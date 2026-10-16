@@ -47,6 +47,7 @@ type Config struct {
 	warnings []string
 	files    Files
 	db       *settings.Store
+	sealer   *Sealer
 }
 
 // Load resolves every setting and returns all faults joined, so an operator

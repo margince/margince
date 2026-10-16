@@ -15,7 +15,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -44,7 +43,7 @@ func overrideActor(kind principal.PrincipalType, grant principal.ObjectGrant) co
 }
 
 func TestOnlyAHumanRoutingEditorMaySaveTaskOverrides(t *testing.T) {
-	h := aiRoutingHandlers{store: ai.NewRoutingStore(NewSettingsStore(nil), StoredConfig(nil), config.Static(nil))}
+	h := aiRoutingHandlers{store: ai.NewRoutingStore(NewSettingsStore(nil), StoredConfig(nil))}
 	reader := overrideActor(principal.PrincipalHuman, principal.ObjectGrant{Read: true})
 	if rec := putTaskOverrides(reader, h, `{}`, ""); rec.Code != http.StatusForbidden {
 		t.Fatalf("a read-only seat saved: %d %s", rec.Code, rec.Body)

@@ -47,7 +47,9 @@ type Store struct {
 	AuditVerb        string
 	Freeze           func(context.Context, pgx.Tx) (bool, string, error)
 	MachineryApplied bool
-	SecretReference  bool
+	// SecretReference stores a Secret's value sealed in the key vault: the row
+	// holds the vault's ref, Save seals and StoredVal opens.
+	SecretReference bool
 	// SurvivesDataReset keeps the row through a data reset: the installation's
 	// own identity, which a reset of its records must not take with them.
 	SurvivesDataReset bool
@@ -58,6 +60,9 @@ type Setting[T any] struct {
 	spec  Spec[T]
 	store *Store
 	row   *settings.Entry[T]
+	// sealed is a SecretReference setting's row in place of row: the vault
+	// ref, never the value.
+	sealed *settings.Entry[string]
 }
 
 // Define declares a setting only boot sources set.
@@ -68,6 +73,10 @@ func Define[T any](s Spec[T]) *Setting[T] { return &Setting[T]{spec: s} }
 // bounds in the Spec are the ones that guard a write.
 func DefineStored[T any](s Spec[T], st Store) *Setting[T] {
 	setting := &Setting[T]{spec: s, store: &st}
+	if st.SecretReference {
+		setting.sealed = sealedEntry(s.Key, st)
+		return setting
+	}
 	def, _ := s.Default.Get()
 	row := settings.Define(s.Key, st.RBACObject, st.AuditVerb, def, setting.checkTyped)
 	if st.Freeze != nil {
@@ -75,9 +84,6 @@ func DefineStored[T any](s Spec[T], st Store) *Setting[T] {
 	}
 	if st.MachineryApplied {
 		row = row.MachineryApplied()
-	}
-	if st.SecretReference {
-		row = row.AsSecretReference()
 	}
 	if st.SurvivesDataReset {
 		row = row.AsInstallationIdentity()
@@ -122,9 +128,20 @@ func (s *Setting[T]) TypeName() string {
 }
 
 //nolint:ireturn // the erased registry reaches every stored entry through settings.Definition
-func (s *Setting[T]) entry() settings.Definition { return s.row }
+func (s *Setting[T]) entry() settings.Definition {
+	if s.sealed != nil {
+		return s.sealed
+	}
+	return s.row
+}
 
+// storedText never opens a sealed value: a secret is shown nowhere, so only
+// whether a row exists is read.
 func (s *Setting[T]) storedText(ctx context.Context, db *settings.Store) (string, bool, error) {
+	if s.sealed != nil {
+		_, stored, err := settings.GetStored(ctx, db, s.sealed)
+		return "", stored, err
+	}
 	v, stored, err := settings.GetStored(ctx, db, s.row)
 	if err != nil {
 		return "", false, err
@@ -207,6 +224,9 @@ func (s *Setting[T]) invariantFault() error {
 	if s.spec.Secret && hasDefault {
 		return fmt.Errorf("config: %s is a secret with a default; a default is printed in docs", s.spec.Key)
 	}
+	if err := s.storeFault(); err != nil {
+		return err
+	}
 	_, hasMin := s.spec.Min.Get()
 	_, hasMax := s.spec.Max.Get()
 	var zero T
@@ -217,6 +237,23 @@ func (s *Setting[T]) invariantFault() error {
 		if err := s.checkTyped(def); err != nil {
 			return fmt.Errorf("config: %s: its own default is invalid: %w", s.spec.Key, err)
 		}
+	}
+	return nil
+}
+
+// storeFault refuses a stored secret whose row would hold it in the clear. It
+// also refuses a sealed row that a gate-free machinery read would hand out.
+func (s *Setting[T]) storeFault() error {
+	if s.store == nil {
+		return nil
+	}
+	switch {
+	case s.spec.Secret && !s.store.SecretReference:
+		return fmt.Errorf("config: %s is a stored secret without SecretReference; its row would hold the secret in the clear", s.spec.Key)
+	case s.store.SecretReference && !s.spec.Secret:
+		return fmt.Errorf("config: %s is a SecretReference but not a Secret; only a secret is sealed", s.spec.Key)
+	case s.store.SecretReference && s.store.MachineryApplied:
+		return fmt.Errorf("config: %s is sealed and MachineryApplied; a sealed value is read only behind its gate", s.spec.Key)
 	}
 	return nil
 }

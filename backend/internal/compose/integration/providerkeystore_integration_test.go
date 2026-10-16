@@ -16,6 +16,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -45,21 +46,45 @@ func searchVault(t *testing.T, e *SearchEnv) keyvault.Vault {
 	return vault
 }
 
+// sealingConfig reads and saves stored settings through e's pool and seals
+// through the real vault, as compose wires a role with a vault.
+func sealingConfig(t *testing.T, e *SearchEnv) *config.Config {
+	t.Helper()
+	return compose.WithVault(compose.StoredConfig(e.Pool), searchVault(t, e), discard())
+}
+
 func providerKeyStore(t *testing.T, e *SearchEnv) *ai.ProviderKeyStore {
 	t.Helper()
-	return ai.NewProviderKeyStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), searchVault(t, e), discard())
+	return ai.NewProviderKeyStore(sealingConfig(t, e))
 }
 
 // resolveKey asks the same resolver the routing lane uses, so the test observes
 // what a model client would be handed rather than what the store recorded.
 func resolveKey(ctx context.Context, t *testing.T, e *SearchEnv, provider string) string {
 	t.Helper()
-	refs, err := settings.Get(ctx, compose.NewSettingsStore(e.Pool), ai.ProviderKeys)
-	if err != nil {
-		t.Fatalf("reading the sealed refs: %v", err)
+	return ai.KeyLookup(ctx, sealingConfig(t, e), discard())(ai.KeyEnvVarFor(provider))
+}
+
+// keySetting is the setting a provider's key is stored under.
+func keySetting(t *testing.T, provider string) *config.Setting[string] {
+	t.Helper()
+	for _, s := range ai.KeySettings() {
+		if s.Env() == ai.KeyEnvVarFor(provider) {
+			return s
+		}
 	}
-	lookup := ai.SealedKeys(ctx, searchVault(t, e), ids.From[ids.WorkspaceKind](e.WS), refs, config.Static(nil))
-	return lookup(ai.KeyEnvVarFor(provider))
+	t.Fatalf("%s takes no key", provider)
+	return nil
+}
+
+// storedRef is the vault ref a provider's row holds, unopened.
+func storedRef(ctx context.Context, t *testing.T, e *SearchEnv, provider string) string {
+	t.Helper()
+	ref, _, err := config.SealedRef(ctx, compose.StoredConfig(e.Pool), keySetting(t, provider))
+	if err != nil {
+		t.Fatalf("reading where the %s key is sealed: %v", provider, err)
+	}
+	return ref
 }
 
 func TestASealedKeyIsWhatTheRoutingLaneResolves(t *testing.T) {
@@ -87,19 +112,17 @@ func TestTheStoredSettingHoldsARefAndNeverTheKey(t *testing.T) {
 	if err := store.Set(ctx, "openai", ai.ProviderCredential{APIKey: key}); err != nil {
 		t.Fatal(err)
 	}
-	refs, err := settings.Get(ctx, compose.NewSettingsStore(e.Pool), ai.ProviderKeys)
-	if err != nil {
-		t.Fatal(err)
-	}
 	// A setting row is readable by anything holding the read grant, and it is
 	// dumped in support bundles and audit trails. The credential must not be
 	// in it — only an opaque, workspace-bound handle.
-	for provider, ref := range refs {
-		if strings.Contains(ref, key) {
-			t.Fatalf("the %s setting carries the credential itself: %q", provider, ref)
-		}
+	var row string
+	if err := e.Pool.QueryRow(ctx, `SELECT value::text FROM setting WHERE key = $1`, keySetting(t, "openai").Key()).Scan(&row); err != nil {
+		t.Fatalf("reading the openai row: %v", err)
 	}
-	if refs["openai"] == "" {
+	if strings.Contains(row, key) {
+		t.Fatalf("the openai setting carries the credential itself: %q", row)
+	}
+	if storedRef(ctx, t, e, "openai") == "" {
 		t.Fatal("no ref recorded, so nothing was sealed")
 	}
 }
@@ -112,11 +135,7 @@ func TestRotatingAKeyServesTheNewOneAndRetiresTheOld(t *testing.T) {
 	if err := store.Set(ctx, "anthropic", ai.ProviderCredential{APIKey: "sk-first"}); err != nil {
 		t.Fatal(err)
 	}
-	refs, err := settings.Get(ctx, compose.NewSettingsStore(e.Pool), ai.ProviderKeys)
-	if err != nil {
-		t.Fatal(err)
-	}
-	firstRef := refs["anthropic"]
+	firstRef := storedRef(ctx, t, e, "anthropic")
 
 	if err := store.Set(ctx, "anthropic", ai.ProviderCredential{APIKey: "sk-second"}); err != nil {
 		t.Fatalf("rotating: %v", err)
@@ -127,11 +146,7 @@ func TestRotatingAKeyServesTheNewOneAndRetiresTheOld(t *testing.T) {
 	// The superseded blob is gone, not merely unreferenced: a credential no ref
 	// names is one no operator can find to delete, and it stays decryptable by
 	// anything holding the root key.
-	after, err := settings.Get(ctx, compose.NewSettingsStore(e.Pool), ai.ProviderKeys)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if after["anthropic"] == firstRef {
+	if storedRef(ctx, t, e, "anthropic") == firstRef {
 		t.Fatal("the ref did not move, so the rotation stored nothing new")
 	}
 	if _, err := searchVault(t, e).Get(ctx, ids.From[ids.WorkspaceKind](e.WS), keyvault.Ref(firstRef)); err == nil {
@@ -139,46 +154,37 @@ func TestRotatingAKeyServesTheNewOneAndRetiresTheOld(t *testing.T) {
 	}
 }
 
-// Two admins keying two DIFFERENT vendors must both survive, and the case is
-// built to prove the ORDERING rather than to hope a race fires.
+// Two admins keying one vendor at once leave one key serving and no blob
+// stranded. A save takes the write lock before it reads the ref it retires.
 //
-// The setting's value is one provider→ref map, so a Set is a read-modify-write
-// and the write lock has to be held across BOTH halves. Held only across the
-// write — which is where SetRawTx takes it — two requests read the same map,
-// each adds its own provider, and the second write drops the first's entirely:
-// a lost update, with both callers told they succeeded and the missing key
-// surfacing later as an AI lane that will not run.
-//
-// Two concurrent goroutines demonstrate that only by luck; the window is a few
-// milliseconds and it closed before the race landed. So the interleaving is
-// FORCED instead. The test takes the key's lock itself, waits until a Set is
-// provably parked on it, and only then writes another provider and commits:
-//
-//	lock held before the read  the Set blocks BEFORE reading, so it reads the
-//	                           committed map and merges — both providers live
-//	lock held after the read   the Set already read the empty map, and its write
-//	                           replaces the committed one — the other provider is
-//	                           gone, which is the failure being ruled out
-func TestAConcurrentKeyWriteCannotDropAnotherProvidersRef(t *testing.T) {
+// The interleaving is forced. The test holds the key's lock, waits until a Set
+// is parked on it, then records another key and commits. Another vendor's key,
+// written in the same transaction, stays.
+func TestAConcurrentKeyWriteRetiresTheKeyItReplaced(t *testing.T) {
 	e := SetupSearch(t)
 	ctx := e.adminRoutingCtx()
 	store := providerKeyStore(t, e)
 	settingsStore := compose.NewSettingsStore(e.Pool)
+	openai := keySetting(t, "openai").Key()
+	held := sealKey(ctx, t, e, "sk-held")
 
 	setDone := make(chan error, 1)
 	// Held open for the whole body: the lock is transaction-scoped, so the
 	// window this test needs is exactly this transaction's lifetime.
 	if err := settingsStore.WriteTx(ctx, func(tx pgx.Tx) error {
-		if err := settings.LockForWrite(ctx, tx, ai.ProviderKeysKey); err != nil {
+		if err := settings.LockForWrite(ctx, tx, openai); err != nil {
 			return err
 		}
 		go func() { setDone <- store.Set(ctx, "openai", ai.ProviderCredential{APIKey: "sk-openai"}) }()
-		waitForLockWaiter(ctx, t, e, ai.ProviderKeysKey)
+		waitForLockWaiter(ctx, t, e, openai)
 
-		// The other admin's write, through the real writer, while the Set is
+		// The other admin's writes, through the real writer, while the Set is
 		// parked. Committing this releases the lock and lets the Set proceed.
-		return settings.SetTx(ctx, settingsStore, tx, ai.ProviderKeys,
-			map[string]string{"anthropic": sealKey(ctx, t, e, "sk-anthropic")})
+		if err := settingsStore.SetRawTx(ctx, tx, openai, json.RawMessage(`"`+held+`"`)); err != nil {
+			return err
+		}
+		return settingsStore.SetRawTx(ctx, tx, keySetting(t, "anthropic").Key(),
+			json.RawMessage(`"`+sealKey(ctx, t, e, "sk-anthropic")+`"`))
 	}); err != nil {
 		t.Fatalf("the holding transaction failed: %v", err)
 	}
@@ -190,6 +196,9 @@ func TestAConcurrentKeyWriteCannotDropAnotherProvidersRef(t *testing.T) {
 		if got := resolveKey(ctx, t, e, provider); got != want {
 			t.Errorf("%s resolved %q, want %q: the concurrent write dropped it", provider, got, want)
 		}
+	}
+	if _, err := searchVault(t, e).Get(ctx, ids.From[ids.WorkspaceKind](e.WS), keyvault.Ref(held)); err == nil {
+		t.Error("the key the Set replaced is still in the vault, named by no row")
 	}
 }
 
@@ -278,7 +287,7 @@ func TestARotatedKeyReachesARunningRouterAndARemovedOneStopsBeingUsed(t *testing
 
 	// A binding on a provider that TAKES a key, so the credential is part of
 	// what the clients are built with.
-	routing := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
+	routing := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	bound, err := routing.Replace(ctx, cloudRouting(t))
 	if err != nil {
 		t.Fatalf("storing the binding: %v", err)
@@ -385,11 +394,7 @@ func TestTheAuditTrailOfAKeyChangeCarriesNoRef(t *testing.T) {
 	if err := store.Set(ctx, "gemini", ai.ProviderCredential{APIKey: "sk-audited"}); err != nil {
 		t.Fatalf("sealing: %v", err)
 	}
-	refs, err := settings.Get(ctx, compose.NewSettingsStore(e.Pool), ai.ProviderKeys)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ref := refs["gemini"]
+	ref := storedRef(ctx, t, e, "gemini")
 	if ref == "" {
 		t.Fatal("nothing was stored, so the test would pass on an empty trail")
 	}

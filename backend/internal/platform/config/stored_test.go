@@ -200,19 +200,20 @@ func TestOnlyStoredSettingsAreLockedAndRegistered(t *testing.T) {
 	}
 }
 
-// A stored secret's Validate guards the settings write too, so its reason must
-// be dropped there as it is at boot.
+// A stored secret's Validate guards the save too, so its reason must be
+// dropped there as it is at boot. The refusal comes before the value is sealed
+// or the database is asked.
 func TestAStoredSecretsRefusalDoesNotQuoteIt(t *testing.T) {
 	echo := config.DefineStored(config.Spec[string]{
 		Key: "test.key", Env: "X_TEST_KEY", Type: config.NonEmpty, Secret: true,
 		Validate: func(s string) error { return errors.New("bad " + s) }, Doc: "d",
 	},
-		config.Store{RBACObject: "installation_settings", AuditVerb: "update"})
+		config.Store{RBACObject: "installation_settings", AuditVerb: "update", SecretReference: true})
 	cfg, err := load(t, fixture{}, echo)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = cfg.StoredDefinitions()[0].ValidateJSON([]byte(`"hunter2"`))
+	err = config.Save(writer, cfg, echo, "hunter2")
 	if err == nil || strings.Contains(err.Error(), "hunter2") {
 		t.Fatalf("got %v", err)
 	}
@@ -281,5 +282,63 @@ func TestLockFirstAnswersTheLockInPlaceOfARefusal(t *testing.T) {
 	}
 	if err := lockedCap(t).LockFirst("test.cap", nil); err != nil {
 		t.Fatalf("no refusal = %v, want nil", err)
+	}
+}
+
+var sealedKey = config.DefineStored(config.Spec[string]{
+	Key: "test.sealed", Env: "X_TEST_SEALED", Type: config.NonEmpty, Secret: true, Doc: "d",
+},
+	config.Store{RBACObject: "installation_settings", AuditVerb: "update", SecretReference: true})
+
+func lockedSecret(t *testing.T) *config.Config {
+	t.Helper()
+	cfg, err := load(t, fixture{env: []string{"X_TEST_SEALED=sk-boot"}}, sealedKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return cfg
+}
+
+// A boot-set secret refuses even its own value: a no-op answer would confirm
+// a caller's guess of it. No database is attached, so the lock is what answers.
+func TestSavingABootSetSecretIsAConflictEvenForItsOwnValue(t *testing.T) {
+	cfg := lockedSecret(t)
+	for _, v := range []string{"sk-boot", "sk-other"} {
+		err := config.Save(writer, cfg, sealedKey, v)
+		if !errors.Is(err, apperrors.ErrConflict) || strings.Contains(err.Error(), v) {
+			t.Fatalf("save of a secret over its boot value = %v, want a conflict that quotes nothing", err)
+		}
+	}
+}
+
+func TestRemovingABootSetSecretIsAConflict(t *testing.T) {
+	if err := config.RemoveSecret(writer, lockedSecret(t), sealedKey); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("removing a boot-set secret = %v, want a conflict", err)
+	}
+	if err := config.RemoveSecret(reader, lockedSecret(t), sealedKey); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("removing without the grant = %v, want ErrPermissionDenied before the lock", err)
+	}
+}
+
+// A sealed setting's row holds a ref. The readers and writers that treat the
+// row as the value refuse it, rather than hand out the ref.
+func TestARowReaderRefusesASealedSetting(t *testing.T) {
+	cfg := lockedSecret(t)
+	if _, err := config.StoredRequireTx(reader, nil, cfg, sealedKey); err == nil {
+		t.Error("StoredRequireTx read a sealed setting's row")
+	}
+	if err := config.SaveTx(writer, cfg, nil, sealedKey, "sk-x"); err == nil {
+		t.Error("SaveTx wrote a sealed setting's row in the clear")
+	}
+	if err := sealedKey.ValidateJSON([]byte(`"sk-x"`)); err == nil {
+		t.Error("ValidateJSON judged a secret as its row")
+	}
+}
+
+// The boot value answers a sealed setting without a vault or a database.
+func TestABootSetSecretIsReadWithoutTheVault(t *testing.T) {
+	v, origin, err := config.StoredValWithSource(reader, lockedSecret(t), sealedKey)
+	if err != nil || v != "sk-boot" || origin.Name != "X_TEST_SEALED" {
+		t.Fatalf("read %q %+v %v, want the boot value from X_TEST_SEALED", v, origin, err)
 	}
 }

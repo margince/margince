@@ -6,7 +6,6 @@ package gates
 // The reasons a key may still be declared with settings.Define. A module that
 // converts deletes its lines, so the list ends holding only real exceptions.
 const (
-	convertsIn13 = "converts in Task 13, with the other secrets"
 	// readBySQL is why a boot value cannot be honoured. SQL reads the row,
 	// and a boot value it never sees would split Go from SQL.
 	readBySQL = "SQL views, functions and raw statements read this row directly, so a boot value would split Go from SQL"
@@ -14,6 +13,10 @@ const (
 	pendingState = "product-written pending state for a scheduled window change, not configuration"
 	// productState is a record the product writes of what it did.
 	productState = "product-written state, not configuration"
+	// bootFieldsApart is a stored value whose boot source is several separate
+	// settings, which one stored setting cannot name. Compose locks it while
+	// they set it.
+	bootFieldsApart = "its boot source is several per-field settings one stored setting cannot carry; compose locks it while they set it"
 )
 
 // gatekit:fixture the settings.Define keys a module may still declare, and why: expected exceptions, not a waived cost
@@ -23,12 +26,11 @@ var settingsDefineExceptions = map[string]string{
 	"installation.agent_window_next_hours": pendingState,
 	"installation.agent_window_next_from":  pendingState,
 
-	"installation.smtp_password_ref": convertsIn13,
-	"installation.license_token_ref": convertsIn13,
-	"ai.provider_keys":               convertsIn13,
-	"capture.google_app":             convertsIn13,
-	"capture.microsoft_app":          convertsIn13,
+	"capture.google_app":    bootFieldsApart,
+	"capture.microsoft_app": bootFieldsApart,
 
-	"ai.price_sync_last_run":        productState,
-	"privacy.retention_floor_carry": productState,
+	"ai.price_sync_last_run":         productState,
+	"privacy.retention_floor_carry":  productState,
+	"installation.smtp_password_ref": productState,
+	"installation.license_token_ref": productState,
 }

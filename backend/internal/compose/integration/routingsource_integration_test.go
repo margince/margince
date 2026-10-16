@@ -35,10 +35,10 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -111,7 +111,7 @@ func TestAStoredBindingWinsOverAnyRoutingPath(t *testing.T) {
 	ctx := context.Background()
 
 	// Stored through the real writer — the one PUT /v1/ai/routing drives.
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	if _, err := store.Replace(e.adminRoutingCtx(), parsedRouting(t, "fake-stored")); err != nil {
 		t.Fatalf("storing the binding: %v", err)
 	}
@@ -169,7 +169,7 @@ func TestAReplacedBindingReachesARunningRouterWithoutARestart(t *testing.T) {
 	e := SetupSearch(t)
 	ctx := e.adminRoutingCtx()
 
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	first, err := store.Replace(ctx, parsedRouting(t, "first"))
 	if err != nil {
 		t.Fatalf("storing the first binding: %v", err)
@@ -218,7 +218,7 @@ func TestAReplacedBindingReachesARunningRouterWithoutARestart(t *testing.T) {
 func TestTheStoreRefusesABindingTheFileLoaderWouldHaveRefused(t *testing.T) {
 	e := SetupSearch(t)
 	ctx := e.adminRoutingCtx()
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 
 	if _, err := store.Replace(ctx, ai.RoutingConfig{
 		Profile: "nowhere",
@@ -330,7 +330,7 @@ func TestAnIgnoredRoutingPathIsAnnouncedAndSaysWhichSituation(t *testing.T) {
 	// Bound: the flag is merely redundant, and the warning must not claim the
 	// lanes are absent — an operator who reads that goes looking for a fault
 	// that is not there.
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	if _, err := store.Replace(e.adminRoutingCtx(), parsedRouting(t, "fake-stored")); err != nil {
 		t.Fatalf("storing the binding: %v", err)
 	}
@@ -347,25 +347,17 @@ func TestAnIgnoredRoutingPathIsAnnouncedAndSaysWhichSituation(t *testing.T) {
 	}
 }
 
-// A key in the environment is sealed on a boot that has NO binding yet.
+// A key in the environment reads as configured on a boot that has no binding
+// yet, and nothing is sealed for it.
 //
-// The regression this closes was silent and self-defeating. Sealing lived
-// BELOW the unconfigured early return, so a fresh installation — the only kind
-// that has no binding — never reached it. `ai.provider_keys` stayed empty,
-// which is the row /ai/provider-keys reports `configured` from, so Settings ->
-// AI told an admin their vendor was unkeyed on the very screen they had opened
-// to bind a tier to it. The key was in the environment the whole time and the
-// api process had it.
-//
-// Sealing does not depend on a binding and never did: one is a credential
-// moving out of the process environment, the other is which vendor answers
-// which tier. Whoever binds first has to be able to see that the credential
-// for it has arrived.
-func TestAKeyIsSealedOnAnInstallationThatHasBoundNothing(t *testing.T) {
+// Whoever binds first has to see that the credential for it has arrived.
+// /ai/provider-keys reports `configured` on the screen an admin opens to bind a
+// tier. A key a boot source sets is held whether or not a binding exists.
+func TestAKeyInTheEnvironmentReadsAsConfiguredOnAnInstallationThatHasBoundNothing(t *testing.T) {
 	e := SetupSearch(t)
+	apptest.BindEnv(t, []string{"GEMINI_API_KEY=a-gemini-key"})
 	env := config.Static(map[string]string{
 		keyvault.EnvRootKey: base64.StdEncoding.EncodeToString(bytes.Repeat([]byte("k"), 32)),
-		"GEMINI_API_KEY":    "a-gemini-key",
 	})
 
 	cfg, err := compose.ResolveRouting(context.Background(), e.Pool, "", env, discard())
@@ -377,12 +369,17 @@ func TestAKeyIsSealedOnAnInstallationThatHasBoundNothing(t *testing.T) {
 		t.Errorf("resolved %+v, want unconfigured", cfg.Tiers)
 	}
 
-	stored, err := settings.Get(e.adminRoutingCtx(), compose.NewSettingsStore(e.Pool), ai.ProviderKeys)
-	if err != nil {
-		t.Fatalf("reading the recorded refs: %v", err)
+	if n := searchSealedBlobCount(t, e); n != 0 {
+		t.Errorf("%d blobs sealed at boot; a key the environment sets is never copied into the vault", n)
 	}
-	if stored["gemini"] == "" {
-		t.Errorf("no ref recorded for gemini: %v — the key stayed in the environment, so Settings -> AI reports it unkeyed", stored)
+	listed, err := ai.NewProviderKeyStore(compose.StoredConfig(e.Pool)).List(e.adminRoutingCtx())
+	if err != nil {
+		t.Fatalf("listing the provider keys: %v", err)
+	}
+	for _, status := range listed {
+		if status.Provider == "gemini" && !status.Configured {
+			t.Error("gemini reads unkeyed though the environment sets its key, so Settings -> AI reports it unkeyed")
+		}
 	}
 }
 
@@ -434,7 +431,7 @@ func TestPlantingNeverOverwritesABindingTheInstallationAlreadyHas(t *testing.T) 
 	e := SetupSearch(t)
 	ctx := context.Background()
 
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	if _, err := store.Replace(e.adminRoutingCtx(), parsedRouting(t, "chosen-by-a-human")); err != nil {
 		t.Fatalf("storing the admin's binding: %v", err)
 	}

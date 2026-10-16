@@ -95,16 +95,7 @@ func ResolveRouting(ctx context.Context, pool *pgxpool.Pool, routingPath string,
 	if routingPath != "" {
 		warnRoutingFileIgnored(ctx, routingPath, stored.Unconfigured(), log)
 	}
-	// Sealing runs BEFORE the unconfigured return, and the order is the whole
-	// point. A credential moving out of the process environment and into the
-	// vault has nothing to do with which vendor answers which tier: below the
-	// return, the only installation that never sealed was the fresh one, whose
-	// admin then opened Settings -> AI to bind a tier and was told the vendor
-	// they were about to bind was unkeyed. The key was in the environment the
-	// whole time. `configured` on /ai/provider-keys reads the sealed ref, so an
-	// unsealed key is indistinguishable from an absent one on the one screen
-	// that could have fixed it.
-	lookup, credentials := sealedKeys(ctx, pool, ws, keys, log)
+	lookup, credentials := sealedKeys(ctx, pool, keys, log)
 	if stored.Unconfigured() {
 		return ai.RoutingConfig{}, nil
 	}
@@ -223,35 +214,43 @@ func warnRoutingFileIgnored(ctx context.Context, routingPath string, unconfigure
 		"file", routingPath)
 }
 
-// sealedKeys upgrades the environment lookup to one that resolves a provider's
-// BYOK key from the vault, sealing any the environment still carries.
+// sealedKeys is the lookup a binding resolves each provider's key through. Its
+// digest of the sealed refs lets a watcher see a rotation. env supplies only
+// the vault's root key.
 //
-// Built here rather than passed in because this is where the workspace is
-// already resolved, and both roles would otherwise construct the same thing
-// from the same three inputs. A second vault instance costs nothing: it holds a
-// pool and an AEAD derived from the root key, and no state that two of them
-// could disagree about.
-//
-// An installation with no vault configured gets the environment unchanged,
-// which is where every installation was before this existed.
-func sealedKeys(ctx context.Context, pool *pgxpool.Pool, ws ids.UUID, env config.Lookup, log *slog.Logger) (config.Lookup, string) {
+// An installation whose vault cannot be built still reads the keys a boot
+// source sets. A sealed key then reads as unkeyed, and the binding that needs
+// it fails naming the variable to set.
+func sealedKeys(ctx context.Context, pool *pgxpool.Pool, env config.Lookup, log *slog.Logger) (config.Lookup, string) {
+	cfg := StoredConfig(pool)
 	vault, configured, err := keyvault.FromEnv(ctx, pool, env)
-	if err != nil || !configured {
-		if err != nil {
-			// Not fatal HERE, deliberately. FromEnv refuses a boot that finds
-			// sealed ciphertext with no root key, so by the time this runs the
-			// serving roles have already had their say on whether the vault is
-			// survivable. What is left for this path is a vault that cannot be
-			// built at all, and provider keys still resolve from the
-			// environment — which is where every installation kept them before
-			// the vault existed.
-			log.WarnContext(ctx, "the key vault is configured but unusable; provider credentials resolve from the environment this boot", "error", err)
-		}
-		return env, ""
+	switch {
+	case err != nil:
+		log.WarnContext(ctx, "the key vault is configured but unusable; only provider keys a boot source sets are read this boot", "error", err)
+	case configured:
+		cfg = WithVault(cfg, vault, log)
 	}
-	workspace := ids.From[ids.WorkspaceKind](ws)
-	refs := SealProviderKeys(ctx, pool, vault, workspace, env, log)
-	return ai.SealedKeys(ctx, vault, workspace, refs, env), credentialDigest(refs)
+	return ai.KeyLookup(ctx, cfg, log), credentialDigest(sealedProviderRefs(ctx, cfg, log))
+}
+
+// sealedProviderRefs are the refs of the provider keys no boot source sets. A
+// boot value cannot change while this process runs, so only these can rotate.
+func sealedProviderRefs(ctx context.Context, cfg *config.Config, log *slog.Logger) map[string]string {
+	refs := map[string]string{}
+	for _, s := range ai.KeySettings() {
+		if _, locked := cfg.Locked(s.Key()); locked {
+			continue
+		}
+		ref, stored, err := config.SealedRef(ctx, cfg, s)
+		if err != nil {
+			log.WarnContext(ctx, "cannot read where a provider key is sealed; a rotation of it is noticed on a later check", "setting", s.Key(), "error", err)
+			continue
+		}
+		if stored {
+			refs[s.Key()] = ref
+		}
+	}
+	return refs
 }
 
 // credentialDigest fingerprints the provider→ref map a binding resolves with, so
@@ -374,15 +373,15 @@ func RoutingFromDeployConfig(path string) (ai.RoutingConfig, error) {
 	return routing, nil
 }
 
-// RoutingKeys is the lookup the routing path resolves credentials through. The
-// vault's root key comes from the loaded settings, so it opens the vault the
-// role's boot opened. Each provider key comes from the process environment.
+// RoutingKeys is the lookup the routing path opens the vault with. Its root key
+// comes from the loaded settings, so it opens the vault the role's boot opened.
+// A provider key is read through its own setting, never through this lookup.
 func RoutingKeys(c *config.Config) config.Lookup {
 	rootKey := keyvault.RootKey(c)
 	return func(name string) string {
 		if name == keyvault.EnvRootKey {
 			return rootKey
 		}
-		return config.FromOS(name)
+		return ""
 	}
 }

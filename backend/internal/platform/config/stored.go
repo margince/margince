@@ -49,7 +49,7 @@ func StoredValWithSource[T any](ctx context.Context, c *Config, s *Setting[T]) (
 	if err := requireStored(s); err != nil {
 		return zero, Origin{}, err
 	}
-	if err := settings.RequireRead(ctx, s.row); err != nil {
+	if err := settings.RequireRead(ctx, s.entry()); err != nil {
 		return zero, Origin{}, err
 	}
 	if v, origin, ok := bootValue(c, s); ok {
@@ -59,7 +59,13 @@ func StoredValWithSource[T any](ctx context.Context, c *Config, s *Setting[T]) (
 	if err != nil {
 		return zero, Origin{}, err
 	}
-	v, stored, err := settings.GetStored(ctx, db, s.row)
+	var v T
+	var stored bool
+	if s.sealed != nil {
+		v, stored, err = storedSealed(ctx, c, db, s)
+	} else {
+		v, stored, err = settings.GetStored(ctx, db, s.row)
+	}
 	if err != nil {
 		return zero, Origin{}, err
 	}
@@ -73,20 +79,27 @@ func StoredValTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T]
 	if err := requireStored(s); err != nil {
 		return zero, err
 	}
-	if err := settings.RequireRead(ctx, s.row); err != nil {
+	if err := settings.RequireRead(ctx, s.entry()); err != nil {
 		return zero, err
 	}
 	if v, _, ok := bootValue(c, s); ok {
 		return v, nil
 	}
-	return settings.GetTx(ctx, tx, s.row)
+	if s.sealed == nil {
+		return settings.GetTx(ctx, tx, s.row)
+	}
+	ref, err := settings.GetTx(ctx, tx, s.sealed)
+	if err != nil || ref == "" {
+		return zero, err
+	}
+	return openSealed(ctx, c, s, ref)
 }
 
 // StoredRequireTx is StoredValTx for a value the installation is measured in:
 // with no boot value, an absent row is an error rather than the default.
 func StoredRequireTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T]) (T, error) {
 	var zero T
-	if err := requireStored(s); err != nil {
+	if err := requirePlain(s); err != nil {
 		return zero, err
 	}
 	if err := settings.RequireRead(ctx, s.row); err != nil {
@@ -101,7 +114,7 @@ func StoredRequireTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Settin
 // SeedTx writes a bootstrap value once, unless a boot source sets the setting.
 // A row written then would take effect only once that source is removed.
 func SeedTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T], v T) (stored bool, err error) {
-	if err := requireStored(s); err != nil {
+	if err := requirePlain(s); err != nil {
 		return false, err
 	}
 	return settings.SeedValue(ctx, tx, s.row, v, c.BootLocked())
@@ -117,7 +130,7 @@ func BootVal[T any](c *Config, s *Setting[T]) (T, bool) {
 // ValidateJSON refuses a wire value the way a save would. A caller uses it to
 // refuse a value before it writes anything else in the same transaction.
 func (s *Setting[T]) ValidateJSON(raw json.RawMessage) error {
-	if err := requireStored(s); err != nil {
+	if err := requirePlain(s); err != nil {
 		return err
 	}
 	return s.row.ValidateJSON(raw)
@@ -196,7 +209,7 @@ func appliedValue[T any](c *Config, s *Setting[T], rows map[string]json.RawMessa
 
 // requireMachinery refuses a setting the ungated readers may not read.
 func requireMachinery[T any](s *Setting[T]) error {
-	if err := requireStored(s); err != nil {
+	if err := requirePlain(s); err != nil {
 		return err
 	}
 	if !s.store.MachineryApplied {
@@ -212,11 +225,14 @@ func Save[T any](ctx context.Context, c *Config, s *Setting[T], v T) error {
 	if err := requireStored(s); err != nil {
 		return err
 	}
-	if err := settings.RequireWrite(ctx, s.row); err != nil {
+	if err := settings.RequireWrite(ctx, s.entry()); err != nil {
 		return err
 	}
 	if locked, err := lockedAgainst(c, s, v); locked || err != nil {
 		return err
+	}
+	if s.sealed != nil {
+		return saveSealed(ctx, c, s, v)
 	}
 	db, err := c.database(s.Key())
 	if err != nil {
@@ -227,7 +243,7 @@ func Save[T any](ctx context.Context, c *Config, s *Setting[T], v T) error {
 
 // SaveTx is Save inside the caller's transaction.
 func SaveTx[T any](ctx context.Context, c *Config, tx pgx.Tx, s *Setting[T], v T) error {
-	if err := requireStored(s); err != nil {
+	if err := requirePlain(s); err != nil {
 		return err
 	}
 	if err := settings.RequireWrite(ctx, s.row); err != nil {
@@ -244,9 +260,10 @@ func SaveTx[T any](ctx context.Context, c *Config, tx pgx.Tx, s *Setting[T], v T
 }
 
 // lockedAgainst accepts the boot value itself as a no-op, so a form that sends
-// every field still saves the fields that are not locked.
+// every field still saves the fields that are not locked. A secret is never
+// the same: a no-op answer would confirm a guess of the boot value.
 func lockedAgainst[T any](c *Config, s *Setting[T], v T) (bool, error) {
-	return LockedChange(c, s, func(boot T) bool { return reflect.DeepEqual(boot, v) })
+	return LockedChange(c, s, func(boot T) bool { return !s.Secret() && reflect.DeepEqual(boot, v) })
 }
 
 // LockedChange is the lock a save takes, for a writer with its own statement
@@ -299,7 +316,7 @@ func bootValue[T any](c *Config, s *Setting[T]) (T, Origin, bool) {
 }
 
 func (c *Config) database(key string) (*settings.Store, error) {
-	if c.db == nil {
+	if c == nil || c.db == nil {
 		return nil, fmt.Errorf("config: %s is stored and this Config has no database; call WithDatabase", key)
 	}
 	return c.db, nil

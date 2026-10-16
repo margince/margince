@@ -41,7 +41,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/reporting"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -266,11 +265,11 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool, log *slog.Logger
 	// needs no tenant credential, so there is no "no provider connected"
 	// configuration to honor here.
 	s.priceCatalogues = newAIPriceCatalogues()
-	routing := ai.NewRoutingStore(NewSettingsStore(pool), StoredConfig(pool), config.FromOS).WithCatalogue(s.priceCatalogues.broker)
+	routing := ai.NewRoutingStore(NewSettingsStore(pool), StoredConfig(pool)).WithCatalogue(s.priceCatalogues.broker)
 	s.aiRoutingHandlers = aiRoutingHandlers{store: routing}
 	// The sync reads the picker's broker cache. s.vault is nil until WithKeyvault,
 	// which rebuilds the sync over the vault it brings.
-	s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, s.vault, config.FromOS, log, s.priceCatalogues))
+	s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, s.vault, log, s.priceCatalogues))
 	s.aiAdminHandlers = aiAdminHandlers{store: ai.NewAdminStore(InstallationDB(pool), NewSettingsStore(pool), StoredConfig(pool), budgetFullUsers, aiDeferredWork(pool))}
 	s.ownDomainHandlers = ownDomainHandlers{store: capture.NewOwnDomainStore(InstallationDB(pool))}
 	// The installation's own identity and reporting basis (ADR-0090/A135):

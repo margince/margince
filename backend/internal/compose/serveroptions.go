@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -205,7 +204,8 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// seal a key. Wired here rather than in the AI block so a role that
 		// composes no vault serves 501 on those routes instead of recording a
 		// reference to a blob nothing wrote.
-		keys := ai.NewProviderKeyStore(NewSettingsStore(pool), StoredConfig(pool), vault, s.log)
+		sealed := WithVault(StoredConfig(pool), vault, s.log)
+		keys := ai.NewProviderKeyStore(sealed)
 		s.voiceHandlers = s.WithProviderKeys(keys)
 		// The routing store gets the same vault, for the ONE read that calls a
 		// vendor rather than describing it: asking a vendor what it serves needs
@@ -218,12 +218,12 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// surface has no store to upgrade, and reaching through the nil one is
 		// the panic that says so at boot rather than at the read.
 		if s.aiRoutingHandlers.store != nil {
-			s.aiRoutingHandlers.store = s.aiRoutingHandlers.store.WithVault(vault)
+			s.aiRoutingHandlers.store = s.aiRoutingHandlers.store.WithSealer(vaultSealer(vault, s.log))
 		}
 		// The sync lists each vendor's models with the key sealed here; guarded
 		// like the store above, for a role that composed no AI surface.
 		if s.priceCatalogues.broker != nil {
-			s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, vault, config.FromOS, s.log, s.priceCatalogues))
+			s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, vault, s.log, s.priceCatalogues))
 		}
 		// The connector OAuth apps ride the same reasoning: each client SECRET is
 		// sealed, so the surface exists only where there is somewhere to seal it.
@@ -246,7 +246,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// vault does — a setup answer composed from two of the three stores
 		// would report a step unconfigured for the wrong reason.
 		s.installationSetupHandlers = installationSetupHandlers{
-			routing:       ai.NewRoutingStore(NewSettingsStore(pool), StoredConfig(pool), config.FromOS),
+			routing:       ai.NewRoutingStore(NewSettingsStore(pool), sealed),
 			providerKeys:  keys,
 			connectorApps: connectorApps,
 		}

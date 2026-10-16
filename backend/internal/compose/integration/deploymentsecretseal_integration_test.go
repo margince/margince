@@ -5,17 +5,13 @@
 
 package integration
 
-// The two deployment credentials leaving the process environment, against a
-// real database.
+// The two deployment credentials an earlier release sealed, against a real
+// database.
 //
-// Four things need one and none can be shown with a unit test: that the ref is
-// actually recorded, so the boot after the operator drops the declaration finds
-// the credential rather than nothing; that sealing is idempotent, or every
-// restart strands another copy of the same secret; that a rotated declaration
-// re-seals rather than leaving the vault holding a stale credential nobody will
-// notice until the declaration is gone; and that a vault which cannot open what
-// it holds says exactly that, instead of reporting an installation with a
-// license as having none.
+// A boot value is never copied into the vault. What needs a database: a
+// declared credential seals nothing. A copy sealed before is read once nothing
+// declares one, and left in place while one is declared. A vault that cannot
+// open what it holds says so, rather than report no license.
 
 import (
 	"bytes"
@@ -145,119 +141,113 @@ func readCtx(ws ids.UUID) context.Context {
 	})
 }
 
-func TestTheRelayPasswordIsSealedAndAnsweredFromTheVaultOnceTheDeclarationIsGone(t *testing.T) {
+// sealedBefore records secret as an earlier release did: sealed in vault, and
+// its ref written through the settings store under the entry's own key.
+func sealedBefore(t *testing.T, e *Env, vault keyvault.Vault, entry *settings.Entry[string], secret string) string {
+	t.Helper()
+	ref, err := vault.Put(sealCtx(), ids.From[ids.WorkspaceKind](e.WS), []byte(secret))
+	if err != nil {
+		t.Fatalf("sealing the earlier copy: %v", err)
+	}
+	if err := settings.Set(readCtx(e.WS), compose.NewSettingsStore(e.Pool), entry, string(ref)); err != nil {
+		t.Fatalf("recording the earlier copy: %v", err)
+	}
+	return string(ref)
+}
+
+func TestADeclaredRelayPasswordIsReadAndNeverSealed(t *testing.T) {
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
 
 	got, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, "SMTP_PASSWORD", "SMTP_PASSWORD=a-relay-password"), log)
 	if err != nil {
-		t.Fatalf("sealing the relay password: %v", err)
+		t.Fatalf("reading the relay password: %v", err)
 	}
 	if got != "a-relay-password" {
-		t.Fatalf("resolved %q while the deployment still declares the password", got)
+		t.Fatalf("resolved %q while the deployment declares the password", got)
 	}
 
-	// Recorded, not merely sealed.
 	ref, err := settings.Get(readCtx(e.WS), compose.NewSettingsStore(e.Pool), identity.SMTPPasswordRef)
 	if err != nil {
 		t.Fatalf("reading the recorded ref: %v", err)
 	}
-	if ref == "" {
-		t.Fatal("the relay password was resolved but no vault ref was recorded; the next boot would seal a second copy")
+	if ref != "" || sealedBlobCount(t, e) != 0 {
+		t.Fatalf("a declared password was copied into the vault (ref %q, %d blobs)", ref, sealedBlobCount(t, e))
 	}
 
-	// The boot after the operator drops the variable: nothing is declared, and
-	// the sealed copy is the only one left.
+	// The boot after the operator drops the variable: nothing is declared and
+	// nothing was sealed, so the relay is unauthenticated.
 	after, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, ""), log)
 	if err != nil {
-		t.Fatalf("reading the sealed relay password: %v", err)
+		t.Fatalf("reading with nothing declared: %v", err)
 	}
-	if after != "a-relay-password" {
-		t.Errorf("the vault answered %q, want the sealed password", after)
+	if after != "" {
+		t.Errorf("the vault answered %q, want nothing: nothing was sealed", after)
 	}
 }
 
-// Idempotent across boots. Without this every restart seals another copy of the
-// same secret and strands the previous one.
-func TestASecondBootRepointsNothing(t *testing.T) {
+// A copy an earlier release sealed is still the answer once nothing declares
+// one. The installation that dropped its variable after that release keeps its
+// relay.
+func TestACopySealedBeforeIsAnsweredOnceTheDeclarationIsGone(t *testing.T) {
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
-	cfg := mailConfig(t, "SMTP_PASSWORD", "SMTP_PASSWORD=a-relay-password")
+	sealedBefore(t, e, vault, identity.SMTPPasswordRef, "a-relay-password")
 
-	if _, err := relayPassword(sealCtx(), e.Pool, vault, cfg, log); err != nil {
+	first, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, ""), log)
+	if err != nil {
 		t.Fatalf("first boot: %v", err)
 	}
-	first, err := settings.Get(readCtx(e.WS), compose.NewSettingsStore(e.Pool), identity.SMTPPasswordRef)
+	second, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, ""), log)
 	if err != nil {
-		t.Fatalf("reading the recorded ref: %v", err)
-	}
-	if _, err := relayPassword(sealCtx(), e.Pool, vault, cfg, log); err != nil {
 		t.Fatalf("second boot: %v", err)
 	}
-	second, err := settings.Get(readCtx(e.WS), compose.NewSettingsStore(e.Pool), identity.SMTPPasswordRef)
-	if err != nil {
-		t.Fatalf("reading the recorded ref: %v", err)
+	if first != "a-relay-password" || second != first {
+		t.Errorf("the boots answered %q and %q, want the sealed password both times", first, second)
 	}
-	if first != second {
-		t.Errorf("a boot that sealed nothing new repointed the ref from %q to %q; the old blob is now stranded", first, second)
+	if got := sealedBlobCount(t, e); got != 1 {
+		t.Errorf("%d sealed blobs after two boots read one copy, want 1", got)
 	}
 }
 
-// A credential rotated in the deployment must reach the vault, or the mirror
-// goes stale silently and the operator only discovers it on the boot after they
-// drop the declaration — which is the boot that has no other copy.
-func TestARotatedDeclarationIsResealed(t *testing.T) {
+// A declaration wins over a copy sealed before, and the copy is left in place.
+// Destroying it would let one boot with a stale variable or a botched pipeline
+// irreversibly destroy a credential it never meant to replace.
+func TestADeclarationWinsOverACopySealedBeforeAndLeavesIt(t *testing.T) {
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
+	superseded := sealedBefore(t, e, vault, identity.SMTPPasswordRef, "the-old-password")
 
-	if _, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, "SMTP_PASSWORD", "SMTP_PASSWORD=the-old-password"), log); err != nil {
-		t.Fatalf("first boot: %v", err)
+	got, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, "SMTP_PASSWORD", "SMTP_PASSWORD=the-new-password"), log)
+	if err != nil {
+		t.Fatalf("boot with a declaration: %v", err)
 	}
-	superseded, err := settings.Get(readCtx(e.WS), compose.NewSettingsStore(e.Pool), identity.SMTPPasswordRef)
+	if got != "the-new-password" {
+		t.Errorf("resolved %q, want the declared password over the sealed copy", got)
+	}
+	ref, err := settings.Get(readCtx(e.WS), compose.NewSettingsStore(e.Pool), identity.SMTPPasswordRef)
 	if err != nil {
 		t.Fatalf("reading the recorded ref: %v", err)
 	}
-
-	if _, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, "SMTP_PASSWORD", "SMTP_PASSWORD=the-new-password"), log); err != nil {
-		t.Fatalf("boot after rotation: %v", err)
+	if ref != superseded {
+		t.Errorf("the declaration repointed the sealed copy from %q to %q; a boot value is never sealed", superseded, ref)
 	}
-
-	after, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, ""), log)
-	if err != nil {
-		t.Fatalf("reading the sealed relay password: %v", err)
-	}
-	if after != "the-new-password" {
-		t.Errorf("the vault still answers %q after the deployment rotated the password", after)
-	}
-	// The superseded blob SURVIVES, and that is the deliberate answer rather
-	// than an omission. A re-seal is triggered by the declaration alone, and the
-	// declaration is the thing a stale variable or a botched pipeline gets
-	// wrong; destroying what it supersedes would let one bad boot irreversibly
-	// destroy the installation's only copy of a credential it never meant to
-	// replace. An unreferenced blob is encrypted at rest and reachable by
-	// nobody, which is the cheaper of the two failures by a wide margin.
 	if _, err := vault.Get(sealCtx(), ids.From[ids.WorkspaceKind](e.WS), keyvault.Ref(superseded)); err != nil {
-		t.Errorf("the superseded password is gone from the vault (%v); a re-seal must not destroy a credential the declaration merely disagreed with", err)
+		t.Errorf("the sealed copy is gone from the vault (%v); a declaration must not destroy it", err)
 	}
 }
 
-// The refusal this whole move turns on. Once the declaration is gone the vault
-// holds the only copy of the license, so a vault that cannot open it must say
-// THAT — an installation told it has no license goes looking for a token it was
-// already issued, and in production that refusal blocks the boot.
+// The refusal the sealed copy turns on. Once nothing declares the license, it
+// lives in the vault, so a vault that cannot open it must say so. An
+// installation told it has no license looks for a token it was already issued,
+// and in production that refusal blocks the boot.
 func TestAnUnopenableVaultNamesItselfRatherThanReportingNoLicense(t *testing.T) {
 	e := Setup(t)
 	log := slog.New(slog.DiscardHandler)
-	cfg := licenseConfig(t, "LICENSE_TOKEN", "LICENSE_TOKEN=a-license-token")
-
-	sealed := realVault(t, e)
-	source := compose.SealedLicenseTokenSource(sealCtx(), e.Pool, sealed, cfg, log)
-	if _, err := source(); err != nil {
-		t.Fatalf("sealing the license token: %v", err)
-	}
+	sealedBefore(t, e, realVault(t, e), identity.LicenseTokenRef, "a-license-token")
 
 	// A different vault is what a rotated or dropped root key looks like from
 	// here: the ref is recorded and refers to nothing this process can open.
@@ -273,15 +263,9 @@ func TestAnUnopenableVaultNamesItselfRatherThanReportingNoLicense(t *testing.T) 
 	}
 }
 
-// Two roles booting at once. `make dev` starts the api and the worker together,
-// so the first boot of a keyvault-enabled installation runs this race for real:
-// both see nothing sealed, both seal, and without the lock the loser's
-// ciphertext is stranded in a table no sweeper walks.
-//
-// The assertion is the BLOB COUNT, not the ref. A fix that recorded one ref
-// while leaving two blobs behind looks identical from the setting row alone,
-// and it is the stranded ciphertext that is the defect.
-func TestTwoRolesSealingAtOnceLeaveExactlyOneCopy(t *testing.T) {
+// Two roles booting at once with a declared password seal nothing between
+// them: no copy to race over, and no ciphertext to strand.
+func TestTwoRolesBootingAtOnceSealNothing(t *testing.T) {
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
@@ -289,9 +273,10 @@ func TestTwoRolesSealingAtOnceLeaveExactlyOneCopy(t *testing.T) {
 
 	var wg sync.WaitGroup
 	errs := make([]error, 2)
+	got := make([]string, 2)
 	for i := range errs {
 		wg.Go(func() {
-			_, errs[i] = relayPassword(sealCtx(), e.Pool, vault, cfg, log)
+			got[i], errs[i] = relayPassword(sealCtx(), e.Pool, vault, cfg, log)
 		})
 	}
 	wg.Wait()
@@ -299,30 +284,16 @@ func TestTwoRolesSealingAtOnceLeaveExactlyOneCopy(t *testing.T) {
 		if err != nil {
 			t.Fatalf("role %d: %v", i, err)
 		}
+		if got[i] != "a-relay-password" {
+			t.Errorf("role %d resolved %q, want the declared password", i, got[i])
+		}
 	}
-
-	// One, not two: the losing role deletes the duplicate it just sealed. This
-	// is the case where deleting IS right — the value is still in hand and
-	// another copy of the very same bytes is the one the row names — and it is
-	// the opposite of the rotation case above, which keeps what it supersedes.
-	if got := sealedBlobCount(t, e); got != 1 {
-		t.Errorf("%d sealed blobs after two roles sealed one credential, want 1 — the loser's copy is stranded", got)
-	}
-	// And the one that survived is the one the row names.
-	ref, err := settings.Get(readCtx(e.WS), compose.NewSettingsStore(e.Pool), identity.SMTPPasswordRef)
-	if err != nil {
-		t.Fatalf("reading the recorded ref: %v", err)
-	}
-	opened, err := vault.Get(sealCtx(), ids.From[ids.WorkspaceKind](e.WS), keyvault.Ref(ref))
-	if err != nil {
-		t.Fatalf("the recorded ref does not open: %v", err)
-	}
-	if string(opened) != "a-relay-password" {
-		t.Errorf("the recorded ref opens to %q, want the sealed password", opened)
+	if n := sealedBlobCount(t, e); n != 0 {
+		t.Errorf("%d sealed blobs after two roles read a declared password, want 0", n)
 	}
 }
 
-// The ledger records that a credential was sealed, never where it went.
+// The ledger records that a copy was sealed, never where it went.
 //
 // A ref is not the secret, but it is the unguessable capability half of the
 // handle — which is why the vault strips it from every error it raises and why
@@ -331,17 +302,7 @@ func TestTwoRolesSealingAtOnceLeaveExactlyOneCopy(t *testing.T) {
 // and verbatim here is careful nowhere.
 func TestTheLedgerRecordsTheSealWithoutTheAddress(t *testing.T) {
 	e := Setup(t)
-	vault := realVault(t, e)
-	log := slog.New(slog.DiscardHandler)
-
-	if _, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, "SMTP_PASSWORD", "SMTP_PASSWORD=a-relay-password"), log); err != nil {
-		t.Fatalf("sealing the relay password: %v", err)
-	}
-
-	ref, err := settings.Get(readCtx(e.WS), compose.NewSettingsStore(e.Pool), identity.SMTPPasswordRef)
-	if err != nil {
-		t.Fatalf("reading the recorded ref: %v", err)
-	}
+	ref := sealedBefore(t, e, realVault(t, e), identity.SMTPPasswordRef, "a-relay-password")
 	if ref == "" {
 		t.Fatal("nothing was sealed; the assertion below would pass vacuously")
 	}

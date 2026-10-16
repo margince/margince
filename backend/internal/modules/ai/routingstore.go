@@ -24,7 +24,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -35,16 +34,10 @@ type RoutingStore struct {
 	settings *settings.Store
 	// cfg reads and saves the binding under the locks the boot sources set.
 	cfg *config.Config
-	// keys resolves a provider's BYOK secret. It travels with the store for
-	// the same reason it travels with a parsed config: a routing document names
-	// providers and never their credentials, so the two meet only where a
-	// binding is turned into something that can serve.
+	// keys overrides how a provider's BYOK secret is resolved, for a test that
+	// hands a client its credentials directly. Nil reads each key's setting
+	// through cfg.
 	keys config.Lookup
-	// vault resolves a sealed BYOK key, for the one read that has to CALL a
-	// vendor rather than describe it. Optional: an installation with no vault
-	// keeps its credentials in the environment, which is where every
-	// installation had them before the vault existed, and `keys` still answers.
-	vault keyvault.Vault
 	// catalogue serves the one vendor (OpenRouter) whose list this store asks
 	// unauthenticated and unbound, for the ONE read that ranks by a published
 	// benchmark rather than by a stored binding. Optional: absent it, that
@@ -53,7 +46,8 @@ type RoutingStore struct {
 	// selectBrain builds the client every vendor read and save-time probe
 	// calls through; the zero value is SelectBrain.
 	selectBrain brainSelector
-	// log hears a save admitted unchecked; nil is slog.Default.
+	// log hears a save admitted unchecked and a key that could not be read;
+	// nil is slog.Default.
 	log *slog.Logger
 	// now dates what a Vertex location was found to serve; nil is time.Now.
 	now func() time.Time
@@ -63,46 +57,26 @@ type RoutingStore struct {
 }
 
 // NewRoutingStore builds the store over the settings catalog, reading the
-// binding and the task overrides through cfg.
-func NewRoutingStore(s *settings.Store, cfg *config.Config, keys config.Lookup) *RoutingStore {
-	return &RoutingStore{settings: s, cfg: cfg, keys: keys, served: &servedAtLocation{}}
+// binding, the task overrides and the provider keys through cfg.
+func NewRoutingStore(s *settings.Store, cfg *config.Config) *RoutingStore {
+	return &RoutingStore{settings: s, cfg: cfg, served: &servedAtLocation{}}
 }
 
-// WithVault returns a store that can resolve a sealed credential.
-//
-// A separate constructor rather than a fourth argument on NewRoutingStore: the
-// vault is needed by exactly one method, every other caller of this store has
-// no vault to give, and widening the constructor would make all of them say so.
-func (s *RoutingStore) WithVault(vault keyvault.Vault) *RoutingStore {
+// WithSealer returns a store that can open a sealed provider key, for the
+// reads that call a vendor rather than describe it.
+func (s *RoutingStore) WithSealer(sealer config.Sealer) *RoutingStore {
 	next := *s
-	next.vault = vault
+	next.cfg = s.cfg.WithSealer(sealer)
 	return &next
 }
 
-// resolvedKeys is the credential lookup a vendor call uses: the vault's sealed
-// keys for this request's workspace, falling back to the environment for a
-// vendor that has none sealed yet.
-//
-// Per request, because the workspace is the request's. A store-wide lookup
-// would either be one tenant's credentials serving another's call, or the
-// environment only — and the environment is exactly what an installation that
-// pasted its key into the UI does not have.
+// resolvedKeys is the credential lookup a vendor call uses. Per request,
+// because a sealed key opens only under the request's workspace.
 func (s *RoutingStore) resolvedKeys(ctx context.Context) config.Lookup {
-	if s.vault == nil {
+	if s.keys != nil {
 		return s.keys
 	}
-	workspace, err := credentialWorkspace(ctx)
-	if err != nil {
-		return s.keys
-	}
-	refs, err := settings.Get(ctx, s.settings, ProviderKeys)
-	if err != nil {
-		// The environment still answers. A settings read that fails is not a
-		// reason to report every vendor as unkeyed — that would tell a reader
-		// their credentials are gone when what failed was one query.
-		return s.keys
-	}
-	return SealedKeys(ctx, s.vault, workspace, refs, s.keys)
+	return KeyLookup(ctx, s.cfg, s.logger())
 }
 
 // Get reads the stored binding as canonical, so a row stored in the per-lane

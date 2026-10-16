@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 func putProviderSettings(t *testing.T, h aiRoutingHandlers, e *integration.Env, provider, body string) *httptest.ResponseRecorder {
@@ -31,7 +30,7 @@ func putProviderSettings(t *testing.T, h aiRoutingHandlers, e *integration.Env, 
 
 func TestSettingAProvidersHostRepointsEveryLaneOnIt(t *testing.T) {
 	e := integration.Setup(t)
-	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))
 	h := aiRoutingHandlers{store: store}
 	planted, err := ai.ParseRouting([]byte(pinnedBrokerRouting))
 	if err != nil {
@@ -65,7 +64,7 @@ func TestSettingAProvidersHostRepointsEveryLaneOnIt(t *testing.T) {
 
 func TestClearingAHostALaneStillNeedsIsRefusedNamingTheLanes(t *testing.T) {
 	e := integration.Setup(t)
-	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))
 	planted, err := ai.ParseRouting([]byte(pinnedBrokerRouting))
 	if err != nil {
 		t.Fatalf("the planted binding does not parse: %v", err)
@@ -86,7 +85,7 @@ func TestClearingAHostALaneStillNeedsIsRefusedNamingTheLanes(t *testing.T) {
 
 func TestAProviderThisBuildDoesNotKnowIsNotFound(t *testing.T) {
 	e := integration.Setup(t)
-	h := aiRoutingHandlers{store: ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool), config.Static(nil))}
+	h := aiRoutingHandlers{store: ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))}
 
 	rec := putProviderSettings(t, h, e, "no_such_vendor", `{"base_url":"https://x.example"}`)
 
@@ -100,7 +99,7 @@ func TestAProviderThisBuildDoesNotKnowIsNotFound(t *testing.T) {
 // routing is what was written, so sending the body back freezes nothing.
 func TestAWritesAnswerIsTheDocumentGETReadsBack(t *testing.T) {
 	e := integration.Setup(t)
-	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))
 	h := aiRoutingHandlers{store: store}
 	planted, err := ai.ParseRouting([]byte(pinnedBrokerRouting))
 	if err != nil {

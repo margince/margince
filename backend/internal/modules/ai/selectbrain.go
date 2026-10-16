@@ -255,8 +255,8 @@ func defaulted(val, fallback string) string {
 // operator who already exports OPENAI_API_KEY / GEMINI_API_KEY needs no extra
 // wiring.
 var cloudKeyEnv = projectProviders(
-	func(d providerDescriptor) string { return d.keyEnv },
-	func(d providerDescriptor) bool { return d.keyEnv != "" })
+	func(d providerDescriptor) string { return d.key.Env() },
+	func(d providerDescriptor) bool { return d.key != nil })
 
 // cloudKey returns the BYOK key for a cloud provider from its conventional
 // environment variable, or "" when unset (the caller fails closed).
@@ -294,40 +294,6 @@ var (
 	errNoProviderKey = errors.New("ai: provider needs an api key")
 	errNoBaseURL     = errors.New("ai: provider needs a base_url")
 )
-
-// The BYOK keys, under each vendor's own name, so an operator already
-// exporting one needs no extra wiring. Each provider still reads its key
-// through a Lookup. None is required: a cloud binding without its key fails at
-// construction, naming the variable (byokKeyRequired).
-var (
-	keyRoles = []config.Role{config.RoleAPI, config.RoleWorker}
-
-	anthropicKey = config.Define(config.Spec[string]{
-		Key: "anthropic_api_key", Env: cloudKeyEnv[providerAnthropic], Type: config.String, Secret: true, Roles: keyRoles,
-		Doc: "BYOK API key for the anthropic provider; required only when a binding names it.",
-	})
-	openAICompatibleKey = config.Define(config.Spec[string]{
-		Key: "openai_compatible_api_key", Env: cloudKeyEnv[providerOpenAICompatible], Type: config.String, Secret: true, Roles: keyRoles,
-		Doc: "BYOK API key for the openai_compatible provider; required only when a binding names it.",
-	})
-	openAIKey = config.Define(config.Spec[string]{
-		Key: "openai_api_key", Env: cloudKeyEnv[providerOpenAI], Type: config.String, Secret: true, Roles: keyRoles,
-		Doc: "BYOK API key for the openai provider; required only when a binding names it.",
-	})
-	geminiKey = config.Define(config.Spec[string]{
-		Key: "gemini_api_key", Env: cloudKeyEnv[providerGemini], Type: config.String, Secret: true, Roles: keyRoles,
-		Doc: "BYOK API key for the gemini provider; required only when a binding names it.",
-	})
-	geminiVertexKey = config.Define(config.Spec[string]{
-		Key: "gemini_vertex_sa_json", Env: cloudKeyEnv[providerGeminiVertex], Type: config.String, Secret: true, Roles: keyRoles,
-		Doc: "BYOK service-account key (the JSON key file's contents) for the gemini_vertex provider; required only when a binding names it.",
-	})
-)
-
-// Settings are this package's boot settings.
-func Settings() []config.Any {
-	return []config.Any{anthropicKey, openAICompatibleKey, openAIKey, geminiKey, geminiVertexKey}
-}
 
 // ParseBinding reads a "provider:model" spec and the endpoint that goes with it.
 //

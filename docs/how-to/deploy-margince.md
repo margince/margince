@@ -110,7 +110,7 @@ The path in step 2 is `/app/secrets/admin-password`, because the api's working d
 
 The AI binding in `seeds.ai_routing` is consumed at first boot, and the database is authoritative
 afterwards. An installation already running is rebound under Settings → AI instead. The conventional
-key variable (`GEMINI_API_KEY`, …) is read once, to seal a key into the vault on first boot. There is
+key variable (`GEMINI_API_KEY`, …) sets that key at boot and locks it in Settings. There is
 no routing file to mount for the api and the worker's serving role.
 
 The DB-less lanes still read one explicitly (`worker siteread`, `worker aitask` and the certification

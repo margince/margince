@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -50,7 +49,7 @@ func newPreviewHarness(t *testing.T) previewHarness {
 		RowScope: principal.RowScopeAll,
 	})
 	settingsStore := NewSettingsStore(e.Pool)
-	store := ai.NewRoutingStore(settingsStore, StoredConfig(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(settingsStore, StoredConfig(e.Pool))
 	planted, err := ai.ParseRouting([]byte(brokerRouting))
 	if err != nil {
 		t.Fatalf("the planted binding does not parse: %v", err)

@@ -400,7 +400,7 @@ func TestSetProviderSettings_DeniedWithoutUpdate(t *testing.T) {
 		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{routingSettingsObject: {Read: true}}},
 	})
 
-	_, err := NewRoutingStore(nil, nil, nil).SetProviderSettings(ctx, providerOpenAICompatible, ProviderSettings{BaseURL: brokerHost})
+	_, err := NewRoutingStore(nil, nil).SetProviderSettings(ctx, providerOpenAICompatible, ProviderSettings{BaseURL: brokerHost})
 
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("err = %v, want ErrPermissionDenied for a reader without update", err)
@@ -414,7 +414,7 @@ func TestSetProviderSettings_UnknownProviderIsNotFound(t *testing.T) {
 		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{routingSettingsObject: {Read: true, Update: true}}},
 	})
 
-	_, err := NewRoutingStore(nil, nil, nil).SetProviderSettings(ctx, "not_a_provider", ProviderSettings{BaseURL: brokerHost})
+	_, err := NewRoutingStore(nil, nil).SetProviderSettings(ctx, "not_a_provider", ProviderSettings{BaseURL: brokerHost})
 
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("err = %v, want ErrNotFound for a provider this build does not know", err)

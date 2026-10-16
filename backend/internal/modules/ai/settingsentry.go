@@ -63,15 +63,15 @@ var Routing = config.DefineStored(config.Spec[RoutingConfig]{
 }, config.Store{RBACObject: routingSettingsObject, AuditVerb: settingsAuditVerb, SurvivesDataReset: true})
 
 // ConfigSettings are the ai settings an administrator may also change at run
-// time. Settings, the boot-only provider keys, keeps its own list.
+// time, apart from the provider keys, which Settings lists.
 func ConfigSettings() []config.Any {
 	return []config.Any{Routing, TaskOverridesSetting, BudgetSettings, PriceSyncSettings}
 }
 
 // Definitions are the ai rows that are not configuration: the record of the
-// last price sync, and the provider key references.
+// last price sync.
 func Definitions() []settings.Definition {
-	return append([]settings.Definition{PriceSyncLastRun}, keyDefinitions()...)
+	return []settings.Definition{PriceSyncLastRun}
 }
 
 // validateStoredRouting holds a stored binding to the same bar the file always

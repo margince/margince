@@ -94,10 +94,12 @@ func (h Handlers) SetAiProviderKey(w http.ResponseWriter, r *http.Request, provi
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
-	// Both fields named is refused whatever they hold: the contract takes
-	// exactly one, and an empty second one is not an absent one.
+	// Both fields named is refused whatever they hold: the contract takes one,
+	// and an empty second one is not an absent one. A locked key answers its
+	// lock first.
 	if body.ApiKey != nil && body.ServiceAccountJson != nil {
-		httperr.Write(w, r, keyRefused("send api_key or service_account_json, not both"))
+		refused := keyRefused(provider, "send api_key or service_account_json, not both")
+		httperr.Write(w, r, h.providerKeys.LockFirst(r.Context(), provider, refused))
 		return
 	}
 	sent := ProviderCredential{APIKey: writtenKey(body.ApiKey), ServiceAccountJSON: writtenKey(body.ServiceAccountJson)}

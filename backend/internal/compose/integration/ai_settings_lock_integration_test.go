@@ -164,7 +164,7 @@ func TestAIPriceSyncSetByEnvIsLockedAgainstAChange(t *testing.T) {
 // binding is the process's own.
 func TestABootSetBindingIsTheOneAnInstallationServes(t *testing.T) {
 	e := SetupSearch(t)
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	if _, err := store.Replace(e.adminRoutingCtx(), parsedRouting(t, "fake-stored")); err != nil {
 		t.Fatalf("storing the binding: %v", err)
 	}

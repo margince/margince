@@ -3,33 +3,10 @@
 
 package compose
 
-// Moving a deployment-wide credential out of the process environment and into
-// the key vault, once, without asking the operator to do anything.
-//
-// Two credentials take this path: the outbound-relay password and the license
-// token. An installation that declares either one today keeps working and needs
-// no action — the value is sealed on the next boot and the declaration becomes
-// how the credential ARRIVED rather than where it lives. Once the boot log says
-// it is sealed, the operator may delete the declaration: the whole `license:`
-// block, or the `password:` line under `email.smtp`. Deleting only what it
-// points AT is not the same thing, and fails the boot. A named source that
-// yields nothing is an error, not an absence.
-// Nothing here can delete it for them: the process cannot edit its own
-// deployment.
-//
-// Leaving the declaration out falls back to the sealed copy. To stop using a
-// sealed relay password, the deployment says `password: ${none}`, and the boot
-// deletes the sealed copy. The license token has no such spelling: an
-// installation removing its license has stopped paying.
-//
-// The DECLARATION outranks the sealed copy, which is the opposite of the order
-// the BYOK provider keys take, and the difference is not an oversight. A
-// provider key has a human write path — the routing surface — so the vault has
-// to win or an admin's change would lose to a stale variable. These two have no
-// write path at all: no seeded role holds update on either entry, so the sealed
-// copy can only ever be a mirror of what the deployment declared. Reading the
-// declaration first is therefore what keeps in-place rotation working, and
-// re-sealing when it changes is what keeps the mirror honest.
+// The copies of two deployment credentials an earlier release sealed in the
+// key vault: the outbound-relay password and the license token. A declared
+// value wins and is never sealed. A copy is read once nothing declares the
+// credential, and `password: ${none}` deletes the relay's.
 
 import (
 	"context"
@@ -46,8 +23,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// deploymentSecret is one credential's move into the vault: where its ref is
-// recorded, and what to call it when something goes wrong.
+// deploymentSecret is one credential an earlier release sealed: where its ref
+// is recorded, and what to call it when something goes wrong.
 type deploymentSecret struct {
 	// ref is the settings entry holding the vault ref.
 	ref *settings.Entry[string]
@@ -70,21 +47,17 @@ type vaultBinding struct {
 	log   *slog.Logger
 }
 
-// resolveSecret returns the credential this process should use, and seals it if
-// the deployment declared one that the vault does not already hold.
-//
-// A declared credential always wins, so a boot never fails on the vault while
-// the operator is still supplying the value themselves. The vault only has to
-// answer once the declaration is gone — which is exactly when a failure to open
-// it must be reported AS a vault failure, because by then it is the only copy.
+// resolveSecret returns the credential this process should use: the declared
+// one, else the copy an earlier release sealed. A declared credential always
+// wins, so a boot never fails on the vault while the operator supplies the
+// value themselves.
 func resolveSecret(ctx context.Context, b vaultBinding, s deploymentSecret, declared string) (string, error) {
+	if declared != "" {
+		return declared, nil
+	}
 	stored, err := settings.Get(ctx, NewSettingsStore(b.pool), s.ref)
 	if err != nil {
 		return "", fmt.Errorf("compose: reading where %s is sealed: %w", s.name, err)
-	}
-	if declared != "" {
-		b.mirror(ctx, s, stored, declared)
-		return declared, nil
 	}
 	if stored == "" {
 		return "", nil
@@ -109,141 +82,14 @@ func (b vaultBinding) open(ctx context.Context, s deploymentSecret, stored strin
 	}
 	if len(secret) == 0 {
 		return "", fmt.Errorf("compose: %s is sealed in the key vault but the sealed value is empty — "+
-			"re-declare the credential at %s so it is sealed again", s.name, s.declaredAt)
+			"declare the credential at %s", s.name, s.declaredAt)
 	}
 	return string(secret), nil
 }
 
-// mirror keeps the sealed copy equal to what the deployment declares.
-//
-// Best-effort on purpose: the declared value is already in hand and this process
-// runs on it whatever happens here, so a vault that refuses must not cost the
-// installation its boot. What it costs instead is a log line, which is the only
-// thing that tells an operator the variable is not yet safe to remove.
-func (b vaultBinding) mirror(ctx context.Context, s deploymentSecret, stored, declared string) {
-	if stored != "" && b.opensTo(ctx, stored, declared) {
-		return
-	}
-	// Either nothing is sealed, or the sealed copy has gone stale against a
-	// rotated declaration, or it cannot be read at all. All three are repaired
-	// the same way: seal the value in hand and repoint the row at it.
-	ref, err := b.vault.Put(ctx, b.ws, []byte(declared))
-	if err != nil {
-		b.log.ErrorContext(ctx, "cannot seal a deployment credential into the key vault; it stays in the deployment configuration for now",
-			"credential_name", s.name, "declared_at", s.declaredAt, "error", err)
-		return
-	}
-	superseded, err := b.record(ctx, s, ref, declared)
-	if err != nil {
-		// The blob is sealed and nothing references it — inert, encrypted at
-		// rest, collected by nobody. Loud, because a stranded secret is not a
-		// non-event, and delete it rather than leave it for the next boot to
-		// strand another.
-		b.log.ErrorContext(ctx, "a sealed deployment credential could not be recorded; the deployment configuration is still the source",
-			"credential_name", s.name, "declared_at", s.declaredAt, "error", err)
-		keyvault.DeleteDetached(ctx, b.vault, b.log, b.ws.UUID, ref, "deployment credential seal failed")
-		return
-	}
-	if superseded == ref {
-		// Another role sealed the same value between this one's read and its
-		// write, and won. Its blob is the one the row names; the blob sealed
-		// here is the duplicate, and deleting it is the whole reason record()
-		// reports which ref lost rather than just whether the write happened.
-		keyvault.DeleteDetached(ctx, b.vault, b.log, b.ws.UUID, ref, "deployment credential sealed twice concurrently")
-		return
-	}
-	if superseded != "" {
-		// The superseded blob is deliberately NOT destroyed, which is the
-		// opposite of what the two arms above do, and the difference is the
-		// whole point: those delete a duplicate of a value still in hand, while
-		// this one would delete a DIFFERENT credential — and once the operator
-		// has deleted the declaration, the only copy of it.
-		//
-		// Three of this design's rules compose badly here. The declaration wins;
-		// a re-seal supersedes; and after retirement the vault is the only copy.
-		// So anything that puts a wrong value in the declaration for one boot —
-		// a stale variable restored from git, a botched pipeline, a value set by
-		// whoever can edit the deploy pipeline without touching the file the
-		// operator reviews — would irreversibly destroy the real credential.
-		// Unsetting the variable does not bring it back; nothing does.
-		//
-		// The cost of keeping it is an unreferenced blob per genuine rotation,
-		// encrypted at rest and reachable by nobody, which is the benign default
-		// keyvault.Put already documents for exactly this trade.
-		//
-		// Not "rotated" in the sentence either: this arm is also reached when the
-		// sealed copy could not be READ, and telling an operator their rotation
-		// landed when the vault merely hiccuped is the wrong half to be
-		// confident about.
-		b.log.InfoContext(ctx, "re-sealed a deployment credential into the key vault; the sealed copy did not match the declaration and has been left in place",
-			"credential_name", s.name, "declared_at", s.declaredAt)
-		return
-	}
-	// The one sentence that tells an operator they may now delete the
-	// declaration — the whole `license:` block, or the `password:` line.
-	b.log.InfoContext(ctx, "sealed a deployment credential into the key vault; the deployment configuration that declared it can be deleted",
-		"credential_name", s.name, "declared_at", s.declaredAt)
-}
-
-// opensTo reports whether the recorded ref already holds this exact value, so a
-// boot that has nothing to do does nothing at all — no second blob, no second
-// audit row.
-func (b vaultBinding) opensTo(ctx context.Context, stored, declared string) bool {
-	sealed, err := b.vault.Get(ctx, b.ws, keyvault.Ref(stored))
-	return err == nil && string(sealed) == declared
-}
-
-// record points the ref row at a freshly sealed blob and reports which ref is
-// now unreferenced — the previous one on a rotation, the NEW one when another
-// role won the race, and empty when this was the first seal.
-//
-// The read and the write are one transaction under the advisory lock the
-// settings writer itself takes, which is what makes the answer trustworthy. Two
-// serving roles boot together on a normal install — `make dev` starts both —
-// and without the lock each reads "nothing sealed", each seals its own blob,
-// and the loser's ciphertext is stranded in a table no sweeper walks. The lock
-// is per-key and re-entrant within the transaction, so SetTx re-taking it below
-// costs nothing.
-func (b vaultBinding) record(ctx context.Context, s deploymentSecret, ref keyvault.Ref, declared string) (superseded keyvault.Ref, err error) {
-	store := NewSettingsStore(b.pool)
-	err = store.WriteTx(ctx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, s.ref.Key()); err != nil {
-			return fmt.Errorf("compose: serializing the seal of %s: %w", s.name, err)
-		}
-		current, err := settings.GetTx(ctx, tx, s.ref)
-		if err != nil {
-			return err
-		}
-		if current != "" && b.sealedOnTxEquals(ctx, tx, current, declared) {
-			// Somebody else recorded this same value while this role was
-			// sealing. Theirs stands; ours is the spare.
-			superseded = ref
-			return nil
-		}
-		if err := settings.SetTx(ctx, store, tx, s.ref, string(ref)); err != nil {
-			return err
-		}
-		superseded = keyvault.Ref(current)
-		return nil
-	})
-	if err != nil {
-		return "", err
-	}
-	return superseded, nil
-}
-
-// sealedOnTxEquals opens a ref through the caller's own transaction, so the
-// comparison sees the same snapshot the lock is protecting rather than a second
-// one taken from the pool behind it.
-func (b vaultBinding) sealedOnTxEquals(ctx context.Context, tx pgx.Tx, ref, want string) bool {
-	sealed, err := b.vault.GetOn(ctx, tx, b.ws, keyvault.Ref(ref))
-	return err == nil && string(sealed) == want
-}
-
-// secretSealActor names the boot in the audit trail when a credential's ref row
-// is written. Distinct from the routing seed's actor: the two write different
-// settings for different reasons, and an audit row that could not tell them
-// apart would be the only record either one leaves.
+// secretSealActor names the boot in the audit trail when a sealed copy's ref
+// row is read or removed. Distinct from the routing seed's actor, so the audit
+// rows of the two tell apart.
 const secretSealActor = "deployment-secret-seal"
 
 // smtpPassword and licenseToken are the two credentials that take this path.
@@ -261,7 +107,7 @@ var (
 )
 
 // sealedSMTPPassword resolves the relay credential the mailer authenticates
-// with, and seals whatever the deployment declared. A password declared absent
+// with: the declared one, else a sealed copy. A password declared absent
 // resolves to nothing; RemoveDeclaredAbsentCredentials deleted its sealed copy
 // at boot.
 //
@@ -282,9 +128,8 @@ func sealedSMTPPassword(ctx context.Context, pool *pgxpool.Pool, vault keyvault.
 // vault where the deployment no longer declares one.
 //
 // A SOURCE rather than a token, because the watcher re-reads it. Only a
-// license.token_file renewed in place takes effect on the next re-check, and
-// re-reading keeps the sealed mirror current then; license.token is fixed at
-// boot.
+// license.token_file renewed in place takes effect on the next re-check;
+// license.token is fixed at boot.
 func SealedLicenseTokenSource(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, cfg *config.Config, log *slog.Logger) func() (string, error) {
 	declared := declaredLicenseToken(cfg)
 	return func() (string, error) {
@@ -299,10 +144,9 @@ func SealedLicenseTokenSource(ctx context.Context, pool *pgxpool.Pool, vault key
 // sealedSecret binds the boot principal and hands off to resolveSecret.
 //
 // An unprovisioned installation (ADR-0105: claimed but not yet bootstrapped)
-// has no workspace, so there is nowhere to seal a credential TO and nothing can
-// have been sealed before. What the deployment declares is the whole answer,
-// and that is not an error — every tenant route answers 503 until the claim
-// runs, so a boot that refused here would refuse the very thing that fixes it.
+// has no workspace, so nothing can have been sealed for it. What the
+// deployment declares is the whole answer. That is not an error: every tenant
+// route answers 503 until the claim runs, and a refusal here would block it.
 //
 // singletonWorkspace documents EnsureInstallation as having already refused a
 // multi-workspace database, and on the WORKER that is the api's doing rather

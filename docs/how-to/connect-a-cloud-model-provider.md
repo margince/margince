@@ -24,11 +24,9 @@ A binding names only the provider. **The BYOK key lives in the key vault.** You 
 Settings → AI → AI models → Providers (step 4). An `api_key:` in a binding is an error at start, and
 secrets never touch a config file.
 
-The value in the table above is a **seed**. When a start finds one, it may seal it into the vault, and
-after that you can remove it. It is still the source the runtime reads in two cases:
-
-- an installation with no vault in its config;
-- the debug and certification lanes, which have no database and open no vault at all.
+The value in the table above sets the key at start, and wins over the key in the vault. The key is
+then locked: Settings shows it as set and refuses a change. Margince never copies it into the vault.
+The debug and certification lanes, which have no database, read only this value.
 
 Choose a provider with its **own** client (`openai` or `gemini`) for three things. You get the reasoning
 and thinking settings of that vendor, token use split by kind, and a PDF sent to the model whole. `anthropic` carries
@@ -55,9 +53,9 @@ Either way it is the same shape, and **no key appears in it**. The key goes in o
 step 4. The dev default we ship binds **`gemini`** on `cheap_cloud` and `premium`:
 
 ```yaml
-# Native adapters — the key comes from the vault (Settings -> AI); GEMINI_API_KEY
-# / OPENAI_API_KEY seed it, and remain the source with no vault and in the
-# DB-less lanes:
+# Native adapters — the key comes from GEMINI_API_KEY / OPENAI_API_KEY where
+# set, else from the vault (Settings -> AI); the DB-less lanes read only the
+# variable:
 tiers:
   cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }
   premium:     { provider: gemini, model: gemini-3.5-flash }
@@ -181,8 +179,8 @@ can change it without a restart.
 
 For local dev, the short way is still the environment. Set the key for the provider you bind in
 `.env.local`: `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `OPENAI_COMPATIBLE_API_KEY`.
-`make dev` reads `.env.local`. The first start that finds a key **seals it into the vault**, and records
-where, so you can take the value out after that. Either way the binding has no key in it:
+`make dev` reads `.env.local`. A key set there wins over the one in the vault, and the screen refuses
+a change to it. Either way the binding has no key in it:
 
 ```sh
 # .env.local:  GEMINI_API_KEY=…
@@ -217,8 +215,8 @@ at a location you name. It is the provider to bind when the prompt must be handl
 To save it checks the key with Google once, and Margince does not store a key that Google refuses.
 
 `GEMINI_VERTEX_SA_JSON` is the way through the environment, as for any other key. It holds the
-*content* of the file, not a path: one line, inside `'…'` in `.env.local`. The first start seals it
-into the key vault. The project comes from the `project_id` in the key.
+*content* of the file, not a path: one line, inside `'…'` in `.env.local`. It wins over a key in the
+key vault. The project comes from the `project_id` in the key.
 
 **Choose a location.** It belongs to the provider, and you set it once: the Location field on the sheet
 of the `gemini_vertex` provider. `gemini_vertex` takes no `base_url`. The embeddings lane may name a

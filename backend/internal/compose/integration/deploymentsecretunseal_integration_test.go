@@ -66,9 +66,7 @@ func bootWith(t *testing.T, e *Env, vault keyvault.Vault, cfg *config.Config, lo
 func TestADeclaredRemovalDeletesTheSealedPasswordAndTheMailerSendsWithoutOne(t *testing.T) {
 	e := Setup(t)
 	vault := realVault(t, e)
-	if _, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, "SMTP_PASSWORD", "SMTP_PASSWORD=a-leaked-password"), slog.New(slog.DiscardHandler)); err != nil {
-		t.Fatalf("sealing the relay password: %v", err)
-	}
+	sealedBefore(t, e, vault, identity.SMTPPasswordRef, "a-leaked-password")
 	if sealedBlobCount(t, e) != 1 || smtpRefRows(t, e) != 1 {
 		t.Fatal("nothing was sealed; the removal below would pass vacuously")
 	}
@@ -116,9 +114,7 @@ func TestAnAbsentPasswordKeyStillAuthenticatesWithTheSealedCopy(t *testing.T) {
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
-	if _, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, "SMTP_PASSWORD", "SMTP_PASSWORD=a-relay-password"), log); err != nil {
-		t.Fatalf("sealing the relay password: %v", err)
-	}
+	sealedBefore(t, e, vault, identity.SMTPPasswordRef, "a-relay-password")
 	relay, err := compose.OperatorMailer(sealCtx(), e.Pool, vault, mailConfig(t, ""), log)
 	if err != nil {
 		t.Fatalf("booting with no password key: %v", err)
@@ -137,9 +133,7 @@ func TestADeclaredRemovalHoldsWhileMailIsSwitchedOff(t *testing.T) {
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
-	if _, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, "SMTP_PASSWORD", "SMTP_PASSWORD=a-leaked-password"), log); err != nil {
-		t.Fatalf("sealing the relay password: %v", err)
-	}
+	sealedBefore(t, e, vault, identity.SMTPPasswordRef, "a-leaked-password")
 	if err := compose.RemoveDeclaredAbsentCredentials(sealCtx(), e.Pool, vault, removedMailConfig(t, false), log); err != nil {
 		t.Fatalf("booting with mail off and the password declared removed: %v", err)
 	}
@@ -156,9 +150,7 @@ func TestARemovalLeavesARefSealedWhileItWasDeciding(t *testing.T) {
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
-	if _, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, "SMTP_PASSWORD", "SMTP_PASSWORD=the-old-password"), log); err != nil {
-		t.Fatalf("sealing the relay password: %v", err)
-	}
+	sealedBefore(t, e, vault, identity.SMTPPasswordRef, "the-old-password")
 	ws := ids.From[ids.WorkspaceKind](e.WS)
 	fresh, err := vault.Put(sealCtx(), ws, []byte("the-new-password"))
 	if err != nil {

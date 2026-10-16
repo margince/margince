@@ -30,9 +30,9 @@ The api and the worker follow the same rules, and each reads only the values it 
 | Key in `margince.yaml` | flag → environment variable → `--env-file` → `--config-file` → `margince.yaml` → default | The default. |
 | Setting an admin changes | value saved in the database → default; a boot source comes first for the [settings a boot source can set](#settings-a-boot-source-can-set) | The default, except for the company name and the reporting timezone, which bootstrap writes and which refuse to run unset. |
 | Seed in `margince.yaml` | `--config-file` → `margince.yaml` → default, root by root | Used when the company is created, and again by a data reset. |
-| AI provider key, Google or Microsoft app | value saved in Settings → environment variable | That provider, or that mailbox connection, is off. |
-| SMTP password | `email.smtp.password` reference → the copy sealed in the vault; `${none}` deletes that copy | The relay is used with no password. |
-| License | `MARGINCE_LICENSE` → `license.token` (or the older `license.token_file`) → the copy sealed in the vault | Production refuses to boot; `dev` and `test` run with no license. |
+| AI provider key, Google or Microsoft app | environment variable → value saved in Settings | That provider, or that mailbox connection, is off. |
+| SMTP password | `email.smtp.password` reference → a copy an earlier release sealed in the vault; `${none}` deletes that copy | The relay is used with no password. |
+| License | `MARGINCE_LICENSE` → `license.token` (or the older `license.token_file`) → a copy an earlier release sealed in the vault | Production refuses to boot; `dev` and `test` run with no license. |
 
 **Files.** How the base file and `--config-file` work together is in
 [The file layer](#the-file-layer-a-base-and-an-optional---config-file).
@@ -71,8 +71,8 @@ setting: `seeds.ai_routing` gives a new installation its first value, and Settin
 Without a binding or `--ai-fake`, the worker does not start its AI runner or its embedding lane.
 
 **Secrets.** An empty bootstrap password or license reference is an error that names the field.
-Sealed copies of the SMTP password and the license are in
-[The vault also holds the two deployment credentials](#the-vault-also-holds-the-two-deployment-credentials).
+Copies of the SMTP password and the license that an earlier release sealed are in
+[The vault may hold copies of the two deployment credentials](#the-vault-may-hold-copies-of-the-two-deployment-credentials).
 
 ### Variables for the keys of `margince.yaml`
 
@@ -180,10 +180,28 @@ value gets a 409 that names the source, and a save of the same value changes not
 | `MARGINCE_DEALS_MAINTENANCE_WRITES_ENABLED` | `true` | `deals.maintenance_writes_enabled` |
 | `MARGINCE_DEALS_LEGAL_REVIEW_ENABLED` | `true` | `deals.legal_review_enabled` |
 | `MARGINCE_PRIVACY_RETAIN_ONLY` | `false` | `privacy.retain_only` |
+| `ANTHROPIC_API_KEY` | — (secret) | `ai.provider_keys_anthropic` |
+| `OPENAI_COMPATIBLE_API_KEY` | — (secret) | `ai.provider_keys_openai_compatible` |
+| `OPENAI_API_KEY` | — (secret) | `ai.provider_keys_openai` |
+| `GEMINI_API_KEY` | — (secret) | `ai.provider_keys_gemini` |
+| `GEMINI_VERTEX_SA_JSON` | — (secret) | `ai.provider_keys_gemini_vertex`, the JSON of the key file |
+| `TYPESAFE_API_KEY` | — (secret) | `ai.provider_keys_jev` |
+| `JEV_COMPATIBLE_API_KEY` | — (secret) | `ai.provider_keys_jev_compatible` |
 
 A data reset keeps the saved rows of the first 12 settings, from `installation.name` to
-`identity.oidc_group_role_map`, and of `ai.routing`, `ai.task_overrides` and `ai.budget`. It
-deletes the rest.
+`identity.oidc_group_role_map`, of `ai.routing`, `ai.task_overrides` and `ai.budget`, and of each
+`ai.provider_keys_*`. It deletes the rest.
+
+Each `ai.provider_keys_*` is a secret. Its saved row holds only a reference to the key sealed in the
+key vault. In `margince.yaml` it takes only a `${env:...}` or `${file:...}` reference. A boot value
+is read where it is and is never sealed into the vault. A key sealed before is left in place, and
+read again once no boot source sets the key. A save of a boot-set key gets a 409 even when it sends
+the same key, so a save cannot confirm a guess of it.
+
+The Google and Microsoft apps are not in the table, because each takes several variables:
+`MARGINCE_GMAIL_CLIENT_ID` and `MARGINCE_GMAIL_CLIENT_SECRET`; `MARGINCE_GRAPH_CLIENT_ID`,
+`MARGINCE_GRAPH_CLIENT_SECRET` and `MARGINCE_GRAPH_TENANT`. An app these set wins over the app saved
+in Settings, and a save or a removal of the saved app gets a 409. The saved app is left in place.
 
 A value in each `ai.*` setting replaces the whole document; no source merges into another. A
 boot-set `ai.routing` also refuses a change to the settings of one provider, and it wins over
@@ -1038,32 +1056,25 @@ command line, where any user on the machine can read argv.
 |---|---|---|
 | `MARGINCE_KEYVAULT_ROOT_KEY` | — | base64 (std) of 32 bytes; set it to turn on the vault. Generate: `openssl rand -base64 32` |
 
-### The vault also holds the two deployment credentials
+### The vault may hold copies of the two deployment credentials
 
-Next to connector credentials, the vault holds two credentials that come by another route. The
-deployment declares the **outbound relay password** (`email.smtp.password`) and the **license
-token** (`license.token`). On the first boot that sees one, Margince seals the value into the vault,
-and the installation records where the value is now. The operator has nothing to do, and the boot
-log says when it has happened:
+The deployment declares the **outbound relay password** (`email.smtp.password`) and the **license
+token** (`license.token`). Margince reads each where it is declared, and never seals a declared
+value into the vault.
 
-```
-sealed a deployment credential into the key vault; the deployment configuration
-that declared it can be deleted  credential_name="the license token" declared_at=license.token
-```
+An earlier release sealed each declared value into the vault, and recorded where. Such a copy stays.
+While the deployment declares the credential, the declaration wins and the copy is not read. Once
+nothing declares it, the copy is the answer. So an installation that removed its declaration
+after that release keeps starting.
 
-Once that line shows up, the declaration may be deleted, and the installation keeps starting on the
-sealed copy. A process cannot edit its own deployment, so you delete it yourself.
-
-**Delete the declaration and its source.** Say you drop the variable, or remove the file, while the
-`license:` block or the `password:` line is still in `margince.yaml`. Then the boot fails while
-it loads its settings, before Margince looks at the vault. A `${file:…}` that no longer exists cannot be
-read. A `${env:…}` that is unset is a named source that gave nothing, which is an error.
-
-Remove the whole `license:` block, or the `password:` line from `email.smtp`. Then the variable or
-the file can go too.
+**Delete the declaration and its source together.** Say you drop the variable, or remove the file,
+while the `license:` block or the `password:` line is still in `margince.yaml`. Then the boot fails
+while it loads its settings, before Margince looks at the vault. A `${file:…}` that no longer
+exists cannot be read. A `${env:…}` that is unset is a named source that gave nothing, which is an
+error.
 
 **Remove the relay password with `${none}`.** To delete the `password:` line does not switch the
-installation to a relay with no password: the sealed copy keeps answering. Write the line as
+installation to a relay with no password: a sealed copy keeps answering. Write the line as
 `password: ${none}` instead. That is the case for a relay that takes no credential, and for a relay
 password that is no longer secret. On the next boot, the api and the worker each do three things:
 
@@ -1088,22 +1099,13 @@ and so does `email.smtp.password` next to `password_file`. A `${env:…}` or `${
 whose target holds the text `${none}` is refused as well. A removal is always written where the
 setting is declared.
 
-Copies sealed before a change of password are not deleted by `${none}`. Margince keeps them on
-purpose (see below), and nothing points to them.
-
 This does not matter for the license. An installation that removes its license has stopped paying,
 and a production boot refuses a missing license in any case.
 
-**The vault copies the declaration.** No part of the product changes either credential, and no role
-Margince ships with holds the grant to write one. So the sealed copy only copies what the deployment
-declares, and that is why the declaration wins when both exist. To change it, put the new value
-where the declaration reads it (the variable or the file), and the next boot seals it again.
-
-Margince leaves the old ciphertext in place. Only the declaration starts a new seal, and an old
-variable or a broken pipeline can get the declaration wrong. To remove the old copy would let one
-bad boot delete, for good, the only copy of a credential nobody picked to replace. The cost is one
-blob nothing points to per change, sealed at rest and open to nobody. A BYOK provider key has the
-other order (the vault wins), because the routing screen can change one.
+**A declaration does not replace the copy.** No part of the product changes either credential, and
+no role Margince ships with holds the grant to write one. A declaration that differs from the copy
+wins, and the copy is left in place. To remove it would let one bad boot, with an old variable or a
+broken pipeline, delete for good a credential nobody picked to replace.
 
 **A vault that cannot be opened says so**, in two places. There are two ways it can fail, and each
 needs its own words.
@@ -1648,11 +1650,11 @@ There are three postures. This is what each one does at boot:
 | **token checked and good** | starts | `margince_license_posture{state="valid"} 1`, plus `margince_license_seats` when the license grants a seat count |
 | **token refused** | **refuses to boot** (api and worker both), naming the own reason of the module and the setting to fix | (none) |
 
-On the first boot that reads a token, Margince stores it, sealed, in the key vault. After that, the
-declaration above may be removed. See
-[the vault also holds the two deployment credentials](#the-vault-also-holds-the-two-deployment-credentials)
-for what that changes about rotation. It also covers the boot error that a vault Margince cannot
-reach causes, in place of an `absent` posture.
+Margince reads the token where it is declared, and never seals it. A token an earlier release sealed
+in the key vault is read only when nothing declares one. See
+[the vault may hold copies of the two deployment credentials](#the-vault-may-hold-copies-of-the-two-deployment-credentials).
+It also covers the boot error that a vault Margince cannot reach causes, in place of an `absent`
+posture.
 
 **A production installation serves only on a license.** The posture decides it, and `MARGINCE_ENV`
 fails closed. So an installation that names nothing is production, and must have a license. When
@@ -1749,13 +1751,10 @@ Model credentials (BYOK cloud tiers) live in the **key vault**. An admin puts th
 Settings → AI → AI models → Providers. No binary flag holds one, and the binding does not either: a
 binding names providers and never a credential.
 
-The normal environment variable of a provider is a **seed** for a role the vault backs. A boot that
-reads a binding may store what it finds in the vault, and record where. After that, you can remove
-the variable; check that the boot log said so first.
-
-In two cases the variable stays the source at runtime, read on every run. One is an installation
-with no vault set up. The other is the debug and certification lanes that run with no database,
-which open no vault. To remove the variable breaks those.
+The normal environment variable of a provider sets its key at boot. It wins over a key saved in
+Settings and locks it: a save there gets a 409. Margince reads it where it is and never seals it
+into the vault. The debug and certification lanes, which run with no database, read only the
+variable.
 
 The **binding** is a stored setting; there is no routing file. A new installation declares it under
 `seeds.ai_routing` (see `config/margince.example.yaml`); you bind a running one again from Settings
@@ -1773,12 +1772,11 @@ Models, on the Providers card (`PUT /v1/ai/provider-keys/{provider}`). Test on t
 the vendor whether the stored key works; what it calls for each provider is in
 [ai-provider-key-test.md](ai-provider-key-test.md).
 
-The environment variable in the table below is a seed. Margince stores a key it finds there in the
-vault on the next boot, and you can then delete the variable. Both routes fail closed. Margince
-refuses a bound provider with a key from no route when it builds the adapter, and names what is
-missing.
+The environment variable in the table below sets the key at boot, and then wins over the key saved
+in the vault. Both routes fail closed. Margince refuses a bound provider with a key from no route
+when it builds the adapter, and names what is missing.
 
-| provider | key env var (seed) | `base_url` | notes |
+| provider | key env var | `base_url` | notes |
 |---|---|---|---|
 | `fake` | (none) | (none) | a fixed stub that runs offline (dev/test) |
 | `ollama` | (none) | can be skipped (default `localhost:11434`) | local; may run under `sovereign` |

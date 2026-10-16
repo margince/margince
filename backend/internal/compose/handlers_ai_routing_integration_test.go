@@ -73,7 +73,7 @@ func TestAPinnedEUBindingPreviewsCleanAndSavesFromTheDocumentGETAnswered(t *test
 		RowScope: principal.RowScopeAll,
 	})
 	settingsStore := NewSettingsStore(e.Pool)
-	store := ai.NewRoutingStore(settingsStore, StoredConfig(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(settingsStore, StoredConfig(e.Pool))
 	pinned, err := ai.ParseRouting([]byte(pinnedBrokerRouting))
 	if err != nil {
 		t.Fatalf("the planted binding does not parse: %v", err)
@@ -99,7 +99,7 @@ func TestAPinnedEUBindingPreviewsCleanAndSavesFromTheDocumentGETAnswered(t *test
 func TestReadingTheBindingAndWritingItBackKeepsEveryResidencyPin(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := routingAdmin(e)
-	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))
 	pinned, err := ai.ParseRouting([]byte(pinnedBrokerRouting))
 	if err != nil {
 		t.Fatalf("the planted binding does not parse: %v", err)
@@ -139,7 +139,7 @@ func TestReadingTheBindingAndWritingItBackKeepsEveryResidencyPin(t *testing.T) {
 func TestRepointingALaneKeepsItsProvidersPinsButNotItsServingPreferences(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := routingAdmin(e)
-	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))
 	pinned, err := ai.ParseRouting([]byte(pinnedBrokerRouting))
 	if err != nil {
 		t.Fatalf("the planted binding does not parse: %v", err)
@@ -189,7 +189,7 @@ func TestRepointingALaneKeepsItsProvidersPinsButNotItsServingPreferences(t *test
 func TestAStoredThinkingLevelIsClearedByWritingDefault(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := routingAdmin(e)
-	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))
 	leveled, err := ai.ParseRouting([]byte(`profile: cloud_frontier
 tiers:
   cheap_cloud: {provider: gemini, model: gemini-3.1-flash-lite, thinking_level: low}

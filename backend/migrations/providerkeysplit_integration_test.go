@@ -1,0 +1,71 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package migrations_test
+
+import (
+	"context"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+)
+
+const providerKeySplitMigration = "core/1792139047_each_provider_key_is_its_own_setting"
+
+func providerKeyRows(ctx context.Context, t *testing.T, conn *pgx.Conn) map[string]string {
+	t.Helper()
+	rows, err := conn.Query(ctx, `SELECT key, value::text FROM setting WHERE key LIKE 'ai.provider_keys%'`)
+	if err != nil {
+		t.Fatalf("reading the provider key rows: %v", err)
+	}
+	got, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) ([2]string, error) {
+		var kv [2]string
+		err := row.Scan(&kv[0], &kv[1])
+		return kv, err
+	})
+	if err != nil {
+		t.Fatalf("reading the provider key rows: %v", err)
+	}
+	out := map[string]string{}
+	for _, kv := range got {
+		out[kv[0]] = kv[1]
+	}
+	return out
+}
+
+// Each provider's ref moves to its own row unchanged, so every sealed blob is
+// still named. An empty ref names nothing and does not move.
+func TestEachProviderKeyRefMovesToItsOwnRow(t *testing.T) {
+	dsn, _ := dsns(t)
+	conn := connect(t, dsn)
+	headSchema(t, conn)
+	ctx := context.Background()
+	if _, err := conn.Exec(ctx, `INSERT INTO setting (key, value) VALUES
+		('ai.provider_keys', '{"gemini":"mgv.1.ws.aaa","gemini_vertex":"mgv.1.ws.bbb","openai":""}')`); err != nil {
+		t.Fatalf("seeding the map row: %v", err)
+	}
+
+	runFile(ctx, t, conn, providerKeySplitMigration+".up.sql")
+
+	want := map[string]string{
+		"ai.provider_keys_gemini":        `"mgv.1.ws.aaa"`,
+		"ai.provider_keys_gemini_vertex": `"mgv.1.ws.bbb"`,
+	}
+	got := providerKeyRows(ctx, t, conn)
+	if len(got) != len(want) {
+		t.Fatalf("rows after the split = %v, want %v", got, want)
+	}
+	for key, value := range want {
+		if got[key] != value {
+			t.Errorf("%s = %s, want %s", key, got[key], value)
+		}
+	}
+
+	runFile(ctx, t, conn, providerKeySplitMigration+".down.sql")
+	back := providerKeyRows(ctx, t, conn)
+	if len(back) != 1 || back["ai.provider_keys"] != `{"gemini": "mgv.1.ws.aaa", "gemini_vertex": "mgv.1.ws.bbb"}` {
+		t.Errorf("rows after the way down = %v, want the one map row", back)
+	}
+}

@@ -235,7 +235,7 @@
       }
     },
     "ai": {
-      "description": "AIConfig carries operator-posture switches for the AI runtime. It names no providers or models (that is `seeds.ai_routing`, and the stored binding once an installation is running) and holds no secret — only deployment posture. capture_payloads turns on Layer-3 AI payload capture (ai_call_payload); OFF by default, because it stores special-category-adjacent content that then ages under the retention engine and the Art. 17 erasure cascade.",
+      "description": "AIConfig carries operator-posture switches for the AI runtime. It names no providers or models (that is `seeds.ai_routing`, and the stored binding once an installation is running). A provider key arrives as a reference, never a literal. capture_payloads turns on Layer-3 AI payload capture (ai_call_payload); OFF by default, because it stores special-category-adjacent content that then ages under the retention engine and the Art. 17 erasure cascade.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -294,6 +294,69 @@
               "type": "boolean"
             }
           }
+        },
+        "provider_keys_anthropic": {
+          "description": "The anthropic provider's BYOK API key, as a reference: ${env:...} or ${file:...}. A value here locks the key against a change in the product.",
+          "type": "string",
+          "pattern": "^\\s*$|^\\s*\\$\\{(env|file):[^}]*[^}\\s][^}]*\\}\\s*$",
+          "examples": [
+            "${env:VARIABLE_NAME}",
+            "${file:/run/secrets/name}"
+          ]
+        },
+        "provider_keys_openai_compatible": {
+          "description": "The openai_compatible provider's BYOK API key, as a reference: ${env:...} or ${file:...}. A value here locks the key against a change in the product.",
+          "type": "string",
+          "pattern": "^\\s*$|^\\s*\\$\\{(env|file):[^}]*[^}\\s][^}]*\\}\\s*$",
+          "examples": [
+            "${env:VARIABLE_NAME}",
+            "${file:/run/secrets/name}"
+          ]
+        },
+        "provider_keys_openai": {
+          "description": "The openai provider's BYOK API key, as a reference: ${env:...} or ${file:...}. A value here locks the key against a change in the product.",
+          "type": "string",
+          "pattern": "^\\s*$|^\\s*\\$\\{(env|file):[^}]*[^}\\s][^}]*\\}\\s*$",
+          "examples": [
+            "${env:VARIABLE_NAME}",
+            "${file:/run/secrets/name}"
+          ]
+        },
+        "provider_keys_gemini": {
+          "description": "The gemini provider's BYOK API key, as a reference: ${env:...} or ${file:...}. A value here locks the key against a change in the product.",
+          "type": "string",
+          "pattern": "^\\s*$|^\\s*\\$\\{(env|file):[^}]*[^}\\s][^}]*\\}\\s*$",
+          "examples": [
+            "${env:VARIABLE_NAME}",
+            "${file:/run/secrets/name}"
+          ]
+        },
+        "provider_keys_gemini_vertex": {
+          "description": "The gemini_vertex provider's service-account key (the key file's JSON), as a reference: ${env:...} or ${file:...}. A value here locks the key against a change in the product.",
+          "type": "string",
+          "pattern": "^\\s*$|^\\s*\\$\\{(env|file):[^}]*[^}\\s][^}]*\\}\\s*$",
+          "examples": [
+            "${env:VARIABLE_NAME}",
+            "${file:/run/secrets/name}"
+          ]
+        },
+        "provider_keys_jev": {
+          "description": "The jev decision provider's API key, as a reference: ${env:...} or ${file:...}. A value here locks the key against a change in the product.",
+          "type": "string",
+          "pattern": "^\\s*$|^\\s*\\$\\{(env|file):[^}]*[^}\\s][^}]*\\}\\s*$",
+          "examples": [
+            "${env:VARIABLE_NAME}",
+            "${file:/run/secrets/name}"
+          ]
+        },
+        "provider_keys_jev_compatible": {
+          "description": "A jev_compatible decision server's API key, as a reference: ${env:...} or ${file:...}. A value here locks the key against a change in the product.",
+          "type": "string",
+          "pattern": "^\\s*$|^\\s*\\$\\{(env|file):[^}]*[^}\\s][^}]*\\}\\s*$",
+          "examples": [
+            "${env:VARIABLE_NAME}",
+            "${file:/run/secrets/name}"
+          ]
         }
       }
     },

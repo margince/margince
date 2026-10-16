@@ -16,14 +16,13 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestAnUnknownNestedKeyIsRefusedNamingItsPathOnEveryRoutingWrite(t *testing.T) {
 	e := integration.Setup(t)
 	settings := NewSettingsStore(e.Pool)
-	store := ai.NewRoutingStore(settings, StoredConfig(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(settings, StoredConfig(e.Pool))
 	routing := aiRoutingHandlers{store: store}
 	admin := aiAdminHandlers{store: ai.NewAdminStore(e.DB(), settings, StoredConfig(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))}
 	ctx := e.As(e.AdminUser, nil, principal.Permissions{
@@ -79,7 +78,7 @@ func TestAnUnknownNestedKeyIsRefusedNamingItsPathOnEveryRoutingWrite(t *testing.
 
 func TestAVertexProviderEntryWithAHostIsRefusedNamingTheEntry(t *testing.T) {
 	e := integration.Setup(t)
-	h := aiRoutingHandlers{store: ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool), config.Static(nil))}
+	h := aiRoutingHandlers{store: ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))}
 
 	rec := putProviderSettings(t, h, e, "gemini_vertex", `{"base_url":"https://x.example","location":"eu"}`)
 
