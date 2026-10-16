@@ -8,8 +8,8 @@
 package gates
 
 // An acceptance of the CLA covers the text it was shown, under the version that
-// text carries. CLA.md's header sets that version, and every place cla.yml names a
-// version must agree with it: the sentence a contributor posts, the prompt, the
+// text carries. CLA.md's header sets that version, and every version cla.yml names
+// must agree with it. Those are the sentence a contributor posts, the prompt, the
 // signatures file and its commit messages. The text itself is pinned per version,
 // so it cannot change under a version somebody has already accepted.
 
