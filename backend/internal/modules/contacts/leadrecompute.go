@@ -80,21 +80,10 @@ func recomputeLeadScoreTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now
 		return nil // promoted/disqualified leads keep their last score
 	}
 
-	signals, err := leadBehavioralSignals(ctx, tx, leadID)
+	scored, err := scoreLeadFor(ctx, tx, leadID, now, title, source)
 	if err != nil {
 		return err
 	}
-	// A rep's own inputs count toward the same weighted total — that is the
-	// point of supplying them — and stay their own labelled rows.
-	manual, err := leadManualFactors(ctx, tx, leadID)
-	if err != nil {
-		return err
-	}
-	intents, err := loadSourceIntents(ctx, tx)
-	if err != nil {
-		return err
-	}
-	scored := ScoreLeadDetail(deref(title), intents.Of(deref(source)), signals, now).withManual(manual)
 	machine := scored.Score
 
 	// Sticky override: the machine value moves score_computed, never score.
@@ -141,6 +130,29 @@ func recomputeLeadScoreTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now
 	return storekit.EmitEvent(ctx, tx, auditID, leadID.UUID, crmcontracts.PublicEventLeadUpdated{
 		ChangedFields: map[string]any{"delta": map[string]any{"score": machine}},
 	})
+}
+
+// scoreLeadFor is the weighted-signal formula over a lead's title and source,
+// plus the signals the database holds for it. The title and source are
+// arguments because an edit scores the values it is about to write.
+func scoreLeadFor(
+	ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now time.Time, title, source *string,
+) (LeadScoring, error) {
+	signals, err := leadBehavioralSignals(ctx, tx, leadID)
+	if err != nil {
+		return LeadScoring{}, err
+	}
+	// A rep's own inputs count toward the same weighted total, and stay their
+	// own labelled rows.
+	manual, err := leadManualFactors(ctx, tx, leadID)
+	if err != nil {
+		return LeadScoring{}, err
+	}
+	intents, err := loadSourceIntents(ctx, tx)
+	if err != nil {
+		return LeadScoring{}, err
+	}
+	return ScoreLeadDetail(deref(title), intents.Of(deref(source)), signals, now).withManual(manual), nil
 }
 
 // fieldKeyScoreComputed names the machine score on the audit trail and

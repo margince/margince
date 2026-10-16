@@ -166,6 +166,22 @@ func (p *Patch) recordAssignment(column, sqlName string, oldVal, newVal any) {
 	p.after[column] = newVal
 }
 
+// SetStamp stages a column the write sets as a consequence of the edit, not as a
+// field the caller edited. The provenance of a name a human just typed is one.
+// It rides the same UPDATE, so the row's version moves once for the edit. It
+// stays out of the audit images, which describe what the caller changed.
+//
+//craft:ignore naked-any same column-value contract as Set
+func (p *Patch) SetStamp(column string, val any) {
+	if i, seen := p.slotBySQLName[column]; seen {
+		p.args[i] = val
+		return
+	}
+	p.args = append(p.args, val)
+	p.slotBySQLName[column] = len(p.args) - 1
+	p.sets = append(p.sets, fmt.Sprintf("%s = $%d", column, len(p.args)))
+}
+
 func (p *Patch) Empty() bool { return len(p.sets) == 0 }
 
 // liveClause renders the archive predicate every guarded write and its
