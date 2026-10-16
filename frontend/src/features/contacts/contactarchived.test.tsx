@@ -105,7 +105,7 @@ describe("the contact page on an archived row", () => {
   it("says the contact could not be opened when the row read fails", async () => {
     const routes = archivedContactRoutes();
     routes["GET /contacts/p-1"] = () =>
-      jsonResponse({ status: 500, code: "internal_error" }, 500);
+      jsonResponse({ status: 500, code: "internal" }, 500);
     mount(routes);
 
     expect(await screen.findByText(en["contact.page.notOpened"])).toBeTruthy();

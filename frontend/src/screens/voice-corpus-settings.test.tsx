@@ -368,9 +368,10 @@ describe("handing a file to the Settings voice card", () => {
     stubApi({
       status: 422,
       body: {
-        code: "brand_new_rule",
+        code: "validation_error",
         title: "Unprocessable",
         detail: "That source is not eligible.",
+        details: { errors: [{ field: "content", code: "brand_new_rule" }] },
       },
     });
     render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);

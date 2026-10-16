@@ -439,6 +439,9 @@ export const TeamWeeklyForbidden: Story = {
   render: part(<TeamWeeklyPanel reach="every_team" />, {
     ...TEAM_ROUTES,
     "GET /weekly-reviews/team": () =>
-      jsonResponse({ title: "Forbidden", code: "forbidden" }, 403),
+      jsonResponse(
+        { title: "Forbidden", status: 403, code: "permission_denied" },
+        403,
+      ),
   }),
 };

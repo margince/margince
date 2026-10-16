@@ -18,6 +18,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { AssignProjectOwnerAction } from "./projectowner";
 import type { Project } from "./projects.form";
 
@@ -262,7 +263,7 @@ describe("AssignProjectOwnerAction", () => {
         body: {
           title: "Conflict",
           detail: "the project was changed by someone else",
-          code: "version_conflict",
+          code: "version_skew",
         },
         status: 409,
       },
@@ -276,7 +277,7 @@ describe("AssignProjectOwnerAction", () => {
 
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(await panel.findByRole("alert")).toHaveTextContent(
-      "the project was changed by someone else",
+      en["common.versionSkew"],
     );
     expect(screen.getByRole("dialog")).toBeInTheDocument();
 

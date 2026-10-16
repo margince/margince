@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { LeadBoard, scoreTone } from "./leadpresentation";
 
 type Lead = components["schemas"]["Lead"];
@@ -157,7 +158,7 @@ describe("lead work-board presentation", () => {
         async () =>
           new Response(
             JSON.stringify({
-              code: "version_conflict",
+              code: "version_skew",
               detail: "Somebody else moved this lead.",
             }),
             { status: 409, headers: { "content-type": "application/json" } },
@@ -176,7 +177,7 @@ describe("lead work-board presentation", () => {
     dropOn("contacted", lead.id);
 
     await waitFor(() => expect(invalidated).toContainEqual(["lead", lead.id]));
-    expect(await screen.findByText(/moved this lead/)).toBeTruthy();
+    expect(await screen.findByText(en["common.versionSkew"])).toBeTruthy();
   });
   // The two terminal columns exist, are folded, and state a figure the board's
   // own page cannot see.

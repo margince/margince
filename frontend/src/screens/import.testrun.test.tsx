@@ -447,8 +447,17 @@ describe("the test run", () => {
           return jsonResponse(
             {
               status: 422,
-              code: "validation_failed",
+              code: "validation_error",
               detail: "Two columns are mapped to Email.",
+              details: {
+                errors: [
+                  {
+                    field: "mapping",
+                    code: "duplicate_target",
+                    message: "Two columns are mapped to Email.",
+                  },
+                ],
+              },
             },
             422,
           );

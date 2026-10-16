@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { problemCode } from "../lib/problem";
 import {
   api,
   CACHE_ANSWER_GRACE_MS,
@@ -137,10 +138,8 @@ describe("a gateway that gave up on the app behind it", () => {
     });
 
     expect(response.status).toBe(502);
-    expect(error).toMatchObject({
-      code: "gateway_unavailable",
-      status: 502,
-    });
+    expect(problemCode(error)).toBe("gateway_unavailable");
+    expect(error).toMatchObject({ status: 502 });
   });
 
   // A gateway status the app DID answer keeps its own body: the server's
@@ -151,7 +150,10 @@ describe("a gateway that gave up on the app behind it", () => {
       vi.fn(
         async () =>
           new Response(
-            JSON.stringify({ code: "maintenance_mode", detail: "upgrading" }),
+            JSON.stringify({
+              code: "service_unavailable",
+              detail: "upgrading",
+            }),
             {
               status: 503,
               headers: { "Content-Type": "application/problem+json" },
@@ -164,7 +166,7 @@ describe("a gateway that gave up on the app behind it", () => {
       params: { path: { id: "01a0-4cd2" } },
     });
 
-    expect(error).toMatchObject({ code: "maintenance_mode" });
+    expect(error).toMatchObject({ code: "service_unavailable" });
   });
 
   // An ordinary refusal is untouched.
