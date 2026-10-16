@@ -231,8 +231,8 @@ func TestCloudProvidersBoundNamesEveryCloudVendorAndOnlyThose(t *testing.T) {
 	})
 }
 
-// A key a boot source sets refuses its removal before the vault is asked, as
-// a save does: a role with no vault still answers the lock.
+// A key a boot source sets refuses its removal before the vault is asked, as a
+// save does. A role with no vault still answers the lock.
 func TestRemovingABootSetKeyIsLockedBeforeTheVaultIsAsked(t *testing.T) {
 	store := NewProviderKeyStore(configtest.MustLoadEnv(t, Settings(), "GEMINI_API_KEY=sk-boot"))
 	admin := keySeatCtx(principal.ObjectGrant{Read: true, Update: true})

@@ -682,8 +682,8 @@ func TestAnUnknownVendorIsNotFoundRatherThanDefaulted(t *testing.T) {
 	}
 }
 
-// A client id the environment sets without its secret composes no app, so it
-// locks nothing: the stored app stays the admin's to write and remove.
+// A client id the environment sets without its secret composes no app. So it
+// locks nothing, and the stored app stays the admin's to write and remove.
 func TestAnEnvClientIDWithoutItsSecretLeavesTheStoredAppWritable(t *testing.T) {
 	e, _ := setupGoogleConnect(t, "env-only.apps.googleusercontent.com", "")
 	secret := httpSecret
