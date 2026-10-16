@@ -8,6 +8,7 @@ import {
   type SettingsPage,
   type SettingsPageId,
 } from "./settingscatalog";
+import { SETTINGS_SECTIONS } from "./settingssections";
 
 /**
  * Finding a setting by the word a reader already has for it.
@@ -195,6 +196,26 @@ export function settingsPageAliases(
   ];
 }
 
+/** The names of the panels and settings `page` draws, in the reader's words. */
+export function settingsPageSections(
+  page: SettingsPageId,
+  t: (key: MessageKey) => string,
+): readonly string[] {
+  return SETTINGS_SECTIONS[page].map((key) => t(key));
+}
+
+/** Everything `page` answers to besides its own name, for the ⌘K palette. */
+export function settingsPageKeywords(
+  page: SettingsPageId,
+  t: (key: MessageKey) => string,
+  reader: SettingsSearchReader = NO_ADMIN_ROLE,
+): readonly string[] {
+  return [
+    ...settingsPageAliases(page, reader),
+    ...settingsPageSections(page, t),
+  ];
+}
+
 /**
  * A form of the text that matches the way contacts actually type.
  *
@@ -217,6 +238,8 @@ export type SettingsHit = {
   label: string;
   /** The group it sits under, so a hit says where it lives. */
   group: string;
+  /** The setting on the page that matched, when nothing above it did. */
+  section: string | undefined;
 };
 
 /**
@@ -249,14 +272,15 @@ export function settingsSearch(
     const label = t(`settings.tab.${page.id}`);
     const group = t(groupHeadingKey(page.group));
     const sub = t(`settings.page.${page.id}.sub`);
-    const fields = [
-      // Order is the ranking: a hit on the page's own name beats one on its
-      // description, which beats one on a word it merely answers to.
+    const sections = settingsPageSections(page.id, t);
+    // Order is the ranking: the page's own name, its group, the words it
+    // answers to, the settings it draws, and last its description.
+    const named = [
       fold(label),
       fold(group),
       ...settingsPageAliases(page.id, reader).map(fold),
-      fold(sub),
     ];
+    const fields = [...named, ...sections.map(fold), fold(sub)];
     // Every word, or the page does not answer. Ranked by the BEST field any
     // one word reached, so "email signature" ranks under the same rule a
     // single word would — and a page matching only half the phrase is out
@@ -264,7 +288,13 @@ export function settingsSearch(
     const ranks = words.map((word) => rankOf(word, fields));
     const reached = ranks.filter((rank) => rank !== undefined);
     if (reached.length === ranks.length) {
-      scored.push({ hit: { page, label, group }, rank: Math.min(...reached) });
+      const rank = Math.min(...reached);
+      const section = namedSection(
+        words,
+        sections,
+        Math.floor(rank / 2) - named.length,
+      );
+      scored.push({ hit: { page, label, group, section }, rank });
     }
   }
   return scored
@@ -276,6 +306,22 @@ export function settingsSearch(
         pages.indexOf(a.hit.page) - pages.indexOf(b.hit.page),
     )
     .map((entry) => entry.hit);
+}
+
+// The setting a hit through the sections alone names: the one holding every
+// word, else the one the best word reached.
+function namedSection(
+  words: readonly string[],
+  sections: readonly string[],
+  best: number,
+): string | undefined {
+  if (best < 0 || best >= sections.length) {
+    return undefined;
+  }
+  const whole = sections.find((section) =>
+    words.every((word) => fold(section).includes(word)),
+  );
+  return whole ?? sections[best];
 }
 
 /**
