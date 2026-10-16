@@ -77,6 +77,10 @@ func seedSearchDoors(t *testing.T, d *twoDoors) searchDoorsSeed {
 	return seed
 }
 
+// toolDefaultTypes is the route's spelling of the types search_records
+// searches when none is named; the route's own default is every branch.
+const toolDefaultTypes = "types=contact,company,deal,lead,project"
+
 func TestSearchRouteAndSearchRecordsRankAlike(t *testing.T) {
 	d := newTwoDoors(t, "search-ranked-doors", "read")
 	seed := seedSearchDoors(t, d)
@@ -89,7 +93,7 @@ func TestSearchRouteAndSearchRecordsRankAlike(t *testing.T) {
 		want  []string
 	}{
 		{
-			"no type named", "/v1/search?q=Zephyrwind&limit=10",
+			"no type named", "/v1/search?q=Zephyrwind&limit=10&" + toolDefaultTypes,
 			map[string]any{"q": "Zephyrwind", "limit": 10},
 			[]string{seed.strong, seed.weak, seed.company},
 		},
@@ -99,12 +103,12 @@ func TestSearchRouteAndSearchRecordsRankAlike(t *testing.T) {
 			[]string{seed.strong, seed.weak},
 		},
 		{
-			"with employees", "/v1/search?q=Werke&with_employees=true&limit=10",
+			"with employees", "/v1/search?q=Werke&with_employees=true&limit=10&" + toolDefaultTypes,
 			map[string]any{"q": "Werke", "with_employees": true, "limit": 10},
 			[]string{seed.company, seed.employee},
 		},
 		{
-			"one of each type", "/v1/search?q=Zephyrwind&per_type=1",
+			"one of each type", "/v1/search?q=Zephyrwind&per_type=1&" + toolDefaultTypes,
 			map[string]any{"q": "Zephyrwind", "per_type": perType},
 			[]string{seed.strong, seed.company},
 		},
@@ -124,6 +128,29 @@ func TestSearchRouteAndSearchRecordsRankAlike(t *testing.T) {
 			(route.TypesWithMore != nil && !slices.Equal(*route.TypesWithMore, *tool.TypesWithMore)) {
 			t.Errorf("%s: the route names types with more %v, the tool %v", c.what, route.TypesWithMore, tool.TypesWithMore)
 		}
+	}
+}
+
+// The doors differ in what they search when no type is named: the route every
+// type, the tool the five record types. An activity carrying the word is the
+// record that tells the two defaults apart.
+func TestTheRouteDefaultSearchesTheTimelineAndTheToolDefaultDoesNot(t *testing.T) {
+	d := newTwoDoors(t, "search-default-types", "read")
+	seedSearchDoors(t, d)
+	task := createdRecord(t, d.e, "/v1/activities", AnyMap{"kind": "task", "subject": "Zephyrwind follow-up"})
+
+	route := decodedAs[routeSearchPage](t, d.rest(t, "GET", "/v1/search?q=Zephyrwind&limit=50", nil))
+	if !slices.Contains(route.ids(), task) {
+		t.Errorf("the route's default left out the task %s carrying the word: %v", task, route.ids())
+	}
+	tool := decodedAs[toolSearchPage](t, d.tool(t, "search_records", map[string]any{"q": "Zephyrwind", "limit": 25}))
+	if slices.Contains(tool.ids(), task) {
+		t.Errorf("the tool's default found the task %s; it searches the timeline only when named", task)
+	}
+	named := decodedAs[toolSearchPage](t, d.tool(t, "search_records",
+		map[string]any{"q": "Zephyrwind", "record_type": "activity"}))
+	if !slices.Contains(named.ids(), task) {
+		t.Errorf("naming activity did not find the task %s: %v", task, named.ids())
 	}
 }
 
