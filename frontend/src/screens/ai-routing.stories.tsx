@@ -166,6 +166,10 @@ function story(
         response.headers.set("ETag", '"routing-v1"');
         return response;
       },
+      // The tier lines read this. Unstubbed, the fallback answers with the
+      // empty LIST envelope, which carries no `rows` for them to read.
+      "GET /ai/call-stats": () =>
+        jsonResponse({ window: "7d", group: "tier", rows: [] }),
       "GET /ai/status": () => jsonResponse(aiStatus),
       "GET /ai/health": () => jsonResponse(health),
       "GET /ai-model-rates": () => jsonResponse({ data: SHEET }),
