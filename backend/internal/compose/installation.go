@@ -35,7 +35,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/ownedfile"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -391,7 +390,7 @@ func seedRetentionPosture(ctx context.Context, tx pgx.Tx, seeds deployconfig.See
 	// only have preserved a row that already says what this would have written.
 	// Nothing an operator supplied is lost, which is exactly what separates it
 	// from the identity trio.
-	_, err := settings.SeedValue(ctx, tx, privacy.RetainOnly, true, nil)
+	_, err := config.SeedTx(ctx, tx, loadedConfig(), privacy.RetainOnly, true)
 	return err
 }
 

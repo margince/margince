@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -165,5 +166,27 @@ func TestLegalReviewSetByEnvIsLockedAgainstAChange(t *testing.T) {
 	})
 	if rows := settingRows(t, e, deals.LegalReviewEnabled.Key()); rows != 0 {
 		t.Fatalf("the locked switch wrote %d rows, want none", rows)
+	}
+}
+
+// The retain-only posture the api's environment sets reads as that value and
+// refuses a change; resending it is accepted. A bool has no invalid value.
+func TestRetainOnlySetByEnvIsLockedAgainstAChange(t *testing.T) {
+	e := apptest.SetupAppWithEnv(t, []string{"MARGINCE_PRIVACY_RETAIN_ONLY=true"})
+	e.BootstrapWorkspace(t)
+
+	const path = "/v1/retention/settings"
+	var read struct {
+		RetainOnly bool `json:"retain_only"`
+	}
+	if status := e.Call(t, http.MethodGet, path, nil, nil, &read); status != http.StatusOK || !read.RetainOnly {
+		t.Fatalf("GET %s → %d, retain_only %v, want the true the environment sets", path, status, read.RetainOnly)
+	}
+	expectLockedWrites(t, e, []lockedWrite{
+		{"lifting the posture", http.MethodPatch, path, map[string]any{"retain_only": false}, http.StatusConflict},
+		{"the locked posture resent", http.MethodPatch, path, map[string]any{"retain_only": true}, http.StatusOK},
+	})
+	if rows := settingRows(t, e, privacy.RetainOnly.Key()); rows != 0 {
+		t.Fatalf("the locked posture wrote %d rows, want none", rows)
 	}
 }

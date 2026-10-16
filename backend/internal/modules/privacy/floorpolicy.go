@@ -135,7 +135,8 @@ func carryOf(f CarriedFloor) FloorCarry {
 // RetentionFloorCarry is the carried floor. Never lowered: a later weakening
 // keeps the stricter class and moves Before forward. It survives a data reset,
 // like the country it follows, because the mail it protects can predate the
-// reset's own records.
+// reset's own records. It stays a settings.Define entry, out of the boot
+// sources: a jurisdiction change writes it, and no operator sets it.
 var RetentionFloorCarry = settings.Define[FloorCarry](
 	"privacy.retention_floor_carry",
 	retentionPolicyObject,

@@ -179,6 +179,7 @@ value gets a 409 that names the source, and a save of the same value changes not
 | `MARGINCE_DEALS_STAGE_AUTOPILOT_ENABLED` | `false` | `deals.stage_autopilot_enabled` |
 | `MARGINCE_DEALS_MAINTENANCE_WRITES_ENABLED` | `true` | `deals.maintenance_writes_enabled` |
 | `MARGINCE_DEALS_LEGAL_REVIEW_ENABLED` | `true` | `deals.legal_review_enabled` |
+| `MARGINCE_PRIVACY_RETAIN_ONLY` | `false` | `privacy.retain_only` |
 
 A data reset keeps the saved rows of the first 12 settings, from `installation.name` to
 `identity.oidc_group_role_map`, and of `ai.routing`, `ai.task_overrides` and `ai.budget`. It
@@ -199,7 +200,8 @@ reset from taking over.
 boot. `consent.controller_particulars` takes the fields `LegalName`, `PostalAddress`,
 `PrivacyContact`, `ObjectionRoute` and `AdvertiserContact`, spelled as the saved row spells them.
 
-A boot-set `deals.legal_review_enabled` wins over `seeds.legal_review`.
+A boot-set `deals.legal_review_enabled` wins over `seeds.legal_review`, and a boot-set
+`privacy.retain_only` wins over `seeds.retention.default_policy`.
 
 ## Common log flags (api, worker)
 

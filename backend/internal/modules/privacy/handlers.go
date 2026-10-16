@@ -11,9 +11,9 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -47,13 +47,13 @@ type Handlers struct {
 }
 
 // NewHandlers wires the transport over the installation-bound pool and the
-// assembled settings catalog.
+// configuration the retain-only posture is read and saved through.
 //
-// The catalog is a constructor argument rather than an option because every route
-// here needs it: the posture routes read and write it, and the policy list reports
-// each row's live suppression against it.
-func NewHandlers(db *database.DB, store *settings.Store) Handlers {
-	return Handlers{db: db, policies: NewPolicyStore(db), posture: NewPostureStore(store), eraser: NewEraser(db)}
+// The configuration is a constructor argument rather than an option because
+// every route here needs it: the posture routes read and write it, and the
+// policy list reports each row's live suppression against it.
+func NewHandlers(db *database.DB, cfg *config.Config) Handlers {
+	return Handlers{db: db, policies: NewPolicyStore(db), posture: NewPostureStore(cfg), eraser: NewEraser(db)}
 }
 
 // WithBlobstore gives the retention surface an eraser that reaches attachment

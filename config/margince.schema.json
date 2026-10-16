@@ -793,6 +793,17 @@
           "type": "boolean"
         }
       }
+    },
+    "privacy": {
+      "description": "The retention posture an operator may also set at boot. A value here locks the setting against a change in the product.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "retain_only": {
+          "description": "Destroy nothing: the nightly retention pass applies no anonymize and no erase, whatever a policy says.",
+          "type": "boolean"
+        }
+      }
     }
   },
   "$defs": {

@@ -6,8 +6,7 @@ package gates
 // The reasons a key may still be declared with settings.Define. A module that
 // converts deletes its lines, so the list ends holding only real exceptions.
 const (
-	convertsIn12d = "converts in Task 12d"
-	convertsIn13  = "converts in Task 13, with the other secrets"
+	convertsIn13 = "converts in Task 13, with the other secrets"
 	// readBySQL is why a boot value cannot be honoured. SQL reads the row,
 	// and a boot value it never sees would split Go from SQL.
 	readBySQL = "SQL views, functions and raw statements read this row directly, so a boot value would split Go from SQL"
@@ -30,8 +29,6 @@ var settingsDefineExceptions = map[string]string{
 	"capture.google_app":             convertsIn13,
 	"capture.microsoft_app":          convertsIn13,
 
-	"ai.price_sync_last_run": productState,
-
-	"privacy.retain_only":           convertsIn12d,
-	"privacy.retention_floor_carry": convertsIn12d,
+	"ai.price_sync_last_run":        productState,
+	"privacy.retention_floor_carry": productState,
 }

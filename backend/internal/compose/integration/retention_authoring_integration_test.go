@@ -37,9 +37,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -205,7 +205,7 @@ func TestRetainOnlyPostureSuppressesDestructionButNotArchival(t *testing.T) {
 	// The posture is seeded the way bootstrap seeds it from margince.yaml, so
 	// the pass reads exactly what a `default_policy: retain_only` install has.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := settings.SeedValue(context.Background(), tx, privacy.RetainOnly, true, nil)
+		_, err := config.SeedTx(context.Background(), tx, nil, privacy.RetainOnly, true)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -281,7 +281,7 @@ func TestRetainOnlyPostureIsReportedOnEveryPolicyItOverrides(t *testing.T) {
 	store := privacy.NewPolicyStore(e.DB())
 	admin := retentionAdminCtx(e.WS, principal.ObjectGrant{Read: true, Update: true})
 
-	postures := privacy.NewPostureStore(compose.NewSettingsStore(e.Pool))
+	postures := privacy.NewPostureStore(compose.StoredConfig(e.Pool))
 	on := true
 	if _, err := postures.SetPosture(admin, &on); err != nil {
 		t.Fatal(err)
@@ -434,7 +434,7 @@ func TestRetainOnlyPostureDoesNotDestroyContentThroughTheEmbedCascade(t *testing
 	withContent := seedEmbedCallWithPayload(t, e, 91, "Marek Janetzke, Q3 renewal terms")
 
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := settings.SeedValue(context.Background(), tx, privacy.RetainOnly, true, nil)
+		_, err := config.SeedTx(context.Background(), tx, nil, privacy.RetainOnly, true)
 		return err
 	}); err != nil {
 		t.Fatal(err)
