@@ -298,6 +298,7 @@ describe("offering a vocabulary", () => {
     expect(screen.getByText("dana@nordwand.example")).toBeTruthy();
     expect(screen.queryByText("dan")).toBeNull();
   });
+
   it("takes no highlighted row on an input method's Enter", async () => {
     const user = userEvent.setup();
     render(<Offering />);

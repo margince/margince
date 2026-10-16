@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en } from "../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -67,7 +68,7 @@ export const DuplicateRefused: Story = {
     const drafted = groups[groups.length - 1];
     if (!drafted) throw new Error("the drafted row has no group field");
     await userEvent.type(drafted, "crm-admins");
-    await canvas.findByText("Each group can be mapped only once.");
+    await canvas.findByText(en["groupRoles.duplicateGroup"]);
   },
 };
 
@@ -92,7 +93,7 @@ export const SaveRefused: Story = {
     await userEvent.click(
       canvas.getByRole("button", { name: /save group grants/i }),
     );
-    await canvas.findByText("Change not saved");
+    await canvas.findByText(en["signInMethods.saveFailed"]);
   },
 };
 

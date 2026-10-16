@@ -577,12 +577,7 @@ describe("the bare variant is the .iconbtn control, not a copy of it", () => {
     });
     const where = (rule: { file: string; selector: string }) =>
       `${relative(here, rule.file)}: ${rule.selector}`;
-    // `.btn-bare` alone ties with `.btn`, so only `.btn.btn-bare` may name it.
-    const misspelled = all.filter(
-      (rule) =>
-        /\.btn-bare(?![\w-])/.test(rule.selector) &&
-        !/\.btn\.btn-bare(?![\w-])/.test(rule.selector),
-    );
+    const misspelled = all.filter((rule) => namesLoneBare(rule.selector));
     expect([
       ...paired
         .filter(({ partner }) => !written.has(partner))
@@ -592,7 +587,25 @@ describe("the bare variant is the .iconbtn control, not a copy of it", () => {
     // Pinned, so a pair deleted on both sides fails rather than shrinking.
     expect(paired).toHaveLength(16);
   });
+
+  it.each([
+    [".btn.btn-bare", false],
+    [".btn.btn-bare:hover svg", false],
+    [".btn.btn-barely", false],
+    [".btn-bare svg", true],
+    [".notifbell .btn-bare", true],
+    [".btn-bare.btn:hover", true],
+    [".xbtn.btn-bare", true],
+    [".btn.btn-bare + .btn-bare", true],
+  ])("reads %j as naming a lone .btn-bare: %s", (selector, lone) => {
+    expect(namesLoneBare(selector)).toBe(lone);
+  });
 });
+
+// `.btn-bare` alone ties with `.btn`, so every mention must be `.btn.btn-bare`.
+function namesLoneBare(selector: string): boolean {
+  return /(?<!(?:^|[^\w-])\.btn)\.btn-bare(?![\w-])/.test(selector);
+}
 
 // The same selector spelled for the other of the pair, or undefined for one
 // that names neither.

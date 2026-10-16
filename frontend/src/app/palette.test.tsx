@@ -191,6 +191,14 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
 
   // Enter still belongs to the destinations: a reader who typed a screen name
   // and pressed it goes there, and asking is not what they did.
+  it("Enter runs the first destination, not the ask", async () => {
+    window.location.hash = "#/home";
+    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    await userEvent.type(screen.getByRole("searchbox"), "deals");
+    await userEvent.keyboard("{Enter}");
+    expect(window.location.hash).toBe("#/deals");
+  });
+
   it("runs nothing on an input method's Enter", async () => {
     window.location.hash = "#/home";
     const onClose = vi.fn();
@@ -202,14 +210,6 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
 
     expect(window.location.hash).toBe("#/home");
     expect(onClose).not.toHaveBeenCalled();
-  });
-
-  it("Enter runs the first destination, not the ask", async () => {
-    window.location.hash = "#/home";
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("searchbox"), "deals");
-    await userEvent.keyboard("{Enter}");
-    expect(window.location.hash).toBe("#/deals");
   });
 
   it("closes on a selection that lands on the address it is already at", async () => {

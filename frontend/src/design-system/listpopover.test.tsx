@@ -168,7 +168,7 @@ describe("ListPopover on a desktop", () => {
     await user.click(screen.getByRole("button", { name: "Assign owner" }));
     await user.keyboard("{ArrowDown}");
 
-    fireEvent.keyDown(document.activeElement ?? document.body, {
+    fireEvent.keyDown(screen.getByRole("combobox"), {
       key: "Enter",
       keyCode: 229,
     });
