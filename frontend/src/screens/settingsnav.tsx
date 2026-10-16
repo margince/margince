@@ -31,12 +31,15 @@ import {
   Wrench,
 } from "lucide-react";
 import type { NavLevelEntry, NavLevelGroup, NavSection } from "../app/nav";
+import type { MessageKey } from "../i18n/en";
 import { unitsForSecretScope } from "../lib/extensions";
 import type { Route } from "../lib/router";
 import { useMe } from "../lib/session";
 import {
   SETTINGS_GROUPS as CATALOG_GROUPS,
   readsOnly,
+  SETTINGS_PAGES,
+  type SettingsGroupId,
   type SettingsPage,
   type SettingsPageId,
   type SettingsReach,
@@ -264,59 +267,37 @@ function navEntry(page: SettingsPage): NavLevelEntry {
   };
 }
 
+/** The words naming a settings group, in the rail and on the settings home. */
+export const groupHeadingKey = (group: SettingsGroupId): MessageKey =>
+  `settings.group.${group}`;
+
 export function useSettingsSection(route: Route): NavSection {
-  // The rail carries what this reader can ACT on. A page they may open and
-  // cannot change is still theirs to reach — it answers its address, appears in
-  // search and is listed on the settings home under a heading that says so —
-  // but it is not furniture they navigate past every day. `reach.acts` and
-  // `reach.looksUp` partition exactly the pages `useVisibleSettingsPages`
-  // returns, so nothing leaves the product by being left out here.
+  // The rail carries what this reader can act on. A page they may only read
+  // still answers its address, appears in search and is listed on the settings
+  // home, marked read-only. `reach.acts` and `reach.looksUp` partition the
+  // pages `useVisibleSettingsPages` returns, so nothing leaves the product here.
   const reach = useSettingsReach();
   const pages = reach.acts;
-  // Everything this reader may open, rail or not. The two below need it: a page
-  // reached from the settings home or from a search hit is a real destination
-  // and has to be recognised as the current one, and the search box must offer
-  // every page the reader can open rather than only the ones they can change.
+  // Everything this reader may open, rail or not. A page reached from the home
+  // or from a search hit is still the current one, and search offers them all.
   const openable = [...reach.acts, ...reach.looksUp];
   const target = settingsRouteTarget(route);
   const named =
     target.kind === "page"
       ? openable.find((page) => page.id === target.page)
       : undefined;
-  // Both message keys are composed from the ids, and both annotations are what
-  // make them KEYS: a template literal narrows to the catalog's union only where
-  // something expects one, and unannotated it would compile as any old string —
-  // an unknown key has to stay a compile error.
-  // Seven headings from the catalog, in its order. No `prefix`: every page
-  // addresses flat now, so a row's depth is no longer a property of the group
-  // it happens to sit under.
-  //
-  // An empty group is dropped rather than rendered as a heading with nothing
-  // beneath it — which is what a reader holding one grant in a group of five
-  // would otherwise see.
+  // The open page joins the rail in its catalog group and place. The heading,
+  // trail and phone switcher name the current page from the rail's rows.
+  const railed = new Set<SettingsPage>(named ? [...pages, named] : pages);
+  // An empty group is dropped rather than printed as a heading over nothing.
   const groups = CATALOG_GROUPS.map(
     (group): NavLevelGroup => ({
-      headingKey: `settings.group.${group}`,
-      items: pages.filter((page) => page.group === group).map(navEntry),
+      headingKey: groupHeadingKey(group),
+      items: SETTINGS_PAGES.filter(
+        (page) => page.group === group && railed.has(page),
+      ).map(navEntry),
     }),
   ).filter((group) => group.items.length > 0);
-  // The page the reader is ON, when it is one the rail does not carry.
-  //
-  // The chrome resolves the current page by searching the rendered rows —
-  // `sectionHead` in app/pagemeta.ts does — so a page that is only on the
-  // settings home would publish an `activeId` no row matches, and the heading,
-  // the breadcrumb, the subtitle, the scope badge and the phone switcher would
-  // all fall back to the section's own name. Reaching a page from search or
-  // from the home would land the reader somewhere that says "Settings".
-  //
-  // So it joins the rail for exactly as long as it is open, in its own group.
-  // Its own rather than its catalog group's: the group heading would then
-  // appear for one page the reader cannot act on, which is the clutter the
-  // partition exists to remove.
-  const openedOffRail =
-    named !== undefined && !pages.some((page) => page.id === named.id)
-      ? [{ items: [navEntry(named)] } satisfies NavLevelGroup]
-      : [];
   // Settings home, above the seven groups and in a group of its own. Not a
   // member of one: it belongs to no topic, and a group that owned it would take
   // it away on the day that group had no other visible page.
@@ -335,6 +316,7 @@ export function useSettingsSection(route: Route): NavSection {
       {
         id: SETTINGS_HOME_ID,
         labelKey: "settings.home",
+        subKey: "settings.home.sub",
         icon: House,
         // Addresses the LEVEL — `#/settings`, not `#/settings/home`.
         level: true,
@@ -372,7 +354,7 @@ export function useSettingsSection(route: Route): NavSection {
         : target.kind === "home"
           ? SETTINGS_HOME_ID
           : (named?.id ?? ""),
-    groups: [home, ...groups, ...openedOffRail],
+    groups: [home, ...groups],
   };
 }
 

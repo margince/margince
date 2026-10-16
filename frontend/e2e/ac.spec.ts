@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
 import { de } from "../src/i18n/de";
-import type { MessageKey } from "../src/i18n/en";
+import { en, type MessageKey } from "../src/i18n/en";
 import { SETTINGS_PAGES } from "../src/screens/settingscatalog";
 import { meFixture } from "../src/testing/mefixture";
 import { copy } from "./copy";
@@ -462,17 +462,16 @@ test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   // locales ship, so the control is a list rather than a toggle — a toggle
   // cannot say where the next click lands.
   await page.goto("/#/settings/account");
-  // The card the language row sits in: password, sign-off and language are one
-  // account card now rather than a Preferences card of their own.
+  // The panel the language row sits in.
   await expect(
-    page.getByRole("heading", { name: "Dein Nutzerkonto" }),
+    page.getByRole("heading", { name: de["settings.preferencesTitle"] }),
   ).toBeVisible();
   await page.getByRole("combobox", { name: "Sprache" }).click();
   await page.getByRole("option", { name: "English" }).click();
   // The surface around the control follows the choice, not just the control's
   // own face: every word on it is rendered from the catalog that just changed.
   await expect(
-    page.getByRole("heading", { name: "Your account" }),
+    page.getByRole("heading", { name: en["settings.preferencesTitle"] }),
   ).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Language" })).toBeVisible();
 });
@@ -488,7 +487,7 @@ test("features/10 §7: Settings → Account offers language and appearance", asy
 }) => {
   await page.goto("/#/settings/account");
   await expect(
-    page.getByRole("heading", { name: "Dein Nutzerkonto" }),
+    page.getByRole("heading", { name: de["settings.preferencesTitle"] }),
   ).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Sprache" })).toBeVisible();
   await expect(

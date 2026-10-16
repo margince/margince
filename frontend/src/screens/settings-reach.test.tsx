@@ -141,25 +141,34 @@ describe("a page the rail does not carry is still the reader's to reach", () => 
     ).toBeNull();
   });
 
-  it("lists it on the settings home, under what you can look up", async () => {
+  it("lists it on the settings home, marked read-only", async () => {
     vi.stubGlobal("fetch", settingsNavBackend(consultingRep));
     renderHome();
     await expectSnapshotResolved();
-    const heading = await screen.findByRole("heading", {
-      name: translate("en", "settings.home.lookUp"),
+    // The row's name runs on into its marker and subtitle, so the match is on
+    // the label it starts with.
+    const row = await screen.findByRole("link", {
+      name: new RegExp(`^${labelOf("pipelines")}`),
     });
-    const panel = heading.closest("section") ?? heading.parentElement;
-    if (!panel) {
-      throw new Error("the look-up panel has no container");
-    }
-    // The home row names the page, its scope and its subtitle in one accessible
-    // name — that is the whole point of the row, so the match is on the label it
-    // starts with rather than on the label alone.
     expect(
-      within(panel).getByRole("link", {
-        name: new RegExp(`^${labelOf("pipelines")}`),
-      }),
+      within(row).getByText(translate("en", "settings.home.readOnly")),
     ).toBeTruthy();
+  });
+
+  // The control: a page this rep can change carries no marker.
+  it("marks no page the reader can change", async () => {
+    vi.stubGlobal("fetch", settingsNavBackend(consultingRep));
+    renderHome();
+    await expectSnapshotResolved();
+    // Named through to its subtitle, which tells this row from the rail's.
+    const row = await screen.findByRole("link", {
+      name: new RegExp(
+        `^${labelOf("account")}.*${translate("en", "settings.page.account.sub")}`,
+      ),
+    });
+    expect(
+      within(row).queryByText(translate("en", "settings.home.readOnly")),
+    ).toBeNull();
   });
 
   it("finds it in the search", async () => {
@@ -184,6 +193,19 @@ describe("a page the rail does not carry is still the reader's to reach", () => 
     expect(
       screen.queryByText(translate("en", "settings.boundary.deniedTitle")),
     ).toBeNull();
+  });
+
+  it("joins the rail while open, inside its own group", async () => {
+    vi.stubGlobal("fetch", settingsNavBackend(consultingRep));
+    render(<SettingsRail route={settingsHref("pipelines")} />);
+    const group = await screen.findByRole("group", {
+      name: translate("en", "settings.group.sales"),
+    });
+    expect(
+      within(group)
+        .getByRole("link", { name: labelOf("pipelines") })
+        .getAttribute("aria-current"),
+    ).toBe("page");
   });
 
   it("says once that it is theirs to read and not to change", async () => {

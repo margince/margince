@@ -130,20 +130,48 @@ describe("AgentToolsCard", () => {
   });
 
   // What an agent selects on is the served description, governance clause
-  // included, so the row carries all of it: one line until it is opened.
-  it("names each tool by its title, with its key and the text an agent selects it by", async () => {
+  // included, so the row carries all of it: one line until it is opened. The
+  // raw key is for the reader who opened the row.
+  it("names each tool by its title and the text an agent selects it by, with its key once opened", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal("fetch", agentToolsBackend());
     render(<SettingsScreen route={settingsAddress("agents")} />);
 
     const sendRow = await screen.findByTestId("tool-send_email");
     expect(within(sendRow).getByText("Send email")).toBeTruthy();
-    expect(within(sendRow).getByText("send_email").tagName).toBe("CODE");
     expect(
       within(sendRow).getByText(/Governance: a human approves every call/),
     ).toBeTruthy();
-    // The scope reads as the permission a human granted, never its wire token.
-    expect(within(sendRow).getByText("Send messages")).toBeTruthy();
-    expect(within(sendRow).queryByText("send")).toBeNull();
+    expect(within(sendRow).queryByText("send_email")).toBeNull();
+
+    await user.click(
+      within(sendRow).getByRole("button", {
+        name: "Full description of Send email",
+      }),
+    );
+    expect(within(sendRow).getByText("send_email").tagName).toBe("CODE");
+  });
+
+  // The scope reads as the permission a human granted, never its wire token,
+  // and once per group rather than on every row.
+  it("groups the tools under the permission each one needs", async () => {
+    vi.stubGlobal("fetch", agentToolsBackend());
+    render(<SettingsScreen route={settingsAddress("agents")} />);
+
+    const sendRow = await screen.findByTestId("tool-send_email");
+    const sendGroup = sendRow.closest("details");
+    const readGroup = screen
+      .getByTestId("tool-search_records")
+      .closest("details");
+    expect(sendGroup).not.toBe(readGroup);
+    expect(
+      within(sendGroup as HTMLElement).getByText("Send messages"),
+    ).toBeTruthy();
+    expect(
+      within(readGroup as HTMLElement).getByText("Read records"),
+    ).toBeTruthy();
+    expect(within(sendRow).queryByText("Send messages")).toBeNull();
+    expect(screen.queryByText("send")).toBeNull();
   });
 
   it("opens a tool's full description from its row and from its chevron", async () => {
@@ -300,8 +328,8 @@ describe("AgentToolsCard passport scoping", () => {
     ).toBeTruthy();
   });
 
-  // The reason sits with the permission it is about, not on the tool's name.
-  it("says an unreachable tool's scope is not granted, in its permission cell", async () => {
+  // The group already names the permission, so the reason sits under the name.
+  it("says an unreachable tool's scope is not granted, under its name", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", agentToolsWithPassportsBackend());
     render(<SettingsScreen route={settingsAddress("agents")} />);
@@ -315,7 +343,7 @@ describe("AgentToolsCard passport scoping", () => {
 
     const reason = within(scopedRow).getByText("Scope not granted");
     expect(reason.closest("td")).toBe(
-      within(scopedRow).getByText("Send messages").closest("td"),
+      within(scopedRow).getByText("Send email").closest("td"),
     );
   });
 

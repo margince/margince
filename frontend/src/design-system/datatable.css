@@ -184,10 +184,48 @@
     min-inline-size: 0;
     overflow-wrap: anywhere;
   }
-  .panel > .table-scroll-bleed.table-scroll-fold > .table > tbody > tr {
+  /* The pane-wide shapes atoms.css insets at the first and last cell. Folded,
+     the row holds that inset, or the first cell starts --space-3 too far in. */
+  .panel > .table-scroll-bleed.table-scroll-fold > .table > tbody > tr,
+  .panel
+    > :is(.panel-body, .settinglist-bleed)
+    > .disclosure
+    > .disclosure-body
+    > .table-scroll-fold
+    > .table
+    > tbody
+    > tr,
+  .panel
+    > :is(.panel-body, .settinglist-bleed)
+    > .disclosure-wrap
+    > .disclosure
+    > .disclosure-body
+    > .table-scroll-fold
+    > .table
+    > tbody
+    > tr {
     padding-inline: var(--padPanel);
   }
-  .panel > .table-scroll-bleed.table-scroll-fold > .table > tbody > tr > td {
+  .panel > .table-scroll-bleed.table-scroll-fold > .table > tbody > tr > td,
+  .panel
+    > :is(.panel-body, .settinglist-bleed)
+    > .disclosure
+    > .disclosure-body
+    > .table-scroll-fold
+    > .table
+    > tbody
+    > tr
+    > td:is(:first-child, :last-child),
+  .panel
+    > :is(.panel-body, .settinglist-bleed)
+    > .disclosure-wrap
+    > .disclosure
+    > .disclosure-body
+    > .table-scroll-fold
+    > .table
+    > tbody
+    > tr
+    > td:is(:first-child, :last-child) {
     padding: 0;
   }
   /* Basis 0, so a long title wraps inside line one instead of pushing the

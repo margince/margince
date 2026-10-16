@@ -181,16 +181,10 @@ export function AutonomySettingsCard() {
 
   return (
     <Panel title={t("autonomy.title")}>
-      <PanelBody className="form-stack">
+      <PanelBody>
         <PanelIntro>{t("autonomy.sub")}</PanelIntro>
         {rows.length > 0 && noneDecidedYet(rows) && (
-          <Callout
-            tone="info"
-            kind="standing"
-            title={t("autonomy.noneDecidedYetTitle")}
-          >
-            {t("autonomy.noneDecidedYet")}
-          </Callout>
+          <PanelIntro>{t("autonomy.noneDecidedYet")}</PanelIntro>
         )}
       </PanelBody>
       {/* An empty list means this seat is routed no kind at all, which is an
@@ -212,6 +206,7 @@ function AutonomyChoices({
   const t = useT();
   const { locale } = useLocale();
   const update = useUpdateAutonomy();
+  const noneYet = noneDecidedYet(rows);
   return (
     <>
       <SettingList bleed="settings">
@@ -225,7 +220,11 @@ function AutonomyChoices({
                 <KeyedName name={kindLabel(row.kind, t)} code={row.kind} />
               )
             }
-            description={[kindHelp(row.kind, t), decidedSoFar(row, t, locale)]
+            description={[
+              kindHelp(row.kind, t),
+              // The card says once that nothing is decided yet.
+              !noneYet && decidedSoFar(row, t, locale),
+            ]
               .filter(Boolean)
               .join(" ")}
             control={

@@ -52,6 +52,14 @@ function saveBeside(field: HTMLElement): HTMLElement {
   return within(control).getByRole("button", { name: "Save" });
 }
 
+function noSaveBeside(field: HTMLElement): boolean {
+  const control = field.closest(".settingrow-control");
+  if (!(control instanceof HTMLElement)) {
+    throw new Error("the field is not inside a setting row");
+  }
+  return within(control).queryByRole("button", { name: "Save" }) === null;
+}
+
 beforeEach(() => {
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
   vi.stubGlobal("fetch", settingsBackend());
@@ -117,7 +125,9 @@ describe("SettingsScreen RBAC surfaces", () => {
     render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
-    expect(screen.getByRole("heading", { name: "Your account" })).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Language and appearance" }),
+    ).toBeTruthy();
     expect(screen.getByRole("combobox", { name: "Language" })).toBeTruthy();
     // Opened, because a Margince `Select` renders its options in a listbox on
     // click rather than as children of the control.
@@ -160,40 +170,35 @@ describe("SettingsScreen RBAC surfaces", () => {
     expect(screen.getByRole("radio", { name: "Dark" })).toBeChecked();
   });
 
-  // Identity, credential, sign-off and language are ONE card, not four: a
-  // reader auditing their own account reads one title and finds three answers
-  // at one x. The claim is about the three ROWS being there, in the one card —
-  // a page that grew a second panel back would still pass a query for any one
-  // of them on its own.
-  //
-  // The tab holds a second card beside it — which kinds of proposal answer
-  // themselves — and that is a different subject rather than a fragment of this
-  // one, so the count below asks how many headings this card carries rather
-  // than how many the tab does.
-  it("carries the identity, the password, the signature and the language in ONE card", async () => {
+  // Each panel holds the rows its title names, so a reader scanning titles
+  // finds the row. A row that drifted to another panel fails here.
+  it("groups the account into profile, security, and language panels", async () => {
     render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
-    const card = screen
-      .getByRole("heading", { name: "Your account" })
-      .closest("section");
-    if (!(card instanceof HTMLElement)) {
-      throw new Error("the account card is not a section");
-    }
-    // The identity block, and the three verbs/answers that belong to it.
-    expect(within(card).getByText("ada@acme.test")).toBeTruthy();
+    const panel = (title: string) => {
+      const section = screen
+        .getByRole("heading", { name: title })
+        .closest("section");
+      if (!(section instanceof HTMLElement)) {
+        throw new Error(`the ${title} panel is not a section`);
+      }
+      return within(section);
+    };
+    const profile = panel("Profile");
+    expect(profile.getByText("ada@acme.test")).toBeTruthy();
+    expect(profile.getByRole("textbox", { name: "Display name" })).toBeTruthy();
     expect(
-      within(card).getByRole("button", { name: "Change password" }),
+      profile.getByRole("button", { name: "Edit signature" }),
     ).toBeTruthy();
+    const security = panel("Security");
     expect(
-      within(card).getByRole("button", { name: "Edit signature" }),
+      security.getByRole("button", { name: "Change password" }),
     ).toBeTruthy();
-    expect(
-      within(card).getByRole("combobox", { name: "Language" }),
-    ).toBeTruthy();
-    // And the four are not four cards: this one has a single title over all of
-    // them, which is what fragmenting it again would break.
-    expect(within(card).getAllByRole("heading", { level: 2 })).toHaveLength(1);
+    expect(security.getByRole("button", { name: "Sign out" })).toBeTruthy();
+    const language = panel("Language and appearance");
+    expect(language.getByRole("combobox", { name: "Language" })).toBeTruthy();
+    expect(language.getByRole("combobox", { name: "Appearance" })).toBeTruthy();
   });
 
   // THE DRAFT IS DISCARDED ON THE NEXT OPENING, not on the way out.
@@ -343,7 +348,7 @@ describe("SettingsScreen RBAC surfaces", () => {
   });
 
   // The control for the case above: Save is withheld until the name actually
-  // moves. Without it, a row that always enabled Save would pass the case above
+  // moves. Without it, a row that always offered Save would pass the case above
   // and quietly write on every render.
   it("offers no save until the name changes", async () => {
     const user = userEvent.setup();
@@ -351,8 +356,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     const field = screen.getByRole("textbox", { name: "Display name" });
-    const save = saveBeside(field);
-    expect(save).toHaveProperty("disabled", true);
+    expect(noSaveBeside(field)).toBe(true);
 
     // A name of only whitespace is not a name, so it does not enable it either.
     await user.clear(field);
@@ -397,11 +401,26 @@ describe("SettingsScreen RBAC surfaces", () => {
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     const field = screen.getByRole("textbox", { name: "Greeting name" });
-    expect(saveBeside(field)).toHaveProperty("disabled", true);
+    expect(noSaveBeside(field)).toBe(true);
     await user.type(field, "  Ada  ");
     await user.click(saveBeside(field));
     await waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0]).toEqual({ greeting_name: "Ada" });
+  });
+
+  // Enter commits a changed name, as a rename does everywhere else.
+  it("saves a changed name on Enter", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    vi.stubGlobal("fetch", greetingBackend(null, sent));
+    render(<SettingsScreen route={settingsHref("account")} />);
+    await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
+
+    await user.type(
+      screen.getByRole("textbox", { name: "Greeting name" }),
+      "Ada{Enter}",
+    );
+    await waitFor(() => expect(sent).toEqual([{ greeting_name: "Ada" }]));
   });
 
   it("sends an emptied greeting name as null, which clears it", async () => {
@@ -430,9 +449,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     // The choice reaches the chrome around the control, not just the control's
     // own face — which is the whole point of changing a language here.
     expect(screen.getByRole("combobox", { name: "Sprache" })).toBeTruthy();
-    expect(
-      screen.getByRole("heading", { name: "Dein Nutzerkonto" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "Darstellung" })).toBeTruthy();
   });
 
   // WCAG 2.2 AA 3.1.2. This is the one picker in the product where every option

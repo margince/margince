@@ -10,14 +10,15 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { TimezoneSelect } from "../design-system/timezoneselect";
 import { useToast } from "../design-system/toast";
-import { viewerZone } from "../format/timezone";
-import { useT } from "../i18n";
+import { timezoneOption, viewerZone } from "../format/timezone";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import "./book.css";
 
 type WorkingHours = components["schemas"]["WorkingHours"];
 
@@ -96,7 +97,6 @@ export function WorkingHoursCard() {
   return (
     <Panel title={t("workingHours.title")}>
       <PanelBody className="form-stack">
-        <PanelIntro>{t("workingHours.sub")}</PanelIntro>
         <QueryGate pendingLabel={t("workingHours.title")} query={query}>
           {(answer) =>
             // Checked, not asserted. The field is contract-required, but a body
@@ -182,6 +182,8 @@ export function WorkingHoursFields({
   onChange: (next: WorkingHours) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [now] = useState(() => new Date());
   const browserZone = viewerZone();
   const { start_time: start, end_time: end, days, timezone: zone } = value;
   return (
@@ -219,25 +221,33 @@ export function WorkingHoursFields({
       </div>
       <fieldset className="form-stack">
         <legend className="t-name">{t("workingHours.days")}</legend>
-        {WEEK.map((day) => (
-          <Checkbox
-            key={day}
-            label={t(dayLabelKey(day))}
-            checked={days.includes(day)}
-            onChange={(event) =>
-              onChange({
-                ...value,
-                days: event.target.checked
-                  ? [...days, day]
-                  : days.filter((chosenDay) => chosenDay !== day),
-              })
-            }
-          />
-        ))}
+        <div className="working-days">
+          {WEEK.map((day) => (
+            <Checkbox
+              key={day}
+              label={t(dayLabelKey(day))}
+              checked={days.includes(day)}
+              onChange={(event) =>
+                onChange({
+                  ...value,
+                  days: event.target.checked
+                    ? [...days, day]
+                    : days.filter((chosenDay) => chosenDay !== day),
+                })
+              }
+            />
+          ))}
+        </div>
       </fieldset>
       <Field
         label={t("workingHours.timezone")}
-        hint={t("workingHours.timezoneHelp")}
+        hint={
+          !chosen && browserZone !== zone
+            ? t("workingHours.browserZone", {
+                zone: timezoneOption(locale, browserZone, now).label,
+              })
+            : t("workingHours.timezoneHelp")
+        }
       >
         {(control) => (
           <TimezoneSelect
@@ -247,11 +257,6 @@ export function WorkingHoursFields({
           />
         )}
       </Field>
-      {!chosen && browserZone !== zone && (
-        <p className="t-caption">
-          {t("workingHours.browserZone", { zone: browserZone })}
-        </p>
-      )}
     </>
   );
 }

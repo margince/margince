@@ -1,9 +1,9 @@
 <!-- prose:plain -->
 # Your own settings
 
-Your own settings in Margince are the six pages under **You** in Settings:
-**Account**, **Meetings**, **Writing voice**, **Agents**, **Connections** and
-**Capture activity**. Everything here changes your own seat and nobody else's.
+Your own settings in Margince are the pages under **You** in Settings:
+**Account**, **Meetings**, **Writing voice**, **Agents**, **Notifications**,
+**Connections** and **Capture activity**. Everything here changes your own seat and nobody else's.
 Two pages, Connections and Capture activity, also carry one card each that holds
 for the whole company.
 
@@ -11,22 +11,25 @@ For everything else, see [Settings](settings.md).
 
 ### How do I open my own settings?
 To open your own settings in Margince, open the account menu at the top right and choose **Settings**, then pick a page under **You**.
-The six pages are **Account** (name, password, signature, language, appearance), **Meetings** (bookable hours, calendars and booking choices), **Writing voice**, **Agents**, **Connections** and **Capture activity**.
+The pages are **Account** (name, password, signature, language, appearance), **Meetings** (bookable hours, calendars and booking choices), **Writing voice**, **Agents**, **Notifications**, **Connections** and **Capture activity**.
 You can also press ⌘K (Ctrl+K) and type the page name, or a word such as "password", "language", "theme" or "mailbox".
 Also called: my profile, my account, preferences, user settings.
 
 ### How do I change my notifications?
-Margince has no notification bell and no notification settings. The two summaries that come each day and each week are the morning brief and the weekly review. You choose whether they also come by email. Open **Settings → Account** and set **Morning brief** and **Weekly review** to **By email** or **Not by email**.
+To change your notifications in Margince, open Settings → **Notifications**.
+1. Under **Delivery by kind**, pick how each kind reaches you: **Off**, **In the app**, **Email** or **Daily digest**. Not every kind offers every choice.
+2. Under **Email summaries**, set **Morning brief** and **Weekly review** to **By email** or **Not by email**.
 
-Both always appear on **Home**, whatever you pick, and what you still need to do waits on your Worklist there.
+Every notice also stays in the notification center under the bell, whatever you pick. **Nudges from colleagues** cannot be turned off. The brief and the review always appear on **Home**, and what you still need to do waits on your Worklist there.
 Also called: email notifications, turn off emails, alerts, daily digest.
 
 ## Account
 
-The Account page in Settings holds one card, **Your account**. It holds who you
-are, how you sign in (password and two-step sign-in) and how you sign off. It also holds which language the
-product uses with you (English, Deutsch or Tiếng Việt), and how it looks. It
-also has **Sign out**.
+The Account page in Settings has three panels. **Profile** holds who you are,
+your display and greeting names, and how you sign off. **Security** holds your
+password and two-step sign-in, and **Sign out**. **Language and appearance**
+holds which language the product uses with you (English, Deutsch or Tiếng
+Việt), and how it looks.
 **Appearance** is here as well as in the account menu, where it is called
 **Theme**. Both change the same setting.
 
@@ -83,7 +86,7 @@ Also called: new phone, new backup codes, lost phone.
 Keep your backup codes where you can find them without your phone. An administrator cannot turn two-step sign-in off for you.
 
 ### How do I change my display name?
-To change your display name in Margince, open Settings → **Account**, edit the **Display name** field and choose **Save**.
+To change your display name in Margince, open Settings → **Account**, edit the **Display name** field, and choose **Save** or press Enter. **Save** shows once you change the name.
 Your display name is what colleagues see on records you edit, in pickers and in the audit log.
 It cannot be empty, and it can be up to 255 characters long. Your email address shows under it, and you do not change it here.
 Also called: my name, profile name, rename myself.
@@ -113,19 +116,19 @@ Also called: dark mode, light mode, appearance, colour scheme.
 ## Meetings
 
 ### How do I set my bookable hours?
-To set when customers can book time with you in Margince, open Settings → **Meetings** and fill in the **Bookable hours** card.
+To set when customers can book time with you in Margince, open Settings → **Meetings** and fill in the **Availability** panel.
 1. Set **Day starts** and **Day ends**.
 2. Tick your **Working days**.
 3. Choose a place in the **Timezone** list, which shows the time zone your free times use now.
 4. While the list is open, type the place name to go to it.
-5. Choose **Save working hours**.
+5. Choose **Save settings** in the bar at the foot of the page.
 
-Until you save, the card says **Not set yet**, and customers are offered 09:00 to 17:00, Monday to Friday, in the installation's time zone.
+Until you save, the panel says **Not set yet**, and customers are offered 09:00 to 17:00, Monday to Friday, in the installation's time zone.
 Also called: working hours, availability, office hours.
 
-The Bookable hours card is personal: "Personal setting. Only you set your
-hours." Nobody sets them for you, and you set them for nobody else. Narrowing
-them says what it costs: "Customers have fewer times to choose from."
+Your hours are personal. Nobody sets them for you, and you set them for nobody
+else. Narrowing them says what it costs: "Customers have fewer times to choose
+from."
 
 ### Calendar and booking preferences
 
@@ -147,13 +150,13 @@ the link: Google Meet for Google Calendar, and the Outlook default, often
 Microsoft Teams, for Outlook. You can turn it off for one meeting while you book
 it. If the calendar adds no link, the invitation still goes out.
 
-**My booking link** is still the place to copy a public link you can use again
-and again, for your email signature. There you can also look at it first, pause
-it or replace it. Opening meeting settings from a booking draft opens another tab;
+**My booking link** is at the foot of the page. Copy a public link there that you
+can use again and again, for your email signature. There you can also look at it
+first, turn off **Accept bookings** to pause it, or replace it. Opening meeting settings from a booking draft opens another tab;
 coming back loads the saved settings again.
 
 ### How do I share a booking link?
-Open **Settings → Meetings**. Connect or reconnect Google Calendar or Outlook Calendar with permission to create invitations. Your name comes from **Settings → Account**, and your company's look comes from **Settings → Company**. Set the meeting details and the limits on your free times, then save. Open the account menu → **My booking link** and choose **Enable bookings**.
+Open **Settings → Meetings**. Connect or reconnect Google Calendar or Outlook Calendar with permission to create invitations. Your name comes from **Settings → Account**, and your company's look comes from **Settings → Company**. Set the meeting details and the limits on your free times, then save. Then turn on **Accept bookings** under **My booking link** on the same page.
 
 A calendar marked **Read-only calendar** is connected to read events, but cannot
 send invitations. In Settings → Connections, choose **Reconnect** and allow it
@@ -162,8 +165,8 @@ Choose **Copy link** to share it in any place, your email signature too. Guests
 choose a time and enter their own details; you do not need to pick a contact
 first.
 
-**Preview public page** shows what guests will see. **Pause bookings** stops new
-bookings without changing the link. **Replace booking link** stops the old link
+**Preview public page** shows what guests will see. Turning off **Accept
+bookings** stops new bookings without changing the link. **Replace booking link** stops the old link
 working, so update any signatures or pages where you shared it.
 
 ### How do I arrange a meeting with a contact?

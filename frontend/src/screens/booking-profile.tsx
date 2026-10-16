@@ -3,15 +3,17 @@ import { CalendarDays, Copy, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Badge, Button, TextInput } from "../design-system/atoms";
+import { Button, TextInput } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { CompanyLogo } from "../design-system/companylogo";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
 import { FactList } from "../design-system/factlist";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
+import { SettingList, SettingRow } from "../design-system/settingrow";
+import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
 import { throwProblem, unwrap } from "../lib/problem";
 import { navigate } from "../lib/router";
@@ -86,36 +88,34 @@ function ProfileForm({
   });
   return (
     <div className="book-form">
-      <Panel title={t("scheduling.myLink")} tone="accent">
-        <PanelBody>
-          <p className="t-caption">{t("scheduling.linkIntro")}</p>
-          <Badge tone={profile.enabled ? "success" : "default"}>
-            {t(profile.enabled ? "scheduling.active" : "scheduling.paused")}
-          </Badge>
+      {/* The lead card on its own page; one panel among several in settings. */}
+      <Panel
+        title={t("scheduling.myLink")}
+        tone={embedded ? undefined : "accent"}
+      >
+        <PanelBody className="form-stack">
+          <PanelIntro>{t("scheduling.linkIntro")}</PanelIntro>
           {profile.enabled &&
             !calendar.connections.isPending &&
             !calendar.ready && (
               <ErrorLine>{t("scheduling.publicCalendarUnavailable")}</ErrorLine>
             )}
-          {profile.public_url && (
-            <div className="book-link">
+          <div className="booking-link">
+            {profile.public_url ? (
               <TextInput
                 aria-label={t("scheduling.myLink")}
                 readOnly
-                value={profile.public_url ?? ""}
+                value={profile.public_url}
               />
-            </div>
-          )}
-          {!profile.public_url && (
-            <p className="t-caption">
-              {t(
-                profile.slug
-                  ? "scheduling.publicUrlMissing"
-                  : "scheduling.linkNotCreated",
-              )}
-            </p>
-          )}
-          <div className="book-actions">
+            ) : (
+              <p className="t-caption">
+                {t(
+                  profile.slug
+                    ? "scheduling.publicUrlMissing"
+                    : "scheduling.linkNotCreated",
+                )}
+              </p>
+            )}
             <Button
               variant="primary"
               disabled={!profile.public_url}
@@ -130,46 +130,66 @@ function ProfileForm({
             </Button>
           </div>
           {copy.notice}
-          <div className="book-actions">
-            {/* The refusal rides the button, so at 390 it stays beside the
-                verb it explains rather than under the next one. */}
-            <Button
-              disabled={save.isPending}
-              reason={
-                !profile.enabled && !profile.provider
-                  ? t("scheduling.calendarSetupNeeded")
-                  : undefined
-              }
-              onClick={() => save.mutate({ enabled: !profile.enabled })}
-            >
-              {t(profile.enabled ? "scheduling.pause" : "scheduling.resume")}
-            </Button>
-            <Button
-              disabled={!profile.slug || save.isPending}
-              onClick={() => setReplace(true)}
-            >
-              {t("scheduling.replace")}
-            </Button>
-          </div>
-          {embedded && <BookingIdentity profile={profile} />}
-          <ConfirmModal
-            open={replace}
-            onClose={() => setReplace(false)}
-            title={t("scheduling.replace")}
-            confirmLabel={t("scheduling.replace")}
-            pending={save.isPending}
-            onConfirm={() =>
-              save.mutate(
-                { replace_link: true },
-                { onSuccess: () => setReplace(false) },
-              )
-            }
-          >
-            <p>{t("scheduling.replaceHelp")}</p>
-            <ErrorLine error={save.error} />
-          </ConfirmModal>
-          <ErrorLine error={save.error} />
         </PanelBody>
+        <SettingList bleed="settings">
+          <SettingRow
+            label={t("scheduling.acceptBookings")}
+            description={t("scheduling.acceptBookingsHelp")}
+            control={
+              <Switch
+                label={t("scheduling.acceptBookings")}
+                labelHidden
+                checked={profile.enabled}
+                pending={save.isPending}
+                // The refusal rides the switch, so at 390 it stays beside it.
+                reason={
+                  !profile.enabled && !profile.provider
+                    ? t("scheduling.calendarSetupNeeded")
+                    : undefined
+                }
+                onChange={(on) => save.mutate({ enabled: on })}
+              />
+            }
+          />
+          <SettingRow
+            label={t("scheduling.replace")}
+            description={t("scheduling.replaceShort")}
+            control={
+              <Button
+                disabled={!profile.slug || save.isPending}
+                onClick={() => setReplace(true)}
+              >
+                {t("scheduling.replaceAction")}
+              </Button>
+            }
+          />
+        </SettingList>
+        {embedded && (
+          <PanelBody>
+            <BookingIdentity profile={profile} />
+          </PanelBody>
+        )}
+        {save.error && !replace && (
+          <PanelBody>
+            <ErrorLine error={save.error} />
+          </PanelBody>
+        )}
+        <ConfirmModal
+          open={replace}
+          onClose={() => setReplace(false)}
+          title={t("scheduling.replace")}
+          confirmLabel={t("scheduling.replace")}
+          pending={save.isPending}
+          onConfirm={() =>
+            save.mutate(
+              { replace_link: true },
+              { onSuccess: () => setReplace(false) },
+            )
+          }
+        >
+          <p>{t("scheduling.replaceHelp")}</p>
+          <ErrorLine error={save.error} />
+        </ConfirmModal>
       </Panel>
       {!embedded && (
         <a href="#/settings/meetings">{t("scheduling.openSettings")}</a>

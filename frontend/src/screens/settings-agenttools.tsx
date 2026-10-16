@@ -5,10 +5,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Badge, EmptyState, SearchField } from "../design-system/atoms";
+import {
+  Badge,
+  EmptyState,
+  OptionCount,
+  SearchField,
+} from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
-import { KeyedName } from "../design-system/keyedname";
+import { Disclosure, DisclosureGroup } from "../design-system/disclosure";
+import { KeyCode } from "../design-system/keyedname";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import {
   PassportSelect,
@@ -58,6 +64,14 @@ export function AgentToolsCard() {
     <Panel title={t("tools.title")}>
       <PanelBody>
         <PanelIntro>{t("tools.sub")}</PanelIntro>
+        {all.length > 0 && (
+          <SearchField
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t("tools.search")}
+            aria-label={t("tools.search")}
+          />
+        )}
       </PanelBody>
       {/* Kept once a passport was ever minted, revoked included, so revoking
           the chosen one does not pull the selector away mid-use. */}
@@ -82,27 +96,22 @@ export function AgentToolsCard() {
           />
         </SettingList>
       )}
-      {all.length > 0 && (
-        <PanelBody>
-          <SearchField
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t("tools.search")}
-            aria-label={t("tools.search")}
+      <PanelBody>
+        {shown.length > 0 ? (
+          <ToolGroups
+            key={query.trim() === "" ? "browse" : "search"}
+            groups={groupByScope(shown)}
+            searching={query.trim() !== ""}
+            reachable={reachable}
           />
-        </PanelBody>
-      )}
-      {shown.length > 0 ? (
-        <ToolTable tools={shown} reachable={reachable} />
-      ) : (
-        <PanelBody>
+        ) : (
           <QueryStates query={tools} pendingLabel={t("tools.title")}>
             <EmptyState>
               {all.length > 0 ? t("tools.noMatch") : t("common.empty")}
             </EmptyState>
           </QueryStates>
-        </PanelBody>
-      )}
+        )}
+      </PanelBody>
     </Panel>
   );
 }
@@ -122,10 +131,80 @@ function matching(
   );
 }
 
+// The order a passport's scopes widen in, so the groups read from the least
+// a tool may do to the most.
+const SCOPE_ORDER: readonly string[] = [
+  "read",
+  "draft",
+  "write",
+  "send",
+  "enrich",
+];
+
+type ToolGroup = Readonly<{
+  scope: string | null;
+  tools: readonly AgentTool[];
+}>;
+
+function scopeRank(scope: string | null): number {
+  if (scope === null) {
+    return -1;
+  }
+  const rank = SCOPE_ORDER.indexOf(scope);
+  return rank === -1 ? SCOPE_ORDER.length : rank;
+}
+
+function groupByScope(tools: readonly AgentTool[]): readonly ToolGroup[] {
+  const byScope = new Map<string | null, AgentTool[]>();
+  for (const tool of tools) {
+    const scope = tool.required_scope ?? null;
+    byScope.set(scope, [...(byScope.get(scope) ?? []), tool]);
+  }
+  return [...byScope]
+    .map(([scope, members]) => ({ scope, tools: members }))
+    .sort((a, b) => scopeRank(a.scope) - scopeRank(b.scope));
+}
+
+// Browsing opens one scope at a time; a search opens every group it matched in.
+function ToolGroups({
+  groups,
+  searching,
+  reachable,
+}: Readonly<{
+  groups: readonly ToolGroup[];
+  searching: boolean;
+  reachable: (tool: AgentTool) => boolean;
+}>) {
+  const t = useT();
+  const sections = groups.map((group) => {
+    const label =
+      group.scope === null
+        ? t("tools.noScope")
+        : scopeChipLabel(t, group.scope);
+    return (
+      <Disclosure
+        key={group.scope ?? ""}
+        open={searching ? true : undefined}
+        summary={
+          <span className="tools-group">
+            {label}
+            <OptionCount count={group.tools.length} />
+          </span>
+        }
+      >
+        <ToolTable label={label} tools={group.tools} reachable={reachable} />
+      </Disclosure>
+    );
+  });
+  return searching ? sections : <DisclosureGroup>{sections}</DisclosureGroup>;
+}
+
 function ToolTable({
+  label,
   tools,
   reachable,
 }: Readonly<{
+  label: string;
   tools: readonly AgentTool[];
   reachable: (tool: AgentTool) => boolean;
 }>) {
@@ -149,9 +228,15 @@ function ToolTable({
       fold: "title",
       render: (tool) => (
         <CellStack>
-          <span className={reachable(tool) ? undefined : "agents-ended"}>
-            <KeyedName name={tool.title} code={tool.name} />
+          <span className="tools-name-line">
+            <span className={reachable(tool) ? undefined : "agents-ended"}>
+              {tool.title}
+            </span>
+            {tool.egress && <Badge tone="warning">{t("tools.egress")}</Badge>}
           </span>
+          {!reachable(tool) && (
+            <span className="t-caption">{t("tools.unreachable")}</span>
+          )}
           {/* The text an agent selects the tool by, governance clause included. */}
           <span
             id={descriptionId(tool)}
@@ -162,6 +247,11 @@ function ToolTable({
             }
           >
             {tool.description}
+            {open.has(tool.name) && (
+              <span className="tools-key">
+                <KeyCode code={tool.name} />
+              </span>
+            )}
           </span>
         </CellStack>
       ),
@@ -171,29 +261,11 @@ function ToolTable({
       header: t("tools.colTier"),
       render: (tool) => <AutonomyDot tier={dotTier(tool.tier)} withLabel />,
     },
-    {
-      key: "access",
-      header: t("tools.colScope"),
-      render: (tool) => (
-        <CellStack>
-          <span className="tools-access">
-            {tool.required_scope && (
-              <Badge>{scopeChipLabel(t, tool.required_scope)}</Badge>
-            )}
-            {tool.egress && <Badge tone="warning">{t("tools.egress")}</Badge>}
-          </span>
-          {!reachable(tool) && (
-            <span className="t-caption">{t("tools.unreachable")}</span>
-          )}
-        </CellStack>
-      ),
-    },
   ];
   return (
     <DataTable
-      bleed
       fold
-      label={t("tools.title")}
+      label={label}
       columns={columns}
       rows={[...tools]}
       rowKey={(tool) => tool.name}

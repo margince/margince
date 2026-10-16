@@ -1,15 +1,14 @@
 // What the product may send this reader about their day and their week.
 //
-// The brief and the weekly are on their screen either way; these rows are about
-// the NUDGE toward them, which is the one part a contact is entitled to switch
-// off. So they sit under the account's own settings beside the display
-// language, not under anything an admin configures for the team.
+// The brief and the weekly show on Home either way. These rows switch off only
+// the email that points to them, so they sit with the reader's own notifications.
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { Panel } from "../design-system/panel";
 import { Select } from "../design-system/select";
-import { SettingRow } from "../design-system/settingrow";
+import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import { unwrap } from "../lib/problem";
 
@@ -19,8 +18,19 @@ type BriefDelivery = components["schemas"]["BriefDelivery"];
 const CHOICES = ["email", "none"] as const;
 type Choice = (typeof CHOICES)[number];
 
+export function BriefDeliveryPanel() {
+  const t = useT();
+  return (
+    <Panel title={t("delivery.panelTitle")}>
+      <SettingList bleed="settings">
+        <BriefDeliveryRows />
+      </SettingList>
+    </Panel>
+  );
+}
+
 /**
- * The delivery settings, as rows in the account panel.
+ * The delivery settings, as rows in the summaries panel.
  *
  * A member who has never chosen sees the dropdown on its DEFAULT rather than on
  * a blank: the server distinguishes "never chose" from "chose none", and the
@@ -28,7 +38,7 @@ type Choice = (typeof CHOICES)[number];
  * whatever the installation does. Sending is that default, so the control shows
  * it — and touching the control is what turns a default into a decision.
  */
-export function BriefDeliveryRows() {
+function BriefDeliveryRows() {
   const t = useT();
   const queryClient = useQueryClient();
   const settings = useQuery({

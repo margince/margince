@@ -124,9 +124,9 @@ decided: **Close dates**, **Company names** and **Lifecycle stages**. They land
 under **Handled for you** on the Worklist rather than as an approval.
 
 This is set per seat, and it is **on by default**. The switches
-are at **Settings → Agents**, under **Automatic changes**, which says: "Automatic
-changes start on. Existing settings are kept. Each switch applies to your work,
-not the whole team."
+are at **Settings → Agents**, under **Automatic changes**, which says: "Each switch
+lets one kind of change run without your review. It applies to your work, not
+the whole team."
 
 Each switch shows how you have answered that kind of proposal so far.
 It reads: "So far: {clean} approved as proposed, {edited} approved after edits, {rejected}

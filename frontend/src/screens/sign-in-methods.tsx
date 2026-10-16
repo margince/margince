@@ -13,6 +13,7 @@ import { QueryGate } from "../design-system/querystates";
 import { Select, type SelectOption } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
+import { useOAuthApp, type Vendor } from "../features/automations/oauth-app";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
@@ -146,6 +147,20 @@ function grantRefusal(
   return null;
 }
 
+// A duplicate group collapses in the saved map, so it counts as a change the
+// refusal then names.
+function draftChanged(
+  rows: readonly GrantRow[],
+  initial: Readonly<Record<string, string>>,
+): boolean {
+  const groups = new Set(rows.map((row) => row.group));
+  return (
+    groups.size !== rows.length ||
+    rows.length !== Object.keys(initial).length ||
+    rows.some((row) => initial[row.group] !== row.role)
+  );
+}
+
 /**
  * A draft, saved whole: the stored map is replaced, never merged, and an empty
  * object clears it. A background refetch must not overwrite rows mid-edit.
@@ -171,6 +186,8 @@ function GroupRoleGrants({
   const nextId = useRef(Object.keys(initial).length);
   const refusal = grantRefusal(rows, t);
   const locked = !canManage || save.isPending;
+  const draft = Object.fromEntries(rows.map((row) => [row.group, row.role]));
+  const dirty = draftChanged(rows, initial);
   const editRow = (id: number, edit: Partial<GrantRow>) =>
     setRows((current) =>
       current.map((row) => (row.id === id ? { ...row, ...edit } : row)),
@@ -232,10 +249,10 @@ function GroupRoleGrants({
   return (
     <Panel
       title={t("groupRoles.title")}
-      actions={
-        <div className="group-grants-actions">
+      titleAction={
+        canManage && (
           <Button
-            disabled={locked}
+            disabled={save.isPending}
             reason={
               rows.length >= MAX_GROUP_GRANTS
                 ? t("groupRoles.tooMany")
@@ -252,34 +269,37 @@ function GroupRoleGrants({
           >
             {t("groupRoles.add")}
           </Button>
-          <Button
-            variant="primary"
-            pending={save.isPending}
-            disabled={!canManage}
-            reason={refusal ?? undefined}
-            onClick={() =>
-              save.mutate({
-                oidc_group_role_map: Object.fromEntries(
-                  rows.map((row) => [row.group, row.role]),
-                ),
-              })
-            }
-          >
-            {t("groupRoles.save")}
-          </Button>
-        </div>
+        )
+      }
+      actions={
+        canManage &&
+        dirty && (
+          <div className="group-grants-actions">
+            <Button
+              variant="primary"
+              pending={save.isPending}
+              reason={refusal ?? undefined}
+              onClick={() => save.mutate({ oidc_group_role_map: draft })}
+            >
+              {t("groupRoles.save")}
+            </Button>
+          </div>
+        )
       }
     >
       <PanelBody>
         <PanelIntro>{t("groupRoles.sub")}</PanelIntro>
-        <Callout
-          tone="warning"
-          kind="standing"
-          title={t("groupRoles.grantOnlyTitle")}
-        >
-          <p>{t("groupRoles.grantOnly")}</p>
-          <p>{t("groupRoles.adminGrant")}</p>
-        </Callout>
+        {/* The cost of a mapping, shown once there is one to weigh. */}
+        {rows.length > 0 && (
+          <Callout
+            tone="warning"
+            kind="standing"
+            title={t("groupRoles.grantOnlyTitle")}
+          >
+            <p>{t("groupRoles.grantOnly")}</p>
+            <p>{t("groupRoles.adminGrant")}</p>
+          </Callout>
+        )}
         {save.error && (
           <Callout
             tone="danger"
@@ -289,12 +309,9 @@ function GroupRoleGrants({
             {problemMessageOf(save.error, t)}
           </Callout>
         )}
+        {rows.length === 0 && <EmptyState>{t("groupRoles.empty")}</EmptyState>}
       </PanelBody>
-      {rows.length === 0 ? (
-        <PanelBody>
-          <EmptyState>{t("groupRoles.empty")}</EmptyState>
-        </PanelBody>
-      ) : (
+      {rows.length > 0 && (
         <DataTable
           label={t("groupRoles.title")}
           bleed
@@ -306,6 +323,20 @@ function GroupRoleGrants({
       )}
     </Panel>
   );
+}
+
+function isVendor(key: string): key is Vendor {
+  return key === "google" || key === "microsoft";
+}
+
+// A switched-on provider stays off the sign-in screen until its OAuth app
+// exists. An unreadable app keeps the plain hint.
+function ProviderHint({ provider }: Readonly<{ provider: Vendor }>) {
+  const t = useT();
+  const app = useOAuthApp(provider);
+  return app.data?.source === "none"
+    ? t("signInMethods.providerNoApp")
+    : t("signInMethods.providerHint");
 }
 
 export function SignInMethodsCard() {
@@ -360,7 +391,7 @@ export function SignInMethodsCard() {
                         labelHidden
                         checked
                         describedBy={control["aria-describedby"]}
-                        reason={t("signInMethods.passwordReason")}
+                        disabled
                         onChange={() => undefined}
                       />
                     )}
@@ -391,7 +422,13 @@ export function SignInMethodsCard() {
                     <SettingRow
                       key={provider.key}
                       label={provider.label}
-                      description={t("signInMethods.providerHint")}
+                      description={
+                        isVendor(provider.key) ? (
+                          <ProviderHint provider={provider.key} />
+                        ) : (
+                          t("signInMethods.providerHint")
+                        )
+                      }
                       control={(control) => (
                         <Switch
                           label={provider.label}

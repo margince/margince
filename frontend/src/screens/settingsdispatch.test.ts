@@ -43,7 +43,7 @@ function dispatchedIds(): Set<string> {
 // split moved eight cards out of a Data model wrapper and seven out of an AI
 // tab strip, which is exactly the shape that loses one.
 const CARDS_THE_REGISTER_REACHED = [
-  "AccountCard",
+  "AccountSettings",
   "AutonomySettingsCard",
   "VoiceDnaCard",
   "AgentsTab",

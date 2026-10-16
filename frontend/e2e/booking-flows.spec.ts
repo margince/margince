@@ -437,25 +437,20 @@ test("calendar setup enables booking with the existing Account name", async ({
       .getByRole("main")
       .getByRole("link", { name: de["settings.tab.account"], exact: true }),
   ).toHaveAttribute("href", "#/settings/account");
-  await expect(
-    page.getByRole("button", { name: de["scheduling.resume"], exact: true }),
-  ).toBeDisabled();
+  const accept = page.getByRole("switch", {
+    name: de["scheduling.acceptBookings"],
+    exact: true,
+  });
+  await expect(accept).toBeDisabled();
   await page
     .getByRole("button", { name: de["scheduling.save"], exact: true })
     .click();
   await expect(
     page.getByText(de["settings.saved"], { exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: de["scheduling.resume"], exact: true })
-    .click();
+  await accept.click();
   // The booking link panel is the one surface that states it.
-  await expect(
-    page.getByText(de["scheduling.active"], { exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: de["scheduling.pause"], exact: true }),
-  ).toBeVisible();
+  await expect(accept).toHaveAttribute("aria-checked", "true");
   expect(writes).toHaveLength(2);
   expect(writes[1]).toMatchObject({
     provider: "gcal",

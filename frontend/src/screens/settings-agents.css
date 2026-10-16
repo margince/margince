@@ -60,18 +60,23 @@
   }
 }
 
-/* One chip a line, so the column is as wide as its widest chip and the tool's
-   description takes the width. */
-.tools-access {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
+.tools-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
-@container table-fold (width < 36rem) {
-  .tools-access {
-    flex-flow: row wrap;
-  }
+
+/* A tool's name with its external-access badge, wrapping under it when short. */
+.tools-name-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.tools-key {
+  display: block;
+  margin-block-start: var(--space-1);
 }
 
 /* The text an agent selects a tool by: one line until its row is opened. */

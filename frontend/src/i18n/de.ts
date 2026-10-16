@@ -331,6 +331,9 @@ export const de = {
   "scheduling.replace": "Buchungslink ersetzen",
   "scheduling.replaceHelp":
     "Der alte Link nimmt keine Buchungen mehr an. Aktualisiere deine E-Mail-Signatur und alle anderen Stellen, an denen du den Link geteilt hast. Bestehende Termine behalten ihre privaten Links zum Ändern.",
+  "scheduling.replaceShort":
+    "Ein neuer Link wird erstellt. Der alte Link funktioniert dann nicht mehr.",
+  "scheduling.replaceAction": "Link ersetzen",
   "scheduling.reschedule": "Termin verschieben",
   "scheduling.rescheduleHelp":
     "Dein bisheriger Termin bleibt reserviert, bis der Kalender die Änderung bestätigt.",
@@ -383,10 +386,9 @@ export const de = {
   "scheduling.copied": "Kopiert",
   "scheduling.copyFallback": "Markiere und kopiere den Link unten.",
   "scheduling.preview": "Öffentliche Seite ansehen",
-  "scheduling.active": "Buchungen aktiv",
-  "scheduling.paused": "Öffentliche Buchungen pausiert",
-  "scheduling.pause": "Buchungen pausieren",
-  "scheduling.resume": "Buchungen aktivieren",
+  "scheduling.acceptBookings": "Buchungen annehmen",
+  "scheduling.acceptBookingsHelp":
+    "Deaktiviere die Einstellung, um keine neuen Buchungen mehr anzunehmen. Der Link bleibt gleich.",
   "scheduling.settings": "Termineinstellungen",
   "scheduling.save": "Einstellungen speichern",
   "settings.tab.meetings": "Termine",
@@ -453,7 +455,9 @@ export const de = {
   "scheduling.linkNotCreated":
     "Speichere die Termineinstellungen, um deinen Buchungslink zu erstellen.",
   "scheduling.calendarSetupNeeded":
-    "Wähle und speichere in den Termineinstellungen einen Kalender, bevor du Buchungen aktivierst.",
+    "Wähle und speichere zuerst einen Kalender.",
+  "scheduling.noCalendar":
+    "Kein Kalender verbunden. Ein verbundenes Postfach bringt seinen Kalender nicht mit.",
   "scheduling.hostName": "Dein öffentlicher Name",
   "scheduling.subject": "Termintitel",
   "scheduling.location": "Ort oder Besprechungslink",
@@ -5457,7 +5461,9 @@ export const de = {
   "explain.col.owner": "Zuständig",
   "explain.col.pipeline": "Pipeline",
 
-  "settings.accountCard": "Dein Nutzerkonto",
+  "settings.profileTitle": "Profil",
+  "settings.securityTitle": "Sicherheit",
+  "settings.preferencesTitle": "Sprache und Darstellung",
   "unsaved.title": "Ungespeicherte Änderungen verwerfen?",
   "unsaved.body":
     "Wenn du diese Seite verlässt, gehen deine Eingaben verloren. Gehe zurück, um deine Eingaben zuerst zu speichern.",
@@ -5498,6 +5504,7 @@ export const de = {
     "Sendet den Wochenrückblick vom Montag zusätzlich per E-Mail.",
   "delivery.byEmail": "Per E-Mail",
   "delivery.none": "Nicht per E-Mail",
+  "delivery.panelTitle": "Zusammenfassungen per E-Mail",
   "settings.appearance": "Darstellung",
   "settings.appearanceHelp":
     "Hell, dunkel oder die Einstellung des Geräts. Die Darstellung lässt sich auch im Kontomenü ändern.",
@@ -5509,7 +5516,8 @@ export const de = {
   "settings.greetingNameHelp":
     "Mit diesem Namen wirst du in entworfenen Nachrichten und Begrüßungen angesprochen. Lässt du das Feld leer, gilt das erste Wort deines Anzeigenamens.",
   "settings.greetingNameSave": "Speichern",
-  "settings.languageHelp": "Gilt für diese Sitzung.",
+  "settings.languageHelp":
+    "Die Sprache wird in deinem Nutzerkonto gespeichert und gilt auf jedem Gerät, auf dem du dich anmeldest.",
   "settings.deviceCard": "Dieses Gerät",
   "settings.installApp": "Margince-App",
   "settings.installAppHelp":
@@ -6790,9 +6798,9 @@ export const de = {
   "notifications.byAgent": "Von einem Agenten",
   "notifications.empty":
     "Bisher ist nichts eingegangen. Was das Produkt dir mitteilt, erscheint hier.",
-  "notifications.title": "Auf welche Weise dich Benachrichtigungen erreichen",
+  "notifications.title": "Zustellung nach Typ",
   "notifications.sub":
-    "Jede Benachrichtigung bleibt unter „Benachrichtigungen“ erhalten, egal was du hier wählst. Diese Einstellung legt fest, was zusätzlich geschieht, wenn eine Benachrichtigung eintrifft.",
+    "Jede Benachrichtigung bleibt auch unter „Benachrichtigungen“ erhalten, egal was du hier wählst.",
   "notifications.saveFailed": "Diese Wahl wurde nicht gespeichert",
   "notifications.saveFailedFor": "„{setting}“ wurde nicht gespeichert",
   "notifications.class.approval_pending.label":
@@ -6811,9 +6819,9 @@ export const de = {
   "notifications.class.system.label": "Systembenachrichtigungen",
   "notifications.class.system.help":
     "Wartung, ein erreichtes Limit und alles andere, was die Installation dir mitteilen muss.",
-  "notifications.class.coach.label": "Hinweis aus dem Team",
+  "notifications.class.coach.label": "Hinweise aus dem Team",
   "notifications.class.coach.help":
-    "Jemand aus deinem Team weist auf einen Deal, eine Antwort oder einen Rückstand von dir hin. Diese Hinweise lassen sich nicht deaktivieren, da sie dich immer auf irgendeinem Weg erreichen.",
+    "Jemand aus deinem Team weist dich auf einen Deal, eine Antwort oder einen Rückstand von dir hin. Es gibt kein „Aus“, da diese Hinweise immer zugestellt werden.",
   "notifications.delivery.off": "Aus",
   "notifications.delivery.in_app": "In der App",
   "notifications.delivery.email": "E-Mail",
@@ -9129,9 +9137,9 @@ export const de = {
   // überschrift darüber sagt das Wort schon, und eine Zeile, die ihre eigene
   // Überschrift wiederholt, benennt nichts.
   "settings.home": "\u00dcbersicht",
-  "settings.home.yours": "Deine Einstellungen",
-  "settings.home.manage": "Bearbeitbare Einstellungen",
-  "settings.home.lookUp": "Schreibgeschützte Einstellungen",
+  "settings.home.sub":
+    "Alle Einstellungsseiten, die du öffnen kannst, nach Gruppen geordnet.",
+  "settings.home.readOnly": "Schreibgeschützt",
   "settings.home.rolesLabel": "Deine Rolle",
   "settings.home.seatLabel": "Dein Platz",
   "settings.home.seat.full": "Voller Platz: Änderungen erlaubt",
@@ -9743,12 +9751,10 @@ export const de = {
   "settings.rates.colCacheWriteShort": "Cache schreiben",
   "settings.rates.modelGroupLabel": "Preise von {provider}",
   "settings.voice.title": "Voice DNA",
-  "settings.voice.intro":
-    "Dein persönlicher Schreibstil prägt Entwürfe, die für dich geschrieben werden. Nur du siehst den Schreibstil, und er lernt nur aus Schreibproben, die du hinzufügst.",
   "settings.voice.readOnly":
     "Nur Lesezugriff. Deine Rolle darf die Voice DNA nicht ändern.",
   "settings.voice.emptyBody":
-    "Füge Schreibproben hinzu, um deine Voice DNA aufzubauen. Das dauert etwa eine Minute.",
+    "Füge Schreibproben hinzu, um deine Voice DNA aufzubauen. Die Voice DNA lernt nur aus dem, was du hinzufügst, und der erste Aufbau dauert etwa eine Minute.",
   "settings.voice.status.collecting": "Wird gesammelt",
   "settings.voice.status.stale": "Neuaufbau nötig",
   "settings.voice.bandThin": "dünn",
@@ -9886,9 +9892,6 @@ export const de = {
   "settings.voice.dropHint":
     "Dateien ablegen oder auswählen (.txt, .md, .pdf, .docx, .vtt, .srt oder .json), auch mehrere auf einmal.",
   "settings.voice.dropEmpty": "Dateien hier ablegen oder zum Auswählen klicken",
-  "settings.voice.whyToggle": "Warum Proben hinzufügen",
-  "settings.voice.whyBody":
-    "Margince entwirft E-Mails in deinen eigenen Worten. Margince lernt Ton, Rhythmus und Formulierungen nur aus deinen Texten. Proben sind nur für dich sichtbar.",
   "settings.voice.worksTitle": "Die besten Proben",
   "settings.voice.worksEmails":
     "Gesendete E-Mails, gespeichert als .txt, .md, .pdf oder .docx.",
@@ -10393,7 +10396,7 @@ export const de = {
   "tools.unreachable": "Bereich nicht gewährt",
   "tools.colTool": "Werkzeug",
   "tools.colTier": "Freigabe",
-  "tools.colScope": "Zugriff",
+  "tools.noScope": "Kein Bereich nötig",
   "tools.colDetail": "Details",
   "tools.search": "Werkzeuge durchsuchen",
   "tools.noMatch": "Keine Werkzeuge entsprechen dieser Suche.",
@@ -10614,12 +10617,12 @@ export const de = {
   "signInMethods.title": "Anmeldemethoden",
   "signInMethods.saveFailed": "Änderung nicht gespeichert",
   "signInMethods.sub":
-    "Wie sich Mitglieder anmelden können. Die Liste zeigt die Anbieter, für die diese Installation Zugangsdaten hat: Admins können einen Anbieter deaktivieren, aber keinen hinzufügen.",
+    "Admins können einen Anbieter deaktivieren, aber keinen hinzufügen. Ein Anbieter erscheint auf der Anmeldeseite, sobald seine App unten eingerichtet ist.",
   "signInMethods.password": "E-Mail und Passwort",
   "signInMethods.passwordAlways":
     "Immer verfügbar. Alle Nutzenden können sich so anmelden, daher lassen sich die anderen Methoden gefahrlos deaktivieren.",
-  "signInMethods.passwordReason":
-    "Die Anmeldung mit Passwort lässt sich nicht deaktivieren. Dadurch bleibt die Installation zugänglich.",
+  "signInMethods.providerNoApp":
+    "Noch nicht auf der Anmeldeseite. Der Anbieter erscheint, sobald die App unten eingerichtet ist.",
   "signInMethods.providerHint":
     "Zeigt diesen Anbieter auf der Anmeldeseite. Bestehende Sitzungen bleiben beim Deaktivieren erhalten. Laufende Anmeldungen werden abgebrochen.",
   "signInMethods.noneConfigured":
@@ -10972,8 +10975,6 @@ export const de = {
   "aiTasks.embeddingsEdit":
     "Suche und Abruf haben keine Denkstufe und keine Zeitlimits. Anbieter und Modell änderst du in der Zeile „Embedding-Modell“ unter Modellstufen.",
   "workingHours.title": "Buchbare Zeiten",
-  "workingHours.sub":
-    "Persönliche Einstellung. Nur du legst deine Zeiten fest.",
   "workingHours.unsetTitle": "Noch nicht festgelegt",
   "workingHours.unset":
     "Zur Buchung werden 09:00 bis 17:00 Uhr, Montag bis Freitag, in der Zeitzone der Installation angeboten.",
@@ -10982,7 +10983,7 @@ export const de = {
   "workingHours.days": "Arbeitstage",
   "workingHours.timezone": "Zeitzone",
   "workingHours.browserZone":
-    "Dein Browser verwendet {zone}. Die Auswahl oben ist die Zeitzone für die Verfügbarkeit.",
+    "Dein Browser ist auf {zone} eingestellt. Die Verfügbarkeit nutzt die hier gewählte Zeitzone.",
   "workingHours.timezoneHelp":
     "Zeitzone für die Verfügbarkeit. Suche nach einer Stadt oder Region.",
   "workingHours.narrowedTitle": "Weniger buchbare Zeiten",
@@ -10998,8 +10999,7 @@ export const de = {
   "workingHours.day.7": "Sonntag",
   "autonomy.title": "Automatische Änderungen",
   "autonomy.sub":
-    "Automatische Änderungen sind zu Beginn aktiviert. Bestehende Einstellungen bleiben erhalten. Jeder Schalter gilt für deine Arbeit, nicht für das ganze Team.",
-  "autonomy.noneDecidedYetTitle": "Noch keine Prüfungen",
+    "Mit jedem Schalter läuft eine Art von Änderung ohne deine Prüfung. Jeder Schalter gilt für deine Arbeit, nicht für das ganze Team.",
   "autonomy.updateFailed": "Einstellung nicht gespeichert",
   "autonomy.noneDecidedYet":
     "Du hast noch keinen dieser Vorschläge geprüft. Je nachdem, was unten aktiviert ist, können automatische Änderungen bereits laufen. Vorschläge hängen von deinen Datensätzen und der dir zugewiesenen Arbeit ab.",

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { PageTitle, SettingsRail } from "../app/shell";
 import { en } from "../i18n/en";
 import type { Route } from "../lib/router";
@@ -169,5 +169,20 @@ export const Phone: Story = {
         ),
       }),
     );
+    // The sheet lands on the reader's own page, not on the search field.
+    const sheet = within(canvasElement.ownerDocument.body);
+    const current = await sheet.findByRole("link", {
+      name: en["settings.tab.pipelines"],
+      current: "page",
+    });
+    await expect(current).toHaveFocus();
   },
+};
+
+// A page this reader may only read joins the rail in its own group while open.
+export const PhoneOpenedOffRail: Story = {
+  args: { route: { screen: SETTINGS_SCREEN, id: "fields" } },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: phone(READS_FIELDS),
 };

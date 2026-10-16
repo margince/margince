@@ -79,7 +79,6 @@ export function VoiceDnaCard() {
           // and a box saying there is nothing yet only pushes that job down.
           <Panel title={t("settings.voice.title")}>
             <PanelBody>
-              <PanelIntro>{t("settings.voice.intro")}</PanelIntro>
               <PanelIntro>{t("settings.voice.emptyBody")}</PanelIntro>
               {!canCreate && <p>{t("settings.voice.readOnly")}</p>}
             </PanelBody>
@@ -130,7 +129,6 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
     <>
       <Panel title={t("settings.voice.title")}>
         <PanelBody>
-          <PanelIntro>{t("settings.voice.intro")}</PanelIntro>
           {/* Said ONCE, for the whole surface, rather than beside each of the
               controls a denial disables. The affordances below may then be
               absent without the page making a claim about the data — which is

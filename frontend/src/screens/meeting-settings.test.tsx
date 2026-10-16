@@ -334,11 +334,11 @@ it("saves calendar setup and enables the reusable link using the Account name", 
     </StoryProviders>,
   );
   expect(await screen.findByText("Your public name")).toBeTruthy();
-  const enable = screen.getByRole("button", { name: "Enable bookings" });
+  const enable = screen.getByRole("switch", { name: "Accept bookings" });
   expect(enable).toHaveProperty("disabled", true);
-  // The reason describes the button it refuses, so the two stay together.
+  // The reason describes the switch it refuses, so the two stay together.
   expect(enable).toHaveAccessibleDescription(
-    "Choose and save a calendar in meeting settings before enabling bookings.",
+    /Choose and save a calendar first/,
   );
   const save = await screen.findByRole("button", { name: "Save settings" });
   await waitFor(() => expect(save).toHaveProperty("disabled", false));
@@ -347,7 +347,7 @@ it("saves calendar setup and enables the reusable link using the Account name", 
   await waitFor(() =>
     expect(screen.queryByRole("button", { name: "Save settings" })).toBeNull(),
   );
-  await user.click(screen.getByRole("button", { name: "Enable bookings" }));
+  await user.click(screen.getByRole("switch", { name: "Accept bookings" }));
   await waitFor(() => expect(writes).toHaveLength(2));
   expect(writes[1]).toMatchObject({
     host_name: bookingProfile.host_name,
@@ -416,11 +416,17 @@ it("uses the link's current enabled state without losing an edited title", async
   const title = await screen.findByLabelText("Meeting title");
   await user.clear(title);
   await user.type(title, "Keep this draft");
-  await user.click(screen.getByRole("button", { name: "Enable bookings" }));
-  await screen.findByRole("button", { name: "Pause bookings" });
+  // The panel remounts on each answer, so the switch is found again each time.
+  const accept = () => screen.getByRole("switch", { name: "Accept bookings" });
+  await user.click(accept());
+  await waitFor(() =>
+    expect(accept().getAttribute("aria-checked")).toBe("true"),
+  );
   expect(title).toHaveProperty("value", "Keep this draft");
-  await user.click(screen.getByRole("button", { name: "Pause bookings" }));
-  await screen.findByRole("button", { name: "Enable bookings" });
+  await user.click(accept());
+  await waitFor(() =>
+    expect(accept().getAttribute("aria-checked")).toBe("false"),
+  );
   expect(title).toHaveProperty("value", "Keep this draft");
 });
 it("displays an old minute value concisely without changing it on unrelated saves", async () => {
@@ -471,7 +477,7 @@ it.each([false, true])(
       true,
     );
     expect(
-      screen.getByRole("button", { name: "Enable bookings" }),
+      screen.getByRole("switch", { name: "Accept bookings" }),
     ).toHaveProperty("disabled", true);
   },
 );

@@ -33,15 +33,27 @@ function Served({
   groupRoleMap = {},
   requireMfa = false,
   ownMfaConfirmed = true,
+  appSource = "stored",
   children,
 }: Readonly<{
   providers: { key: string; label: string; enabled: boolean }[];
   groupRoleMap?: Record<string, string>;
   requireMfa?: boolean;
   ownMfaConfirmed?: boolean;
+  appSource?: "stored" | "none";
   children: ReactNode;
 }>) {
+  const app = (provider: string) => () =>
+    jsonResponse({
+      provider,
+      configured: appSource === "stored",
+      source: appSource,
+      client_id: appSource === "stored" ? "client-1" : "",
+      redirect_uris: [],
+    });
   installFetchStub({
+    "GET /installation/oauth-apps/google": app("google"),
+    "GET /installation/oauth-apps/microsoft": app("microsoft"),
     "GET /installation/authentication-policy": () =>
       jsonResponse({
         sign_in_providers: providers,
@@ -84,6 +96,46 @@ export const ProviderEnabled: Story = {
       <SignInMethodsCard />
     </Served>
   ),
+};
+
+/** Kept on by the admin, but no OAuth app exists for either vendor yet, so the
+ * rows say the sign-in screen does not show them. */
+export const ProviderWithoutApp: Story = {
+  render: () => (
+    <Served
+      providers={[
+        { key: "google", label: "Continue with Google", enabled: true },
+        { key: "microsoft", label: "Continue with Microsoft", enabled: true },
+      ]}
+      appSource="none"
+    >
+      <SignInMethodsCard />
+    </Served>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    expect(
+      await canvas.findAllByText(/not on the sign-in screen yet/i),
+    ).toHaveLength(2);
+  },
+};
+
+/** A drafted mapping: the grant-only warning appears with the first row, and
+ * Save stands only while the draft differs from what is stored. */
+export const GroupDraft: Story = {
+  render: () => (
+    <Served providers={[{ key: "google", label: "Google", enabled: true }]}>
+      <SignInMethodsCard />
+    </Served>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const add = await canvas.findByRole("button", { name: /add group/i });
+    await waitFor(() => expect(add).toBeEnabled());
+    await userEvent.click(add);
+    await canvas.findByText(/grants the mapped roles and never removes any/i);
+    await canvas.findByRole("button", { name: /save group grants/i });
+  },
 };
 
 /** The same provider switched off. It stays LISTED — the credentials are still

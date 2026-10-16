@@ -131,13 +131,13 @@ function NameSettingRow({
   // count UTF-16 units and refuse a name the server admits.
   const tooLong = [...trimmed].length > maxRunes;
   const refusal = save.error ? problemMessageOf(save.error, t) : undefined;
+  const savable = dirty && (emptyAllowed || trimmed !== "") && !tooLong;
   return (
     <SettingRow
       label={label}
       description={description}
-      layout="stack"
       control={(row) => (
-        // The catalogued pairing of field and verb, as the pipeline rows use.
+        // Save appears once the name moves, so a settled row is the field alone.
         <div className="form-stack settingrow-measure">
           <Field label={label} labelHidden error={refusal}>
             {(field) => (
@@ -152,16 +152,26 @@ function NameSettingRow({
                 placeholder={placeholder}
                 // No `maxLength`: UTF-16 units, not the runes `tooLong` counts.
                 onChange={(event) => setDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && savable) {
+                    save.mutate(trimmed);
+                  }
+                }}
               />
             )}
           </Field>
-          <Button
-            disabled={!dirty || (!emptyAllowed && trimmed === "") || tooLong}
-            pending={save.isPending}
-            onClick={() => save.mutate(trimmed)}
-          >
-            {saveLabel}
-          </Button>
+          {dirty && (
+            <div className="form-actions">
+              <Button
+                variant="primary"
+                disabled={!savable}
+                pending={save.isPending}
+                onClick={() => save.mutate(trimmed)}
+              >
+                {saveLabel}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     />

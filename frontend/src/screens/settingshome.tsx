@@ -1,21 +1,23 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 import type { MouseEvent } from "react";
-import { Badge, EmptyState } from "../design-system/atoms";
-import { Heading } from "../design-system/heading";
+import { EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RoleBadge } from "../design-system/rbac";
 import { useT } from "../i18n";
 import { navigate } from "../lib/router";
 import { useMe } from "../lib/session";
+import { usePhoneViewport } from "../lib/viewport";
 import type {
   SettingsGroupId,
   SettingsPage,
   SettingsReach,
 } from "./settingscatalog";
-import { SETTINGS_GROUPS } from "./settingscatalog";
+import { SETTINGS_GROUPS, SETTINGS_PAGES } from "./settingscatalog";
+import { groupHeadingKey } from "./settingsnav";
+import { PAGE_ICONS } from "./settingsnavicons";
 import { settingsHref } from "./settingsrouting";
 import { SettingsSearchBox } from "./settingssearchbox";
 
@@ -105,58 +107,32 @@ function routeHashOf(): string {
 }
 
 /**
- * The settings landing page.
+ * The settings landing page: every page this reader may open, by topic, then
+ * who they are here.
  *
- * Four questions, in the order a reader asks them: what is mine, what can I
- * change, what can I only look at, and who am I here. The middle two are the
- * `settingsReach` partition — the same one the sidebar is built from — so a page
- * cannot be in the rail and missing here, or listed here as manageable while its
- * every control is disabled.
- *
- * The "look up" panel is load-bearing rather than a courtesy. The rail carries
- * only pages a reader can act on, so this is where a page they may read and not
- * change goes on living: without it, dropping a page from the rail would read as
- * taking it away.
+ * Built from the `settingsReach` partition the rail reads. A page the reader may
+ * only consult is not in the rail, so this is where it stays reachable, marked
+ * read-only.
  */
 export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
   const t = useT();
   const me = useMe();
-  const personal = reach.acts.filter((page) => page.group === "me");
-  const manageable = groupsOf(reach.acts.filter((page) => page.group !== "me"));
-  const consultable = groupsOf(reach.looksUp);
+  const phone = usePhoneViewport();
+  const openable = [...reach.acts, ...reach.looksUp];
 
   return (
     <div className="settings-stack arrive-stack">
-      {/* At every viewport, not only where the rail is. The rail owns the
-          desktop search box and the rail is gone at phone width, so this is the
-          one a reader on a phone reaches. */}
-      <SettingsSearchBox pages={[...reach.acts, ...reach.looksUp]} />
+      {/* The rail holds this box above phone width; below it this page is the
+          directory, so the box comes here. */}
+      {phone && <SettingsSearchBox pages={openable} />}
 
-      <Panel title={t("settings.home.yours")}>
-        <PanelBody>
-          <PageRows pages={personal} />
-        </PanelBody>
-      </Panel>
-
-      {manageable.length > 0 && (
-        <Panel title={t("settings.home.manage")}>
+      {groupsOf(openable).map(({ group, items }) => (
+        <Panel key={group} title={t(groupHeadingKey(group))}>
           <PanelBody>
-            {manageable.map(({ group, items }) => (
-              <GroupRows key={group} group={group} items={items} />
-            ))}
+            <PageRows pages={items} looksUp={reach.looksUp} />
           </PanelBody>
         </Panel>
-      )}
-
-      {consultable.length > 0 && (
-        <Panel title={t("settings.home.lookUp")}>
-          <PanelBody>
-            {consultable.map(({ group, items }) => (
-              <GroupRows key={group} group={group} items={items} />
-            ))}
-          </PanelBody>
-        </Panel>
-      )}
+      ))}
 
       <Panel title={t("settings.home.access")}>
         <PanelBody>
@@ -205,63 +181,63 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
   );
 }
 
-/** The pages of one half, bucketed by group in the catalog's own order. */
+/** The pages by group, both in the catalog's own order. */
 function groupsOf(
   pages: readonly SettingsPage[],
 ): readonly { group: SettingsGroupId; items: readonly SettingsPage[] }[] {
+  const open = new Set(pages);
   return SETTINGS_GROUPS.map((group) => ({
     group,
-    items: pages.filter((page) => page.group === group),
+    items: SETTINGS_PAGES.filter(
+      (page) => page.group === group && open.has(page),
+    ),
   })).filter((entry) => entry.items.length > 0);
 }
 
-function GroupRows({
-  group,
-  items,
-}: Readonly<{ group: SettingsGroupId; items: readonly SettingsPage[] }>) {
-  const t = useT();
-  return (
-    <section className="settings-home-group">
-      <Heading size="small" as="h3" className="settings-home-groupname">
-        {t(`settings.group.${group}`)}
-      </Heading>
-      <PageRows pages={items} />
-    </section>
-  );
-}
-
-/**
- * One row per page: its name, what it is for, and whose state it changes.
- *
- * A title-only link was the whole defect this replaces — it made the home a
- * second copy of the menu, so a reader who could not tell two pages apart in
- * the rail could not tell them apart here either. The subtitle and the scope
- * are already in the catalog and were being thrown away.
- */
-function PageRows({ pages }: Readonly<{ pages: readonly SettingsPage[] }>) {
+/** One row per page: its glyph, its name and what it is for. */
+function PageRows({
+  pages,
+  looksUp,
+}: Readonly<{
+  pages: readonly SettingsPage[];
+  looksUp: readonly SettingsPage[];
+}>) {
   const t = useT();
   return (
     <div className="settings-home-links">
-      {pages.map((page) => (
-        <a
-          key={page.id}
-          className="settings-home-row"
-          href={`#/settings/${page.id}`}
-          onClick={(event) => {
-            if (!opensInThisTab(event)) {
-              return;
-            }
-            event.preventDefault();
-            navigate(settingsHref(page.id));
-          }}
-        >
-          <span className="settings-home-rowhead">
-            <span>{t(`settings.tab.${page.id}`)}</span>
-            <Badge>{t(`settings.scope.${page.scope}`)}</Badge>
-          </span>
-          <span className="t-caption">{t(`settings.page.${page.id}.sub`)}</span>
-        </a>
-      ))}
+      {pages.map((page) => {
+        const Glyph = PAGE_ICONS[page.id];
+        return (
+          <a
+            key={page.id}
+            className="settings-home-row"
+            href={`#/settings/${page.id}`}
+            onClick={(event) => {
+              if (!opensInThisTab(event)) {
+                return;
+              }
+              event.preventDefault();
+              navigate(settingsHref(page.id));
+            }}
+          >
+            <Glyph size={16} aria-hidden className="settings-home-glyph" />
+            <span className="settings-home-name">
+              {t(`settings.tab.${page.id}`)}
+              {/* A lock rather than a badge on each row: a reader holding
+                  many read grants would otherwise see a column of chips. */}
+              {looksUp.includes(page) && (
+                <>
+                  <Lock size={14} aria-hidden className="settings-home-lock" />
+                  <span className="sr-only">{t("settings.home.readOnly")}</span>
+                </>
+              )}
+            </span>
+            <span className="t-caption">
+              {t(`settings.page.${page.id}.sub`)}
+            </span>
+          </a>
+        );
+      })}
     </div>
   );
 }

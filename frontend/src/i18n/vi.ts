@@ -333,6 +333,9 @@ export const vi = {
   "scheduling.replace": "Thay liên kết đặt lịch",
   "scheduling.replaceHelp":
     "Liên kết cũ sẽ ngừng nhận đặt lịch. Cập nhật chữ ký email và mọi nơi khác đã chia sẻ liên kết. Các cuộc họp hiện có vẫn giữ liên kết thay đổi riêng.",
+  "scheduling.replaceShort":
+    "Tạo liên kết mới. Liên kết cũ sẽ ngừng hoạt động.",
+  "scheduling.replaceAction": "Thay liên kết",
   "scheduling.reschedule": "Đổi lịch",
   "scheduling.rescheduleHelp":
     "Giờ hiện tại vẫn được giữ cho đến khi lịch xác nhận thay đổi.",
@@ -382,10 +385,9 @@ export const vi = {
   "scheduling.copied": "Đã sao chép",
   "scheduling.copyFallback": "Chọn và sao chép liên kết bên dưới.",
   "scheduling.preview": "Xem trước trang công khai",
-  "scheduling.active": "Đang nhận đặt lịch",
-  "scheduling.paused": "Đã tạm dừng đặt lịch công khai",
-  "scheduling.pause": "Tạm dừng đặt lịch",
-  "scheduling.resume": "Bật đặt lịch",
+  "scheduling.acceptBookings": "Nhận đặt lịch",
+  "scheduling.acceptBookingsHelp":
+    "Tắt để dừng nhận đặt lịch mới. Liên kết vẫn giữ nguyên.",
   "scheduling.settings": "Cài đặt cuộc họp",
   "scheduling.save": "Lưu cài đặt",
   "settings.tab.meetings": "Cuộc họp",
@@ -449,8 +451,9 @@ export const vi = {
   "scheduling.accountName":
     "Tên trên trang đặt lịch lấy từ Cài đặt, mục Tài khoản.",
   "scheduling.linkNotCreated": "Lưu cài đặt cuộc họp để tạo liên kết đặt lịch.",
-  "scheduling.calendarSetupNeeded":
-    "Chọn và lưu lịch trong cài đặt cuộc họp trước khi bật đặt lịch.",
+  "scheduling.calendarSetupNeeded": "Chọn và lưu lịch trước.",
+  "scheduling.noCalendar":
+    "Chưa kết nối lịch. Kết nối hộp thư không kèm theo lịch của hộp thư đó.",
   "scheduling.hostName": "Tên công khai",
   "scheduling.subject": "Tiêu đề cuộc họp",
   "scheduling.location": "Địa điểm hoặc liên kết cuộc họp",
@@ -5342,7 +5345,9 @@ export const vi = {
   "explain.col.owner": "Phụ trách",
   "explain.col.pipeline": "Pipeline",
 
-  "settings.accountCard": "Tài khoản của bạn",
+  "settings.profileTitle": "Hồ sơ",
+  "settings.securityTitle": "Bảo mật",
+  "settings.preferencesTitle": "Ngôn ngữ và giao diện",
   "unsaved.title": "Bỏ thay đổi chưa lưu?",
   "unsaved.body":
     "Rời trang này sẽ bỏ những gì đã nhập. Quay lại để lưu trước.",
@@ -5382,6 +5387,7 @@ export const vi = {
   "delivery.weeklyHelp": "Gửi thêm bản tổng kết thứ Hai qua email.",
   "delivery.byEmail": "Qua email",
   "delivery.none": "Không qua email",
+  "delivery.panelTitle": "Bản tóm tắt qua email",
   "settings.appearance": "Giao di\u1ec7n",
   "settings.appearanceHelp":
     "Sáng, tối hoặc theo cài đặt thiết bị. Cũng có thể đổi trong menu tài khoản.",
@@ -5393,7 +5399,8 @@ export const vi = {
   "settings.greetingNameHelp":
     "Tên dùng để chào bạn trong bản nháp và lời chào. Nếu để trống, sẽ dùng từ đầu tiên của tên hiển thị.",
   "settings.greetingNameSave": "Lưu",
-  "settings.languageHelp": "Áp dụng cho phiên này.",
+  "settings.languageHelp":
+    "Ngôn ngữ lưu theo tài khoản, nên mọi thiết bị đăng nhập đều dùng ngôn ngữ này.",
   "settings.deviceCard": "Thiết bị này",
   "settings.installApp": "Ứng dụng Margince",
   "settings.installAppHelp":
@@ -6623,9 +6630,9 @@ export const vi = {
   "notifications.byAgent": "Do trợ lý AI tạo",
   "notifications.empty":
     "Chưa có thông báo nào. Những gì cần báo cho bạn sẽ hiển thị ở đây.",
-  "notifications.title": "Cách từng loại thông báo đến với bạn",
+  "notifications.title": "Cách gửi theo loại",
   "notifications.sub":
-    "Mọi thông báo luôn nằm trong trung tâm thông báo, dù chọn gì ở đây. Lựa chọn này quyết định những gì xảy ra thêm khi có thông báo đến.",
+    "Mọi thông báo vẫn nằm trong trung tâm thông báo, dù chọn gì ở đây.",
   "notifications.saveFailed": "Không thể lưu lựa chọn đó",
   "notifications.saveFailedFor": "Không thể lưu “{setting}”",
   "notifications.class.approval_pending.label": "Phê duyệt đang chờ bạn",
@@ -6643,9 +6650,9 @@ export const vi = {
   "notifications.class.system.label": "Thông báo hệ thống",
   "notifications.class.system.help":
     "Bảo trì, chạm giới hạn, và mọi điều khác bản cài đặt cần báo cho bạn.",
-  "notifications.class.coach.label": "Lời nhắc của đồng nghiệp",
+  "notifications.class.coach.label": "Lời nhắc từ đồng nghiệp",
   "notifications.class.coach.help":
-    "Đồng nghiệp trong nhóm chỉ cho bạn một deal, một câu trả lời hoặc phần việc tồn đọng của bạn. Loại thông báo này luôn được gửi qua một kênh nào đó, nên không thể tắt.",
+    "Đồng nghiệp chỉ cho một deal, một câu trả lời hoặc phần việc tồn đọng. Lời nhắc này luôn đến, nên không có lựa chọn “Tắt”.",
   "notifications.delivery.off": "Tắt",
   "notifications.delivery.in_app": "Trong ứng dụng",
   "notifications.delivery.email": "Qua email",
@@ -8905,9 +8912,8 @@ export const vi = {
   // "Chung" thay vì "Tổ chức" cho mục đầu tiên: tiêu đề nhóm phía trên đã nói
   // từ đó, và một dòng lặp lại tiêu đề của chính nó thì không gọi tên được gì.
   "settings.home": "T\u1ed5ng quan",
-  "settings.home.yours": "C\u00e0i \u0111\u1eb7t c\u1ee7a b\u1ea1n",
-  "settings.home.manage": "Cài đặt có thể sửa",
-  "settings.home.lookUp": "Cài đặt chỉ đọc",
+  "settings.home.sub": "Mọi trang cài đặt có thể mở, xếp theo nhóm.",
+  "settings.home.readOnly": "Chỉ đọc",
   "settings.home.rolesLabel": "Vai tr\u00f2 c\u1ee7a b\u1ea1n",
   "settings.home.seatLabel": "Tài khoản của bạn",
   "settings.home.seat.full": "Tài khoản đầy đủ quyền: được thay đổi",
@@ -9500,12 +9506,10 @@ export const vi = {
   "settings.rates.colCacheWriteShort": "Ghi cache",
   "settings.rates.modelGroupLabel": "Giá của {provider}",
   "settings.voice.title": "Voice DNA",
-  "settings.voice.intro":
-    "Giọng văn riêng của bạn. Giọng văn này định hình bản nháp viết cho bạn, chỉ bạn thấy được và chỉ học từ văn mẫu bạn thêm vào.",
   "settings.voice.readOnly":
     "Chỉ đọc. Vai trò hiện tại không có quyền thay đổi Voice DNA.",
   "settings.voice.emptyBody":
-    "Thêm văn mẫu để dựng Voice DNA. Mất khoảng một phút.",
+    "Thêm văn mẫu để dựng Voice DNA. Voice DNA chỉ học từ những gì đã thêm, và lần dựng đầu mất khoảng một phút.",
   "settings.voice.status.collecting": "Đang thu thập",
   "settings.voice.status.stale": "Cần dựng lại",
   "settings.voice.bandThin": "mỏng",
@@ -9639,9 +9643,6 @@ export const vi = {
   "settings.voice.dropHint":
     "Thả hoặc chọn tệp (.txt, .md, .pdf, .docx, .vtt, .srt hoặc .json), nhiều tệp cùng lúc.",
   "settings.voice.dropEmpty": "Thả tệp vào đây, hoặc bấm để chọn",
-  "settings.voice.whyToggle": "Vì sao cần thêm văn mẫu",
-  "settings.voice.whyBody":
-    "Margince soạn email bằng chính lời văn của bạn và chỉ học giọng điệu, nhịp văn, cách diễn đạt từ văn bản của bạn. Chỉ bạn xem được các văn mẫu.",
   "settings.voice.worksTitle": "Văn mẫu nên dùng",
   "settings.voice.worksEmails":
     "Email đã gửi, lưu dưới dạng .txt, .md, .pdf hoặc .docx.",
@@ -10139,7 +10140,7 @@ export const vi = {
   "tools.unreachable": "Chưa được cấp phạm vi",
   "tools.colTool": "Công cụ",
   "tools.colTier": "Phê duyệt",
-  "tools.colScope": "Truy cập",
+  "tools.noScope": "Không cần phạm vi",
   "tools.colDetail": "Chi tiết",
   "tools.search": "Tìm công cụ",
   "tools.noMatch": "Không có công cụ nào khớp với tìm kiếm này.",
@@ -10353,12 +10354,12 @@ export const vi = {
   "signInMethods.title": "Phương thức đăng nhập",
   "signInMethods.saveFailed": "Không thể lưu thay đổi",
   "signInMethods.sub":
-    "Cách thành viên có thể đăng nhập. Danh sách gồm các nhà cung cấp mà bản cài đặt này có thông tin xác thực: quản trị viên có thể tắt một nhà cung cấp nhưng không thể thêm mới.",
+    "Quản trị viên có thể tắt một nhà cung cấp nhưng không thể thêm mới. Nhà cung cấp hiện trên màn hình đăng nhập khi đã thiết lập ứng dụng tương ứng bên dưới.",
   "signInMethods.password": "Email và mật khẩu",
   "signInMethods.passwordAlways":
     "Luôn khả dụng. Mọi thành viên đều có thể đăng nhập theo cách này, nên có thể tắt các phương thức khác một cách an toàn.",
-  "signInMethods.passwordReason":
-    "Không thể tắt đăng nhập bằng mật khẩu. Phương thức này giữ cho bản cài đặt luôn truy cập được.",
+  "signInMethods.providerNoApp":
+    "Chưa hiện trên màn hình đăng nhập. Nhà cung cấp sẽ hiện khi đã thiết lập ứng dụng bên dưới.",
   "signInMethods.providerHint":
     "Hiển thị nhà cung cấp này trên màn hình đăng nhập. Tắt đi sẽ dừng các lượt đăng nhập đang diễn ra; các phiên hiện có vẫn tiếp tục.",
   "signInMethods.noneConfigured":
@@ -10708,7 +10709,6 @@ export const vi = {
   "aiTasks.embeddingsEdit":
     "Tìm kiếm và truy xuất không có mức suy nghĩ hay thời gian chờ để thiết lập. Đổi nhà cung cấp và mô hình ở dòng Mô hình embedding trong Cấp mô hình.",
   "workingHours.title": "Giờ nhận đặt lịch",
-  "workingHours.sub": "Cài đặt cá nhân. Chỉ bạn có thể đặt khung giờ này.",
   "workingHours.unsetTitle": "Chưa thiết lập",
   "workingHours.unset":
     "Khách hàng được đề xuất khung 09:00 đến 17:00, thứ Hai đến thứ Sáu, theo múi giờ của bản cài đặt.",
@@ -10717,7 +10717,7 @@ export const vi = {
   "workingHours.days": "Ngày làm việc",
   "workingHours.timezone": "Múi giờ",
   "workingHours.browserZone":
-    "Trình duyệt đang dùng {zone}. Múi giờ chọn ở trên là múi giờ dùng để tính thời gian trống.",
+    "Trình duyệt đang dùng {zone}. Thời gian trống tính theo múi giờ đã chọn ở đây.",
   "workingHours.timezoneHelp":
     "Múi giờ dùng để tính thời gian trống. Tìm theo thành phố hoặc khu vực.",
   "workingHours.narrowedTitle": "Ít giờ nhận đặt lịch hơn",
@@ -10733,8 +10733,7 @@ export const vi = {
   "workingHours.day.7": "Chủ Nhật",
   "autonomy.title": "Thay đổi tự động",
   "autonomy.sub":
-    "Thay đổi tự động mặc định được bật. Cài đặt hiện có được giữ nguyên. Mỗi công tắc áp dụng cho công việc của bạn, không phải cả nhóm.",
-  "autonomy.noneDecidedYetTitle": "Chưa có lượt xem lại nào",
+    "Mỗi công tắc cho phép một loại thay đổi tự áp dụng mà không cần bạn xem lại. Công tắc áp dụng cho công việc của bạn, không phải cả nhóm.",
   "autonomy.updateFailed": "Không thể lưu cài đặt",
   "autonomy.noneDecidedYet":
     "Bạn chưa xem lại đề xuất nào trong số này. Các thay đổi tự động vẫn có thể chạy theo các công tắc bên dưới. Đề xuất tùy thuộc vào hồ sơ của bạn và công việc được chuyển đến bạn.",

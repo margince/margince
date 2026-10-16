@@ -2,16 +2,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { operations } from "../api/schema";
-import { THEME_LABEL_KEYS } from "../app/account";
-import { Avatar, Button, TextInput } from "../design-system/atoms";
+import { Button, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
-import { QueryGate } from "../design-system/querystates";
-import { RoleBadge } from "../design-system/rbac";
-import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { useToast } from "../design-system/toast";
 import { AgentConnectionsCard } from "../features/automations/agent-token-settings";
 import { AgentAllowancesCard } from "../features/automations/agentallowances";
 import { AgentUsageByUserCard } from "../features/automations/agentusage";
@@ -24,12 +19,12 @@ import { OAuthAppCard } from "../features/automations/oauth-app";
 import { OvernightGrantCard } from "../features/automations/overnight-grant";
 import { TagVocabularyCard } from "../features/lists/tagadmin";
 import { formatNumber } from "../format/format";
-import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { navigateReplacing, type Route } from "../lib/router";
-import { useLogout, useMe } from "../lib/session";
-import { setThemeChoice, THEME_CHOICES, useThemeChoice } from "../lib/theme";
+import { useMe } from "../lib/session";
+import { AccountSettings } from "./account-settings";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
 import { AiBudgetCard } from "./ai-admin";
 import { ModelPricesCard } from "./ai-price-sync";
@@ -39,7 +34,7 @@ import { AiTasksCard } from "./ai-tasks";
 import { AiCallsCard } from "./aicalls";
 import { AiUsageCard } from "./aiusage";
 import { BlockedDomainsCard } from "./blocked-domains";
-import { BriefDeliveryRows } from "./briefdelivery";
+import { BriefDeliveryPanel } from "./briefdelivery";
 import { CaptureActivityTab } from "./capture-activity";
 import { OwnerIdentitiesCard } from "./capture-owner-identities";
 import { CaptureSettingsCard } from "./capture-settings";
@@ -62,11 +57,9 @@ import { LicenseCard } from "./license";
 import { LinkedInImportCard } from "./linkedin-import";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
 import { MeetingSettings } from "./meeting-settings";
-import { MfaSettingRow } from "./mfacard";
 import { NotificationSettingsCard } from "./notification-settings";
 import { OfferTemplatesAdmin } from "./offertemplates";
 import { OwnDomainsCard } from "./own-domains";
-import { PasswordSettingRow } from "./passwordcard";
 import { ProductsAdmin } from "./products";
 import { FxRatesCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
@@ -80,15 +73,9 @@ import { SystemHealthPage } from "./settings.systemhealth";
 import { AgentToolsCard } from "./settings-agenttools";
 import { AuditLogCard } from "./settings-audit";
 import { AutonomyTiersCard } from "./settings-autonomytiers";
-import {
-  DisplayNameSettingRow,
-  GreetingNameSettingRow,
-} from "./settings-names";
 import { PassportCard } from "./settings-passports";
-import { SignatureSettingRow } from "./settingssignaturerow";
 import { SignInMethodsCard } from "./sign-in-methods";
 import { SignatureTemplateCard } from "./signaturetemplatecard";
-import { ThisDevicePanel } from "./thisdevice";
 import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
 import { VoiceDnaCard } from "./voice-dna";
@@ -134,24 +121,20 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
   switch (id) {
     // ---- me ----
     case "account":
-      return (
-        <>
-          <AccountCard />
-          <ThisDevicePanel />
-        </>
-      );
+      return <AccountSettings />;
     case "meetings":
       return <MeetingSettings />;
     case "voice":
       return <VoiceDnaCard />;
     case "agents":
       return <AgentsTab />;
-    // What the product may send this reader, and where. Beside the brief and
-    // weekly nudges on Account rather than merged into them: those two rows are
-    // about a digest the reader subscribes to, and these are about every notice
-    // the product raises whether or not anybody asked for it.
     case "notifications":
-      return <NotificationSettingsCard />;
+      return (
+        <>
+          <NotificationSettingsCard />
+          <BriefDeliveryPanel />
+        </>
+      );
     case "connections":
       return <ConnectionsTab />;
     // Beside `connections` and after it on purpose: that page says what you are
@@ -503,175 +486,6 @@ function AgentsTab() {
           Directly under the tier reference it is written in terms of. */}
       <AutonomySettingsCard />
     </>
-  );
-}
-
-// Your account, as ONE card: who you are, and the three answers that belong to
-// you — how you sign in, how you sign off, and which language the product
-// speaks to you in.
-//
-// The identity block is the card's subject, drawn like the record page's
-// header block (composed.css `.record-head`). It has a mark, the name, badges
-// on the name's line, and the meta under it. Everything below
-// it is a decision about that subject, in the page's one row language.
-function AccountCard() {
-  const t = useT();
-  const query = useMe();
-  const logout = useLogout();
-  // The card owns where an announcement lands, not the row that produced it: a
-  // toast region standing between two rows in the list would take the
-  // hairline the list draws between decisions.
-  const toast = useToast();
-  return (
-    <Panel
-      title={t("settings.accountCard")}
-      actions={
-        <Button disabled={logout.isPending} onClick={() => logout.mutate()}>
-          {t("auth.signOut")}
-        </Button>
-      }
-    >
-      <PanelBody className="form-stack">
-        <QueryGate query={query} pendingLabel={t("settings.accountCard")}>
-          {(me) => (
-            <div className="settings-identity">
-              {/* Both halves are required on the wire, so the `|| ""` is not a
-                  default — it is the promise that a server answering with
-                  neither costs the reader an unnamed chip rather than the whole
-                  page: this block renders inside the app shell, and a throw here
-                  takes the navigation down with it. The chip is keyed on the
-                  user id, like every other chip drawn for this seat. */}
-              <Avatar
-                identity={me.user.id}
-                name={me.user.display_name || me.user.email || ""}
-              />
-              <div className="settings-identity-id">
-                <div className="settings-identity-name">
-                  <strong>{me.user.display_name || me.user.email}</strong>
-                  {me.roles.map((role) => (
-                    <RoleBadge key={role} roleKey={role} />
-                  ))}
-                </div>
-                {/* The two lines that qualify the name: the address the session
-                    is bound to, and the workspace it is bound to it IN. */}
-                <span className="t-caption">{me.user.email}</span>
-                <span className="t-caption">{me.workspace_name}</span>
-              </div>
-            </div>
-          )}
-        </QueryGate>
-      </PanelBody>
-      <SettingList bleed="settings">
-        <DisplayNameSettingRow toast={toast} />
-        <GreetingNameSettingRow toast={toast} />
-        <PasswordSettingRow />
-        <MfaSettingRow />
-        <SignatureSettingRow toast={toast} />
-        <LanguageSettingRow />
-        <AppearanceSettingRow />
-        <BriefDeliveryRows />
-      </SettingList>
-    </Panel>
-  );
-}
-
-/**
- * The appearance choice, in Settings as well as in the account menu.
- *
- * One state, two faces. Both read `useThemeChoice` and write `setThemeChoice`
- * from lib/theme.ts, so changing it in either place moves the other. The menu
- * keeps its shortcut, because appearance is the setting a reader changes most
- * often and from anywhere. This is where somebody who came to Settings looking
- * for it finds it.
- */
-function AppearanceSettingRow() {
-  const t = useT();
-  const choice = useThemeChoice();
-  return (
-    <SettingRow
-      label={t("settings.appearance")}
-      description={t("settings.appearanceHelp")}
-      control={(control) => (
-        <Select
-          {...control}
-          className="settingrow-measure"
-          value={choice}
-          // `Select` reports a string, narrowed back through the same list the
-          // options were built from — no assertion, and nothing acted on that
-          // the control was never offering.
-          onChange={(next) => {
-            const picked = THEME_CHOICES.find((option) => option === next);
-            if (picked) {
-              setThemeChoice(picked);
-            }
-          }}
-          options={THEME_CHOICES.map((option) => ({
-            value: option,
-            label: t(THEME_LABEL_KEYS[option]),
-          }))}
-        />
-      )}
-    />
-  );
-}
-
-/**
- * The language this installation speaks to this reader in. The locale context
- * holds the answer, so this row is not a second source of truth.
- */
-function LanguageSettingRow() {
-  const t = useT();
-  const { locale, setLocale } = useLocale();
-  const queryClient = useQueryClient();
-  // The choice is written to the seat so it follows this colleague to their next
-  // browser; `setLocale` still keeps its local copy, which is what renders
-  // before the request lands and what a signed-out reader is left with.
-  //
-  // A failed write does NOT revert the language. The page is already in the
-  // language they asked for, and yanking it back would be a worse answer to a
-  // dropped request than letting the next sign-in re-ask the server.
-  const remember = useMutation({
-    mutationFn: async (next: Locale) => {
-      unwrap(await api.PUT("/me/locale", { body: { locale: next } }), t);
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["me"] });
-    },
-  });
-  return (
-    <SettingRow
-      label={t("locale.switchLabel")}
-      description={t("settings.languageHelp")}
-      control={(control) => (
-        <Select
-          {...control}
-          className="settingrow-measure"
-          value={locale}
-          // `Select` reports a string. The options are built from LOCALES,
-          // so narrowing the answer through that same list is what makes
-          // it a Locale — no assertion, and nothing acted on that the
-          // control was never offering.
-          onChange={(next) => {
-            const picked = LOCALES.find((option) => option === next);
-            if (picked) {
-              setLocale(picked);
-              remember.mutate(picked);
-            }
-          }}
-          // Language names are proper nouns and deliberately not
-          // translated, so every option here is in a different language
-          // from the page around it — WCAG 2.2 AA 3.1.2, the same reason
-          // the login footer's switcher carries `lang` on each name. Our
-          // locale codes are BCP 47 language subtags, so the code IS the
-          // value `lang` wants.
-          options={LOCALES.map((option) => ({
-            value: option,
-            label: t(localeNameKey(option)),
-            lang: option,
-          }))}
-        />
-      )}
-    />
   );
 }
 

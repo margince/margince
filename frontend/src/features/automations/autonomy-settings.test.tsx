@@ -161,9 +161,10 @@ describe("AutonomySettingsCard", () => {
       "autonomy-toggle-close_date_correction",
     );
     expect(toggle.getAttribute("aria-checked")).toBe("false");
-    // The offer stands on the description alone when there is no record, so the
-    // card must say there is none rather than printing three zeroes.
-    expect(screen.getByText(/No decisions of this kind yet/i)).not.toBeNull();
+    // With no record the offer stands on its description. The card says so
+    // once rather than printing three zeroes.
+    expect(screen.getByText(/have not reviewed any of these/i)).not.toBeNull();
+    expect(screen.queryByText(/No decisions of this kind yet/i)).toBeNull();
   });
 
   // A PERMANENT ZERO DESERVES A READING. The card is shown to every seat on
@@ -184,7 +185,9 @@ describe("AutonomySettingsCard", () => {
     );
     render(<AutonomySettingsCard />);
 
-    expect(await screen.findByText(/No reviews yet/i)).not.toBeNull();
+    expect(
+      await screen.findByText(/have not reviewed any of these/i),
+    ).not.toBeNull();
   });
 
   // And it goes away the moment one HAS. A note that stands beside a real track
@@ -201,7 +204,9 @@ describe("AutonomySettingsCard", () => {
     render(<AutonomySettingsCard />);
 
     expect(await screen.findByText(/3 approved as proposed/i)).not.toBeNull();
-    expect(screen.queryByText(/No reviews yet/i)).toBeNull();
+    expect(screen.queryByText(/have not reviewed any of these/i)).toBeNull();
+    // The kind still undecided says so on its own row instead.
+    expect(screen.getByText(/No decisions of this kind yet/i)).not.toBeNull();
   });
 
   // AND NOT WHEN THERE IS NOTHING TO HAVE DECIDED. "You have not decided any of
@@ -217,7 +222,7 @@ describe("AutonomySettingsCard", () => {
     // would read the absence below off a card that had not loaded yet — an
     // assertion no implementation could fail.
     expect(await screen.findByText(/nothing here yet/i)).not.toBeNull();
-    expect(screen.queryByText(/No reviews yet/i)).toBeNull();
+    expect(screen.queryByText(/have not reviewed any of these/i)).toBeNull();
   });
 
   // A failed refetch keeps stale rows cached behind the error arm. A note read
@@ -238,7 +243,9 @@ describe("AutonomySettingsCard", () => {
     );
     const client = testClient();
     render(<AutonomySettingsCard />, "en", client);
-    expect(await screen.findByText(/No reviews yet/i)).not.toBeNull();
+    expect(
+      await screen.findByText(/have not reviewed any of these/i),
+    ).not.toBeNull();
 
     refusing = true;
     await act(() => client.refetchQueries({ queryKey: ["autonomy"] }));
@@ -246,7 +253,7 @@ describe("AutonomySettingsCard", () => {
     expect(
       await screen.findByText("Could not load this view. Reload the page."),
     ).not.toBeNull();
-    expect(screen.queryByText(/No reviews yet/i)).toBeNull();
+    expect(screen.queryByText(/have not reviewed any of these/i)).toBeNull();
   });
 
   it("shows the track record under a kind the reader has decided", async () => {

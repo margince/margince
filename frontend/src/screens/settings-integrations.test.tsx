@@ -72,7 +72,7 @@ describe("SettingsScreen connections and integrations tabs", () => {
     expect(
       await screen.findByText(/no access to this settings page/i),
     ).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Your account" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Profile" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Webhooks" })).toBeNull();
   });
 

@@ -18,7 +18,11 @@ export const Light: Story = {
   render: bookingFrame(() => <BookingProfileScreen />),
 };
 export const Dark: Story = { ...Light, globals: { theme: "dark" } };
-export const Phone: Story = { ...Light, tags: ["uat-phone"] };
+export const Phone: Story = {
+  ...Light,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
 
 export const NotCreated: Story = {
   render: bookingFrame(() => <BookingProfileScreen />, {
@@ -36,7 +40,11 @@ export const NotCreatedDark: Story = {
   ...NotCreated,
   globals: { theme: "dark" },
 };
-export const NotCreatedPhone: Story = { ...NotCreated, tags: ["uat-phone"] };
+export const NotCreatedPhone: Story = {
+  ...NotCreated,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
 export const MissingPublicAddress: Story = {
   render: bookingFrame(() => <BookingProfileScreen />, {
     "GET /scheduling/profile": () =>
@@ -53,6 +61,7 @@ export const MissingPublicAddressDark: Story = {
 };
 export const MissingPublicAddressPhone: Story = {
   ...MissingPublicAddress,
+  globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };
 
@@ -79,5 +88,18 @@ export const InSettings: Story = {
 };
 export const InSettingsPhone: Story = {
   ...InSettings,
+  globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+// Paused with a calendar chosen: the switch is off and free to turn on.
+export const PausedInSettings: Story = {
+  render: bookingFrame(() => <BookingProfileScreen embedded />, {
+    "GET /scheduling/profile": () =>
+      jsonResponse({ ...bookingProfile, enabled: false }),
+  }),
+};
+export const PausedInSettingsDark: Story = {
+  ...PausedInSettings,
+  globals: { theme: "dark" },
 };

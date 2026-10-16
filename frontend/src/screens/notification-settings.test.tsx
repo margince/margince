@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
 import { type Locale, LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import { NotificationSettingsCard } from "./notification-settings";
 
@@ -100,6 +101,25 @@ describe("NotificationSettingsCard", () => {
     expect(await screen.findAllByRole("combobox")).toHaveLength(6);
   });
 
+  // The server's order is its own; the reader meets what waits on them first.
+  it("reads approvals first and the installation's notices last", async () => {
+    vi.stubGlobal("fetch", backendFor(everyClass()).fetchMock);
+    render(<NotificationSettingsCard />);
+
+    const boxes = await screen.findAllByRole("combobox");
+    const rows = boxes.map((box) =>
+      box.closest("[data-testid]")?.getAttribute("data-testid"),
+    );
+    expect(rows).toEqual([
+      "notification-delivery-approval_pending",
+      "notification-delivery-coach",
+      "notification-delivery-lead_sla",
+      "notification-delivery-automation",
+      "notification-delivery-capture",
+      "notification-delivery-system",
+    ]);
+  });
+
   // A row the seat has never decided still shows what happens TODAY. The
   // default is the answer, so the control sits on it rather than on a blank or
   // an invented "Default" option — and approvals default to email while
@@ -128,7 +148,9 @@ describe("NotificationSettingsCard", () => {
     render(<NotificationSettingsCard />);
 
     await user.click(
-      await screen.findByRole("combobox", { name: /colleague’s nudge/i }),
+      await screen.findByRole("combobox", {
+        name: en["notifications.class.coach.label"],
+      }),
     );
     const listbox = screen.getByRole("listbox");
     expect(within(listbox).queryByRole("option", { name: "Off" })).toBeNull();

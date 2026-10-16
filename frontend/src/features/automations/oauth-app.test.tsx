@@ -162,6 +162,20 @@ describe("the Google app card", () => {
     expect(screen.getByText(CONNECT_URI)).toBeTruthy();
   });
 
+  // Registering an app needs the addresses, so they are open until one exists.
+  it("opens the addresses while there is no app, and shuts them once there is", async () => {
+    mount({ ...absent(), redirect_uris: stored().redirect_uris });
+    const open = await screen.findByText("Authorized redirect URIs");
+    expect(open.closest("summary")?.getAttribute("aria-expanded")).toBe("true");
+    cleanup();
+
+    mount(stored());
+    const shut = await screen.findByText("Authorized redirect URIs");
+    expect(shut.closest("summary")?.getAttribute("aria-expanded")).toBe(
+      "false",
+    );
+  });
+
   // A row per address: its purpose, the address and a copy verb naming it. The
   // address cell's title keeps it whole however the cell cuts it.
   it("tabulates each address under its purpose, beside its copy verb", async () => {

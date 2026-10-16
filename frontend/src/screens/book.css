@@ -33,11 +33,15 @@
 }
 .book-policy-fields {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   gap: var(--space-4);
+  align-items: start;
 }
-.book-link {
-  margin-block: var(--space-5);
+/* The seven days read as one week, so they run as a row and wrap. */
+.working-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
 }
 .book-guest-page {
   min-height: 100vh;
@@ -193,4 +197,7 @@
 }
 .meeting-checklist li[data-done="true"] {
   color: var(--textSecondary);
+}
+.meeting-length > .segmented {
+  align-self: flex-start;
 }

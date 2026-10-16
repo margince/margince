@@ -86,8 +86,11 @@ export function NotificationBell() {
 
   return (
     <div className="notifbell">
-      <Button
-        iconOnly
+      {/* Bare, like the sidebar toggle and the narrow search glyph: the strip's
+          controls are glyphs, and a boxed one read as a field. */}
+      <button
+        type="button"
+        className="iconbtn"
         ref={trigger}
         // The count joins the NAME, not only the box. `aria-label` replaces the
         // button's contents for name computation, so a figure left to the badge
@@ -125,7 +128,7 @@ export function NotificationBell() {
             </Badge>
           </span>
         )}
-      </Button>
+      </button>
       {/* Portalled to the body: the strip clips what hangs below it, and a
           panel drawn inside the bar would be cut off at its own first row. */}
       {open &&

@@ -3,7 +3,8 @@ import { NumberSettingRow } from "../../design-system/numbersetting";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SettingList } from "../../design-system/settingrow";
-import { useT } from "../../i18n";
+import { formatInterval } from "../../format/interval";
+import { useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
@@ -25,6 +26,7 @@ const TOKEN_BOUNDS = {
 // itself rather than drawing a refusal the reader can do nothing about.
 export function AgentConnectionsCard() {
   const t = useT();
+  const { locale } = useLocale();
   const canRead = useCan("installation_settings", "read");
   const canManage = useCanWrite("installation_settings", "update");
   const query = useInstallationSettings(canRead);
@@ -50,6 +52,7 @@ export function AgentConnectionsCard() {
               value={settings.oauth_access_token_ttl_minutes}
               {...TOKEN_BOUNDS.oauth_access_token_ttl_minutes}
               refusal={t("agentConnections.ttl.refusal")}
+              reading={(minutes) => formatInterval(minutes * 60, locale)}
               disabled={!canManage || update.isPending}
               onCommit={(next) =>
                 update.mutate({ oauth_access_token_ttl_minutes: next })

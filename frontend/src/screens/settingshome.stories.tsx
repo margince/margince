@@ -106,6 +106,13 @@ export const ReadyDark: Story = {
   render: home(LEAD),
 };
 
+// At phone width the rail is gone, so the directory carries the search box.
+export const Phone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: home(LEAD),
+};
+
 // The floor: a seat holding no object grant at all. The personal pages are the
 // ones no grant gates, so they stay — and both conditional panels are dropped
 // rather than drawn empty, which is what a heading over nothing would be.

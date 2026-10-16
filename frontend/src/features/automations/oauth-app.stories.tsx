@@ -182,6 +182,15 @@ const LONG_URIS = URIS.map((uri) => ({
   ),
 }));
 
+// The addresses fold behind their summary; these stories open it.
+const openRedirects = async ({
+  canvasElement,
+}: Readonly<{ canvasElement: HTMLElement }>) => {
+  await userEvent.click(
+    await within(canvasElement).findByText("Authorized redirect URIs"),
+  );
+};
+
 export const LongAddressesPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
@@ -197,6 +206,7 @@ export const LongAddressesPhone: Story = {
       <OAuthAppCard provider="google" />
     </Served>
   ),
+  play: openRedirects,
 };
 
 // The browser refuses the clipboard: the notice lands above the table, not in
@@ -218,6 +228,7 @@ export const CopyRefused: Story = {
     // Put back afterwards: the catalog renders many stories in one page.
     const clipboard = stubClipboard("absent");
     try {
+      await openRedirects({ canvasElement });
       const canvas = within(canvasElement);
       await userEvent.click(
         await canvas.findByRole("button", { name: "Copy Mailbox URI" }),

@@ -215,7 +215,11 @@ it("warns when an active public page cannot send calendar invitations", async ()
       "Your booking page is active, but calendar invitations are unavailable. Open meeting settings to check the connection or pause the page.",
     ),
   ).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Pause bookings" })).toBeTruthy();
+  expect(
+    screen
+      .getByRole("switch", { name: "Accept bookings" })
+      .getAttribute("aria-checked"),
+  ).toBe("true");
 });
 
 it("pauses a public link without overwriting meeting settings saved in another tab", async () => {
@@ -235,7 +239,7 @@ it("pauses a public link without overwriting meeting settings saved in another t
       <BookingProfileScreen />
     </StoryProviders>,
   );
-  const pause = await screen.findByRole("button", { name: "Pause bookings" });
+  const pause = await screen.findByRole("switch", { name: "Accept bookings" });
   latest = { ...latest, horizon_days: 90, calendar_id: "another-calendar" };
   await user.click(pause);
   await waitFor(() => expect(writes).toHaveLength(1));

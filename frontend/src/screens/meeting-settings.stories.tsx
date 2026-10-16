@@ -20,7 +20,17 @@ export const OneCalendar: Story = {
   render: bookingFrame(() => <MeetingSettings />, identity),
 };
 export const Dark: Story = { ...OneCalendar, globals: { theme: "dark" } };
-export const Phone: Story = { ...OneCalendar, tags: ["uat-phone"] };
+export const Phone: Story = {
+  ...OneCalendar,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+// A seat that may not book keeps its hours, and is told why the rest is absent.
+export const BookingNotGranted: Story = {
+  render: bookingFrame(() => <MeetingSettings />, {
+    "GET /me": meRoute({}),
+  }),
+};
 export const TwoProviders: Story = {
   render: bookingFrame(() => <MeetingSettings />, {
     ...identity,
@@ -84,6 +94,11 @@ export const OutlookVideoOff: Story = {
         video_call: false,
       }),
   }),
+};
+export const NoCalendarPhone: Story = {
+  ...NoCalendar,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
 export const OutlookVideoOffDark: Story = {
   ...OutlookVideoOff,

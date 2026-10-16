@@ -186,10 +186,9 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     expect(await screen.findByLabelText("First writing sample")).toBe(
       fileInput(),
     );
-    // What to add, why, and how much: the part onboarding narrates and a bare
-    // row used to leave out.
+    // What to add and how much: the part onboarding narrates and a bare row
+    // used to leave out.
     expect(screen.getByText("Best samples")).toBeTruthy();
-    expect(screen.getByText("Why add samples")).toBeTruthy();
     expect(screen.getByText(/at least 800 words/)).toBeTruthy();
     // No paste box: files are the one way in here.
     expect(screen.queryByRole("textbox")).toBeNull();

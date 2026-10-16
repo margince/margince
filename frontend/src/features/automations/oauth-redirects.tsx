@@ -3,11 +3,10 @@
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { Button } from "../../design-system/atoms";
+import { Button, Disclosure, OptionCount } from "../../design-system/atoms";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
-import { Heading } from "../../design-system/heading";
-import { PanelBody, PanelIntro } from "../../design-system/panel";
+import { PanelIntro } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import "./oauth-redirects.css";
 
@@ -86,11 +85,9 @@ function RedirectCopy({
 // in the client is how they stop matching what the vendor receives.
 export function RedirectUriTable({
   uris,
-  bleed,
   noticeSlot,
 }: Readonly<{
   uris: readonly RedirectUri[];
-  bleed?: boolean;
   noticeSlot: HTMLElement | null;
 }>) {
   const t = useT();
@@ -134,7 +131,6 @@ export function RedirectUriTable({
   return (
     <DataTable
       label={t("oauthApp.redirectTitle")}
-      bleed={bleed}
       fold
       columns={columns}
       rows={[...uris]}
@@ -168,27 +164,35 @@ export function RedirectUris({
   );
 }
 
-// The same list as a section of a vendor's panel: its heading, the caption, and
-// the table edge to edge.
+// The same list as a fold in a vendor's panel body. Open while the vendor has no
+// app, because registering one needs these addresses; shut once it has one.
 export function RedirectUriGroup({
   uris,
   sub,
-}: Readonly<{ uris: readonly RedirectUri[] | undefined; sub: string }>) {
+  open,
+}: Readonly<{
+  uris: readonly RedirectUri[] | undefined;
+  sub: string;
+  open: boolean;
+}>) {
   const t = useT();
   const [noticeSlot, setNoticeSlot] = useState<HTMLElement | null>(null);
   if (!uris || uris.length === 0) {
     return null;
   }
   return (
-    <>
-      <PanelBody>
-        <Heading size="xsmall" as="h3" className="oauthredirect-redirect-title">
+    <Disclosure
+      open={open}
+      summary={
+        <span className="oauthredirect-summary">
           {t("oauthApp.redirectTitle")}
-        </Heading>
-        <div className="oauthredirect-notice" ref={setNoticeSlot} />
-        <PanelIntro>{sub}</PanelIntro>
-      </PanelBody>
-      <RedirectUriTable uris={uris} bleed noticeSlot={noticeSlot} />
-    </>
+          <OptionCount count={uris.length} />
+        </span>
+      }
+    >
+      <PanelIntro>{sub}</PanelIntro>
+      <div className="oauthredirect-notice" ref={setNoticeSlot} />
+      <RedirectUriTable uris={uris} noticeSlot={noticeSlot} />
+    </Disclosure>
   );
 }

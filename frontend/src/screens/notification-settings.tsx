@@ -1,27 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Where each class of notice reaches this reader.
-//
-// It sits under the account's own settings beside the display language, not
-// under anything an admin configures for the team: what the product may send
-// somebody is the one part of a notification a seat is entitled to decide, and
-// an admin muting a colleague's approvals is the shape this refuses. So there is
-// no role gating here and no refusal copy — the endpoints read and write the
-// calling seat's own rows.
-//
-// The classes are deliberately coarser than the notice kinds: a reader who
-// muted "an automation fired" has not muted "somebody is waiting on your
-// approval".
+// Where each class of notice reaches this reader. An admin never mutes a
+// colleague's approvals, so there is no role gating: both endpoints read and
+// write the calling seat's own rows. The classes are coarser than notice kinds.
 
-import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { PanelNotices } from "../design-system/panelnotices";
 import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf } from "../lib/problem";
 import {
   type NotificationClass,
   type NotificationDelivery,
@@ -61,13 +51,9 @@ function choicesFor(
 }
 
 /**
- * The label and the sentence under it, per class.
- *
- * Spelled out rather than composed from the class at the call site, because `t`
- * takes a key from a closed union — a computed key does not compile. Keyed by
- * the contract's own enum, so the day a seventh class is added the regenerated
- * type fails this map rather than letting the page render a row it has no words
- * for.
+ * The label and the sentence under it, per class, in reading order: what waits
+ * on the reader first, the product's housekeeping last. Keyed by the contract's
+ * enum, so a new class fails this map rather than rendering a row with no words.
  */
 const CLASS_COPY: Readonly<
   Record<NotificationClass, { label: MessageKey; help: MessageKey }>
@@ -76,13 +62,17 @@ const CLASS_COPY: Readonly<
     label: "notifications.class.approval_pending.label",
     help: "notifications.class.approval_pending.help",
   },
-  automation: {
-    label: "notifications.class.automation.label",
-    help: "notifications.class.automation.help",
+  coach: {
+    label: "notifications.class.coach.label",
+    help: "notifications.class.coach.help",
   },
   lead_sla: {
     label: "notifications.class.lead_sla.label",
     help: "notifications.class.lead_sla.help",
+  },
+  automation: {
+    label: "notifications.class.automation.label",
+    help: "notifications.class.automation.help",
   },
   capture: {
     label: "notifications.class.capture.label",
@@ -92,11 +82,17 @@ const CLASS_COPY: Readonly<
     label: "notifications.class.system.label",
     help: "notifications.class.system.help",
   },
-  coach: {
-    label: "notifications.class.coach.label",
-    help: "notifications.class.coach.help",
-  },
 };
+
+const CLASS_ORDER = Object.keys(CLASS_COPY);
+
+function inReadingOrder(
+  rows: readonly NotificationPreference[],
+): NotificationPreference[] {
+  return [...rows].sort(
+    (a, b) => CLASS_ORDER.indexOf(a.class) - CLASS_ORDER.indexOf(b.class),
+  );
+}
 
 /** What each delivery is called, spelled out for the same reason. */
 const DELIVERY_COPY: Readonly<Record<NotificationDelivery, MessageKey>> = {
@@ -130,7 +126,7 @@ function DeliveryChoices({
   return (
     <>
       <SettingList bleed="settings">
-        {rows.map((row) => (
+        {inReadingOrder(rows).map((row) => (
           <DeliveryRow
             key={row.class}
             row={row}
@@ -144,29 +140,23 @@ function DeliveryChoices({
           />
         ))}
       </SettingList>
-      {/* THE CALLOUT NAMES THE ROW IT IS ABOUT. Six rows share one error
-          surface, and it sits under all of them, so an unnamed failure leaves
-          the reader checking each dropdown to find which one did not take.
-          The class comes from the failed write's own variable rather than from
-          a render — it is the same value that went on the wire, so the sentence
-          cannot name a different row from the one the server refused. */}
-      {save.isError && (
-        <PanelBody>
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={
-              save.variables === undefined
-                ? t("notifications.saveFailed")
-                : t("notifications.saveFailedFor", {
-                    setting: t(CLASS_COPY[save.variables.class].label),
-                  })
-            }
-          >
-            {problemMessageOf(save.error, t)}
-          </Callout>
-        </PanelBody>
-      )}
+      {/* The title names the row the server refused: six rows share one
+          notice under them. */}
+      <PanelNotices
+        refused={
+          save.isError
+            ? {
+                title:
+                  save.variables === undefined
+                    ? t("notifications.saveFailed")
+                    : t("notifications.saveFailedFor", {
+                        setting: t(CLASS_COPY[save.variables.class].label),
+                      }),
+                error: save.error,
+              }
+            : undefined
+        }
+      />
     </>
   );
 }

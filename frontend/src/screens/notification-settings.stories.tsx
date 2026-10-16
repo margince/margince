@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -38,11 +39,21 @@ function standingDefaults(): Preference[] {
   ];
 }
 
-function story(items: Preference[]) {
+function story(items: Preference[], refuseWrites = false) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({}),
       "GET /me/notification-preferences": () => jsonResponse({ items }),
+      ...(refuseWrites && {
+        "PUT /me/notification-preferences": () =>
+          jsonResponse(
+            {
+              status: 422,
+              detail: "That delivery is not offered for this kind.",
+            },
+            422,
+          ),
+      }),
     });
     return (
       <StoryProviders>
@@ -53,7 +64,7 @@ function story(items: Preference[]) {
 }
 
 const meta: Meta<typeof NotificationSettingsCard> = {
-  title: "Settings/You/Notifications/How each kind reaches you",
+  title: "Settings/You/Notifications/Delivery by kind",
   component: NotificationSettingsCard,
 };
 export default meta;
@@ -103,4 +114,24 @@ export const AsQuietAsItGets: Story = {
 export const StandingDefaultsDark: Story = {
   globals: { theme: "dark" },
   render: story(standingDefaults()),
+};
+
+export const StandingDefaultsPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story(standingDefaults()),
+};
+
+// A refused write names the row it was about, once, under the rows.
+export const SaveRefused: Story = {
+  render: story(standingDefaults(), true),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await canvas.findByRole("combobox", { name: /Automations that ran/ }),
+    );
+    await userEvent.click(await body.findByRole("option", { name: "Off" }));
+    await canvas.findByRole("alert");
+  },
 };

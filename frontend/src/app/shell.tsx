@@ -1,17 +1,16 @@
-import { ChevronDown, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import {
   type KeyboardEvent,
   type ReactNode,
   type RefObject,
   useCallback,
   useEffect,
-  useId,
   useRef,
   useState,
 } from "react";
 import { PageAsideProvider } from "../components/pageaside";
 import { PageHeadSlot } from "../components/pageheadaction";
-import { Avatar, Badge, Modal } from "../design-system/atoms";
+import { Avatar, Badge } from "../design-system/atoms";
 import { CompanyLogo } from "../design-system/companylogo";
 import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
@@ -37,10 +36,7 @@ import {
   MOBILE_PRIMARY,
   NAV,
   type NavCounts,
-  type NavLevelEntry,
-  type NavLevelGroup,
   type NavSection,
-  navEntryHref,
   RAIL_LESS_SCREENS,
   recordKindOf,
 } from "./nav";
@@ -58,6 +54,7 @@ import {
 } from "./pagemeta";
 import { usePopoverDismiss } from "./popover";
 import { useReadingColumn } from "./readingcolumn";
+import { SectionSwitcher } from "./sectionswitcher";
 import { TopBar } from "./topbar";
 import "./shell.css";
 
@@ -303,7 +300,7 @@ export function WorkspaceRail({
   // At phone width the panel is a bottom bar of four destinations, and it KEEPS
   // them on a section route — a bar that hands its four tabs over to a section
   // loses every destination and is left holding two controls. The section is
-  // reached from the page head there instead (SectionSwitcher below), so no
+  // reached from the page head there instead (app/sectionswitcher.tsx), so no
   // section is walked into here.
   const level = useNavLevel(
     route,
@@ -515,125 +512,6 @@ function SettingsPageTitle(
 ) {
   const section = useSettingsSection(props.route);
   return <PageTitle {...props} section={section} />;
-}
-
-// One group of the switcher's list, with the section's own heading above it — the
-// same grouping the sidebar's level shows, because it is the same data.
-function SectionPickGroup({
-  section,
-  group,
-  activeId,
-  onPick,
-}: Readonly<{
-  section: NavSection;
-  group: NavLevelGroup;
-  activeId: string;
-  onPick: () => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  // The group carrying the section's OWN name goes unheaded here: the sheet has
-  // already said it at heading level 2 above this list, and a group repeating it
-  // would name the section twice in the same view. In the sidebar that group is
-  // what names the level at all, which is why the name lives on the group rather
-  // than being spelled again in this file.
-  const heading =
-    group.headingKey === section.titleKey ? undefined : group.headingKey;
-  return (
-    <div className="sectionpickgroup">
-      {heading && (
-        <Heading size="xsmall" as="h3">
-          {t(heading)}
-        </Heading>
-      )}
-      {group.items.map((entry) => (
-        <a
-          key={entry.id}
-          className="t-body"
-          href={navEntryHref([section.screen], entry)}
-          aria-current={entry.id === activeId ? "page" : undefined}
-          // The sheet covers the page it just navigated to, so a row that acts
-          // takes the sheet with it.
-          onClick={onPick}
-        >
-          <entry.icon size={16} aria-hidden />
-          {entryLabel(entry, locale, t)}
-        </a>
-      ))}
-    </div>
-  );
-}
-
-/**
- * The way between a section's pages at phone width.
- *
- * The sidebar cannot carry them there — it is a bar of four destinations, and
- * handing those four to a section loses the whole product's navigation — so the
- * section lives in the page head instead: a control naming the entry you are on,
- * opening the section's own list.
- *
- * It opens the design system's `Modal`, which IS the full-screen sheet at this
- * width; a second sheet hand-rolled here would be a second set of dismissal,
- * focus and scroll-lock rules to keep in step with it.
- *
- * The LIST claims the current page and the button does not: the entries are the
- * section's navigation, the same links the sidebar's level carries above the
- * breakpoint, while the button is a control that opens them — and a control is
- * not a page. Several elements may name the current page (the trail's last stop
- * and the sidebar's active row both do, and agree); what none of them may do is
- * claim it for something that is not a destination.
- */
-function SectionSwitcher({
-  section,
-  entry,
-}: Readonly<{ section: NavSection; entry: NavLevelEntry }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const [open, setOpen] = useState(false);
-  const titleId = useId();
-  const close = useCallback(() => setOpen(false), []);
-  const label = entryLabel(entry, locale, t);
-  return (
-    <>
-      <button
-        type="button"
-        className="pageswitch"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        // The visible word is the entry the reader is on; the accessible name
-        // adds what the control does and keeps that word inside it, which is
-        // what WCAG 2.5.3 asks of a control named longer than it reads.
-        aria-label={t("shell.sectionSwitch", { name: label })}
-        onClick={() => setOpen(true)}
-      >
-        <span>{label}</span>
-        <ChevronDown size={16} aria-hidden />
-      </button>
-      <Modal open={open} onClose={close} labelledBy={titleId} intent="drawer">
-        {/* Named by the SECTION: the list is everything Settings holds, and the
-            entry the reader came from is marked inside it. */}
-        <Heading size="large" id={titleId} className="t-h2 modal-title">
-          {t(section.titleKey)}
-        </Heading>
-        {/* Above the rows, exactly where the rail puts it. Without this the
-            search was unreachable at phone width — the one width where the
-            navigation is hardest to scan, since the rail is gone and the whole
-            list is behind this button. */}
-        {section.leadFor?.(close)}
-        <div className="sectionpick">
-          {section.groups.map((group, index) => (
-            <SectionPickGroup
-              key={group.headingKey ?? `group-${index}`}
-              section={section}
-              group={group}
-              activeId={entry.id}
-              onPick={close}
-            />
-          ))}
-        </div>
-      </Modal>
-    </>
-  );
 }
 
 type SlotRef = (slot: HTMLElement | null) => void;

@@ -1015,12 +1015,8 @@
 }
 /* The heading and its scope badge on one line, the badge baseline-aligned with
    the heading's text rather than centred on its box — a display-size heading is
-   tall enough that centring reads as floating.
-   `flex-wrap` is the last resort, not the usual behaviour. At phone width the
-   heading holds the SectionSwitcher, which takes `flex: 1` and absorbs the
-   remaining width, so its own label ellipsizes and the badge stays beside it.
-   The badge only drops to its own line when even the ellipsized name plus the
-   badge cannot fit. */
+   tall enough that centring reads as floating. A name too long to share the
+   row puts the badge on the next line; the name itself wraps, never clips. */
 .pagetitle-head {
   display: flex;
   align-items: baseline;
@@ -1045,51 +1041,35 @@
   margin: 0;
   max-width: 68ch;
 }
-/* The heading IS the switcher at phone width: the h1 carries no type of its own
-   there, because the control inside it brings the page's name at the size the
-   control draws it — and it hands the control the whole row, because what it
-   switches is the whole page and at 390px the thumb wants the row rather than
-   the six characters of "Audit log". */
+/* The heading is the switcher at phone width: the control inside the h1 takes
+   the heading's own type, so the page reads as titled rather than as a form. */
 .pageswitchhead {
   display: flex;
   min-width: 0;
-  /* Grows to the end of the row beside the scope badge; a name too long to
-     share the row puts the badge on the next line before the name wraps. */
-  flex: auto;
 }
 .pageswitchhead > .pageswitch {
-  flex: 1;
   min-width: 0;
 }
 
 /* ===== the section switcher (phone width only) =====
  * At phone width the sidebar is a bar of four destinations, so a section's own
- * entries are reached from here. It stands AS the page's heading — the control
- * names the page and opens the others, and a heading repeating that name above
- * it would be the page named twice. Rendered only at that width (app/shell.tsx
- * asks lib/viewport.ts), so it needs no media query of its own — but it is a
- * phone control, which is why it takes the 44px target WCAG 2.5.5 asks for
- * rather than the compact row rhythm the sidebar uses under a pointer. */
-/* Full width, because what it switches is the whole page: a pill hugging its own
-   label read as one more chip in the head, and at 390px the thumb wants the
-   whole row rather than the six characters of "Audit log". The chevron sits at
-   the far end for the same reason — the gap between name and glyph is the
-   affordance that says the row opens. */
+ * entries are reached from here. Rendered only at that width (app/shell.tsx
+ * asks lib/viewport.ts), and it keeps the 44px target WCAG 2.5.5 asks of a
+ * phone control. Bare, like the title it is: the chevron beside the name is the
+ * affordance, and the negative inset keeps the name on the page gutter while
+ * the pressed ground reaches past it. */
 .pageswitch {
-  display: flex;
+  display: inline-flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-2);
-  width: 100%;
+  gap: var(--space-1);
   min-height: 44px;
-  /* One line of the name centred in the 44px target inside the 1px border, and
-     the same air around a name that wraps. */
-  padding: calc((44px - 1lh) / 2 - 1px) var(--space-3); /* ds:ignore the block inset is derived from the 44px target, not a rhythm step */
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  background: var(--bgElevated);
+  margin-inline: calc(-1 * var(--space-2));
+  padding: calc((44px - 1lh) / 2) var(--space-2); /* ds:ignore the block inset is derived from the 44px target, not a rhythm step */
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
   color: var(--textPrimary);
-  font-family: var(--fontFamilyBody);
+  font: inherit;
   text-align: left;
   cursor: pointer;
 }
@@ -1101,8 +1081,8 @@
 .pageswitch:active {
   background: var(--bgInset);
 }
-/* The column is 390px wide and the pill must never widen the page, so a long
-   name wraps and the heading grows. */
+/* The column is 390px wide and the control must never widen the page, so a
+   long name wraps and the heading grows. */
 .pageswitch > span {
   min-width: 0;
   overflow-wrap: break-word;
@@ -1112,6 +1092,7 @@
 .pageswitch svg {
   flex: none;
   block-size: 1lh;
+  color: var(--textSecondary);
 }
 
 /* The list inside the sheet: the section's groups and their entries, which are
@@ -1928,8 +1909,9 @@
 }
 
 .settingssearch-hit {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--space-2);
   /* The anatomy's block inset, so a hit here is the row a menu draws; the
      inline inset is the list's own, since a hit carries two lines rather than
      one and an optical menu inset would crowd the second. */
@@ -1937,6 +1919,15 @@
   border-radius: var(--r-sm);
   color: var(--textPrimary);
   text-decoration: none;
+}
+
+/* The page's own glyph, centred on its name line as in the rail. */
+.settingssearch-hit > svg {
+  align-self: center;
+  color: var(--textSecondary);
+}
+.settingssearch-hit > .t-caption {
+  grid-column: 2;
 }
 
 /* One state for keyboard and pointer, because the list tracks one active

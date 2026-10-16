@@ -7,6 +7,7 @@ import { useT } from "../i18n";
 import { useHoldsAdminRole } from "../lib/capability";
 import { navigate } from "../lib/router";
 import type { SettingsPage } from "./settingscatalog";
+import { PAGE_ICONS } from "./settingsnavicons";
 import { settingsHref } from "./settingsrouting";
 import { settingsSearch } from "./settingssearch";
 
@@ -119,7 +120,8 @@ export function SettingsSearchBox({
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Escape") {
+    // An empty box leaves Escape to its host, so the phone drawer still closes.
+    if (event.key === "Escape" && typed !== "") {
       // The text goes and the focus STAYS. A reader who clears a search is
       // still searching; throwing them back to the page would make them find
       // the box again to type the next word.
@@ -184,8 +186,10 @@ export function SettingsSearchBox({
                unselectable row would let a reader arrow onto a sentence. */
             <p className="settingssearch-empty">{t("settings.search.none")}</p>
           ) : (
-            hits.map((hit, index) => (
-              /* An anchor, so a hit is a real address — copyable, and openable
+            hits.map((hit, index) => {
+              const Glyph = PAGE_ICONS[hit.page.id];
+              return (
+                /* An anchor, so a hit is a real address: copyable, and openable
                  in a tab by every modifier the browser understands.
 
                  `tabIndex={-1}`: a combobox's popup is driven by
@@ -199,48 +203,49 @@ export function SettingsSearchBox({
                  problem it was solving is solved by `onMouseDown`'s
                  preventDefault below, which keeps focus in the input WITHOUT
                  acting. */
-              <a
-                key={hit.page.id}
-                id={optionDomId(index)}
-                role="option"
-                tabIndex={-1}
-                aria-selected={index === active}
-                ref={index === active ? activeRef : undefined}
-                className={
-                  index === active
-                    ? "settingssearch-hit active"
-                    : "settingssearch-hit"
-                }
-                href={`#/settings/${hit.page.id}`}
-                onMouseDown={(event) => {
-                  // Focus stays in the box; nothing is opened here.
-                  event.preventDefault();
-                }}
-                onClick={(event) => {
-                  // Every modified click belongs to the BROWSER — a new tab, a
-                  // new window, a download. Only the plain one is ours.
-                  if (
-                    event.metaKey ||
-                    event.ctrlKey ||
-                    event.shiftKey ||
-                    event.altKey
-                  ) {
-                    return;
+                <a
+                  key={hit.page.id}
+                  id={optionDomId(index)}
+                  role="option"
+                  tabIndex={-1}
+                  aria-selected={index === active}
+                  ref={index === active ? activeRef : undefined}
+                  className={
+                    index === active
+                      ? "settingssearch-hit active"
+                      : "settingssearch-hit"
                   }
-                  event.preventDefault();
-                  go(index);
-                }}
-              >
-                <span>{hit.label}</span>
-                {/* Where it lives AND whose state it changes. The scope comes
-                    off the hit's own page, which the hit has carried all along
-                    — a reader searching "domain" gets two hits on two pages and
-                    the badge is what tells them which one is the company's. */}
-                <span className="t-caption">
-                  {hit.group} · {t(`settings.scope.${hit.page.scope}`)}
-                </span>
-              </a>
-            ))
+                  href={`#/settings/${hit.page.id}`}
+                  onMouseDown={(event) => {
+                    // Focus stays in the box; nothing is opened here.
+                    event.preventDefault();
+                  }}
+                  onClick={(event) => {
+                    // Every modified click belongs to the browser (a new tab, a
+                    // new window, a download). Only the plain one is ours.
+                    if (
+                      event.metaKey ||
+                      event.ctrlKey ||
+                      event.shiftKey ||
+                      event.altKey
+                    ) {
+                      return;
+                    }
+                    event.preventDefault();
+                    go(index);
+                  }}
+                >
+                  <Glyph size={16} aria-hidden />
+                  <span>{hit.label}</span>
+                  {/* Where it lives and whose state it changes: a reader
+                      searching "domain" gets two pages, and this says which
+                      one is the company's. */}
+                  <span className="t-caption">
+                    {hit.group} · {t(`settings.scope.${hit.page.scope}`)}
+                  </span>
+                </a>
+              );
+            })
           )}
         </div>
       )}

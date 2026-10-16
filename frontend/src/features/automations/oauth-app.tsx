@@ -207,143 +207,135 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
         </QueryGate>
       </PanelBody>
       {loaded && (
-        <>
+        <PanelBody>
           <RedirectUriGroup
+            open={loaded.source === "none"}
             uris={loaded.redirect_uris}
             sub={t(copy.redirectSub)}
           />
-          <PanelBody>
-            <div className="form-stack">
+          <div className="form-stack">
+            <Field
+              label={t("oauthApp.clientId")}
+              hint={
+                loaded.source === "stored"
+                  ? t("oauthApp.replaceHint")
+                  : undefined
+              }
+            >
+              {(control) => (
+                <TextInput
+                  {...control}
+                  ref={clientIdRef}
+                  value={clientId}
+                  autoComplete="off"
+                  disabled={!canManage || busy}
+                  placeholder={t(copy.clientIdPlaceholder)}
+                  onChange={(e) => setClientId(e.target.value)}
+                />
+              )}
+            </Field>
+            <Field label={t("oauthApp.clientSecret")}>
+              {(control) => (
+                <TextInput
+                  {...control}
+                  type="password"
+                  autoComplete="off"
+                  value={clientSecret}
+                  disabled={!canManage || busy}
+                  onChange={(e) => setClientSecret(e.target.value)}
+                />
+              )}
+            </Field>
+            {provider === "microsoft" && (
               <Field
-                label={t("oauthApp.clientId")}
-                hint={
-                  loaded.source === "stored"
-                    ? t("oauthApp.replaceHint")
-                    : undefined
-                }
+                label={t("oauthApp.tenant")}
+                hint={t("oauthApp.tenantHint")}
               >
                 {(control) => (
                   <TextInput
                     {...control}
-                    ref={clientIdRef}
-                    value={clientId}
+                    // The stored directory until somebody edits it, so a
+                    // rotation carries the pinning forward. Widening an app
+                    // to every company then takes emptying the field.
+                    value={tenant ?? loaded.tenant ?? ""}
                     autoComplete="off"
                     disabled={!canManage || busy}
-                    placeholder={t(copy.clientIdPlaceholder)}
-                    onChange={(e) => setClientId(e.target.value)}
+                    placeholder={t("oauthApp.tenantPlaceholder")}
+                    onChange={(e) => setTenant(e.target.value)}
                   />
                 )}
               </Field>
-              <Field label={t("oauthApp.clientSecret")}>
-                {(control) => (
-                  <TextInput
-                    {...control}
-                    type="password"
-                    autoComplete="off"
-                    value={clientSecret}
-                    disabled={!canManage || busy}
-                    onChange={(e) => setClientSecret(e.target.value)}
-                  />
-                )}
-              </Field>
-              {provider === "microsoft" && (
-                <Field
-                  label={t("oauthApp.tenant")}
-                  hint={t("oauthApp.tenantHint")}
-                >
-                  {(control) => (
-                    <TextInput
-                      {...control}
-                      // The stored directory until somebody edits it, so a
-                      // rotation carries the pinning forward. Emptying the
-                      // field is then a deliberate act, which is what widening
-                      // an app to every company ought to be.
-                      value={tenant ?? loaded.tenant ?? ""}
-                      autoComplete="off"
-                      disabled={!canManage || busy}
-                      placeholder={t("oauthApp.tenantPlaceholder")}
-                      onChange={(e) => setTenant(e.target.value)}
-                    />
-                  )}
-                </Field>
-              )}
-              <div className="form-actions">
-                <Button
-                  variant="primary"
-                  pending={save.isPending}
-                  disabled={!canManage || remove.isPending || !ready}
-                  onClick={() => {
-                    remove.reset();
-                    save.mutate(
-                      {
-                        clientId: clientId.trim(),
-                        clientSecret: clientSecret.trim(),
-                        tenant: (tenant ?? loaded.tenant ?? "").trim(),
-                      },
-                      {
-                        onSuccess: () => {
-                          // The field is the only copy this app holds, and it
-                          // has done its job.
-                          setClientSecret("");
-                          setClientId("");
-                          setTenant(undefined);
-                          save.reset();
-                        },
-                      },
-                    );
-                  }}
-                >
-                  {loaded.source === "stored"
-                    ? t("oauthApp.replace")
-                    : t("oauthApp.store")}
-                </Button>
-                {loaded.source === "stored" && (
-                  <Button
-                    variant="danger"
-                    pending={remove.isPending}
-                    disabled={!canManage || save.isPending}
-                    onClick={() => setConfirming(true)}
-                  >
-                    {t("oauthApp.remove")}
-                  </Button>
-                )}
-              </div>
-              <ConfirmModal
-                open={confirming}
-                onClose={() => setConfirming(false)}
-                title={t(copy.removeConfirmTitle)}
-                confirmLabel={t("oauthApp.remove")}
-                confirmVariant="danger"
-                pending={remove.isPending}
-                // A refused DELETE leaves this dialog OPEN, so the reason has
-                // to be inside it: the background Callout is behind a modal the
-                // reader cannot see past, which reads as a button that did
-                // nothing.
-                error={remove.error ? problemMessageOf(remove.error, t) : null}
-                returnFocusTo={() => clientIdRef.current}
-                onConfirm={() => {
-                  save.reset();
-                  remove.mutate(undefined, {
-                    onSuccess: () => {
-                      setConfirming(false);
-                      // AND THE DRAFT GOES WITH IT. An operator who typed
-                      // replacement credentials and then removed the app
-                      // instead was left with both fields populated and Store
-                      // app ready to press — offering to store a secret they
-                      // had just decided to be rid of, against an app that no
-                      // longer exists.
-                      setClientSecret("");
-                      setClientId("");
-                      setTenant(undefined);
+            )}
+            <div className="form-actions">
+              <Button
+                variant="primary"
+                pending={save.isPending}
+                disabled={!canManage || remove.isPending || !ready}
+                onClick={() => {
+                  remove.reset();
+                  save.mutate(
+                    {
+                      clientId: clientId.trim(),
+                      clientSecret: clientSecret.trim(),
+                      tenant: (tenant ?? loaded.tenant ?? "").trim(),
                     },
-                  });
+                    {
+                      onSuccess: () => {
+                        // The field is the only copy this app holds, and it
+                        // has done its job.
+                        setClientSecret("");
+                        setClientId("");
+                        setTenant(undefined);
+                        save.reset();
+                      },
+                    },
+                  );
                 }}
               >
-                {t(copy.removeConfirmBody)}
-              </ConfirmModal>
+                {loaded.source === "stored"
+                  ? t("oauthApp.replace")
+                  : t("oauthApp.store")}
+              </Button>
+              {loaded.source === "stored" && (
+                <Button
+                  variant="danger"
+                  pending={remove.isPending}
+                  disabled={!canManage || save.isPending}
+                  onClick={() => setConfirming(true)}
+                >
+                  {t("oauthApp.remove")}
+                </Button>
+              )}
             </div>
-          </PanelBody>
-        </>
+            <ConfirmModal
+              open={confirming}
+              onClose={() => setConfirming(false)}
+              title={t(copy.removeConfirmTitle)}
+              confirmLabel={t("oauthApp.remove")}
+              confirmVariant="danger"
+              pending={remove.isPending}
+              // A refused DELETE leaves this dialog open, so the reason goes
+              // inside it. The background Callout sits behind the modal.
+              error={remove.error ? problemMessageOf(remove.error, t) : null}
+              returnFocusTo={() => clientIdRef.current}
+              onConfirm={() => {
+                save.reset();
+                remove.mutate(undefined, {
+                  onSuccess: () => {
+                    setConfirming(false);
+                    // The draft goes too: a removed app must not leave a
+                    // secret ready to store against an app that is gone.
+                    setClientSecret("");
+                    setClientId("");
+                    setTenant(undefined);
+                  },
+                });
+              }}
+            >
+              {t(copy.removeConfirmBody)}
+            </ConfirmModal>
+          </div>
+        </PanelBody>
       )}
     </Panel>
   );

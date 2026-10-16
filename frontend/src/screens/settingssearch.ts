@@ -17,24 +17,8 @@ import type { SettingsPage, SettingsPageId } from "./settingscatalog";
  * It never calls an endpoint. Twenty-eight rows is not a query.
  */
 
-/**
- * The words a page answers to besides its own name.
- *
- * Three kinds, and each earns its place:
- *
- *   - the OLD name, so a reader who learnt "General" still finds Company
- *     profile and a stale bookmark's word still works;
- *   - the plain noun, because a reader searches for the thing they want to
- *     change ("password", "logo", "vat") rather than the page that holds it;
- *   - the neighbouring word, where two pages could each plausibly answer —
- *     "email" reaches both Connections and Capture, and letting one of them
- *     hide the other would make the search wrong for half of its askers.
- *
- * English only, on purpose. These are search aliases rather than copy: a
- * German reader's query lands on the translated LABEL, which is already
- * indexed, and inventing a German alias for a word nobody types would be a
- * translation of a guess.
- */
+// Old names and the nouns a reader types, in English: a translated query already
+// matches the translated label. The rail's search and the palette share them.
 const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
   account: [
     "password",
@@ -43,8 +27,6 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
     "language",
     "signature",
     "profile",
-    "brief",
-    "home",
     "theme",
     "appearance",
     "install",
@@ -59,13 +41,54 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
     "notice",
   ],
   voice: ["writing", "tone", "style", "drafts"],
-  agents: ["passport", "token", "api", "mcp", "credentials", "automation"],
-  notifications: ["notifications", "alerts", "digest", "email"],
-  connections: ["mailbox", "imap", "gmail", "outlook", "email", "linkedin"],
-  "capture-activity": ["mail", "email", "held", "judgement", "why"],
-  company: ["general", "installation", "currency", "timezone", "fiscal year"],
+  agents: [
+    "passport",
+    "token",
+    "api",
+    "api key",
+    "mcp",
+    "credentials",
+    "automation",
+  ],
+  notifications: [
+    "notifications",
+    "alerts",
+    "digest",
+    "email",
+    "brief",
+    "home",
+  ],
+  connections: [
+    "mailbox",
+    "imap",
+    "gmail",
+    "outlook",
+    "email",
+    "linkedin",
+    "oauth",
+    "calendar",
+  ],
+  "capture-activity": [
+    "mail",
+    "email",
+    "held",
+    "judgement",
+    "why",
+    "capture log",
+    "trace",
+  ],
+  company: [
+    "general",
+    "installation",
+    "workspace",
+    "currency",
+    "fx",
+    "timezone",
+    "fiscal year",
+  ],
   authentication: [
     "sign in",
+    "sign-in",
     "login",
     "sso",
     "oidc",
@@ -77,18 +100,41 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
     "mcp",
     "token",
   ],
-  members: ["users", "contacts", "invite", "seat", "deactivate", "roles"],
+  members: [
+    "users",
+    "contacts",
+    "roster",
+    "invite",
+    "seat",
+    "deactivate",
+    "roles",
+  ],
   teams: ["team", "group", "manager"],
   roles: ["role", "permission", "access", "rights", "scope", "grant"],
   seats: ["license", "licence", "entitlement", "capacity", "headcount"],
-  pipelines: ["stage", "deal", "funnel", "won", "lost"],
-  leads: ["lead", "source", "vocabulary", "qualification"],
-  fields: ["custom field", "data model", "column", "attribute"],
-  tags: ["tag", "label", "vocabulary"],
-  products: ["product", "offer", "template", "price", "catalog"],
+  pipelines: ["stages", "deal stages", "funnel", "won", "lost"],
+  leads: ["lead sources", "vocabulary", "qualification", "disqualify"],
+  fields: [
+    "custom fields",
+    "custom-fields",
+    "data model",
+    "schema",
+    "column",
+    "attribute",
+  ],
+  tags: ["labels", "vocabulary"],
+  products: [
+    "product",
+    "offer templates",
+    "offer-templates",
+    "price list",
+    "rate card",
+    "catalog",
+  ],
   capture: [
     "mail",
     "email",
+    "email capture",
     "domain",
     "sharing",
     "inbox",
@@ -98,17 +144,25 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
     "limit",
   ],
   integrations: ["webhook", "api"],
-  knowledge: ["document", "corpus", "rag", "upload"],
+  knowledge: ["documents", "handbook", "corpus", "rag", "upload"],
   import: ["csv", "upload", "migration", "bulk"],
-  models: ["ai", "routing", "provider", "anthropic", "openai", "key"],
-  automations: ["rule", "workflow", "trigger", "automation"],
+  models: [
+    "ai",
+    "routing",
+    "providers",
+    "anthropic",
+    "openai",
+    "keys",
+    "embeddings",
+  ],
+  automations: ["rules", "workflow", "triggers", "automation"],
   usage: ["spend", "cost", "budget", "tokens", "money"],
-  "model-calls": ["trace", "log", "call", "debug", "prompt"],
+  "model-calls": ["trace", "logs", "calls", "debug", "prompt"],
   privacy: ["gdpr", "dsr", "consent", "retention", "erasure", "purpose"],
   jurisdiction: ["country", "law", "legal", "pack", "deadline", "floor"],
   audit: ["trail", "log", "who", "history", "compliance"],
   "system-health": ["jobs", "queue", "reindex", "maintenance", "stuck"],
-  extensions: ["unit", "plugin", "module", "extension"],
+  extensions: ["units", "plugins", "modules", "extension"],
   reset: ["empty", "wipe", "delete everything", "danger"],
 };
 
@@ -120,6 +174,23 @@ const PROFILE_ALIASES: readonly string[] = [
   "address",
   "context",
 ];
+
+/** What the search needs to know about the reader asking. */
+type SettingsSearchReader = { readonly holdsAdminRole: boolean };
+
+/** The reader a caller gets when it names none: no admin pages. */
+const NO_ADMIN_ROLE: SettingsSearchReader = { holdsAdminRole: false };
+
+/** The words `page` answers to besides its own name, for this reader. */
+export function settingsPageAliases(
+  page: SettingsPageId,
+  reader: SettingsSearchReader = NO_ADMIN_ROLE,
+): readonly string[] {
+  return [
+    ...(ALIASES[page] ?? []),
+    ...(page === "company" && reader.holdsAdminRole ? PROFILE_ALIASES : []),
+  ];
+}
 
 /**
  * A form of the text that matches the way contacts actually type.
@@ -144,12 +215,6 @@ export type SettingsHit = {
   /** The group it sits under, so a hit says where it lives. */
   group: string;
 };
-
-/** What the search needs to know about the reader asking. */
-type SettingsSearchReader = { readonly holdsAdminRole: boolean };
-
-/** The reader a caller gets when it names none: no admin pages. */
-const NO_ADMIN_ROLE: SettingsSearchReader = { holdsAdminRole: false };
 
 /**
  * The pages matching `query`, best first.
@@ -187,10 +252,7 @@ export function settingsSearch(
       // description, which beats one on a word it merely answers to.
       fold(label),
       fold(group),
-      ...(ALIASES[page.id] ?? []).map(fold),
-      ...(page.id === "company" && reader.holdsAdminRole
-        ? PROFILE_ALIASES.map(fold)
-        : []),
+      ...settingsPageAliases(page.id, reader).map(fold),
       fold(sub),
     ];
     // Every word, or the page does not answer. Ranked by the BEST field any

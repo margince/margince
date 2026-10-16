@@ -142,16 +142,14 @@ export default meta;
 
 type Story = StoryObj<typeof SettingsScreen>;
 
-// The whole tab is ONE card now: the identity block as its subject, and the
-// password, the sign-off and the language as three rows under it, each answer at
-// the same x. It used to be four panels with four header bands.
+// Profile, security, and language and appearance: three panels, each answer at
+// the same x down the page.
 export const AccountTab: Story = {
   render: tab("account", { "GET /me": me() }),
 };
 
-// And in dark, because the card is a plate (the identity block) sitting above a
-// ruled list, and the hairline between two decisions plus the avatar's tint are
-// three derived values that move between themes.
+// And in dark, because the hairline between two decisions and the avatar's tint
+// are derived values that move between themes.
 export const AccountTabDark: Story = {
   globals: { theme: "dark" },
   render: tab("account", { "GET /me": me() }),
@@ -168,6 +166,25 @@ export const AccountPreferences: Story = {
       await canvas.findByRole("combobox", { name: "Language" }),
     );
   },
+};
+
+// The notices by kind, then the two email summaries, as one page.
+export const NotificationsTab: Story = {
+  render: tab("notifications", {
+    "GET /me": me(),
+    "GET /me/notification-preferences": () =>
+      jsonResponse({
+        items: [
+          { class: "approval_pending", delivery: "email", chosen: false },
+          { class: "automation", delivery: "in_app", chosen: false },
+          { class: "lead_sla", delivery: "in_app", chosen: false },
+          { class: "capture", delivery: "in_app", chosen: false },
+          { class: "system", delivery: "in_app", chosen: false },
+          { class: "coach", delivery: "in_app", chosen: false },
+        ],
+      }),
+    "GET /me/brief-delivery": () => jsonResponse({}),
+  }),
 };
 
 // The sign-off's editor. A textarea committed with a Save button is the settings
@@ -319,7 +336,7 @@ export const PassportMintDialogDark: Story = {
   },
 };
 
-// The tool table unfiltered, then scoped to the read-only "Scout" passport: the
+// The tool groups unfiltered, then scoped to the read-only "Scout" passport: the
 // send_email row is struck, because "send" is not in that grant.
 const toolConsoleRoutes = agentsTabRoutes;
 
@@ -329,14 +346,14 @@ const selectScoutPassport = async ({
   canvasElement: HTMLElement;
 }) => {
   const canvas = within(canvasElement);
-  await canvas.findByText("search_records");
   // The listbox is portalled to the body, outside this story's canvas, so the
   // pick goes through the shared helper rather than a canvas-scoped query.
   await pickOption(
     userEvent.setup(),
-    canvas.getByRole("combobox", { name: "All passports" }),
+    await canvas.findByRole("combobox", { name: "All passports" }),
     "Reachable by Scout",
   );
+  await userEvent.click(await canvas.findByText("Send messages"));
 };
 
 export const AgentToolConsole: Story = {

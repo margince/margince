@@ -15,9 +15,9 @@ import { useHoldsAdminRole } from "../lib/capability";
 import { navigate, type Route } from "../lib/router";
 import { openAsk } from "../lib/urlstate";
 import { SCHEDULED_SCREEN } from "../screens/scheduledsends";
-import type { SettingsPageId } from "../screens/settingscatalog";
 import { useVisibleSettingsPages } from "../screens/settingsnav";
 import { settingsHref } from "../screens/settingsrouting";
+import { settingsPageAliases } from "../screens/settingssearch";
 import {
   CUSTOM_SCREEN,
   customPaletteScreens,
@@ -56,49 +56,6 @@ export type Command = {
   // instead of leaving it — asking does that, and a route it never follows
   // would be a claim about where the reader ends up that is simply untrue.
   route?: Route;
-};
-
-// The words a settings entry answers to beyond its own label. A reader types the
-// THING they are looking for — "webhook", "products", "password" — and almost
-// never the name of the page it was filed under, which is a shelving decision
-// they were not present for.
-//
-// Three of these carry words the product no longer prints anywhere: three
-// screens of their own collapsed into the data-model page and the automations
-// editor into the AI page, and somebody who learned "custom fields" or
-// "automations" must not be told the product no longer has one.
-const SETTINGS_ALIASES: Readonly<
-  Partial<Record<SettingsPageId, readonly string[]>>
-> = {
-  account: ["password", "profile", "language", "theme"],
-  voice: ["tone", "writing style"],
-  agents: ["passport", "api key", "token"],
-  connections: ["oauth", "mailbox", "calendar"],
-  "capture-activity": ["capture log", "trace"],
-  company: ["general", "currency", "workspace", "fx"],
-  authentication: ["sign-in", "sso", "oauth app", "login"],
-  members: ["users", "contacts", "roster", "invite"],
-  teams: ["team"],
-  seats: ["license", "billing", "plan", "subscription"],
-  pipelines: ["stages", "deal stages"],
-  leads: ["lead sources", "disqualify"],
-  fields: ["custom-fields", "data model", "schema"],
-  tags: ["labels", "vocabulary"],
-  products: ["price list", "rate card", "offer-templates"],
-  capture: ["email capture", "inbox"],
-  integrations: ["webhook", "api"],
-  knowledge: ["handbook", "corpus", "documents"],
-  import: ["csv", "upload", "migration"],
-  models: ["routing", "providers", "keys", "embeddings"],
-  automations: ["rules", "triggers"],
-  usage: ["spend", "cost", "budget", "tokens"],
-  "model-calls": ["logs", "trace", "calls"],
-  privacy: ["gdpr", "consent", "retention", "erasure"],
-  jurisdiction: ["country", "law", "legal"],
-  audit: ["trail", "log", "history"],
-  "system-health": ["jobs", "health", "reindex", "maintenance"],
-  extensions: ["units", "plugins"],
-  reset: ["danger", "wipe", "delete everything"],
 };
 
 export function useBuiltinCommands(): Command[] {
@@ -164,7 +121,7 @@ export function useBuiltinCommands(): Command[] {
       label: t(`settings.tab.${page.id}`),
       keywords: [
         page.id,
-        ...(SETTINGS_ALIASES[page.id] ?? []),
+        ...settingsPageAliases(page.id, { holdsAdminRole: isAdmin }),
         ...(page.id === "company" && isAdmin
           ? [t("settings.companyRefresh")]
           : []),

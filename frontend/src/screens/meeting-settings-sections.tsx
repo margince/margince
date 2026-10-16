@@ -104,9 +104,6 @@ export function CalendarSection({
           )}
         </Field>
       )}
-      {!connectionsPending && !connectionsError && providers.length === 0 && (
-        <p>{t("scheduling.disconnectedCalendar")}</p>
-      )}
       {connectionsPending && <p>{t("common.loading")}</p>}
       <ErrorLine error={connectionsError} />
       {provider ? (
@@ -118,9 +115,16 @@ export function CalendarSection({
           onBlocking={onBlocking}
         />
       ) : (
-        <a href="#/settings/connections" target="_blank" rel="noreferrer">
-          {t("scheduling.manageConnection")}
-        </a>
+        <p>
+          {!connectionsPending &&
+            !connectionsError &&
+            providers.length === 0 && <>{t("scheduling.noCalendar")} </>}
+          {/* A new tab, so the draft here survives; this page reloads the
+              connections when the reader comes back. */}
+          <a href="#/settings/connections" target="_blank" rel="noreferrer">
+            {t("scheduling.manageConnection")}
+          </a>
+        </p>
       )}
       {missingSaved && (
         <ErrorLine>{t("scheduling.missingSavedCalendar")}</ErrorLine>
@@ -227,20 +231,25 @@ export function DefaultFields({
           />
         )}
       </Field>
-      <SegmentedControl
-        label={t("scheduling.duration")}
-        options={lengths}
-        value={duration}
-        labels={Object.fromEntries(
-          lengths.map((minutes) => [
-            minutes,
-            plural("scheduling.minutes", Number(minutes), { count: minutes }),
-          ]),
-        )}
-        onChange={(minutes) =>
-          onChange({ ...form, duration_minutes: Number(minutes) })
-        }
-      />
+      <div className="field meeting-length">
+        <span className="t-label" aria-hidden>
+          {t("scheduling.duration")}
+        </span>
+        <SegmentedControl
+          label={t("scheduling.duration")}
+          options={lengths}
+          value={duration}
+          labels={Object.fromEntries(
+            lengths.map((minutes) => [
+              minutes,
+              plural("scheduling.minutes", Number(minutes), { count: minutes }),
+            ]),
+          )}
+          onChange={(minutes) =>
+            onChange({ ...form, duration_minutes: Number(minutes) })
+          }
+        />
+      </div>
       <Switch
         label={t(videoDefaultLabel(provider))}
         hint={

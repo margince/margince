@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, Disclosure, Radio } from "../design-system/atoms";
+import { Button, Radio } from "../design-system/atoms";
 import { FileDropzoneControl } from "../design-system/filedropzone";
 import { SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
@@ -112,9 +112,6 @@ export function VoiceCorpusIntake({
                 })}
               </p>
             )}
-            <Disclosure summary={t("settings.voice.whyToggle")}>
-              <p>{t("settings.voice.whyBody")}</p>
-            </Disclosure>
           </div>
         )}
       />

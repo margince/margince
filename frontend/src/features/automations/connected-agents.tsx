@@ -462,23 +462,22 @@ export function ConnectedAgentsCard() {
     <Panel title={t("agents.connected")}>
       <PanelBody>
         <PanelIntro>{t("agents.connectedSub")}</PanelIntro>
-      </PanelBody>
-      {list.isSuccess && connections.length > 0 ? (
-        <ConnectionTable
-          connections={connections}
-          now={now}
-          onEnd={disconnect.ask}
-        />
-      ) : (
-        <PanelBody>
-          <div ref={emptyRegion} tabIndex={-1}>
+        {!(list.isSuccess && connections.length > 0) && (
+          <div ref={emptyRegion} tabIndex={-1} className="agents-empty">
             <QueryStates query={list} pendingLabel={t("agents.connected")}>
               {/* Not the generic empty state: beside a connect guide, "nothing
                   here" reads as a failed load. */}
               <EmptyState>{t("agents.noneConnected")}</EmptyState>
             </QueryStates>
           </div>
-        </PanelBody>
+        )}
+      </PanelBody>
+      {list.isSuccess && connections.length > 0 && (
+        <ConnectionTable
+          connections={connections}
+          now={now}
+          onEnd={disconnect.ask}
+        />
       )}
       <PanelBody>
         {/* Open by itself only once the read has answered with nothing, so a

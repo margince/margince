@@ -324,6 +324,8 @@ export const en = {
   "scheduling.replace": "Replace booking link",
   "scheduling.replaceHelp":
     "The old link will stop accepting bookings. Update your email signature and anywhere else you have shared it. Existing meetings keep their private change links.",
+  "scheduling.replaceShort": "Makes a new link. The old one stops working.",
+  "scheduling.replaceAction": "Replace link",
   "scheduling.reschedule": "Reschedule",
   "scheduling.rescheduleHelp":
     "Your current time stays reserved until the calendar confirms the change.",
@@ -375,10 +377,9 @@ export const en = {
   "scheduling.copied": "Copied",
   "scheduling.copyFallback": "Select and copy the link below.",
   "scheduling.preview": "Preview public page",
-  "scheduling.active": "Accepting bookings",
-  "scheduling.paused": "Public bookings paused",
-  "scheduling.pause": "Pause bookings",
-  "scheduling.resume": "Enable bookings",
+  "scheduling.acceptBookings": "Accept bookings",
+  "scheduling.acceptBookingsHelp":
+    "Turn off to stop new bookings. The link stays the same.",
   "scheduling.settings": "Meeting settings",
   "scheduling.save": "Save settings",
   "settings.tab.meetings": "Meetings",
@@ -445,8 +446,9 @@ export const en = {
     "The name on your booking page comes from Account settings.",
   "scheduling.linkNotCreated":
     "Save meeting settings to create your booking link.",
-  "scheduling.calendarSetupNeeded":
-    "Choose and save a calendar in meeting settings before enabling bookings.",
+  "scheduling.calendarSetupNeeded": "Choose and save a calendar first.",
+  "scheduling.noCalendar":
+    "No calendar connected. Connecting your mailbox does not connect its calendar.",
   "scheduling.hostName": "Your public name",
   "scheduling.subject": "Meeting title",
   "scheduling.location": "Location or meeting link",
@@ -5535,7 +5537,9 @@ export const en = {
   "explain.col.owner": "Owner",
   "explain.col.pipeline": "Pipeline",
 
-  "settings.accountCard": "Your account",
+  "settings.profileTitle": "Profile",
+  "settings.securityTitle": "Security",
+  "settings.preferencesTitle": "Language and appearance",
   "unsaved.title": "Discard unsaved changes?",
   "unsaved.body":
     "Leaving this page discards what you entered. Go back to save it first.",
@@ -5576,6 +5580,7 @@ export const en = {
   "delivery.weeklyHelp": "Also sends Monday’s review by email.",
   "delivery.byEmail": "By email",
   "delivery.none": "Not by email",
+  "delivery.panelTitle": "Email summaries",
   "settings.appearance": "Appearance",
   "settings.appearanceHelp":
     "Light, dark or the device setting. The account menu also changes it.",
@@ -5587,7 +5592,8 @@ export const en = {
   "settings.greetingNameHelp":
     "The name you are greeted by in drafted messages and greetings. Empty uses the first word of your display name.",
   "settings.greetingNameSave": "Save",
-  "settings.languageHelp": "Applies to this session.",
+  "settings.languageHelp":
+    "Saved to your account, so every device you sign in on uses it.",
   "settings.deviceCard": "This device",
   "settings.installApp": "Margince app",
   "settings.installAppHelp":
@@ -6904,9 +6910,9 @@ export const en = {
   "notifications.byAgent": "By an agent",
   "notifications.empty":
     "Nothing has come in yet. What the product tells you about arrives here.",
-  "notifications.title": "How each kind reaches you",
+  "notifications.title": "Delivery by kind",
   "notifications.sub":
-    "Every notice is kept in your notification center whatever you choose here. This decides what else happens when one lands.",
+    "Every notice also stays in your notification center, whatever you choose here.",
   "notifications.saveFailed": "That choice was not saved",
   "notifications.saveFailedFor": "“{setting}” was not saved",
   "notifications.class.approval_pending.label": "Approvals waiting on you",
@@ -6924,9 +6930,9 @@ export const en = {
   "notifications.class.system.label": "System notices",
   "notifications.class.system.help":
     "Maintenance, a limit reached, and anything else the installation has to tell you.",
-  "notifications.class.coach.label": "A colleague’s nudge",
+  "notifications.class.coach.label": "Nudges from colleagues",
   "notifications.class.coach.help":
-    "Somebody on your team pointing at a deal, a reply or a backlog of yours. These always reach you somehow, so they cannot be switched off.",
+    "A teammate pointing you to a deal, a reply or a backlog of yours. Always delivered, so there is no “Off”.",
   "notifications.delivery.off": "Off",
   "notifications.delivery.in_app": "In the app",
   "notifications.delivery.email": "Email",
@@ -9252,9 +9258,8 @@ export const en = {
   // systems the INSTALLATION is wired to. One row carried both before, which
   // is why it had to be ungated to keep a rep's own mailbox reachable.
   "settings.home": "Overview",
-  "settings.home.yours": "Your settings",
-  "settings.home.manage": "Editable settings",
-  "settings.home.lookUp": "Read-only settings",
+  "settings.home.sub": "Every settings page you can open, in groups.",
+  "settings.home.readOnly": "Read-only",
   "settings.home.rolesLabel": "Your role",
   "settings.home.seatLabel": "Your seat",
   "settings.home.seat.full": "Full seat: changes allowed",
@@ -9840,11 +9845,9 @@ export const en = {
   "settings.rates.colCacheWriteShort": "Cache write",
   "settings.rates.modelGroupLabel": "{provider} prices",
   "settings.voice.title": "Voice DNA",
-  "settings.voice.intro":
-    "Your personal writing voice. It shapes drafts written for you, is visible only to you and learns only from samples you add.",
   "settings.voice.readOnly": "Read-only. Your role cannot change Voice DNA.",
   "settings.voice.emptyBody":
-    "Add writing samples to build your Voice DNA. It takes about a minute.",
+    "Add writing samples to build your Voice DNA. It learns only from what you add, and a first build takes about a minute.",
   "settings.voice.status.collecting": "Collecting",
   "settings.voice.status.stale": "Rebuild needed",
   "settings.voice.bandThin": "thin",
@@ -9980,9 +9983,6 @@ export const en = {
   "settings.voice.dropHint":
     "Drop or choose files (.txt, .md, .pdf, .docx, .vtt, .srt or .json), several at once.",
   "settings.voice.dropEmpty": "Drop files here, or click to choose",
-  "settings.voice.whyToggle": "Why add samples",
-  "settings.voice.whyBody":
-    "Margince drafts emails in your own words. It learns tone, rhythm and phrasing only from your writing. Samples are visible only to you.",
   "settings.voice.worksTitle": "Best samples",
   "settings.voice.worksEmails":
     "Sent emails saved as .txt, .md, .pdf or .docx.",
@@ -10474,7 +10474,7 @@ export const en = {
   "tools.unreachable": "Scope not granted",
   "tools.colTool": "Tool",
   "tools.colTier": "Approval",
-  "tools.colScope": "Access",
+  "tools.noScope": "No scope needed",
   "tools.colDetail": "Details",
   "tools.search": "Search tools",
   "tools.noMatch": "No tools match this search.",
@@ -10686,12 +10686,12 @@ export const en = {
   "signInMethods.title": "Sign-in methods",
   "signInMethods.saveFailed": "Change not saved",
   "signInMethods.sub":
-    "How members can sign in. The list shows the providers this installation has credentials for: an administrator can turn one off but cannot add one.",
+    "An administrator can turn a provider off but cannot add one. A provider shows on the sign-in screen once its app below is set up.",
   "signInMethods.password": "Email and password",
   "signInMethods.passwordAlways":
     "Always available. Every user can sign in this way, so the other methods can be turned off safely.",
-  "signInMethods.passwordReason":
-    "Password sign-in cannot be turned off. It keeps the installation accessible.",
+  "signInMethods.providerNoApp":
+    "Not on the sign-in screen yet. It shows once the app below is set up.",
   "signInMethods.providerHint":
     "Shows this provider on the sign-in screen. Turning it off stops sign-ins in progress; existing sessions continue.",
   "signInMethods.noneConfigured":
@@ -11037,7 +11037,6 @@ export const en = {
   "aiTasks.embeddingsEdit":
     "Search and retrieval has no thinking level or timeouts to set. Change its provider and model on the Embedding model row under Model tiers.",
   "workingHours.title": "Bookable hours",
-  "workingHours.sub": "Personal setting. Only you set your hours.",
   "workingHours.unsetTitle": "Not set yet",
   "workingHours.unset":
     "Customers are offered 09:00 to 17:00, Monday to Friday, in the installation timezone.",
@@ -11046,7 +11045,7 @@ export const en = {
   "workingHours.days": "Working days",
   "workingHours.timezone": "Timezone",
   "workingHours.browserZone":
-    "Your browser uses {zone}. The selection above is the timezone used for availability.",
+    "Your browser is on {zone}. Availability uses the timezone chosen here.",
   "workingHours.timezoneHelp":
     "Timezone used to calculate availability. Search for a city or region.",
   "workingHours.narrowedTitle": "Fewer bookable hours",
@@ -11062,8 +11061,7 @@ export const en = {
   "workingHours.day.7": "Sunday",
   "autonomy.title": "Automatic changes",
   "autonomy.sub":
-    "Automatic changes start on. Existing settings are kept. Each switch applies to your work, not the whole team.",
-  "autonomy.noneDecidedYetTitle": "No reviews yet",
+    "Each switch lets one kind of change run without your review. It applies to your work, not the whole team.",
   "autonomy.updateFailed": "Setting not saved",
   "autonomy.noneDecidedYet":
     "You have not reviewed any of these proposals yet. Automatic changes can already run according to the switches below. Proposals depend on your records and the work routed to you.",

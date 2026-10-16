@@ -155,6 +155,22 @@ describe("the settings search box", () => {
     expect(document.activeElement).toBe(box());
   });
 
+  // The phone drawer hosting the box closes on Escape only if the empty box
+  // leaves the key unhandled.
+  it("leaves Escape to its host once the box is empty", async () => {
+    const user = userEvent.setup();
+    mount();
+    const seen: boolean[] = [];
+    const record = (event: KeyboardEvent) => seen.push(event.defaultPrevented);
+    globalThis.addEventListener("keydown", record);
+    await user.type(box(), "audit");
+    await user.keyboard("{Escape}");
+    await user.keyboard("{Escape}");
+    globalThis.removeEventListener("keydown", record);
+
+    expect(seen.slice(-2)).toEqual([true, false]);
+  });
+
   // Pointer and keyboard reach the same place, by the same route.
   it("opens a hit on click", async () => {
     const user = userEvent.setup();
