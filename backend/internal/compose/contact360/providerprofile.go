@@ -19,10 +19,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"time"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/providerwire"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -142,7 +140,7 @@ func namesToShow(statuses map[string]string, runs []providerRunRow, claims []sto
 		seen[name] = true
 	}
 	for _, r := range runs {
-		seen[r.providerName] = true
+		seen[r.Provider] = true
 	}
 	for _, c := range claims {
 		seen[c.provider] = true
@@ -187,20 +185,20 @@ func (s *Service) profileFor(name string, status string, runs []providerRunRow, 
 	}
 	if len(runs) > 0 {
 		latest := runs[0]
-		profile.RetrievedAt = latest.completedAt
-		if latest.safeCode != "" {
-			profile.SafeStatusCode = new(latest.safeCode)
+		profile.RetrievedAt = latest.CompletedAt
+		if latest.SafeStatusCode != "" {
+			profile.SafeStatusCode = new(latest.SafeStatusCode)
 		}
-		profile.LatestRun = new(toWireRun(latest))
+		profile.LatestRun = new(providerwire.Run(latest))
 		profile.ContributingRuns = new(contributingRuns(runs))
 		if s.providers != nil {
 			if desc, err := s.providers.Descriptor(name); err == nil {
 				profile.CategoriesNotRequested = categoriesNotRequested(desc, runs, claims)
 				if answerable(latest) {
-					delivered := deliveredKeys(latest.id, claims)
-					profile.CategoriesAsked = new(asked(desc, latest.requested, delivered))
+					delivered := deliveredKeys(latest.ID, claims)
+					profile.CategoriesAsked = new(asked(desc, requestedNames(latest), delivered))
 					profile.CategoriesWithoutAnswer = new(categoriesWithoutAnswer(
-						desc, latest.requested, delivered))
+						desc, requestedNames(latest), delivered))
 				}
 			}
 		}
@@ -218,7 +216,7 @@ func (s *Service) profileFor(name string, status string, runs []providerRunRow, 
 func withoutDeferrals(runs []providerRunRow) []providerRunRow {
 	out := make([]providerRunRow, 0, len(runs))
 	for _, r := range runs {
-		if r.skipReason != string(provider.SkipCategoryInFlight) {
+		if r.SkipReason != provider.SkipCategoryInFlight {
 			out = append(out, r)
 		}
 	}
@@ -230,7 +228,7 @@ func withoutDeferrals(runs []providerRunRow) []providerRunRow {
 func runsOf(name string, runs []providerRunRow) []providerRunRow {
 	var out []providerRunRow
 	for _, r := range runs {
-		if r.providerName == name {
+		if r.Provider == name {
 			out = append(out, r)
 		}
 	}
@@ -247,39 +245,21 @@ func claimsOf(name string, claims []storedClaim) []storedClaim {
 	return out
 }
 
-// providerRunRow is one run as this section reads it: the lifecycle facts and
-// what the run was allowed to ask for. Not the frozen snapshot, the
-// correlation id or the reservations — none of them is a fact about the
-// CONTACT, and the run endpoint serves them to anyone who needs them.
-type providerRunRow struct {
-	id                ids.UUID
-	providerName      string
-	trigger           string
-	connectionVersion int64
-	state             string
-	claimsUnwritten   bool
-	// Whether this run's answers have been offered to the record. The page
-	// waits on it: the apply commits AFTER the run completes, so a client
-	// that stopped at the terminal state would refresh one step before the
-	// values it is waiting for exist.
-	applied     bool
-	safeCode    string
-	requested   []string
-	snapshot    provider.Snapshot
-	skipReason  string
-	createdAt   time.Time
-	completedAt *time.Time
-}
+// providerRunRow is one run as this section reads it. Reservations are not read.
+// What a run cost belongs to the settings card, since a credit figure beside a
+// mobile number reads as its price. The run endpoint serves them.
+type providerRunRow = provider.Run
 
 // providerRuns reads this contact's run history, newest first. Scrubbed runs
 // are gone from it by construction: an erasure nulls contact_id, so a run that
 // no longer names anybody cannot be read back onto their page.
 func (s *Service) providerRuns(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]providerRunRow, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT id, provider, trigger, connection_version, state, claims_unwritten,
-		       applied_at IS NOT NULL,
-		       coalesce(last_safe_status_code, ''), coalesce(skip_reason, ''),
-		       requested_categories, configuration_snapshot, created_at, completed_at
+		SELECT id::text, subject_kind, contact_id::text, provider, trigger, state,
+		       coalesce(skip_reason, ''), claims_unwritten, applied_at IS NOT NULL,
+		       connection_version, configuration_snapshot, requested_categories,
+		       coalesce(last_safe_status_code, ''), submitted_at, completed_at,
+		       created_at, updated_at
 		  FROM provider_run
 		 WHERE contact_id = $1 AND subject_kind = 'contact'
 		 ORDER BY created_at DESC`, contactID)
@@ -291,12 +271,17 @@ func (s *Service) providerRuns(ctx context.Context, tx pgx.Tx, contactID ids.Con
 	for rows.Next() {
 		var r providerRunRow
 		var frozen []byte
-		if err := rows.Scan(&r.id, &r.providerName, &r.trigger, &r.connectionVersion, &r.state, &r.claimsUnwritten,
-			&r.applied, &r.safeCode, &r.skipReason, &r.requested, &frozen, &r.createdAt, &r.completedAt); err != nil {
+		var requested []string
+		if err := rows.Scan(&r.ID, &r.SubjectKind, &r.ContactID, &r.Provider, &r.Trigger, &r.State,
+			&r.SkipReason, &r.ClaimsUnwritten, &r.Applied, &r.ConnectionVersion, &frozen, &requested,
+			&r.SafeStatusCode, &r.SubmittedAt, &r.CompletedAt, &r.CreatedAt, &r.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("contact360: scanning a provider run: %w", err)
 		}
-		if err := json.Unmarshal(frozen, &r.snapshot); err != nil {
+		if err := json.Unmarshal(frozen, &r.Snapshot); err != nil {
 			return nil, fmt.Errorf("contact360: reading a run's frozen configuration: %w", err)
+		}
+		for _, name := range requested {
+			r.RequestedCategories = append(r.RequestedCategories, provider.Category(name))
 		}
 		out = append(out, r)
 	}
@@ -306,32 +291,6 @@ func (s *Service) providerRuns(ctx context.Context, tx pgx.Tx, contactID ids.Con
 	return out, nil
 }
 
-// toWireRun renders one run for the page: which provider, what was asked for,
-// how it ended.
-//
-// The reservations are left empty: what a run cost belongs to the settings card.
-// A credit figure beside a mobile number reads as its price, and the run
-// endpoint serves reservations to a caller who needs them. The frozen
-// configuration is no price and the contract requires it, so it is served.
-func toWireRun(r providerRunRow) crmcontracts.ProviderRun {
-	return crmcontracts.ProviderRun{
-		ConfigurationSnapshot: providerwire.Snapshot(r.snapshot),
-		Reservations:          []crmcontracts.ProviderRunReservation{},
-		Id:                    openapi_types.UUID(r.id),
-		SubjectKind:           crmcontracts.ProviderRunSubjectKindContact,
-		Provider:              crmcontracts.Provider(r.providerName),
-		Trigger:               crmcontracts.ProviderRunTrigger(r.trigger),
-		State:                 crmcontracts.ProviderRunState(r.state),
-		ClaimsUnwritten:       r.claimsUnwritten,
-		Applied:               &r.applied,
-		RequestedCategories:   r.requested,
-		ConnectionVersion:     r.connectionVersion,
-		CreatedAt:             r.createdAt,
-		UpdatedAt:             r.createdAt,
-		CompletedAt:           r.completedAt,
-	}
-}
-
 // contributingRuns names every run whose claims this snapshot drew on: the
 // completed ones that delivered values. Normally the single latest run; after
 // a merge it spans BOTH sides, because both were paid for and the section
@@ -339,8 +298,8 @@ func toWireRun(r providerRunRow) crmcontracts.ProviderRun {
 func contributingRuns(runs []providerRunRow) []crmcontracts.ProviderRun {
 	out := []crmcontracts.ProviderRun{}
 	for _, r := range runs {
-		if r.state == string(provider.RunCompleted) && !r.claimsUnwritten {
-			out = append(out, toWireRun(r))
+		if r.State == provider.RunCompleted && !r.ClaimsUnwritten {
+			out = append(out, providerwire.Run(r))
 		}
 	}
 	return out
@@ -378,12 +337,12 @@ func categoriesNotRequested(desc provider.Descriptor, runs []providerRunRow, cla
 	}
 	asked := map[string]bool{}
 	for _, r := range runs {
-		for _, c := range r.requested {
+		for _, c := range r.RequestedCategories {
 			// The latest run's own requests count whatever it returned: its
 			// receipt is rendered beside this list, so a category it asked
 			// about and got nothing for is already accounted for there.
-			if r.id == runs[0].id {
-				asked[c] = true
+			if r.ID == runs[0].ID {
+				asked[string(c)] = true
 			}
 		}
 	}

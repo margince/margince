@@ -95,8 +95,8 @@ func TestMorningDigestBuildAndRead(t *testing.T) {
 	}
 }
 
-// A calendar day no request may bind is a malformed parameter, not a storage
-// fault: Go reads year 0 and Postgres has no date for it.
+// The store is queried with the day's ISO text, which has no year 0.
+// A day outside the accepted range is a malformed parameter, not a storage fault.
 func TestMorningDigestRefusesADayOutsideTheAcceptedRange(t *testing.T) {
 	b := setupBackfillWire(t)
 	for _, day := range []string{"0000-01-01", "0000-12-31", "0001-01-01", "9999-12-31"} {

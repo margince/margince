@@ -22,7 +22,10 @@ func TestEverySiteReadFailureCodeIsDeclaredOnBothReadShapes(t *testing.T) {
 			t.Errorf("CompanySiteRead.status_code does not declare %q", code)
 		}
 	}
-	if !crmcontracts.SiteReadReportStatusCode(string(crmcontracts.SiteReadReportStatusCodeBudgetDeferred)).Valid() {
+	if !crmcontracts.SiteReadReportStatusCode("budget_deferred").Valid() {
 		t.Error("budget_deferred fell out of SiteReadReport.status_code")
+	}
+	if !crmcontracts.CompanySiteReadStatusCode("budget_deferred").Valid() {
+		t.Error("budget_deferred fell out of CompanySiteRead.status_code")
 	}
 }

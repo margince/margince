@@ -27,6 +27,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/contact360"
+	"github.com/margince/margince/backend/internal/compose/providerwire"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -364,5 +365,54 @@ func seedOrphanClaim(t *testing.T, e *Env, contactID ids.UUID, key, value string
 		return err
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// A run that sent nothing says why on both doors that serve it. The contact
+// page and the run endpoint map the same stored run through one function.
+func TestASkippedRunShowsItsReasonOnTheContactPageAndTheRunEndpoint(t *testing.T) {
+	e := Setup(t)
+	connectProvider(t, e)
+	contactID := seedSubject(t, e)
+	frozen, err := json.Marshal(provider.Snapshot{Mode: "automatic_on_create"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var runID string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			INSERT INTO provider_run
+			  (subject_kind, contact_id, provider, trigger, state, skip_reason, input_fingerprint,
+			   external_correlation_id, connection_version, connection_epoch,
+			   configuration_snapshot, requested_categories, completed_at)
+			VALUES ('contact', $1, 'surfe', 'automatic_create', 'skipped', 'already_fresh', $2,
+			        gen_random_uuid(), 1, 1, $3::jsonb, ARRAY['professional_email'], now())
+			RETURNING id::text`, contactID, "fp-skip-"+contactID.String(), string(frozen)).Scan(&runID)
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	page, err := contact360Service(e).Assemble(e.Admin(), ids.From[ids.ContactKind](contactID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	onPage := sectionFor(t, page, "surfe").LatestRun
+	endpoint, err := providerStoreFor(t, e).GetRun(e.Admin(), contactID.String(), runID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	onEndpoint := providerwire.Run(endpoint)
+
+	for door, run := range map[string]*crmcontracts.ProviderRun{"contact page": onPage, "run endpoint": &onEndpoint} {
+		if run == nil || run.SkipReason == nil || *run.SkipReason != crmcontracts.ProviderRunSkipReasonAlreadyFresh {
+			t.Errorf("%s: run = %+v, want skip_reason already_fresh", door, run)
+			continue
+		}
+		if run.ContactId == nil || run.ContactId.String() != contactID.String() {
+			t.Errorf("%s: contact_id = %v, want %s", door, run.ContactId, contactID)
+		}
+		if run.UpdatedAt.IsZero() {
+			t.Errorf("%s: updated_at is unset, want the run's own", door)
+		}
 	}
 }

@@ -72,8 +72,8 @@ func TestAnEmptyDateParameterIsRefusedRatherThanDated(t *testing.T) {
 	}
 }
 
-// A year Go reads and Postgres cannot store is refused with the field named.
-// It used to reach the store and answer as a server fault.
+// The digest read queries the store with the day's ISO text, which has no year 0.
+// A day outside the accepted range is refused with its field named.
 func TestADigestDayOutsideTheAcceptedRangeIsRefusedWithItsField(t *testing.T) {
 	t.Parallel()
 	for _, day := range []time.Time{

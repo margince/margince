@@ -743,7 +743,7 @@ paths:
         '403':
           description: >
             Refused: the caller is an agent/passport principal (this endpoint is human-only)
-            or a human without the admin role. Not an object/action RBAC grant denial.
+            or a seat without `job_health:read` (held by the admin and ops roles).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -776,7 +776,7 @@ paths:
         '403':
           description: >
             Refused: the caller is an agent/passport principal (this endpoint is human-only)
-            or a human without the admin role. Not an object/action RBAC grant denial.
+            or a seat without `job_health:read` (held by the admin and ops roles).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -815,7 +815,7 @@ paths:
         '403':
           description: >
             Refused: the caller is an agent/passport principal (this endpoint is human-only)
-            or a human without the admin role. Not an object/action RBAC grant denial.
+            or a seat without `job_health:read` (held by the admin and ops roles).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }

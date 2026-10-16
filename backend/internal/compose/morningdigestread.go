@@ -79,11 +79,9 @@ func missingDigest(day *time.Time) *httperr.DetailedError {
 
 // refuseAnUnreadableDate rejects a `date` that names no day the store can hold.
 //
-// An empty parameter binds to the zero date rather than to nil. It read as the
-// year one and was answered as a day with no digest.
-//
-// Go reads years that Postgres has no date for, and those were answered 500.
-// The range is the one every other request-stored date obeys.
+// The store is queried with the day's ISO text, and Postgres has no year 0.
+// That text must fall inside the range every request-stored date obeys.
+// An empty parameter binds to the zero date, which no caller asked for.
 func refuseAnUnreadableDate(params crmcontracts.GetMorningDigestParams) error {
 	if params.Date == nil {
 		return nil

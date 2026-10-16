@@ -47486,7 +47486,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a human without the admin role. Not an object/action RBAC grant denial. */
+            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a seat without `job_health:read` (held by the admin and ops roles). */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -47516,7 +47516,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a human without the admin role. Not an object/action RBAC grant denial. */
+            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a seat without `job_health:read` (held by the admin and ops roles). */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -47546,7 +47546,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a human without the admin role. Not an object/action RBAC grant denial. */
+            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a seat without `job_health:read` (held by the admin and ops roles). */
             403: {
                 headers: {
                     [name: string]: unknown;
