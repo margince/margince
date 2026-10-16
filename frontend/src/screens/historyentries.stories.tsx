@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
+import { type Locale, translate } from "../i18n";
 import {
   emptyPage,
   expectNameAndValueApart,
@@ -45,10 +46,48 @@ const updated = {
   before: { amount_minor: 2500000 },
   after: { amount_minor: 4150000 },
 };
+const viaClient = {
+  id: "h3",
+  actor_type: "agent",
+  actor_id: "agent:p1",
+  passport_id: "0199a000-0000-7000-8000-000000000001",
+  on_behalf_of_name: "Ada Authority",
+  agent_client: "Claude",
+  action: "archive",
+  occurred_at: "2026-07-15T10:00:00Z",
+  summary: "Ada Authority, via Claude, archived the record",
+};
+const connector = {
+  id: "h4",
+  actor_type: "connector",
+  actor_id: "connector:gmail",
+  action: "update",
+  occurred_at: "2026-07-15T11:00:00Z",
+  summary: "Connector updated the record",
+};
+const system = {
+  id: "h5",
+  actor_type: "system",
+  actor_id: "system",
+  action: "restrict",
+  occurred_at: "2026-07-15T12:00:00Z",
+  summary: "System withheld the record",
+};
+const unrecorded = {
+  id: "h6",
+  actor_type: "agent",
+  actor_id: "agent:p2",
+  passport_id: "0199a000-0000-7000-8000-000000000002",
+  action: "send_email",
+  occurred_at: "2026-07-15T13:00:00Z",
+  summary:
+    "A machine with no recorded human authority sent an email for the record",
+};
+const everyActor = [unrecorded, system, connector, viaClient, updated, created];
 
-function Panel() {
+function Panel({ locale = "en" }: Readonly<{ locale?: Locale }>) {
   return (
-    <StoryProviders>
+    <StoryProviders locale={locale}>
       <div style={{ maxWidth: 720 }}>
         <RecordHistory kind="deal" id="d1" currency="EUR" />
       </div>
@@ -73,13 +112,16 @@ export const Entries: Story = {
       "GET /me": meRoute({}),
       "GET /records/deal/d1/history": () =>
         jsonResponse({
-          data: [updated, created],
+          data: everyActor,
           page: { next_cursor: null, has_more: false },
         }),
     });
     return <Panel />;
   },
-  play: ({ canvasElement }) => expectNameAndValueApart(canvasElement),
+  play: async ({ canvasElement }) => {
+    await expectViaClientLine(canvasElement, "en");
+    await expectNameAndValueApart(canvasElement);
+  },
 };
 
 // The same change list in dark: the agent-actor line reads "on behalf of"
@@ -127,6 +169,66 @@ export const UndoConfirm: Story = {
     );
     await within(canvasElement.ownerDocument.body).findByRole("dialog");
   },
+};
+
+function stubEveryActor() {
+  seedWorkspace();
+  installFetchStub({
+    "GET /me": meRoute({}),
+    "GET /records/deal/d1/history": () =>
+      jsonResponse({
+        data: everyActor,
+        page: { next_cursor: null, has_more: false },
+      }),
+  });
+}
+
+function viaClientLine(locale: Locale): string {
+  const subject = translate(locale, "history.subject.viaClient", {
+    name: viaClient.on_behalf_of_name,
+    client: viaClient.agent_client,
+  });
+  return translate(locale, "history.verb.archive", { subject });
+}
+
+async function expectViaClientLine(canvasElement: HTMLElement, locale: Locale) {
+  const expected = viaClientLine(locale);
+  const line = await within(canvasElement).findByText(expected);
+  await expect(line).toBeVisible();
+  // The English line is the server's own sentence, so only another
+  // language can prove the summary was not drawn.
+  if (expected !== viaClient.summary) {
+    await expect(
+      within(canvasElement).queryByText(viaClient.summary),
+    ).toBeNull();
+  }
+}
+
+export const GermanReader: Story = {
+  render: () => {
+    stubEveryActor();
+    return <Panel locale="de" />;
+  },
+  play: ({ canvasElement }) => expectViaClientLine(canvasElement, "de"),
+};
+
+export const VietnameseReader: Story = {
+  render: () => {
+    stubEveryActor();
+    return <Panel locale="vi" />;
+  },
+  play: ({ canvasElement }) => expectViaClientLine(canvasElement, "vi"),
+};
+
+// German runs longest, so the phone is where a sentence would overflow.
+export const GermanReaderPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => {
+    stubEveryActor();
+    return <Panel locale="de" />;
+  },
+  play: ({ canvasElement }) => expectViaClientLine(canvasElement, "de"),
 };
 
 // Nothing recorded for this record yet: the honest empty state, not a list

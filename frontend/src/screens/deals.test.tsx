@@ -15,7 +15,7 @@ import { RecordShell } from "../app/testing/recordshell.testkit";
 import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { formatMoney } from "../format/format";
-import { LocaleProvider } from "../i18n";
+import { LocaleProvider, translate } from "../i18n";
 import { meFixture } from "../testing/mefixture";
 import { askedToClose } from "./deal360/confirmadvance.testkit";
 import type { CompanyNaming } from "./dealcompanymarks";
@@ -2291,8 +2291,8 @@ describe("DealScreen — History tab", () => {
     await userEvent.click(screen.getByRole("button", { name: /history/i }));
     await userEvent.click(screen.getByRole("button", { name: "Changes" }));
 
-    await waitFor(() =>
-      expect(screen.getByText("Deal amount changed")).toBeTruthy(),
+    await screen.findByText(
+      translate("en", "history.verb.update", { subject: "u1" }),
     );
   });
 });

@@ -16,7 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
-import { LocaleProvider } from "../i18n";
+import { LocaleProvider, translate } from "../i18n";
 import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import {
@@ -2227,8 +2227,8 @@ describe("LeadScreen — History tab", () => {
     await userEvent.click(screen.getByRole("button", { name: /history/i }));
     await userEvent.click(screen.getByRole("button", { name: "Changes" }));
 
-    await waitFor(() =>
-      expect(screen.getByText("Lead score changed")).toBeTruthy(),
+    await screen.findByText(
+      translate("en", "history.verb.update", { subject: "u1" }),
     );
     // The identity header (name) must stay visible on the History tab, not
     // just the overview — it lives above the tab switch, matching

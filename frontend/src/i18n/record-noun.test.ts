@@ -296,6 +296,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "analytics.share.liveHelp",
     "audit.noHumanAuthority",
     "audit.unknownBuyer",
+    "history.subject.buyer",
+    "history.subject.unrecordedAuthority",
     "blockedDomains.reasonHint",
     "cf.col.addedBy",
     "common.permissionDenied",

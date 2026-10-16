@@ -135,6 +135,13 @@ export const ACTOR_ICON: Record<AuditLogEntry["actor_type"], LucideIcon> = {
   buyer: UserRoundCheck,
 };
 
+// A server newer than this client may send an actor kind it cannot attribute.
+export function isAuditActorType(
+  actorType: string,
+): actorType is AuditLogEntry["actor_type"] {
+  return Object.hasOwn(ACTOR_ICON, actorType);
+}
+
 // The phrase that says a machine did the typing, qualifying the contact who
 // authorised it. Only the two delegated actor kinds have one: a human needs no
 // qualifier and `system` is not acting for anybody.
@@ -151,8 +158,8 @@ const MACHINE_QUALIFIER: Partial<
 // never be equal.
 export const HUMAN_ACTOR_PREFIX = "human:";
 
-// actorAttribution decides WHO a row is attributed to, as the label a reader
-// sees and the qualifier under it.
+// actorAttribution decides who a row is attributed to. Unlike the server's
+// summary, it names a buyer and never shows a member's id.
 //
 // The contact comes first and the machine second (PD-002). An agent's own
 // identifier is never the label: attribution exists so somebody can be asked
@@ -183,7 +190,12 @@ export function actorAttribution(
       : { labelKey: "audit.unknownMember" };
   }
   if (entry.actor_type === "system") {
-    return { labelKey: "audit.system" };
+    return entry.passport_id
+      ? {
+          labelKey: "audit.noHumanAuthority",
+          identifier: machineIdentifier(entry),
+        }
+      : { labelKey: "audit.system" };
   }
   // A Deal Room participant, named the way a member is. The read path resolves
   // actor_name from deal_room_participant for a buyer, so "who confirmed v5?"

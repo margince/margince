@@ -27,6 +27,7 @@ import {
 import { HistoryEdgeDetail } from "./historyedge";
 import { HistoryFieldDiff } from "./historyfielddiff";
 import { LeftBehindNotice, useLeftBehind } from "./historyleftbehind";
+import { historyLine } from "./historyline";
 import { historyRows } from "./historyreversal";
 import { actorName, ReversalPairRow } from "./historyreversalrow";
 import { undoRefusalKey, VERSION_SKEW_CODE } from "./historyundo";
@@ -34,10 +35,9 @@ import { type HistoryValueCtx, historyValue } from "./historyvalues";
 import { useRecordRestore } from "./recordrestore";
 import "./history.css";
 
-// The per-record plain-language change list (B-EP09.x): every audit_log row
-// for one record, rendered as a `summary` line the endpoint already wrote in
-// prose — this panel never re-derives wording from before/after diffs, it
-// just attributes and paginates what the contract hands back.
+// The per-record change list: one sentence per audit_log row, from its verb
+// and actor, never from its before/after diffs. A link change keeps the
+// server's English sentence (historyline.ts).
 
 type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];
 type AuditHistoryListResponse =
@@ -334,6 +334,7 @@ function HistoryEntryRow({
   note?: string;
   undoLabel?: MessageKey;
 }>) {
+  const t = useT();
   const viewerId = useViewerId();
   const recordZone = useRecordZone();
   // An edge entry's images are the LINK's columns, not this record's, so it has
@@ -344,11 +345,7 @@ function HistoryEntryRow({
   return (
     <li>
       <span className="tl-body">
-        {/* `summary` already NAMES the granting human as its subject
-            ("Ada Authority, via an agent, updated the record"), so the
-            on-behalf-of suffix that used to complete the old machine-first
-            sentence would now say the same contact twice. */}
-        <span className="tl-title">{entry.summary}</span>
+        <span className="tl-title">{historyLine(entry, t)}</span>
         <span className="tl-meta">
           <span>{formatDateTime(entry.occurred_at, locale, recordZone)}</span>
           <ProvenanceTag

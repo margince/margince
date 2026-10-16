@@ -1039,6 +1039,82 @@ export const de = {
   "history.reversal.undoneBy": "Rückgängig gemacht von {undoer}",
   "history.reversal.unpaired": "Macht eine frühere Änderung rückgängig",
   "history.edge.marker": "Verknüpfung",
+  "history.subject.viaClient": "{name} (über {client})",
+  "history.subject.viaAgent": "{name} (über einen Agenten)",
+  "history.subject.viaConnector": "{name} (über einen Connector)",
+  "history.subject.unrecordedAuthority":
+    "Ein automatisierter Vorgang (keine menschliche Autorisierung erfasst)",
+  "history.subject.system": "Das System",
+  "history.subject.agent": "Ein Agent",
+  "history.subject.connector": "Ein Connector",
+  "history.subject.buyer": "Ein Gast im Deal Room",
+  "history.subject.buyerNamed": "{name} (im Deal Room)",
+  "history.verb.create": "{subject} hat den Datensatz erstellt",
+  "history.verb.update": "{subject} hat den Datensatz aktualisiert",
+  "history.verb.archive": "{subject} hat den Datensatz archiviert",
+  "history.verb.merge": "{subject} hat den Datensatz zusammengeführt",
+  "history.verb.promote": "{subject} hat den Datensatz hochgestuft",
+  "history.verb.demote": "{subject} hat den Datensatz herabgestuft",
+  "history.verb.disqualify": "{subject} hat den Datensatz disqualifiziert",
+  "history.verb.restore": "{subject} hat den Datensatz wiederhergestellt",
+  "history.verb.export": "{subject} hat den Datensatz exportiert",
+  "history.verb.erase": "{subject} hat den Datensatz endgültig gelöscht",
+  "history.verb.anonymize": "{subject} hat den Datensatz anonymisiert",
+  "history.verb.assign": "{subject} hat den Datensatz zugewiesen",
+  "history.verb.advanceStage":
+    "{subject} hat die Phase des Datensatzes gewechselt",
+  "history.verb.advancePhase":
+    "{subject} hat die Projektphase des Datensatzes gewechselt",
+  "history.verb.sendEmail": "{subject} hat eine E-Mail zum Datensatz gesendet",
+  "history.verb.consentGrant":
+    "{subject} hat die Einwilligung für den Datensatz erteilt",
+  "history.verb.consentWithdraw":
+    "{subject} hat die Einwilligung für den Datensatz widerrufen",
+  "history.verb.approve": "{subject} hat den Datensatz freigegeben",
+  "history.verb.reject": "{subject} hat den Datensatz abgelehnt",
+  "history.verb.recordShare": "{subject} hat den Datensatz geteilt",
+  "history.verb.recordUnshare":
+    "{subject} hat das Teilen des Datensatzes beendet",
+  "history.verb.activityRelink": "{subject} hat den Datensatz neu verknüpft",
+  "history.verb.import": "{subject} hat den Datensatz importiert",
+  "history.verb.importUndo":
+    "{subject} hat den Import des Datensatzes rückgängig gemacht",
+  "history.verb.resetData": "{subject} hat den Datensatz zurückgesetzt",
+  "history.verb.passwordLinkIssued":
+    "{subject} hat einen Passwort-Link für den Datensatz erstellt",
+  "history.verb.connect": "{subject} hat den Datensatz verbunden",
+  "history.verb.disconnect":
+    "{subject} hat die Verbindung des Datensatzes getrennt",
+  "history.verb.schedule": "{subject} hat den Datensatz geplant",
+  "history.verb.reschedule": "{subject} hat den Datensatz verschoben",
+  "history.verb.cancel": "{subject} hat den Datensatz abgebrochen",
+  "history.verb.release": "{subject} hat den Datensatz zum Senden übergeben",
+  "history.verb.hold": "{subject} hat den Datensatz zur Prüfung zurückgehalten",
+  "history.verb.expire":
+    "{subject} hat die Entscheidungsfrist für den Datensatz verstreichen lassen",
+  "history.verb.resolve": "{subject} hat den Datensatz erledigt",
+  "history.verb.restrict": "{subject} hat den Datensatz einbehalten",
+  "history.verb.pin":
+    "{subject} hat den Datensatz für die gesetzliche Aufbewahrung angeheftet",
+  "history.verb.accrue":
+    "{subject} hat eine Provision für den Datensatz verbucht",
+  "history.verb.pay": "{subject} hat den Datensatz bezahlt",
+  "history.verb.publish": "{subject} hat den Datensatz veröffentlicht",
+  "history.verb.pause": "{subject} hat den Datensatz pausiert",
+  "history.verb.resume": "{subject} hat den Datensatz fortgesetzt",
+  "history.verb.close": "{subject} hat den Datensatz geschlossen",
+  "history.verb.invite": "{subject} hat den Datensatz eingeladen",
+  "history.verb.revoke":
+    "{subject} hat den Zugriff für den Datensatz widerrufen",
+  "history.verb.delete": "{subject} hat den Datensatz gelöscht",
+  "history.verb.placeLegalHold":
+    "{subject} hat den Datensatz unter Legal Hold gestellt",
+  "history.verb.liftLegalHold":
+    "{subject} hat den Legal Hold für den Datensatz aufgehoben",
+  "history.verb.requestLegalReview":
+    "{subject} hat eine Rechtsprüfung für den Datensatz angefragt",
+  "history.verb.withdrawLegalReview":
+    "{subject} hat die Anfrage zur Rechtsprüfung für den Datensatz zurückgezogen",
   "history.field.address": "Adresse",
   "history.field.admission": "Eingangsprüfung der Domain",
   "history.field.admission_reason": "Grund der Eingangsprüfung",
@@ -6666,7 +6742,7 @@ export const de = {
   "audit.action.import": "Importiert",
   "audit.action.importUndo": "Import rückgängig gemacht",
   "audit.action.resetData": "Daten zurückgesetzt",
-  "audit.action.passwordLinkIssued": "Passwort-Link gesendet",
+  "audit.action.passwordLinkIssued": "Passwort-Link erstellt",
   "audit.action.connect": "Verbunden",
   "audit.action.disconnect": "Getrennt",
   "audit.action.schedule": "Geplant",

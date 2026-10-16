@@ -2,7 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Translator } from "../../i18n";
-import { actorAttribution, HUMAN_ACTOR_PREFIX } from "../../screens/audit";
+import {
+  actorAttribution,
+  HUMAN_ACTOR_PREFIX,
+  isAuditActorType,
+} from "../../screens/audit";
 import type { WorklistItem } from "./worklist.queries";
 
 type Viewer = Readonly<{ id: string; display_name: string }>;
@@ -58,14 +62,7 @@ function noticeActor(
   t: Translator,
 ): string {
   const kind = origin.actor_type;
-  if (
-    kind !== "human" &&
-    kind !== "agent" &&
-    kind !== "connector" &&
-    kind !== "system" &&
-    kind !== "buyer"
-  )
-    return t("home.change.unidentified");
+  if (!isAuditActorType(kind)) return t("home.change.unidentified");
   const attribution = actorAttribution(
     {
       ...origin,

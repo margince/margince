@@ -15,7 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { listFetchLimit } from "../components/listquery";
 import { pickOption } from "../design-system/select-testing";
-import { LocaleProvider } from "../i18n";
+import { LocaleProvider, translate } from "../i18n";
 import { meFixture } from "../testing/mefixture";
 import { AssistantPanel } from "./assistant";
 import { CompaniesScreen, CompanyScreen } from "./companies";
@@ -1247,8 +1247,8 @@ describe("CompanyScreen — the record's history", () => {
 
     await userEvent.click(await openRecordMenu("company-full-history"));
 
-    await waitFor(() =>
-      expect(screen.getByText("Created the record")).toBeTruthy(),
+    await screen.findByText(
+      translate("en", "history.verb.create", { subject: "u1" }),
     );
   });
 

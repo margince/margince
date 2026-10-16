@@ -37719,6 +37719,12 @@ export interface components {
             /** @description The job layer's vetted operator sentence. A failure whose stored text did not come from that closed vocabulary reports a fixed substitute instead — the raw cause never travels here. */
             reason: string;
         };
+        /**
+         * @description The verb of one audit row, as both the audit log and a record's history
+         *     serve it. One list, so the two reads cannot name the same row two ways.
+         * @enum {string}
+         */
+        AuditAction: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke" | "delete" | "place_legal_hold" | "lift_legal_hold" | "request_legal_review" | "withdraw_legal_review";
         /** @description An append-only audit row. Mirrors the `audit_log` table. */
         AuditLogEntry: {
             /** Format: uuid */
@@ -37760,8 +37766,7 @@ export interface components {
              * @description The bulk change that wrote this row; null for a change made on its own.
              */
             batch_id?: string | null;
-            /** @enum {string} */
-            action: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke" | "delete" | "place_legal_hold" | "lift_legal_hold" | "request_legal_review" | "withdraw_legal_review";
+            action: components["schemas"]["AuditAction"];
             entity_type: string;
             /**
              * Format: uuid
@@ -37973,8 +37978,12 @@ export interface components {
         /**
          * @description One rendered history line for a record mutation. `before`/`after` are
          *     masked to the viewer's readable fields — an absent key was hidden, not null.
-         *     `summary` is server-composed plain language; field-level detail lives in
-         *     before/after for the client to render.
+         *     `summary` is server-composed plain language in English. A client that
+         *     renders the line in its reader's language builds it from `action` and the
+         *     actor fields. It falls back to `summary` for an edge row, whose role
+         *     travels only in the sentence, and for an action or actor kind it does
+         *     not know.
+         *     Field-level detail lives in before/after for the client to render.
          */
         AuditHistoryEntry: {
             /** Format: uuid */
@@ -38000,7 +38009,15 @@ export interface components {
              *     "via {agent_client}" where it would otherwise say "via an agent".
              */
             agent_client?: string | null;
-            action: string;
+            action: components["schemas"]["AuditAction"];
+            /**
+             * Format: uuid
+             * @description The Agent Seat Passport the change was made under, as FieldHistoryEntry
+             *     carries it. A machine row with a passport and no `on_behalf_of_name`
+             *     had a human authority the row failed to record; one without a
+             *     passport never had one.
+             */
+            passport_id?: string | null;
             /** Format: date-time */
             occurred_at: string;
             authorization_rule?: string | null;
