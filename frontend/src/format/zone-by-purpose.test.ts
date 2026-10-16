@@ -462,6 +462,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Pretends to be in a zone behind UTC to prove a DSR deadline mints and reads back on the same calendar day; the claim is unwritable without naming that zone.",
   },
   {
+    file: "features/privacy/privacy.dsr.test.tsx",
+    why: "Pretends to be in a zone behind UTC to prove a DSR opened there gets its deadline on the day the reader chose.",
+  },
+  {
     file: "features/privacy/privacy.deadline.test.tsx",
     why: "Pretends to be in a zone behind UTC to prove an earlier deadline mints at the end of the chosen day there and never passes an hour-exact deadline.",
   },
