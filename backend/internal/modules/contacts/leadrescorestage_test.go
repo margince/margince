@@ -5,8 +5,8 @@ package contacts
 
 import "testing"
 
-// A column the patch does not touch keeps the value the row holds, and one it
-// does touch reads as the value it will write, nil for a clear.
+// A column the patch leaves alone keeps the row's value. One it touches reads as
+// the value it will write, nil for a clear.
 func TestStagedColumnsReadWhatThePatchWillLeaveInTheRow(t *testing.T) {
 	after := map[string]any{
 		"source":   "referral",

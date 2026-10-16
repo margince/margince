@@ -6,7 +6,6 @@ package contacts
 import (
 	"context"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -318,13 +317,7 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 			return crmcontracts.Lead{}, err
 		}
 	}
-	if resumeRecompute {
-		// A cleared override recomputes at once, so the score does not lag the
-		// machine value. The recompute appends its own history entry.
-		if err := recomputeLeadScoreTx(ctx, tx, id, time.Now().UTC(), true); err != nil {
-			return crmcontracts.Lead{}, err
-		}
-	} else if err := recordRescoreHistory(ctx, tx, id, in, rescore); err != nil {
+	if err := recordRescoreHistory(ctx, tx, id, in, rescore); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	return readLead(ctx, tx, id, storekit.LiveOnly, active)

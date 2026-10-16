@@ -31,15 +31,20 @@ type stagedLeadRescore struct {
 	reason    *string
 }
 
-// stageLeadRescore scores the lead as the patch will leave it. When a corrected
-// source changes the result, it stages the new number on the patch. The number
-// goes to score_computed while a Commercial Judgement override is in force, and
-// to score otherwise. A cleared override recomputes after the write instead, so
-// resume skips staging.
+// stageLeadRescore scores the lead as the patch will leave it. A corrected
+// source, or a withdrawn override (resume), stages the new number. It goes to
+// score_computed under an override, and to score otherwise.
+//
+// The number is a stamp. It is derived from the source, so it stays out of the
+// audit images, and a restore of the source edit re-derives it.
+//
+// History records the number moving, except for a withdrawn override. The clear
+// has already set score to the retained value, yet the newest entry still names
+// the override. Left out, the series would say the override is in force.
 func stageLeadRescore(
 	ctx context.Context, tx pgx.Tx, id ids.LeadID, current crmcontracts.Lead, p *storekit.Patch, resume bool,
 ) (stagedLeadRescore, error) {
-	if _, sourceMoved := p.Moved()["source"]; !sourceMoved || resume {
+	if _, sourceMoved := p.Moved()["source"]; !sourceMoved && !resume {
 		return stagedLeadRescore{}, nil
 	}
 	after := p.After()
@@ -61,13 +66,15 @@ func stageLeadRescore(
 		if held && computed == machine {
 			return stagedLeadRescore{}, nil
 		}
-		p.Set(fieldKeyScoreComputed, current.ScoreComputed, machine)
+		p.SetStamp(fieldKeyScoreComputed, machine)
 		return stagedLeadRescore{moved: true, displayed: displayed, scored: scored, reason: reason}, nil
 	}
-	if machine == displayed {
+	if machine == displayed && !resume {
 		return stagedLeadRescore{}, nil
 	}
-	p.Set("score", current.Score, machine)
+	if machine != displayed {
+		p.SetStamp("score", machine)
+	}
 	return stagedLeadRescore{moved: true, displayed: machine, scored: scored}, nil
 }
 

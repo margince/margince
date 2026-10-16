@@ -15,10 +15,11 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func seedManualLead(t *testing.T) (context.Context, *Store, ids.LeadID) {
+func seedManualLead(t *testing.T) (context.Context, *Store, crmcontracts.Lead, ids.LeadID) {
 	t.Helper()
 	ctx, store := newLeadScoreEnv(t)
 	created, _, err := store.CreateLead(ctx, CreateLeadInput{
@@ -28,13 +29,13 @@ func seedManualLead(t *testing.T) (context.Context, *Store, ids.LeadID) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return ctx, store, ids.From[ids.LeadKind](ids.UUID(created.Id))
+	return ctx, store, created, ids.From[ids.LeadKind](ids.UUID(created.Id))
 }
 
 // The rescore a source change owes lands in the series with the number the lead
 // now shows. The edit wrote that number in the same UPDATE.
 func TestARescoreOnASourceChangeIsInTheSeriesAndTheAuditDiff(t *testing.T) {
-	ctx, store, id := seedManualLead(t)
+	ctx, store, _, id := seedManualLead(t)
 	updated, err := store.UpdateLead(ctx, id, UpdateLeadInput{Source: new("referral")})
 	if err != nil {
 		t.Fatal(err)
@@ -52,15 +53,15 @@ func TestARescoreOnASourceChangeIsInTheSeriesAndTheAuditDiff(t *testing.T) {
 		  ORDER BY occurred_at DESC, id DESC LIMIT 1`, id).Scan(&after); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(after, `"score"`) || !strings.Contains(after, `"source"`) {
-		t.Fatalf("the edit's audit row should carry source and the score it implied, got %s", after)
+	if !strings.Contains(after, `"source"`) || strings.Contains(after, `"score"`) {
+		t.Fatalf("the edit's audit row should carry the source and not the score derived from it, got %s", after)
 	}
 }
 
 // Under a Commercial Judgement override the rescore moves the machine value
 // and leaves the human's number alone, still in one version.
 func TestASourceChangeUnderAnOverrideMovesOnlyTheMachineScore(t *testing.T) {
-	ctx, store, id := seedManualLead(t)
+	ctx, store, _, id := seedManualLead(t)
 	human, reason := 88, "strategic account"
 	set, err := store.UpdateLead(ctx, id, UpdateLeadInput{Score: &human, ScoreOverrideReason: &reason})
 	if err != nil {
@@ -84,7 +85,7 @@ func TestASourceChangeUnderAnOverrideMovesOnlyTheMachineScore(t *testing.T) {
 // A source whose weight equals the old one moves no score, writes no series
 // entry, and still raises the version once.
 func TestASourceChangeThatLeavesTheScoreAlonePutsNothingInTheSeries(t *testing.T) {
-	ctx, store, id := seedManualLead(t)
+	ctx, store, _, id := seedManualLead(t)
 	low, err := store.UpdateLead(ctx, id, UpdateLeadInput{Source: new("import")})
 	if err != nil {
 		t.Fatal(err)
@@ -171,7 +172,7 @@ func TestEachContactEditRaisesItsVersionByOne(t *testing.T) {
 	}
 }
 
-func TestARenamedCompanyRaisesItsVersionByOne(t *testing.T) {
+func TestAHumanRenameStampsTheNameAsHumanChosen(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	created, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: "Glazed Frog GmbH", Source: "manual"})
@@ -180,12 +181,8 @@ func TestARenamedCompanyRaisesItsVersionByOne(t *testing.T) {
 	}
 	id := ids.From[ids.CompanyKind](ids.UUID(created.Id))
 	renamed := "Glazed Toad GmbH"
-	updated, err := e.store.UpdateCompany(ctx, id, UpdateCompanyInput{DisplayName: &renamed, IfVersion: created.Version})
-	if err != nil {
+	if _, err := e.store.UpdateCompany(ctx, id, UpdateCompanyInput{DisplayName: &renamed, IfVersion: created.Version}); err != nil {
 		t.Fatalf("rename: %v", err)
-	}
-	if got, want := *updated.Version, *created.Version+1; got != want {
-		t.Fatalf("version after a rename = %d, want %d", got, want)
 	}
 	if got := companyColumn(ctx, t, e, id, "name_source"); got != nameSourceHuman {
 		t.Fatalf("a human rename stamps name_source %q, got %q", nameSourceHuman, got)
@@ -193,15 +190,7 @@ func TestARenamedCompanyRaisesItsVersionByOne(t *testing.T) {
 }
 
 func TestALeadSourceChangeThatMovesTheScoreRaisesItsVersionByOne(t *testing.T) {
-	ctx, store := newLeadScoreEnv(t)
-	created, _, err := store.CreateLead(ctx, CreateLeadInput{
-		FullName: new("Jonas Petersen"), Email: new("jonas@nordwind.example"),
-		Title: new("VP Sales"), Source: "manual", Status: "new",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	id := ids.From[ids.LeadKind](ids.UUID(created.Id))
+	ctx, store, created, id := seedManualLead(t)
 	updated, err := store.UpdateLead(ctx, id, UpdateLeadInput{Source: new("referral")})
 	if err != nil {
 		t.Fatalf("change source: %v", err)
@@ -211,5 +200,36 @@ func TestALeadSourceChangeThatMovesTheScoreRaisesItsVersionByOne(t *testing.T) {
 	}
 	if got, want := *updated.Version, *created.Version+1; got != want {
 		t.Fatalf("version after a source change that rescored = %d, want %d", got, want)
+	}
+}
+
+// Withdrawing an override resumes the machine score. When that score has moved
+// since the override took hold, the new number rides the clear's own UPDATE.
+func TestClearingAnOverrideRaisesTheVersionByOneWhenTheMachineScoreMoved(t *testing.T) {
+	ctx, store, _, id := seedManualLead(t)
+	human, reason := 88, "strategic account"
+	set, err := store.UpdateLead(ctx, id, UpdateLeadInput{Score: &human, ScoreOverrideReason: &reason})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.db.Pool().Exec(ctx, `UPDATE lead SET score_computed = score_computed + 1 WHERE id = $1`, id); err != nil {
+		t.Fatalf("simulating a machine score that moved under the override: %v", err)
+	}
+	stale, err := store.GetLead(ctx, id, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cleared, err := store.UpdateLead(ctx, id, UpdateLeadInput{ClearScoreOverride: true, IfVersion: stale.Version})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cleared.Score == *stale.ScoreComputed {
+		t.Fatalf("premise: the resumed score must differ from the stale retained value %d", *stale.ScoreComputed)
+	}
+	if got, want := *cleared.Version, *stale.Version+1; got != want {
+		t.Fatalf("version after clearing the override = %d, want %d", got, want)
+	}
+	if cleared.ScoreOverrideReason != nil || cleared.ScoreComputed != nil || cleared.Score != *set.ScoreComputed {
+		t.Fatalf("cleared lead = %+v, want the machine score %d and no override", cleared, *set.ScoreComputed)
 	}
 }
