@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { rowsOf } from "../api/rows";
 import {
   Button,
@@ -73,11 +73,13 @@ function RoleReach({ role }: Readonly<{ role: RecordRole }>) {
 function roleColumns({
   t,
   canEdit,
+  refusedFor,
   onActive,
   onRename,
 }: Readonly<{
   t: Translator;
   canEdit: boolean;
+  refusedFor: (role: RecordRole) => string | undefined;
   onActive: (role: RecordRole, active: boolean) => void;
   onRename: (role: RecordRole) => void;
 }>): DataTableColumn<RecordRole>[] {
@@ -99,6 +101,7 @@ function roleColumns({
       fold: "end",
       render: (role) => (
         <Switch
+          describedBy={refusedFor(role)}
           label={t("recordRoles.activeFor", { label: role.label })}
           labelHidden
           checked={role.active}
@@ -257,6 +260,7 @@ export function RecordRolesCard() {
   const create = useCreateRecordRole();
   const update = useUpdateRecordRole();
   const rename = useUpdateRecordRole();
+  const refusalId = useId();
   const [adding, setAdding] = useState(false);
   // Kept after close, so the dialog leaving the page still names its role.
   const [renaming, setRenaming] = useState<RecordRole | null>(null);
@@ -265,6 +269,10 @@ export function RecordRolesCard() {
   const columns = roleColumns({
     t,
     canEdit,
+    refusedFor: (role) =>
+      update.isError && update.variables?.id === role.id
+        ? refusalId
+        : undefined,
     onActive: (role, active) =>
       update.mutate({ id: role.id, body: { active } }),
     onRename: (role) => {
@@ -305,7 +313,11 @@ export function RecordRolesCard() {
         readOnly={refusal && t(refusal)}
         refused={
           update.isError
-            ? { title: t("leadSources.notSaved"), error: update.error }
+            ? {
+                title: t("leadSources.notSaved"),
+                error: update.error,
+                id: refusalId,
+              }
             : undefined
         }
       />

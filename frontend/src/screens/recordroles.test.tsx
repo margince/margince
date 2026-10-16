@@ -237,6 +237,25 @@ it("says a duplicate name on the Name field and keeps the dialog open", async ()
   expect(dialog.queryByText(en["recordRoles.duplicate"])).toBeNull();
 });
 
+it("names the refusal on the one switch whose write failed", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal("fetch", rolesBackend(ADMIN, [], true));
+  render(<RecordRolesCard />);
+  const refused = await screen.findByRole("switch", {
+    name: "Delivery lead can be newly assigned",
+  });
+  const untouched = screen.getByRole("switch", {
+    name: "Technical contact can be newly assigned",
+  });
+  expect(refused).not.toHaveAttribute("aria-describedby");
+  await user.click(refused);
+  await screen.findByText(en["leadSources.notSaved"]);
+  expect(refused).toHaveAccessibleDescription(
+    expect.stringContaining(en["leadSources.notSaved"]),
+  );
+  expect(untouched).not.toHaveAttribute("aria-describedby");
+});
+
 it("leaves every control inert for a reader, and leaves the why to the page", async () => {
   vi.stubGlobal("fetch", rolesBackend({ custom_field: ["read"] }));
   render(<RecordRolesCard />);

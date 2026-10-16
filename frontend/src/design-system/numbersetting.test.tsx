@@ -6,7 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { NumberSetting } from "./numbersetting";
+import { NumberSetting, NumberSettingRow } from "./numbersetting";
 import { SettingList, SettingRow } from "./settingrow";
 
 afterEach(cleanup);
@@ -92,6 +92,40 @@ describe("NumberSetting", () => {
 
   // The reader corrects what they typed instead of retyping it, and hears the
   // rule beside the refusal rather than in place of it.
+  it("names the caller's element after the row's description, and only once given", () => {
+    const row = (describedBy?: string) => (
+      <SettingList>
+        <NumberSettingRow
+          label="Pages per read"
+          description="Most pages one read fetches."
+          value={60}
+          min={1}
+          max={200}
+          refusal={REFUSAL}
+          describedBy={describedBy}
+          onCommit={vi.fn()}
+        />
+      </SettingList>
+    );
+    const { rerender } = render(
+      <>
+        {row()}
+        <p id="card-refusal">The save was refused.</p>
+      </>,
+    );
+    const box = screen.getByRole("textbox", { name: "Pages per read" });
+    expect(box).toHaveAccessibleDescription("Most pages one read fetches.");
+    rerender(
+      <>
+        {row("card-refusal")}
+        <p id="card-refusal">The save was refused.</p>
+      </>,
+    );
+    expect(box).toHaveAccessibleDescription(
+      "Most pages one read fetches. The save was refused.",
+    );
+  });
+
   it("keeps an out-of-range value in the box with the refusal under it", async () => {
     const user = userEvent.setup();
     const onCommit = vi.fn();

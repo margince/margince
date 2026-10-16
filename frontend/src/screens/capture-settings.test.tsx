@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -299,4 +300,68 @@ describe("the website-read limits on the enrichment card", () => {
       );
     },
   );
+});
+
+describe("a refused save on the enrichment card", () => {
+  const UNAVAILABLE = {
+    type: "about:blank",
+    title: "Service Unavailable",
+    status: 503,
+    code: "service_unavailable",
+    detail: "The settings store is not reachable.",
+  };
+
+  function refusingBackend() {
+    return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req =
+        input instanceof Request ? input : new Request(String(input), init);
+      if (req.url.endsWith("/v1/me")) {
+        return jsonResponse(meFixture({ allow: CAPTURE_EDITOR }));
+      }
+      return req.method === "PATCH"
+        ? jsonResponse(UNAVAILABLE, 503)
+        : jsonResponse(SETTINGS);
+    });
+  }
+
+  const notice = expect.stringContaining(
+    translate("en", "captureSettings.updateFailed"),
+  );
+
+  it("names the notice on the limit it refused, after the row's description", async () => {
+    vi.stubGlobal("fetch", refusingBackend());
+    const user = userEvent.setup();
+    render(<CaptureSettingsCard />);
+    const cap =
+      await screen.findByTestId<HTMLInputElement>("capture-daily-cap");
+    const pages = screen.getByTestId("capture-read-max-pages");
+    const before = cap.getAttribute("aria-describedby");
+    await user.clear(cap);
+    await user.type(cap, "5000{Enter}");
+
+    const alert = await screen.findByRole("alert");
+    expect(cap.getAttribute("aria-describedby")).toBe(`${before} ${alert.id}`);
+    expect(cap).toHaveAccessibleDescription(notice);
+    expect(pages.getAttribute("aria-describedby")).not.toContain(alert.id);
+    expect(
+      screen.getByTestId("capture-auto-enrich-toggle"),
+    ).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("names the notice on the switch it refused and no other", async () => {
+    vi.stubGlobal("fetch", refusingBackend());
+    const user = userEvent.setup();
+    render(<CaptureSettingsCard />);
+    const toggle = await screen.findByTestId("capture-auto-enrich-toggle");
+    await user.click(toggle);
+
+    await screen.findByRole("alert");
+    expect(toggle).toHaveAccessibleDescription(notice);
+    expect(
+      screen.getByTestId("capture-signature-enrich-toggle"),
+    ).not.toHaveAttribute("aria-describedby");
+    expect(
+      screen.getByTestId("capture-daily-cap"),
+    ).not.toHaveAccessibleDescription(notice);
+  });
 });

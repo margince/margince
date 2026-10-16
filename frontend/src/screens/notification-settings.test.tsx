@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -271,14 +272,24 @@ describe("NotificationSettingsCard", () => {
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
     render(<NotificationSettingsCard />);
+    const refused = await screen.findByRole("combobox", {
+      name: /Automations that ran/i,
+    });
+    const untouched = screen.getByRole("combobox", {
+      name: /Approvals waiting on you/i,
+    });
+    const before = refused.getAttribute("aria-describedby");
 
-    await pickOption(
-      user,
-      await screen.findByRole("combobox", { name: /Automations that ran/i }),
-      "Daily digest",
-    );
+    await pickOption(user, refused, "Daily digest");
 
     const alert = await screen.findByRole("alert");
+    expect(refused.getAttribute("aria-describedby")).toBe(
+      `${before} ${alert.id}`,
+    );
+    expect(refused).toHaveAccessibleDescription(
+      expect.stringContaining("coaching cannot be switched off"),
+    );
+    expect(untouched.getAttribute("aria-describedby")).not.toContain(alert.id);
     expect(alert.textContent).toContain("coaching cannot be switched off");
     // AND IT NAMES THE ROW. Six dropdowns share this one surface and it sits
     // under all of them, so a failure that named none would leave the reader

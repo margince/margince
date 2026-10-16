@@ -2,11 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
+  permissionDenied,
   StoryProviders,
 } from "../testing/story-utils";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
@@ -74,9 +75,13 @@ const ADDER = { custom_field: ["read", "create"] } as const;
 
 function story(
   allow: Parameters<typeof meRoute>[0],
-  options: Readonly<{ counted?: boolean; refuseName?: boolean }> = {},
+  options: Readonly<{
+    counted?: boolean;
+    refuseName?: boolean;
+    refuseFlip?: boolean;
+  }> = {},
 ) {
-  const { counted = true, refuseName = false } = options;
+  const { counted = true, refuseName = false, refuseFlip = false } = options;
   return () => {
     installFetchStub({
       "GET /me": meRoute(allow),
@@ -84,6 +89,9 @@ function story(
         jsonResponse(counted ? SOURCES : UNCOUNTED),
       ...(refuseName && {
         "POST /acquisition-sources": () => jsonResponse(DUPLICATE, 409),
+      }),
+      ...(refuseFlip && {
+        "PATCH /acquisition-sources/acq-referral": permissionDenied,
       }),
     });
     return (
@@ -183,4 +191,22 @@ export const DuplicateSourcePhone: Story = {
   play: addADuplicate,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+export const RefusedSwitch: Story = {
+  render: story(ADMIN, { refuseFlip: true }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const refused = await canvas.findByRole("switch", {
+      name: "Referral can be chosen on a deal",
+    });
+    await userEvent.click(refused);
+    await canvas.findByText("Change was not saved");
+    await expect(refused).toHaveAccessibleDescription(
+      expect.stringContaining("Change was not saved"),
+    );
+    await expect(
+      canvas.getByRole("switch", { name: "Partner can be chosen on a deal" }),
+    ).not.toHaveAttribute("aria-describedby");
+  },
 };

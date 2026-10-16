@@ -6,7 +6,8 @@ import { useState } from "react";
 import { expect, within } from "storybook/test";
 import { formatInterval } from "../format/interval";
 import { Card } from "./atoms";
-import { NumberSetting } from "./numbersetting";
+import { Callout } from "./callout";
+import { NumberSetting, NumberSettingRow } from "./numbersetting";
 import { SettingList, SettingRow } from "./settingrow";
 
 const meta: Meta<typeof NumberSetting> = {
@@ -94,5 +95,40 @@ export const NotYours: Story = {
     await expect(
       canvas.getByText(/Only an administrator or operations user/),
     ).toBeVisible();
+  },
+};
+
+export const RefusedSave: Story = {
+  render: () => (
+    <Card title="Website reads">
+      <SettingList>
+        <NumberSettingRow
+          label="Pages per read"
+          description="Most pages one read fetches, 1 to 200."
+          value={60}
+          min={1}
+          max={200}
+          refusal="Enter a whole number of pages from 1 to 200."
+          describedBy="pages-refused"
+          onCommit={() => {}}
+        />
+      </SettingList>
+      <Callout
+        id="pages-refused"
+        kind="outcome"
+        tone="danger"
+        title="Couldn't save the setting"
+      >
+        You don't have permission to do that.
+      </Callout>
+    </Card>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("textbox", { name: "Pages per read" }),
+    ).toHaveAccessibleDescription(
+      expect.stringContaining("Couldn't save the setting"),
+    );
   },
 };

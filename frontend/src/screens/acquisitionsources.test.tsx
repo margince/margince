@@ -22,6 +22,14 @@ const CONFLICT = {
   detail: "conflict",
 };
 
+const DENIED = {
+  type: "about:blank",
+  title: "Forbidden",
+  status: 403,
+  code: "permission_denied",
+  detail: "You don't have permission to do that.",
+};
+
 function source(key: string, label: string, extra: object = {}) {
   return {
     id: `acq-${key}`,
@@ -43,9 +51,13 @@ type Call = { method: string; url: string; body: unknown };
 function backend(
   allow: GrantSpec,
   calls: Call[] = [],
-  options: Readonly<{ counted?: boolean; refuseWrite?: boolean }> = {},
+  options: Readonly<{
+    counted?: boolean;
+    refuseWrite?: boolean;
+    denyWrite?: boolean;
+  }> = {},
 ) {
-  const { counted = true, refuseWrite = false } = options;
+  const { counted = true, refuseWrite = false, denyWrite = false } = options;
   return vi.fn(async (request: Request) => {
     const raw = request.method === "GET" ? "" : await request.text();
     calls.push({
@@ -55,6 +67,9 @@ function backend(
     });
     if (request.url.endsWith("/me")) {
       return jsonResponse(meFixture({ allow }));
+    }
+    if (request.method !== "GET" && denyWrite) {
+      return jsonResponse(DENIED, 403);
     }
     if (request.method !== "GET") {
       return refuseWrite
@@ -206,6 +221,25 @@ it("retires a source through its switch, one PATCH", async () => {
     ).toBe(true),
   );
   expect(calls.filter((call) => call.method === "PATCH")).toHaveLength(1);
+});
+
+it("names the refusal on the one switch whose write failed", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal("fetch", backend(ADMIN, [], { denyWrite: true }));
+  render(<AcquisitionSourcesCard />);
+  const refused = await screen.findByRole("switch", {
+    name: "Partner can be chosen on a deal",
+  });
+  const untouched = screen.getByRole("switch", {
+    name: "Existing customer can be chosen on a deal",
+  });
+  expect(refused).not.toHaveAttribute("aria-describedby");
+  await user.click(refused);
+  await screen.findByText(en["leadSources.notSaved"]);
+  expect(refused).toHaveAccessibleDescription(
+    expect.stringContaining(en["leadSources.notSaved"]),
+  );
+  expect(untouched).not.toHaveAttribute("aria-describedby");
 });
 
 it("leaves every control inert for a reader, and leaves the why to the page", async () => {

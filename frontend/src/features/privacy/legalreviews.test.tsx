@@ -153,4 +153,38 @@ describe("the installation's switch", () => {
       else expect(toggle).toBeDisabled();
     },
   );
+
+  it("names the card's notice on the switch when the server refuses the flip", async () => {
+    stubWithSession(
+      {
+        "GET /legal-reviews/settings": legalOn,
+        "PUT /legal-reviews/settings": () =>
+          jsonResponse(
+            {
+              type: "about:blank",
+              title: "Forbidden",
+              status: 403,
+              code: "permission_denied",
+              detail: "You don't have permission to do that.",
+            },
+            403,
+          ),
+      },
+      { installation_settings: ["read", "update"] },
+      { roles: ["admin"] },
+    );
+    const user = userEvent.setup();
+    render(
+      <StoryProviders>
+        <LegalReviewSettingsCard />
+      </StoryProviders>,
+    );
+    const toggle = await screen.findByRole("switch");
+    expect(toggle).not.toHaveAttribute("aria-describedby");
+    await user.click(toggle);
+    await screen.findByText(en["legalReview.notSaved"]);
+    expect(toggle).toHaveAccessibleDescription(
+      expect.stringContaining(en["legalReview.notSaved"]),
+    );
+  });
 });

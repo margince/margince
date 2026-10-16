@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { describedByIds } from "../design-system/describedby";
 import { Panel } from "../design-system/panel";
 import { PanelNotices } from "../design-system/panelnotices";
 import { Select } from "../design-system/select";
@@ -65,7 +66,7 @@ function BriefDeliveryRows() {
 
   const chosen = (value: Choice | undefined): Choice => value ?? "email";
   const describedBy = (own: string | undefined) =>
-    [own, save.isError && refusalId].filter(Boolean).join(" ") || undefined;
+    describedByIds(own, save.isError && refusalId);
   const options = CHOICES.map((choice) => ({
     value: choice,
     label: t(choice === "email" ? "delivery.byEmail" : "delivery.none"),
