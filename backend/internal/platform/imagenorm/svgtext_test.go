@@ -68,6 +68,9 @@ func TestDecodeRefusesAnSVGTheRendererCannotDrawAsNotDrawableAndNotAsText(t *tes
 		"a clipPath outside defs":     svgOpen + `<clipPath id="c"><rect width="10" height="10"/></clipPath><circle cx="25" cy="25" r="20" clip-path="url(#c)"/></svg>`,
 		"a referenced half-crop clipPath in defs":         svgOpen + `<defs><clipPath id="c"><rect width="50" height="50"/></clipPath></defs><g clip-path="url(#c)"><circle cx="25" cy="25" r="20"/></g></svg>`,
 		"a mask used before it is defined":                svgOpen + `<circle cx="25" cy="25" r="20" mask="url(#m)"/><defs><mask id="m"><rect width="100" height="50"/></mask></defs></svg>`,
+		"a translated artboard rect":                      svgOpen + `<defs><clipPath id="c"><rect width="100" height="100" transform="translate(50 0)"/></clipPath></defs><g clip-path="url(#c)"><circle cx="25" cy="25" r="20"/></g></svg>`,
+		"a scaled artboard rect":                          svgOpen + `<defs><clipPath id="c"><rect width="100" height="100" transform="scale(0.5)"/></clipPath></defs><g clip-path="url(#c)"><circle cx="25" cy="25" r="20"/></g></svg>`,
+		"a transformed clipPath":                          svgOpen + `<defs><clipPath id="c" transform="translate(50 0)"><rect width="100" height="100"/></clipPath></defs><g clip-path="url(#c)"><circle cx="25" cy="25" r="20"/></g></svg>`,
 		"a use reference":                                 svgOpen + `<defs><circle id="c" r="5"/></defs><use href="#c"/></svg>`,
 		"an unclosed document":                            svgOpen + `<circle cx="25" cy="25" r="20"`,
 		"a currentColor fill the renderer cannot resolve": svgOpen + `<circle cx="25" cy="25" r="20" fill="currentColor"/></svg>`,
@@ -118,5 +121,14 @@ func TestDecodeKeepsAnSVGWhoseDefsHoldOnlyUnreferencedUndrawnElements(t *testing
 	doc := svgOpen + defs + `<circle cx="25" cy="25" r="20" fill="#ff6b00"/></svg>`
 	if _, err := Decode([]byte(doc)); err != nil {
 		t.Fatalf("leftover defs that nothing references lose nothing, yet were refused: %v", err)
+	}
+}
+
+func TestDecodeReadsAViewBoxSeparatedByNewlinesWhenJudgingAnArtboardClip(t *testing.T) {
+	doc := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0\n0\t100 50\">" +
+		`<defs><clipPath id="c"><rect width="100" height="50"/></clipPath></defs>` +
+		`<g clip-path="url(#c)"><circle cx="25" cy="25" r="20" fill="#ff6b00"/></g></svg>`
+	if _, err := Decode([]byte(doc)); err != nil {
+		t.Fatalf("an artboard clip under a whitespace-separated viewBox loses nothing: %v", err)
 	}
 }
