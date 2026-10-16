@@ -25,7 +25,7 @@ it("says so under Language when the account refuses the new language", async () 
       new Response(
         JSON.stringify({
           status: 503,
-          code: "unavailable",
+          code: "service_unavailable",
           detail: "The language could not be saved.",
         }),
         {

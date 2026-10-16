@@ -57,7 +57,7 @@ export const RepPhone: Story = {
 export const LanguageRefused: Story = {
   render: story(["rep"], {
     "PUT /me/locale": () =>
-      new Response(JSON.stringify({ status: 503, code: "unavailable" }), {
+      new Response(JSON.stringify({ status: 503, code: "service_unavailable" }), {
         status: 503,
         headers: { "content-type": "application/problem+json" },
       }),

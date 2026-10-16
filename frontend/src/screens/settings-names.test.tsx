@@ -92,7 +92,7 @@ it("hands focus back to the field after a refused Save", async () => {
   const user = userEvent.setup();
   mount(
     () =>
-      new Response(JSON.stringify({ status: 503, code: "unavailable" }), {
+      new Response(JSON.stringify({ status: 503, code: "service_unavailable" }), {
         status: 503,
         headers: { "content-type": "application/problem+json" },
       }),

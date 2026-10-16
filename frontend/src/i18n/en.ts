@@ -9297,7 +9297,7 @@ export const en = {
   "settings.page.agents.sub":
     "What an agent may do unattended, and which clients hold your credentials.",
   "settings.page.notifications.sub":
-    "Which notices reach you and how, and the morning brief and weekly review by email.",
+    "Which notices reach you and how, plus the Morning brief and Weekly review by email.",
   "settings.page.connections.sub":
     "Mailboxes and addresses this seat reads from.",
   "settings.page.capture-activity.sub":

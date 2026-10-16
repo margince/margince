@@ -74,7 +74,7 @@ function mount(
     }
     if (request.method === "PATCH" ? refusing.writes : refusing.reads) {
       return jsonResponse(
-        { title: "Unavailable", status: 503, code: "unavailable" },
+        { title: "Unavailable", status: 503, code: "service_unavailable" },
         503,
       );
     }
@@ -101,7 +101,7 @@ function mount(
             redirect_uris: [],
           })
         : jsonResponse(
-            { title: "Forbidden", status: 403, code: "forbidden" },
+            { title: "Forbidden", status: 403, code: "permission_denied" },
             403,
           );
     }
@@ -481,6 +481,33 @@ describe("the group role grant editor", () => {
         screen.getByRole("button", { name: /add group/i }),
       ),
     );
+  });
+
+  it("hands focus to the first group when a full map leaves Add disabled", async () => {
+    const full = Object.fromEntries(
+      Array.from({ length: 64 }, (_, index) => [`team-${index}`, "rep"]),
+    );
+    mount([], full);
+    const user = userEvent.setup();
+    const groups = await screen.findAllByRole("textbox", {
+      name: /idp group/i,
+    });
+    const last = groups.at(-1);
+    if (!last) {
+      throw new Error("the full map rendered no group input");
+    }
+    await user.type(last, "x");
+    await user.click(
+      screen.getByRole("button", { name: /save group grants/i }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: /save group grants/i }),
+      ).toBeNull(),
+    );
+    await waitFor(() => expect(document.activeElement).toBe(groups[0]));
+    const add = screen.getByRole("button", { name: /add group/i });
+    expect(add.hasAttribute("disabled")).toBe(true);
   });
 
   // Mirrors the server's refusal so it reaches the admin before a request
