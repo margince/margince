@@ -83,6 +83,7 @@ let shellStyles: HTMLStyleElement | undefined;
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   shellStyles?.remove();
   shellStyles = undefined;
   window.location.hash = "";
@@ -270,8 +271,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     expect(document.activeElement).toBe(deals);
   });
 
-  it("hides a tip the pointer raised on Escape while focus sits elsewhere", async () => {
-    const user = userEvent.setup();
+  it("hides a tip the pointer raised on Escape while focus sits elsewhere", () => {
     render(
       <>
         <WorkspaceRail route={{ screen: "home" }} collapsed />
@@ -285,12 +285,14 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     act(() => {
       vi.advanceTimersByTime(500);
     });
-    vi.useRealTimers();
     expect(screen.getByRole("tooltip").textContent).toBe("Deals");
     const heard = vi.fn();
     globalThis.addEventListener("keydown", heard);
 
-    await user.keyboard("{Escape}");
+    // A raw dispatch: `userEvent` never returns on the hover clock.
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "Elsewhere" }), {
+      key: "Escape",
+    });
     globalThis.removeEventListener("keydown", heard);
 
     expect(screen.queryByRole("tooltip")).toBeNull();

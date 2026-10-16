@@ -63,6 +63,15 @@ function Row({ text }: Readonly<{ text: string }>) {
   );
 }
 
+function TwoVerbs() {
+  return (
+    <>
+      <IconAction label="Mail" icon={<Mail aria-hidden="true" />} />
+      <IconAction label="Call" icon={<Phone aria-hidden="true" />} />
+    </>
+  );
+}
+
 describe("a tip the pointer raised while focus sits elsewhere", () => {
   it("goes on Escape and leaves focus where it was", async () => {
     const user = userEvent.setup();
@@ -123,14 +132,9 @@ describe("the press a tip takes", () => {
     expect(onKeyDown).toHaveBeenCalledOnce();
   });
 
-  it("leaves a tip focus raised later standing until the next press", async () => {
+  it("after a pointer tip, leaves a focus tip up for the next press", async () => {
     const user = userEvent.setup();
-    render(
-      <>
-        <IconAction label="Mail" icon={<Mail aria-hidden="true" />} />
-        <IconAction label="Call" icon={<Phone aria-hidden="true" />} />
-      </>,
-    );
+    render(<TwoVerbs />);
     settleOn(tipAnchor("Call"));
     await user.tab();
     expect(screen.getAllByRole("tooltip")).toHaveLength(2);
@@ -140,6 +144,26 @@ describe("the press a tip takes", () => {
 
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("after a focus tip, takes both tips down in one press", async () => {
+    const user = userEvent.setup();
+    render(<TwoVerbs />);
+    await user.tab();
+    settleOn(tipAnchor("Call"));
+    expect(screen.getAllByRole("tooltip")).toHaveLength(2);
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("leaves an Escape that ends an input method's composition alone", () => {
+    render(<IconAction label="Call" icon={<Phone aria-hidden="true" />} />);
+    settleOn(tipAnchor("Call"));
+
+    fireEvent.keyDown(document.body, { key: "Escape", isComposing: true });
+
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Call");
   });
 });
 
@@ -259,7 +283,37 @@ describe("a tip over another layer", () => {
     rerender(page(true));
 
     await user.keyboard("{Escape}");
-
     expect(onClose).toHaveBeenCalledOnce();
+    rerender(page(false));
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Call");
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("inside a popover opened from a dialog takes the first Escape", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <Modal open onClose={onClose} labelledBy="d" intent="form">
+        <Heading size="large" id="d">
+          Edit deal
+        </Heading>
+        <Popover label="How it stands">
+          <IconAction label="Call" icon={<Phone aria-hidden="true" />} />
+        </Popover>
+      </Modal>,
+    );
+    const aside = screen.getByRole("button", { name: "How it stands" });
+    await user.click(aside);
+    settleOn(tipAnchor("Call"));
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    expect(aside).toHaveAttribute("aria-expanded", "true");
+
+    await user.keyboard("{Escape}");
+    expect(aside).toHaveAttribute("aria-expanded", "false");
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

@@ -136,11 +136,7 @@ export function AiRuntimeChip({
       setDismissed(true);
     };
     function onKeyDown(event: KeyboardEvent) {
-      if (
-        event.key === "Escape" &&
-        !event.defaultPrevented &&
-        !coveredByDialog(wrapper.current)
-      ) {
+      if (event.key === "Escape" && !coveredByDialog(wrapper.current)) {
         // A popover about to be hidden would drop its focus onto the body.
         if (popover.current?.contains(document.activeElement)) {
           button.current?.focus();

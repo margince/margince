@@ -13,7 +13,8 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { coveredByDialog } from "./dialogfocus";
+import { isImeCommit } from "../lib/imecommit";
+import { coveredByLayer } from "./dialogfocus";
 import { useHoverIntent } from "./hoverintent";
 import "./tooltip.css";
 
@@ -214,7 +215,8 @@ export function useEscapeDismisses(
       if (
         event.key !== "Escape" ||
         event.defaultPrevented ||
-        coveredByDialog(anchor.current)
+        isImeCommit({ nativeEvent: event }) ||
+        coveredByLayer(anchor.current)
       ) {
         return;
       }
