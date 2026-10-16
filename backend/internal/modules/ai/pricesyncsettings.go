@@ -19,7 +19,7 @@ const (
 
 // PriceSyncConfig is whether the daily job syncs model prices.
 type PriceSyncConfig struct {
-	AutoSync bool `json:"auto_sync"`
+	AutoSync bool `json:"auto_sync" yaml:"auto_sync"`
 }
 
 // PriceSyncSettings is on by default, sovereign included: reading two public

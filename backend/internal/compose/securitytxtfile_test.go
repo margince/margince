@@ -168,3 +168,16 @@ func uncommentedBlock(t *testing.T, doc, start, want string) string {
 	t.Fatalf("the example no longer documents a commented %s block containing %q", start, want)
 	return ""
 }
+
+// A date with no time is not an RFC 3339 instant. The file's YAML is decoded
+// as written, so it does not become a midnight timestamp that would pass.
+func TestADateOnlyExpiryIsRefused(t *testing.T) {
+	body := `web:
+  security_txt:
+    contact: [mailto:security@example.org]
+    expires: 2027-01-01
+`
+	if _, err := loadSecurityTxt(t, body); err == nil {
+		t.Fatal("a date-only expires loaded; RFC 9116 needs a full RFC 3339 instant")
+	}
+}

@@ -150,3 +150,27 @@ func loadBudget(t *testing.T, file string, environ []string) (BudgetConfig, erro
 	}
 	return budget, nil
 }
+
+// Overrides in margince.yaml are spelled as the API spells them.
+func TestTaskOverridesLoadFromTheFileByTheirAPINames(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "margince.yaml")
+	file := "ai:\n  task_overrides:\n    capture_classify: {thinking: low, attempt_timeout_ms: 10000}\n"
+	if err := os.WriteFile(path, []byte(file), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	reg, err := config.NewRegistry(ConfigSettings())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(reg, config.Sources{Args: []string{"--config", path}})
+	if err != nil {
+		t.Fatalf("loading %q: %v", file, err)
+	}
+	got, ok := config.BootVal(cfg, TaskOverridesSetting)
+	if !ok {
+		t.Fatal("the file set no task overrides")
+	}
+	if want := (TaskOverride{Thinking: "low", AttemptTimeoutMs: 10000}); got[TaskCaptureClassify] != want {
+		t.Errorf("capture_classify loaded as %+v, want %+v", got[TaskCaptureClassify], want)
+	}
+}

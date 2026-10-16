@@ -32,11 +32,11 @@ const TaskOverridesKey = "ai.task_overrides"
 type TaskOverride struct {
 	// Thinking is the exact level every site of the task is sent at. It
 	// outranks the binding's level and the site's floor.
-	Thinking string `json:"thinking,omitempty"`
+	Thinking string `json:"thinking,omitempty" yaml:"thinking"`
 	// DecisionTimeoutMs bounds the decision-model call of a deciding task.
-	DecisionTimeoutMs int `json:"decision_timeout_ms,omitempty"`
+	DecisionTimeoutMs int `json:"decision_timeout_ms,omitempty" yaml:"decision_timeout_ms"`
 	// AttemptTimeoutMs bounds each model call on the task's ladder.
-	AttemptTimeoutMs int `json:"attempt_timeout_ms,omitempty"`
+	AttemptTimeoutMs int `json:"attempt_timeout_ms,omitempty" yaml:"attempt_timeout_ms"`
 }
 
 // TaskOverrides holds one override per task that has one, keyed by task.

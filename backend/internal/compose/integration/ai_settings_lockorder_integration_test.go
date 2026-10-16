@@ -61,6 +61,25 @@ func TestAnIfMatchResendOfALockedBindingIsANoOp(t *testing.T) {
 	}
 }
 
+// A stale If-Match is answered as stale before the lock is, as the budget and
+// the overrides answer it, so the editor reloads rather than reads a lock.
+func TestAStaleIfMatchUnderALockedBindingIsVersionSkew(t *testing.T) {
+	e := apptest.SetupAppWithEnv(t, []string{envBinding("env-model")})
+	e.BootstrapWorkspace(t)
+	var read json.RawMessage
+	if status := e.Call(t, http.MethodGet, "/v1/ai/routing", nil, nil, &read); status != http.StatusOK {
+		t.Fatalf("GET /ai/routing → %d", status)
+	}
+	changed := json.RawMessage(strings.Replace(string(read), `"env-model"`, `"other-model"`, 1))
+	var refusal struct {
+		Code string `json:"code"`
+	}
+	stale := map[string]string{"If-Match": `"stale-revision"`}
+	if status := e.Call(t, http.MethodPut, "/v1/ai/routing", changed, stale, &refusal); status != http.StatusConflict || refusal.Code != "version_skew" {
+		t.Fatalf("a stale If-Match under the locked binding → %d %q, want 409 version_skew", status, refusal.Code)
+	}
+}
+
 func TestAnInvalidChangeOfLockedOverridesIsRefusedAsLocked(t *testing.T) {
 	e := apptest.SetupAppWithEnv(t, []string{`MARGINCE_AI_TASK_OVERRIDES={"capture_classify":{"thinking":"high"}}`})
 	e.BootstrapWorkspace(t)

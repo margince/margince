@@ -299,7 +299,12 @@ func (s *RoutingStore) write(ctx context.Context, settle func(current RoutingCon
 		if err != nil {
 			return err
 		}
+		// A stale If-Match is answered as stale before the lock, as the budget
+		// and the overrides answer it; any other refusal waits on the lock.
 		stored, _, err := settle(current)
+		if errors.Is(err, apperrors.ErrVersionSkew) {
+			return err
+		}
 		if err != nil {
 			return s.cfg.LockFirst(RoutingKey, err)
 		}

@@ -188,13 +188,36 @@ func (structType[T]) Name() string { return "object" }
 
 func (s structType[T]) Parse(text string) (T, error) { return s.DecodeJSON(json.RawMessage(text)) }
 
-// DecodeYAML reads the mapping as the JSON it spells, so a file and the
-// environment decode one value through one decoder, the type's own included.
+// DecodeYAML decodes the mapping directly, refusing an unknown field as JSON
+// does. A type with its own JSON decoding is read through it instead, so a
+// file and the environment hold its value to one bar.
 func (s structType[T]) DecodeYAML(n *yaml.Node) (T, error) {
 	var v T
 	if n.Kind != yaml.MappingNode {
 		return v, fmt.Errorf("want a mapping, got a %s", nodeKind(n))
 	}
+	if _, own := any(&v).(json.Unmarshaler); own {
+		return s.decodeYAMLAsJSON(n)
+	}
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	if err := enc.Encode(n); err != nil {
+		return v, fmt.Errorf("re-encoding: %w", err)
+	}
+	if err := enc.Close(); err != nil {
+		return v, fmt.Errorf("re-encoding: %w", err)
+	}
+	dec := yaml.NewDecoder(&buf)
+	dec.KnownFields(true)
+	if err := dec.Decode(&v); err != nil {
+		return v, errStructFields
+	}
+	return v, nil
+}
+
+// decodeYAMLAsJSON re-spells the mapping as JSON for the type's own decoder.
+func (s structType[T]) decodeYAMLAsJSON(n *yaml.Node) (T, error) {
+	var v T
 	var generic any //craft:ignore naked-any a YAML mapping of any shape, re-spelled as JSON for the type's own decoder
 	if err := n.Decode(&generic); err != nil {
 		return v, errStructFields
