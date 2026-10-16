@@ -9,11 +9,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { RbacAction } from "../lib/accessgrants";
+import { companyContextCapabilitiesQueryKey } from "../screens/companycontextreach";
 import {
   type CapabilityExpression,
   SETTINGS_PAGES,
   type SettingsPageId,
 } from "../screens/settingscatalog";
+import { COMPANY_CONTEXT_ON } from "../screens/settingspages.fixtures";
 import { settingsSearch } from "../screens/settingssearch";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { type Command, matchingCommands, useBuiltinCommands } from "./palette";
@@ -62,6 +64,11 @@ const PHRASES: readonly (readonly [string, SettingsPageId])[] = [
   ["reindex", "system-health"],
   ["plugins", "extensions"],
   ["delete everything", "reset"],
+  // The name of one setting on the page, which no alias carries.
+  ["data retention", "system-health"],
+  ["date format", "company"],
+  ["sync interval", "capture"],
+  ["two-step", "account"],
 ];
 
 // Seats and license cannot change what anyone pays.
@@ -94,6 +101,7 @@ async function adminCommands(): Promise<readonly Command[]> {
     ...meFixture({ roles: ["admin"], allow: everyCatalogGrant() }),
     data_reset_available: true,
   });
+  client.setQueryData(companyContextCapabilitiesQueryKey, COMPANY_CONTEXT_ON);
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{children}</LocaleProvider>
@@ -118,7 +126,7 @@ function paletteFinds(commands: readonly Command[], phrase: string) {
 
 function searchFinds(phrase: string): SettingsPageId[] {
   return settingsSearch(phrase, SETTINGS_PAGES, t, {
-    holdsAdminRole: true,
+    seesCompanyContext: true,
   }).map((hit) => hit.page.id);
 }
 
@@ -139,4 +147,24 @@ describe("the palette and the settings search", () => {
       expect(searchFinds(word)).not.toContain("seats");
     },
   );
+});
+
+describe("the palette's matcher", () => {
+  const company: Command = {
+    id: "screen:settings-company",
+    label: "Hồ sơ công ty",
+    keywords: ["Múi giờ báo cáo", "Khoảng đồng bộ (giây)"],
+    type: "screen",
+  };
+
+  it.each(["mui gio bao cao", "bao cao gio", "dong bo", "ho so cong"])(
+    "finds %p through every word and without its marks",
+    (query) => {
+      expect(matchingCommands([company], query)).toEqual([company]);
+    },
+  );
+
+  it("drops a command that holds only some of the words", () => {
+    expect(matchingCommands([company], "mui kubernetes")).toEqual([]);
+  });
 });

@@ -83,3 +83,31 @@ export const TypedThenEscape: Story = {
     await expect(canvas.queryByRole("listbox")).toBeNull();
   },
 };
+
+// A setting's own name finds the page that draws it, and the hit names it.
+export const SectionHit: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(
+      await canvas.findByRole("combobox", {
+        name: en["settings.search.label"],
+      }),
+      "data retention",
+    );
+    const hit = await canvas.findByRole("option", {
+      name: new RegExp(en["settings.tab.system-health"]),
+    });
+    await expect(hit).toHaveTextContent(en["operations.retention.label"]);
+  },
+};
+
+export const SectionHitDark: Story = {
+  ...SectionHit,
+  globals: { theme: "dark" },
+};
+
+export const SectionHitPhone: Story = {
+  ...SectionHit,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};

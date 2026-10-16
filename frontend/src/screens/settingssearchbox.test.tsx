@@ -9,7 +9,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import * as router from "../lib/router";
 import { meFixture } from "../testing/mefixture";
+import { companyContextCapabilitiesQueryKey } from "./companycontextreach";
 import { SETTINGS_PAGES, type SettingsPage } from "./settingscatalog";
+import { COMPANY_CONTEXT_ON } from "./settingspages.fixtures";
 import { SettingsSearchBox } from "./settingssearchbox";
 
 afterEach(() => {
@@ -26,6 +28,7 @@ function mount(
 ) {
   const client = new QueryClient();
   client.setQueryData(["me"], meFixture({ roles }));
+  client.setQueryData(companyContextCapabilitiesQueryKey, COMPANY_CONTEXT_ON);
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
@@ -288,5 +291,24 @@ describe("the settings search box", () => {
 
     expect((box() as HTMLInputElement).value).toBe("");
     expect(options()).toHaveLength(0);
+  });
+  it("names the setting a hit was found by, and opens its page", async () => {
+    const user = userEvent.setup();
+    const navigate = vi.spyOn(router, "navigate").mockImplementation(() => {});
+    mount();
+    await user.type(box(), "data retention");
+
+    const index = options().findIndex((option) =>
+      option.textContent?.startsWith("System health"),
+    );
+    expect(options()[index]?.querySelector(".t-caption")?.textContent).toBe(
+      "Data retention · Installation",
+    );
+    await user.keyboard("{ArrowDown}".repeat(index + 1));
+    await user.keyboard("{Enter}");
+    expect(navigate).toHaveBeenCalledWith({
+      screen: "settings",
+      id: "system-health",
+    });
   });
 });
