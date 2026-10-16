@@ -5,32 +5,31 @@
 
 package gates
 
-// The MARGINCE_* variables the code reads, .env.example names, configuration.md
-// names and an entrypoint requires agree with each other. Four obligations, all
-// derived from the tree rather than a maintained list:
+// The MARGINCE_* variables the code reads, configuration.md names and an
+// entrypoint requires agree with each other. Three obligations, all derived
+// from the tree rather than a maintained list:
 //
 //  1. every MARGINCE_* var the Go code reads is named in
 //     docs/reference/configuration.md — the table of record for the binaries;
-//  2. every MARGINCE_* var .env.example names is still part of the product;
-//  3. every MARGINCE_* var configuration.md names is still part of the product;
-//  4. every MARGINCE_* var a deploy entrypoint hard-requires is named in
+//  2. every MARGINCE_* var configuration.md names is still part of the product;
+//  3. every MARGINCE_* var a deploy entrypoint hard-requires is named in
 //     .env.example — that file is the annotated template
 //     docs/how-to/deploy-margince.md hands an operator, so a var the container
 //     refuses to boot without must not be discoverable only by reading the
 //     entrypoint script.
 //
-// Unasserted, the three files drift apart: the template names credentials for a
-// process role that no longer exists, a secret an operator must provision goes
-// undocumented, and the reference doc keeps a row for a variable nothing reads.
-// None of those is visible at the point of failure — an operator supplies a
-// value and observes no effect, or looks for a variable and does not find it.
+// tools/gen-config writes .env.example and the settings tables of
+// configuration.md from the registry, and configgenerated_test.go fails a
+// stale copy. So no name in .env.example can be dead, and every documented
+// default is the declared one; these obligations cover what the generator does
+// not write.
 //
 // What these gates do NOT cover, stated rather than implied:
 //
 //   - Obligation 1 covers Go readers, in the licensed trees only. A var read
 //     solely by deploy shell or a workflow is documented in configuration.md
 //     by hand, and this sweep walks the backend tree only.
-//     Obligations 2 and 3 do count those non-Go readers, because there the
+//     Obligation 2 does count those non-Go readers, because there the
 //     question is merely whether a name is still real.
 //   - MARGINCE_-prefixed names only. The BYOK keys (GEMINI_API_KEY,
 //     OPENAI_API_KEY, ANTHROPIC_API_KEY, OPENAI_COMPATIBLE_API_KEY) carry
@@ -47,9 +46,8 @@ package gates
 //     process consults. Its own comment records the reason. Every backquoted
 //     occurrence remains prose in a comment or an error message.
 //   - Presence, not truth. A var being named in a document does not make the
-//     prose around it accurate, and .env.example now carries denser
-//     behavioural claims than the reference doc does. These gates stop a var
-//     disappearing; they cannot stop a description going stale.
+//     prose around it accurate. These gates stop a var disappearing; they
+//     cannot stop a description going stale.
 
 import (
 	"maps"
@@ -59,8 +57,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/compose"
 )
 
 // envVarName matches one MARGINCE_* name in prose — the reference doc and the
@@ -82,7 +78,7 @@ const (
 
 // deploySurfaceRoots are the non-Go paths that configure a deployment: the
 // entrypoints and helper scripts, the dev compose stack, and the CI definitions.
-// A variable read only here is as real as one Go reads, so obligations 2 and 3
+// A variable read only here is as real as one Go reads, so obligation 2
 // must accept it. MARGINCE_ADMIN_PASSWORD is the current example: the entrypoint
 // turns it into the file reference margince.yaml names — OPS-CFG-3 keeps secret
 // VALUES out of every config layer the product reads — so a Go-only definition of
@@ -193,14 +189,6 @@ func TestEveryEnvVarIsDocumented(t *testing.T) {
 	}
 }
 
-// TestEnvExampleNamesOnlyLiveVars: an entry for a variable nothing reads is
-// worse than no entry at all, because it invites an operator to supply a value
-// that cannot take effect.
-func TestEnvExampleNamesOnlyLiveVars(t *testing.T) {
-	t.Parallel()
-	assertNamesOnlyLiveVars(t, envExample)
-}
-
 // TestConfigurationDocNamesOnlyLiveVars holds the table of record to the same
 // bar as the template it now absorbs. Without it the more authoritative file is
 // the one free to keep a row for a var that no longer exists.
@@ -218,7 +206,7 @@ func TestConfigurationDocNamesOnlyLiveVars(t *testing.T) {
 //
 // Only these two forms are detected. A script can also make a variable
 // mandatory with an explicit guard (`[ -z "$FOO" ] && exit 1`) or by relying on
-// `set -u`, and obligation 4 would not see either. Neither appears in
+// `set -u`, and obligation 3 would not see either. Neither appears in
 // scripts/deploy today; the limit is recorded so the gate is not read as
 // proving more than it does.
 var entrypointRequired = regexp.MustCompile(`\$\{(MARGINCE_[A-Z0-9_]+):?\?`)
@@ -259,10 +247,9 @@ func TestEntrypointRequiredVarsAreInTheEnvExample(t *testing.T) {
 // reached: a var the deploy surface refuses to boot without has to be written
 // down somewhere an operator reads.
 //
-// Obligation 1 covers Go readers only, and says so. Obligations 2 and 3 already
-// count the deploy surface, but only in the permissive direction — they ask
-// whether a name a document mentions is still real, never whether a real name is
-// mentioned. So a var an entrypoint hard-requires was documented if the author
+// Obligation 1 covers Go readers only, and says so. Obligation 2 counts the
+// deploy surface, but only in the permissive direction. It asks whether a name
+// a document mentions is still real, never whether a real name is mentioned. So a var an entrypoint hard-requires was documented if the author
 // remembered, which is the failure mode obligation 1 removed for Go.
 // margince/margince#566.
 //
@@ -272,8 +259,8 @@ func TestEntrypointRequiredVarsAreInTheEnvExample(t *testing.T) {
 // not the whole file, is read. `MARGINCE_DSN` is named in a dozen other rows, so
 // a whole-file match would pass with the entrypoint section deleted.
 //
-// It reuses obligation 4's `${VAR:?}` set rather than sweeping for mentions,
-// and inherits that set's stated limits exactly — the `:-default` form is not a
+// It reuses obligation 3's `${VAR:?}` set rather than sweeping for mentions,
+// and inherits that set's stated limits. The `:-default` form is not a
 // requirement, and an explicit guard or `set -u` is invisible to both. A var
 // with a fallback is not one an operator must supply; requiring those would
 // admit most of the deploy surface and leave the label meaningless.
@@ -289,9 +276,9 @@ func TestEntrypointRequiredVarsAreDocumented(t *testing.T) {
 			}
 		}
 	})
-	// The same floor obligation 4 carries, for the same reason: a sweep that
-	// scans nothing passes exactly like a clean one, and this walk depends on
-	// the scripts staying where they are and on the `:?` form staying in use.
+	// The same floor obligation 3 carries: a sweep that scans nothing passes
+	// like a clean one. This walk depends on the scripts staying where they are
+	// and on the `:?` form staying in use.
 	if len(required) == 0 {
 		t.Fatal("no `${MARGINCE_…:?}` requirement found under ../scripts/deploy — a sweep that scans nothing passes exactly like a clean one")
 	}
@@ -351,180 +338,4 @@ func assertNamesOnlyLiveVars(t *testing.T, path string) {
 		t.Errorf("%d var(s) named in %s that nothing in the product reads — delete them. A `MARGINCE_FOO_*` glob counts as the name `MARGINCE_FOO_`, which nothing reads: spell such vars out instead of globbing them:\n\t%s",
 			len(dead), path, strings.Join(dead, "\n\t"))
 	}
-}
-
-// ---------------------------------------------------------------------------
-// Obligation 5: a declared default and a documented default say the same thing.
-//
-// The four obligations above gate NAMES. Nothing gated VALUES, and the two
-// descriptions of a default drift apart in the direction that matters: the code
-// applies a fallback, the schema does not declare it, and the reference doc
-// documents one anyway. An operator reads the doc, sees a default, and supplies
-// nothing — while what the binary actually does is decided somewhere the doc
-// never described.
-//
-// Both sides are in the tree: each program's registry carries a setting's
-// default, and configuration.md's tables carry a Default column. This asserts
-// they agree both ways.
-
-// configItemDefault is one setting's env name and the default it declares. An
-// absent default is the empty string, which the doc writes as an em dash.
-type configItemDefault struct {
-	name    string
-	value   string
-	pos     string
-	present bool
-}
-
-// docDefaultRow matches one reference-doc table row in an `Env | Default`
-// table: the env name in backticks, then the second cell.
-var docDefaultRow = regexp.MustCompile(`(?m)^\|\s*` + "`" + `(MARGINCE_[A-Z0-9_]+)` + "`" + `\s*\|\s*([^|]*?)\s*\|`)
-
-// docFlagDefaultRow matches one row of a `Flag | Env | Default` table, where
-// the env name is the SECOND cell and the default the third. Its first cell is
-// a flag, an em dash, or prose like "— (env-only)".
-var docFlagDefaultRow = regexp.MustCompile(`(?m)^\|[^|]*\|\s*` + "`" + `(MARGINCE_[A-Z0-9_]+)` + "`" + `\s*\|\s*([^|]*?)\s*\|`)
-
-// docDefaultTable matches a table header whose SECOND column is the default.
-// configuration.md also carries tables whose second column is something else
-// entirely — which role reads the var, or which suite needs it — and reading
-// those cells as defaults would report prose where no default was ever claimed.
-var docDefaultTable = regexp.MustCompile(`(?mi)^\|\s*Env\s*\|\s*Default\s*\|`)
-
-// docFlagDefaultTable matches the OTHER default-bearing shape, whose columns
-// are Flag, Env, Default. Most of this document is that shape, and reading only
-// the first left the majority of the tree's declared defaults uncomparable —
-// which is not a quiet gap: the one contradiction this gate exists to catch was
-// sitting in one of these tables, documenting `off` where the code declares
-// `live`, and the gate reported PASS because it could not see the row.
-var docFlagDefaultTable = regexp.MustCompile(`(?mi)^\|\s*Flag\s*\|\s*Env\s*\|\s*Default\s*\|`)
-
-// docDefaultLiteral pulls the value out of a default cell.
-//
-// The value is a backticked literal, optionally followed by a parenthetical
-// gloss saying what it MEANS — "`0` (= built-in 40)". The gloss is for the
-// operator and is not part of the value: a cell reading `0` alone tells them
-// nothing about what zero does, and demanding the bare literal would push that
-// explanation out of the table it belongs in.
-var docDefaultLiteral = regexp.MustCompile("^`([^`]*)`(?:\\s+\\([^)]*\\))?$")
-
-// docDefaultAbsent is the same shape for "no default": an em dash, optionally
-// glossed — "— (required)", "— (off)".
-var docDefaultAbsent = regexp.MustCompile(`^[—-](?:\s+\([^)]*\))?$`)
-
-func TestEveryDeclaredDefaultMatchesTheDocumentedOne(t *testing.T) {
-	t.Parallel()
-	declared := declaredConfigDefaults(t)
-	documented := documentedDefaults(t)
-	if len(declared) == 0 {
-		t.Fatal("no setting found in any program's registry — a sweep that scans nothing passes exactly like a clean one")
-	}
-
-	for _, item := range declared {
-		docValue, inDoc := documented[item.name]
-		if !inDoc {
-			// Obligation 1 requires the NAME to appear in the document. It does
-			// not require it to appear where a default can be read, and that is
-			// how nine declarations came to apply a fallback the reference never
-			// showed: an operator found the variable, read its meaning, supplied
-			// nothing, and got a value the document had not mentioned. A default
-			// that is not in a Default column is not documented.
-			if item.present {
-				t.Errorf("%s: %s declares Default %q and %s shows it in no Default column — put it in one, and this comparison gates it from then on",
-					item.pos, item.name, item.value, configurationDoc)
-			}
-			continue
-		}
-		switch {
-		case item.present && docValue != item.value:
-			t.Errorf("%s: %s declares Default %q, %s documents %q — an operator supplying nothing gets the first and reads the second",
-				item.pos, item.name, item.value, configurationDoc, docValue)
-		case !item.present && docValue != "":
-			t.Errorf("%s: %s declares no Default, %s documents %q — either the code applies that fallback and the schema must declare it, or it does not and the doc is telling operators about a value nothing will supply",
-				item.pos, item.name, configurationDoc, docValue)
-		}
-	}
-}
-
-// declaredConfigDefaults reads every MARGINCE_* setting's default from the
-// registries the programs load, so a setting is compared the day it is declared.
-func declaredConfigDefaults(t *testing.T) []configItemDefault {
-	t.Helper()
-	seen := map[string]bool{}
-	var out []configItemDefault
-	for role, reg := range compose.ProgramRegistries() {
-		for _, s := range reg.All() {
-			if !strings.HasPrefix(s.Env(), "MARGINCE_") || seen[s.Env()] {
-				continue
-			}
-			seen[s.Env()] = true
-			value, present := s.DefaultText()
-			out = append(out, configItemDefault{name: s.Env(), value: value, present: present, pos: string(role) + " setting " + s.Key()})
-		}
-	}
-	return out
-}
-
-// documentedDefaults reads the Default column out of configuration.md's tables.
-// An em dash means the doc is asserting there is no default, which is the same
-// claim as an absent Default field.
-func documentedDefaults(t *testing.T) map[string]string {
-	t.Helper()
-	b, err := os.ReadFile(configurationDoc) // #nosec G304 -- fixed path in the trusted source tree
-	if err != nil {
-		t.Fatalf("reading %s: %v", configurationDoc, err)
-	}
-	out := map[string]string{}
-	for _, table := range defaultBearingTables(string(b)) {
-		for _, row := range table.row.FindAllStringSubmatch(table.body, -1) {
-			cell := strings.TrimSpace(row[2])
-			if cell == "" || docDefaultAbsent.MatchString(cell) {
-				out[row[1]] = ""
-				continue
-			}
-			if literal := docDefaultLiteral.FindStringSubmatch(cell); literal != nil {
-				out[row[1]] = literal[1]
-				continue
-			}
-			// Prose in a Default column is not a value this gate can compare, and
-			// silently treating it as "no default" would make the row invisible.
-			t.Errorf("%s: the Default cell for %s reads %q — a default is a literal in backticks or an em dash, so that a gate and an operator read the same thing",
-				configurationDoc, row[1], cell)
-		}
-	}
-	return out
-}
-
-// defaultBearingTable is one table body paired with the row pattern that reads
-// it: which cell holds the env name depends on the header above it.
-type defaultBearingTable struct {
-	body string
-	row  *regexp.Regexp
-}
-
-// defaultBearingTables cuts the document into the table bodies that carry a
-// Default column, so rows from the other tables are never read as one.
-//
-// BOTH shapes, because both are in this document and only one of them was read
-// before. A table whose second column is a role, or a suite, is still skipped —
-// reading those cells as defaults would report prose where no default was ever
-// claimed.
-func defaultBearingTables(doc string) []defaultBearingTable {
-	var out []defaultBearingTable
-	for _, shape := range []struct {
-		header *regexp.Regexp
-		row    *regexp.Regexp
-	}{
-		{docFlagDefaultTable, docFlagDefaultRow},
-		{docDefaultTable, docDefaultRow},
-	} {
-		for _, loc := range shape.header.FindAllStringIndex(doc, -1) {
-			body := doc[loc[1]:]
-			if end := strings.Index(body, "\n\n"); end >= 0 {
-				body = body[:end]
-			}
-			out = append(out, defaultBearingTable{body: body, row: shape.row})
-		}
-	}
-	return out
 }

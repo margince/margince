@@ -4,7 +4,6 @@
 package compose_test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -35,20 +34,17 @@ func loadShipped(t *testing.T, role config.Role, args ...string) *config.Config 
 	return cfg
 }
 
-// The annotated example is what `make dev` copies and every deployment starts
-// from, so both serving programs must load it as written.
+// The generated example is what `make dev` copies and every deployment starts
+// from, so both serving programs load it as written. It arms nothing. The dev
+// file turns the MCP connector on.
 func TestTheShippedExampleLoadsForBothServingPrograms(t *testing.T) {
 	t.Parallel()
-	api := loadShipped(t, config.RoleAPI, "--config", shippedExample)
-	// The example turns the connector on so a local stack serves /mcp without
-	// an edit. That is safe only because the api refuses to boot on it with no
-	// --public-base-url; the code default stays off.
-	if !config.Val(api, ps.MCPConnector) {
-		t.Error("example mcp.connector_enabled must stay true; commenting it out costs every local stack the /mcp surface")
-	}
-	worker := loadShipped(t, config.RoleWorker, "--config", shippedExample)
-	if got := strings.Join(config.Val(worker, ps.RatesFxCurrencies), ","); got != "USD,GBP,CHF" {
-		t.Errorf("example rates.fx_currencies = %q, want the documented USD,GBP,CHF", got)
+	for _, role := range []config.Role{config.RoleAPI, config.RoleWorker} {
+		example := loadShipped(t, role, "--config", shippedExample)
+		dev := loadShipped(t, role, "--config", shippedExample, "--config-file", shippedDevPosture)
+		if role == config.RoleAPI && (config.Val(example, ps.MCPConnector) || !config.Val(dev, ps.MCPConnector)) {
+			t.Error("the dev file turns the MCP connector on and the example leaves it at its default, off")
+		}
 	}
 }
 

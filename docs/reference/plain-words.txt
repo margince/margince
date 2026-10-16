@@ -236,7 +236,6 @@ child
 choice
 chokepoint
 choose
-cidr
 ciphertext
 citation
 cite
@@ -274,7 +273,6 @@ comfort
 comma
 command
 comment
-commission
 commit
 common
 company
@@ -302,7 +300,6 @@ connect
 connection
 connector
 consent
-console
 consolidation
 constant
 constellation
@@ -627,7 +624,6 @@ general
 generate
 generation
 generator
-geocoding
 get
 gif
 git
@@ -656,10 +652,8 @@ guard
 guess
 guide
 guidelines
-guids
 h
 had
-hairpin
 half
 halves
 hand
@@ -727,7 +721,6 @@ ignore
 image
 immutable
 import
-imprint
 in
 inbound
 inbox
@@ -786,7 +779,6 @@ judge
 judgement
 jurisdiction
 just
-jwks
 keep
 kept
 key
@@ -875,7 +867,6 @@ mail
 mailbox
 main
 maintain
-maintenance
 make
 manager
 manifest
@@ -968,7 +959,6 @@ no
 nobody
 node
 noise
-nominatim
 non
 none
 nor
@@ -1004,7 +994,6 @@ one
 only
 onto
 open
-openstreetmap
 operation
 operational
 operator
@@ -1473,7 +1462,6 @@ static
 status
 statute
 stay
-std
 stdio
 step
 still
@@ -1581,7 +1569,6 @@ tiers
 time
 timeline
 timeout
-timer
 timezone
 title
 to
@@ -1598,7 +1585,6 @@ toolkit
 tools
 tooltip
 top
-topic
 total
 touch
 trace
@@ -1651,7 +1637,6 @@ unrelated
 unresolved
 unset
 unsigned
-unsubscribe
 untagged
 untested
 until

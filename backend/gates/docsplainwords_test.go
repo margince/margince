@@ -214,6 +214,19 @@ func plainEnrolment(doc string) (enrolled bool, maxWords int) {
 	return true, 0
 }
 
+// generatedRegion is a block a generator writes between two markers, such as
+// the settings tables gen-config writes from each setting's declared doc. Those
+// words are the declarations', so the bar reads the prose around the block.
+var generatedRegion = regexp.MustCompile(`(?s)<!-- generated:([a-z]+):start -->.*?<!-- generated:([a-z]+):end -->`)
+
+// withoutGeneratedRegions blanks each region and keeps its line breaks, so a
+// finding outside it still names its own line.
+func withoutGeneratedRegions(doc string) string {
+	return generatedRegion.ReplaceAllStringFunc(doc, func(block string) string {
+		return strings.Repeat("\n", strings.Count(block, "\n"))
+	})
+}
+
 func plainTooLong(res plainResult, maxWords int) bool { return maxWords > 0 && res.words > maxWords }
 
 // plainPools gives each docs area its own list of fewer than 1,000 general
@@ -243,7 +256,7 @@ var plainCaps = map[string]int{
 	"docs/how-to/plain-words.txt":      1387,
 	"docs/explanation/plain-words.txt": 1663,
 	"docs/handbook/plain-words.txt":    1402,
-	"docs/reference/plain-words.txt":   1766,
+	"docs/reference/plain-words.txt":   1751,
 	plainProjectFile:                   1808,
 }
 
@@ -379,7 +392,7 @@ func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 		enrolled[f.path] = true
 		limits[f.path] = maxWords
 		list := plainPoolFor(f.path)
-		res := plainCheck(string(raw), pools[list])
+		res := plainCheck(withoutGeneratedRegions(string(raw)), pools[list])
 		for w := range res.used {
 			used[list][w] = true
 			usedNames[w] = true
@@ -501,5 +514,12 @@ func TestPlainPageRulesFireOnPlantedDefects(t *testing.T) {
 	}
 	if ok, _ := plainEnrolment("# A\n`<!-- prose:plain -->`"); ok {
 		t.Error("a page quoting the marker below its first line was enrolled")
+	}
+	region := "Circumnavigate.\n<!-- generated:config:start -->\nCircumnavigated.\n<!-- generated:config:end -->\n"
+	if got := plainCheck(withoutGeneratedRegions(region), vocab).unknown; got["Circumnavigate"] == 0 || got["Circumnavigated"] != 0 {
+		t.Errorf("the bar read inside a generated region, or skipped the prose before it: %v", got)
+	}
+	if got := withoutGeneratedRegions("<!-- generated:config:start -->\nCircumnavigated.\n"); !strings.Contains(got, "Circumnavigated") {
+		t.Error("a start marker with no end hid the rest of the page from the bar")
 	}
 }

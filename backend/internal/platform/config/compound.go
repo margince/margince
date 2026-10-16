@@ -24,7 +24,7 @@ func Enum[E ~string](values ...E) Type[E] {
 	}
 	name := "enum(" + strings.Join(names, "|") + ")"
 	return textType[E]{
-		name: name,
+		name: name, enumValues: names,
 		parse: func(s string) (E, error) {
 			if slices.Contains(values, E(s)) {
 				return E(s), nil

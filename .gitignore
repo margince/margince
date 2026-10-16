@@ -227,7 +227,7 @@ dump.rdb
 /backend/tools/gen-agentpolicy/gen-agentpolicy
 /backend/tools/gen-aitasks/gen-aitasks
 /backend/tools/gen-composition/gen-composition
-/backend/tools/gen-configschema/gen-configschema
+/backend/tools/gen-config/gen-config
 /backend/tools/gen-jobs/gen-jobs
 /backend/tools/gen-payloads/gen-payloads
 /backend/tools/gen-queryenums/gen-queryenums

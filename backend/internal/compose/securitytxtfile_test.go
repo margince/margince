@@ -4,7 +4,6 @@
 package compose
 
 import (
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -130,43 +129,6 @@ func TestAnUnparseableExpiryIsLeftToTheLoaderNotWarnedAbout(t *testing.T) {
 	if w := securityTxtWarnings(&SecurityTxt{Expires: "soon"}, clocktest.Now(t)); w != nil {
 		t.Fatalf("warned about an expiry the loader refuses: %v", w)
 	}
-}
-
-// The block the example invites an operator to uncomment is held to the loader.
-func TestTheDocumentedSecurityTxtBlockLoads(t *testing.T) {
-	raw, err := os.ReadFile("../../../config/margince.example.yaml")
-	if err != nil {
-		t.Fatalf("reading the shipped example: %v", err)
-	}
-	block := uncommentedBlock(t, string(raw), "web:", "security_txt:")
-	if body := securityTxtBody(mustLoadSecurityTxt(t, block)); !strings.Contains(body, "Policy: ") {
-		t.Fatalf("the documented block rendered without its optional fields:\n%s", body)
-	}
-}
-
-// uncommentedBlock returns the commented-out block of the example that starts
-// with `# start` and contains want, with its comment marks removed.
-func uncommentedBlock(t *testing.T, doc, start, want string) string {
-	t.Helper()
-	lines := strings.Split(doc, "\n")
-	for i, line := range lines {
-		if strings.TrimSpace(line) != "# "+start {
-			continue
-		}
-		var out []string
-		for _, l := range lines[i:] {
-			trimmed := strings.TrimSpace(l)
-			if trimmed == "" || !strings.HasPrefix(trimmed, "#") {
-				break
-			}
-			out = append(out, strings.TrimPrefix(strings.TrimSuffix(l, "#"), "# "))
-		}
-		if block := strings.Join(out, "\n") + "\n"; strings.Contains(block, want) {
-			return block
-		}
-	}
-	t.Fatalf("the example no longer documents a commented %s block containing %q", start, want)
-	return ""
 }
 
 // A date with no time is not an RFC 3339 instant. The file's YAML is decoded

@@ -31,11 +31,14 @@ type textType[T any] struct {
 	parse   func(string) (T, error)
 	format  func(T) string
 	compare func(a, b T) int
+	// enumValues are the only values an Enum admits; nil for every other type.
+	enumValues []string
 }
 
 func (t textType[T]) Name() string              { return t.name }
 func (t textType[T]) Parse(s string) (T, error) { return t.parse(s) }
 func (t textType[T]) Format(v T) string         { return t.format(v) }
+func (t textType[T]) choices() []string         { return t.enumValues }
 
 func (t textType[T]) DecodeYAML(n *yaml.Node) (T, error) {
 	var zero T

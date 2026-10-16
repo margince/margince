@@ -5,24 +5,19 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
-// The model-binding shape, carried under $defs.
-//
-// It used to be config/ai-routing.schema.json, a file of its own, which was
-// right while a routing FILE existed. The binding now lives in this document
-// under `seeds.ai_routing` — and, once an installation is running, in the
-// database — so its shape belongs where the thing it describes is written.
+// The model-binding shape, carried under $defs and served to the admin screen.
 //
 // Held as literals: the descriptions are hand-tuned and the key order is
-// chosen. Round-tripping them would churn the file on every regeneration for
-// no reader's benefit. The tier enum is not literal: it comes from the task
-// contract through ai.AllTiers. Nor are the provider enums, which come from the
-// provider registry through ai.KnownProviders and ai.DecisionProviders.
+// chosen. The tier enum comes from the task contract through ai.AllTiers, and
+// the provider enums from the provider registry through ai.KnownProviders and
+// ai.DecisionProviders.
 const routingDefsTemplate = `{
   "aiRouting": {
     "description": "The tier-to-model binding a fresh installation is bootstrapped with. Consumed ONCE, at bootstrap: a running installation is rebound through Settings -> AI, and editing this afterwards changes nothing until the database is rebuilt.",
@@ -398,7 +393,7 @@ const routingDefsTemplate = `{
 
 // routingDefs renders the $defs block with the tier names the contract declares
 // and the providers the registry holds.
-func routingDefs() json.RawMessage {
+func routingDefs() (json.RawMessage, error) {
 	tiers := ai.AllTiers()
 	names := make([]string, len(tiers))
 	for i, t := range tiers {
@@ -409,11 +404,10 @@ func routingDefs() json.RawMessage {
 	raw = strings.Replace(raw, "__PROVIDERS__", quotedList(ai.KnownProviders()), 1)
 	// Validated here so a substitution bug fails generation rather than shipping
 	// a schema no editor can load.
-	var probe any
-	if err := json.Unmarshal([]byte(raw), &probe); err != nil {
-		fail(fmt.Errorf("gen-configschema: the routing $defs are not valid JSON: %w", err))
+	if !json.Valid([]byte(raw)) {
+		return nil, errors.New("gen-config: the routing $defs are not valid JSON")
 	}
-	return json.RawMessage(raw)
+	return json.RawMessage(raw), nil
 }
 
 // quotedList is names as JSON string literals, comma-separated, for an enum

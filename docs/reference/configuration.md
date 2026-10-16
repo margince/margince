@@ -74,119 +74,279 @@ Without a binding or `--ai-fake`, the worker does not start its AI runner or its
 Copies of the SMTP password and the license that an earlier release sealed are in
 [The vault may hold copies of the two deployment credentials](#the-vault-may-hold-copies-of-the-two-deployment-credentials).
 
-### Variables for the keys of `margince.yaml`
+## Every setting
 
-Each key below is also read from a variable. A variable wins over the file, and a value in either
-must pass the same check. A secret key takes a `${file:...}` or `${env:...}` reference in the file.
+Each setting has a key in `margince.yaml` and a variable, and some have a flag. A value from any of
+them must pass the same check. A secret key takes a `${file:...}` or `${env:...}` reference in the
+file. Programs names the programs that read the setting. A Type that says stored marks a setting an
+admin can also change under Settings.
 
-| Env | Default | Key |
-|---|---|---|
-| `MARGINCE_AUTH_PASSWORD_ENABLED` | `true` | `auth.password.enabled` |
-| `MARGINCE_LICENSE` | — | `license.token` (secret) |
-| `MARGINCE_LICENSE_TOKEN_FILE` | — | `license.token_file` |
-| `MARGINCE_EMAIL_ENABLED` | `false` | `email.enabled` |
-| `MARGINCE_EMAIL_FROM_ADDRESS` | — | `email.from_address` |
-| `MARGINCE_EMAIL_SMTP_HOST` | — | `email.smtp.host` |
-| `MARGINCE_EMAIL_SMTP_PORT` | `0` | `email.smtp.port` |
-| `MARGINCE_EMAIL_SMTP_USERNAME` | — | `email.smtp.username` |
-| `MARGINCE_EMAIL_SMTP_PASSWORD` | — | `email.smtp.password` (secret; `${none}` removes it) |
-| `MARGINCE_EMAIL_SMTP_PASSWORD_FILE` | — | `email.smtp.password_file` |
-| `MARGINCE_AI_CAPTURE_PAYLOADS` | `false` | `ai.capture_payloads` |
-| `MARGINCE_RATES_FX_SOURCE` | — | `rates.fx_source` |
-| `MARGINCE_RATES_FX_CURRENCIES` | — | `rates.fx_currencies` |
-| `MARGINCE_MCP_CONNECTOR_ENABLED` | `false` | `mcp.connector_enabled` |
-| `MARGINCE_RATES_MODEL_PRICING` | — | `rates.model_pricing` (ignored) |
-| `MARGINCE_CAPTURE_FREEMAIL_EXTRA` | — | `capture.freemail_extra` (ignored) |
-| `MARGINCE_CAPTURE_FREEMAIL_NEVER` | — | `capture.freemail_never` (ignored) |
-| `MARGINCE_CAPTURE_TRANSACTIONAL_EXTRA` | — | `capture.transactional_extra` |
-| `MARGINCE_CAPTURE_TRANSACTIONAL_NEVER` | — | `capture.transactional_never` |
-| `MARGINCE_CAPTURE_TRACE_PAYLOADS` | `true` | `capture.trace_payloads` |
-| `MARGINCE_CAPTURE_MAX_BACKFILL_MONTHS` | `0` (= no cap) | `capture.max_backfill_months` |
-| `MARGINCE_CAPTURE_SKIP_RESERVED_DOMAIN_PROPOSALS` | `true` | `capture.skip_reserved_domain_proposals` |
-| `MARGINCE_COMPANY_CONTEXT_ROLLOUT` | `onboarding` | `company_context.rollout` |
-| `MARGINCE_ANALYTICS_PERFORMANCE_ENABLED` | `false` | `analytics.performance_enabled` (ignored) |
-| `MARGINCE_LISTS_ENABLED` | `true` | `lists.enabled` |
-| `MARGINCE_OPERATIONS_ALLOW_DATA_RESET` | `false` | `operations.allow_data_reset` |
-| `MARGINCE_OPERATIONS_ALLOW_TEST_MAILBOX` | `false` | `operations.allow_test_mailbox` |
-| `MARGINCE_UPLOADS_ATTACHMENT_MB` | `25` | `uploads.attachment_mb` |
-| `MARGINCE_UPLOADS_CSV_IMPORT_MB` | `10` | `uploads.csv_import_mb` |
-| `MARGINCE_UPLOADS_LINKEDIN_IMPORT_MB` | `8` | `uploads.linkedin_import_mb` |
-| `MARGINCE_UPLOADS_KNOWLEDGE_DOCUMENT_MB` | `5` | `uploads.knowledge_document_mb` |
-| `MARGINCE_WEB_SECURITY_TXT` | `null` (= not served) | `web.security_txt`, as a JSON object in the variable |
+<!-- generated:config:start -->
+<!-- Written by tools/gen-config from the settings registry: edit a setting's declaration, then run `make config-gen`. -->
+
+### Top-level keys
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `addr` | `MARGINCE_ADDR` | `--addr` | `non-empty string` | `:8080` | api | Listen address of the HTTP server. |
+| `ai_fake` | `MARGINCE_AI_FAKE` | `--ai-fake` | `bool` | `false` | api, worker | Drive the AI surfaces with the offline fake model when nothing else can serve (dev and test only). |
+| `ai_routing` | `MARGINCE_AI_ROUTING` | `--ai-routing` | `string` | — | api, worker | Ignored; kept so existing command lines parse. |
+| `api_base_url` | `MARGINCE_API_BASE_URL` | `--api-base-url` | `string` | — | api | The api's external base for the OAuth redirect_uri when it is on another origin than the SPA; defaults to --public-base-url. |
+| `blobstore_access_key` | `MARGINCE_BLOBSTORE_ACCESS_KEY` | — | `string`, secret | — | api, worker | Access key for the object store. |
+| `blobstore_bucket` | `MARGINCE_BLOBSTORE_BUCKET` | — | `string` | — | api, worker | Bucket attachments are written to. |
+| `blobstore_endpoint` | `MARGINCE_BLOBSTORE_ENDPOINT` | — | `string` | — | api, worker | S3/MinIO endpoint for attachment bytes; it wins over MARGINCE_BLOBSTORE_PATH, and with both unset the attachment endpoints answer 501. |
+| `blobstore_path` | `MARGINCE_BLOBSTORE_PATH` | — | `string` | — | api, worker | Directory attachment bytes are written to when there is no object storage service; ignored when MARGINCE_BLOBSTORE_ENDPOINT is set. |
+| `blobstore_region` | `MARGINCE_BLOBSTORE_REGION` | — | `string` | — | api, worker | Region the bucket lives in. |
+| `blobstore_secret_key` | `MARGINCE_BLOBSTORE_SECRET_KEY` | — | `string`, secret | — | api, worker | Secret key for the object store. |
+| `blobstore_use_ssl` | `MARGINCE_BLOBSTORE_USE_SSL` | — | `bool` | `false` | api, worker | Reach the object store over TLS. |
+| `certlog_base_url` | `MARGINCE_CERTLOG_BASE_URL` | `--certlog-base-url` | `string` | — | worker | Certificate-transparency base URL, or public for crt.sh; unset makes no outbound lookups of what a company runs. |
+| `connector_state_key` | `MARGINCE_CONNECTOR_STATE_KEY` | `--connector-state-key` | `string`, secret | — | api | HMAC key of at least 32 bytes signing the OAuth connect state; required for the Gmail and Graph connect flows. |
+| `dsn` | `MARGINCE_DSN` | `--dsn` | `string`, secret | — | api, migrate, worker | Postgres DSN of the runtime app role; migrate falls back to it when MARGINCE_OWNER_DSN is unset. |
+| `geocode_base_url` | `MARGINCE_GEOCODE_BASE_URL` | `--geocode-base-url` | `string` | — | api, worker | Nominatim base URL, or public; set it on the api and the worker together, or a lookup is never queued. |
+| `gmail_client_id` | `MARGINCE_GMAIL_CLIENT_ID` | `--gmail-client-id` | `string` | — | api, worker | Google OAuth client id of the Gmail capture connector. |
+| `gmail_client_secret` | `MARGINCE_GMAIL_CLIENT_SECRET` | `--gmail-client-secret` | `string`, secret | — | api, worker | Google OAuth client secret of the Gmail capture connector. |
+| `gmail_jwks_url` | `MARGINCE_GMAIL_JWKS_URL` | `--gmail-jwks-url` | `string` | — | api | Override of Google's OIDC JWKS URL, for test and dev. |
+| `gmail_pubsub_topic` | `MARGINCE_GMAIL_PUBSUB_TOPIC` | `--gmail-pubsub-topic` | `string` | — | worker | Gmail Pub/Sub topic (projects/<p>/topics/<t>) that enables the push-watch job; unset leaves capture on the poll. |
+| `gmail_push_audience` | `MARGINCE_GMAIL_PUSH_AUDIENCE` | `--gmail-push-audience` | `string` | — | api | OIDC audience the Pub/Sub push subscription mints tokens for. |
+| `gmail_push_service_account` | `MARGINCE_GMAIL_PUSH_SERVICE_ACCOUNT` | `--gmail-push-service-account` | `string` | — | api | Google service account email that signs the Pub/Sub push OIDC tokens. |
+| `gmail_push_token` | `MARGINCE_GMAIL_PUSH_TOKEN` | `--gmail-push-token` | `string`, secret | — | api | Shared secret on the Pub/Sub push URL; unset, POST /webhooks/gmail is absent. |
+| `graph_client_id` | `MARGINCE_GRAPH_CLIENT_ID` | `--graph-client-id` | `string` | — | api, worker | Microsoft Entra application id of the Outlook/M365 capture connector. |
+| `graph_client_secret` | `MARGINCE_GRAPH_CLIENT_SECRET` | `--graph-client-secret` | `string`, secret | — | api, worker | Microsoft client secret of the Outlook/M365 capture connector. |
+| `graph_notification_url` | `MARGINCE_GRAPH_NOTIFICATION_URL` | `--graph-notification-url` | `string`, secret | — | worker | Public URL, token included, that Microsoft posts Graph change notifications to; unset leaves Outlook capture on the poll. |
+| `graph_push_token` | `MARGINCE_GRAPH_PUSH_TOKEN` | `--graph-push-token` | `string`, secret | — | api | Shared secret on the Graph change-notification URL; unset, POST /webhooks/graph is absent. |
+| `graph_tenant` | `MARGINCE_GRAPH_TENANT` | `--graph-tenant` | `string` | — | api, worker | Microsoft identity tenant of the capture consent endpoint and token refresh; unset means common. |
+| `inline_relay` | `MARGINCE_INLINE_RELAY` | `--inline-relay` | `bool` | `true` | api | Run the outbox relay in this process; false when cmd/worker runs it. |
+| `job_drain_window` | `MARGINCE_JOB_DRAIN_WINDOW` | `--job-drain-window` | `duration` | `20s` | worker | How long a running job gets to finish at shutdown; the grace period must cover it plus 5s and the teardown. |
+| `keyvault_root_key` | `MARGINCE_KEYVAULT_ROOT_KEY` | — | `string`, secret | — | api, worker | Base64 (standard, padded) 32-byte root key sealing connector credentials; unset disables the vault. |
+| `log_format` | `MARGINCE_LOG_FORMAT` | `--log-format` | `enum(text\|json)` | `text` | api, worker | Log format. |
+| `log_level` | `MARGINCE_LOG_LEVEL` | `--log-level` | `enum(debug\|info\|warn\|error)` | `info` | api, worker | Log level. |
+| `mcp_apps_base_url` | `MARGINCE_MCP_APPS_BASE_URL` | `--mcp-apps-base-url` | `string` | — | api | Origin the api reads the MCP App view documents from; defaults to --public-base-url. |
+| `metrics_access` | `MARGINCE_METRICS_ACCESS` | `--metrics-access` | `enum(token\|open)` | `token` | api | Who /metrics serves: token requires --metrics-token, open serves anyone who reaches the port. |
+| `metrics_token` | `MARGINCE_METRICS_TOKEN` | `--metrics-token` | `string`, secret | — | api | Bearer credential /metrics requires; unset, /metrics refuses every scrape unless --metrics-access=open. |
+| `microsoft_signin_tenant` | `MARGINCE_MICROSOFT_SIGNIN_TENANT` | `--microsoft-signin-tenant` | `string` | — | api | Comma-separated Entra directory ids whose members may sign in; defaults to --graph-tenant when that names a directory. |
+| `observe_addr` | `MARGINCE_OBSERVE_ADDR` | `--observe-addr` | `string` | — | worker | Address to serve the worker's /healthz, /readyz and /metrics on, such as 127.0.0.1:9101; unset serves nothing. |
+| `observe_pprof` | `MARGINCE_OBSERVE_PPROF` | `--observe-pprof` | `bool` | `false` | worker | Mount the unauthenticated pprof handlers under /debug/pprof/ on the --observe-addr listener; turn it on only to diagnose. |
+| `owner_dsn` | `MARGINCE_OWNER_DSN` | — | `string`, secret | — | migrate | Postgres DSN of the owner role, which migrate applies the schema with. |
+| `provider_surfe` | `MARGINCE_PROVIDER_SURFE` | — | `string` | `live` | api, worker | Enrichment provider: live, offline or off; an unknown value fails the boot. |
+| `public_base_url` | `MARGINCE_PUBLIC_BASE_URL` | `--public-base-url` | `string` | — | api, worker | External scheme and host for buyer-facing links and the OAuth callback; required to send mail. |
+| `redis` | `MARGINCE_REDIS` | `--redis` | `non-empty string` | `localhost:16379` | api, worker | Redis address of the event bus. |
+| `redis_password` | `MARGINCE_REDIS_PASSWORD` | `--redis-password` | `string`, secret | — | api, worker | Event-bus credential, where the Redis server requires one. |
+| `schema_dsn` | `MARGINCE_SCHEMA_DSN` | `--schema-dsn` | `string`, secret | — | api | Postgres DSN of the owner role for custom-field schema changes; unset, those two operations answer 501. |
+| `trusted_proxies` | `MARGINCE_TRUSTED_PROXIES` | `--trusted-proxies` | `string` | — | api | Comma-separated CIDR prefixes of the reverse proxies whose X-Forwarded-For per-IP rate limits believe. |
+| `vat_check_base_url` | `MARGINCE_VAT_CHECK_BASE_URL` | `--vat-check-base-url` | `string` | — | api, worker | VIES base URL, or public; set it on the api and the worker together, or a VAT check is never queued. |
+| `webhook_key` | `MARGINCE_WEBHOOK_KEY` | `--webhook-key` | `string`, secret | — | api, worker | Base64 32-byte key sealing outbound-webhook signing secrets; unset, the mutating webhook paths answer 503 and the worker delivers nothing. |
+| `work_dir` | `MARGINCE_AITASK_DIR` | `--work-dir` | `non-empty string` | `.tmp/aitask` | worker | Directory the worker aitask probes write their artifacts to. |
+
+### `activities`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `activities.follow_up_after_days` | `MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS` | — | `int`, 1 to 30, stored | `2` | api, worker | Days a sent message may go unanswered before the sender's worklist reminds them to follow up. |
+
+### `ai`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `ai.budget` | `MARGINCE_AI_BUDGET` | — | `object`, stored | `{"tokens_per_full_user":12000000,"company_monthly_tokens":null}` | api, worker | The company's monthly AI token allowance, as tokens_per_full_user and company_monthly_tokens (null for the per-user sum). |
+| `ai.capture_payloads` | `MARGINCE_AI_CAPTURE_PAYLOADS` | — | `bool` | `false` | api, worker | Keep each AI call's request and answer in ai_call_payload, aged by its retention policy; set it on the api and the worker together. |
+| `ai.price_sync` | `MARGINCE_AI_PRICE_SYNC` | — | `object`, stored | `{"auto_sync":true}` | api, worker | Whether the daily job syncs model prices, as {"auto_sync": true\|false}. Refresh now runs either way. |
+| `ai.provider_keys_anthropic` | `ANTHROPIC_API_KEY` | — | `string`, secret, stored | — | api, worker | BYOK API key for the anthropic provider; required only when a binding names it. |
+| `ai.provider_keys_gemini` | `GEMINI_API_KEY` | — | `string`, secret, stored | — | api, worker | BYOK API key for the gemini provider; required only when a binding names it. |
+| `ai.provider_keys_gemini_vertex` | `GEMINI_VERTEX_SA_JSON` | — | `string`, secret, stored | — | api, worker | BYOK service-account key (the JSON key file's contents) for the gemini_vertex provider; required only when a binding names it. |
+| `ai.provider_keys_jev` | `TYPESAFE_API_KEY` | — | `string`, secret, stored | — | api, worker | API key for TypeSafe's jev decision provider; required only when the decisions lane binds it. |
+| `ai.provider_keys_jev_compatible` | `JEV_COMPATIBLE_API_KEY` | — | `string`, secret, stored | — | api, worker | API key for a jev_compatible decision server; sent when set and never required. |
+| `ai.provider_keys_openai` | `OPENAI_API_KEY` | — | `string`, secret, stored | — | api, worker | BYOK API key for the openai provider; required only when a binding names it. |
+| `ai.provider_keys_openai_compatible` | `OPENAI_COMPATIBLE_API_KEY` | — | `string`, secret, stored | — | api, worker | BYOK API key for the openai_compatible provider; required only when a binding names it. |
+| `ai.routing` | `MARGINCE_AI_ROUTING_BINDING` | — | `object`, stored | `{"tiers":null,"embeddings":{"provider":"","model":"","base_url":"","dimensions":0},"profile":""}` | api, worker | The tier-to-model binding, in the shape seeds.ai_routing takes (JSON in the environment). Unset binds no models. |
+| `ai.task_overrides` | `MARGINCE_AI_TASK_OVERRIDES` | — | `object`, stored | `{}` | api, worker | Each task's thinking level and timeouts, as the JSON object PUT /ai/task-overrides takes. Unset keeps the product's values. |
+
+### `analytics`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `analytics.performance_enabled` | `MARGINCE_ANALYTICS_PERFORMANCE_ENABLED` | — | `bool` | `false` | api, worker | Ignored; kept so existing files load. |
+
+### `auth`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `auth.password.enabled` | `MARGINCE_AUTH_PASSWORD_ENABLED` | — | `bool` | `true` | api | Email and password sign-in; an installation behind its own identity provider turns it off. |
+
+### `capture`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `capture.auto_enrich` | `MARGINCE_CAPTURE_AUTO_ENRICH` | — | `bool`, stored | `true` | api, worker | Read a new contact's company web page automatically. |
+| `capture.auto_enrich_daily_cap` | `MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP` | — | `int`, 1 to 20000, stored | `500` | api, worker | Automatic company web-page reads the installation may start in one UTC day. |
+| `capture.freemail_extra` | `MARGINCE_CAPTURE_FREEMAIL_EXTRA` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
+| `capture.freemail_never` | `MARGINCE_CAPTURE_FREEMAIL_NEVER` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
+| `capture.mail_sharing` | `MARGINCE_CAPTURE_MAIL_SHARING` | — | `bool`, stored | `true` | api, worker | Let every colleague who can see a contact read the email captured with them; off holds new mail to its participants. |
+| `capture.mail_sync_interval_seconds` | `MARGINCE_CAPTURE_MAIL_SYNC_INTERVAL_SECONDS` | — | `int`, 30 to 3600, stored | `120` | api, worker | Seconds a healthy mailbox connection waits between polls. |
+| `capture.max_backfill_months` | `MARGINCE_CAPTURE_MAX_BACKFILL_MONTHS` | — | `int` | `0` | api, worker | How far back a mailbox import may reach, for the whole installation; 0 is no cap. |
+| `capture.shared_posture_allowed` | `MARGINCE_CAPTURE_SHARED_POSTURE_ALLOWED` | — | `bool`, stored | `false` | api, worker | Allow a seat to share their mailbox with colleagues as mail lands; turn it on only under a works-council agreement. |
+| `capture.signature_enrich` | `MARGINCE_CAPTURE_SIGNATURE_ENRICH` | — | `bool`, stored | `true` | api, worker | Read contact details from the signatures and attached cards of captured mail, for every mailbox that has not chosen. |
+| `capture.site_read_max_mib` | `MARGINCE_CAPTURE_SITE_READ_MAX_MIB` | — | `int`, 1 to 128, stored | `32` | api, worker | MiB one company web-page read may hold, summed over its pages. |
+| `capture.site_read_max_pages` | `MARGINCE_CAPTURE_SITE_READ_MAX_PAGES` | — | `int`, 1 to 200, stored | `60` | api, worker | Pages one company web-page read may fetch. |
+| `capture.site_read_wall_seconds` | `MARGINCE_CAPTURE_SITE_READ_WALL_SECONDS` | — | `int`, 30 to 600, stored | `240` | api, worker | Seconds one company web-page read may run before it stops and extracts what it has. |
+| `capture.skip_reserved_domain_proposals` | `MARGINCE_CAPTURE_SKIP_RESERVED_DOMAIN_PROPOSALS` | — | `bool` | `true` | api, worker | Raise no contact proposal for a sender on an RFC 2606 reserved name; the mail is still captured. |
+| `capture.trace_payloads` | `MARGINCE_CAPTURE_TRACE_PAYLOADS` | — | `bool` | `true` | api, worker | Keep each traced message's sender and a bounded subject in the 24-hour capture trace, dropped messages included. |
+| `capture.transactional_extra` | `MARGINCE_CAPTURE_TRANSACTIONAL_EXTRA` | — | `list<string>` | — | api, worker | Mail-infrastructure domains added to the built-in list; their mail keeps the activity and derives no counterparty. |
+| `capture.transactional_never` | `MARGINCE_CAPTURE_TRANSACTIONAL_NEVER` | — | `list<string>` | — | api, worker | Domains never suppressed as transactional, whatever the built-in rules say. |
+
+### `company_context`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `company_context.rollout` | `MARGINCE_COMPANY_CONTEXT_ROLLOUT` | — | `enum(off\|read\|tasks\|onboarding)` | `onboarding` | api | Company-context stage: off, read (reads and settings), tasks (AI tasks receive it) or onboarding (the first-run flow too). |
+
+### `consent`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `consent.authorization_modes` | `MARGINCE_CONSENT_AUTHORIZATION_MODES` | — | `map<string,string>`, stored | `account_notice:enforce,active_deal_followup:enforce,consent_confirmation:enforce,contract_notice:enforce,customer_service:enforce,invoice_or_payment:enforce,marketing:enforce,optout_confirmation:enforce,precontract_quote:enforce,privacy_notice:enforce,record_confirmation:enforce,reply_to_inbound:enforce,requested_followup:enforce,security_notice:enforce` | api, worker | The authority the authorization engine's answer carries for each communication category: observe, warn or enforce. |
+| `consent.controller_particulars` | `MARGINCE_CONSENT_CONTROLLER_PARTICULARS` | — | `object`, stored | — | api, worker | Who this installation is, as every message it sends must say: legal name, postal address, privacy contact, objection route and advertiser contact. |
+
+### `contacts`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `contacts.first_response_enabled` | `MARGINCE_CONTACTS_FIRST_RESPONSE_ENABLED` | — | `bool`, stored | `false` | api, worker | Track a first-response target on every lead. |
+| `contacts.first_response_target_minutes` | `MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES` | — | `int`, 15 to 10080, stored | `240` | api, worker | Minutes a lead may wait for its first real response once its clock starts. |
+| `contacts.signature_template` | `MARGINCE_CONTACTS_SIGNATURE_TEMPLATE` | — | `string`, stored | — | api, worker | The workspace's email signature layout, which replaces each sender's own signature. Empty means none. |
+| `contacts.unassigned_escalation_user_id` | `MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID` | — | `string`, stored | — | api, worker | The user id of the colleague who answers for a lead nobody owns once it breaches its target. Empty means nobody. A value set at boot is not checked against the colleagues: one who is not an active colleague escalates to nobody, and the log warns. |
+
+### `deals`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `deals.legal_review_enabled` | `MARGINCE_DEALS_LEGAL_REVIEW_ENABLED` | — | `bool`, stored | `true` | api, worker | Let a deal be sent to legal for review, and let a legal_reviewed criterion block an advance. |
+| `deals.maintenance_writes_enabled` | `MARGINCE_DEALS_MAINTENANCE_WRITES_ENABLED` | — | `bool`, stored | `true` | api, worker | Let the nightly close-date sweep write to a deal. Off stops every automatic write the sweep makes. |
+| `deals.stage_autopilot_enabled` | `MARGINCE_DEALS_STAGE_AUTOPILOT_ENABLED` | — | `bool`, stored | `false` | api, worker | Let a stage transition move a deal by itself where its rule has earned it. Off stops every automatic move. |
+
+### `email`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `email.enabled` | `MARGINCE_EMAIL_ENABLED` | — | `bool` | `false` | api, worker | Send the installation's own mail through the SMTP relay below; needs --public-base-url. |
+| `email.from_address` | `MARGINCE_EMAIL_FROM_ADDRESS` | — | `string` | — | api, worker | Sender address of the installation's own mail; required when email.enabled. |
+| `email.smtp.host` | `MARGINCE_EMAIL_SMTP_HOST` | — | `string` | — | api, worker | SMTP relay host; required when email.enabled. |
+| `email.smtp.password` | `MARGINCE_EMAIL_SMTP_PASSWORD` | — | `string`, secret | — | api, worker | SMTP relay password, sealed into the key vault at boot; ${none} deletes the sealed copy and sends without one. |
+| `email.smtp.password_file` | `MARGINCE_EMAIL_SMTP_PASSWORD_FILE` | — | `string` | — | api, worker | Path to a file holding the SMTP relay password; email.smtp.password wins over it. |
+| `email.smtp.port` | `MARGINCE_EMAIL_SMTP_PORT` | — | `int` | `0` | api, worker | SMTP relay port, 1 to 65535 when email.enabled. |
+| `email.smtp.username` | `MARGINCE_EMAIL_SMTP_USERNAME` | — | `string` | — | api, worker | SMTP relay user; unset sends without authenticating. |
+
+### `identity`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `identity.enabled_oidc_providers` | `MARGINCE_IDENTITY_ENABLED_OIDC_PROVIDERS` | — | `list<string>`, stored | — | api, worker | The sign-in providers offered, as a list of provider keys. Unset offers every provider the deployment configured. |
+| `identity.oidc_group_role_map` | `MARGINCE_IDENTITY_OIDC_GROUP_ROLE_MAP` | — | `map<string,string>`, stored | — | api, worker | The role each directory group grants at sign-in, as group:role pairs. Grants only; it never takes a role away. |
+| `identity.require_mfa` | `MARGINCE_IDENTITY_REQUIRE_MFA` | — | `bool`, stored | `false` | api, worker | Every member must sign in with a second factor. |
+| `identity.require_sso` | `MARGINCE_IDENTITY_REQUIRE_SSO` | — | `bool`, stored | `false` | api, worker | Members other than admins sign in only through a sign-in provider. |
+
+### `installation`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `installation.agent_calls_per_window` | `MARGINCE_INSTALLATION_AGENT_CALLS_PER_WINDOW` | — | `int`, 50 to 20000, stored | `1000` | api, worker | Calls of any kind, tool or API, one agent passport may make per window. |
+| `installation.agent_egress_per_window` | `MARGINCE_INSTALLATION_AGENT_EGRESS_PER_WINDOW` | — | `int`, 1 to 200, stored | `20` | api, worker | Calls that send something out of the workspace one agent passport may make per window. |
+| `installation.agent_runner_interval_seconds` | `MARGINCE_INSTALLATION_AGENT_RUNNER_INTERVAL_SECONDS` | — | `int`, 10 to 3600, stored | `30` | api, worker | Seconds between the agent scheduler's passes. |
+| `installation.agent_window_hours` | `MARGINCE_INSTALLATION_AGENT_WINDOW_HOURS` | — | `int`, 1 to 168, stored | `24` | api, worker | Hours in the window the agent allowances count over. Set at boot, it also keeps a length an administrator saved for the next reset from taking over. |
+| `installation.agent_writes_per_window` | `MARGINCE_INSTALLATION_AGENT_WRITES_PER_WINDOW` | — | `int`, 10 to 5000, stored | `200` | api, worker | Changing calls one agent passport may make per window. |
+| `installation.base_language` | `MARGINCE_INSTALLATION_BASE_LANGUAGE` | — | `string`, stored | `en` | api, worker | The language AI writes the shared record in: en, de or vi. |
+| `installation.close_date_sweep_interval_seconds` | `MARGINCE_INSTALLATION_CLOSE_DATE_SWEEP_INTERVAL_SECONDS` | — | `int`, 3600 to 604800, stored | `86400` | api, worker | Seconds between the close-date sweeps. |
+| `installation.country` | `MARGINCE_INSTALLATION_COUNTRY` | — | `string`, stored | `""` | api, worker | Where the installation is established, as a two-letter ISO 3166-1 code in small letters; empty for none. |
+| `installation.date_format` | `MARGINCE_INSTALLATION_DATE_FORMAT` | — | `string`, stored | `locale` | api, worker | How dates are written: locale, dmy, mdy or ymd. |
+| `installation.dead_work_banner_hours` | `MARGINCE_INSTALLATION_DEAD_WORK_BANNER_HOURS` | — | `int`, stored | `24` | api, worker | Hours the job-health banner looks back before it calls dead work a problem. |
+| `installation.fiscal_year_start_month` | `MARGINCE_INSTALLATION_FISCAL_YEAR_START_MONTH` | — | `int`, stored | `1` | api, worker | The month the business year begins, 1 to 12. |
+| `installation.follow_up_reconcile_interval_seconds` | `MARGINCE_INSTALLATION_FOLLOW_UP_RECONCILE_INTERVAL_SECONDS` | — | `int`, 3600 to 604800, stored | `86400` | api, worker | Seconds between the follow-up reconcile passes. |
+| `installation.forecast_forward_measure` | `MARGINCE_INSTALLATION_FORECAST_FORWARD_MEASURE` | — | `string`, stored | `commit_evidence` | api, worker | Which remaining-pipeline reading a projected landing is built from. |
+| `installation.geocode_backfill_interval_seconds` | `MARGINCE_INSTALLATION_GEOCODE_BACKFILL_INTERVAL_SECONDS` | — | `int`, stored | `3600` | api, worker | Seconds between the geocoding backfill sweeps, or 0 for off. |
+| `installation.gmail_watch_renew_within_hours` | `MARGINCE_INSTALLATION_GMAIL_WATCH_RENEW_WITHIN_HOURS` | — | `int`, 24 to 144, stored | `48` | api, worker | Hours before a Gmail push subscription expires that it is renewed. |
+| `installation.gmail_watch_scan_interval_seconds` | `MARGINCE_INSTALLATION_GMAIL_WATCH_SCAN_INTERVAL_SECONDS` | — | `int`, 600 to 43200, stored | `21600` | api, worker | Seconds between the scans for Gmail push subscriptions due for renewal. |
+| `installation.graph_watch_renew_within_hours` | `MARGINCE_INSTALLATION_GRAPH_WATCH_RENEW_WITHIN_HOURS` | — | `int`, 24 to 60, stored | `24` | api, worker | Hours before a Microsoft Graph mail subscription expires that it is renewed. |
+| `installation.graph_watch_scan_interval_seconds` | `MARGINCE_INSTALLATION_GRAPH_WATCH_SCAN_INTERVAL_SECONDS` | — | `int`, 600 to 43200, stored | `21600` | api, worker | Seconds between the scans for Microsoft Graph mail subscriptions due for renewal. |
+| `installation.name` | `MARGINCE_INSTALLATION_NAME` | — | `string`, stored | — | api, worker | The company's name. Set at boot, it also refuses a different name on the company profile. |
+| `installation.oauth_access_token_ttl_minutes` | `MARGINCE_INSTALLATION_OAUTH_ACCESS_TOKEN_TTL_MINUTES` | — | `int`, 5 to 129600, stored | `43200` | api, worker | Minutes an access token from a connector's OAuth handshake lives, for the code exchange and every refresh. |
+| `installation.retention_sweep_interval_seconds` | `MARGINCE_INSTALLATION_RETENTION_SWEEP_INTERVAL_SECONDS` | — | `int`, 3600 to 604800, stored | `86400` | api, worker | Seconds between the retention sweeps. |
+| `installation.send_max_age_hours` | `MARGINCE_INSTALLATION_SEND_MAX_AGE_HOURS` | — | `int`, 1 to 168, stored | `24` | api, worker | Hours a delivery held back by the send rate may wait before it stops with a reason. |
+| `installation.send_rate_limit` | `MARGINCE_INSTALLATION_SEND_RATE_LIMIT` | — | `int`, 1 to 1000, stored | `30` | api, worker | Messages one mailbox may send per send-rate window. |
+| `installation.send_rate_window_seconds` | `MARGINCE_INSTALLATION_SEND_RATE_WINDOW_SECONDS` | — | `int`, 10 to 3600, stored | `60` | api, worker | Seconds in the window the send rate is counted over. |
+| `installation.technical_backfill_interval_seconds` | `MARGINCE_INSTALLATION_TECHNICAL_BACKFILL_INTERVAL_SECONDS` | — | `int`, stored | `21600` | api, worker | Seconds between the technical backfill sweeps, or 0 for off. |
+| `installation.time_format` | `MARGINCE_INSTALLATION_TIME_FORMAT` | — | `string`, stored | `locale` | api, worker | How times of day are written: locale, 24h or 12h. |
+| `installation.time_scan_interval_seconds` | `MARGINCE_INSTALLATION_TIME_SCAN_INTERVAL_SECONDS` | — | `int`, 60 to 86400, stored | `3600` | api, worker | Seconds between the time-scan passes. |
+| `installation.webhook_retry_interval_seconds` | `MARGINCE_INSTALLATION_WEBHOOK_RETRY_INTERVAL_SECONDS` | — | `int`, 10 to 3600, stored | `30` | api, worker | Seconds between the passes that retry failed webhook deliveries. |
+
+### `integrations`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `integrations.automatic_lookup` | `MARGINCE_INTEGRATIONS_AUTOMATIC_LOOKUP` | — | `bool`, stored | `true` | api, worker | Look each new contact up once against the connected data provider for the free details, without anybody asking. |
+
+### `license`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `license.token` | `MARGINCE_LICENSE` | — | `string`, secret | — | api, worker | Licence token; unset with no license.token_file runs unlicensed, which production refuses. |
+| `license.token_file` | `MARGINCE_LICENSE_TOKEN_FILE` | — | `string` | — | api, worker | Path to a file holding the licence token, read again at each licence check; license.token wins over it. |
+
+### `lists`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `lists.enabled` | `MARGINCE_LISTS_ENABLED` | — | `bool` | `true` | api, worker | Live Lists and Shortlists; false hides every list surface and deletes no list. |
+
+### `mcp`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `mcp.connector_enabled` | `MARGINCE_MCP_CONNECTOR_ENABLED` | — | `bool` | `false` | api | Serve /mcp and the OAuth authorization server to outside agent clients; needs --public-base-url. |
+
+### `operations`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `operations.allow_data_reset` | `MARGINCE_OPERATIONS_ALLOW_DATA_RESET` | — | `bool` | `false` | api, worker | Arm POST /v1/admin/reset-data, which purges this installation's tenant data back to its first-boot state. |
+| `operations.allow_test_mailbox` | `MARGINCE_OPERATIONS_ALLOW_TEST_MAILBOX` | — | `bool` | `false` | api, worker | Arm the test_mailbox connector, a no-network fake mailbox that captures and sends; never on a real deployment. |
+
+### `privacy`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `privacy.retain_only` | `MARGINCE_PRIVACY_RETAIN_ONLY` | — | `bool`, stored | `false` | api, worker | Destroy nothing: the nightly retention pass applies no anonymize and no erase, whatever a policy says. |
+
+### `rates`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `rates.fx_currencies` | `MARGINCE_RATES_FX_CURRENCIES` | — | `list<string>` | — | worker | ISO 4217 codes the FX refresh proposes for an empty rate sheet; unset proposes USD, GBP and CHF. |
+| `rates.fx_source` | `MARGINCE_RATES_FX_SOURCE` | — | `string` | — | worker | Page the FX refresh reads rates from; unset reads api.frankfurter.dev. |
+| `rates.model_pricing` | `MARGINCE_RATES_MODEL_PRICING` | — | `map<string,string>` | — | api, worker | Ignored, with a warning at boot; kept so existing files load. |
+
+### `uploads`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `uploads.attachment_mb` | `MARGINCE_UPLOADS_ATTACHMENT_MB` | — | `int`, 1 to 100 | `25` | api, worker | Largest request POST /v1/attachments takes, in decimal MB. |
+| `uploads.csv_import_mb` | `MARGINCE_UPLOADS_CSV_IMPORT_MB` | — | `int`, 1 to 100 | `10` | api, worker | Largest request POST /v1/imports/sources and the vCard import take, in decimal MB. |
+| `uploads.knowledge_document_mb` | `MARGINCE_UPLOADS_KNOWLEDGE_DOCUMENT_MB` | — | `int`, 1 to 100 | `5` | api, worker | Largest document POST /v1/knowledge/corpora/{id}/documents takes, in decimal MB. |
+| `uploads.linkedin_import_mb` | `MARGINCE_UPLOADS_LINKEDIN_IMPORT_MB` | — | `int`, 1 to 100 | `8` | api, worker | Largest request POST /v1/me/linkedin-connections takes, in decimal MB. |
+
+### `web`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `web.security_txt` | `MARGINCE_WEB_SECURITY_TXT` | — | `object` | `null` | api | RFC 9116 security.txt: contact (mailto:, https: or tel: URIs) and an RFC 3339 expires, with optional policy and preferred_languages. |
+
+<!-- generated:config:end -->
 
 ### Settings a boot source can set
 
-An admin changes each setting below under Settings. An operator can also set one at boot, by its
-variable or by its key in `margince.yaml` or `--config-file`. A value set at boot wins over the value
+An admin changes each setting whose Type says stored, in [Every setting](#every-setting), under
+Settings. An operator can also set one at boot, by its variable or by its key in `margince.yaml` or
+`--config-file`. A value set at boot wins over the value
 saved in the database, and the row is left as it is. The setting is then locked. A save of any other
 value gets a 409 that names the source, and a save of the same value changes nothing.
-
-| Env | Default | Key |
-|---|---|---|
-| `MARGINCE_INSTALLATION_NAME` | — | `installation.name` |
-| `MARGINCE_INSTALLATION_COUNTRY` | — (none) | `installation.country` |
-| `MARGINCE_INSTALLATION_BASE_LANGUAGE` | `en` (`en`, `de` or `vi`) | `installation.base_language` |
-| `MARGINCE_INSTALLATION_DATE_FORMAT` | `locale` (`dmy`, `mdy` or `ymd`) | `installation.date_format` |
-| `MARGINCE_INSTALLATION_TIME_FORMAT` | `locale` (`24h` or `12h`) | `installation.time_format` |
-| `MARGINCE_INSTALLATION_FISCAL_YEAR_START_MONTH` | `1` (1 to 12) | `installation.fiscal_year_start_month` |
-| `MARGINCE_INSTALLATION_DEAD_WORK_BANNER_HOURS` | `24` (1 to 168) | `installation.dead_work_banner_hours` |
-| `MARGINCE_INSTALLATION_FORECAST_FORWARD_MEASURE` | `commit_evidence` (`weighted` or `manager_call`) | `installation.forecast_forward_measure` |
-| `MARGINCE_IDENTITY_ENABLED_OIDC_PROVIDERS` | — (every provider the deployment sets up) | `identity.enabled_oidc_providers`, a `,` list |
-| `MARGINCE_IDENTITY_REQUIRE_SSO` | `false` | `identity.require_sso` |
-| `MARGINCE_IDENTITY_REQUIRE_MFA` | `false` | `identity.require_mfa` |
-| `MARGINCE_IDENTITY_OIDC_GROUP_ROLE_MAP` | — | `identity.oidc_group_role_map`, as `group:role` pairs in a `,` list |
-| `MARGINCE_INSTALLATION_OAUTH_ACCESS_TOKEN_TTL_MINUTES` | `43200` (5 to 129600) | `installation.oauth_access_token_ttl_minutes` |
-| `MARGINCE_INSTALLATION_AGENT_RUNNER_INTERVAL_SECONDS` | `30` (10 to 3600) | `installation.agent_runner_interval_seconds` |
-| `MARGINCE_INSTALLATION_WEBHOOK_RETRY_INTERVAL_SECONDS` | `30` (10 to 3600) | `installation.webhook_retry_interval_seconds` |
-| `MARGINCE_INSTALLATION_TIME_SCAN_INTERVAL_SECONDS` | `3600` (60 to 86400) | `installation.time_scan_interval_seconds` |
-| `MARGINCE_INSTALLATION_CLOSE_DATE_SWEEP_INTERVAL_SECONDS` | `86400` (3600 to 604800) | `installation.close_date_sweep_interval_seconds` |
-| `MARGINCE_INSTALLATION_FOLLOW_UP_RECONCILE_INTERVAL_SECONDS` | `86400` (3600 to 604800) | `installation.follow_up_reconcile_interval_seconds` |
-| `MARGINCE_INSTALLATION_RETENTION_SWEEP_INTERVAL_SECONDS` | `86400` (3600 to 604800) | `installation.retention_sweep_interval_seconds` |
-| `MARGINCE_INSTALLATION_GEOCODE_BACKFILL_INTERVAL_SECONDS` | `3600` (300 to 604800, or `0` for off) | `installation.geocode_backfill_interval_seconds` |
-| `MARGINCE_INSTALLATION_TECHNICAL_BACKFILL_INTERVAL_SECONDS` | `21600` (300 to 604800, or `0` for off) | `installation.technical_backfill_interval_seconds` |
-| `MARGINCE_INSTALLATION_GMAIL_WATCH_SCAN_INTERVAL_SECONDS` | `21600` (600 to 43200) | `installation.gmail_watch_scan_interval_seconds` |
-| `MARGINCE_INSTALLATION_GRAPH_WATCH_SCAN_INTERVAL_SECONDS` | `21600` (600 to 43200) | `installation.graph_watch_scan_interval_seconds` |
-| `MARGINCE_INSTALLATION_GMAIL_WATCH_RENEW_WITHIN_HOURS` | `48` (24 to 144) | `installation.gmail_watch_renew_within_hours` |
-| `MARGINCE_INSTALLATION_GRAPH_WATCH_RENEW_WITHIN_HOURS` | `24` (24 to 60) | `installation.graph_watch_renew_within_hours` |
-| `MARGINCE_INSTALLATION_SEND_RATE_LIMIT` | `30` (1 to 1000) | `installation.send_rate_limit` |
-| `MARGINCE_INSTALLATION_SEND_RATE_WINDOW_SECONDS` | `60` (10 to 3600) | `installation.send_rate_window_seconds` |
-| `MARGINCE_INSTALLATION_SEND_MAX_AGE_HOURS` | `24` (1 to 168) | `installation.send_max_age_hours` |
-| `MARGINCE_INSTALLATION_AGENT_WRITES_PER_WINDOW` | `200` (10 to 5000) | `installation.agent_writes_per_window` |
-| `MARGINCE_INSTALLATION_AGENT_EGRESS_PER_WINDOW` | `20` (1 to 200) | `installation.agent_egress_per_window` |
-| `MARGINCE_INSTALLATION_AGENT_CALLS_PER_WINDOW` | `1000` (50 to 20000) | `installation.agent_calls_per_window` |
-| `MARGINCE_INSTALLATION_AGENT_WINDOW_HOURS` | `24` (1 to 168) | `installation.agent_window_hours` |
-| `MARGINCE_CAPTURE_AUTO_ENRICH` | `true` | `capture.auto_enrich` |
-| `MARGINCE_CAPTURE_MAIL_SHARING` | `true` | `capture.mail_sharing` |
-| `MARGINCE_CAPTURE_SHARED_POSTURE_ALLOWED` | `false` | `capture.shared_posture_allowed` |
-| `MARGINCE_CAPTURE_SIGNATURE_ENRICH` | `true` | `capture.signature_enrich` |
-| `MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP` | `500` (1 to 20000) | `capture.auto_enrich_daily_cap` |
-| `MARGINCE_CAPTURE_SITE_READ_MAX_PAGES` | `60` (1 to 200) | `capture.site_read_max_pages` |
-| `MARGINCE_CAPTURE_SITE_READ_MAX_MIB` | `32` (1 to 128) | `capture.site_read_max_mib` |
-| `MARGINCE_CAPTURE_SITE_READ_WALL_SECONDS` | `240` (30 to 600) | `capture.site_read_wall_seconds` |
-| `MARGINCE_CAPTURE_MAIL_SYNC_INTERVAL_SECONDS` | `120` (30 to 3600) | `capture.mail_sync_interval_seconds` |
-| `MARGINCE_INTEGRATIONS_AUTOMATIC_LOOKUP` | `true` | `integrations.automatic_lookup` |
-| `MARGINCE_AI_ROUTING_BINDING` | `{"tiers":null,"embeddings":{"provider":"","model":"","base_url":"","dimensions":0},"profile":""}` (no models bound) | `ai.routing`, in the shape `seeds.ai_routing` takes |
-| `MARGINCE_AI_TASK_OVERRIDES` | `{}` | `ai.task_overrides`, the JSON object `PUT /ai/task-overrides` takes |
-| `MARGINCE_AI_BUDGET` | `{"tokens_per_full_user":12000000,"company_monthly_tokens":null}` (each 1 to 1000000000000) | `ai.budget` |
-| `MARGINCE_AI_PRICE_SYNC` | `{"auto_sync":true}` | `ai.price_sync` |
-| `MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS` | `2` (1 to 30) | `activities.follow_up_after_days` |
-| `MARGINCE_CONSENT_AUTHORIZATION_MODES` | `account_notice:enforce,active_deal_followup:enforce,consent_confirmation:enforce,contract_notice:enforce,customer_service:enforce,invoice_or_payment:enforce,marketing:enforce,optout_confirmation:enforce,precontract_quote:enforce,privacy_notice:enforce,record_confirmation:enforce,reply_to_inbound:enforce,requested_followup:enforce,security_notice:enforce` (each mode `observe`, `warn` or `enforce`) | `consent.authorization_modes`, as `category:mode` pairs in a `,` list |
-| `MARGINCE_CONSENT_CONTROLLER_PARTICULARS` | — (nothing stated) | `consent.controller_particulars`, a JSON object |
-| `MARGINCE_CONTACTS_FIRST_RESPONSE_ENABLED` | `false` | `contacts.first_response_enabled` |
-| `MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES` | `240` (15 to 10080) | `contacts.first_response_target_minutes` |
-| `MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID` | — (nobody) | `contacts.unassigned_escalation_user_id`, a user id |
-| `MARGINCE_CONTACTS_SIGNATURE_TEMPLATE` | — (none) | `contacts.signature_template`, at most 4000 characters |
-| `MARGINCE_DEALS_STAGE_AUTOPILOT_ENABLED` | `false` | `deals.stage_autopilot_enabled` |
-| `MARGINCE_DEALS_MAINTENANCE_WRITES_ENABLED` | `true` | `deals.maintenance_writes_enabled` |
-| `MARGINCE_DEALS_LEGAL_REVIEW_ENABLED` | `true` | `deals.legal_review_enabled` |
-| `MARGINCE_PRIVACY_RETAIN_ONLY` | `false` | `privacy.retain_only` |
-| `ANTHROPIC_API_KEY` | — (secret) | `ai.provider_keys_anthropic` |
-| `OPENAI_COMPATIBLE_API_KEY` | — (secret) | `ai.provider_keys_openai_compatible` |
-| `OPENAI_API_KEY` | — (secret) | `ai.provider_keys_openai` |
-| `GEMINI_API_KEY` | — (secret) | `ai.provider_keys_gemini` |
-| `GEMINI_VERTEX_SA_JSON` | — (secret) | `ai.provider_keys_gemini_vertex`, the JSON of the key file |
-| `TYPESAFE_API_KEY` | — (secret) | `ai.provider_keys_jev` |
-| `JEV_COMPATIBLE_API_KEY` | — (secret) | `ai.provider_keys_jev_compatible` |
 
 A data reset keeps the saved rows of the first 12 settings, from `installation.name` to
 `identity.oidc_group_role_map`, of `ai.routing`, `ai.task_overrides` and `ai.budget`, and of each
@@ -227,10 +387,6 @@ A boot-set `deals.legal_review_enabled` wins over `seeds.legal_review`, and a bo
 
 ## Common log flags (api, worker)
 
-| Flag | Env | Default | Values |
-|---|---|---|---|
-| `--log-level` | `MARGINCE_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
-| `--log-format` | `MARGINCE_LOG_FORMAT` | `text` | `text` (slog text), `json` |
 
 Both roles log to stdout, and their log lines carry the `correlation_id` of each request through the
 correlation slog wrapper. `cmd/migrate` takes no log flag. It writes what it did to stdout and
@@ -240,26 +396,10 @@ failures to stderr, with no logger you can set up.
 
 | Flag | Env | Default | Meaning |
 |---|---|---|---|
-| `--dsn` | `MARGINCE_DSN` | — (required) | Postgres DSN, runtime app role |
 | `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file (`bootstrap` + `auth`: `workspace`, `bootstrap_admin`, `seeds`, `email`; a field it does not know is an error, and secrets are `*_file` references). With a missing file, an installation that already exists still starts; to bootstrap an empty database needs `workspace` + `bootstrap_admin` |
 | `--config-file` | `MARGINCE_CONFIG_FILE` | — | a second YAML file, layered over the base file |
 | `--env-file` | `MARGINCE_ENV_FILE` | — | a `.env` file to read |
 | `--config-trace` | `MARGINCE_CONFIG_TRACE` | `false` | log each configuration source read and the origin of each setting; a secret shows by name only |
-| `--schema-dsn` | `MARGINCE_SCHEMA_DSN` | — | Postgres DSN, **owner** role, for the customfields runtime DDL pool; not set = `createCustomField`/`updateCustomFieldOptions` answer 501 |
-| `--addr` | `MARGINCE_ADDR` | `:8080` | listen address |
-| `--redis` | `MARGINCE_REDIS` | `localhost:16379` | Redis address (event bus). May name a logical database as `host:port/N` (0–79). See below |
-| `--redis-password` | `MARGINCE_REDIS_PASSWORD` | — | Event bus credential, where the Redis server needs one. Empty is the normal case on a network the deployment controls. Set it when anything else can reach the bus; the desktop bundle makes one per installation, because its bus listens on loopback. Use the environment: every process on the machine can read argv |
-| `--inline-relay` | `MARGINCE_INLINE_RELAY` | `true` | run the outbox relay inside this process; set `false` when `cmd/worker` runs it |
-| `--webhook-key` | `MARGINCE_WEBHOOK_KEY` | — | Base64 32-byte key that seals outbound webhook signing secrets at rest. Not set = the `/webhook-subscriptions` paths that change data (create, a new key, replay) answer 503, and Margince never sends without a signature in their place; the read paths still list |
-| `--geocode-base-url` | `MARGINCE_GEOCODE_BASE_URL` | — | Nominatim base URL. Both roles read it: the worker does the lookup, and the api decides whether to queue one. Set it on both or on none. Not set = no geocoding: company addresses keep no map point, and every `within_radius` query answers that it is not available. `public` uses the own service of OpenStreetMap, for a PoC only: its rules let a scheduled client send 4 requests a minute, on one thread, with a cache. Many requests need a server you host yourself |
-| `--vat-check-base-url` | `MARGINCE_VAT_CHECK_BASE_URL` | — | VIES base URL. Both roles read it: the worker sends the request, and the api decides whether to queue one. Set it on both or on none. Not set = no VAT check: Margince stores the VAT ID of a company as its imprint stated it. `public` uses the own service of the Commission, whose rules expect a check now and then; this installation runs one worker that waits between checks |
-| `--certlog-base-url` | `MARGINCE_CERTLOG_BASE_URL` | — | certificate log base URL, on the worker role. Turns on the technical lookup: what a company runs in public, read from its DNS records, its certificate history and one read of its first web page. Not set = off: the company record keeps no technical profile, and its button answers 501. `public` uses [crt.sh](https://crt.sh), free and keyless but small; the reader keeps to one query every 5 seconds and caches every answer |
-| `--trusted-proxies` | `MARGINCE_TRUSTED_PROXIES` | — | CIDR prefixes of the proxies the api sits behind, joined by `,` (an address with no `/N` is its own `/32`). Decides the client address that every rate limit per IP keys on. See [Trusted proxies](#trusted-proxies) |
-| `--metrics-token` | `MARGINCE_METRICS_TOKEN` | — | shared secret `/metrics` needs as a Bearer credential. Not set (the default), `/metrics` refuses every scrape with the same 401 a wrong token gets, unless `--metrics-access=open`. See [Metrics access](#metrics-access) |
-| `--metrics-access` | `MARGINCE_METRICS_ACCESS` | `token` | who `/metrics` serves. `token` needs `--metrics-token`; `open` serves any client that reaches the port. The api warns at boot each time it is open, and refuses to boot with `open` and a token together. See [Metrics access](#metrics-access) |
-| `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **Not used, and warns.** The binding is a stored setting. A new install declares it under `seeds.ai_routing` in `margince.yaml`; a running one changes it through Settings → AI / `PUT /v1/ai/routing`, with no restart. One case works another way: a role that started with nothing bound has no watcher, so restart it once after the first binding is stored. The flag stays registered, so an old command line still reads. A bound installation turns on the cold-start read-back, enrich per organization, the Morning-Brief `L2` order, and offers an AI drafts made again |
-| `--ai-fake` | `MARGINCE_AI_FAKE` | `false` | offline fake model (dev/test only), used only when nothing else can serve: a stored binding that can serve comes before it. It serves when nothing is bound, or when the stored binding cannot be built, so a dev stack with no key still starts. With `MARGINCE_ENV` production, only the flag turns it on: the variable or a file fails the boot |
-| `--public-base-url` | `MARGINCE_PUBLIC_BASE_URL` | — | the one true outside scheme+host for links a buyer sees (RFC 8058 unsubscribe and preference links) and for the Gmail/Graph OAuth callback. Also the API address in the Margince skill when `--api-base-url` is not set. Needed to send marketing mail: a send refuses, and does not derive the link that carries the token from the request Host. See [Public base URL](#public-base-url) |
 | (env-only) | `MARGINCE_PROVIDER_SURFE` | `live` | which licensed data provider adapter this process carries: `live` (default) the Surfe adapter, `offline` a fixed fake for a dev stack, `off` none. See [Licensed-data provider](#licensed-data-provider) |
 
 With `--inline-relay` (the default), a Redis Margince cannot reach fails the boot. Without a relay,
@@ -708,17 +848,7 @@ the api says so. Webhook retries need `cmd/worker`. See
 
 | Flag | Env | Default | Meaning |
 |---|---|---|---|
-| `--dsn` | `MARGINCE_DSN` | — (required) | Postgres DSN, runtime app role |
-| `--public-base-url` | `MARGINCE_PUBLIC_BASE_URL` | — | the one true outside scheme+host for links a buyer sees (the RFC 8058 links to stop or change mail). Required for a marketing send that a Surface-B agent run of this role starts; without it that send refuses, and does not send a link someone could forge |
 | `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment file. The worker reads it for the `ai.capture_payloads` setting the Surface-B runner follows. Capture applies to both the api and worker roles; the worker runs the source with the most content, the agent runs. A missing file starts with capture off. With capture on, the `ai_call_payload` / `content` retention window is the whole limit on what is kept: see [AI payload capture and its window](#ai-payload-capture-and-its-window-api-worker) before you pick one |
-| `--redis` | `MARGINCE_REDIS` | `localhost:16379` | Redis address (event bus). May name a logical database as `host:port/N` (0–79). See below |
-| `--redis-password` | `MARGINCE_REDIS_PASSWORD` | — | Event bus credential, where the instance needs one. Empty is the normal case on a network the deployment controls. Set it where anything else can reach the bus; the desktop bundle makes one per installation, because its bus is open on loopback. Use the environment: every process on the machine can read argv |
-| `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **Not used, and warns** (see the api row). An installation with a stored binding runs the Surface-B runner + embeddings from the database. This role reads the stored binding again on a timer, so it never serves one the api has replaced |
-| `--ai-fake` | `MARGINCE_AI_FAKE` | `false` | run the Surface-B runner on the built-in test model. With `MARGINCE_ENV` production, only the flag turns it on, as on the api |
-| `--webhook-key` | `MARGINCE_WEBHOOK_KEY` | — | base64 32-byte key used to lock outbound webhook signing secrets; not set = the delivery worker stays off (no `cg:webhooks` consumer, no retry sweep) |
-| `--job-drain-window` | `MARGINCE_JOB_DRAIN_WINDOW` | `20s` | how long a job already running at shutdown gets to end before its context is cancelled. Must be more than zero. The grace time of the pod has to cover it plus `5s` and the shutdown steps; see [Stopping the worker](#stopping-the-worker) |
-| `--observe-addr` | `MARGINCE_OBSERVE_ADDR` | — (off) | address to serve the `/healthz`, `/readyz` and `/metrics` of this worker on, such as `127.0.0.1:9101`. Empty serves nothing; see below |
-| `--observe-pprof` | `MARGINCE_OBSERVE_PPROF` | `false` | `true` also serves the Go `net/http/pprof` profiles under `/debug/pprof/` on that same listener; needs `--observe-addr`. Turn it on only for a short time; see below |
 
 ### The operator surface of the worker
 
@@ -936,21 +1066,6 @@ surfaces stay their declared 501. Secrets go through the environment, never CLI 
 (any user can read argv). Roles: **api** serves connect/callback, **worker** runs the background
 sync.
 
-| Flag | Env | Role | Meaning |
-|---|---|---|---|
-| `--gmail-client-id` / `--gmail-client-secret` | `MARGINCE_GMAIL_CLIENT_ID` / `MARGINCE_GMAIL_CLIENT_SECRET` | api + worker | the Google OAuth app; with the state key and `--public-base-url`, it turns on `/connectors/gmail/*` (api) and the sync poll (worker). Not needed once an admin stores the app under Settings (or in the first run). Capture and Google sign-in use the stored app first, and use this pair when sign-in or capture runs, so a stored app needs no restart |
-| `--graph-client-id` / `--graph-client-secret` | `MARGINCE_GRAPH_CLIENT_ID` / `MARGINCE_GRAPH_CLIENT_SECRET` | api + worker | the Microsoft (Entra) app; it turns on `/connectors/graph/*` (Outlook mail) and `/connectors/graphcal/*` (Outlook calendar) the same way. One app serves both, with `Mail.Read` and `Calendars.Read` granted and a redirect URI registered for each; they are separate connections with separate consents. The same rule as for the Google pair, stored app first, applies for capture and for Microsoft sign-in |
-| `--graph-tenant` | `MARGINCE_GRAPH_TENANT` | api + worker | Microsoft identity tenant (default `common`: any company) |
-| `--microsoft-signin-tenant` | `MARGINCE_MICROSOFT_SIGNIN_TENANT` | api | the Entra **directory IDs** (GUIDs, in a `,` list) whose members may sign in through `/auth/oidc/microsoft/*`, on the same client as Graph capture. Defaults to `--graph-tenant` when that already names a directory, not an authority alias. When not set, a Microsoft app stored under Settings signs members in on the directory it is pinned to, and an app with no pin signs nobody in; when set, this list wins over the pin. Add the callback the api prints at boot (`<api-base>/v1/auth/oidc/microsoft/callback`) to the redirect URIs of the Entra app, and grant it the `openid profile email` delegated permissions. See [Microsoft sign-in tenants](#microsoft-sign-in-tenants) |
-| `--connector-state-key` | `MARGINCE_CONNECTOR_STATE_KEY` | api | HMAC key (≥32 bytes) that signs the OAuth connect `state`; required for both connect steps |
-| `--mcp-apps-base-url` | `MARGINCE_MCP_APPS_BASE_URL` | api | the origin the api reads the MCP App view documents from (`GET <origin>/mcp-apps/<view>.html`), read once at start and again from time to time. Defaults to `--public-base-url`, which the connector gate already needs, so where `/mcp` is served the value cannot be empty. The api must reach the value, which can differ from what the public can reach: a container may have no ingress hairpin routing, outside DNS or egress. A CDN origin works, and is a good fit. The scheme must be `https` unless the host is a literal loopback or private address (or `localhost`); a host name in clear text such as `http://web.internal` is refused at boot, naming the setting. With the connector gate off, nothing is read |
-| `--api-base-url` | `MARGINCE_API_BASE_URL` | api | the base of the api that the outside can reach, for the OAuth callback `redirect_uri` and the API address in the Margince skill (see [Public base URL](#public-base-url)); defaults to `--public-base-url`. Set it only when the api and the SPA each have their own origin (such as dev). Telegram needs no public address of its own: its ingress long-polls. Google sign-in (`/auth/oidc/google/*`) uses this `redirect_uri` too, which you must add to `Authorized redirect URIs` of the Google app **in the Google Cloud Console**. Sign-in needs no new credentials past the app (stored under Settings or the `MARGINCE_GMAIL_*` pair) and that Console edit; without it every try ends in `redirect_uri_mismatch`. The routes mount when the state key and this base are set; the login page shows the button once a client is found |
-| `--gmail-pubsub-topic` | `MARGINCE_GMAIL_PUBSUB_TOPIC` | worker | Gmail `Pub/Sub` topic (`projects/<p>/topics/<t>`); turns on the push-watch register and renew job (empty = poll only) |
-| `--gmail-push-token` | `MARGINCE_GMAIL_PUSH_TOKEN` | api | shared secret on the `Pub/Sub` push subscription URL; turns on `POST /webhooks/gmail` (empty = no route) |
-| `--gmail-push-audience` / `--gmail-push-service-account` | `MARGINCE_GMAIL_PUSH_AUDIENCE` / `MARGINCE_GMAIL_PUSH_SERVICE_ACCOUNT` | api | OIDC audience + signing service account email; set both, and the push webhook also checks the Google OIDC token |
-| `--gmail-jwks-url` | `MARGINCE_GMAIL_JWKS_URL` | api | override the Google OIDC JWKS URL; test and dev only |
-| `--graph-notification-url` | `MARGINCE_GRAPH_NOTIFICATION_URL` | worker | public URL Microsoft sends Graph change notices to, operator token included (`https://<api>/webhooks/graph?token=…`); turns on the subscription register and renew job (empty = poll only) |
-| `--graph-push-token` | `MARGINCE_GRAPH_PUSH_TOKEN` | api | shared secret on the Graph change notice URL; turns on `POST /webhooks/graph` (empty = no route). It must be the same token the `--graph-notification-url` of the worker carries, and it is the only check at the gate: Microsoft signs nothing on a change notice |
 
 ### Microsoft sign-in tenants
 
@@ -1024,15 +1139,6 @@ local folder in its place would make the attachments that are already there go m
 - The bucket is created on first connect, and the store waits for a backend that is still starting,
   with a limited retry.
 
-| Env | Default | Meaning |
-|---|---|---|
-| `MARGINCE_BLOBSTORE_ENDPOINT` | — | `S3`/MinIO `host:port`; set it to turn on attachments and company logos |
-| `MARGINCE_BLOBSTORE_ACCESS_KEY` | — | access key |
-| `MARGINCE_BLOBSTORE_SECRET_KEY` | — | secret key |
-| `MARGINCE_BLOBSTORE_BUCKET` | — | bucket name (created on first connect) |
-| `MARGINCE_BLOBSTORE_REGION` | — | region the bucket lives in. Required when an endpoint is set, and it has no default, because it decides where a bucket that holds attachments is created (for MinIO any value works). An installation with only a path creates no bucket and never reads it |
-| `MARGINCE_BLOBSTORE_USE_SSL` | `false` | `true` for TLS to the store. `1`, `t`, `true` and `0`, `f`, `false` are read in any case (`strconv.ParseBool`); any other value stops the boot, and is not read as off |
-| `MARGINCE_BLOBSTORE_PATH` | — | folder object bytes are written to, when no endpoint is set; created if missing, owner-only (`0700`). Bytes land under `<path>/blob/<key>` and their content type under `<path>/meta/<key>`. Each is written through a short-lived file and then renamed, so a stopped write never leaves a cut-off attachment that a row still points at |
 
 ## Secret vault (api, worker): connector credentials
 
@@ -1052,9 +1158,6 @@ command line, where any user on the machine can read argv.
   an installation that already holds sealed ciphertext. A new deployment that dropped the variable
   is refused, not run in a weaker mode (see below).
 
-| Env | Default | Meaning |
-|---|---|---|
-| `MARGINCE_KEYVAULT_ROOT_KEY` | — | base64 (std) of 32 bytes; set it to turn on the vault. Generate: `openssl rand -base64 32` |
 
 ### The vault may hold copies of the two deployment credentials
 
@@ -1195,7 +1298,6 @@ longer written. Use `migrate reset-password` to change the password of a user wh
 
 | Flag | Env | Default | Meaning |
 |---|---|---|---|
-| `--dsn` | `MARGINCE_OWNER_DSN`, else `MARGINCE_DSN` | — (required) | Postgres DSN, **owner** role. The owner variable comes first because every verb here runs DDL. `MARGINCE_DSN` is the app role in every other place (`NOSUPERUSER NOBYPASSRLS`, no DDL rights). Without this order, an installation that sets both would migrate under the one credential that cannot apply migrations. `MARGINCE_DSN` stays the fallback for a small installation that runs everything under one credential with enough rights. For the database verbs, the DSN must name a maintenance database (`postgres`): `CREATE`/`DROP DATABASE` cannot run inside the database it drops |
 | `--steps` | (none) | `1` | migrations to undo (`down` only) |
 | `--email` | (none) | (none) | user email (`reset-password` only): the way in for the operator when all else fails. It sets the password of that user right in the database, and reads the new password from **stdin** (never argv). It is the way back in when the admin is locked out and no outbound email is set up. It covers a locked-out admin, and recovery the operator leads. Normal onboarding happens in Settings → Users & roles. There, an installation with no outbound email offers a "Get set-password link" per member, to hand over by another route |
 | `--name` | (none) | (none) | database name (`recreate-db`, `drop-db`, `db-exists` only): the admin step of the integration lane that copies a database per package. Drop if it exists and create, drop if it exists, or print `true`/`false`. The drops are `WITH (FORCE)`, so a session that is still open is ended, and does not make the clean-up fail some of the time. It runs on the same owner DSN the migrations and tests use. So the lane needs no host psql, and a changed `MARGINCE_TEST_DSN` points at one cluster the whole way. A name (or template) over the name limit of the server (63 bytes by default) is refused, never cut short into the name of another database |
@@ -1245,7 +1347,6 @@ resolve their other flags from the `MARGINCE_*` values above. The steps that use
 | `MARGINCE_BENCH_TIER` | — | `make bench-perf` | the PERF-3/PERF-7 seed tier the perfbench suite builds: `smb` (default) or `mid_market`. A value it does not know fails the bench with a clear error. |
 | `MARGINCE_BENCH_RECORD` | — | `make bench-perf` | set to `1` to let the PERF-3/PERF-7 tier harness write its record into `docs/reference/perfbench/`, which `make perfdoc` turns into the published budgets page. Off by default, because a scheduled job runs the same suite weekly (`make bench-perf-check`), and a machine must never write its own numbers into the tree. The `bench-record`/`bench-capture`/`bench-mobile` targets, run by hand, need no switch, since only a human runs them. |
 | `MARGINCE_BENCH_DAILY_SCALE` | `1` | `make bench-daily` | multiplies every count in the daily-use test data. It is a positive number; `0.05` suits a development run. A value other than `1` writes the record to the git-ignored `docs/reference/perfbench/dev/`, marked `development scale N`. `make perfdoc` never reads that folder, so the record never passes as the mid-market tier. A value that is not a positive number fails the bench. |
-| `MARGINCE_AITASK_DIR` | `.tmp/aitask` | `worker aitask` | working folder for the files of the `ai-probe` debug loop (flag `--work-dir`), gitignored by default. A page it gets carries what the source carried, so this stays out of the tree. |
 | `MARGINCE_HOME` | — | desktop launcher | sets the installation folder the launcher works from. Unset, it uses the folder of the running program, which is where the launcher sits inside a shipped folder. To set it lets a dev stack run from a staging tree that is not shipped. Everything else the launcher touches comes from it: `data/` with the database and the blobs, `margince.yaml`, `margince.env`, and the `runtime/` that can be replaced. |
 
 ### Broker upstream preferences
@@ -1562,12 +1663,6 @@ In every other case the declared type is kept, and the name does not
 matter. An empty or `application/octet-stream` type, which browsers send for `.msg` and `.md`, is
 read from the file name. Margince does not look at the bytes. Files that come in with an email are
 stored in any kind, as a record of what was sent.
-
-| Key | Default | Route |
-|---|---|---|
-| `uploads.attachment_mb` | `25` | `POST /v1/attachments`, the documents surface |
-| `uploads.csv_import_mb` | `10` | `POST /v1/imports/sources` |
-| `uploads.linkedin_import_mb` | `8` | `POST /v1/me/linkedin-connections` |
 
 **Decimal megabytes**: `25` means 25,000,000 bytes, not 26,214,400. The value here is the number
 the 413 of the server names, and the number the upload form states. The unit is decimal so those

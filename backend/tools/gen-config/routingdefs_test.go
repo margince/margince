@@ -10,14 +10,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
-// The tier enum is DERIVED, not hand-copied.
-//
-// This obligation moved here with the routing shape: it used to be proved
-// against the contract file inside gen-aitasks, and the enum now arrives one
-// hop later through ai.AllTiers, which the same contract generates. A schema
-// listing a tier the router does not serve — or missing one it does — sends an
-// operator an editor error over a binding that works, or waves through one that
-// will not bind.
+// The tier enum is derived from the task contract through ai.AllTiers. A schema
+// that lists a tier the router does not serve flags a binding that works. One
+// that misses a tier passes a binding that will not bind.
 func TestTheTierEnumIsDerivedFromTheContractsTiers(t *testing.T) {
 	var defs struct {
 		AiRouting struct {
@@ -29,7 +24,11 @@ func TestTheTierEnumIsDerivedFromTheContractsTiers(t *testing.T) {
 			} `json:"properties"`
 		} `json:"aiRouting"`
 	}
-	if err := json.Unmarshal(routingDefs(), &defs); err != nil {
+	raw, err := routingDefs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(raw, &defs); err != nil {
 		t.Fatalf("the generated $defs are not parseable: %v", err)
 	}
 	got := defs.AiRouting.Properties.Tiers.PropertyNames.Enum

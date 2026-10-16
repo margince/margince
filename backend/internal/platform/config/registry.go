@@ -25,6 +25,7 @@ type Any interface {
 	Stored() bool
 	Roles() []Role
 	DefaultText() (string, bool)
+	Shape() (Shape, error)
 	parseText(string) (any, error)
 	decodeYAML(n *yaml.Node) (any, error)
 	check(any) error
