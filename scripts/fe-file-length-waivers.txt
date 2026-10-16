@@ -35,7 +35,7 @@
 1319 frontend/src/components/listquery.tsx
 1264 frontend/src/screens/offers.tsx
 1360 frontend/src/app/agentrail.test.tsx
-1504 frontend/src/screens/onboarding-conversation/confirm-card.tsx
+1488 frontend/src/screens/onboarding-conversation/confirm-card.tsx
 1436 frontend/src/design-system/listtable.test.tsx
 1343 frontend/src/app/agentrail.tsx
 1725 frontend/src/screens/onboarding-facts.test.tsx

@@ -49,11 +49,8 @@ import {
   STATE_RANK,
   STATE_WORD,
 } from "./company-review-state";
-import {
-  FINDING_EXPAND_EVENT,
-  jumpToFindings,
-  NarrationBubble,
-} from "./entries";
+import { FINDING_EXPAND_EVENT, jumpToFindings } from "./entries";
+import { SaveRefusalLine } from "./save-refusal-line";
 
 // The company review as a triage surface: every profile field is on the
 // board, ordered so the work sits on top: required gaps first, weak evidence
@@ -1475,20 +1472,7 @@ export function CompanyConfirmCard(props: CompanyConfirmCardProps) {
           />
         </div>
       )}
-      {props.error && (
-        // A failed save speaks as Margince, not as a bare server string
-        // floating in the card; the safe problem detail rides as a param.
-        <div role="alert">
-          <NarrationBubble
-            entry={{
-              kind: "narration",
-              id: "review:confirm-failed",
-              i18nKey: "ob.conv.review.confirmFailed",
-              params: { detail: props.error },
-            }}
-          />
-        </div>
-      )}
+      <SaveRefusalLine message={props.error ?? null} />
       <ReviewContinueBar
         filled={requiredFilled}
         total={requiredTotal}

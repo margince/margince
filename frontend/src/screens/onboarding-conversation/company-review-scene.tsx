@@ -14,6 +14,7 @@ import { DecisionScene } from "./decision-scene";
 import { ProfileDigest } from "./profile-digest";
 import type { DeckCard } from "./review-deck";
 import { ReviewDeck } from "./review-deck";
+import { SaveRefusalLine } from "./save-refusal-line";
 import { WayOnward } from "./way-onward";
 
 type CompanySiteRead = components["schemas"]["CompanySiteRead"];
@@ -76,7 +77,7 @@ type ConfirmControl = Readonly<{
   held: boolean;
 }>;
 
-type ReviewSceneProps = Readonly<{
+export type ReviewSceneProps = Readonly<{
   mode: ArtifactMode;
   onSwitchMode: (mode: ArtifactMode) => void;
   onReadWhole: () => void;
@@ -141,6 +142,7 @@ function DeckScene({
   onReadWhole,
   goToField,
   identity,
+  error,
 }: SceneWithIdentity) {
   return (
     <ReviewDeck
@@ -163,6 +165,7 @@ function DeckScene({
         />
       )}
       pending={confirm.pending}
+      refusal={error}
       goTo={goToField ?? undefined}
     />
   );
@@ -179,6 +182,7 @@ function WholeRecordScene({
   onSwitchMode,
   draft,
   confirm,
+  error,
 }: SceneWithIdentity) {
   const t = useT();
   const plural = usePlural();
@@ -204,6 +208,7 @@ function WholeRecordScene({
       <Button variant="ghost" onClick={() => onSwitchMode("record")}>
         {t("ob.digest.pickFacts")}
       </Button>
+      {draft.edited.size === 0 && <SaveRefusalLine message={error} />}
       {/* One Save for every corrected line, shown once one is: an untouched
           record already has the deck's Confirm. */}
       {draft.edited.size > 0 && (
@@ -217,11 +222,14 @@ function WholeRecordScene({
             t("ob.deck.stillNeeded", { fields: fields.join(", ") })
           }
           note={
-            <p className="ob-stage-hint">
-              {plural("ob.digest.changed", draft.edited.size, {
-                count: formatNumber(draft.edited.size, locale),
-              })}
-            </p>
+            <>
+              <SaveRefusalLine message={error} />
+              <p className="ob-stage-hint">
+                {plural("ob.digest.changed", draft.edited.size, {
+                  count: formatNumber(draft.edited.size, locale),
+                })}
+              </p>
+            </>
           }
           onGo={confirm.run}
         />
