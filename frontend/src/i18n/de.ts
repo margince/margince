@@ -10288,6 +10288,8 @@ export const de = {
   "settings.companyMarkUnsupported":
     "Nimm eine PNG-, JPEG-, GIF-, WebP-, ICO- oder SVG-Datei.",
   "settings.companyMarkTooLarge": "Nimm eine kleinere Datei.",
+  "settings.companyMarkSvgNotDrawable":
+    "Diese SVG-Datei enthält Teile, die sich nicht darstellen lassen, etwa eingebettete Bilder. Exportiere sie als PNG-Datei.",
   "settings.companyMarkSvgText":
     "Diese SVG-Datei enthält Text, der sich nicht darstellen lässt. Wandle den Text in deinem Grafikprogramm in Pfade um, oder lade eine PNG-Datei hoch.",
   "settings.companyMarkAddWide": "Breites Logo hinzufügen",

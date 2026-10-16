@@ -373,3 +373,27 @@ it("tells the admin to outline the text when an SVG draws its words as text", as
   ).toBeTruthy();
   expect(within(alert).queryByText(/cannot render/)).toBeNull();
 });
+
+it("tells the admin to export a PNG when an SVG has parts that cannot be drawn", async () => {
+  const user = userEvent.setup();
+  refuseUploads({
+    type: "about:blank",
+    title: "Unprocessable Entity",
+    status: 422,
+    code: "svg_not_drawable",
+    detail: "the SVG has parts this server cannot draw",
+  });
+  mark(WITHOUT_MARK);
+
+  await user.upload(
+    slot("Wide logo").getByLabelText("Wide logo"),
+    new File(["<svg/>"], "acme.svg", { type: "image/svg+xml" }),
+  );
+
+  const alert = await screen.findByRole("alert");
+  expect(
+    within(alert).getByText(
+      "This SVG has parts that cannot be drawn, such as embedded images. Export it as a PNG.",
+    ),
+  ).toBeTruthy();
+});

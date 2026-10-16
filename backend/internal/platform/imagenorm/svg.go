@@ -65,31 +65,32 @@ var ErrSVGTextNotOutlined = fmt.Errorf("%w: the SVG draws live text, which has t
 // namespace prefix, so svg:text counts too.
 var svgTextElements = map[string]bool{"text": true, "tspan": true, "textpath": true}
 
-// svgUndrawnElements carry content the renderer silently skips, so a document
-// holding one would lose part of what its author drew.
+// svgUndrawnElements are elements whose whole content the renderer drops.
 var svgUndrawnElements = map[string]bool{"foreignobject": true, "image": true}
 
-// ErrSVGBlank reports an SVG that rasterized to nothing visible.
-var ErrSVGBlank = fmt.Errorf("%w: the SVG draws nothing the renderer can show", ErrUnsupported)
+// ErrSVGNotDrawable reports an SVG the renderer would draw blank or only partly.
+// It wraps ErrUnsupported so a candidate chain still skips the file.
+var ErrSVGNotDrawable = fmt.Errorf("%w: the SVG has parts the renderer cannot draw", ErrUnsupported)
 
-// refuseLossySVG rejects a document whose drawing the renderer would only
-// partly keep: live text, or elements it skips. Storing the result would drop
-// content with no sign to the author. Text holding only whitespace draws nothing
-// and is left alone.
+// refuseLossySVG rejects a document the renderer would only partly draw; the
+// stored PNG would drop content with no sign to the author.
 func refuseLossySVG(src []byte) error {
 	decoder := xml.NewDecoder(bytes.NewReader(src))
 	decoder.Strict = false
 	textDepth := 0
 	for {
 		token, err := decoder.Token()
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
 		if err != nil {
-			return nil // refuseUnsafeSVG has already vetted readability
+			return fmt.Errorf("%w: the SVG is not readable as XML: %w", ErrUnsupported, err)
 		}
 		switch t := token.(type) {
 		case xml.StartElement:
 			name := strings.ToLower(t.Name.Local)
 			if svgUndrawnElements[name] {
-				return fmt.Errorf("%w: the SVG holds <%s>, which the renderer does not draw", ErrUnsupported, name)
+				return fmt.Errorf("%w: the SVG holds <%s>", ErrSVGNotDrawable, name)
 			}
 			if svgTextElements[name] {
 				textDepth++
@@ -153,7 +154,7 @@ func rasterizeSVG(src []byte) (image.Image, error) {
 	// Only SVG is held to this: Decode also reads stored PNGs, and a blank one
 	// must still reach TrimTransparentPNG unchanged.
 	if _, painted := paintedBounds(canvas); !painted {
-		return nil, ErrSVGBlank
+		return nil, ErrSVGNotDrawable
 	}
 	return canvas, nil
 }

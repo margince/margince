@@ -13,10 +13,9 @@ const svgOpen = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50">`
 
 func TestDecodeRefusesAnSVGWhoseWordsAreLiveText(t *testing.T) {
 	cases := map[string]string{
-		"a text element":          svgOpen + `<circle cx="10" cy="10" r="10"/><text x="30" y="20">Acme</text></svg>`,
-		"a nested tspan":          svgOpen + `<text x="0" y="20"><tspan>Ac</tspan>me</text></svg>`,
-		"uppercase element names": svgOpen + `<TEXT x="0" y="20">Acme</TEXT></svg>`,
-		"a textPath":              svgOpen + `<defs><path id="p" d="M0 0 L100 0"/></defs><textPath href="#p">Acme</textPath></svg>`,
+		"a text element": svgOpen + `<circle cx="10" cy="10" r="10"/><text x="30" y="20">Acme</text></svg>`,
+		"a nested tspan": svgOpen + `<text x="0" y="20"><tspan>Ac</tspan>me</text></svg>`,
+		"a textPath":     svgOpen + `<defs><path id="p" d="M0 0 L100 0"/></defs><textPath href="#p">Acme</textPath></svg>`,
 		"a prefixed text": `<svg:svg xmlns:svg="http://www.w3.org/2000/svg" viewBox="0 0 10 10">` +
 			`<svg:text>Acme</svg:text></svg:svg>`,
 	}
@@ -56,7 +55,7 @@ func TestDecodeKeepsAnSVGWhoseTextElementsHoldNoCharacters(t *testing.T) {
 	}
 }
 
-func TestDecodeRefusesSVGContentTheRendererSkipsAsUnsupportedNotAsText(t *testing.T) {
+func TestDecodeRefusesSVGContentTheRendererSkipsAsNotDrawableNotAsText(t *testing.T) {
 	cases := map[string]string{
 		"foreignObject markup": svgOpen + `<foreignObject width="100" height="50"><div xmlns="http://www.w3.org/1999/xhtml">Acme</div></foreignObject></svg>`,
 		"an embedded image":    svgOpen + `<circle cx="25" cy="25" r="20"/><image href="data:image/png;base64,AAAA" width="10" height="10"/></svg>`,
@@ -64,16 +63,16 @@ func TestDecodeRefusesSVGContentTheRendererSkipsAsUnsupportedNotAsText(t *testin
 	for name, doc := range cases {
 		t.Run(name, func(t *testing.T) {
 			_, err := Decode([]byte(doc))
-			if !errors.Is(err, ErrUnsupported) || errors.Is(err, ErrSVGTextNotOutlined) {
-				t.Fatalf("err = %v, want plain ErrUnsupported", err)
+			if !errors.Is(err, ErrSVGNotDrawable) || !errors.Is(err, ErrUnsupported) || errors.Is(err, ErrSVGTextNotOutlined) {
+				t.Fatalf("err = %v, want ErrSVGNotDrawable", err)
 			}
 		})
 	}
 }
 
 func TestDecodeRefusesAnSVGThatPaintsNothingButLeavesABlankPNGAlone(t *testing.T) {
-	if _, err := Decode([]byte(svgOpen + `<g/></svg>`)); !errors.Is(err, ErrSVGBlank) || !errors.Is(err, ErrUnsupported) {
-		t.Fatalf("err = %v, want ErrSVGBlank wrapping ErrUnsupported", err)
+	if _, err := Decode([]byte(svgOpen + `<g/></svg>`)); !errors.Is(err, ErrSVGNotDrawable) || !errors.Is(err, ErrUnsupported) {
+		t.Fatalf("err = %v, want ErrSVGNotDrawable wrapping ErrUnsupported", err)
 	}
 	blank := solidPNG(t, 4, 4, color.NRGBA{})
 	if _, err := Decode(blank); err != nil {

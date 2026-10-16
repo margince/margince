@@ -99,8 +99,17 @@ const SVG_TEXT = {
     "the SVG draws its words as text, which this server cannot render; convert the text to outlines in your design tool, or upload a PNG",
 };
 
+const SVG_NOT_DRAWABLE = {
+  type: "about:blank",
+  title: "Unprocessable Entity",
+  status: 422,
+  code: "svg_not_drawable",
+  detail:
+    "the SVG has parts this server cannot draw, such as embedded images; export it as a PNG",
+};
+
 function refuseUploads(
-  problem: typeof UNSUPPORTED | typeof SVG_TEXT,
+  problem: typeof UNSUPPORTED | typeof SVG_TEXT | typeof SVG_NOT_DRAWABLE,
   ...paths: string[]
 ) {
   const refuse = () =>
@@ -208,4 +217,22 @@ export const TheServerRefusesAnSvgWithLiveTextPhone: Story = {
   ...TheServerRefusesAnSvgWithLiveText,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+export const TheServerRefusesAnSvgItCannotDraw: Story = {
+  ...TheServerRefusesTheWideLogo,
+  render: (args) => {
+    refuseUploads(SVG_NOT_DRAWABLE, "/company/logo");
+    return (
+      <StoryProviders>
+        <CompanyMark {...args} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await refuseUpload(canvasElement, "Wide logo");
+    await within(canvasElement).findByText(
+      "This SVG has parts that cannot be drawn, such as embedded images. Export it as a PNG.",
+    );
+  },
 };
