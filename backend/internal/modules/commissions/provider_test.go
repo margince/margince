@@ -65,7 +65,8 @@ func TestTheLedgerSeamRefusesBeforeItReads(t *testing.T) {
 	text := "Northgate"
 	_, _, _, err := p.SearchEntity(ctx, datasource.EntityCommission, &text, 10, nil, nil)
 	var searched *httperr.DetailedError
-	if !errors.As(err, &searched) || searched.Status != http.StatusUnprocessableEntity || searched.Fields[0].Field != "q" {
+	if !errors.As(err, &searched) || searched.Status != http.StatusUnprocessableEntity ||
+		len(searched.Fields) == 0 || searched.Fields[0].Field != "q" {
 		t.Errorf("a text search of the ledger answered %v, want a validation refusal on q", err)
 	}
 

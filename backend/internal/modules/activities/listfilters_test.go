@@ -134,7 +134,8 @@ func TestTheTimelineSeamRefusesBeforeItReads(t *testing.T) {
 	} {
 		_, _, _, err = p.SearchEntity(ctx, datasource.EntityActivity, nil, 10, nil, half)
 		var pair *httperr.DetailedError
-		if !errors.As(err, &pair) || pair.Status != http.StatusUnprocessableEntity || pair.Fields[0].Code != "requires_pair" {
+		if !errors.As(err, &pair) || pair.Status != http.StatusUnprocessableEntity ||
+			len(pair.Fields) == 0 || pair.Fields[0].Code != "requires_pair" {
 			t.Errorf("filtering by %v alone answered %v, want the requires_pair refusal", half, err)
 		}
 	}

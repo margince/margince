@@ -30,10 +30,7 @@ import (
 // because a thread's author is a foreign key into that table.
 func roomWriter(t *testing.T, e *apptest.AppEnv) context.Context {
 	t.Helper()
-	var admin ids.UUID
-	if err := e.Owner.QueryRow(t.Context(), `SELECT id FROM app_user WHERE email = 'ada@example.com'`).Scan(&admin); err != nil {
-		t.Fatalf("resolving the admin: %v", err)
-	}
+	admin := readerByEmail(t, e, "ada@example.com")
 	ctx := principal.WithWorkspaceID(context.Background(), apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool))
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{

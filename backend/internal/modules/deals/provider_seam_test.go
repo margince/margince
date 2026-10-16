@@ -110,9 +110,10 @@ func TestACatalogOrOfferListRefusesAFilterItCannotApply(t *testing.T) {
 	for _, typ := range []datasource.EntityType{
 		datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer,
 	} {
-		if _, _, _, err := p.SearchEntity(context.Background(), typ, nil, 10, nil,
-			map[string]string{"colour": "red"}); err == nil {
-			t.Errorf("a %s list accepted a filter it has no binding for", typ)
+		_, _, _, err := p.SearchEntity(context.Background(), typ, nil, 10, nil,
+			map[string]string{"colour": "red", "deal_id": ids.NewV7().String()})
+		if field, _ := refusedOn(t, err); field != "colour" {
+			t.Errorf("a %s list was refused on %q (%v), want the unbound filter colour", typ, field, err)
 		}
 	}
 }
@@ -223,11 +224,13 @@ func TestACatalogOrOfferPatchHoldsTheRulesTheRESTDoorHolds(t *testing.T) {
 
 func TestOfferLineVerbsRefuseATotalBeforeTheStore(t *testing.T) {
 	p, offer, line := seamProvider(), ids.NewV7(), ids.NewV7()
-	if _, err := p.AddOfferLine(context.Background(), offer, json.RawMessage(`{"quantity":1,"gross_minor":9}`)); err == nil {
-		t.Error("adding a line that names gross_minor was accepted")
+	_, err := p.AddOfferLine(context.Background(), offer, json.RawMessage(`{"quantity":1,"gross_minor":9}`))
+	if field, code := refusedOn(t, err); field != "gross_minor" || code != "totals_derived" {
+		t.Errorf("adding a line naming gross_minor was refused on %s/%s, want gross_minor/totals_derived", field, code)
 	}
-	if _, err := p.UpdateOfferLine(context.Background(), offer, line, json.RawMessage(`{"line_tax":9}`)); err == nil {
-		t.Error("a line patch naming line_tax was accepted")
+	_, err = p.UpdateOfferLine(context.Background(), offer, line, json.RawMessage(`{"line_tax":9}`))
+	if field, code := refusedOn(t, err); field != "line_tax" || code != "totals_derived" {
+		t.Errorf("a line patch naming line_tax was refused on %s/%s, want line_tax/totals_derived", field, code)
 	}
 }
 

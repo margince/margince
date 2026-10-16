@@ -73,8 +73,9 @@ func TestAnOfferPatchRefusesATotalAndCarriesItsClears(t *testing.T) {
 	if err := json.Unmarshal([]byte(`{"gross_minor":1}`), &smuggled); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := offerUpdateInput(smuggled, nil, nil); err == nil {
-		t.Fatal("a patch naming gross_minor was accepted")
+	_, err := offerUpdateInput(smuggled, nil, nil)
+	if field, code := refusedOn(t, err); field != "gross_minor" || code != "totals_derived" {
+		t.Fatalf("a patch naming gross_minor was refused on %s/%s, want gross_minor/totals_derived", field, code)
 	}
 
 	var req crmcontracts.UpdateOfferRequest

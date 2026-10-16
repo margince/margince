@@ -35,7 +35,7 @@ func (s *Store) RefuseArchiveDeal(ctx context.Context, id ids.DealID) error {
 		return err
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {
-		return auth.EnsureWritable(ctx, tx, dealTable, id.UUID)
+		return auth.EnsureWritableLive(ctx, tx, dealTable, id.UUID)
 	})
 }
 

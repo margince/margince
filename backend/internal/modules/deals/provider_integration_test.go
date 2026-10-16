@@ -156,6 +156,7 @@ func TestTheSeamCarriesADealFromCreateToItsNextStage(t *testing.T) {
 	if _, err := e.provider.Read(e.passport(), deal); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("reading the archived deal answered %v, want not found: the seam reads live deals only", err)
 	}
+	e.refusesASecondArchive(t, deal)
 }
 
 func TestTheSeamCarriesAProductFromCreateToArchive(t *testing.T) {

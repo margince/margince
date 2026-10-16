@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -31,15 +32,6 @@ type stated struct {
 	Version int64  `json:"version"`
 }
 
-func decodedPart[T any](t *testing.T, what string, raw json.RawMessage) T {
-	t.Helper()
-	var out T
-	if err := json.Unmarshal(raw, &out); err != nil {
-		t.Fatalf("%s does not decode: %v\n%s", what, err, raw)
-	}
-	return out
-}
-
 // A fact is corrected and then removed alike on the facts routes and through
 // change_record_parts, each write pinned to the version the caller read.
 func TestCompanyFactCorrectionAndRemovalAnswerAsTheirRoutes(t *testing.T) {
@@ -47,11 +39,11 @@ func TestCompanyFactCorrectionAndRemovalAnswerAsTheirRoutes(t *testing.T) {
 	viaREST := createdRecord(t, d.e, "/v1/companies", AnyMap{"display_name": "Fact Fix REST GmbH", "source": "manual"})
 	viaTool := createdRecord(t, d.e, "/v1/companies", AnyMap{"display_name": "Fact Fix Tool GmbH", "source": "manual"})
 	fact := AnyMap{"category": "company", "field": "employee_range", "value": "11-50"}
-	restFact := decodedPart[struct {
+	restFact := decodedAs[struct {
 		stated
 		ValueKey string `json:"value_key"`
-	}](t, "the REST fact", d.restStatus(t, "POST", "/v1/companies/"+viaREST+"/facts", fact, http.StatusCreated))
-	toolFact := decodedPart[stated](t, "the tool fact", d.toolSeed(t, "change_record_parts", map[string]any{
+	}](t, d.restStatus(t, "POST", "/v1/companies/"+viaREST+"/facts", fact, http.StatusCreated))
+	toolFact := decodedAs[stated](t, d.toolSeed(t, "change_record_parts", map[string]any{
 		"action": "add_company_fact", "company_id": viaTool, "category": "company", "field": "employee_range", "value": "11-50",
 	}))
 	key := "employee_range:" + restFact.ValueKey
@@ -196,11 +188,11 @@ func TestOfferLineChangeAndRemovalAnswerAsTheirRoutes(t *testing.T) {
 		offer := recordIDOf(t, d.toolSeed(t, "create_record", map[string]any{"record_type": "offer", "fields": map[string]any{
 			"deal_id": deal, "currency": "EUR", "line_items": []AnyMap{{"product_id": product, "quantity": 1}, {"product_id": product, "quantity": 4}},
 		}}))
-		lines := decodedPart[struct {
+		lines := decodedAs[struct {
 			LineItems []struct {
 				ID string `json:"id"`
 			} `json:"line_items"`
-		}](t, "the seeded offer", d.rest(t, "GET", "/v1/offers/"+offer, nil))
+		}](t, d.rest(t, "GET", "/v1/offers/"+offer, nil))
 		return offer, lines.LineItems[0].ID
 	}
 	restOffer, restLine := offerWithLines()
@@ -267,6 +259,25 @@ func TestListRecordsNarrowsTheTimelineToARecordsUnansweredMail(t *testing.T) {
 	}
 }
 
+// problemCode is the code a route's problem body names, which a tool refusal of
+// the same kind carries too.
+func problemCode(t *testing.T, answer json.RawMessage) string {
+	t.Helper()
+	code := decodedAs[struct {
+		Code string `json:"code"`
+	}](t, answer).Code
+	if code == "" {
+		t.Fatalf("the route's refusal names no code: %s", answer)
+	}
+	return code
+}
+
+// namesCode reports a tool refusal naming code, which a not-found refusal
+// spells in words: "(not found)".
+func namesCode(refusal, code string) bool {
+	return strings.Contains(refusal, code) || strings.Contains(refusal, strings.ReplaceAll(code, "_", " "))
+}
+
 // A part write the route refuses, change_record_parts refuses too.
 func TestChangeRecordPartsRefusesWhatItsRoutesRefuse(t *testing.T) {
 	d := newTwoDoors(t, "part-refusal-doors", "read", "write")
@@ -285,74 +296,87 @@ func TestChangeRecordPartsRefusesWhatItsRoutesRefuse(t *testing.T) {
 		method, path string
 		body         AnyMap
 		args         map[string]any
+		status       int
 	}{
 		{
 			"a fact field outside the vocabulary", "POST", "/v1/companies/" + company + "/facts",
 			AnyMap{"category": "company", "field": "shoe_size", "value": "42"},
 			map[string]any{"action": "add_company_fact", "company_id": company, "category": "company", "field": "shoe_size", "value": "42"},
+			422,
 		},
 		{
 			"correcting a fact the company does not state", "PATCH", "/v1/companies/" + company + "/facts/" + key,
 			AnyMap{"value": "11-50"},
 			map[string]any{"action": "update_company_fact", "company_id": company, "fact_key": key, "value": "11-50"},
+			404,
 		},
 		{
 			"confirming a fact the company does not state", "POST", "/v1/companies/" + company + "/facts/" + key + "/confirm",
 			nil,
 			map[string]any{"action": "confirm_company_fact", "company_id": company, "fact_key": key},
+			404,
 		},
 		{
 			"an agent originating a profile claim", "PATCH", "/v1/companies/" + company + "/profile-fields/legal_form",
 			AnyMap{"value": "GmbH"},
 			map[string]any{"action": "update_company_profile_field", "company_id": company, "field": "legal_form", "value": "GmbH"},
+			404,
 		},
 		{
 			"confirming a profile field nobody stated", "POST", "/v1/companies/" + company + "/profile-fields/legal_form/confirm",
 			nil,
 			map[string]any{"action": "confirm_company_profile_field", "company_id": company, "field": "legal_form"},
+			404,
 		},
 		{
 			"putting a company that does not exist on the project", "PUT", "/v1/projects/" + project + "/companies",
 			AnyMap{"company_id": nowhere},
 			map[string]any{"action": "set_project_company", "project_id": project, "company_id": nowhere},
+			404,
 		},
 		{
 			"taking the last company off the project", "DELETE", "/v1/projects/" + project + "/companies/" + company,
 			nil,
 			map[string]any{"action": "remove_project_company", "project_id": project, "company_id": company},
+			422,
 		},
 		{
 			"a stakeholder role outside the vocabulary", "PUT", "/v1/projects/" + project + "/stakeholders",
 			AnyMap{"contact_id": contact, "role": "astronaut"},
 			map[string]any{"action": "set_project_stakeholder", "project_id": project, "contact_id": contact, "role": "astronaut"},
+			422,
 		},
 		{
 			"detaching a contact that is not on the project", "DELETE", "/v1/projects/" + project + "/stakeholders/" + contact,
 			nil,
 			map[string]any{"action": "remove_project_stakeholder", "project_id": project, "contact_id": contact},
+			404,
 		},
 		{
 			"a line on an offer that does not exist", "POST", "/v1/offers/" + nowhere + "/line-items",
 			AnyMap{"quantity": 1},
 			map[string]any{"action": "add_offer_line", "offer_id": nowhere, "line": map[string]any{"quantity": 1}},
+			404,
 		},
 		{
 			"changing a line the offer does not carry", "PATCH", "/v1/offers/" + offer + "/line-items/" + nowhere,
 			AnyMap{"quantity": 2},
 			map[string]any{"action": "update_offer_line", "offer_id": offer, "line_item_id": nowhere, "line": map[string]any{"quantity": 2}},
+			404,
 		},
 		{
 			"removing a line the offer does not carry", "DELETE", "/v1/offers/" + offer + "/line-items/" + nowhere,
 			nil,
 			map[string]any{"action": "remove_offer_line", "offer_id": offer, "line_item_id": nowhere},
+			404,
 		},
 	} {
 		var answer json.RawMessage
-		if status := d.e.Call(t, c.method, c.path, c.body, d.bearer, &answer); status < 400 || status >= 500 {
-			t.Errorf("%s: the route answered %d %s, want a refusal", c.what, status, answer)
+		if status := d.e.Call(t, c.method, c.path, c.body, d.bearer, &answer); status != c.status {
+			t.Errorf("%s: the route answered %d %s, want %d", c.what, status, answer, c.status)
 		}
-		if refusal := d.toolRefused(t, "change_record_parts", c.args); refusal == "" {
-			t.Errorf("%s: the tool refused without a word", c.what)
+		if refusal := d.toolRefused(t, "change_record_parts", c.args); !namesCode(refusal, problemCode(t, answer)) {
+			t.Errorf("%s: the tool refused with %s, not the route's %s", c.what, refusal, problemCode(t, answer))
 		}
 	}
 }
@@ -366,34 +390,40 @@ func TestRecordListsRefuseWhatTheirRoutesRefuse(t *testing.T) {
 		what, path string
 		tool       string
 		args       map[string]any
+		status     int
 	}{
 		{
 			"companies of a list that does not exist", "/v1/companies?list_id=" + nowhere, "list_records",
 			map[string]any{"record_type": "company", "filters": map[string]any{"list_id": nowhere}},
+			404,
 		},
 		{
 			"leads of a list that does not exist", "/v1/leads?list_id=" + nowhere, "list_records",
 			map[string]any{"record_type": "lead", "filters": map[string]any{"list_id": nowhere}},
+			404,
 		},
 		{
 			"contacts of a list that does not exist", "/v1/contacts?list_id=" + nowhere, "list_records",
 			map[string]any{"record_type": "contact", "filters": map[string]any{"list_id": nowhere}},
+			404,
 		},
 		{
 			"the timeline in an order it has no column for", "/v1/activities?sort=shoe_size", "list_records",
 			map[string]any{"record_type": "activity", "filters": map[string]any{"sort": "shoe_size"}},
+			422,
 		},
 		{
 			"a commission nobody accrued", "/v1/commissions/" + nowhere, "read_record",
 			map[string]any{"record_type": "commission", "id": nowhere},
+			404,
 		},
 	} {
 		var answer json.RawMessage
-		if status := d.e.Call(t, "GET", c.path, nil, d.bearer, &answer); status < 400 || status >= 500 {
-			t.Errorf("%s: the route answered %d %s, want a refusal", c.what, status, answer)
+		if status := d.e.Call(t, "GET", c.path, nil, d.bearer, &answer); status != c.status {
+			t.Errorf("%s: the route answered %d %s, want %d", c.what, status, answer, c.status)
 		}
-		if refusal := d.toolRefused(t, c.tool, c.args); refusal == "" {
-			t.Errorf("%s: the tool refused without a word", c.what)
+		if refusal := d.toolRefused(t, c.tool, c.args); !namesCode(refusal, problemCode(t, answer)) {
+			t.Errorf("%s: the tool refused with %s, not the route's %s", c.what, refusal, problemCode(t, answer))
 		}
 	}
 }
