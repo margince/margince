@@ -4,8 +4,8 @@
 import { NarrationBubble } from "./entries";
 
 /**
- * The deck, whole-record and fact-board views render this from the one
- * `bannerMessage`, so a press that moved nothing always says why.
+ * One refusal line shared by every view that confirms, so a press that
+ * moved nothing always says why.
  */
 export function SaveRefusalLine({
   message,
