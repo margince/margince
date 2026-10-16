@@ -5,6 +5,8 @@
 // colleague's approvals, so there is no role gating: both endpoints read and
 // write the calling seat's own rows. The classes are coarser than notice kinds.
 
+import { useId } from "react";
+import { describedByIds } from "../design-system/describedby";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { PanelNotices } from "../design-system/panelnotices";
 import { QueryGate } from "../design-system/querystates";
@@ -123,6 +125,7 @@ function DeliveryChoices({
 }: Readonly<{ rows: readonly NotificationPreference[] }>) {
   const t = useT();
   const save = useSaveNotificationPreference();
+  const refusalId = useId();
   return (
     <>
       <SettingList bleed="settings">
@@ -137,6 +140,11 @@ function DeliveryChoices({
             // dropdowns nobody touched, and hiding the queued second change the
             // hook's own scope exists to serialise.
             saving={save.isPending && save.variables?.class === row.class}
+            refusedBy={
+              save.isError && save.variables?.class === row.class
+                ? refusalId
+                : undefined
+            }
           />
         ))}
       </SettingList>
@@ -153,6 +161,7 @@ function DeliveryChoices({
                         setting: t(CLASS_COPY[save.variables.class].label),
                       }),
                 error: save.error,
+                id: refusalId,
               }
             : undefined
         }
@@ -165,10 +174,12 @@ function DeliveryRow({
   row,
   onPick,
   saving,
+  refusedBy,
 }: Readonly<{
   row: NotificationPreference;
   onPick: (delivery: NotificationDelivery) => void;
   saving: boolean;
+  refusedBy?: string;
 }>) {
   const t = useT();
   const offered = choicesFor(row.class);
@@ -180,6 +191,10 @@ function DeliveryRow({
       control={(control) => (
         <Select
           {...control}
+          aria-describedby={describedByIds(
+            control["aria-describedby"],
+            refusedBy,
+          )}
           className="settingrow-measure"
           // A row the seat has never decided sits on the STANDING DEFAULT the
           // server reports, not on a blank or an invented "Default" option:

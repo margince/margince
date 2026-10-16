@@ -10,6 +10,7 @@ package integration
 // surface that names the installation reads the new name.
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -17,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const configuredName = "Configured Name GmbH"
@@ -133,30 +135,80 @@ func TestAHumanRenamingTheAnchorRecordRenamesTheInstallation(t *testing.T) {
 	}
 }
 
-// The store would refuse the rename on release, so the agent hears it before a
-// human is asked to approve it.
-func TestAnAgentRenamingTheAnchorIsRefusedBeforeAnyoneIsAsked(t *testing.T) {
-	e := oneNameApp(t)
-	anchor := saveAnchor(t, e, "Profile Name AG")
-	agent := apptest.PassportBearer(t, e, "renaming agent", "read", "write")
+// renameDoor sends an agent's rename of the anchor through one door and answers
+// what came back and whether the door refused it.
+type renameDoor func(t *testing.T, name string) (answer string, refused bool)
 
-	var refused companyProblem
-	if status := e.Call(t, http.MethodPatch, "/v1/companies/"+anchor,
-		AnyMap{"display_name": "Agent Picked Ltd"}, agent, &refused); status != http.StatusUnprocessableEntity {
-		t.Fatalf("an agent's PATCH /v1/companies/{anchor} = %d, want 422", status)
+func anchorRenameDoors(d *twoDoors, anchor string) map[string]renameDoor {
+	rest := func(path, key string) renameDoor {
+		return func(t *testing.T, name string) (string, bool) {
+			t.Helper()
+			var answer json.RawMessage
+			status := d.e.Call(t, http.MethodPatch, path, AnyMap{key: name}, d.bearer, &answer)
+			if status != http.StatusOK && status != http.StatusUnprocessableEntity {
+				t.Fatalf("PATCH %s = %d %s, want 200 or 422", path, status, answer)
+			}
+			return string(answer), status == http.StatusUnprocessableEntity
+		}
 	}
-	wantNameFault(t, refused, "anchor_protected")
-	var inbox struct {
-		Data []struct{} `json:"data"`
+	tool := func(name string, args func(string) map[string]any) renameDoor {
+		return func(t *testing.T, value string) (string, bool) {
+			t.Helper()
+			got := d.mcp.Call(t, name, args(value))
+			return got.Text, got.IsError
+		}
 	}
-	if status := e.Call(t, http.MethodGet, "/v1/approvals?status=pending", nil, nil, &inbox); status != http.StatusOK {
-		t.Fatalf("GET /v1/approvals = %d, want 200", status)
+	return map[string]renameDoor{
+		"PATCH the record": rest("/v1/companies/"+anchor, "display_name"),
+		"PATCH the field":  rest("/v1/companies/"+anchor+"/profile-fields/display_name", "value"),
+		"update_record": tool("update_record", func(name string) map[string]any {
+			return map[string]any{"record_type": "company", "id": anchor, "fields": map[string]any{"display_name": name}}
+		}),
+		"change_record_parts": tool("change_record_parts", func(name string) map[string]any {
+			return map[string]any{"action": "update_company_profile_field", "company_id": anchor, "field": "display_name", "value": name}
+		}),
 	}
-	if len(inbox.Data) != 0 {
-		t.Errorf("the refused rename staged %d approvals, want none", len(inbox.Data))
+}
+
+// No agent rename of the anchor reaches an approval, on any door that carries
+// one; resending its current name is no rename.
+func TestAnAgentRenamingTheAnchorIsRefusedBeforeAnyoneIsAsked(t *testing.T) {
+	d := newTwoDoors(t, "anchor-renamer", "read", "write")
+	anchor := saveAnchor(t, d.e, "Onboarded Name AG")
+	// A name a human last wrote is what an agent's rename stages over.
+	if status := d.e.Call(t, http.MethodPatch, "/v1/companies/"+anchor,
+		AnyMap{"display_name": "Profile Name AG"}, nil, nil); status != http.StatusOK {
+		t.Fatalf("a human renaming the anchor = %d, want 200", status)
 	}
-	if got := anchorName(t, e, anchor); got != "Profile Name AG" {
-		t.Errorf("the refused rename left the anchor named %q, want %q", got, "Profile Name AG")
+
+	doors := anchorRenameDoors(d, anchor)
+	// Renames run before resends. A resend makes the agent the name's last
+	// writer, and a rename over an agent's name never stages.
+	for door, rename := range doors {
+		answer, refused := rename(t, "Agent Picked Ltd")
+		if !refused || !strings.Contains(answer, values.AnchorRenameRefusal) {
+			t.Errorf("%s: an agent's rename answered %s, want it refused as the installation's name", door, answer)
+		}
+		if !strings.Contains(answer, "display_name") || !strings.Contains(answer, "anchor_protected") ||
+			strings.Contains(answer, "inputSchema") {
+			t.Errorf("%s: the refusal %s must name display_name and anchor_protected, and not send the agent to the schema",
+				door, answer)
+		}
+	}
+	for door, rename := range doors {
+		if answer, refused := rename(t, "Profile Name AG"); refused {
+			t.Errorf("%s: an agent resending the anchor's name was refused: %s", door, answer)
+		}
+	}
+	var staged int
+	if err := d.e.Owner.QueryRow(t.Context(), `SELECT count(*) FROM approval`).Scan(&staged); err != nil {
+		t.Fatalf("counting approvals: %v", err)
+	}
+	if staged != 0 {
+		t.Errorf("the agent's renames and resends staged %d approvals, want none", staged)
+	}
+	if got := anchorName(t, d.e, anchor); got != "Profile Name AG" {
+		t.Errorf("the refused renames left the anchor named %q, want %q", got, "Profile Name AG")
 	}
 }
 

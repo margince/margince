@@ -526,7 +526,7 @@
   width: 32px;
   height: 32px;
 }
-/* What stands here is the square badge (app/shell.tsx picks it), so it is
+/* What stands here is the square badge (app/shellrail.tsx picks it), so it is
    centred rather than flush left: the wide mark's left alignment is what lines
    a wordmark up with the labels beside it, and a square has nothing to line up
    with. An installation that uploaded no badge lands its wide mark here, and

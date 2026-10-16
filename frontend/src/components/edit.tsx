@@ -161,9 +161,9 @@ export function EditRecordModal({
     rows: FormRows | undefined,
     opened: Record<string, unknown> & { id: string; version?: number },
   ) => void;
-  // The form's live answers, published so a caller can drive a SERVER read
-  // from them — the narrowing optionsFor cannot do, because it is a pure
-  // function of the values. See usePublishedValues (create.tsx).
+  // The form's live answers, published so a caller can drive a server read
+  // from them. optionsFor cannot do that narrowing, because it is a pure
+  // function of the values. See usePublishedValues (create.fields.ts).
   onValuesChange?: (values: Record<string, string>) => void;
 }>) {
   const [values, setValues] = useState<Record<string, string>>({});
@@ -310,7 +310,7 @@ export function EditAction<Updated extends { id: string }>({
   resolveExisting?: (code: string, id: string) => Route;
   // The form's live answers, for a screen whose field list depends on them —
   // a dependent picker whose options only the server can narrow. See
-  // usePublishedValues (create.tsx).
+  // usePublishedValues (create.fields.ts).
   onValuesChange?: (values: Record<string, string>) => void;
 }>) {
   const t = useT();

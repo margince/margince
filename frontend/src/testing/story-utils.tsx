@@ -29,6 +29,13 @@ export function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+export function permissionDenied(): Response {
+  return jsonResponse(
+    { title: "Forbidden", status: 403, code: "permission_denied" },
+    403,
+  );
+}
+
 export const emptyPage = {
   data: [],
   page: { next_cursor: null, has_more: false },

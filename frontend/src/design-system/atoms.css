@@ -1088,7 +1088,7 @@
   flex: none;
 }
 
-/* Repeatable-row form group (create.tsx RepeatableRowsField): label → rows →
+/* Repeatable-row form group (repeatablerowsfield.tsx RepeatableRowsField): label → rows →
  * "Add" button at 8px rhythm — a distinct wrapper from bare .field's tighter
  * 5px, since a row group needs more breathing room than a single input. */
 .field-repeatable {
@@ -1097,7 +1097,7 @@
   gap: 8px;
 }
 
-/* Multiselect field group (create.tsx MultiselectField): a legend + one
+/* Multiselect field group (create.controls.tsx MultiselectField): a legend + one
  * checkbox row per option, at the same 8px rhythm as .field-repeatable. */
 .field-multiselect {
   display: flex;
@@ -1108,7 +1108,7 @@
   padding: 0;
 }
 
-/* Form field stack (create.tsx RecordFormBody): the 8/12 spacing scale. */
+/* Form field stack (create.form.tsx RecordFormBody): the 8/12 spacing scale. */
 .form-stack {
   display: flex;
   flex-direction: column;
@@ -1185,7 +1185,7 @@ span.error-line {
   margin-bottom: var(--space-3);
 }
 
-/* Group divider inside a form (create.tsx RecordFormBody): sets custom fields
+/* Group divider inside a form (create.form.tsx RecordFormBody): sets custom fields
    apart from core fields with a labeled rule, no input of its own. */
 .form-divider {
   margin: 4px 0 0;

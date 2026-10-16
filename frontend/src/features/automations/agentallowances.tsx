@@ -7,6 +7,7 @@ import type { components } from "../../api/schema";
 import { useUnsavedGuard } from "../../components/unsaved";
 import { Button, TextInput } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { describedByIds } from "../../design-system/describedby";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
@@ -287,11 +288,10 @@ function AllowanceForm({
                     className="t-num"
                     data-testid={`allowance-${row.property}`}
                     inputMode="numeric"
-                    aria-describedby={
-                      [control["aria-describedby"], `${control.id}-note`]
-                        .filter(Boolean)
-                        .join(" ") || undefined
-                    }
+                    aria-describedby={describedByIds(
+                      control["aria-describedby"],
+                      `${control.id}-note`,
+                    )}
                     aria-invalid={refused ? true : undefined}
                     value={draft[row.property]}
                     disabled={busy}

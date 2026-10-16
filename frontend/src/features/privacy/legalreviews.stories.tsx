@@ -2,8 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import {
   jsonResponse,
+  permissionDenied,
   StoryProviders,
   stubWithSession,
 } from "../../testing/story-utils";
@@ -85,6 +87,33 @@ export const Switch: Story = {
       <StoryProviders>
         <LegalReviewSettingsCard />
       </StoryProviders>
+    );
+  },
+};
+
+export const SwitchRefused: Story = {
+  render: () => {
+    stubWithSession(
+      {
+        "GET /legal-reviews/settings": legalOn,
+        "PUT /legal-reviews/settings": permissionDenied,
+      },
+      { installation_settings: ["read", "update"] },
+      { roles: ["admin"] },
+    );
+    return (
+      <StoryProviders>
+        <LegalReviewSettingsCard />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const toggle = await canvas.findByRole("switch");
+    await userEvent.click(toggle);
+    await canvas.findByText("Setting was not saved.");
+    await expect(toggle).toHaveAccessibleDescription(
+      expect.stringContaining("Setting was not saved."),
     );
   },
 };

@@ -134,6 +134,12 @@ func (t updateRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	if len(split.Conflicts) == 0 {
 		return t.apply(ctx, args, args.Fields)
 	}
+	// The residue meets the REST split's refusals before any half applies.
+	if err := NewPatchCall(t.p, t.language, PatchCommand{
+		RecordType: args.RecordType, ID: args.ID, Fields: split.Staged,
+	}).Guards(ctx); err != nil {
+		return nil, err
+	}
 	if t.staging == nil {
 		return nil, fmt.Errorf("fields %s were last edited by a human, and this surface has no approvals engine to stage the overwrite: %w",
 			strings.Join(split.Conflicts, ", "), apperrors.ErrRequiresApproval)
