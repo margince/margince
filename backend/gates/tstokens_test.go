@@ -34,6 +34,14 @@ type tsToken struct {
 	pos      int
 }
 
+// tsNote is one comment: its text after the opener, and whether it is a
+// `//` line comment.
+type tsNote struct {
+	text string
+	pos  int
+	line bool
+}
+
 // tsPunctuators are tried longest first.
 var tsPunctuators = []string{
 	">>>=", "...", "===", "!==", "**=", "<<=", ">>=", ">>>", "&&=", "||=", "??=",
@@ -42,20 +50,21 @@ var tsPunctuators = []string{
 }
 
 type tsLexer struct {
-	src    string
-	pos    int
-	jsx    bool
-	tokens []tsToken
+	src      string
+	pos      int
+	jsx      bool
+	tokens   []tsToken
+	comments []tsNote
 }
 
 // tokenizeTS reads source as TypeScript, and as TSX when jsx is set. An error
 // names the line it could not read past.
-func tokenizeTS(source string, jsx bool) ([]tsToken, error) {
+func tokenizeTS(source string, jsx bool) ([]tsToken, []tsNote, error) {
 	lexer := &tsLexer{src: source, jsx: jsx}
 	if err := lexer.code(false); err != nil {
-		return nil, fmt.Errorf("line %d: %w", lineAt(source, lexer.pos), err)
+		return nil, nil, fmt.Errorf("line %d: %w", lineAt(source, lexer.pos), err)
 	}
-	return lexer.tokens, nil
+	return lexer.tokens, lexer.comments, nil
 }
 
 func lineAt(source string, pos int) int {
@@ -71,14 +80,10 @@ func (l *tsLexer) code(nested bool) error {
 		switch {
 		case ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r':
 			l.pos++
-		case strings.HasPrefix(l.src[l.pos:], "//"):
-			l.skipLine()
-		case strings.HasPrefix(l.src[l.pos:], "/*"):
-			end := strings.Index(l.src[l.pos+2:], "*/")
-			if end < 0 {
-				return errors.New("a block comment never closes")
+		case strings.HasPrefix(l.src[l.pos:], "//"), strings.HasPrefix(l.src[l.pos:], "/*"):
+			if err := l.comment(); err != nil {
+				return err
 			}
-			l.pos += end + 4
 		case ch == '"' || ch == '\'':
 			if err := l.quoted(ch); err != nil {
 				return err
@@ -116,6 +121,23 @@ func (l *tsLexer) code(nested bool) error {
 	if nested {
 		return errors.New("an expression inside a template or JSX never closes")
 	}
+	return nil
+}
+
+// comment reads one comment and keeps its text.
+func (l *tsLexer) comment() error {
+	start := l.pos
+	if strings.HasPrefix(l.src[l.pos:], "//") {
+		l.skipLine()
+		l.comments = append(l.comments, tsNote{text: l.src[start+2 : l.pos], pos: start, line: true})
+		return nil
+	}
+	end := strings.Index(l.src[l.pos+2:], "*/")
+	if end < 0 {
+		return errors.New("a block comment never closes")
+	}
+	l.pos += end + 4
+	l.comments = append(l.comments, tsNote{text: l.src[start+2 : l.pos-2], pos: start})
 	return nil
 }
 
@@ -308,14 +330,10 @@ func (l *tsLexer) element() error {
 			return fmt.Errorf("JSX element <%s> never closes its tag", name)
 		}
 		switch {
-		case strings.HasPrefix(l.src[l.pos:], "//"):
-			l.skipLine()
-		case strings.HasPrefix(l.src[l.pos:], "/*"):
-			end := strings.Index(l.src[l.pos+2:], "*/")
-			if end < 0 {
-				return errors.New("a block comment never closes")
+		case strings.HasPrefix(l.src[l.pos:], "//"), strings.HasPrefix(l.src[l.pos:], "/*"):
+			if err := l.comment(); err != nil {
+				return err
 			}
-			l.pos += end + 4
 		case strings.HasPrefix(l.src[l.pos:], "/>"):
 			l.pos += 2
 			l.endOperand()

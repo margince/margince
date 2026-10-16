@@ -10,9 +10,10 @@ package gates
 import "fmt"
 
 type tsTree struct {
-	tokens []tsToken
-	match  []int
-	parent []int
+	tokens   []tsToken
+	comments []tsNote
+	match    []int
+	parent   []int
 }
 
 func tsCloserOf(open string) string {
@@ -125,43 +126,52 @@ func (tr *tsTree) entries(open int) []tsEntry {
 	return out
 }
 
-// strings reads one literal, one cast with `as` or `satisfies`, or a
-// conditional of two literals; a template with a substitution is computed.
-func (tr *tsTree) strings(value tsSpan) (texts []string, computed, ok bool) {
+// literals answers the literal tokens a value can be: one, cast with `as` or
+// `satisfies`, or an arm of a conditional. true and false answer none.
+func (tr *tsTree) literals(value tsSpan) ([]int, bool) {
 	if value.to <= value.from {
-		return nil, false, false
+		return nil, false
 	}
-	if text, isComputed, single := tr.literal(value.from); single &&
-		(value.to == value.from+1 || tr.word(value.from+1) == "as" || tr.word(value.from+1) == "satisfies") {
-		return []string{text}, isComputed, true
+	first := tr.tokens[value.from]
+	single := value.to == value.from+1 || tr.word(value.from+1) == "as" || tr.word(value.from+1) == "satisfies"
+	switch {
+	case single && (first.kind == tkString || first.kind == tkTemplate):
+		return []int{value.from}, true
+	case single && first.kind == tkNumber && first.text != "<jsx/>" && first.text != "/regex/":
+		return []int{value.from}, true
+	case single && (first.text == "true" || first.text == "false"):
+		return nil, true
 	}
-	question, colon := -1, -1
+	yes, no, ok := conditionalArms(tr, value)
+	if !ok {
+		return nil, false
+	}
+	yesLiterals, yesOK := tr.literals(yes)
+	noLiterals, noOK := tr.literals(no)
+	return append(yesLiterals, noLiterals...), yesOK && noOK
+}
+
+// conditionalArms splits `cond ? yes : no` at its own operators: a `?` inside
+// an arm waits for its own `:` before the outer one is reached.
+func conditionalArms(tr *tsTree, value tsSpan) (yes, no tsSpan, ok bool) {
+	question, open := -1, 0
 	for i := value.from; i < value.to; i++ {
 		if tr.match[i] > i {
 			i = tr.match[i]
 			continue
 		}
-		if tr.is(i, "?") && question < 0 {
-			question = i
-		} else if tr.is(i, ":") && question >= 0 && colon < 0 {
-			colon = i
+		switch {
+		case tr.is(i, "?"):
+			if question < 0 {
+				question = i
+			}
+			open++
+		case tr.is(i, ":") && open > 0:
+			open--
+			if open == 0 {
+				return tsSpan{question + 1, i}, tsSpan{i + 1, value.to}, true
+			}
 		}
 	}
-	if question < 0 || colon != question+2 || value.to != colon+2 {
-		return nil, false, false
-	}
-	yes, yesComputed, yesOK := tr.literal(question + 1)
-	no, noComputed, noOK := tr.literal(colon + 1)
-	if !yesOK || !noOK {
-		return nil, false, false
-	}
-	return []string{yes, no}, yesComputed || noComputed, true
-}
-
-func (tr *tsTree) literal(i int) (text string, computed, ok bool) {
-	token := tr.tokens[i]
-	if token.kind != tkString && token.kind != tkTemplate {
-		return "", false, false
-	}
-	return token.text, token.computed, true
+	return tsSpan{}, tsSpan{}, false
 }

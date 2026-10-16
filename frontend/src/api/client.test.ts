@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { problemCode } from "../lib/problem";
 import {
   api,
   CACHE_ANSWER_GRACE_MS,
@@ -137,10 +138,8 @@ describe("a gateway that gave up on the app behind it", () => {
     });
 
     expect(response.status).toBe(502);
-    expect(error).toMatchObject({
-      code: "gateway_unavailable",
-      status: 502,
-    });
+    expect(problemCode(error)).toBe("gateway_unavailable");
+    expect(error).toMatchObject({ status: 502 });
   });
 
   // A gateway status the app DID answer keeps its own body: the server's
