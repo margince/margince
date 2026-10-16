@@ -81,9 +81,13 @@ type paramRef struct {
 }
 
 type emittedCensus struct {
-	units      []*goUnit
-	consts     map[string]map[string]string
-	structs    map[string]map[string]*ast.StructType
+	units    []*goUnit
+	consts   map[string]map[string]string
+	structs  map[string]map[string]*ast.StructType
+	structAt map[*ast.StructType]*goUnit
+	// problemDir holds each package a file of which imports httperr: only
+	// there may a Code this census cannot type be a carrier's.
+	problemDir map[string]bool
 	calls      map[codeFuncKey][]codeCallSite
 	asValue    map[codeFuncKey][]string
 	composite  map[string][]fieldSet
@@ -212,9 +216,13 @@ func newEmittedCensus(t *testing.T, units []*goUnit) *emittedCensus {
 		asValue: map[codeFuncKey][]string{}, composite: map[string][]fieldSet{},
 		codes: map[string]string{}, followed: map[paramRef]bool{}, fieldsRead: map[string]bool{},
 		funcs: map[codeFuncKey]*ast.FuncDecl{}, owner: map[*ast.FuncDecl]*goUnit{}, decls: map[string]map[string]constDecl{},
+		structAt: map[*ast.StructType]*goUnit{}, problemDir: map[string]bool{problemWriterDir: true},
 	}
 	for _, unit := range units {
 		census.index(unit)
+		if slices.Contains(slices.Collect(maps.Values(unit.imports)), problemWriterDir) {
+			census.problemDir[unit.dir] = true
+		}
 	}
 	return census
 }
@@ -267,6 +275,7 @@ func (c *emittedCensus) indexStructs(unit *goUnit, decl ast.Decl) {
 		if typed, ok := spec.(*ast.TypeSpec); ok {
 			if shape, ok := typed.Type.(*ast.StructType); ok {
 				c.structs[unit.dir][typed.Name.Name] = shape
+				c.structAt[shape] = unit
 			}
 		}
 	}
@@ -381,27 +390,21 @@ func (c *emittedCensus) readCodeAssignment(assign codeAssign) {
 		if !isSel || sel.Sel.Name != "Code" {
 			continue
 		}
-		base, isIdent := sel.X.(*ast.Ident)
+		typ, owner, typed := c.typeOf(sel.X, assign.unit, 0)
 		switch {
-		case !isIdent && !c.writesProblems(assign.unit):
-		case !isIdent:
+		case !typed && !c.problemDir[assign.unit.dir]:
+		case !typed:
 			c.faults = append(c.faults, fmt.Sprintf("%s: a Code is assigned through %s, whose type this census "+
 				"cannot tell; assign it on a variable declared as the carrier", c.at(assign.unit, target),
 				exprString(sel.X)))
-		case !c.typedAsCarrier(base, assign.unit):
+		case !c.holdsCarrierCode(typ, owner, 0):
 		case len(assign.stmt.Lhs) != len(assign.stmt.Rhs):
 			c.faults = append(c.faults, fmt.Sprintf("%s: %s.Code is assigned from a multi-value call, so the code "+
-				"cannot be read; assign it from a literal or a constant", c.at(assign.unit, target), base.Name))
+				"cannot be read; assign it from a literal or a constant", c.at(assign.unit, target), exprString(sel.X)))
 		default:
 			c.read(assign.stmt.Rhs[i], assign.unit, assign.in)
 		}
 	}
-}
-
-// writesProblems reports a file inside httperr or importing it: only there
-// can a Code whose base this census cannot type be a body carrier's.
-func (c *emittedCensus) writesProblems(unit *goUnit) bool {
-	return unit.dir == problemWriterDir || slices.Contains(slices.Collect(maps.Values(unit.imports)), problemWriterDir)
 }
 
 // exprString spells a short expression for a finding.
@@ -648,8 +651,8 @@ func rangedTable(ident *ast.Ident) (*ast.CompositeLit, *ast.StructType, bool) {
 func (c *emittedCensus) relaysACode(expr ast.Expr, unit *goUnit) bool {
 	switch e := expr.(type) {
 	case *ast.SelectorExpr:
-		base, ok := e.X.(*ast.Ident)
-		return ok && e.Sel.Name == "Code" && c.typedAsCarrier(base, unit)
+		typ, owner, typed := c.typeOf(e.X, unit, 0)
+		return typed && e.Sel.Name == "Code" && c.holdsCarrierCode(typ, owner, 0)
 	case *ast.CallExpr:
 		return len(e.Args) == 1 && c.relaysACode(e.Args[0], unit)
 	case *ast.Ident:
@@ -658,69 +661,6 @@ func (c *emittedCensus) relaysACode(expr ast.Expr, unit *goUnit) bool {
 		return ok && isMethod && faultMethodNames[method.Sel.Name]
 	}
 	return false
-}
-
-// typedAsCarrier reports a variable declared as a body carrier, received as
-// one, or assigned from errors.AsType or a function that answers one.
-func (c *emittedCensus) typedAsCarrier(ident *ast.Ident, unit *goUnit) bool {
-	if ident.Obj == nil {
-		return false
-	}
-	switch decl := ident.Obj.Decl.(type) {
-	case *ast.ValueSpec:
-		return decl.Type != nil && c.isCarrier(decl.Type, unit)
-	case *ast.Field:
-		return c.isCarrier(decl.Type, unit)
-	}
-	if built, ok := assignedValue(ident); ok {
-		if ref, isRef := built.(*ast.UnaryExpr); isRef {
-			built = ref.X
-		}
-		if lit, isLit := built.(*ast.CompositeLit); isLit {
-			return c.isCarrier(lit.Type, unit)
-		}
-	}
-	call, ok := assignedCall(ident)
-	if !ok {
-		return false
-	}
-	if generic, isGeneric := call.Fun.(*ast.IndexExpr); isGeneric {
-		return c.isCarrier(generic.Index, unit)
-	}
-	key, known := c.callee(unit, call.Fun)
-	fn := c.funcs[key]
-	return known && fn != nil && fn.Type.Results != nil && len(fn.Type.Results.List) > 0 &&
-		c.isCarrier(fn.Type.Results.List[0].Type, c.owner[fn])
-}
-
-// assignedValue answers the one expression a `:=` gave ident.
-func assignedValue(ident *ast.Ident) (ast.Expr, bool) {
-	if ident.Obj == nil {
-		return nil, false
-	}
-	assign, ok := ident.Obj.Decl.(*ast.AssignStmt)
-	if !ok || len(assign.Rhs) != 1 {
-		return nil, false
-	}
-	return assign.Rhs[0], true
-}
-
-func assignedCall(ident *ast.Ident) (*ast.CallExpr, bool) {
-	value, ok := assignedValue(ident)
-	call, isCall := value.(*ast.CallExpr)
-	if !ok || !isCall {
-		return &ast.CallExpr{}, false
-	}
-	return call, true
-}
-
-func (c *emittedCensus) isCarrier(typ ast.Expr, unit *goUnit) bool {
-	if star, ok := typ.(*ast.StarExpr); ok {
-		typ = star.X
-	}
-	name, ok := c.literalType(unit, typ)
-	dir, typeName, _ := strings.Cut(name, ".")
-	return ok && dir == problemWriterDir && bodyCodeCarriers[typeName]
 }
 
 // constant folds expr to the one string it is, through the constants of its
