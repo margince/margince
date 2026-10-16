@@ -50,7 +50,10 @@ var RetainOnly = config.DefineStored(config.Spec[bool]{
 	Type:    config.Bool,
 	Default: config.Some(false),
 	Doc:     "Destroy nothing: the nightly retention pass applies no anonymize and no erase, whatever a policy says.",
-}, config.Store{RBACObject: retentionPolicyObject, AuditVerb: actionUpdate})
+}, config.Store{RBACObject: retentionPolicyObject, AuditVerb: settingsAuditVerb})
+
+// settingsAuditVerb is the audit action every privacy settings change records.
+const settingsAuditVerb = "update"
 
 // retainOnlyTx is the posture every retention decision reads, inside the
 // caller's transaction, under the boot value the program bound.

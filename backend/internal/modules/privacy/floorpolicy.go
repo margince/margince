@@ -140,7 +140,7 @@ func carryOf(f CarriedFloor) FloorCarry {
 var RetentionFloorCarry = settings.Define[FloorCarry](
 	"privacy.retention_floor_carry",
 	retentionPolicyObject,
-	"update",
+	settingsAuditVerb,
 	FloorCarry{},
 	func(c FloorCarry) error {
 		if c.Before == nil {

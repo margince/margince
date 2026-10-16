@@ -15,8 +15,8 @@ import (
 const (
 	followUpMinDays = 1
 	followUpMaxDays = 30
-	// followUpAuditVerb is the verb a change of the window is audited under.
-	followUpAuditVerb = "update"
+	// settingsAuditVerb is the audit action every activities settings change records.
+	settingsAuditVerb = "update"
 )
 
 // FollowUpAfterDays is how long a message the reader sent may go unanswered
@@ -31,7 +31,7 @@ var FollowUpAfterDays = config.DefineStored(config.Spec[int]{
 	Max:     config.Some(followUpMaxDays),
 	Doc:     "Days a sent message may go unanswered before the sender's worklist reminds them to follow up.",
 }, config.Store{
-	RBACObject: "installation_settings", AuditVerb: followUpAuditVerb,
+	RBACObject: "installation_settings", AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the worklist applies it to rows the reader is separately gated for
 })
 

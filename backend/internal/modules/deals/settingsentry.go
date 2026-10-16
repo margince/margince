@@ -37,7 +37,7 @@ var StageAutopilotEnabled = config.DefineStored(config.Spec[bool]{
 	Default: config.Some(false),
 	Doc:     "Let a stage transition move a deal by itself where its rule has earned it. Off stops every automatic move.",
 }, config.Store{
-	RBACObject: stageAutomationObject, AuditVerb: dealsAuditVerb,
+	RBACObject: stageAutomationObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the apply path reads it; no request carries it
 })
 
@@ -76,7 +76,7 @@ var MaintenanceWritesEnabled = config.DefineStored(config.Spec[bool]{
 	Default: config.Some(true),
 	Doc:     "Let the nightly close-date sweep write to a deal. Off stops every automatic write the sweep makes.",
 }, config.Store{
-	RBACObject: maintenanceObject, AuditVerb: dealsAuditVerb,
+	RBACObject: maintenanceObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the sweep reads it; no request carries it
 })
 
@@ -100,12 +100,12 @@ var LegalReviewEnabled = config.DefineStored(config.Spec[bool]{
 	Default: config.Some(true),
 	Doc:     "Let a deal be sent to legal for review, and let a legal_reviewed criterion block an advance.",
 }, config.Store{
-	RBACObject: "installation_settings", AuditVerb: dealsAuditVerb,
+	RBACObject: "installation_settings", AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the advance gate reads it for whoever moves the deal
 })
 
-// dealsAuditVerb is the verb a change to one of these switches is audited under.
-const dealsAuditVerb = "update"
+// settingsAuditVerb is the audit action every deals settings change records.
+const settingsAuditVerb = "update"
 
 // SetLegalReviewEnabled switches legal review for the installation. An admin's
 // act alone: ops holds installation_settings.update for the wiring it runs,

@@ -66,7 +66,7 @@ var AuthorizationModes = config.DefineStored(config.Spec[map[string]string]{
 	Validate: validateAuthorizationModes,
 	Doc:      "The authority the authorization engine's answer carries for each communication category: observe, warn or enforce.",
 }, config.Store{
-	RBACObject: authorizationModesObject, AuditVerb: "update",
+	RBACObject: authorizationModesObject, AuditVerb: settingsAuditVerb,
 	// The transmit gate reads this inside the transaction that binds its own
 	// decision, whoever acts; a worker dispatching a delivery holds no settings grant.
 	MachineryApplied: true,
@@ -77,6 +77,9 @@ var AuthorizationModes = config.DefineStored(config.Spec[map[string]string]{
 func authorizationModesTx(ctx context.Context, tx pgx.Tx) (map[string]string, error) {
 	return config.StoredApplyTx(ctx, tx, config.Bound(), AuthorizationModes)
 }
+
+// settingsAuditVerb is the audit action every consent settings change records.
+const settingsAuditVerb = "update"
 
 // enforceEveryCategory is the shipped posture: every category the vocabulary
 // holds, at enforce.

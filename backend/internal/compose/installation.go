@@ -385,11 +385,9 @@ func seedRetentionPosture(ctx context.Context, tx pgx.Tx, seeds deployconfig.See
 	if !seeds.RetainOnly() {
 		return nil
 	}
-	// The stored answer is deliberately dropped here, and this is the one seed
-	// where that is defensible: the value is the constant true, so a discard can
-	// only have preserved a row that already says what this would have written.
-	// Nothing an operator supplied is lost, which is exactly what separates it
-	// from the identity trio.
+	// The seed writes only where no row exists, so it never replaces a saved
+	// posture. Under a boot-set posture it writes nothing: the boot value is in
+	// force, and the deployment's seed of true is dropped.
 	_, err := config.SeedTx(ctx, tx, loadedConfig(), privacy.RetainOnly, true)
 	return err
 }

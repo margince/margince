@@ -60,33 +60,19 @@ func (p ControllerParticulars) IsZero() bool {
 		p.AdvertiserContact == ""
 }
 
-// ControllerIdentity is the installation's own particulars.
-//
-// MachineryApplied, for the same reason the authorization posture beside it is:
-// the disclosures a message carries must apply whoever composes it. A rep
-// writing a reply is the case that decides it — a system worker would pass the
-// gate anyway, since auth.Require admits PrincipalSystem, but a rep holds
-// contact grants and no settings grant at all. Gating the read would mean a
-// message went out WITHOUT its legally required disclosure because the sender
-// lacked an operator permission, which is the failure this whole slice exists
-// to end.
-//
-// The disclosure through behaviour is the feature, which is the bar
-// MachineryApplied sets. These particulars are the installation's own public
-// identity — the name, address and contact it prints at the bottom of its mail
-// — so there is nothing here a reader could learn that any recipient of that
-// mail does not already have in their inbox. WRITING them stays gated on
-// installation_settings at update, which is where the trust actually sits.
-//
-// The stored row spells each field by its Go name, so a boot value and the
-// yaml tags do too. No Default: the zero value states nothing.
+// ControllerIdentity is the installation's own particulars. MachineryApplied: a
+// rep writing a reply holds no settings grant, and a gated read would send the
+// message without its legally required disclosure. The particulars are public,
+// printed on every mail; writing them stays gated on installation_settings.
+// The saved row spells each field by its Go name, and so do a boot value and
+// the yaml tags.
 var ControllerIdentity = config.DefineStored(config.Spec[ControllerParticulars]{
 	Key:      "consent.controller_particulars",
 	Env:      "MARGINCE_CONSENT_CONTROLLER_PARTICULARS",
 	Type:     config.Struct[ControllerParticulars](),
 	Validate: validateControllerParticulars,
 	Doc:      "Who this installation is, as every message it sends must say: legal name, postal address, privacy contact, objection route and advertiser contact.",
-}, config.Store{RBACObject: controllerParticularsObject, AuditVerb: "update", MachineryApplied: true})
+}, config.Store{RBACObject: controllerParticularsObject, AuditVerb: settingsAuditVerb, MachineryApplied: true})
 
 // validateControllerParticulars refuses what a message could not carry.
 //
