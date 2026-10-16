@@ -117,7 +117,7 @@ function recordHead(): Element {
 // The strip ITSELF, from the component that draws the tabs — not the slot the
 // page chrome reserves for it.
 //
-// `.record-tabs` in composed.tsx is that slot: a wrapper the record head puts
+// `.record-tabs` in recordview.tsx is that slot: a wrapper the record head puts
 // around whatever tabs it is handed. The tabs live inside it under
 // `recordtabs.tsx`'s own classes, and a query for `.record-tabs button` matches
 // nothing at all. This file asked for the wrapper and for buttons inside it, so

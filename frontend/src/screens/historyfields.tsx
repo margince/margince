@@ -12,9 +12,9 @@ import {
   EmptyState,
   SegmentedControl,
 } from "../design-system/atoms";
-import type { TimelineEntry } from "../design-system/composed";
 import { LoadMoreButton, QueryStates } from "../design-system/querystates";
 import { Row } from "../design-system/stack";
+import type { TimelineEntry } from "../design-system/timelineentry";
 import {
   EvidenceChip,
   ProvenanceTag,

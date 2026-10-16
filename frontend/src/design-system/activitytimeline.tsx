@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { emailSummaryText } from "../format/emailtext";
 import type { Locale, useT } from "../i18n";
-import type { TimelineEntry } from "./composed";
 import {
   type ContactOn,
   contactsOn,
@@ -14,6 +13,7 @@ import {
   withWhom,
 } from "./participants";
 import { provenanceOf } from "./provenanceof";
+import type { TimelineEntry } from "./timelineentry";
 import { isTranscriptActivity, TranscriptReadCard } from "./transcriptread";
 
 type Activity = components["schemas"]["Activity"];

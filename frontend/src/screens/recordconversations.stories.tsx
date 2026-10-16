@@ -2,7 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { TimelineEntry, TimelineGroup } from "../design-system/composed";
+import type {
+  TimelineEntry,
+  TimelineGroup,
+} from "../design-system/timelineentry";
 import { StoryProviders } from "../testing/story-utils";
 import { ConversationList } from "./recordconversations";
 

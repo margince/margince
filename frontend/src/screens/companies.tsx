@@ -27,7 +27,6 @@ import {
   Modal,
   Skeleton,
 } from "../design-system/atoms";
-import type { TimelineEntry, TimelineGroup } from "../design-system/composed";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import type { ListChip } from "../design-system/listsurface";
@@ -43,6 +42,10 @@ import {
 import { RecordView } from "../design-system/recordview";
 import { Stack } from "../design-system/stack";
 import { sectionState } from "../design-system/surfacestate";
+import type {
+  TimelineEntry,
+  TimelineGroup,
+} from "../design-system/timelineentry";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { groupChronology } from "../design-system/timelinegroups";
 import { SaveViewAction, useSavedViewTabs } from "../features/lists/savedviews";

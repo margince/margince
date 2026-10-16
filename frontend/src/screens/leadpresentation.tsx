@@ -9,12 +9,12 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { Badge } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import {
   type BoardColumn,
   type BoardRecord,
   PipelineBoard,
-} from "../design-system/composed";
-import { ErrorLine } from "../design-system/errorline";
+} from "../design-system/pipelineboard";
 import { LoadMoreButton } from "../design-system/querystates";
 import { formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";

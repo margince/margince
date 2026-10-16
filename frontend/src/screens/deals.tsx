@@ -56,12 +56,6 @@ import {
   EmptyState,
   SegmentedControl,
 } from "../design-system/atoms";
-import type {
-  BoardColumn,
-  BoardDeal,
-  BoardMoneyColumn,
-  PipelineBoard,
-} from "../design-system/composed";
 import { DataTable } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { IconAction } from "../design-system/iconaction";
@@ -73,6 +67,12 @@ import {
   type ListSelection,
 } from "../design-system/listtable";
 import { Panel, PanelBody } from "../design-system/panel";
+import type {
+  BoardColumn,
+  BoardDeal,
+  BoardMoneyColumn,
+  PipelineBoard,
+} from "../design-system/pipelineboard";
 import { provenanceOf } from "../design-system/provenanceof";
 import { LoadMoreButton, QueryGate } from "../design-system/querystates";
 import { FieldGuard } from "../design-system/rbac";

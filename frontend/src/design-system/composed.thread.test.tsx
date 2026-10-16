@@ -4,11 +4,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
-import {
-  GroupedTimelineList,
-  type TimelineEntry,
-  type TimelineGroup,
-} from "./composed";
+import { GroupedTimelineList } from "./timeline";
+import type { TimelineEntry, TimelineGroup } from "./timelineentry";
 
 // What a thread on the chronology SAYS, as assertions: the card's head names
 // the kind, the count and the other side; each message says who wrote it in

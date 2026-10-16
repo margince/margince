@@ -5,14 +5,10 @@ import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import { useT } from "../i18n";
 import { Avatar } from "./atoms";
-import {
-  GroupedTimelineList,
-  type TimelineEntry,
-  type TimelineGroup,
-  TimelineList,
-} from "./composed";
 import { Heading } from "./heading";
 import { PageZones, type PageZonesShape } from "./pagezones";
+import { GroupedTimelineList, TimelineList } from "./timeline";
+import type { TimelineEntry, TimelineGroup } from "./timelineentry";
 import { useTruncationTooltip } from "./tooltip";
 
 // Where a record's verbs land. Three places can hold them — beside the
