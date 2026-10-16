@@ -242,16 +242,10 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			return err
 		}
 		page = shape.page(hits)
-		if err := s.countTagReach(ctx, tx, page.Hits); err != nil {
+		if err := noteCaptureWithheld(ctx, tx, types); err != nil {
 			return err
 		}
-		if err := s.attachEmailSummaries(ctx, tx, page.Hits); err != nil {
-			return err
-		}
-		if err := s.markPartners(ctx, tx, page.Hits); err != nil {
-			return err
-		}
-		return s.attachCompanyLogos(ctx, tx, page.Hits)
+		return s.decorate(ctx, tx, page.Hits)
 	})
 	if err != nil {
 		return Page{}, err
