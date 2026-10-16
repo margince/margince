@@ -5,6 +5,7 @@ import {
   memoryStorage,
   renderApp,
   sessionOnlyFetch,
+  teardownApp,
 } from "./testing/appharness";
 
 // The COMPOSED half of the extension-route pair. Its twin,
@@ -50,8 +51,9 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn(sessionOnlyFetch()));
 });
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  await teardownApp();
   vi.unstubAllGlobals();
   window.location.hash = "";
 });

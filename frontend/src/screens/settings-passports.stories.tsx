@@ -129,6 +129,6 @@ export const UsageOpen: Story = {
         name: "Show this window’s usage for Claude Code on my laptop",
       }),
     );
-    await canvas.findByRole("meter", { name: "Records read" });
+    await canvas.findByRole("meter", { name: "Sends" });
   },
 };

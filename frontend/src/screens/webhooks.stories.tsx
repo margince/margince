@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import { Badge } from "../design-system/atoms";
 import { LocaleProvider } from "../i18n";
-import { en } from "../i18n/en";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
@@ -249,19 +248,22 @@ export const SecretRevealed: Story = {
       await canvas.findByLabelText(/target url/i),
       "https://hooks.acme.test/inbound",
     );
-    // The drawer's event picker: open it, tick one event, close it.
+    // The event set is its own picker: an "Add events" popover over groups
+    // of checkboxes, each row naming the type in words and in code.
+    //
+    // Choosing one is open, tick, and close by the same button. The panel
+    // stays open after a tick, which is what makes choosing three of a
+    // hundred three clicks, and it would cover the submit. Escape closes the
+    // create dialog instead, taking the whole form with it.
+    const addEvents = await canvas.findByRole("button", {
+      name: /Add events/,
+    });
+    await userEvent.click(addEvents);
+    await userEvent.click(await canvas.findByText("deal.stage_changed"));
+    await userEvent.click(addEvents);
     await userEvent.click(
-      await canvas.findByRole("button", { name: en["webhooks.events.add"] }),
+      canvas.getByRole("button", { name: "Create subscription" }),
     );
-    await userEvent.click(
-      await canvas.findByRole("checkbox", {
-        name: new RegExp(`^${en["webhooks.event.deal.stage_changed.label"]}`),
-      }),
-    );
-    await userEvent.click(
-      canvas.getByRole("button", { name: en["webhooks.events.done"] }),
-    );
-    await userEvent.click(canvas.getByTestId("save-webhook-subscription"));
   },
 };
 
@@ -270,7 +272,8 @@ export const SecretRevealed: Story = {
 // admin/ops role the create affordance already gates on.
 export const EditOpen: Story = {
   render: cardStory(baseRoutes()),
-  play: async () => {
+  play: async ({ canvasElement }) => {
+    await openRowActions(canvasElement);
     await clickTestIds(["edit-webhook-subscription"]);
   },
 };

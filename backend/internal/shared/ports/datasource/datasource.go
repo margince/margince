@@ -271,6 +271,30 @@ type FreshnessInfo struct {
 	Authoritative bool
 }
 
+// The per-record provenance labels, spelled here so the REST and tool surfaces
+// answer with one vocabulary. They mirror the contract's SearchResultTrustTier,
+// which a test holds.
+const (
+	TrustTierAuthoritative = "authoritative"
+	TrustTierExternal      = "external"
+)
+
+// TrustTier is what this record's provenance lets a surface claim.
+//
+// It answers whether this installation holds the record. That is a narrower
+// question than who wrote the content. A connector-captured row stored here is
+// authoritative, and still carries an automated writer's tier on the envelope.
+// The two labels are not rival answers.
+//
+// Absent is a third state and it means unknown, so a surface that knows says
+// so. Omitting the label on a native read reports the weaker of two claims.
+func (f FreshnessInfo) TrustTier() string {
+	if f.Authoritative {
+		return TrustTierAuthoritative
+	}
+	return TrustTierExternal
+}
+
 // SearchQuery is the governed search shape: full-text plus structured
 // filters, cursor-paginated per the contract's keyset convention.
 type SearchQuery struct {

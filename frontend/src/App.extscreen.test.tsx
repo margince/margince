@@ -6,6 +6,7 @@ import {
   memoryStorage,
   renderApp,
   sessionOnlyFetch,
+  teardownApp,
 } from "./testing/appharness";
 
 // The THIRD extension-route case, beside App.test.tsx's vanilla lane and
@@ -76,8 +77,9 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn(sessionOnlyFetch()));
 });
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  await teardownApp();
   vi.unstubAllGlobals();
   window.location.hash = "";
 });

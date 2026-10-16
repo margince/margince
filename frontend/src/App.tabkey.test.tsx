@@ -7,6 +7,7 @@ import {
   memoryStorage,
   renderApp,
   sessionOnlyFetch,
+  teardownApp,
 } from "./testing/appharness";
 
 // A tab inside a record is a view of that record. The app keys its routed
@@ -171,8 +172,9 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn(contactFetch()));
 });
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  await teardownApp();
   vi.unstubAllGlobals();
   window.location.hash = "";
 });

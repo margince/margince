@@ -23293,8 +23293,7 @@ type AddDealRoomDocumentRequest struct {
 	Source   string `json:"source"`
 
 	// Title The buyer-facing name. Defaults to the attachment's filename.
-	Title                *string                `json:"title,omitempty"`
-	AdditionalProperties map[string]interface{} `json:"-"`
+	Title *string `json:"title,omitempty"`
 }
 
 // Address Structured postal address.
@@ -33645,10 +33644,9 @@ type CreateDealRoomRequest struct {
 	Source    string             `json:"source"`
 
 	// StewardUserId Defaults to the deal's owner when omitted.
-	StewardUserId        *openapi_types.UUID    `json:"steward_user_id,omitempty"`
-	Title                string                 `json:"title"`
-	WelcomeMessage       *string                `json:"welcome_message,omitempty"`
-	AdditionalProperties map[string]interface{} `json:"-"`
+	StewardUserId  *openapi_types.UUID `json:"steward_user_id,omitempty"`
+	Title          string              `json:"title"`
+	WelcomeMessage *string             `json:"welcome_message,omitempty"`
 }
 
 // CreateImportRunRequest Exactly one of two shapes: `object` and `mapping` (and optionally
@@ -38663,11 +38661,10 @@ type IntroRequestStatus string
 // InviteDealRoomParticipantRequest defines model for InviteDealRoomParticipantRequest.
 type InviteDealRoomParticipantRequest struct {
 	// Capability Defaults to `view` — the least that lets someone read the room.
-	Capability           *DealRoomParticipantCapability `json:"capability,omitempty"`
-	Email                openapi_types.Email            `json:"email"`
-	FullName             string                         `json:"full_name"`
-	Source               string                         `json:"source"`
-	AdditionalProperties map[string]interface{}         `json:"-"`
+	Capability *DealRoomParticipantCapability `json:"capability,omitempty"`
+	Email      openapi_types.Email            `json:"email"`
+	FullName   string                         `json:"full_name"`
+	Source     string                         `json:"source"`
 }
 
 // InviteUserRequest Admin-supplied details for a new member. No password — the invite issues a set-password token.
@@ -48528,10 +48525,9 @@ type UpdateDealRoomDocumentRequest struct {
 	// key never carries a display string. Not configurable, not AI-assigned — the
 	// contact adding the document picks. A plain string rather than an inline enum
 	// for the reason `DealRoomParticipantCapability` gives.
-	GroupKey             *DealRoomDocumentGroup `json:"group_key,omitempty"`
-	Position             *int                   `json:"position,omitempty"`
-	Title                *string                `json:"title,omitempty"`
-	AdditionalProperties map[string]interface{} `json:"-"`
+	GroupKey *DealRoomDocumentGroup `json:"group_key,omitempty"`
+	Position *int                   `json:"position,omitempty"`
+	Title    *string                `json:"title,omitempty"`
 }
 
 // UpdateDealRoomParticipantRequest Any subset; omit a field to leave it unchanged.
@@ -48550,9 +48546,8 @@ type UpdateDealRoomParticipantRequest struct {
 
 	// Email Only while their credential is unconsumed. Changing it invalidates the link
 	// already sent; resend to issue a new one.
-	Email                *openapi_types.Email   `json:"email,omitempty"`
-	FullName             *string                `json:"full_name,omitempty"`
-	AdditionalProperties map[string]interface{} `json:"-"`
+	Email    *openapi_types.Email `json:"email,omitempty"`
+	FullName *string              `json:"full_name,omitempty"`
 }
 
 // UpdateDealRoomRequest Any subset; omit a field to leave it unchanged. HUMAN-ONLY: an invited buyer
@@ -48562,10 +48557,9 @@ type UpdateDealRoomParticipantRequest struct {
 // is a change to what an outside party can reach, so it has its own human-only
 // operation rather than riding an auto-execute patch.
 type UpdateDealRoomRequest struct {
-	StewardUserId        *openapi_types.UUID    `json:"steward_user_id,omitempty"`
-	Title                *string                `json:"title,omitempty"`
-	WelcomeMessage       *string                `json:"welcome_message,omitempty"`
-	AdditionalProperties map[string]interface{} `json:"-"`
+	StewardUserId  *openapi_types.UUID `json:"steward_user_id,omitempty"`
+	Title          *string             `json:"title,omitempty"`
+	WelcomeMessage *string             `json:"welcome_message,omitempty"`
 }
 
 // UpdateImportRunRequest The choices one save changes on a draft run, with the `version` it was
@@ -59305,128 +59299,6 @@ type PinWorklistRowJSONRequestBody = WorklistPinRequest
 // QueryWorkspaceJSONRequestBody defines body for QueryWorkspace for application/json ContentType.
 type QueryWorkspaceJSONRequestBody = WorkspaceQueryRequest
 
-// Getter for additional properties for AddDealRoomDocumentRequest. Returns the specified
-// element and whether it was found
-func (a AddDealRoomDocumentRequest) Get(fieldName string) (value interface{}, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for AddDealRoomDocumentRequest
-func (a *AddDealRoomDocumentRequest) Set(fieldName string, value interface{}) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]interface{})
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for AddDealRoomDocumentRequest to handle AdditionalProperties
-func (a *AddDealRoomDocumentRequest) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if raw, found := object["attachment_id"]; found {
-		err = json.Unmarshal(raw, &a.AttachmentId)
-		if err != nil {
-			return fmt.Errorf("error reading 'attachment_id': %w", err)
-		}
-		delete(object, "attachment_id")
-	}
-
-	if raw, found := object["group_key"]; found {
-		err = json.Unmarshal(raw, &a.GroupKey)
-		if err != nil {
-			return fmt.Errorf("error reading 'group_key': %w", err)
-		}
-		delete(object, "group_key")
-	}
-
-	if raw, found := object["position"]; found {
-		err = json.Unmarshal(raw, &a.Position)
-		if err != nil {
-			return fmt.Errorf("error reading 'position': %w", err)
-		}
-		delete(object, "position")
-	}
-
-	if raw, found := object["source"]; found {
-		err = json.Unmarshal(raw, &a.Source)
-		if err != nil {
-			return fmt.Errorf("error reading 'source': %w", err)
-		}
-		delete(object, "source")
-	}
-
-	if raw, found := object["title"]; found {
-		err = json.Unmarshal(raw, &a.Title)
-		if err != nil {
-			return fmt.Errorf("error reading 'title': %w", err)
-		}
-		delete(object, "title")
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]interface{})
-		for fieldName, fieldBuf := range object {
-			var fieldVal interface{}
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for AddDealRoomDocumentRequest to handle AdditionalProperties
-func (a AddDealRoomDocumentRequest) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	object["attachment_id"], err = json.Marshal(a.AttachmentId)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'attachment_id': %w", err)
-	}
-
-	object["group_key"], err = json.Marshal(a.GroupKey)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'group_key': %w", err)
-	}
-
-	if a.Position != nil {
-		object["position"], err = json.Marshal(a.Position)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'position': %w", err)
-		}
-	}
-
-	object["source"], err = json.Marshal(a.Source)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'source': %w", err)
-	}
-
-	if a.Title != nil {
-		object["title"], err = json.Marshal(a.Title)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'title': %w", err)
-		}
-	}
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
-		}
-	}
-	return json.Marshal(object)
-}
-
 // Getter for additional properties for Address. Returns the specified
 // element and whether it was found
 func (a Address) Get(fieldName string) (value interface{}, found bool) {
@@ -62292,143 +62164,6 @@ func (a CreateDealRequest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
-// Getter for additional properties for CreateDealRoomRequest. Returns the specified
-// element and whether it was found
-func (a CreateDealRoomRequest) Get(fieldName string) (value interface{}, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for CreateDealRoomRequest
-func (a *CreateDealRoomRequest) Set(fieldName string, value interface{}) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]interface{})
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for CreateDealRoomRequest to handle AdditionalProperties
-func (a *CreateDealRoomRequest) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if raw, found := object["deal_id"]; found {
-		err = json.Unmarshal(raw, &a.DealId)
-		if err != nil {
-			return fmt.Errorf("error reading 'deal_id': %w", err)
-		}
-		delete(object, "deal_id")
-	}
-
-	if raw, found := object["expires_at"]; found {
-		err = json.Unmarshal(raw, &a.ExpiresAt)
-		if err != nil {
-			return fmt.Errorf("error reading 'expires_at': %w", err)
-		}
-		delete(object, "expires_at")
-	}
-
-	if raw, found := object["source"]; found {
-		err = json.Unmarshal(raw, &a.Source)
-		if err != nil {
-			return fmt.Errorf("error reading 'source': %w", err)
-		}
-		delete(object, "source")
-	}
-
-	if raw, found := object["steward_user_id"]; found {
-		err = json.Unmarshal(raw, &a.StewardUserId)
-		if err != nil {
-			return fmt.Errorf("error reading 'steward_user_id': %w", err)
-		}
-		delete(object, "steward_user_id")
-	}
-
-	if raw, found := object["title"]; found {
-		err = json.Unmarshal(raw, &a.Title)
-		if err != nil {
-			return fmt.Errorf("error reading 'title': %w", err)
-		}
-		delete(object, "title")
-	}
-
-	if raw, found := object["welcome_message"]; found {
-		err = json.Unmarshal(raw, &a.WelcomeMessage)
-		if err != nil {
-			return fmt.Errorf("error reading 'welcome_message': %w", err)
-		}
-		delete(object, "welcome_message")
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]interface{})
-		for fieldName, fieldBuf := range object {
-			var fieldVal interface{}
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for CreateDealRoomRequest to handle AdditionalProperties
-func (a CreateDealRoomRequest) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	object["deal_id"], err = json.Marshal(a.DealId)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'deal_id': %w", err)
-	}
-
-	if a.ExpiresAt != nil {
-		object["expires_at"], err = json.Marshal(a.ExpiresAt)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'expires_at': %w", err)
-		}
-	}
-
-	object["source"], err = json.Marshal(a.Source)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'source': %w", err)
-	}
-
-	if a.StewardUserId != nil {
-		object["steward_user_id"], err = json.Marshal(a.StewardUserId)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'steward_user_id': %w", err)
-		}
-	}
-
-	object["title"], err = json.Marshal(a.Title)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'title': %w", err)
-	}
-
-	if a.WelcomeMessage != nil {
-		object["welcome_message"], err = json.Marshal(a.WelcomeMessage)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'welcome_message': %w", err)
-		}
-	}
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
-		}
-	}
-	return json.Marshal(object)
-}
-
 // Getter for additional properties for CreateLeadRequest. Returns the specified
 // element and whether it was found
 func (a CreateLeadRequest) Get(fieldName string) (value interface{}, found bool) {
@@ -64816,113 +64551,6 @@ func (a DealRoomParticipant) MarshalJSON() ([]byte, error) {
 	object["updated_at"], err = json.Marshal(a.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'updated_at': %w", err)
-	}
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
-		}
-	}
-	return json.Marshal(object)
-}
-
-// Getter for additional properties for InviteDealRoomParticipantRequest. Returns the specified
-// element and whether it was found
-func (a InviteDealRoomParticipantRequest) Get(fieldName string) (value interface{}, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for InviteDealRoomParticipantRequest
-func (a *InviteDealRoomParticipantRequest) Set(fieldName string, value interface{}) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]interface{})
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for InviteDealRoomParticipantRequest to handle AdditionalProperties
-func (a *InviteDealRoomParticipantRequest) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if raw, found := object["capability"]; found {
-		err = json.Unmarshal(raw, &a.Capability)
-		if err != nil {
-			return fmt.Errorf("error reading 'capability': %w", err)
-		}
-		delete(object, "capability")
-	}
-
-	if raw, found := object["email"]; found {
-		err = json.Unmarshal(raw, &a.Email)
-		if err != nil {
-			return fmt.Errorf("error reading 'email': %w", err)
-		}
-		delete(object, "email")
-	}
-
-	if raw, found := object["full_name"]; found {
-		err = json.Unmarshal(raw, &a.FullName)
-		if err != nil {
-			return fmt.Errorf("error reading 'full_name': %w", err)
-		}
-		delete(object, "full_name")
-	}
-
-	if raw, found := object["source"]; found {
-		err = json.Unmarshal(raw, &a.Source)
-		if err != nil {
-			return fmt.Errorf("error reading 'source': %w", err)
-		}
-		delete(object, "source")
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]interface{})
-		for fieldName, fieldBuf := range object {
-			var fieldVal interface{}
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for InviteDealRoomParticipantRequest to handle AdditionalProperties
-func (a InviteDealRoomParticipantRequest) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	if a.Capability != nil {
-		object["capability"], err = json.Marshal(a.Capability)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'capability': %w", err)
-		}
-	}
-
-	object["email"], err = json.Marshal(a.Email)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'email': %w", err)
-	}
-
-	object["full_name"], err = json.Marshal(a.FullName)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'full_name': %w", err)
-	}
-
-	object["source"], err = json.Marshal(a.Source)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'source': %w", err)
 	}
 
 	for fieldName, field := range a.AdditionalProperties {
@@ -68229,300 +67857,6 @@ func (a UpdateDealRequest) MarshalJSON() ([]byte, error) {
 		object["wait_until"], err = json.Marshal(a.WaitUntil)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'wait_until': %w", err)
-		}
-	}
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
-		}
-	}
-	return json.Marshal(object)
-}
-
-// Getter for additional properties for UpdateDealRoomDocumentRequest. Returns the specified
-// element and whether it was found
-func (a UpdateDealRoomDocumentRequest) Get(fieldName string) (value interface{}, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for UpdateDealRoomDocumentRequest
-func (a *UpdateDealRoomDocumentRequest) Set(fieldName string, value interface{}) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]interface{})
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for UpdateDealRoomDocumentRequest to handle AdditionalProperties
-func (a *UpdateDealRoomDocumentRequest) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if raw, found := object["group_key"]; found {
-		err = json.Unmarshal(raw, &a.GroupKey)
-		if err != nil {
-			return fmt.Errorf("error reading 'group_key': %w", err)
-		}
-		delete(object, "group_key")
-	}
-
-	if raw, found := object["position"]; found {
-		err = json.Unmarshal(raw, &a.Position)
-		if err != nil {
-			return fmt.Errorf("error reading 'position': %w", err)
-		}
-		delete(object, "position")
-	}
-
-	if raw, found := object["title"]; found {
-		err = json.Unmarshal(raw, &a.Title)
-		if err != nil {
-			return fmt.Errorf("error reading 'title': %w", err)
-		}
-		delete(object, "title")
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]interface{})
-		for fieldName, fieldBuf := range object {
-			var fieldVal interface{}
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for UpdateDealRoomDocumentRequest to handle AdditionalProperties
-func (a UpdateDealRoomDocumentRequest) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	if a.GroupKey != nil {
-		object["group_key"], err = json.Marshal(a.GroupKey)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'group_key': %w", err)
-		}
-	}
-
-	if a.Position != nil {
-		object["position"], err = json.Marshal(a.Position)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'position': %w", err)
-		}
-	}
-
-	if a.Title != nil {
-		object["title"], err = json.Marshal(a.Title)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'title': %w", err)
-		}
-	}
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
-		}
-	}
-	return json.Marshal(object)
-}
-
-// Getter for additional properties for UpdateDealRoomParticipantRequest. Returns the specified
-// element and whether it was found
-func (a UpdateDealRoomParticipantRequest) Get(fieldName string) (value interface{}, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for UpdateDealRoomParticipantRequest
-func (a *UpdateDealRoomParticipantRequest) Set(fieldName string, value interface{}) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]interface{})
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for UpdateDealRoomParticipantRequest to handle AdditionalProperties
-func (a *UpdateDealRoomParticipantRequest) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if raw, found := object["capability"]; found {
-		err = json.Unmarshal(raw, &a.Capability)
-		if err != nil {
-			return fmt.Errorf("error reading 'capability': %w", err)
-		}
-		delete(object, "capability")
-	}
-
-	if raw, found := object["email"]; found {
-		err = json.Unmarshal(raw, &a.Email)
-		if err != nil {
-			return fmt.Errorf("error reading 'email': %w", err)
-		}
-		delete(object, "email")
-	}
-
-	if raw, found := object["full_name"]; found {
-		err = json.Unmarshal(raw, &a.FullName)
-		if err != nil {
-			return fmt.Errorf("error reading 'full_name': %w", err)
-		}
-		delete(object, "full_name")
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]interface{})
-		for fieldName, fieldBuf := range object {
-			var fieldVal interface{}
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for UpdateDealRoomParticipantRequest to handle AdditionalProperties
-func (a UpdateDealRoomParticipantRequest) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	if a.Capability != nil {
-		object["capability"], err = json.Marshal(a.Capability)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'capability': %w", err)
-		}
-	}
-
-	if a.Email != nil {
-		object["email"], err = json.Marshal(a.Email)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'email': %w", err)
-		}
-	}
-
-	if a.FullName != nil {
-		object["full_name"], err = json.Marshal(a.FullName)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'full_name': %w", err)
-		}
-	}
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
-		}
-	}
-	return json.Marshal(object)
-}
-
-// Getter for additional properties for UpdateDealRoomRequest. Returns the specified
-// element and whether it was found
-func (a UpdateDealRoomRequest) Get(fieldName string) (value interface{}, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for UpdateDealRoomRequest
-func (a *UpdateDealRoomRequest) Set(fieldName string, value interface{}) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]interface{})
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for UpdateDealRoomRequest to handle AdditionalProperties
-func (a *UpdateDealRoomRequest) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if raw, found := object["steward_user_id"]; found {
-		err = json.Unmarshal(raw, &a.StewardUserId)
-		if err != nil {
-			return fmt.Errorf("error reading 'steward_user_id': %w", err)
-		}
-		delete(object, "steward_user_id")
-	}
-
-	if raw, found := object["title"]; found {
-		err = json.Unmarshal(raw, &a.Title)
-		if err != nil {
-			return fmt.Errorf("error reading 'title': %w", err)
-		}
-		delete(object, "title")
-	}
-
-	if raw, found := object["welcome_message"]; found {
-		err = json.Unmarshal(raw, &a.WelcomeMessage)
-		if err != nil {
-			return fmt.Errorf("error reading 'welcome_message': %w", err)
-		}
-		delete(object, "welcome_message")
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]interface{})
-		for fieldName, fieldBuf := range object {
-			var fieldVal interface{}
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for UpdateDealRoomRequest to handle AdditionalProperties
-func (a UpdateDealRoomRequest) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	if a.StewardUserId != nil {
-		object["steward_user_id"], err = json.Marshal(a.StewardUserId)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'steward_user_id': %w", err)
-		}
-	}
-
-	if a.Title != nil {
-		object["title"], err = json.Marshal(a.Title)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'title': %w", err)
-		}
-	}
-
-	if a.WelcomeMessage != nil {
-		object["welcome_message"], err = json.Marshal(a.WelcomeMessage)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'welcome_message': %w", err)
 		}
 	}
 

@@ -79,6 +79,7 @@ export function renderApp(): void {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  mounted.push(client);
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider>
@@ -86,6 +87,30 @@ export function renderApp(): void {
       </LocaleProvider>
     </QueryClientProvider>,
   );
+}
+
+// The clients renderApp has mounted, so a case can shut them down. A client
+// nobody holds a reference to cannot be stopped.
+const mounted: QueryClient[] = [];
+
+/**
+ * Stop every client renderApp mounted in this case.
+ *
+ * Call it in `afterEach`, ahead of taking the stubbed fetch away.
+ *
+ * Unmounting the tree stops the observers. A read already in flight still
+ * settles after, and a screen that polls has its next tick scheduled.
+ *
+ * Both reach whatever `fetch` is by then, which is the real one once the stub
+ * is gone. A late settle can also land in the next case, where a router write
+ * it makes moves a page that case waits for.
+ */
+export async function teardownApp(): Promise<void> {
+  const clients = mounted.splice(0, mounted.length);
+  for (const client of clients) {
+    await client.cancelQueries();
+    client.clear();
+  }
 }
 
 // A wizard row at the step named — the shape the shell's journey gate reads.
