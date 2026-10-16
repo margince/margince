@@ -185,8 +185,7 @@ export const TheServerRefusesBothImagesPhone: Story = {
   tags: ["uat-phone"],
 };
 
-// A text wordmark is refused rather than stored with its words missing; the
-// sentence tells the admin how to fix the file.
+// The sentence tells the admin how to fix the file.
 export const TheServerRefusesAnSvgWithLiveText: Story = {
   ...TheServerRefusesTheWideLogo,
   render: (args) => {
@@ -200,7 +199,7 @@ export const TheServerRefusesAnSvgWithLiveText: Story = {
   play: async ({ canvasElement }) => {
     await refuseUpload(canvasElement, "Wide logo");
     await within(canvasElement).findByText(
-      "This SVG has live text, which cannot be drawn. Convert the text to outlines in your design tool, or upload a PNG.",
+      "This SVG holds its words as text, which cannot be drawn. Convert the text to outlines in your design tool, or upload a PNG.",
     );
   },
 };

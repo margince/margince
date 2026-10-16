@@ -10370,7 +10370,7 @@ export const en = {
     "Use a PNG, JPEG, GIF, WebP, ICO or SVG file.",
   "settings.companyMarkTooLarge": "Use a smaller file.",
   "settings.companyMarkSvgText":
-    "This SVG has live text, which cannot be drawn. Convert the text to outlines in your design tool, or upload a PNG.",
+    "This SVG holds its words as text, which cannot be drawn. Convert the text to outlines in your design tool, or upload a PNG.",
   "settings.companyMarkAddWide": "Add wide logo",
   "settings.companyMarkReplaceWide": "Replace wide logo",
   "settings.companyMarkRemoveWide": "Remove wide logo",
