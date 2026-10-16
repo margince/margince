@@ -101,8 +101,11 @@ var UnassignedEscalationUserID = config.DefineStored(config.Spec[string]{
 const settingsAuditVerb = "update"
 
 // ConfigSettings are this module's settings in the configuration registry.
-func ConfigSettings() []config.Any {
-	return []config.Any{FirstResponseEnabled, FirstResponseTargetMinutes, UnassignedEscalationUserID, SignatureTemplate}
+func ConfigSettings() []config.Any { return append(LeadSettingsSurface(), SignatureTemplate) }
+
+// LeadSettingsSurface are the settings GET /leads/settings carries.
+func LeadSettingsSurface() []config.Any {
+	return []config.Any{FirstResponseEnabled, FirstResponseTargetMinutes, UnassignedEscalationUserID}
 }
 
 // leadSLAPolicy is the resolved setting pair every SLA computation reads.

@@ -11351,6 +11351,33 @@ export interface paths {
         patch: operations["updateInstallationSettings"];
         trace?: never;
     };
+    "/installation/configuration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every setting the programs read, with its value and source (admin/ops).
+         * @description Lists every registered setting of the api, worker and migrate programs, sorted by key:
+         *     its environment variable and flag, its type, the programs that read it, the value in
+         *     force and where that value came from. A secret answers `secret: true` and a null value
+         *     and default; no response carries a secret. Settings the product writes itself are not
+         *     configuration and are not listed.
+         *
+         *     Admin/ops only: governed by the `installation_settings` RBAC object's update grant, the
+         *     grant of those who change the installation.
+         */
+        get: operations["getInstallationConfiguration"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/installation/setup": {
         parameters: {
             query?: never;
@@ -20494,6 +20521,7 @@ export interface components {
             unlisted: string[];
         };
         AiPriceSync: {
+            locks?: components["schemas"]["SettingLocks"];
             /** @description Whether the daily job syncs model prices. */
             auto_sync: boolean;
             last_run?: components["schemas"]["AiPriceSyncRun"];
@@ -20661,11 +20689,64 @@ export interface components {
             data: components["schemas"]["WebhookDelivery"][];
             page: components["schemas"]["PageInfo"];
         };
+        /** @description Where the value in force came from. */
+        SettingOrigin: {
+            /**
+             * @description `flag`, `env`, `env_file` and `config_file` are boot sources, and a setting one of them
+             *     sets is locked. `config_file` covers both the base file and the `--config-file` file;
+             *     `file` says which. `database` is a value an administrator saved, `default` the
+             *     declared default, and `unset` no value at all.
+             * @enum {string}
+             */
+            source: "flag" | "env" | "env_file" | "config_file" | "database" | "default" | "unset";
+            /** @description The flag, environment variable or YAML key that set the value. Empty for `database`, `default` and `unset`. */
+            name: string;
+            /** @description The file that held the value, for a .env or YAML source or a secret file. */
+            file?: string;
+        };
+        /** @description A setting a boot source sets. A write that changes it is refused with 409 `setting_locked_by_boot_source`. */
+        SettingLock: {
+            /** @description The setting's key, such as `capture.auto_enrich_daily_cap`. */
+            key: string;
+            origin: components["schemas"]["SettingOrigin"];
+        };
+        /**
+         * @description The settings in this response that a boot source sets, each with its source. A client
+         *     shows each as read-only. Empty when nothing is locked. A write ignores it.
+         */
+        SettingLocks: components["schemas"]["SettingLock"][];
+        /** @description One registered setting, as the api program loaded it. */
+        ConfigurationEntry: {
+            key: string;
+            /** @description The environment variable that sets it. */
+            env: string;
+            /** @description The command-line flag that sets it, without dashes. Absent when none does. */
+            flag?: string;
+            /** @description The value's type, as the reference documentation names it. */
+            type: string;
+            doc: string;
+            /** @description The programs that read the setting. */
+            roles: ("api" | "worker" | "migrate")[];
+            /** @description True for a secret, whose value and default this answer never carries. */
+            secret: boolean;
+            /** @description True when an administrator may also save it in the product. */
+            stored: boolean;
+            /**
+             * @description The value in force, written as an operator writes it. Null for a secret, for a setting
+             *     with no value, and for a setting the api does not read: another program's sources are
+             *     not visible to the api.
+             */
+            value: string | null;
+            /** @description The declared default, written as an operator writes it. Null for a secret and when none is declared. */
+            default: string | null;
+            origin: components["schemas"]["SettingOrigin"];
+        };
         /**
          * @description The installation's identity and reporting basis (ADR-0090). Read by every role,
          *     changed only by admin/ops.
          */
         InstallationSettings: {
+            locks?: components["schemas"]["SettingLocks"];
             /**
              * @description The company's display name. An administrator saving the anchor company's `display_name`
              *     (`PUT /company`, a profile-field correction or a company edit) sets it in the same
@@ -21198,6 +21279,7 @@ export interface components {
          *     changed only by admin/ops.
          */
         CaptureSettings: {
+            locks?: components["schemas"]["SettingLocks"];
             /**
              * @description The installation-wide ceiling on AUTOMATIC website reads started in one UTC day.
              *     Company auto-enrichment and domain triage spend it from one counter. It paces and only
@@ -21281,6 +21363,7 @@ export interface components {
             blocking: boolean;
         };
         ConnectorApp: {
+            locks?: components["schemas"]["SettingLocks"];
             /**
              * @description Which vendor's app this describes, echoed so a cached response cannot be misread.
              * @enum {string}
@@ -21480,6 +21563,7 @@ export interface components {
             tenant?: string;
         };
         AiProviderKeyList: {
+            locks?: components["schemas"]["SettingLocks"];
             providers: components["schemas"]["AiProviderKeyStatus"][];
         };
         /**
@@ -21598,6 +21682,7 @@ export interface components {
          *     copy free to drift from the generated one.
          */
         AiRouting: {
+            locks?: components["schemas"]["SettingLocks"];
             /**
              * @description The location ladder (§4). `sovereign` means zero egress by construction: a cloud
              *     provider on any tier is refused, and so is a local provider pointed at another host.
@@ -21863,6 +21948,7 @@ export interface components {
          *     admin/ops.
          */
         IntegrationsSettings: {
+            locks?: components["schemas"]["SettingLocks"];
             /**
              * @description When true, every contact is looked up once against the connected data provider for
              *     the details it charges nothing for — the professional profile link, the current role
@@ -23536,6 +23622,7 @@ export interface components {
             comments?: string | null;
         };
         LegalReviewSettings: {
+            locks?: components["schemas"]["SettingLocks"];
             enabled: boolean;
         };
         /** @description One Deal Scout suggestion: a deal the evidence says should exist on a company with no open deal. */
@@ -23783,6 +23870,7 @@ export interface components {
             expected_revision: string;
         };
         AiBudgetSnapshot: {
+            locks?: components["schemas"]["SettingLocks"];
             config: components["schemas"]["AiBudgetConfig"];
             revision: string;
             /** Format: int64 */
@@ -29686,6 +29774,7 @@ export interface components {
             updated_at?: string | null;
         };
         EmailSignatureTemplate: {
+            locks?: components["schemas"]["SettingLocks"];
             /**
              * @description The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
              *     `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
@@ -34816,10 +34905,12 @@ export interface components {
             active?: boolean;
         };
         FollowUpSettings: {
+            locks?: components["schemas"]["SettingLocks"];
             /** @description Days a sent message may stay unanswered before its sender is reminded to follow up. */
             follow_up_after_days: number;
         };
         LeadSettings: {
+            locks?: components["schemas"]["SettingLocks"];
             /** @description Whether the first-response target is tracked at all. Off by default. */
             first_response_enabled: boolean;
             /** @description How long a lead may wait for its first genuine response once the clock starts (routing, else creation). 15..10080. */
@@ -40334,6 +40425,7 @@ export interface components {
         };
         /** @description The installation's retention posture (GCS-PARAM-6). */
         RetentionSettings: {
+            locks?: components["schemas"]["SettingLocks"];
             /**
              * @description When true, the nightly evaluator applies no `anonymize` and no `erase` — whatever any
              *     policy row says. `archive` is unaffected. Default false: storage limitation
@@ -40809,6 +40901,7 @@ export interface components {
          *     disclosures a message carries; these are the words that meet them.
          */
         ControllerParticulars: {
+            locks?: components["schemas"]["SettingLocks"];
             /** @description Who is writing, as the law would name them. Art. 13(1)(a) GDPR's identity of the controller, and the advertiser under Decree 91/2020. */
             legal_name?: string;
             /** @description Where they are, as a block of lines — including a register court and number where a business letter needs one. */
@@ -46980,6 +47073,15 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /** @description A boot source (a flag, the environment, a .env file or a YAML file) sets a setting this write would change (`code: setting_locked_by_boot_source`). The detail names the setting and its source; change it there. Sending the value in force is accepted, except for a secret, which refuses every value. */
+        SettingLocked: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
         /** @description Request failed validation (RFC 7807 with field-level `details.errors`). */
         ValidationError: {
             headers: {
@@ -49431,6 +49533,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -50051,7 +50154,15 @@ export interface operations {
             };
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            /** @description A state conflict (a concurrent edit or a duplicate). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -52060,6 +52171,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -58402,6 +58514,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -58451,6 +58564,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -58498,6 +58612,7 @@ export interface operations {
                 };
             };
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -63134,6 +63249,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -63562,7 +63678,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description The draft cannot be confirmed as submitted, and `code` says which of the three it is: `already_confirmed` (this dossier was confirmed already — reload the company), `not_confirmable` (the read has produced no draft yet — wait for it or start a new one), or `version_skew` (the draft moved since it was reviewed — inspect it again). */
+            /** @description The draft cannot be confirmed as submitted, and `code` says which of the three it is: `already_confirmed` (this dossier was confirmed already — reload the company), `not_confirmable` (the read has produced no draft yet — wait for it or start a new one), or `version_skew` (the draft moved since it was reviewed — inspect it again). It is also `setting_locked_by_boot_source` when the draft renames the company and a boot source sets `installation.name`. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -65187,7 +65303,30 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getInstallationConfiguration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The configuration overview. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigurationEntry"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     getInstallationSetup: {
@@ -65289,6 +65428,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
             /** @description This installation has no key vault, so the client secret cannot be stored. The remedy is the operator's — the vault root key — not anything the caller sent. */
             503: {
@@ -65331,6 +65471,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            409: components["responses"]["SettingLocked"];
             /** @description This installation has no key vault, so there is no sealed secret to remove. The remedy is the operator's — the vault root key — not anything the caller sent. */
             503: {
                 headers: {
@@ -65531,6 +65672,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -65957,12 +66099,14 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
-            /** @description The configuration changed; reload before saving. */
+            /** @description The configuration changed; reload before saving. Or a boot source sets the allowance (`code: setting_locked_by_boot_source`): change it there. */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
             };
             422: components["responses"]["ValidationError"];
         };
@@ -66079,12 +66223,14 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
-            /** @description Someone saved the overrides since they were read; reload before saving. */
+            /** @description Someone saved the overrides since they were read; reload before saving. Or a boot source sets the overrides (`code: setting_locked_by_boot_source`): change it there. */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
             };
             422: components["responses"]["ValidationError"];
         };
@@ -66300,12 +66446,14 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
-            /** @description The supplied configuration revision is stale, or, with no revision supplied, the document kept changing while its Vertex AI bindings were being checked. Read it again and retry. */
+            /** @description The supplied configuration revision is stale, or, with no revision supplied, the document kept changing while its Vertex AI bindings were being checked (`code: version_skew` or `conflict`): read it again and retry. Or a boot source sets the binding (`code: setting_locked_by_boot_source`): change it there. */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
             };
             422: components["responses"]["ValidationError"];
         };
@@ -66428,6 +66576,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
             /** @description This installation has no key vault, so a provider key cannot be stored. The remedy is the operator's — the vault root key — not anything the caller sent. */
             503: {
@@ -66461,6 +66610,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["SettingLocked"];
             /** @description This installation has no key vault, so there is no sealed credential to remove. The remedy is the operator's — the vault root key — not anything the caller sent. */
             503: {
                 headers: {
@@ -66502,12 +66652,14 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
-            /** @description The routing document kept changing while its Vertex AI bindings were being checked against the new location. Read it again and retry. */
+            /** @description The routing document kept changing while its Vertex AI bindings were being checked: read it again and retry. Or a boot source sets the binding (`code: setting_locked_by_boot_source`): change it there. */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
             };
             422: components["responses"]["ValidationError"];
         };
@@ -67277,6 +67429,7 @@ export interface operations {
                     "application/json": components["schemas"]["ControllerParticulars"];
                 };
             };
+            409: components["responses"]["SettingLocked"];
         };
     };
     listNoticeCases: {
@@ -68353,6 +68506,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -76977,6 +77131,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -77079,7 +77234,15 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["VersionConflict"];
+            /** @description The company changed since the version in If-Match (`code: version_skew`). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -77149,7 +77312,15 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["VersionConflict"];
+            /** @description The company changed since the version in If-Match (`code: version_skew`). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };

@@ -27,6 +27,11 @@ func (e LockedError) Error() string { return e.Key + " is set by " + originText(
 // Is makes a lock a conflict to errors.Is, which the HTTP layer maps.
 func (e LockedError) Is(target error) bool { return target == apperrors.ErrConflict }
 
+// MessageFault names no field of the request: the fix is in the boot source.
+func (e LockedError) MessageFault() (code, message string) {
+	return "setting_locked_by_boot_source", e.Error() + "; change it there"
+}
+
 // WithDatabase returns a copy that reads and writes stored settings through st,
 // so the boot view stays usable before the pool exists.
 func (c *Config) WithDatabase(st *settings.Store) *Config {

@@ -392,6 +392,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/imports/{id}/problems.csv":                                     {Op: "downloadImportProblems", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/imports/{id}/report":                                           {Op: "getImportRunReport", Access: "tool", Tool: "read_import_report", RecordType: "import_run", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/installation/authentication-policy":                            {Op: "getAuthenticationPolicy", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/installation/configuration":                                    {Op: "getInstallationConfiguration", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/installation/jurisdiction":                                     {Op: "getInstallationJurisdiction", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/installation/jurisdiction/documents/{documentId}":              {Op: "downloadJurisdictionDocument", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/installation/license":                                          {Op: "getLicenseEntitlement", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

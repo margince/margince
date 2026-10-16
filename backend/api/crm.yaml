@@ -2573,6 +2573,7 @@ paths:
               schema: { $ref: '#/components/schemas/IntegrationsSettings' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------------------ /provider-connections --------------------------
@@ -2946,7 +2947,11 @@ paths:
               schema: { $ref: '#/components/schemas/Company' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409':
+          description: 'A state conflict (a concurrent edit or a duplicate). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Companies]
@@ -5066,6 +5071,7 @@ paths:
               schema: { $ref: '#/components/schemas/LegalReviewSettings' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /legal-reviews/{id}:
@@ -10239,6 +10245,7 @@ paths:
               schema: { $ref: '#/components/schemas/FollowUpSettings' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /email-signature-template:
@@ -10278,6 +10285,7 @@ paths:
               schema: { $ref: '#/components/schemas/EmailSignatureTemplate' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /leads/settings:
@@ -10317,6 +10325,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/LeadSettings' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /leads/{id}:
@@ -14712,6 +14721,7 @@ paths:
               schema: { $ref: '#/components/schemas/CompanyProfile' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /company/logo:
@@ -15102,7 +15112,9 @@ paths:
             The draft cannot be confirmed as submitted, and `code` says which of the three it is:
             `already_confirmed` (this dossier was confirmed already — reload the company),
             `not_confirmable` (the read has produced no draft yet — wait for it or start a new one),
-            or `version_skew` (the draft moved since it was reviewed — inspect it again).
+            or `version_skew` (the draft moved since it was reviewed — inspect it again). It is also
+            `setting_locked_by_boot_source` when the draft renames the company and a boot source
+            sets `installation.name`.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -16990,7 +17002,35 @@ paths:
               schema: { $ref: '#/components/schemas/InstallationSettings' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /installation/configuration:
+    get:
+      tags: [Identity]
+      operationId: getInstallationConfiguration
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Every setting the programs read, with its value and source (admin/ops).
+      description: |
+        Lists every registered setting of the api, worker and migrate programs, sorted by key:
+        its environment variable and flag, its type, the programs that read it, the value in
+        force and where that value came from. A secret answers `secret: true` and a null value
+        and default; no response carries a secret. Settings the product writes itself are not
+        configuration and are not listed.
+
+        Admin/ops only: governed by the `installation_settings` RBAC object's update grant, the
+        grant of those who change the installation.
+      responses:
+        '200':
+          description: The configuration overview.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ConfigurationEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
 
   /installation/setup:
     get:
@@ -17126,6 +17166,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '503':
           description: >-
@@ -17164,6 +17205,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '503':
           description: >-
             This installation has no key vault, so there is no sealed secret to remove. The
@@ -17417,6 +17459,7 @@ paths:
               schema: { $ref: '#/components/schemas/CaptureSettings' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------- /capture/consumer-mail-domains (CAP-PARAM-5) ---------------
@@ -17925,7 +17968,10 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '409':
-          description: The configuration changed; reload before saving.
+          description: 'The configuration changed; reload before saving. Or a boot source sets the allowance (`code: setting_locked_by_boot_source`): change it there.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /ai/budget/preview:
@@ -18022,7 +18068,10 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '409':
-          description: Someone saved the overrides since they were read; reload before saving.
+          description: 'Someone saved the overrides since they were read; reload before saving. Or a boot source sets the overrides (`code: setting_locked_by_boot_source`): change it there.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /ai/task-overrides/preview:
@@ -18233,7 +18282,11 @@ paths:
               schema: { $ref: '#/components/schemas/AiRouting' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
-        '409': { description: 'The supplied configuration revision is stale, or, with no revision supplied, the document kept changing while its Vertex AI bindings were being checked. Read it again and retry.' }
+        '409':
+          description: 'The supplied configuration revision is stale, or, with no revision supplied, the document kept changing while its Vertex AI bindings were being checked (`code: version_skew` or `conflict`): read it again and retry. Or a boot source sets the binding (`code: setting_locked_by_boot_source`): change it there.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /ai/provider-keys:
@@ -18477,6 +18530,7 @@ paths:
         '204': { description: 'Sealed. The key is not echoed.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '503':
           description: >-
@@ -18511,6 +18565,7 @@ paths:
         '204': { description: 'Removed, or there was nothing to remove.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '503':
           description: >-
             This installation has no key vault, so there is no sealed credential to remove. The
@@ -18564,7 +18619,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { description: 'The routing document kept changing while its Vertex AI bindings were being checked against the new location. Read it again and retry.' }
+        '409':
+          description: 'The routing document kept changing while its Vertex AI bindings were being checked: read it again and retry. Or a boot source sets the binding (`code: setting_locked_by_boot_source`): change it there.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /ai/provider-keys/{provider}/test:
     parameters:
@@ -19294,6 +19353,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ControllerParticulars' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
   /privacy/notice-cases:
     get:
       tags: [Compliance]
@@ -20625,6 +20685,7 @@ paths:
               schema: { $ref: '#/components/schemas/RetentionSettings' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /retention/restrictions:
@@ -29106,6 +29167,7 @@ paths:
               schema: { $ref: '#/components/schemas/AiPriceSync' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /ai-model-rates/propose-refresh:
@@ -29182,7 +29244,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/VersionConflict' }
+        '409':
+          description: 'The company changed since the version in If-Match (`code: version_skew`). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /companies/{id}/profile-fields/{field}/confirm:
@@ -29212,7 +29278,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/VersionConflict' }
+        '409':
+          description: 'The company changed since the version in If-Match (`code: version_skew`). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /companies/{id}/facts/{factKey}:
@@ -30011,6 +30081,14 @@ components:
           examples:
             skew:
               value: { type: 'https://errors.gradion.com/version_skew', title: Version conflict, status: 409, code: version_skew, detail: The resource changed since your last read; re-read and retry. }
+    SettingLocked:
+      description: 'A boot source (a flag, the environment, a .env file or a YAML file) sets a setting this write would change (`code: setting_locked_by_boot_source`). The detail names the setting and its source; change it there. Sending the value in force is accepted, except for a secret, which refuses every value.'
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          examples:
+            locked:
+              value: { type: 'https://errors.gradion.com/setting_locked_by_boot_source', title: Conflict, status: 409, code: setting_locked_by_boot_source, detail: 'capture.auto_enrich_daily_cap is set by env MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP; change it there' }
     ValidationError:
       description: Request failed validation (RFC 7807 with field-level `details.errors`).
       content:
@@ -30182,6 +30260,7 @@ components:
       additionalProperties: false
       required: [auto_sync]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         auto_sync: { type: boolean, description: Whether the daily job syncs model prices. }
         last_run: { $ref: '#/components/schemas/AiPriceSyncRun' }
     AiPriceSyncRun:
@@ -30410,6 +30489,63 @@ components:
         page: { $ref: '#/components/schemas/PageInfo' }
 
     # ---- capture settings (workspace-shared posture; CAP-PARAM-7, ADR-0072) ----
+    SettingOrigin:
+      type: object
+      additionalProperties: false
+      description: Where the value in force came from.
+      required: [source, name]
+      properties:
+        source:
+          type: string
+          enum: [flag, env, env_file, config_file, database, default, unset]
+          description: |
+            `flag`, `env`, `env_file` and `config_file` are boot sources, and a setting one of them
+            sets is locked. `config_file` covers both the base file and the `--config-file` file;
+            `file` says which. `database` is a value an administrator saved, `default` the
+            declared default, and `unset` no value at all.
+        name: { type: string, description: 'The flag, environment variable or YAML key that set the value. Empty for `database`, `default` and `unset`.' }
+        file: { type: string, description: 'The file that held the value, for a .env or YAML source or a secret file.' }
+    SettingLock:
+      type: object
+      additionalProperties: false
+      description: A setting a boot source sets. A write that changes it is refused with 409 `setting_locked_by_boot_source`.
+      required: [key, origin]
+      properties:
+        key: { type: string, description: 'The setting''s key, such as `capture.auto_enrich_daily_cap`.' }
+        origin: { $ref: '#/components/schemas/SettingOrigin' }
+    SettingLocks:
+      type: array
+      description: |
+        The settings in this response that a boot source sets, each with its source. A client
+        shows each as read-only. Empty when nothing is locked. A write ignores it.
+      items: { $ref: '#/components/schemas/SettingLock' }
+    ConfigurationEntry:
+      type: object
+      additionalProperties: false
+      description: One registered setting, as the api program loaded it.
+      required: [key, env, type, doc, roles, secret, stored, value, default, origin]
+      properties:
+        key: { type: string }
+        env: { type: string, description: The environment variable that sets it. }
+        flag: { type: string, description: 'The command-line flag that sets it, without dashes. Absent when none does.' }
+        type: { type: string, description: 'The value''s type, as the reference documentation names it.' }
+        doc: { type: string }
+        roles:
+          type: array
+          description: The programs that read the setting.
+          items: { type: string, enum: [api, worker, migrate] }
+        secret: { type: boolean, description: 'True for a secret, whose value and default this answer never carries.' }
+        stored: { type: boolean, description: True when an administrator may also save it in the product. }
+        value:
+          type: [string, 'null']
+          description: |
+            The value in force, written as an operator writes it. Null for a secret, for a setting
+            with no value, and for a setting the api does not read: another program's sources are
+            not visible to the api.
+        default:
+          type: [string, 'null']
+          description: The declared default, written as an operator writes it. Null for a secret and when none is declared.
+        origin: { $ref: '#/components/schemas/SettingOrigin' }
     InstallationSettings:
       type: object
       description: |
@@ -30417,6 +30553,7 @@ components:
         changed only by admin/ops.
       required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations, agent_allowances]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         name:
           type: string
           description: |
@@ -31095,6 +31232,7 @@ components:
         changed only by admin/ops.
       required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich, auto_enrich_daily_cap, site_read, mail_sync_interval_seconds]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         auto_enrich_daily_cap:
           type: integer
           minimum: 1
@@ -31205,6 +31343,7 @@ components:
       additionalProperties: false
       required: [provider, configured, client_id, source, redirect_uris]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         provider:
           type: string
           enum: [google, microsoft]
@@ -31558,6 +31697,7 @@ components:
       additionalProperties: false
       required: [providers]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         providers:
           type: array
           items: { $ref: '#/components/schemas/AiProviderKeyStatus' }
@@ -31825,6 +31965,7 @@ components:
         copy free to drift from the generated one.
       required: [profile, tiers, embeddings]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         profile:
           type: string
           enum: [eu_hosted, sovereign, cloud_frontier]
@@ -32083,6 +32224,7 @@ components:
         admin/ops.
       required: [automatic_lookup]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         automatic_lookup:
           type: boolean
           description: |
@@ -33882,6 +34024,7 @@ components:
       type: object
       required: [enabled]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         enabled: { type: boolean }
 
     DealSuggestion:
@@ -34114,6 +34257,7 @@ components:
       type: object
       required: [config, revision, eligible_full_users, budgeted_full_users, source, monthly_tokens, spent_tokens, remaining_tokens, band, month_start_at, resets_at, observed_at]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         config: { $ref: '#/components/schemas/AiBudgetConfig' }
         revision: { type: string }
         eligible_full_users: { type: integer, format: int64 }
@@ -41590,6 +41734,7 @@ components:
       type: object
       required: [template]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         template:
           type: string
           maxLength: 4000
@@ -47322,6 +47467,7 @@ components:
       type: object
       required: [follow_up_after_days]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         follow_up_after_days:
           type: integer
           minimum: 1
@@ -47332,6 +47478,7 @@ components:
       type: object
       required: [first_response_enabled, first_response_target_minutes]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         first_response_enabled: { type: boolean, description: 'Whether the first-response target is tracked at all. Off by default.' }
         first_response_target_minutes: { type: integer, description: 'How long a lead may wait for its first genuine response once the clock starts (routing, else creation). 15..10080.' }
         unassigned_escalation_user_id:
@@ -54978,6 +55125,7 @@ components:
       description: The installation's retention posture (GCS-PARAM-6).
       required: [retain_only]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         retain_only:
           type: boolean
           description: |
@@ -55482,6 +55630,7 @@ components:
         Every field is optional and every field is free text. A jurisdiction pack declares WHICH
         disclosures a message carries; these are the words that meet them.
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks' }
         legal_name:
           type: string
           maxLength: 500

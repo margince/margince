@@ -97,6 +97,9 @@ func TestSavingOverABootSourceIsAConflictThatNamesTheSource(t *testing.T) {
 	if !strings.Contains(err.Error(), "X_TEST_CAP") || strings.Contains(err.Error(), "901") {
 		t.Fatalf("the refusal must name the source and not the value: %v", err)
 	}
+	if code, message := locked.MessageFault(); code != "setting_locked_by_boot_source" || !strings.Contains(message, "X_TEST_CAP") {
+		t.Fatalf("the refusal answers %q %q, want the lock's code and the source", code, message)
+	}
 	// No database is attached, so reaching the store would fail rather than pass.
 	if err := config.Save(writer, cfg, storedCap, 900); err != nil {
 		t.Fatalf("saving the boot value itself is a no-op: %v", err)

@@ -173,7 +173,9 @@ func (h Handlers) GetControllerParticulars(w http.ResponseWriter, r *http.Reques
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireParticulars(current))
+	out := wireParticulars(current)
+	out.Locks = h.settingLocks(ControllerIdentity)
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 // SetControllerParticulars records who this installation is.
@@ -216,7 +218,9 @@ func (h Handlers) SetControllerParticulars(w http.ResponseWriter, r *http.Reques
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireParticulars(saved))
+	out := wireParticulars(saved)
+	out.Locks = h.settingLocks(ControllerIdentity)
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 // valueOr reads an optional wire string. An ABSENT field and an empty one are
@@ -244,4 +248,18 @@ func wireParticulars(p ControllerParticulars) crmcontracts.ControllerParticulars
 		ObjectionRoute:    &p.ObjectionRoute,
 		AdvertiserContact: &p.AdvertiserContact,
 	}
+}
+
+// WithLocks binds what reports the settings a boot source sets.
+func (h Handlers) WithLocks(locks func(surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
+	h.locks = locks
+	return h
+}
+
+// settingLocks are the locks among surface, the settings one response carries.
+func (h Handlers) settingLocks(surface ...config.Any) *[]crmcontracts.SettingLock {
+	if h.locks == nil {
+		return nil
+	}
+	return h.locks(surface)
 }

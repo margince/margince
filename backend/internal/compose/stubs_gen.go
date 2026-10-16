@@ -1967,6 +1967,10 @@ func (stubs) GetAuthenticationPolicy(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "GetAuthenticationPolicy")
 }
 
+func (stubs) GetInstallationConfiguration(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetInstallationConfiguration")
+}
+
 func (stubs) GetInstallationJurisdiction(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetInstallationJurisdiction")
 }

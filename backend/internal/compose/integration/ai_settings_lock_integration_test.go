@@ -125,9 +125,10 @@ func TestAIBudgetSetByEnvIsLockedAgainstAChange(t *testing.T) {
 	}
 	more := int64(778)
 	changed := budgetConfig{TokensPerFullUser: 5000, CompanyMonthlyTokens: &more}
+	var refused problemBody
 	if status := e.Call(t, http.MethodPut, "/v1/ai/budget",
-		map[string]any{"config": changed, "expected_revision": read.Revision}, nil, nil); status != http.StatusConflict {
-		t.Fatalf("a change of the locked allowance → %d, want 409", status)
+		map[string]any{"config": changed, "expected_revision": read.Revision}, nil, &refused); status != http.StatusConflict || refused.Code != lockedCode {
+		t.Fatalf("a change of the locked allowance → %d %q, want 409 %s", status, refused.Code, lockedCode)
 	}
 	if status := e.Call(t, http.MethodPut, "/v1/ai/budget",
 		map[string]any{"config": read.Config, "expected_revision": read.Revision}, nil, nil); status != http.StatusOK {

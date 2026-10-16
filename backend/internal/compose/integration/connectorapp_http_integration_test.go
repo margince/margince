@@ -262,33 +262,7 @@ func TestGoogleAppOverHTTPWithoutAVaultIsUnavailableNotUnimplemented(t *testing.
 // can record a stored app the way the store does.
 func setupGoogleAppWithEnvApp(t *testing.T, opts ...compose.Option) (*apptest.AppEnv, keyvault.Vault) {
 	t.Helper()
-	return setupGoogleConnect(t, "env-client.apps.googleusercontent.com", "GOCSPX-from-the-environment", opts...)
-}
-
-// setupGoogleConnect mounts the Google connect flow over a vault, with the
-// environment's app given by clientID and secret. Empty means it composed none,
-// and only a stored app can serve.
-func setupGoogleConnect(t *testing.T, clientID, secret string, opts ...compose.Option) (*apptest.AppEnv, keyvault.Vault) {
-	t.Helper()
-	key := make([]byte, 32)
-	if _, err := rand.Read(key); err != nil {
-		t.Fatalf("generating a test root key: %v", err)
-	}
-	vault, err := keyvault.New(keyvault.Config{RootKey: key, Pool: apptest.EarlyPool(t)})
-	if err != nil {
-		t.Fatalf("building the local vault: %v", err)
-	}
-	e := apptest.SetupAppWithOptions(t, append([]compose.Option{
-		compose.WithKeyvault(vault),
-		compose.WithGmailCapture(compose.GmailConfig{
-			ClientID:      clientID,
-			ClientSecret:  secret,
-			StateKey:      "0123456789abcdef0123456789abcdef",
-			PublicBaseURL: "https://app.example",
-		}, compose.CaptureConfig{}),
-	}, opts...)...)
-	e.BootstrapWorkspace(t)
-	return e, vault
+	return apptest.SetupGoogleConnect(t, "env-client.apps.googleusercontent.com", "GOCSPX-from-the-environment", opts...)
 }
 
 // storedAppCtx records and reads a stored app as the system, on the
@@ -497,7 +471,7 @@ func TestInstallationSetupNeedsBothABindingAndItsKey(t *testing.T) {
 // looks like from here, and it exercises the real unseal failing for the real
 // reason.
 func TestAStoredAppWhoseSecretWillNotOpenIsNotReportedAsUnconfigured(t *testing.T) {
-	e, _ := setupGoogleConnect(t, "", "")
+	e, _ := apptest.SetupGoogleConnect(t, "", "")
 	secret := httpSecret
 	if status := e.Call(t, "PUT", "/v1/installation/oauth-apps/google",
 		crmcontracts.ConnectorAppInput{ClientId: httpClientID, ClientSecret: &secret}, nil, nil); status != http.StatusNoContent {
@@ -685,7 +659,7 @@ func TestAnUnknownVendorIsNotFoundRatherThanDefaulted(t *testing.T) {
 // A client id the environment sets without its secret composes no app. So it
 // locks nothing, and the stored app stays the admin's to write and remove.
 func TestAnEnvClientIDWithoutItsSecretLeavesTheStoredAppWritable(t *testing.T) {
-	e, _ := setupGoogleConnect(t, "env-only.apps.googleusercontent.com", "")
+	e, _ := apptest.SetupGoogleConnect(t, "env-only.apps.googleusercontent.com", "")
 	secret := httpSecret
 	if status := e.Call(t, "PUT", "/v1/installation/oauth-apps/google",
 		crmcontracts.ConnectorAppInput{ClientId: httpClientID, ClientSecret: &secret}, nil, nil); status != http.StatusNoContent {

@@ -624,7 +624,11 @@ paths:
               schema: {$ref: '#/components/schemas/Company'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409':
+          description: 'A state conflict (a concurrent edit or a duplicate). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`).'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
     delete:
       tags: [Companies]
@@ -7717,7 +7721,11 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/VersionConflict'}
+        '409':
+          description: 'The company changed since the version in If-Match (`code: version_skew`). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`).'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/profile-fields/{field}/confirm:
     parameters:
@@ -7749,7 +7757,11 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/VersionConflict'}
+        '409':
+          description: 'The company changed since the version in If-Match (`code: version_skew`). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`).'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/facts/{factKey}:
     parameters:
@@ -8120,6 +8132,36 @@ components:
           type: string
           description: A field belonging to `category`; the pairing is checked, so a market field under `company` is a 422 rather than a row nobody can read back.
         value: {type: string, minLength: 1}
+    SettingOrigin:
+      type: object
+      additionalProperties: false
+      description: Where the value in force came from.
+      required: [source, name]
+      properties:
+        source:
+          type: string
+          enum: [flag, env, env_file, config_file, database, default, unset]
+          description: |-
+            `flag`, `env`, `env_file` and `config_file` are boot sources, and a setting one of them
+            sets is locked. `config_file` covers both the base file and the `--config-file` file;
+            `file` says which. `database` is a value an administrator saved, `default` the
+            declared default, and `unset` no value at all.
+        name: {type: string, description: 'The flag, environment variable or YAML key that set the value. Empty for `database`, `default` and `unset`.'}
+        file: {type: string, description: 'The file that held the value, for a .env or YAML source or a secret file.'}
+    SettingLock:
+      type: object
+      additionalProperties: false
+      description: A setting a boot source sets. A write that changes it is refused with 409 `setting_locked_by_boot_source`.
+      required: [key, origin]
+      properties:
+        key: {type: string, description: 'The setting''s key, such as `capture.auto_enrich_daily_cap`.'}
+        origin: {$ref: '#/components/schemas/SettingOrigin'}
+    SettingLocks:
+      type: array
+      description: |-
+        The settings in this response that a boot source sets, each with its source. A client
+        shows each as read-only. Empty when nothing is locked. A write ignores it.
+      items: {$ref: '#/components/schemas/SettingLock'}
     SourceAuthor:
       type: object
       description: |-
@@ -12670,6 +12712,7 @@ components:
       type: object
       required: [template]
       properties:
+        locks: {$ref: '#/components/schemas/SettingLocks'}
         template:
           type: string
           maxLength: 4000
@@ -15870,6 +15913,7 @@ components:
       type: object
       required: [follow_up_after_days]
       properties:
+        locks: {$ref: '#/components/schemas/SettingLocks'}
         follow_up_after_days:
           type: integer
           minimum: 1
@@ -15879,6 +15923,7 @@ components:
       type: object
       required: [first_response_enabled, first_response_target_minutes]
       properties:
+        locks: {$ref: '#/components/schemas/SettingLocks'}
         first_response_enabled: {type: boolean, description: 'Whether the first-response target is tracked at all. Off by default.'}
         first_response_target_minutes: {type: integer, description: 'How long a lead may wait for its first genuine response once the clock starts (routing, else creation). 15..10080.'}
         unassigned_escalation_user_id:

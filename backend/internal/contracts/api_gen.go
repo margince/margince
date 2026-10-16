@@ -6061,6 +6061,27 @@ func (e ComputedFieldKind) Valid() bool {
 	}
 }
 
+// Defines values for ConfigurationEntryRoles.
+const (
+	ConfigurationEntryRolesApi     ConfigurationEntryRoles = "api"
+	ConfigurationEntryRolesMigrate ConfigurationEntryRoles = "migrate"
+	ConfigurationEntryRolesWorker  ConfigurationEntryRoles = "worker"
+)
+
+// Valid indicates whether the value is a known member of the ConfigurationEntryRoles enum.
+func (e ConfigurationEntryRoles) Valid() bool {
+	switch e {
+	case ConfigurationEntryRolesApi:
+		return true
+	case ConfigurationEntryRolesMigrate:
+		return true
+	case ConfigurationEntryRolesWorker:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ConfirmSubmissionResolution.
 const (
 	ConfirmSubmissionResolutionAccepted ConfirmSubmissionResolution = "accepted"
@@ -16237,6 +16258,39 @@ func (e SetTransitionPolicyRequestMode) Valid() bool {
 	}
 }
 
+// Defines values for SettingOriginSource.
+const (
+	SettingOriginSourceConfigFile SettingOriginSource = "config_file"
+	SettingOriginSourceDatabase   SettingOriginSource = "database"
+	SettingOriginSourceDefault    SettingOriginSource = "default"
+	SettingOriginSourceEnv        SettingOriginSource = "env"
+	SettingOriginSourceEnvFile    SettingOriginSource = "env_file"
+	SettingOriginSourceFlag       SettingOriginSource = "flag"
+	SettingOriginSourceUnset      SettingOriginSource = "unset"
+)
+
+// Valid indicates whether the value is a known member of the SettingOriginSource enum.
+func (e SettingOriginSource) Valid() bool {
+	switch e {
+	case SettingOriginSourceConfigFile:
+		return true
+	case SettingOriginSourceDatabase:
+		return true
+	case SettingOriginSourceDefault:
+		return true
+	case SettingOriginSourceEnv:
+		return true
+	case SettingOriginSourceEnvFile:
+		return true
+	case SettingOriginSourceFlag:
+		return true
+	case SettingOriginSourceUnset:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SettleClaimRequestOutcome.
 const (
 	SettleClaimRequestOutcomeDismissed SettleClaimRequestOutcome = "dismissed"
@@ -24175,14 +24229,18 @@ type AiBudgetSnapshot struct {
 	BudgetedFullUsers int64          `json:"budgeted_full_users"`
 	Config            AiBudgetConfig `json:"config"`
 	EligibleFullUsers int64          `json:"eligible_full_users"`
-	MonthStartAt      time.Time      `json:"month_start_at"`
-	MonthlyTokens     int64          `json:"monthly_tokens"`
-	ObservedAt        time.Time      `json:"observed_at"`
-	RemainingTokens   int64          `json:"remaining_tokens"`
-	ResetsAt          time.Time      `json:"resets_at"`
-	Revision          string         `json:"revision"`
-	Source            string         `json:"source"`
-	SpentTokens       int64          `json:"spent_tokens"`
+
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks           *SettingLocks `json:"locks,omitempty"`
+	MonthStartAt    time.Time     `json:"month_start_at"`
+	MonthlyTokens   int64         `json:"monthly_tokens"`
+	ObservedAt      time.Time     `json:"observed_at"`
+	RemainingTokens int64         `json:"remaining_tokens"`
+	ResetsAt        time.Time     `json:"resets_at"`
+	Revision        string        `json:"revision"`
+	Source          string        `json:"source"`
+	SpentTokens     int64         `json:"spent_tokens"`
 }
 
 // AiCall defines model for AiCall.
@@ -24877,6 +24935,10 @@ type AiPriceSync struct {
 	// AutoSync Whether the daily job syncs model prices.
 	AutoSync bool            `json:"auto_sync"`
 	LastRun  *AiPriceSyncRun `json:"last_run,omitempty"`
+
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
 }
 
 // AiPriceSyncChange defines model for AiPriceSyncChange.
@@ -24969,6 +25031,9 @@ type AiProviderKeyInput struct {
 
 // AiProviderKeyList defines model for AiProviderKeyList.
 type AiProviderKeyList struct {
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks     *SettingLocks         `json:"locks,omitempty"`
 	Providers []AiProviderKeyStatus `json:"providers"`
 }
 
@@ -25057,6 +25122,10 @@ type AiRouting struct {
 	// reaches no further than the task's own bindings.
 	Decisions  *AiDecisionsBinding `json:"decisions,omitempty"`
 	Embeddings AiEmbeddingsBinding `json:"embeddings"`
+
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
 
 	// Profile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 	// provider on any tier is refused, and so is a local provider pointed at another host.
@@ -28806,6 +28875,10 @@ type CaptureSettings struct {
 	// without a restart. Default 500.
 	AutoEnrichDailyCap int `json:"auto_enrich_daily_cap"`
 
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
+
 	// MailSharing The workspace's capture-sharing posture, ON by default: captured correspondence is
 	// readable by every colleague who can see the contact. Switched OFF, everything captured
 	// FROM THEN ON is held to its participants and the capturing member — already-captured
@@ -31998,6 +32071,43 @@ type ComputedField struct {
 // ComputedFieldKind defines model for ComputedField.Kind.
 type ComputedFieldKind string
 
+// ConfigurationEntry One registered setting, as the api program loaded it.
+type ConfigurationEntry struct {
+	// Default The declared default, written as an operator writes it. Null for a secret and when none is declared.
+	Default *string `json:"default"`
+	Doc     string  `json:"doc"`
+
+	// Env The environment variable that sets it.
+	Env string `json:"env"`
+
+	// Flag The command-line flag that sets it, without dashes. Absent when none does.
+	Flag *string `json:"flag,omitempty"`
+	Key  string  `json:"key"`
+
+	// Origin Where the value in force came from.
+	Origin SettingOrigin `json:"origin"`
+
+	// Roles The programs that read the setting.
+	Roles []ConfigurationEntryRoles `json:"roles"`
+
+	// Secret True for a secret, whose value and default this answer never carries.
+	Secret bool `json:"secret"`
+
+	// Stored True when an administrator may also save it in the product.
+	Stored bool `json:"stored"`
+
+	// Type The value's type, as the reference documentation names it.
+	Type string `json:"type"`
+
+	// Value The value in force, written as an operator writes it. Null for a secret, for a setting
+	// with no value, and for a setting the api does not read: another program's sources are
+	// not visible to the api.
+	Value *string `json:"value"`
+}
+
+// ConfigurationEntryRoles defines model for ConfigurationEntry.Roles.
+type ConfigurationEntryRoles string
+
 // ConfirmCompanySiteReadRequest defines model for ConfirmCompanySiteReadRequest.
 type ConfirmCompanySiteReadRequest struct {
 	DraftVersion int `json:"draft_version"`
@@ -32198,6 +32308,10 @@ type ConnectorApp struct {
 
 	// Configured Whether this vendor's app is available to this installation from any source — true when `source` is `stored` or `environment`. It answers "can this vendor's mail and calendar be connected", which is a different question from where the app came from.
 	Configured bool `json:"configured"`
+
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
 
 	// Provider Which vendor's app this describes, echoed so a cached response cannot be misread.
 	Provider ConnectorAppProvider `json:"provider"`
@@ -33678,6 +33792,10 @@ type ControllerParticulars struct {
 
 	// LegalName Who is writing, as the law would name them. Art. 13(1)(a) GDPR's identity of the controller, and the advertiser under Decree 91/2020.
 	LegalName *string `json:"legal_name,omitempty"`
+
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
 
 	// ObjectionRoute How to say stop, free and without a barrier. §7(3) UWG requires it on every advertising
 	// message rather than only the first. The one-click unsubscribe this product mints is
@@ -36313,6 +36431,10 @@ type EmailSignatureDraft struct {
 
 // EmailSignatureTemplate defines model for EmailSignatureTemplate.
 type EmailSignatureTemplate struct {
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
+
 	// Template The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
 	// `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
 	// mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
@@ -37116,6 +37238,10 @@ type FinanceSummaryState string
 type FollowUpSettings struct {
 	// FollowUpAfterDays Days a sent message may stay unanswered before its sender is reminded to follow up.
 	FollowUpAfterDays int `json:"follow_up_after_days"`
+
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
 }
 
 // ForecastAssurance What the most recent nightly input check found, and how much of the pipeline it was able to reach.
@@ -38926,6 +39052,10 @@ type InstallationSettings struct {
 	// `commit_evidence` and says so in the landing's `caveat`.
 	ForecastForwardMeasure InstallationSettingsForecastForwardMeasure `json:"forecast_forward_measure"`
 
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
+
 	// MaxUploadBytes The largest upload request this installation accepts, in bytes — set by whoever
 	// operates it, not compiled into the build (OPS-CFG-12, DOC-PARAM-11). Read-only:
 	// it is a deployment fact, so PATCH does not carry it.
@@ -39036,6 +39166,10 @@ type IntegrationsSettings struct {
 	// decision with the contact who made it. There is no per-contact equivalent because a
 	// contact's country is not a fact this product holds.
 	AutomaticLookup bool `json:"automatic_lookup"`
+
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
 }
 
 // IntroFallbackPolicy What the requester wants to happen if the colleague says no. Stored rather than held in the drawer, so the answer survives the tab that gave it.
@@ -39988,6 +40122,10 @@ type LeadSettings struct {
 	// FirstResponseTargetMinutes How long a lead may wait for its first genuine response once the clock starts (routing, else creation). 15..10080.
 	FirstResponseTargetMinutes int `json:"first_response_target_minutes"`
 
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
+
 	// UnassignedEscalationUserId Who answers when a lead nobody owns misses its target. Null means nobody is
 	// configured, and an unowned breach is recorded without being addressed. Also reads
 	// null once the named seat can no longer work the queue — suspended, archived, an
@@ -40191,6 +40329,10 @@ type LegalReviewQueueItem struct {
 // LegalReviewSettings defines model for LegalReviewSettings.
 type LegalReviewSettings struct {
 	Enabled bool `json:"enabled"`
+
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
 }
 
 // LegalReviewStatus `requested` waits for legal. `approved` and `changes_needed` are legal's
@@ -45961,6 +46103,10 @@ type RetentionScope string
 
 // RetentionSettings The installation's retention posture (GCS-PARAM-6).
 type RetentionSettings struct {
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
+
 	// RetainOnly When true, the nightly evaluator applies no `anonymize` and no `erase` — whatever any
 	// policy row says. `archive` is unaffected. Default false: storage limitation
 	// (Art. 5(1)(e)) is the out-of-the-box posture, and the installation under a
@@ -47171,6 +47317,40 @@ type SetTransitionPolicyRequest struct {
 
 // SetTransitionPolicyRequestMode defines model for SetTransitionPolicyRequest.Mode.
 type SetTransitionPolicyRequestMode string
+
+// SettingLock A setting a boot source sets. A write that changes it is refused with 409 `setting_locked_by_boot_source`.
+type SettingLock struct {
+	// Key The setting's key, such as `capture.auto_enrich_daily_cap`.
+	Key string `json:"key"`
+
+	// Origin Where the value in force came from.
+	Origin SettingOrigin `json:"origin"`
+}
+
+// SettingLocks The settings in this response that a boot source sets, each with its source. A client
+// shows each as read-only. Empty when nothing is locked. A write ignores it.
+type SettingLocks = []SettingLock
+
+// SettingOrigin Where the value in force came from.
+type SettingOrigin struct {
+	// File The file that held the value, for a .env or YAML source or a secret file.
+	File *string `json:"file,omitempty"`
+
+	// Name The flag, environment variable or YAML key that set the value. Empty for `database`, `default` and `unset`.
+	Name string `json:"name"`
+
+	// Source `flag`, `env`, `env_file` and `config_file` are boot sources, and a setting one of them
+	// sets is locked. `config_file` covers both the base file and the `--config-file` file;
+	// `file` says which. `database` is a value an administrator saved, `default` the
+	// declared default, and `unset` no value at all.
+	Source SettingOriginSource `json:"source"`
+}
+
+// SettingOriginSource `flag`, `env`, `env_file` and `config_file` are boot sources, and a setting one of them
+// sets is locked. `config_file` covers both the base file and the `--config-file` file;
+// `file` says which. `database` is a value an administrator saved, `default` the
+// declared default, and `unset` no value at all.
+type SettingOriginSource string
 
 // SettingsAvailability Which settings surfaces EXIST in this installation, independently of whether this caller may read them. A surface can be absent for two unrelated reasons — the installation never enabled it, or this caller holds no grant on it — and settings navigation has to tell them apart: the first is not a destination at all, the second is a destination that explains itself.
 // Deployment facts only, never per-caller ones. Nothing here narrows with a role, so it discloses no more than the deployment file already tells every seat. A caller capability belongs beside `admin_password_link` instead, which folds the caller's role into its answer for exactly that reason.
@@ -52746,6 +52926,9 @@ type PermissionDenied = Problem
 
 // RetentionHeld RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type RetentionHeld = Problem
+
+// SettingLocked RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type SettingLocked = Problem
 
 // Unauthorized RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type Unauthorized = Problem
@@ -71837,6 +72020,9 @@ type ServerInterface interface {
 	// Which sign-in methods this installation offers.
 	// (GET /installation/authentication-policy)
 	GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request)
+	// Every setting the programs read, with its value and source (admin/ops).
+	// (GET /installation/configuration)
+	GetInstallationConfiguration(w http.ResponseWriter, r *http.Request)
 	// The installation's jurisdiction and what it puts in force.
 	// (GET /installation/jurisdiction)
 	GetInstallationJurisdiction(w http.ResponseWriter, r *http.Request)
@@ -75857,6 +76043,12 @@ func (_ Unimplemented) ValidateImportRun(w http.ResponseWriter, r *http.Request,
 // Which sign-in methods this installation offers.
 // (GET /installation/authentication-policy)
 func (_ Unimplemented) GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Every setting the programs read, with its value and source (admin/ops).
+// (GET /installation/configuration)
+func (_ Unimplemented) GetInstallationConfiguration(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -98710,6 +98902,26 @@ func (siw *ServerInterfaceWrapper) GetAuthenticationPolicy(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// GetInstallationConfiguration operation middleware
+func (siw *ServerInterfaceWrapper) GetInstallationConfiguration(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetInstallationConfiguration(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetInstallationJurisdiction operation middleware
 func (siw *ServerInterfaceWrapper) GetInstallationJurisdiction(w http.ResponseWriter, r *http.Request) {
 
@@ -115627,6 +115839,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/authentication-policy", wrapper.GetAuthenticationPolicy)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/configuration", wrapper.GetInstallationConfiguration)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/jurisdiction", wrapper.GetInstallationJurisdiction)

@@ -65,6 +65,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithMatchStager(linkedInMatchStager(pool)).
 		WithVCardReviewStager(vcardCreateStager(pool)).
 		WithSettings(StoredConfig(pool)).
+		WithLocks(loadedLocks).
 		WithSeatReadsLeads(seatReadsLeads(pool)).
 		WithDealOpener(leadDealOpener{deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}).
 		// A merge carries the retiring subject's stops, or it refuses. consent
@@ -102,6 +103,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	gate := consentGateFor(pool)
 	return activities.NewHandlers(InstallationDB(pool)).
 		WithSettings(StoredConfig(pool)).
+		WithLocks(loadedLocks).
 		WithConsent(gate).
 		WithSendPreview(gate).
 		// The SAME seam the check_availability tool reads, so the two doors
@@ -467,6 +469,7 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 		// The controller particulars form reads and writes through the settings
 		// store; without it every read and write of the form is a server fault.
 		WithSettings(StoredConfig(pool)).
+		WithLocks(loadedLocks).
 		// The edge that writes an accepted correction, through contacts' own
 		// update path — so the subject's correction is governed by the same
 		// gates as any other edit to that field.

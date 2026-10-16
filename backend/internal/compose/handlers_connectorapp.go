@@ -107,7 +107,13 @@ func (h connectorAppHandlers) GetOauthApp(w http.ResponseWriter, r *http.Request
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, connectorAppView(p, status, h.composed[p]))
+	view := connectorAppView(p, status, h.composed[p])
+	locks := []crmcontracts.SettingLock{}
+	if lock, ok := h.envLock(p); ok {
+		locks = append(locks, crmcontracts.SettingLock{Key: lock.Key, Origin: settingOrigin(lock.Origin)})
+	}
+	view.Locks = &locks
+	httperr.WriteJSON(w, http.StatusOK, view)
 }
 
 // SetOauthApp implements (PUT /installation/oauth-apps/{provider}).
@@ -213,15 +219,24 @@ var envAppSettings = map[capture.AppProvider]struct {
 // one every connect uses, so a stored one would be saved and never read. The
 // lock comes after the grant and the body, and before the value is judged.
 func (h connectorAppHandlers) locked(p capture.AppProvider) error {
+	if lock, ok := h.envLock(p); ok {
+		return lock
+	}
+	return nil
+}
+
+// envLock is the lock the deployment's app puts on the stored one, named by
+// the client id's source. A read reports it and a write is refused with it.
+func (h connectorAppHandlers) envLock(p capture.AppProvider) (config.LockedError, bool) {
 	if h.composed[p].envClientID == "" {
-		return nil
+		return config.LockedError{}, false
 	}
 	app := envAppSettings[p]
 	origin, set := loadedConfig().Locked(app.clientID.Key())
 	if !set {
 		origin = config.Origin{Source: config.SourceEnv, Name: app.clientID.Env()}
 	}
-	return config.LockedError{Key: app.key, Origin: origin}
+	return config.LockedError{Key: app.key, Origin: origin}, true
 }
 
 // sent reads an omitted string field as empty.

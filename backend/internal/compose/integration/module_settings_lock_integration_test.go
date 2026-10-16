@@ -30,11 +30,14 @@ type lockedWrite struct {
 }
 
 // expectLockedWrites sends each write in order and fails on any other status.
+// A refusal must carry the lock's code, whatever refused it.
 func expectLockedWrites(t *testing.T, e *apptest.AppEnv, writes []lockedWrite) {
 	t.Helper()
 	for _, w := range writes {
-		if status := e.Call(t, w.method, w.path, w.body, nil, nil); status != w.want {
-			t.Errorf("%s: %s %s → %d, want %d", w.name, w.method, w.path, status, w.want)
+		var refused problemBody
+		status := e.Call(t, w.method, w.path, w.body, nil, &refused)
+		if status != w.want || (status == http.StatusConflict && refused.Code != lockedCode) {
+			t.Errorf("%s: %s %s → %d %q, want %d", w.name, w.method, w.path, status, refused.Code, w.want)
 		}
 	}
 }

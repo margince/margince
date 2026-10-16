@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"sync"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -25,6 +26,9 @@ import (
 )
 
 type Handlers struct {
+	// locks reports the settings a boot source sets on each settings response;
+	// nil leaves the field out.
+	locks func(surface []config.Any) *[]crmcontracts.SettingLock
 	// stageMatches turns suggested LinkedIn matches into approvals. See
 	// WithMatchStager for why it is injected.
 	stageMatches func(context.Context) error

@@ -53,7 +53,9 @@ func (h Handlers) GetEmailSignatureTemplate(w http.ResponseWriter, r *http.Reque
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.EmailSignatureTemplate{Template: template})
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.EmailSignatureTemplate{
+		Template: template, Locks: h.settingLocks(SignatureTemplate),
+	})
 }
 
 // SaveEmailSignatureTemplate implements PUT /email-signature-template (admin/ops, human only).
@@ -67,5 +69,21 @@ func (h Handlers) SaveEmailSignatureTemplate(w http.ResponseWriter, r *http.Requ
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.EmailSignatureTemplate{Template: template})
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.EmailSignatureTemplate{
+		Template: template, Locks: h.settingLocks(SignatureTemplate),
+	})
+}
+
+// WithLocks binds what reports the settings a boot source sets.
+func (h Handlers) WithLocks(locks func(surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
+	h.locks = locks
+	return h
+}
+
+// settingLocks are the locks among surface, the settings one response carries.
+func (h Handlers) settingLocks(surface ...config.Any) *[]crmcontracts.SettingLock {
+	if h.locks == nil {
+		return nil
+	}
+	return h.locks(surface)
 }

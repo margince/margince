@@ -29,6 +29,9 @@ import (
 )
 
 type Handlers struct {
+	// locks reports the settings a boot source sets on each settings response;
+	// nil leaves the field out.
+	locks func(surface []config.Any) *[]crmcontracts.SettingLock
 	store *Store
 	// listMembers resolves the deal list's list_id; nil while lists are off.
 	listMembers storekit.ListMemberFilterResolver

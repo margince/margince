@@ -28,6 +28,9 @@ const (
 // Handlers is the module's transport slice; compose embeds it so the
 // generated consent stubs are shadowed by real code.
 type Handlers struct {
+	// locks reports the settings a boot source sets on each settings response;
+	// nil leaves the field out.
+	locks  func(surface []config.Any) *[]crmcontracts.SettingLock
 	store  *Store
 	eraser Eraser
 	// The Art. 15 assembler, injected the same way and for the same reason as

@@ -43,6 +43,7 @@ func (h Handlers) ListAiProviderKeys(w http.ResponseWriter, r *http.Request) {
 	}
 	out := crmcontracts.AiProviderKeyList{
 		Providers: make([]crmcontracts.AiProviderKeyStatus, 0, len(statuses)),
+		Locks:     h.settingLocks(Settings()...),
 	}
 	for _, s := range statuses {
 		out.Providers = append(out.Providers, crmcontracts.AiProviderKeyStatus{
