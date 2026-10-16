@@ -19,7 +19,7 @@
 2 react-hooks/refs src/components/recordfields.tsx
 1 react-hooks/set-state-in-effect src/components/unsaved.tsx
 2 react-hooks/set-state-in-effect src/lib/scrollmemory.ts
-1 react-hooks/set-state-in-effect src/app/shell.tsx
+1 react-hooks/set-state-in-effect src/app/shellrail.tsx
 1 react-hooks/set-state-in-effect src/lib/viewport.ts
 1 react-hooks/set-state-in-effect src/design-system/airuntimechip.tsx
 1 react-hooks/set-state-in-effect src/design-system/anchoredpopup.ts
