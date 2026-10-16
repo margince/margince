@@ -8,6 +8,7 @@ import { PanelNotices } from "../../design-system/panelnotices";
 import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { Switch } from "../../design-system/switch";
+import { lockReasonOr } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import { useCanMutate, useHoldsAdminRole } from "../../lib/capability";
 import {
@@ -45,9 +46,12 @@ export function LegalReviewSettingsCard() {
                   labelHidden
                   checked={settings.enabled}
                   pending={update.isPending}
-                  reason={
-                    canEdit ? undefined : t("legalReview.settingsReadOnly")
-                  }
+                  reason={lockReasonOr(
+                    settings.locks,
+                    "deals.legal_review_enabled",
+                    t,
+                    canEdit ? undefined : t("legalReview.settingsReadOnly"),
+                  )}
                   testId="legal-review-switch"
                   onChange={(next) => update.mutate(next)}
                 />

@@ -10,6 +10,7 @@ import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select, type SelectOption } from "../design-system/select";
 import { useSaveSignInPolicy } from "../features/sign-in/sign-in-policy";
+import type { FieldLock } from "../format/settinglocks";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
 import {
@@ -87,7 +88,12 @@ function draftChanged(
 export function GroupRoleGrants({
   initial,
   canManage,
-}: Readonly<{ initial: Record<string, string>; canManage: boolean }>) {
+  lock,
+}: Readonly<{
+  initial: Record<string, string>;
+  canManage: boolean;
+  lock: FieldLock;
+}>) {
   const t = useT();
   const save = useSaveSignInPolicy();
   // Asked only of a reader who may write the map: the list is the invite's own
@@ -106,7 +112,7 @@ export function GroupRoleGrants({
   const firstGroup = useRef<HTMLInputElement>(null);
   const handBack = useRef(false);
   const refusal = grantRefusal(rows, t);
-  const locked = !canManage || save.isPending;
+  const locked = !canManage || save.isPending || lock.disabled;
   const draft = Object.fromEntries(rows.map((row) => [row.group, row.role]));
   const dirty = draftChanged(rows, initial);
   const commit = () =>
@@ -198,7 +204,7 @@ export function GroupRoleGrants({
             ref={addButton}
             disabled={save.isPending}
             reason={
-              rows.length >= MAX_GROUP_GRANTS
+              rows.length >= MAX_GROUP_GRANTS && !lock.disabled
                 ? t("groupRoles.tooMany")
                 : undefined
             }
@@ -222,7 +228,7 @@ export function GroupRoleGrants({
             <Button
               variant="primary"
               pending={save.isPending}
-              reason={refusal ?? undefined}
+              reason={lock.disabled ? lock.reason : (refusal ?? undefined)}
               onClick={commit}
             >
               {t("groupRoles.save")}

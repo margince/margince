@@ -14,6 +14,7 @@ import {
 } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
+import { lockReasonOr } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
 import { isConflict, readLatest, writeSlice } from "./ai-binding-write";
@@ -126,7 +127,13 @@ export function BindingEditor({
 
   const binding = draft.binding;
   const keyMissing = binding ? missingKey(binding.provider, keys) : false;
-  const busy = !canManage || save.isPending;
+  const refusal = lockReasonOr(
+    opened.routing.locks,
+    "ai.routing",
+    t,
+    canManage ? undefined : t("aiRouting.adminOnly"),
+  );
+  const busy = refusal !== undefined || save.isPending;
   return (
     <Modal
       open
@@ -234,13 +241,13 @@ export function BindingEditor({
             pending={save.isPending}
             busyLabel={t("aiRouting.saving")}
             disabled={
-              !canManage ||
+              refusal !== undefined ||
               !binding ||
               binding.model.trim() === "" ||
               keyMissing ||
               (servingBlocked(draft, opened.routing) === null && !servingValid)
             }
-            reason={canManage ? undefined : t("aiRouting.adminOnly")}
+            reason={refusal}
             onClick={() => submit(draft)}
           >
             {t("aiRouting.saveBinding")}

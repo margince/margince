@@ -311,8 +311,11 @@ func TestAConnectorAppFromEnvBeatsTheStoredOne(t *testing.T) {
 
 	var app crmcontracts.ConnectorApp
 	if status := e.Call(t, "GET", "/v1/installation/oauth-apps/google", nil, nil, &app); status != http.StatusOK ||
-		app.ClientId != "env-client.apps.googleusercontent.com" || app.Source != crmcontracts.ConnectorAppSourceEnvironment {
+		app.ClientId != "env-client.apps.googleusercontent.com" {
 		t.Fatalf("GET the app → %d %+v, want the environment's app in use", status, app)
+	}
+	if lock, ok := appLock(app, capture.GoogleAppKey); !ok || lock.Origin.Source != crmcontracts.SettingOriginSourceEnv {
+		t.Errorf("locks = %+v, want %s locked by the environment", app.Locks, capture.GoogleAppKey)
 	}
 
 	secret := httpSecret
@@ -667,10 +670,26 @@ func TestAnEnvClientIDWithoutItsSecretLeavesTheStoredAppWritable(t *testing.T) {
 	}
 	var app crmcontracts.ConnectorApp
 	if status := e.Call(t, "GET", "/v1/installation/oauth-apps/google", nil, nil, &app); status != http.StatusOK ||
-		app.ClientId != httpClientID || app.Source != crmcontracts.ConnectorAppSourceStored {
+		app.ClientId != httpClientID {
 		t.Fatalf("GET → %d %+v, want the stored app in use", status, app)
+	}
+	if _, ok := appLock(app, capture.GoogleAppKey); ok {
+		t.Errorf("locks = %+v, want the stored app unlocked", app.Locks)
 	}
 	if status := e.Call(t, "DELETE", "/v1/installation/oauth-apps/google", nil, nil, nil); status != http.StatusNoContent {
 		t.Errorf("DELETE beside a half environment app → %d, want 204", status)
 	}
+}
+
+// appLock is the lock a connector app read reports on key.
+func appLock(app crmcontracts.ConnectorApp, key string) (crmcontracts.SettingLock, bool) {
+	if app.Locks == nil {
+		return crmcontracts.SettingLock{}, false
+	}
+	for _, lock := range *app.Locks {
+		if lock.Key == key {
+			return lock, true
+		}
+	}
+	return crmcontracts.SettingLock{}, false
 }

@@ -6,6 +6,7 @@ import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
+import { lockFor } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
@@ -27,6 +28,12 @@ import { RedirectUriGroup } from "./oauth-redirects";
  */
 
 export type Vendor = "google" | "microsoft";
+
+// The setting key a deployment's own app locks, per vendor.
+const appKey = {
+  google: "capture.google_app",
+  microsoft: "capture.microsoft_app",
+} as const satisfies Record<Vendor, string>;
 
 // vendorCopy is each vendor's own wording, as literal message keys.
 //
@@ -162,6 +169,11 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
   const failure = save.error ?? remove.error;
   // A failed refetch keeps the old data while the gate above offers Retry.
   const loaded = app.isError ? undefined : app.data;
+  // The deployment's app is the one every connect uses, so it locks this form:
+  // a stored app would be saved and never read.
+  const lock = lockFor(loaded?.locks, appKey[provider], t);
+  const stored = loaded?.configured === true && !lock.disabled;
+  const replaceHint = stored ? t("oauthApp.replaceHint") : undefined;
 
   return (
     <Panel title={t(copy.title)}>
@@ -179,19 +191,12 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
                   {problemMessageOf(failure, t)}
                 </Callout>
               )}
-              {/* Three states, because there are three answers. `configured`
-                  alone could not tell "nothing anywhere" from "the deployment
-                  supplies one", and the card said the former in both — telling
-                  an operator mail could not be connected on installations
-                  where it demonstrably could. */}
+              {/* `configured` is true for the deployment's app too; its lock,
+                  under the fields, says where that one is set. */}
               <p className="t-body">
-                {status.source === "stored" &&
-                  t("oauthApp.configured", { clientId: status.client_id })}
-                {status.source === "environment" &&
-                  t("oauthApp.fromEnvironment", {
-                    clientId: status.client_id,
-                  })}
-                {status.source === "none" && t(copy.absent)}
+                {status.configured
+                  ? t("oauthApp.configured", { clientId: status.client_id })
+                  : t(copy.absent)}
               </p>
               {/* Whatever the app's source: a directory pin is a fact about
                   who can sign in, and an operator debugging a refused login
@@ -209,18 +214,14 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
       {loaded && (
         <PanelBody>
           <RedirectUriGroup
-            open={loaded.source === "none"}
+            open={!loaded.configured}
             uris={loaded.redirect_uris}
             sub={t(copy.redirectSub)}
           />
           <div className="form-stack">
             <Field
               label={t("oauthApp.clientId")}
-              hint={
-                loaded.source === "stored"
-                  ? t("oauthApp.replaceHint")
-                  : undefined
-              }
+              hint={lock.disabled ? lock.reason : replaceHint}
             >
               {(control) => (
                 <TextInput
@@ -228,7 +229,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
                   ref={clientIdRef}
                   value={clientId}
                   autoComplete="off"
-                  disabled={!canManage || busy}
+                  disabled={!canManage || busy || lock.disabled}
                   placeholder={t(copy.clientIdPlaceholder)}
                   onChange={(e) => setClientId(e.target.value)}
                 />
@@ -241,7 +242,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
                   type="password"
                   autoComplete="off"
                   value={clientSecret}
-                  disabled={!canManage || busy}
+                  disabled={!canManage || busy || lock.disabled}
                   onChange={(e) => setClientSecret(e.target.value)}
                 />
               )}
@@ -259,54 +260,56 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
                     // to every company then takes emptying the field.
                     value={tenant ?? loaded.tenant ?? ""}
                     autoComplete="off"
-                    disabled={!canManage || busy}
+                    disabled={!canManage || busy || lock.disabled}
                     placeholder={t("oauthApp.tenantPlaceholder")}
                     onChange={(e) => setTenant(e.target.value)}
                   />
                 )}
               </Field>
             )}
-            <div className="form-actions">
-              <Button
-                variant="primary"
-                pending={save.isPending}
-                disabled={!canManage || remove.isPending || !ready}
-                onClick={() => {
-                  remove.reset();
-                  save.mutate(
-                    {
-                      clientId: clientId.trim(),
-                      clientSecret: clientSecret.trim(),
-                      tenant: (tenant ?? loaded.tenant ?? "").trim(),
-                    },
-                    {
-                      onSuccess: () => {
-                        // The field is the only copy this app holds, and it
-                        // has done its job.
-                        setClientSecret("");
-                        setClientId("");
-                        setTenant(undefined);
-                        save.reset();
-                      },
-                    },
-                  );
-                }}
-              >
-                {loaded.source === "stored"
-                  ? t("oauthApp.replace")
-                  : t("oauthApp.store")}
-              </Button>
-              {loaded.source === "stored" && (
+            {/* A locked app refuses every value, its own included, so no
+                verb is offered at all. */}
+            {!lock.disabled && (
+              <div className="form-actions">
                 <Button
-                  variant="danger"
-                  pending={remove.isPending}
-                  disabled={!canManage || save.isPending}
-                  onClick={() => setConfirming(true)}
+                  variant="primary"
+                  pending={save.isPending}
+                  disabled={!canManage || remove.isPending || !ready}
+                  onClick={() => {
+                    remove.reset();
+                    save.mutate(
+                      {
+                        clientId: clientId.trim(),
+                        clientSecret: clientSecret.trim(),
+                        tenant: (tenant ?? loaded.tenant ?? "").trim(),
+                      },
+                      {
+                        onSuccess: () => {
+                          // The field is the only copy this app holds, and it
+                          // has done its job.
+                          setClientSecret("");
+                          setClientId("");
+                          setTenant(undefined);
+                          save.reset();
+                        },
+                      },
+                    );
+                  }}
                 >
-                  {t("oauthApp.remove")}
+                  {stored ? t("oauthApp.replace") : t("oauthApp.store")}
                 </Button>
-              )}
-            </div>
+                {stored && (
+                  <Button
+                    variant="danger"
+                    pending={remove.isPending}
+                    disabled={!canManage || save.isPending}
+                    onClick={() => setConfirming(true)}
+                  >
+                    {t("oauthApp.remove")}
+                  </Button>
+                )}
+              </div>
+            )}
             <ConfirmModal
               open={confirming}
               onClose={() => setConfirming(false)}

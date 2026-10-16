@@ -11,9 +11,11 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { Switch } from "../../design-system/switch";
+import { lockFor } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
+import { useInstallationSettings } from "../../lib/uploadlimit";
 import { GroupRoleGrants } from "../../screens/group-role-grants";
 import { useOAuthApp, type Vendor } from "../automations/oauth-app";
 import { useMyMfa } from "./mfa.queries";
@@ -60,7 +62,7 @@ function ProviderHint({ provider }: Readonly<{ provider: Vendor }>) {
   if (app.isPending) {
     return null;
   }
-  return app.data?.source === "none"
+  return app.data?.configured === false
     ? t("signInMethods.providerNoApp")
     : t("signInMethods.providerHint");
 }
@@ -82,6 +84,12 @@ export function SignInMethodsCard() {
   // Reading a vendor app takes capture settings, which a custom role may lack.
   const canReadApps = useCan("capture_settings", "read");
   const settings = useAuthenticationPolicy();
+  // The policy's own read carries no locks; the installation's does, for a
+  // reader who may read it. Without it, a locked write's refusal still shows.
+  const canReadInstallation = useCan("installation_settings", "read");
+  const locks = useInstallationSettings(canReadInstallation).data?.locks;
+  const mfaLock = lockFor(locks, "identity.require_mfa", t);
+  const providersLock = lockFor(locks, "identity.enabled_oidc_providers", t);
   const save = useSaveSignInPolicy();
   const [confirmingMfa, setConfirmingMfa] = useState(false);
   // Asked only while the confirm is open: it decides one line of that dialog.
@@ -140,6 +148,7 @@ export function SignInMethodsCard() {
                         describedBy={control["aria-describedby"]}
                         pending={save.isPending}
                         disabled={!canManage || save.isPending}
+                        reason={mfaLock.disabled ? mfaLock.reason : undefined}
                         onChange={(next) => {
                           if (!next) {
                             save.mutate({ require_mfa: false });
@@ -174,6 +183,11 @@ export function SignInMethodsCard() {
                           // The list is sent whole, so a second flip during a
                           // save would send the stale list and undo the first.
                           disabled={!canManage || save.isPending}
+                          reason={
+                            providersLock.disabled
+                              ? providersLock.reason
+                              : undefined
+                          }
                           // The setting replaces the list, so one key alone
                           // would turn the rest off.
                           onChange={(next) =>
@@ -227,6 +241,7 @@ export function SignInMethodsCard() {
           // contract-required, and a body that lost it hands over `undefined`.
           initial={settings.data.oidc_group_role_map ?? {}}
           canManage={canManageGrants}
+          lock={lockFor(locks, "identity.oidc_group_role_map", t)}
         />
       )}
     </>

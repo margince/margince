@@ -4,6 +4,7 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SettingList } from "../../design-system/settingrow";
 import { formatInterval } from "../../format/interval";
+import { lockReasonOr } from "../../format/settinglocks";
 import { useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf } from "../../lib/problem";
@@ -54,6 +55,12 @@ export function AgentConnectionsCard() {
               refusal={t("agentConnections.ttl.refusal")}
               reading={(minutes) => formatInterval(minutes * 60, locale)}
               disabled={!canManage || update.isPending}
+              reason={lockReasonOr(
+                settings.locks,
+                "installation.oauth_access_token_ttl_minutes",
+                t,
+                undefined,
+              )}
               onCommit={(next) =>
                 update.mutate({ oauth_access_token_ttl_minutes: next })
               }

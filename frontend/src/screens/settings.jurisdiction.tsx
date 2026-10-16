@@ -19,10 +19,12 @@ import {
   parsePeriod,
   ruleText,
 } from "../format/jurisdiction";
+import { lockFor } from "../format/settinglocks";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { useInstallationSettings } from "../lib/uploadlimit";
 import {
   AUDIENCE_LABEL,
   DOCUMENT_KIND_LABEL,
@@ -87,15 +89,24 @@ function SelectionPanel({
   const { locale } = useLocale();
   const canChange = useCanWrite("installation_settings", "update");
   const selected = jurisdiction.selected ?? null;
+  // The jurisdiction read carries no locks; the installation's names the
+  // country's.
+  const lock = lockFor(
+    useInstallationSettings().data?.locks,
+    "installation.country",
+    t,
+  );
   return (
     <Panel>
       <SettingList bleed="settings">
         <SettingRow
           label={t("jurisdiction.selected.label")}
           description={
-            selected === null
-              ? t("jurisdiction.selected.noneDescription")
-              : jurisdiction.unit?.description
+            lock.disabled
+              ? lock.reason
+              : selected === null
+                ? t("jurisdiction.selected.noneDescription")
+                : jurisdiction.unit?.description
           }
           value={
             selected === null
@@ -103,7 +114,12 @@ function SelectionPanel({
               : jurisdictionName(selected, locale)
           }
           control={
-            canChange && <ChangeJurisdiction jurisdiction={jurisdiction} />
+            canChange && (
+              <ChangeJurisdiction
+                jurisdiction={jurisdiction}
+                locked={lock.disabled}
+              />
+            )
           }
         />
         {jurisdiction.unit?.unit_name && (
@@ -136,7 +152,8 @@ function SelectionPanel({
 
 function ChangeJurisdiction({
   jurisdiction,
-}: Readonly<{ jurisdiction: Jurisdiction }>) {
+  locked,
+}: Readonly<{ jurisdiction: Jurisdiction; locked: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
@@ -172,6 +189,7 @@ function ChangeJurisdiction({
       <Button
         aria-haspopup="dialog"
         aria-label={t("jurisdiction.change.label")}
+        disabled={locked}
         onClick={() => setOpen(true)}
       >
         {t("jurisdiction.change.action")}

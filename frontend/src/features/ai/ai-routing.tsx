@@ -8,6 +8,7 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate, QueryStates } from "../../design-system/querystates";
 import { stable } from "../../format/collate";
 import { formatDate, formatNumber } from "../../format/format";
+import { lockReasonOr } from "../../format/settinglocks";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
@@ -352,6 +353,12 @@ function FirstBinding({
       await invalidateProviderHealth(queryClient);
     },
   });
+  const refusal = lockReasonOr(
+    read.routing.locks,
+    "ai.routing",
+    t,
+    canManage ? undefined : t("aiRouting.adminOnly"),
+  );
   const startable = startableProviders(providers);
   if (startable.length === 0) {
     // No key, so nothing to bind TO; adding one is the part a reader of THIS
@@ -370,8 +377,8 @@ function FirstBinding({
           <Button
             key={id}
             pending={bind.isPending && bind.variables?.id === id}
-            disabled={!canManage || bind.isPending}
-            reason={canManage ? undefined : t("aiRouting.adminOnly")}
+            disabled={refusal !== undefined || bind.isPending}
+            reason={refusal}
             onClick={() =>
               bind.mutate({
                 id,

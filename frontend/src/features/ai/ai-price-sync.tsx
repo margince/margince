@@ -12,6 +12,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { Switch } from "../../design-system/switch";
 import { formatElapsed, useNow } from "../../format/now";
+import { lockReasonOr } from "../../format/settinglocks";
 import { useLocale, useT } from "../../i18n";
 import { useCan, useCanUpsert, useCanWrite } from "../../lib/capability";
 import { throwProblem, unwrap } from "../../lib/problem";
@@ -120,7 +121,12 @@ export function ModelPricesCard() {
                     testId="ai-price-sync-auto"
                     label={t("aiPriceSync.autoSync.label")}
                     labelHidden
-                    reason={canManage ? undefined : t("aiPriceSync.adminOnly")}
+                    reason={lockReasonOr(
+                      state.locks,
+                      "ai.price_sync",
+                      t,
+                      canManage ? undefined : t("aiPriceSync.adminOnly"),
+                    )}
                     checked={state.auto_sync}
                     pending={setAutoSync.isPending}
                     onChange={(next) => setAutoSync.mutate({ autoSync: next })}

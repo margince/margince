@@ -7,6 +7,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { SettingList } from "../design-system/settingrow";
 import { worklistKey } from "../features/worklist/worklist.queries";
+import { lockReasonOr } from "../format/settinglocks";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { throwProblem, unwrap } from "../lib/problem";
@@ -77,6 +78,12 @@ export function FollowUpSettingsCard() {
                 {...FOLLOW_UP_BOUNDS.follow_up_after_days}
                 refusal={t("followUpSettings.outOfRange")}
                 disabled={!canEdit || update.isPending}
+                reason={lockReasonOr(
+                  settings.locks,
+                  "activities.follow_up_after_days",
+                  t,
+                  undefined,
+                )}
                 onCommit={(days) =>
                   update.mutate({ follow_up_after_days: days })
                 }

@@ -6,6 +6,7 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { serviceAccountProblem } from "../../design-system/serviceaccountkeyfield";
+import { type FieldLock, lockFor } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
@@ -148,6 +149,11 @@ export function AiProviderKeysCard() {
                       <ProviderConnection
                         status={openStatus}
                         canManage={canManage}
+                        lock={lockFor(
+                          list.locks,
+                          `ai.provider_keys_${openStatus.provider}`,
+                          t,
+                        )}
                       />
                       {/* Drawn once the stored settings are read: the form
                           starts from them, and one started empty would save
@@ -212,9 +218,13 @@ function keyEntryHint(
 function ProviderConnection({
   status,
   canManage,
+  lock,
 }: {
   status: ProviderStatus;
   canManage: boolean;
+  /** A key a boot source sets refuses every value, its own included, so the
+   *  paste field never opens and no save or remove is offered. */
+  lock: FieldLock;
 }) {
   const t = useT();
   const [value, setValue] = useState("");
@@ -267,6 +277,7 @@ function ProviderConnection({
   const keyless = status.env_var === "";
 
   const entryHint = keyEntryHint(status, t);
+  const adminOnly = canManage ? undefined : t("aiProviderKeys.adminOnly");
   // Save and Remove, the same pair whichever field holds the secret.
   const verbs = (
     <>
@@ -365,7 +376,7 @@ function ProviderConnection({
                   setEditing((open) => !open);
                 }}
                 aria-expanded={editing}
-                reason={canManage ? undefined : t("aiProviderKeys.adminOnly")}
+                reason={lock.disabled ? lock.reason : adminOnly}
               >
                 {status.configured
                   ? t("aiProviderKeys.replace")
@@ -375,7 +386,7 @@ function ProviderConnection({
           )}
         </div>
         <KeyTestOutcome test={test} keyHeld={status.configured} />
-        {editing && (
+        {editing && !lock.disabled && (
           <KeyEntry
             kind={kind}
             configured={status.configured}

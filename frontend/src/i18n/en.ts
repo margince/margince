@@ -5761,6 +5761,10 @@ export const en = {
   "settings.removedItem": "“{name}” removed",
   "settings.removed": "Removed",
   "settings.saved": "Saved",
+  "settings.lockedBy.flag": "Set by {name} (command line). Change it there.",
+  "settings.lockedBy.env": "Set by {name} (environment). Change it there.",
+  "settings.lockedBy.env_file": "Set by {name} in {file}. Change it there.",
+  "settings.lockedBy.config_file": "Set by {name} in {file}. Change it there.",
   "settings.signatureFromTemplate": "Company template",
   "settings.signatureTemplateHint":
     "Your company’s signature template signs your mail. It fills in your name, title and phone.",
@@ -11144,8 +11148,6 @@ export const en = {
   "oauthApp.microsoft.removeConfirmBody":
     "The client secret cannot be read back, so restoring the app requires re-entering the client ID and secret from the Entra portal. Outlook mail and calendar connections use this app; Google and IMAP mailboxes are unaffected. First-run setup asks for an app again.",
   "oauthApp.configured": "In use: {clientId}",
-  "oauthApp.fromEnvironment":
-    "In use from this installation’s configuration: {clientId}. An app stored here overrides it until removed.",
   "oauthApp.pinnedToDirectory": "Pinned to directory {tenant}.",
   "oauthApp.replaceHint":
     "A new pair replaces the stored one. Existing connections keep working until reconnected.",

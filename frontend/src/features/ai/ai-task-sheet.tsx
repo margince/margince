@@ -21,6 +21,7 @@ import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { Select } from "../../design-system/select";
 import { formatNumber } from "../../format/format";
+import { lockReasonOr } from "../../format/settinglocks";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { aiTaskLabel } from "../../lib/ai-task-label";
@@ -33,6 +34,7 @@ import {
   type Window,
 } from "./ai-call-figures";
 import { tierLabel } from "./ai-decision-labels";
+import { useRouting } from "./ai-routing-query";
 import { LatencyAgainstTimeout, TaskOutcome } from "./ai-task-outcome";
 import { ReadProblem, SaveProblem, TimeoutField } from "./ai-task-sheet-fields";
 import { CALL_TASK_PARAM, callsHrefFor } from "./aicalls";
@@ -135,6 +137,15 @@ export function TaskSheet({
   const t = useT();
   const titleId = useId();
   const stored = useTaskOverrides(true);
+  // The overrides' own read is a map, so their lock rides on the routing read.
+  const locks = useRouting(true).data?.routing.locks;
+  const refusal = lockReasonOr(
+    locks,
+    "ai.task_overrides",
+    t,
+    canManage ? undefined : t("aiRouting.adminOnly"),
+  );
+  const mayEdit = refusal === undefined;
   const decides = route.decides === true;
   const defaults = defaultsOf(route);
   const saved = draftOf(stored.data?.overrides[route.task], defaults);
@@ -180,8 +191,8 @@ export function TaskSheet({
           draft={draft}
           defaults={defaults}
           decides={decides}
-          canManage={canManage}
-          busy={!canManage || save.isPending || !stored.data}
+          canManage={mayEdit}
+          busy={!mayEdit || save.isPending || !stored.data}
           onChange={setEdited}
         />
         <ContractFacts route={route} />
@@ -198,8 +209,8 @@ export function TaskSheet({
           <Button
             variant="primary"
             pending={save.isPending}
-            disabled={!canManage || !changed || !stored.data}
-            reason={canManage ? undefined : t("aiRouting.adminOnly")}
+            disabled={!mayEdit || !changed || !stored.data}
+            reason={refusal}
             onClick={submit}
           >
             {t("aiTaskSheet.save")}

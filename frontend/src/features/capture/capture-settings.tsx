@@ -10,6 +10,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { Switch } from "../../design-system/switch";
 import { useToast } from "../../design-system/toast";
+import { lockReasonOr } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { throwProblem, unwrap } from "../../lib/problem";
@@ -115,7 +116,11 @@ export function CaptureSettingsCard() {
   const query = useCaptureSettings();
   const update = useUpdateCaptureSettings();
   const locked = !canManage || update.isPending;
-  const reason = canManage ? undefined : t("captureSettings.adminOnly");
+  const adminOnly = canManage ? undefined : t("captureSettings.adminOnly");
+  const reasonFor = (
+    settings: components["schemas"]["CaptureSettings"],
+    property: string,
+  ) => lockReasonOr(settings.locks, `capture.${property}`, t, adminOnly);
   const refusalId = useId();
   const refusedFor = (setting: keyof CaptureSettingsPatch) =>
     update.isError && update.variables?.[setting] !== undefined
@@ -142,7 +147,7 @@ export function CaptureSettingsCard() {
                     testId="capture-auto-enrich-toggle"
                     label={t("captureSettings.autoEnrich.label")}
                     labelHidden
-                    reason={reason}
+                    reason={reasonFor(settings, "auto_enrich")}
                     checked={settings.auto_enrich}
                     disabled={locked}
                     onChange={(next) => update.mutate({ auto_enrich: next })}
@@ -161,7 +166,7 @@ export function CaptureSettingsCard() {
                     testId="capture-signature-enrich-toggle"
                     label={t("captureSettings.signatureEnrich.label")}
                     labelHidden
-                    reason={reason}
+                    reason={reasonFor(settings, "signature_enrich")}
                     checked={settings.signature_enrich}
                     disabled={locked}
                     onChange={(next) =>
@@ -183,7 +188,7 @@ export function CaptureSettingsCard() {
                   {...READ_LIMITS[row.property]}
                   refusal={t(`captureReading.${row.copy}.refusal`)}
                   disabled={locked}
-                  reason={reason}
+                  reason={reasonFor(settings, row.property)}
                   describedBy={refusedFor(row.property)}
                   onCommit={(next) => update.mutate({ [row.property]: next })}
                 />

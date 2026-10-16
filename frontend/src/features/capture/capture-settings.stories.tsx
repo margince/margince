@@ -18,6 +18,7 @@ function story(
   auto_enrich: boolean,
   allow: Parameters<typeof meRoute>[0],
   refuseWrites = false,
+  locks: unknown[] = [],
 ) {
   return () => {
     installFetchStub({
@@ -32,6 +33,7 @@ function story(
           auto_enrich_daily_cap: 500,
           site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
           mail_sync_interval_seconds: 120,
+          locks,
         }),
     });
     return (
@@ -72,6 +74,17 @@ export const CannotChange: Story = { render: story(true, READER) };
 export const CannotChangeDark: Story = {
   globals: { theme: "dark" },
   render: story(true, READER),
+};
+
+// A limit the environment sets: refused for an administrator too, with the
+// variable to change in its place, while the other rows stay editable.
+export const LockedByEnvironment: Story = {
+  render: story(true, MANAGER, false, [
+    {
+      key: "capture.auto_enrich_daily_cap",
+      origin: { source: "env", name: "MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP" },
+    },
+  ]),
 };
 
 // Six rows at 390px: each switch and number box drops under its words.

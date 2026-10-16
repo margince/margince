@@ -59,9 +59,12 @@ function server({
   overrides = {},
   conflict = false,
   unreadable = 0,
+  routingLocks,
 }: {
   overrides?: unknown;
   conflict?: boolean;
+  /** The locks the routing read reports, which carry the overrides' own. */
+  routingLocks?: unknown;
   /** How many reads of the stored overrides fail before one answers. */
   unreadable?: number;
 } = {}) {
@@ -96,6 +99,9 @@ function server({
         const response = jsonResponse(overrides);
         response.headers.set("ETag", '"overrides-v1"');
         return response;
+      }
+      if (routingLocks && req.url.endsWith("/ai/routing")) {
+        return jsonResponse({ locks: routingLocks });
       }
       if (req.url.includes("/ai/call-stats/flow")) return jsonResponse(FLOW);
       if (req.url.includes("/ai/call-stats")) {
@@ -320,6 +326,50 @@ describe("TaskSheet", () => {
     expect(
       within(sheet).getByRole("combobox", { name: /Thinking level/ }),
     ).toBeDisabled();
+    expect(
+      within(sheet).getByRole("button", { name: "Save settings" }),
+    ).toBeDisabled();
+  });
+});
+
+describe("TaskSheet under a boot source", () => {
+  it("refuses every setting the configuration file sets, and says where to change it", async () => {
+    server({
+      routingLocks: [
+        {
+          key: "ai.task_overrides",
+          origin: {
+            source: "config_file",
+            name: "ai.task_overrides",
+            file: "/etc/margince/margince.yaml",
+          },
+        },
+      ],
+    });
+    render(
+      <TaskSheet
+        route={DECIDING}
+        canManage
+        canSeeCalls={false}
+        onClose={() => {}}
+      />,
+    );
+
+    const sheet = await screen.findByRole("dialog");
+    await waitFor(() =>
+      expect(
+        within(sheet).getByText(
+          "Set by ai.task_overrides in /etc/margince/margince.yaml. Change it there.",
+        ),
+      ).toBeTruthy(),
+    );
+    for (const name of [
+      /Thinking level/,
+      /Decision model timeout/,
+      /Model call timeout/,
+    ]) {
+      expect(within(sheet).getByRole("combobox", { name })).toBeDisabled();
+    }
     expect(
       within(sheet).getByRole("button", { name: "Save settings" }),
     ).toBeDisabled();

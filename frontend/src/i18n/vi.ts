@@ -5574,6 +5574,13 @@ export const vi = {
   "settings.removedItem": "Đã gỡ “{name}”",
   "settings.removed": "Đã gỡ",
   "settings.saved": "Đã lưu",
+  "settings.lockedBy.flag": "Đặt bởi {name} (dòng lệnh). Đổi giá trị tại đó.",
+  "settings.lockedBy.env":
+    "Đặt bởi {name} (biến môi trường). Đổi giá trị tại đó.",
+  "settings.lockedBy.env_file":
+    "Đặt bởi {name} trong {file}. Đổi giá trị tại đó.",
+  "settings.lockedBy.config_file":
+    "Đặt bởi {name} trong {file}. Đổi giá trị tại đó.",
   "settings.signatureFromTemplate": "Mẫu của công ty",
   "settings.signatureTemplateHint":
     "Thư gửi đi dùng mẫu chữ ký của công ty. Mẫu tự điền tên, chức danh và số điện thoại.",
@@ -10820,8 +10827,6 @@ export const vi = {
   "oauthApp.microsoft.removeConfirmBody":
     "Không thể đọc lại client secret, nên muốn khôi phục ứng dụng phải nhập lại client ID và secret từ cổng Entra. Kết nối thư và lịch Outlook dùng ứng dụng này; hộp thư Google và IMAP không bị ảnh hưởng. Bước thiết lập ban đầu sẽ hỏi lại ứng dụng.",
   "oauthApp.configured": "Đang dùng: {clientId}",
-  "oauthApp.fromEnvironment":
-    "Đang dùng theo cấu hình của bản cài đặt này: {clientId}. Ứng dụng lưu tại đây sẽ thay thế cấu hình này cho đến khi bị gỡ.",
   "oauthApp.pinnedToDirectory": "Đã gắn với thư mục {tenant}.",
   "oauthApp.replaceHint":
     "Cặp mới sẽ thay thế cặp đã lưu. Các kết nối hiện có vẫn hoạt động cho đến khi kết nối lại.",

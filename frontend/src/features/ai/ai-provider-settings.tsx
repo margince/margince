@@ -8,6 +8,7 @@ import type { components } from "../../api/schema";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { Select } from "../../design-system/select";
+import { lockReasonOr } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemMessageOf, unwrap } from "../../lib/problem";
@@ -359,7 +360,14 @@ export function ProviderSettingsForm({
   const [location, setLocation] = useState(stored.location ?? "");
   const [openRouter, setOpenRouter] = useState(() => draftOf(stored.upstream));
   const save = useSetProviderSettings();
-  const disabled = !canManage || save.isPending;
+  // Host and location live in the routing document, so its lock binds them.
+  const refusal = lockReasonOr(
+    routing.locks,
+    "ai.routing",
+    t,
+    canManage ? undefined : t("aiProviderKeys.adminOnly"),
+  );
+  const disabled = refusal !== undefined || save.isPending;
   const known = catalog?.services.find((s) => s.id === service);
   const host = hostOf(known, service, typed);
   const brokered = provider === "openai_compatible" && isOpenRouter(host);
@@ -418,8 +426,8 @@ export function ProviderSettingsForm({
         <Button
           variant="primary"
           pending={save.isPending}
-          disabled={!canManage || unchosen || written === saved}
-          reason={canManage ? undefined : t("aiProviderKeys.adminOnly")}
+          disabled={refusal !== undefined || unchosen || written === saved}
+          reason={refusal}
           onClick={() =>
             save.mutate(
               { provider, settings: body },

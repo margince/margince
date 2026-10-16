@@ -5707,6 +5707,14 @@ export const de = {
   "settings.removedItem": "„{name}“ entfernt",
   "settings.removed": "Entfernt",
   "settings.saved": "Gespeichert",
+  "settings.lockedBy.flag":
+    "Festgelegt durch {name} (Befehlszeile). Ändere den Wert dort.",
+  "settings.lockedBy.env":
+    "Festgelegt durch {name} (Umgebung). Ändere den Wert dort.",
+  "settings.lockedBy.env_file":
+    "Festgelegt durch {name} in {file}. Ändere den Wert dort.",
+  "settings.lockedBy.config_file":
+    "Festgelegt durch {name} in {file}. Ändere den Wert dort.",
   "settings.signatureFromTemplate": "Unternehmensvorlage",
   "settings.signatureTemplateHint":
     "Deine E-Mails enden mit der Signaturvorlage deines Unternehmens. Die Vorlage füllt deinen Namen, deinen Jobtitel und deine Telefonnummer ein.",
@@ -11102,8 +11110,6 @@ export const de = {
   "oauthApp.microsoft.removeConfirmBody":
     "Der Clientschlüssel lässt sich nicht wieder auslesen. Um die App wiederherzustellen, müssen Client-ID und Clientschlüssel erneut aus dem Entra-Portal eingetragen werden. Outlook-E-Mail- und -Kalender-Verbindungen nutzen diese App. Google- und IMAP-Postfächer sind nicht betroffen. Die Ersteinrichtung fragt erneut nach einer App.",
   "oauthApp.configured": "In Verwendung: {clientId}",
-  "oauthApp.fromEnvironment":
-    "Aus der Konfiguration dieser Installation in Verwendung: {clientId}. Eine hier gespeicherte App hat Vorrang, bis sie entfernt wird.",
   "oauthApp.pinnedToDirectory": "An das Verzeichnis {tenant} gebunden.",
   "oauthApp.replaceHint":
     "Ein neues Paar ersetzt das gespeicherte. Bestehende Verbindungen funktionieren weiter, bis sie neu verbunden werden.",

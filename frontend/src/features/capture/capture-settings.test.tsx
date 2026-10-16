@@ -127,6 +127,48 @@ describe("CaptureSettingsCard", () => {
       expect(backend.getCapturedPatch()).toEqual({ auto_enrich: false }),
     );
   });
+
+  it("refuses a limit the environment sets, says where to change it, and leaves the rest editable", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url.endsWith("/v1/me")) {
+          return jsonResponse(meFixture({ allow: CAPTURE_EDITOR }));
+        }
+        return jsonResponse({
+          ...SETTINGS,
+          locks: [
+            {
+              key: "capture.auto_enrich_daily_cap",
+              origin: {
+                source: "env",
+                name: "MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP",
+              },
+            },
+          ],
+        });
+      }),
+    );
+    render(<CaptureSettingsCard />);
+
+    const cap =
+      await screen.findByTestId<HTMLInputElement>("capture-daily-cap");
+    expect(cap.disabled).toBe(true);
+    const reason = screen.getByText(
+      "Set by MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP (environment). Change it there.",
+    );
+    expect(cap.getAttribute("aria-describedby")?.split(" ")).toContain(
+      reason.id,
+    );
+    expect(
+      screen.getByTestId<HTMLInputElement>("capture-read-max-pages").disabled,
+    ).toBe(false);
+    expect(
+      screen.getByTestId<HTMLButtonElement>("capture-auto-enrich-toggle")
+        .disabled,
+    ).toBe(false);
+  });
 });
 
 // A proxy that never reached the application answers with its own page, not

@@ -10,6 +10,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { Switch } from "../../design-system/switch";
 import { useToast } from "../../design-system/toast";
+import { lockReasonOr } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
@@ -177,7 +178,12 @@ export function MailSharingCard() {
                       testId="mail-sharing-toggle"
                       label={t("mailSharing.label")}
                       labelHidden
-                      reason={notAdmin}
+                      reason={lockReasonOr(
+                        settings.locks,
+                        "capture.mail_sharing",
+                        t,
+                        notAdmin,
+                      )}
                       checked={shown}
                       disabled={!canManage || save.isPending}
                       onChange={(next) => setPending(next)}
@@ -195,7 +201,12 @@ export function MailSharingCard() {
                       testId="shared-posture-allowed-toggle"
                       label={t("mailSharing.sharedPosture.label")}
                       labelHidden
-                      reason={notAdmin}
+                      reason={lockReasonOr(
+                        settings.locks,
+                        "capture.shared_posture_allowed",
+                        t,
+                        notAdmin,
+                      )}
                       checked={sharedShown}
                       disabled={!canManage || saveShared.isPending}
                       onChange={(next) => setPendingShared(next)}
@@ -212,7 +223,12 @@ export function MailSharingCard() {
                   {...MAIL_SYNC_BOUNDS.mail_sync_interval_seconds}
                   refusal={t("captureMailSync.interval.refusal")}
                   disabled={!canManage || sync.isPending}
-                  reason={notAdmin}
+                  reason={lockReasonOr(
+                    settings.locks,
+                    "capture.mail_sync_interval_seconds",
+                    t,
+                    notAdmin,
+                  )}
                   describedBy={syncRefused}
                   onCommit={(next) =>
                     sync.mutate({ mail_sync_interval_seconds: next })
