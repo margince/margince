@@ -34,10 +34,12 @@ type tsFunc struct {
 }
 
 // codeSource is how a helper's parameter reaches a Problem's code: by its
-// position, then the member path read below it.
+// position, then the member path below it. status is the parameter that
+// carries the Problem's status, when one does.
 type codeSource struct {
-	index int
-	path  []string
+	index  int
+	path   []string
+	status *codeSource
 }
 
 // tsImport is one named import: the file it resolves to and its exported name.
@@ -76,7 +78,10 @@ type problemFileReader struct {
 	bindings []tsBinding
 	patterns map[int]bool
 	lines    []int
-	scan     *problemFileScan
+	// statusParam is the helper parameter the object being judged takes its
+	// status from, set while its context is read.
+	statusParam *codeRead
+	scan        *problemFileScan
 }
 
 // scanProblemFile reads one tokenized file. takers are the functions whose
@@ -152,6 +157,10 @@ func (r *problemFileReader) indexConstant(name string, value int) {
 	case value >= len(tr.tokens):
 	case tr.tokens[value].kind == tkString || tr.tokens[value].kind == tkTemplate:
 		r.consts[name] = value
+	case tr.tokens[value].kind == tkNumber:
+		if _, number := unquotedNumber(tr.tokens[value]); number {
+			r.consts[name] = value
+		}
 	case tr.is(value, "{"):
 		r.objects[name] = value
 	case tr.is(value, "["):
@@ -392,6 +401,7 @@ func (r *problemFileReader) readObject(open int) {
 	if !found || r.patterns[open] {
 		return
 	}
+	r.statusParam = nil
 	status, problem := r.problemContext(open, map[int]bool{})
 	if !problem {
 		return
@@ -401,6 +411,9 @@ func (r *problemFileReader) readObject(open int) {
 	case !ok:
 		r.scan.mocks = append(r.scan.mocks, problemMock{path: r.path, line: r.line(entry.keyAt), computed: true, status: status})
 	case read.helper != "":
+		if r.statusParam != nil && r.statusParam.helper == read.helper {
+			read.source.status = &r.statusParam.source
+		}
 		r.scan.helpers[read.helper] = read.source
 	default:
 		r.addMocks(read.literals, status, entry.keyAt, true)
@@ -469,13 +482,10 @@ func (r *problemFileReader) resolve(value tsSpan, path []string, depth int) (cod
 	return r.resolveName(value.from, chain[0], append(chain[1:len(chain):len(chain)], path...), depth)
 }
 
-// resolveName reads a name at token at: a constant, a table row, or a helper
-// parameter, with path read below it.
+// resolveName reads a name at token at, with path read below it. The
+// innermost scope wins: a table row, then a parameter, then a file constant.
 func (r *problemFileReader) resolveName(at int, name string, path []string, depth int) (codeRead, bool) {
 	tr := r.tree
-	if literal, known := r.consts[name]; known && len(path) == 0 {
-		return codeRead{literals: []int{literal}}, true
-	}
 	if binding, bound := r.bindingFor(at, name); bound {
 		var read codeRead
 		for _, row := range tr.split(binding.table) {
@@ -488,11 +498,17 @@ func (r *problemFileReader) resolveName(at int, name string, path []string, dept
 		}
 		return read, true
 	}
+	if fn, index, ok := r.paramOf(at, name); ok {
+		if fn.name == "" {
+			return codeRead{}, false
+		}
+		return codeRead{helper: fn.name, source: codeSource{index: index, path: path}}, true
+	}
+	if literal, known := r.consts[name]; known && len(path) == 0 {
+		return codeRead{literals: []int{literal}}, true
+	}
 	if open, known := r.objects[name]; known && len(path) > 0 {
 		return r.resolve(tsSpan{open, tr.match[open] + 1}, path, depth+1)
-	}
-	if fn, index, ok := r.paramOf(at, name); ok && fn.name != "" {
-		return codeRead{helper: fn.name, source: codeSource{index: index, path: path}}, true
 	}
 	return codeRead{}, false
 }
@@ -610,7 +626,7 @@ func (r *problemFileReader) sentAsArgument(paren int, slot tsSpan) (int, bool) {
 			continue
 		}
 		if tr.is(arg.from, "{") && tr.match[arg.from] == arg.to-1 {
-			if code, refusal := statusOf(tr, tr.entries(arg.from)); refusal {
+			if code, refusal := r.statusOf(tr.entries(arg.from)); refusal {
 				return code, true
 			}
 			continue
@@ -633,7 +649,7 @@ func (r *problemFileReader) sentAsValue(brace int, slot tsSpan, seen map[int]boo
 		if entry.spread {
 			return r.problemContext(brace, seen)
 		}
-		if code, refusal := statusOf(tr, tr.entries(brace)); refusal {
+		if code, refusal := r.statusOf(tr.entries(brace)); refusal {
 			return code, true
 		}
 		return 0, false
@@ -644,44 +660,36 @@ func (r *problemFileReader) sentAsValue(brace int, slot tsSpan, seen map[int]boo
 func refusalStatus(code int) bool { return code >= 400 && code <= 599 }
 
 // statusOf reads an object's status entry as a refusal status.
-func statusOf(tr *tsTree, entries []tsEntry) (int, bool) {
+func (r *problemFileReader) statusOf(entries []tsEntry) (int, bool) {
 	for _, entry := range entries {
 		if entry.key == "status" && !entry.spread {
-			return refusalStatusOf(tr, entry.value)
+			return r.boundStatus(entry.value)
 		}
 	}
 	return 0, false
 }
 
-// refusalStatusOf reads a status expression: a 4xx or 5xx literal, a
-// conditional with one, or a value named `status` that may be one.
-func refusalStatusOf(tr *tsTree, span tsSpan) (int, bool) {
-	if span.to == span.from+1 {
-		if code, ok := unquotedNumber(tr.tokens[span.from]); ok {
-			return code, refusalStatus(code)
-		}
+// boundStatus reads a status expression as a refusal: a 4xx or 5xx literal,
+// constant or table row, or a helper parameter its calls decide. A value it
+// cannot follow counts when it is named `status`.
+func (r *problemFileReader) boundStatus(span tsSpan) (int, bool) {
+	tr := r.tree
+	read, ok := r.resolve(span, nil, 0)
+	switch {
+	case ok && read.helper != "":
+		r.statusParam = &read
+		return 0, true
+	case ok && len(read.literals) > 0:
+		return refusalOf(tr, read.literals)
 	}
-	if yes, no, ok := conditionalArms(tr, span); ok {
-		yesCode, yesRefusal := refusalStatusOf(tr, yes)
-		noCode, noRefusal := refusalStatusOf(tr, no)
-		if yesRefusal {
-			return yesCode, true
-		}
-		return noCode, noRefusal
-	}
-	chain, ok := memberChain(tr, span)
-	return 0, ok && chain[len(chain)-1] == "status"
+	chain, named := memberChain(tr, span)
+	return 0, named && chain[len(chain)-1] == "status"
 }
 
-// boundStatus reads a status a table row or a constant holds: `c.http` in
-// `for (const c of rows)` is a refusal when a row's value is one.
-func (r *problemFileReader) boundStatus(span tsSpan) (int, bool) {
-	if code, refusal := refusalStatusOf(r.tree, span); refusal {
-		return code, true
-	}
-	read, ok := r.resolve(span, nil, 0)
-	for _, literal := range read.literals {
-		if code, number := unquotedNumber(r.tree.tokens[literal]); ok && number && refusalStatus(code) {
+// refusalOf answers the first refusal status among number literals.
+func refusalOf(tr *tsTree, literals []int) (int, bool) {
+	for _, literal := range literals {
+		if code, number := unquotedNumber(tr.tokens[literal]); number && refusalStatus(code) {
 			return code, true
 		}
 	}
@@ -696,7 +704,7 @@ func (r *problemFileReader) ownStatus(open int, seen map[int]bool) (int, bool) {
 	}
 	seen[open] = true
 	entries := r.tree.entries(open)
-	if status, refusal := statusOf(r.tree, entries); refusal {
+	if status, refusal := r.statusOf(entries); refusal {
 		return status, true
 	}
 	for _, entry := range entries {
@@ -809,17 +817,42 @@ func (r *problemFileReader) readCall(call int, source codeSource) bool {
 	if source.index >= len(args) {
 		return false
 	}
+	status, refusal, passed := r.callStatus(args, source.status)
+	if !refusal {
+		return false
+	}
 	read, ok := r.resolve(args[source.index], source.path, 0)
 	switch {
 	case !ok:
-		r.scan.mocks = append(r.scan.mocks, problemMock{path: r.path, line: r.line(call), computed: true})
+		r.scan.mocks = append(r.scan.mocks, problemMock{path: r.path, line: r.line(call), computed: true, status: status})
 	case read.helper != "":
 		if _, known := r.scan.helpers[read.helper]; !known {
+			if passed != nil && passed.helper == read.helper {
+				read.source.status = &passed.source
+			}
 			r.scan.helpers[read.helper] = read.source
 			return true
 		}
 	default:
-		r.addMocks(read.literals, 0, call, false)
+		r.addMocks(read.literals, status, call, false)
 	}
 	return false
+}
+
+// callStatus judges the status a call passes a helper that takes one. A
+// literal decides; one the call takes from its own caller is passed on; one
+// it cannot follow may be a refusal.
+func (r *problemFileReader) callStatus(args []tsSpan, param *codeSource) (status int, refusal bool, passed *codeRead) {
+	if param == nil || param.index >= len(args) {
+		return 0, true, nil
+	}
+	read, ok := r.resolve(args[param.index], param.path, 0)
+	switch {
+	case ok && read.helper != "":
+		return 0, true, &read
+	case ok && len(read.literals) > 0:
+		status, refusal = refusalOf(r.tree, read.literals)
+		return status, refusal, nil
+	}
+	return 0, true, nil
 }

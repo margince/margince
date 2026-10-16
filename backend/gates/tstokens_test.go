@@ -124,7 +124,6 @@ func (l *tsLexer) code(nested bool) error {
 	return nil
 }
 
-// comment reads one comment and keeps its text.
 func (l *tsLexer) comment() error {
 	start := l.pos
 	if strings.HasPrefix(l.src[l.pos:], "//") {

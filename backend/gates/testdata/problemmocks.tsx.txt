@@ -112,3 +112,37 @@ refusedBy({});
 deny("forbidden"); // want: forbidden
 // problem-code:client a test cannot vouch for a code
 const testMarked = { status: 403, code: "test_marked" }; // want: test_marked
+
+const code = "permission_denied"; // want: permission_denied
+json({ title: "Unshadowed", code }, 403);
+for (const [st, code] of [
+  [409, "r2_shadowed_loop"], // want: r2_shadowed_loop
+] as const) {
+  json({ title: "Shadowed", code }, st);
+}
+function shadowed(code: string) {
+  return json({ title: "Shadowed", code }, 403);
+}
+shadowed("r2_shadowed_helper"); // want: r2_shadowed_helper
+
+const FORBIDDEN = 403;
+const OK = 200;
+const STATUS = { FORBIDDEN: 403, OK: 200 };
+const byConst = { status: FORBIDDEN, code: "r2_status_const" }; // want: r2_status_const
+json({ code: "r2_status_arg" }, FORBIDDEN); // want: r2_status_arg
+HttpResponse.json({ code: "r2_status_msw" }, { status: FORBIDDEN }); // want: r2_status_msw
+const byMember = { status: STATUS.FORBIDDEN, code: "r2_status_member" }; // want: r2_status_member
+const okConst = { status: OK, code: "vn" };
+json({ code: "vn" }, STATUS.OK);
+
+function reply(s: number, c: string) {
+  return json({ code: c }, s);
+}
+reply(403, "r2_reply_refused"); // want: r2_reply_refused
+reply(200, "vn");
+reply(pick(), "r2_reply_unknown"); // want: r2_reply_unknown
+function reply2(status: number, c: string) {
+  return json({ title: "Named", code: c }, status);
+}
+reply2(200, "vn");
+reply2(409, "r2_reply2_refused"); // want: r2_reply2_refused
