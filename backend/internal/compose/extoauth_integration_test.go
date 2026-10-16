@@ -11,12 +11,15 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/extsecrets"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -44,10 +47,7 @@ func TestAConnectedUnitAppServesItsTokenAndKeepsItFromTheUnit(t *testing.T) {
 		signer:        newStateSigner([]byte(testStateKey)),
 		publicBaseURL: "https://app.test", apiBaseURL: "https://api.test",
 	}
-	admin := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + e.AdminUser.String(), UserID: e.AdminUser,
-		Permissions: adminRBAC().Permissions,
-	})
+	admin := e.humanCtx(adminRBAC().Permissions)
 	rec := httptest.NewRecorder()
 	h.ConnectExtOauth(rec, httptest.NewRequest(http.MethodPost, "/v1/ext-oauth/books/connect", nil).WithContext(admin), "books")
 	if rec.Code != http.StatusOK {
@@ -79,4 +79,65 @@ func TestAConnectedUnitAppServesItsTokenAndKeepsItFromTheUnit(t *testing.T) {
 	if _, err := rt.OAuthAccessToken(ctx, "books"); !errors.Is(err, extension.ErrOAuthNotConnected) {
 		t.Fatalf("after disconnect = %v, want ErrOAuthNotConnected", err)
 	}
+}
+
+func TestTheAppListNamesAUnitAppWithItsTitleUnitAndCallback(t *testing.T) {
+	e := setupExtRuntime(t)
+	setComposedExtensions([]extension.Extension{{Name: "ledger", Version: "0.1.0", OAuthApps: []extension.OAuthApp{booksApp("https://auth.ledgerly.test/token")}}})
+	t.Cleanup(func() { setComposedExtensions(nil) })
+	h := connectorAppHandlers{
+		store:               capture.NewConnectorAppStore(NewSettingsStore(e.Pool), e.vault, nil).WithUnitApps(composedUnitApp),
+		unitCallbackAPIBase: "https://api.test", unitCallbackPublicBase: "https://app.test",
+	}
+	if err := h.store.Set(e.callCtx(e.WS), "books", "ledgerly-client", "ledgerly-secret", ""); err != nil {
+		t.Fatalf("storing the unit's app: %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	h.ListOauthApps(rec, httptest.NewRequest(http.MethodGet, "/v1/installation/oauth-apps", nil).WithContext(e.humanCtx(settingsReader)))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("list status = %d, want 200 (body %s)", rec.Code, rec.Body)
+	}
+	var list crmcontracts.ConnectorAppList
+	if err := json.NewDecoder(rec.Body).Decode(&list); err != nil {
+		t.Fatalf("decoding the list: %v", err)
+	}
+	var providers []string
+	for _, app := range list.Data {
+		providers = append(providers, app.Provider)
+	}
+	if want := []string{"google", "microsoft", "books"}; !slices.Equal(providers, want) {
+		t.Fatalf("listed providers = %v, want the core vendors then the unit's app %v", providers, want)
+	}
+
+	books := list.Data[2]
+	if books.Title == nil || *books.Title != "Books ledger" || books.Unit == nil || *books.Unit != "ledger" {
+		t.Fatalf("the unit app's title and unit = %v, %v; want the declaration's", books.Title, books.Unit)
+	}
+	if !books.Configured || books.ClientId != "ledgerly-client" || books.Source != crmcontracts.ConnectorAppSourceStored {
+		t.Fatalf("the unit app = %+v, want the stored client id", books)
+	}
+	want := []crmcontracts.ConnectorAppRedirectUri{{
+		Purpose: crmcontracts.ConnectorAppRedirectUriPurposeExtensionConnect,
+		Url:     "https://api.test/v1/ext-oauth/books/callback",
+	}}
+	if !slices.Equal(books.RedirectUris, want) {
+		t.Fatalf("the unit app's redirect URIs = %+v, want its consent callback %+v", books.RedirectUris, want)
+	}
+	if list.Data[0].Title != nil || list.Data[0].Unit != nil {
+		t.Fatalf("a core vendor carries a unit's title or unit: %+v", list.Data[0])
+	}
+}
+
+// settingsReader may read the installation's apps and nothing else.
+var settingsReader = principal.Permissions{
+	Objects: map[string]principal.ObjectGrant{capture.SettingsObject: {Read: true}},
+}
+
+// humanCtx is the workspace admin, signed in as a human and holding perms.
+func (e *extRuntimeEnv) humanCtx(perms principal.Permissions) context.Context {
+	return principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.AdminUser.String(), UserID: e.AdminUser,
+		Permissions: perms,
+	})
 }
