@@ -45,10 +45,10 @@ func PrintUsage(w io.Writer, r *Registry) {
 
 func newFlagSet(r *Registry, out *flagValues) *flag.FlagSet {
 	fs := flag.NewFlagSet("margince", flag.ContinueOnError)
-	fs.StringVar(&out.config, "config", "", "base YAML file (default margince.yaml)")
-	fs.StringVar(&out.configFile, "config-file", "", "YAML file layered over the base file")
-	fs.StringVar(&out.envFile, "env-file", "", ".env file to read")
-	fs.BoolVar(&out.trace, "config-trace", false, "log every configuration source and each setting's origin")
+	fs.StringVar(&out.config, "config", "", loaderDoc("config"))
+	fs.StringVar(&out.configFile, "config-file", "", loaderDoc("config-file"))
+	fs.StringVar(&out.envFile, "env-file", "", loaderDoc("env-file"))
+	fs.BoolVar(&out.trace, "config-trace", false, loaderDoc("config-trace"))
 	for _, s := range r.All() {
 		addFlag(fs, s, func(v string) { out.raw[s.Flag()] = v })
 	}

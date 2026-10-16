@@ -35,7 +35,7 @@ var StageAutopilotEnabled = config.DefineStored(config.Spec[bool]{
 	Env:     "MARGINCE_DEALS_STAGE_AUTOPILOT_ENABLED",
 	Type:    config.Bool,
 	Default: config.Some(false),
-	Doc:     "Let a stage transition move a deal by itself where its rule has earned it. Off stops every automatic move.",
+	Doc:     "Let a deal move to the next stage by itself where the rule of its stage allows it; off stops every automatic move.",
 }, config.Store{
 	RBACObject: stageAutomationObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the apply path reads it; no request carries it
@@ -98,7 +98,7 @@ var LegalReviewEnabled = config.DefineStored(config.Spec[bool]{
 	Env:     "MARGINCE_DEALS_LEGAL_REVIEW_ENABLED",
 	Type:    config.Bool,
 	Default: config.Some(true),
-	Doc:     "Let a deal be sent to legal for review, and let a legal_reviewed criterion block an advance.",
+	Doc:     "Let a deal be sent to legal for review, and let a legal_reviewed criterion hold a deal at its stage.",
 }, config.Store{
 	RBACObject: "installation_settings", AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the advance gate reads it for whoever moves the deal

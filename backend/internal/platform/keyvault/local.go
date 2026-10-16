@@ -258,7 +258,7 @@ func refLogSafe(ref Ref) string {
 var rootKeySetting = config.Define(config.Spec[string]{
 	Key: "keyvault_root_key", Env: EnvRootKey, Type: config.String, Secret: true,
 	Roles: []config.Role{config.RoleAPI, config.RoleWorker},
-	Doc:   "Base64 (standard, padded) 32-byte root key sealing connector credentials; unset disables the vault.",
+	Doc:   "Standard Base64 of the 32-byte root key that seals connector credentials; unset disables the vault.",
 })
 
 // Settings are this package's boot settings.

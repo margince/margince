@@ -11,6 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
 // commentWidth is where a doc comment wraps in the YAML and .env templates.
@@ -119,28 +120,73 @@ func yamlScalar(text string) (string, error) {
 
 const envHeader = `# Written by tools/gen-config from the settings registry; run ` + "`make config-gen`" + ` after a change.
 #
-# Every variable a Margince program reads, commented out at its default. Copy what you need to
-# .env.local (gitignored); a deployment supplies these through its own environment or secret
-# store. A secret has no default: write the value itself here, never in a committed file.
-# docs/reference/configuration.md lists each one with the key it sets in margince.yaml.
+# Every variable a Margince program or image entrypoint reads, commented out at its default. Copy
+# what you need to .env.local (gitignored); a deployment supplies these through its own environment
+# or secret store. A secret has no default: write the value itself here, never in a committed file.
+# [required] marks a variable the image entrypoint refuses to start without.
+# docs/reference/configuration.md lists each setting with the key it sets in margince.yaml.
 `
 
-// envExample writes the env names section by section, each commented out at
-// its default.
-func envExample(settings []setting) string {
+// envInputs are the variables .env.example lists beside the settings: those
+// the loader reads itself, and those the image entrypoint scripts read.
+type envInputs struct {
+	loader     []config.LoaderVar
+	entrypoint []deployconfig.EntrypointVar
+}
+
+// required is the set of variables an entrypoint stops without.
+func (in envInputs) required() map[string]bool {
+	out := map[string]bool{}
+	for _, v := range in.entrypoint {
+		out[v.Name] = out[v.Name] || v.Required
+	}
+	return out
+}
+
+// envExample writes the loader's variables, then the entrypoint's own, then
+// the settings section by section, each commented out at its default.
+func envExample(settings []setting, in envInputs) string {
 	var b strings.Builder
 	b.WriteString(envHeader)
+	required := in.required()
+	b.WriteString("\n# ---- loader ----\n")
+	for _, v := range in.loader {
+		writeEnvVar(&b, v.Doc, v.Env, "", required[v.Env])
+	}
+	settingEnvs := map[string]bool{}
+	for _, s := range settings {
+		settingEnvs[s.Env()] = true
+	}
+	var entrypointOnly []deployconfig.EntrypointVar
+	for _, v := range in.entrypoint {
+		if !settingEnvs[v.Name] {
+			entrypointOnly = append(entrypointOnly, v)
+		}
+	}
+	if len(entrypointOnly) > 0 {
+		b.WriteString("\n# ---- image entrypoint ----\n")
+		for _, v := range entrypointOnly {
+			writeEnvVar(&b, "Read by scripts/deploy/"+v.Script+" before it starts a program.", v.Name, "", v.Required)
+		}
+	}
 	for _, group := range groups(settings) {
 		b.WriteString("\n# ---- " + groupTitle(group) + " ----\n")
 		for _, s := range group {
-			b.WriteString("\n")
-			for _, line := range wrap(s.Doc(), commentWidth) {
-				b.WriteString("# " + line + "\n")
-			}
-			b.WriteString("# " + s.Env() + "=" + envDefault(s) + "\n")
+			writeEnvVar(&b, s.Doc(), s.Env(), envDefault(s), required[s.Env()])
 		}
 	}
 	return b.String()
+}
+
+func writeEnvVar(b *strings.Builder, doc, name, value string, required bool) {
+	if required {
+		doc = "[required] " + doc
+	}
+	b.WriteString("\n")
+	for _, line := range wrap(doc, commentWidth) {
+		b.WriteString("# " + line + "\n")
+	}
+	b.WriteString("# " + name + "=" + value + "\n")
 }
 
 // envDefault is the default as the variable spells it, quoted where the .env

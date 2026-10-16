@@ -90,8 +90,8 @@ var UnassignedEscalationUserID = config.DefineStored(config.Spec[string]{
 		}
 		return nil
 	},
-	Doc: "The user id of the colleague who answers for a lead nobody owns once it breaches its target. Empty means nobody. " +
-		"A value set at boot is not checked against the colleagues: one who is not an active colleague escalates to nobody, and the log warns.",
+	Doc: "The user id of the colleague who answers for a lead nobody owns once it misses its target; empty means nobody, " +
+		"and a boot value that names no active colleague reaches nobody and logs a warning.",
 }, config.Store{
 	RBACObject: leadVocabularyObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the SLA sweep applies it to decide who a breach is addressed to

@@ -69,10 +69,19 @@ func TestTheExampleNestsEachSettingCommentedOutAtItsDefault(t *testing.T) {
 }
 
 func TestTheEnvTemplateWritesEachVariableCommentedOut(t *testing.T) {
+	in := envInputs{
+		loader: []config.LoaderVar{{Env: "MARGINCE_ENV", Doc: "The posture."}},
+		entrypoint: []deployconfig.EntrypointVar{
+			{Name: "MARGINCE_ADMIN_PASSWORD", Script: "api-entrypoint.sh"},
+			{Name: "MARGINCE_LICENSE", Required: true, Script: "api-entrypoint.sh"},
+		},
+	}
 	want := envHeader +
-		"\n# ---- license ----\n\n# Licence token.\n# MARGINCE_LICENSE=\n" +
+		"\n# ---- loader ----\n\n# The posture.\n# MARGINCE_ENV=\n" +
+		"\n# ---- image entrypoint ----\n\n# Read by scripts/deploy/api-entrypoint.sh before it starts a program.\n# MARGINCE_ADMIN_PASSWORD=\n" +
+		"\n# ---- license ----\n\n# [required] Licence token.\n# MARGINCE_LICENSE=\n" +
 		"\n# ---- uploads ----\n\n# Largest attachment, in decimal MB.\n# MARGINCE_UPLOADS_ATTACHMENT_MB=25\n"
-	if got := envExample(twoSettings(t)); got != want {
+	if got := envExample(twoSettings(t), in); got != want {
 		t.Errorf("env template:\n%s\nwant:\n%s", got, want)
 	}
 }
@@ -114,7 +123,11 @@ func TestASecretRendersNoValueAndNoDefaultInAnyOutput(t *testing.T) {
 	if secrets == 0 {
 		t.Fatal("no registry setting is a secret; this test checks nothing")
 	}
-	files, err := render(settings, docsBegin+"\n"+docsEnd+"\n")
+	entrypoint, err := deployconfig.EntrypointVars("../../../scripts/deploy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files, err := render(settings, docsBegin+"\n"+docsEnd+"\n", envInputs{loader: config.LoaderVars(), entrypoint: entrypoint})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,6 +167,13 @@ func TestCheckNamesTheFilesThatDiffer(t *testing.T) {
 	if err := os.WriteFile(page, []byte("# Configuration\n\n"+docsBegin+"\n"+docsEnd+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	scripts := filepath.Join(root, entrypointDir)
+	if err := os.MkdirAll(scripts, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(scripts, "api-entrypoint.sh"), []byte(`: "${MARGINCE_DSN:?}"`+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	var out bytes.Buffer
 	if err := run(root, true, &out); !errors.Is(err, errStale) || !strings.Contains(out.String(), envPath+"\n") {
 		t.Fatalf("a tree with no generated files passed -check (%v):\n%s", err, out.String())
@@ -178,5 +198,14 @@ func TestCheckNamesTheFilesThatDiffer(t *testing.T) {
 	after, err := os.ReadFile(filepath.Join(root, envPath))
 	if err != nil || !bytes.Equal(before, after) {
 		t.Fatalf("-check rewrote %s (%v)", envPath, err)
+	}
+}
+
+// A key, flag or path in a doc reads as code on the page; a plain word does not.
+func TestADocSetsWhatOneTypesInCode(t *testing.T) {
+	got := docText("Read by POST /v1/attachments (see license.token_file); defaults to --public-base-url.")
+	want := "Read by POST `/v1/attachments` (see `license.token_file`); defaults to `--public-base-url`."
+	if got != want {
+		t.Errorf("docText = %q, want %q", got, want)
 	}
 }

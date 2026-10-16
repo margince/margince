@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -128,6 +129,20 @@ func TestSecurityTxtWarnsAtBootWhenItsExpiryIsPastOrTooFarOut(t *testing.T) {
 func TestAnUnparseableExpiryIsLeftToTheLoaderNotWarnedAbout(t *testing.T) {
 	if w := securityTxtWarnings(&SecurityTxt{Expires: "soon"}, clocktest.Now(t)); w != nil {
 		t.Fatalf("warned about an expiry the loader refuses: %v", w)
+	}
+}
+
+// A filled-in block, every optional field included, is held to the loader.
+func TestTheDocumentedSecurityTxtBlockLoads(t *testing.T) {
+	raw, err := os.ReadFile("testdata/securitytxt.yaml")
+	if err != nil {
+		t.Fatalf("reading the security.txt fixture: %v", err)
+	}
+	if !strings.Contains(string(raw), "security_txt:") {
+		t.Fatal("the fixture no longer holds a security_txt block")
+	}
+	if body := securityTxtBody(mustLoadSecurityTxt(t, string(raw))); !strings.Contains(body, "Policy: ") {
+		t.Fatalf("the block rendered without its optional fields:\n%s", body)
 	}
 }
 

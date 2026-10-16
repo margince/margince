@@ -68,7 +68,7 @@ var MailSharing = config.DefineStored(config.Spec[bool]{
 	Env:     "MARGINCE_CAPTURE_MAIL_SHARING",
 	Type:    config.Bool,
 	Default: config.Some(true),
-	Doc:     "Let every colleague who can see a contact read the email captured with them; off holds new mail to its participants.",
+	Doc:     "Let every colleague who can see a contact read the email captured with them; off keeps new mail to those on it.",
 }, config.Store{
 	RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb,
 	MachineryApplied: true, // the sink stamps each new email's audience from it
@@ -89,7 +89,7 @@ var SharedPostureAllowed = config.DefineStored(config.Spec[bool]{
 	Env:     "MARGINCE_CAPTURE_SHARED_POSTURE_ALLOWED",
 	Type:    config.Bool,
 	Default: config.Some(false),
-	Doc:     "Allow a seat to share their mailbox with colleagues as mail lands; turn it on only under a works-council agreement.",
+	Doc:     "Allow a seat to share their mailbox with colleagues as mail lands; turn it on only where a works agreement allows it.",
 }, config.Store{
 	RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb,
 	MachineryApplied: true, // SetMailPosture reads it inside the write it gates
@@ -125,7 +125,7 @@ var SignatureEnrich = config.DefineStored(config.Spec[bool]{
 	Env:     "MARGINCE_CAPTURE_SIGNATURE_ENRICH",
 	Type:    config.Bool,
 	Default: config.Some(true),
-	Doc:     "Read contact details from the signatures and attached cards of captured mail, for every mailbox that has not chosen.",
+	Doc:     "Read contact details from the signatures and attached cards of captured mail, for every mailbox that has made no choice of its own.",
 }, config.Store{
 	RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb,
 	MachineryApplied: true, // candidate selection reads it, per mailbox, in SQL

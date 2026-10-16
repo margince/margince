@@ -58,7 +58,7 @@ var AgentWindowHours = config.DefineStored(config.Spec[int]{
 	Default: config.Some(int(agentvolume.DefaultWindow.Hours())),
 	Min:     config.Some(1),
 	Max:     config.Some(168),
-	Doc:     "Hours in the window the agent allowances count over. Set at boot, it also keeps a length an administrator saved for the next reset from taking over.",
+	Doc:     "Hours in the window the agent limits count over; set at boot, it also keeps a length an admin saved for the next reset from taking over.",
 }, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true})
 
 // AgentWindowNextHours is a saved length still waiting for its reset; 0 when

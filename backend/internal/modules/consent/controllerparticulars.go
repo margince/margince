@@ -71,7 +71,7 @@ var ControllerIdentity = config.DefineStored(config.Spec[ControllerParticulars]{
 	Env:      "MARGINCE_CONSENT_CONTROLLER_PARTICULARS",
 	Type:     config.Struct[ControllerParticulars](),
 	Validate: validateControllerParticulars,
-	Doc:      "Who this installation is, as every message it sends must say: legal name, postal address, privacy contact, objection route and advertiser contact.",
+	Doc:      "Who this installation is, as every message it sends must say: legal name, address, privacy contact, how to object, and advertiser contact.",
 }, config.Store{RBACObject: controllerParticularsObject, AuditVerb: settingsAuditVerb, MachineryApplied: true})
 
 // validateControllerParticulars refuses what a message could not carry.

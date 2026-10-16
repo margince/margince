@@ -32,6 +32,8 @@ const (
 	envPath     = ".env.example"
 	schemaPath  = "config/margince.schema.json"
 	routingPath = "backend/internal/modules/ai/routingschema_gen.go"
+	// entrypointDir holds the image entrypoint scripts, an input.
+	entrypointDir = "scripts/deploy"
 )
 
 func main() {
@@ -55,7 +57,14 @@ func run(root string, check bool, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	files, err := render(settings, string(page))
+	entrypoint, err := deployconfig.EntrypointVars(filepath.Join(root, entrypointDir))
+	if err != nil {
+		return err
+	}
+	if len(entrypoint) == 0 {
+		return fmt.Errorf("gen-config: no MARGINCE_* variable read under %s; the scripts moved", entrypointDir)
+	}
+	files, err := render(settings, string(page), envInputs{loader: config.LoaderVars(), entrypoint: entrypoint})
 	if err != nil {
 		return err
 	}
@@ -88,7 +97,7 @@ func run(root string, check bool, out io.Writer) error {
 
 // render builds every output from the settings and the current reference
 // page, whose prose around the generated region it keeps.
-func render(settings []setting, page string) (map[string][]byte, error) {
+func render(settings []setting, page string, env envInputs) (map[string][]byte, error) {
 	docs, err := spliceDocs(page, settings)
 	if err != nil {
 		return nil, err
@@ -112,7 +121,7 @@ func render(settings []setting, page string) (map[string][]byte, error) {
 	return map[string][]byte{
 		docsPath:    []byte(docs),
 		examplePath: []byte(example),
-		envPath:     []byte(envExample(settings)),
+		envPath:     []byte(envExample(settings, env)),
 		schemaPath:  schema,
 		routingPath: routingGo,
 	}, nil

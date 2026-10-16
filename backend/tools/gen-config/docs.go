@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -59,7 +60,7 @@ func tableRow(s setting) string {
 	}
 	cells := []string{
 		codeSpan(s.Key()), codeSpan(s.Env()), flagCell, typeCell(s), defaultCell(s),
-		programNames(s.programs), cellText(s.Doc()),
+		programNames(s.programs), cellText(docText(s.Doc())),
 	}
 	return "| " + strings.Join(cells, " | ") + " |\n"
 }
@@ -96,6 +97,25 @@ func defaultCell(s setting) string {
 		return codeSpan(`""`)
 	}
 	return codeSpan(text)
+}
+
+// codeToken is a word of a doc that names something to type. That is a path,
+// a flag, a reference, or an identifier with an underscore or a slash.
+var codeToken = regexp.MustCompile(`^(/|--|\$\{)|[_/]`)
+
+// docText sets each such word of a doc in code. The hand-written prose of the
+// page does the same, so a key or a path reads as one.
+func docText(doc string) string {
+	words := strings.Split(doc, " ")
+	for i, word := range words {
+		core := strings.TrimRight(strings.TrimLeft(word, "("), ".,;:)")
+		if core == "" || strings.Contains(core, "`") || !codeToken.MatchString(core) {
+			continue
+		}
+		at := strings.Index(word, core)
+		words[i] = word[:at] + codeSpan(core) + word[at+len(core):]
+	}
+	return strings.Join(words, " ")
 }
 
 // codeSpan wraps text in a fence longer than any backtick run inside it, and

@@ -36,7 +36,7 @@ type SecurityTxt struct {
 var WebSecurityTxt = config.Define(config.Spec[*SecurityTxt]{
 	Key: "web.security_txt", Env: "MARGINCE_WEB_SECURITY_TXT", Type: config.Struct[*SecurityTxt](),
 	Default: config.Some[*SecurityTxt](nil), Validate: validSecurityTxt, Roles: []config.Role{config.RoleAPI},
-	Doc: "RFC 9116 security.txt: contact (mailto:, https: or tel: URIs) and an RFC 3339 expires, with optional policy and preferred_languages.",
+	Doc: "RFC 9116 security.txt: one or more contact URIs and an RFC 3339 end time, with an optional policy link and preferred_languages.",
 })
 
 // languageTag is the character set of a BCP 47 tag. It refuses the comma and

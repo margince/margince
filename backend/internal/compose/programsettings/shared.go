@@ -56,11 +56,11 @@ var (
 	})
 	PublicBaseURL = config.Define(config.Spec[string]{
 		Key: "public_base_url", Env: "MARGINCE_PUBLIC_BASE_URL", Flag: "public-base-url", Type: config.String, Roles: both,
-		Doc: "External scheme and host for buyer-facing links and the OAuth callback; required to send mail.",
+		Doc: "External scheme and host for the links a buyer sees and for the OAuth callback; required to send mail.",
 	})
 	WebhookKey = config.Define(config.Spec[string]{
 		Key: "webhook_key", Env: "MARGINCE_WEBHOOK_KEY", Flag: "webhook-key", Type: config.String, Secret: true, Roles: both,
-		Doc: "Base64 32-byte key sealing outbound-webhook signing secrets; unset, the mutating webhook paths answer 503 and the worker delivers nothing.",
+		Doc: "Base64 32-byte key sealing outbound-webhook signing secrets; unset, the webhook paths that change data answer 503 and the worker sends nothing.",
 	})
 	VATCheckBaseURL = config.Define(config.Spec[string]{
 		Key: "vat_check_base_url", Env: "MARGINCE_VAT_CHECK_BASE_URL", Flag: "vat-check-base-url", Type: config.String, Roles: both,
@@ -85,11 +85,11 @@ var (
 	})
 	GraphClientID = config.Define(config.Spec[string]{
 		Key: "graph_client_id", Env: "MARGINCE_GRAPH_CLIENT_ID", Flag: "graph-client-id", Type: config.String, Roles: both,
-		Doc: "Microsoft Entra application id of the Outlook/M365 capture connector.",
+		Doc: "Microsoft Entra app id of the Outlook and Microsoft 365 capture connector.",
 	})
 	GraphClientSecret = config.Define(config.Spec[string]{
 		Key: "graph_client_secret", Env: "MARGINCE_GRAPH_CLIENT_SECRET", Flag: "graph-client-secret", Type: config.String, Secret: true, Roles: both,
-		Doc: "Microsoft client secret of the Outlook/M365 capture connector.",
+		Doc: "Microsoft client secret of the Outlook and Microsoft 365 capture connector.",
 	})
 	GraphTenant = config.Define(config.Spec[string]{
 		Key: "graph_tenant", Env: "MARGINCE_GRAPH_TENANT", Flag: "graph-tenant", Type: config.String, Roles: both,

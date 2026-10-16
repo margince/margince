@@ -34,7 +34,7 @@ var (
 	})
 	APIBaseURL = config.Define(config.Spec[string]{
 		Key: "api_base_url", Env: "MARGINCE_API_BASE_URL", Flag: "api-base-url", Type: config.String, Roles: apiOnly,
-		Doc: "The api's external base for the OAuth redirect_uri when it is on another origin than the SPA; defaults to --public-base-url.",
+		Doc: "External base of the api for the OAuth redirect_uri when the api and the SPA are on different origins; defaults to --public-base-url.",
 	})
 	ConnectorStateKey = config.Define(config.Spec[string]{
 		Key: "connector_state_key", Env: "MARGINCE_CONNECTOR_STATE_KEY", Flag: "connector-state-key", Type: config.String, Secret: true, Roles: apiOnly,
@@ -47,12 +47,12 @@ var (
 	MetricsAccess = config.Define(config.Spec[string]{
 		Key: "metrics_access", Env: "MARGINCE_METRICS_ACCESS", Flag: "metrics-access", Roles: apiOnly,
 		Type: config.Enum(MetricsAccessToken, MetricsAccessOpen), Default: config.Some(MetricsAccessToken),
-		Doc: "Who /metrics serves: token requires --metrics-token, open serves anyone who reaches the port.",
+		Doc: "Who /metrics serves: token requires --metrics-token, open serves any client that reaches the port.",
 	})
 	TrustedProxies = config.Define(config.Spec[string]{
 		Key: "trusted_proxies", Env: "MARGINCE_TRUSTED_PROXIES", Flag: "trusted-proxies", Type: config.String, Roles: apiOnly,
 		Validate: validTrustedProxies,
-		Doc:      "Comma-separated CIDR prefixes of the reverse proxies whose X-Forwarded-For per-IP rate limits believe.",
+		Doc:      "Comma-separated CIDR prefixes of the reverse proxies whose client address header the rate limits per IP trust.",
 	})
 )
 
@@ -73,11 +73,11 @@ var (
 	})
 	GmailJWKSURL = config.Define(config.Spec[string]{
 		Key: "gmail_jwks_url", Env: "MARGINCE_GMAIL_JWKS_URL", Flag: "gmail-jwks-url", Type: config.String, Roles: apiOnly,
-		Doc: "Override of Google's OIDC JWKS URL, for test and dev.",
+		Doc: "Override of the Google OIDC JWKS URL, for test and dev.",
 	})
 	GraphPushToken = config.Define(config.Spec[string]{
 		Key: "graph_push_token", Env: "MARGINCE_GRAPH_PUSH_TOKEN", Flag: "graph-push-token", Type: config.String, Secret: true, Roles: apiOnly,
-		Doc: "Shared secret on the Graph change-notification URL; unset, POST /webhooks/graph is absent.",
+		Doc: "Shared secret on the Graph change notice URL; unset, POST /webhooks/graph is absent.",
 	})
 	MicrosoftSignInTenant = config.Define(config.Spec[string]{
 		Key: "microsoft_signin_tenant", Env: "MARGINCE_MICROSOFT_SIGNIN_TENANT", Flag: "microsoft-signin-tenant", Type: config.String, Roles: apiOnly,

@@ -28,28 +28,28 @@ var (
 	})
 	GraphNotificationURL = config.Define(config.Spec[string]{
 		Key: "graph_notification_url", Env: "MARGINCE_GRAPH_NOTIFICATION_URL", Flag: "graph-notification-url", Type: config.String, Secret: true, Roles: workerOnly,
-		Doc: "Public URL, token included, that Microsoft posts Graph change notifications to; unset leaves Outlook capture on the poll.",
+		Doc: "Public URL, token included, that Microsoft posts Graph change notices to; unset leaves Outlook capture on the poll.",
 	})
 	JobDrainWindow = config.Define(config.Spec[time.Duration]{
 		Key: "job_drain_window", Env: "MARGINCE_JOB_DRAIN_WINDOW", Flag: "job-drain-window", Type: config.Duration,
 		Default: config.Some(DefaultJobDrainWindow), Validate: positiveWindow, Roles: workerOnly,
-		Doc: "How long a running job gets to finish at shutdown; the grace period must cover it plus 5s and the teardown.",
+		Doc: "How long a running job gets to finish at shutdown; the grace period must cover it, five more seconds and the shutdown steps.",
 	})
 	CertLogBaseURL = config.Define(config.Spec[string]{
 		Key: "certlog_base_url", Env: "MARGINCE_CERTLOG_BASE_URL", Flag: "certlog-base-url", Type: config.String, Roles: workerOnly,
-		Doc: "Certificate-transparency base URL, or public for crt.sh; unset makes no outbound lookups of what a company runs.",
+		Doc: "Base URL of a certificate log, or public for a free public one; unset makes no outbound lookups of what a company runs.",
 	})
 	ObserveAddr = config.Define(config.Spec[string]{
 		Key: "observe_addr", Env: "MARGINCE_OBSERVE_ADDR", Flag: "observe-addr", Type: config.String, Roles: workerOnly,
-		Doc: "Address to serve the worker's /healthz, /readyz and /metrics on, such as 127.0.0.1:9101; unset serves nothing.",
+		Doc: "Address the worker serves its /healthz, /readyz and /metrics on, such as 127.0.0.1:9101; unset serves nothing.",
 	})
 	ObservePprof = config.Define(config.Spec[bool]{
 		Key: "observe_pprof", Env: "MARGINCE_OBSERVE_PPROF", Flag: "observe-pprof", Type: config.Bool, Default: config.Some(false), Roles: workerOnly,
-		Doc: "Mount the unauthenticated pprof handlers under /debug/pprof/ on the --observe-addr listener; turn it on only to diagnose.",
+		Doc: "Serve the Go profiles under /debug/pprof/ on the --observe-addr listener with no sign-in; turn it on only to find a fault.",
 	})
 	AITaskDir = config.Define(config.Spec[string]{
 		Key: "work_dir", Env: "MARGINCE_AITASK_DIR", Flag: "work-dir", Type: config.NonEmpty, Default: config.Some(DefaultAITaskDir), Roles: workerOnly,
-		Doc: "Directory the worker aitask probes write their artifacts to.",
+		Doc: "Directory where the AI task probes of the worker write their files.",
 	})
 )
 

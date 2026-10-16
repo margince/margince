@@ -71,7 +71,7 @@ var (
 
 	endpointSetting = config.Define(config.Spec[string]{
 		Key: "blobstore_endpoint", Env: EnvEndpoint, Type: config.String, Roles: storeRoles,
-		Doc: "S3/MinIO endpoint for attachment bytes; it wins over MARGINCE_BLOBSTORE_PATH, and with both unset the attachment endpoints answer 501.",
+		Doc: "Endpoint of an object store such as MinIO for attachment bytes; it wins over MARGINCE_BLOBSTORE_PATH, and with both unset the attachment endpoints answer 501.",
 	})
 	accessKeySetting = config.Define(config.Spec[string]{
 		Key: "blobstore_access_key", Env: EnvAccessKey, Type: config.String, Secret: true, Roles: storeRoles,

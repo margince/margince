@@ -40,7 +40,7 @@ var (
 
 	AnthropicKey = config.DefineStored(config.Spec[string]{
 		Key: "ai.provider_keys_anthropic", Env: "ANTHROPIC_API_KEY", Type: config.String, Secret: true, Roles: keyRoles,
-		Doc: "BYOK API key for the anthropic provider; required only when a binding names it.",
+		Doc: "BYOK API key for the Anthropic provider; required only when a binding names it.",
 	}, providerKeyStore)
 	OpenAICompatibleKey = config.DefineStored(config.Spec[string]{
 		Key: "ai.provider_keys_openai_compatible", Env: "OPENAI_COMPATIBLE_API_KEY", Type: config.String, Secret: true, Roles: keyRoles,
@@ -48,11 +48,11 @@ var (
 	}, providerKeyStore)
 	OpenAIKey = config.DefineStored(config.Spec[string]{
 		Key: "ai.provider_keys_openai", Env: "OPENAI_API_KEY", Type: config.String, Secret: true, Roles: keyRoles,
-		Doc: "BYOK API key for the openai provider; required only when a binding names it.",
+		Doc: "BYOK API key for the OpenAI provider; required only when a binding names it.",
 	}, providerKeyStore)
 	GeminiKey = config.DefineStored(config.Spec[string]{
 		Key: "ai.provider_keys_gemini", Env: "GEMINI_API_KEY", Type: config.String, Secret: true, Roles: keyRoles,
-		Doc: "BYOK API key for the gemini provider; required only when a binding names it.",
+		Doc: "BYOK API key for the Gemini provider; required only when a binding names it.",
 	}, providerKeyStore)
 	GeminiVertexKey = config.DefineStored(config.Spec[string]{
 		Key: "ai.provider_keys_gemini_vertex", Env: "GEMINI_VERTEX_SA_JSON", Type: config.String, Secret: true, Roles: keyRoles,
@@ -60,7 +60,7 @@ var (
 	}, providerKeyStore)
 	JevKey = config.DefineStored(config.Spec[string]{
 		Key: "ai.provider_keys_jev", Env: "TYPESAFE_API_KEY", Type: config.String, Secret: true, Roles: keyRoles,
-		Doc: "API key for TypeSafe's jev decision provider; required only when the decisions lane binds it.",
+		Doc: "API key for the TypeSafe decision provider; required only when the decisions lane binds it.",
 	}, providerKeyStore)
 	JevCompatibleKey = config.DefineStored(config.Spec[string]{
 		Key: "ai.provider_keys_jev_compatible", Env: "JEV_COMPATIBLE_API_KEY", Type: config.String, Secret: true, Roles: keyRoles,

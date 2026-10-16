@@ -22,7 +22,7 @@ var CompanyContextRollout = config.Define(config.Spec[string]{
 	Key: "company_context.rollout", Env: "MARGINCE_COMPANY_CONTEXT_ROLLOUT", Roles: []config.Role{config.RoleAPI},
 	Type:    config.Enum(companyContextRolloutOff, companyContextRolloutRead, companyContextRolloutTasks, companyContextRolloutOnboarding),
 	Default: config.Some(companyContextRolloutOnboarding),
-	Doc:     "Company-context stage: off, read (reads and settings), tasks (AI tasks receive it) or onboarding (the first-run flow too).",
+	Doc:     "Company-context stage: off, read (reads and settings), tasks (AI tasks get it) or onboarding (the first-run flow too).",
 })
 
 // CompanyContextTasks reports whether declared AI tasks may receive company

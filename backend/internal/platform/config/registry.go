@@ -48,12 +48,7 @@ const (
 	envTrace      = "MARGINCE_CONFIG_TRACE"
 )
 
-// reserved are read by Load itself: where the files are, how to trace, and the
-// posture. A setting with one of these names would be read before it exists.
-var reserved = map[string]bool{
-	envPosture: true, envConfig: true, envConfigFile: true, envEnvFile: true, envTrace: true,
-	"config": true, "config-file": true, "env-file": true, "config-trace": true,
-}
+var reserved = reservedNames()
 
 // Registry indexes the settings by key, env name and flag.
 type Registry struct {

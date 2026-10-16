@@ -58,7 +58,7 @@ var BudgetSettings = config.DefineStored(config.Spec[BudgetConfig]{
 	Type:     config.Struct[BudgetConfig](),
 	Default:  config.Some(BudgetConfig{TokensPerFullUser: int64(DefaultMonthlyTokens)}),
 	Validate: validateBudget,
-	Doc:      "The company's monthly AI token allowance, as tokens_per_full_user and company_monthly_tokens (null for the per-user sum).",
+	Doc:      "The monthly AI token budget of the company, as tokens_per_full_user and company_monthly_tokens (null for the total over its users).",
 }, config.Store{RBACObject: budgetObject, AuditVerb: settingsAuditVerb, MachineryApplied: true, SurvivesDataReset: true})
 
 func validateBudget(c BudgetConfig) error {

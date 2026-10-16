@@ -151,7 +151,7 @@
       "additionalProperties": false,
       "properties": {
         "follow_up_after_days": {
-          "description": "Days a sent message may go unanswered before the sender's worklist reminds them to follow up.",
+          "description": "Days a sent message may go without a reply before its sender is asked to follow up.",
           "type": [
             "integer",
             "null"
@@ -179,7 +179,7 @@
       "additionalProperties": false,
       "properties": {
         "budget": {
-          "description": "The company's monthly AI token allowance, as tokens_per_full_user and company_monthly_tokens (null for the per-user sum).",
+          "description": "The monthly AI token budget of the company, as tokens_per_full_user and company_monthly_tokens (null for the total over its users).",
           "type": [
             "object",
             "null"
@@ -226,7 +226,7 @@
           }
         },
         "provider_keys_anthropic": {
-          "description": "BYOK API key for the anthropic provider; required only when a binding names it.",
+          "description": "BYOK API key for the Anthropic provider; required only when a binding names it.",
           "type": [
             "string",
             "null"
@@ -238,7 +238,7 @@
           ]
         },
         "provider_keys_gemini": {
-          "description": "BYOK API key for the gemini provider; required only when a binding names it.",
+          "description": "BYOK API key for the Gemini provider; required only when a binding names it.",
           "type": [
             "string",
             "null"
@@ -262,7 +262,7 @@
           ]
         },
         "provider_keys_jev": {
-          "description": "API key for TypeSafe's jev decision provider; required only when the decisions lane binds it.",
+          "description": "API key for the TypeSafe decision provider; required only when the decisions lane binds it.",
           "type": [
             "string",
             "null"
@@ -286,7 +286,7 @@
           ]
         },
         "provider_keys_openai": {
-          "description": "BYOK API key for the openai provider; required only when a binding names it.",
+          "description": "BYOK API key for the OpenAI provider; required only when a binding names it.",
           "type": [
             "string",
             "null"
@@ -388,7 +388,7 @@
       }
     },
     "api_base_url": {
-      "description": "The api's external base for the OAuth redirect_uri when it is on another origin than the SPA; defaults to --public-base-url.",
+      "description": "External base of the api for the OAuth redirect_uri when the api and the SPA are on different origins; defaults to --public-base-url.",
       "type": [
         "string",
         "null"
@@ -440,7 +440,7 @@
       ]
     },
     "blobstore_endpoint": {
-      "description": "S3/MinIO endpoint for attachment bytes; it wins over MARGINCE_BLOBSTORE_PATH, and with both unset the attachment endpoints answer 501.",
+      "description": "Endpoint of an object store such as MinIO for attachment bytes; it wins over MARGINCE_BLOBSTORE_PATH, and with both unset the attachment endpoints answer 501.",
       "type": [
         "string",
         "null"
@@ -526,7 +526,7 @@
           }
         },
         "mail_sharing": {
-          "description": "Let every colleague who can see a contact read the email captured with them; off holds new mail to its participants.",
+          "description": "Let every colleague who can see a contact read the email captured with them; off keeps new mail to those on it.",
           "type": [
             "boolean",
             "null"
@@ -534,7 +534,7 @@
           "default": true
         },
         "mail_sync_interval_seconds": {
-          "description": "Seconds a healthy mailbox connection waits between polls.",
+          "description": "Seconds a working mailbox connection waits between polls.",
           "type": [
             "integer",
             "null"
@@ -552,7 +552,7 @@
           "default": 0
         },
         "shared_posture_allowed": {
-          "description": "Allow a seat to share their mailbox with colleagues as mail lands; turn it on only under a works-council agreement.",
+          "description": "Allow a seat to share their mailbox with colleagues as mail lands; turn it on only where a works agreement allows it.",
           "type": [
             "boolean",
             "null"
@@ -560,7 +560,7 @@
           "default": false
         },
         "signature_enrich": {
-          "description": "Read contact details from the signatures and attached cards of captured mail, for every mailbox that has not chosen.",
+          "description": "Read contact details from the signatures and attached cards of captured mail, for every mailbox that has made no choice of its own.",
           "type": [
             "boolean",
             "null"
@@ -568,7 +568,7 @@
           "default": true
         },
         "site_read_max_mib": {
-          "description": "MiB one company web-page read may hold, summed over its pages.",
+          "description": "MiB one company web-page read may hold, over all its pages.",
           "type": [
             "integer",
             "null"
@@ -614,7 +614,7 @@
           "default": true
         },
         "transactional_extra": {
-          "description": "Mail-infrastructure domains added to the built-in list; their mail keeps the activity and derives no counterparty.",
+          "description": "Domains of mail services added to the built-in list; their mail keeps the activity and derives no counterparty.",
           "type": [
             "array",
             "null"
@@ -624,7 +624,7 @@
           }
         },
         "transactional_never": {
-          "description": "Domains never suppressed as transactional, whatever the built-in rules say.",
+          "description": "Domains never held back as system mail, whatever the built-in rules say.",
           "type": [
             "array",
             "null"
@@ -636,7 +636,7 @@
       }
     },
     "certlog_base_url": {
-      "description": "Certificate-transparency base URL, or public for crt.sh; unset makes no outbound lookups of what a company runs.",
+      "description": "Base URL of a certificate log, or public for a free public one; unset makes no outbound lookups of what a company runs.",
       "type": [
         "string",
         "null"
@@ -650,7 +650,7 @@
       "additionalProperties": false,
       "properties": {
         "rollout": {
-          "description": "Company-context stage: off, read (reads and settings), tasks (AI tasks receive it) or onboarding (the first-run flow too).",
+          "description": "Company-context stage: off, read (reads and settings), tasks (AI tasks get it) or onboarding (the first-run flow too).",
           "anyOf": [
             {
               "type": "string",
@@ -689,7 +689,7 @@
       "additionalProperties": false,
       "properties": {
         "authorization_modes": {
-          "description": "The authority the authorization engine's answer carries for each communication category: observe, warn or enforce.",
+          "description": "How strictly the authorization engine applies its answer for each message category: observe, warn or enforce.",
           "type": [
             "object",
             "null"
@@ -715,7 +715,7 @@
           }
         },
         "controller_particulars": {
-          "description": "Who this installation is, as every message it sends must say: legal name, postal address, privacy contact, objection route and advertiser contact.",
+          "description": "Who this installation is, as every message it sends must say: legal name, address, privacy contact, how to object, and advertiser contact.",
           "type": [
             "object",
             "null"
@@ -767,14 +767,14 @@
           "default": 240
         },
         "signature_template": {
-          "description": "The workspace's email signature layout, which replaces each sender's own signature. Empty means none.",
+          "description": "The email signature of the workspace, used in place of the own signature of each sender; empty means none.",
           "type": [
             "string",
             "null"
           ]
         },
         "unassigned_escalation_user_id": {
-          "description": "The user id of the colleague who answers for a lead nobody owns once it breaches its target. Empty means nobody. A value set at boot is not checked against the colleagues: one who is not an active colleague escalates to nobody, and the log warns.",
+          "description": "The user id of the colleague who answers for a lead nobody owns once it misses its target; empty means nobody, and a boot value that names no active colleague reaches nobody and logs a warning.",
           "type": [
             "string",
             "null"
@@ -790,7 +790,7 @@
       "additionalProperties": false,
       "properties": {
         "legal_review_enabled": {
-          "description": "Let a deal be sent to legal for review, and let a legal_reviewed criterion block an advance.",
+          "description": "Let a deal be sent to legal for review, and let a legal_reviewed criterion hold a deal at its stage.",
           "type": [
             "boolean",
             "null"
@@ -806,7 +806,7 @@
           "default": true
         },
         "stage_autopilot_enabled": {
-          "description": "Let a stage transition move a deal by itself where its rule has earned it. Off stops every automatic move.",
+          "description": "Let a deal move to the next stage by itself where the rule of its stage allows it; off stops every automatic move.",
           "type": [
             "boolean",
             "null"
@@ -877,7 +877,7 @@
               ]
             },
             "password_file": {
-              "description": "Path to a file holding the SMTP relay password; email.smtp.password wins over it.",
+              "description": "Path to a file holding the SMTP relay password; a password set by reference wins over it.",
               "type": [
                 "string",
                 "null"
@@ -892,7 +892,7 @@
               "default": 0
             },
             "username": {
-              "description": "SMTP relay user; unset sends without authenticating.",
+              "description": "SMTP relay user; unset sends without signing in.",
               "type": [
                 "string",
                 "null"
@@ -929,7 +929,7 @@
       ]
     },
     "gmail_jwks_url": {
-      "description": "Override of Google's OIDC JWKS URL, for test and dev.",
+      "description": "Override of the Google OIDC JWKS URL, for test and dev.",
       "type": [
         "string",
         "null"
@@ -969,14 +969,14 @@
       ]
     },
     "graph_client_id": {
-      "description": "Microsoft Entra application id of the Outlook/M365 capture connector.",
+      "description": "Microsoft Entra app id of the Outlook and Microsoft 365 capture connector.",
       "type": [
         "string",
         "null"
       ]
     },
     "graph_client_secret": {
-      "description": "Microsoft client secret of the Outlook/M365 capture connector.",
+      "description": "Microsoft client secret of the Outlook and Microsoft 365 capture connector.",
       "type": [
         "string",
         "null"
@@ -988,7 +988,7 @@
       ]
     },
     "graph_notification_url": {
-      "description": "Public URL, token included, that Microsoft posts Graph change notifications to; unset leaves Outlook capture on the poll.",
+      "description": "Public URL, token included, that Microsoft posts Graph change notices to; unset leaves Outlook capture on the poll.",
       "type": [
         "string",
         "null"
@@ -1000,7 +1000,7 @@
       ]
     },
     "graph_push_token": {
-      "description": "Shared secret on the Graph change-notification URL; unset, POST /webhooks/graph is absent.",
+      "description": "Shared secret on the Graph change notice URL; unset, POST /webhooks/graph is absent.",
       "type": [
         "string",
         "null"
@@ -1026,7 +1026,7 @@
       "additionalProperties": false,
       "properties": {
         "enabled_oidc_providers": {
-          "description": "The sign-in providers offered, as a list of provider keys. Unset offers every provider the deployment configured.",
+          "description": "The sign-in providers offered, as a list of provider keys; unset offers every provider the deployment set up.",
           "type": [
             "array",
             "null"
@@ -1036,7 +1036,7 @@
           }
         },
         "oidc_group_role_map": {
-          "description": "The role each directory group grants at sign-in, as group:role pairs. Grants only; it never takes a role away.",
+          "description": "The role each directory group grants at sign-in, as group:role pairs; it only grants, and never removes a role.",
           "type": [
             "object",
             "null"
@@ -1046,7 +1046,7 @@
           }
         },
         "require_mfa": {
-          "description": "Every member must sign in with a second factor.",
+          "description": "Every member must use two-step sign-in.",
           "type": [
             "boolean",
             "null"
@@ -1099,7 +1099,7 @@
           "default": 20
         },
         "agent_runner_interval_seconds": {
-          "description": "Seconds between the agent scheduler's passes.",
+          "description": "Seconds between the passes of the agent scheduler.",
           "type": [
             "integer",
             "null"
@@ -1109,7 +1109,7 @@
           "default": 30
         },
         "agent_window_hours": {
-          "description": "Hours in the window the agent allowances count over. Set at boot, it also keeps a length an administrator saved for the next reset from taking over.",
+          "description": "Hours in the window the agent limits count over; set at boot, it also keeps a length an admin saved for the next reset from taking over.",
           "type": [
             "integer",
             "null"
@@ -1197,7 +1197,7 @@
           "default": "commit_evidence"
         },
         "geocode_backfill_interval_seconds": {
-          "description": "Seconds between the geocoding backfill sweeps, or 0 for off.",
+          "description": "Seconds between the sweeps that add missing map points, or 0 for off.",
           "type": [
             "integer",
             "null"
@@ -1205,7 +1205,7 @@
           "default": 3600
         },
         "gmail_watch_renew_within_hours": {
-          "description": "Hours before a Gmail push subscription expires that it is renewed.",
+          "description": "Hours before a Gmail push subscription ends that it is renewed.",
           "type": [
             "integer",
             "null"
@@ -1225,7 +1225,7 @@
           "default": 21600
         },
         "graph_watch_renew_within_hours": {
-          "description": "Hours before a Microsoft Graph mail subscription expires that it is renewed.",
+          "description": "Hours before a Microsoft Graph mail subscription ends that it is renewed.",
           "type": [
             "integer",
             "null"
@@ -1252,7 +1252,7 @@
           ]
         },
         "oauth_access_token_ttl_minutes": {
-          "description": "Minutes an access token from a connector's OAuth handshake lives, for the code exchange and every refresh.",
+          "description": "Minutes an access token from the OAuth handshake of a connector lives, for the first token and every refresh.",
           "type": [
             "integer",
             "null"
@@ -1302,7 +1302,7 @@
           "default": 60
         },
         "technical_backfill_interval_seconds": {
-          "description": "Seconds between the technical backfill sweeps, or 0 for off.",
+          "description": "Seconds between the sweeps that add missing technical profiles, or 0 for off.",
           "type": [
             "integer",
             "null"
@@ -1347,7 +1347,7 @@
       "additionalProperties": false,
       "properties": {
         "automatic_lookup": {
-          "description": "Look each new contact up once against the connected data provider for the free details, without anybody asking.",
+          "description": "Look each new contact up once against the connected data provider for the free details, with no request from a user.",
           "type": [
             "boolean",
             "null"
@@ -1357,7 +1357,7 @@
       }
     },
     "job_drain_window": {
-      "description": "How long a running job gets to finish at shutdown; the grace period must cover it plus 5s and the teardown.",
+      "description": "How long a running job gets to finish at shutdown; the grace period must cover it, five more seconds and the shutdown steps.",
       "type": [
         "string",
         "null"
@@ -1365,7 +1365,7 @@
       "default": "20s"
     },
     "keyvault_root_key": {
-      "description": "Base64 (standard, padded) 32-byte root key sealing connector credentials; unset disables the vault.",
+      "description": "Standard Base64 of the 32-byte root key that seals connector credentials; unset disables the vault.",
       "type": [
         "string",
         "null"
@@ -1384,7 +1384,7 @@
       "additionalProperties": false,
       "properties": {
         "token": {
-          "description": "Licence token; unset with no license.token_file runs unlicensed, which production refuses.",
+          "description": "Licence token; unset with no license.token_file runs with no license, which production refuses.",
           "type": [
             "string",
             "null"
@@ -1480,7 +1480,7 @@
       ]
     },
     "metrics_access": {
-      "description": "Who /metrics serves: token requires --metrics-token, open serves anyone who reaches the port.",
+      "description": "Who /metrics serves: token requires --metrics-token, open serves any client that reaches the port.",
       "anyOf": [
         {
           "type": "string",
@@ -1515,14 +1515,14 @@
       ]
     },
     "observe_addr": {
-      "description": "Address to serve the worker's /healthz, /readyz and /metrics on, such as 127.0.0.1:9101; unset serves nothing.",
+      "description": "Address the worker serves its /healthz, /readyz and /metrics on, such as 127.0.0.1:9101; unset serves nothing.",
       "type": [
         "string",
         "null"
       ]
     },
     "observe_pprof": {
-      "description": "Mount the unauthenticated pprof handlers under /debug/pprof/ on the --observe-addr listener; turn it on only to diagnose.",
+      "description": "Serve the Go profiles under /debug/pprof/ on the --observe-addr listener with no sign-in; turn it on only to find a fault.",
       "type": [
         "boolean",
         "null"
@@ -1574,7 +1574,7 @@
       "additionalProperties": false,
       "properties": {
         "retain_only": {
-          "description": "Destroy nothing: the nightly retention pass applies no anonymize and no erase, whatever a policy says.",
+          "description": "Keep everything: the nightly retention pass erases nothing and strips no personal data, whatever a policy says.",
           "type": [
             "boolean",
             "null"
@@ -1592,7 +1592,7 @@
       "default": "live"
     },
     "public_base_url": {
-      "description": "External scheme and host for buyer-facing links and the OAuth callback; required to send mail.",
+      "description": "External scheme and host for the links a buyer sees and for the OAuth callback; required to send mail.",
       "type": [
         "string",
         "null"
@@ -1606,7 +1606,7 @@
       "additionalProperties": false,
       "properties": {
         "fx_currencies": {
-          "description": "ISO 4217 codes the FX refresh proposes for an empty rate sheet; unset proposes USD, GBP and CHF.",
+          "description": "ISO 4217 codes the FX refresh offers for an empty rate sheet; unset offers USD, GBP and CHF.",
           "type": [
             "array",
             "null"
@@ -1616,7 +1616,7 @@
           }
         },
         "fx_source": {
-          "description": "Page the FX refresh reads rates from; unset reads api.frankfurter.dev.",
+          "description": "Page the FX refresh reads rates from; unset reads a free source of ECB rates.",
           "type": [
             "string",
             "null"
@@ -1668,7 +1668,7 @@
       ]
     },
     "trusted_proxies": {
-      "description": "Comma-separated CIDR prefixes of the reverse proxies whose X-Forwarded-For per-IP rate limits believe.",
+      "description": "Comma-separated CIDR prefixes of the reverse proxies whose client address header the rate limits per IP trust.",
       "type": [
         "string",
         "null"
@@ -1738,7 +1738,7 @@
       "additionalProperties": false,
       "properties": {
         "security_txt": {
-          "description": "RFC 9116 security.txt: contact (mailto:, https: or tel: URIs) and an RFC 3339 expires, with optional policy and preferred_languages.",
+          "description": "RFC 9116 security.txt: one or more contact URIs and an RFC 3339 end time, with an optional policy link and preferred_languages.",
           "anyOf": [
             {
               "type": [
@@ -1776,7 +1776,7 @@
       }
     },
     "webhook_key": {
-      "description": "Base64 32-byte key sealing outbound-webhook signing secrets; unset, the mutating webhook paths answer 503 and the worker delivers nothing.",
+      "description": "Base64 32-byte key sealing outbound-webhook signing secrets; unset, the webhook paths that change data answer 503 and the worker sends nothing.",
       "type": [
         "string",
         "null"
@@ -1788,7 +1788,7 @@
       ]
     },
     "work_dir": {
-      "description": "Directory the worker aitask probes write their artifacts to.",
+      "description": "Directory where the AI task probes of the worker write their files.",
       "type": [
         "string",
         "null"

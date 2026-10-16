@@ -64,7 +64,7 @@ var AuthorizationModes = config.DefineStored(config.Spec[map[string]string]{
 	Type:     config.Map(config.String),
 	Default:  config.Some(enforceEveryCategory()),
 	Validate: validateAuthorizationModes,
-	Doc:      "The authority the authorization engine's answer carries for each communication category: observe, warn or enforce.",
+	Doc:      "How strictly the authorization engine applies its answer for each message category: observe, warn or enforce.",
 }, config.Store{
 	RBACObject: authorizationModesObject, AuditVerb: settingsAuditVerb,
 	// The transmit gate reads this inside the transaction that binds its own

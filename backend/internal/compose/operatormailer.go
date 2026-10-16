@@ -39,7 +39,7 @@ var (
 	})
 	SMTPUsername = config.Define(config.Spec[string]{
 		Key: "email.smtp.username", Env: "MARGINCE_EMAIL_SMTP_USERNAME", Type: config.String, Roles: bothRoles,
-		Doc: "SMTP relay user; unset sends without authenticating.",
+		Doc: "SMTP relay user; unset sends without signing in.",
 	})
 	SMTPPassword = config.Define(config.Spec[string]{
 		Key: "email.smtp.password", Env: "MARGINCE_EMAIL_SMTP_PASSWORD", Type: config.String, Secret: true, AllowNone: true, Roles: bothRoles,
@@ -47,7 +47,7 @@ var (
 	})
 	SMTPPasswordFile = config.Define(config.Spec[string]{
 		Key: "email.smtp.password_file", Env: "MARGINCE_EMAIL_SMTP_PASSWORD_FILE", Type: config.String, Roles: bothRoles,
-		Doc: "Path to a file holding the SMTP relay password; email.smtp.password wins over it.",
+		Doc: "Path to a file holding the SMTP relay password; a password set by reference wins over it.",
 	})
 )
 

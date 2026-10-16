@@ -23,11 +23,11 @@ var (
 	})
 	CaptureTransactionalExtra = config.Define(config.Spec[[]string]{
 		Key: "capture.transactional_extra", Env: "MARGINCE_CAPTURE_TRANSACTIONAL_EXTRA", Type: config.List(config.String), Roles: bothRoles,
-		Doc: "Mail-infrastructure domains added to the built-in list; their mail keeps the activity and derives no counterparty.",
+		Doc: "Domains of mail services added to the built-in list; their mail keeps the activity and derives no counterparty.",
 	})
 	CaptureTransactionalNever = config.Define(config.Spec[[]string]{
 		Key: "capture.transactional_never", Env: "MARGINCE_CAPTURE_TRANSACTIONAL_NEVER", Type: config.List(config.String), Roles: bothRoles,
-		Doc: "Domains never suppressed as transactional, whatever the built-in rules say.",
+		Doc: "Domains never held back as system mail, whatever the built-in rules say.",
 	})
 	// Only the deployment turns it off. A member must not be able to switch on
 	// retention of colleagues' subjects. An operator who turns it off makes a

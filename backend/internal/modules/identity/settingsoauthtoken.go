@@ -41,7 +41,7 @@ var OAuthAccessTokenTTLMinutes = config.DefineStored(config.Spec[int]{
 	Default: config.Some(int(defaultPassportTTL / time.Minute)),
 	Min:     config.Some(minOAuthAccessTokenTTLMinutes),
 	Max:     config.Some(int(maxPassportTTL / time.Minute)),
-	Doc:     "Minutes an access token from a connector's OAuth handshake lives, for the code exchange and every refresh.",
+	Doc:     "Minutes an access token from the OAuth handshake of a connector lives, for the first token and every refresh.",
 }, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true})
 
 // errOAuthMintUnwired refuses a mint on a service composed without the

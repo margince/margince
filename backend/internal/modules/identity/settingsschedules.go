@@ -51,7 +51,7 @@ var (
 	AgentRunnerIntervalSeconds = config.DefineStored(config.Spec[int]{
 		Key: "installation.agent_runner_interval_seconds", Env: "MARGINCE_INSTALLATION_AGENT_RUNNER_INTERVAL_SECONDS",
 		Type: config.Int, Default: seconds(30 * time.Second), Min: seconds(10 * time.Second), Max: seconds(time.Hour),
-		Doc: "Seconds between the agent scheduler's passes.",
+		Doc: "Seconds between the passes of the agent scheduler.",
 	}, scheduleStore)
 	WebhookRetryIntervalSeconds = config.DefineStored(config.Spec[int]{
 		Key: "installation.webhook_retry_interval_seconds", Env: "MARGINCE_INSTALLATION_WEBHOOK_RETRY_INTERVAL_SECONDS",
@@ -81,12 +81,12 @@ var (
 	GeocodeBackfillIntervalSeconds = config.DefineStored(config.Spec[int]{
 		Key: "installation.geocode_backfill_interval_seconds", Env: "MARGINCE_INSTALLATION_GEOCODE_BACKFILL_INTERVAL_SECONDS",
 		Type: config.Int, Default: seconds(time.Hour), Validate: offOrWithin(5*time.Minute, week),
-		Doc: "Seconds between the geocoding backfill sweeps, or 0 for off.",
+		Doc: "Seconds between the sweeps that add missing map points, or 0 for off.",
 	}, scheduleStore)
 	TechnicalBackfillIntervalSeconds = config.DefineStored(config.Spec[int]{
 		Key: "installation.technical_backfill_interval_seconds", Env: "MARGINCE_INSTALLATION_TECHNICAL_BACKFILL_INTERVAL_SECONDS",
 		Type: config.Int, Default: seconds(6 * time.Hour), Validate: offOrWithin(5*time.Minute, week),
-		Doc: "Seconds between the technical backfill sweeps, or 0 for off.",
+		Doc: "Seconds between the sweeps that add missing technical profiles, or 0 for off.",
 	}, scheduleStore)
 	// The watch scans run at least twice a day: a renewal window is at least
 	// a day (below), so two scans always land inside it, with room for one
@@ -111,14 +111,14 @@ var (
 	GmailWatchRenewWithinHours = config.DefineStored(config.Spec[int]{
 		Key: "installation.gmail_watch_renew_within_hours", Env: "MARGINCE_INSTALLATION_GMAIL_WATCH_RENEW_WITHIN_HOURS",
 		Type: config.Int, Default: config.Some(48), Min: config.Some(24), Max: config.Some(144),
-		Doc: "Hours before a Gmail push subscription expires that it is renewed.",
+		Doc: "Hours before a Gmail push subscription ends that it is renewed.",
 	}, scheduleStore)
 	// A Graph mail subscription lasts at most 4230 minutes, just under three
 	// days, so the margin stops well short of it.
 	GraphWatchRenewWithinHours = config.DefineStored(config.Spec[int]{
 		Key: "installation.graph_watch_renew_within_hours", Env: "MARGINCE_INSTALLATION_GRAPH_WATCH_RENEW_WITHIN_HOURS",
 		Type: config.Int, Default: config.Some(24), Min: config.Some(24), Max: config.Some(60),
-		Doc: "Hours before a Microsoft Graph mail subscription expires that it is renewed.",
+		Doc: "Hours before a Microsoft Graph mail subscription ends that it is renewed.",
 	}, scheduleStore)
 )
 

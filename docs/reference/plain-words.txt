@@ -236,6 +236,7 @@ child
 choice
 chokepoint
 choose
+cidr
 ciphertext
 citation
 cite
@@ -779,6 +780,7 @@ judge
 judgement
 jurisdiction
 just
+jwks
 keep
 kept
 key
@@ -959,6 +961,7 @@ no
 nobody
 node
 noise
+nominatim
 non
 none
 nor
@@ -974,6 +977,7 @@ nowhere
 number
 object
 obligation
+observe
 occasional
 of
 off
@@ -1585,6 +1589,7 @@ toolkit
 tools
 tooltip
 top
+topic
 total
 touch
 trace
@@ -1651,6 +1656,7 @@ upstream
 uptime
 urls
 us
+usd
 use
 user
 user's

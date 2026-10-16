@@ -49,7 +49,7 @@ var RetainOnly = config.DefineStored(config.Spec[bool]{
 	Env:     "MARGINCE_PRIVACY_RETAIN_ONLY",
 	Type:    config.Bool,
 	Default: config.Some(false),
-	Doc:     "Destroy nothing: the nightly retention pass applies no anonymize and no erase, whatever a policy says.",
+	Doc:     "Keep everything: the nightly retention pass erases nothing and strips no personal data, whatever a policy says.",
 }, config.Store{RBACObject: retentionPolicyObject, AuditVerb: settingsAuditVerb})
 
 // settingsAuditVerb is the audit action every privacy settings change records.

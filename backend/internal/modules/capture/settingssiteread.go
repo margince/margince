@@ -73,7 +73,7 @@ var SiteReadMaxMiB = config.DefineStored(config.Spec[int]{
 	Default: config.Some(DefaultSiteReadMaxMiB),
 	Min:     config.Some(1),
 	Max:     config.Some(MaxSiteReadMaxMiB),
-	Doc:     "MiB one company web-page read may hold, summed over its pages.",
+	Doc:     "MiB one company web-page read may hold, over all its pages.",
 }, config.Store{RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb})
 
 // SiteReadWallSeconds is how long one crawl may run before it stops and
@@ -100,7 +100,7 @@ var MailSyncIntervalSeconds = config.DefineStored(config.Spec[int]{
 	Default: config.Some(DefaultMailSyncIntervalSeconds),
 	Min:     config.Some(30),
 	Max:     config.Some(3600),
-	Doc:     "Seconds a healthy mailbox connection waits between polls.",
+	Doc:     "Seconds a working mailbox connection waits between polls.",
 }, config.Store{
 	RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb,
 	MachineryApplied: true, // the sync applies it to the next_sync_at it writes

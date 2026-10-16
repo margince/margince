@@ -16,7 +16,7 @@ import (
 var (
 	LicenseToken = config.Define(config.Spec[string]{
 		Key: "license.token", Env: "MARGINCE_LICENSE", Type: config.String, Secret: true, Roles: bothRoles,
-		Doc: "Licence token; unset with no license.token_file runs unlicensed, which production refuses.",
+		Doc: "Licence token; unset with no license.token_file runs with no license, which production refuses.",
 	})
 	LicenseTokenFile = config.Define(config.Spec[string]{
 		Key: "license.token_file", Env: "MARGINCE_LICENSE_TOKEN_FILE", Type: config.String, Roles: bothRoles,

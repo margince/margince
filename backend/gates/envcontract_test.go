@@ -57,6 +57,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
 // envVarName matches one MARGINCE_* name in prose — the reference doc and the
@@ -197,19 +199,28 @@ func TestConfigurationDocNamesOnlyLiveVars(t *testing.T) {
 	assertNamesOnlyLiveVars(t, configurationDoc)
 }
 
-// entrypointRequired matches the parameter-expansion forms that abort a script
-// on an unset variable: `${FOO:?msg}` and the colonless `${FOO?msg}`, which
-// differ only in whether an empty value also aborts. The `:-default` form is
-// deliberately not matched — a variable with a fallback is not one an operator
-// must supply, and requiring those would admit most of the deploy surface and
-// leave the label meaningless.
-//
-// Only these two forms are detected. A script can also make a variable
-// mandatory with an explicit guard (`[ -z "$FOO" ] && exit 1`) or by relying on
-// `set -u`, and obligation 3 would not see either. Neither appears in
-// scripts/deploy today; the limit is recorded so the gate is not read as
-// proving more than it does.
-var entrypointRequired = regexp.MustCompile(`\$\{(MARGINCE_[A-Z0-9_]+):?\?`)
+// entrypointRequired is each var a deploy entrypoint stops without, mapped to
+// the script that reads it, from deployconfig.EntrypointVars. The generated
+// .env.example marks the same set [required] from the same call.
+// Its stated limits are these gates' limits too: only the `${VAR:?}` and
+// `${VAR?}` forms are seen, never an explicit guard or `set -u`.
+func entrypointRequired(t *testing.T) map[string]string {
+	t.Helper()
+	vars, err := deployconfig.EntrypointVars("../scripts/deploy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	required := map[string]string{}
+	for _, v := range vars {
+		if v.Required {
+			required[v.Name] = "../scripts/deploy/" + v.Script
+		}
+	}
+	if len(required) == 0 {
+		t.Fatal("no `${MARGINCE_…:?}` requirement found under ../scripts/deploy — a sweep that scans nothing passes exactly like a clean one")
+	}
+	return required
+}
 
 // TestEntrypointRequiredVarsAreInTheEnvExample: a var the container refuses to
 // boot without belongs in the file an operator is handed, not only in the
@@ -219,18 +230,7 @@ func TestEntrypointRequiredVarsAreInTheEnvExample(t *testing.T) {
 	t.Parallel()
 	offered := namesIn(t, envExample)
 
-	required := map[string]string{}
-	walkTextFiles(t, "../scripts/deploy", func(path, text string) {
-		for _, m := range entrypointRequired.FindAllStringSubmatch(text, -1) {
-			if _, seen := required[m[1]]; !seen {
-				required[m[1]] = path
-			}
-		}
-	})
-	if len(required) == 0 {
-		t.Fatal("no `${MARGINCE_…:?}` requirement found under ../scripts/deploy — a sweep that scans nothing passes exactly like a clean one")
-	}
-
+	required := entrypointRequired(t)
 	var missing []string
 	for _, name := range slices.Sorted(maps.Keys(required)) {
 		if !offered[name] {
@@ -249,7 +249,8 @@ func TestEntrypointRequiredVarsAreInTheEnvExample(t *testing.T) {
 //
 // Obligation 1 covers Go readers only, and says so. Obligation 2 counts the
 // deploy surface, but only in the permissive direction. It asks whether a name
-// a document mentions is still real, never whether a real name is mentioned. So a var an entrypoint hard-requires was documented if the author
+// a document mentions is still real, never whether a real name is mentioned.
+// So a var an entrypoint hard-requires was documented if the author
 // remembered, which is the failure mode obligation 1 removed for Go.
 // margince/margince#566.
 //
@@ -268,21 +269,7 @@ func TestEntrypointRequiredVarsAreDocumented(t *testing.T) {
 	t.Parallel()
 	documented := namesInSection(t, configurationDoc, entrypointSection)
 
-	required := map[string]string{}
-	walkTextFiles(t, "../scripts/deploy", func(path, text string) {
-		for _, m := range entrypointRequired.FindAllStringSubmatch(text, -1) {
-			if _, seen := required[m[1]]; !seen {
-				required[m[1]] = path
-			}
-		}
-	})
-	// The same floor obligation 3 carries: a sweep that scans nothing passes
-	// like a clean one. This walk depends on the scripts staying where they are
-	// and on the `:?` form staying in use.
-	if len(required) == 0 {
-		t.Fatal("no `${MARGINCE_…:?}` requirement found under ../scripts/deploy — a sweep that scans nothing passes exactly like a clean one")
-	}
-
+	required := entrypointRequired(t)
 	var missing []string
 	for _, name := range slices.Sorted(maps.Keys(required)) {
 		if !documented[name] {

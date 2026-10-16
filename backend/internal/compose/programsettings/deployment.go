@@ -50,12 +50,12 @@ var (
 	})
 	RatesFxSource = config.Define(config.Spec[string]{
 		Key: "rates.fx_source", Env: "MARGINCE_RATES_FX_SOURCE", Type: config.String, Roles: workerOnly,
-		Doc: "Page the FX refresh reads rates from; unset reads api.frankfurter.dev.",
+		Doc: "Page the FX refresh reads rates from; unset reads a free source of ECB rates.",
 	})
 	RatesFxCurrencies = config.Define(config.Spec[[]string]{
 		Key: "rates.fx_currencies", Env: "MARGINCE_RATES_FX_CURRENCIES", Type: config.List(config.String), Roles: workerOnly,
 		Validate: distinctCurrencies,
-		Doc:      "ISO 4217 codes the FX refresh proposes for an empty rate sheet; unset proposes USD, GBP and CHF.",
+		Doc:      "ISO 4217 codes the FX refresh offers for an empty rate sheet; unset offers USD, GBP and CHF.",
 	})
 )
 

@@ -82,7 +82,7 @@ var EnabledOidcProviders = config.DefineStored(config.Spec[[]string]{
 		}
 		return nil
 	},
-	Doc: "The sign-in providers offered, as a list of provider keys. Unset offers every provider the deployment configured.",
+	Doc: "The sign-in providers offered, as a list of provider keys; unset offers every provider the deployment set up.",
 }, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 
 // RequireSSO closes the password path: when true, an ordinary member may sign
@@ -153,7 +153,7 @@ var OidcGroupRoleMap = config.DefineStored(config.Spec[map[string]string]{
 	Env:      "MARGINCE_IDENTITY_OIDC_GROUP_ROLE_MAP",
 	Type:     config.Map(config.String),
 	Validate: validateGroupRoleMap,
-	Doc:      "The role each directory group grants at sign-in, as group:role pairs. Grants only; it never takes a role away.",
+	Doc:      "The role each directory group grants at sign-in, as group:role pairs; it only grants, and never removes a role.",
 }, config.Store{RBACObject: authenticationPolicyObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 
 // validateGroupRoleMap holds the map's bounds and vocabulary at the write.
@@ -210,5 +210,5 @@ var RequireMFA = config.DefineStored(config.Spec[bool]{
 	Env:     "MARGINCE_IDENTITY_REQUIRE_MFA",
 	Type:    config.Bool,
 	Default: config.Some(false),
-	Doc:     "Every member must sign in with a second factor.",
+	Doc:     "Every member must use two-step sign-in.",
 }, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})

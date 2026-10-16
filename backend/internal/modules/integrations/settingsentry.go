@@ -48,7 +48,7 @@ var AutomaticLookup = config.DefineStored(config.Spec[bool]{
 	Env:     "MARGINCE_INTEGRATIONS_AUTOMATIC_LOOKUP",
 	Type:    config.Bool,
 	Default: config.Some(true),
-	Doc:     "Look each new contact up once against the connected data provider for the free details, without anybody asking.",
+	Doc:     "Look each new contact up once against the connected data provider for the free details, with no request from a user.",
 }, config.Store{RBACObject: objectIntegrations, AuditVerb: "update", MachineryApplied: true})
 
 // ConfigSettings are this module's settings in the configuration registry.

@@ -29,7 +29,7 @@ var FollowUpAfterDays = config.DefineStored(config.Spec[int]{
 	Default: config.Some(2),
 	Min:     config.Some(followUpMinDays),
 	Max:     config.Some(followUpMaxDays),
-	Doc:     "Days a sent message may go unanswered before the sender's worklist reminds them to follow up.",
+	Doc:     "Days a sent message may go without a reply before its sender is asked to follow up.",
 }, config.Store{
 	RBACObject: "installation_settings", AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the worklist applies it to rows the reader is separately gated for
