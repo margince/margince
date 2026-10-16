@@ -774,6 +774,25 @@
           "type": "string"
         }
       }
+    },
+    "deals": {
+      "description": "The deal switches an operator may also set at boot. A value here locks the setting against a change in the product.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stage_autopilot_enabled": {
+          "description": "Let a stage transition move a deal by itself where its rule has earned it. Off stops every automatic move.",
+          "type": "boolean"
+        },
+        "maintenance_writes_enabled": {
+          "description": "Let the nightly close-date sweep write to a deal. Off stops every automatic write the sweep makes.",
+          "type": "boolean"
+        },
+        "legal_review_enabled": {
+          "description": "Let a deal be sent to legal for review, and let a legal_reviewed criterion block an advance.",
+          "type": "boolean"
+        }
+      }
     }
   },
   "$defs": {

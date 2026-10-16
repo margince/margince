@@ -32,9 +32,6 @@ var settingsDefineExceptions = map[string]string{
 
 	"ai.price_sync_last_run": productState,
 
-	"deals.legal_review_enabled":       convertsIn12d,
-	"deals.maintenance_writes_enabled": convertsIn12d,
-	"deals.stage_autopilot_enabled":    convertsIn12d,
-	"privacy.retain_only":              convertsIn12d,
-	"privacy.retention_floor_carry":    convertsIn12d,
+	"privacy.retain_only":           convertsIn12d,
+	"privacy.retention_floor_carry": convertsIn12d,
 }

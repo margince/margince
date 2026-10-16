@@ -20,7 +20,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -159,7 +158,7 @@ func TestSwitchingLegalReviewOffAndOnAgain(t *testing.T) {
 // deals wait for legal is an admin's call.
 func TestOnlyAnAdminSwitchesLegalReview(t *testing.T) {
 	e := setupReviewEnv(t)
-	store := settings.New(e.pool, settings.NewRegistry(Definitions()...))
+	store := dealsConfig(t, e.pool)
 	ops := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.admin.String(), UserID: e.admin,
 		Permissions: principal.Permissions{

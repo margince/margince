@@ -176,6 +176,9 @@ value gets a 409 that names the source, and a save of the same value changes not
 | `MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES` | `240` (15 to 10080) | `contacts.first_response_target_minutes` |
 | `MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID` | — (nobody) | `contacts.unassigned_escalation_user_id`, a user id |
 | `MARGINCE_CONTACTS_SIGNATURE_TEMPLATE` | — (none) | `contacts.signature_template`, at most 4000 characters |
+| `MARGINCE_DEALS_STAGE_AUTOPILOT_ENABLED` | `false` | `deals.stage_autopilot_enabled` |
+| `MARGINCE_DEALS_MAINTENANCE_WRITES_ENABLED` | `true` | `deals.maintenance_writes_enabled` |
+| `MARGINCE_DEALS_LEGAL_REVIEW_ENABLED` | `true` | `deals.legal_review_enabled` |
 
 A data reset keeps the saved rows of the first 12 settings, from `installation.name` to
 `identity.oidc_group_role_map`, and of `ai.routing`, `ai.task_overrides` and `ai.budget`. It
@@ -195,6 +198,8 @@ reset from taking over.
 `consent.authorization_modes` names every category or none; a value that leaves one out fails the
 boot. `consent.controller_particulars` takes the fields `LegalName`, `PostalAddress`,
 `PrivacyContact`, `ObjectionRoute` and `AdvertiserContact`, spelled as the saved row spells them.
+
+A boot-set `deals.legal_review_enabled` wins over `seeds.legal_review`.
 
 ## Common log flags (api, worker)
 

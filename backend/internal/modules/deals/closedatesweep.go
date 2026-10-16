@@ -25,9 +25,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
@@ -329,7 +329,7 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		// the one after it. A halted write is not a failure — the pass carries
 		// on assessing, and the version is still read so a 🟡 staging binds to
 		// the row a human would see.
-		on, err := settings.ApplyTx(ctx, tx, MaintenanceWritesEnabled)
+		on, err := config.StoredApplyTx(ctx, tx, config.Bound(), MaintenanceWritesEnabled)
 		if err != nil {
 			return fmt.Errorf("read whether deal maintenance may write: %w", err)
 		}

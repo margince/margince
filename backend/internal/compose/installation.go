@@ -318,10 +318,8 @@ func configuredSeed(seeds deployconfig.Seeds, dealsH dealsHandlers, discarded *[
 		if err := ai.SeedWorkspaceDefaultsTx(ctx, tx, time.Now().UTC()); err != nil {
 			return err
 		}
-		if seeds.LegalReview != nil && !*seeds.LegalReview {
-			if _, err := settings.SeedValue(ctx, tx, deals.LegalReviewEnabled, false, nil); err != nil {
-				return err
-			}
+		if err := seedLegalReview(ctx, tx, seeds); err != nil {
+			return err
 		}
 		if seeds.StarterAutomations == nil || *seeds.StarterAutomations {
 			if err := automation.SeedStarterAutomationsTx(ctx, tx); err != nil {
@@ -333,6 +331,17 @@ func configuredSeed(seeds deployconfig.Seeds, dealsH dealsHandlers, discarded *[
 		}
 		return nil
 	}
+}
+
+// seedLegalReview turns legal review off when the deployment asked for it. A
+// value a boot source sets is not seeded, since the row would act only once
+// that source is gone.
+func seedLegalReview(ctx context.Context, tx pgx.Tx, seeds deployconfig.Seeds) error {
+	if seeds.LegalReview == nil || *seeds.LegalReview {
+		return nil
+	}
+	_, err := config.SeedTx(ctx, tx, loadedConfig(), deals.LegalReviewEnabled, false)
+	return err
 }
 
 func seedPipeline(ctx context.Context, tx pgx.Tx, p *deployconfig.PipelineSeed, dealsH dealsHandlers) error {

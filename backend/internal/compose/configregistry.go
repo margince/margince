@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -45,6 +46,7 @@ func allSettings() []config.Any {
 		activities.ConfigSettings(),
 		consent.ConfigSettings(),
 		contacts.ConfigSettings(),
+		deals.ConfigSettings(),
 	)
 }
 

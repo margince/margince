@@ -25,7 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -112,7 +112,7 @@ func StageAutopilotModeTx(
 	// The kill switch first, because it is the cheapest question and the one
 	// an admin expects to answer everything. Nothing below it is consulted
 	// when the installation has said no.
-	on, err := settings.ApplyTx(ctx, tx, StageAutopilotEnabled)
+	on, err := config.StoredApplyTx(ctx, tx, config.Bound(), StageAutopilotEnabled)
 	if err != nil {
 		return refused(), fmt.Errorf("read whether stage automation is on: %w", err)
 	}
@@ -278,7 +278,7 @@ func transitionRatesTx(
 // automation at all, for the settings surface that renders the per-transition
 // rules beside it.
 //
-// settings.ApplyTx on StageAutopilotEnabled, which is where StageAutopilotModeTx
+// config.StoredApplyTx on StageAutopilotEnabled, which is where StageAutopilotModeTx
 // reads it too — the same SOURCE, not the same read: that one runs inside the
 // caller's transaction and this opens its own, so a switch flipped between them is
 // seen by one and not the other. What this rules out is a screen deriving the answer
@@ -294,7 +294,7 @@ func (s *Store) StageAutomationEnabled(ctx context.Context) (bool, error) {
 	var on bool
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		on, err = settings.ApplyTx(ctx, tx, StageAutopilotEnabled)
+		on, err = config.StoredApplyTx(ctx, tx, config.Bound(), StageAutopilotEnabled)
 		return err
 	})
 	if err != nil {

@@ -49,7 +49,6 @@ var settingsDefinitions = sync.OnceValue(func() []settings.Definition {
 	var defs []settings.Definition
 	defs = append(defs, ai.Definitions()...)
 	defs = append(defs, capture.Definitions()...)
-	defs = append(defs, deals.Definitions()...)
 	defs = append(defs, identity.Definitions()...)
 	defs = append(defs, privacy.Definitions()...)
 	// The settings each module has moved to the configuration registry.

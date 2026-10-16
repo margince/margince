@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -141,5 +142,28 @@ func TestSignatureTemplateSetByEnvIsLockedAgainstAChange(t *testing.T) {
 	})
 	if rows := settingRows(t, e, contacts.SignatureTemplate.Key()); rows != 0 {
 		t.Fatalf("the locked template wrote %d rows, want none", rows)
+	}
+}
+
+// The legal review switch the api's environment sets reads as that value and
+// refuses a change; resending it is accepted. A bool has no invalid value, and
+// a body that is no bool is refused for its shape before the lock is asked.
+func TestLegalReviewSetByEnvIsLockedAgainstAChange(t *testing.T) {
+	e := apptest.SetupAppWithEnv(t, []string{"MARGINCE_DEALS_LEGAL_REVIEW_ENABLED=false"})
+	e.BootstrapWorkspace(t)
+
+	const path = "/v1/legal-reviews/settings"
+	var read struct {
+		Enabled bool `json:"enabled"`
+	}
+	if status := e.Call(t, http.MethodGet, path, nil, nil, &read); status != http.StatusOK || read.Enabled {
+		t.Fatalf("GET %s → %d, enabled %v, want the false the environment sets", path, status, read.Enabled)
+	}
+	expectLockedWrites(t, e, []lockedWrite{
+		{"switching it on", http.MethodPut, path, map[string]any{"enabled": true}, http.StatusConflict},
+		{"the locked switch resent", http.MethodPut, path, map[string]any{"enabled": false}, http.StatusOK},
+	})
+	if rows := settingRows(t, e, deals.LegalReviewEnabled.Key()); rows != 0 {
+		t.Fatalf("the locked switch wrote %d rows, want none", rows)
 	}
 }
