@@ -146,3 +146,23 @@ function reply2(status: number, c: string) {
 }
 reply2(200, "vn");
 reply2(409, "r2_reply2_refused"); // want: r2_reply2_refused
+
+function defaulted(cd = "r3_default_code") { // want: r3_default_code
+  return json({ title: "Defaulted", code: cd }, 409);
+}
+defaulted();
+defaulted("r3_default_passed"); // want: r3_default_passed
+function defaultedNever(cd = "never_read") {
+  return json({ title: "Defaulted", code: cd }, 409);
+}
+defaultedNever("r3_default_given"); // want: r3_default_given
+
+function fallbackStatus(st: number | undefined, cd: string) {
+  return json({ code: cd }, st ?? 500);
+}
+fallbackStatus(undefined, "r3_fallback_helper"); // want: r3_fallback_helper
+fallbackStatus(200, "vn");
+json({ code: "r3_fallback_arg" }, maybe ?? 500); // want: r3_fallback_arg
+json({ code: "r3_fallback_or" }, maybe || 500); // want: r3_fallback_or
+const fallbackEntry = { status: maybe ?? 503, code: "r3_fallback_entry" }; // want: r3_fallback_entry
+json({ code: "vn" }, maybe ?? 200);

@@ -117,14 +117,10 @@ describe("ProjectLinks", () => {
       attach: async () => {
         throw new ProblemError({
           code: "validation_error",
-          detail: "this company still has 2 deal(s) on the project",
+          detail: "role is required",
           details: {
             errors: [
-              {
-                field: "company_id",
-                code: "company_has_deals_on_project",
-                message: "this company still has 2 deal(s) on the project",
-              },
+              { field: "role", code: "required", message: "role is required" },
             ],
           },
         });
@@ -140,9 +136,7 @@ describe("ProjectLinks", () => {
 
     // The refusal is the one moment the reader most needs to see what they
     // asked for, so the dialog stays.
-    expect(
-      await screen.findByText(/still has 2 deal\(s\) on the project/),
-    ).toBeTruthy();
+    expect(await screen.findByText("role is required")).toBeTruthy();
     expect(
       screen.getByRole("searchbox", { name: /Search projects/ }),
     ).toBeTruthy();
