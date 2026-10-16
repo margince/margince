@@ -467,7 +467,7 @@ function momentText(
 // `#/activities/<id>` would be a control that goes nowhere.
 //
 // A `draft_reply` row whose subject is a CONTACT opens the composer, through
-// `?compose=reply` on their record (contactpage.tsx COMPOSE_PARAM). Everything
+// `?compose=reply` on their record (contactpage.address.ts COMPOSE_PARAM). Everything
 // else lands on the record itself, and its verb says so.
 //
 // WHY ONLY A CONTACT. The composer lives on the contact page and drafts to the

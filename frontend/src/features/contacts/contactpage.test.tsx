@@ -19,11 +19,18 @@ import {
 } from "../../testing/story-utils";
 import { ContactPageV2 } from "./contactpage";
 import {
+  type Contact360,
   type ContactConsentGuardEntry,
   mount,
+  quietMoment,
+  recordHeader,
   view,
 } from "./contactpage.testkit";
 import { CONTACT_TABS } from "./contacttab";
+
+afterEach(() => {
+  cleanup();
+});
 
 // Every tab of the contact record was a placeholder panel once, and the way
 // that regresses is silent: a tab whose content stops rendering looks exactly
@@ -37,33 +44,12 @@ import { CONTACT_TABS } from "./contacttab";
 // non-default mount (a route override outside `mount`'s own extraRoutes, a
 // distinct grant) still reach the same seam directly.
 
-type Contact360 = components["schemas"]["Contact360"];
-
 const CAPTURED = {
   source: "manual",
   captured_by: "human:u-1",
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-08-01T08:00:00Z",
 } as const;
-
-// The gone-quiet rung, carrying the reason the server put in its destination.
-// The label promises a follow-up; the prefill is the only place the reason it
-// fired for is written down.
-const quietMoment: Contact360["moment"] = {
-  claim_key: "gone_quiet:p-1",
-  evidence_fingerprint: "fp-1",
-  rule: "gone_quiet",
-  headline: "Dana has gone quiet",
-  why_now: "Six weeks since her last reply",
-  confidence: "observed_fact",
-  evidence: [{ type: "activity", label: "Fleet renewal", id: "a-1" }],
-  recommended_action: {
-    kind: "draft_reply",
-    label: "Draft a follow-up",
-    state: "available",
-    destination: { surface: "composer", prefill: { intent: "follow_up" } },
-  },
-};
 
 // A guard that permits correspondence, so the rail's permissions panel says the
 // ordinary thing. The hero Email verb does NOT read it: whether a message may
@@ -75,22 +61,6 @@ const mailAllowed: ContactConsentGuardEntry = {
   verdict: "allowed",
   reason: "she wrote to you on 11 August",
 };
-
-// The record's header, which is where the page's verbs live. Found through the
-// heading it names rather than by class, because the header is a landmark for
-// the record and the rail offers verbs of its own that must not be mistaken
-// for it.
-async function recordHeader(): Promise<HTMLElement> {
-  const name = await screen.findByRole("heading", {
-    level: 1,
-    name: "Dana Buyer",
-  });
-  const header = name.closest("header");
-  if (!(header instanceof HTMLElement)) {
-    throw new Error("the record's header is not around its own heading");
-  }
-  return header;
-}
 
 // The header's writing verb, once the reads it depends on have arrived: the
 // consent guard decides whether it may be pressed and the transport directory
@@ -105,9 +75,59 @@ async function leadVerb(label: string): Promise<HTMLButtonElement> {
   return lead;
 }
 
-afterEach(() => {
-  cleanup();
-});
+// The reachability the record carries, and the conversation a reply would
+// continue. A channel reaches nobody without both. The first says the identity
+// is live, the second that there is something to answer.
+const reachableOnZalo = [
+  { provider: "zalo_oa", reachable: true, since: "2026-07-01T08:00:00Z" },
+];
+
+// `kind` is annotated rather than left to inference. The contract's activity
+// kind is a closed union, and a bare object literal widens it to `string`.
+// The timeline's own type then refuses it.
+const chatMessage: components["schemas"]["Activity"] = {
+  id: "a-chat",
+  kind: "message",
+  channel_provider: "zalo_oa",
+  occurred_at: "2026-08-12T12:00:00Z",
+  is_done: false,
+  ...CAPTURED,
+};
+
+// A contact captured over a chat channel: no address, one conversation.
+const chatOnly: Contact360 = {
+  ...view,
+  contact: { ...view.contact, emails: [], reachability: reachableOnZalo },
+  activities: { data: [chatMessage], page: { has_more: false } },
+};
+
+// Reachable both ways, which is the case where the composer must ASK.
+const mailAndChat: Contact360 = {
+  ...view,
+  contact: { ...view.contact, reachability: reachableOnZalo },
+  activities: {
+    data: [...(view.activities?.data ?? []), chatMessage],
+    page: { has_more: false },
+  },
+};
+
+// Nothing to write to: no address, and no channel conversation to answer. The
+// mail thread on the record is not a way to reach them; an address is.
+const unreachable: Contact360 = {
+  ...view,
+  contact: { ...view.contact, emails: [] },
+};
+
+// A guard that refuses mail. Consent is decided per purpose, so this is one
+// refused purpose and no allowed one: the state the hero button reads as "may
+// not write".
+const mailBlocked: ContactConsentGuardEntry = {
+  purpose_key: "marketing",
+  purpose_class: "marketing",
+  channel: "email",
+  verdict: "blocked",
+  reason: "opt-out recorded 12 July",
+};
 
 describe("what the day's work says it could not read", () => {
   it("names the withheld moment, so a quiet day is not claimed off a source nobody read", async () => {
@@ -272,60 +292,6 @@ describe("a moment action that opens the composer", () => {
     ).toBeNull();
   });
 });
-
-// The reachability the record carries, and the conversation a reply would
-// continue. Both are needed before a channel is a way to reach anybody: the
-// first says the identity is live, the second that there is something to answer.
-const reachableOnZalo = [
-  { provider: "zalo_oa", reachable: true, since: "2026-07-01T08:00:00Z" },
-];
-
-// `kind` is annotated rather than left to inference: the contract's activity
-// kind is a closed union, and a bare object literal widens it to `string`, which
-// the timeline's own type then refuses.
-const chatMessage: components["schemas"]["Activity"] = {
-  id: "a-chat",
-  kind: "message",
-  channel_provider: "zalo_oa",
-  occurred_at: "2026-08-12T12:00:00Z",
-  is_done: false,
-  ...CAPTURED,
-};
-
-// A contact captured over a chat channel: no address, one conversation.
-const chatOnly: Contact360 = {
-  ...view,
-  contact: { ...view.contact, emails: [], reachability: reachableOnZalo },
-  activities: { data: [chatMessage], page: { has_more: false } },
-};
-
-// Reachable both ways, which is the case where the composer must ASK.
-const mailAndChat: Contact360 = {
-  ...view,
-  contact: { ...view.contact, reachability: reachableOnZalo },
-  activities: {
-    data: [...(view.activities?.data ?? []), chatMessage],
-    page: { has_more: false },
-  },
-};
-
-// Nothing to write to: no address, and no channel conversation to answer. The
-// mail thread on the record is not a way to reach them — an address is.
-const unreachable: Contact360 = {
-  ...view,
-  contact: { ...view.contact, emails: [] },
-};
-
-// A guard that refuses mail. Consent is decided per purpose, so this is one
-// refused purpose and no allowed one — the state the hero button reads as "may
-// not write".
-const mailBlocked: ContactConsentGuardEntry = {
-  purpose_key: "marketing",
-  purpose_class: "marketing",
-  channel: "email",
-  verdict: "blocked",
-  reason: "opt-out recorded 12 July",
-};
 
 describe("the header's writing verb", () => {
   // The ONE sentence this verb's refusal can say. There is no consent sentence
@@ -652,255 +618,6 @@ describe("the contact's LinkedIn on the header", () => {
     expect(link.getAttribute("href")).toBe(
       "https://de.linkedin.com/in/dana-buyer",
     );
-  });
-});
-
-// The one thing a CRM must let a rep do on a contact is write down what
-// happened. Two ways in, one form: the header verb that is always there, and
-// the moment card's action when its rung decides logging is the next step.
-describe("logging an activity", () => {
-  // The "nothing needed" rung, whose one action is to log an interaction.
-  const quietDayMoment: Contact360["moment"] = {
-    claim_key: "moment:nothing_needed",
-    evidence_fingerprint: "quiet",
-    rule: "nothing_needed",
-    headline: "Nothing needs you today",
-    why_now: "No meeting coming up, nothing owed, nobody waiting on a reply.",
-    confidence: "observed_fact",
-    evidence: [],
-    recommended_action: {
-      kind: "log_activity",
-      label: "Log an interaction",
-      state: "available",
-      destination: { surface: "activity_log" },
-    },
-  };
-
-  it("opens the log form from the header, whatever the moment card offers", async () => {
-    const user = userEvent.setup();
-    mount("overview");
-
-    // Disabled until the caller's grants have arrived, and the header is
-    // rebuilt when they do — so the button is looked up fresh each time
-    // rather than held from before the grant landed.
-    const logButton = async () =>
-      within(await recordHeader()).getByRole("button", {
-        name: "Log activity",
-      });
-    await waitFor(async () =>
-      expect(await logButton()).toHaveProperty("disabled", false),
-    );
-    await user.click(await logButton());
-
-    expect(
-      await screen.findByRole("dialog", { name: "Log activity" }),
-    ).toBeTruthy();
-  });
-
-  it("keeps the verb on the page but refuses it without the create grant", async () => {
-    // The store refuses a save without `activity.create`, so the button must
-    // not open a form it cannot complete — and it stays visible, because a
-    // reader who cannot tell "not mine to do" from "no such button" learns
-    // nothing from an absence.
-    mount("overview", view, [], {}, { contact: ["read", "update"] });
-
-    const header = await recordHeader();
-    const button = within(header).getByRole("button", {
-      name: /Log activity/,
-    });
-    expect(button).toHaveProperty("disabled", true);
-    expect(
-      within(header).getByText(
-        "You do not have permission to log activities on this record.",
-      ),
-    ).toBeTruthy();
-  });
-
-  // "Add task" issues the same POST /activities as "Log activity", so it is
-  // refused by the same grant — sharing the one sentence rather than
-  // printing it twice.
-  it("also refuses Add task without the create grant, over the same sentence", async () => {
-    mount("overview", view, [], {}, { contact: ["read", "update"] });
-
-    const header = await recordHeader();
-    const addTask = within(header).getByRole("button", { name: "Add task" });
-    const logActivity = within(header).getByRole("button", {
-      name: /Log activity/,
-    });
-    expect(addTask).toHaveProperty("disabled", true);
-    expect(
-      within(header).getAllByText(
-        "You do not have permission to log activities on this record.",
-      ),
-    ).toHaveLength(1);
-    expect(addTask.getAttribute("aria-describedby")).toBe(
-      logActivity.getAttribute("aria-describedby"),
-    );
-  });
-
-  // A guard that has not answered yet refuses nothing: while /me is still in
-  // flight, useCanWrite reads false the same way it would for a caller
-  // without the grant — so without this, both buttons would flash the
-  // "You do not have permission" sentence on every page load, before the
-  // verdict is even in.
-  it("stays quiet — disabled, no claimed refusal — while the grant is still in flight", async () => {
-    mount("overview", view, [], {
-      "GET /me": () => new Promise<Response>(() => {}),
-    });
-
-    const header = await recordHeader();
-    const addTask = within(header).getByRole("button", { name: "Add task" });
-    const logActivity = within(header).getByRole("button", {
-      name: /Log activity/,
-    });
-    expect(addTask).toHaveProperty("disabled", true);
-    expect(logActivity).toHaveProperty("disabled", true);
-    expect(
-      within(header).queryByText(
-        "You do not have permission to log activities on this record.",
-      ),
-    ).toBeNull();
-  });
-
-  // The button names a verb, opens the same form Log activity does — started
-  // on the task kind — and files the task against THIS contact, rather than
-  // navigating to the Worklist, which has no way to add one.
-  it("adds a task on this contact from the header, instead of leaving for the Worklist", async () => {
-    const user = userEvent.setup();
-    const posted: unknown[] = [];
-    mount("overview", view, [], {
-      "POST /activities": (body) => {
-        posted.push(body);
-        return jsonResponse({}, 201);
-      },
-    });
-
-    const header = await recordHeader();
-    await user.click(within(header).getByRole("button", { name: "Add task" }));
-    const dialog = await screen.findByRole("dialog", { name: "Add task" });
-    await user.type(
-      within(dialog).getByRole("textbox", { name: "Subject" }),
-      "Send the renewal quote",
-    );
-    await user.click(within(dialog).getByRole("button", { name: "Add task" }));
-
-    await waitFor(() => expect(posted).toHaveLength(1));
-    expect(posted[0]).toMatchObject({
-      kind: "task",
-      subject: "Send the renewal quote",
-      links: [{ entity_type: "contact", entity_id: "p-1" }],
-    });
-  });
-
-  // A quiet rung already says so in the brief, so the moment's own sentence
-  // under it would be the same news twice, and neither an agent byline nor
-  // a verb a reader can press belongs on a record where nothing is asked.
-  it("prints no suggestion card, byline, readiness word, or coverage sentence for a quiet record", async () => {
-    mount("overview", { ...view, moment: quietDayMoment });
-
-    await recordHeader();
-    expect(screen.queryByText(quietDayMoment.why_now)).toBeNull();
-    expect(screen.queryByText("Margince suggests")).toBeNull();
-    expect(screen.queryByText("Ready")).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: "Log an interaction" }),
-    ).toBeNull();
-  });
-
-  // The contrast that makes the rule above a rule rather than a blanket
-  // deletion: a rung that really is an ask still says whose ask it is.
-  it("keeps the byline on a rung that does ask for something", async () => {
-    mount("overview", { ...view, moment: quietMoment });
-
-    const move = (await screen.findByText("Dana has gone quiet")).closest(
-      ".co-move",
-    );
-    if (!(move instanceof HTMLElement)) {
-      throw new Error("the moment is not drawn as a move");
-    }
-    expect(within(move).getByText("Margince suggests")).toBeTruthy();
-    expect(within(move).queryByText("Ready")).toBeNull();
-  });
-
-  it("logs a meeting on a quiet contact from the header", async () => {
-    const user = userEvent.setup();
-    const posted: unknown[] = [];
-    mount("overview", { ...view, moment: quietDayMoment }, [], {
-      "POST /activities": (body) => {
-        posted.push(body);
-        return jsonResponse({}, 201);
-      },
-    });
-
-    await user.click(
-      within(await recordHeader()).getByRole("button", {
-        name: /Log activity/,
-      }),
-    );
-    const dialog = await screen.findByRole("dialog", { name: "Log activity" });
-    await user.click(within(dialog).getByRole("combobox", { name: "Type" }));
-    await user.click(await screen.findByRole("option", { name: "Meeting" }));
-    await user.type(
-      within(dialog).getByRole("textbox", { name: "Subject" }),
-      "Coffee at the fair",
-    );
-    await user.click(within(dialog).getByRole("button", { name: "Log" }));
-
-    await waitFor(() => expect(posted).toHaveLength(1));
-    expect(posted[0]).toMatchObject({
-      kind: "meeting",
-      subject: "Coffee at the fair",
-      meeting_status: "held",
-      links: [{ entity_type: "contact", entity_id: "p-1" }],
-    });
-  });
-
-  // The `task` surface ContactMomentDestination documents ("the task sheet")
-  // used to fall through runAction's default and do nothing — the same
-  // capability-the-API-serves-and-no-screen-offers shape as the header's own
-  // Add task bug, in the same file's action loop.
-  const taskMoment: Contact360["moment"] = {
-    claim_key: "moment:overdue_promise",
-    evidence_fingerprint: "fp-task",
-    rule: "overdue_promise",
-    headline: "Something is due",
-    why_now: "The next step needs a task to track it.",
-    confidence: "observed_fact",
-    evidence: [],
-    recommended_action: {
-      kind: "complete_task",
-      label: "File a task",
-      state: "available",
-      destination: { surface: "task" },
-    },
-  };
-
-  it("adds a task from the moment card's own 'task' surface", async () => {
-    const user = userEvent.setup();
-    const posted: unknown[] = [];
-    mount("overview", { ...view, moment: taskMoment }, [], {
-      "POST /activities": (body) => {
-        posted.push(body);
-        return jsonResponse({}, 201);
-      },
-    });
-
-    await user.click(
-      await screen.findByRole("button", { name: "File a task" }),
-    );
-    const dialog = await screen.findByRole("dialog", { name: "Add task" });
-    await user.type(
-      within(dialog).getByRole("textbox", { name: "Subject" }),
-      "Chase the signed order",
-    );
-    await user.click(within(dialog).getByRole("button", { name: "Add task" }));
-
-    await waitFor(() => expect(posted).toHaveLength(1));
-    expect(posted[0]).toMatchObject({
-      kind: "task",
-      subject: "Chase the signed order",
-      links: [{ entity_type: "contact", entity_id: "p-1" }],
-    });
   });
 });
 
