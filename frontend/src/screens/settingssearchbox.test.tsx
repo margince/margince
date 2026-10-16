@@ -9,7 +9,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import * as router from "../lib/router";
 import { meFixture } from "../testing/mefixture";
+import { companyContextCapabilitiesQueryKey } from "./companycontextreach";
 import { SETTINGS_PAGES, type SettingsPage } from "./settingscatalog";
+import { COMPANY_CONTEXT_ON } from "./settingspages.fixtures";
 import { SettingsSearchBox } from "./settingssearchbox";
 
 afterEach(() => {
@@ -26,6 +28,7 @@ function mount(
 ) {
   const client = new QueryClient();
   client.setQueryData(["me"], meFixture({ roles }));
+  client.setQueryData(companyContextCapabilitiesQueryKey, COMPANY_CONTEXT_ON);
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">

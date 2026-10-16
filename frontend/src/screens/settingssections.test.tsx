@@ -7,8 +7,10 @@ import { render, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { companyContextShown } from "./companycontextreach";
 import * as stories from "./settings.stories";
 import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
+import { COMPANY_CONTEXT_OFF } from "./settingspages.fixtures";
 import { settingsPageSections } from "./settingssearch";
 
 const t = (key: MessageKey) => translate("en", key);
@@ -101,7 +103,7 @@ describe("each settings page's sections are the names it draws", () => {
         expect(view.container.querySelector("[aria-busy=true]")).toBeNull();
         expect(drawnNames(view.container)).toEqual(
           new Set([
-            ...settingsPageSections(page, t, { holdsAdminRole: true }),
+            ...settingsPageSections(page, t, { seesCompanyContext: true }),
             ...(DRAWN_NOT_OFFERED[page] ?? []).map(({ key }) => t(key)),
           ]),
         );
@@ -117,9 +119,22 @@ describe("each settings page's sections are the names it draws", () => {
     },
   );
 
+  it("offers none of the company-context names while the rollout hides the card", async () => {
+    const seesCompanyContext = companyContextShown(true, COMPANY_CONTEXT_OFF);
+    expect(seesCompanyContext).toBe(false);
+    const { CompanyPageContextOff } = composeStories(stories);
+    const view = render(<CompanyPageContextOff />);
+    await waitFor(() => {
+      expect(view.container.querySelector("[aria-busy=true]")).toBeNull();
+      expect(drawnNames(view.container)).toEqual(
+        new Set(settingsPageSections("company", t, { seesCompanyContext })),
+      );
+    });
+  });
+
   // An empty state or a grant cannot be checked from one render, and each entry
   // hides a name from search, so a new one takes an edit here.
-  it("holds the unchecked exceptions to the ones named today", () => {
+  it("pins the unchecked exceptions to three", () => {
     const unchecked = Object.values(DRAWN_NOT_OFFERED)
       .flatMap((entries) => entries ?? [])
       .filter(({ why }) => why !== "record-filter");

@@ -42,6 +42,10 @@ import { useMe } from "../lib/session";
 import { coldFieldLabel } from "./coldfieldlabels";
 import { ReadWarnings } from "./company-context.notices";
 import { CompanyFactsCard, PROFILE_GROUPS } from "./companycontextfacts";
+import {
+  companyContextShown,
+  useCompanyContextCapabilities,
+} from "./companycontextreach";
 import { CompanyMark } from "./companymark";
 import {
   companySaveMessage,
@@ -50,7 +54,6 @@ import {
 } from "./installationcompany";
 import "./company-context.css";
 
-type Capabilities = components["schemas"]["CompanyContextCapabilities"];
 type CompanyProfile = components["schemas"]["CompanyProfile"];
 type CompanyInput = components["schemas"]["CompanyProfileInput"];
 type SiteRead = components["schemas"]["CompanySiteRead"];
@@ -89,24 +92,6 @@ const MULTILINE_FIELDS = new Set<keyof CompanyInput>([
   "sales_motion",
   "history",
 ]);
-
-// The rollout answer every surface that gates on the flag shares — the card
-// here and the onboarding journey. Named so a caller can ask
-// the cache whether the answer has LANDED, which is a different question from
-// whether the request went out.
-export const companyContextCapabilitiesQueryKey = [
-  "company-context-capabilities",
-];
-
-export function useCompanyContextCapabilities(enabled = true) {
-  return useQuery({
-    queryKey: companyContextCapabilitiesQueryKey,
-    enabled,
-    queryFn: async (): Promise<Capabilities> => {
-      return unwrap(await api.GET("/company/context/capabilities"));
-    },
-  });
-}
 
 // ManualCompanySetup is the rollback-safe first-run floor below the
 // `onboarding` rollout stage. It creates the same canonical profile with the
@@ -463,11 +448,7 @@ export function CompanyContextCard() {
   // nothing: a surface that is none of this reader's work is not a fact being
   // withheld from them, and a card saying so on a tab they are entitled to
   // open would draw a permission boundary as a fault.
-  if (!isAdmin) {
-    return null;
-  }
-
-  if (capabilities.data && !capabilities.data.read_enabled) {
+  if (!companyContextShown(isAdmin, capabilities.data)) {
     return null;
   }
 

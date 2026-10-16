@@ -12,10 +12,10 @@ import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
 import { usePresence } from "../design-system/presence";
 import { holdsEveryWord, searchWords } from "../format/collate";
 import { useLocale, useT } from "../i18n";
-import { useHoldsAdminRole } from "../lib/capability";
 import { isImeCommit } from "../lib/imecommit";
 import { navigate, type Route } from "../lib/router";
 import { openAsk } from "../lib/urlstate";
+import { useCompanyContextShown } from "../screens/companycontextreach";
 import { SCHEDULED_SCREEN } from "../screens/scheduledsends";
 import { useVisibleSettingsPages } from "../screens/settingsnav";
 import { settingsHref } from "../screens/settingsrouting";
@@ -84,9 +84,9 @@ export function useBuiltinCommands(): Command[] {
   // The same table the settings rail walks, not a second opinion about it: a
   // palette reading its own list offers a page the rail no longer lists.
   const visible = useVisibleSettingsPages();
-  // Company profile draws its website card for an admin seat only, so only an
-  // admin finds the page by that card's words; any other seat would land on none.
-  const isAdmin = useHoldsAdminRole();
+  // Company profile draws its website card only where `companyContextShown`
+  // says, so only that reader finds the page by the card's words.
+  const seesCompanyContext = useCompanyContextShown();
   return useMemo(() => {
     const screens: Command[] = NAV.map((item) => ({
       id: `screen:${item.screen}`,
@@ -141,8 +141,8 @@ export function useBuiltinCommands(): Command[] {
       label: t(`settings.tab.${page.id}`),
       keywords: [
         page.id,
-        ...settingsPageKeywords(page.id, t, { holdsAdminRole: isAdmin }),
-        ...(page.id === "company" && isAdmin
+        ...settingsPageKeywords(page.id, t, { seesCompanyContext }),
+        ...(page.id === "company" && seesCompanyContext
           ? [t("settings.companyRefresh")]
           : []),
       ],
@@ -182,7 +182,7 @@ export function useBuiltinCommands(): Command[] {
       ...offRailScreens,
       ...settingsScreens,
     ];
-  }, [t, visible, locale, isAdmin]);
+  }, [t, visible, locale, seesCompanyContext]);
 }
 
 export function CommandPalette({
