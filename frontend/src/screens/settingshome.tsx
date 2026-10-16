@@ -208,7 +208,9 @@ function PageRow({
 }: Readonly<{ page: SettingsPage; reach: SettingsReach }>) {
   const t = useT();
   const Glyph = PAGE_ICONS[page.id];
-  const lock = useTooltip<HTMLSpanElement>(t("settings.home.readOnly"));
+  const { ref, trigger, tip } = useTooltip<HTMLSpanElement>(
+    t("settings.home.readOnly"),
+  );
   // The tip opens over the lock for a pointer and on the row for a keyboard.
   // The hidden word already names the lock, so the tip adds no description.
   const {
@@ -216,7 +218,7 @@ function PageRow({
     onPointerLeave,
     "aria-describedby": _spoken,
     ...onRowFocus
-  } = lock.trigger;
+  } = trigger;
   const locked = readsOnly(reach, page.id);
   return (
     <a
@@ -236,14 +238,14 @@ function PageRow({
         {t(`settings.tab.${page.id}`)}
         {locked && (
           <span
-            ref={lock.ref}
+            ref={ref}
             className="settings-home-lock"
             onPointerEnter={onPointerEnter}
             onPointerLeave={onPointerLeave}
           >
             <Lock size={14} aria-hidden />
             <span className="sr-only">{t("settings.home.readOnly")}</span>
-            {lock.tip}
+            {tip}
           </span>
         )}
       </span>

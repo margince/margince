@@ -130,11 +130,8 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
       <Panel title={t("settings.voice.title")}>
         <PanelBody>
           <PanelIntro>{t("settings.voice.privacy")}</PanelIntro>
-          {/* Said ONCE, for the whole surface, rather than beside each of the
-              controls a denial disables. The affordances below may then be
-              absent without the page making a claim about the data — which is
-              the split design-system/README.md draws between a withheld surface
-              and a withheld write. */}
+          {/* Said once for the whole surface, not beside each control a denial
+              disables: the README's withheld write, not a withheld surface. */}
           {!canEdit && (
             <p className="vdna-readonly">{t("settings.voice.readOnly")}</p>
           )}

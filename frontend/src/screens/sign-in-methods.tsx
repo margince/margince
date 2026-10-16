@@ -1,76 +1,27 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { X } from "lucide-react";
-import { useRef, useState } from "react";
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../api/client";
-import type { components } from "../api/schema";
-import { Button, EmptyState, TextInput } from "../design-system/atoms";
+import { EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { DataTable, type DataTableColumn } from "../design-system/datatable";
-import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
-import { Select, type SelectOption } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useOAuthApp, type Vendor } from "../features/automations/oauth-app";
 import { useT } from "../i18n";
 import { useCan, useCanWrite } from "../lib/capability";
-import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
-import { INSTALLATION_SETTINGS_KEY } from "../lib/uploadlimit";
+import { problemMessageOf, throwProblem } from "../lib/problem";
+import { GroupRoleGrants } from "./group-role-grants";
 import { useMyMfa } from "./mfa.queries";
 import {
-  type AssignableRole,
-  roleLabel,
-  roleOptions,
-  useAssignableRoles,
-} from "./roles.queries";
+  AUTHENTICATION_POLICY_KEY,
+  useSaveSignInPolicy,
+} from "./sign-in-policy";
 import "./sign-in-methods.css";
-
-/** The narrow sign-in read, keyed apart from the installation aggregate. */
-const AUTHENTICATION_POLICY_KEY = ["authentication-policy"] as const;
-
-type SignInPolicyChange = Pick<
-  components["schemas"]["UpdateInstallationSettingsRequest"],
-  "enabled_oidc_providers" | "oidc_group_role_map" | "require_mfa"
->;
-
-/**
- * Which ways contacts may sign in to this installation.
- *
- * The list is what the DEPLOYMENT makes possible: an admin turns a provider off
- * or back on, but cannot add one, because a client id and secret cannot be
- * invented from a settings screen. The effective answer is the intersection, so
- * this screen can only ever narrow what is configured.
- *
- * The read is the SHARED installation-settings query, not a second one under the
- * same cache key: two query functions on one key let observer order decide whose
- * error and retry behaviour every reader of that key gets.
- *
- * Password is rendered and is permanently on. It is not a member of the stored
- * set at all — there is no value of the setting that removes it — so the row
- * carries a `reason` rather than a flippable switch, which is the honest way to
- * show a control that exists and cannot be moved. Hiding the row instead would
- * leave an admin wondering whether password sign-in was configured at all.
- */
-function useSaveSignInPolicy() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    // The change is a variable rather than closed-over render state, so a click
-    // cannot submit a value older than the control it came from.
-    mutationFn: async (change: SignInPolicyChange) => {
-      unwrap(await api.PATCH("/installation/settings", { body: change }));
-    },
-    onSuccess: async () => {
-      // Both caches: the aggregate holds a copy of these settings, and the
-      // card reads the narrow projection.
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: INSTALLATION_SETTINGS_KEY }),
-        queryClient.invalidateQueries({ queryKey: AUTHENTICATION_POLICY_KEY }),
-      ]);
-    },
-  });
-}
 
 /**
  * Which providers this installation offers, read on its own.
@@ -97,234 +48,6 @@ function useAuthenticationPolicy() {
   });
 }
 
-// The server refuses a larger map; mirrored here so the refusal reaches the
-// admin before a request does.
-const MAX_GROUP_GRANTS = 64;
-
-// A draft grant row. Keyed by a minted id rather than by the group name,
-// because the group is the thing being typed: keying on it would remount the
-// input under the admin's cursor at every keystroke.
-type GrantRow = Readonly<{ id: number; group: string; role: string }>;
-
-// The roles this admin may hand out, with the stored value prepended when it is
-// not among them: a role archived since the map was written, or one a reader
-// who may not assign roles never receives, is still this map's answer — a
-// Select that showed its placeholder instead would read as a mapping that lost
-// its role.
-function grantRoleOptions(
-  role: string,
-  t: ReturnType<typeof useT>,
-  offered: readonly AssignableRole[],
-): SelectOption[] {
-  const options = roleOptions(t, offered);
-  return options.some((option) => option.value === role)
-    ? options
-    : [{ value: role, label: roleLabel(t)(role) }, ...options];
-}
-
-/**
- * Why this draft cannot be saved, or null. Mirrors the server's own refusals —
- * it refuses these anyway; the mirror is what turns a failed request into a
- * sentence beside the button before one is made. Order is by what the admin
- * fixes first: a blank name, then whitespace, then a duplicate, then size.
- */
-function grantRefusal(
-  rows: readonly GrantRow[],
-  t: ReturnType<typeof useT>,
-): string | null {
-  if (rows.some((row) => row.group.trim() === "")) {
-    return t("groupRoles.blankGroup");
-  }
-  if (rows.some((row) => row.group !== row.group.trim())) {
-    return t("groupRoles.whitespaceGroup");
-  }
-  if (new Set(rows.map((row) => row.group)).size !== rows.length) {
-    return t("groupRoles.duplicateGroup");
-  }
-  if (rows.length > MAX_GROUP_GRANTS) {
-    return t("groupRoles.tooMany");
-  }
-  return null;
-}
-
-// A duplicate group collapses in the saved map, so it counts as a change the
-// refusal then names.
-function draftChanged(
-  rows: readonly GrantRow[],
-  initial: Readonly<Record<string, string>>,
-): boolean {
-  const groups = new Set(rows.map((row) => row.group));
-  return (
-    groups.size !== rows.length ||
-    rows.length !== Object.keys(initial).length ||
-    rows.some((row) => initial[row.group] !== row.role)
-  );
-}
-
-/**
- * A draft, saved whole: the stored map is replaced, never merged, and an empty
- * object clears it. A background refetch must not overwrite rows mid-edit.
- * The grant-only warning stands as a Callout because it is the setting's cost.
- */
-function GroupRoleGrants({
-  initial,
-  canManage,
-}: Readonly<{ initial: Record<string, string>; canManage: boolean }>) {
-  const t = useT();
-  const save = useSaveSignInPolicy();
-  // Asked only of a reader who may write the map: the list is the invite's own
-  // assignable-roles ceiling, which refuses anybody else.
-  const assignable = useAssignableRoles(canManage);
-  const offered = assignable.data ?? [];
-  const [rows, setRows] = useState<readonly GrantRow[]>(() =>
-    Object.entries(initial).map(([group, role], index) => ({
-      id: index,
-      group,
-      role,
-    })),
-  );
-  const nextId = useRef(Object.keys(initial).length);
-  const refusal = grantRefusal(rows, t);
-  const locked = !canManage || save.isPending;
-  const draft = Object.fromEntries(rows.map((row) => [row.group, row.role]));
-  const dirty = draftChanged(rows, initial);
-  const editRow = (id: number, edit: Partial<GrantRow>) =>
-    setRows((current) =>
-      current.map((row) => (row.id === id ? { ...row, ...edit } : row)),
-    );
-  const columns: DataTableColumn<GrantRow>[] = [
-    {
-      key: "group",
-      header: t("groupRoles.group"),
-      grow: true,
-      render: (row) => (
-        <TextInput
-          aria-label={t("groupRoles.group")}
-          placeholder={t("groupRoles.groupPlaceholder")}
-          value={row.group}
-          autoComplete="off"
-          disabled={locked}
-          onChange={(event) => editRow(row.id, { group: event.target.value })}
-        />
-      ),
-    },
-    {
-      key: "role",
-      header: t("groupRoles.role"),
-      render: (row) => (
-        <Select
-          className="group-grants-role"
-          aria-label={t("groupRoles.role")}
-          options={grantRoleOptions(row.role, t, offered)}
-          value={row.role}
-          disabled={locked}
-          onChange={(role) => editRow(row.id, { role })}
-        />
-      ),
-    },
-    {
-      key: "remove",
-      header: t("table.actions"),
-      headerHidden: true,
-      fold: "end",
-      align: "end",
-      render: (row) => (
-        <div className="cell-actions">
-          <IconAction
-            icon={<X aria-hidden />}
-            label={
-              row.group.trim() === ""
-                ? t("groupRoles.remove")
-                : t("groupRoles.removeNamed", { group: row.group })
-            }
-            disabled={locked}
-            onClick={() =>
-              setRows((current) => current.filter((each) => each.id !== row.id))
-            }
-          />
-        </div>
-      ),
-    },
-  ];
-  return (
-    <Panel
-      title={t("groupRoles.title")}
-      titleAction={
-        canManage && (
-          <Button
-            disabled={save.isPending}
-            reason={
-              rows.length >= MAX_GROUP_GRANTS
-                ? t("groupRoles.tooMany")
-                : undefined
-            }
-            onClick={() =>
-              setRows((current) => [
-                ...current,
-                // Least privilege as the starting answer: a row born as Admin
-                // would make the costliest grant the one a hurried save ships.
-                { id: nextId.current++, group: "", role: "read_only" },
-              ])
-            }
-          >
-            {t("groupRoles.add")}
-          </Button>
-        )
-      }
-      actions={
-        canManage &&
-        dirty && (
-          <div className="group-grants-actions">
-            <Button
-              variant="primary"
-              pending={save.isPending}
-              reason={refusal ?? undefined}
-              onClick={() => save.mutate({ oidc_group_role_map: draft })}
-            >
-              {t("groupRoles.save")}
-            </Button>
-          </div>
-        )
-      }
-    >
-      <PanelBody>
-        <PanelIntro>{t("groupRoles.sub")}</PanelIntro>
-        {/* The cost of a mapping, shown once there is one to weigh. */}
-        {rows.length > 0 && (
-          <Callout
-            tone="warning"
-            kind="standing"
-            title={t("groupRoles.grantOnlyTitle")}
-          >
-            <p>{t("groupRoles.grantOnly")}</p>
-            <p>{t("groupRoles.adminGrant")}</p>
-          </Callout>
-        )}
-        {save.error && (
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("signInMethods.saveFailed")}
-          >
-            {problemMessageOf(save.error, t)}
-          </Callout>
-        )}
-        {rows.length === 0 && <EmptyState>{t("groupRoles.empty")}</EmptyState>}
-      </PanelBody>
-      {rows.length > 0 && (
-        <DataTable
-          label={t("groupRoles.title")}
-          bleed
-          fold
-          columns={columns}
-          rows={[...rows]}
-          rowKey={(row) => String(row.id)}
-        />
-      )}
-    </Panel>
-  );
-}
-
 function isVendor(key: string): key is Vendor {
   return key === "google" || key === "microsoft";
 }
@@ -339,6 +62,11 @@ function ProviderHint({ provider }: Readonly<{ provider: Vendor }>) {
     : t("signInMethods.providerHint");
 }
 
+/**
+ * Which ways people may sign in to this installation. An admin narrows what the
+ * deployment configured and cannot add a provider. Password is always on, so its
+ * row is a switch that refuses rather than a missing row.
+ */
 export function SignInMethodsCard() {
   const t = useT();
   const canManage = useCanWrite("installation_settings", "update");

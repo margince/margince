@@ -80,7 +80,7 @@
 774 frontend/src/screens/onboarding-conversation/connect-scene.tsx
 720 frontend/src/features/worklist/worklist.tsx
 775 frontend/src/screens/companycontacts/summary.tsx
-521 frontend/src/screens/voice-dna.tsx
+519 frontend/src/screens/voice-dna.tsx
 773 frontend/src/screens/record360/spine.tsx
 541 frontend/src/screens/relationships.tsx
 844 frontend/src/screens/onboarding-gate.tsx

@@ -8,6 +8,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider, translate } from "../i18n";
+import type { Route } from "../lib/router";
 import { SETTINGS_SCREEN, useSettingsSection } from "../screens/settingsnav";
 import { meFixture } from "../testing/mefixture";
 import { sectionHead } from "./pagemeta";
@@ -18,7 +19,7 @@ afterEach(() => {
   window.location.hash = "";
 });
 
-const ROUTE = { screen: SETTINGS_SCREEN, id: "tags" };
+const ROUTE: Route = { screen: SETTINGS_SCREEN, id: "tags" };
 
 function Switcher() {
   const head = sectionHead(useSettingsSection(ROUTE), ROUTE);
