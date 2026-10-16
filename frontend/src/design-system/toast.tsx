@@ -139,7 +139,7 @@ const ToastQueueContext = createContext<readonly ToastMessage[]>([]);
  * the shell mounts — has no region listening, and the reasoning
  * `app/attention.tsx` gives applies unchanged: publishing into nothing is right
  * there. What made the old design unsafe was that PRODUCTION could be in that
- * state too. It cannot now — `design-system/conformance.test.ts` holds the
+ * state too. It cannot now: `design-system/conformance.behaviour.test.ts` holds the
  * provider and the region to one file each, the way `UnsavedGuard` is held to
  * `App.tsx`.
  */
