@@ -14,7 +14,7 @@
 1 react-hooks/set-state-in-effect src/app/askfromaddress.tsx
 1 react-hooks/set-state-in-effect src/app/palette.tsx
 1 react-hooks/set-state-in-effect src/components/create.dialog.ts
-1 react-hooks/refs src/components/create.tsx
+1 react-hooks/refs src/components/create.fields.ts
 1 react-hooks/refs src/components/listquery.tsx
 2 react-hooks/refs src/components/recordfields.tsx
 1 react-hooks/set-state-in-effect src/components/unsaved.tsx
