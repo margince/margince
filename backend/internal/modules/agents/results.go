@@ -110,11 +110,10 @@ type QueryEvidence struct {
 	RecordType string   `json:"record_type"`
 	ID         ids.UUID `json:"id"`
 	Title      string   `json:"title"`
-	// TrustTier is "external" when the hop record did not come from the native
-	// store, exactly as it is on a row's own record. A hop's content is
-	// content: an agent reading a title here is reading it as a reason to act,
-	// so it carries the same label the record it names would carry. Omitted for
-	// authoritative native reads.
+	// TrustTier is the hop record's own label, read off the same derivation a
+	// row's record uses. A hop's content is content. An agent reading a title
+	// here reads it as a reason to act, so it carries what the record it names
+	// would carry.
 	TrustTier string `json:"trust_tier,omitempty"`
 }
 

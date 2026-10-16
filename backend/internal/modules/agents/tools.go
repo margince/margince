@@ -171,14 +171,14 @@ type wireRecord struct {
 	ID         ids.UUID        `json:"id"`
 	Fields     json.RawMessage `json:"fields"`
 	Version    int64           `json:"version,omitempty"`
-	// TrustTier is "external" when the record did not come from the native
-	// store (datasource.Record.Freshness.Authoritative is false), which is
-	// content another system holds and this one only copies — T2 by
-	// definition. It is the same marker the REST search surface emits
-	// (compose.ContractSearchResults); carrying it here keeps that content
-	// tainted end-to-end for Surface-A MCP clients too, not only inside the
-	// runner's blanket untrusted-wrapping.
-	// Omitted (empty) for authoritative native reads.
+	// TrustTier says whether this installation holds the record or copies it
+	// from a system that does. It carries a value on every record, because an
+	// absent label means UNKNOWN and a native read is not unknown.
+	//
+	// It is not the envelope's trust tier and does not answer the same
+	// question. A connector-captured row stored here is authoritative and
+	// still folds an automated writer's tier onto the envelope. The words come
+	// from datasource, which the REST surface reads too.
 	TrustTier string `json:"trust_tier,omitempty"`
 }
 
@@ -194,13 +194,10 @@ type wireRecord struct {
 // inherits both properties by calling the function it was going to call anyway.
 func newWireRecord(ctx context.Context, rec datasource.Record) wireRecord {
 	noteRecord(ctx, rec)
-	w := wireRecord{
-		RecordType: string(rec.Ref.Type), ID: rec.Ref.ID, Fields: rec.Fields, Version: rec.Version,
+	return wireRecord{
+		RecordType: string(rec.Ref.Type), ID: rec.Ref.ID, Fields: rec.Fields,
+		Version: rec.Version, TrustTier: rec.Freshness.TrustTier(),
 	}
-	if !rec.Freshness.Authoritative {
-		w.TrustTier = "external"
-	}
-	return w
 }
 
 func searchResult(ctx context.Context, name SeatNamer, res datasource.SearchResult) SearchRecordsResult {
