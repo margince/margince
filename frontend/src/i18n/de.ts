@@ -9180,7 +9180,7 @@ export const de = {
   "settings.page.agents.sub":
     "Was ein Agent unbeaufsichtigt tun darf und welche Clients deine Zugangsdaten halten.",
   "settings.page.notifications.sub":
-    "Welche Benachrichtigungstypen dich erreichen und auf welchem Weg.",
+    "Welche Benachrichtigungstypen dich wie erreichen, dazu Morgenbericht und Wochenrückblick per E-Mail.",
   "settings.page.connections.sub":
     "Postfächer und Adressen, die für diesen Platz gelesen werden.",
   "settings.page.capture-activity.sub":

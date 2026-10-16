@@ -49,6 +49,7 @@ function story(items: Preference[], refuseWrites = false) {
           jsonResponse(
             {
               status: 422,
+              code: "validation_error",
               detail: "That delivery is not offered for this kind.",
             },
             422,

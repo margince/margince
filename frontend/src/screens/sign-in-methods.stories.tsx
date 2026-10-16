@@ -40,17 +40,19 @@ function Served({
   groupRoleMap?: Record<string, string>;
   requireMfa?: boolean;
   ownMfaConfirmed?: boolean;
-  appSource?: "stored" | "none";
+  appSource?: "stored" | "none" | "pending";
   children: ReactNode;
 }>) {
   const app = (provider: string) => () =>
-    jsonResponse({
-      provider,
-      configured: appSource === "stored",
-      source: appSource,
-      client_id: appSource === "stored" ? "client-1" : "",
-      redirect_uris: [],
-    });
+    appSource === "pending"
+      ? new Promise<Response>(() => {})
+      : jsonResponse({
+          provider,
+          configured: appSource === "stored",
+          source: appSource,
+          client_id: appSource === "stored" ? "client-1" : "",
+          redirect_uris: [],
+        });
   installFetchStub({
     "GET /installation/oauth-apps/google": app("google"),
     "GET /installation/oauth-apps/microsoft": app("microsoft"),
@@ -119,6 +121,28 @@ export const ProviderWithoutApp: Story = {
     await expect(
       canvas.getAllByText(/not on the sign-in screen yet/i),
     ).toHaveLength(1);
+  },
+};
+
+/** The app read has not answered: the row shows no hint rather than one it
+ * may take back. */
+export const ProviderAppPending: Story = {
+  render: () => (
+    <Served
+      providers={[
+        { key: "google", label: "Continue with Google", enabled: true },
+      ]}
+      appSource="pending"
+    >
+      <SignInMethodsCard />
+    </Served>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("switch", { name: /google/i });
+    await expect(
+      canvas.queryByText(/shows this provider on the sign-in screen/i),
+    ).toBeNull();
   },
 };
 

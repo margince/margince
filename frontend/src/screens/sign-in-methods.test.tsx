@@ -50,11 +50,13 @@ function mount(
     ownConfirmed?: boolean;
     ownAnswer?: Promise<Response>;
     app?: "none" | "stored";
+    appAnswered?: Promise<void>;
   } = {},
 ) {
   const calls: unknown[] = [];
   const appReads: string[] = [];
   const refusing = { writes: false, reads: false };
+  let storedMap = groupRoleMap;
   const fetchMock = vi.fn(async (request: Request) => {
     if (request.url.endsWith("/v1/me")) {
       return jsonResponse(meFixture({ allow }));
@@ -71,10 +73,15 @@ function mount(
       });
     }
     if (request.method === "PATCH" ? refusing.writes : refusing.reads) {
-      return jsonResponse({ title: "Unavailable", status: 503 }, 503);
+      return jsonResponse(
+        { title: "Unavailable", status: 503, code: "unavailable" },
+        503,
+      );
     }
     if (request.method === "PATCH") {
-      calls.push(JSON.parse(await request.text()));
+      const change = JSON.parse(await request.text());
+      calls.push(change);
+      storedMap = change.oidc_group_role_map ?? storedMap;
       return new Response(null, { status: 204 });
     }
     // The grant editor picks from the roles the server says this reader may
@@ -84,6 +91,7 @@ function mount(
     }
     if (request.url.includes("/installation/oauth-apps/")) {
       appReads.push(request.url);
+      await server.appAnswered;
       return server.app
         ? jsonResponse({
             provider: "google",
@@ -92,7 +100,10 @@ function mount(
             client_id: server.app === "stored" ? "client-1" : "",
             redirect_uris: [],
           })
-        : jsonResponse({ title: "Forbidden", status: 403 }, 403);
+        : jsonResponse(
+            { title: "Forbidden", status: 403, code: "forbidden" },
+            403,
+          );
     }
     // The narrow authentication-policy projection this card reads — not the
     // installation aggregate, which answers a different route.
@@ -100,7 +111,7 @@ function mount(
       sign_in_providers: providers,
       require_sso: false,
       require_mfa: server.required ?? false,
-      oidc_group_role_map: groupRoleMap,
+      oidc_group_role_map: storedMap,
     });
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -192,6 +203,26 @@ describe("the sign-in methods card", () => {
     ).toBeTruthy();
     const control = screen.getByRole("switch", { name: /google/i });
     expect(control.getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("shows no hint on a switched-on provider until its app read answers", async () => {
+    let answer = () => {};
+    const appAnswered = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    mount([{ key: "google", label: "Google", enabled: true }], {}, undefined, {
+      app: "none",
+      appAnswered,
+    });
+    expect(await screen.findByRole("switch", { name: /google/i })).toBeTruthy();
+    expect(
+      screen.queryByText(/shows this provider on the sign-in screen/i),
+    ).toBeNull();
+    expect(screen.queryByText(/not on the sign-in screen yet/i)).toBeNull();
+    answer();
+    expect(
+      await screen.findByText(/not on the sign-in screen yet/i),
+    ).toBeTruthy();
   });
 
   it("keeps the plain hint on a switched-off provider and asks for no app", async () => {
@@ -428,6 +459,27 @@ describe("the group role grant editor", () => {
       expect(calls).toEqual([
         { oidc_group_role_map: { engineering: "manager" } },
       ]),
+    );
+  });
+
+  it("hands focus to Add group once the saved map clears Save away", async () => {
+    mount([], { sales: "rep", engineering: "manager" });
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Remove the sales mapping" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /save group grants/i }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: /save group grants/i }),
+      ).toBeNull(),
+    );
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: /add group/i }),
+      ),
     );
   });
 

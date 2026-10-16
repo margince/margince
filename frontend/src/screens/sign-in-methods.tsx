@@ -57,13 +57,16 @@ function isVendor(key: string): key is Vendor {
 function ProviderHint({ provider }: Readonly<{ provider: Vendor }>) {
   const t = useT();
   const app = useOAuthApp(provider);
+  if (app.isPending) {
+    return null;
+  }
   return app.data?.source === "none"
     ? t("signInMethods.providerNoApp")
     : t("signInMethods.providerHint");
 }
 
 /**
- * Which ways people may sign in to this installation. An admin narrows what the
+ * Which sign-in methods this installation allows. An admin narrows what the
  * deployment configured and cannot add a provider. Password is always on, so its
  * row is a switch that refuses rather than a missing row.
  */

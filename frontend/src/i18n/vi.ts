@@ -8957,7 +8957,7 @@ export const vi = {
   "settings.page.agents.sub":
     "Trợ lý AI được tự làm gì khi không ai giám sát, và client nào đang giữ thông tin xác thực của bạn.",
   "settings.page.notifications.sub":
-    "Loại thông báo nào đến với bạn, và theo cách nào.",
+    "Loại thông báo nào đến với bạn và theo cách nào, cùng bản tin sáng và tổng kết tuần qua email.",
   "settings.page.connections.sub":
     "Các hộp thư và địa chỉ mà tài khoản này đọc.",
   "settings.page.capture-activity.sub":

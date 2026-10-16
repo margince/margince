@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { X } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, EmptyState, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
@@ -102,10 +102,34 @@ export function GroupRoleGrants({
     })),
   );
   const nextId = useRef(Object.keys(initial).length);
+  const addButton = useRef<HTMLButtonElement>(null);
+  const firstGroup = useRef<HTMLInputElement>(null);
+  const handBack = useRef(false);
   const refusal = grantRefusal(rows, t);
   const locked = !canManage || save.isPending;
   const draft = Object.fromEntries(rows.map((row) => [row.group, row.role]));
   const dirty = draftChanged(rows, initial);
+  const commit = () =>
+    save.mutate(
+      { oidc_group_role_map: draft },
+      {
+        onSuccess: () => {
+          handBack.current = true;
+        },
+      },
+    );
+  // Save leaves once the stored map matches the draft. Add stays disabled until
+  // the save settles, so focus moves to it only after that render.
+  useEffect(() => {
+    if (!handBack.current || save.isPending) {
+      return;
+    }
+    handBack.current = false;
+    if (!dirty && document.activeElement === document.body) {
+      const add = addButton.current;
+      (add && !add.disabled ? add : firstGroup.current)?.focus();
+    }
+  }, [dirty, save.isPending]);
   const editRow = (id: number, edit: Partial<GrantRow>) =>
     setRows((current) =>
       current.map((row) => (row.id === id ? { ...row, ...edit } : row)),
@@ -117,6 +141,7 @@ export function GroupRoleGrants({
       grow: true,
       render: (row) => (
         <TextInput
+          ref={row.id === rows[0]?.id ? firstGroup : undefined}
           aria-label={t("groupRoles.group")}
           placeholder={t("groupRoles.groupPlaceholder")}
           value={row.group}
@@ -170,6 +195,7 @@ export function GroupRoleGrants({
       titleAction={
         canManage && (
           <Button
+            ref={addButton}
             disabled={save.isPending}
             reason={
               rows.length >= MAX_GROUP_GRANTS
@@ -197,7 +223,7 @@ export function GroupRoleGrants({
               variant="primary"
               pending={save.isPending}
               reason={refusal ?? undefined}
-              onClick={() => save.mutate({ oidc_group_role_map: draft })}
+              onClick={commit}
             >
               {t("groupRoles.save")}
             </Button>

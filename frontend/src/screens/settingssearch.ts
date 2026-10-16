@@ -181,7 +181,7 @@ const PROFILE_ALIASES: readonly string[] = [
 /** What the search needs to know about the reader asking. */
 type SettingsSearchReader = { readonly holdsAdminRole: boolean };
 
-/** The reader a caller gets when it names none: no admin pages. */
+/** The reader a caller gets when it names none: no admin-only aliases. */
 const NO_ADMIN_ROLE: SettingsSearchReader = { holdsAdminRole: false };
 
 /** The words `page` answers to besides its own name, for this reader. */

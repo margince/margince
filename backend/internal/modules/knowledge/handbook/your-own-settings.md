@@ -30,6 +30,10 @@ your display and greeting names, and your email signature. **Security** holds yo
 password and two-step sign-in, and **Sign out**. **Language and appearance**
 holds which language the product uses with you (English, Deutsch or Tiếng
 Việt), and how it looks.
+
+Where your browser can add Margince to this device as an app, a fourth panel
+shows: **This device**. It says how to add the app, or that it is there already.
+
 **Appearance** is here as well as in the account menu, where it is called
 **Theme**. Both change the same setting.
 
@@ -122,6 +126,8 @@ To set when customers can book time with you in Margince, open Settings → **Me
 3. Choose a place in the **Timezone** list, which shows the time zone your free times use now.
 4. While the list is open, type the place name to go to it.
 5. Choose **Save settings** in the bar at the foot of the page.
+
+If you may not book meetings yourself, the page shows the **Bookable hours** panel instead. Set the same fields there and choose **Save working hours**.
 
 Until you save, the panel says **Not set yet**, and customers are offered 09:00 to 17:00, Monday to Friday, in the installation's time zone.
 Also called: working hours, availability, office hours.
