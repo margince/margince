@@ -158,6 +158,7 @@ async function openMenu(
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("LeadSourcesCard", () => {
@@ -789,6 +790,8 @@ describe("a refused write names the card's notice on the control that sent it", 
   });
 
   it("follows the latest refused press when two writes have failed", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-01T09:00:00Z"));
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backend(ADMIN, [], { refuseWrite: true }));
     render(
@@ -804,6 +807,7 @@ describe("a refused write names the card's notice on the control that sent it", 
     });
     await user.click(adopt);
     await waitFor(() => expect(adopt).toHaveAccessibleDescription(notSaved));
+    vi.setSystemTime(new Date("2026-08-01T09:00:01Z"));
     const intent = screen.getByRole("combobox", {
       name: "Intent of Trade show",
     });
