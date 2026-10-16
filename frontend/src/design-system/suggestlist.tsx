@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { isImeCommit } from "../lib/imecommit";
 import {
   useActiveOptionVisible,
   useAnchoredPopup,
@@ -165,7 +166,7 @@ function navigateList(
   // Enter on nothing highlighted is NOT the list's: a host collecting a set
   // commits what was typed there, and a value-binding host does nothing. Neither
   // answer belongs to a menu the reader never opened a row on.
-  if (event.key === "Enter" && list.active !== -1) {
+  if (event.key === "Enter" && !isImeCommit(event) && list.active !== -1) {
     event.preventDefault();
     list.pick(list.active);
     return true;

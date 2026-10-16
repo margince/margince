@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ReactNode, useId, useState } from "react";
+import { isImeCommit } from "../lib/imecommit";
 import { TextInput } from "./atoms";
 import { ErrorLine } from "./errorline";
 import { type SettingControlProps, SettingRow } from "./settingrow";
@@ -115,7 +116,7 @@ export function NumberSetting({
         onChange={(e) => setDraft({ text: e.target.value, over: value })}
         onBlur={() => commit("blur")}
         onKeyDown={(e) => {
-          if (e.key === "Enter") {
+          if (e.key === "Enter" && !isImeCommit(e)) {
             e.preventDefault();
             commit("enter");
           }

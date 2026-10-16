@@ -317,6 +317,20 @@ describe("editing free text where it is read", () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledWith("Aerospace"));
   });
 
+  it("commits nothing on an input method's Enter", async () => {
+    const { onSave } = renderText();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Change Industry" }),
+    );
+    const input = screen.getByLabelText("Industry");
+    await userEvent.type(input, "s");
+
+    fireEvent.keyDown(input, { key: "Enter", keyCode: 229 });
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Industry")).toHaveValue("Automotives");
+  });
+
   it("commits on losing focus, with no explicit commit press", async () => {
     const { onSave } = renderText();
     await userEvent.click(

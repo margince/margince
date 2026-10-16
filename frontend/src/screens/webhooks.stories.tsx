@@ -255,7 +255,7 @@ export const SecretRevealed: Story = {
     );
     await userEvent.click(
       await canvas.findByRole("checkbox", {
-        name: /^Deal moved to another stage/,
+        name: new RegExp(`^${en["webhooks.event.deal.stage_changed.label"]}`),
       }),
     );
     await userEvent.click(

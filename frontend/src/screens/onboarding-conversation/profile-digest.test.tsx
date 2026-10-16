@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
@@ -71,6 +71,21 @@ describe("the profile digest", () => {
     // Committed: the line is prose again, reading what was typed is the
     // caller's job through `rows`, and the control is gone.
     expect(screen.queryByRole("textbox", { name: "Company name" })).toBeNull();
+  });
+
+  it("keeps the line open on an input method's Enter", async () => {
+    const onField = vi.fn();
+    mount(<ProfileDigest rows={ROWS} read={READ} onField={onField} />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Edit Company name" }),
+    );
+    const control = screen.getByRole("textbox", { name: "Company name" });
+    await userEvent.type(control, " GmbH");
+
+    fireEvent.keyDown(control, { key: "Enter", keyCode: 229 });
+
+    expect(onField).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox", { name: "Company name" })).toBeTruthy();
   });
 
   // Escape is the way out without a change: the value the reader started from

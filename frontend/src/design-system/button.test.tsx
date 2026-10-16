@@ -551,15 +551,12 @@ describe("the bare variant is the .iconbtn control, not a copy of it", () => {
     expect(classesOf("Notifications")).toContain("btn-bare");
   });
 
-  // Test files are outside every tsconfig, so the compile is run here.
   it("compiles only as a glyph button", () => {
-    expect(
-      compileErrorLines(`import { Button } from "./atoms";
-export const glyph = <Button variant="bare" iconOnly aria-label="Bell" />;
-export const worded = <Button variant="bare">Bell</Button>;
-export const ghost = <Button variant="ghost">Bell</Button>;
-`),
-    ).toEqual([3]);
+    render(
+      // @ts-expect-error bare is a glyph button only
+      <Button variant="bare">Bell</Button>,
+    );
+    expect(classesOf("Bell")).toContain("btn-bare");
   });
 
   // A rule for one of the two and not the other is where their looks part.
@@ -578,49 +575,24 @@ export const ghost = <Button variant="ghost">Bell</Button>;
         ? []
         : [{ rule, partner: key(rule.file, partner, rule.body) }];
     });
-    expect(paired.length).toBeGreaterThan(0);
-    expect(
-      paired
+    const where = (rule: { file: string; selector: string }) =>
+      `${relative(here, rule.file)}: ${rule.selector}`;
+    // `.btn-bare` alone ties with `.btn`, so only `.btn.btn-bare` may name it.
+    const misspelled = all.filter(
+      (rule) =>
+        /\.btn-bare(?![\w-])/.test(rule.selector) &&
+        !/\.btn\.btn-bare(?![\w-])/.test(rule.selector),
+    );
+    expect([
+      ...paired
         .filter(({ partner }) => !written.has(partner))
-        .map(({ rule }) => `${relative(here, rule.file)}: ${rule.selector}`),
-    ).toEqual([]);
+        .map(({ rule }) => where(rule)),
+      ...misspelled.map(where),
+    ]).toEqual([]);
+    // Pinned, so a pair deleted on both sides fails rather than shrinking.
+    expect(paired).toHaveLength(16);
   });
 });
-
-// The 1-based lines of `source` that fail to type, compiled as a file beside
-// atoms.tsx under the app's own compiler options.
-function compileErrorLines(source: string): number[] {
-  const config = ts.getParsedCommandLineOfConfigFile(
-    join(here, "..", "..", "tsconfig.app.json"),
-    {},
-    { ...ts.sys, onUnRecoverableConfigFileDiagnostic: () => undefined },
-  );
-  if (config === undefined) {
-    throw new Error("tsconfig.app.json did not parse");
-  }
-  // Not composite: the fixture is no file the project lists.
-  const options = { ...config.options, composite: false };
-  const fixture = join(here, "button-shape.fixture.tsx");
-  const host = ts.createCompilerHost(options, true);
-  const readReal = host.getSourceFile.bind(host);
-  host.getSourceFile = (name, version, onError, shouldCreate) =>
-    name === fixture
-      ? ts.createSourceFile(name, source, version, true, ts.ScriptKind.TSX)
-      : readReal(name, version, onError, shouldCreate);
-  host.fileExists = (name) => name === fixture || ts.sys.fileExists(name);
-  const program = ts.createProgram([fixture], options, host);
-  const file = program.getSourceFile(fixture);
-  if (file === undefined) {
-    throw new Error("the fixture did not load");
-  }
-  const lines = program
-    .getSemanticDiagnostics(file)
-    .map(
-      (diagnostic) =>
-        file.getLineAndCharacterOfPosition(diagnostic.start ?? 0).line + 1,
-    );
-  return [...new Set(lines)];
-}
 
 // The same selector spelled for the other of the pair, or undefined for one
 // that names neither.

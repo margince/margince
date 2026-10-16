@@ -153,6 +153,9 @@ test("says so when the browser will not let the page copy", async () => {
   await user.click(await screen.findByRole("button", { name: /^Copy$/ }));
   expect(await screen.findByText(/clipboard access denied/i)).toBeTruthy();
   expect(screen.getByText(/copy it manually/i)).toBeTruthy();
+  // Editing the message is the remedy, so the notice stays while it happens.
+  await user.type(screen.getByRole("textbox", { name: "Message" }), "!");
+  expect(screen.getByText(/copy it manually/i)).toBeTruthy();
 });
 
 // With no model configured the endpoint answers from a template. Saying so is

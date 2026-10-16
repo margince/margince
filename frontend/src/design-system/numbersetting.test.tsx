@@ -3,7 +3,7 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NumberSetting } from "./numbersetting";
@@ -76,6 +76,18 @@ describe("NumberSetting", () => {
     await user.type(box, "120{Enter}");
     expect(onCommit).toHaveBeenCalledWith(120);
     expect(box).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("commits nothing on an input method's Enter", async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    const box = renderPages(onCommit);
+    await user.clear(box);
+    await user.type(box, "120");
+
+    fireEvent.keyDown(box, { key: "Enter", keyCode: 229 });
+
+    expect(onCommit).not.toHaveBeenCalled();
   });
 
   // The reader corrects what they typed instead of retyping it, and hears the

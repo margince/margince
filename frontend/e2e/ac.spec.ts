@@ -1649,7 +1649,12 @@ test.describe("§3.8: 390px mobile", () => {
             small: visible
               .map((element) => ({
                 height: element.getBoundingClientRect().height,
-                label: (element.textContent ?? "").trim(),
+                // A glyph button has no text, so its name is its aria-label.
+                label: (
+                  element.getAttribute("aria-label") ||
+                  element.textContent ||
+                  ""
+                ).trim(),
               }))
               .filter(({ height }) => height < 44)
               .map(({ height, label }) => `${label}: ${Math.round(height)}px`),

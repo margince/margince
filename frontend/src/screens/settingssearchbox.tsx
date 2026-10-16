@@ -5,6 +5,7 @@ import { Search } from "lucide-react";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { useT } from "../i18n";
 import { useHoldsAdminRole } from "../lib/capability";
+import { isImeCommit } from "../lib/imecommit";
 import { navigate } from "../lib/router";
 import type { SettingsPage } from "./settingscatalog";
 import { PAGE_ICONS } from "./settingsnavicons";
@@ -143,7 +144,7 @@ export function SettingsSearchBox({
       setActive((current) => (current <= 0 ? hits.length - 1 : current - 1));
       return;
     }
-    if (event.key === "Enter" && active >= 0) {
+    if (event.key === "Enter" && !isImeCommit(event) && active >= 0) {
       event.preventDefault();
       go(active);
     }

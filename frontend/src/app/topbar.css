@@ -273,7 +273,8 @@
      list somebody has to remember to extend. Grandchildren only — an open
      menu's own rows are not the strip's targets. */
   .topbar-trail > button,
-  .topbar-trail > * > button {
+  .topbar-trail > * > button,
+  .topbar-trail > * > .btn.btn-bare {
     min-height: max(var(--controlHeight), 44px);
   }
 }

@@ -9,6 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { stubClipboard } from "../design-system/clipboard-testing";
 import { mount, view } from "../features/contacts/contactpage.testkit";
 import {
   installFetchStub,
@@ -351,4 +352,42 @@ it("hands focus back to Replace link once the new link lands", async () => {
     ).toHaveProperty("value", "https://book.example/new-link"),
   );
   await waitFor(() => expect(document.activeElement).toBe(replace));
+});
+
+it("keeps a failed copy's remedy over a replaced link until the next copy", async () => {
+  const user = userEvent.setup();
+  let latest = { ...bookingProfile };
+  installFetchStub({
+    "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
+    "GET /scheduling/profile": () => jsonResponse(latest),
+    "PUT /scheduling/profile": () => {
+      latest = { ...latest, public_url: "https://book.example/new-link" };
+      return jsonResponse(latest);
+    },
+  });
+  render(
+    <StoryProviders>
+      <BookingProfileScreen />
+    </StoryProviders>,
+  );
+  stubClipboard("refuses");
+  await user.click(await screen.findByRole("button", { name: "Copy link" }));
+  await screen.findByText(/clipboard access denied/i);
+  await user.click(screen.getByRole("button", { name: "Replace link" }));
+  await user.click(
+    within(await screen.findByRole("dialog")).getByRole("button", {
+      name: "Replace booking link",
+    }),
+  );
+  await waitFor(() =>
+    expect(
+      screen.getByRole("textbox", { name: "My booking link" }),
+    ).toHaveProperty("value", "https://book.example/new-link"),
+  );
+  expect(screen.getByText(/clipboard access denied/i)).toBeTruthy();
+  const accepted = stubClipboard("accepts");
+  await user.click(screen.getByRole("button", { name: "Copy link" }));
+  expect(await screen.findByRole("button", { name: "Copied" })).toBeTruthy();
+  expect(screen.queryByText(/clipboard access denied/i)).toBeNull();
+  expect(accepted.written).toEqual(["https://book.example/new-link"]);
 });

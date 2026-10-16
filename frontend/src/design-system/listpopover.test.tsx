@@ -161,6 +161,22 @@ describe("ListPopover on a desktop", () => {
     expect(document.activeElement).toBe(trigger);
   });
 
+  it("picks nothing on an input method's Enter", async () => {
+    const user = userEvent.setup();
+    const onPick = vi.fn();
+    render(owners(onPick));
+    await user.click(screen.getByRole("button", { name: "Assign owner" }));
+    await user.keyboard("{ArrowDown}");
+
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Enter",
+      keyCode: 229,
+    });
+
+    expect(onPick).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+
   it("keeps the panel open over a refused write until the caller calls done", async () => {
     const user = userEvent.setup();
     const onPick = vi.fn();

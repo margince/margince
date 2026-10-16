@@ -191,6 +191,19 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
 
   // Enter still belongs to the destinations: a reader who typed a screen name
   // and pressed it goes there, and asking is not what they did.
+  it("runs nothing on an input method's Enter", async () => {
+    window.location.hash = "#/home";
+    const onClose = vi.fn();
+    render(<CommandPalette open onClose={onClose} commands={commands} />);
+    const input = screen.getByRole("searchbox");
+    await userEvent.type(input, "deals");
+
+    fireEvent.keyDown(input, { key: "Enter", keyCode: 229 });
+
+    expect(window.location.hash).toBe("#/home");
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("Enter runs the first destination, not the ask", async () => {
     window.location.hash = "#/home";
     render(<CommandPalette open onClose={() => {}} commands={commands} />);

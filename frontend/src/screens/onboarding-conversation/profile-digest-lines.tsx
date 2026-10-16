@@ -5,6 +5,7 @@ import { type KeyboardEvent, useState } from "react";
 import { Button, Textarea, TextInput } from "../../design-system/atoms";
 import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
+import { isImeCommit } from "../../lib/imecommit";
 import type { CompanyFieldName } from "../onboarding";
 import type { ReviewRow } from "./company-review-state";
 import type { Contact, Fact, LegalEntity } from "./profile-digest-data";
@@ -108,7 +109,11 @@ function EditableValue({
       setText(row.value);
       setEditing(false);
     }
-    if (event.key === "Enter" && !(row.multiline && !event.metaKey)) {
+    if (
+      event.key === "Enter" &&
+      !isImeCommit(event) &&
+      !(row.multiline && !event.metaKey)
+    ) {
       event.preventDefault();
       commit();
     }

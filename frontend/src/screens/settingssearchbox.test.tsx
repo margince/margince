@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
@@ -127,6 +127,18 @@ describe("the settings search box", () => {
     await user.keyboard("{ArrowDown}{Enter}");
 
     expect(navigate).toHaveBeenCalledWith({ screen: "settings", id: "audit" });
+  });
+
+  it("opens nothing on an input method's Enter", async () => {
+    const user = userEvent.setup();
+    const navigate = vi.spyOn(router, "navigate").mockImplementation(() => {});
+    mount();
+    await user.type(box(), "audit");
+    await user.keyboard("{ArrowDown}");
+
+    fireEvent.keyDown(box(), { key: "Enter", keyCode: 229 });
+
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   // Enter on an untouched query opens nothing: the first row is a candidate,

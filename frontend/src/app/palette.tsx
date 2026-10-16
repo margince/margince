@@ -12,6 +12,7 @@ import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
 import { usePresence } from "../design-system/presence";
 import { useLocale, useT } from "../i18n";
 import { useHoldsAdminRole } from "../lib/capability";
+import { isImeCommit } from "../lib/imecommit";
 import { navigate, type Route } from "../lib/router";
 import { openAsk } from "../lib/urlstate";
 import { SCHEDULED_SCREEN } from "../screens/scheduledsends";
@@ -330,7 +331,11 @@ export function CommandPalette({
               } else if (event.key === "ArrowUp") {
                 event.preventDefault();
                 setPicked(clamp(selected - 1));
-              } else if (event.key === "Enter" && rows[selected]) {
+              } else if (
+                event.key === "Enter" &&
+                !isImeCommit(event) &&
+                rows[selected]
+              ) {
                 run(rows[selected]);
               }
             }}

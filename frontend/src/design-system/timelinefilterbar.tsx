@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { isImeCommit } from "../lib/imecommit";
 import { Field, SearchField } from "./atoms";
 import { DateInput, type ISODate, isISODate } from "./dateinput";
 import {
@@ -100,7 +101,7 @@ export function TimelineFilterBar({
           onChange={(event) => setDraft(event.target.value)}
           onBlur={commitSearch}
           onKeyDown={(event) => {
-            if (event.key === "Enter") {
+            if (event.key === "Enter" && !isImeCommit(event)) {
               event.preventDefault();
               commitSearch();
             }

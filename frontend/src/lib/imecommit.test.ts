@@ -1,12 +1,14 @@
+/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
 import { isImeCommit } from "./imecommit";
 
-// The two fields a browser reads an input method's key from, and nothing else.
-function enter(nativeEvent: { isComposing: boolean; keyCode: number }) {
-  return { nativeEvent: nativeEvent as KeyboardEvent };
+function enter(init: KeyboardEventInit) {
+  return {
+    nativeEvent: new KeyboardEvent("keydown", { key: "Enter", ...init }),
+  };
 }
 
 describe("isImeCommit", () => {
@@ -15,10 +17,10 @@ describe("isImeCommit", () => {
   });
 
   it("claims the Enter Safari sends after the composition ended", () => {
-    expect(isImeCommit(enter({ isComposing: false, keyCode: 229 }))).toBe(true);
+    expect(isImeCommit(enter({ keyCode: 229 }))).toBe(true);
   });
 
   it("leaves a plain Enter to the field", () => {
-    expect(isImeCommit(enter({ isComposing: false, keyCode: 13 }))).toBe(false);
+    expect(isImeCommit(enter({ keyCode: 13 }))).toBe(false);
   });
 });
