@@ -62,6 +62,11 @@ const PHRASES: readonly (readonly [string, SettingsPageId])[] = [
   ["reindex", "system-health"],
   ["plugins", "extensions"],
   ["delete everything", "reset"],
+  // The name of one setting on the page, which no alias carries.
+  ["data retention", "system-health"],
+  ["date format", "company"],
+  ["sync interval", "capture"],
+  ["two-step", "account"],
 ];
 
 // Seats and license cannot change what anyone pays.

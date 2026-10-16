@@ -289,4 +289,23 @@ describe("the settings search box", () => {
     expect((box() as HTMLInputElement).value).toBe("");
     expect(options()).toHaveLength(0);
   });
+  it("names the setting a hit was found by, and opens its page", async () => {
+    const user = userEvent.setup();
+    const navigate = vi.spyOn(router, "navigate").mockImplementation(() => {});
+    mount();
+    await user.type(box(), "data retention");
+
+    const index = options().findIndex((option) =>
+      option.textContent?.startsWith("System health"),
+    );
+    expect(options()[index]?.querySelector(".t-caption")?.textContent).toBe(
+      "Data retention",
+    );
+    await user.keyboard("{ArrowDown}".repeat(index + 1));
+    await user.keyboard("{Enter}");
+    expect(navigate).toHaveBeenCalledWith({
+      screen: "settings",
+      id: "system-health",
+    });
+  });
 });

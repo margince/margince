@@ -13,6 +13,12 @@ import {
 } from "../testing/story-utils";
 import { SettingsScreen, settingsAddress } from "./settings";
 import { PipelinesCard } from "./settings.pipelines";
+import type { SettingsPageId } from "./settingscatalog";
+import {
+  EVERY_GRANT,
+  NOTIFICATION_ROUTES,
+  UNUSED_INSTALLATION_ROUTES,
+} from "./settingspages.fixtures";
 
 // The settings entries and the cards each one carries. Every story installs the
 // fetch stub those cards read through, so the render is deterministic and
@@ -170,21 +176,7 @@ export const AccountPreferences: Story = {
 
 // The notices by kind, then the two email summaries, as one page.
 export const NotificationsTab: Story = {
-  render: tab("notifications", {
-    "GET /me": me(),
-    "GET /me/notification-preferences": () =>
-      jsonResponse({
-        items: [
-          { class: "approval_pending", delivery: "email", chosen: false },
-          { class: "automation", delivery: "in_app", chosen: false },
-          { class: "lead_sla", delivery: "in_app", chosen: false },
-          { class: "capture", delivery: "in_app", chosen: false },
-          { class: "system", delivery: "in_app", chosen: false },
-          { class: "coach", delivery: "in_app", chosen: false },
-        ],
-      }),
-    "GET /me/brief-delivery": () => jsonResponse({}),
-  }),
+  render: tab("notifications", { "GET /me": me(), ...NOTIFICATION_ROUTES }),
 };
 
 // The sign-off's editor. A textarea committed with a Save button is the settings
@@ -567,3 +559,58 @@ export const PipelinesAdminDark: Story = {
   globals: { theme: "dark" },
   render: pipelinesCard({ pipeline: ["read", "create", "update"] }),
 };
+
+// Every catalog page whole, for an admin holding every grant, over an unused
+// installation. `settingssections.test.tsx` pins search's sections to these.
+const everyGrantMe = () =>
+  jsonResponse({
+    ...meFixture({ roles: ["admin"], allow: EVERY_GRANT }),
+    data_reset_available: true,
+  });
+
+function catalogPage(page: SettingsPageId): Story {
+  return {
+    parameters: { settingsPage: page },
+    render: tab(page, {
+      "GET /me": everyGrantMe,
+      ...UNUSED_INSTALLATION_ROUTES,
+    }),
+  };
+}
+
+export const AccountPage: Story = catalogPage("account");
+export const MeetingsPage: Story = catalogPage("meetings");
+export const VoicePage: Story = catalogPage("voice");
+export const AgentsPage: Story = catalogPage("agents");
+export const NotificationsPage: Story = catalogPage("notifications");
+export const ConnectionsPage: Story = catalogPage("connections");
+export const CaptureActivityPage: Story = catalogPage("capture-activity");
+export const CompanyPage: Story = catalogPage("company");
+export const AuthenticationPage: Story = catalogPage("authentication");
+export const MembersPage: Story = catalogPage("members");
+export const TeamsPage: Story = catalogPage("teams");
+export const RolesPage: Story = catalogPage("roles");
+export const SeatsPage: Story = catalogPage("seats");
+export const PipelinesPage: Story = catalogPage("pipelines");
+export const StageautomationPage: Story = catalogPage("stageautomation");
+export const LeadsPage: Story = catalogPage("leads");
+export const AcquisitionPage: Story = catalogPage("acquisition");
+export const ReviewtemplatesPage: Story = catalogPage("reviewtemplates");
+export const RecordrolesPage: Story = catalogPage("recordroles");
+export const FieldsPage: Story = catalogPage("fields");
+export const TagsPage: Story = catalogPage("tags");
+export const ProductsPage: Story = catalogPage("products");
+export const CapturePage: Story = catalogPage("capture");
+export const IntegrationsPage: Story = catalogPage("integrations");
+export const KnowledgePage: Story = catalogPage("knowledge");
+export const ImportPage: Story = catalogPage("import");
+export const UsagePage: Story = catalogPage("usage");
+export const ModelsPage: Story = catalogPage("models");
+export const ModelCallsPage: Story = catalogPage("model-calls");
+export const AutomationsPage: Story = catalogPage("automations");
+export const PrivacyPage: Story = catalogPage("privacy");
+export const JurisdictionPage: Story = catalogPage("jurisdiction");
+export const AuditPage: Story = catalogPage("audit");
+export const SystemHealthPage: Story = catalogPage("system-health");
+export const ExtensionsPage: Story = catalogPage("extensions");
+export const ResetPage: Story = catalogPage("reset");

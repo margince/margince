@@ -242,7 +242,8 @@ export function SettingsSearchBox({
                       searching "domain" gets two pages, and this says which
                       one is the company's. */}
                   <span className="t-caption">
-                    {hit.group} · {t(`settings.scope.${hit.page.scope}`)}
+                    {hit.section ??
+                      `${hit.group} · ${t(`settings.scope.${hit.page.scope}`)}`}
                   </span>
                 </a>
               );

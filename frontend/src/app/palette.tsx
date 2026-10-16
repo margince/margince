@@ -18,7 +18,7 @@ import { openAsk } from "../lib/urlstate";
 import { SCHEDULED_SCREEN } from "../screens/scheduledsends";
 import { useVisibleSettingsPages } from "../screens/settingsnav";
 import { settingsHref } from "../screens/settingsrouting";
-import { settingsPageAliases } from "../screens/settingssearch";
+import { settingsPageKeywords } from "../screens/settingssearch";
 import {
   CUSTOM_SCREEN,
   customPaletteScreens,
@@ -141,7 +141,7 @@ export function useBuiltinCommands(): Command[] {
       label: t(`settings.tab.${page.id}`),
       keywords: [
         page.id,
-        ...settingsPageAliases(page.id, { holdsAdminRole: isAdmin }),
+        ...settingsPageKeywords(page.id, t, { holdsAdminRole: isAdmin }),
         ...(page.id === "company" && isAdmin
           ? [t("settings.companyRefresh")]
           : []),
