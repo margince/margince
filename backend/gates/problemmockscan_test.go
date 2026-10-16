@@ -34,8 +34,8 @@ type tsFunc struct {
 	exported bool
 }
 
-// codeSource is how a helper's parameter reaches a Problem's code: by its
-// position, then the member path below it.
+// codeSource is how a helper's parameter reaches a Problem's code: by position
+// and member path, with the parameter carrying its status and its default's code.
 type codeSource struct {
 	index    int
 	path     []string

@@ -510,8 +510,18 @@ func TestTheEmittedCodeCensusReadsEveryPlantedSite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parsing %s: %v", planted, err)
 	}
+	const otherPlanted, otherVirtual = "gates/testdata/problemcodeothers.go.txt", "internal/plantedother/others.go"
+	otherRaw, err := os.ReadFile(otherPlanted)
+	if err != nil {
+		t.Fatalf("reading %s: %v", otherPlanted, err)
+	}
+	other, err := parser.ParseFile(gatekit.SourceFileSet(), otherVirtual, otherRaw, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("parsing %s: %v", otherPlanted, err)
+	}
 	units := append(readGoUnits(t, problemWriterDir),
-		&goUnit{path: virtual, dir: path.Dir(virtual), file: file, imports: localImports(file)})
+		&goUnit{path: virtual, dir: path.Dir(virtual), file: file, imports: localImports(file)},
+		&goUnit{path: otherVirtual, dir: path.Dir(otherVirtual), file: other, imports: localImports(other)})
 	census := newEmittedCensus(t, units)
 	census.readSources()
 	for _, code := range []string{

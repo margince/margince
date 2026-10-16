@@ -55,7 +55,7 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 // The detail the store's CHECK-constraint net answers when a render's write
-// is refused, the one 422 the render route sends.
+// is refused with a 422.
 const VALUE_REFUSED =
   "a value violates a rule on this record; check the picklist options";
 

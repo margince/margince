@@ -13,6 +13,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"maps"
 	"net/http"
 	"path/filepath"
 	"slices"
@@ -382,6 +383,7 @@ func (c *emittedCensus) readCodeAssignment(assign codeAssign) {
 		}
 		base, isIdent := sel.X.(*ast.Ident)
 		switch {
+		case !isIdent && !c.writesProblems(assign.unit):
 		case !isIdent:
 			c.faults = append(c.faults, fmt.Sprintf("%s: a Code is assigned through %s, whose type this census "+
 				"cannot tell; assign it on a variable declared as the carrier", c.at(assign.unit, target),
@@ -394,6 +396,12 @@ func (c *emittedCensus) readCodeAssignment(assign codeAssign) {
 			c.read(assign.stmt.Rhs[i], assign.unit, assign.in)
 		}
 	}
+}
+
+// writesProblems reports a file inside httperr or importing it: only there
+// can a Code whose base this census cannot type be a body carrier's.
+func (c *emittedCensus) writesProblems(unit *goUnit) bool {
+	return unit.dir == problemWriterDir || slices.Contains(slices.Collect(maps.Values(unit.imports)), problemWriterDir)
 }
 
 // exprString spells a short expression for a finding.
