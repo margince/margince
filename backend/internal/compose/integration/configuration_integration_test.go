@@ -41,34 +41,62 @@ const (
 func lockedSurfaces() []lockedSurface {
 	routing := strings.TrimPrefix(envBinding("env-model"), "MARGINCE_AI_ROUTING_BINDING=")
 	return []lockedSurface{
-		{"/capture/settings", "/v1/capture/settings", "capture.auto_enrich_daily_cap", "MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP", "900",
-			lockedWrite{method: http.MethodPatch, path: "/v1/capture/settings", body: map[string]any{"auto_enrich_daily_cap": 5}}},
-		{"/ai/routing", "/v1/ai/routing", "ai.routing", "MARGINCE_AI_ROUTING_BINDING", routing,
-			lockedWrite{method: http.MethodPut, path: "/v1/ai/provider-settings/openai_compatible", body: map[string]any{"base_url": "https://openrouter.ai/api"}}},
-		{"/ai/provider-keys", "/v1/ai/provider-keys", "ai.provider_keys_anthropic", "ANTHROPIC_API_KEY", envProviderKey,
-			lockedWrite{method: http.MethodPut, path: "/v1/ai/provider-keys/anthropic", body: map[string]any{"api_key": envProviderKey}}},
-		{"/ai/budget", "/v1/ai/budget", "ai.budget", "MARGINCE_AI_BUDGET", `{"tokens_per_full_user":5000,"company_monthly_tokens":777}`,
-			lockedWrite{}},
-		{"/ai/price-sync", "/v1/ai/price-sync", "ai.price_sync", "MARGINCE_AI_PRICE_SYNC", `{"auto_sync":false}`,
-			lockedWrite{method: http.MethodPut, path: "/v1/ai/price-sync", body: map[string]any{"auto_sync": true}}},
-		{"/integrations/settings", "/v1/integrations/settings", "integrations.automatic_lookup", "MARGINCE_INTEGRATIONS_AUTOMATIC_LOOKUP", "false",
-			lockedWrite{method: http.MethodPatch, path: "/v1/integrations/settings", body: map[string]any{"automatic_lookup": true}}},
-		{"/leads/settings", "/v1/leads/settings", "contacts.first_response_target_minutes", "MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES", "60",
-			lockedWrite{method: http.MethodPatch, path: "/v1/leads/settings", body: map[string]any{"first_response_target_minutes": 90}}},
-		{"/email-signature-template", "/v1/email-signature-template", "contacts.signature_template", "MARGINCE_CONTACTS_SIGNATURE_TEMPLATE", "<p>{name}</p>",
-			lockedWrite{method: http.MethodPut, path: "/v1/email-signature-template", body: map[string]any{"template": "<p>{title}</p>"}}},
-		{"/retention/settings", "/v1/retention/settings", "privacy.retain_only", "MARGINCE_PRIVACY_RETAIN_ONLY", "true",
-			lockedWrite{method: http.MethodPatch, path: "/v1/retention/settings", body: map[string]any{"retain_only": false}}},
-		{"/activities/follow-up-settings", "/v1/activities/follow-up-settings", "activities.follow_up_after_days", "MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS", "6",
-			lockedWrite{method: http.MethodPatch, path: "/v1/activities/follow-up-settings", body: map[string]any{"follow_up_after_days": 3}}},
-		{"/legal-reviews/settings", "/v1/legal-reviews/settings", "deals.legal_review_enabled", "MARGINCE_DEALS_LEGAL_REVIEW_ENABLED", "false",
-			lockedWrite{method: http.MethodPut, path: "/v1/legal-reviews/settings", body: map[string]any{"enabled": true}}},
-		{"/privacy/controller-particulars", "/v1/privacy/controller-particulars", "consent.controller_particulars", "MARGINCE_CONSENT_CONTROLLER_PARTICULARS", `{"LegalName":"Env GmbH"}`,
-			lockedWrite{method: http.MethodPut, path: "/v1/privacy/controller-particulars", body: map[string]any{"legal_name": "Other GmbH"}}},
-		{"/installation/settings", "/v1/installation/settings", "installation.send_rate_limit", "MARGINCE_INSTALLATION_SEND_RATE_LIMIT", "7",
-			lockedWrite{method: http.MethodPatch, path: "/v1/installation/settings", body: map[string]any{"send_rate_limit": 8}}},
-		{"/installation/oauth-apps/{provider}", "/v1/installation/oauth-apps/google", "capture.google_app", "MARGINCE_GMAIL_CLIENT_ID", gmailEnvClientID,
-			lockedWrite{method: http.MethodDelete, path: "/v1/installation/oauth-apps/google"}},
+		{
+			"/capture/settings", "/v1/capture/settings", "capture.auto_enrich_daily_cap", "MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP", "900",
+			lockedWrite{method: http.MethodPatch, path: "/v1/capture/settings", body: map[string]any{"auto_enrich_daily_cap": 5}},
+		},
+		{
+			"/ai/routing", "/v1/ai/routing", "ai.routing", "MARGINCE_AI_ROUTING_BINDING", routing,
+			lockedWrite{method: http.MethodPut, path: "/v1/ai/provider-settings/openai_compatible", body: map[string]any{"base_url": "https://openrouter.ai/api"}},
+		},
+		{
+			"/ai/provider-keys", "/v1/ai/provider-keys", "ai.provider_keys_anthropic", "ANTHROPIC_API_KEY", envProviderKey,
+			lockedWrite{method: http.MethodPut, path: "/v1/ai/provider-keys/anthropic", body: map[string]any{"api_key": envProviderKey}},
+		},
+		{
+			"/ai/budget", "/v1/ai/budget", "ai.budget", "MARGINCE_AI_BUDGET", `{"tokens_per_full_user":5000,"company_monthly_tokens":777}`,
+			lockedWrite{},
+		},
+		{
+			"/ai/price-sync", "/v1/ai/price-sync", "ai.price_sync", "MARGINCE_AI_PRICE_SYNC", `{"auto_sync":false}`,
+			lockedWrite{method: http.MethodPut, path: "/v1/ai/price-sync", body: map[string]any{"auto_sync": true}},
+		},
+		{
+			"/integrations/settings", "/v1/integrations/settings", "integrations.automatic_lookup", "MARGINCE_INTEGRATIONS_AUTOMATIC_LOOKUP", "false",
+			lockedWrite{method: http.MethodPatch, path: "/v1/integrations/settings", body: map[string]any{"automatic_lookup": true}},
+		},
+		{
+			"/leads/settings", "/v1/leads/settings", "contacts.first_response_target_minutes", "MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES", "60",
+			lockedWrite{method: http.MethodPatch, path: "/v1/leads/settings", body: map[string]any{"first_response_target_minutes": 90}},
+		},
+		{
+			"/email-signature-template", "/v1/email-signature-template", "contacts.signature_template", "MARGINCE_CONTACTS_SIGNATURE_TEMPLATE", "<p>{name}</p>",
+			lockedWrite{method: http.MethodPut, path: "/v1/email-signature-template", body: map[string]any{"template": "<p>{title}</p>"}},
+		},
+		{
+			"/retention/settings", "/v1/retention/settings", "privacy.retain_only", "MARGINCE_PRIVACY_RETAIN_ONLY", "true",
+			lockedWrite{method: http.MethodPatch, path: "/v1/retention/settings", body: map[string]any{"retain_only": false}},
+		},
+		{
+			"/activities/follow-up-settings", "/v1/activities/follow-up-settings", "activities.follow_up_after_days", "MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS", "6",
+			lockedWrite{method: http.MethodPatch, path: "/v1/activities/follow-up-settings", body: map[string]any{"follow_up_after_days": 3}},
+		},
+		{
+			"/legal-reviews/settings", "/v1/legal-reviews/settings", "deals.legal_review_enabled", "MARGINCE_DEALS_LEGAL_REVIEW_ENABLED", "false",
+			lockedWrite{method: http.MethodPut, path: "/v1/legal-reviews/settings", body: map[string]any{"enabled": true}},
+		},
+		{
+			"/privacy/controller-particulars", "/v1/privacy/controller-particulars", "consent.controller_particulars", "MARGINCE_CONSENT_CONTROLLER_PARTICULARS", `{"LegalName":"Env GmbH"}`,
+			lockedWrite{method: http.MethodPut, path: "/v1/privacy/controller-particulars", body: map[string]any{"legal_name": "Other GmbH"}},
+		},
+		{
+			"/installation/settings", "/v1/installation/settings", "installation.send_rate_limit", "MARGINCE_INSTALLATION_SEND_RATE_LIMIT", "7",
+			lockedWrite{method: http.MethodPatch, path: "/v1/installation/settings", body: map[string]any{"send_rate_limit": 8}},
+		},
+		{
+			"/installation/oauth-apps/{provider}", "/v1/installation/oauth-apps/google", "capture.google_app", "MARGINCE_GMAIL_CLIENT_ID", gmailEnvClientID,
+			lockedWrite{method: http.MethodDelete, path: "/v1/installation/oauth-apps/google"},
+		},
 	}
 }
 
@@ -99,8 +127,7 @@ func surfacesWithLocks(t *testing.T) []string {
 }
 
 // Every settings response names the settings a boot source sets, with the
-// variable that sets them, and every write to one is refused with the lock's
-// own code.
+// variable that sets them. Every write to one is refused with the lock's code.
 func TestEverySettingsResponseReportsItsLocks(t *testing.T) {
 	surfaces := lockedSurfaces()
 	var covered, environ []string
@@ -137,9 +164,9 @@ func TestEverySettingsResponseReportsItsLocks(t *testing.T) {
 	}
 }
 
-// The value a boot source sets is the one a settings response carries, the
-// lock names it, and only a change is refused: the value in force, sent again
-// beside another field, saves.
+// A settings response carries the value a boot source sets, and its lock names
+// the source. Only a change is refused: the value in force, sent again beside
+// another field, saves.
 func TestLockedSettingsShowInTheAPIAndRefuseAChange(t *testing.T) {
 	e := apptest.SetupAppWithEnv(t, []string{"MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP=900"})
 	e.BootstrapWorkspace(t)

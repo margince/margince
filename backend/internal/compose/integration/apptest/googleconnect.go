@@ -16,6 +16,8 @@ import (
 // SetupGoogleConnect mounts the Google connect flow over a vault, with the
 // environment's app given by clientID and secret. Empty means it composed none,
 // and only a stored app can serve.
+//
+//nolint:ireturn // keyvault.New answers the Vault seam; there is no struct to return.
 func SetupGoogleConnect(t *testing.T, clientID, secret string, opts ...compose.Option) (*AppEnv, keyvault.Vault) {
 	t.Helper()
 	key := make([]byte, 32)

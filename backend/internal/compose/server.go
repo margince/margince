@@ -234,8 +234,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// the purger above is not: a role that forgot it would answer 404 to a
 		// controller placing a litigation hold, which reads as "no such record"
 		// rather than as "this installation cannot hold one".
-		privacyHandlers: privacy.NewHandlers(InstallationDB(pool), StoredConfig(pool)).
-			WithLocks(loadedLocks).
+		privacyHandlers: privacy.NewHandlers(InstallationDB(pool), StoredConfig(pool)).WithLocks(loadedLocks).
 			WithCountry(identity.CountryForDecision).
 			WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))).
 			WithLegalHoldWriter(NewLegalHoldSeam(pool)).
@@ -252,8 +251,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		automationHandlers: automation.NewHandlers(InstallationDB(pool)).
 			WithFieldCatalog(customfields.NewService(pool, nil)).
 			WithRetryEngine(NewWorkflowEngine(InstallationDB(pool))),
-		voiceHandlers: ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)).
-			WithLocks(loadedLocks).
+		voiceHandlers: ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)).WithLocks(loadedLocks).
 			WithVoiceKnownSpeakers(voiceKnownSpeakers(pool)),
 		// The names seam is the WEB surface's: a reader reading "explain this
 		// number" meets the deals by name, while the MCP provider leaves it
