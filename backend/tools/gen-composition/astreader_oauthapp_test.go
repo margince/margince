@@ -84,6 +84,9 @@ func TestOAuthAppsRefuseWhatValidateRefuses(t *testing.T) {
 		"no title":         {strings.Replace(wholeOAuthApp, `"Books ledger"`, `""`, 1), "Title"},
 		"a provider twice": {wholeOAuthApp + wholeOAuthApp, "declared twice"},
 		"a computed scope": {strings.Replace(wholeOAuthApp, `"ledger.read"`, `scope()`, 1), "Scopes entry"},
+		"a core parameter": {strings.Replace(wholeOAuthApp, `"prompt"`, `"redirect_uri"`, 1), "redirect_uri"},
+		"a computed key":   {strings.Replace(wholeOAuthApp, `"prompt"`, `param()`, 1), "AuthParams key"},
+		"params by name":   {strings.Replace(wholeOAuthApp, `map[string]string{"prompt": "consent"}`, `consentParams`, 1), "map literal"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := deriveSynthetic(t, "x", oauthUnitSource(tc.entries))

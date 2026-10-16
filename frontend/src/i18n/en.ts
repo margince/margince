@@ -12067,6 +12067,7 @@ export const en = {
   "oauthApp.microsoft.removeConfirmTitle": "Remove the Microsoft app?",
   "oauthApp.microsoft.removeConfirmBody":
     "The client secret cannot be read back, so restoring the app requires re-entering the client ID and secret from the Entra portal. Outlook mail and calendar connections use this app; Google and IMAP mailboxes are unaffected. First-run setup asks for an app again.",
+  "oauthApp.unit.listTitle": "Extension apps",
   "oauthApp.unit.sub":
     "The {title} extension reads its vendor’s API through an OAuth app your company registers with that vendor.",
   "oauthApp.unit.absent":

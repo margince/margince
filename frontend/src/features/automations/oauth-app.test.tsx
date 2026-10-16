@@ -465,7 +465,10 @@ describe("the Microsoft app card", () => {
 describe("the extension units' app cards", () => {
   const BOOKS_URI = "https://api.acme.test/v1/ext-oauth/books/callback";
 
-  function mountUnits(list: unknown[]) {
+  function mountUnits(
+    list: unknown[],
+    listResponse = () => jsonResponse({ data: list }),
+  ) {
     const fetchMock = vi.fn(async (request: Request) => {
       const url = new URL(request.url).pathname;
       if (url.endsWith("/me")) {
@@ -474,7 +477,7 @@ describe("the extension units' app cards", () => {
         );
       }
       if (url.endsWith("/installation/oauth-apps")) {
-        return jsonResponse({ data: list });
+        return listResponse();
       }
       return jsonResponse(
         list.find((app) =>
@@ -518,5 +521,33 @@ describe("the extension units' app cards", () => {
     expect(screen.getByText("Connect")).toBeTruthy();
     expect(screen.queryByText("Google app")).toBeNull();
     expect(screen.queryByText("Microsoft app")).toBeNull();
+  });
+
+  // The core vendors' cards still render around a failed list, so without its
+  // own error a unit's card would simply be missing.
+  it("says the unit apps did not load, and loads them on Retry", async () => {
+    const books = {
+      provider: "books",
+      title: "Books ledger",
+      unit: "ledger",
+      configured: false,
+      client_id: "",
+      source: "none",
+      redirect_uris: [{ purpose: "extension_connect", url: BOOKS_URI }],
+    };
+    let failing = true;
+    mountUnits([books], () =>
+      failing
+        ? jsonResponse({ title: "down" }, 503)
+        : jsonResponse({ data: [books] }),
+    );
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(screen.getByText("Extension apps")).toBeTruthy();
+    failing = false;
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(
+      await screen.findByText(/The Books ledger extension cannot be connected/),
+    ).toBeTruthy();
+    expect(screen.queryByText("Extension apps")).toBeNull();
   });
 });

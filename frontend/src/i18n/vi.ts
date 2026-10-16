@@ -11753,6 +11753,7 @@ export const vi = {
   "oauthApp.microsoft.removeConfirmTitle": "Gỡ ứng dụng Microsoft?",
   "oauthApp.microsoft.removeConfirmBody":
     "Không thể đọc lại client secret, nên muốn khôi phục ứng dụng phải nhập lại client ID và secret từ cổng Entra. Kết nối thư và lịch Outlook dùng ứng dụng này; hộp thư Google và IMAP không bị ảnh hưởng. Bước thiết lập ban đầu sẽ hỏi lại ứng dụng.",
+  "oauthApp.unit.listTitle": "Ứng dụng của tiện ích mở rộng",
   "oauthApp.unit.sub":
     "Tiện ích mở rộng {title} đọc API của nhà cung cấp qua một ứng dụng OAuth mà công ty đăng ký với nhà cung cấp đó.",
   "oauthApp.unit.absent":
