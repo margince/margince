@@ -38,7 +38,14 @@ const base: AuditHistoryEntry = {
 const SHAPES: ReadonlyArray<{
   shape: string;
   entry: Partial<AuditHistoryEntry>;
-  subject: { key: MessageKey; params?: Record<string, string> } | string;
+  subject:
+    | {
+        key: MessageKey;
+        params?: Record<string, string>;
+        // A name that is itself copy, read in the locale under test.
+        nameKey?: MessageKey;
+      }
+    | string;
 }> = [
   {
     shape: "a human edit",
@@ -80,6 +87,20 @@ const SHAPES: ReadonlyArray<{
     subject: {
       key: "history.subject.viaAgent",
       params: { name: "Ada Authority" },
+    },
+  },
+  {
+    shape: "an agent on behalf of a member whose seat no longer resolves",
+    entry: {
+      actor_type: "agent",
+      actor_id: "agent:p1",
+      passport_id: PASSPORT,
+      on_behalf_of: "u-gone",
+      on_behalf_of_name: null,
+    },
+    subject: {
+      key: "history.subject.viaAgent",
+      nameKey: "audit.unknownMember",
     },
   },
   {
@@ -169,7 +190,12 @@ describe("historyLine", () => {
           const expectedSubject =
             typeof subject === "string"
               ? subject
-              : fill(CATALOGS[locale][subject.key], subject.params ?? {});
+              : fill(CATALOGS[locale][subject.key], {
+                  ...subject.params,
+                  ...(subject.nameKey && {
+                    name: CATALOGS[locale][subject.nameKey],
+                  }),
+                });
           const expected = fill(CATALOGS[locale][verb.key], {
             subject: expectedSubject,
           });

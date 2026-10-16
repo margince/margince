@@ -158,8 +158,8 @@ const MACHINE_QUALIFIER: Partial<
 // never be equal.
 export const HUMAN_ACTOR_PREFIX = "human:";
 
-// actorAttribution decides who a row is attributed to, in the audit log and the
-// history line. Unlike the server's summary, it names a buyer, never an id.
+// actorAttribution decides who a row is attributed to. Unlike the server's
+// summary, it names a buyer and never shows a member's id.
 //
 // The contact comes first and the machine second (PD-002). An agent's own
 // identifier is never the label: attribution exists so somebody can be asked
@@ -189,8 +189,13 @@ export function actorAttribution(
       ? { name: entry.actor_name }
       : { labelKey: "audit.unknownMember" };
   }
-  if (entry.actor_type === "system" && !entry.passport_id) {
-    return { labelKey: "audit.system" };
+  if (entry.actor_type === "system") {
+    return entry.passport_id
+      ? {
+          labelKey: "audit.noHumanAuthority",
+          identifier: machineIdentifier(entry),
+        }
+      : { labelKey: "audit.system" };
   }
   // A Deal Room participant, named the way a member is. The read path resolves
   // actor_name from deal_room_participant for a buyer, so "who confirmed v5?"
