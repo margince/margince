@@ -130,9 +130,9 @@ func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	}
 }
 
-// Search answers one page of one record type's records: list_records and a
-// named anchor each ask for one. Ranking across types is the search module's
-// engine, which search_records and GET /v1/search share.
+// Search answers one page of one record type's records, which is what
+// list_records asks for. Ranking by words is the search module's engine, which
+// search_records, an intent tool's record_name and GET /v1/search share.
 //
 // The cursor names the type it was minted for. A token presented on another
 // type's search is refused rather than resumed in the wrong table.

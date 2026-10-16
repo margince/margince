@@ -9,6 +9,7 @@ package integration
 // answers the same records in the same order on both doors.
 
 import (
+	"encoding/json"
 	"net/http"
 	"slices"
 	"strings"
@@ -151,6 +152,43 @@ func TestTheRouteDefaultSearchesTheTimelineAndTheToolDefaultDoesNot(t *testing.T
 		map[string]any{"q": "Zephyrwind", "record_type": "activity"}))
 	if !slices.Contains(named.ids(), task) {
 		t.Errorf("naming activity did not find the task %s: %v", task, named.ids())
+	}
+}
+
+// An intent tool's record_name and search_records rank a name on one engine.
+// A whole word resolves to the tool's top hit. A fragment search_records does
+// not find is refused.
+func TestARecordNameResolvesAsSearchRecordsFindsIt(t *testing.T) {
+	d := newTwoDoors(t, "search-record-name", "read")
+	seed := seedSearchDoors(t, d)
+
+	top := decodedAs[toolSearchPage](t, d.tool(t, "search_records",
+		map[string]any{"q": "Zephyrwind", "record_type": "company"}))
+	if len(top.Records) == 0 || top.Records[0].ID != seed.company {
+		t.Fatalf("search_records ranks %v for the company, want %s first", top.ids(), seed.company)
+	}
+	var picture struct {
+		Anchor struct {
+			RecordID string `json:"record_id"`
+		} `json:"anchor"`
+	}
+	if err := json.Unmarshal(d.tool(t, "catch_me_up_on",
+		map[string]any{"record_type": "company", "record_name": "Zephyrwind"}), &picture); err != nil {
+		t.Fatal(err)
+	}
+	if picture.Anchor.RecordID != top.Records[0].ID {
+		t.Errorf("catch_me_up_on resolved Zephyrwind to %s, search_records ranks %s first",
+			picture.Anchor.RecordID, top.Records[0].ID)
+	}
+
+	fragment := decodedAs[toolSearchPage](t, d.tool(t, "search_records",
+		map[string]any{"q": "ephyrwind", "record_type": "company"}))
+	if len(fragment.Records) != 0 {
+		t.Fatalf("search_records finds %v for a fragment inside a word; this case needs it to find nothing", fragment.ids())
+	}
+	refused := d.toolRefused(t, "catch_me_up_on", map[string]any{"record_type": "company", "record_name": "ephyrwind"})
+	if !strings.Contains(refused, "search_records") {
+		t.Errorf("the fragment was refused with %q, want the no-match refusal naming search_records", refused)
 	}
 }
 

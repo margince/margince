@@ -5409,7 +5409,7 @@ paths:
         The answer the `catch_me_up_on` agent tool gives, run by the same tool on both doors:
         the recent activity, open tasks and related records around one record, each with the
         passages it rests on. Name the record by `record_id`, or by `record_name` as
-        `list_records`' `q` would find it; a name that matches more than one record is refused
+        `search_records` would find it; a name that matches more than one record is refused
         with the candidates rather than guessed at.
       parameters:
         - $ref: '#/components/parameters/AnchorRecordType'
@@ -7866,7 +7866,7 @@ components:
       in: query
       schema: {type: string}
       description: >-
-        The record named in words, found the way `list_records`' `q` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at.
+        The record named in words, found the way `search_records` finds the same words. A name matching more than one record is refused with the candidate ids rather than guessed at.
     AnchorMaxItems:
       name: max_items
       in: query

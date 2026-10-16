@@ -134,10 +134,12 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterBriefTool(registry, briefReader(pool))
 	agents.RegisterAnnotateBriefTool(registry, briefAnnotator(pool))
 	searchRetriever, retriever := registryRetrievers(pool, embedder)
-	agents.RegisterIntentTools(registry, retriever, meetingBrief, provider)
+	// One engine ranks search_records and resolves an intent tool's record_name.
+	recordSearch := recordSearchSeam(pool)
+	agents.RegisterIntentTools(registry, retriever, meetingBrief, recordSearch)
 	agents.RegisterChannelProviderTools(registry, channelProviderDirectory{})
 	agents.RegisterContextSearchTool(registry, provider, retriever)
-	agents.RegisterRecordSearchTool(registry, provider, recordSearchSeam(pool))
+	agents.RegisterRecordSearchTool(registry, provider, recordSearch)
 	agents.RegisterReportEvidenceTool(registry, provider, reportEvidenceSeam{
 		db: InstallationDB(pool), floor: analyticsquery.DefaultFloor,
 		ranker: searchRetriever, classifier: searchRetriever,
