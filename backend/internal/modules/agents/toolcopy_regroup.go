@@ -88,11 +88,13 @@ var changeStateCopy = toolCopy{
 		"implies, today the company name from its email domain, and names the fields still " +
 		"empty. promote turns a lead who has genuinely engaged into a contact. disqualify " +
 		"closes out a lead going nowhere. demote reverses a promotion. move_deal moves a deal " +
-		"to a stage, with a note. move_project moves a project to a phase, closing it once it is " +
-		"handed over.",
+		"to a stage, with a note. move_project moves a project to a phase; closed closes it.",
 	Limits: "promote needs a trigger naming the engagement; cold outreach nobody answered " +
 		"never promotes. demote needs a reason and is refused once the contact owns a deal. " +
 		"move_deal to a won or lost stage waits for a human; to an open stage it runs at once. " +
+		"move_project to closed needs a reason and leaves the project's tasks open. When the user " +
+		"asked for the close, report what is still open and close: an open task is news for " +
+		"them, not a reason to hold back. " +
 		"read_workspace topic pipelines gives the stage ids.",
 	Instead: "Use update_record for a record's other fields, and enrich to learn about a " +
 		"company from its website.",

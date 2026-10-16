@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 120.9 KB |
+| Tool catalog | 121.1 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 31839 |
+| Approx. wire tokens | 31886 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 24.6 KB | 20% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 31.2 KB | 25% | Yes, every step |
+| Descriptions (incl. governance clause) | 31.4 KB | 25% | Yes, every step |
 | Input schemas | 56.4 KB | 46% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 7% | Partly |
-| **Description + input schema** | **87.6 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **87.8 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -65,7 +65,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1228 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 592 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
-| [`change_state`](#change_state) | Move a lead, deal or project on |  |  | 819 |
+| [`change_state`](#change_state) | Move a lead, deal or project on |  |  | 866 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 553 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
@@ -1771,15 +1771,17 @@ record's own fields, and create_record with record_type offer to make an offer w
 Move a lead, deal or project on. qualify fills what a lead's own data already implies, today the
 company name from its email domain, and names the fields still empty. promote turns a lead who has
 genuinely engaged into a contact. disqualify closes out a lead going nowhere. demote reverses a
-promotion. move_deal moves a deal to a stage, with a note. move_project moves a project to a phase,
-closing it once it is handed over. promote needs a trigger naming the engagement; cold outreach
-nobody answered never promotes. demote needs a reason and is refused once the contact owns a deal.
-move_deal to a won or lost stage waits for a human; to an open stage it runs at once. read_workspace
-topic pipelines gives the stage ids. Use update_record for a record's other fields, and enrich to
-learn about a company from its website. A promotion answers with the new contact's id. A staged
-answer's approval id is what the retry carries; do not report the change until the retry has
-answered. (Governance: runs immediately for demote, disqualify, move_project, promote, qualify;
-decided per call from its arguments for move_deal; requires passport scope "write".)
+promotion. move_deal moves a deal to a stage, with a note. move_project moves a project to a phase;
+closed closes it. promote needs a trigger naming the engagement; cold outreach nobody answered never
+promotes. demote needs a reason and is refused once the contact owns a deal. move_deal to a won or
+lost stage waits for a human; to an open stage it runs at once. move_project to closed needs a
+reason and leaves the project's tasks open. When the user asked for the close, report what is still
+open and close: an open task is news for them, not a reason to hold back. read_workspace topic
+pipelines gives the stage ids. Use update_record for a record's other fields, and enrich to learn
+about a company from its website. A promotion answers with the new contact's id. A staged answer's
+approval id is what the retry carries; do not report the change until the retry has answered.
+(Governance: runs immediately for demote, disqualify, move_project, promote, qualify; decided per
+call from its arguments for move_deal; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>

@@ -357,8 +357,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `send_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `preview_import` | 1.00 | 4 | `case10_finish_the_import`, `case3_spreadsheet` |
-| `read_analytics` | 1.00 | 2 | `case20_put_it_in_the_board_pack` |
 | `change_state` | 1.00 | 8 | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list` |
+| `read_analytics` | 1.00 | 2 | `case20_put_it_in_the_board_pack` |
 | `bulk_update_records` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `read_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `create_record` | 1.00 | 8 | `case1_log_it`, `case2_business_card`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
@@ -391,9 +391,9 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `find_records` | 0.86 | 6/7 | - | `case4_use_the_moment`, `case5_before_the_meeting`, `case6_ask_the_company` |
 | `change_activities` | 0.92 | 12/13 | - | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case48_that_whole_thread_is_filed_wrong`, `case57_put_it_on_the_file`, `case59_file_it_on_the_meeting_and_the_contract`, `case9_filed_in_the_wrong_place` |
 | `send_outbound` | 0.80 | 4/5 | - | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
+| `change_state` | 0.75 | 6/8 | `case41_close_the_project` | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list` |
 | `read_analytics` | 0.67 | 2/3 | - | `case20_put_it_in_the_board_pack` |
 | `read_forecast` | 0.86 | 6/7 | - | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
-| `change_state` | 0.75 | 6/8 | `case41_close_the_project` | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list` |
 | `draft_outbound` | 0.80 | 4/5 | - | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `read_project` | 0.00 | 0/2 | `case41_close_the_project` | `case41_close_the_project` |
 
