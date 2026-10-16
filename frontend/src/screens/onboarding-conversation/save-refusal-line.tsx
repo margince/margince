@@ -14,7 +14,7 @@ export function SaveRefusalLine({
     return null;
   }
   return (
-    <div role="alert" className="ob-save-refusal">
+    <div role="alert">
       <NarrationBubble
         entry={{
           kind: "narration",

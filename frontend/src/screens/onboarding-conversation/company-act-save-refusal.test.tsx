@@ -249,7 +249,7 @@ it("keeps one alert, on the same node, when the first edit adds Save", async () 
   expect(refusalLine()).toBe(before);
 });
 
-it("joins the foot of an already shown Save as its leading line", async () => {
+it("joins the foot of an already shown Save", async () => {
   renderReview(REFUSED);
   await openWholeRecord();
   await editCompanyName();
@@ -264,5 +264,4 @@ it("joins the foot of an already shown Save as its leading line", async () => {
   const foot = save.closest(".ob-stage-acts");
   expect(foot).not.toBeNull();
   expect(foot?.querySelectorAll('[role="alert"]')).toHaveLength(1);
-  expect(refusalLine()?.classList.contains("ob-save-refusal")).toBe(true);
 });

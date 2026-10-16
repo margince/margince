@@ -2620,10 +2620,3 @@
   color: var(--textPrimary);
   font-family: var(--fontFamilyHeading);
 }
-
-/* The stage foot is one flex row that fills in mount order. A refusal that
-   arrives after Save is shown would otherwise land last and crowd the button,
-   so it always leads. */
-.ob-stage-acts > .ob-save-refusal {
-  order: -1;
-}
