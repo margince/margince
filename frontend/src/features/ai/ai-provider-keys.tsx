@@ -222,8 +222,7 @@ function ProviderConnection({
 }: {
   status: ProviderStatus;
   canManage: boolean;
-  /** A key a boot source sets refuses every value, its own included, so the
-   *  paste field never opens and no save or remove is offered. */
+  /** A boot-set key refuses every value, its own included. */
   lock: FieldLock;
 }) {
   const t = useT();

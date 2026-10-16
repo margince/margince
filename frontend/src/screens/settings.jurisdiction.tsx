@@ -113,11 +113,13 @@ function SelectionPanel({
               ? t("jurisdiction.selected.none")
               : jurisdictionName(selected, locale)
           }
-          control={
+          control={(control) =>
             canChange && (
               <ChangeJurisdiction
                 jurisdiction={jurisdiction}
-                locked={lock.disabled}
+                reasonId={
+                  lock.disabled ? control["aria-describedby"] : undefined
+                }
               />
             )
           }
@@ -152,8 +154,8 @@ function SelectionPanel({
 
 function ChangeJurisdiction({
   jurisdiction,
-  locked,
-}: Readonly<{ jurisdiction: Jurisdiction; locked: boolean }>) {
+  reasonId,
+}: Readonly<{ jurisdiction: Jurisdiction; reasonId: string | undefined }>) {
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
@@ -189,7 +191,8 @@ function ChangeJurisdiction({
       <Button
         aria-haspopup="dialog"
         aria-label={t("jurisdiction.change.label")}
-        disabled={locked}
+        // The row's description is the lock's reason while it holds.
+        reasonId={reasonId}
         onClick={() => setOpen(true)}
       >
         {t("jurisdiction.change.action")}

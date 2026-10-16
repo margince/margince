@@ -363,12 +363,19 @@ describe("TaskSheet under a boot source", () => {
         ),
       ).toBeTruthy(),
     );
+    const reason = within(sheet).getByText(
+      "Set by ai.task_overrides in /etc/margince/margince.yaml. Change it there.",
+    );
     for (const name of [
       /Thinking level/,
       /Decision model timeout/,
       /Model call timeout/,
     ]) {
-      expect(within(sheet).getByRole("combobox", { name })).toBeDisabled();
+      const select = within(sheet).getByRole("combobox", { name });
+      expect(select).toBeDisabled();
+      expect(select.getAttribute("aria-describedby")?.split(" ")).toContain(
+        reason.id,
+      );
     }
     expect(
       within(sheet).getByRole("button", { name: "Save settings" }),

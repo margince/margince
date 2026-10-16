@@ -21,10 +21,15 @@ import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { Select } from "../../design-system/select";
 import { formatNumber } from "../../format/format";
-import { lockReasonOr } from "../../format/settinglocks";
+import {
+  describedWith,
+  lockReasonOr,
+  useRefusalId,
+} from "../../format/settinglocks";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { aiTaskLabel } from "../../lib/ai-task-label";
+import { useCan } from "../../lib/capability";
 import { problemCodeOf, throwProblem, unwrap } from "../../lib/problem";
 import {
   useCallStats,
@@ -138,14 +143,18 @@ export function TaskSheet({
   const titleId = useId();
   const stored = useTaskOverrides(true);
   // The overrides' own read is a map, so their lock rides on the routing read.
-  const locks = useRouting(true).data?.routing.locks;
+  // Nothing is editable until that read has answered.
+  const canRoute = useCan("ai_routing", "read");
+  const routing = useRouting(canRoute);
   const refusal = lockReasonOr(
-    locks,
+    routing.data?.routing.locks,
     "ai.task_overrides",
     t,
     canManage ? undefined : t("aiRouting.adminOnly"),
   );
+  const reasonId = useRefusalId(refusal);
   const mayEdit = refusal === undefined;
+  const locksPending = canRoute && routing.isPending;
   const decides = route.decides === true;
   const defaults = defaultsOf(route);
   const saved = draftOf(stored.data?.overrides[route.task], defaults);
@@ -187,12 +196,18 @@ export function TaskSheet({
           error={stored.isError ? stored.error : null}
           onRetry={() => stored.refetch()}
         />
+        {reasonId ? (
+          <p id={reasonId} className="t-caption">
+            {refusal}
+          </p>
+        ) : null}
         <TaskSettings
           draft={draft}
           defaults={defaults}
           decides={decides}
           canManage={mayEdit}
-          busy={!mayEdit || save.isPending || !stored.data}
+          reasonId={reasonId}
+          busy={!mayEdit || locksPending || save.isPending || !stored.data}
           onChange={setEdited}
         />
         <ContractFacts route={route} />
@@ -209,8 +224,8 @@ export function TaskSheet({
           <Button
             variant="primary"
             pending={save.isPending}
-            disabled={!mayEdit || !changed || !stored.data}
-            reason={refusal}
+            disabled={!changed || locksPending || !stored.data}
+            reasonId={reasonId}
             onClick={submit}
           >
             {t("aiTaskSheet.save")}
@@ -262,6 +277,7 @@ function TaskSettings({
   defaults,
   decides,
   canManage,
+  reasonId,
   busy,
   onChange,
 }: Readonly<{
@@ -269,6 +285,7 @@ function TaskSettings({
   defaults: Draft;
   decides: boolean;
   canManage: boolean;
+  reasonId: string | undefined;
   busy: boolean;
   onChange: (next: Draft) => void;
 }>) {
@@ -297,6 +314,10 @@ function TaskSettings({
         {(control) => (
           <Select
             {...control}
+            aria-describedby={describedWith(
+              control["aria-describedby"],
+              reasonId,
+            )}
             value={draft.thinking}
             disabled={busy}
             options={[
@@ -325,6 +346,7 @@ function TaskSettings({
           value={draft.decision}
           fallback={defaults.decision}
           disabled={busy}
+          reasonId={reasonId}
           onChange={(decision) => set({ decision })}
         />
       ) : null}
@@ -343,6 +365,7 @@ function TaskSettings({
         value={draft.attempt}
         fallback={defaults.attempt}
         disabled={busy}
+        reasonId={reasonId}
         onChange={(attempt) => set({ attempt })}
       />
       {!same(draft, defaults) && canManage ? (

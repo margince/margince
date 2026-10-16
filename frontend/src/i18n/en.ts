@@ -5765,6 +5765,10 @@ export const en = {
   "settings.lockedBy.env": "Set by {name} (environment). Change it there.",
   "settings.lockedBy.env_file": "Set by {name} in {file}. Change it there.",
   "settings.lockedBy.config_file": "Set by {name} in {file}. Change it there.",
+  "settings.lockedBy.env_file_unnamed":
+    "Set by {name} (.env file). Change it there.",
+  "settings.lockedBy.config_file_unnamed":
+    "Set by {name} (configuration file). Change it there.",
   "settings.signatureFromTemplate": "Company template",
   "settings.signatureTemplateHint":
     "Your company’s signature template signs your mail. It fills in your name, title and phone.",

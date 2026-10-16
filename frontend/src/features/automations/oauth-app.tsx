@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { lockFor } from "../../format/settinglocks";
+import { describedWith, lockFor } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
@@ -139,6 +139,26 @@ function useRemoveOAuthApp(provider: Vendor) {
   });
 }
 
+// The deployment's app is the one every connect uses, so it locks this form: a
+// stored app would be saved and never read. `lockReasonId` is set only while the
+// reason is drawn.
+function useAppLock(
+  loaded:
+    | { locks?: Parameters<typeof lockFor>[0]; configured: boolean }
+    | undefined,
+  provider: Vendor,
+) {
+  const t = useT();
+  const lockId = useId();
+  const lock = lockFor(loaded?.locks, appKey[provider], t);
+  return {
+    lock,
+    lockId,
+    lockReasonId: lock.disabled ? lockId : undefined,
+    stored: loaded?.configured === true && !lock.disabled,
+  };
+}
+
 export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
   const t = useT();
   const copy = vendorCopy[provider];
@@ -169,10 +189,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
   const failure = save.error ?? remove.error;
   // A failed refetch keeps the old data while the gate above offers Retry.
   const loaded = app.isError ? undefined : app.data;
-  // The deployment's app is the one every connect uses, so it locks this form:
-  // a stored app would be saved and never read.
-  const lock = lockFor(loaded?.locks, appKey[provider], t);
-  const stored = loaded?.configured === true && !lock.disabled;
+  const { lock, lockId, lockReasonId, stored } = useAppLock(loaded, provider);
   const replaceHint = stored ? t("oauthApp.replaceHint") : undefined;
 
   return (
@@ -219,13 +236,19 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
             sub={t(copy.redirectSub)}
           />
           <div className="form-stack">
-            <Field
-              label={t("oauthApp.clientId")}
-              hint={lock.disabled ? lock.reason : replaceHint}
-            >
+            {lock.disabled && (
+              <p id={lockId} className="t-caption">
+                {lock.reason}
+              </p>
+            )}
+            <Field label={t("oauthApp.clientId")} hint={replaceHint}>
               {(control) => (
                 <TextInput
                   {...control}
+                  aria-describedby={describedWith(
+                    control["aria-describedby"],
+                    lockReasonId,
+                  )}
                   ref={clientIdRef}
                   value={clientId}
                   autoComplete="off"
@@ -239,6 +262,10 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
               {(control) => (
                 <TextInput
                   {...control}
+                  aria-describedby={describedWith(
+                    control["aria-describedby"],
+                    lockReasonId,
+                  )}
                   type="password"
                   autoComplete="off"
                   value={clientSecret}
@@ -255,6 +282,10 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
                 {(control) => (
                   <TextInput
                     {...control}
+                    aria-describedby={describedWith(
+                      control["aria-describedby"],
+                      lockReasonId,
+                    )}
                     // The stored directory until somebody edits it, so a
                     // rotation carries the pinning forward. Widening an app
                     // to every company then takes emptying the field.

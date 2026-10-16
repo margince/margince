@@ -5715,6 +5715,10 @@ export const de = {
     "Festgelegt durch {name} in {file}. Ändere den Wert dort.",
   "settings.lockedBy.config_file":
     "Festgelegt durch {name} in {file}. Ändere den Wert dort.",
+  "settings.lockedBy.env_file_unnamed":
+    "Festgelegt durch {name} (.env-Datei). Ändere den Wert dort.",
+  "settings.lockedBy.config_file_unnamed":
+    "Festgelegt durch {name} (Konfigurationsdatei). Ändere den Wert dort.",
   "settings.signatureFromTemplate": "Unternehmensvorlage",
   "settings.signatureTemplateHint":
     "Deine E-Mails enden mit der Signaturvorlage deines Unternehmens. Die Vorlage füllt deinen Namen, deinen Jobtitel und deine Telefonnummer ein.",

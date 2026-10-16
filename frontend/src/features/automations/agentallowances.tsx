@@ -19,7 +19,7 @@ import { formatDateTime, formatNumber } from "../../format/format";
 import { formatInterval } from "../../format/interval";
 import { type FieldLock, lockFor } from "../../format/settinglocks";
 import { UTC_ZONE } from "../../format/timezone";
-import { type Locale, useLocale, useT } from "../../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
@@ -82,6 +82,23 @@ export function AgentAllowancesCard() {
   );
 }
 
+// Edit's refusal when a boot source sets every allowance, each reason once:
+// the form would open with nothing in it to change.
+function lockedEditReason(locks: Locks, t: Translator): string | undefined {
+  const properties = [
+    ...COUNTS.map((row) => row.property),
+    "agent_window_hours",
+  ];
+  const reasons = properties.map((property) => {
+    const lock = lockFor(locks, `installation.${property}`, t);
+    return lock.disabled ? lock.reason : null;
+  });
+  if (reasons.includes(null)) {
+    return undefined;
+  }
+  return [...new Set(reasons)].join(" ");
+}
+
 function AllowancesBody({
   allowances,
   locks,
@@ -135,6 +152,7 @@ function AllowancesBody({
         {draft === null && canManage && (
           <div className="card-actions">
             <Button
+              reason={lockedEditReason(locks, t)}
               onClick={() => {
                 update.reset();
                 setDraft(draftOf(allowances));

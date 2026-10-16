@@ -5,9 +5,12 @@ import { useMutation } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { Field, TextInput } from "../../design-system/atoms";
 import { ServiceAccountKeyField } from "../../design-system/serviceaccountkeyfield";
+import { lockFor } from "../../format/settinglocks";
 import { type Translator, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
+import { useRouting } from "../ai/ai-routing-query";
 import { VertexLocationField } from "../ai/vertex-location";
 import type { SetupProvider } from "./setup-providers";
 
@@ -15,8 +18,17 @@ import type { SetupProvider } from "./setup-providers";
 // service-account file for Vertex), the location Vertex is bound at, and the
 // write that binds every lane under the choice's own profile.
 
+// A boot source that sets the routing owns the binding, so the step stores the
+// key and leaves the routing as that source set it.
+function useRoutingLock() {
+  const t = useT();
+  const canRoute = useCan("ai_routing", "read");
+  return lockFor(useRouting(canRoute).data?.routing.locks, "ai.routing", t);
+}
+
 export function useBindModels() {
-  return useMutation({
+  const locked = useRoutingLock().disabled;
+  const bind = useMutation({
     // Same reasoning as the provider-key mutation: nothing here is a secret,
     // but the two settle together and a stale binding on screen after a
     // success is the same confusion.
@@ -30,7 +42,11 @@ export function useBindModels() {
       profile: SetupProvider["profile"];
       chatModel: string;
       embedModel: string;
+      routingLocked?: boolean;
     }) => {
+      if (vars.routingLocked) {
+        return;
+      }
       // Every chat tier on the one model the reader chose. A tier left unbound
       // degrades honestly at runtime, but an onboarding that bound only some of
       // them would have the product answer for one task and refuse another with
@@ -72,6 +88,14 @@ export function useBindModels() {
     // reader to press past it (`onDone`); a reload mid-sequence finds
     // `ai_models` configured and loses nothing but the ceremony.
   });
+  // The lock travels as a variable, read by the render that drew the press.
+  return {
+    ...bind,
+    mutate: (
+      vars: Omit<Parameters<typeof bind.mutate>[0], "routingLocked">,
+      options?: Parameters<typeof bind.mutate>[1],
+    ) => bind.mutate({ ...vars, routingLocked: locked }, options),
+  };
 }
 
 // A choice that keeps processing in the EU says so in its name: it is the one
@@ -115,8 +139,12 @@ export function AiKeyFields({
   onLocation: (location: string) => void;
 }>) {
   const t = useT();
+  const routingLock = useRoutingLock();
   return (
     <>
+      {routingLock.disabled && (
+        <p className="t-caption">{routingLock.reason}</p>
+      )}
       {preset.credential === "service_account" ? (
         <ServiceAccountKeyField
           value={secret}

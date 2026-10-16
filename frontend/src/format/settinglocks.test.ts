@@ -87,6 +87,24 @@ describe("lockFor", () => {
     });
   });
 
+  it("names only the source when a file origin carries no file", () => {
+    const unnamed = (source: "env_file" | "config_file") =>
+      lockFor(
+        [{ key: "ai.budget", origin: { source, name: "MARGINCE_AI_BUDGET" } }],
+        "ai.budget",
+        testTranslate,
+      );
+    expect(unnamed("env_file")).toEqual({
+      disabled: true,
+      reason: "Set by MARGINCE_AI_BUDGET (.env file). Change it there.",
+    });
+    expect(unnamed("config_file")).toEqual({
+      disabled: true,
+      reason:
+        "Set by MARGINCE_AI_BUDGET (configuration file). Change it there.",
+    });
+  });
+
   it("leaves a field editable when nothing locks it", () => {
     expect(lockFor(undefined, "x", testTranslate)).toEqual({ disabled: false });
     expect(lockFor([], "x", testTranslate)).toEqual({ disabled: false });

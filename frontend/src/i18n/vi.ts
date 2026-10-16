@@ -5581,6 +5581,10 @@ export const vi = {
     "Đặt bởi {name} trong {file}. Đổi giá trị tại đó.",
   "settings.lockedBy.config_file":
     "Đặt bởi {name} trong {file}. Đổi giá trị tại đó.",
+  "settings.lockedBy.env_file_unnamed":
+    "Đặt bởi {name} (tệp .env). Đổi giá trị tại đó.",
+  "settings.lockedBy.config_file_unnamed":
+    "Đặt bởi {name} (tệp cấu hình). Đổi giá trị tại đó.",
   "settings.signatureFromTemplate": "Mẫu của công ty",
   "settings.signatureTemplateHint":
     "Thư gửi đi dùng mẫu chữ ký của công ty. Mẫu tự điền tên, chức danh và số điện thoại.",

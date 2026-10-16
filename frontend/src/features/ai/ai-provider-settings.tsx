@@ -5,10 +5,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Button, Field, TextInput } from "../../design-system/atoms";
+import { Button, Field } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { Select } from "../../design-system/select";
-import { lockReasonOr } from "../../format/settinglocks";
+import { lockReasonOr, useRefusalId } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemMessageOf, unwrap } from "../../lib/problem";
@@ -20,6 +20,10 @@ import {
 } from "./ai-openrouter-settings";
 import { invalidateProviderHealth } from "./ai-provider-health";
 import { isOpenRouter } from "./ai-provider-links";
+import {
+  type OtherHost,
+  OtherHostFields,
+} from "./ai-provider-settings.otherhost";
 import { ROUTING_KEY } from "./ai-routing-query";
 import { VERTEX_PROVIDER, VertexLocationField } from "./vertex-location";
 
@@ -30,10 +34,6 @@ import { VERTEX_PROVIDER, VertexLocationField } from "./vertex-location";
 type Routing = components["schemas"]["AiRouting"];
 type ProviderSettings = components["schemas"]["AiProviderSettings"];
 
-// The guide a reader setting up a service by hand is pointed at.
-const HOST_GUIDE =
-  "https://github.com/margince/margince/blob/main/docs/how-to/connect-a-cloud-model-provider.md";
-
 type Service = Readonly<{
   id: string;
   label: MessageKey;
@@ -42,10 +42,6 @@ type Service = Readonly<{
   note?: MessageKey;
   noteLink?: string;
 }>;
-
-// What the Other service asks for on each provider. A chat host gets /v1
-// appended, Gemini's carries its version, a decision endpoint is used as written.
-type OtherHost = Readonly<{ help: MessageKey; placeholder: MessageKey }>;
 
 type ProviderServices = Readonly<{
   services: readonly Service[];
@@ -367,6 +363,7 @@ export function ProviderSettingsForm({
     t,
     canManage ? undefined : t("aiProviderKeys.adminOnly"),
   );
+  const reasonId = useRefusalId(refusal);
   const disabled = refusal !== undefined || save.isPending;
   const known = catalog?.services.find((s) => s.id === service);
   const host = hostOf(known, service, typed);
@@ -379,6 +376,11 @@ export function ProviderSettingsForm({
   useEffect(() => onHostChange?.(host), [host, onHostChange]);
   return (
     <div className="ai-provider-settings">
+      {reasonId && (
+        <p id={reasonId} className="t-caption">
+          {refusal}
+        </p>
+      )}
       {catalog && (
         <Field label={t("aiProviderSettings.service.label")}>
           {(control) => (
@@ -426,8 +428,8 @@ export function ProviderSettingsForm({
         <Button
           variant="primary"
           pending={save.isPending}
-          disabled={refusal !== undefined || unchosen || written === saved}
-          reason={refusal}
+          disabled={unchosen || written === saved}
+          reasonId={reasonId}
           onClick={() =>
             save.mutate(
               { provider, settings: body },
@@ -459,42 +461,4 @@ function hostOf(
 ): string {
   if (known) return known.host;
   return service === OTHER ? typed : "";
-}
-
-/** The host an admin types when no listed service is theirs. */
-function OtherHostFields({
-  other,
-  typed,
-  disabled,
-  onChange,
-}: Readonly<{
-  other: OtherHost;
-  typed: string;
-  disabled: boolean;
-  onChange: (host: string) => void;
-}>) {
-  const t = useT();
-  return (
-    <>
-      <Field label={t("aiRouting.baseUrl.label")} hint={t(other.help)}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={typed}
-            disabled={disabled}
-            placeholder={t(other.placeholder)}
-            onChange={(e) => onChange(e.target.value)}
-          />
-        )}
-      </Field>
-      <a
-        className="t-caption"
-        href={HOST_GUIDE}
-        target="_blank"
-        rel="noreferrer"
-      >
-        {t("aiProviderSettings.host.guide")}
-      </a>
-    </>
-  );
 }

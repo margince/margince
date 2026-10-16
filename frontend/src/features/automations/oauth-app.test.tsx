@@ -168,11 +168,14 @@ describe("the Google app card", () => {
     expect(secret.disabled).toBe(true);
     expect(secret.value).toBe("");
     expect(clientId.value).toBe("");
-    expect(
-      screen.getByText(
-        "Set by MARGINCE_GMAIL_CLIENT_ID (environment). Change it there.",
-      ),
-    ).toBeTruthy();
+    const reason = screen.getByText(
+      "Set by MARGINCE_GMAIL_CLIENT_ID (environment). Change it there.",
+    );
+    for (const input of [clientId, secret]) {
+      expect(input.getAttribute("aria-describedby")?.split(" ")).toContain(
+        reason.id,
+      );
+    }
     expect(screen.queryByRole("button", { name: "Store app" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Replace app" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Remove app" })).toBeNull();
