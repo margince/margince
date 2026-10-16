@@ -81,7 +81,6 @@
 503 frontend/src/features/contacts/contactmemory.tsx
 888 frontend/src/screens/share.tsx
 798 frontend/src/screens/integrations-provider.tsx
-854 frontend/src/components/create.tsx
 
 # The build scripts, frozen when the gate learned to read them.
 1060 frontend/scripts/ext-imports.test.ts
