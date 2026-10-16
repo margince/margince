@@ -52237,8 +52237,8 @@ type CreateAcquisitionSourceParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -52261,8 +52261,8 @@ type UpdateAcquisitionSourceParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -52353,8 +52353,8 @@ type LogActivityParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -52377,8 +52377,8 @@ type RelinkActivitiesParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -52401,8 +52401,8 @@ type RelinkThreadParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -52441,8 +52441,8 @@ type UpdateActivityParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -52520,8 +52520,8 @@ type RelinkActivityParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -52554,8 +52554,8 @@ type SendEmailParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -52586,8 +52586,8 @@ type SendMessageParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -52936,8 +52936,8 @@ type ApproveApprovalParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -52971,8 +52971,8 @@ type UpdateRecordAssignmentParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -53180,8 +53180,8 @@ type BookMeetingParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -53215,8 +53215,8 @@ type ExecuteBulkChangeParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -53239,8 +53239,8 @@ type UndoBulkChangeParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -53560,8 +53560,8 @@ type CreateCompanyParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -53594,8 +53594,8 @@ type UpdateCompanyParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -53785,8 +53785,8 @@ type CreateCompanyFactParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -53817,8 +53817,8 @@ type DeleteCompanyFactParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -53856,8 +53856,8 @@ type UpdateCompanyFactParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -53895,8 +53895,8 @@ type ConfirmCompanyFactParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -53961,8 +53961,8 @@ type MergeCompanyParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54010,8 +54010,8 @@ type UpdateCompanyProfileFieldParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54049,8 +54049,8 @@ type ConfirmCompanyProfileFieldParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54088,8 +54088,8 @@ type RejectCompanyParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54168,8 +54168,8 @@ type StartAnchorCompanySiteReadParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54192,8 +54192,8 @@ type ConfirmAnchorCompanySiteReadParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54391,8 +54391,8 @@ type CreateContactParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54415,8 +54415,8 @@ type QuickCaptureContactParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54455,8 +54455,8 @@ type UpdateContactParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54508,8 +54508,8 @@ type RecordConsentParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54607,8 +54607,8 @@ type CreateContactEnrichmentRunParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54650,8 +54650,8 @@ type MergeContactParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54711,8 +54711,8 @@ type CreateContractParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54817,8 +54817,8 @@ type CreateCustomFieldParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54841,8 +54841,8 @@ type RenameCustomFieldParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54872,8 +54872,8 @@ type UpdateCustomFieldOptionsParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54896,8 +54896,8 @@ type RetireCustomFieldParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54941,8 +54941,8 @@ type CreateDataSubjectRequestParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -55016,8 +55016,8 @@ type CreateDealRoomParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -55112,8 +55112,8 @@ type AcceptDealSuggestionParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -55136,8 +55136,8 @@ type DismissDealSuggestionParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -55285,8 +55285,8 @@ type CreateDealParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -55344,8 +55344,8 @@ type UpdateDealParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -55375,8 +55375,8 @@ type AdvanceDealParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -55466,8 +55466,8 @@ type CreateOfferParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -55506,8 +55506,8 @@ type RevertStageProgressionParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -55561,8 +55561,8 @@ type SendCompanyEmailParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -55804,8 +55804,8 @@ type CreateLeadDisqualifyReasonParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -55828,8 +55828,8 @@ type UpdateLeadDisqualifyReasonParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -55852,8 +55852,8 @@ type CreateLeadSourceParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -55876,8 +55876,8 @@ type UpdateLeadSourceParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56047,8 +56047,8 @@ type CreateLeadParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56071,8 +56071,8 @@ type UpdateLeadParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56102,8 +56102,8 @@ type DemoteLeadParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56132,8 +56132,8 @@ type PromoteLeadParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56180,8 +56180,8 @@ type ReopenLeadParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56464,8 +56464,8 @@ type CreateOfferTemplateParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56495,8 +56495,8 @@ type UpdateOfferTemplateParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56539,8 +56539,8 @@ type RegenerateOfferParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56573,8 +56573,8 @@ type RenderOfferParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56597,8 +56597,8 @@ type SendOfferParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56637,8 +56637,8 @@ type PutOnboardingStateParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56705,8 +56705,8 @@ type CreatePipelineParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56729,8 +56729,8 @@ type ReorderPipelinesParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56763,8 +56763,8 @@ type UpdatePipelineParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56794,8 +56794,8 @@ type ReorderStagesParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56867,8 +56867,8 @@ type CreateProductParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56962,8 +56962,8 @@ type CreateProjectParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56994,8 +56994,8 @@ type TransferProjectOwnershipParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -57036,8 +57036,8 @@ type UpdateProjectParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -57075,8 +57075,8 @@ type AdvanceProjectPhaseParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -57152,8 +57152,8 @@ type CreateProjectHealthAssessmentParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -57176,8 +57176,8 @@ type CorrectProjectHealthAssessmentParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -57222,8 +57222,8 @@ type UpdateProviderConnectionParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -57253,8 +57253,8 @@ type ConnectProviderParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -57297,8 +57297,8 @@ type BookPublicMeetingParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -57457,8 +57457,8 @@ type CreateRecordGrantParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -57491,8 +57491,8 @@ type CreateRecordRoleParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -57515,8 +57515,8 @@ type UpdateRecordRoleParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -57588,8 +57588,8 @@ type CreateRecordAssignmentParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -57698,8 +57698,8 @@ type LiftLegalHoldParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -57722,8 +57722,8 @@ type PlaceLegalHoldParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -57762,8 +57762,8 @@ type PinActivityToFloorParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -57786,8 +57786,8 @@ type ReleaseRestrictedActivityParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -57863,8 +57863,8 @@ type CreateMeetingInvitationParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -57906,8 +57906,8 @@ type CreateMeetingProposalParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58001,8 +58001,8 @@ type CreateSignalParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58025,8 +58025,8 @@ type UpdateSignalParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58056,8 +58056,8 @@ type ResolveSignalParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58080,8 +58080,8 @@ type SetTransitionPolicyParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58121,8 +58121,8 @@ type CreateStageParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58155,8 +58155,8 @@ type UpdateStageParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58191,8 +58191,8 @@ type CreateStageExitCriterionParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58254,8 +58254,8 @@ type CreateTaskParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58356,8 +58356,8 @@ type CreateVoiceProfileParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58400,8 +58400,8 @@ type CreateVoiceBuildParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58431,8 +58431,8 @@ type ClearVoiceCorpusParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58471,8 +58471,8 @@ type RejectVoiceDraftParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58495,8 +58495,8 @@ type IngestVoiceCorpusSourceParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58562,8 +58562,8 @@ type ApplyVoiceProfileVersionParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58593,8 +58593,8 @@ type RejectVoiceProfileVersionParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58617,8 +58617,8 @@ type RollbackVoiceProfileVersionParams struct {
 	// returns the original status + body. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running, carries `Retry-After`, and
-	// resending the same request returns its answer; `idempotency_key_failed` means an earlier
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,

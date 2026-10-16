@@ -46749,8 +46749,8 @@ export interface components {
          *     returns the original status + body. Reusing the same key with a *different* request body
          *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
          *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-         *     means the first request under the key is still running, carries `Retry-After`, and
-         *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+         *     means the first request under the key is still running and carries `Retry-After`;
+         *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
          *     request under the key failed after it had started, so check whether it took effect before
          *     retrying under a new key.
          *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -47841,8 +47841,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -47902,8 +47902,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -48058,8 +48058,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -48121,8 +48121,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -49080,8 +49080,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -49155,8 +49155,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -49239,8 +49239,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -49497,8 +49497,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -49616,8 +49616,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -49678,8 +49678,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -49741,8 +49741,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -51077,8 +51077,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -51609,8 +51609,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -51664,8 +51664,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -51838,8 +51838,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -52050,8 +52050,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -52111,8 +52111,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -52339,8 +52339,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -52435,8 +52435,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -52545,8 +52545,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -52608,8 +52608,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -52726,8 +52726,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -52798,8 +52798,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -52970,8 +52970,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -53024,8 +53024,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -53281,8 +53281,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -53390,8 +53390,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -53469,8 +53469,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -53528,8 +53528,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -53608,8 +53608,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -53717,8 +53717,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -53807,8 +53807,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -53964,8 +53964,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54082,8 +54082,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54234,8 +54234,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54380,8 +54380,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54499,8 +54499,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54743,8 +54743,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54880,8 +54880,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -54931,8 +54931,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -55216,8 +55216,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -55294,8 +55294,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -55669,8 +55669,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -55977,8 +55977,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56247,8 +56247,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56443,8 +56443,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -56591,8 +56591,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -57697,8 +57697,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -57982,8 +57982,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58042,8 +58042,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58211,8 +58211,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58281,8 +58281,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58535,8 +58535,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58609,8 +58609,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58684,8 +58684,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58734,8 +58734,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58809,8 +58809,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58859,8 +58859,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -58938,8 +58938,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -59016,8 +59016,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -59091,8 +59091,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -59173,8 +59173,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -62385,8 +62385,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -62792,8 +62792,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -62941,8 +62941,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -66340,8 +66340,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -66590,8 +66590,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -67370,8 +67370,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -67454,8 +67454,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -67543,8 +67543,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -67600,8 +67600,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -67824,8 +67824,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -67882,8 +67882,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -67979,8 +67979,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -68038,8 +68038,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -68232,8 +68232,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -68703,8 +68703,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -69743,8 +69743,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -69917,8 +69917,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -70114,8 +70114,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -70162,8 +70162,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -70289,8 +70289,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -70347,8 +70347,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -70397,8 +70397,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -70512,8 +70512,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -70619,8 +70619,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -70817,8 +70817,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -71584,8 +71584,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -71678,8 +71678,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -71903,8 +71903,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -72137,8 +72137,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -72266,8 +72266,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -72315,8 +72315,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -72459,8 +72459,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -72567,8 +72567,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -72627,8 +72627,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -75273,8 +75273,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -76438,8 +76438,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -76512,8 +76512,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -76582,8 +76582,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -76654,8 +76654,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
@@ -76732,8 +76732,8 @@ export interface operations {
                  *     returns the original status + body. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running, carries `Retry-After`, and
-                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
