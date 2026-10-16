@@ -20071,8 +20071,8 @@ paths:
         mutation's entries are never split across pages, so a page may exceed `limit` by the
         width of its final row. A visible record with no matching changes answers
         `200 {data: []}` — an empty history is honest, not a gap. A record outside the
-        caller's row scope answers 404 (existence-hiding), like every single-record read; an
-        unbounded caller asking about an id that never existed reads the same honest empty page.
+        caller's row scope answers 404 (existence-hiding), like every single-record read, and
+        so does an id that names no record, for an unbounded caller too.
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'

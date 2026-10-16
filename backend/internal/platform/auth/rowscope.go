@@ -388,38 +388,6 @@ func VisibleTo(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (bool,
 	}
 }
 
-// EnsureVisible applies the row scope to a single-row operation: get,
-// update, archive, advance. Out of scope reads as ErrNotFound — the
-// caller cannot distinguish "not yours" from "not there", by design.
-// Activities scope through their links (the activities module's
-// link-walk clause); pipelines have no owner and are governed by object
-// grants only.
-func EnsureVisible(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	idPos := arg(id)
-
-	clause, err := ScopeClauseFor(ctx, table, "", arg)
-	if err != nil {
-		return err
-	}
-	if clause == "" {
-		return nil
-	}
-
-	var visible bool
-	err = tx.QueryRow(ctx,
-		fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $%d AND %s)`, table, idPos, clause),
-		args...).Scan(&visible)
-	if err != nil {
-		return err
-	}
-	if !visible {
-		return apperrors.ErrNotFound
-	}
-	return nil
-}
-
 // VisibleSubset answers, in ONE statement, which of the given rows of a
 // row-scoped table the caller may SEE — the question EnsureVisible asks of one
 // row, asked of a whole page at once. It is the read-only twin of

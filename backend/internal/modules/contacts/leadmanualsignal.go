@@ -184,7 +184,7 @@ func (s *Store) ListLeadManualSignals(ctx context.Context, leadID ids.LeadID) ([
 	}
 	var signals []crmcontracts.LeadManualSignal
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, "lead", leadID.UUID); err != nil {
+		if err := auth.EnsureVisibleExisting(ctx, tx, "lead", leadID.UUID); err != nil {
 			return err
 		}
 		rows, err := tx.Query(ctx,

@@ -131,6 +131,11 @@ func (s *Store) ForContact(ctx context.Context, contactID ids.UUID, limit int) (
 	}
 	var out []Request
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// An id that names no contact, or one the caller cannot open, answers
+		// not-found.
+		if err := auth.EnsureVisibleExisting(ctx, tx, "contact", contactID); err != nil {
+			return err
+		}
 		// Only the asks this caller is party to. A rep browsing a contact does
 		// not learn which of their colleagues has been asked about them and
 		// refused: that is the introducer's answer to give, not the record's.

@@ -221,7 +221,7 @@ var writeAuthorityProbes = map[string]bool{
 // ones they narrow. A site is one call to any of them, so a converted site
 // stays in the census rather than dropping out of the gate's sight.
 var recordAuthorityProbes = map[string]bool{
-	"EnsureVisible": true, "EnsureVisibleLive": true, "EnsureVisibleForSubjectRights": true,
+	"EnsureVisible": true, "EnsureVisibleLive": true, "EnsureVisibleExisting": true, "EnsureVisibleForSubjectRights": true,
 	"VisibleTo": true, "EnsureReadable": true,
 	// The rendered list predicates. They name their table in a different
 	// argument, which tableArgIndex accounts for.
