@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useId } from "react";
+import { describedByIds } from "../../design-system/describedby";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { PanelNotices } from "../../design-system/panelnotices";
 import { QueryGate } from "../../design-system/querystates";
@@ -22,6 +24,7 @@ export function LegalReviewSettingsCard() {
   const canEdit = admin && mutable;
   const query = useLegalReviewSettings();
   const update = useUpdateLegalReviewSettings();
+  const refusalId = useId();
   return (
     <Panel title={t("legalReview.settingsTitle")}>
       <PanelBody>
@@ -34,7 +37,10 @@ export function LegalReviewSettingsCard() {
               label={t("legalReview.settingsSwitch")}
               control={(control) => (
                 <Switch
-                  describedBy={control["aria-describedby"]}
+                  describedBy={describedByIds(
+                    control["aria-describedby"],
+                    update.isError && refusalId,
+                  )}
                   label={t("legalReview.settingsSwitch")}
                   labelHidden
                   checked={settings.enabled}
@@ -53,7 +59,11 @@ export function LegalReviewSettingsCard() {
       <PanelNotices
         refused={
           update.isError
-            ? { title: t("legalReview.notSaved"), error: update.error }
+            ? {
+                title: t("legalReview.notSaved"),
+                error: update.error,
+                id: refusalId,
+              }
             : undefined
         }
       />

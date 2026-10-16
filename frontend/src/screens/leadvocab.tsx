@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useId } from "react";
+import { describedByIds } from "../design-system/describedby";
 import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel } from "../design-system/panel";
 import { PanelNotices } from "../design-system/panelnotices";
@@ -38,6 +40,13 @@ export function LeadHandlingCard() {
   const refusal = grants.refusal && t("leadHandling.readOnly");
   const query = useLeadSettings();
   const update = useUpdateLeadSettings();
+  const refusalId = useId();
+  const refusedFor = (
+    setting: "first_response_enabled" | "first_response_target_minutes",
+  ) =>
+    update.isError && update.variables?.[setting] !== undefined
+      ? refusalId
+      : undefined;
   return (
     <Panel title={t("leadHandling.title")}>
       <QueryGate query={query} pendingLabel={t("leadHandling.title")}>
@@ -52,7 +61,10 @@ export function LeadHandlingCard() {
                 // Without the row's description, a screen reader never
                 // hears what this switch does.
                 <Switch
-                  describedBy={control["aria-describedby"]}
+                  describedBy={describedByIds(
+                    control["aria-describedby"],
+                    refusedFor("first_response_enabled"),
+                  )}
                   label={t("leadHandling.firstResponse")}
                   labelHidden
                   checked={settings.first_response_enabled}
@@ -77,6 +89,7 @@ export function LeadHandlingCard() {
                 !canEdit || !settings.first_response_enabled || update.isPending
               }
               reason={refusal}
+              describedBy={refusedFor("first_response_target_minutes")}
               onCommit={(minutes) =>
                 update.mutate({ first_response_target_minutes: minutes })
               }
@@ -88,7 +101,11 @@ export function LeadHandlingCard() {
       <PanelNotices
         refused={
           update.isError
-            ? { title: t("leadSources.notSaved"), error: update.error }
+            ? {
+                title: t("leadSources.notSaved"),
+                error: update.error,
+                id: refusalId,
+              }
             : undefined
         }
       />

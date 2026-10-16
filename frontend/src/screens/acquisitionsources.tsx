@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { rowsOf } from "../api/rows";
 import { Button, EmptyState } from "../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
@@ -34,6 +34,7 @@ function sourceColumns({
   plural,
   locale,
   canEdit,
+  refusedFor,
   onActive,
   onRename,
 }: Readonly<{
@@ -41,6 +42,7 @@ function sourceColumns({
   plural: PluralTranslator;
   locale: Locale;
   canEdit: boolean;
+  refusedFor: (source: AcquisitionSource) => string | undefined;
   onActive: (source: AcquisitionSource, active: boolean) => void;
   onRename: (source: AcquisitionSource) => void;
 }>): DataTableColumn<AcquisitionSource>[] {
@@ -73,6 +75,7 @@ function sourceColumns({
     fold: "end",
     render: (source) => (
       <Switch
+        describedBy={refusedFor(source)}
         label={t("acqSources.activeFor", { label: source.label })}
         labelHidden
         checked={source.active}
@@ -123,6 +126,7 @@ export function AcquisitionSourcesCard() {
   const create = useCreateAcquisitionSource();
   const update = useUpdateAcquisitionSource();
   const rename = useUpdateAcquisitionSource();
+  const refusalId = useId();
   // Kept after close, so the dialog leaving the page still reads as what it was.
   const [naming, setNaming] = useState<Naming>({ mode: "create" });
   const [namingOpen, setNamingOpen] = useState(false);
@@ -147,6 +151,10 @@ export function AcquisitionSourcesCard() {
     plural,
     locale,
     canEdit,
+    refusedFor: (source) =>
+      update.isError && update.variables?.id === source.id
+        ? refusalId
+        : undefined,
     onActive: (source, active) =>
       update.mutate({ id: source.id, body: { active } }),
     onRename: (source) => open({ mode: "rename", source }),
@@ -187,7 +195,11 @@ export function AcquisitionSourcesCard() {
         readOnly={refusal && t(refusal)}
         refused={
           update.isError
-            ? { title: t("leadSources.notSaved"), error: update.error }
+            ? {
+                title: t("leadSources.notSaved"),
+                error: update.error,
+                id: refusalId,
+              }
             : undefined
         }
       />

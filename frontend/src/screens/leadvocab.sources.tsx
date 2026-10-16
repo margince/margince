@@ -13,6 +13,7 @@ import {
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
+import { describedByIds } from "../design-system/describedby";
 import { Heading } from "../design-system/heading";
 import { KeyCode, KeyedName } from "../design-system/keyedname";
 import {
@@ -165,6 +166,7 @@ function sourceColumns({
   plural,
   locale,
   grants,
+  refusedFor,
   onUpdate,
   onRename,
   onRemove,
@@ -173,6 +175,10 @@ function sourceColumns({
   plural: PluralTranslator;
   locale: Locale;
   grants: Readonly<{ canEdit: boolean; canRemove: boolean }>;
+  refusedFor: (
+    source: LeadSource,
+    field: "intent" | "active",
+  ) => string | undefined;
   onUpdate: (patch: SourcePatch) => void;
   onRename: (source: LeadSource) => void;
   onRemove: (source: LeadSource) => void;
@@ -203,6 +209,7 @@ function sourceColumns({
         <span className="lead-vocab-intent">
           <Select
             aria-label={t("leadSources.intentFor", { label: source.label })}
+            aria-describedby={refusedFor(source, "intent")}
             value={source.intent}
             disabled={!canEdit}
             onChange={(value) => {
@@ -221,6 +228,7 @@ function sourceColumns({
       fold: "end",
       render: (source) => (
         <Switch
+          describedBy={refusedFor(source, "active")}
           label={t("leadSources.activeFor", { label: source.label })}
           labelHidden
           checked={source.active}
@@ -243,11 +251,13 @@ function DiscoveredSources({
   discovered,
   administered,
   canCreate,
+  refusedFor,
   onAdopt,
 }: Readonly<{
   discovered: readonly DiscoveredLeadSource[];
   administered: readonly LeadSource[];
   canCreate: boolean;
+  refusedFor: (found: DiscoveredLeadSource) => string | undefined;
   onAdopt: (found: DiscoveredLeadSource, label: string) => void;
 }>) {
   const t = useT();
@@ -281,7 +291,7 @@ function DiscoveredSources({
       fold: "end",
       render: (found) => (
         <Button
-          aria-describedby={nameId(found)}
+          aria-describedby={describedByIds(nameId(found), refusedFor(found))}
           onClick={() =>
             onAdopt(found, sourceKeyLabel(found.key, administered, t))
           }
@@ -321,7 +331,12 @@ export function LeadSourcesCard() {
   const [renaming, setRenaming] = useState<LeadSource | null>(null);
   const [removing, setRemoving] = useState<LeadSource | null>(null);
   const removal = useRemovalFocus();
-  const failure = [adopt, update].find((m) => m.isError);
+  const failure = [adopt, update]
+    .filter((m) => m.isError)
+    .sort((a, b) => b.submittedAt - a.submittedAt)[0];
+  const refusalId = useId();
+  const refusedPatch = failure === update ? update.variables : undefined;
+  const refusedAdopt = failure === adopt ? adopt.variables?.key : undefined;
   const administered = rowsOf(query.data?.data);
   const discovered = rowsOf(query.data?.discovered);
   const columns = sourceColumns({
@@ -329,6 +344,10 @@ export function LeadSourcesCard() {
     plural,
     locale,
     grants: { canEdit, canRemove },
+    refusedFor: (source, field) =>
+      refusedPatch?.id === source.id && refusedPatch[field] !== undefined
+        ? refusalId
+        : undefined,
     onUpdate: (patch) => update.mutate(patch),
     onRename: (source) => {
       rename.reset();
@@ -379,6 +398,9 @@ export function LeadSourcesCard() {
           discovered={discovered}
           administered={administered}
           canCreate={canCreate}
+          refusedFor={(found) =>
+            refusedAdopt === found.key ? refusalId : undefined
+          }
           onAdopt={(found, label) =>
             adopt.mutate({ key: found.key, label, intent: "neutral" })
           }
@@ -387,7 +409,11 @@ export function LeadSourcesCard() {
       <PanelNotices
         readOnly={refusal && t(refusal)}
         refused={
-          failure && { title: t("leadSources.notSaved"), error: failure.error }
+          failure && {
+            title: t("leadSources.notSaved"),
+            error: failure.error,
+            id: refusalId,
+          }
         }
       />
       {adding && (

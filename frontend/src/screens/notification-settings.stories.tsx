@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -123,16 +123,22 @@ export const StandingDefaultsPhone: Story = {
   render: story(standingDefaults()),
 };
 
-// A refused write names the row it was about, once, under the rows.
 export const SaveRefused: Story = {
   render: story(standingDefaults(), true),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(
-      await canvas.findByRole("combobox", { name: /Automations that ran/ }),
-    );
+    const refused = await canvas.findByRole("combobox", {
+      name: /Automations that ran/,
+    });
+    await userEvent.click(refused);
     await userEvent.click(await body.findByRole("option", { name: "Off" }));
-    await canvas.findByRole("alert");
+    const alert = await canvas.findByRole("alert");
+    await expect(refused.getAttribute("aria-describedby")).toContain(alert.id);
+    await expect(
+      canvas
+        .getByRole("combobox", { name: /Approvals waiting on you/ })
+        .getAttribute("aria-describedby"),
+    ).not.toContain(alert.id);
   },
 };

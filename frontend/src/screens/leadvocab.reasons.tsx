@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../api/client";
 import { rowsOf } from "../api/rows";
 import { Button, EmptyState } from "../design-system/atoms";
@@ -87,6 +87,7 @@ function reasonColumns({
   locale,
   canEdit,
   canRemove,
+  refusedFor,
   onActive,
   onRename,
   onRemove,
@@ -96,6 +97,7 @@ function reasonColumns({
   locale: Locale;
   canEdit: boolean;
   canRemove: boolean;
+  refusedFor: (reason: LeadDisqualifyReason) => string | undefined;
   onActive: (reason: LeadDisqualifyReason, active: boolean) => void;
   onRename: (reason: LeadDisqualifyReason) => void;
   onRemove: (reason: LeadDisqualifyReason) => void;
@@ -124,6 +126,7 @@ function reasonColumns({
       fold: "end",
       render: (reason) => (
         <Switch
+          describedBy={refusedFor(reason)}
           label={t("leadSources.activeFor", { label: reason.label })}
           labelHidden
           checked={reason.active}
@@ -162,6 +165,7 @@ export function LeadDisqualifyReasonsCard() {
   const [namingOpen, setNamingOpen] = useState(false);
   const [removing, setRemoving] = useState<LeadDisqualifyReason | null>(null);
   const removal = useRemovalFocus();
+  const refusalId = useId();
   const reasons = rowsOf(query.data);
   const write = naming.mode === "rename" ? rename : create;
   const refused = nameRefusal(write.error, t, "leadReasons.duplicate");
@@ -177,6 +181,10 @@ export function LeadDisqualifyReasonsCard() {
     locale,
     canEdit,
     canRemove,
+    refusedFor: (reason) =>
+      update.isError && update.variables?.id === reason.id
+        ? refusalId
+        : undefined,
     onActive: (reason, active) => update.mutate({ id: reason.id, active }),
     onRename: (reason) => open({ mode: "rename", reason }),
     onRemove: (reason) => {
@@ -227,7 +235,11 @@ export function LeadDisqualifyReasonsCard() {
         readOnly={refusal && t(refusal)}
         refused={
           update.isError
-            ? { title: t("leadSources.notSaved"), error: update.error }
+            ? {
+                title: t("leadSources.notSaved"),
+                error: update.error,
+                id: refusalId,
+              }
             : undefined
         }
       />

@@ -2,11 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
+  permissionDenied,
   StoryProviders,
 } from "../testing/story-utils";
 import { RecordRolesCard } from "./recordroles";
@@ -76,13 +77,20 @@ const DUPLICATE = {
   detail: "conflict",
 };
 
-function story(allow: Parameters<typeof meRoute>[0], refuseName = false) {
+function story(
+  allow: Parameters<typeof meRoute>[0],
+  refuseName = false,
+  refuseFlip = false,
+) {
   return () => {
     installFetchStub({
       "GET /me": meRoute(allow),
       "GET /record-roles": () => jsonResponse(ROLES),
       ...(refuseName && {
         "POST /record-roles": () => jsonResponse(DUPLICATE, 409),
+      }),
+      ...(refuseFlip && {
+        "PATCH /record-roles/role-delivery_lead": permissionDenied,
       }),
     });
     return (
@@ -186,4 +194,24 @@ export const AddingRoleDark: Story = {
   render: story(ADMIN),
   play: openTheAddForm,
   globals: { theme: "dark" },
+};
+
+export const RefusedSwitch: Story = {
+  render: story(ADMIN, false, true),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const refused = await canvas.findByRole("switch", {
+      name: "Delivery lead can be newly assigned",
+    });
+    await userEvent.click(refused);
+    await canvas.findByText("Change was not saved");
+    await expect(refused).toHaveAccessibleDescription(
+      expect.stringContaining("Change was not saved"),
+    );
+    await expect(
+      canvas.getByRole("switch", {
+        name: "Sales engineer can be newly assigned",
+      }),
+    ).not.toHaveAttribute("aria-describedby");
+  },
 };
