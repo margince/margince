@@ -15,7 +15,7 @@ import { stubClipboard } from "../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../i18n";
 import { jsonResponse } from "../../screens/company.fixtures";
 import { meFixture } from "../../testing/mefixture";
-import { OAuthAppCard } from "./oauth-app";
+import { OAuthAppCard, UnitOAuthAppCards } from "./oauth-app";
 
 afterEach(() => {
   cleanup();
@@ -427,5 +427,64 @@ describe("the Microsoft app card", () => {
     mount(stored());
     await screen.findByLabelText("Client ID");
     expect(screen.queryByLabelText("Directory (tenant) ID")).toBeNull();
+  });
+});
+
+describe("the extension units' app cards", () => {
+  const BOOKS_URI = "https://api.acme.test/v1/ext-oauth/books/callback";
+
+  function mountUnits(list: unknown[]) {
+    const fetchMock = vi.fn(async (request: Request) => {
+      const url = new URL(request.url).pathname;
+      if (url.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { capture_settings: ["read", "update"] } }),
+        );
+      }
+      if (url.endsWith("/installation/oauth-apps")) {
+        return jsonResponse({ data: list });
+      }
+      return jsonResponse(
+        list.find((app) =>
+          url.endsWith(`/${(app as { provider: string }).provider}`),
+        ),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={qc}>
+        <LocaleProvider>
+          <UnitOAuthAppCards />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+  }
+
+  // The core vendors have their own cards, so the list's google and microsoft
+  // entries must not be drawn a second time.
+  it("draws one card per unit app, under the unit's title, and none for the core vendors", async () => {
+    mountUnits([
+      { ...absent(), provider: "google" },
+      { ...absent(), provider: "microsoft" },
+      {
+        provider: "books",
+        title: "Books ledger",
+        unit: "ledger",
+        configured: false,
+        client_id: "",
+        source: "none",
+        redirect_uris: [{ purpose: "extension_connect", url: BOOKS_URI }],
+      },
+    ]);
+    expect(
+      await screen.findByText(/The Books ledger extension cannot be connected/),
+    ).toBeTruthy();
+    expect(screen.getByText(BOOKS_URI)).toBeTruthy();
+    expect(screen.getByText("Connect")).toBeTruthy();
+    expect(screen.queryByText("Google app")).toBeNull();
+    expect(screen.queryByText("Microsoft app")).toBeNull();
   });
 });

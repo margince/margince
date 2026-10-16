@@ -243,7 +243,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// reporting no app and no URLs to register — and it would do so only on
 		// the option orders where keyvault happens to run last, which nothing
 		// holds.
-		s.connectorAppHandlers.store = connectorApps
+		s.connectorAppHandlers.store = connectorApps.WithUnitApps(composedUnitApp)
 		// And the connect transport resolves the STORED app per request, so an
 		// app set through Settings works without restarting the api. The worker
 		// resolves it the same way for the sync poll's token refresh, which is

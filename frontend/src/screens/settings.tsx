@@ -15,7 +15,7 @@ import { AutonomySettingsCard } from "../features/automations/autonomy-settings"
 import { ConnectedAgentsCard } from "../features/automations/connected-agents";
 import { ExtensionAccessCard } from "../features/automations/extension-access";
 import { ExtensionUnitsCard } from "../features/automations/extension-units";
-import { OAuthAppCard } from "../features/automations/oauth-app";
+import { OAuthAppCards } from "../features/automations/oauth-app";
 import { OvernightGrantCard } from "../features/automations/overnight-grant";
 import { TagVocabularyCard } from "../features/lists/tagadmin";
 import { formatNumber } from "../format/format";
@@ -168,8 +168,7 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
         <>
           <SignInMethodsCard />
           <AgentConnectionsCard />
-          <OAuthAppCard provider="google" />
-          <OAuthAppCard provider="microsoft" />
+          <OAuthAppCards />
         </>
       );
 

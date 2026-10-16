@@ -33,7 +33,7 @@
 2081 frontend/src/screens/companies.tsx
 2409 frontend/src/screens/deals.test.tsx
 1082 frontend/src/screens/compose.tsx
-641 frontend/src/screens/settings.tsx
+640 frontend/src/screens/settings.tsx
 2727 frontend/src/screens/leads.test.tsx
 3331 frontend/src/screens/compose.test.tsx
 3165 frontend/src/screens/deals.tsx

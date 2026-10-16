@@ -51,7 +51,7 @@ const CARDS_THE_REGISTER_REACHED = [
   "FxRatesCard",
   "CompanyContextCard",
   "SignInMethodsCard",
-  "OAuthAppCard",
+  "OAuthAppCards",
   "ExtensionAccessCard",
   "UsersAdminCard",
   "TeamsCard",

@@ -58,6 +58,11 @@ export const routes: readonly MockRoute[] = [
   },
   {
     method: "GET",
+    path: "/installation/oauth-apps",
+    handle: session.oauthApps,
+  },
+  {
+    method: "GET",
     path: (path) => path.startsWith("/installation/oauth-apps/"),
     handle: session.oauthApp,
   },

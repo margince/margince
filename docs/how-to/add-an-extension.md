@@ -743,6 +743,51 @@ the sync reads `InvoicesFor` for each linked customer. It writes only what chang
 Test the three functions against answers you recorded from the vendor's own API docs, so the test needs
 no network. A check against the live vendor runs on a schedule, outside the merge gate.
 
+## Sign an admin in to your vendor: declare an OAuth app
+
+When your unit reads a vendor's API for the company, an admin must agree at the vendor first. Declare the
+vendor's OAuth app, and the core runs the sign-in for you:
+
+```go
+OAuthApps: []extension.OAuthApp{{
+	Provider: "books", Title: "Books ledger",
+	AuthURL:  "https://auth.ledgerly.example/authorize",
+	TokenURL: "https://auth.ledgerly.example/token",
+	Scopes:   []string{"ledger.read"},
+	OnGrant:  keepCompany,
+}},
+```
+
+What the core does:
+
+1. **Settings → Sign-in and apps** shows a card for the app, named by its `Title`. An admin stores the
+   client ID and secret there, and registers the redirect URI the card shows at the vendor.
+2. Your screen starts the sign-in with `POST /v1/ext-oauth/books/connect`, and sends the browser to the
+   `authorize_url` it gets back. Only a user who may add an integration can start it.
+3. The vendor sends the admin back to `/v1/ext-oauth/books/callback`. The core gets the tokens, keeps them
+   sealed for the workspace, and calls `OnGrant`.
+4. The admin lands on your screen at `#/ext/<unit>?oauth=<outcome>&provider=books`. Read it with
+   `useOAuthReturn()` from `@margince/frontend/app`.
+
+Then, before each call to the vendor:
+
+```go
+token, err := rt.OAuthAccessToken(ctx, "books")
+// errors.Is(err, extension.ErrOAuthNotConnected) or extension.ErrOAuthRevoked: an admin must connect again
+```
+
+The rules:
+
+- **Ask for the token each time.** Keep none. The core gets a new one from the vendor when the old one ends,
+  and keeps the new refresh token if the vendor sends one.
+- **Never log a token**, and never put one in an error.
+- **Keep vendor extras yourself.** Some vendors send the company the admin picked as a query value on the
+  return. `OnGrant` gets these values in `OAuthGrant.Params`; keep what you need in your own `Secrets`. If
+  `OnGrant` returns an error, the core drops the tokens and the admin sees a failure.
+- **`Provider` is `snake_case`**, at most 32 characters, unique in the build, and never a core name such as
+  `google` or `microsoft`. `AuthURL` and `TokenURL` must use `https`.
+- `rt.OAuthDisconnect(ctx, "books")` drops the tokens. It does not end the grant at the vendor.
+
 ## Write the unit's own test
 
 Each unit is its own Go module, so the `./...` of the backend never reaches it. It carries its own tests, which

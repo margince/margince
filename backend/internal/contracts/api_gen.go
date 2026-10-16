@@ -5965,24 +5965,6 @@ func (e ConnectConnectorRequestReturnTo) Valid() bool {
 	}
 }
 
-// Defines values for ConnectorAppProvider.
-const (
-	ConnectorAppProviderGoogle    ConnectorAppProvider = "google"
-	ConnectorAppProviderMicrosoft ConnectorAppProvider = "microsoft"
-)
-
-// Valid indicates whether the value is a known member of the ConnectorAppProvider enum.
-func (e ConnectorAppProvider) Valid() bool {
-	switch e {
-	case ConnectorAppProviderGoogle:
-		return true
-	case ConnectorAppProviderMicrosoft:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ConnectorAppSource.
 const (
 	ConnectorAppSourceEnvironment ConnectorAppSource = "environment"
@@ -6006,15 +5988,18 @@ func (e ConnectorAppSource) Valid() bool {
 
 // Defines values for ConnectorAppRedirectUriPurpose.
 const (
-	ConnectorAppRedirectUriPurposeCalendarConnect ConnectorAppRedirectUriPurpose = "calendar_connect"
-	ConnectorAppRedirectUriPurposeMailboxConnect  ConnectorAppRedirectUriPurpose = "mailbox_connect"
-	ConnectorAppRedirectUriPurposeSignIn          ConnectorAppRedirectUriPurpose = "sign_in"
+	ConnectorAppRedirectUriPurposeCalendarConnect  ConnectorAppRedirectUriPurpose = "calendar_connect"
+	ConnectorAppRedirectUriPurposeExtensionConnect ConnectorAppRedirectUriPurpose = "extension_connect"
+	ConnectorAppRedirectUriPurposeMailboxConnect   ConnectorAppRedirectUriPurpose = "mailbox_connect"
+	ConnectorAppRedirectUriPurposeSignIn           ConnectorAppRedirectUriPurpose = "sign_in"
 )
 
 // Valid indicates whether the value is a known member of the ConnectorAppRedirectUriPurpose enum.
 func (e ConnectorAppRedirectUriPurpose) Valid() bool {
 	switch e {
 	case ConnectorAppRedirectUriPurposeCalendarConnect:
+		return true
+	case ConnectorAppRedirectUriPurposeExtensionConnect:
 		return true
 	case ConnectorAppRedirectUriPurposeMailboxConnect:
 		return true
@@ -31864,8 +31849,8 @@ type ConnectorApp struct {
 	// Configured Whether this vendor's app is available to this installation from any source — true when `source` is `stored` or `environment`. It answers "can this vendor's mail and calendar be connected", which is a different question from where the app came from.
 	Configured bool `json:"configured"`
 
-	// Provider Which vendor's app this describes, echoed so a cached response cannot be misread.
-	Provider ConnectorAppProvider `json:"provider"`
+	// Provider Which vendor's app this describes, echoed so a cached response cannot be misread. `google` or `microsoft` for the core's own vendors, otherwise the provider of an extension unit's OAuth app.
+	Provider string `json:"provider"`
 
 	// RedirectUris Every callback URL that must be registered as a redirect URI on the vendor's OAuth client, one per purpose this deployment actually serves. A purpose that is not composed is absent rather than listed, because telling an operator to register a URL nothing answers sends them to debug a mismatch that was never the cause.
 	RedirectUris []ConnectorAppRedirectUri `json:"redirect_uris"`
@@ -31875,10 +31860,13 @@ type ConnectorApp struct {
 
 	// Tenant The Entra directory (tenant) id a Microsoft app is pinned to. OMITTED, not empty, when the app authorizes any company — and always omitted for `google`, which has no such concept, where a value would be a field that silently does nothing. A client that expects a string here reads the unpinned case as the wrong shape rather than as absent.
 	Tenant *string `json:"tenant,omitempty"`
-}
 
-// ConnectorAppProvider Which vendor's app this describes, echoed so a cached response cannot be misread.
-type ConnectorAppProvider string
+	// Title What Settings calls an extension unit's app, as the unit declares it. Absent for the core's own vendors, whose names the client already knows.
+	Title *string `json:"title,omitempty"`
+
+	// Unit The extension unit that declares this app, absent for the core's own vendors. Its screen is `#/ext/<unit>`, where an admin connects the app once it is stored.
+	Unit *string `json:"unit,omitempty"`
+}
 
 // ConnectorAppSource Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
 type ConnectorAppSource string
@@ -31895,9 +31883,14 @@ type ConnectorAppInput struct {
 	Tenant *string `json:"tenant,omitempty"`
 }
 
+// ConnectorAppList defines model for ConnectorAppList.
+type ConnectorAppList struct {
+	Data []ConnectorApp `json:"data"`
+}
+
 // ConnectorAppRedirectUri One callback URL that must be registered as a redirect URI on the vendor's OAuth client. The `url` is the exact value this deployment sends the vendor, byte for byte — paste it as given rather than reconstructing it.
 type ConnectorAppRedirectUri struct {
-	// Purpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
+	// Purpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. `extension_connect` is the consent callback of an extension unit's OAuth app, and the only purpose such an app lists. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
 	// None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
 	Purpose ConnectorAppRedirectUriPurpose `json:"purpose"`
 
@@ -31905,7 +31898,7 @@ type ConnectorAppRedirectUri struct {
 	Url string `json:"url"`
 }
 
-// ConnectorAppRedirectUriPurpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
+// ConnectorAppRedirectUriPurpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. `extension_connect` is the consent callback of an extension unit's OAuth app, and the only purpose such an app lists. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
 // None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
 type ConnectorAppRedirectUriPurpose string
 
@@ -36280,6 +36273,12 @@ type ExcuseNoticeCase struct {
 
 // ExcuseNoticeCaseState Which claim this is: the duty does not apply, or it was met somewhere this installation did not send from.
 type ExcuseNoticeCaseState string
+
+// ExtOAuthConnectResponse defines model for ExtOAuthConnectResponse.
+type ExtOAuthConnectResponse struct {
+	// AuthorizeUrl The vendor's consent URL, carrying the signed `state`. Send the browser there.
+	AuthorizeUrl string `json:"authorize_url"`
+}
 
 // ExtensionDirectory The composed extension set, sorted by name. Not paginated, for the same reason `RoleDirectory` is not: the set is fixed at build time and small by construction.
 type ExtensionDirectory struct {
@@ -52303,6 +52302,9 @@ type ContactProfileFieldKey string
 // Cursor defines model for Cursor.
 type Cursor = string
 
+// ExtOAuthProvider defines model for ExtOAuthProvider.
+type ExtOAuthProvider = string
+
 // FactKey defines model for FactKey.
 type FactKey = string
 
@@ -55739,6 +55741,18 @@ type BackfillEmploymentImportJSONBody struct {
 	After *openapi_types.UUID `json:"after,omitempty"`
 	Apply *bool               `json:"apply,omitempty"`
 	Limit *int                `json:"limit,omitempty"`
+}
+
+// ExtOauthCallbackParams defines parameters for ExtOauthCallback.
+type ExtOauthCallbackParams struct {
+	// Code The vendor's authorization code
+	Code *string `form:"code,omitempty" json:"code,omitempty"`
+
+	// State Signed binding to the workspace
+	State string `form:"state" json:"state"`
+
+	// Error Set instead of `code` when the admin declined.
+	Error *string `form:"error,omitempty" json:"error,omitempty"`
 }
 
 // GetFieldHistoryParams defines parameters for GetFieldHistory.
@@ -71315,6 +71329,12 @@ type ServerInterface interface {
 	// Download the whole-workspace export bundle.
 	// (GET /exports/bundle)
 	DownloadExportBundle(w http.ResponseWriter, r *http.Request)
+	// OAuth redirect callback — completes an admin's consent to an extension unit's app.
+	// (GET /ext-oauth/{provider}/callback)
+	ExtOauthCallback(w http.ResponseWriter, r *http.Request, provider ExtOAuthProvider, params ExtOauthCallbackParams)
+	// Start an admin's consent to an extension unit's OAuth app.
+	// (POST /ext-oauth/{provider}/connect)
+	ConnectExtOauth(w http.ResponseWriter, r *http.Request, provider ExtOAuthProvider)
 	// List the composed extension units and what each contributes. Human-only, read-only; needs the extension_access read grant.
 	// (GET /extensions)
 	ListExtensions(w http.ResponseWriter, r *http.Request)
@@ -71453,6 +71473,9 @@ type ServerInterface interface {
 	// The installation's entitlement and seat usage (admin/ops).
 	// (GET /installation/license)
 	GetLicenseEntitlement(w http.ResponseWriter, r *http.Request)
+	// Every vendor whose OAuth app this installation can hold, and whether it holds one.
+	// (GET /installation/oauth-apps)
+	ListOauthApps(w http.ResponseWriter, r *http.Request)
 	// Remove one vendor's OAuth app (admin/ops).
 	// (DELETE /installation/oauth-apps/{provider})
 	DeleteOauthApp(w http.ResponseWriter, r *http.Request, provider string)
@@ -75209,6 +75232,18 @@ func (_ Unimplemented) DownloadExportBundle(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// OAuth redirect callback — completes an admin's consent to an extension unit's app.
+// (GET /ext-oauth/{provider}/callback)
+func (_ Unimplemented) ExtOauthCallback(w http.ResponseWriter, r *http.Request, provider ExtOAuthProvider, params ExtOauthCallbackParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Start an admin's consent to an extension unit's OAuth app.
+// (POST /ext-oauth/{provider}/connect)
+func (_ Unimplemented) ConnectExtOauth(w http.ResponseWriter, r *http.Request, provider ExtOAuthProvider) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List the composed extension units and what each contributes. Human-only, read-only; needs the extension_access read grant.
 // (GET /extensions)
 func (_ Unimplemented) ListExtensions(w http.ResponseWriter, r *http.Request) {
@@ -75482,6 +75517,12 @@ func (_ Unimplemented) DownloadJurisdictionDocument(w http.ResponseWriter, r *ht
 // The installation's entitlement and seat usage (admin/ops).
 // (GET /installation/license)
 func (_ Unimplemented) GetLicenseEntitlement(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Every vendor whose OAuth app this installation can hold, and whether it holds one.
+// (GET /installation/oauth-apps)
+func (_ Unimplemented) ListOauthApps(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -96859,6 +96900,106 @@ func (siw *ServerInterfaceWrapper) DownloadExportBundle(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// ExtOauthCallback operation middleware
+func (siw *ServerInterfaceWrapper) ExtOauthCallback(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider ExtOAuthProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ExtOauthCallbackParams
+
+	// ------------- Optional query parameter "code" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "code", r.URL.Query(), &params.Code, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "code"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "code", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "state", r.URL.Query(), &params.State, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "state"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "error" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "error", r.URL.Query(), &params.Error, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "error"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "error", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExtOauthCallback(w, r, provider, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConnectExtOauth operation middleware
+func (siw *ServerInterfaceWrapper) ConnectExtOauth(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider ExtOAuthProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConnectExtOauth(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListExtensions operation middleware
 func (siw *ServerInterfaceWrapper) ListExtensions(w http.ResponseWriter, r *http.Request) {
 
@@ -98367,6 +98508,26 @@ func (siw *ServerInterfaceWrapper) GetLicenseEntitlement(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetLicenseEntitlement(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListOauthApps operation middleware
+func (siw *ServerInterfaceWrapper) ListOauthApps(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListOauthApps(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -115094,6 +115255,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/exports/bundle", wrapper.DownloadExportBundle)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ext-oauth/{provider}/callback", wrapper.ExtOauthCallback)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/ext-oauth/{provider}/connect", wrapper.ConnectExtOauth)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/extensions", wrapper.ListExtensions)
 	})
 	r.Group(func(r chi.Router) {
@@ -115230,6 +115397,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/license", wrapper.GetLicenseEntitlement)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/oauth-apps", wrapper.ListOauthApps)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/installation/oauth-apps/{provider}", wrapper.DeleteOauthApp)

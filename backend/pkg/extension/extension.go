@@ -355,6 +355,15 @@ type Extension struct {
 	// which is the state every unit was in before this field existed.
 	Inbound []InboundEndpoint
 
+	// OAuthApps are the vendors whose consent flow the core runs for this unit
+	// (see OAuthApp). The core keeps the client credentials and the tokens: a
+	// refresh needs the client secret, and only the core holds it. The unit asks
+	// for a live access token through Runtime.OAuthAccessToken.
+	//
+	// Declared here rather than in a contract fragment for Inbound's reason: the
+	// connect and callback routes are core routes, not the unit's own.
+	OAuthApps []OAuthApp
+
 	// Migrations is the unit's SQL schema layer: a read-only filesystem
 	// holding the MigrationsDir directory of NNNN_name.up.sql/.down.sql
 	// pairs, which a unit supplies with `//go:embed migrations`. A unit

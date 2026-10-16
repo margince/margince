@@ -10769,6 +10769,15 @@ export const en = {
   "oauthApp.microsoft.removeConfirmTitle": "Remove the Microsoft app?",
   "oauthApp.microsoft.removeConfirmBody":
     "The client secret cannot be read back, so restoring the app requires re-entering the client ID and secret from the Entra portal. Outlook mail and calendar connections use this app; Google and IMAP mailboxes are unaffected. First-run setup asks for an app again.",
+  "oauthApp.unit.sub":
+    "The {title} extension reads its vendor’s API through an OAuth app your company registers with that vendor.",
+  "oauthApp.unit.absent":
+    "No app is stored. The {title} extension cannot be connected until one is.",
+  "oauthApp.unit.redirectSub":
+    "Register this URI as a redirect URI on the app in the vendor’s developer console.",
+  "oauthApp.unit.removeConfirmTitle": "Remove the {title} app?",
+  "oauthApp.unit.removeConfirmBody":
+    "The client secret cannot be read back, so restoring the app requires re-entering the client ID and secret. The {title} extension can no longer refresh its access until an app is stored again.",
   "oauthApp.configured": "In use: {clientId}",
   "oauthApp.fromEnvironment":
     "In use from this installation’s configuration: {clientId}. An app stored here overrides it until removed.",
@@ -10789,6 +10798,7 @@ export const en = {
   "oauthApp.redirect.mailbox_connect": "Mailbox",
   "oauthApp.redirect.calendar_connect": "Calendar",
   "oauthApp.redirect.sign_in": "Sign-in",
+  "oauthApp.redirect.extension_connect": "Connect",
   "oauthApp.redirectTitle": "Authorized redirect URIs",
   "oauthApp.clientId": "Client ID",
   "oauthApp.clientSecret": "Client secret",

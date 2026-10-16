@@ -148,6 +148,16 @@ type Runtime interface {
 	// workspace, and answers when it is QUEUED rather than when it has run.
 	// See syncnow.go for what it promises and what it cannot do.
 	SyncNow(ctx context.Context, job JobName) error
+
+	// OAuthAccessToken answers a live access token for one of this unit's
+	// OAuthApps in the invocation's workspace. The core refreshes an expired one
+	// at the vendor. Call it before each vendor call and keep nothing.
+	// ErrOAuthNotConnected and ErrOAuthRevoked both mean an admin must connect.
+	OAuthAccessToken(ctx context.Context, provider OAuthProvider) (string, error)
+
+	// OAuthDisconnect forgets the workspace's grant for one of this unit's
+	// OAuthApps. It does not revoke the grant at the vendor.
+	OAuthDisconnect(ctx context.Context, provider OAuthProvider) error
 }
 
 // CallerType is which kind of principal an invocation is running as. It mirrors

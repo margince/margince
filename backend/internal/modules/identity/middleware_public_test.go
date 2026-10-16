@@ -70,3 +70,19 @@ func TestStatusIsExplicitlyPublic(t *testing.T) {
 		t.Fatal("the status probe must expose GET anonymously, not every method on its path")
 	}
 }
+
+// Under /v1/ext-oauth only the consent callback skips the session. The connect
+// route starts a workspace grant, so it needs the admin's session.
+func TestOnlyTheExtensionOAuthCallbackSkipsTheSession(t *testing.T) {
+	for path, want := range map[string]bool{
+		"/v1/ext-oauth/books/callback":       true,
+		"/v1/ext-oauth/books/connect":        false,
+		"/v1/ext-oauth/books/admin/callback": false,
+		"/v1/ext-oauth//callback":            false,
+		"/v1/ext-oauth/callback":             false,
+	} {
+		if got := AdmittedWithoutSession(httptest.NewRequest(http.MethodGet, path, nil)); got != want {
+			t.Errorf("AdmittedWithoutSession(GET %s) = %v, want %v", path, got, want)
+		}
+	}
+}
