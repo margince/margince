@@ -66,10 +66,12 @@ func TestDecodeRefusesAnSVGTheRendererCannotDrawAsNotDrawableAndNotAsText(t *tes
 		"a marker":                    svgOpen + `<defs><marker id="k"/></defs><path d="M0 0L10 10" marker-end="url(#k)" stroke="#000"/></svg>`,
 		"a referenced filter in defs": svgOpen + `<defs><filter id="f"/></defs><circle cx="25" cy="25" r="20" style="filter:url(#f)"/></svg>`,
 		"a clipPath outside defs":     svgOpen + `<clipPath id="c"><rect width="10" height="10"/></clipPath><circle cx="25" cy="25" r="20" clip-path="url(#c)"/></svg>`,
-		"a use reference":             svgOpen + `<defs><circle id="c" r="5"/></defs><use href="#c"/></svg>`,
-		"an unclosed document":        svgOpen + `<circle cx="25" cy="25" r="20"`,
+		"a referenced half-crop clipPath in defs":         svgOpen + `<defs><clipPath id="c"><rect width="50" height="50"/></clipPath></defs><g clip-path="url(#c)"><circle cx="25" cy="25" r="20"/></g></svg>`,
+		"a mask used before it is defined":                svgOpen + `<circle cx="25" cy="25" r="20" mask="url(#m)"/><defs><mask id="m"><rect width="100" height="50"/></mask></defs></svg>`,
+		"a use reference":                                 svgOpen + `<defs><circle id="c" r="5"/></defs><use href="#c"/></svg>`,
+		"an unclosed document":                            svgOpen + `<circle cx="25" cy="25" r="20"`,
 		"a currentColor fill the renderer cannot resolve": svgOpen + `<circle cx="25" cy="25" r="20" fill="currentColor"/></svg>`,
-		"an empty viewBox": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 0 0"><circle r="5"/></svg>`,
+		"an empty viewBox":                                `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 0 0"><circle r="5"/></svg>`,
 	}
 	for name, doc := range cases {
 		t.Run(name, func(t *testing.T) {
