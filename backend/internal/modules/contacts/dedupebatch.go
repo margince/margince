@@ -19,11 +19,16 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// CompanyBatch is the companies a batch will create.
+// CompanyBatch is the companies a batch will hold, one member per record. A
+// record a later row writes again keeps the names it wrote last, as the
+// commit's ladder meets it.
 type CompanyBatch struct {
-	members []batchCompany
+	members  []batchCompany
+	byRecord map[string]int
 	// The gate scores a pairing only when it shares a squashed name or a word
-	// sameCompanyToken matches. A member is found by one or the other.
+	// sameCompanyToken matches. A member is found by one or the other. A key a
+	// renamed member no longer carries still finds it, and is scored on its
+	// current names.
 	bySquashed map[string][]int
 	byToken    map[string][]int
 	// tokensOfLength holds each distinct word under its rune length, since
@@ -37,26 +42,39 @@ type batchCompany struct {
 	names          companyNamePair
 }
 
-// Add records a company the batch will create.
-func (b *CompanyBatch) Add(c CompanyCandidate) {
-	if b.domains == nil {
-		b.bySquashed, b.byToken, b.tokensOfLength, b.domains = map[string][]int{}, map[string][]int{}, map[int][]string{}, map[string]bool{}
+// Put files the company a row of record will write. A name the row leaves
+// blank keeps the one filed before, and domains merge, as an update's do.
+func (b *CompanyBatch) Put(record string, c CompanyCandidate) {
+	if b.byRecord == nil {
+		b.byRecord, b.domains = map[string]int{}, map[string]bool{}
+		b.bySquashed, b.byToken, b.tokensOfLength = map[string][]int{}, map[string][]int{}, map[int][]string{}
 	}
-	at := len(b.members)
-	member := batchCompany{display: c.DisplayName, legal: c.LegalName, names: companyNamePairOf(c.DisplayName, c.LegalName)}
+	at, filed := b.byRecord[record]
+	if !filed {
+		at = len(b.members)
+		b.byRecord[record] = at
+		b.members = append(b.members, batchCompany{})
+	}
+	member := &b.members[at]
+	if c.DisplayName != "" {
+		member.display = c.DisplayName
+	}
+	if c.LegalName != "" {
+		member.legal = c.LegalName
+	}
+	member.names = companyNamePairOf(member.display, member.legal)
 	for _, form := range member.names.forms() {
 		if form.squashed != "" {
 			b.bySquashed[form.squashed] = append(b.bySquashed[form.squashed], at)
 		}
 		for _, token := range form.tokens {
-			if _, filed := b.byToken[token]; !filed {
+			if _, known := b.byToken[token]; !known {
 				length := len([]rune(token))
 				b.tokensOfLength[length] = append(b.tokensOfLength[length], token)
 			}
 			b.byToken[token] = append(b.byToken[token], at)
 		}
 	}
-	b.members = append(b.members, member)
 	for _, d := range c.Domains {
 		b.domains[normalizeDomain(d)] = true
 	}
@@ -169,24 +187,38 @@ func bindParam[T any](args *[]any, value T) string {
 // domain is then the only employer evidence between two rows, and a name alone
 // cannot clear the threshold.
 type ContactBatch struct {
-	byDomain map[string][]batchContact
+	members  []batchContact
+	byRecord map[string]int
+	byDomain map[string][]int
 }
 
 // batchContact is a member's name as given, and as the scorer compares it.
 type batchContact struct {
 	name, normalized string
+	domains          map[string]bool
 }
 
-// Add records a contact the batch will create. A consumer mail domain is not
-// filed: the ladder never reads one as a shared employer.
-func (b *ContactBatch) Add(c ContactCandidate) {
-	if b.byDomain == nil {
-		b.byDomain = map[string][]batchContact{}
+// Put files the contact a row of record will write, as CompanyBatch.Put does.
+// A consumer mail domain is not filed: the ladder never reads one as a shared
+// employer.
+func (b *ContactBatch) Put(record string, c ContactCandidate) {
+	if b.byRecord == nil {
+		b.byRecord, b.byDomain = map[string]int{}, map[string][]int{}
 	}
-	member := batchContact{name: c.FullName, normalized: normalizeName(c.FullName)}
+	at, filed := b.byRecord[record]
+	if !filed {
+		at = len(b.members)
+		b.byRecord[record] = at
+		b.members = append(b.members, batchContact{domains: map[string]bool{}})
+	}
+	member := &b.members[at]
+	if c.FullName != "" {
+		member.name, member.normalized = c.FullName, normalizeName(c.FullName)
+	}
 	for _, e := range c.Emails {
-		if domain := emailDomain(e); domain != "" && sharedEmployerDomain(c, domain) {
-			b.byDomain[domain] = append(b.byDomain[domain], member)
+		if domain := emailDomain(e); domain != "" && sharedEmployerDomain(c, domain) && !member.domains[domain] {
+			member.domains[domain] = true
+			b.byDomain[domain] = append(b.byDomain[domain], at)
 		}
 	}
 }
@@ -211,7 +243,8 @@ func (b *ContactBatch) Rivals(c ContactCandidate) ContactRivals {
 		// Every member filed here shares only this domain with c, so the
 		// employer term is one number for all of them.
 		employer := companyMatch(c, contactCandidateRow{mailDomains: []string{domain}})
-		for _, member := range b.byDomain[domain] {
+		for _, at := range b.byDomain[domain] {
+			member := b.members[at]
 			similarity := normalizedNameSimilarity(name, member.normalized)
 			// Corroboration is the costlier test, and only a pair the employer
 			// lifts over the bar needs it.

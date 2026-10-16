@@ -7,7 +7,7 @@ import "testing"
 
 func TestCompanyBatchFindsTheLookAlikesTheLadderWouldScore(t *testing.T) {
 	var batch CompanyBatch
-	batch.Add(CompanyCandidate{DisplayName: "Skipco Trading", Domains: []string{"Skipco.Example"}})
+	batch.Put("row:1", CompanyCandidate{DisplayName: "Skipco Trading", Domains: []string{"Skipco.Example"}})
 
 	cases := []struct {
 		candidate CompanyCandidate
@@ -38,7 +38,7 @@ func TestCompanyBatchFindsATypoInTheOneDistinctiveWord(t *testing.T) {
 	}
 	for _, pair := range pairs {
 		var batch CompanyBatch
-		batch.Add(CompanyCandidate{DisplayName: pair[0]})
+		batch.Put("row:1", CompanyCandidate{DisplayName: pair[0]})
 		_, ladder := companyPairRival(companyNamePairOf(pair[1], ""), companyNamePairOf(pair[0], ""))
 		if !ladder {
 			t.Fatalf("the ladder does not score %q against %q, so the case proves nothing", pair[1], pair[0])
@@ -49,10 +49,34 @@ func TestCompanyBatchFindsATypoInTheOneDistinctiveWord(t *testing.T) {
 	}
 }
 
+// A record two rows write is one member under the name it was written last.
+func TestABatchMemberTakesTheNameItsRecordWasWrittenLast(t *testing.T) {
+	var companies CompanyBatch
+	companies.Put("id:1", CompanyCandidate{DisplayName: "Nordwind Logistik"})
+	companies.Put("id:1", CompanyCandidate{DisplayName: "Kestrel Data"})
+	companies.Put("id:1", CompanyCandidate{})
+	if rivals := companies.Rivals(CompanyCandidate{DisplayName: "Nordwind Logistik GmbH"}); len(rivals.scored) != 0 {
+		t.Errorf("the company's first name still found a rival after the record was renamed")
+	}
+	if rivals := companies.Rivals(CompanyCandidate{DisplayName: "Kestrel Data GmbH"}); len(rivals.scored) != 1 {
+		t.Errorf("the company's last name found %d rivals, want 1", len(rivals.scored))
+	}
+
+	var contacts ContactBatch
+	contacts.Put("id:1", ContactCandidate{FullName: "Mareike Olsen", Emails: []string{"mareike@kestrel.example"}})
+	contacts.Put("id:1", ContactCandidate{FullName: "Tom Brandt", Emails: []string{"tom@kestrel.example"}})
+	if rivals := contacts.Rivals(ContactCandidate{FullName: "Mareike Olsen", Emails: []string{"m.olsen@kestrel.example"}}); rivals.Any() {
+		t.Errorf("the contact's first name still found a rival after the record was renamed")
+	}
+	if rivals := contacts.Rivals(ContactCandidate{FullName: "Tom Brandt", Emails: []string{"t.brandt@kestrel.example"}}); len(rivals.names) != 1 {
+		t.Errorf("the contact's last name found %d rivals, want 1, filed once under its one domain", len(rivals.names))
+	}
+}
+
 func TestContactBatchNeedsTheSharedEmployerDomainTheLadderNeeds(t *testing.T) {
 	var batch ContactBatch
-	batch.Add(ContactCandidate{FullName: "Mareike Olsen", Emails: []string{"mareike@kestrel.example"}})
-	batch.Add(ContactCandidate{FullName: "Tom Brandt", Emails: []string{"tom@gmail.com"}})
+	batch.Put("row:1", ContactCandidate{FullName: "Mareike Olsen", Emails: []string{"mareike@kestrel.example"}})
+	batch.Put("row:2", ContactCandidate{FullName: "Tom Brandt", Emails: []string{"tom@gmail.com"}})
 
 	cases := []struct {
 		name, email string

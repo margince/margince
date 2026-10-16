@@ -550,3 +550,18 @@ func TestARenamedCompanyIsALookAlikeUnderItsNewName(t *testing.T) {
 	want.Updated = 1
 	assertPreviewIsTheCommit(t, preview, final, want)
 }
+
+// A company two rows rename is met under its last name only.
+func TestACompanyRenamedTwiceIsNoLookAlikeOfItsFirstNewName(t *testing.T) {
+	e := setupImportApp(t)
+	id := createCompanyReturningID(t, e, map[string]any{"display_name": "Kestrel Data"})
+	file := "Id,Company\n" + id + ",Nordwind Logistik\n" + id + ",Zephyr Freight\n,Nordwind Logistik GmbH\n"
+
+	preview, final := previewThenCommit(t, e, "company", file, map[string]any{
+		"mapping": map[string]string{"Id": "id", "Company": "display_name"}, "on_duplicate": "skip",
+	})
+
+	want := dispositionOf(1, 0, 0, 0)
+	want.Updated = 2
+	assertPreviewIsTheCommit(t, preview, final, want)
+}

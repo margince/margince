@@ -117,8 +117,8 @@ func (f *inFileLedger) reconsider(
 }
 
 // record files the row's claimed keys when the prediction says it lands. It
-// files the names the row lands under as rivals for later rows. An update's
-// names count too, since the commit's ladder meets the record as it left it.
+// files the names the row lands under as rivals for later rows, by record. A
+// record two rows write is then met under the names it was written last.
 func (f *inFileLedger) record(row migration.Row, outcome predictedOutcome) {
 	claimed, claimant, freeing, freer := f.claimed, f.claimant, f.freeing, f.freer
 	f.claimed, f.claimant, f.freeing, f.freer = nil, "", nil, ids.UUID{}
@@ -143,9 +143,9 @@ func (f *inFileLedger) record(row migration.Row, outcome predictedOutcome) {
 		if domain := canonicalFor(fieldDomain, fields[fieldDomain]); domain != "" {
 			held.Domains = []string{domain}
 		}
-		f.companies.Add(held)
+		f.companies.Put(claimant, held)
 	case migration.ObjectContact:
-		f.contactRows.Add(contactCandidateOf(fields, f.writers.consumerMail))
+		f.contactRows.Put(claimant, contactCandidateOf(fields, f.writers.consumerMail))
 	}
 }
 
