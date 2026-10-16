@@ -200,6 +200,10 @@ reset from taking over.
 boot. `consent.controller_particulars` takes the fields `LegalName`, `PostalAddress`,
 `PrivacyContact`, `ObjectionRoute` and `AdvertiserContact`, spelled as the saved row spells them.
 
+A boot-set `contacts.unassigned_escalation_user_id` is not checked against the colleagues. If it
+names no active colleague, a lead with no owner that passes its first-response target reaches
+nobody. The log then warns with the key and the source of the setting.
+
 A boot-set `deals.legal_review_enabled` wins over `seeds.legal_review`, and a boot-set
 `privacy.retain_only` wins over `seeds.retention.default_policy`.
 

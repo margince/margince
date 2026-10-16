@@ -6,57 +6,29 @@
 package contacts
 
 import (
+	"bytes"
 	"context"
 	"errors"
-	"io/fs"
+	"log/slog"
+	"strings"
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
-	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// contactsConfig is this module's configuration as a program loads it from
-// environ alone, reading and saving through pool.
-func contactsConfig(t *testing.T, pool *pgxpool.Pool, environ ...string) *config.Config {
-	t.Helper()
-	reg, err := config.NewRegistry(ConfigSettings())
-	if err != nil {
-		t.Fatalf("the contacts settings do not register: %v", err)
-	}
-	cfg, err := config.Load(reg, config.Sources{
-		Environ:  environ,
-		ReadFile: func(string) ([]byte, error) { return nil, fs.ErrNotExist },
-	})
-	if err != nil {
-		t.Fatalf("loading the contacts settings from %v: %v", environ, err)
-	}
-	return cfg.WithDatabase(settings.New(pool, settings.NewRegistry(cfg.StoredDefinitions()...)))
-}
-
-// bindForTest binds cfg as the program's configuration until the test ends.
-func bindForTest(t *testing.T, cfg *config.Config) {
-	t.Helper()
-	before := config.Bound()
-	config.Bind(cfg)
-	t.Cleanup(func() { config.Bind(before) })
-}
-
-// A target the environment sets pairs with the switch an admin saved, so a
-// lead read applies both. Not parallel: the binding is the process's own.
+// A target the environment sets pairs with the switch an admin saved. The
+// settings surface reads it through the configuration its writes lock against.
 func TestABootSetTargetPairsWithTheSavedSwitch(t *testing.T) {
 	e := setupPromoteConsent(t)
 	pool := e.store.db.Pool()
 	on, saved := true, 30
-	if _, err := e.store.WithSettings(contactsConfig(t, pool)).UpdateLeadSettings(e.ctx,
+	if _, err := e.store.WithSettings(configtest.StoredOver(t, pool, ConfigSettings())).UpdateLeadSettings(e.ctx,
 		UpdateLeadSettingsInput{FirstResponseEnabled: &on, FirstResponseTargetMinutes: &saved}); err != nil {
 		t.Fatalf("saving the policy with nothing set at boot: %v", err)
 	}
-	locked := contactsConfig(t, pool, "MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES=90")
-	bindForTest(t, locked)
+	locked := configtest.StoredOver(t, pool, ConfigSettings(), "MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES=90")
 
 	got, err := e.store.WithSettings(locked).GetLeadSettings(e.ctx)
 	if err != nil {
@@ -71,8 +43,7 @@ func TestABootSetTargetPairsWithTheSavedSwitch(t *testing.T) {
 // any other seat is refused as locked before that seat is judged.
 func TestABootSetEscalationSeatRefusesAnotherBeforeJudgingIt(t *testing.T) {
 	e := setupPromoteConsent(t)
-	locked := contactsConfig(t, e.store.db.Pool(), "MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID="+e.user.String())
-	bindForTest(t, locked)
+	locked := configtest.StoredOver(t, e.store.db.Pool(), ConfigSettings(), "MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID="+e.user.String())
 	store := e.store.WithSettings(locked)
 
 	got, err := store.GetLeadSettings(e.ctx)
@@ -101,7 +72,7 @@ func TestABootSetTemplateIsTheOneASendSignsWith(t *testing.T) {
 		SignatureTemplate.Key()); err != nil {
 		t.Fatal(err)
 	}
-	bindForTest(t, contactsConfig(t, e.store.db.Pool(), "MARGINCE_CONTACTS_SIGNATURE_TEMPLATE=<p>{name}</p>"))
+	configtest.Bind(t, configtest.StoredOver(t, e.store.db.Pool(), ConfigSettings(), "MARGINCE_CONTACTS_SIGNATURE_TEMPLATE=<p>{name}</p>"))
 
 	signature, err := e.store.SignatureFor(e.ctx, e.user)
 	if err != nil {
@@ -109,5 +80,31 @@ func TestABootSetTemplateIsTheOneASendSignsWith(t *testing.T) {
 	}
 	if signature.Template != "<p>{name}</p>" {
 		t.Fatalf("a send signs with %q, want the template the environment sets", signature.Template)
+	}
+}
+
+// A boot-set seat no colleague holds escalates to nobody, and the log names
+// the setting and the variable that set it. Not parallel: the log and the
+// binding are the process's own.
+func TestABootSetSeatNoColleagueHoldsIsWarnedAbout(t *testing.T) {
+	e := setupPromoteConsent(t)
+	locked := configtest.StoredOver(t, e.store.db.Pool(), ConfigSettings(),
+		"MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID="+ids.NewV7().String())
+	var logged bytes.Buffer
+	restore := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn})))
+	t.Cleanup(func() { slog.SetDefault(restore) })
+
+	got, err := e.store.WithSettings(locked).GetLeadSettings(e.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.UnassignedEscalationUserId != nil {
+		t.Fatalf("a seat no colleague holds reads %v, want nobody", got.UnassignedEscalationUserId)
+	}
+	for _, want := range []string{UnassignedEscalationUserID.Key(), "MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID"} {
+		if !strings.Contains(logged.String(), want) {
+			t.Errorf("the warning %q does not name %s", logged.String(), want)
+		}
 	}
 }

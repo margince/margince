@@ -53,7 +53,7 @@ var SignatureTemplate = config.DefineStored(config.Spec[string]{
 	},
 	Doc: "The workspace's email signature layout, which replaces each sender's own signature. Empty means none.",
 }, config.Store{
-	RBACObject: "installation_settings", AuditVerb: "update",
+	RBACObject: "installation_settings", AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the send path applies it to the sender's own sign-off
 })
 

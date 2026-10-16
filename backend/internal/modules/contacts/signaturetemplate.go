@@ -29,8 +29,9 @@ func (s *Store) GetSignatureTemplate(ctx context.Context) (string, error) {
 }
 
 // SaveSignatureTemplate writes the layout through the configuration, which
-// gates it, refuses a boot-set value, validates and audits it. The send path sanitizes the markup, so what
-// an admin types never reaches a recipient unchecked.
+// gates it, refuses a boot-set value, validates and audits it. The send path
+// sanitizes the markup, so what an admin types never reaches a recipient
+// unchecked.
 func (s *Store) SaveSignatureTemplate(ctx context.Context, template string) (string, error) {
 	if err := auth.Require(ctx, "installation_settings", principal.ActionUpdate); err != nil {
 		return "", err

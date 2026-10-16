@@ -44,7 +44,7 @@ var FirstResponseEnabled = config.DefineStored(config.Spec[bool]{
 	Default: config.Some(false),
 	Doc:     "Track a first-response target on every lead.",
 }, config.Store{
-	RBACObject: leadVocabularyObject, AuditVerb: leadSettingsAuditVerb,
+	RBACObject: leadVocabularyObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // every SLA computation applies it to a lead read already gated by lead:read
 })
 
@@ -59,7 +59,7 @@ var FirstResponseTargetMinutes = config.DefineStored(config.Spec[int]{
 	Max:     config.Some(firstResponseMaxMinutes),
 	Doc:     "Minutes a lead may wait for its first genuine response once its clock starts.",
 }, config.Store{
-	RBACObject: leadVocabularyObject, AuditVerb: leadSettingsAuditVerb,
+	RBACObject: leadVocabularyObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the band it produces rides lead rows the caller is separately gated for
 })
 
@@ -90,14 +90,15 @@ var UnassignedEscalationUserID = config.DefineStored(config.Spec[string]{
 		}
 		return nil
 	},
-	Doc: "The user id of the colleague who answers for a lead nobody owns once it breaches its target. Empty means nobody.",
+	Doc: "The user id of the colleague who answers for a lead nobody owns once it breaches its target. Empty means nobody. " +
+		"A value set at boot is not checked against the colleagues: one who is not an active colleague escalates to nobody, and the log warns.",
 }, config.Store{
-	RBACObject: leadVocabularyObject, AuditVerb: leadSettingsAuditVerb,
+	RBACObject: leadVocabularyObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the SLA sweep applies it to decide who a breach is addressed to
 })
 
-// leadSettingsAuditVerb is the verb a lead-settings change is audited under.
-const leadSettingsAuditVerb = "update"
+// settingsAuditVerb is the audit action every contacts settings change records.
+const settingsAuditVerb = "update"
 
 // ConfigSettings are this module's settings in the configuration registry.
 func ConfigSettings() []config.Any {
@@ -116,16 +117,11 @@ func (p leadSLAPolicy) atRisk() time.Duration { return p.target / 4 }
 
 func (p leadSLAPolicy) targetMinutes() int { return int(p.target / time.Minute) }
 
-// loadLeadSLAPolicy reads the two settings inside the caller's transaction,
-// through the machinery reader and so without the settings object gate. The
-// policy is an input to a lead read already gated by lead:read. A connector or
-// agent reading leads must not need a settings grant to see them.
-//
-// The paired reader, because two single reads take two snapshots under
-// `READ COMMITTED`. A write of both could land between them and pair values no
-// operator configured together. A boot value stands in for its row.
-func loadLeadSLAPolicy(ctx context.Context, tx pgx.Tx) (leadSLAPolicy, error) {
-	enabled, minutes, err := config.StoredApplyPairTx(ctx, tx, config.Bound(), FirstResponseEnabled, FirstResponseTargetMinutes)
+// loadLeadSLAPolicy reads the two settings ungated: the policy feeds a lead read
+// already gated by lead:read. One paired read is one snapshot under
+// `READ COMMITTED`, so a write of both cannot land between two reads.
+func loadLeadSLAPolicy(ctx context.Context, tx pgx.Tx, cfg *config.Config) (leadSLAPolicy, error) {
+	enabled, minutes, err := config.StoredApplyPairTx(ctx, tx, cfg, FirstResponseEnabled, FirstResponseTargetMinutes)
 	if err != nil {
 		return leadSLAPolicy{target: DefaultFirstResponseTarget}, fmt.Errorf("load lead sla policy: %w", err)
 	}
@@ -137,7 +133,7 @@ func loadLeadSLAPolicy(ctx context.Context, tx pgx.Tx) (leadSLAPolicy, error) {
 func (s *Store) slaPolicy(ctx context.Context) (leadSLAPolicy, error) {
 	var policy leadSLAPolicy
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
-		policy, err = loadLeadSLAPolicy(ctx, tx)
+		policy, err = loadLeadSLAPolicy(ctx, tx, s.bootConfig())
 		return err
 	})
 	return policy, err
@@ -159,6 +155,15 @@ func (s *Store) FirstResponseTracked(ctx context.Context) (bool, error) {
 		return false, err
 	}
 	return policy.enabled, nil
+}
+
+// bootConfig is the configuration this store reads boot values from: the
+// injected one, which the lead-settings writes lock against, else the program's.
+func (s *Store) bootConfig() *config.Config {
+	if s.settings != nil {
+		return s.settings
+	}
+	return config.Bound()
 }
 
 // WithSettings wires the configuration the lead-settings endpoints read and
@@ -185,7 +190,7 @@ func (s *Store) GetLeadSettings(ctx context.Context) (crmcontracts.LeadSettings,
 	// naming somebody who has since been suspended reads null here for the
 	// same reason it escalates to nobody there.
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
-		target, configured, err := unassignedEscalationTarget(ctx, tx)
+		target, configured, err := unassignedEscalationTarget(ctx, tx, s.bootConfig())
 		if err != nil {
 			return err
 		}

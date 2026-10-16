@@ -729,7 +729,7 @@
           }
         },
         "controller_particulars": {
-          "description": "Who this installation is, as every message it sends must say.",
+          "description": "Who this installation is, as every message it sends must say: legal name, postal address, privacy contact, objection route and advertiser contact.",
           "type": "object",
           "additionalProperties": false,
           "properties": {
@@ -766,7 +766,7 @@
           "type": "integer"
         },
         "unassigned_escalation_user_id": {
-          "description": "The user id of the colleague who answers for a lead nobody owns once it breaches its target. Empty means nobody.",
+          "description": "The user id of the colleague who answers for a lead nobody owns once it breaches its target. Empty means nobody. A value set at boot is not checked against the colleagues: one who is not an active colleague escalates to nobody, and the log warns.",
           "type": "string"
         },
         "signature_template": {

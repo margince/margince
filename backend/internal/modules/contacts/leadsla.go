@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -282,27 +283,13 @@ func leadTouchesFor(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline 
 	return out, rows.Err()
 }
 
-// unassignedEscalationTarget reads the configured intake seat.
-//
-// Answers (id, true) when an installation has named a seat that can still work
-// the queue, and (zero, false) for every way it has not: no setting, an empty
-// one, an unparseable one, or a seat that has since been suspended, archived,
-// turned into an agent or dropped to a read seat. A seat nobody reads is the
-// same silence as no seat at all, wearing a configuration that looks correct.
-//
-// Read through config.StoredApplyTx, the ungated machinery reader, as
-// loadLeadSLAPolicy reads its pair. This runs inside the SLA sweep under the
-// system principal, as an input to a decision that is the sweep's to make. The
-// object gate cannot answer no there: auth.Require admits PrincipalSystem.
-//
-// The machinery reader refuses any entry not declared MachineryApplied, so the
-// licence to read this one ungated is checked rather than agreed. It reports a
-// decode failure as an error, which is the answer this path needs.
-// The setting is written through a validated entry, so a value that will not
-// decode means somebody wrote the row around it, and answering "nobody is
-// configured" would hide that behind a queue quietly escalating to no one.
-func unassignedEscalationTarget(ctx context.Context, tx pgx.Tx) (ids.UUID, bool, error) {
-	configured, err := config.StoredApplyTx(ctx, tx, config.Bound(), UnassignedEscalationUserID)
+// unassignedEscalationTarget reads the configured intake seat: (id, true) for a
+// seat that can still work the queue, else (zero, false). A seat that is set
+// but is no active colleague also logs a warning. The read is the ungated machinery
+// one, since the SLA sweep runs as the system principal. A value that will not
+// decode is an error: somebody wrote the row around its validator.
+func unassignedEscalationTarget(ctx context.Context, tx pgx.Tx, cfg *config.Config) (ids.UUID, bool, error) {
+	configured, err := config.StoredApplyTx(ctx, tx, cfg, UnassignedEscalationUserID)
 	if err != nil {
 		return ids.UUID{}, false, fmt.Errorf("load the unassigned escalation seat: %w", err)
 	}
@@ -320,9 +307,22 @@ func unassignedEscalationTarget(ctx context.Context, tx pgx.Tx) (ids.UUID, bool,
 	// principal — and its eligibility half is exactly the question.
 	if err := auth.EnsureAssignee(ctx, tx, id); err != nil {
 		if errors.As(err, new(*auth.AssigneeNotAllowedError)) {
+			warnSeatAnswersNobody(ctx, cfg)
 			return ids.UUID{}, false, nil
 		}
 		return ids.UUID{}, false, fmt.Errorf("check the unassigned escalation seat: %w", err)
 	}
 	return id, true, nil
+}
+
+// warnSeatAnswersNobody names the setting and where its value comes from. No
+// save checks a boot value against the colleagues, so this is where an operator
+// learns the seat they set answers for nothing.
+func warnSeatAnswersNobody(ctx context.Context, cfg *config.Config) {
+	source := "the database"
+	if origin, locked := cfg.Locked(UnassignedEscalationUserID.Key()); locked {
+		source = origin.String()
+	}
+	slog.WarnContext(ctx, "contacts: the unassigned escalation seat is not an active colleague, so a breach on an unowned lead escalates to nobody",
+		"setting", UnassignedEscalationUserID.Key(), "origin", source)
 }

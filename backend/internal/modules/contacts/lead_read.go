@@ -18,6 +18,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -130,7 +131,7 @@ func readLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, archived storekit.A
 	if archived == storekit.LiveOnly {
 		q += liveOnlyClause
 	}
-	policy, err := loadLeadSLAPolicy(ctx, tx)
+	policy, err := loadLeadSLAPolicy(ctx, tx, config.Bound())
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
