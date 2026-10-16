@@ -6144,7 +6144,7 @@ export const de = {
   "import.reason.contact_duplicate_skipped":
     "Jemand, der zu dieser Zeile passt, ist bereits im CRM, und dieser Lauf soll Duplikate überspringen.",
   "import.reason.contact_email_held":
-    "Diese E-Mail-Adresse ist im CRM bereits vergeben, daher kann die Zeile keinen zweiten Kontakt damit anlegen.",
+    "Ein anderer Kontakt hat diese E-Mail-Adresse bereits, im CRM oder in einer früheren Zeile dieser Datei, daher kann die Zeile keinen zweiten Kontakt damit anlegen.",
   "import.reason.contact_unnamed":
     "Die Zeile enthält weder einen Namen noch eine E-Mail-Adresse und benennt daher keinen Kontakt.",
   "import.reason.currency_unset":
@@ -6152,7 +6152,7 @@ export const de = {
   "import.reason.description_too_long":
     "Die Beschreibung hat {length} Zeichen; eine Unternehmensbeschreibung fasst höchstens {max}.",
   "import.reason.domain_held":
-    "Diese Domain gehört im CRM bereits einem anderen Unternehmen, daher kann die Zeile kein zweites Unternehmen damit anlegen.",
+    "Ein anderes Unternehmen hat diese Domain bereits, im CRM oder in einer früheren Zeile dieser Datei, daher kann die Zeile kein zweites Unternehmen damit anlegen.",
   "import.reason.duplicate_email":
     "Diese E-Mail-Adresse gehört bereits einem anderen Kontakt.",
   "import.reason.employer_column_empty":
@@ -6172,6 +6172,8 @@ export const de = {
     "Kein Unternehmen, das du sehen kannst, hat die ID „{value}“. Es kann archiviert oder zusammengeführt worden sein oder aus einem anderen System stammen.",
   "import.reason.id_on_non_company":
     "Nur eine Unternehmenszeile kann „{column}“ angeben; eine Zeile vom Typ {object} wird über ihren eigenen Schlüssel erkannt.",
+  "import.reason.lead_email_held":
+    "Ein anderer Lead hat diese E-Mail-Adresse bereits, im CRM oder in einer früheren Zeile dieser Datei, daher kann die Zeile sie keinem zweiten Lead geben.",
   "import.reason.link_ambiguous":
     "Mehr als ein Unternehmen heißt „{name}“, daher kann nur ein Mensch entscheiden, welches diesen Kontakt beschäftigt.",
   "import.reason.link_ambiguous_dropped":
@@ -6181,7 +6183,7 @@ export const de = {
   "import.reason.link_not_found_dropped":
     "Kein Unternehmen mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wurde ohne Verknüpfung importiert.",
   "import.reason.linkedin_held":
-    "Diese LinkedIn-URL gehört im CRM bereits einem anderen Datensatz, daher kann die Zeile sie nicht beanspruchen.",
+    "Ein anderer Datensatz hat diese LinkedIn-URL bereits, im CRM oder in einer früheren Zeile dieser Datei, daher kann die Zeile sie nicht beanspruchen.",
   "import.reason.natural_key_taken":
     "Ein Datensatz mit diesem Schlüssel existiert bereits.",
   "import.reason.not_a_date":

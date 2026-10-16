@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -39,6 +40,9 @@ func (w *csvWriters) createLead(ctx context.Context, row migration.Row, typed ma
 	})
 	if errors.Is(err, errImportReplayed) {
 		return skippedFor(naturalKeyTakenWhy), nil
+	}
+	if _, ok := errors.AsType[*contacts.DuplicateLeadError](err); ok {
+		return skippedFor(leadEmailClaimedWhy), nil
 	}
 	if linkedInClaimed(err) {
 		return skippedFor(linkedInClaimedWhy), nil

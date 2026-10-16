@@ -15,7 +15,6 @@ package integration
 import (
 	"net/http"
 	"slices"
-	"strings"
 	"testing"
 )
 
@@ -145,7 +144,7 @@ func TestCSVImportRefusesADomainAnotherCompanyHolds(t *testing.T) {
 	}
 	var named bool
 	for _, issue := range report.Issues {
-		if strings.Contains(issue.Reason, "already held by another company") {
+		if issue.ReasonCode == "domain_held" {
 			named = true
 		}
 	}

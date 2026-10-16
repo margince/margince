@@ -202,21 +202,19 @@ func squashedCompanyName(name string) string {
 	return strings.Join(strings.FieldsFunc(companyNameForMatching(name), nameWordSeparators), "")
 }
 
-// sharesADistinctiveWord is the gate itself: may these two names be scored?
+// formsShareADistinctiveWord is the gate itself: may these two names be scored?
 //
 // The SQUASHED NAME is asked first, because compounding hides a shared word
 // rather than removing it — "DigitalOcean" is one token and shares no word with
 // "Digital Ocean". The TOKEN PASS then asks whether they share a word that means
 // something.
-func sharesADistinctiveWord(a, b string) bool {
+func formsShareADistinctiveWord(a, b companyNameForm) bool {
 	// An EMPTY squashed name is not a match with another empty one: two names
 	// made entirely of punctuation have said nothing about being one company.
-	if squashed := squashedCompanyName(a); squashed != "" && squashed == squashedCompanyName(b) {
+	if a.squashed != "" && a.squashed == b.squashed {
 		return true
 	}
-	left, right := distinctiveCompanyTokens(a), distinctiveCompanyTokens(b)
-	_, leftMarket := matchingFormOf(a)
-	_, rightMarket := matchingFormOf(b)
+	left, right := a.tokens, b.tokens
 	// A name that reduced to NOTHING shares no word and stops here: a Vietnamese
 	// name of only its legal form and trade vocabulary strips to empty
 	// (companynameforms.go), and two such names have said nothing.
@@ -234,7 +232,7 @@ func sharesADistinctiveWord(a, b string) bool {
 	//
 	// EITHER side declaring the market is enough: a company does not stop being
 	// Vietnamese when someone types its bare brand.
-	if isSyllabicMarket(leftMarket) || isSyllabicMarket(rightMarket) {
+	if a.syllabic || b.syllabic {
 		return 2*shared > min(len(left), len(right))
 	}
 	return true

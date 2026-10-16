@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -37,16 +38,8 @@ import (
 // An address that already belongs to someone else is a SKIP with a reason, never
 // an automatic merge: two records that look like one contact is a question for a
 // human, and answering it by writing is the one move no undo reverses.
-// different seam, a different required field and a different reason for
-// skipping. Folding them together would put one branch between the two
-// record types and hide which rule each row was judged by.
-//
-//nolint:dupl // createCompany has the same SHAPE and not the same job: a
 func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
 	in := contactCreateFrom(textFields(row.Fields), typed, w.sourceSystem, w.provenanceOf(row.ExternalID))
-	if in.FullName == "" {
-		return skippedFor(contactUnnamedWhy), nil
-	}
 	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
 		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
 			return ids.UUID{}, err
@@ -107,8 +100,8 @@ func (w *csvWriters) applyContact(ctx context.Context, id ids.UUID, in contacts.
 	return err
 }
 
-// contactEmailIsClaimed answers whether the estate already holds this row's
-// address, WITHOUT regard to who holds it.
+// contactEmailHeld answers whether a live contact outside except holds this
+// address. With nothing left out it reads the page's answer.
 //
 // It is deliberately not visibility-filtered, and that is the opposite of the
 // rule the collision check below follows. The reason is that the two answer
@@ -123,27 +116,21 @@ func (w *csvWriters) applyContact(ctx context.Context, id ids.UUID, in contacts.
 // why, and it does not: the reason names the row's own address, which the caller
 // supplied, and never the incumbent or their existence beyond the fact that this
 // address is spoken for.
-func (w *csvWriters) contactEmailAlreadyHeld(ctx context.Context, row migration.Row) (bool, error) {
-	if w.object != migration.ObjectContact {
-		return false, nil
-	}
-	email := strings.TrimSpace(textFields(row.Fields)[fieldEmail])
-	if email == "" {
-		return false, nil
-	}
-	if claimed, read := w.heldEmails[email]; read {
+func (w *csvWriters) contactEmailHeld(ctx context.Context, email string, except []ids.UUID) (bool, error) {
+	if claimed, read := w.heldEmails[email]; read && len(except) == 0 {
 		return claimed, nil
 	}
-	held, err := w.emailsHeld(ctx, []string{email})
+	held, err := w.emailsHeld(ctx, []string{email}, except)
 	if err != nil {
 		return false, err
 	}
 	return held[email], nil
 }
 
-// emailsHeld answers which of these addresses a live contact holds, in one
-// query. Postgres lowers each address, as the store's own key does.
-func (w *csvWriters) emailsHeld(ctx context.Context, emails []string) (map[string]bool, error) {
+// emailsHeld answers which of these addresses a live contact outside except
+// holds, in one query. Postgres lowers each address, as the store's own key
+// does.
+func (w *csvWriters) emailsHeld(ctx context.Context, emails []string, except []ids.UUID) (map[string]bool, error) {
 	held := make(map[string]bool, len(emails))
 	for _, email := range emails {
 		held[email] = false
@@ -151,7 +138,9 @@ func (w *csvWriters) emailsHeld(ctx context.Context, emails []string) (map[strin
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT given FROM unnest($1::text[]) AS given
-			 WHERE EXISTS (SELECT 1 FROM contact_email WHERE email = lower(given) AND archived_at IS NULL)`, emails)
+			 WHERE EXISTS (SELECT 1 FROM contact_email
+			                WHERE email = lower(given) AND archived_at IS NULL
+			                  AND ($2::uuid[] IS NULL OR contact_id <> ALL($2)))`, emails, except)
 		if err != nil {
 			return err
 		}
@@ -179,12 +168,41 @@ func (w *csvWriters) readPageEmails(ctx context.Context, rows []migration.Row) e
 			emails = append(emails, email)
 		}
 	}
-	held, err := w.emailsHeld(ctx, emails)
+	held, err := w.emailsHeld(ctx, emails, nil)
 	if err != nil {
 		return err
 	}
 	w.heldEmails = held
 	return nil
+}
+
+// contactCandidateOf is what the collision check asks the ladder about a row.
+func contactCandidateOf(fields map[string]string, consumerMail *freemail.Matcher) contacts.ContactCandidate {
+	var emails []string
+	if email := strings.TrimSpace(fields[fieldEmail]); email != "" {
+		emails = []string{email}
+	}
+	return contacts.ContactCandidate{
+		FullName: contactFullName(fields), Emails: emails, ConsumerMail: consumerMail,
+		// A collision check only reads, so it files no review pair for what it
+		// looked at. The create files its own.
+		QueueNameCollisions: false,
+	}
+}
+
+// leadEmailHeld answers whether a live lead outside except holds this
+// address. Not visibility-filtered, for the reason the contact check gives:
+// the store refuses a second lead on one address whoever holds it.
+func (w *csvWriters) leadEmailHeld(ctx context.Context, email string, except []ids.UUID) (bool, error) {
+	var held bool
+	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		var err error
+		held, err = storekit.LiveLeadEmailHeldOutside(ctx, tx, email, except)
+		return err
+	}); err != nil {
+		return false, fmt.Errorf("import: checking whether %q is already held: %w", email, err)
+	}
+	return held, nil
 }
 
 // contactCollides answers whether this row names someone the caller can already
@@ -216,16 +234,7 @@ func (w *csvWriters) contactCollides(ctx context.Context, row migration.Row) (bo
 		if err != nil {
 			return err
 		}
-		var emails []string
-		if email != "" {
-			emails = []string{email}
-		}
-		match, err := contacts.DedupeContact(ctx, tx, contacts.ContactCandidate{
-			FullName: name, Emails: emails, ConsumerMail: consumerMail,
-			// The preview writes nothing and routes nothing, so it has no
-			// business filing a review pair for what it merely looked at.
-			QueueNameCollisions: false,
-		})
+		match, err := contacts.DedupeContact(ctx, tx, contactCandidateOf(fields, consumerMail))
 		if err != nil || match.Decision == contacts.DecisionNoMatch {
 			return err
 		}

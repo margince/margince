@@ -11,13 +11,14 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 )
 
-// The three "held" reasons name the row's own value and nothing about the
+// The four "held" reasons name the row's own value and nothing about the
 // incumbent. They never say who holds it, nor whether the caller could see them.
 // duplicateEmailWhy is a merge candidate the run discloses and does not resolve.
 var (
 	boundArchivedWhy        = migration.Why(migration.ReasonRecordArchived)
 	linkedInClaimedWhy      = migration.Why(migration.ReasonLinkedinHeld)
 	domainClaimedWhy        = migration.Why(migration.ReasonDomainHeld)
+	leadEmailClaimedWhy     = migration.Why(migration.ReasonLeadEmailHeld)
 	contactEmailClaimedWhy  = migration.Why(migration.ReasonContactEmailHeld)
 	duplicateEmailWhy       = migration.Why(migration.ReasonDuplicateEmail)
 	naturalKeyTakenWhy      = migration.Why(migration.ReasonNaturalKeyTaken)

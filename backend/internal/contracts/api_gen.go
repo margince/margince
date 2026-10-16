@@ -10607,6 +10607,7 @@ const (
 	ImportReasonCodeIdNotACompanyId              ImportReasonCode = "id_not_a_company_id"
 	ImportReasonCodeIdNotVisible                 ImportReasonCode = "id_not_visible"
 	ImportReasonCodeIdOnNonCompany               ImportReasonCode = "id_on_non_company"
+	ImportReasonCodeLeadEmailHeld                ImportReasonCode = "lead_email_held"
 	ImportReasonCodeLeadNotFound                 ImportReasonCode = "lead_not_found"
 	ImportReasonCodeLeadNotFoundDropped          ImportReasonCode = "lead_not_found_dropped"
 	ImportReasonCodeLeadStatusNotImportable      ImportReasonCode = "lead_status_not_importable"
@@ -10772,6 +10773,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeIdNotVisible:
 		return true
 	case ImportReasonCodeIdOnNonCompany:
+		return true
+	case ImportReasonCodeLeadEmailHeld:
 		return true
 	case ImportReasonCodeLeadNotFound:
 		return true
