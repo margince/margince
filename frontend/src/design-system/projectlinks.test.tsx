@@ -116,13 +116,9 @@ describe("ProjectLinks", () => {
       // of production and proving nothing about it.
       attach: async () => {
         throw new ProblemError({
-          code: "validation_error",
-          detail: "role is required",
-          details: {
-            errors: [
-              { field: "role", code: "required", message: "role is required" },
-            ],
-          },
+          status: 404,
+          code: "not_found",
+          detail: "not found",
         });
       },
     });
@@ -136,7 +132,7 @@ describe("ProjectLinks", () => {
 
     // The refusal is the one moment the reader most needs to see what they
     // asked for, so the dialog stays.
-    expect(await screen.findByText("role is required")).toBeTruthy();
+    expect(await screen.findByText("not found")).toBeTruthy();
     expect(
       screen.getByRole("searchbox", { name: /Search projects/ }),
     ).toBeTruthy();

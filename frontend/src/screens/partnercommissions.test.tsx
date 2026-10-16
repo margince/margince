@@ -381,14 +381,14 @@ describe("deciding a commission entry", () => {
       body: {
         code: "validation_error",
         title: "Unprocessable",
-        detail: "This entry is already settled.",
+        detail: "cannot approve an entry that is paid",
         status: 422,
         details: {
           errors: [
             {
               field: "decision",
               code: "commission_transition_illegal",
-              message: "This entry is already settled.",
+              message: "cannot approve an entry that is paid",
             },
           ],
         },
@@ -398,7 +398,7 @@ describe("deciding a commission entry", () => {
     const dialog = await confirmApprove();
 
     expect(
-      await within(dialog).findByText("This entry is already settled."),
+      await within(dialog).findByText("cannot approve an entry that is paid"),
     ).toBeTruthy();
     expect(screen.queryByText(en["common.versionSkew"])).toBeNull();
     expect(ledgerReads.length).toBe(1);

@@ -35,8 +35,7 @@ type tsFunc struct {
 }
 
 // codeSource is how a helper's parameter reaches a Problem's code: by its
-// position, then the member path below it. status is the parameter that
-// carries the Problem's status; fallback is the code its default gives.
+// position, then the member path below it.
 type codeSource struct {
 	index    int
 	path     []string
@@ -693,9 +692,8 @@ func (r *problemFileReader) statusOf(entries []tsEntry) statusRead {
 	return statusRead{}
 }
 
-// boundStatus reads a status expression as a refusal: a 4xx or 5xx literal,
-// constant or table row, or a helper parameter its calls decide. Either side
-// of `??` or `||` counts. A value it cannot follow counts when named `status`.
+// boundStatus reads a status expression as a refusal. A value it cannot
+// follow counts when it is named `status`, since a mock's refusal is named so.
 func (r *problemFileReader) boundStatus(span tsSpan) statusRead {
 	tr := r.tree
 	if left, right, ok := fallbackSides(tr, span); ok {
@@ -884,9 +882,8 @@ func (r *problemFileReader) readCall(call int, source codeSource) bool {
 	return false
 }
 
-// callStatus judges the status a call passes a helper that takes one. A
-// literal decides; one the call takes from its own caller is passed on; one
-// it cannot follow may be a refusal.
+// callStatus judges the status a call passes a helper. One it cannot follow
+// may be a refusal, so its code is judged.
 func (r *problemFileReader) callStatus(args []tsSpan, param *codeSource) (status int, refusal bool, passed *codeRead) {
 	if param == nil || param.index >= len(args) {
 		return 0, true, nil

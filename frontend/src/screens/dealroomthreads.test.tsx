@@ -178,7 +178,8 @@ describe("a refused reply", () => {
     const reply = vi.fn(async () => {
       throw new ProblemError({
         code: "deal_room_thread_resolved",
-        detail: "The thread moved on. Read it again before replying.",
+        detail:
+          "deal room is resolved: this thread is resolved; open a new one to continue",
       });
     });
     draw({ reply });
@@ -187,7 +188,9 @@ describe("a refused reply", () => {
     await user.click(screen.getByRole("button", { name: /^Reply$/ }));
 
     // The server's OWN sentence, composed for a reader, still reaches them.
-    await waitFor(() => expect(screen.getByText(/moved on/)).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText(/open a new one to continue/)).toBeTruthy(),
+    );
     // And the draft survives — a refused write must not also lose the words.
     expect(screen.getByLabelText(/reply/i)).toHaveValue("Clause 7.");
   });

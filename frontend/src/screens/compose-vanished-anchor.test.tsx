@@ -152,7 +152,7 @@ describe("drafting a reply to a message that is gone", () => {
         jsonResponse(
           {
             title: "Bad Gateway",
-            detail: "provider unusable",
+            detail: "the provider returned no usable answer",
             code: "provider_unusable",
           },
           502,

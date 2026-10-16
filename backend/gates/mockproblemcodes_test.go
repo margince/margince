@@ -6,8 +6,9 @@
 package gates
 
 // Every Problem a frontend test, story or fixture answers carries a code the
-// server can send. A mock with a code no handler emits never reaches the
-// screen's branch or copy for it, so its test proves nothing about either.
+// server can send. A code no handler emits never reaches the screen's branch
+// or copy for it. Only the top-level code is judged, not details.errors[].code
+// nor the pairing of code and status.
 //
 // A product file that builds a Problem of its own marks it with
 // `problem-code:client` and a reason, on the line or the one above.
@@ -116,9 +117,8 @@ func quoteAll(texts []string) string {
 }
 
 // clientMadeSites answers the mocks a `problem-code:client` marker vouches
-// for. It counts in a `//` comment of a product file, with a reason. It vouches
-// only for a literal the same file builds on its line or the next. An imported
-// code is judged where it lands, so a product-named helper vouches for no test.
+// for. An imported code is judged where it lands, so a product-named helper
+// beside the tests cannot vouch for a test's code.
 func clientMadeSites(scans map[string]*problemFileScan) (vouched map[problemMock]bool, faults []string) {
 	vouched = map[problemMock]bool{}
 	for filePath, scan := range scans {
@@ -160,7 +160,7 @@ func frontendProblemMocks(t *testing.T) ([]problemMock, map[string]*problemFileS
 	moduleFile := frontendModuleFile(t)
 	scans := map[string]*problemFileScan{}
 	for _, file := range trackedFiles(t) {
-		if file.symlink || !moduleFile.MatchString(file.path) || !frontendLayer(file.path) {
+		if file.symlink || !moduleFile.MatchString(file.path) {
 			continue
 		}
 		raw, err := os.ReadFile(filepath.Join(repoRoot, file.path))
@@ -168,6 +168,8 @@ func frontendProblemMocks(t *testing.T) ([]problemMock, map[string]*problemFileS
 			t.Fatalf("reading %s: %v", file.path, err)
 		}
 		source := string(raw)
+		// A file that never spells `code` holds no mock. Skipping it was measured
+		// to cut the scan from 0.6s to 0.4s with the same mocks read.
 		if !strings.Contains(source, "code") {
 			continue
 		}
@@ -214,11 +216,6 @@ func frontendModuleFile(t *testing.T) *regexp.Regexp {
 		t.Fatalf("%s: MODULE_FILE is no pattern Go can read: %v", moduleFileOwner, err)
 	}
 	return pattern
-}
-
-func frontendLayer(filePath string) bool {
-	return strings.HasPrefix(filePath, "frontend/src/") || strings.HasPrefix(filePath, "frontend/e2e/") ||
-		strings.HasPrefix(filePath, "extensions/") && slices.Contains(strings.Split(filePath, "/"), "frontend")
 }
 
 func parseTS(source, filePath string) (*tsTree, error) {
@@ -501,7 +498,7 @@ func TestAMarkerVouchesOnlyForTheCodeItsFileBuilds(t *testing.T) {
 }
 
 // The census is planted with every site shape it reads, beside the real
-// httperr, and with the three shapes it must refuse.
+// httperr, and with the shapes it must refuse.
 func TestTheEmittedCodeCensusReadsEveryPlantedSite(t *testing.T) {
 	t.Parallel()
 	const planted, virtual = "gates/testdata/problemcodesites.go.txt", "internal/planted/sites.go"
@@ -534,13 +531,21 @@ func TestTheEmittedCodeCensusReadsEveryPlantedSite(t *testing.T) {
 			t.Errorf("a fault outside the planted file: %s", fault)
 		}
 	}
-	for _, refused := range []string{`fmt.Sprintf("planted_%d", n)`, "strings.ToLower(s)", "return valueHelper"} {
-		at := fmt.Sprintf("%s:%d:", virtual, lineAt(string(raw), strings.Index(string(raw), refused)))
+	refusedShapes := []string{
+		`fmt.Sprintf("planted_%d", n)`, "strings.ToLower(s)", "return valueHelper",
+		"refusal.Code, err = codeAndErr()", `h.refusal.Code = "planted_nested"`, "\trepeatedSecond",
+	}
+	for _, refused := range refusedShapes {
+		offset := strings.Index(string(raw), refused)
+		if offset < 0 {
+			t.Fatalf("%s no longer holds the planted shape %q; plant it again or drop it from this list", planted, refused)
+		}
+		at := fmt.Sprintf("%s:%d:", virtual, lineAt(string(raw), offset))
 		if !slices.ContainsFunc(faulted, func(fault string) bool { return strings.HasPrefix(fault, at) }) {
 			t.Errorf("the census did not refuse %s at %s; it faulted %q", refused, at, faulted)
 		}
 	}
-	if len(faulted) != 3 {
-		t.Errorf("faulted %d planted sites, want 3: %q", len(faulted), faulted)
+	if len(faulted) != len(refusedShapes) {
+		t.Errorf("faulted %d planted sites, want %d: %q", len(faulted), len(refusedShapes), faulted)
 	}
 }

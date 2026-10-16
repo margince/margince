@@ -54,6 +54,11 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+// The detail the store's CHECK-constraint net answers when a render's write
+// is refused, the one 422 the render route sends.
+const VALUE_REFUSED =
+  "a value violates a rule on this record; check the picklist options";
+
 const baseOffer = {
   id: "o-1",
   deal_id: "d-1",
@@ -627,9 +632,12 @@ describe("render PDF action (OP-12)", () => {
       baseOffer,
       {
         body: {
-          title: "Unprocessable",
-          detail: "offer has no line items to render",
+          title: "Unprocessable Entity",
+          detail: VALUE_REFUSED,
           code: "validation_error",
+          details: {
+            errors: [{ field: "body", code: "value_not_allowed" }],
+          },
         },
         status: 422,
       },
@@ -641,9 +649,7 @@ describe("render PDF action (OP-12)", () => {
     await userEvent.click(screen.getByTestId("render-pdf"));
 
     await waitFor(() => expect(calls).toHaveLength(1));
-    expect(
-      await screen.findByText("offer has no line items to render"),
-    ).toBeTruthy();
+    expect(await screen.findByText(VALUE_REFUSED)).toBeTruthy();
     expect(screen.queryByTestId("pdf-unavailable")).toBeNull();
   });
 });

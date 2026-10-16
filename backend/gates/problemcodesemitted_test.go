@@ -9,6 +9,7 @@ package gates
 import (
 	"fmt"
 	"go/ast"
+	"go/format"
 	"go/parser"
 	"go/token"
 	"io/fs"
@@ -23,11 +24,9 @@ import (
 
 const problemWriterDir = "internal/platform/httperr"
 
-// bodyCodeCarriers are the httperr structs whose Code becomes the body's code:
-// writeProblem encodes problem, Write fills it from Fault, and Classify fills
-// Fault from DetailedError. Following those assignments needs type
-// information, so they are named; the census refuses an httperr struct with a
-// Code that neither list names.
+// bodyCodeCarriers are the httperr structs whose Code becomes the body's code.
+// Following the assignments between them needs type information, so they are
+// named; the census refuses an httperr struct with a Code neither list names.
 var bodyCodeCarriers = map[string]bool{"problem": true, "Fault": true, "DetailedError": true}
 
 // fieldCodeCarriers hold a per-field code, which the body carries in
@@ -170,7 +169,7 @@ func readGoUnits(t *testing.T, root string) []*goUnit {
 			return walkErr
 		}
 		if entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") ||
-			strings.HasSuffix(path, "_gen.go") || slices.Contains(strings.Split(path, "/"), "testdata") {
+			slices.Contains(strings.Split(path, "/"), "testdata") {
 			return nil
 		}
 		file, err := gatekit.ParseFile(path, parser.ParseComments)
@@ -362,18 +361,7 @@ func (c *emittedCensus) readSources() {
 	}
 	c.readSentinelTable()
 	for _, assign := range c.assigns {
-		if len(assign.stmt.Lhs) != len(assign.stmt.Rhs) {
-			continue
-		}
-		for i, target := range assign.stmt.Lhs {
-			sel, isSel := target.(*ast.SelectorExpr)
-			if !isSel || sel.Sel.Name != "Code" {
-				continue
-			}
-			if base, isIdent := sel.X.(*ast.Ident); isIdent && c.typedAsCarrier(base, assign.unit) {
-				c.read(assign.stmt.Rhs[i], assign.unit, assign.in)
-			}
-		}
+		c.readCodeAssignment(assign)
 	}
 	for _, unit := range c.units {
 		for _, decl := range unit.file.Decls {
@@ -382,6 +370,39 @@ func (c *emittedCensus) readSources() {
 			}
 		}
 	}
+}
+
+// readCodeAssignment reads `x.Code = value` for a body carrier x. One it
+// cannot pair with its value, or whose x it cannot type, is a fault.
+func (c *emittedCensus) readCodeAssignment(assign codeAssign) {
+	for i, target := range assign.stmt.Lhs {
+		sel, isSel := target.(*ast.SelectorExpr)
+		if !isSel || sel.Sel.Name != "Code" {
+			continue
+		}
+		base, isIdent := sel.X.(*ast.Ident)
+		switch {
+		case !isIdent:
+			c.faults = append(c.faults, fmt.Sprintf("%s: a Code is assigned through %s, whose type this census "+
+				"cannot tell; assign it on a variable declared as the carrier", c.at(assign.unit, target),
+				exprString(sel.X)))
+		case !c.typedAsCarrier(base, assign.unit):
+		case len(assign.stmt.Lhs) != len(assign.stmt.Rhs):
+			c.faults = append(c.faults, fmt.Sprintf("%s: %s.Code is assigned from a multi-value call, so the code "+
+				"cannot be read; assign it from a literal or a constant", c.at(assign.unit, target), base.Name))
+		default:
+			c.read(assign.stmt.Rhs[i], assign.unit, assign.in)
+		}
+	}
+}
+
+// exprString spells a short expression for a finding.
+func exprString(expr ast.Expr) string {
+	var text strings.Builder
+	if err := format.Node(&text, token.NewFileSet(), expr); err != nil {
+		return "an expression"
+	}
+	return text.String()
 }
 
 // holdCarrierLists refuses an httperr struct with a Code field that neither
@@ -432,7 +453,8 @@ func (c *emittedCensus) tableRows() []sentinelRow {
 			}
 		}
 	}
-	c.faults = append(c.faults, fmt.Sprintf("found no %s table in %s, so no sentinel's code was read", sentinelMappingVar, problemWriterDir))
+	c.faults = append(c.faults, fmt.Sprintf("found no %s table in %s, so no sentinel's code was read; "+
+		"rename this census's sentinelMappingVar to the table's name", sentinelMappingVar, problemWriterDir))
 	return nil
 }
 
@@ -445,7 +467,8 @@ func (c *emittedCensus) rowsOf(unit *goUnit, table ast.Expr) []sentinelRow {
 		}
 	}
 	if shape == nil {
-		c.faults = append(c.faults, c.at(unit, table)+": the sentinel table is not a slice of an inline struct, which is the shape this census reads")
+		c.faults = append(c.faults, c.at(unit, table)+": the sentinel table is not a slice of an inline struct; "+
+			"keep it one, or teach rowsOf the new shape")
 		return nil
 	}
 	var rows []sentinelRow
@@ -454,7 +477,8 @@ func (c *emittedCensus) rowsOf(unit *goUnit, table ast.Expr) []sentinelRow {
 		code, hasCode := fieldValue(entry, shape, "code")
 		status, hasStatus := fieldValue(entry, shape, "status")
 		if !ok || !hasCode || !hasStatus {
-			c.faults = append(c.faults, c.at(unit, row)+": a sentinel row whose code and status this census cannot find")
+			c.faults = append(c.faults, c.at(unit, row)+": a sentinel row with no code or status field this census "+
+				"can find; write the row as a struct literal with both")
 			continue
 		}
 		rows = append(rows, sentinelRow{unit: unit, status: status, code: code})
@@ -820,8 +844,9 @@ func (c *emittedCensus) readField(unit *goUnit, typeName, field string, at ast.N
 		}
 	}
 	if read == 0 {
-		c.faults = append(c.faults, fmt.Sprintf("%s: the code is %s.%s, and no literal of %s sets it, so the codes it "+
-			"holds cannot be read", c.at(unit, at), typeName, field, typeName))
+		c.faults = append(c.faults, fmt.Sprintf("%s: the code is %s.%s, and no literal of %s sets it; build %s "+
+			"in this package with a literal that sets %s, or give the field a named string type",
+			c.at(unit, at), typeName, field, typeName, typeName, field))
 	}
 }
 
@@ -834,7 +859,7 @@ type constDecl struct {
 }
 
 // constDecls indexes the package's constants, generated files included: the
-// contract's enums live there. A planted package's live only in the census.
+// contract's enums live there. A planted package's are read from its units.
 func (c *emittedCensus) constDecls(dir string) map[string]constDecl {
 	if decls, read := c.decls[dir]; read {
 		return decls
@@ -853,28 +878,46 @@ func (c *emittedCensus) constDecls(dir string) map[string]constDecl {
 		if err != nil {
 			c.t.Fatalf("parsing %s for its constants: %v", source, err)
 		}
-		indexConstDecls(&goUnit{path: filepath.ToSlash(source), dir: dir, file: file, imports: localImports(file)}, decls)
+		c.indexConstDecls(&goUnit{path: filepath.ToSlash(source), dir: dir, file: file, imports: localImports(file)}, decls)
 	}
 	for _, unit := range c.units {
 		if unit.dir == dir {
-			indexConstDecls(unit, decls)
+			c.indexConstDecls(unit, decls)
 		}
 	}
 	return decls
 }
 
-func indexConstDecls(unit *goUnit, into map[string]constDecl) {
+func (c *emittedCensus) indexConstDecls(unit *goUnit, into map[string]constDecl) {
 	for _, decl := range unit.file.Decls {
 		if general, ok := decl.(*ast.GenDecl); ok && general.Tok == token.CONST {
-			indexConstSpecs(general, unit, into)
+			for _, fault := range indexConstSpecs(general, unit, into) {
+				if !slices.Contains(c.faults, fault) {
+					c.faults = append(c.faults, fault)
+				}
+			}
 		}
 	}
 }
 
-func indexConstSpecs(general *ast.GenDecl, unit *goUnit, into map[string]constDecl) {
+// indexConstSpecs indexes a const group. A spec that repeats a string
+// implicitly is a fault, since its value is written on another line.
+func indexConstSpecs(general *ast.GenDecl, unit *goUnit, into map[string]constDecl) (faults []string) {
+	repeatsString := false
 	for _, spec := range general.Specs {
 		value, ok := spec.(*ast.ValueSpec)
-		if !ok || len(value.Names) != len(value.Values) {
+		if !ok {
+			continue
+		}
+		if len(value.Values) == 0 && repeatsString {
+			faults = append(faults, fmt.Sprintf("%s:%d: constant %s repeats the string above it implicitly; "+
+				"give it its own value", unit.path, gatekit.SourceFileSet().Position(value.Pos()).Line, value.Names[0].Name))
+		}
+		if len(value.Values) > 0 {
+			lit, isLit := value.Values[0].(*ast.BasicLit)
+			repeatsString = isLit && lit.Kind == token.STRING
+		}
+		if len(value.Names) != len(value.Values) {
 			continue
 		}
 		typeName := ""
@@ -885,6 +928,7 @@ func indexConstSpecs(general *ast.GenDecl, unit *goUnit, into map[string]constDe
 			into[name.Name] = constDecl{typeName: typeName, value: value.Values[i], unit: unit}
 		}
 	}
+	return faults
 }
 
 // typedValues answers every constant of a field's named string type: the set
@@ -919,7 +963,8 @@ func (c *emittedCensus) typedValues(unit *goUnit, shape *ast.StructType, field s
 		}
 		text, folded := c.namedConstant(dir, name, 0)
 		if !folded {
-			c.faults = append(c.faults, fmt.Sprintf("%s: constant %s of %s cannot be read as a string", declared.unit.path, name, typeName))
+			c.faults = append(c.faults, fmt.Sprintf("%s: constant %s of %s cannot be read as a string; make it a "+
+				"string literal or a constant built from them", declared.unit.path, name, typeName))
 			continue
 		}
 		values = append(values, text)

@@ -220,7 +220,8 @@ describe("RecordPicker", () => {
     const user = userEvent.setup();
     const refused = new ProblemError({
       code: "schema_changed",
-      detail: "Search is being rebuilt. Try again in a few minutes.",
+      detail:
+        "this installation's schema changed while the connection serving this request was holding a plan made against the old one. Nothing in the request is wrong and nothing was written; send it again — the plan is rebuilt on the next attempt.",
     });
     rtlRender(
       <LocaleProvider initial="en">
@@ -234,7 +235,9 @@ describe("RecordPicker", () => {
 
     await user.type(screen.getByRole("searchbox"), "anna");
 
-    await waitFor(() => expect(screen.getByText(/being rebuilt/)).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText(/the plan is rebuilt/)).toBeTruthy(),
+    );
   });
 
   it("discards a stale search when the term changes before it resolves", async () => {
