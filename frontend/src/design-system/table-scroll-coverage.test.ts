@@ -12,12 +12,12 @@ import { parseSource } from "../../scripts/lib/source-tree";
 // rest of it.
 //
 // A settings column is 654px and a coverage matrix is one column per
-// colleague, so a table overrunning its container is not an edge case, it is
-// Tuesday. `TableScroll` (atoms.tsx) is the one box that handles it: it takes
-// a tab stop and announces itself as a NAMED region, and only while it is
-// actually holding something past its right edge — so a keyboard reader can
-// get to the columns they cannot see, and is not given a tab stop in front of
-// every table in the product for the few that overflow.
+// colleague, so a table that overruns its container is common.
+// `TableScroll` (tablescroll.tsx) is the one box that handles it. It takes a
+// tab stop and announces itself as a named region, but only while it holds
+// something past its right edge. So a keyboard reader can get to the columns
+// they cannot see. Yet no tab stop sits in front of every table in the
+// product for the few that overflow.
 //
 // A hand-written `overflow-x: auto` gives the mouse everything and the
 // keyboard nothing. That is the whole defect, and it is silent: the page looks

@@ -93,6 +93,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	announceStatutoryFloorFrom(pool, log)
 
 	srv := newServer(pool, log, authH, dealsH)
+	srv.views = &viewDoor{}
 	for _, opt := range opts {
 		opt(&srv, pool)
 	}
@@ -126,6 +127,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	srv.publishCompanyContextAvailability()
 
 	api := contractAPI(srv, pool, identitySvc)
+	srv.views.api = api
 	// ONE identity.Service for the whole process: contractAPI's admission
 	// gate and the connector's authenticate closure share this instance, so
 	// they share its singleton cache and its clock.

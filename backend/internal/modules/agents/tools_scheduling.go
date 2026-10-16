@@ -150,6 +150,7 @@ func (t bookMeetingTool) Spec() mcp.ToolSpec {
 		Description:   bookMeetingCopy.render(),
 		Instead:       bookMeetingCopy.Instead,
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
+		Unlisted:  true,
 		OpenAPIOp: "bookMeeting",
 		// `links` is REQUIRED by crm.yaml's bookMeeting body and was advertised
 		// as optional, so an agent that read the schema and omitted it was

@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
-import type { BoardDeal, BoardMoneyColumn } from "../design-system/composed";
+import type {
+  BoardDeal,
+  BoardMoneyColumn,
+} from "../design-system/pipelineboard";
 import { WriteToProvider } from "../lib/writeto";
 import {
   installFetchStub,

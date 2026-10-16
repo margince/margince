@@ -110,10 +110,11 @@ type relinkActivities struct {
 
 func (t relinkActivities) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "relink_activities", Title: "Re-associate a set of activities to a record", Version: toolVersionV1,
+		Name: relinkActivitiesTool, Title: "Re-associate a set of activities to a record", Version: toolVersionV1,
 		Description:   relinkActivitiesCopy.render(),
 		Instead:       relinkActivitiesCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic,
+		Unlisted:     true,
 		TierResolver: relinkActivityTier,
 		OpenAPIOp:    "relinkActivities",
 		InputSchema: schema(`{"type":"object","required":["activity_ids","entity_type","entity_id"],"properties":{

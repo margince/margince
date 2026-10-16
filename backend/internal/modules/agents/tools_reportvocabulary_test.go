@@ -152,7 +152,7 @@ func TestRunReportNamesTheDocumentWithoutOrderingARead(t *testing.T) {
 		t.Errorf("run_report's `report` description does not name %s, so a caller whose plan is "+
 			"refused has no route to the names: %s", ReportVocabularyURI, described)
 	}
-	if !strings.Contains(described, "describe_vocabulary") {
+	if !strings.Contains(described, "describe_report_vocabulary") {
 		t.Errorf("it does not name the door either, and the Surface-B runner can reach nothing "+
 			"else: %s", described)
 	}

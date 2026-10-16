@@ -142,9 +142,9 @@ func (analyticsSchemaResource) Resources(context.Context) []mcp.Resource {
 		Title:         "Analytics query vocabulary",
 		RequiredScope: principal.ScopeRead,
 		MIMEType:      mimeTextPlain,
-		Description: "The populations a run_analytics_query plan may name, each with its " +
+		Description: "The populations an analytics query plan may name, each with its " +
 			"group_by dimensions and its measures, derived for this seat. " +
-			"run_analytics_query names this document instead of carrying it.",
+			"read_analytics with step=query names this document instead of carrying it.",
 	}}
 }
 

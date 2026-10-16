@@ -20,6 +20,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -90,10 +91,13 @@ type DecidedMember struct {
 // ApprovalQuery is the listing's filter. Status defaults to pending at the
 // seam, not here, so both doors onto the inbox default alike.
 type ApprovalQuery struct {
-	Status string
-	Kind   string
-	Limit  int
-	Cursor string
+	Status           string
+	Kind             string
+	TargetEntityType string
+	TargetEntityID   ids.UUID
+	BundleID         ids.UUID
+	Limit            int
+	Cursor           string
 }
 
 // ApprovalPage is one page of the queue.
@@ -137,10 +141,13 @@ const listApprovalsToolName = "list_approvals"
 type listApprovalsTool struct{ inbox ApprovalInbox }
 
 type listApprovalsArgs struct {
-	Status string `json:"status"`
-	Kind   string `json:"kind"`
-	Limit  int    `json:"limit"`
-	Cursor string `json:"cursor"`
+	Status           string   `json:"status"`
+	Kind             string   `json:"kind"`
+	TargetEntityType string   `json:"target_entity_type"`
+	TargetEntityID   ids.UUID `json:"target_entity_id"`
+	BundleID         ids.UUID `json:"bundle_id"`
+	Limit            int      `json:"limit"`
+	Cursor           string   `json:"cursor"`
 }
 
 func (t listApprovalsTool) Spec() mcp.ToolSpec {
@@ -152,7 +159,10 @@ func (t listApprovalsTool) Spec() mcp.ToolSpec {
 		OpenAPIOp: "listApprovals",
 		InputSchema: schema(`{"type":"object","properties":{
 			"status":{"type":"string","enum":["pending","approved","rejected"],"description":"Defaults to pending — what is still waiting."},
-			"kind":{"type":"string","description":"One staged action, e.g. send_email or advance_deal."},
+			"kind":{"type":"string","description":"One staged action's kind, e.g. advance_deal."},
+			"target_entity_type":{"type":"string","description":"With target_entity_id, the approvals staged against one record."},
+			"target_entity_id":{"type":"string","format":"uuid"},
+			"bundle_id":{"type":"string","format":"uuid","description":"The approvals staged together as one bundle."},
 			"limit":{"type":"integer","minimum":1,"maximum":50},
 			"cursor":{"type":"string","description":"next_cursor from a previous page."}},
 			"additionalProperties":false}`),
@@ -168,9 +178,12 @@ func (t listApprovalsTool) Handle(ctx context.Context, in json.RawMessage) (json
 	if err := knownStatus(args.Status); err != nil {
 		return nil, err
 	}
-	// Converted rather than copied field by field: the wire shape and the seam's
-	// query are the same four members, and a conversion cannot silently drop the
-	// fifth somebody adds to one of them.
+	if (args.TargetEntityType == "") != args.TargetEntityID.IsZero() {
+		return nil, &BadArgsError{Field: "target_entity_id", Cause: errors.New(
+			"target_entity_type and target_entity_id name one record together; pass both or neither")}
+	}
+	// Converted, not copied field by field, so a member added to both is never
+	// dropped on the way.
 	page, err := t.inbox.ListApprovals(ctx, ApprovalQuery(args))
 	if err != nil {
 		return nil, err

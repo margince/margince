@@ -151,6 +151,23 @@ func TestTheGateAdmitsAReadItDoesNotLeaveToTheRegistry(t *testing.T) {
 	}
 }
 
+// A read the policy table does not carry is refused, as a mutation is. The
+// refusal comes before the volume meter is asked.
+func TestTheGateRefusesAReadWithNoPolicy(t *testing.T) {
+	d := newSlippingDoors(t)
+	router := chi.NewRouter()
+	router.With(agentGate(d.registry, nil, nil, nil, nil, nil, nil,
+		auth.NewGate(fullSeat{}, auth.WithVolumeMeter(d.lookups)))).
+		Get("/v1/no-policy-here", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/v1/no-policy-here", nil).WithContext(readingAgent(t.Context())))
+
+	if recorder.Code != http.StatusForbidden || d.lookups.reads[agentvolume.Calls] != 0 {
+		t.Fatalf("GET /v1/no-policy-here → %d after %d call-ceiling lookups, want 403 after 0",
+			recorder.Code, d.lookups.reads[agentvolume.Calls])
+	}
+}
+
 // The query parameters are the tool's arguments: one named passes through, one
 // omitted leaves the tool its own default.
 func TestTheSlippingRouteAsksTheToolAtTheWindowItNames(t *testing.T) {

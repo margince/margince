@@ -34,9 +34,11 @@ type Pipeline struct {
 	Name string   `json:"name"`
 	// IsDefault marks the workspace's default pipeline — the one to pick when
 	// the caller has no reason to prefer another.
-	IsDefault bool    `json:"is_default"`
-	Position  int     `json:"position"`
-	Stages    []Stage `json:"stages"`
+	IsDefault bool `json:"is_default"`
+	Position  int  `json:"position"`
+	// Archived marks a retired pipeline, listed only when include_archived asked.
+	Archived bool    `json:"archived,omitempty"`
+	Stages   []Stage `json:"stages"`
 }
 
 // Stage is one stage of a pipeline. Semantic is the load-bearing field: it is
@@ -62,11 +64,11 @@ type listPipelinesAnswer struct {
 // Compose implements it over the deals module's own row-scoped config reads, so
 // the `pipeline` RBAC object gates this tool exactly as it gates the HTTP
 // surface.
-type PipelineLister func(ctx context.Context) ([]Pipeline, error)
+type PipelineLister func(ctx context.Context, includeArchived bool) ([]Pipeline, error)
 
 // pipelinesSource names where a pipeline or stage id comes from, for every tool
 // that takes one.
-const pipelinesSource = "read_directory (list: pipelines)"
+const pipelinesSource = "the workspace's pipeline list"
 
 // RegisterPipelineTool wires the config read behind the deal write verbs. A nil
 // seam registers nothing: a surface that cannot ground its answer does not
@@ -89,26 +91,23 @@ func (t listPipelinesTool) Spec() mcp.ToolSpec {
 		Instead:       listPipelinesCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "listPipelines",
-		// No arguments. The whole config is small, bounded by how many pipelines
-		// a workspace configures, and a filter would only let a caller ask for
-		// the one it cannot name yet.
-		//
-		// Why to call this first, and what to read off each stage, lives on the
-		// tool's Description rather than here: that is a statement about the
-		// tool, and an argument object with no arguments has nothing to say
-		// about it. Spelled in both places the two would drift, and a model
-		// would read the same paragraph twice.
-		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
+		// No filter beyond the route's own: the whole config is small, bounded
+		// by how many pipelines a workspace configures.
+		InputSchema: schema(`{"type":"object","properties":{
+			"include_archived":{"type":"boolean","description":"Also list retired pipelines; a deal cannot be moved into one"}},
+			"additionalProperties":false}`),
 		OutputSchema: schemaFor[listPipelinesAnswer](),
 	}
 }
 
 func (t listPipelinesTool) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
-	var args struct{}
+	var args struct {
+		IncludeArchived bool `json:"include_archived"`
+	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	pipelines, err := t.list(ctx)
+	pipelines, err := t.list(ctx, args.IncludeArchived)
 	if err != nil {
 		return nil, err
 	}

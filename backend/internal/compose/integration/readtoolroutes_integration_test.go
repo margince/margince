@@ -126,6 +126,10 @@ func TestRecordReadAndListRoutesAnswerAsTheirTools(t *testing.T) {
 	lead := createdRecord(t, d.e, "/v1/leads", AnyMap{"source": "manual", "full_name": "Lena Lead"})
 	deal := openDeal(t, d.e, stages, "Door renewal")
 	project := createdRecord(t, d.e, "/v1/projects", AnyMap{"name": "Door rollout", "company_id": company, "source": "manual"})
+	product := createdRecord(t, d.e, "/v1/products", AnyMap{
+		"source": "manual", "name": "Door install", "unit_price_minor": 45000, "currency": "EUR",
+	})
+	template := createdRecord(t, d.e, "/v1/offer-templates", AnyMap{"name": "Door offer", "layout": AnyMap{}})
 	note := createdRecord(t, d.e, "/v1/activities", AnyMap{
 		"kind": "note", "source": "manual", "subject": "Door note",
 		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact}},
@@ -140,7 +144,9 @@ func TestRecordReadAndListRoutesAnswerAsTheirTools(t *testing.T) {
 		{"lead", "leads", lead, true},
 		{"deal", "deals", deal, true},
 		{"project", "projects", project, true},
-		{"activity", "activities", note, false},
+		{"activity", "activities", note, true},
+		{"product", "products", product, true},
+		{"offer_template", "offer-templates", template, true},
 	} {
 		sameDoorRecords(t, "read "+c.kind,
 			d.rest(t, "GET", "/v1/"+c.route+"/"+c.id, nil),

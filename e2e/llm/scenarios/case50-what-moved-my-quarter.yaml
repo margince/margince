@@ -39,7 +39,7 @@ may_call:
   - list_records
   - resolve_entities
   - query_workspace
-  - read_input_checks
+  - read_forecast
 
 must_mention:
   - "Vorort"

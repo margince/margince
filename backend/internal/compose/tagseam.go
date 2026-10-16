@@ -124,14 +124,14 @@ func (a tagAdapter) RecordTagTypes() []string { return collections.RecordTagType
 // through: TagVocabulary was written for a caller outside that module and
 // this is the first one, so there is nothing here to translate beyond the
 // field names the wire uses.
-func (a tagAdapter) ListTags(ctx context.Context, includeArchived bool) ([]agents.Tag, bool, error) {
-	rows, truncated, err := a.store.TagVocabulary(ctx, includeArchived)
+func (a tagAdapter) ListTags(ctx context.Context, q agents.TagQuery) ([]agents.Tag, bool, error) {
+	rows, truncated, err := a.store.TagVocabulary(ctx, collections.VocabularyQuery(q))
 	if err != nil {
 		return nil, false, err
 	}
 	out := make([]agents.Tag, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, agents.Tag{TagID: r.TagID, Name: r.Name, Color: r.Color, Archived: r.Archived})
+		out = append(out, agents.Tag{TagID: r.TagID, Name: r.Name, Color: r.Color, Archived: r.Archived, CarriedBy: r.CarriedBy})
 	}
 	return out, truncated, nil
 }
@@ -218,6 +218,14 @@ func (a tagAdapter) MergeTags(ctx context.Context, source, target ids.UUID) (age
 		return agents.TagMergeResult{}, err
 	}
 	return agents.TagMergeResult{Moved: out.Moved, Collapsed: out.Collapsed}, nil
+}
+
+func (a tagAdapter) ArchiveTag(ctx context.Context, tagID ids.UUID) (agents.Tag, error) {
+	row, err := a.store.ArchiveTag(ctx, ids.From[ids.TagKind](tagID))
+	if err != nil {
+		return agents.Tag{}, err
+	}
+	return tagOf(row.ID, row.Name, row.Color, true), nil
 }
 
 func (a tagAdapter) UpdateTag(ctx context.Context, tagID ids.UUID, in agents.TagEdit) (agents.Tag, error) {

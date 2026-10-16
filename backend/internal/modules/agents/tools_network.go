@@ -348,6 +348,7 @@ func (t atRiskTool) Spec() mcp.ToolSpec {
 		Description:   atRiskRelationshipsCopy.render(),
 		Instead:       atRiskRelationshipsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Unlisted:  true,
 		OpenAPIOp: "listAtRiskRelationships",
 		// No arguments. The question is about the caller's own book, and the
 		// row scope already decides what that is — an owner or team filter here

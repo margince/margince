@@ -37,7 +37,16 @@ const (
 	filterCommercialMotion   = "commercial_motion"
 	filterPriority           = "priority"
 	filterAcquisitionSource  = "acquisition_source"
+	filterOwnerTeamID        = "owner_team_id"
+	filterUnassigned         = "unassigned"
+	filterIncludeArchived    = "include_archived"
+	filterSort               = "sort"
+	filterListID             = "list_id"
 )
+
+// dealListEntity is the record type a list of deals holds, as the list module
+// names its members.
+const dealListEntity = "deal"
 
 // filterUnset is the sentinel the three commercial-context filters take to
 // mean "no value recorded". A filter parameter cannot say that with an enum
@@ -45,6 +54,10 @@ const (
 const filterUnset = "unset"
 
 var dealListFilters = storekit.FilterSet[ListDealsInput]{
+	filterListID: storekit.FilterID(func(in *ListDealsInput, id *ids.ID[ids.ListKind]) {
+		member := id.UUID
+		in.MemberOf = &member
+	}),
 	filterTag: storekit.FilterIDList[ids.TagKind](func(in *ListDealsInput, v []ids.UUID) { in.TagIDs = v }),
 	filterTagMode: storekit.FilterWord(func(in *ListDealsInput, v *string) {
 		// A stored mode the enum does not admit selects `any`, the contract's
@@ -57,7 +70,11 @@ var dealListFilters = storekit.FilterSet[ListDealsInput]{
 	}),
 	filterCompanyID: storekit.FilterID(
 		func(in *ListDealsInput, id *ids.CompanyID) { in.CompanyID = id }),
-	filterOwnerID: storekit.FilterID(func(in *ListDealsInput, id *ids.UserID) { in.OwnerID = id }),
+	filterOwnerID:         storekit.FilterID(func(in *ListDealsInput, id *ids.UserID) { in.OwnerID = id }),
+	filterOwnerTeamID:     storekit.FilterID(func(in *ListDealsInput, id *ids.TeamID) { in.OwnerTeamID = id }),
+	filterUnassigned:      storekit.FilterFlag(func(in *ListDealsInput, v *bool) { in.Unassigned = v }),
+	filterIncludeArchived: storekit.FilterFlag(func(in *ListDealsInput, v *bool) { in.IncludeArchived = *v }),
+	filterSort:            storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Sort = v }),
 	filterPartnerCompanyID: storekit.FilterID(
 		func(in *ListDealsInput, id *ids.CompanyID) { in.PartnerCompanyID = id }),
 	filterPartnerAttribution: storekit.FilterWord(
@@ -82,6 +99,12 @@ func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	switch t {
 	case datasource.EntityDeal:
 		return dealListFilters.Names()
+	case datasource.EntityProduct:
+		return productListFilters.Names()
+	case datasource.EntityOfferTemplate:
+		return offerTemplateListFilters.Names()
+	case datasource.EntityOffer:
+		return offerListFilters.Names()
 	default:
 		return nil
 	}

@@ -15,6 +15,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
 
@@ -121,6 +122,7 @@ func (t searchRecords) Spec() mcp.ToolSpec {
 		Description:   searchRecordsCopy.render(),
 		Instead:       searchRecordsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Unlisted: true,
 		// The cross-object search operation, not the per-type list ones: those
 		// declare list_records now, and naming them here would leave the two
 		// tools claiming one operation family between them.
@@ -128,6 +130,7 @@ func (t searchRecords) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","properties":{
 			"q":{"type":"string","description":"What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched. Not accepted with record_type=partner, which has no text of its own."},
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","project","partner"],"description":"Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these. A sweep never visits partner: name it to reach one."},
+			"record_types":{"type":"array","items":{"type":"string","enum":["contact","company","deal","lead","project"]},"description":"Restrict the sweep to these types, in place of record_type."},
 			"limit":{"type":"integer","minimum":1,"maximum":50},
 			"cursor":{"type":"string","description":"Keyset cursor from the previous page, which a page reporting more always carries. A sweep of every type resumes by it too."}},
 			"additionalProperties":false}`),
@@ -137,17 +140,24 @@ func (t searchRecords) Spec() mcp.ToolSpec {
 
 func (t searchRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
-		Q          string `json:"q"`
-		RecordType string `json:"record_type"`
-		Limit      int    `json:"limit"`
-		Cursor     string `json:"cursor"`
+		Q           string   `json:"q"`
+		RecordType  string   `json:"record_type"`
+		RecordTypes []string `json:"record_types"`
+		Limit       int      `json:"limit"`
+		Cursor      string   `json:"cursor"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
+	if args.RecordType != "" && len(args.RecordTypes) > 0 {
+		return nil, &BadArgsError{Field: "record_types", Cause: errors.New("name one record_type or a list of record_types, not both")}
+	}
 	q := datasource.SearchQuery{Text: args.Q, Limit: args.Limit, Cursor: args.Cursor}
 	if args.RecordType != "" {
 		q.EntityTypes = []datasource.EntityType{datasource.EntityType(args.RecordType)}
+	}
+	for _, recordType := range args.RecordTypes {
+		q.EntityTypes = append(q.EntityTypes, datasource.EntityType(recordType))
 	}
 	res, err := t.p.Search(ctx, q)
 	if err != nil {
@@ -214,9 +224,9 @@ func (t readRecord) Spec() mcp.ToolSpec {
 		Description:   readRecordCopy.render(),
 		Instead:       readRecordCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "getContact/getCompany/getDeal/getLead/getActivity/getProject/getPartner",
+		OpenAPIOp: "getContact/getCompany/getDeal/getLead/getActivity/getProject/getPartner/getProduct/getOfferTemplate/getOffer/getCommissionEntry/getDealRoom",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
-			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","partner"],"description":"partner is addressed by its COMPANY's id: the row is that company's partner terms, not a separate record."},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","partner","product","offer_template","offer","commission","deal_room"],"description":"partner is addressed by its COMPANY's id: the row is that company's partner terms, not a separate record."},
 			"id":{"type":"string","format":"uuid"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[recordWithOwner](),
@@ -260,9 +270,9 @@ func (t createRecord) Spec() mcp.ToolSpec {
 		Description:   createRecordCopy.render(),
 		Instead:       createRecordCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "createContact/createCompany/createDeal/createLead/createProject/createRelationship",
+		OpenAPIOp: "createContact/createCompany/createDeal/createLead/createProject/createRelationship/createProduct/createOfferTemplate/createOffer/createDealRoom/openDealRoomThread/replyDealRoomThread",
 		InputSchema: schema(`{"type":"object","required":["record_type","fields"],"properties":{
-			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship"]},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship","product","offer_template","offer","deal_room","deal_room_thread","deal_room_comment"]},
 			"fields":{"type":"object","description":` + jsonString(recordFieldsDescription) + `},
 			"offer_tag":{"type":"string","maxLength":64,"description":"A tag word the user said fits this record, such as the event they met at. It offers the tag to the user and applies nothing."},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
@@ -338,6 +348,22 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 // in Handle, and that is the point: the approved retry re-enters through
 // Handle, so a rule enforced only there is one a human's yes is spent
 // discovering.
+// takeParent lifts a parent id out of a create's fields: the route names it in
+// its path, a create_record call among its fields.
+func takeParent(fields json.RawMessage, name string) (ids.UUID, json.RawMessage, error) {
+	var named map[string]json.RawMessage
+	if err := json.Unmarshal(fields, &named); err != nil {
+		return ids.UUID{}, nil, &BadArgsError{Field: fieldsArg, Cause: fmt.Errorf("fields must be a JSON object: %w", err)}
+	}
+	var id ids.UUID
+	if err := json.Unmarshal(named[name], &id); err != nil || id.IsZero() {
+		return ids.UUID{}, nil, &BadArgsError{Field: name, Cause: fmt.Errorf("%s names the record this one is created on", name)}
+	}
+	delete(named, name)
+	rest, err := json.Marshal(named)
+	return id, rest, err
+}
+
 func (t createRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageInfo, error) {
 	var args struct {
 		RecordType string          `json:"record_type"`
@@ -351,6 +377,15 @@ func (t createRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 		return StageInfo{}, &BadArgsError{Cause: fmt.Errorf(
 			"this verb does not create %q records, so no approval of it could ever be carried out",
 			args.RecordType)}
+	}
+	// An offer is made ON a deal, as POST /deals/{id}/offers makes it, so both
+	// doors stage the one command that names the deal.
+	if args.RecordType == string(datasource.EntityOffer) {
+		dealID, fields, err := takeParent(args.Fields, "deal_id")
+		if err != nil {
+			return StageInfo{}, err
+		}
+		return StageSubject(ctx, NewCreateOfferCall(t.p, t.language, CreateOfferCommand{DealID: dealID, Fields: fields}))
 	}
 	// This door's wire shape IS the command's field set (same reasoning as
 	// archiveRecord.StageInfo, command.go), so it converts rather than
@@ -376,6 +411,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 		Description:   logActivityCopy.render(),
 		Instead:       logActivityCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		Unlisted:  true,
 		OpenAPIOp: "logActivity",
 		// The two vocabularies are SPLICED from the contract, never spelled
 		// here: this tool's body IS crm.yaml's CreateActivityRequest, and both
@@ -391,7 +427,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 		// — the refusal that actually binds is the server's.
 		InputSchema: schema(`{"type":"object","required":["kind"],"properties":{
 			"kind":{"type":"string","enum":` + activityKindEnum + `},
-			"channel_provider":{"type":"string","description":"Required when kind is \"message\", else refused; a provider read_directory (list: channel_providers) names."},
+			"channel_provider":{"type":"string","description":"Required when kind is \"message\", else refused; a provider the workspace's channel provider list names."},
 			"subject":{"type":"string","description":` + proseLanguageNote + `},
 			"body":{"type":"string","description":` + proseLanguageSeeSubject + `},
 			"occurred_at":{"type":"string","format":"date-time"` + timestampNote + `},
@@ -400,9 +436,9 @@ func (t logActivity) Spec() mcp.ToolSpec {
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
 				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},
-				"description":"Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project marks the activity as commercial correspondence, so it is made through relink_activity, which waits for the user's yes. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect."},
+				"description":"Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project marks the activity as commercial correspondence, so it is made by relinking the activity, which waits for the user's yes. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect."},
 			"attendee_user_ids":{"type":"array","maxItems":25,"items":{"type":"string","format":"uuid"},
-				"description":"Meeting or call only: the workspace members who attended besides you, ids from read_directory (list: colleagues). The meeting then counts toward each one's relationship with every linked contact. An id that is not an active member is refused."},
+				"description":"Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. The meeting then counts toward each one's relationship with every linked contact. An id that is not an active member is refused."},
 			"source_system":{"type":"string"},"source_id":{"type":"string"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),

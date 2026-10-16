@@ -250,7 +250,7 @@ func activityReachNotes(shapes map[datasource.EntityType]reflect.Type) []string 
 	// far more often. Keyed on the create shapes (which carry `links`), because it
 	// is the write that hands out the only handle.
 	if describesField(shapes, "links") {
-		return []string{"An activity is not searchable — search_records does not serve it — so keep the id " +
+		return []string{"An activity is not searchable — a record search does not serve it — so keep the id " +
 			"an activity write returns; read_record answers it by that id."}
 	}
 	if _, hasActivity := shapes[datasource.EntityActivity]; !hasActivity {
@@ -346,8 +346,8 @@ func assigneeNote(shapes map[datasource.EntityType]reflect.Type) []string {
 	if !describesField(shapes, "assignee_id") {
 		return nil
 	}
-	return []string{"`assignee_id` and `owner_id` take a COLLEAGUE's id — read_directory (list: " +
-		"colleagues) answers those, whoami answers your own. A contact id is a contact and is refused."}
+	return []string{"`assignee_id` and `owner_id` take a COLLEAGUE's id — the colleague roster " +
+		"answers those, whoami answers your own. A contact id is a contact and is refused."}
 }
 
 // transcriptNote says the one value that turns a body into a transcript.

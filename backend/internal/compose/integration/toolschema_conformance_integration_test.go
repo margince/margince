@@ -329,6 +329,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"read_approval", `{"staged_action_id":"` + waiting.String() + `"}`},
 		{"decide_approval", `{"staged_action_id":"` + waiting.String() + `","decision":"reject"}`},
 	}
+	calls = append(calls, partsAndRetirement(ctx, t, registry, company)...)
 	assertEveryRegisteredToolIsAccountedFor(t, registry, calls)
 
 	for _, call := range calls {
@@ -353,6 +354,20 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 	}
 }
 
+// partsAndRetirement are the list filters each record type takes, a fact
+// stated on the fixture's company, and a retired word. The word is coined for
+// it and retired last, so no call before it meets an archived tag.
+func partsAndRetirement(ctx context.Context, t *testing.T, registry *agents.Registry, company ids.UUID) []struct{ tool, args string } {
+	t.Helper()
+	retired := coinTagThroughTheToolSurface(ctx, t, registry, `{"name":"conformance-retired","color":"teal"}`)
+	return []struct{ tool, args string }{
+		{"describe_list_filters", `{}`},
+		{"change_record_parts", `{"action":"add_company_fact","company_id":"` + company.String() +
+			`","category":"company","field":"employee_range","value":"11-50"}`},
+		{"archive_tag", `{"tag_id":"` + retired.String() + `"}`},
+	}
+}
+
 // unreachableInThisLane names the tools this sweep CANNOT invoke, and why. Each
 // needs a seam the lane does not stand up — a live calendar, an outbound mail or
 // channel provider, a crawl runner, a drafting brain — so a call would exercise
@@ -362,6 +377,8 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 // listed here and then made reachable fails as loudly as one that was never
 // covered, so the list cannot quietly outlive its reason.
 var unreachableInThisLane = gatekit.Waive(map[string]string{
+	"read_view": "runs a route through the API server's router, and this lane's registry is built with no server; " +
+		"TestReadViewAnswersAsItsRoutes (readviewdoors_integration_test.go) calls it on the served MCP surface and compares it to the route",
 	"relink_thread": "refused for an assistant at every destination and however it is called, so it has no answer to hold to a schema; " +
 		"TestAThreadRelinkIsRefusedOnTheExecutionPathAtEveryDestination (modules/agents) holds the refusal itself",
 	"read_lists": "needs lists switched on (lists.enabled), which this lane's registry is not composed with; " +

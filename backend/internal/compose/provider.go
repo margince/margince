@@ -17,9 +17,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/commissions"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
+	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
@@ -27,7 +29,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -36,11 +37,13 @@ import (
 // authoritative (03e §2.3 — the overlay adapter is where that earns its
 // keep).
 type Provider struct {
-	contacts   *contacts.Provider
-	deals      *deals.Provider
-	projects   *projects.Provider
-	activities *activities.Provider
-	reports    *reportEngine
+	contacts    *contacts.Provider
+	deals       *deals.Provider
+	projects    *projects.Provider
+	activities  *activities.Provider
+	commissions *commissions.Provider
+	dealRooms   *dealrooms.Provider
+	reports     *reportEngine
 }
 
 func NewProvider(pool *pgxpool.Pool) *Provider {
@@ -63,10 +66,12 @@ func NewProviderFor(db *database.DB) *Provider {
 			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
 			WithGrantCarrier(identity.NewServiceFor(db)).
 			WithInstallationRenamer(installationRenamer(pool)),
-		deals:      deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
-		projects:   projects.ProviderOver(ProjectsStoreOver(db)),
-		activities: activities.NewProvider(InstallationDB(pool)),
-		reports:    newReportEngine(pool),
+		deals:       deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
+		projects:    projects.ProviderOver(ProjectsStoreOver(db)),
+		activities:  activities.NewProvider(InstallationDB(pool)),
+		commissions: commissions.NewProvider(db),
+		dealRooms:   dealrooms.NewProvider(db),
+		reports:     newReportEngine(pool),
 	}
 }
 
@@ -101,15 +106,21 @@ var searchable = []datasource.EntityType{datasource.EntityContact, datasource.En
 // name?". Conflating them is how naming a type became impossible by the act
 // of keeping it out of the sweep — a type left out of the default set stopped
 // being reachable at all, which is the opposite of what excluding it meant.
-var nameable = append(append([]datasource.EntityType{}, searchable...), datasource.EntityPartner)
+var nameable = append(append([]datasource.EntityType{}, searchable...), datasource.EntityPartner, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityActivity,
+	datasource.EntityOffer, datasource.EntityCommission, datasource.EntityDealRoom, datasource.EntityDealRoomThread, datasource.EntityDealRoomComment, datasource.EntityDealRoomDocument, datasource.EntityDealRoomParticipant)
 
 func (p *Provider) Read(ctx context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	switch ref.Type {
 	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityRelationship, datasource.EntityPartner:
 		return p.contacts.Read(ctx, ref)
-	case datasource.EntityDeal:
+	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer:
 		return p.deals.Read(ctx, ref)
+	case datasource.EntityCommission:
+		return p.commissions.Read(ctx, ref)
+	case datasource.EntityDealRoom, datasource.EntityDealRoomThread, datasource.EntityDealRoomDocument,
+		datasource.EntityDealRoomParticipant, datasource.EntityDealRoomComment:
+		return p.dealRooms.Read(ctx, ref)
 	case datasource.EntityProject:
 		return p.projects.Read(ctx, ref)
 	case datasource.EntityActivity:
@@ -132,10 +143,16 @@ func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityPartner:
 		return p.contacts.ListFilters(t)
-	case datasource.EntityDeal:
+	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer:
 		return p.deals.ListFilters(t)
+	case datasource.EntityCommission:
+		return p.commissions.ListFilters(t)
+	case datasource.EntityDealRoom, datasource.EntityDealRoomThread, datasource.EntityDealRoomComment, datasource.EntityDealRoomDocument, datasource.EntityDealRoomParticipant:
+		return p.dealRooms.ListFilters(t)
 	case datasource.EntityProject:
 		return p.projects.ListFilters(t)
+	case datasource.EntityActivity:
+		return p.activities.ListFilters(t)
 	default:
 		return nil
 	}
@@ -165,6 +182,11 @@ func (p *Provider) Search(ctx context.Context, q datasource.SearchQuery) (dataso
 	position, err := resumeStream(q.Cursor)
 	if err != nil {
 		return datasource.SearchResult{}, err
+	}
+	// A sweep walks only the searchable types, so a position in a stream it
+	// never visits (a listed timeline, say) was minted elsewhere.
+	if len(q.EntityTypes) == 0 && position.Stream != "" && !slices.Contains(searchable, datasource.EntityType(position.Stream)) {
+		return datasource.SearchResult{}, &storekit.MalformedCursorError{}
 	}
 	text := &q.Text
 	if q.Text == "" {
@@ -224,10 +246,16 @@ func (p *Provider) searchOneType(ctx context.Context, t datasource.EntityType, t
 	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityPartner:
 		records, next, _, err = p.contacts.SearchEntity(ctx, t, text, limit, inner, filters)
-	case datasource.EntityDeal:
+	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer:
 		records, next, _, err = p.deals.SearchEntity(ctx, t, text, limit, inner, filters)
+	case datasource.EntityCommission:
+		records, next, _, err = p.commissions.SearchEntity(ctx, t, text, limit, inner, filters)
+	case datasource.EntityDealRoom, datasource.EntityDealRoomThread, datasource.EntityDealRoomComment, datasource.EntityDealRoomDocument, datasource.EntityDealRoomParticipant:
+		records, next, _, err = p.dealRooms.SearchEntity(ctx, t, text, limit, inner, filters)
 	case datasource.EntityProject:
 		records, next, _, err = p.projects.SearchEntity(ctx, t, text, limit, inner, filters)
+	case datasource.EntityActivity:
+		records, next, _, err = p.activities.SearchEntity(ctx, t, text, limit, inner, filters)
 	default:
 		return nil, "", &datasource.UnsupportedEntityError{Type: string(t)}
 	}
@@ -341,8 +369,10 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityRelationship:
 		return p.contacts.Create(ctx, in)
-	case datasource.EntityDeal:
+	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer:
 		return p.deals.Create(ctx, in)
+	case datasource.EntityDealRoom, datasource.EntityDealRoomThread, datasource.EntityDealRoomComment:
+		return p.dealRooms.Create(ctx, in)
 	case datasource.EntityProject:
 		return p.projects.Create(ctx, in)
 	case datasource.EntityActivity:
@@ -357,7 +387,7 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityRelationship:
 		return p.contacts.Update(ctx, in)
-	case datasource.EntityDeal:
+	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer:
 		return p.deals.Update(ctx, in)
 	case datasource.EntityProject:
 		return p.projects.Update(ctx, in)
@@ -385,7 +415,7 @@ func (p *Provider) archiverFor(t datasource.EntityType) datasource.RecordArchive
 	switch t {
 	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityRelationship:
 		return p.contacts
-	case datasource.EntityDeal:
+	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer:
 		return p.deals
 	case datasource.EntityProject:
 		return p.projects
@@ -434,67 +464,4 @@ func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (d
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Ref.Type)}
 	}
 	return module.ArchiveAt(ctx, in)
-}
-
-func (p *Provider) Merge(ctx context.Context, in datasource.MergeInput) (datasource.EntityRef, error) {
-	switch in.Type {
-	case datasource.EntityContact, datasource.EntityCompany:
-		return p.contacts.Merge(ctx, in)
-	default:
-		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Type)}
-	}
-}
-
-func (p *Provider) AdvanceDeal(ctx context.Context, in datasource.AdvanceDealInput) (datasource.EntityRef, error) {
-	return p.deals.AdvanceDeal(ctx, in)
-}
-
-// StageSemantic feeds the advance_deal tier resolver (interfaces.md
-// §2.1) — part of the frozen v1 seam, resolved from pipeline config,
-// never from labels or request args.
-func (p *Provider) StageSemantic(ctx context.Context, stageID ids.UUID) (semantic string, pipelineID ids.UUID, err error) {
-	return p.deals.StageSemantic(ctx, stageID)
-}
-
-// PromoteLead is the features/01 §6.4 graduation — a cross-module
-// orchestration verb of the frozen v1 seam (interfaces.md §3), owned by
-// the contacts module's transaction and dispatched here.
-func (p *Provider) PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string, ifVersion *int64) (datasource.EntityRef, bool, error) {
-	return p.contacts.PromoteLead(ctx, id, trigger, evidenceNote, ifVersion)
-}
-
-// Freshness in SoR-mode is trivially authoritative: there is no mirror
-// to go stale.
-func (p *Provider) Freshness(_ context.Context, _ datasource.EntityRef) (datasource.FreshnessInfo, error) {
-	return datasource.FreshnessInfo{LastSyncedAt: time.Now().UTC(), Authoritative: true}, nil
-}
-
-// ListObjects/ListFields expose the SoR-mode schema descriptors
-// (interfaces.md §3): static, versioned with the code (P11).
-func (p *Provider) ListObjects(context.Context) ([]datasource.ObjectDef, error) {
-	return schemaObjects, nil
-}
-
-func (p *Provider) ListFields(_ context.Context, entity datasource.EntityType) ([]datasource.FieldDef, error) {
-	fields, ok := schemaFields(entity)
-	if !ok {
-		return nil, &datasource.UnsupportedEntityError{Type: string(entity)}
-	}
-	return fields, nil
-}
-
-// RunReport executes a seam-level plan against the descriptor
-// vocabulary — the same engine the HTTP surface and the run_report
-// tool ride.
-func (p *Provider) RunReport(ctx context.Context, plan datasource.ReportPlan) (datasource.ReportResult, error) {
-	return p.reports.runAdHocPlan(ctx, plan)
-}
-
-// WithTranscriptEnqueue lets a transcript CREATED over this seam start its own
-// reading, the way one created over REST does. Without it the tool surface can
-// store a transcript and nothing reads it — which is how the extraction lane
-// came to hold zero rows while being fully built.
-func (p *Provider) WithTranscriptEnqueue(enqueue activities.TranscriptReadEnqueue) *Provider {
-	p.activities = p.activities.WithTranscriptEnqueue(enqueue)
-	return p
 }

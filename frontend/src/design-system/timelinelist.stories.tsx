@@ -8,12 +8,9 @@ import { LocaleProvider, useLocale, useT } from "../i18n";
 import { StoryProviders } from "../testing/story-utils";
 import { activityTimeline } from "./activitytimeline";
 import { Avatar, Card } from "./atoms";
-import {
-  GroupedTimelineList,
-  type TimelineEntry,
-  TimelineList,
-} from "./composed";
 import type { RecordContact } from "./participants";
+import { GroupedTimelineList, TimelineList } from "./timeline";
+import type { TimelineEntry } from "./timelineentry";
 import { groupChronology } from "./timelinegroups";
 
 const meta: Meta<typeof TimelineList> = {

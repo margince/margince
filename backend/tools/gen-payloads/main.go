@@ -3,10 +3,9 @@
 
 // Command gen-payloads compiles isolated, components-only OpenAPI documents
 // into typed Go structs — the public contract for outbound event/webhook
-// payloads. It reuses the oapi-codegen LIBRARY (not the CLI) over each source
-// so the payload files stay isolated from api/crm.yaml: crm.yaml's webhooks:
-// block is silently pruned by kin-openapi, and flipping global skip-prune
-// there trips a pre-existing ApprovalToken name collision. An isolated file
+// payloads. It reuses the oapi-codegen LIBRARY (not the CLI) over each source.
+// The payload files stay apart from api/crm.yaml, whose webhooks: block
+// kin-openapi silently prunes. An isolated file
 // carries only our schemas, so generating every component is safe with no
 // synthetic-path trick.
 //

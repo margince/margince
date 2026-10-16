@@ -55,7 +55,7 @@ import {
   AvailabilityScreen,
   RESET_ROUTE,
 } from "./screens/auth";
-import { ConfinedAccountScreen, useConfinement } from "./screens/confinement";
+import { ConfinedAccountScreen, useProbeAnswer } from "./screens/confinement";
 import { useInstallationDescribed } from "./screens/installationcompany";
 import { OnboardingScreen } from "./screens/onboarding";
 import { useJourneyProgress } from "./screens/onboarding-journey";
@@ -832,12 +832,12 @@ function AuthedApp({
     }
   }, [authed, described, progress.unfinished, route.screen]);
 
-  const confinement = useConfinement(me.error, me.refetch);
+  const { refusal, confinement } = useProbeAnswer(me);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const commands = useBuiltinCommands();
   usePaletteHotkey(paletteOpen, setPaletteOpen);
 
-  if (me.isPending) {
+  if (me.isPending && refusal === null) {
     return (
       <RaillessFrame>
         <AuthSplash />
@@ -851,9 +851,9 @@ function AuthedApp({
       </RaillessFrame>
     );
   }
-  if (me.isError) {
+  if (refusal !== null) {
     const kind =
-      me.error instanceof AuthProbeError ? me.error.kind : "connection";
+      refusal instanceof AuthProbeError ? refusal.kind : "connection";
     if (kind === "connection" || kind === "installation") {
       const retry = () => me.refetch({ cancelRefetch: false });
       return (

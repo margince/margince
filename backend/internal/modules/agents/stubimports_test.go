@@ -33,7 +33,7 @@ func (stubImports) ReadReport(context.Context, ids.UUID) (crmcontracts.ImportRun
 	return crmcontracts.ImportRun{Status: awaitingApproval}, &crmcontracts.ImportRunReport{}, nil
 }
 
-func (stubImports) DescribeFormat(context.Context) (crmcontracts.ImportFormat, error) {
+func (stubImports) DescribeFormat(context.Context, string) (crmcontracts.ImportFormat, error) {
 	return crmcontracts.ImportFormat{}, nil
 }
 

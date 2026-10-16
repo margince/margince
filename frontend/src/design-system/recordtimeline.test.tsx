@@ -15,7 +15,6 @@ import { LocaleProvider, useT } from "../i18n";
 import { withEmailOpener } from "../lib/openemail";
 import { RecordZoneProvider } from "../lib/recordzone";
 import { activityTimeline } from "./activitytimeline";
-import { GroupedTimelineList } from "./composed";
 import { LoadMoreButton } from "./querystates";
 import {
   dayStartIso,
@@ -25,6 +24,7 @@ import {
   useTimelineFilters,
 } from "./recordtimeline";
 import { pickOption } from "./select-testing";
+import { GroupedTimelineList } from "./timeline";
 import { TimelineFilterBar } from "./timelinefilterbar";
 import { groupChronology } from "./timelinegroups";
 

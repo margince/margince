@@ -61,7 +61,7 @@ func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.Sta
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 			p, ok := principal.Actor(ctx)
-			if !ok || p.Type != principal.PrincipalAgent || servedByTheRegistry(r) {
+			if !ok || p.Type != principal.PrincipalAgent || servedByTheRegistry(r) || admittedByTheTool(r) {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -148,27 +148,19 @@ func refuseAgentRead(w http.ResponseWriter, r *http.Request, next http.Handler, 
 }
 
 // refusedAsHumanOnly applies x-agent-access to a NON-mutating agent call, and
-// reports whether it answered the request itself.
-//
-// A read has no tier to admit and no change to stage, but it does have a
-// governance class, and `x-agent-access: human-only` binds a `get:` exactly
-// as it binds a `post:`. auth.RequireHuman is the in-handler twin of this
-// check and about a dozen human-only reads call it; the rest — attachment
-// bytes and their extractions, AI call logs, voice profiles, automation run
-// history, webhook subscriptions — did not, and the gate could not cover
-// them because it returned early on every non-mutating method. It no longer
-// does.
-//
-// The default is the OPPOSITE of the mutating side's, deliberately: a
-// mutating route absent from the table is refused, a read absent from it is
-// admitted. The table now carries every ANNOTATED read, and an unannotated
-// read is ordinary agent-readable data whose authority is the granting
-// human's RBAC and row scope at the store, unchanged.
+// reports whether it answered the request itself. A read binds a passport as a
+// mutation does. One marked human-only is refused, and so is one the table does
+// not carry: every read a passport makes names its MCP verb.
 func refusedAsHumanOnly(w http.ResponseWriter, r *http.Request) bool {
 	pattern := chi.RouteContext(r.Context()).RoutePattern()
 	pol, admitted := routeAdmitsAgents(r.Method, pattern)
 	if admitted {
 		return false
+	}
+	if pol.Op == "" {
+		httperr.Write(w, r, fmt.Errorf(
+			"agent gate: %s %s has no agent policy: %w", r.Method, pattern, apperrors.ErrPermissionDenied))
+		return true
 	}
 	httperr.Write(w, r, fmt.Errorf(
 		"agent gate: %s is %s: %w", pol.Op, pol.Access, apperrors.ErrPermissionDenied))
@@ -176,13 +168,10 @@ func refusedAsHumanOnly(w http.ResponseWriter, r *http.Request) bool {
 }
 
 // routeAdmitsAgents asks whether an agent may call the route at all, and returns its policy, zero if none.
-// A read is admitted unless marked, and a mutation only under a tool policy.
+// Only a route under a tool policy admits one.
 func routeAdmitsAgents(method, pattern string) (agentPolicy, bool) {
 	pol, known := agentPolicies[method+" "+pattern]
-	if !known {
-		return pol, !mutatingMethod(method)
-	}
-	return pol, pol.Access == accessTool
+	return pol, known && pol.Access == accessTool
 }
 
 // prepareAgentGate resolves the admission inputs for a mutating agent call:

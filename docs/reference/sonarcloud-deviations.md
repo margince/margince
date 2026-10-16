@@ -75,7 +75,7 @@ extra column. So the shape of the table stays the same with it hidden.
 does not allow `tabIndex` on an element a user does not act on. WCAG 2.1.1 requires
 that a keyboard can work an area that scrolls, and the axe check
 `scrollable-region-focusable` fails one that a keyboard cannot reach. That is
-why `composed.tsx` and `trust.tsx` put the tab stop on the element that scrolls
+why `pipelineboard.tsx` and `trust.tsx` put the tab stop on the element that scrolls
 itself. In `decisiondeck.tsx` the stop is the only way the keyboard reaches the
 four verdicts on the `←` and `→` keys. Removing any of the three turns a lint finding
 into a real accessibility error, which the axe pass in the `uat` lane would catch.

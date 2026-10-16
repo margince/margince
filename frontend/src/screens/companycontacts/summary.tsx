@@ -11,8 +11,8 @@ import {
   SegmentedControl,
   StatCard,
 } from "../../design-system/atoms";
-import { PipelineBoard } from "../../design-system/composed";
 import { ErrorLine } from "../../design-system/errorline";
+import { PipelineBoard } from "../../design-system/pipelineboard";
 import { RelationshipMap } from "../../design-system/relationshipmap";
 import { StatStrip } from "../../design-system/statstrip";
 import { ProvenanceTag } from "../../design-system/trust";

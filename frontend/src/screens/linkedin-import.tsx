@@ -10,6 +10,7 @@ import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { postMultipart } from "../lib/multipart";
@@ -224,6 +225,71 @@ function LinkedInProfileRow() {
   );
 }
 
+// Whether colleagues who may read a company see how many of this member's
+// connections work there.
+//
+// On by default, and the description says so, because a member who never opens
+// this is listed. The count is a derived fact and names no connection, which is
+// what makes a default-on setting defensible. It is still a fact about them, so
+// they may withhold it.
+//
+// Their own reach page is unaffected either way: that one answers about
+// themselves, and this governs what colleagues are shown.
+function ReachVisibilityRow() {
+  const t = useT();
+  const account = useLinkedInAccount();
+  const client = useQueryClient();
+  const save = useMutation({
+    mutationFn: async (visible: boolean): Promise<void> => {
+      unwrap(
+        await api.PUT("/me/linkedin-account", {
+          body: { reach_visible_to_team: visible },
+        }),
+      );
+    },
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: LINKEDIN_ACCOUNT_KEY });
+      // The colleague lists every company page draws from this answer.
+      await client.invalidateQueries({ queryKey: ["company-linkedin-reach"] });
+    },
+  });
+  // Only a successful read answers this. Until then the control is unavailable
+  // rather than showing the default. A member who withheld their reach would
+  // see it on, and a click would write a state nobody read back.
+  const answered = account.isSuccess;
+  const visible = account.data?.reach_visible_to_team ?? true;
+  return (
+    <SettingRow
+      label={t("linkedinImport.reachVisibleLabel")}
+      description={t("linkedinImport.reachVisibleHelp")}
+      control={(props) => (
+        <div className="li-reach-visibility">
+          <Switch
+            label={t("linkedinImport.reachVisibleLabel")}
+            labelHidden
+            checked={answered && visible}
+            reason={
+              answered ? undefined : t("linkedinImport.reachVisibleUnread")
+            }
+            pending={save.isPending}
+            describedBy={props["aria-describedby"]}
+            onChange={(next) => save.mutate(next)}
+          />
+          {save.isError && (
+            <Callout
+              kind="outcome"
+              tone="danger"
+              title={t("linkedinImport.reachVisibleSaveFailed")}
+            >
+              {problemMessageOf(save.error, t)}
+            </Callout>
+          )}
+        </div>
+      )}
+    />
+  );
+}
+
 export function LinkedInImportCard() {
   const t = useT();
   const [fileName, setFileName] = useState<string | null>(null);
@@ -242,6 +308,7 @@ export function LinkedInImportCard() {
       </PanelBody>
       <SettingList bleed="settings">
         <LinkedInProfileRow />
+        <ReachVisibilityRow />
         {/* LinkedIn's export holds many CSVs and the wrong one fails with an
             unhelpful parse error, so the description names the file to pick. */}
         <SettingRow

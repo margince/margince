@@ -17,6 +17,10 @@ type agentToolWire struct {
 	RequiredScope string `json:"required_scope"`
 	Tier          string `json:"tier"`
 	Egress        bool   `json:"egress"`
+	Actions       *[]struct {
+		Verb string `json:"verb"`
+		Tier string `json:"tier"`
+	} `json:"actions"`
 }
 type agentToolListWire struct {
 	Data []agentToolWire `json:"data"`
@@ -34,13 +38,18 @@ func TestListAgentToolsMirrorsTheGovernedSurface(t *testing.T) {
 	if len(page.Data) == 0 {
 		t.Fatal("expected a non-empty governed tool surface")
 	}
-	// search_records is a 🟢 read tool that must be present and non-egress.
 	var found bool
 	for _, tool := range page.Data {
-		if tool.Name == "search_records" {
-			found = true
-			if tool.Tier != "auto_execute" || tool.Egress {
-				t.Fatalf("search_records = %+v, want auto_execute/non-egress", tool)
+		// search_records is reached through find_records, and its row carries the
+		// verb with the verb's own tier.
+		if tool.Name == "find_records" && tool.Actions != nil {
+			for _, action := range *tool.Actions {
+				if action.Verb == "search_records" {
+					found = true
+					if action.Tier != "auto_execute" || tool.Egress {
+						t.Fatalf("find_records' search action = %+v on %+v, want auto_execute/non-egress", action, tool)
+					}
+				}
 			}
 		}
 		if tool.Tier != "auto_execute" && tool.Tier != "confirmation_required" && tool.Tier != "dynamic" {
@@ -48,6 +57,6 @@ func TestListAgentToolsMirrorsTheGovernedSurface(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatal("search_records missing from the surface")
+		t.Fatal("search_records is missing from the surface, as a tool and as a router's action")
 	}
 }

@@ -17,6 +17,7 @@ import { useCanWriteRecord } from "../lib/capability";
 import { problemCodeOf, unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { routeHash } from "../lib/router";
+import { CompanyReachCard } from "./company-reach";
 import { CompanyDetails } from "./companydetails";
 import { DealsSection } from "./companyraildeals";
 import { CompanyProfileDetails } from "./companyraildetails";
@@ -151,6 +152,10 @@ export function CompanyRail({
               <DealsSection view={view} loading={loading} onTab={onTab} />
               <ProjectsSection view={view} loading={loading} onTab={onTab} />
               <ContactsSection view={view} loading={loading} onTab={onTab} />
+              {/* Beside the contacts, answering the same question from the
+                  other side. Those are the contacts on file here. This is who
+                  on the team can reach the ones that are not. */}
+              {resolved && <CompanyReachCard companyId={resolved.id} />}
               <ListsSection companyId={companyId} />
             </>
           )}

@@ -28,6 +28,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -42,13 +43,19 @@ import (
 // type the seam does not serve would be describing nothing.
 var (
 	createShapes = map[datasource.EntityType]reflect.Type{
-		datasource.EntityContact:      reflect.TypeFor[crmcontracts.CreateContactRequest](),
-		datasource.EntityCompany:      reflect.TypeFor[crmcontracts.CreateCompanyRequest](),
-		datasource.EntityDeal:         reflect.TypeFor[crmcontracts.CreateDealRequest](),
-		datasource.EntityLead:         reflect.TypeFor[crmcontracts.CreateLeadRequest](),
-		datasource.EntityActivity:     reflect.TypeFor[crmcontracts.CreateActivityRequest](),
-		datasource.EntityProject:      reflect.TypeFor[crmcontracts.CreateProjectRequest](),
-		datasource.EntityRelationship: reflect.TypeFor[crmcontracts.CreateRelationshipRequest](),
+		datasource.EntityContact:         reflect.TypeFor[crmcontracts.CreateContactRequest](),
+		datasource.EntityCompany:         reflect.TypeFor[crmcontracts.CreateCompanyRequest](),
+		datasource.EntityDeal:            reflect.TypeFor[crmcontracts.CreateDealRequest](),
+		datasource.EntityLead:            reflect.TypeFor[crmcontracts.CreateLeadRequest](),
+		datasource.EntityActivity:        reflect.TypeFor[crmcontracts.CreateActivityRequest](),
+		datasource.EntityProject:         reflect.TypeFor[crmcontracts.CreateProjectRequest](),
+		datasource.EntityRelationship:    reflect.TypeFor[crmcontracts.CreateRelationshipRequest](),
+		datasource.EntityProduct:         reflect.TypeFor[crmcontracts.CreateProductRequest](),
+		datasource.EntityOfferTemplate:   reflect.TypeFor[crmcontracts.CreateOfferTemplateRequest](),
+		datasource.EntityOffer:           reflect.TypeFor[crmcontracts.CreateOfferRequest](),
+		datasource.EntityDealRoom:        reflect.TypeFor[crmcontracts.CreateDealRoomRequest](),
+		datasource.EntityDealRoomThread:  reflect.TypeFor[crmcontracts.OpenDealRoomThreadRequest](),
+		datasource.EntityDealRoomComment: reflect.TypeFor[crmcontracts.PostDealRoomCommentRequest](),
 	}
 	// An activity patch cannot reach its LINKS: UpdateActivityRequest declares
 	// no link field, so this list has none to describe. A relationship patch
@@ -56,13 +63,16 @@ var (
 	// domain one — an edge's ends are what it IS, so moving one is an archive
 	// plus a new edge, never an update.
 	updateShapes = map[datasource.EntityType]reflect.Type{
-		datasource.EntityContact:      reflect.TypeFor[crmcontracts.UpdateContactRequest](),
-		datasource.EntityCompany:      reflect.TypeFor[crmcontracts.UpdateCompanyRequest](),
-		datasource.EntityDeal:         reflect.TypeFor[crmcontracts.UpdateDealRequest](),
-		datasource.EntityLead:         reflect.TypeFor[crmcontracts.UpdateLeadRequest](),
-		datasource.EntityActivity:     reflect.TypeFor[crmcontracts.UpdateActivityRequest](),
-		datasource.EntityProject:      reflect.TypeFor[crmcontracts.UpdateProjectRequest](),
-		datasource.EntityRelationship: reflect.TypeFor[crmcontracts.UpdateRelationshipRequest](),
+		datasource.EntityContact:       reflect.TypeFor[crmcontracts.UpdateContactRequest](),
+		datasource.EntityCompany:       reflect.TypeFor[crmcontracts.UpdateCompanyRequest](),
+		datasource.EntityDeal:          reflect.TypeFor[crmcontracts.UpdateDealRequest](),
+		datasource.EntityLead:          reflect.TypeFor[crmcontracts.UpdateLeadRequest](),
+		datasource.EntityActivity:      reflect.TypeFor[crmcontracts.UpdateActivityRequest](),
+		datasource.EntityProject:       reflect.TypeFor[crmcontracts.UpdateProjectRequest](),
+		datasource.EntityRelationship:  reflect.TypeFor[crmcontracts.UpdateRelationshipRequest](),
+		datasource.EntityProduct:       reflect.TypeFor[crmcontracts.UpdateProductRequest](),
+		datasource.EntityOfferTemplate: reflect.TypeFor[crmcontracts.UpdateOfferTemplateRequest](),
+		datasource.EntityOffer:         reflect.TypeFor[crmcontracts.UpdateOfferRequest](),
 	}
 )
 
@@ -100,6 +110,14 @@ func contractFieldNames(t reflect.Type) []string {
 	return names
 }
 
+// acceptedFieldNames is what a write's fields may name: the contract body's own
+// fields and the parent ids its route carries in its path, sorted.
+func acceptedFieldNames(shape reflect.Type, parents []string) []string {
+	names := append(contractFieldNames(shape), parents...)
+	sort.Strings(names)
+	return names
+}
+
 // recordFieldsDescription is the `fields` description both write tools carry.
 //
 // It NAMES the vocabulary rather than reciting it. Reciting it cost 18% of the
@@ -128,7 +146,7 @@ func contractFieldNames(t reflect.Type) []string {
 // disprove, which costs more than the silence it replaced.
 const recordFieldsDescription = "The crm.yaml body for the record_type. The fields each " +
 	"record_type takes, which of them are REQUIRED, and their shapes are published at " +
-	RecordFieldsURI + ", and answered by describe_vocabulary (topic record_fields) — that document, not this " +
+	RecordFieldsURI + ", and answered by describe_record_fields — that document, not this " +
 	"description, is what says what a write may name. An extra key must be cf_<slug> for a " +
 	"custom field; any other key is refused BY NAME " +
 	"and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. " +
@@ -184,7 +202,7 @@ func rejectUnknownFields(shapes writeShapes, recordType string, fields json.RawM
 		return &BadArgsError{Field: fieldsArg, Cause: errors.New("fields must be a JSON object, not null")}
 	}
 	accepted := make(map[string]struct{})
-	for _, name := range contractFieldNames(shape) {
+	for _, name := range acceptedFieldNames(shape, shapes.parents[recordType]) {
 		accepted[name] = struct{}{}
 	}
 	var unknown []string
@@ -304,10 +322,13 @@ type writeShapes struct {
 	// with its JSON type, its closed vocabulary where it has one, and a `?` on
 	// the ones the body may omit.
 	rendered map[string]string
+	// parents are the parent ids a create names among its fields, which its
+	// REST route carries in its path.
+	parents map[string][]string
 }
 
 var (
-	createWriteShapes = writeShapes{types: createShapes, rendered: createRecordShapes}
+	createWriteShapes = writeShapes{types: createShapes, rendered: createRecordShapes, parents: createParentFields}
 	updateWriteShapes = writeShapes{types: updateShapes, rendered: updateRecordShapes}
 )
 
@@ -331,4 +352,10 @@ func (w writeShapes) acceptedBy(recordType string, shape reflect.Type) string {
 		return rendered
 	}
 	return strings.Join(contractFieldNames(shape), ", ")
+}
+
+// CreateParents names the parent ids create_record takes among a record
+// type's fields, which its REST route carries in its path.
+func CreateParents(recordType string) []string {
+	return slices.Clone(createParentFields[recordType])
 }

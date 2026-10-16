@@ -3,6 +3,7 @@ import {
   approvalDotTier,
   dotTier,
   KIND_TO_VERB,
+  tierMapOf,
   type VerbTierMap,
 } from "./autonomy";
 
@@ -27,5 +28,27 @@ describe("autonomy tier helpers", () => {
   it("knows the approval kinds", () => {
     expect(KIND_TO_VERB.send_email).toBe("send_email");
     expect(KIND_TO_VERB.advance_deal).toBeDefined();
+  });
+});
+
+describe("tierMapOf", () => {
+  it("keys a router action's tier by the verb it runs", () => {
+    const map = tierMapOf([
+      {
+        name: "change_state",
+        tier: "dynamic",
+        actions: [
+          { verb: "promote_lead", tier: "auto_execute" },
+          { verb: "progress_deal", tier: "dynamic" },
+        ],
+      },
+      { name: "enrich", tier: "confirmation_required" },
+    ]);
+    expect(map).toEqual({
+      change_state: "dynamic",
+      promote_lead: "auto_execute",
+      progress_deal: "dynamic",
+      enrich: "confirmation_required",
+    });
   });
 });

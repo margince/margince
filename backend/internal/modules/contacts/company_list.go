@@ -80,6 +80,9 @@ type ListCompaniesInput struct {
 	CustomFilters map[string]string
 	// Membership narrows to one list's members (list_id).
 	Membership storekit.ListMemberFilter
+	// MemberOf is the list a seam caller narrowed to; the provider resolves it
+	// into Membership before the read.
+	MemberOf *ids.UUID
 }
 
 // companyListFields is the company list's core sortable

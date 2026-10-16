@@ -2388,6 +2388,8 @@ export const de = {
   "approval.kind.archive_record": "Datensatz archivieren",
   "approval.kind.merge_records": "Datensätze zusammenführen",
   "approval.kind.merge_tags": "Tags zusammenführen",
+  "approval.kind.archive_tag": "Tag stilllegen",
+  "approval.kind.change_record_parts": "Teile eines Datensatzes ändern",
   "approval.kind.update_record": "Datensatz aktualisieren",
   "approval.kind.create_record": "Datensatz erstellen",
   "approval.kind.send_email": "E-Mail senden",
@@ -2550,6 +2552,13 @@ export const de = {
   "linkedinImport.whichFile":
     "Connections.csv aus der LinkedIn-Datenkopie unter „Datenschutz“. Importierte Verbindungen werden nie zu Kontakten, und niemand kann ihnen E-Mails senden.",
   "linkedinImport.choose": "Connections.csv ausw\u00e4hlen",
+  "linkedinImport.reachVisibleUnread":
+    "Deine Reichweiten-Einstellung konnte nicht gelesen werden und lässt sich hier noch nicht ändern.",
+  "linkedinImport.reachVisibleSaveFailed":
+    "Deine Reichweiten-Einstellung wurde nicht gespeichert",
+  "linkedinImport.reachVisibleLabel": "Reichweite für das Team sichtbar",
+  "linkedinImport.reachVisibleHelp":
+    "An: wer ein Unternehmen lesen darf, sieht, wie viele deiner Kontakte dort arbeiten. Nur eine Anzahl, nie die Namen. Aus: du bleibst aus dieser Liste. Deine eigene Reichweiten-Seite bleibt in beiden Fällen unverändert.",
   "linkedinImport.importLabel": "Export der Verbindungen",
   "linkedinImport.noMatchesYet":
     "Noch keine Treffer, was bei einem neuen Unternehmen normal ist. Verbindungen werden mit Kontakten abgeglichen, sobald E-Mails gelesen werden, und der Abgleich läuft stündlich erneut.",
@@ -2559,6 +2568,15 @@ export const de = {
   "linkedinImport.suggested": "Wartet auf Bestätigung",
 
   // Die Prüfliste und die Reichweiten-Tabelle (ADR-0078 §2.1b).
+  "companyReach.title": "Wer dich vorstellen kann",
+  "companyReach.sub":
+    "Teammitglieder, deren LinkedIn-Kontakte hier arbeiten. Nur eine Anzahl, nie die Namen. Frag sie nach einer Vorstellung.",
+  "companyReach.colleaguesLabel": "Teammitglieder mit Kontakten hier",
+  "companyReach.colleague": "Teammitglied",
+  "companyReach.connections": "Kontakte hier",
+  "companyReach.none":
+    "Für dieses Unternehmen wird keine Reichweite im Team angezeigt.",
+  "companyReach.readFailed": "Diese Liste konnte nicht gelesen werden",
   "linkedinReach.title": "Reichweite im Netzwerk",
   "linkedinReach.sub":
     "Erfasste Unternehmen, bei denen du jemanden kennst, die meisten Verbindungen zuerst.",

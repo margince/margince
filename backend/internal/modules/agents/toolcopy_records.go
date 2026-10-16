@@ -22,16 +22,34 @@ var searchRecordsCopy = toolCopy{
 }
 
 var listRecordsCopy = toolCopy{
-	Purpose: "Enumerate the contacts, companies, deals, leads or projects that meet exact " +
-		"conditions — every deal in one pipeline, the leads one rep owns, the projects still " +
-		"being delivered.",
-	Limits: "It narrows only by the filters this workspace publishes for that record_type, which " +
-		"the schema lists per type, and it answers ONE page: the set continues past it.",
-	Instead: "Use search_records when the question is what a record is called rather than which " +
-		"records meet a condition, and run_report when the answer is a count or a total rather " +
-		"than the records themselves.",
-	Retain: "Keep next_cursor and pass it back to read the next page — a second call without it " +
-		"re-reads the first one. A result's `owner` says who holds it. " + sayWhoseItIs,
+	Purpose: "List the records of one record_type that meet exact conditions: every deal in one " +
+		"pipeline, the leads one rep owns, a contact's timeline.",
+	Limits: "It narrows only by the filters listed for that record_type, and answers ONE page: " +
+		"the set continues past it.",
+	Instead: "Use search_records to find a record by what it is called, and run_report for a count " +
+		"or a total.",
+	Retain: "Pass next_cursor back to read the next page; a call without it re-reads the first. " +
+		"A result's `owner` says who holds it. " + sayWhoseItIs,
+}
+
+var readViewCopy = toolCopy{
+	Purpose: "Read what the record tools do not answer: a record's derived views (company_360, " +
+		"contact_graph, deal_stakeholders, company_facts), the workspace's reference lists (stages, " +
+		"lead_sources, teams, record_roles) and reporting objects (reporting_targets, forecast_calls). " +
+		"Each view answers exactly what the matching REST route answers.",
+	Limits: "Name the view, then the id it reads and any of its filters. A view refuses an argument " +
+		"it does not take and names the ones it does.",
+}
+
+var changeRecordPartsCopy = toolCopy{
+	Purpose: "Change what is kept under a record: an offer's line items, a company's facts and " +
+		"profile fields, a project's companies and stakeholders. Prices are in minor units; read a " +
+		"product for its unit_price_minor rather than inventing one.",
+	Limits: "An offer's totals are computed from its lines and cannot be supplied, and a sent or " +
+		"accepted offer keeps its lines. Pass if_version from your read so a change made since is " +
+		"refused. Each action answers as its route does.",
+	Instead: "Use update_record for a record's own fields, and create_record with record_type offer " +
+		"to make an offer with its first lines.",
 }
 
 var readRecordCopy = toolCopy{
@@ -165,7 +183,7 @@ var archiveRecordCopy = toolCopy{
 		"move anything attached to it, so an archived duplicate still holds the activities and " +
 		"deals that were logged against it.",
 	Instead: "Use resolve_duplicates when a duplicate's history should end up on the record that " +
-		"survives, and change_lead_state to disqualify a lead going nowhere — a lead's own transition " +
+		"survives, and disqualify_lead to close out a lead going nowhere — a lead's own transition " +
 		"records the reason where archiving would not.",
 	Retain: "By default the record is archived when this call answers; where an installation " +
 		"has raised this verb to confirm first, the answer is a staged approval and you must not " +

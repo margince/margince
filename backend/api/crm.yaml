@@ -981,6 +981,7 @@ paths:
     get:
       tags: [Identity]
       operationId: getAgentOpenAPIDocument
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The OpenAPI 3.1 document of every operation a passport can call, as JSON.
       description: |
         The same operations as `openapi.yaml` in the skill ZIP (`GET /agent-bundle`), as JSON, so
@@ -1040,6 +1041,7 @@ paths:
     get:
       tags: [Contacts]
       operationId: previewContactEmploymentImport
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Read retained provider roles and their company-link outcomes without buying another lookup.
       responses:
         '200':
@@ -1493,6 +1495,7 @@ paths:
     get:
       tags: [Contacts]
       operationId: getContact360
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The whole contact record page in one round trip — identity, employments, buying roles, strength, who-knows-them, timeline, consent, provenance.
       description: |
         The contact half of the one-composite-read doctrine (PO-EXT-3), assembled inside ONE
@@ -1801,7 +1804,8 @@ paths:
     get:
       tags: [Contacts]
       operationId: getContactConsentGuard
-      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: May we write to this contact right now — per purpose and channel, with the reason.
       description: |
         The readable half of the send gate (ADR-0098 D6). It answers `allowed | blocked |
@@ -2145,6 +2149,7 @@ paths:
     get:
       tags: [Contacts]
       operationId: getContactGraph
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Who around this contact could open a door, and through whom.
       description: |
         The local graph answers one question a rep actually asks: *who here can introduce me,
@@ -2476,6 +2481,8 @@ paths:
     get:
       tags: [Contacts]
       operationId: getContactAccess
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: Who can open this contact and who can change it, and why.
       description: |
         Every live member who can open this contact, with whether they can also change it and the
@@ -2508,6 +2515,7 @@ paths:
     get:
       tags: [Contacts]
       operationId: getContactStrength
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Relationship strength for a contact (deterministic recency × frequency × reciprocity).
       responses:
         '200':
@@ -2525,6 +2533,7 @@ paths:
       tags: [Integrations]
       operationId: getIntegrationsSettings
       security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: The installation's provider-lookup posture.
       description: |
         Whether a provider run may be queued without a human pressing anything. Every role may
@@ -3050,6 +3059,7 @@ paths:
     get:
       tags: [Companies]
       operationId: getCompanyHierarchyRollup
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Roll up a company's account tree — weighted pipeline, current-quarter closed-won, 30-day activity count.
       description: |
         `roll-up(node) = self(node) + Σ roll-up(readable child)` over the parent_company_id tree,
@@ -3152,6 +3162,7 @@ paths:
     get:
       tags: [Companies]
       operationId: getCompany360
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The whole company record page in one round trip — profile, contacts, deals, timeline, tags, approvals, next steps.
       description: |
         One composite read assembled inside ONE workspace transaction, so the sections
@@ -3219,6 +3230,7 @@ paths:
     get:
       tags: [Companies]
       operationId: getCompanyGraph
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The account's connections one hop out — its contacts, its open deals and their stakeholders, its parent, children and partner companies.
       description: |
         The company view's connections card: who and what this account is attached to,
@@ -3371,6 +3383,7 @@ paths:
     get:
       tags: [Companies]
       operationId: getCompanyCoverage
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: How well this account is covered — who answers, who is missing from the buying team, and the warmest way in.
       description: |
         The decision layer of the company Contacts tab. `GET /companies/{id}/contacts`
@@ -3405,6 +3418,7 @@ paths:
     get:
       tags: [Companies]
       operationId: listCompanyContacts
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The account's contacts, ranked by who is worth writing to next, filtered and paged over the WHOLE account.
       description: |
         The company Contacts tab's list. `GET /companies/{id}/360` carries a contacts
@@ -4303,7 +4317,7 @@ paths:
 
         404 when the account has never been looked up, which is the honest difference between
         "never tried" and "tried and found nothing".
-      x-mcp-tool: { verb: read_record, record_type: company, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       responses:
         '200':
           description: What each source last did for this account.
@@ -4334,7 +4348,7 @@ paths:
 
         404 when the number has never been consulted, which is the honest difference between
         "never asked" and "asked and told no".
-      x-mcp-tool: { verb: read_record, record_type: company, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The current standing, and the proof it was checked.
@@ -4393,7 +4407,7 @@ paths:
         industry, no description, no facts — and a draft written from it had nothing to
         stand on. 404 when the account has never been read, which is the honest
         difference between "never tried" and "tried and got nothing".
-      x-mcp-tool: { verb: read_record, record_type: company, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The newest read's report.
@@ -4414,7 +4428,7 @@ paths:
       tags: [Companies]
       operationId: getSiteRead
       summary: One deep read's progress and outcome — pages read, pages skipped and WHY, what got staged.
-      x-mcp-tool: { verb: read_record, record_type: company, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The read report.
@@ -4430,6 +4444,8 @@ paths:
     get:
       tags: [Companies]
       operationId: getCompanyAccess
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: Who can open this company and who can change it, and why.
       description: |
         Every live member who can open this company, with whether they can also change it and the
@@ -4462,6 +4478,7 @@ paths:
     get:
       tags: [Companies]
       operationId: getCompanyStrength
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Relationship strength for a company (max over current employees).
       responses:
         '200':
@@ -4479,6 +4496,7 @@ paths:
     get:
       tags: [Companies, Finance]
       operationId: getCompanyFinanceSummary
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Does this customer actually pay us, and on time?
       description: |
         The finance card's whole read (FIN-WIRE-1, ADR-0083): what we have
@@ -4556,6 +4574,7 @@ paths:
     get:
       tags: [Companies]
       operationId: listCompanyFacts
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The company's confirmed facts (company_fact), grouped by category on the client. Site-read facts carry evidence (snippet, source URL, confidence); human/migration values may omit it.
       responses:
         '200':
@@ -4583,7 +4602,7 @@ paths:
         A live duplicate is refused with 409 rather than silently upserted — if the fact is already
         stated, the honest verbs are confirm and correct, and an upsert here would let a hand write
         quietly overwrite a machine claim without the correction's audit before-image.
-      x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
@@ -4614,6 +4633,7 @@ paths:
     get:
       tags: [Companies]
       operationId: listCompanyProfileFields
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The company's confirmed profile fields (company_profile_field). A field with no stored value is absent (evidence-or-omit); site-read values carry evidence, human/migration values may omit it.
       responses:
         '200':
@@ -4640,7 +4660,7 @@ paths:
         - name: cert_status
           in: query
           schema: { type: string, enum: [applied, certified, suspended] }
-      x-mcp-tool: { verb: search_records, record_type: partner, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: list_records, record_type: partner, tier: auto_execute, scope: read }
       responses:
         '200':
           description: A page of partner records.
@@ -4664,7 +4684,7 @@ paths:
         margin tier as it stood that day. A clawback is a reversal row plus a void on the
         original, never an edit — so the ledger reads the same tomorrow as it did when a
         partner was told what they had earned.
-      x-mcp-tool: { verb: list_records, record_type: commission, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: list_records, record_type: commission, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -4693,7 +4713,7 @@ paths:
       tags: [Commissions]
       operationId: getCommissionSummary
       summary: What is owed, by partner and status — the open-liability figure.
-      x-mcp-tool: { verb: run_report, record_type: commission, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_reporting, tier: auto_execute, scope: read }
       responses:
         '200':
           description: One row per partner and status.
@@ -4710,7 +4730,7 @@ paths:
       tags: [Commissions]
       operationId: getCommissionEntry
       summary: One ledger entry.
-      x-mcp-tool: { verb: read_record, record_type: commission, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: read_record, record_type: commission, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The entry.
@@ -5508,6 +5528,7 @@ paths:
     get:
       tags: [Deals]
       operationId: listDealStakeholders
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List a deal's stakeholders (deal↔contact relationships).
       responses:
         '200':
@@ -5715,6 +5736,7 @@ paths:
     get:
       tags: [Bulk]
       operationId: getBulkChange
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Read what one bulk change did, and whether it was undone.
       description: |
         The record of one executed bulk change or undo: its record type and verb, how many records
@@ -6019,6 +6041,7 @@ paths:
     get:
       tags: [Projects]
       operationId: listProjectHealthAssessments
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: How this project has been going, newest judgement first.
       description: |
         The whole history, corrections included, so a delivery review can read what was said
@@ -6103,6 +6126,7 @@ paths:
     get:
       tags: [Projects]
       operationId: listProjectStakeholders
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List a project's stakeholders (project↔contact relationships).
       description: |
         `relationship` rows of kind `project_stakeholder` — the deal-stakeholder surface's twin,
@@ -6120,7 +6144,7 @@ paths:
       tags: [Projects]
       operationId: setProjectStakeholder
       summary: Attach a contact to a project with a role (idempotent per contact).
-      x-mcp-tool: { verb: update_record, record_type: project, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/ApprovalToken'
       requestBody:
@@ -6147,7 +6171,7 @@ paths:
       tags: [Projects]
       operationId: removeProjectStakeholder
       summary: Detach a contact from a project (archives the edge).
-      x-mcp-tool: { verb: update_record, record_type: project, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/ApprovalToken'
       responses:
@@ -6168,7 +6192,7 @@ paths:
         so a company is an edge (`relationship` of kind `project_company`), not the project's one
         anchor. Sending a company already on the project re-roles the edge that exists rather than
         adding a second one.
-      x-mcp-tool: { verb: update_record, record_type: project, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/ApprovalToken'
       requestBody:
@@ -6199,7 +6223,7 @@ paths:
         The company keeps every record it owns; only its place on this project ends. Taking the
         LAST company off a project is refused: a project no company is on is work nobody is doing,
         and it would vanish from every company page that could lead a reader back to it.
-      x-mcp-tool: { verb: update_record, record_type: project, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/ApprovalToken'
       responses:
@@ -6259,6 +6283,7 @@ paths:
     get:
       tags: [Pipelines]
       operationId: getPipeline
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Get a pipeline (with its ordered stages).
       responses:
         '200':
@@ -6441,6 +6466,7 @@ paths:
     get:
       tags: [Pipelines]
       operationId: listStages
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List stages (optionally filtered by pipeline).
       parameters:
         - name: pipeline_id
@@ -6490,6 +6516,7 @@ paths:
     get:
       tags: [Pipelines]
       operationId: getStage
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Get a stage by id.
       responses:
         '200':
@@ -6676,6 +6703,7 @@ paths:
     get:
       tags: [Deals]
       operationId: listStageEvidence
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: What has been observed about this deal against its stage's criteria.
       description: |
         The evidence ledger for one deal, newest observation first.
@@ -6701,6 +6729,7 @@ paths:
     get:
       tags: [Pipelines]
       operationId: getStageAutomationReport
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: What each stage transition has earned.
       description: |
         Every from→to transition in one pipeline, with what happened to the moves
@@ -6755,6 +6784,7 @@ paths:
     get:
       tags: [Pipelines]
       operationId: listTransitionPolicies
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: What each transition in this pipeline is allowed to do.
       description: |
         One rule per from→to transition an admin has decided about. A transition
@@ -6866,6 +6896,7 @@ paths:
     get:
       tags: [Pipelines]
       operationId: listStageExitCriteria
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: What a deal must satisfy before it leaves this stage.
       description: |
         The stage's exit criteria in `position` order. Live rows only unless
@@ -7045,7 +7076,7 @@ paths:
       tags: [Activities]
       operationId: listActivities
       summary: List activities (the timeline; cursor-paginated, filterable by type/entity).
-      x-mcp-tool: { verb: search_records, record_type: activity, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: list_records, record_type: activity, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -7276,7 +7307,7 @@ paths:
         statutory retention obligation — a held row is outside every ordinary read, so there
         is no presentation of it to refuse. A caller who may discover the row but stands
         outside its audience gets `content_state: withheld`: the markers, and nothing said.
-      x-mcp-tool: { verb: read_record, record_type: activity, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       parameters:
         - name: thread_cursor
           in: query
@@ -7410,6 +7441,7 @@ paths:
     get:
       tags: [Activities]
       operationId: getMeetingBrief
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       x-waits-on-model: always
       summary: The pre-meeting brief for one booked meeting — goal, commitments, where the deal stands.
       description: |
@@ -7761,7 +7793,7 @@ paths:
         after the rep left the page could not be found again — and a transcript nobody had read looked
         exactly like one whose reading had failed. 404 when this transcript has never been read, which
         is the honest difference between "never tried" and "tried and got nothing".
-      x-mcp-tool: { verb: read_record, record_type: activity, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The newest reading's report.
@@ -7782,7 +7814,7 @@ paths:
       tags: [Activities]
       operationId: getTranscriptRead
       summary: One reading's progress and outcome — how many lines it addressed, what it staged, and why it produced nothing.
-      x-mcp-tool: { verb: read_record, record_type: activity, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The read report.
@@ -7838,6 +7870,7 @@ paths:
     get:
       tags: [Activities]
       operationId: getReplyRecipient
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Who a reply to this message would be addressed to.
       description: |
         Asked without drafting, so a composer can show the recipient when it opens
@@ -8681,6 +8714,7 @@ paths:
     get:
       tags: [Activities]
       operationId: getSchedulingProfile
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Read the caller's reusable booking page and scheduling policy.
       responses:
         default:
@@ -8749,6 +8783,7 @@ paths:
     get:
       tags: [Activities]
       operationId: getMeetingInvitation
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Read invitation delivery and calendar state.
       responses:
         default:
@@ -9142,6 +9177,7 @@ paths:
       tags: [Public]
       operationId: getBuyerRoom
       security: [{ dealRoomSession: [] }]
+      x-agent-access: human-only
       summary: The room as its buyer sees it — the room itself, never the live deal.
       description: |
         What the session admits the caller to. `access` says whether content is
@@ -9165,6 +9201,7 @@ paths:
       tags: [Public]
       operationId: listBuyerRoomDocuments
       security: [{ dealRoomSession: [] }]
+      x-agent-access: human-only
       summary: The documents as published, grouped.
       description: |
         The manifest frozen in the latest release. A document the seller added or
@@ -9188,6 +9225,7 @@ paths:
       tags: [Public]
       operationId: downloadBuyerRoomDocument
       security: [{ dealRoomSession: [] }]
+      x-agent-access: human-only
       summary: The bytes of one published document.
       description: |
         Served only for a document named in the latest release of the session's room,
@@ -9209,6 +9247,7 @@ paths:
       tags: [Public]
       operationId: listBuyerRoomThreads
       security: [{ dealRoomSession: [] }]
+      x-agent-access: human-only
       summary: The room's conversation as the buyer sees it.
       description: Optionally narrowed to one published document. Empty while the room serves no content.
       parameters:
@@ -9573,6 +9612,7 @@ paths:
     get:
       tags: [Automations]
       operationId: listAutomationCatalog
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The closed starter library of automation types the workspace can instantiate.
       description: |
         Lists the available automation *types* (the closed starter library, E15/ADR-0035) — the left
@@ -9593,6 +9633,7 @@ paths:
     get:
       tags: [Automations]
       operationId: listAutomations
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List the workspace's configured automation instances.
       parameters:
         - $ref: '#/components/parameters/Cursor'
@@ -9637,6 +9678,7 @@ paths:
     get:
       tags: [Automations]
       operationId: getAutomation
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Read one automation instance.
       responses:
         '200':
@@ -9987,6 +10029,7 @@ paths:
     get:
       tags: [Activities]
       operationId: getFollowUpSettings
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: How long a sent message may go unanswered before the worklist reminds its sender.
       description: |
         The workspace's follow-up window: a message a seat sent to a customer that is still
@@ -10026,6 +10069,7 @@ paths:
     get:
       tags: [Contacts]
       operationId: getEmailSignatureTemplate
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The workspace's signature template.
       description: |
         The layout every member's mail signs with when it is set, filled in with each member's
@@ -10064,6 +10108,7 @@ paths:
     get:
       tags: [Leads]
       operationId: getLeadSettings
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: How this installation handles leads.
       description: |
         The first-response target (formulas §18) is opt-in: off by default. While it is off
@@ -10588,6 +10633,7 @@ paths:
     get:
       tags: [Leads]
       operationId: listLeadSources
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List lead sources, active and inactive, in display order.
       description: |
         `data` is the administered list. `discovered` names source values that
@@ -10675,6 +10721,7 @@ paths:
     get:
       tags: [Deals]
       operationId: listAcquisitionSources
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List deal acquisition sources, active and retired, in display order.
       description: |
         The administered business channels a deal can be attributed to. This list is
@@ -10749,6 +10796,7 @@ paths:
     get:
       tags: [Assignments]
       operationId: listRecordRoles
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List responsibility roles, active and retired, in display order.
       description: |
         The administered vocabulary of responsibilities a colleague or team can hold on a
@@ -10830,6 +10878,7 @@ paths:
     get:
       tags: [Assignments]
       operationId: listRecordAssignments
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Who is responsible for this record, by role.
       description: |
         Answers with the live assignments on one company, deal or project, ordered by role
@@ -10919,6 +10968,7 @@ paths:
     get:
       tags: [Leads]
       operationId: listLeadDisqualifyReasons
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List disqualification reasons, active and inactive, in display order.
       responses:
         '200':
@@ -11001,6 +11051,7 @@ paths:
     get:
       tags: [Relationships]
       operationId: listRelationships
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List relationships (employment, deal_stakeholder, or partner edges).
       parameters:
         - $ref: '#/components/parameters/Cursor'
@@ -11132,7 +11183,7 @@ paths:
     get:
       tags: [Lists]
       operationId: listLists
-      x-mcp-tool: { verb: read_lists, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Find the lists this caller may see, by name.
       description: |
         A list is found by its sharing: every seat finds a workspace list, the members of its team
@@ -11276,7 +11327,7 @@ paths:
     get:
       tags: [Lists]
       operationId: listListMembers
-      x-mcp-tool: { verb: read_lists, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Page through the members of a list this caller may see.
       description: |
         A Shortlist's chosen members, with who added each, when and why; or a Live List's filter
@@ -11446,6 +11497,7 @@ paths:
     get:
       tags: [Lists]
       operationId: getRecordLists
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The lists one record is on that this caller may find.
       description: |
         Every Shortlist the record was chosen for, and every Live List whose filter selects it
@@ -11522,6 +11574,7 @@ paths:
     get:
       tags: [Views]
       operationId: getFilterVocabulary
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Read what a new filter clause may name on one record type (LVS-EXT-8).
       description: |
         The per-resource filter vocabulary: every field a dynamic list, saved view
@@ -11705,6 +11758,7 @@ paths:
       tags:
       - Reports
       operationId: exportReportingEvaluation
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Evaluate reporting
       responses:
         '409': { $ref: '#/components/responses/Conflict' }
@@ -11820,6 +11874,7 @@ paths:
     get:
       tags: [Reports]
       operationId: exportReportingEdition
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Export this edition's permitted frozen metrics and chart readings.
       parameters:
       - $ref: '#/components/parameters/Id'
@@ -12189,6 +12244,7 @@ paths:
       tags:
       - Reports
       operationId: listReportingTargets
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List reporting targets
       responses:
         '200':
@@ -12251,6 +12307,7 @@ paths:
       tags:
       - Reports
       operationId: getReportingTarget
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Get reporting target
       responses:
         '200':
@@ -12302,6 +12359,7 @@ paths:
       tags:
       - Reports
       operationId: getReportingFramework
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Get reporting framework
       responses:
         '200':
@@ -12354,6 +12412,7 @@ paths:
       tags:
       - Reports
       operationId: listReportingSchedules
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List reporting schedules
       responses:
         '200':
@@ -12593,6 +12652,7 @@ paths:
       tags:
       - Reports
       operationId: listReportingExecutions
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List reporting executions
       responses:
         '200':
@@ -12618,6 +12678,7 @@ paths:
       tags:
       - Reports
       operationId: getReportingExecution
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Get reporting execution
       responses:
         '200':
@@ -13372,7 +13433,7 @@ paths:
     delete:
       tags: [Tags]
       operationId: archiveTag
-      x-mcp-tool: { verb: archive_record, record_type: tag, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: archive_tag, record_type: tag, tier: auto_execute, scope: write }
       summary: Archive a tag.
       description: |
         Retiring a word leaves every record that carries it alone: the taggings stay, so a
@@ -13668,6 +13729,7 @@ paths:
     get:
       tags: [Reports]
       operationId: explainReport
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: '"Explain This Number" — resolve a derivation handle to its definition + source rows.'
       description: |
         Resolves the drill-through handle minted as `derivation_url` on every `runReport`
@@ -13943,6 +14005,26 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RecordFieldsVocabulary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /list-filters:
+    get:
+      tags: [Search]
+      operationId: describeListFilters
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: The filters a record list may be narrowed by, for each record type.
+      description: |
+        The answer the `describe_list_filters` agent tool gives, run by the same tool on
+        both doors: for each record type, the filters `list_records` takes (the list
+        route's own query parameters), the operand each takes and its closed values.
+      x-mcp-tool: { verb: describe_list_filters, tier: auto_execute, scope: read, served_by: registry }
+      responses:
+        '200':
+          description: The record list filter vocabulary.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ListFiltersVocabulary' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
@@ -15797,6 +15879,7 @@ paths:
       tags: [Capture]
       operationId: getConnectorBackfillStatus
       security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: Backfill progress — the activation read.
       description: |
         The single-row progress read behind the activation screen (CAP-PARAM-2: < 150 ms, never
@@ -16585,6 +16668,7 @@ paths:
       tags: [Capture]
       operationId: getMorningDigest
       security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: The calling user's morning digest — what capture did overnight.
       description: |
         Reads the CAP-DDL-6 payload built by the nightly suite (CAP-WIRE-6): capture totals,
@@ -16664,6 +16748,8 @@ paths:
     get:
       tags: [Identity]
       operationId: getInstallationSettings
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: The installation's own settings.
       description: |
         Reads the installation's identity and reporting basis (ADR-0090): its name, the
@@ -17099,6 +17185,7 @@ paths:
       tags: [Capture]
       operationId: getCaptureSettings
       security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: The workspace's capture settings.
       description: |
         Reads the workspace-shared capture posture (ADR-0072, CAP-PARAM-7). Every role
@@ -18459,7 +18546,8 @@ paths:
     get:
       tags: [Contacts]
       operationId: listDedupeCandidates
-      security: [ { cookieAuth: [] } ]
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The dedupe review queue, confidence-sorted.
       parameters:
         - { name: status, in: query, schema: { type: string, enum: [open, merged, not_a_duplicate], default: open } }
@@ -18480,7 +18568,8 @@ paths:
     get:
       tags: [Contacts]
       operationId: getDedupeCandidate
-      security: [ { cookieAuth: [] } ]
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: One candidate with its full detection-time evidence.
       responses:
         '200':
@@ -18697,11 +18786,11 @@ paths:
     post:
       tags: [Approvals]
       operationId: approveApproval
-      summary: Approve a staged action (commits it; mints the approval token).
+      summary: Approve a staged action (commits it).
       description: |
         Approving commits the proposed change in one audit transaction. The (optionally
-        edited) payload is what executes. Returns the approval with the resulting entity ref
-        + the `approval_token` that authorized the downstream 🟡 operation.
+        edited) payload is what executes. Returns the approval with the resulting entity ref.
+        An agent that staged the call repeats it with `X-Approval-Token: <this approval's id>`.
 
         A passport acting for a human decides here on that human's own authority
         (ADR-0055): the decision demands the RBAC the staged effect itself needs, the
@@ -19840,7 +19929,7 @@ paths:
         CUSTOM-FIELDS-WIRE-1. Unlike a normal resource list, this admin view returns both
         active and retired fields by default — `status` narrows to one lifecycle state.
         Backs the custom-fields admin field table.
-      x-mcp-tool: { verb: describe_query_vocabulary, record_type: custom_field, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -20051,6 +20140,7 @@ paths:
     get:
       tags: [CustomFields]
       operationId: listCustomFieldLiveLists
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The Live Lists whose filter names this custom field.
       description: |
         What retiring the field would leave behind, asked before the retire is confirmed. A list
@@ -20228,6 +20318,7 @@ paths:
     get:
       tags: [Compliance]
       operationId: listConsentPurposes
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
       description: |
         UNPAGED, deliberately. A workspace's consent purposes are configuration — a handful of
@@ -20624,6 +20715,8 @@ paths:
     get:
       tags: [Compliance]
       operationId: getContactConsent
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: Read a contact's per-purpose consent state plus the append-only proof log.
       description: |
         Returns the current `granted/withdrawn/unknown` state for every tracked purpose and the
@@ -21589,6 +21682,7 @@ paths:
     get:
       tags: [Identity]
       operationId: nameSeats
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Name the colleagues behind a set of ids. Read-only.
       description: |
         The display names behind ids the caller already holds — a record's owner, an activity's
@@ -22222,6 +22316,7 @@ paths:
     get:
       tags: [Identity]
       operationId: listTeams
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List workspace teams — cursor-paginated. Read-only.
       description: |
         Teams available as record-share subjects, with a member count. Any authenticated member may read.
@@ -22841,7 +22936,7 @@ paths:
       tags: [Offers]
       operationId: listProducts
       summary: List rate-card products (live by default; cursor-paginated).
-      x-mcp-tool: { verb: search_records, record_type: product, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: list_records, record_type: product, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -22869,7 +22964,7 @@ paths:
       description: |
         Price is integer minor-units + ISO-4217 currency (P11, no float money). `sku` is
         optional; when present it is unique per workspace (409 on a live duplicate).
-      x-mcp-tool: { verb: create_record, record_type: product, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: create_record, record_type: product, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -22897,7 +22992,7 @@ paths:
       tags: [Offers]
       operationId: getProduct
       summary: Get a product by id.
-      x-mcp-tool: { verb: read_record, record_type: product, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: read_record, record_type: product, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The product.
@@ -22909,7 +23004,7 @@ paths:
       tags: [Offers]
       operationId: updateProduct
       summary: Update a product (partial). Existing offer lines keep their price snapshot.
-      x-mcp-tool: { verb: update_record, record_type: product, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: update_record, record_type: product, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IfMatch'
       requestBody:
@@ -22930,7 +23025,7 @@ paths:
       tags: [Offers]
       operationId: archiveProduct
       summary: Archive (soft-delete) a product. Lines referencing it survive with their snapshot.
-      x-mcp-tool: { verb: archive_record, record_type: product, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: archive_record, record_type: product, tier: auto_execute, scope: write }
       responses:
         '200':
           description: Archived product.
@@ -22965,7 +23060,7 @@ paths:
       description: |
         Scoped by the parent deal's visibility: a room whose deal the caller cannot
         see is absent, indistinguishable from one that does not exist.
-      x-mcp-tool: { verb: search_records, record_type: deal_room, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: list_records, record_type: deal_room, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -23007,7 +23102,7 @@ paths:
         The steward defaults to the deal's owner and is the named human a buyer is
         pointed at for help; a room whose steward left the company points its buyers
         at nobody, so the field transfers deliberately rather than following the deal.
-      x-mcp-tool: { verb: create_record, record_type: deal_room, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: create_record, record_type: deal_room, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -23036,7 +23131,7 @@ paths:
       tags: [Deals]
       operationId: getDealRoom
       summary: Get a Deal Room by id.
-      x-mcp-tool: { verb: read_record, record_type: deal_room, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: read_record, record_type: deal_room, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The Deal Room.
@@ -23259,7 +23354,7 @@ paths:
         Revoked participants are included by default and marked: their comments and
         decisions stay attributed to them, so a roster that hid them would
         leave unexplained names on the room's history.
-      x-mcp-tool: { verb: search_records, record_type: deal_room_participant, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: list_records, record_type: deal_room_participant, tier: auto_execute, scope: read }
       parameters:
         - name: active_only
           in: query
@@ -23431,7 +23526,7 @@ paths:
         Each entry points at an attachment already filed on the room's deal; the room
         holds no bytes of its own. Grouped by one of four fixed groups and ordered
         within each.
-      x-mcp-tool: { verb: search_records, record_type: deal_room_document, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: list_records, record_type: deal_room_document, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The room's documents.
@@ -23533,7 +23628,7 @@ paths:
       description: |
         Live on both sides: nothing here waits for a publish. Optionally narrowed to
         one document. A room-level thread has no `document_id`.
-      x-mcp-tool: { verb: search_records, record_type: deal_room_thread, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: list_records, record_type: deal_room_thread, tier: auto_execute, scope: read }
       parameters:
         - name: document_id
           in: query
@@ -23555,7 +23650,7 @@ paths:
         The first comment is the body. Refused once the room can no longer reach a
         buyer (closed, expired, archived). A document thread is pinned to the
         document's current version.
-      x-mcp-tool: { verb: create_record, record_type: deal_room_thread, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: create_record, record_type: deal_room_thread, tier: auto_execute, scope: write }
       requestBody:
         required: true
         content:
@@ -23584,7 +23679,7 @@ paths:
       operationId: replyDealRoomThread
       summary: Reply in a thread as the seller's side.
       description: Refused on a resolved thread and in a room that can no longer reach a buyer.
-      x-mcp-tool: { verb: create_record, record_type: deal_room_comment, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: create_record, record_type: deal_room_comment, tier: auto_execute, scope: write }
       requestBody:
         required: true
         content:
@@ -23646,7 +23741,7 @@ paths:
       operationId: listOfferTemplates
       summary: List offer templates (branded DE/EN PDF layouts), newest first.
       description: Default view excludes archived rows; pass include_archived=true to include them.
-      x-mcp-tool: { verb: search_records, record_type: offer_template, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: list_records, record_type: offer_template, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -23673,7 +23768,7 @@ paths:
         `offer_template_name_duplicate`). At most one default template per locale (409
         `offer_template_default_conflict` — setting `is_default=true` while another
         default already holds that locale).
-      x-mcp-tool: { verb: create_record, record_type: offer_template, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: create_record, record_type: offer_template, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -23722,7 +23817,7 @@ paths:
       tags: [Offers]
       operationId: getOfferTemplate
       summary: Get an offer template by id.
-      x-mcp-tool: { verb: read_record, record_type: offer_template, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: read_record, record_type: offer_template, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The offer template.
@@ -23737,7 +23832,7 @@ paths:
       operationId: updateOfferTemplate
       summary: Update an offer template (full replace — every writable field is replaced).
       description: Uses PUT (not PATCH) — omitting a writable field resets it, it is not a partial no-op.
-      x-mcp-tool: { verb: update_record, record_type: offer_template, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: update_record, record_type: offer_template, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IfMatch'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -23762,7 +23857,7 @@ paths:
       operationId: archiveOfferTemplate
       summary: Archive (soft-delete) an offer template.
       description: Sets archived_at (soft-archive); hidden from the default list but still fetchable by id. Offers already carrying this template_id are unaffected — a template is never deleted out from under an existing offer.
-      x-mcp-tool: { verb: archive_record, record_type: offer_template, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: archive_record, record_type: offer_template, tier: auto_execute, scope: write }
       responses:
         '200':
           description: Archived offer template.
@@ -23793,7 +23888,7 @@ paths:
 
         Each review names the closing it is about, so a caller comparing against the deal's
         own `closing_occurrence_id` can tell which one is current.
-      x-mcp-tool: { verb: read_record, record_type: deal, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The deal's reviews.
@@ -23842,6 +23937,7 @@ paths:
     get:
       tags: [Activities]
       operationId: listActivityReviewTemplates
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The question sets an outcome review can ask.
       responses:
         '200':
@@ -23883,7 +23979,7 @@ paths:
       tags: [Offers]
       operationId: listDealOffers
       summary: List a deal's offers, newest revision first.
-      x-mcp-tool: { verb: search_records, record_type: offer, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: list_records, record_type: offer, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -23905,7 +24001,7 @@ paths:
         Line items may ride the create; each snapshots description/price from its optional
         `product_id` unless given explicitly. Totals are DERIVED — a body carrying
         `net_minor`/`gross_minor`/`line_total` (any spelling) is rejected 422.
-      x-mcp-tool: { verb: create_record, record_type: offer, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: create_record, record_type: offer, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -23931,7 +24027,7 @@ paths:
       tags: [Offers]
       operationId: getOffer
       summary: Get an offer with its line items and computed totals.
-      x-mcp-tool: { verb: read_record, record_type: offer, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: read_record, record_type: offer, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The offer.
@@ -23943,7 +24039,7 @@ paths:
       tags: [Offers]
       operationId: updateOffer
       summary: Update offer header fields — allowed only while status=draft.
-      x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IfMatch'
       requestBody:
@@ -23969,7 +24065,7 @@ paths:
       operationId: archiveOffer
       summary: Archive (soft-delete) an offer.
       description: An accepted offer prices its deal and is refused 409 `offer_accepted`; archive any other status.
-      x-mcp-tool: { verb: archive_record, record_type: offer, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: archive_record, record_type: offer, tier: auto_execute, scope: write }
       responses:
         '200':
           description: Archived offer.
@@ -23986,7 +24082,7 @@ paths:
       tags: [Offers]
       operationId: addOfferLineItem
       summary: Add a line item to a draft offer (position defaults to next; totals recomputed).
-      x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       requestBody:
         required: true
         content:
@@ -24012,7 +24108,7 @@ paths:
       tags: [Offers]
       operationId: updateOfferLineItem
       summary: Update a draft offer's line item (totals recomputed; totals themselves are not settable).
-      x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       requestBody:
         required: true
         content:
@@ -24030,7 +24126,7 @@ paths:
       tags: [Offers]
       operationId: removeOfferLineItem
       summary: Remove a line item from a draft offer (totals recomputed).
-      x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       responses:
         '200':
           description: The offer without the line, totals recomputed.
@@ -24247,6 +24343,7 @@ paths:
     get:
       tags: [Signals]
       operationId: listSignals
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List signals (cursor-paginated), newest first.
       # The warm room is a human review surface (features/07 §9: the warm room
       # proposes, the rep sends) and signal is deliberately NOT a datasource-seam
@@ -24342,6 +24439,7 @@ paths:
     get:
       tags: [Signals]
       operationId: getSignal
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Get a signal by id.
       # Read-only, REST-reachable under the signal RBAC object + row scope; not an
       # agent tool — signal is not a datasource-seam entity (see listSignals).
@@ -24431,6 +24529,7 @@ paths:
     get:
       tags: [Signals]
       operationId: getSignalWarmth
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The warm/cold classification with the full "why warm" evidence (B-E08.3).
       description: |
         A signal resolved to a company where we hold ≥1 live contact edge
@@ -24458,6 +24557,7 @@ paths:
     get:
       tags: [Signals]
       operationId: getSignalIntroPath
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The proposed warm-intro path for a warm signal (B-E08.4) — an actionable move, not a notification.
       description: |
         Names the route-in contact (the strongest live relationship at the resolved
@@ -25080,6 +25180,7 @@ paths:
     get:
       tags: [Reports]
       operationId: listForecastCalls
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: What this period's forecast has been called, newest first.
       description: |
         The calls made for one period and scope, newest first — not just the one standing now.
@@ -26458,7 +26559,7 @@ paths:
       tags: [Attachments]
       operationId: listDealDocuments
       security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
-      x-mcp-tool: { verb: list_documents, record_type: deal, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The deal's Files area — its own uploads and the files of every message linked to it.
       description: |
         Every attachment whose parent is the deal, plus every attachment of an activity
@@ -26538,7 +26639,7 @@ paths:
       x-waits-on-model: on-miss
       security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
       summary: Where the deal stands, what could lose it, and the one thing to do next.
-      x-mcp-tool: { verb: read_record, record_type: deal, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       description: |
         The deal page's one written card, replacing the three that stood beside each
         other and disagreed: a brief that restated records, a health score with no
@@ -26685,6 +26786,7 @@ paths:
       tags: [Deals]
       operationId: getDealCommitments
       security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: What the customer committed to that this deal waits on.
       description: |
         The open commitments the contacts employed at the deal's company made to us, read
@@ -26792,6 +26894,14 @@ paths:
         The network is yours. The owner is the authenticated caller, never a field in
         the file, so nobody can attribute a stranger's connections to a colleague.
 
+        **A COUNT of your reach at one company is a derived fact, not access to your
+        account.** `GET /companies/{id}/linkedin-reach` tells everyone who may read that
+        company how many of your connections work there, so a rep knows whom to ask for
+        an introduction. It names no connection and exposes no row of your import: your
+        account, your connection list and their details stay yours alone, as above. A
+        member who would rather not be listed switches `reach_visible_to_team` off on
+        their own account and is then left out of everyone else's view.
+
         Re-importing a refreshed export updates rather than duplicates. Rows with no
         usable name are counted as skipped rather than silently dropped — an import that
         quietly ignored half a file while reporting success is worse than one that fails.
@@ -26818,6 +26928,39 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /companies/{id}/linkedin-reach:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Contacts]
+      operationId: getCompanyLinkedInReach
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Which colleagues can get you in at this company.
+      description: |
+        For one account, how many of each colleague's LinkedIn connections work there,
+        highest first. The product's answer to "who can open this door", which is the
+        same shape as naming the colleague who holds a contact you cannot see.
+
+        **A count is a derived fact, not access to a colleague's account.** No
+        connection is named and no row of anybody's import is exposed; a member's
+        account, list and its details stay theirs alone. A member who switched
+        `reach_visible_to_team` off is absent from this answer entirely, and absent
+        rather than reported as zero: zero would say they have no reach, which is a
+        different statement and not theirs to have made.
+
+        Gated on READ of the company, row scope included, and a company the caller
+        cannot open answers 404 as its own read does. A colleague who no longer works
+        here is never offered: a reach count exists to be acted on by asking them.
+      responses:
+        '200':
+          description: The colleagues with reach into this account, highest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CompanyLinkedInReachResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /me/linkedin-reach:
     get:
       tags: [Contacts]
@@ -27702,7 +27845,7 @@ paths:
       tags: [Attachments]
       operationId: listCompanyDocuments
       security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
-      x-mcp-tool: { verb: list_documents, record_type: company, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Every document that rolls up to this account, pinned first (DOC-WIRE-1).
       description: |
         The account's library. A document reachable from a company may hang off a deal, a
@@ -28200,6 +28343,7 @@ paths:
       tags: [Import]
       operationId: getImportRun
       security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       # An assistant reads a run's state through read_import_report, which
       # answers the run before its report exists.
       summary: Read one import run's lifecycle state.
@@ -28517,6 +28661,7 @@ paths:
       tags: [Rates]
       operationId: listFxRates
       security: [ { cookieAuth: [] } ]   # human session only — the sheet is an admin view, not an agent surface
+      x-agent-access: human-only
       summary: List current FX rates (latest per currency), or one pair's history.
       description: |
         Admin/ops-only view. Without `from`, returns the latest effective rate per
@@ -28568,6 +28713,7 @@ paths:
       tags: [Rates]
       operationId: listAiModelRates
       security: [ { cookieAuth: [] } ]   # human session only — internal cost data is an admin view, not an agent surface
+      x-agent-access: human-only
       summary: List current AI model prices (latest per model), or one model's history.
       description: |
         Admin/ops-only view. Prices are USD per 1M tokens (strings). Without
@@ -28794,7 +28940,7 @@ paths:
         transaction, so only an administrator may: another human gets `403`, an agent `422
         anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
         past 200 characters (`too_long`); other companies' names have no length cap.
-      x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
@@ -28829,7 +28975,7 @@ paths:
         `verified_by` are stamped and the field moves from extracted to confirmed. Version-guarded
         like the correction, so two readers confirming a field one of them has since corrected do not
         silently overwrite each other.
-      x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
@@ -28859,7 +29005,7 @@ paths:
         "confirmed" state nothing is able to produce. Same guarantees as the profile-field
         correction: canonical value first, machine proposal preserved in history, provenance flipped
         to `human`, one transaction carrying the row, the audit entry and the event.
-      x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
@@ -28894,7 +29040,7 @@ paths:
         again** — the enrichment upserts skip rows a human captured, and a deleted row leaves
         nothing to skip. Removal means "not true today", not "never show this again". The audit
         before-image keeps what was removed, so the deletion is answerable either way.
-      x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
@@ -28919,7 +29065,7 @@ paths:
       description: |
         Stamps `verified_at` + `verified_by` and moves the fact from extracted to confirmed
         (PO-AC-N-3). Version-guarded.
-      x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
@@ -29509,13 +29655,12 @@ components:
       in: header
       schema: { type: string }
       description: |
-        A signed, single-use approval token (see schema `ApprovalToken`) minted by
-        POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-        compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-        principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-        expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-        match the operation being executed (`403 code: approval_token_invalid`). Required when an
-        AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+        The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+        answer named. MCP takes the same id as `approval_id`. The server checks it against the
+        stored approval: same tool, same diff hash, same staging passport, decided as approved,
+        not yet used, and within 15 minutes of the decision. Anything else is refused with
+        `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+        human's direct call is itself the approval.
     IfMatch:
       name: If-Match
       in: header
@@ -40852,6 +40997,31 @@ components:
       required: [vocabulary]
       properties:
         vocabulary: { type: string }
+    ListFiltersVocabulary:
+      description: 'What `describe_list_filters` answers.'
+      type: object
+      required: [record_types]
+      properties:
+        record_types:
+          type: object
+          description: For each record type list_records takes, the filters it may be narrowed by.
+          additionalProperties:
+            type: array
+            items: { $ref: '#/components/schemas/ListFilter' }
+    ListFilter:
+      description: One filter a record list may be narrowed by.
+      type: object
+      required: [name, operand]
+      properties:
+        name: { type: string, description: "The filter's key in list_records' filters object, and the list route's query parameter." }
+        operand:
+          type: string
+          enum: [string, boolean, integer, number, array]
+          description: 'What the string operand spells: a boolean is "true" or "false", an array is comma-separated.'
+        values:
+          type: array
+          items: { type: string }
+          description: The closed vocabulary the filter takes, when it has one.
     RecordFieldsVocabulary:
       description: 'What `describe_record_fields` answers.'
       type: object
@@ -41262,11 +41432,43 @@ components:
             (`en-GB`, `fr`) is refused rather than approximated, because a locale
             with no catalog renders as raw message keys.
 
+    CompanyLinkedInReachResponse:
+      type: object
+      required: [colleagues]
+      properties:
+        colleagues:
+          type: array
+          description: |
+            Highest count first, then by name, so two reads of an unchanged network
+            return the same order. Empty when nobody on the team reaches this account,
+            or when everybody who does has switched their reach off: the two read the
+            same on purpose, because telling them apart would disclose the choice.
+          items: { $ref: '#/components/schemas/CompanyLinkedInReachColleague' }
+    CompanyLinkedInReachColleague:
+      type: object
+      required: [user_id, display_name, connections]
+      properties:
+        user_id: { type: string, format: uuid }
+        display_name: { type: string, description: 'The colleague to ask.' }
+        connections:
+          type: integer
+          minimum: 1
+          description: |
+            How many of their connections work at this account. At least one, because a
+            colleague with none is not listed. Never a list of who those connections
+            are: they are third parties who never consented to appearing in this CRM.
     LinkedInAccount:
       type: object
       required: [connected, connections]
       properties:
         connected: { type: boolean, description: 'Whether this member has authorized LinkedIn.' }
+        reach_visible_to_team:
+          type: boolean
+          description: |
+            Whether colleagues who may read a company see how many of this member's
+            connections work there. True unless they switched it off. It governs the
+            per-company reach list only — never this member's own reach page, which
+            answers about themselves.
         connected_at: { type: [string, 'null'], format: date-time }
         profile_url:
           type: [string, 'null']
@@ -41278,13 +41480,19 @@ components:
     SaveLinkedInAccountRequest:
       type: object
       properties:
+        reach_visible_to_team:
+          type: boolean
+          description: |
+            Switch off to be left out of the per-company reach list colleagues read.
+            Omitted leaves the current answer; a member who has never set it is listed.
         profile_url:
           type: string
           description: 'Absolute http(s) URL. Empty clears the stored value.'
         connected:
           type: boolean
-          default: false
-          description: 'Record the authorization. Never revokes an existing one.'
+          description: |
+            Record the authorization. Never revokes an existing one, and omitted
+            leaves it as it stands: disconnecting is its own deliberate act.
     LinkedInImportSummary:
       type: object
       description: |
@@ -52386,8 +52594,25 @@ components:
             result — followed by this server's own governance clause, which is absent for a
             tool that runs immediately and needs only the read scope.
         required_scope: { type: string, description: Passport scope required to call it. }
-        tier:  { type: string, enum: [auto_execute, confirmation_required, dynamic] }
+        tier: { $ref: '#/components/schemas/AgentToolTier' }
         egress: { type: boolean, description: True if the tool reaches outside the workspace. }
+        actions:
+          type: array
+          description: >
+            A router's choices. Each runs one verb and is admitted at that verb's tier, so a router
+            whose actions differ lists its own tier as dynamic. Absent on a tool that is not a router.
+          items: { $ref: '#/components/schemas/AgentToolAction' }
+    AgentToolAction:
+      type: object
+      required: [action, verb, tier]
+      properties:
+        action: { type: string, description: The value the router's action argument takes. }
+        verb: { type: string, description: The tool the action runs as; approvals and tasks name it. }
+        tier: { $ref: '#/components/schemas/AgentToolTier' }
+    AgentToolTier:
+      type: string
+      description: Runs at once, waits for a human, or decides per call from its arguments.
+      enum: [auto_execute, confirmation_required, dynamic]
     AgentToolListResponse:
       type: object
       required: [data]
@@ -52485,16 +52710,14 @@ components:
             equal — so a verb cannot mean `enrich` on MCP and `write` on REST.
         served_by:
           type: string
-          enum: [registry, rest_only]
+          enum: [registry]
           description: >-
             registry — the operation's handler runs the tool through the tool registry, the
             entry the MCP door uses, which admits the call itself: scope, seat, tier,
             approval, retry key and volume budget. The REST admission gate passes such an
             operation through untouched, because admitting it there as well would charge an
-            agent twice and stage a confirm-first call twice. rest_only — no MCP tool serves
-            this record_type yet: the verb names only the tier, scope and budget the REST
-            gate admits the call under, and the MCP verb refuses the type. Absent and
-            rest_only both mean the operation's own handler runs and the gate admits it.
+            agent twice and stage a confirm-first call twice. Absent means the operation's
+            own handler runs and the gate admits it.
 
     # ---- AI: cold-start ----
     ColdStartRequest:
@@ -53664,7 +53887,7 @@ components:
             the type carries no name, or the row had already gone — a card then says nothing
             rather than "unknown".
         target_version: { type: [integer, 'null'], description: 'The `version` of the target row when the diff was staged. On approve-execute the server RE-READS the row; if its current version ≠ target_version the execution is rejected with 409 ErrVersionSkew (the world changed since the human last saw the diff — re-stage). This closes the stage→approval race (ADR-0036).' }
-        diff_hash: { type: [string, 'null'], description: 'Hash of the staged proposed_change; the minted approval_token is bound to this hash so a token cannot authorize a different effect.' }
+        diff_hash: { type: [string, 'null'], description: 'Hash of the staged proposed_change. A redemption whose call hashes differently is refused, so an approval cannot authorize a different effect.' }
         summary: { type: [string, 'null'], description: One-line description of the proposed change. }
         proposed_change:
           type: object
@@ -53677,7 +53900,6 @@ components:
         confidence: { type: [number, 'null'], minimum: 0, maximum: 1 }
         result_entity_type: { type: [string, 'null'] }
         result_entity_id: { type: [string, 'null'], format: uuid }
-        approval_token: { type: [string, 'null'], description: 'Signed single-use token minted on approve (schema ApprovalToken, serialized as compact JWS); authorizes exactly the downstream 🟡 operation it is bound to.' }
         decided_by: { type: [string, 'null'], format: uuid }
         decided_at: { type: [string, 'null'], format: date-time }
         effect_failed_at:
@@ -53854,26 +54076,6 @@ components:
         (ErrVersionSkew) so the client re-reads before retrying.
 
     # ---- Approval token (ADR-0036) ----
-    ApprovalToken:
-      type: object
-      description: |
-        The claims carried by the signed `X-Approval-Token` (serialized as a compact JWS; the wire
-        value is the string). It is single-use and bound to one effect — it is NOT a bare opaque
-        string. The server verifies the signature, that `jti` has not been consumed, that `exp` is
-        in the future, and that `workspace_id`/`passport_id`/`tool`/`diff_hash` match the operation
-        being executed; any mismatch → `403 code: approval_token_invalid`.
-      required: [jti, approval_id, tool, diff_hash, exp, single_use]
-      properties:
-        jti: { type: string, description: Unique token id; recorded as consumed on first use (replay → 403). }
-        approval_id: { type: string, format: uuid, description: The Approval this token authorizes. }
-        passport_id: { type: [string, 'null'], format: uuid, description: Agent Seat Passport the token was minted for; null for a human-minted token. }
-        on_behalf_of: { type: [string, 'null'], format: uuid }
-        tool: { type: string, description: 'The exact 🟡 operation authorized (e.g. send_email, advance_deal). A token for one tool cannot authorize another.' }
-        diff_hash: { type: string, description: Hash of the approved effect; binds the token to that specific staged change. }
-        target_version: { type: [integer, 'null'], description: Row version the diff was staged against; re-checked at execute (see Approval.target_version). }
-        exp: { type: string, format: date-time, description: 'Expiry (short TTL — minutes, not hours).' }
-        single_use: { type: boolean, default: true }
-
     # ---- Partner (ADR-0032) ----
     Partner:
       type: object

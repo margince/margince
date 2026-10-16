@@ -116,6 +116,11 @@ func TestCreateAndUpdateTagLeaveTheSameOnEitherDoor(t *testing.T) {
 	if cleared.Color != nil {
 		t.Errorf("colour none left the colour at %q", *cleared.Color)
 	}
+
+	d.restStatus(t, "DELETE", "/v1/tags/"+viaREST.ID, nil, http.StatusOK)
+	d.tool(t, "archive_tag", map[string]any{"tag_id": viaTool.ID})
+	sameStored(t, "archive", d.storedTag(t, viaREST.ID), d.storedTag(t, viaTool.ID), viaREST.ID, viaTool.ID, "name")
+	d.sameEffect(t, "archive", viaREST.ID, viaTool.ID, "name")
 }
 
 // A tag put on a contact and taken off again leaves the same rows on either

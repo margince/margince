@@ -17,7 +17,5 @@ package crmcontracts
 // gen-payloads generator into this same package: api/public-events.yaml into
 // publicevents_gen.go, and api/internal-events.yaml — the payloads that ride
 // the bus without being subscribable — into internalevents_gen.go. Kept out of
-// crm.yaml because crm.yaml's webhooks: block is pruned by kin-openapi and
-// global skip-prune there trips a pre-existing ApprovalToken name collision
-// (B-E10.14).
+// crm.yaml because kin-openapi prunes crm.yaml's webhooks: block (B-E10.14).
 //go:generate go run github.com/margince/margince/backend/tools/gen-payloads

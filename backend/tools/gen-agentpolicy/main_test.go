@@ -67,3 +67,23 @@ func TestAnUndeclaredServedByFailsGeneration(t *testing.T) {
 		t.Errorf("defects = %v, want one naming the undeclared served_by", defects)
 	}
 }
+
+// A read binds a passport as a mutation does, so an unannotated GET is a
+// defect. Only an anonymous one, which no agent ever reaches, needs no row.
+func TestAnUnannotatedReadFailsGenerationUnlessAnonymous(t *testing.T) {
+	policies, defects := policiesOf(t, `
+/companies/{id}/facts:
+  get:
+    operationId: listCompanyFacts
+/public/availability:
+  get:
+    operationId: getPublicAvailability
+    security: []
+`)
+	if len(policies) != 0 {
+		t.Errorf("policies = %v, want none", policies)
+	}
+	if len(defects) != 1 || !strings.Contains(defects[0], "listCompanyFacts") {
+		t.Errorf("defects = %v, want one naming listCompanyFacts", defects)
+	}
+}

@@ -1,4 +1,4 @@
-/* Avatar — a record's round chip and its mesh. A COMPONENT sheet: atoms.tsx
+/* Avatar — a record's round chip and its mesh. A COMPONENT sheet: avatar.tsx
  * imports it for `Avatar`, and the standalone MCP App views import it through
  * mcp-apps/view.css, so a colleague is the same chip in a host's panel. */
 

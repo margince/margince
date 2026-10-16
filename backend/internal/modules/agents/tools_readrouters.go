@@ -10,29 +10,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// readInputChecks fronts the three answers to whether the forecast's inputs can
-// be trusted. Each stays its own tool because each is its own REST route.
-type readInputChecks struct{ routed }
-
-func (readInputChecks) Spec() mcp.ToolSpec {
-	return mcp.ToolSpec{
-		Name: "read_input_checks", Title: "Can the forecast's inputs be trusted", Version: toolVersionV1,
-		Description: readInputChecksCopy.render(),
-		InputSchema: schema(`{"type":"object","properties":{
-			"view":{"description":"summary is the verdict, exceptions the open problems, sources what could be read"}}}`),
-	}
-}
-
-func (readInputChecks) routeField() string { return "view" }
-
-func (readInputChecks) routeTargets() map[string]string {
-	return map[string]string{
-		"summary":    "forecast_input_checks",
-		"exceptions": "list_input_checks",
-		"sources":    "data_coverage",
-	}
-}
-
 // readImport fronts the reads an import needs: one run, and the format its
 // files take.
 type readImport struct{ routed }
@@ -52,7 +29,8 @@ func (readImport) routeTargets() map[string]string {
 	return map[string]string{"report": "read_import_report", "format": "describe_import_format"}
 }
 
-// readForecast fronts the forecast's figures and the account of how they moved.
+// readForecast fronts the forecast's figures, the account of how they moved, and
+// whether its inputs can be trusted.
 type readForecast struct{ routed }
 
 func (readForecast) Spec() mcp.ToolSpec {
@@ -61,44 +39,19 @@ func (readForecast) Spec() mcp.ToolSpec {
 		Description: readForecastCopy.render(),
 		Instead:     readForecastCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"view":{"description":"readings is what a period is expected to close; movement is why it changed between two snapshots"}}}`),
+			"view":{"description":"readings: what a period is expected to close; movement: why it changed between two snapshots; input_summary, input_exceptions and input_sources: whether its inputs can be trusted"}}}`),
 	}
 }
 
 func (readForecast) routeField() string { return "view" }
 
 func (readForecast) routeTargets() map[string]string {
-	return map[string]string{"readings": "forecast_readings", "movement": "forecast_movement"}
-}
-
-// readDirectory fronts the workspace's own set-up: who holds a seat, its
-// pipelines and stages, and the messaging transports it composed. whoami stays
-// apart: it is offered to every passport, and a router spends one scope.
-type readDirectory struct{ routed }
-
-func (readDirectory) Spec() mcp.ToolSpec {
-	return mcp.ToolSpec{
-		Name: "read_directory", Title: "Read the workspace's colleagues, pipelines and channels", Version: toolVersionV1,
-		Description: readDirectoryCopy.render(),
-		Instead:     readDirectoryCopy.Instead,
-		InputSchema: schema(`{"type":"object","properties":{
-			"list":{"description":"colleagues are the seats here, pipelines the stages a deal moves through, channel_providers the messaging transports"}}}`),
-	}
-}
-
-func (readDirectory) routeField() string { return "list" }
-
-func (readDirectory) routeTargets() map[string]string {
 	return map[string]string{
-		"colleagues":        "list_colleagues",
-		"pipelines":         "list_pipelines",
-		"channel_providers": "list_channel_providers",
+		"readings": "forecast_readings", "movement": "forecast_movement",
+		"input_summary": "forecast_input_checks", "input_exceptions": "list_input_checks", "input_sources": "data_coverage",
 	}
 }
 
-// readRelationships fronts the relationship reads that start from one record.
-// The id a call names says which: each target takes a different one.
-// at_risk_relationships stays apart: a scheduled sweep is allowed it alone.
 type readRelationships struct{ routed }
 
 func (readRelationships) Spec() mcp.ToolSpec {

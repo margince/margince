@@ -15,8 +15,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -62,16 +60,7 @@ func setupReviewEnv(t *testing.T) *reviewEnv {
 		e.reviewer, "legal-"+e.reviewer.String()+"@config.test"); err != nil {
 		t.Fatal(err)
 	}
-	eur := func(context.Context, pgx.Tx) (string, error) { return "EUR", nil }
-	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)), Installation{
-		BaseCurrency: eur, BaseCurrencyApplied: eur,
-		Timezone:        func(context.Context, pgx.Tx) (string, error) { return "UTC", nil },
-		Name:            func(context.Context, pgx.Tx) (string, error) { return "Margince Test", nil },
-		IssuerLegalName: func(context.Context, pgx.Tx) (string, error) { return "Margince Test GmbH", nil },
-		// Activities owns the correspondence a sent offer stamps; this package may not import it.
-		StampCorrespondence: func(context.Context, pgx.Tx, ids.DealID, string) error { return nil },
-		ContractVisible:     func(context.Context, string, func(any) int) (string, error) { return "FALSE", nil },
-	})
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)), eurInstallation())
 	store.reviewDocs = e
 	e.store = store
 	return e

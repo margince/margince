@@ -62,6 +62,9 @@ type ListContactsInput struct {
 	CompanyID *ids.CompanyID
 	// Membership narrows to one list's members (list_id).
 	Membership storekit.ListMemberFilter
+	// MemberOf is the list a seam caller narrowed to; the provider resolves it
+	// into Membership before the read.
+	MemberOf *ids.UUID
 }
 
 // contactListFields is the contact list's core sortable vocabulary —

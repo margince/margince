@@ -84,13 +84,13 @@ for it.
 ## License
 
 Margince uses the Business Source License 1.1 ([LICENSE](LICENSE)). The source is public. You may read,
-run and change it.
+run and change it. [LICENSING.md](LICENSING.md) explains the license, and why you accept [CLA.md](CLA.md) to send code.
 
 - You may use it free in production for your own company, up to 10 seats. The limit is for all your
   installations and the companies you own or that own you. A seat is a named user. AI agents and
   service accounts are not seats.
 - To host it as a service for other companies, you need a hosting partner agreement with Gradion.
-- Each release becomes Apache 2.0 two years after it ships.
+- Each release becomes Apache 2.0 no later than two years after it ships.
 
 Outside `dev` and `test` mode, the server needs a license token from Gradion to start, even for one
 seat. Today you ask us for that token. If this blocks you, please say so in an issue.

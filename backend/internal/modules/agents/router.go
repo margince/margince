@@ -64,12 +64,19 @@ func (r *Registry) routedSpec(rt router) mcp.ToolSpec {
 		targets = append(targets, r.routeTarget(spec.Name, rt.routeTargets()[choice]))
 	}
 	first := targets[0]
-	spec.RequiredScope, spec.Tier = first.RequiredScope, first.Tier
-	for _, target := range targets {
-		if target.RequiredScope != first.RequiredScope || target.Tier != first.Tier {
+	spec.RequiredScope, spec.Tier, spec.TierResolver = first.RequiredScope, first.Tier, nil
+	spec.Actions = make([]mcp.ToolAction, 0, len(targets))
+	for i, target := range targets {
+		if target.RequiredScope != first.RequiredScope {
 			//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
-			panic(fmt.Sprintf("crmagents: router %s fronts %s and %s, which differ in scope or tier — one tool spends one of each",
+			panic(fmt.Sprintf("crmagents: router %s fronts %s and %s, which differ in scope — one tool spends one scope",
 				spec.Name, first.Name, target.Name))
+		}
+		// Each action is admitted at its own verb's tier once routed. The
+		// router is listed as decided per call when its actions differ.
+		spec.Actions = append(spec.Actions, mcp.ToolAction{Action: choices[i], Verb: target.Name, Tier: target.Tier})
+		if target.Tier != first.Tier {
+			spec.Tier = mcp.TierDynamic
 		}
 		spec.MaxArgsBytes = max(spec.MaxArgsBytes, argsLimit(target))
 		spec.Egress = spec.Egress || target.Egress
@@ -88,15 +95,16 @@ func (r *Registry) routedSpec(rt router) mcp.ToolSpec {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic(fmt.Sprintf("crmagents: router %s must pick its target either by one argument or by the arguments named", spec.Name))
 	}
+	spec.ActionField = field
 	spec.InputSchema = routedSchema(spec.Name, field, choices, spec.InputSchema, targets)
 	spec.OutputSchema = nil
 	return spec
 }
 
 // routeTarget is one registered target's own spec, refused unless a router may
-// front it. A dynamic tier is refused because its resolver belongs to the
-// target. A router has no call to resolve it on until it has routed. The
-// last three are refused because the listing reads them off the router.
+// front it. A dynamic target keeps its resolver: a call is routed before it is
+// admitted. The last three are refused because the listing reads them off the
+// router.
 func (r *Registry) routeTarget(routerName, name string) mcp.ToolSpec {
 	r.mu.RLock()
 	t, ok := r.tools[name]
@@ -115,8 +123,6 @@ func (r *Registry) routeTarget(routerName, name string) mcp.ToolSpec {
 		why = "is itself a router"
 	case !spec.Unlisted:
 		why = "is still offered, so fronting it would list one capability twice"
-	case spec.Tier == mcp.TierDynamic:
-		why = "has a dynamic tier"
 	case spec.HumanOnly, spec.SelfDescribing, spec.ConfirmsInConversation:
 		why = "is offered or confirmed in a way a router does not carry"
 	}
@@ -143,6 +149,8 @@ type routedObject struct {
 const (
 	schemaDescription = "description"
 	schemaEnum        = "enum"
+	schemaMinimum     = "minimum"
+	schemaMaximum     = "maximum"
 )
 
 // argument is one property of a JSON schema, member by member.
@@ -249,18 +257,38 @@ func uniteArgument(seen, next argument) (argument, bool) {
 		out := maps.Clone(arg)
 		delete(out, schemaDescription)
 		delete(out, schemaEnum)
+		delete(out, schemaMinimum)
+		delete(out, schemaMaximum)
 		return out
 	}
 	if !maps.EqualFunc(shape(seen), shape(next), func(a, b json.RawMessage) bool { return string(a) == string(b) }) {
 		return nil, false
 	}
+	united := maps.Clone(seen)
+	// A bound is the loosest the targets set, so a value any target takes is
+	// advertised; the target refuses its own excess by name. A target that sets
+	// no bound takes any value, so the router sets none either.
+	loosest(united, next, schemaMinimum, func(a, b float64) float64 { return min(a, b) })
+	loosest(united, next, schemaMaximum, func(a, b float64) float64 { return max(a, b) })
 	var words, more []string
 	if json.Unmarshal(seen[schemaEnum], &words) != nil || json.Unmarshal(next[schemaEnum], &more) != nil {
-		return seen, string(seen[schemaEnum]) == string(next[schemaEnum])
+		return united, string(seen[schemaEnum]) == string(next[schemaEnum])
 	}
-	united := maps.Clone(seen)
 	united[schemaEnum] = mustMarshal(slices.Compact(slices.Sorted(slices.Values(append(words, more...)))))
 	return united, true
+}
+
+// loosest sets a numeric bound to the looser of two targets' values, and drops
+// it when either target sets none.
+func loosest(united, next argument, bound string, looser func(float64, float64) float64) {
+	var mine, theirs float64
+	hasMine := united[bound] != nil && json.Unmarshal(united[bound], &mine) == nil
+	hasTheirs := next[bound] != nil && json.Unmarshal(next[bound], &theirs) == nil
+	if hasMine && hasTheirs {
+		united[bound] = mustMarshal(looser(mine, theirs))
+		return
+	}
+	delete(united, bound)
 }
 
 func mustMarshal[T any](v T) json.RawMessage {

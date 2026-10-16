@@ -156,8 +156,23 @@ func outsideToolName(c rune) bool {
 func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 	all := r.Specs()
 	out := make([]mcp.ToolSpec, 0, len(all))
+	words := r.lister()
 	for _, spec := range all {
 		if !spec.Unlisted && invocableByCaller(ctx, spec) {
+			out = append(out, words.listed(spec))
+		}
+	}
+	return out
+}
+
+// Runnable is what a Surface-B run may choose among: every tool this caller may
+// invoke, offered on the external listing or not. A scheduled agent's allowlist
+// narrows it to the verbs that agent names, each with its own full copy.
+func (r *Registry) Runnable(ctx context.Context) []mcp.ToolSpec {
+	all := r.Specs()
+	out := make([]mcp.ToolSpec, 0, len(all))
+	for _, spec := range all {
+		if invocableByCaller(ctx, spec) {
 			out = append(out, spec)
 		}
 	}

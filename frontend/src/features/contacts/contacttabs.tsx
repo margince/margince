@@ -1,12 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
-import { GroupedTimelineList } from "../../design-system/composed";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
   hasTimelineFilters,
   useRecordTimeline,
 } from "../../design-system/recordtimeline";
 import { SurfaceState } from "../../design-system/surfacestate";
+import { GroupedTimelineList } from "../../design-system/timeline";
 import { TimelineFilterBar } from "../../design-system/timelinefilterbar";
 import { groupChronology } from "../../design-system/timelinegroups";
 import { useLocale, useT } from "../../i18n";

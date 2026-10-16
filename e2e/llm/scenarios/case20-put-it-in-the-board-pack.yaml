@@ -88,10 +88,9 @@ may_call:
   # kind is refused BY NAME with the whole set, so composing straight away and
   # reading the refusal is the cheaper correct path. Requiring the lookup would
   # score the better route as a failure.
-  - describe_vocabulary
+  - read_workspace
   - run_report
   - query_workspace
-  - read_directory
   - search_records
 
 must_mention:

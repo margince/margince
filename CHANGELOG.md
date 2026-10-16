@@ -12,6 +12,14 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Added
 
+- **MCP tools match the API.** An MCP tool takes every
+  filter, sort and option its REST route takes. `read_view` reads a route's
+  views, such as a company's 360 or a deal's status. `change_record_parts`
+  changes an offer's lines, a company's facts and profile fields, and a
+  project's companies and stakeholders; it replaces `change_offer`.
+  `list_records` also lists products, offers, commissions, partners, activities
+  and deal rooms. A route with no tool rule is refused to an agent.
+
 - **Core release in the account menu.** An image built with `CORE_VERSION`
   set shows two lines at the foot of the account menu: the instance release and
   the core release. A build without it keeps the single version line.
@@ -92,6 +100,10 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Removed
 
+- **The approval token.** An approved call is redeemed by its approval's id.
+  The `approval_token` field and the server's signing key are gone; a client
+  that sent a token sends the `approval_id` the approval answered.
+
 - **A company no longer carries a `classification`.** Use `lifecycle` (where an
   account stands with us, one value at a time) and `relationship_types` (what the
   company is to us, possibly several things at once). Nothing wrote the old field,
@@ -103,6 +115,11 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
   written and always read zero. The column stays; the wire field is gone.
 
 ### Changed
+
+- **Some reads are for humans only.** These answer a signed-in human only,
+  through the API or MCP: the installation, capture and integration settings,
+  the morning digest, a backfill's progress, exchange rates, AI model prices,
+  and a contact's or company's access and consent.
 
 - **The company graph names its signal route.** In `GET /companies/{id}/graph`,
   `intro_path` is now `signal_route`. It is the contact the account's most recent

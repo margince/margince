@@ -57,8 +57,18 @@ if ! run "50 example.com/slow"; then fail "a waived package under its ceiling fa
 log example.com/fast 3.200s example.com/slow 50.100s
 if run "50 example.com/slow"; then fail "a waived package past its ceiling passed"; fi
 
-log example.com/fast 3.200s example.com/slow 9.000s
+# Clear of the budget by the margin the ceilings are sized with: the package
+# is genuinely fast, so the ceiling goes.
+log example.com/fast 3.200s example.com/slow 8.000s
 if run "50 example.com/slow"; then fail "a waived package back under the budget kept its stale entry"; fi
+
+# Under the budget, but not by that margin. One noisy run puts it over again,
+# and a gate that demanded the ceiling here failed whichever way the next run
+# landed: stale entry with it, over budget without.
+log example.com/fast 3.200s example.com/slow 9.000s
+if ! run "50 example.com/slow"; then
+  fail "a waived package a hair under the budget was told to drop its ceiling, which the next run needs"
+fi
 
 log example.com/fast 3.200s
 if run "50 example.com/renamed"; then fail "a waiver for a package the log never ran passed"; fi
@@ -73,4 +83,6 @@ if [[ "$FAILURES" -gt 0 ]]; then
   echo "FAIL: check-test-budget.test.sh — $FAILURES case(s)" >&2
   exit 1
 fi
-echo "OK: check-test-budget.test.sh — 9 cases"
+# Counted from the fixtures below rather than written down, because a total
+# kept in step by hand stops being true.
+echo "OK: check-test-budget.test.sh — $(grep -c '^log \|^printf .ok' "$0") cases"

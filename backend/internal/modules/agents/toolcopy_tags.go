@@ -74,6 +74,11 @@ var updateTagCopy = toolCopy{
 		"before editing. A name another word already holds is a conflict.",
 }
 
+var archiveTagCopy = toolCopy{
+	Purpose: "Retire a word. Records carrying it keep it, and it can no longer be applied.",
+	Limits:  "It needs the tag grant an ordinary seat lacks. A retired name stays taken; only Settings restores it.",
+}
+
 var readTagsCopy = toolCopy{
 	Purpose: "Read the workspace's tags. list: every word, with the tag_id the other tag calls " +
 		"take. get: one tag and how many contacts, companies, deals and leads carry it — the " +
@@ -91,13 +96,13 @@ var changeTagsCopy = toolCopy{
 	Purpose: "Change the workspace's tags. apply and remove put one tag on, or take it off, one " +
 		"contact, company, deal, lead or project, by tag_id or by the tag_name of a tag that " +
 		"already exists. create coins a new word. update renames, recolours or describes one; " +
-		"fields left out are unchanged.",
+		"fields left out are unchanged. merge folds a duplicate word into the one kept, once a " +
+		"human approves.",
 	Limits: "apply never creates a tag: an unknown name is refused, a name matches " +
 		"case-insensitively, an archived word is refused as archived, and the same tag twice is a " +
 		"conflict. Before create, read the list — a near-duplicate splits records that belong " +
 		"together, and a taken name is a conflict, even a retired one, which only Settings restores. create and update need tag grants an ordinary seat lacks. update " +
 		"sends no version, so read the tag right before editing; it changes what a word is " +
-		"called, never what carries it. Removing a tag that is not there succeeds.",
-	Instead: "Use merge_tags to fold a duplicate word into the one kept, and archive_record on a " +
-		"tag to retire it for every record.",
+		"called, never what carries it. Removing a tag that is not there succeeds. archive retires " +
+		"a word for every record; the records keep it.",
 }
