@@ -299,7 +299,7 @@ describe("the settings search box", () => {
       option.textContent?.startsWith("System health"),
     );
     expect(options()[index]?.querySelector(".t-caption")?.textContent).toBe(
-      "Data retention",
+      "Data retention · Installation",
     );
     await user.keyboard("{ArrowDown}".repeat(index + 1));
     await user.keyboard("{Enter}");

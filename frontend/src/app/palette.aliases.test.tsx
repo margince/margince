@@ -145,3 +145,23 @@ describe("the palette and the settings search", () => {
     },
   );
 });
+
+describe("the palette's matcher", () => {
+  const company: Command = {
+    id: "screen:settings-company",
+    label: "Hồ sơ công ty",
+    keywords: ["Múi giờ báo cáo", "Khoảng đồng bộ (giây)"],
+    type: "screen",
+  };
+
+  it.each(["mui gio bao cao", "bao cao gio", "dong bo", "ho so cong"])(
+    "finds %p through every word and without its marks",
+    (query) => {
+      expect(matchingCommands([company], query)).toEqual([company]);
+    },
+  );
+
+  it("drops a command that holds only some of the words", () => {
+    expect(matchingCommands([company], "mui kubernetes")).toEqual([]);
+  });
+});

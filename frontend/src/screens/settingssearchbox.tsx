@@ -238,12 +238,11 @@ export function SettingsSearchBox({
                 >
                   <Glyph size={16} aria-hidden />
                   <span>{hit.label}</span>
-                  {/* Where it lives and whose state it changes: a reader
-                      searching "domain" gets two pages, and this says which
+                  {/* Whose state it changes, after the setting found or the
+                      group: one name can sit on two pages, and this says which
                       one is the company's. */}
                   <span className="t-caption">
-                    {hit.section ??
-                      `${hit.group} · ${t(`settings.scope.${hit.page.scope}`)}`}
+                    {`${hit.section ?? hit.group} · ${t(`settings.scope.${hit.page.scope}`)}`}
                   </span>
                 </a>
               );

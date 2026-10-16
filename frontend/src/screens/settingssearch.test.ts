@@ -183,11 +183,23 @@ describe("settingsSearch over the settings a page draws", () => {
     expect(hit?.section).toBe(words(key));
   });
 
-  it("matches a Vietnamese setting typed without its tone marks", () => {
-    const plain = vi("installationSettings.timezone")
-      .normalize("NFD")
-      .replace(/\p{Diacritic}/gu, "");
-    expect(ids(plain, ALL, vi)).toContain("company");
+  it.each([
+    ["Mui gio bao cao", "company"],
+    ["khoang dong bo", "capture"],
+  ] as const)(
+    "matches the Vietnamese %p typed without its marks",
+    (q, page) => {
+      expect(ids(q, ALL, vi)).toContain(page);
+    },
+  );
+
+  it("offers the company-context settings to an admin alone", () => {
+    const find = (holdsAdminRole: boolean) =>
+      settingsSearch("ideal customer", ALL, t, { holdsAdminRole }).map(
+        (hit) => hit.page.id,
+      );
+    expect(find(true)).toContain("company");
+    expect(find(false)).not.toContain("company");
   });
 
   // Automations is a page and a phrase on two others ("Automations that ran").

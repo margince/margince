@@ -10,6 +10,7 @@ import {
 import { Callout } from "../design-system/callout";
 import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
 import { usePresence } from "../design-system/presence";
+import { holdsEveryWord, searchWords } from "../format/collate";
 import { useLocale, useT } from "../i18n";
 import { useHoldsAdminRole } from "../lib/capability";
 import { isImeCommit } from "../lib/imecommit";
@@ -59,22 +60,21 @@ export type Command = {
   route?: Route;
 };
 
-/** The commands whose label, subtitle or one keyword holds the whole query. */
+/** The commands whose label, subtitle and keywords hold every query word. */
 export function matchingCommands(
   commands: readonly Command[],
   query: string,
 ): readonly Command[] {
-  const needle = query.trim().toLowerCase();
-  if (!needle) {
+  const words = searchWords(query);
+  if (words.length === 0) {
     return commands;
   }
-  return commands.filter(
-    (command) =>
-      command.label.toLowerCase().includes(needle) ||
-      (command.subtitle ?? "").toLowerCase().includes(needle) ||
-      (command.keywords ?? []).some((word) =>
-        word.toLowerCase().includes(needle),
-      ),
+  return commands.filter((command) =>
+    holdsEveryWord(words, [
+      command.label,
+      command.subtitle ?? "",
+      ...(command.keywords ?? []),
+    ]),
   );
 }
 
