@@ -29,6 +29,12 @@ var appliedCap = config.DefineStored(config.Spec[int]{
 },
 	config.Store{RBACObject: "installation_settings", AuditVerb: "update", MachineryApplied: true})
 
+var appliedFloor = config.DefineStored(config.Spec[int]{
+	Key: "test.applied_floor", Env: "X_TEST_APPLIED_FLOOR", Type: config.Int,
+	Default: config.Some(1), Doc: "d",
+},
+	config.Store{RBACObject: "installation_settings", AuditVerb: "update", MachineryApplied: true})
+
 func asHolding(grant principal.ObjectGrant) context.Context {
 	return principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:test",
@@ -135,6 +141,19 @@ func TestThePairedMachineryReadRefusesAnUndeclaredSetting(t *testing.T) {
 	}
 	if _, _, err := config.StoredApplyPairTx(nobody, nil, cfg, storedCap, appliedCap); err == nil {
 		t.Fatal("a pair leading with a setting not declared MachineryApplied was read ungated")
+	}
+}
+
+// A pair a boot source sets in full answers without the database, as a single
+// machinery read does. A nil transaction proves no row is read.
+func TestThePairedMachineryReadOfTwoBootValuesReadsNoRow(t *testing.T) {
+	cfg, err := load(t, fixture{env: []string{"X_TEST_APPLIED=7", "X_TEST_APPLIED_FLOOR=3"}}, appliedCap, appliedFloor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, b, err := config.StoredApplyPairTx(nobody, nil, cfg, appliedCap, appliedFloor)
+	if err != nil || a != 7 || b != 3 {
+		t.Fatalf("a paired read of two boot values = %d, %d, %v; want 7, 3 with no row read", a, b, err)
 	}
 }
 

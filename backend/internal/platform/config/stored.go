@@ -145,8 +145,8 @@ func StoredApplyTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[
 }
 
 // StoredApplyPairTx is StoredApplyTx for two settings a decision pairs. One
-// statement reads both rows, so a write that changes both together cannot
-// commit between the two reads and pair values no one configured.
+// statement reads the rows no boot source sets, so a write that changes both
+// cannot commit between two reads. With both boot-set it reads no row.
 func StoredApplyPairTx[A, B any](ctx context.Context, tx pgx.Tx, c *Config, a *Setting[A], b *Setting[B]) (A, B, error) {
 	var zeroA A
 	var zeroB B
@@ -156,9 +156,20 @@ func StoredApplyPairTx[A, B any](ctx context.Context, tx pgx.Tx, c *Config, a *S
 	if err := requireMachinery(b); err != nil {
 		return zeroA, zeroB, err
 	}
-	rows, err := settings.ApplyManyTx(ctx, tx, a.row, b.row)
-	if err != nil {
-		return zeroA, zeroB, err
+	var unlocked []settings.Definition
+	if _, locked := c.Locked(a.Key()); !locked {
+		unlocked = append(unlocked, a.row)
+	}
+	if _, locked := c.Locked(b.Key()); !locked {
+		unlocked = append(unlocked, b.row)
+	}
+	rows := map[string]json.RawMessage{}
+	if len(unlocked) > 0 {
+		read, err := settings.ApplyManyTx(ctx, tx, unlocked...)
+		if err != nil {
+			return zeroA, zeroB, err
+		}
+		rows = read
 	}
 	va, err := appliedValue(c, a, rows)
 	if err != nil {
