@@ -261,8 +261,8 @@ func overviewByKey(t *testing.T, entries []crmcontracts.ConfigurationEntry) map[
 	return byKey
 }
 
-// The task overrides answer as a map of tasks, so their lock is reported on
-// the routing response, beside the binding's, where the same screen reads it.
+// The task overrides answer as a map of tasks, with no room for a lock. Their
+// lock is reported on the routing response, which the same screen reads.
 func TestTheRoutingResponseReportsTheTaskOverridesLock(t *testing.T) {
 	e := apptest.SetupAppWithEnv(t, []string{`MARGINCE_AI_TASK_OVERRIDES={"capture_classify":{"thinking":"high"}}`})
 	e.BootstrapWorkspace(t)
