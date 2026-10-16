@@ -8986,7 +8986,7 @@ export interface paths {
          * @description The answer the `catch_me_up_on` agent tool gives, run by the same tool on both doors:
          *     the recent activity, open tasks and related records around one record, each with the
          *     passages it rests on. Name the record by `record_id`, or by `record_name` as
-         *     `search_records` would find it; a name that matches more than one record is refused
+         *     `list_records`' `q` would find it; a name that matches more than one record is refused
          *     with the candidates rather than guessed at.
          */
         get: operations["catchUpOnRecord"];
@@ -46762,7 +46762,7 @@ export interface components {
         AnchorRecordType: "contact" | "company" | "deal" | "lead" | "project" | "activity";
         /** @description The record to build around. Give this or `record_name`, not both. */
         AnchorRecordId: string;
-        /** @description The record named in words, found as `search_records` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at. */
+        /** @description The record named in words, found the way `list_records`' `q` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at. */
         AnchorRecordName: string;
         /** @description Cap the items in each section. */
         AnchorMaxItems: number;
@@ -62275,7 +62275,7 @@ export interface operations {
                 record_type: components["parameters"]["AnchorRecordType"];
                 /** @description The record to build around. Give this or `record_name`, not both. */
                 record_id?: components["parameters"]["AnchorRecordId"];
-                /** @description The record named in words, found as `search_records` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at. */
+                /** @description The record named in words, found the way `list_records`' `q` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at. */
                 record_name?: components["parameters"]["AnchorRecordName"];
                 /** @description Cap the items in each section. */
                 max_items?: components["parameters"]["AnchorMaxItems"];
@@ -62310,7 +62310,7 @@ export interface operations {
                 record_type: components["parameters"]["AnchorRecordType"];
                 /** @description The record to build around. Give this or `record_name`, not both. */
                 record_id?: components["parameters"]["AnchorRecordId"];
-                /** @description The record named in words, found as `search_records` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at. */
+                /** @description The record named in words, found the way `list_records`' `q` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at. */
                 record_name?: components["parameters"]["AnchorRecordName"];
                 /** @description Cap the items in each section. */
                 max_items?: components["parameters"]["AnchorMaxItems"];

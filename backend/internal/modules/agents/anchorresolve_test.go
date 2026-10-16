@@ -149,6 +149,11 @@ func TestANameMatchingNothingIsRefused(t *testing.T) {
 	if !strings.Contains(err.Error(), "Nobody") {
 		t.Errorf("the refusal does not name what was searched for: %v", err)
 	}
+	// The name resolves through list_records' quick-find, so that is the tool
+	// that matches it the same way.
+	if !strings.Contains(err.Error(), "list_records") {
+		t.Errorf("the refusal does not send the caller to list_records' q: %v", err)
+	}
 }
 
 // The candidate list carries ids and nothing else. The refusal travels to an

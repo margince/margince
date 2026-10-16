@@ -57,7 +57,7 @@ func resolveAnchor(
 	switch len(res.Records) {
 	case 0:
 		return ids.UUID{}, &BadArgsError{Cause: fmt.Errorf(
-			"no %s matches `record_name` %q — search_records finds what this workspace holds",
+			"no %s matches `record_name` %q — it matches as list_records' `q` does, so try part of the name there",
 			args.RecordType, args.RecordName)}
 	case 1:
 		return res.Records[0].Ref.ID, nil

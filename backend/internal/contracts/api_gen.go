@@ -53397,7 +53397,7 @@ type CatchUpOnRecordParams struct {
 	// RecordId The record to build around. Give this or `record_name`, not both.
 	RecordId *AnchorRecordId `form:"record_id,omitempty" json:"record_id,omitempty"`
 
-	// RecordName The record named in words, found as `search_records` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at.
+	// RecordName The record named in words, found the way `list_records`' `q` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at.
 	RecordName *AnchorRecordName `form:"record_name,omitempty" json:"record_name,omitempty"`
 
 	// MaxItems Cap the items in each section.
@@ -56475,7 +56475,7 @@ type PrepForMeetingParams struct {
 	// RecordId The record to build around. Give this or `record_name`, not both.
 	RecordId *AnchorRecordId `form:"record_id,omitempty" json:"record_id,omitempty"`
 
-	// RecordName The record named in words, found as `search_records` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at.
+	// RecordName The record named in words, found the way `list_records`' `q` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at.
 	RecordName *AnchorRecordName `form:"record_name,omitempty" json:"record_name,omitempty"`
 
 	// MaxItems Cap the items in each section.
