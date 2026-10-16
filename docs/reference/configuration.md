@@ -170,6 +170,8 @@ value gets a 409 that names the source, and a save of the same value changes not
 | `MARGINCE_AI_BUDGET` | `{"tokens_per_full_user":12000000,"company_monthly_tokens":null}` (each 1 to 1000000000000) | `ai.budget` |
 | `MARGINCE_AI_PRICE_SYNC` | `{"auto_sync":true}` | `ai.price_sync` |
 | `MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS` | `2` (1 to 30) | `activities.follow_up_after_days` |
+| `MARGINCE_CONSENT_AUTHORIZATION_MODES` | `account_notice:enforce,active_deal_followup:enforce,consent_confirmation:enforce,contract_notice:enforce,customer_service:enforce,invoice_or_payment:enforce,marketing:enforce,optout_confirmation:enforce,precontract_quote:enforce,privacy_notice:enforce,record_confirmation:enforce,reply_to_inbound:enforce,requested_followup:enforce,security_notice:enforce` (each mode `observe`, `warn` or `enforce`) | `consent.authorization_modes`, as `category:mode` pairs in a `,` list |
+| `MARGINCE_CONSENT_CONTROLLER_PARTICULARS` | — (nothing stated) | `consent.controller_particulars`, a JSON object |
 
 A data reset keeps the saved rows of the first 12 settings, from `installation.name` to
 `identity.oidc_group_role_map`, and of `ai.routing`, `ai.task_overrides` and `ai.budget`. It
@@ -185,6 +187,10 @@ name on the company profile.
 
 A boot-set `installation.agent_window_hours` also keeps a window length an admin saved for the next
 reset from taking over.
+
+`consent.authorization_modes` names every category or none; a value that leaves one out fails the
+boot. `consent.controller_particulars` takes the fields `LegalName`, `PostalAddress`,
+`PrivacyContact`, `ObjectionRoute` and `AdvertiserContact`, spelled as the saved row spells them.
 
 ## Common log flags (api, worker)
 

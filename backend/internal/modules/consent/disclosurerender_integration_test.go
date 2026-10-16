@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -61,10 +62,11 @@ func operatorCtx(e *channelConsentEnv) context.Context {
 	return principal.WithActor(e.ctx, actor)
 }
 
-// settingsStoreFor builds the store that OWNS the setting table, over the same
-// pool this suite runs on. Consent may not write that table, so the operator
-// path goes through here in production too.
-func settingsStoreFor(t *testing.T) *settings.Store {
+// settingsStoreFor builds the configuration that reads and saves through the
+// store that OWNS the setting table, over the same pool this suite runs on.
+// Consent may not write that table, so the operator path goes through here in
+// production too.
+func settingsStoreFor(t *testing.T, environ ...string) *config.Config {
 	t.Helper()
 	pool, err := testdb.Pool(context.Background(), os.Getenv("MARGINCE_TEST_APP_DSN"))
 	if err != nil {
@@ -75,7 +77,8 @@ func settingsStoreFor(t *testing.T) *settings.Store {
 	// genuinely stopped — a goroutine still holding a connection would go on
 	// writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
-	return settings.New(pool, settings.NewRegistry(Definitions()...))
+	cfg := consentConfig(t, environ...)
+	return cfg.WithDatabase(settings.New(pool, settings.NewRegistry(cfg.StoredDefinitions()...)))
 }
 
 // stateParticulars saves what the installation says about itself.
@@ -267,10 +270,10 @@ func TestTheParticularsRoundTrip(t *testing.T) {
 	}
 
 	store := settingsStoreFor(t)
-	if err := settings.Set(ctx, store, ControllerIdentity, in); err != nil {
+	if err := config.Save(ctx, store, ControllerIdentity, in); err != nil {
 		t.Fatalf("stating the particulars: %v", err)
 	}
-	read, err := settings.Get(ctx, store, ControllerIdentity)
+	read, err := config.StoredVal(ctx, store, ControllerIdentity)
 	if err != nil {
 		t.Fatalf("reading them back: %v", err)
 	}
@@ -286,12 +289,12 @@ func TestStatingTheParticularsNeedsTheSettingsGrant(t *testing.T) {
 	e := setupChannelConsent(t)
 
 	store := settingsStoreFor(t)
-	if err := settings.Set(e.ctx, store, ControllerIdentity, ControllerParticulars{
+	if err := config.Save(e.ctx, store, ControllerIdentity, ControllerParticulars{
 		LegalName: "Somebody Else Ltd",
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a rep restated who this installation is: %v", err)
 	}
-	if _, err := settings.Get(e.ctx, store, ControllerIdentity); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := config.StoredVal(e.ctx, store, ControllerIdentity); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a rep was shown the particulars form: %v", err)
 	}
 }
@@ -302,7 +305,7 @@ func TestAnOverlongParticularIsRefused(t *testing.T) {
 	e := setupChannelConsent(t)
 	ctx := operatorCtx(e)
 
-	err := settings.Set(ctx, settingsStoreFor(t), ControllerIdentity,
+	err := config.Save(ctx, settingsStoreFor(t), ControllerIdentity,
 		ControllerParticulars{LegalName: strings.Repeat("x", particularsFieldCap+1)})
 	if err == nil {
 		t.Fatal("an over-long legal name was accepted: every field goes into every message " +
@@ -317,7 +320,7 @@ func TestAWhitespaceParticularIsRefused(t *testing.T) {
 	e := setupChannelConsent(t)
 	ctx := operatorCtx(e)
 
-	err := settings.Set(ctx, settingsStoreFor(t), ControllerIdentity,
+	err := config.Save(ctx, settingsStoreFor(t), ControllerIdentity,
 		ControllerParticulars{LegalName: "   "})
 	if err == nil {
 		t.Fatal("a whitespace legal name was accepted: it reads as filled in and discloses " +
@@ -339,7 +342,7 @@ func TestAWriterWithoutTheReadGrantChangesNothing(t *testing.T) {
 		LegalName:     "Beispiel GmbH",
 		PostalAddress: "Hauptstraße 1\n10115 Berlin",
 	}
-	if err := settings.Set(operatorCtx(e), store, ControllerIdentity, stated); err != nil {
+	if err := config.Save(operatorCtx(e), store, ControllerIdentity, stated); err != nil {
 		t.Fatalf("stating the particulars: %v", err)
 	}
 
@@ -361,7 +364,7 @@ func TestAWriterWithoutTheReadGrantChangesNothing(t *testing.T) {
 		t.Fatalf("a writer with no read grant got 200; the response echoes the stored value, "+
 			"so this request cannot succeed (body: %s)", rec.Body.String())
 	}
-	after, err := settings.Get(operatorCtx(e), store, ControllerIdentity)
+	after, err := config.StoredVal(operatorCtx(e), store, ControllerIdentity)
 	if err != nil {
 		t.Fatalf("reading the particulars back: %v", err)
 	}

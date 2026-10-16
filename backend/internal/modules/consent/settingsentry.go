@@ -22,11 +22,14 @@ package consent
 // resurrects a consent, clears a suppression or reaches past those six.
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -55,17 +58,25 @@ const authorizationModesObject = "installation_settings"
 // of its own it adopts the old gate's answer rather than refusing, so enforcing
 // stops nothing that was being sent. What it ENDS is the old gate overruling
 // the engine on a message the engine can evidence and it cannot.
-var AuthorizationModes = settings.Define[map[string]string](
-	"consent.authorization_modes",
-	authorizationModesObject,
-	"update",
-	enforceEveryCategory(),
-	validateAuthorizationModes,
-	// MachineryApplied: the transmit gate reads this inside the transaction
-	// that binds its own decision, and the posture must apply whoever the
-	// acting principal is — a worker dispatching a delivery holds the system
-	// principal and has no settings read gate to pass.
-).MachineryApplied()
+//
+// MachineryApplied: the transmit gate reads this inside the transaction that
+// binds its own decision, and the posture must apply whoever the acting
+// principal is — a worker dispatching a delivery holds the system principal and
+// has no settings read gate to pass.
+var AuthorizationModes = config.DefineStored(config.Spec[map[string]string]{
+	Key:      "consent.authorization_modes",
+	Env:      "MARGINCE_CONSENT_AUTHORIZATION_MODES",
+	Type:     config.Map(config.String),
+	Default:  config.Some(enforceEveryCategory()),
+	Validate: validateAuthorizationModes,
+	Doc:      "The authority the authorization engine's answer carries for each communication category: observe, warn or enforce.",
+}, config.Store{RBACObject: authorizationModesObject, AuditVerb: "update", MachineryApplied: true})
+
+// authorizationModesTx is the posture every decision reads, inside the
+// transaction that records it, under the boot value the program bound.
+func authorizationModesTx(ctx context.Context, tx pgx.Tx) (map[string]string, error) {
+	return config.StoredApplyTx(ctx, tx, config.Bound(), AuthorizationModes)
+}
 
 // enforceEveryCategory is the shipped posture: every category the vocabulary
 // holds, at enforce.
@@ -158,8 +169,7 @@ func ModeFor(modes map[string]string, category commsauthz.Category) commsauthz.M
 	}
 }
 
-// Definitions is consent's contribution to the settings registry; compose
-// concatenates each module's list.
-func Definitions() []settings.Definition {
-	return []settings.Definition{AuthorizationModes, ControllerIdentity}
+// ConfigSettings are this module's settings in the configuration registry.
+func ConfigSettings() []config.Any {
+	return []config.Any{AuthorizationModes, ControllerIdentity}
 }

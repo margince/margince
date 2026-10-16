@@ -11,6 +11,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/consent"
 )
 
 // lockedWrite is one request to a settings surface whose field a boot source
@@ -53,5 +54,32 @@ func TestFollowUpWindowSetByEnvIsLockedAgainstAChange(t *testing.T) {
 	})
 	if rows := settingRows(t, e, activities.FollowUpAfterDays.Key()); rows != 0 {
 		t.Fatalf("the locked window wrote %d rows, want none", rows)
+	}
+}
+
+// The particulars the api's environment sets read as that value and refuse a
+// change, even an invalid one; resending them is accepted.
+func TestControllerParticularsSetByEnvAreLockedAgainstAChange(t *testing.T) {
+	e := apptest.SetupAppWithEnv(t, []string{
+		`MARGINCE_CONSENT_CONTROLLER_PARTICULARS={"LegalName":"Env GmbH","PostalAddress":"Envweg 1"}`,
+	})
+	e.BootstrapWorkspace(t)
+
+	const path = "/v1/privacy/controller-particulars"
+	var read struct {
+		LegalName     string `json:"legal_name"`
+		PostalAddress string `json:"postal_address"`
+	}
+	if status := e.Call(t, http.MethodGet, path, nil, nil, &read); status != http.StatusOK || read.LegalName != "Env GmbH" {
+		t.Fatalf("GET %s → %d, %+v, want the Env GmbH the environment sets", path, status, read)
+	}
+	same := map[string]any{"legal_name": "Env GmbH", "postal_address": "Envweg 1"}
+	expectLockedWrites(t, e, []lockedWrite{
+		{"a changed name", http.MethodPut, path, map[string]any{"legal_name": "Other GmbH", "postal_address": "Envweg 1"}, http.StatusConflict},
+		{"a name of only whitespace", http.MethodPut, path, map[string]any{"legal_name": "   "}, http.StatusConflict},
+		{"the locked particulars resent", http.MethodPut, path, same, http.StatusOK},
+	})
+	if rows := settingRows(t, e, consent.ControllerIdentity.Key()); rows != 0 {
+		t.Fatalf("the locked particulars wrote %d rows, want none", rows)
 	}
 }

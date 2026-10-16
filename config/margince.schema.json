@@ -715,6 +715,42 @@
           "type": "integer"
         }
       }
+    },
+    "consent": {
+      "description": "The consent settings an operator may also set at boot. A value here locks the setting against a change in the product.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "authorization_modes": {
+          "description": "The authority the authorization engine's answer carries for each communication category: observe, warn or enforce.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "controller_particulars": {
+          "description": "Who this installation is, as every message it sends must say.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "LegalName": {
+              "type": "string"
+            },
+            "PostalAddress": {
+              "type": "string"
+            },
+            "PrivacyContact": {
+              "type": "string"
+            },
+            "ObjectionRoute": {
+              "type": "string"
+            },
+            "AdvertiserContact": {
+              "type": "string"
+            }
+          }
+        }
+      }
     }
   },
   "$defs": {

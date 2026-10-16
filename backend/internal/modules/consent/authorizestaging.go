@@ -25,7 +25,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -79,7 +78,7 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 	// The posture, read on the caller's transaction — the same one the
 	// decision rows commit on, so a row's stamped mode is the one that was
 	// live when it was taken.
-	modes, err := settings.ApplyTx(ctx, tx, AuthorizationModes)
+	modes, err := authorizationModesTx(ctx, tx)
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
 	}

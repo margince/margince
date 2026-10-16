@@ -32,8 +32,6 @@ var settingsDefineExceptions = map[string]string{
 
 	"ai.price_sync_last_run": productState,
 
-	"consent.authorization_modes":            convertsIn12d,
-	"consent.controller_particulars":         convertsIn12d,
 	"contacts.first_response_enabled":        convertsIn12d,
 	"contacts.first_response_target_minutes": convertsIn12d,
 	"contacts.signature_template":            convertsIn12d,

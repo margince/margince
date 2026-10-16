@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // controllerParticularsObject gates who may read and write the installation's
@@ -21,26 +21,26 @@ const controllerParticularsObject = "installation_settings"
 type ControllerParticulars struct {
 	// LegalName is who is writing, as the law would name them. Art. 13(1)(a)
 	// GDPR's "identity of the controller" and Decree 91/2020's advertiser.
-	LegalName string
+	LegalName string `yaml:"LegalName"`
 	// PostalAddress is where they are, as a block of lines. Art. 13(1)(a)
 	// again, and the German business-letter particulars.
-	PostalAddress string
+	PostalAddress string `yaml:"PostalAddress"`
 	// PrivacyContact is how to reach whoever answers about the data —
 	// Art. 13(1)(b), which asks for the data protection officer where one
 	// exists and the controller's own contact where one does not.
-	PrivacyContact string
+	PrivacyContact string `yaml:"PrivacyContact"`
 	// ObjectionRoute is how to say stop, free and without a barrier. §7(3) UWG
 	// requires it on every advertising message rather than only the first, and
 	// the one-click unsubscribe this product already mints is usually the
 	// honest answer — but an installation whose recipients answer by phone
 	// says so here.
-	ObjectionRoute string
+	ObjectionRoute string `yaml:"ObjectionRoute"`
 	// AdvertiserContact is how to reach the advertiser directly — a phone
 	// number, a website, whatever the jurisdiction asks for. Vietnamese Decree
 	// 91/2020 requires it on advertising beyond naming who is advertising, and
 	// it is a SEPARATE field from the postal address because that requirement
 	// is about reachability rather than about where somebody is registered.
-	AdvertiserContact string
+	AdvertiserContact string `yaml:"AdvertiserContact"`
 }
 
 // particularsFieldCap bounds one field. Long enough for a postal address with a
@@ -77,13 +77,17 @@ func (p ControllerParticulars) IsZero() bool {
 // — so there is nothing here a reader could learn that any recipient of that
 // mail does not already have in their inbox. WRITING them stays gated on
 // installation_settings at update, which is where the trust actually sits.
-var ControllerIdentity = settings.Define[ControllerParticulars](
-	"consent.controller_particulars",
-	controllerParticularsObject,
-	"update",
-	ControllerParticulars{},
-	validateControllerParticulars,
-).MachineryApplied()
+//
+// The stored row spells each field by its Go name, so a boot value and the
+// yaml tags do too. No Default: the zero value, nothing stated, is the honest
+// one.
+var ControllerIdentity = config.DefineStored(config.Spec[ControllerParticulars]{
+	Key:      "consent.controller_particulars",
+	Env:      "MARGINCE_CONSENT_CONTROLLER_PARTICULARS",
+	Type:     config.Struct[ControllerParticulars](),
+	Validate: validateControllerParticulars,
+	Doc:      "Who this installation is, as every message it sends must say: legal name, postal address, privacy contact, objection route and advertiser contact.",
+}, config.Store{RBACObject: controllerParticularsObject, AuditVerb: "update", MachineryApplied: true})
 
 // validateControllerParticulars refuses what a message could not carry.
 //

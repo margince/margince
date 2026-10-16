@@ -17,7 +17,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -52,7 +51,7 @@ func (g *Gate) Preview(ctx context.Context, req commsauthz.Request) (commsauthz.
 
 	var set commsauthz.DecisionSet
 	err := g.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		modes, err := settings.ApplyTx(ctx, tx, AuthorizationModes)
+		modes, err := authorizationModesTx(ctx, tx)
 		if err != nil {
 			return err
 		}

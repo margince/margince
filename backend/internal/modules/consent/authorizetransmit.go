@@ -21,7 +21,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -88,7 +87,7 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 		// before the transaction would let a rollout change between the read
 		// and the write, leaving a row stamped with a mode that never decided
 		// it.
-		modes, err := settings.ApplyTx(ctx, tx, AuthorizationModes)
+		modes, err := authorizationModesTx(ctx, tx)
 		if err != nil {
 			return err
 		}
