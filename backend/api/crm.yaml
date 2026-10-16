@@ -56043,8 +56043,7 @@ components:
           description: Defaults to the deal's owner when omitted.
         expires_at: { type: [string, 'null'], format: date-time }
         source: { type: string }
-      additionalProperties: true
-      x-extension: true
+      additionalProperties: false
 
     UpdateDealRoomRequest:
       type: object
@@ -56059,8 +56058,7 @@ components:
         title: { type: string, minLength: 1 }
         welcome_message: { type: [string, 'null'] }
         steward_user_id: { type: [string, 'null'], format: uuid }
-      additionalProperties: true
-      x-extension: true
+      additionalProperties: false
 
     SetDealRoomExpiryRequest:
       type: object
@@ -56192,8 +56190,7 @@ components:
             - $ref: '#/components/schemas/DealRoomParticipantCapability'
           description: Defaults to `view` — the least that lets someone read the room.
         source: { type: string }
-      additionalProperties: true
-      x-extension: true
+      additionalProperties: false
 
     UpdateDealRoomParticipantRequest:
       type: object
@@ -56207,8 +56204,7 @@ components:
             Only while their credential is unconsumed. Changing it invalidates the link
             already sent; resend to issue a new one.
         capability: { $ref: '#/components/schemas/DealRoomParticipantCapability' }
-      additionalProperties: true
-      x-extension: true
+      additionalProperties: false
 
     DealRoomInvitationIssued:
       type: object
@@ -56303,8 +56299,7 @@ components:
           description: The buyer-facing name. Defaults to the attachment's filename.
         position: { type: integer, description: Order within the group. Defaults to 0. }
         source: { type: string }
-      additionalProperties: true
-      x-extension: true
+      additionalProperties: false
 
     UpdateDealRoomDocumentRequest:
       type: object
@@ -56313,8 +56308,7 @@ components:
         group_key: { $ref: '#/components/schemas/DealRoomDocumentGroup' }
         title: { type: string, minLength: 1 }
         position: { type: integer }
-      additionalProperties: true
-      x-extension: true
+      additionalProperties: false
 
     BuyerRoomDocument:
       type: object

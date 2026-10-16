@@ -41536,8 +41536,6 @@ export interface components {
             /** Format: date-time */
             expires_at?: string | null;
             source: string;
-        } & {
-            [key: string]: unknown;
         };
         /**
          * @description Any subset; omit a field to leave it unchanged. HUMAN-ONLY: an invited buyer
@@ -41552,8 +41550,6 @@ export interface components {
             welcome_message?: string | null;
             /** Format: uuid */
             steward_user_id?: string | null;
-        } & {
-            [key: string]: unknown;
         };
         SetDealRoomExpiryRequest: {
             /**
@@ -41675,8 +41671,6 @@ export interface components {
             /** @description Defaults to `view` — the least that lets someone read the room. */
             capability?: components["schemas"]["DealRoomParticipantCapability"];
             source: string;
-        } & {
-            [key: string]: unknown;
         };
         /** @description Any subset; omit a field to leave it unchanged. */
         UpdateDealRoomParticipantRequest: {
@@ -41688,8 +41682,6 @@ export interface components {
              */
             email?: string;
             capability?: components["schemas"]["DealRoomParticipantCapability"];
-        } & {
-            [key: string]: unknown;
         };
         /**
          * @description A participant and the credential just minted for them.
@@ -41780,16 +41772,12 @@ export interface components {
             /** @description Order within the group. Defaults to 0. */
             position?: number;
             source: string;
-        } & {
-            [key: string]: unknown;
         };
         /** @description Any subset; omit a field to leave it unchanged. */
         UpdateDealRoomDocumentRequest: {
             group_key?: components["schemas"]["DealRoomDocumentGroup"];
             title?: string;
             position?: number;
-        } & {
-            [key: string]: unknown;
         };
         /** @description One published document as the buyer sees it. No seller-side ids beyond its own. */
         BuyerRoomDocument: {

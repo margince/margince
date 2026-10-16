@@ -19015,7 +19015,7 @@ components:
           description: Defaults to the deal's owner when omitted.
         expires_at: {type: [string, 'null'], format: date-time}
         source: {type: string}
-      additionalProperties: true
+      additionalProperties: false
     DealRoomParticipantCapability:
       description: |-
         What a participant may do in the room. Coarse and room-wide on purpose — a
