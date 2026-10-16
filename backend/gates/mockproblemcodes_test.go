@@ -510,24 +510,22 @@ func TestTheEmittedCodeCensusReadsEveryPlantedSite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parsing %s: %v", planted, err)
 	}
-	const otherPlanted, otherVirtual = "gates/testdata/problemcodeothers.go.txt", "internal/plantedother/others.go"
-	otherRaw, err := os.ReadFile(otherPlanted)
-	if err != nil {
-		t.Fatalf("reading %s: %v", otherPlanted, err)
+	units := readGoUnits(t, problemWriterDir)
+	for planted, virtual := range map[string]string{
+		"gates/testdata/problemcodeothers.go.txt":     "internal/plantedother/others.go",
+		"gates/testdata/problemcodesplittypes.go.txt": "internal/plantedsplit/types.go",
+		"gates/testdata/problemcodesplitfill.go.txt":  "internal/plantedsplit/fill.go",
+	} {
+		units = append(units, plantedUnit(t, planted, virtual))
 	}
-	other, err := parser.ParseFile(gatekit.SourceFileSet(), otherVirtual, otherRaw, parser.ParseComments)
-	if err != nil {
-		t.Fatalf("parsing %s: %v", otherPlanted, err)
-	}
-	units := append(readGoUnits(t, problemWriterDir),
-		&goUnit{path: virtual, dir: path.Dir(virtual), file: file, imports: localImports(file)},
-		&goUnit{path: otherVirtual, dir: path.Dir(otherVirtual), file: other, imports: localImports(other)})
+	units = append(units, &goUnit{path: virtual, dir: path.Dir(virtual), file: file, imports: localImports(file)})
 	census := newEmittedCensus(t, units)
 	census.readSources()
 	for _, code := range []string{
 		"planted_literal", "planted_const", "planted_const_converted", "planted_param",
 		"planted_passed_on", "planted_method", "planted_field", "planted_typed_first", "planted_typed_second",
 		"planted_fault_return", "planted_assigned", "planted_ranged", "planted_elided",
+		"planted_nested", "planted_split_nested", "planted_split_embedded", "planted_split_embedded_selector", "planted_split_promoted",
 	} {
 		if _, read := census.codes[code]; !read {
 			t.Errorf("the census did not read the planted %q", code)
@@ -535,7 +533,7 @@ func TestTheEmittedCodeCensusReadsEveryPlantedSite(t *testing.T) {
 	}
 	var faulted []string
 	for _, fault := range census.faults {
-		if strings.Contains(fault, virtual) {
+		if strings.HasPrefix(fault, virtual) {
 			faulted = append(faulted, fault)
 		} else {
 			t.Errorf("a fault outside the planted file: %s", fault)
@@ -543,7 +541,7 @@ func TestTheEmittedCodeCensusReadsEveryPlantedSite(t *testing.T) {
 	}
 	refusedShapes := []string{
 		`fmt.Sprintf("planted_%d", n)`, "strings.ToLower(s)", "return valueHelper",
-		"refusal.Code, err = codeAndErr()", `h.refusal.Code = "planted_nested"`, "\trepeatedSecond",
+		"refusal.Code, err = codeAndErr()", `lookup().Code = "planted_untyped"`, "\trepeatedSecond",
 	}
 	for _, refused := range refusedShapes {
 		offset := strings.Index(string(raw), refused)
@@ -558,4 +556,18 @@ func TestTheEmittedCodeCensusReadsEveryPlantedSite(t *testing.T) {
 	if len(faulted) != len(refusedShapes) {
 		t.Errorf("faulted %d planted sites, want %d: %q", len(faulted), len(refusedShapes), faulted)
 	}
+}
+
+// plantedUnit parses a planted Go file as the source it stands for.
+func plantedUnit(t *testing.T, planted, virtual string) *goUnit {
+	t.Helper()
+	raw, err := os.ReadFile(planted)
+	if err != nil {
+		t.Fatalf("reading %s: %v", planted, err)
+	}
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), virtual, raw, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("parsing %s: %v", planted, err)
+	}
+	return &goUnit{path: virtual, dir: path.Dir(virtual), file: file, imports: localImports(file)}
 }

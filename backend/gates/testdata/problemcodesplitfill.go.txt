@@ -1,0 +1,9 @@
+package plantedsplit
+
+func fillNested(h holder) { h.d.Code = "planted_split_nested" }
+
+func fillEmbedded(w *wrapped) { w.Code = "planted_split_embedded" }
+
+func fillEmbeddedSelector(o outerWrap) { o.inner.Code = "planted_split_embedded_selector" }
+
+func fillPromoted(w wrapped) { w.DetailedError.Code = "planted_split_promoted" }

@@ -1,0 +1,9 @@
+package plantedsplit
+
+import "github.com/margince/margince/backend/internal/platform/httperr"
+
+type holder struct{ d *httperr.DetailedError }
+
+type wrapped struct{ httperr.DetailedError }
+
+type outerWrap struct{ inner wrapped }
