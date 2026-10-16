@@ -11,7 +11,7 @@ import { useT } from "../i18n";
  *
  * DELETING IT IS ONE MOVE. Remove, together:
  *   - this file;
- *   - its call site in `app/shell.tsx` — the `<BetaBadge />` that `BrandBlock`
+ *   - its call site in `app/shellrail.tsx` — the `<BetaBadge />` that `BrandBlock`
  *     seats on the head's second line, and the import above it;
  *   - `shell.beta` from `i18n/en.ts`, `i18n/de.ts` and `i18n/vi.ts`, and its
  *     entry in `i18n.test.ts`'s `KEPT_IN_ENGLISH`, which fails on an allowlisted
