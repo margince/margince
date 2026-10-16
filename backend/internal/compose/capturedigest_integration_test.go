@@ -94,3 +94,22 @@ func TestMorningDigestBuildAndRead(t *testing.T) {
 		t.Fatalf("digest after the worker pass → %d, want 200", status)
 	}
 }
+
+// A calendar day no request may bind is a malformed parameter, not a storage
+// fault: Go reads year 0 and Postgres has no date for it.
+func TestMorningDigestRefusesADayOutsideTheAcceptedRange(t *testing.T) {
+	b := setupBackfillWire(t)
+	for _, day := range []string{"0000-01-01", "0000-12-31", "0001-01-01", "9999-12-31"} {
+		asked, err := time.Parse(time.DateOnly, day)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", day, err)
+		}
+		if status, _ := b.readDigest(t, &asked); status != http.StatusUnprocessableEntity {
+			t.Errorf("digest for %s → %d, want 422", day, status)
+		}
+	}
+	inRange := time.Date(2026, 7, 14, 0, 0, 0, 0, time.UTC)
+	if status, _ := b.readDigest(t, &inRange); status != http.StatusNotFound {
+		t.Errorf("digest for a day nobody built → %d, want 404", status)
+	}
+}

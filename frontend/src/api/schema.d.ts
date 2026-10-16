@@ -344,7 +344,7 @@ export interface paths {
         };
         /**
          * What the background system is holding, and whose work failed.
-         * @description Admin-only. Reports the caller's own workspace's background jobs by kind — waiting, running, retrying, and dead — plus the untenanted dispatcher rows that fan work out to every workspace. Another workspace's jobs are never included: river_job carries no workspace column and therefore no RLS, so this endpoint imposes the scope itself. Failure text is the job layer's own vetted sentence, never a worker's raw cause (that column is fleet-visible and has no redaction path). Human session only (x-agent-access: human-only).
+         * @description Gated by the `job_health` read grant (admin and ops hold it by default). Reports the caller's own workspace's background jobs by kind — waiting, running, retrying, and dead — plus the untenanted dispatcher rows that fan work out to every workspace. Another workspace's jobs are never included: river_job carries no workspace column and therefore no RLS, so this endpoint imposes the scope itself. Failure text is the job layer's own vetted sentence, never a worker's raw cause (that column is fleet-visible and has no redaction path). Human session only (x-agent-access: human-only).
          */
         get: operations["getJobHealth"];
         put?: never;
@@ -364,7 +364,7 @@ export interface paths {
         };
         /**
          * What capture's judgement queues are holding, and in whose mailbox.
-         * @description Admin-only. Reports how much is waiting on a sender decision or a thread verdict, by mailbox, plus the classifier queue as a whole. COUNTS AND AGES ONLY — never a subject, a body, or the reason a thread was held: those describe the correspondence, and an operational page is not an exemption from the capture-privacy boundary.
+         * @description Gated by the `job_health` read grant (admin and ops hold it by default). Reports how much is waiting on a sender decision or a thread verdict, by mailbox, plus the classifier queue as a whole. COUNTS AND AGES ONLY — never a subject, a body, or the reason a thread was held: those describe the correspondence, and an operational page is not an exemption from the capture-privacy boundary.
          *
          *     The contacts it counts are owner-private and invisible to an administrator by design (the importing user only, not even Admin) — which is exactly why a count is worth serving: nobody could otherwise tell that a backlog exists. Human session only (x-agent-access: human-only).
          */
@@ -386,7 +386,7 @@ export interface paths {
         };
         /**
          * Which composed units are handing the core records it cannot express.
-         * @description Admin-only. Reports, per composed unit, how many records the core's ingress grammar refused over the reporting window and which check refused them.
+         * @description Gated by the `job_health` read grant (admin and ops hold it by default). Reports, per composed unit, how many records the core's ingress grammar refused over the reporting window and which check refused them.
          *
          *     A unit moves its cursor past a record the core cannot express — stopping on one malformed message parks the whole connection — so the drop leaves the unit's own logs and nothing else. Without this an installation reading only the CRM cannot tell a provider format change from a feed with nothing on it: every record refused presents exactly like a healthy quiet feed.
          *
@@ -15309,7 +15309,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List the composed extension units and what each contributes. Admin-only, human-only, read-only.
+         * List the composed extension units and what each contributes. Human-only, read-only; needs the extension_access read grant.
          * @description What this binary actually composed (ADR-0120): one entry per enabled unit under
          *     `extensions/`, with the RBAC objects, routes and jobs it contributes. The role editor
          *     reads it to group `ext_<unit>_<object>` grants under the unit that declared them —
@@ -15322,8 +15322,10 @@ export interface paths {
          *     reconciliation validated, so an entry here cannot describe a unit that is not serving.
          *
          *     The extension set is a property of the BINARY, not of the workspace: it is identical for
-         *     every caller and changes only on deploy. Admin-only all the same — it enumerates the
-         *     installation's internal surface (routes, jobs, versions), which is operator information.
+         *     every caller and changes only on deploy. It is gated all the same — it enumerates the
+         *     installation's internal surface (routes, jobs, versions), which is operator information —
+         *     by the `extension_access` read grant, which the admin and ops roles hold by default.
+         *     Every other role answers 403.
          */
         get: operations["listExtensions"];
         put?: never;
@@ -19936,10 +19938,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List current AI model prices (latest per model), or one model's history.
+         * List the AI model price sheet (latest-dated price per model), or one model's history.
          * @description Admin/ops-only view. Prices are USD per 1M tokens (strings). Without
-         *     `provider`/`model_id`, returns the latest effective price per model; with both,
-         *     returns that model's effective-dated history, newest first.
+         *     `provider`/`model_id`, returns the head of the sheet: each model's latest-DATED price,
+         *     which is a price scheduled for a later day when one exists, so compare `effective_date`
+         *     with today before reading a row as the price in force. With both, returns that model's
+         *     effective-dated history, newest first, from which the price in force today is the first
+         *     row dated today or earlier.
          */
         get: operations["listAiModelRates"];
         put?: never;
@@ -25443,6 +25448,11 @@ export interface components {
             /** @description Narrow this ONE run to a subset of what the connection buys — how a reader purchases a single priced detail for one contact without changing the setting for every future run. Omit for the connection's own selection. It can only narrow: a category the connection does not carry is refused with 422 rather than trimmed, because buying less than was asked for while answering as though nothing was wrong is a failure the caller cannot see, and an admin's selection is a ceiling a rep must not be able to raise. */
             categories?: string[];
         };
+        ProviderRunReservation: {
+            pool: string;
+            reserved_credits: number;
+            actual_credits?: number | null;
+        };
         ProviderRun: {
             /** Format: uuid */
             id: string;
@@ -25494,11 +25504,7 @@ export interface components {
             configuration_snapshot: components["schemas"]["ProviderConfiguration"];
             requested_categories: string[];
             /** @description Maximum credits held per pool before submission, reconciled to actual spend on a terminal result (PI-FORM-1). */
-            reservations: {
-                pool: string;
-                reserved_credits: number;
-                actual_credits?: number | null;
-            }[];
+            reservations: components["schemas"]["ProviderRunReservation"][];
             /**
              * @description True when a paid terminal result could not be handed to the owning domain within the bounded retry. The spend is real and the claims are absent; an
              *     operator sees the gap rather than discovering it as missing data (PI-AC-12).
@@ -39361,8 +39367,11 @@ export interface components {
             root_url: string;
             /** @enum {string} */
             status: "queued" | "deferred" | "reading" | "ready" | "partial" | "failed" | "confirmed" | "abandoned";
-            /** @enum {string|null} */
-            status_code: null | "budget_deferred";
+            /**
+             * @description Why a read did not finish: budget_deferred, or the closed failure vocabulary a failed crawl is diagnosed with.
+             * @enum {string|null}
+             */
+            status_code: null | "budget_deferred" | "bot_blocked" | "http_server_error" | "timeout" | "http_client_error" | "dns" | "tls" | "robots_disallowed" | "unreadable" | "internal" | "stale_reclaim";
             /** @description Safe guidance only; never provider payload, prompt, SQL, or stack data. */
             status_detail: string | null;
             /** Format: date-time */
@@ -39622,8 +39631,11 @@ export interface components {
             seed_url: string;
             /** @enum {string} */
             status: "queued" | "deferred" | "running" | "done" | "partial" | "failed" | "cancelled";
-            /** @enum {string|null} */
-            status_code: null | "budget_deferred";
+            /**
+             * @description Why a read did not finish: budget_deferred, or the closed failure vocabulary a failed crawl is diagnosed with.
+             * @enum {string|null}
+             */
+            status_code: null | "budget_deferred" | "bot_blocked" | "http_server_error" | "timeout" | "http_client_error" | "dns" | "tls" | "robots_disallowed" | "unreadable" | "internal" | "stale_reclaim";
             /** @description Safe guidance only; never provider payload, prompt, SQL, or stack data. */
             status_detail: string | null;
             /** Format: date-time */

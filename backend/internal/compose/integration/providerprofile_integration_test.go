@@ -19,6 +19,8 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -59,6 +61,16 @@ func completeOneRun(t *testing.T, e *Env, contactID ids.UUID) string {
 		t.Fatalf("the offline provider answered %s with no result — the fixture cannot prove anything", status.Outcome)
 	}
 
+	// The configuration a run is admitted under, frozen the way the writer
+	// freezes it. An empty object would pass a reader on a value no run carries.
+	frozen, err := json.Marshal(provider.Snapshot{
+		Mode:       "automatic_on_create",
+		Categories: []provider.Category{"professional_email", "mobile"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	var runID string
 	admin := e.Admin()
 	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
@@ -68,9 +80,9 @@ func completeOneRun(t *testing.T, e *Env, contactID ids.UUID) string {
 			   external_correlation_id, connection_version, connection_epoch,
 			   configuration_snapshot, requested_categories, completed_at)
 			VALUES ('contact', $1, 'surfe', 'manual', 'completed', $2,
-			        gen_random_uuid(), 1, 1, '{}'::jsonb,
+			        gen_random_uuid(), 1, 1, $3::jsonb,
 			        ARRAY['professional_email','mobile'], now())
-			RETURNING id::text`, contactID, "fp-fold-"+contactID.String()).Scan(&runID); err != nil {
+			RETURNING id::text`, contactID, "fp-fold-"+contactID.String(), string(frozen)).Scan(&runID); err != nil {
 			return err
 		}
 		return contacts.WriteProviderClaims(admin, tx, runID, contactID.String(), "surfe",
@@ -193,6 +205,16 @@ func TestTheProviderSectionRendersWhatTheAdapterActuallyReturned(t *testing.T) {
 	}
 	if profile.ContributingRuns == nil || len(*profile.ContributingRuns) != 1 {
 		t.Errorf("contributing_runs = %+v, want the one run the section drew on", profile.ContributingRuns)
+	}
+	// The contract requires the run's frozen configuration, and its mode is an
+	// enum: a zero value is a string no client may parse.
+	if snapshot := profile.LatestRun.ConfigurationSnapshot; !snapshot.Mode.Valid() || !snapshot.Categories["mobile"] {
+		t.Errorf("latest_run.configuration_snapshot = mode %q categories %v, want the run's frozen mode and categories", snapshot.Mode, snapshot.Categories)
+	}
+	// The page serves no credit figures, but `reservations` is a required
+	// array: it is written empty, not null.
+	if wire, err := json.Marshal(profile.LatestRun); err != nil || !strings.Contains(string(wire), `"reservations":[]`) {
+		t.Errorf("latest_run = %s (%v), want reservations written as an empty array", wire, err)
 	}
 	// The fixture requested two of the six categories, so four were not asked
 	// for — the difference between "we asked and they had nothing" and "we

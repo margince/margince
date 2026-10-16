@@ -9181,6 +9181,13 @@ components:
           type: object
           description: Per-pool ceilings keyed by the provider's declared credit pools.
           additionalProperties: {$ref: '#/components/schemas/ProviderPoolBudget'}
+    ProviderRunReservation:
+      type: object
+      required: [pool, reserved_credits]
+      properties:
+        pool: {type: string}
+        reserved_credits: {type: integer, minimum: 0}
+        actual_credits: {type: [integer, 'null'], minimum: 0}
     ProviderRun:
       type: object
       required: [id, subject_kind, provider, trigger, state, claims_unwritten, connection_version, configuration_snapshot, requested_categories, reservations, created_at, updated_at]
@@ -9231,13 +9238,7 @@ components:
         reservations:
           type: array
           description: Maximum credits held per pool before submission, reconciled to actual spend on a terminal result.
-          items:
-            type: object
-            required: [pool, reserved_credits]
-            properties:
-              pool: {type: string}
-              reserved_credits: {type: integer, minimum: 0}
-              actual_credits: {type: [integer, 'null'], minimum: 0}
+          items: {$ref: '#/components/schemas/ProviderRunReservation'}
         claims_unwritten:
           type: boolean
           default: false
@@ -18580,7 +18581,7 @@ components:
         company_id: {type: string, format: uuid}
         seed_url: {type: string, format: uri}
         status: {type: string, enum: [queued, deferred, running, done, partial, failed, cancelled]}
-        status_code: {type: [string, 'null'], enum: [null, budget_deferred]}
+        status_code: {type: [string, 'null'], enum: [null, budget_deferred, bot_blocked, http_server_error, timeout, http_client_error, dns, tls, robots_disallowed, unreadable, internal, stale_reclaim], description: 'Why a read did not finish: budget_deferred, or the closed failure vocabulary a failed crawl is diagnosed with.'}
         status_detail: {type: [string, 'null'], description: 'Safe guidance only; never provider payload, prompt, SQL, or stack data.'}
         next_attempt_at: {type: [string, 'null'], format: date-time}
         pages:

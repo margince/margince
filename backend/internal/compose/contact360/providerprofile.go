@@ -16,6 +16,7 @@ package contact360
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
@@ -23,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/providerwire"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
@@ -263,6 +265,7 @@ type providerRunRow struct {
 	applied     bool
 	safeCode    string
 	requested   []string
+	snapshot    provider.Snapshot
 	skipReason  string
 	createdAt   time.Time
 	completedAt *time.Time
@@ -276,7 +279,7 @@ func (s *Service) providerRuns(ctx context.Context, tx pgx.Tx, contactID ids.Con
 		SELECT id, provider, trigger, connection_version, state, claims_unwritten,
 		       applied_at IS NOT NULL,
 		       coalesce(last_safe_status_code, ''), coalesce(skip_reason, ''),
-		       requested_categories, created_at, completed_at
+		       requested_categories, configuration_snapshot, created_at, completed_at
 		  FROM provider_run
 		 WHERE contact_id = $1 AND subject_kind = 'contact'
 		 ORDER BY created_at DESC`, contactID)
@@ -287,9 +290,13 @@ func (s *Service) providerRuns(ctx context.Context, tx pgx.Tx, contactID ids.Con
 	var out []providerRunRow
 	for rows.Next() {
 		var r providerRunRow
+		var frozen []byte
 		if err := rows.Scan(&r.id, &r.providerName, &r.trigger, &r.connectionVersion, &r.state, &r.claimsUnwritten,
-			&r.applied, &r.safeCode, &r.skipReason, &r.requested, &r.createdAt, &r.completedAt); err != nil {
+			&r.applied, &r.safeCode, &r.skipReason, &r.requested, &frozen, &r.createdAt, &r.completedAt); err != nil {
 			return nil, fmt.Errorf("contact360: scanning a provider run: %w", err)
+		}
+		if err := json.Unmarshal(frozen, &r.snapshot); err != nil {
+			return nil, fmt.Errorf("contact360: reading a run's frozen configuration: %w", err)
 		}
 		out = append(out, r)
 	}
@@ -302,25 +309,26 @@ func (s *Service) providerRuns(ctx context.Context, tx pgx.Tx, contactID ids.Con
 // toWireRun renders one run for the page: which provider, what was asked for,
 // how it ended.
 //
-// The reservations and the frozen configuration snapshot are deliberately
-// left empty. What a run COST is the settings card's subject, and a credit
-// figure beside somebody's mobile number invites reading one as the price of
-// the other; the run endpoint serves both to a caller who actually needs
-// them.
+// The reservations are left empty: what a run cost belongs to the settings card.
+// A credit figure beside a mobile number reads as its price, and the run
+// endpoint serves reservations to a caller who needs them. The frozen
+// configuration is no price and the contract requires it, so it is served.
 func toWireRun(r providerRunRow) crmcontracts.ProviderRun {
 	return crmcontracts.ProviderRun{
-		Id:                  openapi_types.UUID(r.id),
-		SubjectKind:         crmcontracts.ProviderRunSubjectKindContact,
-		Provider:            crmcontracts.Provider(r.providerName),
-		Trigger:             crmcontracts.ProviderRunTrigger(r.trigger),
-		State:               crmcontracts.ProviderRunState(r.state),
-		ClaimsUnwritten:     r.claimsUnwritten,
-		Applied:             &r.applied,
-		RequestedCategories: r.requested,
-		ConnectionVersion:   r.connectionVersion,
-		CreatedAt:           r.createdAt,
-		UpdatedAt:           r.createdAt,
-		CompletedAt:         r.completedAt,
+		ConfigurationSnapshot: providerwire.Snapshot(r.snapshot),
+		Reservations:          []crmcontracts.ProviderRunReservation{},
+		Id:                    openapi_types.UUID(r.id),
+		SubjectKind:           crmcontracts.ProviderRunSubjectKindContact,
+		Provider:              crmcontracts.Provider(r.providerName),
+		Trigger:               crmcontracts.ProviderRunTrigger(r.trigger),
+		State:                 crmcontracts.ProviderRunState(r.state),
+		ClaimsUnwritten:       r.claimsUnwritten,
+		Applied:               &r.applied,
+		RequestedCategories:   r.requested,
+		ConnectionVersion:     r.connectionVersion,
+		CreatedAt:             r.createdAt,
+		UpdatedAt:             r.createdAt,
+		CompletedAt:           r.completedAt,
 	}
 }
 

@@ -5424,13 +5424,43 @@ func (e CompanySiteReadStatus) Valid() bool {
 
 // Defines values for CompanySiteReadStatusCode.
 const (
-	CompanySiteReadStatusCodeBudgetDeferred CompanySiteReadStatusCode = "budget_deferred"
+	CompanySiteReadStatusCodeBotBlocked       CompanySiteReadStatusCode = "bot_blocked"
+	CompanySiteReadStatusCodeBudgetDeferred   CompanySiteReadStatusCode = "budget_deferred"
+	CompanySiteReadStatusCodeDns              CompanySiteReadStatusCode = "dns"
+	CompanySiteReadStatusCodeHttpClientError  CompanySiteReadStatusCode = "http_client_error"
+	CompanySiteReadStatusCodeHttpServerError  CompanySiteReadStatusCode = "http_server_error"
+	CompanySiteReadStatusCodeInternal         CompanySiteReadStatusCode = "internal"
+	CompanySiteReadStatusCodeRobotsDisallowed CompanySiteReadStatusCode = "robots_disallowed"
+	CompanySiteReadStatusCodeStaleReclaim     CompanySiteReadStatusCode = "stale_reclaim"
+	CompanySiteReadStatusCodeTimeout          CompanySiteReadStatusCode = "timeout"
+	CompanySiteReadStatusCodeTls              CompanySiteReadStatusCode = "tls"
+	CompanySiteReadStatusCodeUnreadable       CompanySiteReadStatusCode = "unreadable"
 )
 
 // Valid indicates whether the value is a known member of the CompanySiteReadStatusCode enum.
 func (e CompanySiteReadStatusCode) Valid() bool {
 	switch e {
+	case CompanySiteReadStatusCodeBotBlocked:
+		return true
 	case CompanySiteReadStatusCodeBudgetDeferred:
+		return true
+	case CompanySiteReadStatusCodeDns:
+		return true
+	case CompanySiteReadStatusCodeHttpClientError:
+		return true
+	case CompanySiteReadStatusCodeHttpServerError:
+		return true
+	case CompanySiteReadStatusCodeInternal:
+		return true
+	case CompanySiteReadStatusCodeRobotsDisallowed:
+		return true
+	case CompanySiteReadStatusCodeStaleReclaim:
+		return true
+	case CompanySiteReadStatusCodeTimeout:
+		return true
+	case CompanySiteReadStatusCodeTls:
+		return true
+	case CompanySiteReadStatusCodeUnreadable:
 		return true
 	default:
 		return false
@@ -16479,13 +16509,43 @@ func (e SiteReadReportStatus) Valid() bool {
 
 // Defines values for SiteReadReportStatusCode.
 const (
-	SiteReadReportStatusCodeBudgetDeferred SiteReadReportStatusCode = "budget_deferred"
+	SiteReadReportStatusCodeBotBlocked       SiteReadReportStatusCode = "bot_blocked"
+	SiteReadReportStatusCodeBudgetDeferred   SiteReadReportStatusCode = "budget_deferred"
+	SiteReadReportStatusCodeDns              SiteReadReportStatusCode = "dns"
+	SiteReadReportStatusCodeHttpClientError  SiteReadReportStatusCode = "http_client_error"
+	SiteReadReportStatusCodeHttpServerError  SiteReadReportStatusCode = "http_server_error"
+	SiteReadReportStatusCodeInternal         SiteReadReportStatusCode = "internal"
+	SiteReadReportStatusCodeRobotsDisallowed SiteReadReportStatusCode = "robots_disallowed"
+	SiteReadReportStatusCodeStaleReclaim     SiteReadReportStatusCode = "stale_reclaim"
+	SiteReadReportStatusCodeTimeout          SiteReadReportStatusCode = "timeout"
+	SiteReadReportStatusCodeTls              SiteReadReportStatusCode = "tls"
+	SiteReadReportStatusCodeUnreadable       SiteReadReportStatusCode = "unreadable"
 )
 
 // Valid indicates whether the value is a known member of the SiteReadReportStatusCode enum.
 func (e SiteReadReportStatusCode) Valid() bool {
 	switch e {
+	case SiteReadReportStatusCodeBotBlocked:
+		return true
 	case SiteReadReportStatusCodeBudgetDeferred:
+		return true
+	case SiteReadReportStatusCodeDns:
+		return true
+	case SiteReadReportStatusCodeHttpClientError:
+		return true
+	case SiteReadReportStatusCodeHttpServerError:
+		return true
+	case SiteReadReportStatusCodeInternal:
+		return true
+	case SiteReadReportStatusCodeRobotsDisallowed:
+		return true
+	case SiteReadReportStatusCodeStaleReclaim:
+		return true
+	case SiteReadReportStatusCodeTimeout:
+		return true
+	case SiteReadReportStatusCodeTls:
+		return true
+	case SiteReadReportStatusCodeUnreadable:
 		return true
 	default:
 		return false
@@ -31256,16 +31316,18 @@ type CompanySiteRead struct {
 	// resolved does the read also park a square badge beside it — the dossier does not
 	// serve that one, and the same confirmation moves it to `CompanyProfile.logo_icon_url`;
 	// a read that fell back to its square icon parks no badge and leaves that slot empty.
-	LogoUrl       *string                    `json:"logo_url,omitempty"`
-	NextAttemptAt *time.Time                 `json:"next_attempt_at"`
-	Pages         []CompanySiteReadPage      `json:"pages"`
-	PagesRead     *int                       `json:"pages_read,omitempty"`
-	Phase         *CompanySiteReadPhase      `json:"phase,omitempty"`
-	ProfileFields []ColdStartField           `json:"profile_fields"`
-	ProposalHash  string                     `json:"proposal_hash"`
-	RootUrl       string                     `json:"root_url"`
-	Status        CompanySiteReadStatus      `json:"status"`
-	StatusCode    *CompanySiteReadStatusCode `json:"status_code"`
+	LogoUrl       *string               `json:"logo_url,omitempty"`
+	NextAttemptAt *time.Time            `json:"next_attempt_at"`
+	Pages         []CompanySiteReadPage `json:"pages"`
+	PagesRead     *int                  `json:"pages_read,omitempty"`
+	Phase         *CompanySiteReadPhase `json:"phase,omitempty"`
+	ProfileFields []ColdStartField      `json:"profile_fields"`
+	ProposalHash  string                `json:"proposal_hash"`
+	RootUrl       string                `json:"root_url"`
+	Status        CompanySiteReadStatus `json:"status"`
+
+	// StatusCode Why a read did not finish: budget_deferred, or the closed failure vocabulary a failed crawl is diagnosed with.
+	StatusCode *CompanySiteReadStatusCode `json:"status_code"`
 
 	// StatusDetail Safe guidance only; never provider payload, prompt, SQL, or stack data.
 	StatusDetail *string `json:"status_detail"`
@@ -31283,7 +31345,7 @@ type CompanySiteReadPhase string
 // CompanySiteReadStatus defines model for CompanySiteRead.Status.
 type CompanySiteReadStatus string
 
-// CompanySiteReadStatusCode defines model for CompanySiteRead.StatusCode.
+// CompanySiteReadStatusCode Why a read did not finish: budget_deferred, or the closed failure vocabulary a failed crawl is diagnosed with.
 type CompanySiteReadStatusCode string
 
 // CompanySiteReadStoppedReason Why the crawl ended early; null when it exhausted discovery. Same column and vocabulary as SiteReadReport — one deep-read engine serves onboarding and every company.
@@ -43565,11 +43627,7 @@ type ProviderRun struct {
 	RequestedCategories []string `json:"requested_categories"`
 
 	// Reservations Maximum credits held per pool before submission, reconciled to actual spend on a terminal result (PI-FORM-1).
-	Reservations []struct {
-		ActualCredits   *int   `json:"actual_credits,omitempty"`
-		Pool            string `json:"pool"`
-		ReservedCredits int    `json:"reserved_credits"`
-	} `json:"reservations"`
+	Reservations []ProviderRunReservation `json:"reservations"`
 
 	// SafeStatusCode Closed product reason only; never a provider body or contact value.
 	SafeStatusCode *string `json:"safe_status_code,omitempty"`
@@ -43634,6 +43692,13 @@ type ProviderRunSubjectKind string
 // yet; like the other automatic triggers it buys only the categories that cost
 // nothing.
 type ProviderRunTrigger string
+
+// ProviderRunReservation defines model for ProviderRunReservation.
+type ProviderRunReservation struct {
+	ActualCredits   *int   `json:"actual_credits,omitempty"`
+	Pool            string `json:"pool"`
+	ReservedCredits int    `json:"reserved_credits"`
+}
 
 // ProviderSpend A bounded consumption series: the current month plus a small number of prior
 // months, so the connection read stays one round trip.
@@ -47064,12 +47129,14 @@ type SiteReadReport struct {
 	Phase *SiteReadReportPhase `json:"phase,omitempty"`
 
 	// ProposalIds The staged 🟡 approvals this read produced (the deepread bundle first, then one per site_lead).
-	ProposalIds []openapi_types.UUID      `json:"proposal_ids"`
-	ReadId      openapi_types.UUID        `json:"read_id"`
-	SeedUrl     string                    `json:"seed_url"`
-	Skipped     []SiteReadSkip            `json:"skipped"`
-	Status      SiteReadReportStatus      `json:"status"`
-	StatusCode  *SiteReadReportStatusCode `json:"status_code"`
+	ProposalIds []openapi_types.UUID `json:"proposal_ids"`
+	ReadId      openapi_types.UUID   `json:"read_id"`
+	SeedUrl     string               `json:"seed_url"`
+	Skipped     []SiteReadSkip       `json:"skipped"`
+	Status      SiteReadReportStatus `json:"status"`
+
+	// StatusCode Why a read did not finish: budget_deferred, or the closed failure vocabulary a failed crawl is diagnosed with.
+	StatusCode *SiteReadReportStatusCode `json:"status_code"`
 
 	// StatusDetail Safe guidance only; never provider payload, prompt, SQL, or stack data.
 	StatusDetail *string `json:"status_detail"`
@@ -47084,7 +47151,7 @@ type SiteReadReportPhase string
 // SiteReadReportStatus defines model for SiteReadReport.Status.
 type SiteReadReportStatus string
 
-// SiteReadReportStatusCode defines model for SiteReadReport.StatusCode.
+// SiteReadReportStatusCode Why a read did not finish: budget_deferred, or the closed failure vocabulary a failed crawl is diagnosed with.
 type SiteReadReportStatusCode string
 
 // SiteReadReportStoppedReason Why the crawl ended early; null when it exhausted discovery.
@@ -70042,7 +70109,7 @@ type ServerInterface interface {
 	// Remove a model's entry from the price sheet, every effective date of it.
 	// (DELETE /ai-model-rates)
 	DeleteAiModelRate(w http.ResponseWriter, r *http.Request, params DeleteAiModelRateParams)
-	// List current AI model prices (latest per model), or one model's history.
+	// List the AI model price sheet (latest-dated price per model), or one model's history.
 	// (GET /ai-model-rates)
 	ListAiModelRates(w http.ResponseWriter, r *http.Request, params ListAiModelRatesParams)
 	// Set an AI model price effective today or later (append-forward).
@@ -71248,7 +71315,7 @@ type ServerInterface interface {
 	// Download the whole-workspace export bundle.
 	// (GET /exports/bundle)
 	DownloadExportBundle(w http.ResponseWriter, r *http.Request)
-	// List the composed extension units and what each contributes. Admin-only, human-only, read-only.
+	// List the composed extension units and what each contributes. Human-only, read-only; needs the extension_access read grant.
 	// (GET /extensions)
 	ListExtensions(w http.ResponseWriter, r *http.Request)
 	// Per-field change history for one record, projected from audit_log before/after diffs.
@@ -72730,7 +72797,7 @@ func (_ Unimplemented) DeleteAiModelRate(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List current AI model prices (latest per model), or one model's history.
+// List the AI model price sheet (latest-dated price per model), or one model's history.
 // (GET /ai-model-rates)
 func (_ Unimplemented) ListAiModelRates(w http.ResponseWriter, r *http.Request, params ListAiModelRatesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -75142,7 +75209,7 @@ func (_ Unimplemented) DownloadExportBundle(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the composed extension units and what each contributes. Admin-only, human-only, read-only.
+// List the composed extension units and what each contributes. Human-only, read-only; needs the extension_access read grant.
 // (GET /extensions)
 func (_ Unimplemented) ListExtensions(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)

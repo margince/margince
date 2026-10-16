@@ -13,6 +13,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/providerwire"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -197,7 +198,7 @@ func toProviderRun(r provider.Run) crmcontracts.ProviderRun {
 		Applied:         &r.Applied,
 		// The frozen snapshot, echoed so a caller can see what the run was
 		// admitted under rather than what the connection says now.
-		ConfigurationSnapshot: toProviderSnapshot(r.Snapshot),
+		ConfigurationSnapshot: providerwire.Snapshot(r.Snapshot),
 		ConnectionVersion:     r.ConnectionVersion,
 		RequestedCategories:   cats,
 		CreatedAt:             r.CreatedAt,
@@ -217,12 +218,11 @@ func toProviderRun(r provider.Run) crmcontracts.ProviderRun {
 		code := r.SafeStatusCode
 		out.SafeStatusCode = &code
 	}
+	out.Reservations = []crmcontracts.ProviderRunReservation{}
 	for _, res := range r.Reservations {
-		out.Reservations = append(out.Reservations, struct {
-			ActualCredits   *int   `json:"actual_credits,omitempty"`
-			Pool            string `json:"pool"`
-			ReservedCredits int    `json:"reserved_credits"`
-		}{Pool: string(res.Pool), ReservedCredits: res.Reserved, ActualCredits: res.Actual})
+		out.Reservations = append(out.Reservations, crmcontracts.ProviderRunReservation{
+			Pool: string(res.Pool), ReservedCredits: res.Reserved, ActualCredits: res.Actual,
+		})
 	}
 	return out
 }
@@ -235,25 +235,6 @@ func derefString(s *string) string {
 		return ""
 	}
 	return *s
-}
-
-// toProviderSnapshot renders the frozen configuration in the same shape the
-// live configuration uses, so a caller comparing "what this run was allowed"
-// against "what the connection allows now" is comparing like with like.
-func toProviderSnapshot(s provider.Snapshot) crmcontracts.ProviderConfiguration {
-	cats := crmcontracts.ProviderCategorySelection{}
-	for _, c := range s.Categories {
-		cats[string(c)] = true
-	}
-	return crmcontracts.ProviderConfiguration{
-		Mode:                      crmcontracts.ProviderConnectionMode(s.Mode),
-		Preset:                    s.Preset,
-		AutomaticIndividualCreate: s.AutomaticCreate,
-		AutomaticImport:           s.AutomaticImport,
-		Categories:                cats,
-		RefreshAfterDays:          s.RefreshAfterDays,
-		DailyRunLimit:             s.DailyRunLimit,
-	}
 }
 
 // mustUUID parses an id the database produced. A malformed one is a
