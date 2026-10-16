@@ -151,17 +151,32 @@ func swapSealed(ctx context.Context, db *settings.Store, sealer *Sealer, row *se
 		previous, bodyErr = swapSealedTx(ctx, db, tx, row, next)
 		return bodyErr
 	})
-	if txErr != nil {
-		if entered && bodyErr == nil && next != "" {
-			return fmt.Errorf("config: %s was sealed but its write did not report a clean commit, so the sealed copy is kept: %w", row.Key(), txErr)
+	return settleSwap(ctx, sealer, row.Key(), swapOutcome{
+		previous: previous, next: next, committed: txErr == nil, bodyDone: entered && bodyErr == nil, err: txErr,
+	})
+}
+
+// swapOutcome is how a swap's transaction ended: bodyDone with a failed
+// commit is the unclear case.
+type swapOutcome struct {
+	previous, next      string
+	committed, bodyDone bool
+	err                 error
+}
+
+// settleSwap retires the blob no row names after the swap ended as o did.
+func settleSwap(ctx context.Context, sealer *Sealer, key string, o swapOutcome) error {
+	if !o.committed {
+		if o.bodyDone && o.next != "" {
+			return fmt.Errorf("config: %s was sealed but its write did not report a clean commit, so the sealed copy is kept: %w", key, o.err)
 		}
-		if next != "" {
-			sealer.Retire(ctx, next)
+		if o.next != "" {
+			sealer.Retire(ctx, o.next)
 		}
-		return txErr
+		return o.err
 	}
-	if previous != "" && previous != next {
-		sealer.Retire(ctx, previous)
+	if o.previous != "" && o.previous != o.next {
+		sealer.Retire(ctx, o.previous)
 	}
 	return nil
 }

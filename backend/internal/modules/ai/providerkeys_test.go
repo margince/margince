@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -57,19 +58,20 @@ func TestANonCredentialVariableIsNotThisLookupsToAnswer(t *testing.T) {
 	}
 }
 
-// A key that cannot be read answers empty, and the log names the setting and
-// never the key.
-func TestAKeyThatCannotBeReadAnswersEmptyAndLogsNoSecret(t *testing.T) {
+// A key whose row cannot be read, here for want of a database, answers empty.
+// The log names the setting and never a key.
+func TestAKeyWithNoDatabaseToReadAnswersEmptyAndLogsNoSecret(t *testing.T) {
 	cfg := configtest.MustLoadEnv(t, Settings(), "OPENAI_API_KEY=sk-never-logged")
 	var logged bytes.Buffer
 	log := slog.New(slog.NewTextHandler(&logged, nil))
 
-	got := KeyLookup(context.Background(), cfg, log)("GEMINI_API_KEY")
+	got := KeyLookup(principal.SystemActing(context.Background(), "test"), cfg, log)("GEMINI_API_KEY")
 
 	if got != "" {
 		t.Errorf("resolved %q from an unreadable key, want empty", got)
 	}
-	if !strings.Contains(logged.String(), GeminiKey.Key()) || strings.Contains(logged.String(), "sk-never-logged") {
+	if !strings.Contains(logged.String(), "no database") || !strings.Contains(logged.String(), GeminiKey.Key()) ||
+		strings.Contains(logged.String(), "sk-never-logged") {
 		t.Errorf("the log %q must name the setting and no key", logged.String())
 	}
 }
@@ -227,4 +229,14 @@ func TestCloudProvidersBoundNamesEveryCloudVendorAndOnlyThose(t *testing.T) {
 			t.Errorf("three tiers on %q report %v, want one entry", cloud[0], got)
 		}
 	})
+}
+
+// A key a boot source sets refuses its removal before the vault is asked, as
+// a save does: a role with no vault still answers the lock.
+func TestRemovingABootSetKeyIsLockedBeforeTheVaultIsAsked(t *testing.T) {
+	store := NewProviderKeyStore(configtest.MustLoadEnv(t, Settings(), "GEMINI_API_KEY=sk-boot"))
+	admin := keySeatCtx(principal.ObjectGrant{Read: true, Update: true})
+	if err := store.Remove(admin, providerGemini); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("removing a boot-set key with no vault = %v, want a conflict", err)
+	}
 }

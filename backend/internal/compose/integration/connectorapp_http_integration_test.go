@@ -681,3 +681,22 @@ func TestAnUnknownVendorIsNotFoundRatherThanDefaulted(t *testing.T) {
 		}
 	}
 }
+
+// A client id the environment sets without its secret composes no app, so it
+// locks nothing: the stored app stays the admin's to write and remove.
+func TestAnEnvClientIDWithoutItsSecretLeavesTheStoredAppWritable(t *testing.T) {
+	e, _ := setupGoogleConnect(t, "env-only.apps.googleusercontent.com", "")
+	secret := httpSecret
+	if status := e.Call(t, "PUT", "/v1/installation/oauth-apps/google",
+		crmcontracts.ConnectorAppInput{ClientId: httpClientID, ClientSecret: &secret}, nil, nil); status != http.StatusNoContent {
+		t.Fatalf("PUT beside a half environment app → %d, want 204", status)
+	}
+	var app crmcontracts.ConnectorApp
+	if status := e.Call(t, "GET", "/v1/installation/oauth-apps/google", nil, nil, &app); status != http.StatusOK ||
+		app.ClientId != httpClientID || app.Source != crmcontracts.ConnectorAppSourceStored {
+		t.Fatalf("GET → %d %+v, want the stored app in use", status, app)
+	}
+	if status := e.Call(t, "DELETE", "/v1/installation/oauth-apps/google", nil, nil, nil); status != http.StatusNoContent {
+		t.Errorf("DELETE beside a half environment app → %d, want 204", status)
+	}
+}

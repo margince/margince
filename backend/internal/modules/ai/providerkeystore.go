@@ -244,6 +244,9 @@ func (s *ProviderKeyStore) Remove(ctx context.Context, provider string) error {
 	if !cloud {
 		return nil
 	}
+	if _, err := config.LockedChange(s.cfg, setting, func(string) bool { return false }); err != nil {
+		return err
+	}
 	if !s.cfg.Seals() {
 		return ErrVaultUnavailable
 	}

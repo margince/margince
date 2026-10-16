@@ -17,13 +17,17 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -253,5 +257,43 @@ func TestASavedSecretIsSealedAndReadBack(t *testing.T) {
 	}
 	if key, err := config.StoredVal(ctx, cfg, ai.GeminiKey); err != nil || key != "" || secretsHeld(t, vault) != 0 {
 		t.Fatalf("after a removal read %q (%v) with %d sealed, want nothing", key, err, secretsHeld(t, vault))
+	}
+}
+
+// frozenSecretFrozen is the freeze probe's answer, so one test can save the
+// secret and then have the next save refused inside its transaction.
+var frozenSecretFrozen atomic.Bool
+
+var frozenSecret = config.DefineStored(config.Spec[string]{
+	Key: "test.frozen_secret", Env: "X_TEST_FROZEN_SECRET", Type: config.String, Secret: true, Doc: "d",
+}, config.Store{
+	RBACObject: "installation_settings", AuditVerb: "update", SecretReference: true,
+	Freeze: func(context.Context, pgx.Tx) (bool, string, error) {
+		return frozenSecretFrozen.Load(), "frozen for the test", nil
+	},
+})
+
+// A save the transaction refuses retires the blob it sealed and leaves the
+// row naming the old one, which still opens.
+func TestARefusedSecretSaveRetiresItsBlobAndKeepsTheOld(t *testing.T) {
+	e := Setup(t)
+	vault := keyvault.NewMemory()
+	cfg := compose.WithVault(configtest.StoredOver(t, e.Pool, []config.Any{frozenSecret}), vault, discard())
+	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "test-frozen-secret")
+	frozenSecretFrozen.Store(false)
+	t.Cleanup(func() { frozenSecretFrozen.Store(false) })
+
+	if err := config.Save(ctx, cfg, frozenSecret, "sk-old"); err != nil {
+		t.Fatalf("saving the first secret: %v", err)
+	}
+	frozenSecretFrozen.Store(true)
+	if err := config.Save(ctx, cfg, frozenSecret, "sk-new"); err == nil {
+		t.Fatal("a save the freeze probe refuses went through")
+	}
+	if n := secretsHeld(t, vault); n != 1 {
+		t.Errorf("%d secrets held after the refused save, want only the old one", n)
+	}
+	if got, err := config.StoredVal(ctx, cfg, frozenSecret); err != nil || got != "sk-old" {
+		t.Errorf("read %q (%v) after the refused save, want the old secret", got, err)
 	}
 }
