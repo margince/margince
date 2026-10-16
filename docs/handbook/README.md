@@ -25,7 +25,7 @@ Getting around Margince, and where to read about it:
 Settings in Margince, by page:
 - Where are the settings, and what settings pages are there? → [Settings](settings.md)
 - Which settings page do I need for something? → [Settings](settings.md)
-- Where does a setting's value come from, and how do I change one that is locked? → [Configuration](configuration.md)
+- Where does the value of a setting come from, and how do I change one that is locked? → [Configuration](configuration.md)
 - How do I change my password, display name, language or theme? → [Your own settings](your-own-settings.md)
 - How do I add an email signature or set up my writing voice? → [Your own settings](your-own-settings.md)
 - How do I connect my mailbox or calendar? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)

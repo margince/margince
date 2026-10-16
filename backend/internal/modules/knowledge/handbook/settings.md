@@ -19,7 +19,7 @@ Margince Settings puts its pages in these groups:
 - **Sales**: Pipelines, Stage automation, Lead handling, Acquisition sources, Outcome reviews, Responsibility roles, Fields, Tags, Products and offers.
 - **Data**: Capture rules, Integrations, Knowledge, Data import.
 - **AI**: AI usage, AI models, AI call log, Automations.
-- **Governance**: Privacy and retention, Audit log, System health, Extensions, Reset data.
+- **Governance**: Privacy and retention, Audit log, System health, [Configuration](configuration.md), Extensions, Reset data.
 
 You see only the pages your permissions open. The Reset data page appears only where the installation turns it on.
 
