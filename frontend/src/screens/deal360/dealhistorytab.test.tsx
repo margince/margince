@@ -8,7 +8,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { LocaleProvider } from "../../i18n";
+import { LocaleProvider, translate } from "../../i18n";
 import { jsonResponse, stubWithSession } from "../../testing/story-utils";
 import { DealHistoryTab } from "./dealhistorytab";
 
@@ -62,10 +62,14 @@ const CHANGE_ROW = {
   id: "h-1",
   actor_type: "human",
   actor_id: "u-1",
+  actor_name: "Demo Admin",
   action: "update",
   occurred_at: "2026-07-13T10:00:00Z",
   summary: "Deal amount changed",
 };
+const CHANGE_LINE = translate("en", "history.verb.update", {
+  subject: CHANGE_ROW.actor_name,
+});
 
 describe("DealHistoryTab", () => {
   it("opens on the whole chronology, with the kind filter bar over it", async () => {
@@ -102,9 +106,7 @@ describe("DealHistoryTab", () => {
     await screen.findByText("Renewal check-in");
     await userEvent.click(screen.getByRole("button", { name: "Changes" }));
 
-    await waitFor(() =>
-      expect(screen.getByText("Deal amount changed")).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(CHANGE_LINE)).toBeTruthy());
     expect(screen.queryByText("Renewal check-in")).toBeNull();
     expect(screen.queryByLabelText("Activity kind")).toBeNull();
   });

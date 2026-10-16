@@ -5,10 +5,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { formatDateTime } from "../format/format";
+import { useT } from "../i18n";
 import {
   expectNameAndValueApart,
   StoryProviders,
 } from "../testing/story-utils";
+import { historyLine } from "./historyline";
 import type { PairRow } from "./historyreversal";
 import { ReversalPairRow } from "./historyreversalrow";
 
@@ -57,10 +59,11 @@ const pair: PairRow = {
 // the same `timeline-plain` shape RecordHistory's own rows draw, a sentence,
 // an inline date, nothing folded into a gutter.
 function MemberRow({ entry }: Readonly<{ entry: AuditHistoryEntry }>) {
+  const t = useT();
   return (
     <li>
       <span className="tl-body">
-        <span className="tl-title">{entry.summary}</span>
+        <span className="tl-title">{historyLine(entry, t)}</span>
         <span className="tl-meta">
           <span>{formatDateTime(entry.occurred_at, "en", "UTC")}</span>
         </span>
