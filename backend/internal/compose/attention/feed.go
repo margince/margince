@@ -368,14 +368,13 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 		return crmcontracts.Attention{}, besideDay{}, err
 	}
 
-	// The three OPTIONAL lanes, each bound or absent. optionalLane holds the
-	// shape they share; what differs is the reader and the drawing.
+	// The optional lanes, each bound or absent, and the ones a failure can
+	// degrade rather than fail the day. collect says why they and not these.
+	roll := laneRoll{omitted: omitted}
 	for _, lane := range s.optionalLanes(ctx, asOf, until, &out) {
-		omitted, err = lane.collect(omitted)
-		if err != nil {
-			return crmcontracts.Attention{}, besideDay{}, err
-		}
+		roll = s.collect(ctx, lane, roll)
 	}
+	omitted = roll.omitted
 
 	done, err := s.done(ctx, asOf)
 	omitted, err = fill(omitted, "done_for_you", err, func() { out.DoneForYou = done })
@@ -385,6 +384,9 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 
 	if len(omitted) > 0 {
 		out.LanesOmitted = &omitted
+	}
+	if len(roll.broken) > 0 {
+		out.LanesFailed = &roll.broken
 	}
 	// Last, over the assembled lanes: every card that names a record gets its
 	// display name under this reader's own grants (labels.go).

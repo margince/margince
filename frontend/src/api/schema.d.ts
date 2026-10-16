@@ -43875,6 +43875,11 @@ export interface components {
             introductions?: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
             lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "notice_case" | "capture_health" | "domain_questions" | "ai_work_health" | "bounces" | "undelivered" | "automation_health" | "notices" | "introductions" | "meetings_unreported")[];
+            /**
+             * @description Lanes that could not be read. Separate from `lanes_omitted` because withheld and broken are different answers: one is this caller's access, the other is this installation's health, and only the second is worth an operator's attention.
+             *     A lane named here is ABSENT from the answer rather than empty, and carries no count, so nothing about it reads as "there is none". A client MUST surface the day as partial when this is present. Rendering it as a quiet day is the one reading the field exists to prevent, and the reason the feed used to fail the whole request instead.
+             */
+            lanes_failed?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "notice_case" | "capture_health" | "domain_questions" | "ai_work_health" | "bounces" | "undelivered" | "automation_health" | "notices" | "introductions" | "meetings_unreported")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**

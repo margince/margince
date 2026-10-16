@@ -1954,6 +1954,78 @@ func (e AttachmentReadStartedStatus) Valid() bool {
 	}
 }
 
+// Defines values for AttentionLanesFailed.
+const (
+	AttentionLanesFailedAiWorkHealth       AttentionLanesFailed = "ai_work_health"
+	AttentionLanesFailedAtRisk             AttentionLanesFailed = "at_risk"
+	AttentionLanesFailedAutomationHealth   AttentionLanesFailed = "automation_health"
+	AttentionLanesFailedBounces            AttentionLanesFailed = "bounces"
+	AttentionLanesFailedCaptureHealth      AttentionLanesFailed = "capture_health"
+	AttentionLanesFailedCommitments        AttentionLanesFailed = "commitments"
+	AttentionLanesFailedDidNotRun          AttentionLanesFailed = "did_not_run"
+	AttentionLanesFailedDomainQuestions    AttentionLanesFailed = "domain_questions"
+	AttentionLanesFailedDoneForYou         AttentionLanesFailed = "done_for_you"
+	AttentionLanesFailedDsr                AttentionLanesFailed = "dsr"
+	AttentionLanesFailedIntroductions      AttentionLanesFailed = "introductions"
+	AttentionLanesFailedMeetings           AttentionLanesFailed = "meetings"
+	AttentionLanesFailedMeetingsUnreported AttentionLanesFailed = "meetings_unreported"
+	AttentionLanesFailedNeedsYou           AttentionLanesFailed = "needs_you"
+	AttentionLanesFailedNoticeCase         AttentionLanesFailed = "notice_case"
+	AttentionLanesFailedNotices            AttentionLanesFailed = "notices"
+	AttentionLanesFailedPlanned            AttentionLanesFailed = "planned"
+	AttentionLanesFailedRelationshipDecay  AttentionLanesFailed = "relationship_decay"
+	AttentionLanesFailedThisMorning        AttentionLanesFailed = "this_morning"
+	AttentionLanesFailedUndelivered        AttentionLanesFailed = "undelivered"
+)
+
+// Valid indicates whether the value is a known member of the AttentionLanesFailed enum.
+func (e AttentionLanesFailed) Valid() bool {
+	switch e {
+	case AttentionLanesFailedAiWorkHealth:
+		return true
+	case AttentionLanesFailedAtRisk:
+		return true
+	case AttentionLanesFailedAutomationHealth:
+		return true
+	case AttentionLanesFailedBounces:
+		return true
+	case AttentionLanesFailedCaptureHealth:
+		return true
+	case AttentionLanesFailedCommitments:
+		return true
+	case AttentionLanesFailedDidNotRun:
+		return true
+	case AttentionLanesFailedDomainQuestions:
+		return true
+	case AttentionLanesFailedDoneForYou:
+		return true
+	case AttentionLanesFailedDsr:
+		return true
+	case AttentionLanesFailedIntroductions:
+		return true
+	case AttentionLanesFailedMeetings:
+		return true
+	case AttentionLanesFailedMeetingsUnreported:
+		return true
+	case AttentionLanesFailedNeedsYou:
+		return true
+	case AttentionLanesFailedNoticeCase:
+		return true
+	case AttentionLanesFailedNotices:
+		return true
+	case AttentionLanesFailedPlanned:
+		return true
+	case AttentionLanesFailedRelationshipDecay:
+		return true
+	case AttentionLanesFailedThisMorning:
+		return true
+	case AttentionLanesFailedUndelivered:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AttentionLanesOmitted.
 const (
 	AttentionLanesOmittedAiWorkHealth       AttentionLanesOmitted = "ai_work_health"
@@ -25939,6 +26011,10 @@ type Attention struct {
 	// not read introductions.
 	Introductions *[]AttentionItem `json:"introductions,omitempty"`
 
+	// LanesFailed Lanes that could not be read. Separate from `lanes_omitted` because withheld and broken are different answers: one is this caller's access, the other is this installation's health, and only the second is worth an operator's attention.
+	// A lane named here is ABSENT from the answer rather than empty, and carries no count, so nothing about it reads as "there is none". A client MUST surface the day as partial when this is present. Rendering it as a quiet day is the one reading the field exists to prevent, and the reason the feed used to fail the whole request instead.
+	LanesFailed *[]AttentionLanesFailed `json:"lanes_failed,omitempty"`
+
 	// LanesOmitted Lanes withheld because the caller may not read what they contain. Never returned empty instead.
 	LanesOmitted *[]AttentionLanesOmitted `json:"lanes_omitted,omitempty"`
 
@@ -26084,6 +26160,9 @@ type Attention struct {
 	// delivery outcomes.
 	Undelivered *[]AttentionItem `json:"undelivered,omitempty"`
 }
+
+// AttentionLanesFailed defines model for Attention.LanesFailed.
+type AttentionLanesFailed string
 
 // AttentionLanesOmitted defines model for Attention.LanesOmitted.
 type AttentionLanesOmitted string

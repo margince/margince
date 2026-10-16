@@ -17,6 +17,7 @@ package attention
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -40,24 +41,35 @@ type optionalLane struct {
 	count **int
 }
 
-// collect runs the lane and files its result, returning the omitted list the
-// caller carries. An unbound lane is skipped entirely, which is what leaves the
-// field absent on the wire.
+// collect runs the lane and files its result. An unbound lane is skipped
+// entirely, which is what leaves the field absent on the wire.
 //
-// A refusal NAMES the lane; any other failure is returned, because a lane that
-// is broken rather than withheld must not read as a quiet one.
-func (l optionalLane) collect(
-	omitted []crmcontracts.AttentionLanesOmitted,
-) ([]crmcontracts.AttentionLanesOmitted, error) {
+// A refusal names the lane as withheld and a failure names it as failed, on
+// separate lists. This caller's access and this installation's health are
+// different answers.
+//
+// Neither fills the lane, so a named lane is absent and uncounted rather than
+// empty. That is what lets a failure degrade. The lane cannot read as a quiet
+// one, which was the objection that made failing the whole request safer.
+func (s *Service) collect(ctx context.Context, l optionalLane, named laneRoll) laneRoll {
 	if !l.bound {
-		return omitted, nil
+		return named
 	}
-	items, err := l.read()
+	var items []crmcontracts.AttentionItem
+	err := s.degradable(ctx, laneBudget, func(context.Context) error {
+		var err error
+		items, err = l.read()
+		return err
+	})
 	switch {
 	case errors.Is(err, apperrors.ErrPermissionDenied):
-		return append(omitted, crmcontracts.AttentionLanesOmitted(l.name)), nil
+		return named.withheld(l.name)
 	case err != nil:
-		return omitted, err
+		// Named on the page and recorded here. A lane reported as failed with
+		// nothing in the log leaves an operator a warning they cannot act on.
+		slog.Log(ctx, laneFailureLevel(ctx), "an optional attention lane failed",
+			"lane", l.name, "error", err)
+		return named.failed(l.name)
 	}
 	count := len(items)
 	if l.total != nil {
@@ -67,17 +79,40 @@ func (l optionalLane) collect(
 		// and its badge's another would fail the whole feed over a lane the page
 		// would simply have withheld, and filing the items first would leave a
 		// lane both present and named as omitted.
-		count, err = l.total()
+		err := s.degradable(ctx, laneBudget, func(context.Context) error {
+			var err error
+			count, err = l.total()
+			return err
+		})
 		switch {
 		case errors.Is(err, apperrors.ErrPermissionDenied):
-			return append(omitted, crmcontracts.AttentionLanesOmitted(l.name)), nil
+			return named.withheld(l.name)
 		case err != nil:
-			return omitted, err
+			slog.Log(ctx, laneFailureLevel(ctx), "an optional attention lane's count failed",
+				"lane", l.name, "error", err)
+			return named.failed(l.name)
 		}
 	}
 	*l.into = &items
 	*l.count = &count
-	return omitted, nil
+	return named
+}
+
+// laneRoll is the two lists a lane can name itself on, carried together so a
+// lane reports on one of them and not both.
+type laneRoll struct {
+	omitted []crmcontracts.AttentionLanesOmitted
+	broken  []crmcontracts.AttentionLanesFailed
+}
+
+func (r laneRoll) withheld(lane string) laneRoll {
+	r.omitted = append(r.omitted, crmcontracts.AttentionLanesOmitted(lane))
+	return r
+}
+
+func (r laneRoll) failed(lane string) laneRoll {
+	r.broken = append(r.broken, crmcontracts.AttentionLanesFailed(lane))
+	return r
 }
 
 // optionalLanes describes the optional lanes, in the order they are read.
@@ -302,6 +337,14 @@ func renderEach[T any](rows []T, draw func(T) crmcontracts.AttentionItem) []crmc
 // which fields they set, which is what the closure carries — and a lane that is
 // broken rather than withheld still fails the whole feed rather than reading as
 // a quiet day.
+// fill is the required lanes' counterpart, and it still fails the request on a
+// broken read.
+//
+// Not an oversight, and not a different taste about partial data. The fields
+// `this_morning`, `needs_you`, `planned` and `done_for_you` are required by the
+// contract and pre-initialised empty. A lane named as failed would still serve
+// `[]` beside it, and a reader cannot tell that from a quiet day. Degrading
+// these needs the contract to let their fields be absent first.
 func fill(
 	omitted []crmcontracts.AttentionLanesOmitted, name string, err error, assign func(),
 ) ([]crmcontracts.AttentionLanesOmitted, error) {
