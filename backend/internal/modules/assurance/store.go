@@ -298,13 +298,19 @@ func (s *Store) FinishRun(
 
 // noInputCheckYet answers before the first nightly input check. A bare
 // not-found would read as a check hidden from the caller, not one never run.
-func noInputCheckYet() *httperr.DetailedError {
-	return &httperr.DetailedError{
+// It is still ErrNotFound, so a caller asking "is there a run" reads it alike.
+type noInputCheckYet struct{ problem *httperr.DetailedError }
+
+func (e noInputCheckYet) Error() string   { return e.problem.Error() }
+func (e noInputCheckYet) Unwrap() []error { return []error{e.problem, apperrors.ErrNotFound} }
+
+func noInputCheckYetError() error {
+	return noInputCheckYet{problem: &httperr.DetailedError{
 		Status: http.StatusNotFound,
 		Code:   "no_input_check_yet",
 		Detail: "No input check has run yet, so no source has been read: the figures cover only " +
 			"what was typed into Margince by hand. The nightly check creates the first one.",
-	}
+	}}
 }
 
 // LatestRun answers the most recent completed pass.
@@ -326,7 +332,7 @@ func (s *Store) LatestRun(ctx context.Context) (Run, error) {
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return Run{}, noInputCheckYet()
+			return Run{}, noInputCheckYetError()
 		}
 		return Run{}, err
 	}
