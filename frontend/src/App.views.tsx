@@ -166,7 +166,7 @@ const navigateToAddress = (address: string) => navigate(parseHash(address));
 // The view for a held address, parsed rather than threaded alongside the
 // string. That leaves one source for what is on screen: the address the guard
 // says it is holding.
-const screenOfAddress = (address: string) => {
+export const screenOfAddress = (address: string) => {
   const route = parseHash(address);
   return SCREEN_VIEWS[route.screen](route);
 };
