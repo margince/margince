@@ -1,6 +1,7 @@
 import type { components } from "../api/schema";
 import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { actorAttribution, isAuditActorType } from "./audit";
 
 // One history entry as a sentence in the reader's language. A link change, or a
 // verb or actor kind newer than this client, keeps the server's English summary.
@@ -71,6 +72,7 @@ export type HistorySubjectFacts = Pick<
   AuditHistoryEntry,
   | "actor_id"
   | "actor_name"
+  | "on_behalf_of"
   | "on_behalf_of_name"
   | "agent_client"
   | "passport_id"
@@ -79,55 +81,54 @@ export type HistorySubjectFacts = Pick<
 export type HistoryLineFacts = HistorySubjectFacts &
   Pick<AuditHistoryEntry, "edge" | "summary"> & { action: string };
 
-// The contact who authorized a change comes first and the tool second, so a
-// line always names somebody who can be asked about it.
-function delegatedSubject(
-  facts: HistorySubjectFacts,
-  t: Translator,
-): string | null {
-  const name = facts.on_behalf_of_name;
-  if (!name) return null;
-  if (facts.agent_client) {
-    return t("history.subject.viaClient", { name, client: facts.agent_client });
+type Attribution = ReturnType<typeof actorAttribution>;
+
+// The subject for an attribution that names a contact: the name, then the
+// tool or the Deal Room it acted through.
+function namedSubject(who: Attribution, name: string, t: Translator): string {
+  if (who.qualifierName) {
+    return t("history.subject.viaClient", { name, client: who.qualifierName });
   }
-  if (facts.actor_type === "agent") {
-    return t("history.subject.viaAgent", { name });
+  switch (who.qualifierKey) {
+    case "audit.viaAgent":
+      return t("history.subject.viaAgent", { name });
+    case "audit.viaConnector":
+      return t("history.subject.viaConnector", { name });
+    case "audit.viaDealRoom":
+      return t("history.subject.buyerNamed", { name });
+    default:
+      return name;
   }
-  if (facts.actor_type === "connector") {
-    return t("history.subject.viaConnector", { name });
-  }
-  return null;
 }
 
 /**
- * Who made a change, as the opening of a history sentence. Null for an actor
- * kind this client does not know, which leaves the line to `summary`.
+ * Who made a change, as the opening of a history sentence, from the same
+ * attribution the audit log shows. Null for an actor kind this client does not
+ * know, which leaves the line to `summary`.
  */
 export function historySubject(
   facts: HistorySubjectFacts,
   t: Translator,
 ): string | null {
-  const machine =
-    facts.actor_type === "agent" || facts.actor_type === "connector";
-  const delegated = machine ? delegatedSubject(facts, t) : null;
-  if (delegated) return delegated;
-  // An unresolved member keeps the id the row recorded, never an invented name.
-  if (facts.actor_type === "human") return facts.actor_name || facts.actor_id;
-  // A passport with nobody behind it is an authority the row failed to carry,
-  // which "System" would hide.
-  if (facts.passport_id) return t("history.subject.unrecordedAuthority");
-  switch (facts.actor_type) {
-    case "system":
+  const actorType = facts.actor_type;
+  if (!isAuditActorType(actorType)) return null;
+  const who = actorAttribution({ ...facts, actor_type: actorType }, undefined);
+  switch (who.labelKey) {
+    case "audit.noHumanAuthority":
+      return t("history.subject.unrecordedAuthority");
+    case "audit.system":
       return t("history.subject.system");
-    case "agent":
-      return t("history.subject.agent");
-    case "connector":
-      return t("history.subject.connector");
-    case "buyer":
+    case "audit.unknownBuyer":
       return t("history.subject.buyer");
+    case "audit.unknownMember":
+      return namedSubject(who, t("audit.unknownMember"), t);
     default:
-      return null;
+      break;
   }
+  if (who.name) return namedSubject(who, who.name, t);
+  if (actorType === "agent") return t("history.subject.agent");
+  if (actorType === "connector") return t("history.subject.connector");
+  return null;
 }
 
 /** The history line for one entry, in the reader's language. */

@@ -48,7 +48,12 @@ const SHAPES: ReadonlyArray<{
   {
     shape: "a member whose seat no longer resolves",
     entry: { actor_name: null },
-    subject: "human:u1",
+    subject: { key: "audit.unknownMember" },
+  },
+  {
+    shape: "a human edit made with a passport",
+    entry: { actor_name: "Uma Underwriter", passport_id: PASSPORT },
+    subject: "Uma Underwriter",
   },
   {
     shape: "an agent on behalf of a member via a named client",
@@ -100,6 +105,21 @@ const SHAPES: ReadonlyArray<{
     subject: { key: "history.subject.unrecordedAuthority" },
   },
   {
+    shape: "an agent with a named client and no recorded authority",
+    entry: {
+      actor_type: "agent",
+      actor_id: "agent:p1",
+      passport_id: PASSPORT,
+      agent_client: "Claude",
+    },
+    subject: { key: "history.subject.unrecordedAuthority" },
+  },
+  {
+    shape: "the system with a passport",
+    entry: { actor_type: "system", actor_id: "system", passport_id: PASSPORT },
+    subject: { key: "history.subject.unrecordedAuthority" },
+  },
+  {
     shape: "the system",
     entry: { actor_type: "system", actor_id: "system" },
     subject: { key: "history.subject.system" },
@@ -115,9 +135,21 @@ const SHAPES: ReadonlyArray<{
     subject: { key: "history.subject.connector" },
   },
   {
-    shape: "a Deal Room buyer",
+    shape: "a Deal Room buyer whose name no longer resolves",
     entry: { actor_type: "buyer", actor_id: "buyer:b1" },
     subject: { key: "history.subject.buyer" },
+  },
+  {
+    shape: "a named Deal Room buyer",
+    entry: {
+      actor_type: "buyer",
+      actor_id: "buyer:b1",
+      actor_name: "Bea Buyer",
+    },
+    subject: {
+      key: "history.subject.buyerNamed",
+      params: { name: "Bea Buyer" },
+    },
   },
 ];
 
@@ -153,7 +185,9 @@ describe("historyLine", () => {
   it("reads differently in each language for the same change", () => {
     const row: AuditHistoryEntry = {
       ...base,
-      ...SHAPES[2]?.entry,
+      actor_type: "agent",
+      on_behalf_of_name: "Ada Authority",
+      agent_client: "Claude",
       action: "archive",
     };
     const lines = LOCALES.map((locale) =>

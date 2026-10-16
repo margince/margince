@@ -26693,7 +26693,9 @@ type AuditAction string
 // masked to the viewer's readable fields — an absent key was hidden, not null.
 // `summary` is server-composed plain language in English. A client that
 // renders the line in its reader's language builds it from `action` and the
-// actor fields, and falls back to `summary` for an action it does not know.
+// actor fields. It falls back to `summary` for an edge row, whose role
+// travels only in the sentence, and for an action or actor kind it does
+// not know.
 // Field-level detail lives in before/after for the client to render.
 type AuditHistoryEntry struct {
 	// Action The verb of one audit row, as both the audit log and a record's history
