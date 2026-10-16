@@ -311,7 +311,7 @@ func TestAConnectorAppFromEnvBeatsTheStoredOne(t *testing.T) {
 
 	var app crmcontracts.ConnectorApp
 	if status := e.Call(t, "GET", "/v1/installation/oauth-apps/google", nil, nil, &app); status != http.StatusOK ||
-		app.ClientId != "env-client.apps.googleusercontent.com" {
+		app.ClientId != "env-client.apps.googleusercontent.com" || app.Source != crmcontracts.ConnectorAppSourceEnvironment {
 		t.Fatalf("GET the app → %d %+v, want the environment's app in use", status, app)
 	}
 	if lock, ok := appLock(app, capture.GoogleAppKey); !ok || lock.Origin.Source != crmcontracts.SettingOriginSourceEnv {
@@ -670,7 +670,7 @@ func TestAnEnvClientIDWithoutItsSecretLeavesTheStoredAppWritable(t *testing.T) {
 	}
 	var app crmcontracts.ConnectorApp
 	if status := e.Call(t, "GET", "/v1/installation/oauth-apps/google", nil, nil, &app); status != http.StatusOK ||
-		app.ClientId != httpClientID {
+		app.ClientId != httpClientID || app.Source != crmcontracts.ConnectorAppSourceStored {
 		t.Fatalf("GET → %d %+v, want the stored app in use", status, app)
 	}
 	if _, ok := appLock(app, capture.GoogleAppKey); ok {

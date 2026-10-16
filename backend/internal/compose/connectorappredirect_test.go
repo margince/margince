@@ -192,24 +192,26 @@ func TestGoogleAppReportsWhichSourceTheConnectorWillActuallyUse(t *testing.T) {
 		stored      bool
 		storedID    string
 		envClientID string
+		wantSource  crmcontracts.ConnectorAppSource
 		wantID      string
 		wantUsable  bool
 	}{
 		"nothing anywhere": {
-			wantUsable: false,
+			wantSource: crmcontracts.ConnectorAppSourceNone, wantUsable: false,
 		},
 		"the deployment supplies one": {
-			envClientID: "env-id", wantID: "env-id", wantUsable: true,
+			envClientID: "env-id", wantSource: crmcontracts.ConnectorAppSourceEnvironment,
+			wantID: "env-id", wantUsable: true,
 		},
 		// The deployment wins, as it does at the moment of a connect. The
 		// stored app is locked behind it.
 		"the deployment's app wins over a stored one": {
 			stored: true, storedID: "stored-id", envClientID: "env-id",
-			wantID: "env-id", wantUsable: true,
+			wantSource: crmcontracts.ConnectorAppSourceEnvironment, wantID: "env-id", wantUsable: true,
 		},
 		"a stored app answers where the deployment supplies none": {
 			stored: true, storedID: "stored-id",
-			wantID: "stored-id", wantUsable: true,
+			wantSource: crmcontracts.ConnectorAppSourceStored, wantID: "stored-id", wantUsable: true,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -218,6 +220,9 @@ func TestGoogleAppReportsWhichSourceTheConnectorWillActuallyUse(t *testing.T) {
 				capture.ConnectorAppStatus{Configured: tc.stored, ClientID: tc.storedID},
 				connectorAppComposition{envClientID: tc.envClientID},
 			)
+			if app.Source != tc.wantSource {
+				t.Errorf("source = %q, want %q", app.Source, tc.wantSource)
+			}
 			if app.ClientId != tc.wantID {
 				t.Errorf("client id = %q, want %q", app.ClientId, tc.wantID)
 			}
@@ -242,7 +247,7 @@ func TestAnEnvironmentAppIsNeverPairedWithAStoredDirectory(t *testing.T) {
 		capture.ConnectorAppStatus{Tenant: "stored-directory"},
 		connectorAppComposition{envClientID: "env-entra"},
 	)
-	if app.ClientId != "env-entra" {
+	if app.Source != crmcontracts.ConnectorAppSourceEnvironment || app.ClientId != "env-entra" {
 		t.Fatalf("app = %+v, want the environment's app in use", app)
 	}
 	if app.Tenant != nil {

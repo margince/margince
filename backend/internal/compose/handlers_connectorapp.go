@@ -260,8 +260,10 @@ func sent(v *string) string {
 // The environment's app wins, as it does at the moment of a connect. The
 // stored app answers only where the environment composed none.
 //
-// `configured` is true for both sources; GetOauthApp's lock names the
-// environment's.
+// `configured` answers "can this vendor be connected at all", which is a
+// different question from where the app came from: it is true for both
+// sources. `source` names the one in use, so the environment reads as the lock
+// on the stored app.
 func connectorAppView(
 	p capture.AppProvider, stored capture.ConnectorAppStatus, composed connectorAppComposition,
 ) crmcontracts.ConnectorApp {
@@ -270,15 +272,20 @@ func connectorAppView(
 		Configured:   stored.Configured,
 		ClientId:     stored.ClientID,
 		Tenant:       optionalString(stored.Tenant),
+		Source:       crmcontracts.ConnectorAppSourceNone,
 		RedirectUris: composed.redirectURIs,
 	}
-	if composed.envClientID != "" {
+	switch {
+	case composed.envClientID != "":
+		app.Source = crmcontracts.ConnectorAppSourceEnvironment
 		app.Configured = true
 		app.ClientId = composed.envClientID
 		// The environment's OWN directory, never the stored app's: pairing one
 		// app's id with another's directory would send an operator to check a
 		// registration that is not the one in use.
 		app.Tenant = optionalString(composed.envTenant)
+	case stored.Configured:
+		app.Source = crmcontracts.ConnectorAppSourceStored
 	}
 	// An empty LIST and not null: the field is contract-required, and a client
 	// that has to test for null before iterating is one the contract lied to.

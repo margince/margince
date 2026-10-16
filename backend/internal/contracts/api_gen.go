@@ -6151,6 +6151,27 @@ func (e ConnectorAppProvider) Valid() bool {
 	}
 }
 
+// Defines values for ConnectorAppSource.
+const (
+	ConnectorAppSourceEnvironment ConnectorAppSource = "environment"
+	ConnectorAppSourceNone        ConnectorAppSource = "none"
+	ConnectorAppSourceStored      ConnectorAppSource = "stored"
+)
+
+// Valid indicates whether the value is a known member of the ConnectorAppSource enum.
+func (e ConnectorAppSource) Valid() bool {
+	switch e {
+	case ConnectorAppSourceEnvironment:
+		return true
+	case ConnectorAppSourceNone:
+		return true
+	case ConnectorAppSourceStored:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ConnectorAppRedirectUriPurpose.
 const (
 	ConnectorAppRedirectUriPurposeCalendarConnect ConnectorAppRedirectUriPurpose = "calendar_connect"
@@ -32298,12 +32319,19 @@ type ConnectorApp struct {
 	// RedirectUris Every callback URL that must be registered as a redirect URI on the vendor's OAuth client, one per purpose this deployment actually serves. A purpose that is not composed is absent rather than listed, because telling an operator to register a URL nothing answers sends them to debug a mismatch that was never the cause.
 	RedirectUris []ConnectorAppRedirectUri `json:"redirect_uris"`
 
+	// Source Deprecated: read `locks` instead, which names the flag, variable or file that sets the deployment's app. `environment` is that app, which wins and locks the stored one; `stored` is one saved through this surface; `none` means neither can supply one.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Source ConnectorAppSource `json:"source"`
+
 	// Tenant The Entra directory (tenant) id a Microsoft app is pinned to. OMITTED, not empty, when the app authorizes any company — and always omitted for `google`, which has no such concept, where a value would be a field that silently does nothing. A client that expects a string here reads the unpinned case as the wrong shape rather than as absent.
 	Tenant *string `json:"tenant,omitempty"`
 }
 
 // ConnectorAppProvider Which vendor's app this describes, echoed so a cached response cannot be misread.
 type ConnectorAppProvider string
+
+// ConnectorAppSource Deprecated: read `locks` instead, which names the flag, variable or file that sets the deployment's app. `environment` is that app, which wins and locks the stored one; `stored` is one saved through this surface; `none` means neither can supply one.
+type ConnectorAppSource string
 
 // ConnectorAppInput defines model for ConnectorAppInput.
 type ConnectorAppInput struct {

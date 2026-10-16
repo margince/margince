@@ -31341,7 +31341,7 @@ components:
     ConnectorApp:
       type: object
       additionalProperties: false
-      required: [provider, configured, client_id, redirect_uris]
+      required: [provider, configured, client_id, source, redirect_uris]
       properties:
         locks: { $ref: '#/components/schemas/SettingLocks' }
         provider:
@@ -31368,6 +31368,14 @@ components:
             the app authorizes any company — and always omitted for `google`, which has no
             such concept, where a value would be a field that silently does nothing. A client that
             expects a string here reads the unpinned case as the wrong shape rather than as absent.
+        source:
+          type: string
+          enum: [stored, environment, none]
+          deprecated: true
+          description: >-
+            Deprecated: read `locks` instead, which names the flag, variable or file that sets the
+            deployment's app. `environment` is that app, which wins and locks the stored one;
+            `stored` is one saved through this surface; `none` means neither can supply one.
         redirect_uris:
           type: array
           description: >-

@@ -21375,6 +21375,12 @@ export interface components {
             client_id: string;
             /** @description The Entra directory (tenant) id a Microsoft app is pinned to. OMITTED, not empty, when the app authorizes any company — and always omitted for `google`, which has no such concept, where a value would be a field that silently does nothing. A client that expects a string here reads the unpinned case as the wrong shape rather than as absent. */
             tenant?: string;
+            /**
+             * @deprecated
+             * @description Deprecated: read `locks` instead, which names the flag, variable or file that sets the deployment's app. `environment` is that app, which wins and locks the stored one; `stored` is one saved through this surface; `none` means neither can supply one.
+             * @enum {string}
+             */
+            source: "stored" | "environment" | "none";
             /** @description Every callback URL that must be registered as a redirect URI on the vendor's OAuth client, one per purpose this deployment actually serves. A purpose that is not composed is absent rather than listed, because telling an operator to register a URL nothing answers sends them to debug a mismatch that was never the cause. */
             redirect_uris: components["schemas"]["ConnectorAppRedirectUri"][];
         };
