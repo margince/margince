@@ -8,6 +8,7 @@ package gates
 
 import (
 	"go/ast"
+	"slices"
 	"strings"
 )
 
@@ -24,6 +25,8 @@ func (c *emittedCensus) typeOf(expr ast.Expr, unit *goUnit, depth int) (ast.Expr
 		return c.typeOf(e.X, unit, depth+1)
 	case *ast.Ident:
 		return c.identType(e, unit)
+	case *ast.TypeAssertExpr:
+		return e.Type, unit, e.Type != nil
 	case *ast.IndexExpr:
 		container, owner, typed := c.typeOf(e.X, unit, depth+1)
 		switch shape := container.(type) {
@@ -50,19 +53,35 @@ func (c *emittedCensus) identType(ident *ast.Ident, unit *goUnit) (ast.Expr, *go
 	}
 	switch decl := ident.Obj.Decl.(type) {
 	case *ast.ValueSpec:
-		return decl.Type, unit, decl.Type != nil
+		if decl.Type != nil {
+			return decl.Type, unit, true
+		}
+		index := slices.IndexFunc(decl.Names, func(name *ast.Ident) bool { return name.Name == ident.Name })
+		if index >= 0 && index < len(decl.Values) {
+			return c.valueType(decl.Values[index], unit)
+		}
+		return nil, nil, false
 	case *ast.Field:
 		return decl.Type, unit, true
 	}
 	if built, ok := assignedValue(ident); ok {
-		if ref, isRef := built.(*ast.UnaryExpr); isRef {
-			built = ref.X
-		}
-		if lit, isLit := built.(*ast.CompositeLit); isLit && lit.Type != nil {
-			return lit.Type, unit, true
-		}
+		return c.valueType(built, unit)
 	}
-	call, ok := assignedCall(ident)
+	return nil, nil, false
+}
+
+// valueType answers the type a value is built or returned as.
+func (c *emittedCensus) valueType(value ast.Expr, unit *goUnit) (ast.Expr, *goUnit, bool) {
+	if ref, isRef := value.(*ast.UnaryExpr); isRef {
+		value = ref.X
+	}
+	if lit, isLit := value.(*ast.CompositeLit); isLit && lit.Type != nil {
+		return lit.Type, unit, true
+	}
+	if asserted, isAssert := value.(*ast.TypeAssertExpr); isAssert && asserted.Type != nil {
+		return asserted.Type, unit, true
+	}
+	call, ok := value.(*ast.CallExpr)
 	if !ok {
 		return nil, nil, false
 	}
@@ -118,6 +137,16 @@ func (c *emittedCensus) structOf(typ ast.Expr, unit *goUnit) (*ast.StructType, *
 	return shape, c.structAt[shape], true
 }
 
+// namedType answers what a non-struct type this census declares names.
+func (c *emittedCensus) namedType(typ ast.Expr, unit *goUnit) (ast.Expr, *goUnit, bool) {
+	if star, ok := typ.(*ast.StarExpr); ok {
+		typ = star.X
+	}
+	name, ok := c.literalType(unit, typ)
+	declared, known := c.named[name]
+	return declared.typ, declared.unit, ok && known
+}
+
 // embeddedFieldName answers the name an embedded field is reached by.
 func embeddedFieldName(typ ast.Expr) string {
 	if star, ok := typ.(*ast.StarExpr); ok {
@@ -133,10 +162,13 @@ func embeddedFieldName(typ ast.Expr) string {
 }
 
 // holdsCarrierCode reports a type whose Code is a body carrier's: the
-// carrier itself, or a struct that embeds one.
+// carrier itself, an alias or defined type of one, or a struct embedding one.
 func (c *emittedCensus) holdsCarrierCode(typ ast.Expr, unit *goUnit, depth int) bool {
 	if c.isCarrier(typ, unit) {
 		return true
+	}
+	if named, declaredIn, ok := c.namedType(typ, unit); ok && depth <= 8 {
+		return c.holdsCarrierCode(named, declaredIn, depth+1)
 	}
 	shape, declaredIn, ok := c.structOf(typ, unit)
 	if !ok || depth > 8 {

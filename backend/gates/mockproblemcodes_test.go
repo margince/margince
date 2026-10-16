@@ -512,9 +512,10 @@ func TestTheEmittedCodeCensusReadsEveryPlantedSite(t *testing.T) {
 	}
 	units := readGoUnits(t, problemWriterDir)
 	for planted, virtual := range map[string]string{
-		"gates/testdata/problemcodeothers.go.txt":     "internal/plantedother/others.go",
-		"gates/testdata/problemcodesplittypes.go.txt": "internal/plantedsplit/types.go",
-		"gates/testdata/problemcodesplitfill.go.txt":  "internal/plantedsplit/fill.go",
+		"gates/testdata/problemcodeothers.go.txt":      "internal/plantedother/others.go",
+		"gates/testdata/problemcodesplittypes.go.txt":  "internal/plantedsplit/types.go",
+		"gates/testdata/problemcodesplitfill.go.txt":   "internal/plantedsplit/fill.go",
+		"gates/testdata/problemcodesplitvalues.go.txt": "internal/plantedsplit/values.go",
 	} {
 		units = append(units, plantedUnit(t, planted, virtual))
 	}
@@ -525,7 +526,8 @@ func TestTheEmittedCodeCensusReadsEveryPlantedSite(t *testing.T) {
 		"planted_literal", "planted_const", "planted_const_converted", "planted_param",
 		"planted_passed_on", "planted_method", "planted_field", "planted_typed_first", "planted_typed_second",
 		"planted_fault_return", "planted_assigned", "planted_ranged", "planted_elided",
-		"planted_nested", "planted_split_nested", "planted_split_embedded", "planted_split_embedded_selector", "planted_split_promoted",
+		"planted_split_var", "planted_split_asserted", "planted_split_asserted_local", "planted_split_aliased",
+		"planted_split_defined", "planted_nested", "planted_split_nested", "planted_split_embedded", "planted_split_embedded_selector", "planted_split_promoted",
 	} {
 		if _, read := census.codes[code]; !read {
 			t.Errorf("the census did not read the planted %q", code)

@@ -61,6 +61,12 @@ type codeCallSite struct {
 	call *ast.CallExpr
 }
 
+// namedDecl is a declared type that is not a struct, and the file declaring it.
+type namedDecl struct {
+	typ  ast.Expr
+	unit *goUnit
+}
+
 // codeAssign is one assignment statement, inside the function that makes it.
 type codeAssign struct {
 	unit *goUnit
@@ -85,6 +91,7 @@ type emittedCensus struct {
 	consts   map[string]map[string]string
 	structs  map[string]map[string]*ast.StructType
 	structAt map[*ast.StructType]*goUnit
+	named    map[string]namedDecl
 	// problemDir holds each package a file of which imports httperr: only
 	// there may a Code this census cannot type be a carrier's.
 	problemDir map[string]bool
@@ -216,7 +223,7 @@ func newEmittedCensus(t *testing.T, units []*goUnit) *emittedCensus {
 		asValue: map[codeFuncKey][]string{}, composite: map[string][]fieldSet{},
 		codes: map[string]string{}, followed: map[paramRef]bool{}, fieldsRead: map[string]bool{},
 		funcs: map[codeFuncKey]*ast.FuncDecl{}, owner: map[*ast.FuncDecl]*goUnit{}, decls: map[string]map[string]constDecl{},
-		structAt: map[*ast.StructType]*goUnit{}, problemDir: map[string]bool{problemWriterDir: true},
+		structAt: map[*ast.StructType]*goUnit{}, named: map[string]namedDecl{}, problemDir: map[string]bool{problemWriterDir: true},
 	}
 	for _, unit := range units {
 		census.index(unit)
@@ -272,11 +279,15 @@ func (c *emittedCensus) indexStructs(unit *goUnit, decl ast.Decl) {
 		return
 	}
 	for _, spec := range general.Specs {
-		if typed, ok := spec.(*ast.TypeSpec); ok {
-			if shape, ok := typed.Type.(*ast.StructType); ok {
-				c.structs[unit.dir][typed.Name.Name] = shape
-				c.structAt[shape] = unit
-			}
+		typed, ok := spec.(*ast.TypeSpec)
+		if !ok {
+			continue
+		}
+		if shape, ok := typed.Type.(*ast.StructType); ok {
+			c.structs[unit.dir][typed.Name.Name] = shape
+			c.structAt[shape] = unit
+		} else {
+			c.named[unit.dir+"."+typed.Name.Name] = namedDecl{typ: typed.Type, unit: unit}
 		}
 	}
 }
