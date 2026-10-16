@@ -90,8 +90,6 @@ describe("NumberSetting", () => {
     expect(onCommit).not.toHaveBeenCalled();
   });
 
-  // The reader corrects what they typed instead of retyping it, and hears the
-  // rule beside the refusal rather than in place of it.
   it("names the caller's element after the row's description, and only once given", () => {
     const row = (describedBy?: string) => (
       <SettingList>
@@ -126,6 +124,8 @@ describe("NumberSetting", () => {
     );
   });
 
+  // The reader corrects what they typed instead of retyping it, and hears the
+  // rule beside the refusal rather than in place of it.
   it("keeps an out-of-range value in the box with the refusal under it", async () => {
     const user = userEvent.setup();
     const onCommit = vi.fn();

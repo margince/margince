@@ -788,6 +788,31 @@ describe("a refused write names the card's notice on the control that sent it", 
     ).not.toHaveAttribute("aria-describedby");
   });
 
+  it("follows the latest refused press when two writes have failed", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backend(ADMIN, [], { refuseWrite: true }));
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
+    );
+    const found = await screen.findByTestId(
+      "lead-source-discovered-connector:apollo",
+    );
+    const adopt = within(found).getByRole("button", {
+      name: en["leadSources.adopt"],
+    });
+    await user.click(adopt);
+    await waitFor(() => expect(adopt).toHaveAccessibleDescription(notSaved));
+    const intent = screen.getByRole("combobox", {
+      name: "Intent of Trade show",
+    });
+    await user.click(intent);
+    await user.click(screen.getByRole("option", { name: "Low intent" }));
+    await waitFor(() => expect(intent).toHaveAccessibleDescription(notSaved));
+    expect(adopt).not.toHaveAccessibleDescription(notSaved);
+  });
+
   it("describes the refused reason switch alone", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backend(ADMIN, [], { refuseWrite: true }));

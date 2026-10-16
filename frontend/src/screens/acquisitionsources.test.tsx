@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
+import { permissionDenied } from "../testing/story-utils";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
 import { jsonResponse, render } from "./settings.testkit";
 
@@ -20,14 +21,6 @@ const CONFLICT = {
   status: 409,
   code: "conflict",
   detail: "conflict",
-};
-
-const DENIED = {
-  type: "about:blank",
-  title: "Forbidden",
-  status: 403,
-  code: "permission_denied",
-  detail: "You don't have permission to do that.",
 };
 
 function source(key: string, label: string, extra: object = {}) {
@@ -69,7 +62,7 @@ function backend(
       return jsonResponse(meFixture({ allow }));
     }
     if (request.method !== "GET" && denyWrite) {
-      return jsonResponse(DENIED, 403);
+      return permissionDenied();
     }
     if (request.method !== "GET") {
       return refuseWrite

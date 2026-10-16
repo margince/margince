@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import {
   jsonResponse,
+  permissionDenied,
   StoryProviders,
   stubWithSession,
 } from "../../testing/story-utils";
@@ -158,17 +159,7 @@ describe("the installation's switch", () => {
     stubWithSession(
       {
         "GET /legal-reviews/settings": legalOn,
-        "PUT /legal-reviews/settings": () =>
-          jsonResponse(
-            {
-              type: "about:blank",
-              title: "Forbidden",
-              status: 403,
-              code: "permission_denied",
-              detail: "You don't have permission to do that.",
-            },
-            403,
-          ),
+        "PUT /legal-reviews/settings": permissionDenied,
       },
       { installation_settings: ["read", "update"] },
       { roles: ["admin"] },

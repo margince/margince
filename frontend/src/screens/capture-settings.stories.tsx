@@ -94,7 +94,9 @@ export const LimitRefused: Story = {
     );
     await expect(
       canvas.getByTestId("capture-auto-enrich-toggle"),
-    ).not.toHaveAttribute("aria-describedby");
+    ).not.toHaveAccessibleDescription(
+      expect.stringContaining("Setting not changed"),
+    );
     await expect(
       canvas.getByTestId("capture-read-max-pages"),
     ).not.toHaveAccessibleDescription(

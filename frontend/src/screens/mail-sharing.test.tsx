@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider, translate } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
+import { permissionDenied } from "../testing/story-utils";
 import { MailSharingCard } from "./mail-sharing";
 
 // The workspace mail-sharing posture (Settings → Capture rules): every role
@@ -215,16 +216,7 @@ describe("MailSharingCard", () => {
           return jsonResponse(meFixture({ allow: SETTINGS_EDITOR }));
         }
         if (req.method === "PATCH") {
-          return jsonResponse(
-            {
-              type: "about:blank",
-              title: "Forbidden",
-              status: 403,
-              code: "permission_denied",
-              detail: "You don't have permission to do that.",
-            },
-            403,
-          );
+          return permissionDenied();
         }
         return jsonResponse({
           auto_enrich: true,

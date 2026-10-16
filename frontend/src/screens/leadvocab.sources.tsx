@@ -331,7 +331,9 @@ export function LeadSourcesCard() {
   const [renaming, setRenaming] = useState<LeadSource | null>(null);
   const [removing, setRemoving] = useState<LeadSource | null>(null);
   const removal = useRemovalFocus();
-  const failure = [adopt, update].find((m) => m.isError);
+  const failure = [adopt, update]
+    .filter((m) => m.isError)
+    .sort((a, b) => b.submittedAt - a.submittedAt)[0];
   const refusalId = useId();
   const refusedPatch = failure === update ? update.variables : undefined;
   const refusedAdopt = failure === adopt ? adopt.variables?.key : undefined;

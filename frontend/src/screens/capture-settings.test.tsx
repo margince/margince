@@ -108,9 +108,7 @@ describe("CaptureSettingsCard", () => {
     // so a page-wide text match stopped telling them apart the moment there
     // were two — and what matters is that the reason reaches a reader focused
     // on the control they cannot use.
-    const reasonId = toggle.getAttribute("aria-describedby");
-    expect(reasonId).toBeTruthy();
-    expect(document.getElementById(reasonId ?? "")?.textContent).toMatch(
+    expect(toggle).toHaveAccessibleDescription(
       /Only an administrator or operations user/,
     );
   });
@@ -345,10 +343,26 @@ describe("a refused save on the enrichment card", () => {
     expect(pages.getAttribute("aria-describedby")).not.toContain(alert.id);
     expect(
       screen.getByTestId("capture-auto-enrich-toggle"),
-    ).not.toHaveAttribute("aria-describedby");
+    ).not.toHaveAccessibleDescription(notice);
   });
 
-  it("names the notice on the switch it refused and no other", async () => {
+  it("names each switch's row description before any write", async () => {
+    vi.stubGlobal("fetch", refusingBackend());
+    render(<CaptureSettingsCard />);
+
+    expect(
+      await screen.findByTestId("capture-auto-enrich-toggle"),
+    ).toHaveAccessibleDescription(
+      translate("en", "captureSettings.autoEnrich.help"),
+    );
+    expect(
+      screen.getByTestId("capture-signature-enrich-toggle"),
+    ).toHaveAccessibleDescription(
+      translate("en", "captureSettings.signatureEnrich.help"),
+    );
+  });
+
+  it("names the notice on the switch it refused, after its row, and no other", async () => {
     vi.stubGlobal("fetch", refusingBackend());
     const user = userEvent.setup();
     render(<CaptureSettingsCard />);
@@ -356,10 +370,16 @@ describe("a refused save on the enrichment card", () => {
     await user.click(toggle);
 
     await screen.findByRole("alert");
-    expect(toggle).toHaveAccessibleDescription(notice);
+    expect(toggle).toHaveAccessibleDescription(
+      expect.stringMatching(
+        new RegExp(
+          `^${translate("en", "captureSettings.autoEnrich.help")}.*${translate("en", "captureSettings.updateFailed")}`,
+        ),
+      ),
+    );
     expect(
       screen.getByTestId("capture-signature-enrich-toggle"),
-    ).not.toHaveAttribute("aria-describedby");
+    ).not.toHaveAccessibleDescription(notice);
     expect(
       screen.getByTestId("capture-daily-cap"),
     ).not.toHaveAccessibleDescription(notice);
