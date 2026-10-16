@@ -10702,6 +10702,7 @@ export const de = {
   "oauthApp.microsoft.removeConfirmTitle": "Microsoft-App entfernen?",
   "oauthApp.microsoft.removeConfirmBody":
     "Der Clientschlüssel lässt sich nicht wieder auslesen. Um die App wiederherzustellen, müssen Client-ID und Clientschlüssel erneut aus dem Entra-Portal eingetragen werden. Outlook-E-Mail- und -Kalender-Verbindungen nutzen diese App. Google- und IMAP-Postfächer sind nicht betroffen. Die Ersteinrichtung fragt erneut nach einer App.",
+  "oauthApp.unit.listTitle": "Apps der Erweiterungen",
   "oauthApp.unit.sub":
     "Die Erweiterung {title} liest die API ihres Anbieters über eine OAuth-App, die dein Unternehmen bei diesem Anbieter registriert.",
   "oauthApp.unit.absent":

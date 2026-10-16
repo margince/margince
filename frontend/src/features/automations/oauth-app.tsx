@@ -5,7 +5,7 @@ import { Button, Field, TextInput } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
-import { QueryGate } from "../../design-system/querystates";
+import { QueryGate, QueryStates } from "../../design-system/querystates";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
@@ -196,9 +196,11 @@ export function OAuthAppCards() {
 
 /**
  * A card per OAuth app the composed extension units declare, in the list's
- * order. Nothing renders on an installation whose units declare none.
+ * order. Nothing renders on an installation whose units declare none, nor
+ * while the list loads, since most have none to wait for.
  */
 export function UnitOAuthAppCards() {
+  const t = useT();
   const apps = useQuery({
     queryKey: APP_LIST_KEY,
     queryFn: async () => {
@@ -211,6 +213,18 @@ export function UnitOAuthAppCards() {
       return data.data;
     },
   });
+  if (apps.isError) {
+    const title = t("oauthApp.unit.listTitle");
+    return (
+      <Panel title={title}>
+        <PanelBody>
+          <QueryStates query={apps} pendingLabel={title}>
+            {null}
+          </QueryStates>
+        </PanelBody>
+      </Panel>
+    );
+  }
   return (
     <>
       {(apps.data ?? []).map((app) =>

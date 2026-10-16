@@ -7,8 +7,8 @@ package main
 //
 // An operator should see an OAuth app before enabling the unit. It names the
 // vendor an admin is sent to, what the consent asks for, and where the core
-// sends the client secret. The extra consent parameters and OnGrant stay in
-// the source.
+// sends the client secret. The extra consent parameters' values and OnGrant
+// stay in the source.
 
 import (
 	"go/ast"
@@ -60,6 +60,7 @@ func (r *unitReader) readOAuthApp(elt ast.Expr, ext string) (declaredOAuthApp, e
 		return declaredOAuthApp{}, r.errAt(elt, "an OAuthApps entry must be an extension.OAuthApp literal")
 	}
 	app := declaredOAuthApp{Scopes: []string{}}
+	var params map[string]string
 	for _, e := range lit.Elts {
 		kv, ok := e.(*ast.KeyValueExpr)
 		if !ok {
@@ -81,8 +82,10 @@ func (r *unitReader) readOAuthApp(elt ast.Expr, ext string) (declaredOAuthApp, e
 			app.TokenURL, err = r.stringLit(kv.Value, "OAuthApp.TokenURL")
 		case "Scopes":
 			app.Scopes, err = r.readScopes(kv.Value)
-		case "AuthParams", "OnGrant":
-			// Consent detail and behaviour: present in the source, absent here.
+		case "AuthParams":
+			params, err = r.readAuthParamKeys(kv.Value)
+		case "OnGrant":
+			// Behaviour: present in the source, absent here.
 		default:
 			err = r.errAt(kv, "OAuthApp field %s is not derivable by this generator", k.Name)
 		}
@@ -90,11 +93,35 @@ func (r *unitReader) readOAuthApp(elt ast.Expr, ext string) (declaredOAuthApp, e
 			return declaredOAuthApp{}, err
 		}
 	}
-	declared := extension.OAuthApp{Provider: app.Provider, Title: app.Title, AuthURL: app.AuthURL, TokenURL: app.TokenURL}
+	declared := extension.OAuthApp{
+		Provider: app.Provider, Title: app.Title, AuthURL: app.AuthURL, TokenURL: app.TokenURL, AuthParams: params,
+	}
 	if err := declared.Validate(); err != nil {
 		return declaredOAuthApp{}, r.errPos(lit, "%v", err)
 	}
 	return app, nil
+}
+
+// readAuthParamKeys reads the AuthParams map literal's keys, which Validate
+// checks against the parameters the core sets. The values stay in the source.
+func (r *unitReader) readAuthParamKeys(expr ast.Expr) (map[string]string, error) {
+	lit, ok := expr.(*ast.CompositeLit)
+	if !ok {
+		return nil, r.errAt(expr, "OAuthApp.AuthParams must be a map literal")
+	}
+	keys := make(map[string]string, len(lit.Elts))
+	for _, elt := range lit.Elts {
+		kv, ok := elt.(*ast.KeyValueExpr)
+		if !ok {
+			return nil, r.errAt(elt, "OAuthApp.AuthParams must be a map literal")
+		}
+		key, err := r.stringLit(kv.Key, "OAuthApp.AuthParams key")
+		if err != nil {
+			return nil, err
+		}
+		keys[key] = ""
+	}
+	return keys, nil
 }
 
 // readScopes reads the Scopes slice literal of plain strings, sorted.
