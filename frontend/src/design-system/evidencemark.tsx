@@ -127,7 +127,11 @@ export function EvidenceMark({
       return;
     }
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !coveredByDialog(triggerRef.current)) {
+      if (
+        event.key === "Escape" &&
+        !event.defaultPrevented &&
+        !coveredByDialog(triggerRef.current)
+      ) {
         setOpen(false);
         // Focus returns to what opened the panel, so Escape does not drop
         // the reader at the top of the document.

@@ -14,7 +14,7 @@
 # raise.
 # Format: <frozen-line-count> <path>
 969 frontend/src/screens/webhooks.tsx
-853 frontend/src/app/shell.tsx
+847 frontend/src/app/shell.tsx
 999 frontend/src/App.tsx
 921 frontend/src/screens/installation-setup.tsx
 922 frontend/src/screens/auth.tsx

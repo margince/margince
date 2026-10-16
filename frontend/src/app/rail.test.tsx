@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  act,
   cleanup,
   fireEvent,
   screen,
@@ -11,6 +12,10 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  armHoverIntent,
+  takeHoverClock,
+} from "../design-system/hoverintent-testing";
 import { en } from "../i18n/en";
 import { navigate, parseHash, type Route } from "../lib/router";
 import { Shell, WorkspaceRail } from "./shell";
@@ -263,6 +268,48 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     expect(screen.queryByRole("tooltip")).toBeNull();
     // Escape dismisses the tooltip without moving focus (WCAG 1.4.13).
     expect(document.activeElement).toBe(deals);
+  });
+
+  it("hides a tip the pointer raised on Escape while focus sits elsewhere", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <WorkspaceRail route={{ screen: "home" }} collapsed />
+        <input aria-label="Elsewhere" />
+      </>,
+    );
+    act(() => screen.getByRole("textbox", { name: "Elsewhere" }).focus());
+    takeHoverClock();
+    armHoverIntent();
+    fireEvent.pointerEnter(screen.getByRole("link", { name: "Deals" }));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    vi.useRealTimers();
+    expect(screen.getByRole("tooltip").textContent).toBe("Deals");
+    const heard = vi.fn();
+    globalThis.addEventListener("keydown", heard);
+
+    await user.keyboard("{Escape}");
+    globalThis.removeEventListener("keydown", heard);
+
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    expect(heard).not.toHaveBeenCalled();
+  });
+
+  it("hides a tip focus raised on Escape and lets the press carry on", async () => {
+    const user = userEvent.setup();
+    render(<WorkspaceRail route={{ screen: "home" }} collapsed />);
+    act(() => screen.getByRole("link", { name: "Deals" }).focus());
+    await screen.findByRole("tooltip");
+    const heard = vi.fn();
+    globalThis.addEventListener("keydown", heard);
+
+    await user.keyboard("{Escape}");
+    globalThis.removeEventListener("keydown", heard);
+
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    expect(heard).toHaveBeenCalledOnce();
   });
 
   // WCAG 1.4.13 also requires the tooltip be HOVERABLE: reaching for it must not
