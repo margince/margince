@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import { StoryProviders } from "../../testing/story-utils";
 import { EMPTY_DRAFT } from "../onboarding";
 import {
@@ -122,4 +123,32 @@ export const WholeRecordRefusedPhone: Story = {
   tags: ["uat-phone"],
   globals: { viewport: { value: "phone" } },
   args: { mode: "profile" },
+};
+
+function RefusedOnSave(props: Partial<ReviewSceneProps>) {
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <Scene
+      {...props}
+      error={error}
+      confirm={{ ...BASE.confirm, run: () => setError(REFUSAL) }}
+    />
+  );
+}
+
+export const WholeRecordRefusedAfterSave: Story = {
+  render: (args) => <RefusedOnSave {...args} />,
+  args: {
+    mode: "profile",
+    draft: { ...EMPTY_DRAFT, edited: new Set(["display_name"]) },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const save = await canvas.findByRole("button", { name: "Save changes" });
+    await userEvent.click(save);
+    const alert = await canvas.findByRole("alert");
+    await expect(alert).toHaveTextContent(REFUSAL);
+    // The foot fills in mount order; the refusal must still lead it.
+    await expect(getComputedStyle(alert).order).toBe("-1");
+  },
 };

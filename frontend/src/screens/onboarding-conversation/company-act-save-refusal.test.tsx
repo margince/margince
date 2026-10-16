@@ -163,6 +163,24 @@ async function pressConfirm(): Promise<void> {
   );
 }
 
+async function openWholeRecord(): Promise<void> {
+  fireEvent.click(
+    await screen.findByRole("button", { name: en["ob.deck.readWhole"] }),
+  );
+  await screen.findByRole("button", { name: en["ob.deck.backToOpen"] });
+}
+
+async function editCompanyName(): Promise<void> {
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: en["ob.digest.editLine"].replace("{label}", "Company name"),
+    }),
+  );
+  const control = await screen.findByRole("textbox");
+  fireEvent.change(control, { target: { value: "Edited value" } });
+  fireEvent.keyDown(control, { key: "Enter" });
+}
+
 async function expectRefusalLine(): Promise<void> {
   await waitFor(() => expect(refusalLine()).not.toBeNull());
   expect(screen.getAllByText(new RegExp(DETAIL))).toHaveLength(1);
@@ -221,20 +239,30 @@ it("keeps one alert, on the same node, when the first edit adds Save", async () 
   renderReview(REFUSED);
   await pressConfirm();
   await expectRefusalLine();
-  fireEvent.click(
-    await screen.findByRole("button", { name: en["ob.deck.readWhole"] }),
-  );
-  await screen.findByRole("button", { name: en["ob.deck.backToOpen"] });
+  await openWholeRecord();
   const before = refusalLine();
 
-  fireEvent.click(
-    await screen.findByRole("button", { name: "Edit Company name" }),
-  );
-  const control = await screen.findByRole("textbox");
-  fireEvent.change(control, { target: { value: "Edited value" } });
-  fireEvent.keyDown(control, { key: "Enter" });
+  await editCompanyName();
 
   await screen.findByRole("button", { name: en["ob.digest.saveChanges"] });
   await expectRefusalLine();
   expect(refusalLine()).toBe(before);
+});
+
+it("joins the foot of an already shown Save as its leading line", async () => {
+  renderReview(REFUSED);
+  await openWholeRecord();
+  await editCompanyName();
+  const save = await screen.findByRole("button", {
+    name: en["ob.digest.saveChanges"],
+  });
+  expect(refusalLine()).toBeNull();
+
+  fireEvent.click(save);
+
+  await expectRefusalLine();
+  const foot = save.closest(".ob-stage-acts");
+  expect(foot).not.toBeNull();
+  expect(foot?.querySelectorAll('[role="alert"]')).toHaveLength(1);
+  expect(refusalLine()?.classList.contains("ob-save-refusal")).toBe(true);
 });
