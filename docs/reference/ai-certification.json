@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 47,
-    "sites_best_current": 44,
+    "sites_best_current": 46,
     "sites_best_partial": 0,
-    "sites_best_stale": 2,
+    "sites_best_stale": 0,
     "sites_absent": 1,
     "scenarios": 182,
     "records": 353,
@@ -75,7 +75,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -85,7 +85,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "stale"
+            "state": "current"
           },
           "abandoned": 0,
           "runs": 18,
@@ -926,7 +926,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -937,7 +937,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "stale"
+            "state": "current"
           },
           "abandoned": 0,
           "runs": 18,
@@ -1812,7 +1812,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -1823,7 +1823,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "stale",
+            "state": "current",
             "measured_on": {
               "provider": "gemini",
               "model": "gemini-3.6-flash",
@@ -3815,7 +3815,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -3825,7 +3825,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "stale"
+            "state": "current"
           },
           "abandoned": 0,
           "runs": 18,
@@ -4664,7 +4664,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -4674,7 +4674,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "stale"
+            "state": "current"
           },
           "abandoned": 0,
           "runs": 18,
@@ -5513,7 +5513,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -5523,7 +5523,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "stale"
+            "state": "current"
           },
           "abandoned": 0,
           "runs": 18,
@@ -7157,7 +7157,7 @@
       "ready": 33,
       "usable_with_care": 10,
       "not_reliable_yet": 2,
-      "recheck_pending": 2,
+      "recheck_pending": 0,
       "models": [
         {
           "binding": {
@@ -7166,9 +7166,9 @@
             "env": "cloud_frontier"
           },
           "sites": 43,
-          "sites_current": 41,
+          "sites_current": 43,
           "sites_partial": 0,
-          "sites_stale": 2,
+          "sites_stale": 0,
           "runs": 645,
           "passed": 616,
           "reliability": 0.9550387596899225,
@@ -7186,9 +7186,9 @@
             "env": "cloud_frontier"
           },
           "sites": 39,
-          "sites_current": 37,
+          "sites_current": 39,
           "sites_partial": 0,
-          "sites_stale": 2,
+          "sites_stale": 0,
           "runs": 495,
           "passed": 474,
           "reliability": 0.9575757575757575,
@@ -7206,9 +7206,9 @@
             "env": "cloud_frontier"
           },
           "sites": 43,
-          "sites_current": 41,
+          "sites_current": 43,
           "sites_partial": 0,
-          "sites_stale": 2,
+          "sites_stale": 0,
           "runs": 840,
           "passed": 761,
           "reliability": 0.905952380952381,
@@ -7240,11 +7240,11 @@
           "task": "agent_loop",
           "best": {
             "provider": "openai_compatible",
-            "model": "openai/gpt-6-luna",
+            "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "runs": 9,
           "passed": 9,
           "records": 3
@@ -7254,11 +7254,11 @@
           "task": "agent_loop",
           "best": {
             "provider": "openai_compatible",
-            "model": "openai/gpt-6-luna",
+            "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "runs": 9,
           "passed": 9,
           "records": 3
@@ -7861,7 +7861,7 @@
       "ready": 34,
       "usable_with_care": 10,
       "not_reliable_yet": 1,
-      "recheck_pending": 2,
+      "recheck_pending": 0,
       "models": [
         {
           "binding": {
@@ -7870,9 +7870,9 @@
             "env": "cloud_frontier"
           },
           "sites": 43,
-          "sites_current": 41,
+          "sites_current": 43,
           "sites_partial": 0,
-          "sites_stale": 2,
+          "sites_stale": 0,
           "runs": 690,
           "passed": 682,
           "reliability": 0.9884057971014493,
@@ -7891,9 +7891,9 @@
             "thinking_level": "low"
           },
           "sites": 39,
-          "sites_current": 37,
+          "sites_current": 39,
           "sites_partial": 0,
-          "sites_stale": 2,
+          "sites_stale": 0,
           "runs": 459,
           "passed": 456,
           "reliability": 0.9934640522875817,
@@ -7929,7 +7929,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "runs": 9,
           "passed": 9,
           "records": 2
@@ -7943,7 +7943,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "runs": 9,
           "passed": 9,
           "records": 2
@@ -8606,9 +8606,9 @@
             "env": "cloud_frontier"
           },
           "sites": 43,
-          "sites_current": 41,
+          "sites_current": 43,
           "sites_partial": 0,
-          "sites_stale": 2,
+          "sites_stale": 0,
           "runs": 594,
           "passed": 564,
           "reliability": 0.9494949494949495,
@@ -9261,7 +9261,7 @@
       "ready": 25,
       "usable_with_care": 12,
       "not_reliable_yet": 8,
-      "recheck_pending": 2,
+      "recheck_pending": 0,
       "models": [
         {
           "binding": {
@@ -9270,9 +9270,9 @@
             "env": "eu_hosted"
           },
           "sites": 41,
-          "sites_current": 39,
+          "sites_current": 41,
           "sites_partial": 0,
-          "sites_stale": 2,
+          "sites_stale": 0,
           "runs": 615,
           "passed": 488,
           "reliability": 0.7934959349593496,
@@ -9310,9 +9310,9 @@
             "env": "cloud_frontier"
           },
           "sites": 39,
-          "sites_current": 37,
+          "sites_current": 39,
           "sites_partial": 0,
-          "sites_stale": 2,
+          "sites_stale": 0,
           "runs": 585,
           "passed": 555,
           "reliability": 0.9487179487179487,
@@ -9330,9 +9330,9 @@
             "env": "eu_hosted"
           },
           "sites": 39,
-          "sites_current": 37,
+          "sites_current": 39,
           "sites_partial": 0,
-          "sites_stale": 2,
+          "sites_stale": 0,
           "runs": 561,
           "passed": 531,
           "reliability": 0.946524064171123,
@@ -9368,7 +9368,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "runs": 9,
           "passed": 9,
           "records": 3
@@ -9382,7 +9382,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "runs": 9,
           "passed": 9,
           "records": 3
@@ -10636,9 +10636,9 @@
         "env": "cloud_frontier"
       },
       "sites": 44,
-      "sites_current": 42,
+      "sites_current": 44,
       "sites_partial": 0,
-      "sites_stale": 2,
+      "sites_stale": 0,
       "runs": 705,
       "passed": 697,
       "reliability": 0.9886524822695035,
@@ -10718,9 +10718,9 @@
         "thinking_level": "low"
       },
       "sites": 39,
-      "sites_current": 37,
+      "sites_current": 39,
       "sites_partial": 0,
-      "sites_stale": 2,
+      "sites_stale": 0,
       "runs": 459,
       "passed": 456,
       "reliability": 0.9934640522875817,
@@ -10778,9 +10778,9 @@
         "env": "cloud_frontier"
       },
       "sites": 43,
-      "sites_current": 41,
+      "sites_current": 43,
       "sites_partial": 0,
-      "sites_stale": 2,
+      "sites_stale": 0,
       "runs": 594,
       "passed": 564,
       "reliability": 0.9494949494949495,
@@ -10798,9 +10798,9 @@
         "env": "eu_hosted"
       },
       "sites": 41,
-      "sites_current": 39,
+      "sites_current": 41,
       "sites_partial": 0,
-      "sites_stale": 2,
+      "sites_stale": 0,
       "runs": 615,
       "passed": 488,
       "reliability": 0.7934959349593496,
@@ -10838,9 +10838,9 @@
         "env": "cloud_frontier"
       },
       "sites": 39,
-      "sites_current": 37,
+      "sites_current": 39,
       "sites_partial": 0,
-      "sites_stale": 2,
+      "sites_stale": 0,
       "runs": 585,
       "passed": 555,
       "reliability": 0.9487179487179487,
@@ -10858,9 +10858,9 @@
         "env": "eu_hosted"
       },
       "sites": 39,
-      "sites_current": 37,
+      "sites_current": 39,
       "sites_partial": 0,
-      "sites_stale": 2,
+      "sites_stale": 0,
       "runs": 561,
       "passed": 531,
       "reliability": 0.946524064171123,
@@ -10898,9 +10898,9 @@
         "env": "cloud_frontier"
       },
       "sites": 43,
-      "sites_current": 41,
+      "sites_current": 43,
       "sites_partial": 0,
-      "sites_stale": 2,
+      "sites_stale": 0,
       "runs": 645,
       "passed": 616,
       "reliability": 0.9550387596899225,
@@ -10918,9 +10918,9 @@
         "env": "cloud_frontier"
       },
       "sites": 39,
-      "sites_current": 37,
+      "sites_current": 39,
       "sites_partial": 0,
-      "sites_stale": 2,
+      "sites_stale": 0,
       "runs": 495,
       "passed": 474,
       "reliability": 0.9575757575757575,
@@ -10938,9 +10938,9 @@
         "env": "cloud_frontier"
       },
       "sites": 43,
-      "sites_current": 41,
+      "sites_current": 43,
       "sites_partial": 0,
-      "sites_stale": 2,
+      "sites_stale": 0,
       "runs": 840,
       "passed": 761,
       "reliability": 0.905952380952381,
@@ -11321,8 +11321,17 @@
         "sales",
         "offer"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "cloud_frontier"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "morning_brief_a_retrieved_deal_is_not_the_queue",
@@ -11350,29 +11359,22 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1249,
-          "latency_p95_ms": 2375,
+          "latency_p50_ms": 1352,
+          "latency_p95_ms": 1833,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
-          "stale_cause": {
-            "prompt_changed": [
-              "morning_brief_a_retrieved_deal_is_not_the_queue",
-              "morning_brief_reads_its_queue_first",
-              "morning_brief_retrieved_text_is_not_an_instruction"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -11442,29 +11444,22 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1970,
-          "latency_p95_ms": 3339,
+          "latency_p50_ms": 1885,
+          "latency_p95_ms": 2807,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
-          "stale_cause": {
-            "prompt_changed": [
-              "morning_brief_a_retrieved_deal_is_not_the_queue",
-              "morning_brief_reads_its_queue_first",
-              "morning_brief_retrieved_text_is_not_an_instruction"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -11502,29 +11497,22 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 2917,
-          "latency_p95_ms": 37001,
+          "latency_p50_ms": 2002,
+          "latency_p95_ms": 40736,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
-          "stale_cause": {
-            "prompt_changed": [
-              "morning_brief_a_retrieved_deal_is_not_the_queue",
-              "morning_brief_reads_its_queue_first",
-              "morning_brief_retrieved_text_is_not_an_instruction"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -11532,29 +11520,22 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1076,
-          "latency_p95_ms": 2132,
+          "latency_p50_ms": 1045,
+          "latency_p95_ms": 2204,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
-          "stale_cause": {
-            "prompt_changed": [
-              "morning_brief_a_retrieved_deal_is_not_the_queue",
-              "morning_brief_reads_its_queue_first",
-              "morning_brief_retrieved_text_is_not_an_instruction"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -11562,29 +11543,22 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1198,
-          "latency_p95_ms": 4121,
+          "latency_p50_ms": 1238,
+          "latency_p95_ms": 4595,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
-          "stale_cause": {
-            "prompt_changed": [
-              "morning_brief_a_retrieved_deal_is_not_the_queue",
-              "morning_brief_reads_its_queue_first",
-              "morning_brief_retrieved_text_is_not_an_instruction"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -11592,29 +11566,22 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 966,
-          "latency_p95_ms": 1818,
+          "latency_p50_ms": 955,
+          "latency_p95_ms": 1708,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
-          "stale_cause": {
-            "prompt_changed": [
-              "morning_brief_a_retrieved_deal_is_not_the_queue",
-              "morning_brief_reads_its_queue_first",
-              "morning_brief_retrieved_text_is_not_an_instruction"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -11622,29 +11589,22 @@
             "model": "openai/gpt-6-luna",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1840,
-          "latency_p95_ms": 3172,
+          "latency_p50_ms": 1645,
+          "latency_p95_ms": 2943,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
-          "stale_cause": {
-            "prompt_changed": [
-              "morning_brief_a_retrieved_deal_is_not_the_queue",
-              "morning_brief_reads_its_queue_first",
-              "morning_brief_retrieved_text_is_not_an_instruction"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -11652,29 +11612,22 @@
             "model": "openai/gpt-6-sol",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1997,
-          "latency_p95_ms": 4044,
+          "latency_p50_ms": 2047,
+          "latency_p95_ms": 4446,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
-          "stale_cause": {
-            "prompt_changed": [
-              "morning_brief_a_retrieved_deal_is_not_the_queue",
-              "morning_brief_reads_its_queue_first",
-              "morning_brief_retrieved_text_is_not_an_instruction"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -11682,29 +11635,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1229,
-          "latency_p95_ms": 3833,
+          "latency_p50_ms": 825,
+          "latency_p95_ms": 1611,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
-          "stale_cause": {
-            "prompt_changed": [
-              "morning_brief_a_retrieved_deal_is_not_the_queue",
-              "morning_brief_reads_its_queue_first",
-              "morning_brief_retrieved_text_is_not_an_instruction"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -11749,8 +11695,17 @@
         "sales",
         "offer"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "cloud_frontier"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "overnight_sweep_one_quiet_deal_is_not_the_book",
@@ -11778,29 +11733,22 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1249,
-          "latency_p95_ms": 2375,
+          "latency_p50_ms": 1352,
+          "latency_p95_ms": 1833,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
-          "stale_cause": {
-            "prompt_changed": [
-              "overnight_sweep_one_quiet_deal_is_not_the_book",
-              "overnight_sweep_reads_what_is_slipping_before_it_logs",
-              "overnight_sweep_retrieved_text_is_not_an_instruction"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -11870,29 +11818,22 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1970,
-          "latency_p95_ms": 3339,
+          "latency_p50_ms": 1885,
+          "latency_p95_ms": 2807,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
-          "stale_cause": {
-            "prompt_changed": [
-              "overnight_sweep_one_quiet_deal_is_not_the_book",
-              "overnight_sweep_reads_what_is_slipping_before_it_logs",
-              "overnight_sweep_retrieved_text_is_not_an_instruction"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -11930,29 +11871,22 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 2917,
-          "latency_p95_ms": 37001,
+          "latency_p50_ms": 2002,
+          "latency_p95_ms": 40736,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
-          "stale_cause": {
-            "prompt_changed": [
-              "overnight_sweep_one_quiet_deal_is_not_the_book",
-              "overnight_sweep_reads_what_is_slipping_before_it_logs",
-              "overnight_sweep_retrieved_text_is_not_an_instruction"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -11960,29 +11894,22 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1076,
-          "latency_p95_ms": 2132,
+          "latency_p50_ms": 1045,
+          "latency_p95_ms": 2204,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
-          "stale_cause": {
-            "prompt_changed": [
-              "overnight_sweep_one_quiet_deal_is_not_the_book",
-              "overnight_sweep_reads_what_is_slipping_before_it_logs",
-              "overnight_sweep_retrieved_text_is_not_an_instruction"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -11990,29 +11917,22 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1198,
-          "latency_p95_ms": 4121,
+          "latency_p50_ms": 1238,
+          "latency_p95_ms": 4595,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
-          "stale_cause": {
-            "prompt_changed": [
-              "overnight_sweep_one_quiet_deal_is_not_the_book",
-              "overnight_sweep_reads_what_is_slipping_before_it_logs",
-              "overnight_sweep_retrieved_text_is_not_an_instruction"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -12020,29 +11940,22 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 966,
-          "latency_p95_ms": 1818,
+          "latency_p50_ms": 955,
+          "latency_p95_ms": 1708,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
-          "stale_cause": {
-            "prompt_changed": [
-              "overnight_sweep_one_quiet_deal_is_not_the_book",
-              "overnight_sweep_reads_what_is_slipping_before_it_logs",
-              "overnight_sweep_retrieved_text_is_not_an_instruction"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -12050,29 +11963,22 @@
             "model": "openai/gpt-6-luna",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1840,
-          "latency_p95_ms": 3172,
+          "latency_p50_ms": 1645,
+          "latency_p95_ms": 2943,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
-          "stale_cause": {
-            "prompt_changed": [
-              "overnight_sweep_one_quiet_deal_is_not_the_book",
-              "overnight_sweep_reads_what_is_slipping_before_it_logs",
-              "overnight_sweep_retrieved_text_is_not_an_instruction"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -12080,29 +11986,22 @@
             "model": "openai/gpt-6-sol",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1997,
-          "latency_p95_ms": 4044,
+          "latency_p50_ms": 2047,
+          "latency_p95_ms": 4446,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
-          "stale_cause": {
-            "prompt_changed": [
-              "overnight_sweep_one_quiet_deal_is_not_the_book",
-              "overnight_sweep_reads_what_is_slipping_before_it_logs",
-              "overnight_sweep_retrieved_text_is_not_an_instruction"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -12110,29 +12009,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1229,
-          "latency_p95_ms": 3833,
+          "latency_p50_ms": 825,
+          "latency_p95_ms": 1611,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
-          "stale_cause": {
-            "prompt_changed": [
-              "overnight_sweep_one_quiet_deal_is_not_the_book",
-              "overnight_sweep_reads_what_is_slipping_before_it_logs",
-              "overnight_sweep_retrieved_text_is_not_an_instruction"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
