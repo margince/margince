@@ -6534,6 +6534,7 @@ export const en = {
   "jobs.kind.embed_drift_sweep": "Search index catch-up",
   "jobs.kind.embed_reindex": "Search index rebuild",
   "jobs.kind.employment_import_sweep": "Employment history import",
+  "jobs.kind.finance_sync": "Accounting sync on request",
   "jobs.kind.finance_sync_sweep": "Accounting sync",
   "jobs.kind.follow_up_reconcile": "Follow-up proposals for deals",
   "jobs.kind.forecast_snapshot_sweep": "Daily forecast snapshot",
@@ -11397,6 +11398,42 @@ export const en = {
   "ownDomains.remove": "Remove {domain}",
   "ownDomains.candidateNote":
     "Seen on a connected mailbox. Not confirmed, so it does not stop capture.",
+
+  "financeSource.title": "Accounting source",
+  "financeSource.sub":
+    "Margince reads invoices and payments from an accounting system and shows them on each company’s Finance tab. It never writes to the source.",
+  "financeSource.readOnly":
+    "Read-only: only an administrator can connect or sync an accounting source.",
+  "financeSource.noneInstalled": "No accounting source installed",
+  "financeSource.noneInstalledBody":
+    "An extension unit supplies each accounting source. Install one to connect it here.",
+  "financeSource.pick": "Source",
+  "financeSource.connect": "Connect",
+  "financeSource.lastSync": "Last synced {date}",
+  "financeSource.notSynced": "Not synced yet",
+  "financeSource.status.connecting": "Connecting…",
+  "financeSource.status.active": "Active",
+  "financeSource.status.error": "Sync failed",
+  "financeSource.syncNow": "Sync now",
+  "financeSource.syncQueued": "Sync queued",
+  "financeSource.disconnect": "Disconnect",
+  "financeSource.disconnectTitle": "Disconnect the accounting source?",
+  "financeSource.disconnectBody":
+    "The sync stops. Invoices and payments already read stay on their companies.",
+  "financeSource.customers": "Customers in the source",
+  "financeSource.customer": "Customer",
+  "financeSource.company": "Company",
+  "financeSource.notLinked": "Not linked",
+  "financeSource.actions": "Actions",
+  "financeSource.link": "Link",
+  "financeSource.relink": "Change company",
+  "financeSource.unlink": "Unlink",
+  "financeSource.noCustomers": "No customers yet",
+  "financeSource.noCustomersBody":
+    "Customers arrive with the first sync. Select Sync now to start it.",
+  "financeSource.linkTitle": "Link {customer} to a company",
+  "financeSource.findCompany": "Find a company",
+  "financeSource.cancel": "Cancel",
 
   "webhooks.title": "Webhooks",
   "webhooks.readOnly":

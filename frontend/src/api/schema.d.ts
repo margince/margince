@@ -3027,6 +3027,112 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/finance/source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which accounting source is connected, and which this installation can connect.
+         * @description The finance settings page's read. `available` lists every accounting source this build
+         *     composes; the core ships none of its own, so each one is an extension unit. Governed by
+         *     the `integrations` RBAC object.
+         */
+        get: operations["getFinanceSource"];
+        /**
+         * Connect an accounting source (admin/ops).
+         * @description Asks the source whether it can be read before anything is stored, so wrong credentials
+         *     are refused here rather than six hours later. Then records the connection and queues the
+         *     first sync, which brings in the source's customer directory. Connecting the source that is
+         *     already connected answers it unchanged; a different one is refused until the current one
+         *     is disconnected. Read only: nothing here writes to the accounting system.
+         */
+        put: operations["connectFinanceSource"];
+        post?: never;
+        /**
+         * Disconnect the accounting source (admin/ops).
+         * @description Stops the sync. The mirrored invoices and payments stay, labelled with the source they
+         *     came from, and the finance card reports that no source is connected.
+         */
+        delete: operations["disconnectFinanceSource"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/finance/source/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a sync of the connected source now (admin/ops).
+         * @description The six-hourly sweep keeps the mirror current on its own; this runs the same pass sooner,
+         *     for instance after linking customers. A second press while one is queued is a no-op.
+         */
+        post: operations["syncFinanceSource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/finance/source/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The connected source's customers, and the company each is linked to.
+         * @description The directory the last sync brought in, ordered by name. A customer is never linked
+         *     automatically: guessing which customer is which company puts money on the wrong account.
+         */
+        get: operations["listFinanceSourceCustomers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/finance/source/customers/{external_id}/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The customer's id in the accounting source. */
+                external_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Link a source customer to a company (admin/ops).
+         * @description A company may hold several accounting customers; a customer belongs to one company.
+         *     Relinking a customer moves its invoices to the new company on the next sync.
+         */
+        put: operations["linkFinanceSourceCustomer"];
+        post?: never;
+        /**
+         * Remove a customer's link (admin/ops).
+         * @description The sync stops reading this customer's ledger. What it already mirrored stays on the
+         *     company it was linked to.
+         */
+        delete: operations["unlinkFinanceSourceCustomer"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/companies/{id}/capture-triage": {
         parameters: {
             query?: never;
@@ -26532,6 +26638,55 @@ export interface components {
              *     A `withheld` summary carries no subject, preview or counterparty — the citation still names a message, and the words stay the audience's. Absence never proves the activity is not an email: an older server sends none, and a reader outside `activity:read` gets none either. Never stored, because it is assembled per reader: a cached brief that carried one would serve the first reader's access to the second.
              */
             readonly email_summary?: components["schemas"]["EmailSummary"] | null;
+        };
+        FinanceSourceState: {
+            /** @description Every accounting source this build can connect, sorted by provider. */
+            available: components["schemas"]["FinanceSourceOption"][];
+            connection?: components["schemas"]["FinanceConnection"];
+        };
+        FinanceSourceOption: {
+            /** @description The source's key, stored on every mirrored row. */
+            provider: string;
+            /** @description What the extension unit supplying it says it is for. */
+            description: string;
+        };
+        FinanceConnection: {
+            /** Format: uuid */
+            id: string;
+            provider: string;
+            /**
+             * @description `connecting` until the first sync finishes; `error` when the last one failed.
+             * @enum {string}
+             */
+            status: "connecting" | "active" | "error";
+            /** Format: date-time */
+            connected_at: string;
+            /** Format: date-time */
+            last_success_at?: string | null;
+            /** Format: date-time */
+            last_attempt_at?: string | null;
+            last_error_code?: string | null;
+        };
+        ConnectFinanceSourceRequest: {
+            provider: string;
+        };
+        FinanceSourceCustomer: {
+            external_id: string;
+            display_name: string;
+            company?: components["schemas"]["FinanceLinkedCompany"];
+        };
+        FinanceSourceCustomerListResponse: {
+            data: components["schemas"]["FinanceSourceCustomer"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        FinanceLinkedCompany: {
+            /** Format: uuid */
+            id: string;
+            display_name: string;
+        };
+        LinkFinanceSourceCustomerRequest: {
+            /** Format: uuid */
+            company_id: string;
         };
         /**
          * @description What the accounting mirror knows about one customer (ADR-0083).
@@ -50928,6 +51083,198 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CompanyFinanceSummary"];
                 };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getFinanceSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The connected source, if any, and the sources on offer. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceSourceState"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    connectFinanceSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectFinanceSourceRequest"];
+            };
+        };
+        responses: {
+            /** @description Connected; the first sync is queued. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceSourceState"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description The source could not be read (`code: provider_unusable`); nothing was stored. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disconnectFinanceSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disconnected, or nothing was connected. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    syncFinanceSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefreshAccepted"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listFinanceSourceCustomers: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the directory. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceSourceCustomerListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    linkFinanceSourceCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The customer's id in the accounting source. */
+                external_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkFinanceSourceCustomerRequest"];
+            };
+        };
+        responses: {
+            /** @description Linked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceSourceCustomer"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    unlinkFinanceSourceCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The customer's id in the accounting source. */
+                external_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unlinked, or it was not linked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];

@@ -4521,6 +4521,158 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /finance/source:
+    get:
+      tags: [Finance]
+      operationId: getFinanceSource
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Which accounting source is connected, and which this installation can connect.
+      description: |
+        The finance settings page's read. `available` lists every accounting source this build
+        composes; the core ships none of its own, so each one is an extension unit. Governed by
+        the `integrations` RBAC object.
+      responses:
+        '200':
+          description: The connected source, if any, and the sources on offer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FinanceSourceState' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [Finance]
+      operationId: connectFinanceSource
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Connect an accounting source (admin/ops).
+      description: |
+        Asks the source whether it can be read before anything is stored, so wrong credentials
+        are refused here rather than six hours later. Then records the connection and queues the
+        first sync, which brings in the source's customer directory. Connecting the source that is
+        already connected answers it unchanged; a different one is refused until the current one
+        is disconnected. Read only: nothing here writes to the accounting system.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConnectFinanceSourceRequest' }
+      responses:
+        '200':
+          description: Connected; the first sync is queued.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FinanceSourceState' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '502':
+          description: 'The source could not be read (`code: provider_unusable`); nothing was stored.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    delete:
+      tags: [Finance]
+      operationId: disconnectFinanceSource
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Disconnect the accounting source (admin/ops).
+      description: |
+        Stops the sync. The mirrored invoices and payments stay, labelled with the source they
+        came from, and the finance card reports that no source is connected.
+      responses:
+        '204': { description: 'Disconnected, or nothing was connected.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /finance/source/sync:
+    post:
+      tags: [Finance]
+      operationId: syncFinanceSource
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Queue a sync of the connected source now (admin/ops).
+      description: |
+        The six-hourly sweep keeps the mirror current on its own; this runs the same pass sooner,
+        for instance after linking customers. A second press while one is queued is a no-op.
+      responses:
+        '202':
+          description: Queued.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RefreshAccepted' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /finance/source/customers:
+    get:
+      tags: [Finance]
+      operationId: listFinanceSourceCustomers
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: The connected source's customers, and the company each is linked to.
+      description: |
+        The directory the last sync brought in, ordered by name. A customer is never linked
+        automatically: guessing which customer is which company puts money on the wrong account.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: One page of the directory.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FinanceSourceCustomerListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /finance/source/customers/{external_id}/link:
+    parameters:
+      - name: external_id
+        in: path
+        required: true
+        description: The customer's id in the accounting source.
+        schema: { type: string, minLength: 1, maxLength: 200 }
+    put:
+      tags: [Finance]
+      operationId: linkFinanceSourceCustomer
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Link a source customer to a company (admin/ops).
+      description: |
+        A company may hold several accounting customers; a customer belongs to one company.
+        Relinking a customer moves its invoices to the new company on the next sync.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LinkFinanceSourceCustomerRequest' }
+      responses:
+        '200':
+          description: Linked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FinanceSourceCustomer' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Finance]
+      operationId: unlinkFinanceSourceCustomer
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Remove a customer's link (admin/ops).
+      description: |
+        The sync stops reading this customer's ledger. What it already mirrored stays on the
+        company it was linked to.
+      responses:
+        '204': { description: 'Unlinked, or it was not linked.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /companies/{id}/capture-triage:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -37259,6 +37411,74 @@ components:
             a reader outside `activity:read` gets none either. Never stored, because
             it is assembled per reader: a cached brief that carried one would serve
             the first reader's access to the second.
+
+    FinanceSourceState:
+      type: object
+      required: [available]
+      properties:
+        available:
+          type: array
+          description: Every accounting source this build can connect, sorted by provider.
+          items: { $ref: '#/components/schemas/FinanceSourceOption' }
+        connection: { $ref: '#/components/schemas/FinanceConnection' }
+
+    FinanceSourceOption:
+      type: object
+      required: [provider, description]
+      properties:
+        provider: { type: string, description: "The source's key, stored on every mirrored row." }
+        description: { type: string, description: "What the extension unit supplying it says it is for." }
+
+    FinanceConnection:
+      type: object
+      required: [id, provider, status, connected_at]
+      properties:
+        id: { type: string, format: uuid }
+        provider: { type: string }
+        status:
+          type: string
+          enum: [connecting, active, error]
+          description: '`connecting` until the first sync finishes; `error` when the last one failed.'
+        connected_at: { type: string, format: date-time }
+        last_success_at: { type: [string, 'null'], format: date-time }
+        last_attempt_at: { type: [string, 'null'], format: date-time }
+        last_error_code: { type: [string, 'null'] }
+
+    ConnectFinanceSourceRequest:
+      type: object
+      required: [provider]
+      additionalProperties: false
+      properties:
+        provider: { type: string, minLength: 1, maxLength: 32 }
+
+    FinanceSourceCustomer:
+      type: object
+      required: [external_id, display_name]
+      properties:
+        external_id: { type: string }
+        display_name: { type: string }
+        company: { $ref: '#/components/schemas/FinanceLinkedCompany' }
+
+    FinanceSourceCustomerListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/FinanceSourceCustomer' } }
+        page: { $ref: '#/components/schemas/PageInfo' }
+
+    FinanceLinkedCompany:
+      type: object
+      required: [id, display_name]
+      properties:
+        id: { type: string, format: uuid }
+        display_name: { type: string }
+
+    LinkFinanceSourceCustomerRequest:
+      type: object
+      required: [company_id]
+      additionalProperties: false
+      properties:
+        company_id: { type: string, format: uuid }
 
     CompanyFinanceSummary:
       type: object

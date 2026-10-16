@@ -9760,6 +9760,27 @@ func (e FilteredExportRequestObject) Valid() bool {
 	}
 }
 
+// Defines values for FinanceConnectionStatus.
+const (
+	FinanceConnectionStatusActive     FinanceConnectionStatus = "active"
+	FinanceConnectionStatusConnecting FinanceConnectionStatus = "connecting"
+	FinanceConnectionStatusError      FinanceConnectionStatus = "error"
+)
+
+// Valid indicates whether the value is a known member of the FinanceConnectionStatus enum.
+func (e FinanceConnectionStatus) Valid() bool {
+	switch e {
+	case FinanceConnectionStatusActive:
+		return true
+	case FinanceConnectionStatusConnecting:
+		return true
+	case FinanceConnectionStatusError:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for FinanceInvoiceStatus.
 const (
 	FinanceInvoiceStatusCredited      FinanceInvoiceStatus = "credited"
@@ -31759,6 +31780,11 @@ type ConnectConnectorResponse struct {
 	Connection *CaptureConnection `json:"connection,omitempty"`
 }
 
+// ConnectFinanceSourceRequest defines model for ConnectFinanceSourceRequest.
+type ConnectFinanceSourceRequest struct {
+	Provider string `json:"provider"`
+}
+
 // ConnectProviderRequest defines model for ConnectProviderRequest.
 type ConnectProviderRequest struct {
 	// ApiKey Used in memory for verification then sealed; never serialized back.
@@ -36580,6 +36606,22 @@ type FilteredExportRequestFormat string
 // FilteredExportRequestObject The object type to filter-export; requires `filter`. Mutually exclusive with view_id/list_id.
 type FilteredExportRequestObject string
 
+// FinanceConnection defines model for FinanceConnection.
+type FinanceConnection struct {
+	ConnectedAt   time.Time          `json:"connected_at"`
+	Id            openapi_types.UUID `json:"id"`
+	LastAttemptAt *time.Time         `json:"last_attempt_at,omitempty"`
+	LastErrorCode *string            `json:"last_error_code,omitempty"`
+	LastSuccessAt *time.Time         `json:"last_success_at,omitempty"`
+	Provider      string             `json:"provider"`
+
+	// Status `connecting` until the first sync finishes; `error` when the last one failed.
+	Status FinanceConnectionStatus `json:"status"`
+}
+
+// FinanceConnectionStatus `connecting` until the first sync finishes; `error` when the last one failed.
+type FinanceConnectionStatus string
+
 // FinanceInvoice One mirrored invoice, in the currency it was issued in.
 type FinanceInvoice struct {
 	Currency string `json:"currency"`
@@ -36606,6 +36648,41 @@ type FinanceInvoice struct {
 
 // FinanceInvoiceStatus defines model for FinanceInvoice.Status.
 type FinanceInvoiceStatus string
+
+// FinanceLinkedCompany defines model for FinanceLinkedCompany.
+type FinanceLinkedCompany struct {
+	DisplayName string             `json:"display_name"`
+	Id          openapi_types.UUID `json:"id"`
+}
+
+// FinanceSourceCustomer defines model for FinanceSourceCustomer.
+type FinanceSourceCustomer struct {
+	Company     *FinanceLinkedCompany `json:"company,omitempty"`
+	DisplayName string                `json:"display_name"`
+	ExternalId  string                `json:"external_id"`
+}
+
+// FinanceSourceCustomerListResponse defines model for FinanceSourceCustomerListResponse.
+type FinanceSourceCustomerListResponse struct {
+	Data []FinanceSourceCustomer `json:"data"`
+	Page PageInfo                `json:"page"`
+}
+
+// FinanceSourceOption defines model for FinanceSourceOption.
+type FinanceSourceOption struct {
+	// Description What the extension unit supplying it says it is for.
+	Description string `json:"description"`
+
+	// Provider The source's key, stored on every mirrored row.
+	Provider string `json:"provider"`
+}
+
+// FinanceSourceState defines model for FinanceSourceState.
+type FinanceSourceState struct {
+	// Available Every accounting source this build can connect, sorted by provider.
+	Available  []FinanceSourceOption `json:"available"`
+	Connection *FinanceConnection    `json:"connection,omitempty"`
+}
 
 // FinanceSummaryState Why the figures are what they are — the six cases a company page must keep
 // apart, because five of them look identical if you only render the numbers.
@@ -39820,6 +39897,11 @@ type LicenseHolder struct {
 	// Subject The operator-chosen handle the license was issued against, for example
 	// `acme-prod`. It tells two installations of one customer apart.
 	Subject string `json:"subject"`
+}
+
+// LinkFinanceSourceCustomerRequest defines model for LinkFinanceSourceCustomerRequest.
+type LinkFinanceSourceCustomerRequest struct {
+	CompanyId openapi_types.UUID `json:"company_id"`
 }
 
 // LinkedInAccount defines model for LinkedInAccount.
@@ -55396,6 +55478,22 @@ type GetFilterVocabularyParams struct {
 // GetFilterVocabularyParamsResource defines parameters for GetFilterVocabulary.
 type GetFilterVocabularyParamsResource string
 
+// ListFinanceSourceCustomersParams defines parameters for ListFinanceSourceCustomers.
+type ListFinanceSourceCustomersParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // GetForecastParams defines parameters for GetForecast.
 type GetForecastParams struct {
 	// Period The window length. Quarters and months follow the installation's financial year; a week is the working week, Monday to Sunday in the installation's own zone, and moves with no fiscal year.
@@ -58900,6 +58998,12 @@ type PreviewFilterJSONRequestBody = FilterPreviewRequest
 
 // ProposeFilterJSONRequestBody defines body for ProposeFilter for application/json ContentType.
 type ProposeFilterJSONRequestBody = FilterProposalRequest
+
+// ConnectFinanceSourceJSONRequestBody defines body for ConnectFinanceSource for application/json ContentType.
+type ConnectFinanceSourceJSONRequestBody = ConnectFinanceSourceRequest
+
+// LinkFinanceSourceCustomerJSONRequestBody defines body for LinkFinanceSourceCustomer for application/json ContentType.
+type LinkFinanceSourceCustomerJSONRequestBody = LinkFinanceSourceCustomerRequest
 
 // ResolveInputCheckJSONRequestBody defines body for ResolveInputCheck for application/json ContentType.
 type ResolveInputCheckJSONRequestBody = ResolveInputCheck
@@ -70649,6 +70753,27 @@ type ServerInterface interface {
 	// Read what a new filter clause may name on one record type (LVS-EXT-8).
 	// (GET /filters/vocabulary)
 	GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params GetFilterVocabularyParams)
+	// Disconnect the accounting source (admin/ops).
+	// (DELETE /finance/source)
+	DisconnectFinanceSource(w http.ResponseWriter, r *http.Request)
+	// Which accounting source is connected, and which this installation can connect.
+	// (GET /finance/source)
+	GetFinanceSource(w http.ResponseWriter, r *http.Request)
+	// Connect an accounting source (admin/ops).
+	// (PUT /finance/source)
+	ConnectFinanceSource(w http.ResponseWriter, r *http.Request)
+	// The connected source's customers, and the company each is linked to.
+	// (GET /finance/source/customers)
+	ListFinanceSourceCustomers(w http.ResponseWriter, r *http.Request, params ListFinanceSourceCustomersParams)
+	// Remove a customer's link (admin/ops).
+	// (DELETE /finance/source/customers/{external_id}/link)
+	UnlinkFinanceSourceCustomer(w http.ResponseWriter, r *http.Request, externalId string)
+	// Link a source customer to a company (admin/ops).
+	// (PUT /finance/source/customers/{external_id}/link)
+	LinkFinanceSourceCustomer(w http.ResponseWriter, r *http.Request, externalId string)
+	// Queue a sync of the connected source now (admin/ops).
+	// (POST /finance/source/sync)
+	SyncFinanceSource(w http.ResponseWriter, r *http.Request)
 	// What a period is expected to close, and what the figure does not cover.
 	// (GET /forecast)
 	GetForecast(w http.ResponseWriter, r *http.Request, params GetForecastParams)
@@ -74534,6 +74659,48 @@ func (_ Unimplemented) ProposeFilter(w http.ResponseWriter, r *http.Request) {
 // Read what a new filter clause may name on one record type (LVS-EXT-8).
 // (GET /filters/vocabulary)
 func (_ Unimplemented) GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params GetFilterVocabularyParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Disconnect the accounting source (admin/ops).
+// (DELETE /finance/source)
+func (_ Unimplemented) DisconnectFinanceSource(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which accounting source is connected, and which this installation can connect.
+// (GET /finance/source)
+func (_ Unimplemented) GetFinanceSource(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Connect an accounting source (admin/ops).
+// (PUT /finance/source)
+func (_ Unimplemented) ConnectFinanceSource(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The connected source's customers, and the company each is linked to.
+// (GET /finance/source/customers)
+func (_ Unimplemented) ListFinanceSourceCustomers(w http.ResponseWriter, r *http.Request, params ListFinanceSourceCustomersParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a customer's link (admin/ops).
+// (DELETE /finance/source/customers/{external_id}/link)
+func (_ Unimplemented) UnlinkFinanceSourceCustomer(w http.ResponseWriter, r *http.Request, externalId string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Link a source customer to a company (admin/ops).
+// (PUT /finance/source/customers/{external_id}/link)
+func (_ Unimplemented) LinkFinanceSourceCustomer(w http.ResponseWriter, r *http.Request, externalId string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Queue a sync of the connected source now (admin/ops).
+// (POST /finance/source/sync)
+func (_ Unimplemented) SyncFinanceSource(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -96320,6 +96487,202 @@ func (siw *ServerInterfaceWrapper) GetFilterVocabulary(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// DisconnectFinanceSource operation middleware
+func (siw *ServerInterfaceWrapper) DisconnectFinanceSource(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DisconnectFinanceSource(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetFinanceSource operation middleware
+func (siw *ServerInterfaceWrapper) GetFinanceSource(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetFinanceSource(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConnectFinanceSource operation middleware
+func (siw *ServerInterfaceWrapper) ConnectFinanceSource(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConnectFinanceSource(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListFinanceSourceCustomers operation middleware
+func (siw *ServerInterfaceWrapper) ListFinanceSourceCustomers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListFinanceSourceCustomersParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListFinanceSourceCustomers(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnlinkFinanceSourceCustomer operation middleware
+func (siw *ServerInterfaceWrapper) UnlinkFinanceSourceCustomer(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "external_id" -------------
+	var externalId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "external_id", chi.URLParam(r, "external_id"), &externalId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "external_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnlinkFinanceSourceCustomer(w, r, externalId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LinkFinanceSourceCustomer operation middleware
+func (siw *ServerInterfaceWrapper) LinkFinanceSourceCustomer(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "external_id" -------------
+	var externalId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "external_id", chi.URLParam(r, "external_id"), &externalId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "external_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LinkFinanceSourceCustomer(w, r, externalId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SyncFinanceSource operation middleware
+func (siw *ServerInterfaceWrapper) SyncFinanceSource(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SyncFinanceSource(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetForecast operation middleware
 func (siw *ServerInterfaceWrapper) GetForecast(w http.ResponseWriter, r *http.Request) {
 
@@ -114167,6 +114530,27 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/filters/vocabulary", wrapper.GetFilterVocabulary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/finance/source", wrapper.DisconnectFinanceSource)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/finance/source", wrapper.GetFinanceSource)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/finance/source", wrapper.ConnectFinanceSource)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/finance/source/customers", wrapper.ListFinanceSourceCustomers)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/finance/source/customers/{external_id}/link", wrapper.UnlinkFinanceSourceCustomer)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/finance/source/customers/{external_id}/link", wrapper.LinkFinanceSourceCustomer)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/finance/source/sync", wrapper.SyncFinanceSource)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/forecast", wrapper.GetForecast)

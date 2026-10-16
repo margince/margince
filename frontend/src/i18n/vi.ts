@@ -6266,6 +6266,7 @@ export const vi = {
   "jobs.kind.embed_drift_sweep": "Cập nhật bù chỉ mục tìm kiếm",
   "jobs.kind.embed_reindex": "Dựng lại chỉ mục tìm kiếm",
   "jobs.kind.employment_import_sweep": "Nhập lịch sử công tác",
+  "jobs.kind.finance_sync": "Đồng bộ dữ liệu kế toán theo yêu cầu",
   "jobs.kind.finance_sync_sweep": "Đồng bộ dữ liệu kế toán",
   "jobs.kind.follow_up_reconcile": "Đề xuất việc tiếp theo cho deal",
   "jobs.kind.forecast_snapshot_sweep": "Ảnh chụp dự báo hằng ngày",
@@ -11072,6 +11073,42 @@ export const vi = {
   "ownDomains.remove": "Gỡ {domain}",
   "ownDomains.candidateNote":
     "Thấy trên một hộp thư đã kết nối. Chưa xác nhận nên chưa chặn việc thu thập.",
+
+  "financeSource.title": "Nguồn kế toán",
+  "financeSource.sub":
+    "Margince đọc hóa đơn và khoản thanh toán từ hệ thống kế toán và hiển thị chúng trong tab Tài chính của từng công ty. Margince không bao giờ ghi vào nguồn này.",
+  "financeSource.readOnly":
+    "Chỉ xem: chỉ quản trị viên mới có thể kết nối hoặc đồng bộ nguồn kế toán.",
+  "financeSource.noneInstalled": "Chưa cài nguồn kế toán nào",
+  "financeSource.noneInstalledBody":
+    "Mỗi nguồn kế toán đến từ một tiện ích mở rộng. Cài một tiện ích để kết nối tại đây.",
+  "financeSource.pick": "Nguồn",
+  "financeSource.connect": "Kết nối",
+  "financeSource.lastSync": "Đồng bộ lần cuối {date}",
+  "financeSource.notSynced": "Chưa đồng bộ",
+  "financeSource.status.connecting": "Đang kết nối…",
+  "financeSource.status.active": "Đang hoạt động",
+  "financeSource.status.error": "Lỗi đồng bộ",
+  "financeSource.syncNow": "Đồng bộ ngay",
+  "financeSource.syncQueued": "Đã xếp lịch đồng bộ",
+  "financeSource.disconnect": "Ngắt kết nối",
+  "financeSource.disconnectTitle": "Ngắt kết nối nguồn kế toán?",
+  "financeSource.disconnectBody":
+    "Việc đồng bộ dừng lại. Hóa đơn và khoản thanh toán đã đọc vẫn ở lại với công ty của chúng.",
+  "financeSource.customers": "Khách hàng trong nguồn",
+  "financeSource.customer": "Khách hàng",
+  "financeSource.company": "Công ty",
+  "financeSource.notLinked": "Chưa liên kết",
+  "financeSource.actions": "Thao tác",
+  "financeSource.link": "Liên kết",
+  "financeSource.relink": "Đổi công ty",
+  "financeSource.unlink": "Bỏ liên kết",
+  "financeSource.noCustomers": "Chưa có khách hàng",
+  "financeSource.noCustomersBody":
+    "Khách hàng xuất hiện sau lần đồng bộ đầu tiên. Chọn Đồng bộ ngay để bắt đầu.",
+  "financeSource.linkTitle": "Liên kết {customer} với một công ty",
+  "financeSource.findCompany": "Tìm công ty",
+  "financeSource.cancel": "Hủy",
 
   "webhooks.title": "Webhook",
   "webhooks.readOnly":

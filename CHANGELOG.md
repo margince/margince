@@ -35,6 +35,16 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
   `workspace.country` in its file stays unset, keeping mail for the longest
   built-in floor, until an admin chooses the law. Boot
   refuses a stored jurisdiction the build carries no pack for.
+- **Accounting sources come from extension units.** Settings → Integrations
+  has an **Accounting source** card: an admin connects a source, sees its sync
+  state, and links the source's customers to companies. The core ships no
+  accounting connector. A unit declares a `FinanceSource` on
+  `backend/pkg/extension`, with its records in `pkg/extension/accounting`, and
+  `docs/how-to/add-an-extension.md` shows how to write one. The demo source moves
+  out of the core into `extensions/finance-demo`, keeps its `offline_demo`
+  name, and lists a fixed set of demo customers. A company may now hold several
+  accounting customers, so a company merge keeps both ledgers on the survivor.
+  A relinked customer's invoices move to the new company on the next sync.
 - **The Margince skill for AI tools.** Settings → Agents → **Agent passports**
   shows two ways to use a passport. **In your AI tool** has **Download skill**,
   and **In your own code** has a curl, Python and JavaScript example that reads

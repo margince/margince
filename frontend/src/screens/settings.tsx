@@ -43,6 +43,7 @@ import { ConnectionOutcomesCard } from "./connection-outcomes";
 import { ConnectorsCard } from "./connectors";
 import { ConsumerMailDomainsCard } from "./consumer-mail-domains";
 import { CustomFieldsAdmin } from "./customfields";
+import { FinanceSourceCard } from "./financesource";
 import { FollowUpSettingsCard } from "./followupsettings";
 import { ImportCard } from "./import";
 import { InstallationSettingsCard } from "./installation-settings";
@@ -329,12 +330,11 @@ function IntegrationsTab() {
   return (
     <>
       <ProviderCard />
+      <FinanceSourceCard />
       <WebhooksCard />
-      {/* The other half of the units split: a unit whose secret is
-          `workspace`-scoped holds the INSTALLATION's credential, like the two
-          cards above it, so it is offered here and not on a member's own
-          Connections page. Which page a unit lands on is its manifest's
-          decision, never this file's. */}
+      {/* A unit whose secret is `workspace`-scoped holds the installation's
+          credential, like the cards above, so it is offered here. Which page a
+          unit lands on is its manifest's decision, never this file's. */}
       <ExtensionUnitsCard scope="workspace" />
     </>
   );
