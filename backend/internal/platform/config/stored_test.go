@@ -123,6 +123,21 @@ func TestTheMachineryReadTakesTheBootValueWithoutAGate(t *testing.T) {
 	}
 }
 
+// The paired read refuses either setting the ungated readers may not read,
+// before it reads any row.
+func TestThePairedMachineryReadRefusesAnUndeclaredSetting(t *testing.T) {
+	cfg, err := load(t, fixture{env: []string{"X_TEST_CAP=900", "X_TEST_APPLIED=7"}}, storedCap, appliedCap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := config.StoredApplyPairTx(nobody, nil, cfg, appliedCap, storedCap); err == nil {
+		t.Fatal("a pair holding a setting not declared MachineryApplied was read ungated")
+	}
+	if _, _, err := config.StoredApplyPairTx(nobody, nil, cfg, storedCap, appliedCap); err == nil {
+		t.Fatal("a pair leading with a setting not declared MachineryApplied was read ungated")
+	}
+}
+
 func TestAnUnlockedStoredSettingNeedsTheDatabase(t *testing.T) {
 	cfg, err := load(t, fixture{}, storedCap)
 	if err != nil {

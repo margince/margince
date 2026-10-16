@@ -21,8 +21,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -41,15 +41,20 @@ const SignatureTemplateMaxRunes = 4000
 
 // SignatureTemplate is the workspace's signature layout, set by an admin. Empty
 // means none: each sender signs with their own plain-text signature.
-var SignatureTemplate = settings.Define[string](
-	"contacts.signature_template", "installation_settings", "update", "",
-	func(template string) error {
+//
+// MachineryApplied: the send path applies it to the sender's own sign-off.
+var SignatureTemplate = config.DefineStored(config.Spec[string]{
+	Key:  "contacts.signature_template",
+	Env:  "MARGINCE_CONTACTS_SIGNATURE_TEMPLATE",
+	Type: config.String,
+	Validate: func(template string) error {
 		if len([]rune(template)) > SignatureTemplateMaxRunes {
 			return fmt.Errorf("the template is at most %d characters", SignatureTemplateMaxRunes)
 		}
 		return nil
 	},
-).MachineryApplied() // the send path applies it to the sender's own sign-off
+	Doc: "The workspace's email signature layout, which replaces each sender's own signature. Empty means none.",
+}, config.Store{RBACObject: "installation_settings", AuditVerb: "update", MachineryApplied: true})
 
 // EmailSignature is the caller's sign-off as the settings tab shows it.
 type EmailSignature struct {
@@ -90,7 +95,7 @@ func (s *Store) GetMyEmailSignature(ctx context.Context) (EmailSignature, error)
 	}
 	var out EmailSignature
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		template, err := settings.ApplyTx(ctx, tx, SignatureTemplate)
+		template, err := config.StoredApplyTx(ctx, tx, config.Bound(), SignatureTemplate)
 		if err != nil {
 			return err
 		}
@@ -186,7 +191,7 @@ func (s *Store) SignatureFor(ctx context.Context, userID ids.UUID) (SenderSignat
 	}
 	var out SenderSignature
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		template, err := settings.ApplyTx(ctx, tx, SignatureTemplate)
+		template, err := config.StoredApplyTx(ctx, tx, config.Bound(), SignatureTemplate)
 		if err != nil {
 			return err
 		}

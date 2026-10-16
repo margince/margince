@@ -65,7 +65,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithMatchStager(linkedInMatchStager(pool)).
 		WithVCardReviewStager(vcardCreateStager(pool)).
-		WithSettings(NewSettingsStore(pool)).
+		WithSettings(StoredConfig(pool)).
 		WithSeatReadsLeads(seatReadsLeads(pool)).
 		WithDealOpener(leadDealOpener{deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}).
 		// A merge carries the retiring subject's stops, or it refuses. consent

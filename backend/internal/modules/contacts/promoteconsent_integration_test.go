@@ -23,7 +23,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -102,7 +101,7 @@ func setupPromoteConsent(t *testing.T) *promoteConsentEnv {
 	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws))).
-		WithSettings(settings.New(pool, settings.NewRegistry(Definitions()...))).
+		WithSettings(contactsConfig(t, pool)).
 		// The grant read compose binds to identity. Spelled here over the same
 		// role tables rather than stubbed to true: a stub would make every
 		// nomination pass and the refusal it exists to prove would be the one

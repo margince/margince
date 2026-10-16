@@ -16,10 +16,10 @@ import (
 	"sync"
 
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -122,10 +122,10 @@ func (h Handlers) WithFieldCatalog(catalog fieldcatalog.Reader) Handlers {
 	return h
 }
 
-// WithSettings wires the installation settings store the lead-settings
-// endpoints write through.
-func (h Handlers) WithSettings(store *settings.Store) Handlers {
-	h.store = h.store.WithSettings(store)
+// WithSettings wires the configuration the lead-settings endpoints read and
+// save through.
+func (h Handlers) WithSettings(cfg *config.Config) Handlers {
+	h.store = h.store.WithSettings(cfg)
 	return h
 }
 

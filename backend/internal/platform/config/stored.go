@@ -135,16 +135,63 @@ func storedOrigin(key string, stored bool) Origin {
 // MachineryApplied declaration is its licence.
 func StoredApplyTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T]) (T, error) {
 	var zero T
-	if err := requireStored(s); err != nil {
+	if err := requireMachinery(s); err != nil {
 		return zero, err
-	}
-	if !s.store.MachineryApplied {
-		return zero, fmt.Errorf("config: %s is not declared MachineryApplied; read it through StoredVal and its gate", s.Key())
 	}
 	if v, _, ok := bootValue(c, s); ok {
 		return v, nil
 	}
 	return settings.ApplyTx(ctx, tx, s.row)
+}
+
+// StoredApplyPairTx is StoredApplyTx for two settings a decision pairs. One
+// statement reads both rows, so a write that changes both together cannot
+// commit between the two reads and pair values no one configured.
+func StoredApplyPairTx[A, B any](ctx context.Context, tx pgx.Tx, c *Config, a *Setting[A], b *Setting[B]) (A, B, error) {
+	var zeroA A
+	var zeroB B
+	if err := requireMachinery(a); err != nil {
+		return zeroA, zeroB, err
+	}
+	if err := requireMachinery(b); err != nil {
+		return zeroA, zeroB, err
+	}
+	rows, err := settings.ApplyManyTx(ctx, tx, a.row, b.row)
+	if err != nil {
+		return zeroA, zeroB, err
+	}
+	va, err := appliedValue(c, a, rows)
+	if err != nil {
+		return zeroA, zeroB, err
+	}
+	vb, err := appliedValue(c, b, rows)
+	if err != nil {
+		return zeroA, zeroB, err
+	}
+	return va, vb, nil
+}
+
+// appliedValue is s's boot value, else the row ApplyManyTx read for it.
+func appliedValue[T any](c *Config, s *Setting[T], rows map[string]json.RawMessage) (T, error) {
+	if v, _, ok := bootValue(c, s); ok {
+		return v, nil
+	}
+	var v T
+	if err := json.Unmarshal(rows[s.Key()], &v); err != nil {
+		return v, fmt.Errorf("config: decoding %s: %w", s.Key(), err)
+	}
+	return v, nil
+}
+
+// requireMachinery refuses a setting the ungated readers may not read.
+func requireMachinery[T any](s *Setting[T]) error {
+	if err := requireStored(s); err != nil {
+		return err
+	}
+	if !s.store.MachineryApplied {
+		return fmt.Errorf("config: %s is not declared MachineryApplied; read it through StoredVal and its gate", s.Key())
+	}
+	return nil
 }
 
 // Save writes a stored setting through the audited settings store. The update

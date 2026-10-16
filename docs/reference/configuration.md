@@ -172,6 +172,10 @@ value gets a 409 that names the source, and a save of the same value changes not
 | `MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS` | `2` (1 to 30) | `activities.follow_up_after_days` |
 | `MARGINCE_CONSENT_AUTHORIZATION_MODES` | `account_notice:enforce,active_deal_followup:enforce,consent_confirmation:enforce,contract_notice:enforce,customer_service:enforce,invoice_or_payment:enforce,marketing:enforce,optout_confirmation:enforce,precontract_quote:enforce,privacy_notice:enforce,record_confirmation:enforce,reply_to_inbound:enforce,requested_followup:enforce,security_notice:enforce` (each mode `observe`, `warn` or `enforce`) | `consent.authorization_modes`, as `category:mode` pairs in a `,` list |
 | `MARGINCE_CONSENT_CONTROLLER_PARTICULARS` | — (nothing stated) | `consent.controller_particulars`, a JSON object |
+| `MARGINCE_CONTACTS_FIRST_RESPONSE_ENABLED` | `false` | `contacts.first_response_enabled` |
+| `MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES` | `240` (15 to 10080) | `contacts.first_response_target_minutes` |
+| `MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID` | — (nobody) | `contacts.unassigned_escalation_user_id`, a user id |
+| `MARGINCE_CONTACTS_SIGNATURE_TEMPLATE` | — (none) | `contacts.signature_template`, at most 4000 characters |
 
 A data reset keeps the saved rows of the first 12 settings, from `installation.name` to
 `identity.oidc_group_role_map`, and of `ai.routing`, `ai.task_overrides` and `ai.budget`. It

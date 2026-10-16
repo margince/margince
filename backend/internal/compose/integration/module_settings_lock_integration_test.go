@@ -7,11 +7,14 @@ package integration
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // lockedWrite is one request to a settings surface whose field a boot source
@@ -81,5 +84,62 @@ func TestControllerParticularsSetByEnvAreLockedAgainstAChange(t *testing.T) {
 	})
 	if rows := settingRows(t, e, consent.ControllerIdentity.Key()); rows != 0 {
 		t.Fatalf("the locked particulars wrote %d rows, want none", rows)
+	}
+}
+
+// The lead settings the api's environment sets read as those values and refuse
+// a change, even an invalid one; resending them is accepted.
+func TestLeadSettingsSetByEnvAreLockedAgainstAChange(t *testing.T) {
+	seat := ids.NewV7().String()
+	e := apptest.SetupAppWithEnv(t, []string{
+		"MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES=60",
+		"MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID=" + seat,
+	})
+	e.BootstrapWorkspace(t)
+
+	const path = "/v1/leads/settings"
+	var read struct {
+		Target int `json:"first_response_target_minutes"`
+	}
+	if status := e.Call(t, http.MethodGet, path, nil, nil, &read); status != http.StatusOK || read.Target != 60 {
+		t.Fatalf("GET %s → %d, target %d, want the 60 the environment sets", path, status, read.Target)
+	}
+	expectLockedWrites(t, e, []lockedWrite{
+		{"a changed target", http.MethodPatch, path, map[string]any{"first_response_target_minutes": 90}, http.StatusConflict},
+		{"a target below its bounds", http.MethodPatch, path, map[string]any{"first_response_target_minutes": 5}, http.StatusConflict},
+		{"another seat, which is no colleague", http.MethodPatch, path, map[string]any{"unassigned_escalation_user_id": ids.NewV7().String()}, http.StatusConflict},
+		{"the locked values resent beside the switch", http.MethodPatch, path,
+			map[string]any{"first_response_target_minutes": 60, "unassigned_escalation_user_id": seat, "first_response_enabled": true}, http.StatusOK},
+	})
+	for _, key := range []string{contacts.FirstResponseTargetMinutes.Key(), contacts.UnassignedEscalationUserID.Key()} {
+		if rows := settingRows(t, e, key); rows != 0 {
+			t.Errorf("the locked %s wrote %d rows, want none", key, rows)
+		}
+	}
+	if rows := settingRows(t, e, contacts.FirstResponseEnabled.Key()); rows != 1 {
+		t.Errorf("the switch saved beside the locked values wrote %d rows, want 1", rows)
+	}
+}
+
+// The signature template the api's environment sets reads as that value and
+// refuses a change, even an invalid one; resending it is accepted.
+func TestSignatureTemplateSetByEnvIsLockedAgainstAChange(t *testing.T) {
+	e := apptest.SetupAppWithEnv(t, []string{"MARGINCE_CONTACTS_SIGNATURE_TEMPLATE=<p>{name}</p>"})
+	e.BootstrapWorkspace(t)
+
+	const path = "/v1/email-signature-template"
+	var read struct {
+		Template string `json:"template"`
+	}
+	if status := e.Call(t, http.MethodGet, path, nil, nil, &read); status != http.StatusOK || read.Template != "<p>{name}</p>" {
+		t.Fatalf("GET %s → %d, %q, want the template the environment sets", path, status, read.Template)
+	}
+	expectLockedWrites(t, e, []lockedWrite{
+		{"a changed template", http.MethodPut, path, map[string]any{"template": "<p>{title}</p>"}, http.StatusConflict},
+		{"a template past its bound", http.MethodPut, path, map[string]any{"template": strings.Repeat("x", contacts.SignatureTemplateMaxRunes+1)}, http.StatusConflict},
+		{"the locked template resent", http.MethodPut, path, map[string]any{"template": "<p>{name}</p>"}, http.StatusOK},
+	})
+	if rows := settingRows(t, e, contacts.SignatureTemplate.Key()); rows != 0 {
+		t.Fatalf("the locked template wrote %d rows, want none", rows)
 	}
 }

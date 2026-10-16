@@ -751,6 +751,29 @@
           }
         }
       }
+    },
+    "contacts": {
+      "description": "The lead and signature settings an operator may also set at boot. A value here locks the setting against a change in the product.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "first_response_enabled": {
+          "description": "Track a first-response target on every lead.",
+          "type": "boolean"
+        },
+        "first_response_target_minutes": {
+          "description": "Minutes a lead may wait for its first genuine response once its clock starts.",
+          "type": "integer"
+        },
+        "unassigned_escalation_user_id": {
+          "description": "The user id of the colleague who answers for a lead nobody owns once it breaches its target. Empty means nobody.",
+          "type": "string"
+        },
+        "signature_template": {
+          "description": "The workspace's email signature layout, which replaces each sender's own signature. Empty means none.",
+          "type": "string"
+        }
+      }
     }
   },
   "$defs": {

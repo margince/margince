@@ -32,13 +32,9 @@ var settingsDefineExceptions = map[string]string{
 
 	"ai.price_sync_last_run": productState,
 
-	"contacts.first_response_enabled":        convertsIn12d,
-	"contacts.first_response_target_minutes": convertsIn12d,
-	"contacts.signature_template":            convertsIn12d,
-	"contacts.unassigned_escalation_user_id": convertsIn12d,
-	"deals.legal_review_enabled":             convertsIn12d,
-	"deals.maintenance_writes_enabled":       convertsIn12d,
-	"deals.stage_autopilot_enabled":          convertsIn12d,
-	"privacy.retain_only":                    convertsIn12d,
-	"privacy.retention_floor_carry":          convertsIn12d,
+	"deals.legal_review_enabled":       convertsIn12d,
+	"deals.maintenance_writes_enabled": convertsIn12d,
+	"deals.stage_autopilot_enabled":    convertsIn12d,
+	"privacy.retain_only":              convertsIn12d,
+	"privacy.retention_floor_carry":    convertsIn12d,
 }

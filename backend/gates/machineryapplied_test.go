@@ -253,11 +253,11 @@ func storeDeclaresMachineryApplied(call *ast.CallExpr) bool {
 	return false
 }
 
-// forwardsItsCallersEntry is config.StoredApplyTx handing its caller's entry
-// to settings.ApplyTx. The entry is named at that caller, which this gate
-// reads as a machinery read of its own.
+// forwardsItsCallersEntry is config.StoredApplyTx or StoredApplyPairTx handing
+// its caller's entries to settings.ApplyTx or ApplyManyTx. The entries are
+// named at that caller, which this gate reads as a machinery read of its own.
 func forwardsItsCallersEntry(pkg, fn string) bool {
-	return pkg == "config" && fn == "StoredApplyTx"
+	return pkg == "config" && (fn == "StoredApplyTx" || fn == "StoredApplyPairTx")
 }
 
 // entryName renders the entry argument as declaringPackage.Name.
@@ -442,6 +442,8 @@ func machineryEntryArgs(call *ast.CallExpr) []ast.Expr {
 		return call.Args[2:]
 	case calleeName(call) == "StoredApplyTx" && len(call.Args) == 4:
 		return call.Args[3:]
+	case calleeName(call) == "StoredApplyPairTx" && len(call.Args) == 5:
+		return call.Args[3:]
 	}
 	return nil
 }
@@ -472,5 +474,9 @@ func TestTheMachineryCensusReadsAStoredSettingAndItsDeclaration(t *testing.T) {
 	args := machineryEntryArgs(parse(`config.StoredApplyTx(ctx, tx, cfg, identity.Country)`))
 	if len(args) != 1 || entryName(args[0], "compose", map[string]string{"identity": "identity"}, nil) != "identity.Country" {
 		t.Errorf("StoredApplyTx's entry is not read: %v", args)
+	}
+	pair := machineryEntryArgs(parse(`config.StoredApplyPairTx(ctx, tx, cfg, contacts.Enabled, contacts.Target)`))
+	if len(pair) != 2 || entryName(pair[1], "compose", map[string]string{"contacts": "contacts"}, nil) != "contacts.Target" {
+		t.Errorf("StoredApplyPairTx's entries are not both read: %v", pair)
 	}
 }
