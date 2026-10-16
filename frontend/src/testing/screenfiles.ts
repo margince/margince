@@ -11,11 +11,11 @@ export const SRC_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export const SCREEN_ROOTS = ["screens", "components", "features"];
 
 // screenFiles lists every `.tsx` under the screen folders at any depth, minus
-// tests and stories, as paths relative to `src/` with forward slashes.
+// tests, testkits and stories, as paths relative to `src/` with forward slashes.
 export function screenFiles(): string[] {
   return SCREEN_ROOTS.flatMap((root) => filesUnder(join(SRC_ROOT, root)))
     .filter((path) => path.endsWith(".tsx"))
-    .filter((path) => !/\.(test|stories)\.tsx$/.test(path))
+    .filter((path) => !/\.(test|stories|testkit)\.tsx$/.test(path))
     .map((path) => relative(SRC_ROOT, path).split(sep).join("/"))
     .sort(stable);
 }

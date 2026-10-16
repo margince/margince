@@ -12,6 +12,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { describedByIds } from "../design-system/describedby";
 import {
   DrawerBody,
   DrawerFoot,
@@ -262,9 +263,7 @@ function InstallationSettingsForm({
   // Printing it beside each of them would state one fact three times.
   const denialId = useId();
   const describe = (control: FieldControl): string | undefined =>
-    canManage
-      ? control["aria-describedby"]
-      : [control["aria-describedby"], denialId].filter(Boolean).join(" ");
+    describedByIds(control["aria-describedby"], !canManage && denialId);
 
   // The server's per-field assertions, put on the FIELDS. A 422 on this form
   // names which of the three values it refused — an unknown IANA zone, a

@@ -158,6 +158,7 @@ async function openMenu(
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("LeadSourcesCard", () => {
@@ -732,5 +733,133 @@ describe("LeadHandlingCard", () => {
     expect(
       screen.getByTestId("lead-first-response-target"),
     ).toHaveAccessibleDescription(new RegExp(en["leadHandling.readOnly"]));
+  });
+});
+
+describe("a refused write names the card's notice on the control that sent it", () => {
+  const notSaved = expect.stringContaining(en["leadSources.notSaved"]);
+
+  it("describes the refused intent select, and neither the switch beside it nor another row", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backend(ADMIN, [], { refuseWrite: true }));
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
+    );
+    const intent = await screen.findByRole("combobox", {
+      name: "Intent of Trade show",
+    });
+    expect(intent).not.toHaveAttribute("aria-describedby");
+    await user.click(intent);
+    await user.click(screen.getByRole("option", { name: "Low intent" }));
+    await screen.findByText(en["leadSources.notSaved"]);
+    expect(intent).toHaveAccessibleDescription(notSaved);
+    expect(
+      screen.getByRole("switch", { name: "Trade show is active" }),
+    ).not.toHaveAttribute("aria-describedby");
+    expect(
+      screen.getByRole("combobox", { name: "Intent of Created manually" }),
+    ).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("adds the notice to a refused Add to list after the value it names", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backend(ADMIN, [], { refuseWrite: true }));
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
+    );
+    const found = await screen.findByTestId(
+      "lead-source-discovered-connector:apollo",
+    );
+    const adopt = within(found).getByRole("button", {
+      name: en["leadSources.adopt"],
+    });
+    await user.click(adopt);
+    await screen.findByText(en["leadSources.notSaved"]);
+    expect(adopt).toHaveAccessibleDescription(
+      expect.stringMatching(
+        new RegExp(`connector:apollo.*${en["leadSources.notSaved"]}`),
+      ),
+    );
+    expect(
+      screen.getByRole("switch", { name: "Trade show is active" }),
+    ).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("follows the latest refused press when two writes have failed", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-01T09:00:00Z"));
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backend(ADMIN, [], { refuseWrite: true }));
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
+    );
+    const found = await screen.findByTestId(
+      "lead-source-discovered-connector:apollo",
+    );
+    const adopt = within(found).getByRole("button", {
+      name: en["leadSources.adopt"],
+    });
+    await user.click(adopt);
+    await waitFor(() => expect(adopt).toHaveAccessibleDescription(notSaved));
+    vi.setSystemTime(new Date("2026-08-01T09:00:01Z"));
+    const intent = screen.getByRole("combobox", {
+      name: "Intent of Trade show",
+    });
+    await user.click(intent);
+    await user.click(screen.getByRole("option", { name: "Low intent" }));
+    await waitFor(() => expect(intent).toHaveAccessibleDescription(notSaved));
+    expect(adopt).not.toHaveAccessibleDescription(notSaved);
+  });
+
+  it("describes the refused reason switch alone", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backend(ADMIN, [], { refuseWrite: true }));
+    render(
+      <Providers>
+        <LeadDisqualifyReasonsCard />
+      </Providers>,
+    );
+    const refused = await screen.findByRole("switch", {
+      name: "Went quiet is active",
+    });
+    expect(refused).not.toHaveAttribute("aria-describedby");
+    await user.click(refused);
+    await screen.findByText(en["leadSources.notSaved"]);
+    expect(refused).toHaveAccessibleDescription(notSaved);
+    expect(
+      screen.getByRole("switch", { name: "Bad timing is active" }),
+    ).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("describes the refused first-response switch after its row, and not the minutes", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      backend(ADMIN, [], { slaOn: true, refuseWrite: true }),
+    );
+    render(
+      <Providers>
+        <LeadHandlingCard />
+      </Providers>,
+    );
+    const toggle = await screen.findByTestId("lead-first-response-switch");
+    const minutes = screen.getByTestId("lead-first-response-target");
+    const before = minutes.getAttribute("aria-describedby");
+    await user.click(toggle);
+    await screen.findByText(en["leadSources.notSaved"]);
+    expect(toggle).toHaveAccessibleDescription(
+      expect.stringMatching(
+        new RegExp(
+          `^${en["leadHandling.firstResponseHint"]}.*${en["leadSources.notSaved"]}`,
+        ),
+      ),
+    );
+    expect(minutes.getAttribute("aria-describedby")).toBe(before);
   });
 });

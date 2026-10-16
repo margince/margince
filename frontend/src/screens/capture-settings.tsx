@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { describedByIds } from "../design-system/describedby";
 import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel, PanelGroupHead } from "../design-system/panel";
 import { PanelNotices } from "../design-system/panelnotices";
@@ -114,6 +116,11 @@ export function CaptureSettingsCard() {
   const update = useUpdateCaptureSettings();
   const locked = !canManage || update.isPending;
   const reason = canManage ? undefined : t("captureSettings.adminOnly");
+  const refusalId = useId();
+  const refusedFor = (setting: keyof CaptureSettingsPatch) =>
+    update.isError && update.variables?.[setting] !== undefined
+      ? refusalId
+      : undefined;
 
   return (
     <Panel title={t("captureSettings.title")}>
@@ -126,8 +133,12 @@ export function CaptureSettingsCard() {
               <SettingRow
                 label={t("captureSettings.autoEnrich.label")}
                 description={t("captureSettings.autoEnrich.help")}
-                control={
+                control={(control) => (
                   <Switch
+                    describedBy={describedByIds(
+                      control["aria-describedby"],
+                      refusedFor("auto_enrich"),
+                    )}
                     testId="capture-auto-enrich-toggle"
                     label={t("captureSettings.autoEnrich.label")}
                     labelHidden
@@ -136,13 +147,17 @@ export function CaptureSettingsCard() {
                     disabled={locked}
                     onChange={(next) => update.mutate({ auto_enrich: next })}
                   />
-                }
+                )}
               />
               <SettingRow
                 label={t("captureSettings.signatureEnrich.label")}
                 description={t("captureSettings.signatureEnrich.help")}
-                control={
+                control={(control) => (
                   <Switch
+                    describedBy={describedByIds(
+                      control["aria-describedby"],
+                      refusedFor("signature_enrich"),
+                    )}
                     testId="capture-signature-enrich-toggle"
                     label={t("captureSettings.signatureEnrich.label")}
                     labelHidden
@@ -153,7 +168,7 @@ export function CaptureSettingsCard() {
                       update.mutate({ signature_enrich: next })
                     }
                   />
-                }
+                )}
               />
             </SettingList>
             <PanelGroupHead title={t("captureReading.title")} level="h3" />
@@ -169,6 +184,7 @@ export function CaptureSettingsCard() {
                   refusal={t(`captureReading.${row.copy}.refusal`)}
                   disabled={locked}
                   reason={reason}
+                  describedBy={refusedFor(row.property)}
                   onCommit={(next) => update.mutate({ [row.property]: next })}
                 />
               ))}
@@ -179,7 +195,11 @@ export function CaptureSettingsCard() {
       <PanelNotices
         refused={
           update.isError
-            ? { title: t("captureSettings.updateFailed"), error: update.error }
+            ? {
+                title: t("captureSettings.updateFailed"),
+                error: update.error,
+                id: refusalId,
+              }
             : undefined
         }
       />
