@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { foldForMatch } from "../format/collate";
+import { foldForSearch as fold, searchWords } from "../format/collate";
 import type { MessageKey } from "../i18n/en";
 import {
   groupHeadingKey,
   type SettingsPage,
   type SettingsPageId,
 } from "./settingscatalog";
-import { SETTINGS_SECTIONS } from "./settingssections";
+import {
+  COMPANY_CONTEXT_SECTIONS,
+  SETTINGS_SECTIONS,
+} from "./settingssections";
 
 /**
  * Finding a setting by the word a reader already has for it.
@@ -200,8 +203,14 @@ export function settingsPageAliases(
 export function settingsPageSections(
   page: SettingsPageId,
   t: (key: MessageKey) => string,
+  reader: SettingsSearchReader = NO_ADMIN_ROLE,
 ): readonly string[] {
-  return SETTINGS_SECTIONS[page].map((key) => t(key));
+  return [
+    ...SETTINGS_SECTIONS[page],
+    ...(page === "company" && reader.holdsAdminRole
+      ? COMPANY_CONTEXT_SECTIONS
+      : []),
+  ].map((key) => t(key));
 }
 
 /** Everything `page` answers to besides its own name, for the ⌘K palette. */
@@ -212,24 +221,8 @@ export function settingsPageKeywords(
 ): readonly string[] {
   return [
     ...settingsPageAliases(page, reader),
-    ...settingsPageSections(page, t),
+    ...settingsPageSections(page, t, reader),
   ];
-}
-
-/**
- * A form of the text that matches the way contacts actually type.
- *
- * Diacritics folded, because a reader searching a German or Vietnamese label
- * types what their keyboard gives them and a fold in one direction only would
- * make "Zurucksetzen" miss "Zurücksetzen" while the reverse worked.
- *
- * The CASE fold is `foldForMatch`, not `toLocaleLowerCase`: a locale-aware fold
- * maps Turkish `I` to a dotless `ı`, so a needle folded under one locale stops
- * matching a haystack folded under another — and both sides of this comparison
- * are strings the product holds rather than a sentence anybody reads.
- */
-function fold(text: string): string {
-  return foldForMatch(text.normalize("NFD").replace(/\p{Diacritic}/gu, ""));
 }
 
 export type SettingsHit = {
@@ -261,9 +254,7 @@ export function settingsSearch(
   // fields — "email" in the page's aliases, "signature" in another alias
   // beside it — so demanding that the whole phrase be one substring answered
   // nothing for exactly the queries a contact composes naturally.
-  const words = fold(query)
-    .split(/\s+/)
-    .filter((word) => word !== "");
+  const words = searchWords(query);
   if (words.length === 0) {
     return [];
   }
@@ -272,7 +263,7 @@ export function settingsSearch(
     const label = t(`settings.tab.${page.id}`);
     const group = t(groupHeadingKey(page.group));
     const sub = t(`settings.page.${page.id}.sub`);
-    const sections = settingsPageSections(page.id, t);
+    const sections = settingsPageSections(page.id, t, reader);
     // Order is the ranking: the page's own name, its group, the words it
     // answers to, the settings it draws, and last its description.
     const named = [
@@ -342,5 +333,3 @@ function rankOf(needle: string, fields: readonly string[]): number | undefined {
   }
   return undefined;
 }
-
-export { fold as foldForSearch };

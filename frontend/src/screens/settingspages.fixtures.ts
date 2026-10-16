@@ -73,6 +73,19 @@ const INSTALLATION_SETTINGS: Schemas["InstallationSettings"] = {
   base_currency_locked: false,
 };
 
+const UNREAD_COMPANY: Schemas["CompanyProfile"] = {
+  company_id: "00000000-0000-4000-8000-0000000000c1",
+  display_name: "Acme Inc",
+  fields: [],
+};
+
+const CONTEXT_ON: Schemas["CompanyContextCapabilities"] = {
+  rollout: "onboarding",
+  read_enabled: true,
+  tasks_enabled: true,
+  onboarding_enabled: true,
+};
+
 const NO_JURISDICTION: Schemas["InstallationJurisdiction"] = {
   selected: null,
   available: [],
@@ -119,4 +132,6 @@ export const UNUSED_INSTALLATION_ROUTES: RouteMap = {
   "GET /installation/jurisdiction": () => jsonResponse(NO_JURISDICTION),
   "GET /installation/settings": () => jsonResponse(INSTALLATION_SETTINGS),
   "GET /scheduling/profile": () => jsonResponse(bookingProfile),
+  "GET /company": () => jsonResponse(UNREAD_COMPANY),
+  "GET /company/context/capabilities": () => jsonResponse(CONTEXT_ON),
 };
