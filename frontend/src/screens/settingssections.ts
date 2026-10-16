@@ -178,7 +178,7 @@ export const SETTINGS_SECTIONS = {
     "aiPriceSync.autoSync.label",
     "aiPriceSync.lastSyncedLabel",
   ],
-  "model-calls": ["aicalls.col.task"],
+  "model-calls": [],
   automations: ["auto.instances", "auto.catalog"],
   privacy: [
     "settings.purposes",
@@ -192,14 +192,7 @@ export const SETTINGS_SECTIONS = {
     "jurisdiction.selected.label",
     "jurisdiction.documents.title",
   ],
-  audit: [
-    "settings.auditActor",
-    "settings.auditEntity",
-    "settings.auditAction",
-    "settings.auditEntityId",
-    "settings.auditFrom",
-    "settings.auditTo",
-  ],
+  audit: [],
   "system-health": [
     "settings.jobs",
     "settings.extIngest",

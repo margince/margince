@@ -13,22 +13,37 @@ import { settingsPageSections } from "./settingssearch";
 
 const t = (key: MessageKey) => translate("en", key);
 
-// Drawn, and not offered to search: a label for an empty state, or one shown
-// only to a reader holding a grant the search does not know about.
+// Drawn, and not offered to search: an empty state's label, one a grant the
+// search cannot see decides, or a field that filters a record list.
+type NotOffered = Readonly<{
+  key: MessageKey;
+  why: "empty-state" | "grant" | "record-filter";
+}>;
+
 const DRAWN_NOT_OFFERED: Partial<
-  Record<SettingsPageId, readonly MessageKey[]>
+  Record<SettingsPageId, readonly NotOffered[]>
 > = {
-  connections: ["connectors.emptyLabel", "connectors.telegramEmptyLabel"],
-  "capture-activity": ["captureActivity.scope.label"],
+  connections: [
+    { key: "connectors.emptyLabel", why: "empty-state" },
+    { key: "connectors.telegramEmptyLabel", why: "empty-state" },
+  ],
+  "capture-activity": [{ key: "captureActivity.scope.label", why: "grant" }],
+  "model-calls": [{ key: "aicalls.col.task", why: "record-filter" }],
+  audit: [
+    { key: "settings.auditActor", why: "record-filter" },
+    { key: "settings.auditEntity", why: "record-filter" },
+    { key: "settings.auditAction", why: "record-filter" },
+    { key: "settings.auditEntityId", why: "record-filter" },
+    { key: "settings.auditFrom", why: "record-filter" },
+    { key: "settings.auditTo", why: "record-filter" },
+  ],
 };
 
 const pageStories = Object.values(composeStories(stories)).filter(
   (story) => story.parameters.settingsPage !== undefined,
 );
 
-// A setting name is the visible text, less its badges, of a naming primitive:
-// a titled Panel's heading, a SettingRow's name, a Field's label, a legend or a
-// Disclosure's summary. Not a table header: it heads a column of records.
+// Not a table header: it heads a column of records.
 const NAMING = [
   ".settingrow-naming > .t-name",
   ".field > label:not(.sr-only)",
@@ -48,16 +63,19 @@ function visibleText(element: Element | null): string {
   return copy.textContent?.trim() ?? "";
 }
 
-function drawnNames(root: HTMLElement): Set<string> {
+function namingElements(root: HTMLElement): Element[] {
   const panels = [...root.querySelectorAll("section.panel[aria-labelledby]")];
-  const titles = panels.map((panel) =>
-    root.ownerDocument.getElementById(
-      panel.getAttribute("aria-labelledby") ?? "",
-    ),
+  const titles = panels.flatMap(
+    (panel) =>
+      root.ownerDocument.getElementById(
+        panel.getAttribute("aria-labelledby") ?? "",
+      ) ?? [],
   );
-  const named = [...root.querySelectorAll(NAMING)];
-  return new Set([...titles, ...named].map(visibleText));
+  return [...titles, ...root.querySelectorAll(NAMING)];
 }
+
+const drawnNames = (root: HTMLElement) =>
+  new Set(namingElements(root).map(visibleText));
 
 describe("each settings page's sections are the names it draws", () => {
   it("has one page story for every catalog page", () => {
@@ -84,10 +102,27 @@ describe("each settings page's sections are the names it draws", () => {
         expect(drawnNames(view.container)).toEqual(
           new Set([
             ...settingsPageSections(page, t, { holdsAdminRole: true }),
-            ...(DRAWN_NOT_OFFERED[page] ?? []).map(t),
+            ...(DRAWN_NOT_OFFERED[page] ?? []).map(({ key }) => t(key)),
           ]),
         );
       });
+      const filters = (DRAWN_NOT_OFFERED[page] ?? [])
+        .filter(({ why }) => why === "record-filter")
+        .map(({ key }) => t(key));
+      for (const element of namingElements(view.container)) {
+        if (filters.includes(visibleText(element))) {
+          expect(element.closest(".filter-bar")).not.toBeNull();
+        }
+      }
     },
   );
+
+  // An empty state or a grant cannot be checked from one render, and each entry
+  // hides a name from search, so a new one takes an edit here.
+  it("holds the unchecked exceptions to the ones named today", () => {
+    const unchecked = Object.values(DRAWN_NOT_OFFERED)
+      .flatMap((entries) => entries ?? [])
+      .filter(({ why }) => why !== "record-filter");
+    expect(unchecked).toHaveLength(3);
+  });
 });
