@@ -9165,7 +9165,7 @@ export interface paths {
         };
         /**
          * Cross-object search (contacts, companies, deals, activities, leads).
-         * @description Hybrid full-text search. Results are scoped by RBAC; leads are a distinct result type.
+         * @description Lexical full-text search, ranked by relevance: the query's words and prefixes matched against each record's own text, with no meaning match. Results are scoped by RBAC; leads are a distinct result type.
          */
         get: operations["search"];
         put?: never;

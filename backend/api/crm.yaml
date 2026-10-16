@@ -14199,7 +14199,10 @@ paths:
       tags: [Search]
       operationId: search
       summary: Cross-object search (contacts, companies, deals, activities, leads).
-      description: Hybrid full-text search. Results are scoped by RBAC; leads are a distinct result type.
+      description: >
+        Lexical full-text search, ranked by relevance: the query's words and prefixes matched
+        against each record's own text, with no meaning match. Results are scoped by RBAC; leads
+        are a distinct result type.
       x-mcp-tool: { verb: search_records, tier: auto_execute, scope: read }
       parameters:
         - name: q
