@@ -23,7 +23,6 @@
 1100 frontend/src/features/contacts/contactpage.test.tsx
 1133 frontend/src/screens/companyrail.test.tsx
 1134 frontend/src/screens/record360/spine.test.tsx
-1104 frontend/src/design-system/conformance.test.ts
 1182 frontend/src/screens/onboarding-conversation/company-act.test.tsx
 903 frontend/src/features/contacts/contactpage.tsx
 1181 frontend/src/features/privacy/privacy.test.tsx
@@ -36,7 +35,6 @@
 1264 frontend/src/screens/offers.tsx
 1360 frontend/src/app/agentrail.test.tsx
 1504 frontend/src/screens/onboarding-conversation/confirm-card.tsx
-1436 frontend/src/design-system/listtable.test.tsx
 1343 frontend/src/app/agentrail.tsx
 1725 frontend/src/screens/onboarding-facts.test.tsx
 1902 frontend/src/features/contacts/contactpage.stories.tsx
