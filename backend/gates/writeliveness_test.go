@@ -133,6 +133,8 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	"internal/modules/activities:SetCalendarMethodTx":   "the calendar-method re-read writes an archived message on purpose: the method is a fact of the message, and an archived decline brought back must still read as a reply rather than as mail owed an answer. The row stays archived; only calendar_method changes, and only from NULL",
 	"internal/modules/activities:WithholdStoredFilesTx": "withholding a captured file's bytes reaches an archived row on purpose: archiving hides an attachment and keeps its object, so a strip that skipped archived rows would leave a private message's bytes stored for good. The row stays archived; only its key, checksum and bytes_withheld change",
 	"internal/modules/deals:RestoreDealTx":              "the deal un-archive, which brings back exactly the relationships the deal's archive retired, matched on that archive's own stamp",
+	"internal/modules/identity:countFailure":            "every caller first reads the member through LiveMemberSQL under FOR UPDATE in the same transaction (recordFailedLogin, recordFailedChange, lockSecondFactorStreak), so the row it folds is live",
+	"internal/modules/identity:resetLockoutStreak":      "its callers read the member through LiveMemberSQL in the same transaction (checkCredentials, and lockSecondFactorStreak on second-factor completion), so the row it clears is live",
 	// ERASURE AND RETENTION MUST WRITE ARCHIVED ROWS. This is the family that
 	// makes a row-level trigger impossible, and the reason each entry gives is
 	// the specific destruction it performs rather than a restatement of that
