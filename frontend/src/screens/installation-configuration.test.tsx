@@ -102,9 +102,72 @@ it("names a boot source with its name and its file", async () => {
   await screen.findByText("database.url");
   expect(
     within(rowOf("database.url")).getByText(
-      "Set by MARGINCE_DATABASE_URL in .env. Change it there.",
+      ".env file: MARGINCE_DATABASE_URL (.env)",
     ),
   ).toBeVisible();
+});
+
+it("names a boot source that carries no file by its name alone", async () => {
+  stubConfiguration(200, [
+    entry({
+      origin: { source: "env", name: "MARGINCE_HTTP_PORT" },
+    }),
+  ]);
+  render(<InstallationConfigurationPage />);
+
+  await screen.findByText("http.port");
+  expect(
+    within(rowOf("http.port")).getByText("Environment: MARGINCE_HTTP_PORT"),
+  ).toBeVisible();
+  expect(document.body.textContent).not.toContain("Change it there");
+});
+
+it("shows an empty string as Empty", async () => {
+  stubConfiguration(200, [entry({ value: "", default: "" })]);
+  render(<InstallationConfigurationPage />);
+
+  await screen.findByText("http.port");
+  expect(within(rowOf("http.port")).getByText("Empty")).toBeVisible();
+});
+
+it("tells a setting with no value and no default from one the api does not read", async () => {
+  stubConfiguration(200, [
+    entry({ value: null, default: null }),
+    entry({
+      key: "worker.concurrency",
+      value: null,
+      default: null,
+      origin: { source: "unset", name: "" },
+    }),
+  ]);
+  render(<InstallationConfigurationPage />);
+
+  await screen.findByText("worker.concurrency");
+  expect(within(rowOf("http.port")).getByText("No value")).toBeVisible();
+  expect(
+    within(rowOf("worker.concurrency")).getByText("Not set"),
+  ).toBeVisible();
+});
+
+it("opens a secret row without showing a value or a default", async () => {
+  stubConfiguration(
+    200,
+    ENTRIES.map((row) =>
+      row.secret ? { ...row, value: SECRET_TEXT, default: SECRET_TEXT } : row,
+    ),
+  );
+  const user = userEvent.setup();
+  render(<InstallationConfigurationPage />);
+
+  await screen.findByText("database.url");
+  await user.click(
+    screen.getByRole("button", { name: "Show details for database.url" }),
+  );
+  expect(
+    await screen.findByText(/Type: int/, { selector: "span" }),
+  ).toBeVisible();
+  expect(screen.queryByText(/Default:/, { selector: "span" })).toBeNull();
+  expect(document.body.textContent).not.toContain(SECRET_TEXT);
 });
 
 it("marks a secret and draws no value for it", async () => {

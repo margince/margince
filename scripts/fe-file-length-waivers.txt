@@ -35,7 +35,7 @@
 541 frontend/src/features/records/relationships.tsx
 844 frontend/src/features/onboarding/onboarding-gate.tsx
 894 frontend/src/features/onboarding/onboarding-conversation/voice-scenes.tsx
-845 frontend/src/screens/settingscatalog.ts
+848 frontend/src/screens/settingscatalog.ts
 892 frontend/src/features/records/share.tsx
 
 # The build scripts, frozen when the gate learned to read them.

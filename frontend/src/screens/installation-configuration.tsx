@@ -10,7 +10,6 @@ import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
-import { lockFor } from "../format/settinglocks";
 import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
@@ -18,9 +17,11 @@ import { unwrap } from "../lib/problem";
 type Entry = components["schemas"]["ConfigurationEntry"];
 type Source = Entry["origin"]["source"];
 
-// The sources that are not boot sources. A boot source is worded by `lockFor`,
-// so the lock sentence and this column cannot tell two stories.
-const UNLOCKED_SOURCE: Partial<Record<Source, MessageKey>> = {
+const SOURCE_LABEL: Record<Source, MessageKey> = {
+  flag: "configuration.source.flag",
+  env: "configuration.source.env",
+  env_file: "configuration.source.env_file",
+  config_file: "configuration.source.config_file",
   database: "configuration.source.database",
   default: "configuration.source.default",
   unset: "configuration.source.unset",
@@ -34,12 +35,12 @@ function useConfiguration() {
 }
 
 function sourceWords(entry: Entry, t: Translator): string {
-  const lock = lockFor([entry], entry.key, t);
-  if (lock.disabled) {
-    return lock.reason;
+  const { source, name, file } = entry.origin;
+  const label = t(SOURCE_LABEL[source]);
+  if (!name) {
+    return label;
   }
-  const label = UNLOCKED_SOURCE[entry.origin.source];
-  return label ? t(label) : entry.origin.source;
+  return file ? `${label}: ${name} (${file})` : `${label}: ${name}`;
 }
 
 function ValueCell({ entry }: Readonly<{ entry: Entry }>) {
@@ -48,7 +49,14 @@ function ValueCell({ entry }: Readonly<{ entry: Entry }>) {
     return <Badge>{t("configuration.secret")}</Badge>;
   }
   if (entry.value === null) {
-    return <span className="t-caption">{t("configuration.unset")}</span>;
+    // `unset` means the api does not read it; any other source with no value is
+    // a setting that has neither a value nor a default.
+    const unread = entry.origin.source === "unset";
+    return (
+      <span className="t-caption">
+        {t(unread ? "configuration.unset" : "configuration.noValue")}
+      </span>
+    );
   }
   if (entry.value === "") {
     return <span className="t-caption">{t("configuration.emptyValue")}</span>;
