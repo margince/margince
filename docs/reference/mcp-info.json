@@ -10,16 +10,16 @@
   "totals": {
     "tools": 37,
     "resources": 9,
-    "tool_catalog_bytes": 124522,
+    "tool_catalog_bytes": 124549,
     "resource_catalog_bytes": 3588,
-    "approx_wire_tokens_total": 32027,
+    "approx_wire_tokens_total": 32034,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 32245,
-      "input_schema_bytes": 58176,
+      "input_schema_bytes": 58203,
       "output_schema_bytes": 25189,
-      "description_plus_input_schema_bytes": 90421
+      "description_plus_input_schema_bytes": 90448
     }
   },
   "tools": {
@@ -2779,7 +2779,7 @@
               "type": "integer"
             },
             "per_type": {
-              "description": "search only: Answer up to this many of each type instead of one ranked list. Takes no cursor or limit; types_with_more names the types holding more.",
+              "description": "search only: Answer up to this many of each type instead of one ranked list, at most 25 records in all. Takes no cursor or limit; types_with_more names the types holding more.",
               "maximum": 20,
               "minimum": 1,
               "type": "integer"

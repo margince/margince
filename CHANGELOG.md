@@ -139,7 +139,7 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
   and `per_type` as the route does. A project, product or activity carries its
   key, SKU or opening text in `match.snippet`, and a contact found through its
   employer names that company in `match.works_at`. A page holds at most 25
-  records, 20 by default, and its `coverage` and `notes` say when more match or
+  records, 20 by default, `per_type` included, and its `coverage` and `notes` say when more match or
   a record could not be read back. Both doors refuse a `q` of more than 32
   words. The `record_name` of `catch_me_up_on` and `prep_for_meeting` resolves
   on the same engine, so it names the record `search_records` finds for those

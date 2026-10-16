@@ -146,7 +146,7 @@ func (t searchRecords) Spec() mcp.ToolSpec {
 			"record_type":{"type":"string","enum":%[1]s,"description":"Search one type."},
 			"record_types":{"type":"array","items":{"type":"string","enum":%[1]s},"description":"Search these types, in place of record_type. Omit both for contact, company, deal, lead and project."},
 			"with_employees":{"type":"boolean","description":"Also find the contacts who work at a matching company; each carries match.works_at."},
-			"per_type":{"type":"integer","minimum":1,"maximum":20,"description":"Answer up to this many of each type instead of one ranked list. Takes no cursor or limit; types_with_more names the types holding more."},
+			"per_type":{"type":"integer","minimum":1,"maximum":20,"description":"Answer up to this many of each type instead of one ranked list, at most %[2]d records in all. Takes no cursor or limit; types_with_more names the types holding more."},
 			"limit":{"type":"integer","minimum":1,"maximum":%[2]d,"description":"Records on one page; %[3]d when left out."},
 			"cursor":{"type":"string","description":"next_cursor from the previous page."}},
 			"additionalProperties":false}`, types, recordSearchMaxLimit, recordSearchDefaultLimit)),
@@ -218,6 +218,13 @@ func (a searchRecordsArgs) query(ctx context.Context) (RecordSearchQuery, error)
 	}
 	if len(named) == 0 {
 		named = recordSearchDefaultTypes()
+	}
+	// A grouped page holds per_type of every type searched, each read back.
+	if a.PerType != nil && *a.PerType*len(named) > recordSearchMaxLimit {
+		return RecordSearchQuery{}, &BadArgsError{Field: "per_type", Cause: fmt.Errorf(
+			"per_type of each of %d record types would read back more than one page of %d records; "+
+				"ask for at most %d, or name fewer record types", len(named), recordSearchMaxLimit,
+			recordSearchMaxLimit/len(named))}
 	}
 	return RecordSearchQuery{
 		Text: a.Q, Types: named, Limit: limit, Cursor: a.Cursor,

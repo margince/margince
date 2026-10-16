@@ -72,6 +72,37 @@ func TestASearchWithoutWordsIsSentToListRecords(t *testing.T) {
 	}
 }
 
+// A grouped page holds up to per_type of each type searched, and every hit is
+// read back, so per_type is bounded by the page's 25 records.
+func TestAGroupedPageNeverReadsBackMoreThanAPage(t *testing.T) {
+	for _, tc := range []struct {
+		args  string
+		admit bool
+	}{
+		{`{"q":"Acme","per_type":5}`, true},
+		{`{"q":"Acme","per_type":6}`, false},
+		{`{"q":"Acme","record_type":"deal","per_type":20}`, true},
+		{`{"q":"Acme","record_types":["contact","company","deal","lead","project","product","offer_template","activity"],"per_type":3}`, true},
+		{`{"q":"Acme","record_types":["contact","company","deal","lead","project","product","offer_template","activity"],"per_type":4}`, false},
+	} {
+		engine := &rankingProbe{}
+		_, err := searchRecordsOver(nil, engine).Handle(searchReader(recordSearchTypes...), json.RawMessage(tc.args))
+		if tc.admit {
+			if err != nil {
+				t.Errorf("%s was refused: %v", tc.args, err)
+			}
+			continue
+		}
+		badArgs, ok := errors.AsType[*BadArgsError](err)
+		if !ok || badArgs.Field != "per_type" || !strings.Contains(badArgs.Error(), "25") {
+			t.Errorf("%s → %v, want a refusal of per_type naming the 25-record page", tc.args, err)
+		}
+		if engine.asked != nil {
+			t.Errorf("%s reached the engine", tc.args)
+		}
+	}
+}
+
 func TestOneTypeAndAListOfTypesAreNotBothTaken(t *testing.T) {
 	_, err := searchRecordsOver(nil, &rankingProbe{}).Handle(searchReader("deal", "lead"),
 		json.RawMessage(`{"q":"Acme","record_type":"deal","record_types":["lead"]}`))

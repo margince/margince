@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 9 |
 | Tool catalog | 121.6 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 32027 |
+| Approx. wire tokens | 32034 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -73,7 +73,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1673 |
+| [`find_records`](#find_records) | Find records | yes |  | 1679 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 336 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
@@ -3199,7 +3199,7 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
       "type": "integer"
     },
     "per_type": {
-      "description": "search only: Answer up to this many of each type instead of one ranked list. Takes no cursor or limit; types_with_more names the types holding more.",
+      "description": "search only: Answer up to this many of each type instead of one ranked list, at most 25 records in all. Takes no cursor or limit; types_with_more names the types holding more.",
       "maximum": 20,
       "minimum": 1,
       "type": "integer"
