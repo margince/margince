@@ -65,8 +65,15 @@ var ErrSVGTextNotOutlined = fmt.Errorf("%w: the SVG draws live text, which has t
 // namespace prefix, so svg:text counts too.
 var svgTextElements = map[string]bool{"text": true, "tspan": true, "textpath": true}
 
-// svgUndrawnElements are elements whose whole content the renderer drops.
-var svgUndrawnElements = map[string]bool{"foreignobject": true, "image": true}
+// svgUndrawnElements are elements carrying drawing the renderer drops. oksvg's
+// strict mode is no substitute: it refuses metadata an editor always writes
+// (<metadata>, sodipodi:namedview) yet accepts a <filter> or <pattern> inside
+// <defs>. A <clipPath> is left out: an artboard clip is the viewBox it is drawn
+// into anyway.
+var svgUndrawnElements = map[string]bool{
+	"foreignobject": true, "image": true, "filter": true, "pattern": true,
+	"mask": true, "marker": true, "symbol": true,
+}
 
 // ErrSVGNotDrawable reports an SVG the renderer would draw blank or only partly.
 // It wraps ErrUnsupported so a candidate chain still skips the file.
