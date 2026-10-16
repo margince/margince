@@ -12,17 +12,15 @@
 // changes.
 
 import { EmptyState } from "../design-system/atoms";
-import type { TimelineGroup } from "../design-system/composed";
-import {
-  GroupedTimelineList,
-  isConversationKind,
-} from "../design-system/composed";
 import {
   ACTIVITY_KINDS,
   type ActivityKind,
   type TimelineFilters,
   useTimelineFilters,
 } from "../design-system/recordtimeline";
+import { GroupedTimelineList } from "../design-system/timeline";
+import type { TimelineGroup } from "../design-system/timelineentry";
+import { isConversationKind } from "../design-system/timelineentry";
 import { useT } from "../i18n";
 import { type TimelineFilter, useChronologyFilter } from "./recordchronology";
 

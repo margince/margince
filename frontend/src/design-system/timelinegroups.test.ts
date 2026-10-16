@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { TimelineEntry } from "./composed";
+import type { TimelineEntry } from "./timelineentry";
 import { groupChronology } from "./timelinegroups";
 
 function mail(

@@ -93,7 +93,7 @@ func (ReportBlocksResource) Resources(context.Context) []mcp.Resource {
 		// read draws reads from runs with nothing to compose.
 		Description: "The blocks a report may carry: each kind, whether it renders figures, " +
 			"words or both, and the severities a callout may state. " +
-			"compose_analytics_report names this document instead of carrying it.",
+			"read_analytics with step=compose names this document instead of carrying it.",
 	}}
 }
 

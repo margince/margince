@@ -130,10 +130,11 @@ func TestAnAnswerWithNeitherRecordNorGrantIsStillRefused(t *testing.T) {
 func TestTheVocabularyWritesDeclareTheGrantTheirHandlersCheck(t *testing.T) {
 	t.Parallel()
 	want := map[string]principal.Action{
-		"create_tag": principal.ActionCreate,
-		"update_tag": principal.ActionUpdate,
+		"create_tag":  principal.ActionCreate,
+		"update_tag":  principal.ActionUpdate,
+		"archive_tag": principal.ActionDelete,
 	}
-	for _, tool := range []mcp.Tool{createTag{}, updateTag{}} {
+	for _, tool := range []mcp.Tool{createTag{}, updateTag{}, archiveTag{}} {
 		action, vocabulary := want[tool.Spec().Name]
 		if !vocabulary {
 			continue

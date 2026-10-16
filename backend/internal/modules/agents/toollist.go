@@ -16,6 +16,8 @@ package agents
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -109,8 +111,35 @@ func DescribeForClient(spec mcp.ToolSpec) string {
 		tier = "a human approves every call before it runs"
 	case mcp.TierDynamic:
 		tier = "some calls run immediately and others a human approves first, decided per call from its arguments"
+		if byAction := actionGovernance(spec.Actions); byAction != "" {
+			tier = byAction
+		}
 	}
 	return fmt.Sprintf("%s (Governance: %s; %s.)", spec.Description, tier, scope)
+}
+
+// actionGovernance says which of a router's actions run at once, which wait for
+// a human and which decide per call. Empty for a tool with no actions.
+func actionGovernance(actions []mcp.ToolAction) string {
+	groups := map[mcp.RiskTier][]string{}
+	for _, a := range actions {
+		groups[a.Tier] = append(groups[a.Tier], a.Action)
+	}
+	var parts []string
+	for _, g := range []struct {
+		tier  mcp.RiskTier
+		words string
+	}{
+		{mcp.TierAutoExecute, "runs immediately"},
+		{mcp.TierConfirmationRequired, "a human approves first"},
+		{mcp.TierDynamic, "decided per call from its arguments"},
+	} {
+		if names := groups[g.tier]; len(names) > 0 {
+			slices.Sort(names)
+			parts = append(parts, fmt.Sprintf("%s for %s", g.words, strings.Join(names, ", ")))
+		}
+	}
+	return strings.Join(parts, "; ")
 }
 
 // toolList reads Registry.Offered rather than filtering Specs itself, so the

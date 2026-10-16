@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Ellipsis } from "lucide-react";
 import { Button } from "./atoms";
-import type { TimelineEntry } from "./composed";
 import { RecordBack, RecordView } from "./recordview";
+import type { TimelineEntry } from "./timelineentry";
 
 const emailEntry: TimelineEntry = {
   id: "a1",

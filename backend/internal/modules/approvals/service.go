@@ -92,10 +92,7 @@ const (
 	approvalKeyStatus = "status"
 	// entityApproval is what almost every row and event from this module is
 	// about: the staged approval itself, never the record it proposes changing.
-	entityApproval = "approval"
-	// entitySigningKey is the exception — the key the tokens are signed with,
-	// which is a subject of its own and not an approval.
-	entitySigningKey    = "signing_key"
+	entityApproval      = "approval"
 	approvalKeyRedeemed = "redeemed"
 	approvalKeyBundle   = "bundle_id"
 	approvalKeyKind     = "kind"

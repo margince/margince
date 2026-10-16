@@ -1314,7 +1314,7 @@ public.attachment.attachment_byte_size_js_safe CHECK (((byte_size >= '-900719925
 public.attachment.attachment_category_check CHECK ((category = ANY (ARRAY['contract'::text, 'offer'::text, 'legal'::text, 'email_attachment'::text, 'message_attachment'::text, 'other'::text])))
 public.attachment.attachment_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES contract(id) ON DELETE SET NULL
 public.attachment.attachment_doc_state_check CHECK ((doc_state = ANY (ARRAY['draft'::text, 'current'::text, 'final'::text, 'superseded'::text])))
-public.attachment.attachment_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text])))
+public.attachment.attachment_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text])))
 public.attachment.attachment_external_identity_complete CHECK (((external_source_id IS NULL) = (external_part_id IS NULL)))
 public.attachment.attachment_pkey PRIMARY KEY (id)
 public.attachment.attachment_supersedes_fkey FOREIGN KEY (supersedes_id) REFERENCES attachment(id) ON DELETE SET NULL (supersedes_id)
@@ -3899,7 +3899,7 @@ public.embedding.chunk_hash text NOT NULL gen=- def=-
 public.embedding.chunk_ix integer NOT NULL gen=- def=0
 public.embedding.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.embedding.embedding vector NOT NULL gen=- def=-
-public.embedding.embedding_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text])))
+public.embedding.embedding_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text])))
 public.embedding.embedding_pkey PRIMARY KEY (entity_type, entity_id, chunk_ix)
 public.embedding.entity_id uuid NOT NULL gen=- def=-
 public.embedding.entity_type text NOT NULL gen=- def=-
@@ -3986,7 +3986,7 @@ public.field_provenance.confidence real gen=- def=-
 public.field_provenance.evidence_ref text gen=- def=-
 public.field_provenance.field_name text NOT NULL gen=- def=-
 public.field_provenance.field_provenance_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))
-public.field_provenance.field_provenance_object_type_check CHECK ((object_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text])))
+public.field_provenance.field_provenance_object_type_check CHECK ((object_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text])))
 public.field_provenance.field_provenance_pkey PRIMARY KEY (id)
 public.field_provenance.id uuid NOT NULL gen=- def=uuidv7()
 public.field_provenance.object_id uuid NOT NULL gen=- def=-
@@ -5110,6 +5110,7 @@ public.linkedin_account.created_at timestamp with time zone NOT NULL gen=- def=n
 public.linkedin_account.linkedin_account_pkey PRIMARY KEY (user_id)
 public.linkedin_account.linkedin_account_workspace_id_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.linkedin_account.profile_url text gen=- def=-
+public.linkedin_account.reach_visible_to_team boolean NOT NULL gen=- def=true
 public.linkedin_account.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.linkedin_account.user_id uuid NOT NULL gen=- def=-
 public.linkedin_account_pkey CREATE UNIQUE INDEX linkedin_account_pkey ON public.linkedin_account USING btree (user_id)
@@ -6776,14 +6777,6 @@ public.signal_thread_scan.signal_thread_scan_resolved_company_fkey FOREIGN KEY (
 public.signal_thread_scan.signal_thread_scan_scanned_from_shape CHECK (((scanned_from IS NULL) = (scanned_from_id IS NULL)))
 public.signal_thread_scan.thread_key text NOT NULL gen=- def=-
 public.signal_thread_scan_pkey CREATE UNIQUE INDEX signal_thread_scan_pkey ON public.signal_thread_scan USING btree (thread_key)
-public.signing_key acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.signing_key.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.signing_key.kid text NOT NULL gen=- def=-
-public.signing_key.private_key bytea NOT NULL gen=- def=-
-public.signing_key.public_key bytea NOT NULL gen=- def=-
-public.signing_key.retired_at timestamp with time zone gen=- def=-
-public.signing_key.signing_key_pkey PRIMARY KEY (kid)
-public.signing_key_pkey CREATE UNIQUE INDEX signing_key_pkey ON public.signing_key USING btree (kid)
 public.site_read acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.site_read.attempt integer NOT NULL gen=- def=1
 public.site_read.attempt_at timestamp with time zone NOT NULL gen=- def=now()

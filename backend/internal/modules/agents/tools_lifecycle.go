@@ -123,7 +123,7 @@ type relinkActivity struct {
 
 func (t relinkActivity) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "relink_activity", Title: "Re-associate an activity to a record", Version: toolVersionV1,
+		Name: relinkActivityTool, Title: "Re-associate an activity to a record", Version: toolVersionV1,
 		Description: relinkActivityCopy.render(),
 		Instead:     relinkActivityCopy.Instead,
 		// Dynamic because filing under a PROJECT classifies the activity as
@@ -131,6 +131,7 @@ func (t relinkActivity) Spec() mcp.ToolSpec {
 		// other destination is an association that runs at once. See
 		// relinkActivityTier.
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic,
+		Unlisted:     true,
 		TierResolver: relinkActivityTier,
 		OpenAPIOp:    "relinkActivity",
 		InputSchema: schema(`{"type":"object","required":["activity_id","entity_type","entity_id"],"properties":{
@@ -381,11 +382,12 @@ func (t advanceProjectPhase) Spec() mcp.ToolSpec {
 		Description:   advanceProjectPhaseCopy.render(),
 		Instead:       advanceProjectPhaseCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		Unlisted:  true,
 		OpenAPIOp: "advanceProjectPhase",
 		InputSchema: schema(`{"type":"object","required":["project_id","to_phase"],"properties":{
 			"project_id":{"type":"string","format":"uuid"},
 			"to_phase":{"type":"string","enum":["initiative","pursuing","delivering","closed"]},
-			"reason":{"type":"string","description":"Required when to_phase is closed; recorded on the phase-history row either way"},
+			"reason":{"type":"string","minLength":1,"description":"Required when to_phase is closed; recorded on the phase-history row either way"},
 			"if_version":{"type":"integer","description":"The version the caller read; the write is refused as skew if the project moved since"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),

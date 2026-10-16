@@ -248,19 +248,22 @@ export const SecretRevealed: Story = {
       await canvas.findByLabelText(/target url/i),
       "https://hooks.acme.test/inbound",
     );
-    // The event set is a `MultiSelect` (create.tsx), not a page of checkboxes:
-    // the options live in a listbox it portals to the body, so choosing one is
-    // open-then-pick. The list STAYS open after a pick — that is what makes
-    // choosing three of a hundred three clicks — so it is dismissed before the
-    // submit, which it would otherwise cover.
+    // The event set is its own picker: an "Add events" popover over groups
+    // of checkboxes, each row naming the type in words and in code.
+    //
+    // Choosing one is open, tick, and close by the same button. The panel
+    // stays open after a tick, which is what makes choosing three of a
+    // hundred three clicks, and it would cover the submit. Escape closes the
+    // create dialog instead, taking the whole form with it.
+    const addEvents = await canvas.findByRole("button", {
+      name: /Add events/,
+    });
+    await userEvent.click(addEvents);
+    await userEvent.click(await canvas.findByText("deal.stage_changed"));
+    await userEvent.click(addEvents);
     await userEvent.click(
-      await canvas.findByRole("combobox", { name: "Event types" }),
+      canvas.getByRole("button", { name: "Create subscription" }),
     );
-    await userEvent.click(
-      await canvas.findByRole("option", { name: "deal.stage_changed" }),
-    );
-    await userEvent.keyboard("{Escape}");
-    await userEvent.click(canvas.getByRole("button", { name: "Create" }));
   },
 };
 
@@ -269,8 +272,9 @@ export const SecretRevealed: Story = {
 // admin/ops role the create affordance already gates on.
 export const EditOpen: Story = {
   render: cardStory(baseRoutes()),
-  play: async () => {
-    await clickTestIds(["edit-record"]);
+  play: async ({ canvasElement }) => {
+    await openRowActions(canvasElement);
+    await clickTestIds(["edit-webhook-subscription"]);
   },
 };
 

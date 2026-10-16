@@ -92,9 +92,10 @@ func (t searchReportEvidence) Spec() mcp.ToolSpec {
 		Description:   searchReportEvidenceCopy.render(),
 		Instead:       searchReportEvidenceCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Unlisted:  true,
 		OpenAPIOp: "searchReportEvidence",
 		InputSchema: schema(`{"type":"object","required":["run_id","query"],"properties":{
-			"run_id":{"type":"string","format":"uuid","description":"A saved run: run_analytics_query with save answers one."},
+			"run_id":{"type":"string","format":"uuid","description":"A saved run: an analytics query with save answers one."},
 			"cell":{"type":"array","items":{},"description":"One cell's group key values, in the run's group_by order. Omit to search every record the run measured."},
 			"query":{"type":"string","maxLength":1000,"description":"The words the evidence would carry."},
 			"limit":{"type":"integer","minimum":1,"maximum":25,"description":"How many citations, counterexamples and abstentions to return, each."}},

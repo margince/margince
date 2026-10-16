@@ -12,13 +12,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatMoneyCompact, MONEY_ABSENT } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import { Button } from "./atoms";
+import { DealCard } from "./dealcard";
+import { armHoverIntent } from "./hoverintent-testing";
 import {
   type BoardColumn,
   type BoardMoneyColumn,
-  DealCard,
   PipelineBoard,
-} from "./composed";
-import { armHoverIntent } from "./hoverintent-testing";
+} from "./pipelineboard";
 import { RecordView } from "./recordview";
 
 // B-EP09.3b acceptance: the composed surfaces consume the 3a primitives and

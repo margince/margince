@@ -46,7 +46,7 @@ type policy struct {
 	RecordType string // x-mcp-tool record_type ("" when the tool is not record-typed)
 	Tier       string // x-mcp-tool tier: auto_execute | confirmation_required | dynamic
 	Scope      string // x-mcp-tool scope: the passport cap the operation consumes
-	ServedBy   string // x-mcp-tool served_by: "registry" (the handler runs the tool) or "rest_only" (no MCP tool serves the type)
+	ServedBy   string // x-mcp-tool served_by: "registry" when the handler runs the tool
 }
 
 func main() {
@@ -66,7 +66,8 @@ func main() {
 	var doc struct {
 		Paths      map[string]map[string]yaml.Node `yaml:"paths"`
 		Components struct {
-			Schemas map[string]schemaNode `yaml:"schemas"`
+			Schemas    map[string]schemaNode     `yaml:"schemas"`
+			Parameters map[string]queryParameter `yaml:"parameters"`
 		} `yaml:"components"`
 	}
 	if err := yaml.Unmarshal(src, &doc); err != nil {
@@ -89,7 +90,11 @@ func main() {
 
 	// The emitted table must be gofmt-clean like any committed Go file
 	// (map-literal alignment shifts as route keys change length).
-	formatted, err := format.Source([]byte(renderTable(policies, vocab)))
+	views, vErr := readViewQueries(doc.Paths, doc.Components.Parameters, doc.Components.Schemas, policies)
+	if vErr != nil {
+		log.Fatalf("gen-agentpolicy: %v", vErr)
+	}
+	formatted, err := format.Source([]byte(renderTable(policies, vocab) + renderViews(views)))
 	if err != nil {
 		log.Fatalf("gen-agentpolicy: formatting the generated table: %v", err)
 	}
@@ -119,7 +124,8 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 					Scope      string `yaml:"scope"`
 					ServedBy   string `yaml:"served_by"`
 				} `yaml:"x-mcp-tool"`
-				AgentAccess string `yaml:"x-agent-access"`
+				AgentAccess string                 `yaml:"x-agent-access"`
+				Security    *[]map[string][]string `yaml:"security"`
 			}
 			if err := node.Decode(&op); err != nil {
 				log.Fatalf("gen-agentpolicy: %s %s: %v", httpMethod, path, err)
@@ -153,11 +159,12 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 			case mutating[httpMethod]:
 				defects = append(defects, fmt.Sprintf("%s %s (%s): mutating operation carries neither x-mcp-tool nor x-agent-access", httpMethod, path, op.OperationID))
 				continue
+			case op.Security != nil && len(*op.Security) == 0:
+				continue // anonymous: no principal, so no agent, ever reaches it
 			default:
-				// An unannotated read: ordinary agent-readable data. No row,
-				// and no defect — the gate admits a read it has no policy for,
-				// which is the opposite of its mutating default and is why an
-				// unannotated GET does not need to say so.
+				// The gate refuses a route it has no row for, read or write. So
+				// an unannotated read is a defect, as a mutation is.
+				defects = append(defects, fmt.Sprintf("%s %s (%s): operation carries neither x-mcp-tool nor x-agent-access — name the verb that serves it on MCP, or mark it human-only", httpMethod, path, op.OperationID))
 				continue
 			}
 			policies = append(policies, p)
@@ -220,7 +227,7 @@ type agentPolicy struct {
 	RecordType agentRecordType // the record the operation targets; zero when it declares none
 	Tier       agentTier       // contract-declared autonomy tier; zero when it declares none
 	Scope      agentScope      // the passport cap the operation consumes (Access == accessTool)
-	ServedBy   agentServedBy   // registry: the handler's tool call admits it; rest_only: no MCP tool serves the type
+	ServedBy   agentServedBy   // registry: the handler's tool call admits it
 }
 
 // agentPolicies is keyed by "METHOD <chi route pattern>" as the generated

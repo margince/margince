@@ -35,7 +35,8 @@ func TestTheCompositeArchivesWhatItsModulesArchive(t *testing.T) {
 
 	want := []datasource.EntityType{
 		datasource.EntityActivity, datasource.EntityCompany, datasource.EntityContact,
-		datasource.EntityDeal, datasource.EntityProject, datasource.EntityRelationship,
+		datasource.EntityDeal, datasource.EntityOffer, datasource.EntityOfferTemplate, datasource.EntityProduct,
+		datasource.EntityProject, datasource.EntityRelationship,
 	}
 	if !slices.Equal(types, want) {
 		t.Errorf("the composite archives %v, want %v — a staging refusal is built from this list, so a "+

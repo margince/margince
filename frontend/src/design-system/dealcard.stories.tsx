@@ -3,9 +3,10 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { type BoardDeal, DealCard } from "./composed";
+import { DealCard } from "./dealcard";
 import { EmailReference } from "./emailreference";
 import { Eyebrow } from "./eyebrow";
+import type { BoardDeal } from "./pipelineboard";
 
 // The card on its own, for the states the board canvases
 // (pipelineboard.stories.tsx) cannot hold still: a flyout open under a settled

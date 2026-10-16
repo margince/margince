@@ -58,15 +58,17 @@ type registryFeatures struct {
 	lists       bool
 	firstDrafts *firstMessageEngines
 	served      *Server
+	// reclaim deletes a retired offer rendering where no Server holds the store.
+	reclaim deals.RetiredRendering
 }
 
-func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath) *agents.Registry {
+func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath, features registryFeatures) *agents.Registry {
 	db := InstallationDB(pool)
 	brief := meetingBriefReader(newMeetingBriefService(db))
 	if brain == nil {
-		return registryWithGate(db, auth.NewGate(identity.NewService(pool)), nil, send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), registryFeatures{})
+		return registryWithGate(db, auth.NewGate(identity.NewService(pool)), nil, send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), features)
 	}
-	return registryWithGate(db, auth.NewGate(identity.NewService(pool)), newReplyDrafter(pool, brain, nil), send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), registryFeatures{})
+	return registryWithGate(db, auth.NewGate(identity.NewService(pool)), newReplyDrafter(pool, brain, nil), send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), features)
 }
 
 // registryWithGate composes the tool surface. The volume budget charger arrives as
@@ -85,6 +87,7 @@ func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath) 
 // serving a lexically-ranked page under a semantic label.
 func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.EmailDrafter, send SendPath, enricher agents.CompanyEnricher, embedder search.Embedder, transcriptOnLanding activities.TranscriptReadEnqueue, imports agents.Imports, meetingBrief agents.MeetingBriefReader, log *slog.Logger, features registryFeatures, opts ...agents.RegistryOption) *agents.Registry {
 	pool, provider := db.Pool(), providerWithTranscripts(db, transcriptOnLanding)
+	provider = withServerSeams(provider, pool, features)
 	// Every mutating tool shares retry claims and replay authorization on every host role.
 	opts = append(opts, withContractTierFloor(),
 		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
@@ -96,6 +99,8 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterCoreTools(registry, provider, provider, provider, fieldOwnership{pool: pool}, newConsumerMailSeam(db),
 		openDuplicatesFor(pool), tagOfferSeam(db))
 	agents.RegisterListTool(registry, provider, provider)
+	agents.RegisterRecordPartsTool(registry, recordParts{offers: provider, RecordParts: contacts.NewRecordParts(db)})
+	agents.RegisterReadViewTool(registry, readViews(agentPolicies), readViewThrough(viewDoorOf(features.served)))
 	relinker, disqualifier, demoter, advancer := lifecycleSeams(pool)
 	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer)
 	agents.RegisterBulkTool(registry, bulkChangeSeam{engine: newBulkEngine(db, gate).withListsIf(features.lists)})

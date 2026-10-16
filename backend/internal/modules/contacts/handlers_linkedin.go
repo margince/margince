@@ -166,10 +166,7 @@ func (h Handlers) SaveMyLinkedInAccount(w http.ResponseWriter, r *http.Request) 
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
-	account, err := h.store.SaveMyLinkedInAccount(r.Context(), SaveMyLinkedInAccountInput{
-		ProfileURL: derefString(body.ProfileUrl),
-		Connected:  body.Connected != nil && *body.Connected,
-	})
+	account, err := h.store.SaveMyLinkedInAccount(r.Context(), saveLinkedInAccountInput(body))
 	if err != nil {
 		if input, ok := errors.AsType[*DedupeInputError](err); ok {
 			httperr.Write(w, r, httperr.Validation(input.Field, "invalid_profile_url", input.Msg))
@@ -204,20 +201,60 @@ func (h Handlers) GetMyLinkedInReach(w http.ResponseWriter, r *http.Request, par
 	})
 }
 
-// linkedInAccountWire is the one place the account crosses to the wire, so the
-// two handlers cannot describe the same row differently.
-func linkedInAccountWire(a LinkedInAccount) crmcontracts.LinkedInAccount {
-	return crmcontracts.LinkedInAccount{
-		Connected:   a.ConnectedAt != nil,
-		ConnectedAt: a.ConnectedAt,
-		ProfileUrl:  a.ProfileURL,
-		Connections: a.Connections,
+// saveLinkedInAccountInput reads one save request.
+//
+// Each field keeps the pointer it arrived as, because this request carries any
+// subset of three independent facts. Flattened to values, a save of one field
+// overwrites the other two with Go's zero. An absent URL would clear the stored
+// one, and an absent answer would withhold a reach the member shares.
+func saveLinkedInAccountInput(
+	body crmcontracts.SaveLinkedInAccountRequest,
+) SaveMyLinkedInAccountInput {
+	return SaveMyLinkedInAccountInput{
+		ProfileURL:         body.ProfileUrl,
+		Connected:          body.Connected != nil && *body.Connected,
+		ReachVisibleToTeam: body.ReachVisibleToTeam,
 	}
 }
 
-func derefString(s *string) string {
-	if s == nil {
-		return ""
+// linkedInAccountWire is the one place the account crosses to the wire, so the
+// two handlers cannot describe the same row differently.
+func linkedInAccountWire(a LinkedInAccount) crmcontracts.LinkedInAccount {
+	visible := a.ReachVisibleToTeam
+	return crmcontracts.LinkedInAccount{
+		Connected:          a.ConnectedAt != nil,
+		ConnectedAt:        a.ConnectedAt,
+		ProfileUrl:         a.ProfileURL,
+		Connections:        a.Connections,
+		ReachVisibleToTeam: &visible,
 	}
-	return *s
+}
+
+// GetCompanyLinkedInReach answers which colleagues can get the caller in at one
+// account.
+//
+// The store takes the gates: company read, then the row probe that answers 404
+// for an account this caller cannot open. This handler shapes the answer.
+func (h Handlers) GetCompanyLinkedInReach(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	colleagues, err := h.store.CompanyReach(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, companyReachWire(colleagues))
+}
+
+// companyReachWire shapes the answer. The slice is built empty rather than
+// left nil, so an account nobody reaches serialises as [] and not null.
+// A reader cannot tell a null from a field that was never sent.
+func companyReachWire(colleagues []CompanyReachColleague) crmcontracts.CompanyLinkedInReachResponse {
+	out := make([]crmcontracts.CompanyLinkedInReachColleague, 0, len(colleagues))
+	for _, c := range colleagues {
+		out = append(out, crmcontracts.CompanyLinkedInReachColleague{
+			UserId:      openapi_types.UUID(c.UserID),
+			DisplayName: c.DisplayName,
+			Connections: c.Connections,
+		})
+	}
+	return crmcontracts.CompanyLinkedInReachResponse{Colleagues: out}
 }

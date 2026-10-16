@@ -27,4 +27,6 @@ var listDocumentsCopy = toolCopy{
 	Limits: "It lists and never returns a file's contents. Check it before attaching a file " +
 		"again, so the record does not carry the same file twice.",
 	Retain: "Keep next_cursor to read the next page.",
+	Instead: "Use read_view with view company_documents or deal_documents for a company's or deal's " +
+		"document register, filtered by category, contract or state.",
 }

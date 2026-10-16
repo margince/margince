@@ -112,7 +112,7 @@ func (s *fakeSurface) Specs() []mcp.ToolSpec {
 // Offered is what this fake advertises to a run. offered is nil in most cases,
 // which means "the whole surface" — the tests that are not about the filter
 // should not have to describe it.
-func (s *fakeSurface) Offered(context.Context) []mcp.ToolSpec {
+func (s *fakeSurface) Runnable(context.Context) []mcp.ToolSpec {
 	if s.offered != nil {
 		return s.offered
 	}

@@ -1217,12 +1217,13 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## linkedin_account
 
-5 columns · primary key `(user_id)` · referenced by 0 foreign keys
+6 columns · primary key `(user_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `connected_at` | `timestamp with time zone` |  |  |
 | `profile_url` | `text` |  |  |
+| `reach_visible_to_team` | `boolean`, default `true` | yes |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |

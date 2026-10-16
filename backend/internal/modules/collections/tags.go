@@ -386,6 +386,13 @@ func tagSummary(t tagRow) TagSummary {
 	return out
 }
 
+// VocabularyQuery is GET /tags' own two widenings: retired words, and each
+// word's count of the records the caller can see carrying it.
+type VocabularyQuery struct {
+	IncludeArchived bool
+	WithCarriedBy   bool
+}
+
 // TagVocabulary lists the workspace's tags for a caller outside this module.
 //
 // It reports TRUNCATION, because the read is capped at catalogCap and the
@@ -394,18 +401,33 @@ func tagSummary(t tagRow) TagSummary {
 // such tag" for every word past the cap — the exact false negative that makes
 // a caller coin a duplicate, which is what reading the vocabulary was meant to
 // prevent.
-func (s *Store) TagVocabulary(ctx context.Context, includeArchived bool) ([]TagSummary, bool, error) {
+func (s *Store) TagVocabulary(ctx context.Context, q VocabularyQuery) ([]TagSummary, bool, error) {
 	filter := storekit.LiveOnly
-	if includeArchived {
+	if q.IncludeArchived {
 		filter = storekit.IncludeArchived
 	}
-	rows, truncated, err := s.ListTags(ctx, filter)
+	var (
+		rows      []tagRow
+		reach     map[ids.TagID]int
+		truncated bool
+		err       error
+	)
+	if q.WithCarriedBy {
+		rows, reach, truncated, err = s.ListTagsCarried(ctx, filter)
+	} else {
+		rows, truncated, err = s.ListTags(ctx, filter)
+	}
 	if err != nil {
 		return nil, false, err
 	}
 	out := make([]TagSummary, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, tagSummary(r))
+		summary := tagSummary(r)
+		if reach != nil {
+			carriedBy := reach[r.ID]
+			summary.CarriedBy = &carriedBy
+		}
+		out = append(out, summary)
 	}
 	return out, truncated, nil
 }

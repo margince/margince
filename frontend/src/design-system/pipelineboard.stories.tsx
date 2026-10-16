@@ -4,12 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useLayoutEffect, useRef } from "react";
 import { Button, SegmentedControl } from "./atoms";
+import { ListSurface } from "./listsurface";
 import {
   type BoardDeal,
   type BoardMoneyColumn,
   PipelineBoard,
-} from "./composed";
-import { ListSurface } from "./listsurface";
+} from "./pipelineboard";
 import { Select } from "./select";
 
 const meta: Meta<typeof PipelineBoard> = {

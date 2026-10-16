@@ -1,0 +1,56 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package integration
+
+import (
+	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+)
+
+// read_view answers each view as its route answers it, because it runs that
+// route's own handler as the caller. It is checked on a record's derived view,
+// one reference record and a list narrowed by a filter.
+func TestReadViewAnswersAsItsRoutes(t *testing.T) {
+	d := newTwoDoors(t, "read-view-doors", "read")
+	stages := apptest.DiscoverSeededPipeline(t, d.e)
+	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "View Works"})
+
+	sameDoorRecords(t, "company_360",
+		d.rest(t, "GET", "/v1/companies/"+company+"/360", nil),
+		d.tool(t, "read_view", map[string]any{"view": "company_360", "id": company}), company)
+	sameDoorRecords(t, "stages",
+		d.rest(t, "GET", "/v1/stages?pipeline_id="+stages.PipelineID, nil),
+		d.tool(t, "read_view", map[string]any{"view": "stages", "pipeline_id": stages.PipelineID}), stages.Open)
+	sameDoorRecords(t, "pipeline",
+		d.rest(t, "GET", "/v1/pipelines/"+stages.PipelineID, nil),
+		d.tool(t, "read_view", map[string]any{"view": "pipeline", "id": stages.PipelineID}), stages.PipelineID)
+
+	deal := openDeal(t, d.e, stages, "View renewal")
+	status := sameRecords[dealStatusCard](t, "deal_status",
+		d.rest(t, "GET", "/v1/deals/"+deal+"/status?facts_only=true", nil),
+		d.tool(t, "read_view", map[string]any{"view": "deal_status", "id": deal, "facts_only": true}))
+	if status.DealID != deal {
+		t.Errorf("deal_status answered deal %q, want %q", status.DealID, deal)
+	}
+}
+
+// dealStatusCard is what both doors answer about a deal's status, less the
+// time it was written.
+type dealStatusCard struct {
+	DealID      string `json:"deal_id"`
+	GeneratedBy string `json:"generated_by"`
+}
+
+// A view's path value that spells a fixed sibling route lands on that route.
+// import_run's {id} as "template" reaches the human-only import template, which
+// read_view must refuse rather than serve.
+func TestReadViewCannotReachAHumanOnlySiblingRoute(t *testing.T) {
+	d := newTwoDoors(t, "read-view-sibling", "read")
+	if refused := d.toolRefused(t, "read_view", map[string]any{"view": "import_run", "id": "template"}); refused == "" {
+		t.Fatal("read_view served the human-only import template through a view's path value")
+	}
+}

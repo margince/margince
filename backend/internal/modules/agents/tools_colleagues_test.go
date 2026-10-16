@@ -22,7 +22,8 @@ import (
 // as, and no tool could name it. assignee_id and owner_id take these ids.
 func TestListColleaguesAnswersSeatsWithWhatAssignmentNeeds(t *testing.T) {
 	lena := ids.NewV7()
-	out, err := listColleagues{list: func(_ context.Context, q string) ([]Colleague, bool, error) {
+	out, err := listColleagues{list: func(_ context.Context, roster ColleagueQuery) ([]Colleague, bool, error) {
+		q := roster.Q
 		if q != "lena" {
 			t.Errorf("the filter reached the roster as %q, want it forwarded", q)
 		}
@@ -50,7 +51,7 @@ func TestListColleaguesAnswersSeatsWithWhatAssignmentNeeds(t *testing.T) {
 // serializes as an empty array rather than null — a caller iterating the result
 // must not have to guard for both.
 func TestListColleaguesAnswersAnEmptyRosterAsAList(t *testing.T) {
-	out, err := listColleagues{list: func(context.Context, string) ([]Colleague, bool, error) {
+	out, err := listColleagues{list: func(context.Context, ColleagueQuery) ([]Colleague, bool, error) {
 		return nil, false, nil
 	}}.Handle(context.Background(), json.RawMessage(`{"q":"nobody"}`))
 	if err != nil {
@@ -67,7 +68,7 @@ func TestListColleaguesAnswersAnEmptyRosterAsAList(t *testing.T) {
 // A capped roster says so. Told nothing, a caller reads 200 seats as the whole
 // company and reports that a colleague does not work here.
 func TestListColleaguesSaysWhenTheRosterIsLongerThanTheAnswer(t *testing.T) {
-	out, err := listColleagues{list: func(context.Context, string) ([]Colleague, bool, error) {
+	out, err := listColleagues{list: func(context.Context, ColleagueQuery) ([]Colleague, bool, error) {
 		return []Colleague{{UserID: ids.NewV7(), DisplayName: "A"}}, true, nil
 	}}.Handle(context.Background(), json.RawMessage(`{}`))
 	if err != nil {
@@ -92,7 +93,8 @@ func TestAColleagueMissHandsOverTheRosterItWasMatchedAgainst(t *testing.T) {
 	t.Parallel()
 	lena, tom := ids.NewV7(), ids.NewV7()
 	asked := []string{}
-	out, err := listColleagues{list: func(_ context.Context, q string) ([]Colleague, bool, error) {
+	out, err := listColleagues{list: func(_ context.Context, roster ColleagueQuery) ([]Colleague, bool, error) {
+		q := roster.Q
 		asked = append(asked, q)
 		if q != "" {
 			return nil, false, nil
@@ -132,7 +134,7 @@ func TestAColleagueMissHandsOverTheRosterItWasMatchedAgainst(t *testing.T) {
 func TestAColleagueHitDoesNotAlsoReadTheWholeRoster(t *testing.T) {
 	t.Parallel()
 	reads := 0
-	out, err := listColleagues{list: func(_ context.Context, q string) ([]Colleague, bool, error) {
+	out, err := listColleagues{list: func(context.Context, ColleagueQuery) ([]Colleague, bool, error) {
 		reads++
 		return []Colleague{{UserID: ids.NewV7(), DisplayName: "Lena Fischer"}}, false, nil
 	}}.Handle(context.Background(), json.RawMessage(`{"q":"Lena"}`))
@@ -156,7 +158,7 @@ func TestAColleagueHitDoesNotAlsoReadTheWholeRoster(t *testing.T) {
 func TestAnEmptyWorkspaceAnswersEmptyWithoutAskingTwice(t *testing.T) {
 	t.Parallel()
 	reads := 0
-	out, err := listColleagues{list: func(context.Context, string) ([]Colleague, bool, error) {
+	out, err := listColleagues{list: func(context.Context, ColleagueQuery) ([]Colleague, bool, error) {
 		reads++
 		return nil, false, nil
 	}}.Handle(context.Background(), json.RawMessage(`{}`))
@@ -203,7 +205,8 @@ func warnedWith(facts *envelopeFacts, code string) (Warning, bool) {
 // not conclude absence from it.
 func TestACappedFallbackSaysItIsAPageAndNotTheWorkforce(t *testing.T) {
 	t.Parallel()
-	got, facts := colleagueMiss(t, "Fischer", func(_ context.Context, q string) ([]Colleague, bool, error) {
+	got, facts := colleagueMiss(t, "Fischer", func(_ context.Context, roster ColleagueQuery) ([]Colleague, bool, error) {
+		q := roster.Q
 		if q != "" {
 			return nil, false, nil
 		}
@@ -231,7 +234,8 @@ func TestACappedFallbackSaysItIsAPageAndNotTheWorkforce(t *testing.T) {
 // absent fallback must read as unknown rather than as an empty workspace.
 func TestAnUnreadableFallbackDoesNotDestroyTheAnswerItWasAddedTo(t *testing.T) {
 	t.Parallel()
-	got, facts := colleagueMiss(t, "Fischer", func(_ context.Context, q string) ([]Colleague, bool, error) {
+	got, facts := colleagueMiss(t, "Fischer", func(_ context.Context, roster ColleagueQuery) ([]Colleague, bool, error) {
+		q := roster.Q
 		if q != "" {
 			return nil, false, nil
 		}
@@ -255,7 +259,7 @@ func TestAnUnreadableFallbackDoesNotDestroyTheAnswerItWasAddedTo(t *testing.T) {
 // caller to read an absent list.
 func TestAWorkspaceWithNoSeatsSaysSoRatherThanGoingQuiet(t *testing.T) {
 	t.Parallel()
-	_, facts := colleagueMiss(t, "Fischer", func(context.Context, string) ([]Colleague, bool, error) {
+	_, facts := colleagueMiss(t, "Fischer", func(context.Context, ColleagueQuery) ([]Colleague, bool, error) {
 		return nil, false, nil
 	})
 	warning, ok := warnedWith(facts, CodeNameMatchedNoColleague)
@@ -274,7 +278,7 @@ func TestWhitespaceIsNotANarrowingOnEitherSideOfTheSeam(t *testing.T) {
 	t.Parallel()
 	reads := 0
 	ctx, _ := withEnvelopeFacts(context.Background())
-	if _, err := (listColleagues{list: func(context.Context, string) ([]Colleague, bool, error) {
+	if _, err := (listColleagues{list: func(context.Context, ColleagueQuery) ([]Colleague, bool, error) {
 		reads++
 		return nil, false, nil
 	}}).Handle(ctx, json.RawMessage(`{"q":"   "}`)); err != nil {
@@ -296,7 +300,7 @@ func TestAnEmptyFallbackAndAnUnreadableOneAreDifferentOnTheWire(t *testing.T) {
 	t.Parallel()
 	ctx, _ := withEnvelopeFacts(context.Background())
 
-	empty, err := listColleagues{list: func(context.Context, string) ([]Colleague, bool, error) {
+	empty, err := listColleagues{list: func(context.Context, ColleagueQuery) ([]Colleague, bool, error) {
 		return nil, false, nil
 	}}.Handle(ctx, json.RawMessage(`{"q":"Fischer"}`))
 	if err != nil {
@@ -306,7 +310,8 @@ func TestAnEmptyFallbackAndAnUnreadableOneAreDifferentOnTheWire(t *testing.T) {
 		t.Errorf("a workspace that employs nobody does not say so in the data:\n%s", empty)
 	}
 
-	unreadable, err := listColleagues{list: func(_ context.Context, q string) ([]Colleague, bool, error) {
+	unreadable, err := listColleagues{list: func(_ context.Context, roster ColleagueQuery) ([]Colleague, bool, error) {
+		q := roster.Q
 		if q == "" {
 			return nil, false, errors.New("the roster read failed")
 		}

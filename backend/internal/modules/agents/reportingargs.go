@@ -10,7 +10,7 @@ import "errors"
 // `minimum` and `maximum`.
 func requireReportingIDs(in ReportingRead) error {
 	switch in.Mode {
-	case "report", "editions", "edition":
+	case "report", "report_evaluation", "editions", "edition":
 		if in.ID.IsZero() {
 			return missingReportingID("id", in.Mode)
 		}

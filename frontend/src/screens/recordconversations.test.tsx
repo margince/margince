@@ -2,9 +2,11 @@
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-
-import type { TimelineEntry, TimelineGroup } from "../design-system/composed";
 import { ACTIVITY_KINDS } from "../design-system/recordtimeline";
+import type {
+  TimelineEntry,
+  TimelineGroup,
+} from "../design-system/timelineentry";
 import { LocaleProvider } from "../i18n";
 import {
   CONVERSATION_FILTER_KINDS,

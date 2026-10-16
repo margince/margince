@@ -122,6 +122,9 @@ type ListDealsInput struct {
 	CustomFilters map[string]string
 	// Membership narrows to one list's members (list_id).
 	Membership storekit.ListMemberFilter
+	// MemberOf is the list a seam caller narrowed to; the provider resolves it
+	// into Membership before the read.
+	MemberOf *ids.UUID
 }
 
 // dealNameColumn is the deal's display-name column and the quick-find

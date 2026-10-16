@@ -151,6 +151,9 @@ type ListActivitiesInput struct {
 	// this filter and the rest of the page judging against two different
 	// clock reads.
 	WaitingReplyAsOf *time.Time
+	// WaitingReply asks for the same narrowing judged now. The store reads its
+	// own clock, so the wait and its page judge one snapshot.
+	WaitingReply bool
 	// RequestReviewAsOf reads confirmed obligations independently of queue priority.
 	RequestReviewAsOf *time.Time
 	// ownDomains is the colleague-domain snapshot the waiting walk tests senders

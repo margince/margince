@@ -122,9 +122,8 @@ payload by hand.
 
 **Why a separate file.** `backend/api/crm.yaml` is the REST contract, and the `webhooks:` block
 built into OpenAPI 3.1 would be the clear place for this. But `kin-openapi`, the checker the rest of
-the contract pipeline runs on, drops a `webhooks:` block on load without a word. Turning on its
-`skip-prune` setting runs into a conflict of `ApprovalToken` schema names in another part of
-`crm.yaml`. So the public event contract lives in its own file,
+the contract pipeline runs on, drops a `webhooks:` block on load without a word. So the public
+event contract lives in its own file,
 **`backend/api/public-events.yaml`**. It holds only `components` (no paths, no `webhooks:` block),
 so nothing in it gets dropped:
 

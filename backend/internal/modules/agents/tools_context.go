@@ -116,6 +116,7 @@ func (t searchContext) Spec() mcp.ToolSpec {
 		Description:   searchContextCopy.render(),
 		Instead:       searchContextCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Unlisted:  true,
 		OpenAPIOp: "searchContext",
 		// The input is three members and stays three. The retrieval seam
 		// serves exactly these, and a filter vocabulary invented here would be

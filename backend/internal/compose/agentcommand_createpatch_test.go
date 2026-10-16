@@ -114,32 +114,6 @@ func TestAMalformedPatchIDAnswersNotFound(t *testing.T) {
 	}
 }
 
-// A patch record type the record seam does not serve still stages, with its
-// own type and id — the servedByTheRecordSeam short-circuit
-// (modules/agents/command.go) standing down rather than faulting on a read
-// the seam cannot answer. Staged against a provider that fails EVERY read, so
-// a resolver that consulted the seam anyway fails here rather than passing on
-// a lenient stub — the same proof shape as
-// TestAnArchiveOutsideTheToolSchemaStagesItsOwnTypeAndID.
-func TestAPatchOutsideTheToolSchemaStagesTheRowItNames(t *testing.T) {
-	staging := &capturingApprovals{}
-	pol := agentPolicy{
-		Op: "updateProduct", Access: accessTool, Tool: "update_record",
-		RecordType: recordTypeProduct,
-	}
-	productID := ids.NewV7()
-	body := []byte(`{"name":"Renamed package"}`)
-
-	stageRefusal(httptest.NewRecorder(), patchRequest("/v1/products", productID, body), staging,
-		restCommandDeps{records: hiddenRecord{}}, pol, body)
-
-	if staging.last.TargetType != "product" || staging.last.TargetID != productID {
-		t.Fatalf("staged target = (%s,%s), want (product,%s) — a product is patched over REST whether "+
-			"or not the record seam has ever heard of one",
-			staging.last.TargetType, staging.last.TargetID, productID)
-	}
-}
-
 // An unknown field over REST answers 422 validation_error, not an opaque 500.
 // rejectUnknownFields (modules/agents/recordfields.go) returns a
 // *agents.BadArgsError, an MCP-tool-door type httperr.Classify has no

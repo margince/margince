@@ -342,7 +342,6 @@ describe("ApprovalTray — the deck stages, and only the commit sends", () => {
         return jsonResponse({
           ...queue[0],
           status: "approved",
-          approval_token: "example-brief-token",
         });
       },
     });

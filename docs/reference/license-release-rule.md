@@ -28,8 +28,8 @@ Date. This rule is how we use that part of the license.
 
 ## Why the date counts
 
-- The README makes a public promise: every release turns into Apache 2.0 two
-  years after it ships. An old date typed into the file breaks that promise in
+- The README makes a public promise: every release turns into Apache 2.0 no
+  later than two years after it ships. An old date typed into the file breaks that promise in
   two ways. Later releases turn into Apache 2.0 before two years have passed,
   which gives up the window the license keeps for business use. And a release
   that carries a past date is Apache 2.0 at once.

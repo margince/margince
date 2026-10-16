@@ -34,6 +34,8 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   // name for good. The label says which word survives, because that is the
   // half a reader has to check before releasing it.
   merge_tags: "approval.kind.merge_tags",
+  archive_tag: "approval.kind.archive_tag",
+  change_record_parts: "approval.kind.change_record_parts",
   update_record: "approval.kind.update_record",
   create_record: "approval.kind.create_record",
   send_email: "approval.kind.send_email",

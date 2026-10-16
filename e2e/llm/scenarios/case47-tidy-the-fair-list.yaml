@@ -40,7 +40,7 @@ prompt: |
 
 must_call:
   - read_lists
-  - change_lead_state
+  - demote_lead
   - change_lists
   - bulk_update_records
 may_call:
@@ -48,12 +48,11 @@ may_call:
   - read_record
   - list_records
   - resolve_entities
-  - read_directory
+  - read_workspace
   - query_workspace
   - whoami
 
 must_call_with:
-  - change_lead_state.action=demote
   - change_lists.mode=add_member
   - bulk_update_records.mode=preview
   - bulk_update_records.mode=execute

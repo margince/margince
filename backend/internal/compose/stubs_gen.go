@@ -1047,6 +1047,10 @@ func (stubs) DraftIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, id 
 	httperr.NotImplemented(w, r, "DraftIntroRequest")
 }
 
+func (stubs) GetCompanyLinkedInReach(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetCompanyLinkedInReach")
+}
+
 func (stubs) GetCompanyLogo(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetCompanyLogo")
 }
@@ -2161,6 +2165,10 @@ func (stubs) DecideLegalReview(w nethttp.ResponseWriter, r *nethttp.Request, id 
 
 func (stubs) WithdrawLegalReview(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "WithdrawLegalReview")
+}
+
+func (stubs) DescribeListFilters(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DescribeListFilters")
 }
 
 func (stubs) ListLists(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListListsParams) {

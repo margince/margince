@@ -100,7 +100,7 @@ var enrichCopy = toolCopy{
 		"Reading one page answers immediately; reading a whole site is queued and answers with a " +
 		"read id rather than the content. What it finds is captured text from a third party, not " +
 		"a fact this workspace has verified.",
-	Instead: "Use change_lead_state to qualify a lead when the missing values are already " +
+	Instead: "Use qualify_lead to qualify a lead when the missing values are already " +
 		"derivable from the record itself, which costs no external read and needs no approval.",
 	Retain: "Keep the company_id you enriched, and the read id when a whole-site read was " +
 		"queued — the result is collected against it later.",

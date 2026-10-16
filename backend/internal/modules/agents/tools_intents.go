@@ -88,7 +88,7 @@ type anchorArgs struct {
 const anchorSchema = `{"type":"object","required":["record_type"],"properties":{
 	"record_type":{"type":"string","enum":["contact","company","deal","lead","project","activity"]},
 	"record_id":{"type":"string","format":"uuid","description":"The record to build around. Give this or record_name, not both."},
-	"record_name":{"type":"string","description":"The record named in words, resolved the way search_records resolves it. Refused with the candidate ids when the name matches more than one, rather than guessing."},
+	"record_name":{"type":"string","description":"The record named in words, resolved the way a record search resolves it. Refused with the candidate ids when the name matches more than one, rather than guessing."},
 	"max_items":{"type":"integer","minimum":1,"maximum":20},
 	"project_id":{"type":"string","format":"uuid","description":"Keep only what is filed under this project or under none"}},
 	"additionalProperties":false}`
@@ -186,6 +186,7 @@ func (t catchMeUpOn) Spec() mcp.ToolSpec {
 		Description:   catchMeUpOnCopy.render(),
 		Instead:       catchMeUpOnCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Unlisted:     true,
 		OpenAPIOp:    "catchUpOnRecord",
 		InputSchema:  schema(anchorSchema),
 		OutputSchema: schemaFor[AssembledContextResult](),
@@ -223,6 +224,7 @@ func (t prepForMeeting) Spec() mcp.ToolSpec {
 		Description:   prepForMeetingCopy.render(),
 		Instead:       prepForMeetingCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Unlisted:     true,
 		OpenAPIOp:    "prepForMeeting",
 		InputSchema:  schema(anchorSchema),
 		OutputSchema: schemaFor[PrepForMeetingResult](),

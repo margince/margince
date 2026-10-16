@@ -280,9 +280,9 @@ def crm_world(records, tags=None, words=None, runs=None):
                 return ok(record)
         return "not found", True
 
-    def read_directory(arguments):
-        if arguments.get("list") != "pipelines":
-            return "unknown list", True
+    def read_workspace(arguments):
+        if arguments.get("topic") != "pipelines":
+            return "unknown topic", True
         stages = [{"id": QUALIFIED, "name": "Qualified"}, {"id": NEGOTIATION, "name": "Negotiation"}]
         return ok({"pipelines": [{"id": "p", "name": "Sales", "stages": stages}]})
 
@@ -304,7 +304,7 @@ def crm_world(records, tags=None, words=None, runs=None):
             return "not found", True
         return ok({"run_id": arguments["run_id"], "state": states.pop(0) if len(states) > 1 else states[0]})
 
-    return {"list_records": list_records, "read_record": read_record, "read_directory": read_directory,
+    return {"list_records": list_records, "read_record": read_record, "read_workspace": read_workspace,
             "read_tags": read_tags, "read_import": read_import}
 
 

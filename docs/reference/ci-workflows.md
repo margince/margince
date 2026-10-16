@@ -8,6 +8,7 @@ workflow is outside the gate:
 
 | Workflow | What starts it | Blocks a merge? |
 |---|---|---|
+| `cla.yml` | `pull_request_target` (`opened`, `reopened`, `synchronize`, `closed`); a PR comment that contains `recheck` or `Contributor License Agreement` | Yes, for an author outside the Margince team |
 | `cache-warm.yml` | `main` every three hours, manual dispatch | No |
 | `merge-attest.yml` | every push to `main` | No (runs after the merge) |
 | `review-coverage.yml` | pull request events, a sent review | No |
@@ -22,6 +23,15 @@ workflow is outside the gate:
 
 The merge queue rule is off, so the `merge_group` trigger in `ci.yml` does not run.
 `main-health.yml` is the only workflow that publishes the SonarCloud analysis of `main`.
+
+## `cla.yml`
+
+Asks every commit author outside the Margince team to accept [CLA.md](../../CLA.md), and
+records each acceptance in a separate signatures repository. Team members and tool accounts are on an
+allowlist, read from GitHub on every run, so the check passes for them at once. It runs on
+`pull_request_target`, because recording needs a secret a fork run never gets, and so it never checks
+out the pull request's code. `backend/gates/cla_test.go` holds every version of the agreement the workflow names to
+the one in `CLA.md`.
 
 ## `cache-warm.yml`
 

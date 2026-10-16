@@ -170,11 +170,10 @@ func TestTheNativeSweepAnswersTheTypesASeatMayReadRatherThanRefusingAll(t *testi
 	}
 }
 
-// A cursor naming a stream this seam does not search is a fault, not a
-// finished walk. The mirror sweeps `activity` and this one does not, so a
-// token minted over there and presented here — after a cutover, say — would
-// otherwise resume "past" a position this provider cannot place and answer a
-// complete empty page to a caller holding a real token.
+// A cursor naming a stream this sweep does not search is a fault, not a
+// finished walk. The mirror sweeps `activity` and this sweep does not. A token
+// minted there would otherwise resume past a position this sweep cannot place,
+// and answer a complete empty page.
 func TestTheNativeSweepRefusesACursorFromAStreamItDoesNotSearch(t *testing.T) {
 	e := Setup(t)
 	seedSweepable(t, e)

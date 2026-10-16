@@ -111,6 +111,7 @@ func (t whatsSlippingThisWeek) Spec() mcp.ToolSpec {
 		Description:   whatsSlippingCopy.render(),
 		Instead:       whatsSlippingCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Unlisted:  true,
 		OpenAPIOp: "listSlippingDeals",
 		InputSchema: schema(fmt.Sprintf(`{"type":"object","properties":{
 			"quiet_days":{"type":"integer","minimum":1,"maximum":%d,"default":%d,"description":"Days without recorded activity after which a deal counts as gone quiet; omit it for the product-wide stalled threshold"},

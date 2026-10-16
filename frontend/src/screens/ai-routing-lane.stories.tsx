@@ -4,7 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { Panel } from "../design-system/panel";
-import { StoryProviders } from "../testing/story-utils";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { type Lane, TiersTable } from "./ai-routing-lane";
 
 const LANES: readonly Lane[] = [
@@ -26,6 +31,13 @@ const LANES: readonly Lane[] = [
 ];
 
 function Tiers() {
+  // The tier lines read the session to learn whether this reader may see the
+  // week's figures, so the table no longer renders without one.
+  installFetchStub({
+    "GET /me": () => jsonResponse(meFixture()),
+    "GET /ai/call-stats": () =>
+      jsonResponse({ window: "7d", group: "tier", rows: [] }),
+  });
   return (
     <StoryProviders>
       <Panel title="Model tiers">

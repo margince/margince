@@ -16,8 +16,13 @@ import (
 // compose-level method (not a module handler) because the registry is a
 // cross-module composition artifact — no single module owns the full surface.
 func (s Server) ListAgentTools(w http.ResponseWriter, _ *http.Request) {
-	body := crmcontracts.AgentToolListResponse{Data: agentToolsFromSpecs(s.toolRegistry.Specs())}
+	body := crmcontracts.AgentToolListResponse{Data: listedAgentTools(s.toolRegistry)}
 	httperr.WriteJSON(w, http.StatusOK, body)
+}
+
+// listedAgentTools is the catalog worded as tools/list words it.
+func listedAgentTools(registry *agents.Registry) []crmcontracts.AgentTool {
+	return agentToolsFromSpecs(registry.ListedSpecs())
 }
 
 func agentToolsFromSpecs(specs []mcp.ToolSpec) []crmcontracts.AgentTool {
@@ -55,9 +60,23 @@ func agentToolsFromSpecs(specs []mcp.ToolSpec) []crmcontracts.AgentTool {
 			RequiredScope: new(string(spec.RequiredScope)),
 			Tier:          tierWire(spec.Tier),
 			Egress:        spec.Egress,
+			Actions:       actionsWire(spec.Actions),
 		})
 	}
 	return out
+}
+
+// actionsWire lists a router's actions with each verb's tier, or nothing for a
+// tool that is not a router.
+func actionsWire(actions []mcp.ToolAction) *[]crmcontracts.AgentToolAction {
+	if len(actions) == 0 {
+		return nil
+	}
+	out := make([]crmcontracts.AgentToolAction, 0, len(actions))
+	for _, a := range actions {
+		out = append(out, crmcontracts.AgentToolAction{Action: a.Action, Verb: a.Verb, Tier: tierWire(a.Tier)})
+	}
+	return &out
 }
 
 // tierWire maps the closed AutoExecute/ConfirmationRequired/Dynamic RiskTier set (the only

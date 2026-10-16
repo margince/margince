@@ -249,12 +249,37 @@ func TestRegisterRefusesABadRouter(t *testing.T) {
 		"a target nobody registered":       {"a": "fake_a", "z": "nope"},
 		"a target that is itself a router": {"a": "fake_a", "r": "fake_router"},
 		"two scopes behind one tool":       {"a": "fake_a", "r": "fake_r"},
-		"two tiers behind one tool":        {"a": "fake_a", "c": "fake_c"},
 		"a target still offered":           {"a": "fake_a", "l": "fake_l"},
 	} {
 		mustPanic(t, why, func() {
 			setup().Register(fakeRouter{name: "bad", targets: targets})
 		})
+	}
+}
+
+// One router may front actions of different tiers. It lists as decided per
+// call, names each action's governance, and admits each at its own verb's tier.
+func TestARouterAdmitsEachActionAtItsOwnTier(t *testing.T) {
+	approvals := &recordingStageApprovals{}
+	r := NewRegistry(approvals, auth.NewGate(fullSeatAuthority{}))
+	quick := &argsTool{spec: targetSpec("fake_a", principal.ScopeWrite, mcp.TierAutoExecute)}
+	r.Register(quick)
+	r.Register(unlistedStaging{&stagingTool{target: ids.NewV7()}})
+	r.Register(fakeRouter{name: "mixed", targets: map[string]string{"a": "fake_a", "send": "send_it"}})
+
+	spec, _ := r.Spec("mixed")
+	if spec.Tier != mcp.TierDynamic || len(spec.Actions) != 2 {
+		t.Fatalf("the router lists tier %v with actions %+v, want decided per call over two", spec.Tier, spec.Actions)
+	}
+	described := DescribeForClient(spec)
+	if !strings.Contains(described, "runs immediately for a") || !strings.Contains(described, "a human approves first for send") {
+		t.Errorf("the governance line does not name each action's tier: %s", described)
+	}
+	if _, err := r.InvokeServed(agentCtx(), "mixed", json.RawMessage(`{"action":"a","x":1}`)); err != nil || quick.calls != 1 {
+		t.Fatalf("the 🟢 action answered %v after %d calls, want it run at once", err, quick.calls)
+	}
+	if _, err := r.InvokeServed(agentCtx(), "mixed", json.RawMessage(`{"action":"send","body":"hi"}`)); !errors.Is(err, apperrors.ErrRequiresApproval) || approvals.kind != "send_it" {
+		t.Fatalf("the 🟡 action answered %v, staged %q; want it staged under send_it", err, approvals.kind)
 	}
 }
 
@@ -357,6 +382,31 @@ func TestARoutedArgumentCarriesEveryTargetsWords(t *testing.T) {
 	}
 	if got := strings.Join(schema.Properties["color"].Enum, ","); got != "blue,none,red" {
 		t.Errorf("color enum = %s, want every target's words", got)
+	}
+}
+
+// Two targets bounding one argument differently advertise the loosest bound, so
+// a value one target takes is never refused by a client holding the schema.
+func TestARoutedArgumentCarriesTheLoosestBound(t *testing.T) {
+	r := NewRegistry(nil, nil)
+	r.Register(shapedTarget("fake_a", `{"limit":{"type":"integer","minimum":1,"maximum":50},"size":{"type":"integer","maximum":9}}`))
+	r.Register(shapedTarget("fake_b", `{"limit":{"type":"integer","minimum":1,"maximum":25},"size":{"type":"integer"}}`))
+	r.Register(fakeRouter{name: "fake_ab", targets: map[string]string{"a": "fake_a", "b": "fake_b"}})
+	spec, _ := r.Spec("fake_ab")
+	var schema struct {
+		Properties map[string]struct {
+			Minimum *float64 `json:"minimum"`
+			Maximum *float64 `json:"maximum"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+		t.Fatal(err)
+	}
+	if limit := schema.Properties["limit"]; limit.Maximum == nil || *limit.Maximum != 50 || limit.Minimum == nil || *limit.Minimum != 1 {
+		t.Errorf("limit is advertised as %+v, want 1..50", limit)
+	}
+	if size := schema.Properties["size"]; size.Maximum != nil {
+		t.Errorf("size is advertised with maximum %v, want none: one target takes any size", *size.Maximum)
 	}
 }
 

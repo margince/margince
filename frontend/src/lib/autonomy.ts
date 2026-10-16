@@ -40,9 +40,24 @@ export function useAgentTierMap(): VerbTierMap {
       return unwrap(await api.GET("/agent-tools"));
     },
   });
+  return tierMapOf(query.data?.data ?? []);
+}
+
+// tierMapOf keys each tool's tier by its name, and each router action's tier by
+// the verb it runs. A verb behind a router keeps its own tier.
+export function tierMapOf(
+  tools: readonly {
+    name: string;
+    tier: TierName;
+    actions?: readonly { verb: string; tier: TierName }[];
+  }[],
+): VerbTierMap {
   const map: VerbTierMap = {};
-  for (const tool of query.data?.data ?? []) {
+  for (const tool of tools) {
     map[tool.name] = tool.tier;
+    for (const action of tool.actions ?? []) {
+      map[action.verb] = action.tier;
+    }
   }
   return map;
 }

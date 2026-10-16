@@ -60,7 +60,7 @@ func TestAWorkspaceWithNoPipelinesAnswersAnEmptyListNotNull(t *testing.T) {
 	// "This workspace has no pipelines configured" is a true and useful answer —
 	// it is the answer that says the deal verbs cannot be used yet. A JSON null
 	// reads to a model as "unknown", which is a different claim.
-	tool := listPipelinesTool{list: func(context.Context) ([]Pipeline, error) { return nil, nil }}
+	tool := listPipelinesTool{list: func(context.Context, bool) ([]Pipeline, error) { return nil, nil }}
 	out, err := tool.Handle(context.Background(), json.RawMessage(`{}`))
 	if err != nil {
 		t.Fatalf("an unconfigured workspace answered an error: %v", err)
@@ -74,7 +74,7 @@ func TestAPipelineWithNoLiveStagesAnswersAnEmptyStageListNotNull(t *testing.T) {
 	// The case a caller most needs to see as "none": a pipeline whose stages are
 	// all archived cannot host a deal, and `"stages":null` would leave a model
 	// unsure whether it simply had not been told.
-	tool := listPipelinesTool{list: func(context.Context) ([]Pipeline, error) {
+	tool := listPipelinesTool{list: func(context.Context, bool) ([]Pipeline, error) {
 		return []Pipeline{{ID: ids.NewV7(), Name: "Sales", IsDefault: true}}, nil
 	}}
 	out, err := tool.Handle(context.Background(), json.RawMessage(`{}`))
@@ -90,7 +90,7 @@ func TestListPipelinesRefusesAnUnknownArgument(t *testing.T) {
 	// The seam is never reached with arguments the tool does not take: a filter
 	// silently ignored would let a caller believe it had narrowed the answer.
 	reached := false
-	tool := listPipelinesTool{list: func(context.Context) ([]Pipeline, error) {
+	tool := listPipelinesTool{list: func(context.Context, bool) ([]Pipeline, error) {
 		reached = true
 		return nil, nil
 	}}
@@ -112,9 +112,11 @@ func TestListPipelinesRefusesAnUnknownArgument(t *testing.T) {
 func TestEveryToolNeedingAPipelineOrStageIDPointsAtListPipelines(t *testing.T) {
 	const source = pipelinesSource
 	checked := 0
-	for _, spec := range fullRegistry(t).Specs() {
+	registry := fullRegistry(t)
+	for _, spec := range registry.Specs() {
 		// The source and the router fronting it owe no pointer to themselves.
-		if spec.Name == "list_pipelines" || spec.Name == "read_directory" {
+		targets, _ := registry.RouteTargets(spec.Name)
+		if spec.Name == "list_pipelines" || slices.Contains(targets, "list_pipelines") {
 			continue
 		}
 		schemaText := string(spec.InputSchema)
@@ -139,7 +141,7 @@ func TestListPipelinesCarriesEveryStageFieldACallerNeeds(t *testing.T) {
 	// it — and `win_probability` and `position` are what let a caller choose
 	// between open stages without reading their names.
 	stage := Stage{ID: ids.NewV7(), Name: "Discovery", Semantic: "open", WinProbability: 25, Position: 2}
-	tool := listPipelinesTool{list: func(context.Context) ([]Pipeline, error) {
+	tool := listPipelinesTool{list: func(context.Context, bool) ([]Pipeline, error) {
 		return []Pipeline{{ID: ids.NewV7(), Name: "Sales", Position: 0, Stages: []Stage{stage}}}, nil
 	}}
 	out, err := tool.Handle(context.Background(), json.RawMessage(`{}`))

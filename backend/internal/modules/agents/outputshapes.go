@@ -38,6 +38,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 // The JSON Schema type tokens this surface emits. Named once, because the
@@ -198,10 +199,13 @@ var (
 	textMarshaler = reflect.TypeFor[encoding.TextMarshaler]()
 )
 
-// idFormat is the `format` an id-shaped string carries. Derived the same way:
-// a type whose zero value renders as a canonical uuid IS one, and saying so is
-// what lets a caller send the value back rather than invent one.
+// idFormat is the `format` an id-shaped or time string carries. A type whose
+// zero value renders as a canonical uuid is one. Saying so lets a caller send
+// the value back rather than invent one.
 func idFormat(t reflect.Type) string {
+	if t == reflect.TypeFor[time.Time]() {
+		return "date-time"
+	}
 	raw, err := json.Marshal(reflect.New(t).Elem().Interface())
 	if err != nil {
 		return ""

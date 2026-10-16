@@ -166,6 +166,7 @@ workspace/
 # `go build ./tools/<name>` run from backend/ drops the same binary at
 # /backend/<name> instead, which is the spelling a session reaches for when it
 # is already in backend/ — so both are listed for the tools that have hit it.
+/backend/gen-agentpolicy
 /backend/gen-aitasks
 /backend/tools/gen-aitasks/gen-aitasks
 /backend/tools/gen-aitasks/gen-aitasks.exe

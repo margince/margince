@@ -30,6 +30,37 @@ function confinementOf(error: unknown): ConfinedKind | null {
  * Confirming a factor lifts the refusal at once. A focus refetch would
  * otherwise swap in the app while the recovery codes are still on screen.
  */
+/**
+ * What the boundary makes of the session probe: the refusal it is
+ * answering, and the confinement that refusal names, if any.
+ *
+ * The refusal is held while the probe re-asks. A query with no data returns
+ * to `pending` for every refetch. This probe holds none while the reader is
+ * signed out.
+ *
+ * Read straight, the boundary would swing between two answers on each
+ * re-ask. That takes the signed-out surface down and builds a new one. Any
+ * non-/me 401 starts one, and a refused password is one.
+ */
+export function useProbeAnswer(me: {
+  data: unknown;
+  error: unknown;
+  isPending: boolean;
+  refetch: () => Promise<unknown>;
+}) {
+  // The error wins over the data beside it. A refetch that fails keeps the
+  // stale data and sets the error together. Two rules reading them apart
+  // would each undo the other on every render.
+  const [held, setHeld] = useState<unknown>(null);
+  if (me.error) {
+    if (me.error !== held) setHeld(me.error);
+  } else if (me.data && held !== null) {
+    setHeld(null);
+  }
+  const refusal = me.error ?? (me.isPending ? held : null);
+  return { refusal, confinement: useConfinement(refusal, me.refetch) };
+}
+
 export function useConfinement(
   error: unknown,
   refetch: () => Promise<unknown>,

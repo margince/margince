@@ -34,6 +34,7 @@ func (t runAnalyticsQuery) Spec() mcp.ToolSpec {
 		Description:   runAnalyticsQueryCopy.render(),
 		Instead:       runAnalyticsQueryCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Unlisted:  true,
 		OpenAPIOp: "runAnalyticsQuery",
 		// The population/field vocabulary is NOT re-declared here — it is
 		// derived per caller and published at margince://schema/analytics; a

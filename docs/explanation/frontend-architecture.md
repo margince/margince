@@ -74,8 +74,8 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   Then come `atoms.tsx` (`Button`, `Badge`, `Avatar`, `Card`, `Modal`, …) and
   `trust.tsx`. The trust parts are `AutonomyDot`, `EvidenceChip`,
   `ConfidenceMeter`, `ProvenanceTag`, `StagingCard` and `FieldDiff`. Next come
-  the Margince Core (`margince-core*`) and `composed.tsx`, which builds on both
-  (`RecordView`, `PipelineBoard`, `GroupedTimelineList`, …). `motion.ts` holds
+  the Margince Core (`margince-core*`) and the composed parts that build on
+  both, such as `recordview.tsx`, `pipelineboard.tsx` and `timeline.tsx`. `motion.ts` holds
   the `prefers-reduced-motion` rule: with it on, a change shows its end state at
   once, never nothing.
 

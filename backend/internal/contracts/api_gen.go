@@ -11959,6 +11959,33 @@ func (e ListDependencyRole) Valid() bool {
 	}
 }
 
+// Defines values for ListFilterOperand.
+const (
+	ListFilterOperandArray   ListFilterOperand = "array"
+	ListFilterOperandBoolean ListFilterOperand = "boolean"
+	ListFilterOperandInteger ListFilterOperand = "integer"
+	ListFilterOperandNumber  ListFilterOperand = "number"
+	ListFilterOperandString  ListFilterOperand = "string"
+)
+
+// Valid indicates whether the value is a known member of the ListFilterOperand enum.
+func (e ListFilterOperand) Valid() bool {
+	switch e {
+	case ListFilterOperandArray:
+		return true
+	case ListFilterOperandBoolean:
+		return true
+	case ListFilterOperandInteger:
+		return true
+	case ListFilterOperandNumber:
+		return true
+	case ListFilterOperandString:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListHistoryEntryKind.
 const (
 	ListHistoryEntryKindMemberAdded   ListHistoryEntryKind = "member_added"
@@ -23269,8 +23296,7 @@ type AddDealRoomDocumentRequest struct {
 	Source   string `json:"source"`
 
 	// Title The buyer-facing name. Defaults to the attachment's filename.
-	Title                *string                `json:"title,omitempty"`
-	AdditionalProperties map[string]interface{} `json:"-"`
+	Title *string `json:"title,omitempty"`
 }
 
 // Address Structured postal address.
@@ -23569,6 +23595,9 @@ type AgentRecordRef struct {
 
 // AgentTool defines model for AgentTool.
 type AgentTool struct {
+	// Actions A router's choices. Each runs one verb and is admitted at that verb's tier, so a router whose actions differ lists its own tier as dynamic. Absent on a tool that is not a router.
+	Actions *[]AgentToolAction `json:"actions,omitempty"`
+
 	// Description What the tool is for, as an MCP client is told it: the outcome it produces, its limits, when a neighbouring tool is the better call, and what to keep from its result — followed by this server's own governance clause, which is absent for a tool that runs immediately and needs only the read scope.
 	Description string `json:"description"`
 
@@ -23579,20 +23608,34 @@ type AgentTool struct {
 	Name string `json:"name"`
 
 	// RequiredScope Passport scope required to call it.
-	RequiredScope *string       `json:"required_scope,omitempty"`
-	Tier          AgentToolTier `json:"tier"`
+	RequiredScope *string `json:"required_scope,omitempty"`
+
+	// Tier Runs at once, waits for a human, or decides per call from its arguments.
+	Tier AgentToolTier `json:"tier"`
 
 	// Title The written display name a client shows in place of the name.
 	Title string `json:"title"`
 }
 
-// AgentToolTier defines model for AgentTool.Tier.
-type AgentToolTier string
+// AgentToolAction defines model for AgentToolAction.
+type AgentToolAction struct {
+	// Action The value the router's action argument takes.
+	Action string `json:"action"`
+
+	// Tier Runs at once, waits for a human, or decides per call from its arguments.
+	Tier AgentToolTier `json:"tier"`
+
+	// Verb The tool the action runs as; approvals and tasks name it.
+	Verb string `json:"verb"`
+}
 
 // AgentToolListResponse defines model for AgentToolListResponse.
 type AgentToolListResponse struct {
 	Data []AgentTool `json:"data"`
 }
+
+// AgentToolTier Runs at once, waits for a human, or decides per call from its arguments.
+type AgentToolTier string
 
 // AgentUsage One window's use of the three agent allowances, and when they reset.
 type AgentUsage struct {
@@ -25276,9 +25319,6 @@ type ApplyTagRequestEntityType string
 
 // Approval A staged 🟡 confirm-first action awaiting human decision.
 type Approval struct {
-	// ApprovalToken Signed single-use token minted on approve (schema ApprovalToken, serialized as compact JWS); authorizes exactly the downstream 🟡 operation it is bound to.
-	ApprovalToken *string `json:"approval_token,omitempty"`
-
 	// BundleId The act that staged this proposal together with its siblings: today, a website read's company facts and the leads it published. Null for a proposal staged on its own. It is a grouping id, not a foreign key: there is no
 	// bundle entity, and every member keeps its own diff hash, version pin, expiry and
 	// verdict (ADR-0036 — the staged row IS the authority object). Decide the whole set with
@@ -25293,7 +25333,7 @@ type Approval struct {
 	DecidedAt  *time.Time          `json:"decided_at,omitempty"`
 	DecidedBy  *openapi_types.UUID `json:"decided_by,omitempty"`
 
-	// DiffHash Hash of the staged proposed_change; the minted approval_token is bound to this hash so a token cannot authorize a different effect.
+	// DiffHash Hash of the staged proposed_change. A redemption whose call hashes differently is refused, so an approval cannot authorize a different effect.
 	DiffHash *string `json:"diff_hash,omitempty"`
 
 	// EffectFailedAt When the work an APPROVED decision released failed to run. Absent on every
@@ -30812,6 +30852,27 @@ type CompanyHierarchyRollup struct {
 // CompanyHierarchyRollupScope defines model for CompanyHierarchyRollup.Scope.
 type CompanyHierarchyRollupScope string
 
+// CompanyLinkedInReachColleague defines model for CompanyLinkedInReachColleague.
+type CompanyLinkedInReachColleague struct {
+	// Connections How many of their connections work at this account. At least one, because a
+	// colleague with none is not listed. Never a list of who those connections
+	// are: they are third parties who never consented to appearing in this CRM.
+	Connections int `json:"connections"`
+
+	// DisplayName The colleague to ask.
+	DisplayName string             `json:"display_name"`
+	UserId      openapi_types.UUID `json:"user_id"`
+}
+
+// CompanyLinkedInReachResponse defines model for CompanyLinkedInReachResponse.
+type CompanyLinkedInReachResponse struct {
+	// Colleagues Highest count first, then by name, so two reads of an unchanged network
+	// return the same order. Empty when nobody on the team reaches this account,
+	// or when everybody who does has switched their reach off: the two read the
+	// same on purpose, because telling them apart would disclose the choice.
+	Colleagues []CompanyLinkedInReachColleague `json:"colleagues"`
+}
+
 // CompanyListResponse defines model for CompanyListResponse.
 type CompanyListResponse struct {
 	Data []Company `json:"data"`
@@ -33586,10 +33647,9 @@ type CreateDealRoomRequest struct {
 	Source    string             `json:"source"`
 
 	// StewardUserId Defaults to the deal's owner when omitted.
-	StewardUserId        *openapi_types.UUID    `json:"steward_user_id,omitempty"`
-	Title                string                 `json:"title"`
-	WelcomeMessage       *string                `json:"welcome_message,omitempty"`
-	AdditionalProperties map[string]interface{} `json:"-"`
+	StewardUserId  *openapi_types.UUID `json:"steward_user_id,omitempty"`
+	Title          string              `json:"title"`
+	WelcomeMessage *string             `json:"welcome_message,omitempty"`
 }
 
 // CreateImportRunRequest Exactly one of two shapes: `object` and `mapping` (and optionally
@@ -38604,11 +38664,10 @@ type IntroRequestStatus string
 // InviteDealRoomParticipantRequest defines model for InviteDealRoomParticipantRequest.
 type InviteDealRoomParticipantRequest struct {
 	// Capability Defaults to `view` — the least that lets someone read the room.
-	Capability           *DealRoomParticipantCapability `json:"capability,omitempty"`
-	Email                openapi_types.Email            `json:"email"`
-	FullName             string                         `json:"full_name"`
-	Source               string                         `json:"source"`
-	AdditionalProperties map[string]interface{}         `json:"-"`
+	Capability *DealRoomParticipantCapability `json:"capability,omitempty"`
+	Email      openapi_types.Email            `json:"email"`
+	FullName   string                         `json:"full_name"`
+	Source     string                         `json:"source"`
 }
 
 // InviteUserRequest Admin-supplied details for a new member. No password — the invite issues a set-password token.
@@ -39698,6 +39757,12 @@ type LinkedInAccount struct {
 
 	// ProfileUrl The member's own public profile — what their imported network is attributed to.
 	ProfileUrl *string `json:"profile_url,omitempty"`
+
+	// ReachVisibleToTeam Whether colleagues who may read a company see how many of this member's
+	// connections work there. True unless they switched it off. It governs the
+	// per-company reach list only — never this member's own reach page, which
+	// answers about themselves.
+	ReachVisibleToTeam *bool `json:"reach_visible_to_team,omitempty"`
 }
 
 // LinkedInImportSummary What one import did, in the terms someone asked to trust it would check.
@@ -39911,6 +39976,27 @@ type ListFieldValue struct {
 
 	// Value The value as text, as the explanation states it; null when the record holds none.
 	Value *string `json:"value,omitempty"`
+}
+
+// ListFilter One filter a record list may be narrowed by.
+type ListFilter struct {
+	// Name The filter's key in list_records' filters object, and the list route's query parameter.
+	Name string `json:"name"`
+
+	// Operand What the string operand spells: a boolean is "true" or "false", an array is comma-separated.
+	Operand ListFilterOperand `json:"operand"`
+
+	// Values The closed vocabulary the filter takes, when it has one.
+	Values *[]string `json:"values,omitempty"`
+}
+
+// ListFilterOperand What the string operand spells: a boolean is "true" or "false", an array is comma-separated.
+type ListFilterOperand string
+
+// ListFiltersVocabulary What `describe_list_filters` answers.
+type ListFiltersVocabulary struct {
+	// RecordTypes For each record type list_records takes, the filters it may be narrowed by.
+	RecordTypes map[string][]ListFilter `json:"record_types"`
 }
 
 // ListHistoryEntry defines model for ListHistoryEntry.
@@ -45445,11 +45531,16 @@ type SaveEmailSignatureRequest struct {
 
 // SaveLinkedInAccountRequest defines model for SaveLinkedInAccountRequest.
 type SaveLinkedInAccountRequest struct {
-	// Connected Record the authorization. Never revokes an existing one.
+	// Connected Record the authorization. Never revokes an existing one, and omitted
+	// leaves it as it stands: disconnecting is its own deliberate act.
 	Connected *bool `json:"connected,omitempty"`
 
 	// ProfileUrl Absolute http(s) URL. Empty clears the stored value.
 	ProfileUrl *string `json:"profile_url,omitempty"`
+
+	// ReachVisibleToTeam Switch off to be left out of the per-company reach list colleagues read.
+	// Omitted leaves the current answer; a member who has never set it is listed.
+	ReachVisibleToTeam *bool `json:"reach_visible_to_team,omitempty"`
 }
 
 // SaveMyDisplayNameRequest defines model for SaveMyDisplayNameRequest.
@@ -48437,10 +48528,9 @@ type UpdateDealRoomDocumentRequest struct {
 	// key never carries a display string. Not configurable, not AI-assigned — the
 	// contact adding the document picks. A plain string rather than an inline enum
 	// for the reason `DealRoomParticipantCapability` gives.
-	GroupKey             *DealRoomDocumentGroup `json:"group_key,omitempty"`
-	Position             *int                   `json:"position,omitempty"`
-	Title                *string                `json:"title,omitempty"`
-	AdditionalProperties map[string]interface{} `json:"-"`
+	GroupKey *DealRoomDocumentGroup `json:"group_key,omitempty"`
+	Position *int                   `json:"position,omitempty"`
+	Title    *string                `json:"title,omitempty"`
 }
 
 // UpdateDealRoomParticipantRequest Any subset; omit a field to leave it unchanged.
@@ -48459,9 +48549,8 @@ type UpdateDealRoomParticipantRequest struct {
 
 	// Email Only while their credential is unconsumed. Changing it invalidates the link
 	// already sent; resend to issue a new one.
-	Email                *openapi_types.Email   `json:"email,omitempty"`
-	FullName             *string                `json:"full_name,omitempty"`
-	AdditionalProperties map[string]interface{} `json:"-"`
+	Email    *openapi_types.Email `json:"email,omitempty"`
+	FullName *string              `json:"full_name,omitempty"`
 }
 
 // UpdateDealRoomRequest Any subset; omit a field to leave it unchanged. HUMAN-ONLY: an invited buyer
@@ -48471,10 +48560,9 @@ type UpdateDealRoomParticipantRequest struct {
 // is a change to what an outside party can reach, so it has its own human-only
 // operation rather than riding an auto-execute patch.
 type UpdateDealRoomRequest struct {
-	StewardUserId        *openapi_types.UUID    `json:"steward_user_id,omitempty"`
-	Title                *string                `json:"title,omitempty"`
-	WelcomeMessage       *string                `json:"welcome_message,omitempty"`
-	AdditionalProperties map[string]interface{} `json:"-"`
+	StewardUserId  *openapi_types.UUID `json:"steward_user_id,omitempty"`
+	Title          *string             `json:"title,omitempty"`
+	WelcomeMessage *string             `json:"welcome_message,omitempty"`
 }
 
 // UpdateImportRunRequest The choices one save changes on a draft run, with the `version` it was
@@ -52365,13 +52453,12 @@ type SendEmailParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
@@ -52393,13 +52480,12 @@ type SendMessageParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
@@ -52973,13 +53059,12 @@ type BookMeetingParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
@@ -53554,13 +53639,12 @@ type CreateCompanyFactParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
@@ -53582,13 +53666,12 @@ type DeleteCompanyFactParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -53617,13 +53700,12 @@ type UpdateCompanyFactParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -53652,13 +53734,12 @@ type ConfirmCompanyFactParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -53714,13 +53795,12 @@ type MergeCompanyParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -53759,13 +53839,12 @@ type UpdateCompanyProfileFieldParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -53794,13 +53873,12 @@ type ConfirmCompanyProfileFieldParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -54944,13 +55022,12 @@ type DraftDealFollowUpsParams struct {
 	// tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
 	IdempotencyKey *ToolIdempotencyKey `json:"Idempotency-Key,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
@@ -55017,13 +55094,12 @@ type AdvanceDealParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -55112,13 +55188,12 @@ type ProgressDealParams struct {
 	// tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
 	IdempotencyKey *ToolIdempotencyKey `json:"Idempotency-Key,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
@@ -55190,13 +55265,12 @@ type SendCompanyEmailParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
@@ -55722,13 +55796,12 @@ type PromoteLeadParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
@@ -55739,13 +55812,12 @@ type QualifyLeadParams struct {
 	// tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
 	IdempotencyKey *ToolIdempotencyKey `json:"Idempotency-Key,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
@@ -56489,13 +56561,12 @@ type CreateProjectParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
@@ -56527,13 +56598,12 @@ type ArchiveProjectParams struct {
 	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
@@ -56562,13 +56632,12 @@ type UpdateProjectParams struct {
 	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
@@ -56590,13 +56659,12 @@ type AdvanceProjectPhaseParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -56609,25 +56677,23 @@ type AdvanceProjectPhaseParams struct {
 
 // SetProjectCompanyParams defines parameters for SetProjectCompany.
 type SetProjectCompanyParams struct {
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
 // RemoveProjectCompanyParams defines parameters for RemoveProjectCompany.
 type RemoveProjectCompanyParams struct {
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
@@ -56687,25 +56753,23 @@ type CorrectProjectHealthAssessmentParams struct {
 
 // SetProjectStakeholderParams defines parameters for SetProjectStakeholder.
 type SetProjectStakeholderParams struct {
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
 // RemoveProjectStakeholderParams defines parameters for RemoveProjectStakeholder.
 type RemoveProjectStakeholderParams struct {
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
@@ -57313,13 +57377,12 @@ type CreateMeetingInvitationParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
@@ -59238,128 +59301,6 @@ type PinWorklistRowJSONRequestBody = WorklistPinRequest
 
 // QueryWorkspaceJSONRequestBody defines body for QueryWorkspace for application/json ContentType.
 type QueryWorkspaceJSONRequestBody = WorkspaceQueryRequest
-
-// Getter for additional properties for AddDealRoomDocumentRequest. Returns the specified
-// element and whether it was found
-func (a AddDealRoomDocumentRequest) Get(fieldName string) (value interface{}, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for AddDealRoomDocumentRequest
-func (a *AddDealRoomDocumentRequest) Set(fieldName string, value interface{}) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]interface{})
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for AddDealRoomDocumentRequest to handle AdditionalProperties
-func (a *AddDealRoomDocumentRequest) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if raw, found := object["attachment_id"]; found {
-		err = json.Unmarshal(raw, &a.AttachmentId)
-		if err != nil {
-			return fmt.Errorf("error reading 'attachment_id': %w", err)
-		}
-		delete(object, "attachment_id")
-	}
-
-	if raw, found := object["group_key"]; found {
-		err = json.Unmarshal(raw, &a.GroupKey)
-		if err != nil {
-			return fmt.Errorf("error reading 'group_key': %w", err)
-		}
-		delete(object, "group_key")
-	}
-
-	if raw, found := object["position"]; found {
-		err = json.Unmarshal(raw, &a.Position)
-		if err != nil {
-			return fmt.Errorf("error reading 'position': %w", err)
-		}
-		delete(object, "position")
-	}
-
-	if raw, found := object["source"]; found {
-		err = json.Unmarshal(raw, &a.Source)
-		if err != nil {
-			return fmt.Errorf("error reading 'source': %w", err)
-		}
-		delete(object, "source")
-	}
-
-	if raw, found := object["title"]; found {
-		err = json.Unmarshal(raw, &a.Title)
-		if err != nil {
-			return fmt.Errorf("error reading 'title': %w", err)
-		}
-		delete(object, "title")
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]interface{})
-		for fieldName, fieldBuf := range object {
-			var fieldVal interface{}
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for AddDealRoomDocumentRequest to handle AdditionalProperties
-func (a AddDealRoomDocumentRequest) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	object["attachment_id"], err = json.Marshal(a.AttachmentId)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'attachment_id': %w", err)
-	}
-
-	object["group_key"], err = json.Marshal(a.GroupKey)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'group_key': %w", err)
-	}
-
-	if a.Position != nil {
-		object["position"], err = json.Marshal(a.Position)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'position': %w", err)
-		}
-	}
-
-	object["source"], err = json.Marshal(a.Source)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'source': %w", err)
-	}
-
-	if a.Title != nil {
-		object["title"], err = json.Marshal(a.Title)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'title': %w", err)
-		}
-	}
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
-		}
-	}
-	return json.Marshal(object)
-}
 
 // Getter for additional properties for Address. Returns the specified
 // element and whether it was found
@@ -62226,143 +62167,6 @@ func (a CreateDealRequest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
-// Getter for additional properties for CreateDealRoomRequest. Returns the specified
-// element and whether it was found
-func (a CreateDealRoomRequest) Get(fieldName string) (value interface{}, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for CreateDealRoomRequest
-func (a *CreateDealRoomRequest) Set(fieldName string, value interface{}) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]interface{})
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for CreateDealRoomRequest to handle AdditionalProperties
-func (a *CreateDealRoomRequest) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if raw, found := object["deal_id"]; found {
-		err = json.Unmarshal(raw, &a.DealId)
-		if err != nil {
-			return fmt.Errorf("error reading 'deal_id': %w", err)
-		}
-		delete(object, "deal_id")
-	}
-
-	if raw, found := object["expires_at"]; found {
-		err = json.Unmarshal(raw, &a.ExpiresAt)
-		if err != nil {
-			return fmt.Errorf("error reading 'expires_at': %w", err)
-		}
-		delete(object, "expires_at")
-	}
-
-	if raw, found := object["source"]; found {
-		err = json.Unmarshal(raw, &a.Source)
-		if err != nil {
-			return fmt.Errorf("error reading 'source': %w", err)
-		}
-		delete(object, "source")
-	}
-
-	if raw, found := object["steward_user_id"]; found {
-		err = json.Unmarshal(raw, &a.StewardUserId)
-		if err != nil {
-			return fmt.Errorf("error reading 'steward_user_id': %w", err)
-		}
-		delete(object, "steward_user_id")
-	}
-
-	if raw, found := object["title"]; found {
-		err = json.Unmarshal(raw, &a.Title)
-		if err != nil {
-			return fmt.Errorf("error reading 'title': %w", err)
-		}
-		delete(object, "title")
-	}
-
-	if raw, found := object["welcome_message"]; found {
-		err = json.Unmarshal(raw, &a.WelcomeMessage)
-		if err != nil {
-			return fmt.Errorf("error reading 'welcome_message': %w", err)
-		}
-		delete(object, "welcome_message")
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]interface{})
-		for fieldName, fieldBuf := range object {
-			var fieldVal interface{}
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for CreateDealRoomRequest to handle AdditionalProperties
-func (a CreateDealRoomRequest) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	object["deal_id"], err = json.Marshal(a.DealId)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'deal_id': %w", err)
-	}
-
-	if a.ExpiresAt != nil {
-		object["expires_at"], err = json.Marshal(a.ExpiresAt)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'expires_at': %w", err)
-		}
-	}
-
-	object["source"], err = json.Marshal(a.Source)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'source': %w", err)
-	}
-
-	if a.StewardUserId != nil {
-		object["steward_user_id"], err = json.Marshal(a.StewardUserId)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'steward_user_id': %w", err)
-		}
-	}
-
-	object["title"], err = json.Marshal(a.Title)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'title': %w", err)
-	}
-
-	if a.WelcomeMessage != nil {
-		object["welcome_message"], err = json.Marshal(a.WelcomeMessage)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'welcome_message': %w", err)
-		}
-	}
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
-		}
-	}
-	return json.Marshal(object)
-}
-
 // Getter for additional properties for CreateLeadRequest. Returns the specified
 // element and whether it was found
 func (a CreateLeadRequest) Get(fieldName string) (value interface{}, found bool) {
@@ -64750,113 +64554,6 @@ func (a DealRoomParticipant) MarshalJSON() ([]byte, error) {
 	object["updated_at"], err = json.Marshal(a.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'updated_at': %w", err)
-	}
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
-		}
-	}
-	return json.Marshal(object)
-}
-
-// Getter for additional properties for InviteDealRoomParticipantRequest. Returns the specified
-// element and whether it was found
-func (a InviteDealRoomParticipantRequest) Get(fieldName string) (value interface{}, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for InviteDealRoomParticipantRequest
-func (a *InviteDealRoomParticipantRequest) Set(fieldName string, value interface{}) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]interface{})
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for InviteDealRoomParticipantRequest to handle AdditionalProperties
-func (a *InviteDealRoomParticipantRequest) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if raw, found := object["capability"]; found {
-		err = json.Unmarshal(raw, &a.Capability)
-		if err != nil {
-			return fmt.Errorf("error reading 'capability': %w", err)
-		}
-		delete(object, "capability")
-	}
-
-	if raw, found := object["email"]; found {
-		err = json.Unmarshal(raw, &a.Email)
-		if err != nil {
-			return fmt.Errorf("error reading 'email': %w", err)
-		}
-		delete(object, "email")
-	}
-
-	if raw, found := object["full_name"]; found {
-		err = json.Unmarshal(raw, &a.FullName)
-		if err != nil {
-			return fmt.Errorf("error reading 'full_name': %w", err)
-		}
-		delete(object, "full_name")
-	}
-
-	if raw, found := object["source"]; found {
-		err = json.Unmarshal(raw, &a.Source)
-		if err != nil {
-			return fmt.Errorf("error reading 'source': %w", err)
-		}
-		delete(object, "source")
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]interface{})
-		for fieldName, fieldBuf := range object {
-			var fieldVal interface{}
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for InviteDealRoomParticipantRequest to handle AdditionalProperties
-func (a InviteDealRoomParticipantRequest) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	if a.Capability != nil {
-		object["capability"], err = json.Marshal(a.Capability)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'capability': %w", err)
-		}
-	}
-
-	object["email"], err = json.Marshal(a.Email)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'email': %w", err)
-	}
-
-	object["full_name"], err = json.Marshal(a.FullName)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'full_name': %w", err)
-	}
-
-	object["source"], err = json.Marshal(a.Source)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'source': %w", err)
 	}
 
 	for fieldName, field := range a.AdditionalProperties {
@@ -68175,300 +67872,6 @@ func (a UpdateDealRequest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
-// Getter for additional properties for UpdateDealRoomDocumentRequest. Returns the specified
-// element and whether it was found
-func (a UpdateDealRoomDocumentRequest) Get(fieldName string) (value interface{}, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for UpdateDealRoomDocumentRequest
-func (a *UpdateDealRoomDocumentRequest) Set(fieldName string, value interface{}) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]interface{})
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for UpdateDealRoomDocumentRequest to handle AdditionalProperties
-func (a *UpdateDealRoomDocumentRequest) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if raw, found := object["group_key"]; found {
-		err = json.Unmarshal(raw, &a.GroupKey)
-		if err != nil {
-			return fmt.Errorf("error reading 'group_key': %w", err)
-		}
-		delete(object, "group_key")
-	}
-
-	if raw, found := object["position"]; found {
-		err = json.Unmarshal(raw, &a.Position)
-		if err != nil {
-			return fmt.Errorf("error reading 'position': %w", err)
-		}
-		delete(object, "position")
-	}
-
-	if raw, found := object["title"]; found {
-		err = json.Unmarshal(raw, &a.Title)
-		if err != nil {
-			return fmt.Errorf("error reading 'title': %w", err)
-		}
-		delete(object, "title")
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]interface{})
-		for fieldName, fieldBuf := range object {
-			var fieldVal interface{}
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for UpdateDealRoomDocumentRequest to handle AdditionalProperties
-func (a UpdateDealRoomDocumentRequest) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	if a.GroupKey != nil {
-		object["group_key"], err = json.Marshal(a.GroupKey)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'group_key': %w", err)
-		}
-	}
-
-	if a.Position != nil {
-		object["position"], err = json.Marshal(a.Position)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'position': %w", err)
-		}
-	}
-
-	if a.Title != nil {
-		object["title"], err = json.Marshal(a.Title)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'title': %w", err)
-		}
-	}
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
-		}
-	}
-	return json.Marshal(object)
-}
-
-// Getter for additional properties for UpdateDealRoomParticipantRequest. Returns the specified
-// element and whether it was found
-func (a UpdateDealRoomParticipantRequest) Get(fieldName string) (value interface{}, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for UpdateDealRoomParticipantRequest
-func (a *UpdateDealRoomParticipantRequest) Set(fieldName string, value interface{}) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]interface{})
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for UpdateDealRoomParticipantRequest to handle AdditionalProperties
-func (a *UpdateDealRoomParticipantRequest) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if raw, found := object["capability"]; found {
-		err = json.Unmarshal(raw, &a.Capability)
-		if err != nil {
-			return fmt.Errorf("error reading 'capability': %w", err)
-		}
-		delete(object, "capability")
-	}
-
-	if raw, found := object["email"]; found {
-		err = json.Unmarshal(raw, &a.Email)
-		if err != nil {
-			return fmt.Errorf("error reading 'email': %w", err)
-		}
-		delete(object, "email")
-	}
-
-	if raw, found := object["full_name"]; found {
-		err = json.Unmarshal(raw, &a.FullName)
-		if err != nil {
-			return fmt.Errorf("error reading 'full_name': %w", err)
-		}
-		delete(object, "full_name")
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]interface{})
-		for fieldName, fieldBuf := range object {
-			var fieldVal interface{}
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for UpdateDealRoomParticipantRequest to handle AdditionalProperties
-func (a UpdateDealRoomParticipantRequest) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	if a.Capability != nil {
-		object["capability"], err = json.Marshal(a.Capability)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'capability': %w", err)
-		}
-	}
-
-	if a.Email != nil {
-		object["email"], err = json.Marshal(a.Email)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'email': %w", err)
-		}
-	}
-
-	if a.FullName != nil {
-		object["full_name"], err = json.Marshal(a.FullName)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'full_name': %w", err)
-		}
-	}
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
-		}
-	}
-	return json.Marshal(object)
-}
-
-// Getter for additional properties for UpdateDealRoomRequest. Returns the specified
-// element and whether it was found
-func (a UpdateDealRoomRequest) Get(fieldName string) (value interface{}, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for UpdateDealRoomRequest
-func (a *UpdateDealRoomRequest) Set(fieldName string, value interface{}) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]interface{})
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for UpdateDealRoomRequest to handle AdditionalProperties
-func (a *UpdateDealRoomRequest) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if raw, found := object["steward_user_id"]; found {
-		err = json.Unmarshal(raw, &a.StewardUserId)
-		if err != nil {
-			return fmt.Errorf("error reading 'steward_user_id': %w", err)
-		}
-		delete(object, "steward_user_id")
-	}
-
-	if raw, found := object["title"]; found {
-		err = json.Unmarshal(raw, &a.Title)
-		if err != nil {
-			return fmt.Errorf("error reading 'title': %w", err)
-		}
-		delete(object, "title")
-	}
-
-	if raw, found := object["welcome_message"]; found {
-		err = json.Unmarshal(raw, &a.WelcomeMessage)
-		if err != nil {
-			return fmt.Errorf("error reading 'welcome_message': %w", err)
-		}
-		delete(object, "welcome_message")
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]interface{})
-		for fieldName, fieldBuf := range object {
-			var fieldVal interface{}
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for UpdateDealRoomRequest to handle AdditionalProperties
-func (a UpdateDealRoomRequest) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	if a.StewardUserId != nil {
-		object["steward_user_id"], err = json.Marshal(a.StewardUserId)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'steward_user_id': %w", err)
-		}
-	}
-
-	if a.Title != nil {
-		object["title"], err = json.Marshal(a.Title)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'title': %w", err)
-		}
-	}
-
-	if a.WelcomeMessage != nil {
-		object["welcome_message"], err = json.Marshal(a.WelcomeMessage)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'welcome_message': %w", err)
-		}
-	}
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
-		}
-	}
-	return json.Marshal(object)
-}
-
 // Getter for additional properties for UpdateLeadRequest. Returns the specified
 // element and whether it was found
 func (a UpdateLeadRequest) Get(fieldName string) (value interface{}, found bool) {
@@ -70183,7 +69586,7 @@ type ServerInterface interface {
 	// Get a single approval item (full proposed diff + evidence).
 	// (GET /approvals/{id})
 	GetApproval(w http.ResponseWriter, r *http.Request, id Id)
-	// Approve a staged action (commits it; mints the approval token).
+	// Approve a staged action (commits it).
 	// (POST /approvals/{id}/approve)
 	ApproveApproval(w http.ResponseWriter, r *http.Request, id Id, params ApproveApprovalParams)
 	// Say you have seen that an approved change did not run, so it leaves your Worklist.
@@ -70594,6 +69997,9 @@ type ServerInterface interface {
 	// Draft the message asking a colleague to introduce you.
 	// (POST /companies/{id}/intro-request-draft)
 	DraftIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
+	// Which colleagues can get you in at this company.
+	// (GET /companies/{id}/linkedin-reach)
+	GetCompanyLinkedInReach(w http.ResponseWriter, r *http.Request, id Id)
 	// Stream a company's logo image.
 	// (GET /companies/{id}/logo)
 	GetCompanyLogo(w http.ResponseWriter, r *http.Request, id Id)
@@ -71431,6 +70837,9 @@ type ServerInterface interface {
 	// Take back an open request.
 	// (POST /legal-reviews/{id}/withdraw)
 	WithdrawLegalReview(w http.ResponseWriter, r *http.Request, id Id)
+	// The filters a record list may be narrowed by, for each record type.
+	// (GET /list-filters)
+	DescribeListFilters(w http.ResponseWriter, r *http.Request)
 	// Find the lists this caller may see, by name.
 	// (GET /lists)
 	ListLists(w http.ResponseWriter, r *http.Request, params ListListsParams)
@@ -73078,7 +72487,7 @@ func (_ Unimplemented) GetApproval(w http.ResponseWriter, r *http.Request, id Id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Approve a staged action (commits it; mints the approval token).
+// Approve a staged action (commits it).
 // (POST /approvals/{id}/approve)
 func (_ Unimplemented) ApproveApproval(w http.ResponseWriter, r *http.Request, id Id, params ApproveApprovalParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -73897,6 +73306,12 @@ func (_ Unimplemented) ListIntroPaths(w http.ResponseWriter, r *http.Request, id
 // Draft the message asking a colleague to introduce you.
 // (POST /companies/{id}/intro-request-draft)
 func (_ Unimplemented) DraftIntroRequest(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which colleagues can get you in at this company.
+// (GET /companies/{id}/linkedin-reach)
+func (_ Unimplemented) GetCompanyLinkedInReach(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -75571,6 +74986,12 @@ func (_ Unimplemented) DecideLegalReview(w http.ResponseWriter, r *http.Request,
 // Take back an open request.
 // (POST /legal-reviews/{id}/withdraw)
 func (_ Unimplemented) WithdrawLegalReview(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The filters a record list may be narrowed by, for each record type.
+// (GET /list-filters)
+func (_ Unimplemented) DescribeListFilters(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -86759,8 +86180,6 @@ func (siw *ServerInterfaceWrapper) GetCompanyAccess(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -88182,6 +87601,38 @@ func (siw *ServerInterfaceWrapper) DraftIntroRequest(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DraftIntroRequest(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCompanyLinkedInReach operation middleware
+func (siw *ServerInterfaceWrapper) GetCompanyLinkedInReach(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCompanyLinkedInReach(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -90681,8 +90132,6 @@ func (siw *ServerInterfaceWrapper) GetContactAccess(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -90839,8 +90288,6 @@ func (siw *ServerInterfaceWrapper) GetContactConsent(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -91068,8 +90515,6 @@ func (siw *ServerInterfaceWrapper) GetContactConsentGuard(w http.ResponseWriter,
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -96091,6 +95536,8 @@ func (siw *ServerInterfaceWrapper) ListDedupeCandidates(w http.ResponseWriter, r
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	r = r.WithContext(ctx)
 
 	// Parameter object where we will unmarshal all parameters from the context
@@ -96177,6 +95624,8 @@ func (siw *ServerInterfaceWrapper) GetDedupeCandidate(w http.ResponseWriter, r *
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -98031,8 +97480,6 @@ func (siw *ServerInterfaceWrapper) GetSeatUsage(w http.ResponseWriter, r *http.R
 func (siw *ServerInterfaceWrapper) GetInstallationSettings(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -100056,6 +99503,28 @@ func (siw *ServerInterfaceWrapper) WithdrawLegalReview(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.WithdrawLegalReview(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DescribeListFilters operation middleware
+func (siw *ServerInterfaceWrapper) DescribeListFilters(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DescribeListFilters(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -114048,6 +113517,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/companies/{id}/intro-request-draft", wrapper.DraftIntroRequest)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/companies/{id}/linkedin-reach", wrapper.GetCompanyLinkedInReach)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/logo", wrapper.GetCompanyLogo)
 	})
 	r.Group(func(r chi.Router) {
@@ -114883,6 +114355,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/legal-reviews/{id}/withdraw", wrapper.WithdrawLegalReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/list-filters", wrapper.DescribeListFilters)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/lists", wrapper.ListLists)

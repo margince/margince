@@ -177,6 +177,7 @@ func (t reviewCommitments) Spec() mcp.ToolSpec {
 		Description:   reviewCommitmentsCopy.render(),
 		Instead:       reviewCommitmentsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Unlisted:  true,
 		OpenAPIOp: "listOpenCommitments",
 		InputSchema: schema(`{"type":"object","properties":{
 			"assignee_id":{"type":"string","format":"uuid","description":"Narrow to one owner's promises; omit for everyone's"},

@@ -9,9 +9,10 @@
 #
 # The ratchet mirrors check-go-file-length.sh: scripts/test-budget-waivers.txt
 # gives each pre-existing slow package its own ceiling. Once a waived package
-# finishes inside the default budget, its entry must be REMOVED so the budget
-# re-arms. A waived package missing from the log fails too, because a renamed
-# package would otherwise keep a ceiling nobody checks.
+# finishes inside the default budget with the margin below to spare, its entry
+# must be REMOVED so the budget re-arms. A waived package missing from the log
+# fails too, because a renamed package would otherwise keep a ceiling nobody
+# checks.
 #
 # Usage: check-test-budget.sh <go-test-log>...
 set -euo pipefail
@@ -23,8 +24,17 @@ fi
 
 BUDGET="${TEST_PACKAGE_BUDGET:-120}"
 WAIVERS="${TEST_BUDGET_WAIVERS:-$(dirname "$0")/test-budget-waivers.txt}"
+# The margin a measurement must clear the budget by before its waiver is
+# called stale. It is the one the ceilings are already sized with, named in
+# the waiver file's own header.
+#
+# Without it the two sides disagree. A ceiling carries 1.2x of headroom while
+# the removal demand fired on a single sample at the budget itself, so a
+# package whose time straddles the budget was told to drop its waiver on a
+# lucky run and told it was too slow on the next. Neither state is green.
+REMOVAL_MARGIN="${TEST_BUDGET_REMOVAL_MARGIN:-1.2}"
 
-awk -v budget="$BUDGET" -v waivers="$WAIVERS" '
+awk -v budget="$BUDGET" -v waivers="$WAIVERS" -v margin="$REMOVAL_MARGIN" '
 BEGIN {
   while ((getline line < waivers) > 0) {
     if (line ~ /^[[:space:]]*#/ || line ~ /^[[:space:]]*$/) continue
@@ -48,8 +58,8 @@ END {
       if (secs > waived[pkg]) {
         printf "FAIL: %s took %.1fs (its ceiling is %ds) — make it faster, never raise the ceiling\n", pkg, secs, waived[pkg]
         fail = 1
-      } else if (secs <= budget) {
-        printf "FAIL: %s is down to %.1fs (<= %ds) — remove its stale entry from %s so the budget re-arms\n", pkg, secs, budget, waivers
+      } else if (secs * margin <= budget) {
+        printf "FAIL: %s is down to %.1fs (<= %ds with %.1fx to spare) — remove its stale entry from %s so the budget re-arms\n", pkg, secs, budget, margin, waivers
         fail = 1
       }
     } else if (secs > budget) {

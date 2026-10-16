@@ -145,6 +145,17 @@ func resetFlush(path compose.ModelPath) func(ids.UUID) {
 func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg workerConfig, pool *pgxpool.Pool, rdb *redis.Client, vault keyvault.Vault, modelPath compose.ModelPath, logger *slog.Logger, stdout io.Writer) (workerLanes, error) {
 	lanes := workerLanes{background: background, ctx: laneCtx, logger: logger}
 
+	blob, blobConfigured, err := blobstore.FromEnv(laneCtx, config.FromOS)
+	if err != nil {
+		return lanes, fmt.Errorf("worker: blobstore: %w", err)
+	}
+	if blobConfigured {
+		_, _ = fmt.Fprintln(stdout, "worker storing site-read logos and erasing attachment objects (blobstore configured)")
+	}
+	// Before the runner lane: an offer a Surface-B run changes reclaims its
+	// retired rendering from this store.
+	lanes.blob = blob
+
 	if err := startRunnerLane(laneCtx, cfg, pool, rdb, vault, modelPath, &lanes, logger, stdout); err != nil {
 		return lanes, err
 	}
@@ -156,14 +167,6 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 	startResetLane(laneCtx, cfg.allowDataReset, rdb, modelPath, lanes.background, logger)
 	logger.Info("test mailbox connector", "armed", cfg.captureConfig.AllowTestMailbox)
 
-	blob, blobConfigured, err := blobstore.FromEnv(laneCtx, config.FromOS)
-	if err != nil {
-		return lanes, fmt.Errorf("worker: blobstore: %w", err)
-	}
-	if blobConfigured {
-		_, _ = fmt.Fprintln(stdout, "worker storing site-read logos and erasing attachment objects (blobstore configured)")
-	}
-	lanes.blob = blob
 	// The adapter registry the provider-run lanes execute through, read from
 	// the same variable cmd/api reads: the role that queues a run and the
 	// role that executes it must agree about who they are calling.
@@ -314,7 +317,8 @@ func startRunnerLane(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 	// order the boot reaches them in: one pool, and the boot's one vault,
 	// which is already nil on a deployment that configured none.
 	compose.BindExtensionRuntime(pool, vault)
-	runnerSvc := compose.NewRunnerService(pool, modelPath.AgentLoop, modelPath.DraftReply, grounding, logger, send)
+	runnerSvc := compose.NewRunnerService(pool, modelPath.AgentLoop, modelPath.DraftReply, grounding, logger, send,
+		compose.WithRunnerLists(cfg.listsEnabled), compose.WithRunnerBlobstore(lanes.blob))
 	_, _ = fmt.Fprintln(stdout, "worker resuming approved Surface-B runs (cg:overnight-agent)")
 	lanes.runner = runnerSvc
 	lanes.background.Go(func() { runResumeSubscriber(ctx, rdb, runnerSvc, logger) })

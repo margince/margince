@@ -32,10 +32,12 @@ import (
 // configuration.
 func pipelineLister(pool *pgxpool.Pool) agents.PipelineLister {
 	store := deals.NewStore(InstallationDB(pool), DealsInstallation())
-	return func(ctx context.Context) ([]agents.Pipeline, error) {
-		// Live only: this list is what a tool call picks a target stage
-		// from, and an archived pipeline is not one a deal may be moved to.
-		rows, err := store.ListPipelines(ctx, storekit.LiveOnly)
+	return func(ctx context.Context, includeArchived bool) ([]agents.Pipeline, error) {
+		archived := storekit.LiveOnly
+		if includeArchived {
+			archived = storekit.IncludeArchived
+		}
+		rows, err := store.ListPipelines(ctx, archived)
 		if err != nil {
 			return nil, err
 		}
@@ -54,6 +56,7 @@ func toAgentPipeline(p crmcontracts.Pipeline) agents.Pipeline {
 		Name:      p.Name,
 		IsDefault: p.IsDefault,
 		Position:  p.Position,
+		Archived:  p.ArchivedAt != nil,
 		Stages:    []agents.Stage{},
 	}
 	// Stages is an optional member on the contract shape; readPipeline always

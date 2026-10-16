@@ -485,6 +485,8 @@ type Server struct {
 	// failing to say so.
 	resetRuntime ResetRuntime
 
+	// views is the router read_view runs through, shared by every Server copy.
+	views *viewDoor
 	// listsEnabled is the deployment's lists.enabled (WithListsEnabled).
 	listsEnabled bool
 

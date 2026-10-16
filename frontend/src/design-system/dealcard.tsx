@@ -14,14 +14,14 @@ import { formatMoneyOrWord } from "../format/moneyword";
 import { formatElapsed } from "../format/now";
 import { useLocale, useT } from "../i18n";
 import { Avatar, Badge } from "./atoms";
-import type { BoardDeal } from "./composed";
 import { IconAction } from "./iconaction";
+import type { BoardDeal } from "./pipelineboard";
 import { Popover } from "./popover";
 import { FieldGuard } from "./rbac";
 import { Chip } from "./readings";
 import { useTooltip } from "./tooltip";
 
-// One deal, as a card on the pipeline board (composed.tsx draws the board).
+// One deal, as a card on the pipeline board (pipelineboard.tsx draws the board).
 // The card's vocabulary — `BoardDeal` — stays with the board, because a column
 // is a list of them and the board is what a caller assembles.
 

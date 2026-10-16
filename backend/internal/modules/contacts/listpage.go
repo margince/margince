@@ -144,6 +144,13 @@ func listPage[T any](ctx context.Context, s *Store, sortSpec *string, limitIn *i
 			return fmt.Errorf("count %s: %w", spec.entity, err)
 		}
 		page.Total = &n
+		// On the page's own snapshot, so what it reports about the boundary
+		// describes the same instant the rows do. It costs nothing unless the
+		// caller asked to be told, and nothing at all on a table without
+		// capture privacy.
+		if err := auth.NoteCaptureWithheld(ctx, tx, spec.entity); err != nil {
+			return err
+		}
 		return spec.attach(ctx, tx, recs)
 	})
 	if recs == nil {

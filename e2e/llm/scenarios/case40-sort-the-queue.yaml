@@ -53,11 +53,9 @@ prompt: |
 # the qualify action's whole contract — a value typed in through update_record
 # would be the assistant inventing one, which is the opposite of what was asked.
 must_call:
-  - change_lead_state
-must_call_with:
-  - change_lead_state.action=qualify
-  - change_lead_state.action=promote
-  - change_lead_state.action=disqualify
+  - qualify_lead
+  - promote_lead
+  - disqualify_lead
 may_call:
   - list_records
   - search_records

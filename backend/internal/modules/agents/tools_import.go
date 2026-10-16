@@ -67,7 +67,7 @@ type Imports interface {
 	// Commit approves a validated run and starts the write.
 	Commit(ctx context.Context, id ids.UUID) (crmcontracts.ImportRun, error)
 	// DescribeFormat answers the import format in the installation's language.
-	DescribeFormat(ctx context.Context) (crmcontracts.ImportFormat, error)
+	DescribeFormat(ctx context.Context, lang string) (crmcontracts.ImportFormat, error)
 	// ProfileFiles stores several CSV files as one bundle and profiles each,
 	// as an uploaded ZIP is.
 	ProfileFiles(ctx context.Context, files []ImportFile) (crmcontracts.ImportSourceProfile, error)

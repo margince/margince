@@ -9,7 +9,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { BoardDeal, BoardMoneyColumn } from "../design-system/composed";
+import type {
+  BoardDeal,
+  BoardMoneyColumn,
+} from "../design-system/pipelineboard";
 import { LocaleProvider } from "../i18n";
 import {
   type WriteTo,

@@ -3,9 +3,9 @@
 
 import { type ComponentProps, useId, useState } from "react";
 import { Modal } from "../design-system/atoms";
-import { type BoardDeal, PipelineBoard } from "../design-system/composed";
 import type { DealCardActions } from "../design-system/dealcard";
 import { Heading } from "../design-system/heading";
+import { type BoardDeal, PipelineBoard } from "../design-system/pipelineboard";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { routeHash } from "../lib/router";

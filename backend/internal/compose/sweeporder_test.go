@@ -76,8 +76,8 @@ func TestEveryNameableTypeIsServedBySomeModule(t *testing.T) {
 // A type outside both lists is still refused — widening nameable must not turn
 // the allowlist into a pass-through.
 func TestATypeOutsideTheVocabularyIsStillRefused(t *testing.T) {
-	if _, err := sweepOrder([]datasource.EntityType{datasource.EntityActivity}); err == nil {
-		t.Fatal("activity was admitted; a type no search verb serves must be refused, not walked")
+	if _, err := sweepOrder([]datasource.EntityType{datasource.EntityRelationship}); err == nil {
+		t.Fatal("relationship was admitted; a type no search verb serves must be refused, not walked")
 	}
 	if _, err := sweepOrder([]datasource.EntityType{datasource.EntityType("nonsense")}); err == nil {
 		t.Fatal("an unknown type was admitted")

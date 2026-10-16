@@ -9020,6 +9020,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/list-filters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The filters a record list may be narrowed by, for each record type.
+         * @description The answer the `describe_list_filters` agent tool gives, run by the same tool on
+         *     both doors: for each record type, the filters `list_records` takes (the list
+         *     route's own query parameters), the operand each takes and its closed values.
+         */
+        get: operations["describeListFilters"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/search": {
         parameters: {
             query?: never;
@@ -12771,10 +12793,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Approve a staged action (commits it; mints the approval token).
+         * Approve a staged action (commits it).
          * @description Approving commits the proposed change in one audit transaction. The (optionally
-         *     edited) payload is what executes. Returns the approval with the resulting entity ref
-         *     + the `approval_token` that authorized the downstream 🟡 operation.
+         *     edited) payload is what executes. Returns the approval with the resulting entity ref.
+         *     An agent that staged the call repeats it with `X-Approval-Token: <this approval's id>`.
          *
          *     A passport acting for a human decides here on that human's own authority
          *     (ADR-0055): the decision demands the RBAC the staged effect itself needs, the
@@ -18437,6 +18459,14 @@ export interface paths {
          *     The network is yours. The owner is the authenticated caller, never a field in
          *     the file, so nobody can attribute a stranger's connections to a colleague.
          *
+         *     **A COUNT of your reach at one company is a derived fact, not access to your
+         *     account.** `GET /companies/{id}/linkedin-reach` tells everyone who may read that
+         *     company how many of your connections work there, so a rep knows whom to ask for
+         *     an introduction. It names no connection and exposes no row of your import: your
+         *     account, your connection list and their details stay yours alone, as above. A
+         *     member who would rather not be listed switches `reach_visible_to_team` off on
+         *     their own account and is then left out of everyone else's view.
+         *
          *     Re-importing a refreshed export updates rather than duplicates. Rows with no
          *     usable name are counted as skipped rather than silently dropped — an import that
          *     quietly ignored half a file while reporting success is worse than one that fails.
@@ -18446,6 +18476,42 @@ export interface paths {
          *     name suggests nothing. Nothing here ever creates a contact.
          */
         post: operations["importLinkedInConnections"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/companies/{id}/linkedin-reach": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Which colleagues can get you in at this company.
+         * @description For one account, how many of each colleague's LinkedIn connections work there,
+         *     highest first. The product's answer to "who can open this door", which is the
+         *     same shape as naming the colleague who holds a contact you cannot see.
+         *
+         *     **A count is a derived fact, not access to a colleague's account.** No
+         *     connection is named and no row of anybody's import is exposed; a member's
+         *     account, list and its details stay theirs alone. A member who switched
+         *     `reach_visible_to_team` off is absent from this answer entirely, and absent
+         *     rather than reported as zero: zero would say they have no reach, which is a
+         *     different statement and not theirs to have made.
+         *
+         *     Gated on READ of the company, row scope included, and a company the caller
+         *     cannot open answers 404 as its own read does. A colleague who no longer works
+         *     here is never offered: a reach count exists to be acted on by asking them.
+         */
+        get: operations["getCompanyLinkedInReach"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -29197,6 +29263,25 @@ export interface components {
         AnalyticsVocabulary: {
             vocabulary: string;
         };
+        /** @description What `describe_list_filters` answers. */
+        ListFiltersVocabulary: {
+            /** @description For each record type list_records takes, the filters it may be narrowed by. */
+            record_types: {
+                [key: string]: components["schemas"]["ListFilter"][];
+            };
+        };
+        /** @description One filter a record list may be narrowed by. */
+        ListFilter: {
+            /** @description The filter's key in list_records' filters object, and the list route's query parameter. */
+            name: string;
+            /**
+             * @description What the string operand spells: a boolean is "true" or "false", an array is comma-separated.
+             * @enum {string}
+             */
+            operand: "string" | "boolean" | "integer" | "number" | "array";
+            /** @description The closed vocabulary the filter takes, when it has one. */
+            values?: string[];
+        };
         /** @description What `describe_record_fields` answers. */
         RecordFieldsVocabulary: {
             fields: {
@@ -29518,9 +29603,37 @@ export interface components {
              */
             locale: "en" | "de" | "vi";
         };
+        CompanyLinkedInReachResponse: {
+            /**
+             * @description Highest count first, then by name, so two reads of an unchanged network
+             *     return the same order. Empty when nobody on the team reaches this account,
+             *     or when everybody who does has switched their reach off: the two read the
+             *     same on purpose, because telling them apart would disclose the choice.
+             */
+            colleagues: components["schemas"]["CompanyLinkedInReachColleague"][];
+        };
+        CompanyLinkedInReachColleague: {
+            /** Format: uuid */
+            user_id: string;
+            /** @description The colleague to ask. */
+            display_name: string;
+            /**
+             * @description How many of their connections work at this account. At least one, because a
+             *     colleague with none is not listed. Never a list of who those connections
+             *     are: they are third parties who never consented to appearing in this CRM.
+             */
+            connections: number;
+        };
         LinkedInAccount: {
             /** @description Whether this member has authorized LinkedIn. */
             connected: boolean;
+            /**
+             * @description Whether colleagues who may read a company see how many of this member's
+             *     connections work there. True unless they switched it off. It governs the
+             *     per-company reach list only — never this member's own reach page, which
+             *     answers about themselves.
+             */
+            reach_visible_to_team?: boolean;
             /** Format: date-time */
             connected_at?: string | null;
             /**
@@ -29532,13 +29645,18 @@ export interface components {
             connections: number;
         };
         SaveLinkedInAccountRequest: {
+            /**
+             * @description Switch off to be left out of the per-company reach list colleagues read.
+             *     Omitted leaves the current answer; a member who has never set it is listed.
+             */
+            reach_visible_to_team?: boolean;
             /** @description Absolute http(s) URL. Empty clears the stored value. */
             profile_url?: string;
             /**
-             * @description Record the authorization. Never revokes an existing one.
-             * @default false
+             * @description Record the authorization. Never revokes an existing one, and omitted
+             *     leaves it as it stands: disconnecting is its own deliberate act.
              */
-            connected: boolean;
+            connected?: boolean;
         };
         /**
          * @description What one import did, in the terms someone asked to trust it would check.
@@ -38341,11 +38459,24 @@ export interface components {
             description: string;
             /** @description Passport scope required to call it. */
             required_scope?: string;
-            /** @enum {string} */
-            tier: "auto_execute" | "confirmation_required" | "dynamic";
+            tier: components["schemas"]["AgentToolTier"];
             /** @description True if the tool reaches outside the workspace. */
             egress: boolean;
+            /** @description A router's choices. Each runs one verb and is admitted at that verb's tier, so a router whose actions differ lists its own tier as dynamic. Absent on a tool that is not a router. */
+            actions?: components["schemas"]["AgentToolAction"][];
         };
+        AgentToolAction: {
+            /** @description The value the router's action argument takes. */
+            action: string;
+            /** @description The tool the action runs as; approvals and tasks name it. */
+            verb: string;
+            tier: components["schemas"]["AgentToolTier"];
+        };
+        /**
+         * @description Runs at once, waits for a human, or decides per call from its arguments.
+         * @enum {string}
+         */
+        AgentToolTier: "auto_execute" | "confirmation_required" | "dynamic";
         AgentToolListResponse: {
             data: components["schemas"]["AgentTool"][];
         };
@@ -38398,10 +38529,10 @@ export interface components {
              */
             scope?: "read" | "draft" | "write" | "send" | "enrich";
             /**
-             * @description registry — the operation's handler runs the tool through the tool registry, the entry the MCP door uses, which admits the call itself: scope, seat, tier, approval, retry key and volume budget. The REST admission gate passes such an operation through untouched, because admitting it there as well would charge an agent twice and stage a confirm-first call twice. rest_only — no MCP tool serves this record_type yet: the verb names only the tier, scope and budget the REST gate admits the call under, and the MCP verb refuses the type. Absent and rest_only both mean the operation's own handler runs and the gate admits it.
+             * @description registry — the operation's handler runs the tool through the tool registry, the entry the MCP door uses, which admits the call itself: scope, seat, tier, approval, retry key and volume budget. The REST admission gate passes such an operation through untouched, because admitting it there as well would charge an agent twice and stage a confirm-first call twice. Absent means the operation's own handler runs and the gate admits it.
              * @enum {string}
              */
-            served_by?: "registry" | "rest_only";
+            served_by?: "registry";
         };
         /**
          * @description EXACTLY ONE input source (B-E01.2b/.13): `url` (fetch+parse a website, ADR-0006), `text` (the
@@ -39428,7 +39559,7 @@ export interface components {
             target_label?: string | null;
             /** @description The `version` of the target row when the diff was staged. On approve-execute the server RE-READS the row; if its current version ≠ target_version the execution is rejected with 409 ErrVersionSkew (the world changed since the human last saw the diff — re-stage). This closes the stage→approval race (ADR-0036). */
             target_version?: number | null;
-            /** @description Hash of the staged proposed_change; the minted approval_token is bound to this hash so a token cannot authorize a different effect. */
+            /** @description Hash of the staged proposed_change. A redemption whose call hashes differently is refused, so an approval cannot authorize a different effect. */
             diff_hash?: string | null;
             /** @description One-line description of the proposed change. */
             summary?: string | null;
@@ -39442,8 +39573,6 @@ export interface components {
             result_entity_type?: string | null;
             /** Format: uuid */
             result_entity_id?: string | null;
-            /** @description Signed single-use token minted on approve (schema ApprovalToken, serialized as compact JWS); authorizes exactly the downstream 🟡 operation it is bound to. */
-            approval_token?: string | null;
             /** Format: uuid */
             decided_by?: string | null;
             /** Format: date-time */
@@ -39586,42 +39715,6 @@ export interface components {
          *     (ErrVersionSkew) so the client re-reads before retrying.
          */
         RowVersion: number;
-        /**
-         * @description The claims carried by the signed `X-Approval-Token` (serialized as a compact JWS; the wire
-         *     value is the string). It is single-use and bound to one effect — it is NOT a bare opaque
-         *     string. The server verifies the signature, that `jti` has not been consumed, that `exp` is
-         *     in the future, and that `workspace_id`/`passport_id`/`tool`/`diff_hash` match the operation
-         *     being executed; any mismatch → `403 code: approval_token_invalid`.
-         */
-        ApprovalToken: {
-            /** @description Unique token id; recorded as consumed on first use (replay → 403). */
-            jti: string;
-            /**
-             * Format: uuid
-             * @description The Approval this token authorizes.
-             */
-            approval_id: string;
-            /**
-             * Format: uuid
-             * @description Agent Seat Passport the token was minted for; null for a human-minted token.
-             */
-            passport_id?: string | null;
-            /** Format: uuid */
-            on_behalf_of?: string | null;
-            /** @description The exact 🟡 operation authorized (e.g. send_email, advance_deal). A token for one tool cannot authorize another. */
-            tool: string;
-            /** @description Hash of the approved effect; binds the token to that specific staged change. */
-            diff_hash: string;
-            /** @description Row version the diff was staged against; re-checked at execute (see Approval.target_version). */
-            target_version?: number | null;
-            /**
-             * Format: date-time
-             * @description Expiry (short TTL — minutes, not hours).
-             */
-            exp: string;
-            /** @default true */
-            single_use: boolean;
-        };
         /**
          * @description First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
          *     has a `partner` row AND carries `partner` in its `relationship_types` — ADR-0079 split that
@@ -41520,8 +41613,6 @@ export interface components {
             /** Format: date-time */
             expires_at?: string | null;
             source: string;
-        } & {
-            [key: string]: unknown;
         };
         /**
          * @description Any subset; omit a field to leave it unchanged. HUMAN-ONLY: an invited buyer
@@ -41536,8 +41627,6 @@ export interface components {
             welcome_message?: string | null;
             /** Format: uuid */
             steward_user_id?: string | null;
-        } & {
-            [key: string]: unknown;
         };
         SetDealRoomExpiryRequest: {
             /**
@@ -41659,8 +41748,6 @@ export interface components {
             /** @description Defaults to `view` — the least that lets someone read the room. */
             capability?: components["schemas"]["DealRoomParticipantCapability"];
             source: string;
-        } & {
-            [key: string]: unknown;
         };
         /** @description Any subset; omit a field to leave it unchanged. */
         UpdateDealRoomParticipantRequest: {
@@ -41672,8 +41759,6 @@ export interface components {
              */
             email?: string;
             capability?: components["schemas"]["DealRoomParticipantCapability"];
-        } & {
-            [key: string]: unknown;
         };
         /**
          * @description A participant and the credential just minted for them.
@@ -41764,16 +41849,12 @@ export interface components {
             /** @description Order within the group. Defaults to 0. */
             position?: number;
             source: string;
-        } & {
-            [key: string]: unknown;
         };
         /** @description Any subset; omit a field to leave it unchanged. */
         UpdateDealRoomDocumentRequest: {
             group_key?: components["schemas"]["DealRoomDocumentGroup"];
             title?: string;
             position?: number;
-        } & {
-            [key: string]: unknown;
         };
         /** @description One published document as the buyer sees it. No seller-side ids beyond its own. */
         BuyerRoomDocument: {
@@ -46670,13 +46751,12 @@ export interface components {
          */
         ToolIdempotencyKey: string;
         /**
-         * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-         *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-         *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-         *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-         *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-         *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-         *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+         * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+         *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+         *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+         *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+         *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+         *     human's direct call is itself the approval.
          */
         ApprovalToken: string;
         /**
@@ -49601,13 +49681,12 @@ export interface operations {
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
                 /**
@@ -50933,13 +51012,12 @@ export interface operations {
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
@@ -51773,13 +51851,12 @@ export interface operations {
                  */
                 "Idempotency-Key"?: components["parameters"]["ToolIdempotencyKey"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
@@ -51943,13 +52020,12 @@ export interface operations {
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
                 /**
@@ -52007,13 +52083,12 @@ export interface operations {
                  */
                 "Idempotency-Key"?: components["parameters"]["ToolIdempotencyKey"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
@@ -52168,13 +52243,12 @@ export interface operations {
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
@@ -52484,13 +52558,12 @@ export interface operations {
                  */
                 "If-Match"?: components["parameters"]["IfMatch"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
@@ -52545,13 +52618,12 @@ export interface operations {
                  */
                 "If-Match"?: components["parameters"]["IfMatch"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
@@ -52605,13 +52677,12 @@ export interface operations {
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
                 /**
@@ -52880,13 +52951,12 @@ export interface operations {
             query?: never;
             header?: {
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
@@ -52922,13 +52992,12 @@ export interface operations {
             query?: never;
             header?: {
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
@@ -52958,13 +53027,12 @@ export interface operations {
             query?: never;
             header?: {
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
@@ -53000,13 +53068,12 @@ export interface operations {
             query?: never;
             header?: {
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
@@ -54937,13 +55004,12 @@ export interface operations {
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
@@ -55011,13 +55077,12 @@ export interface operations {
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
@@ -55382,13 +55447,12 @@ export interface operations {
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
@@ -55951,13 +56015,12 @@ export interface operations {
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
@@ -56143,13 +56206,12 @@ export interface operations {
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
@@ -57722,13 +57784,12 @@ export interface operations {
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
@@ -57794,13 +57855,12 @@ export interface operations {
                  */
                 "Idempotency-Key"?: components["parameters"]["ToolIdempotencyKey"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
@@ -61726,6 +61786,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecordFieldsVocabulary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    describeListFilters: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The record list filter vocabulary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListFiltersVocabulary"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -74035,6 +74117,32 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getCompanyLinkedInReach: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The colleagues with reach into this account, highest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyLinkedInReachResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     getMyLinkedInReach: {
         parameters: {
             query?: {
@@ -75810,13 +75918,12 @@ export interface operations {
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
                 /**
@@ -75880,13 +75987,12 @@ export interface operations {
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
                 /**
@@ -75946,13 +76052,12 @@ export interface operations {
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
                 /**
@@ -76014,13 +76119,12 @@ export interface operations {
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
                 /**
@@ -76088,13 +76192,12 @@ export interface operations {
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
                 /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
                  */
                 "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
                 /**

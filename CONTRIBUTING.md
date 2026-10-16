@@ -2,8 +2,9 @@
 # Contributing to Margince
 
 Margince is source-available under the Business Source License (BUSL-1.1). AI agents write most of
-its code, and a human is accountable for each change. Your changes are welcome, and they must meet the
-same rules as the code our own agents write.
+its code, and a human is accountable for each change. Your changes are welcome and must meet the
+same rules as the code our own agents write. You accept [CLA.md](CLA.md) before your first change
+merges; [LICENSING.md](LICENSING.md) says why.
 
 The [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) covers how we work together. It adds one rule:
 to send more code than you can explain wastes the time of the reviewers.
@@ -15,8 +16,7 @@ to use AI help. We refuse a change you cannot explain, and more code than the ta
 why a line is there, what it does and why it is right, it is not ready. "The model wrote it" does not
 answer a review question.
 
-This rule never changes. The AI note below keeps a human accountable, and it does not stop you from
-using AI.
+The AI note below keeps a human accountable; it does not stop you from using AI.
 
 ## Say how you used AI
 
@@ -61,8 +61,8 @@ Two things to know about `make dev`:
 
 ### Contributing from a fork
 
-A pull request from a fork runs the same `ci` checks as our own work, and `ci` is the one check a merge
-needs. A maintainer approves the run before it starts, so expect a short wait. A fork run gets no SonarCloud
+A pull request from a fork runs the same `ci` checks as our own work. A merge needs `ci`, and `cla` once
+you accept [CLA.md](CLA.md). A maintainer approves the run before it starts, so expect a short wait. A fork run gets no SonarCloud
 token, so SonarCloud does not report, and a merge does not need it.
 
 ## The checks

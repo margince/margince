@@ -56,7 +56,7 @@ may_call:
   - list_records
   - resolve_entities
   - run_analytics_query
-  - describe_vocabulary
+  - read_workspace
   - read_forecast
   - query_workspace
   - search_context

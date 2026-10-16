@@ -33,6 +33,7 @@ const RUN = {
   connector: "csv",
   file_name: "crm.zip",
   status: "awaiting_approval",
+  version: 1,
   checkpoint: 0,
   source: "import_api",
   captured_by: "u-ada",
@@ -106,6 +107,13 @@ const PROFILE = {
 function page(address: string, current: object = RUN) {
   return () => {
     globalThis.history.replaceState(null, "", address);
+    // The draft answers as itself until the worker is started, then as the
+    // run the test produced.
+    //
+    // Run test saves the mapping, reads the version off that answer, then
+    // posts to validate. A stub answering none of those leaves the wizard on
+    // the map step with nothing to wait for.
+    let tested = false;
     installFetchStub({
       "GET /me": meRoute({ import_run: ["create", "read", "update"] }),
       "GET /imports/format": () => jsonResponse(formatFixture),
@@ -113,6 +121,19 @@ function page(address: string, current: object = RUN) {
         jsonResponse({ data: [], page: { has_more: false } }),
       "POST /imports/sources": () => jsonResponse(PROFILE),
       "POST /imports": () => jsonResponse(current, 202),
+      [`GET /imports/${PROFILE.run_id}`]: () =>
+        jsonResponse(
+          tested
+            ? { ...current, id: PROFILE.run_id }
+            : { ...RUN, id: PROFILE.run_id, status: "pending" },
+        ),
+      [`PATCH /imports/${PROFILE.run_id}`]: () =>
+        jsonResponse({ ...RUN, id: PROFILE.run_id, status: "pending" }),
+      [`POST /imports/${PROFILE.run_id}/validate`]: () => {
+        tested = true;
+        return jsonResponse({ ...current, id: PROFILE.run_id }, 202);
+      },
+      [`GET /imports/${PROFILE.run_id}/report`]: () => jsonResponse(REPORT),
       [`GET /imports/${RUN.id}`]: () => jsonResponse(current),
       [`GET /imports/${RUN.id}/report`]: () => jsonResponse(REPORT),
     });
@@ -128,7 +149,9 @@ async function runTest(canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
   await userEvent.upload(
     await canvas.findByLabelText("Upload your data"),
-    new File(["email\n"], "leads.csv"),
+    // The file the screen's own testkit uploads, so this play drives the
+    // wizard the way its unit tests do.
+    new File(["Email\nada@x.test\n"], "leads.csv"),
   );
   await userEvent.click(
     await canvas.findByRole("button", { name: /Next: map/ }),
