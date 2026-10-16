@@ -350,7 +350,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "WeekPicker performs date-only Monday arithmetic on a UTC carrier. Reading that carrier in UTC preserves the selected calendar date across DST; this is not a display-zone choice.",
   },
   {
-    file: "format/format.ts",
+    file: "format/format.dates.ts",
     why: "monthName reads a UTC-minted date back in UTC to name a month. The zone is not a rendering choice: the instant is midnight on the 1st, so any reader's clock behind UTC lands on the previous month, and this returned December for January in America/New_York.",
   },
   {

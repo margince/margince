@@ -54,7 +54,6 @@
 615 frontend/src/screens/partners.tsx
 655 frontend/src/screens/record360/citations.tsx
 530 frontend/src/screens/contractform.tsx
-651 frontend/src/format/format.ts
 727 frontend/src/screens/companytoday.tsx
 678 frontend/src/screens/installation-settings.tsx
 774 frontend/src/screens/onboarding-conversation/connect-scene.tsx
@@ -72,8 +71,3 @@
 798 frontend/src/screens/integrations-provider.tsx
 
 # The build scripts, frozen when the gate learned to read them.
-1060 frontend/scripts/ext-imports.test.ts
-581 frontend/scripts/fe-uat.mjs
-1026 frontend/scripts/lib/dialoglayout.ts
-612 frontend/scripts/test-budget.ts
-533 frontend/scripts/vite-inline-views.ts
