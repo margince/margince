@@ -1,0 +1,223 @@
+import { type FormEvent, useEffect, useId } from "react";
+import { Button, Field } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
+import { useSinglePress } from "../design-system/presslatch";
+import { RecordFormDialog } from "../design-system/recordformdialog";
+import { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import { navigate, type Route } from "../lib/router";
+import { fieldControl, MultiselectField } from "./create.controls";
+import {
+  type CreateField,
+  type FormRows,
+  fieldLabel,
+  rowsRequirementMet,
+  submittedValues,
+  visibleFields,
+} from "./create.fields";
+import { OfferedNameControl, offeredHint } from "./create.offered";
+import { RepeatableRowsField } from "./repeatablerowsfield";
+
+// A submit button's resting and busy labels travel as one pair, so an edit
+// can never announce "Creating…" while it saves.
+export const SUBMIT_COPY = {
+  create: { label: "create.save", busy: "create.saving" },
+  save: { label: "record.save", busy: "common.saving" },
+} as const satisfies Record<string, { label: MessageKey; busy: MessageKey }>;
+
+export type SubmitIntent = keyof typeof SUBMIT_COPY;
+
+// Fields, error and Cancel/Save, shared by create and edit: only the values'
+// origin and the submit intent differ, and those stay with each modal's owner.
+export function RecordFormBody({
+  fields,
+  values,
+  setValues,
+  rows,
+  setRows,
+  pending,
+  error,
+  existing,
+  resolveExisting,
+  onSubmit,
+  onClose,
+  intent,
+  dialog,
+}: Readonly<{
+  fields: CreateField[];
+  values: Record<string, string>;
+  setValues: (next: Record<string, string>) => void;
+  rows: FormRows;
+  setRows: (next: FormRows) => void;
+  pending: boolean;
+  error: string | null;
+  // A duplicate (409)'s collided record and the screen's route to it: both
+  // present, the "view existing" link renders under the error.
+  existing?: { id: string; code: string } | null;
+  resolveExisting?: (code: string, id: string) => Route;
+  onSubmit: (values: Record<string, string>, rows?: FormRows) => void;
+  onClose: () => void;
+  intent: SubmitIntent;
+  dialog?: { open: boolean; title: string };
+}>) {
+  const t = useT();
+  const formId = useId();
+
+  // A field its showWhen hides neither renders nor holds Save hostage.
+  const shown = visibleFields(fields, values);
+  // A write must not bring back an answer to a question withdrawn in between.
+  // Otherwise the first partner's claim would carry onto a second one named
+  // after it.
+  const setVisibleValues = (next: Record<string, string>) =>
+    setValues(submittedValues(fields, next));
+  const requiredMissing = shown.some((field) => {
+    if (field.type === "repeatable") {
+      return !rowsRequirementMet(field, rows[field.key] ?? []);
+    }
+    return field.required && !(values[field.key] ?? "").trim();
+  });
+  const refusals = new Map(
+    shown.flatMap((field) => {
+      const refusal = field.validate?.(values[field.key] ?? "");
+      return refusal ? [[field.key, refusal] as const] : [];
+    }),
+  );
+  // A refusal lands at the foot of a long stack, out of sight of a pinned Save.
+  useEffect(() => {
+    if (error) {
+      const last = document.getElementById(formId)?.lastElementChild;
+      last?.scrollIntoView?.({ block: "nearest" });
+    }
+  }, [error, formId]);
+
+  // Enter in a field submits without touching Save, so the form holds the
+  // same latch the button does.
+  const singlePress = useSinglePress(pending);
+  const submit = singlePress((event: FormEvent) => {
+    event.preventDefault();
+    if (!pending && !requiredMissing && refusals.size === 0)
+      onSubmit(submittedValues(fields, values), rows);
+  });
+  const stack = (
+    <>
+      {shown.map((field) => {
+        if (field.divider) {
+          return (
+            <p className="form-divider t-label" key={field.key}>
+              {fieldLabel(field, t)}
+            </p>
+          );
+        }
+        if (field.type === "repeatable") {
+          return (
+            <RepeatableRowsField
+              key={field.key}
+              field={field}
+              formId={formId}
+              rows={rows[field.key] ?? []}
+              setRows={(next) => setRows({ ...rows, [field.key]: next })}
+            />
+          );
+        }
+        if (field.type === "multiselect") {
+          return (
+            <MultiselectField
+              key={field.key}
+              field={field}
+              value={values[field.key] ?? ""}
+              setValue={(next) =>
+                setVisibleValues({ ...values, [field.key]: next })
+              }
+            />
+          );
+        }
+        return (
+          <Field
+            key={field.key}
+            label={fieldLabel(field, t)}
+            required={field.required}
+            hint={
+              field.offers
+                ? offeredHint(field.offers, field.key, values, t)
+                : field.hint
+            }
+            error={refusals.get(field.key)}
+          >
+            {(control) =>
+              field.offers ? (
+                <OfferedNameControl
+                  fieldKey={field.key}
+                  type={field.type === "email" ? "email" : undefined}
+                  offers={field.offers}
+                  control={control}
+                  values={values}
+                  setValues={setVisibleValues}
+                />
+              ) : (
+                fieldControl(
+                  field,
+                  control,
+                  values[field.key] ?? "",
+                  (next) => setVisibleValues({ ...values, [field.key]: next }),
+                  t,
+                  values,
+                )
+              )
+            }
+          </Field>
+        );
+      })}
+      {/* Announced: nothing moves when a submit is refused, and the server's
+          reason is the only thing saying why the form is still open. */}
+      {error && <ErrorLine>{error}</ErrorLine>}
+      {existing && resolveExisting && (
+        <Button
+          type="button"
+          className="create-view-existing"
+          onClick={() => navigate(resolveExisting(existing.code, existing.id))}
+        >
+          {t("dedupe.viewExisting")}
+        </Button>
+      )}
+    </>
+  );
+  const actions = (
+    <>
+      <Button type="button" onClick={onClose}>
+        {t("create.cancel")}
+      </Button>
+      <Button
+        variant="primary"
+        type="submit"
+        form={formId}
+        disabled={!pending && (requiredMissing || refusals.size > 0)}
+        pending={pending}
+        busyLabel={t(SUBMIT_COPY[intent].busy)}
+      >
+        {t(SUBMIT_COPY[intent].label)}
+      </Button>
+    </>
+  );
+  if (!dialog) {
+    return (
+      <form id={formId} onSubmit={submit}>
+        <div className="form-stack">{stack}</div>
+        <div className="actions">{actions}</div>
+      </form>
+    );
+  }
+  return (
+    <RecordFormDialog
+      open={dialog.open}
+      title={dialog.title}
+      onClose={onClose}
+      fieldCount={fields.filter((field) => !field.divider).length}
+      form={
+        <form id={formId} className="form-stack" onSubmit={submit}>
+          {stack}
+        </form>
+      }
+      actions={actions}
+    />
+  );
+}

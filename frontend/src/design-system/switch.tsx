@@ -3,6 +3,7 @@
 
 import { type ReactNode, useId } from "react";
 import { BusyMark } from "./atoms";
+import { describedByIds } from "./describedby";
 import { useSinglePress } from "./presslatch";
 import "./switch.css";
 
@@ -112,14 +113,11 @@ export function Switch({
   // reader is never pointed at an element that does not exist. The caller's own
   // id comes FIRST: it describes the setting, and the hint and the refusal
   // qualify it.
-  const describedBy =
-    [
-      describedByProp,
-      hint !== undefined ? hintId : null,
-      reason !== undefined ? reasonId : null,
-    ]
-      .filter(Boolean)
-      .join(" ") || undefined;
+  const describedBy = describedByIds(
+    describedByProp,
+    hint !== undefined && hintId,
+    reason !== undefined && reasonId,
+  );
 
   // Resolved once, and used for BOTH the announced state and the value handed
   // back on click, so what a reader hears and what the next write carries can

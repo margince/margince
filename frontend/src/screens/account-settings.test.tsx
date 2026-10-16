@@ -39,14 +39,13 @@ it("says so under Language when the account refuses the new language", async () 
       <AccountSettings />
     </StoryProviders>,
   );
-  await pickOption(
-    user,
-    await screen.findByRole("combobox", { name: "Language" }),
-    "Deutsch",
-  );
+  const language = await screen.findByRole("combobox", { name: "Language" });
+  const before = language.getAttribute("aria-describedby");
+  await pickOption(user, language, "Deutsch");
   const refusal = await screen.findByRole("alert");
+  expect(before).not.toContain(refusal.id);
   expect(screen.getByRole("combobox", { name: "Sprache" })).toHaveAttribute(
     "aria-describedby",
-    expect.stringContaining(refusal.id),
+    `${before} ${refusal.id}`,
   );
 });
