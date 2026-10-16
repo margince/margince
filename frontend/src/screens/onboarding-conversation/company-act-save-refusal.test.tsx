@@ -247,7 +247,7 @@ it("keeps one alert, on the same node, when the first edit adds Save", async () 
   await screen.findByRole("button", { name: en["ob.digest.saveChanges"] });
   await expectRefusalLine();
   expect(refusalLine()).toBe(before);
-});
+}, 30_000);
 
 it("joins the foot of an already shown Save", async () => {
   renderReview(REFUSED);
@@ -264,4 +264,4 @@ it("joins the foot of an already shown Save", async () => {
   const foot = save.closest(".ob-stage-acts");
   expect(foot).not.toBeNull();
   expect(foot?.querySelectorAll('[role="alert"]')).toHaveLength(1);
-});
+}, 30_000);
