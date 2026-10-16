@@ -78,9 +78,13 @@ func refuseLossySVG(src []byte) error {
 	decoder := xml.NewDecoder(bytes.NewReader(src))
 	decoder.Strict = false
 	textDepth := 0
+	hasText := false
 	for {
 		token, err := decoder.Token()
 		if errors.Is(err, io.EOF) {
+			if hasText {
+				return ErrSVGTextNotOutlined
+			}
 			return nil
 		}
 		if err != nil {
@@ -101,7 +105,7 @@ func refuseLossySVG(src []byte) error {
 			}
 		case xml.CharData:
 			if textDepth > 0 && len(bytes.TrimSpace(t)) > 0 {
-				return ErrSVGTextNotOutlined
+				hasText = true
 			}
 		}
 	}
@@ -119,6 +123,16 @@ const svgMaxElements = 20_000
 // ErrUnsupported like any other undecodable candidate, and the caller moves on
 // to the next one.
 func rasterizeSVG(src []byte) (image.Image, error) {
+	img, err := drawSVG(src)
+	if err != nil && !errors.Is(err, ErrSVGTextNotOutlined) && !errors.Is(err, ErrSVGNotDrawable) {
+		// A recognised SVG that fails is one the admin can still fix by exporting
+		// a PNG; "use an SVG" would be the wrong advice.
+		return nil, fmt.Errorf("%w: %w", ErrSVGNotDrawable, err)
+	}
+	return img, err
+}
+
+func drawSVG(src []byte) (image.Image, error) {
 	if err := refuseUnsafeSVG(src); err != nil {
 		return nil, err
 	}
