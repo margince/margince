@@ -232,7 +232,7 @@ export const TheServerRefusesAnSvgItCannotDraw: Story = {
   play: async ({ canvasElement }) => {
     await refuseUpload(canvasElement, "Wide logo");
     await within(canvasElement).findByText(
-      "This SVG has parts that cannot be drawn, such as embedded images. Export it as a PNG.",
+      "This SVG has parts that cannot be drawn here, or draws nothing. Export the logo as a PNG from your design tool.",
     );
   },
 };

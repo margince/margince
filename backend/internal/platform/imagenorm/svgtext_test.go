@@ -60,6 +60,10 @@ func TestDecodeRefusesAnSVGTheRendererCannotDrawAsNotDrawableAndNotAsText(t *tes
 		"foreignObject markup": svgOpen + `<foreignObject width="100" height="50"><div xmlns="http://www.w3.org/1999/xhtml">Acme</div></foreignObject></svg>`,
 		"an embedded image":    svgOpen + `<circle cx="25" cy="25" r="20"/><image href="data:image/png;base64,AAAA" width="10" height="10"/></svg>`,
 		"an image after text, so the fix that covers both is named": svgOpen + `<text>Acme</text><image href="data:image/png;base64,AAAA"/></svg>`,
+		"a filter":             svgOpen + `<defs><filter id="f"><feGaussianBlur stdDeviation="2"/></filter></defs><circle cx="25" cy="25" r="20" filter="url(#f)"/></svg>`,
+		"a pattern fill":       svgOpen + `<defs><pattern id="p" width="4" height="4"><rect width="2" height="2"/></pattern></defs><circle cx="25" cy="25" r="20" fill="url(#p)"/></svg>`,
+		"a mask":               svgOpen + `<mask id="m"><rect width="50" height="50" fill="#fff"/></mask><circle cx="25" cy="25" r="20" mask="url(#m)"/></svg>`,
+		"a marker":             svgOpen + `<defs><marker id="k"/></defs><path d="M0 0L10 10" marker-end="url(#k)" stroke="#000"/></svg>`,
 		"a use reference":      svgOpen + `<defs><circle id="c" r="5"/></defs><use href="#c"/></svg>`,
 		"an unclosed document": svgOpen + `<circle cx="25" cy="25" r="20"`,
 		"a currentColor fill the renderer cannot resolve": svgOpen + `<circle cx="25" cy="25" r="20" fill="currentColor"/></svg>`,
@@ -82,5 +86,24 @@ func TestDecodeRefusesAnSVGThatPaintsNothingButLeavesABlankPNGAlone(t *testing.T
 	blank := solidPNG(t, 4, 4, color.NRGBA{})
 	if _, err := Decode(blank); err != nil {
 		t.Fatalf("a stored transparent PNG must still decode for the trim path: %v", err)
+	}
+}
+
+func TestDecodeKeepsTheMarkupEditorsWriteAroundAnAcceptedDrawing(t *testing.T) {
+	ns := `<svg xmlns="http://www.w3.org/2000/svg" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" ` +
+		`xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" viewBox="0 0 100 50">`
+	circle := `<circle cx="25" cy="25" r="20" fill="#ff6b00"/>`
+	for name, doc := range map[string]string{
+		"an illustrator export": ns + `<title>Acme</title><desc>logo</desc><metadata>m</metadata><style>.a{fill:#f60}</style>` + circle + `</svg>`,
+		"an inkscape export":    ns + `<sodipodi:namedview id="n"/><metadata id="m"/><g inkscape:label="L">` + circle + `</g></svg>`,
+		"a figma artboard clip": ns + `<g clip-path="url(#c)">` + circle + `</g><defs><clipPath id="c"><rect width="100" height="50"/></clipPath></defs></svg>`,
+		"a gradient fill": ns + `<defs><linearGradient id="g"><stop offset="0" stop-color="#f60"/><stop offset="1" stop-color="#000"/></linearGradient></defs>` +
+			`<circle cx="25" cy="25" r="20" fill="url(#g)"/></svg>`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := Decode([]byte(doc)); err != nil {
+				t.Fatalf("markup that loses no drawing was refused: %v", err)
+			}
+		})
 	}
 }

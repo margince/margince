@@ -393,7 +393,7 @@ it("tells the admin to export a PNG when an SVG has parts that cannot be drawn",
   const alert = await screen.findByRole("alert");
   expect(
     within(alert).getByText(
-      "This SVG has parts that cannot be drawn, such as embedded images. Export it as a PNG.",
+      "This SVG has parts that cannot be drawn here, or draws nothing. Export the logo as a PNG from your design tool.",
     ),
   ).toBeTruthy();
 });
