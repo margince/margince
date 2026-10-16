@@ -35,9 +35,9 @@ import { type HistoryValueCtx, historyValue } from "./historyvalues";
 import { useRecordRestore } from "./recordrestore";
 import "./history.css";
 
-// The per-record plain-language change list (B-EP09.x): every audit_log row
-// for one record, one sentence per row in the reader's language. The wording
-// comes from the row's verb and actor, never from its before/after diffs.
+// The per-record change list: one sentence per audit_log row, from its verb
+// and actor, never from its before/after diffs. A link change keeps the
+// server's English sentence (historyline.ts).
 
 type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];
 type AuditHistoryListResponse =

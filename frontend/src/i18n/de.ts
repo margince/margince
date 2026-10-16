@@ -1043,11 +1043,12 @@ export const de = {
   "history.subject.viaAgent": "{name} (über einen Agenten)",
   "history.subject.viaConnector": "{name} (über einen Connector)",
   "history.subject.unrecordedAuthority":
-    "Eine Maschine ohne erfasste menschliche Vollmacht",
+    "Ein automatisierter Vorgang (keine menschliche Autorisierung erfasst)",
   "history.subject.system": "Das System",
   "history.subject.agent": "Ein Agent",
   "history.subject.connector": "Ein Connector",
-  "history.subject.buyer": "Die Käuferseite",
+  "history.subject.buyer": "Ein Gast im Deal Room",
+  "history.subject.buyerNamed": "{name} (im Deal Room)",
   "history.verb.create": "{subject} hat den Datensatz erstellt",
   "history.verb.update": "{subject} hat den Datensatz aktualisiert",
   "history.verb.archive": "{subject} hat den Datensatz archiviert",
@@ -1080,7 +1081,7 @@ export const de = {
     "{subject} hat den Import des Datensatzes rückgängig gemacht",
   "history.verb.resetData": "{subject} hat den Datensatz zurückgesetzt",
   "history.verb.passwordLinkIssued":
-    "{subject} hat einen Passwort-Link für den Datensatz gesendet",
+    "{subject} hat einen Passwort-Link für den Datensatz erstellt",
   "history.verb.connect": "{subject} hat den Datensatz verbunden",
   "history.verb.disconnect":
     "{subject} hat die Verbindung des Datensatzes getrennt",
@@ -6741,7 +6742,7 @@ export const de = {
   "audit.action.import": "Importiert",
   "audit.action.importUndo": "Import rückgängig gemacht",
   "audit.action.resetData": "Daten zurückgesetzt",
-  "audit.action.passwordLinkIssued": "Passwort-Link gesendet",
+  "audit.action.passwordLinkIssued": "Passwort-Link erstellt",
   "audit.action.connect": "Verbunden",
   "audit.action.disconnect": "Getrennt",
   "audit.action.schedule": "Geplant",
