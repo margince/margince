@@ -324,7 +324,9 @@ Three more checks share that first job. The tag points at a commit on `main`. `L
 release's Change Date and version, checked by
 [`scripts/release-license-stamped.sh`](../../scripts/release-license-stamped.sh)
 (`make test-release-license-stamped`). And the commit carries no failing `verdict` from
-`merge-attest`. That last check picks releases, and does not gate merges.
+`merge-attest`.
+
+That last check picks releases, and does not gate merges.
 To merge past `ci` is a standing decision here, so a missing result passes. A result that exists
 but is not done yet refuses.
 

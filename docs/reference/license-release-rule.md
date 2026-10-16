@@ -45,7 +45,8 @@ Two checks hold the rule:
   [`scripts/release-license-stamped.sh`](../../scripts/release-license-stamped.sh) on every `v*`
   tag, before any bundle builds. It refuses the release when the `Change Date` is not the tag
   date plus two years, or the `Licensed Work` line does not name the tag. The tag date is the day
-  of an annotated tag, in the tagger's time zone. A tag made on 29 February converts on 28
-  February, which stays inside the two years.
+  the tag was made, in the time zone of the one who made it. Only `git tag -a` records that day,
+  so a tag made without `-a` is refused. A tag made on `02-29` converts on `02-28`, which stays
+  inside the two years.
 - `backend/gates/licensebody_test.go` pins the text below the `Parameters` block. Any change to
   it fails `make check` on every PR, not only on a release.
