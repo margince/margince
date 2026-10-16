@@ -306,8 +306,8 @@ func writeMCPRateLimited(w http.ResponseWriter, r *http.Request, bucket *ratelim
 }
 
 // writeMCPRefused answers a pre-auth ceiling without claiming a count: those
-// limiters fail closed, so an unreachable shared store trips them too, and a
-// count the caller never reached would be false.
+// limiters fail closed. An unreachable shared store trips them too. A count the
+// caller never reached would be false.
 func writeMCPRefused(w http.ResponseWriter, r *http.Request, bucket *ratelimit.Limiter) {
 	wait := bucket.RetryAfterSeconds()
 	writeMCPWait(w, r, wait, fmt.Sprintf("requests from this caller are refused for now. Wait %d seconds and send the request again.", wait))

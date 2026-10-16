@@ -282,10 +282,6 @@ var transientCodes = map[string]struct{}{
 	AgentBusyCode:                {},
 }
 
-// IdempotencyInProgressCode refuses a retry whose first attempt under the same
-// key is still running. It clears when that attempt settles.
-const IdempotencyInProgressCode = "idempotency_key_in_progress"
-
 // SourceBusyCode refuses an import test while another run of the same source
 // name is writing. It clears when that write ends.
 const SourceBusyCode = "import_source_busy"

@@ -124,10 +124,9 @@ type Limiter struct {
 // Limit is how many events one key may spend in a window.
 func (l *Limiter) Limit() int { return l.limit }
 
-// RetryAfterSeconds is how long a refused caller waits for a fresh window. The
-// windows are fixed and the store does not report where a key's window began, so
-// this is the whole span: waiting it out always clears the ceiling, and it never
-// overstates the wait by more than the time already spent in the window.
+// RetryAfterSeconds is how long a refused caller waits for a fresh window.
+// Windows are fixed and the store does not report where one began, so this is
+// the whole span. Waiting it out always clears the ceiling.
 func (l *Limiter) RetryAfterSeconds() int {
 	return int(math.Ceil(l.window.Seconds()))
 }

@@ -291,8 +291,8 @@ func TestStreamOpensGetTheirOwnTighterBudget(t *testing.T) {
 	}
 }
 
-// A refused call says when to come back and which ceiling it met, for each of
-// the three ceilings, so a client does not have to guess a backoff.
+// A refused call says when to come back, for each of the three ceilings. A
+// client then needs no guessed backoff.
 func TestEveryMCPCeilingAnswersWithItsWait(t *testing.T) {
 	const peer = "160.79.104.11"
 	cases := []struct {
