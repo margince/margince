@@ -10365,6 +10365,18 @@ export const vi = {
     "Mã ISO 4217 mà mọi số tiền được quy đổi sang khi tổng hợp. Có thể thay đổi cho đến khi có số tiền đầu tiên được quy đổi.",
   "installationSettings.baseCurrencyLocked":
     "Đã khóa: đã có số tiền quy đổi sang loại tiền này, nên đổi loại tiền sẽ làm thay đổi mọi số liệu tổng hợp.",
+  "installationSettings.baseCurrencyLock.ratesFrozen_one":
+    "{count} hồ sơ đã cố định tỷ giá quy đổi theo loại tiền này, nên không thể thay đổi.",
+  "installationSettings.baseCurrencyLock.ratesFrozen_other":
+    "{count} hồ sơ đã cố định tỷ giá quy đổi theo loại tiền này, nên không thể thay đổi.",
+  "installationSettings.baseCurrencyLock.rateSheet_one":
+    "{count} tỷ giá đang quy đổi sang {base}. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+  "installationSettings.baseCurrencyLock.rateSheet_other":
+    "{count} tỷ giá đang quy đổi sang {base}. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+  "installationSettings.baseCurrencyLock.rateSheetUnnamed_one":
+    "{count} tỷ giá đang quy đổi sang một loại tiền cơ sở chưa được ghi nhận. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+  "installationSettings.baseCurrencyLock.rateSheetUnnamed_other":
+    "{count} tỷ giá đang quy đổi sang một loại tiền cơ sở chưa được ghi nhận. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
   "installationSettings.baseLanguage": "Ngôn ngữ cơ sở",
   "installationSettings.baseLanguageHint":
     "Ngôn ngữ AI dùng để viết khi cả nhóm cùng đọc văn bản. Ngôn ngữ hiển thị là cài đặt riêng, và thư trả lời khách hàng theo ngôn ngữ của chuỗi thư.",

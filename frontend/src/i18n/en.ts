@@ -10692,6 +10692,18 @@ export const en = {
     "ISO 4217 code that all amounts convert to for roll-ups. Can be changed until the first amount is converted.",
   "installationSettings.baseCurrencyLocked":
     "Locked: amounts are already converted to this currency, so changing it would alter every roll-up.",
+  "installationSettings.baseCurrencyLock.ratesFrozen_one":
+    "{count} record has frozen a conversion rate against this currency, so it cannot change.",
+  "installationSettings.baseCurrencyLock.ratesFrozen_other":
+    "{count} records have frozen a conversion rate against this currency, so it cannot change.",
+  "installationSettings.baseCurrencyLock.rateSheet_one":
+    "{count} currency rate converts into {base}. Clear the currency rates first to change the base currency.",
+  "installationSettings.baseCurrencyLock.rateSheet_other":
+    "{count} currency rates convert into {base}. Clear the currency rates first to change the base currency.",
+  "installationSettings.baseCurrencyLock.rateSheetUnnamed_one":
+    "{count} currency rate converts into a base currency that is not on record. Clear the currency rates first to change the base currency.",
+  "installationSettings.baseCurrencyLock.rateSheetUnnamed_other":
+    "{count} currency rates convert into a base currency that is not on record. Clear the currency rates first to change the base currency.",
   "installationSettings.baseLanguage": "Base language",
   "installationSettings.baseLanguageHint":
     "Language AI writes in when the whole team reads the text. Display language is separate, and customer replies follow the language of the thread.",

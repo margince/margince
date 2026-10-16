@@ -11192,9 +11192,10 @@ export interface paths {
          *     (PATCH). Governed by the `installation_settings` RBAC object.
          *
          *     `base_currency_locked` reports whether the currency has stopped being changeable, and
-         *     `base_currency_locked_reason` says why, naming how many deals have already frozen a
-         *     conversion rate against it (ADR-0085 §7). A client renders the field read-only from
-         *     the flag rather than discovering the refusal by attempting a write.
+         *     `base_currency_lock` says why as facts: which reason holds it and how many records or
+         *     currency rates hold it (ADR-0085 §7). `base_currency_locked_reason` carries the same
+         *     facts as one English sentence for older clients. A client renders the field read-only
+         *     from the flag rather than discovering the refusal by attempting a write.
          */
         get: operations["getInstallationSettings"];
         put?: never;
@@ -20593,10 +20594,13 @@ export interface components {
              */
             base_currency_locked: boolean;
             /**
-             * @description Why the currency is locked, naming what has already converted against it. Absent
-             *     when it is still changeable.
+             * @description Why the currency is locked, naming what has already converted against it, as one
+             *     English sentence. Absent when it is still changeable. A client words the reason
+             *     from `base_currency_lock` instead, and reads this only from a server that does not
+             *     send that object.
              */
             base_currency_locked_reason?: string;
+            base_currency_lock?: components["schemas"]["BaseCurrencyLock"];
             /**
              * Format: int64
              * @description The largest upload request this installation accepts, in bytes — set by whoever
@@ -21287,6 +21291,18 @@ export interface components {
             oidc_group_role_map: {
                 [key: string]: string;
             };
+        };
+        /** @description Why the base currency is locked, as facts a client words in its reader's language. Present exactly when `base_currency_locked_reason` is (ADR-0085 §7). */
+        BaseCurrencyLock: {
+            /**
+             * @description `rates_frozen`: closed deals, sent offers, mirrored invoices, contracts or commission entries have frozen a conversion rate against the base, and nothing undoes that. `rate_sheet`: currency rates convert into the base; clearing them lifts the lock.
+             * @enum {string}
+             */
+            reason: "rates_frozen" | "rate_sheet";
+            /** @description How many records froze a rate (`rates_frozen`), or how many currency rates convert into the base (`rate_sheet`). */
+            count: number;
+            /** @description The ISO-4217 code the currency rates convert into. Sent only with `rate_sheet`, and absent there when the installation holds no stored base to name. */
+            base_currency?: string;
         };
         /** @description One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen. */
         SignInProvider: {

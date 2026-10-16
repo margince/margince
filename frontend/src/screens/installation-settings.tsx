@@ -36,6 +36,7 @@ import {
   INSTALLATION_SETTINGS_KEY,
   useInstallationSettings,
 } from "../lib/uploadlimit";
+import { useCurrencyNote } from "./installation-settings.currency";
 import {
   RegionalSettingsFields,
   RegionalSettingsRows,
@@ -43,7 +44,6 @@ import {
 
 // Installation facts are readable by every role; only admin/ops may change them.
 // Each row opens the shared sparse-patch form with its own field focused.
-// A frozen base currency remains visible with the server's reason in both views.
 
 // Both shapes come from the generated contract rather than being restated
 // here: a hand-written copy would drift the first time the contract gains a
@@ -194,24 +194,6 @@ export function fiscalYearStartSummary(
   return `${monthName(month, locale)} — ${fiscalYearLabel(month, exampleYear)}`;
 }
 
-// A frozen currency is frozen for an admin too, so the lock reason replaces the
-// advice about what to type — that advice is about a value nobody can set. The
-// row and the field inside the dialog say the same thing, from one expression,
-// because two copies of this rule would answer differently the day the server
-// stops sending a reason.
-export function currencyNote(
-  settings: InstallationSettings,
-  t: ReturnType<typeof useT>,
-): string {
-  if (!settings.base_currency_locked) {
-    return t("installationSettings.baseCurrencyHint");
-  }
-  return (
-    settings.base_currency_locked_reason ??
-    t("installationSettings.baseCurrencyLocked")
-  );
-}
-
 function InstallationSettingsForm({
   settings,
   canManage,
@@ -220,6 +202,7 @@ function InstallationSettingsForm({
   canManage: boolean;
 }) {
   const t = useT();
+  const currencyNote = useCurrencyNote();
   const { locale } = useLocale();
   const toast = useToast();
   const [editing, setEditing] = useState<EditedFact | null>(null);
@@ -336,7 +319,7 @@ function InstallationSettingsForm({
         />
         <SettingRow
           label={t("installationSettings.baseCurrency")}
-          description={currencyNote(settings, t)}
+          description={currencyNote(settings)}
           value={settings.base_currency}
           control={editVerb(
             "base_currency",
@@ -441,6 +424,7 @@ function InstallationProfileDialog({
   onSubmit: () => void;
 }>) {
   const t = useT();
+  const currencyNote = useCurrencyNote();
   const refusalTitle = t("installationSettings.saveFailed");
   const { locale } = useLocale();
   const titleId = useId();
@@ -506,7 +490,7 @@ function InstallationProfileDialog({
           />
           <Field
             label={t("installationSettings.baseCurrency")}
-            hint={currencyNote(settings, t)}
+            hint={currencyNote(settings)}
             error={refused.get("base_currency")}
           >
             {(control) => (

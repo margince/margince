@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/currencylock"
 )
 
 type installationSettingsHandlers struct {
@@ -221,8 +222,8 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 // arrives from composition rather than from the settings table — the same way
 // base_currency_locked is derived rather than kept.
 //
-// The lock reason is omitted rather than sent empty when the currency is still
-// changeable: an empty string would render as a reason that says nothing.
+// The lock reason and its facts are omitted while the currency is changeable.
+// An empty string would render as a reason that says nothing.
 func (h installationSettingsHandlers) toContract(s identity.InstallationSettings) crmcontracts.InstallationSettings {
 	out := crmcontracts.InstallationSettings{
 		Name:                 s.Name,
@@ -244,9 +245,24 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 	timeFormat := crmcontracts.InstallationSettingsTimeFormat(s.TimeFormat)
 	out.DateFormat = &dateFormat
 	out.TimeFormat = &timeFormat
-	if s.BaseCurrencyLockedReason != "" {
-		reason := s.BaseCurrencyLockedReason
+	if s.BaseCurrencyLocked {
+		reason := s.BaseCurrencyLock.Prose()
 		out.BaseCurrencyLockedReason = &reason
+		out.BaseCurrencyLock = toBaseCurrencyLock(s.BaseCurrencyLock)
+	}
+	return out
+}
+
+// toBaseCurrencyLock sends the facts the prose reason was worded from. An
+// absent base stays absent, not empty, so a client words that case without one.
+func toBaseCurrencyLock(lock currencylock.Lock) *crmcontracts.BaseCurrencyLock {
+	out := &crmcontracts.BaseCurrencyLock{
+		Reason: crmcontracts.BaseCurrencyLockReason(lock.Reason),
+		Count:  lock.Count,
+	}
+	if lock.BaseCurrency != "" {
+		base := lock.BaseCurrency
+		out.BaseCurrency = &base
 	}
 	return out
 }
