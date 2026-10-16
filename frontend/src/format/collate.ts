@@ -76,14 +76,8 @@ export function foldForMatch(value: string): string {
   return value.toLowerCase();
 }
 
-/**
- * A form of the text that matches the way contacts actually type.
- *
- * Diacritics folded, because a reader searching a German or Vietnamese label
- * types what their keyboard gives them and a fold in one direction only would
- * make "Zurucksetzen" miss "Zurücksetzen" while the reverse worked. `đ` has no
- * decomposition, so it is mapped to the `d` a Vietnamese reader types for it.
- */
+// Folded both ways, or "Zurucksetzen" misses "Zurücksetzen" while the reverse
+// works. `đ` has no decomposition, so it maps to the `d` a reader types for it.
 export function foldForSearch(value: string): string {
   return foldForMatch(
     value.normalize("NFD").replace(/\p{Diacritic}/gu, ""),

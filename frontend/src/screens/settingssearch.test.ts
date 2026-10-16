@@ -193,9 +193,9 @@ describe("settingsSearch over the settings a page draws", () => {
     },
   );
 
-  it("offers the company-context settings to an admin alone", () => {
-    const find = (holdsAdminRole: boolean) =>
-      settingsSearch("ideal customer", ALL, t, { holdsAdminRole }).map(
+  it("offers the company-context settings only where the card draws", () => {
+    const find = (seesCompanyContext: boolean) =>
+      settingsSearch("ideal customer", ALL, t, { seesCompanyContext }).map(
         (hit) => hit.page.id,
       );
     expect(find(true)).toContain("company");

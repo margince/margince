@@ -15,6 +15,7 @@ import { SettingsScreen, settingsAddress } from "./settings";
 import { PipelinesCard } from "./settings.pipelines";
 import type { SettingsPageId } from "./settingscatalog";
 import {
+  COMPANY_CONTEXT_OFF,
   EVERY_GRANT,
   NOTIFICATION_ROUTES,
   UNUSED_INSTALLATION_ROUTES,
@@ -614,3 +615,15 @@ export const AuditPage: Story = catalogPage("audit");
 export const SystemHealthPage: Story = catalogPage("system-health");
 export const ExtensionsPage: Story = catalogPage("extensions");
 export const ResetPage: Story = catalogPage("reset");
+
+// Company profile while the rollout keeps the company context unread: the card
+// draws nothing, and search offers none of its names.
+export const CompanyPageContextOff: Story = {
+  parameters: { companyContext: "off" },
+  render: tab("company", {
+    "GET /me": everyGrantMe,
+    ...UNUSED_INSTALLATION_ROUTES,
+    "GET /company/context/capabilities": () =>
+      jsonResponse(COMPANY_CONTEXT_OFF),
+  }),
+};

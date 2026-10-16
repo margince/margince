@@ -9,11 +9,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { RbacAction } from "../lib/accessgrants";
+import { companyContextCapabilitiesQueryKey } from "../screens/companycontextreach";
 import {
   type CapabilityExpression,
   SETTINGS_PAGES,
   type SettingsPageId,
 } from "../screens/settingscatalog";
+import { COMPANY_CONTEXT_ON } from "../screens/settingspages.fixtures";
 import { settingsSearch } from "../screens/settingssearch";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { type Command, matchingCommands, useBuiltinCommands } from "./palette";
@@ -99,6 +101,7 @@ async function adminCommands(): Promise<readonly Command[]> {
     ...meFixture({ roles: ["admin"], allow: everyCatalogGrant() }),
     data_reset_available: true,
   });
+  client.setQueryData(companyContextCapabilitiesQueryKey, COMPANY_CONTEXT_ON);
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{children}</LocaleProvider>
@@ -123,7 +126,7 @@ function paletteFinds(commands: readonly Command[], phrase: string) {
 
 function searchFinds(phrase: string): SettingsPageId[] {
   return settingsSearch(phrase, SETTINGS_PAGES, t, {
-    holdsAdminRole: true,
+    seesCompanyContext: true,
   }).map((hit) => hit.page.id);
 }
 

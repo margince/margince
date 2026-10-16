@@ -4,9 +4,9 @@
 import { Search } from "lucide-react";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { useT } from "../i18n";
-import { useHoldsAdminRole } from "../lib/capability";
 import { isImeCommit } from "../lib/imecommit";
 import { navigate } from "../lib/router";
+import { useCompanyContextShown } from "./companycontextreach";
 import type { SettingsPage } from "./settingscatalog";
 import { PAGE_ICONS } from "./settingsnavicons";
 import { settingsHref } from "./settingsrouting";
@@ -75,8 +75,8 @@ export function SettingsSearchBox({
     activeRef.current?.scrollIntoView?.({ block: "nearest" });
   }, [active]);
 
-  const holdsAdminRole = useHoldsAdminRole();
-  const hits = settingsSearch(typed, pages, t, { holdsAdminRole });
+  const seesCompanyContext = useCompanyContextShown();
+  const hits = settingsSearch(typed, pages, t, { seesCompanyContext });
   // Whether the popup is ON SCREEN, which is what `aria-expanded` must report.
   // It was `hits.length > 0`, so a query matching nothing rendered a visible
   // popup while the combobox told assistive technology it was collapsed.
@@ -238,9 +238,8 @@ export function SettingsSearchBox({
                 >
                   <Glyph size={16} aria-hidden />
                   <span>{hit.label}</span>
-                  {/* Whose state it changes, after the setting found or the
-                      group: one name can sit on two pages, and this says which
-                      one is the company's. */}
+                  {/* Whose state it changes, after the setting or group: one
+                      name can sit on two pages. */}
                   <span className="t-caption">
                     {`${hit.section ?? hit.group} · ${t(`settings.scope.${hit.page.scope}`)}`}
                   </span>

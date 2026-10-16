@@ -79,11 +79,18 @@ const UNREAD_COMPANY: Schemas["CompanyProfile"] = {
   fields: [],
 };
 
-const CONTEXT_ON: Schemas["CompanyContextCapabilities"] = {
+export const COMPANY_CONTEXT_ON: Schemas["CompanyContextCapabilities"] = {
   rollout: "onboarding",
   read_enabled: true,
   tasks_enabled: true,
   onboarding_enabled: true,
+};
+
+export const COMPANY_CONTEXT_OFF: Schemas["CompanyContextCapabilities"] = {
+  rollout: "off",
+  read_enabled: false,
+  tasks_enabled: false,
+  onboarding_enabled: false,
 };
 
 const NO_JURISDICTION: Schemas["InstallationJurisdiction"] = {
@@ -133,5 +140,5 @@ export const UNUSED_INSTALLATION_ROUTES: RouteMap = {
   "GET /installation/settings": () => jsonResponse(INSTALLATION_SETTINGS),
   "GET /scheduling/profile": () => jsonResponse(bookingProfile),
   "GET /company": () => jsonResponse(UNREAD_COMPANY),
-  "GET /company/context/capabilities": () => jsonResponse(CONTEXT_ON),
+  "GET /company/context/capabilities": () => jsonResponse(COMPANY_CONTEXT_ON),
 };

@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { foldForSearch as fold, searchWords } from "../format/collate";
+import {
+  foldForSearch as fold,
+  holdsEveryWord,
+  searchWords,
+} from "../format/collate";
 import type { MessageKey } from "../i18n/en";
 import {
   groupHeadingKey,
@@ -173,8 +177,8 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
   reset: ["empty", "wipe", "delete everything", "danger"],
 };
 
-// The company-context card's own words. That card draws for an admin alone
-// (company-context.tsx), so another reader would land on a page without them.
+// The company-context card's own words. That card draws only where
+// `companyContextShown` says, so another reader would land on a page without them.
 const PROFILE_ALIASES: readonly string[] = [
   "logo",
   "vat",
@@ -183,19 +187,19 @@ const PROFILE_ALIASES: readonly string[] = [
 ];
 
 /** What the search needs to know about the reader asking. */
-type SettingsSearchReader = { readonly holdsAdminRole: boolean };
+type SettingsSearchReader = { readonly seesCompanyContext: boolean };
 
-/** The reader a caller gets when it names none: no admin-only aliases. */
-const NO_ADMIN_ROLE: SettingsSearchReader = { holdsAdminRole: false };
+/** The reader a caller gets when it names none: no company-context words. */
+const NO_COMPANY_CONTEXT: SettingsSearchReader = { seesCompanyContext: false };
 
 /** The words `page` answers to besides its own name, for this reader. */
 export function settingsPageAliases(
   page: SettingsPageId,
-  reader: SettingsSearchReader = NO_ADMIN_ROLE,
+  reader: SettingsSearchReader = NO_COMPANY_CONTEXT,
 ): readonly string[] {
   return [
     ...(ALIASES[page] ?? []),
-    ...(page === "company" && reader.holdsAdminRole ? PROFILE_ALIASES : []),
+    ...(page === "company" && reader.seesCompanyContext ? PROFILE_ALIASES : []),
   ];
 }
 
@@ -203,11 +207,11 @@ export function settingsPageAliases(
 export function settingsPageSections(
   page: SettingsPageId,
   t: (key: MessageKey) => string,
-  reader: SettingsSearchReader = NO_ADMIN_ROLE,
+  reader: SettingsSearchReader = NO_COMPANY_CONTEXT,
 ): readonly string[] {
   return [
     ...SETTINGS_SECTIONS[page],
-    ...(page === "company" && reader.holdsAdminRole
+    ...(page === "company" && reader.seesCompanyContext
       ? COMPANY_CONTEXT_SECTIONS
       : []),
   ].map((key) => t(key));
@@ -217,7 +221,7 @@ export function settingsPageSections(
 export function settingsPageKeywords(
   page: SettingsPageId,
   t: (key: MessageKey) => string,
-  reader: SettingsSearchReader = NO_ADMIN_ROLE,
+  reader: SettingsSearchReader = NO_COMPANY_CONTEXT,
 ): readonly string[] {
   return [
     ...settingsPageAliases(page, reader),
@@ -247,7 +251,7 @@ export function settingsSearch(
   query: string,
   pages: readonly SettingsPage[],
   t: (key: MessageKey) => string,
-  reader: SettingsSearchReader = NO_ADMIN_ROLE,
+  reader: SettingsSearchReader = NO_COMPANY_CONTEXT,
 ): readonly SettingsHit[] {
   // Split on whitespace, and every word must land somewhere. A reader types
   // "email signature" as one thought, but the two words live in different
@@ -276,10 +280,8 @@ export function settingsSearch(
     // one word reached, so "email signature" ranks under the same rule a
     // single word would — and a page matching only half the phrase is out
     // rather than ranked low, because a reader who typed two words meant both.
-    const ranks = words.map((word) => rankOf(word, fields));
-    const reached = ranks.filter((rank) => rank !== undefined);
-    if (reached.length === ranks.length) {
-      const rank = Math.min(...reached);
+    if (holdsEveryWord(words, fields)) {
+      const rank = Math.min(...words.map((word) => rankOf(word, fields)));
       const section = namedSection(
         words,
         sections,
@@ -309,20 +311,18 @@ function namedSection(
   if (best < 0 || best >= sections.length) {
     return undefined;
   }
-  const whole = sections.find((section) =>
-    words.every((word) => fold(section).includes(word)),
-  );
+  const whole = sections.find((section) => holdsEveryWord(words, [section]));
   return whole ?? sections[best];
 }
 
 /**
- * How well the needle matches, lower being better, or undefined for no match.
+ * How well the needle matches, lower being better, or Infinity for no match.
  *
  * A prefix beats a contained substring at the same field, so typing "au" puts
  * Audit log above the pages that merely contain those letters. Beyond that the
  * FIELD decides, which is what the caller's ordering above encodes.
  */
-function rankOf(needle: string, fields: readonly string[]): number | undefined {
+function rankOf(needle: string, fields: readonly string[]): number {
   for (const [index, field] of fields.entries()) {
     if (field.startsWith(needle)) {
       return index * 2;
@@ -331,5 +331,5 @@ function rankOf(needle: string, fields: readonly string[]): number | undefined {
       return index * 2 + 1;
     }
   }
-  return undefined;
+  return Number.POSITIVE_INFINITY;
 }
