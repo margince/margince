@@ -9,7 +9,7 @@
 3 react-hooks/refs src/app/account.tsx
 3 react-hooks/refs src/app/agent-edge.tsx
 2 react-hooks/set-state-in-effect src/app/agent-edge.tsx
-1 react-hooks/set-state-in-effect src/app/agentrail.tsx
+1 react-hooks/set-state-in-effect src/app/agentpanelframe.tsx
 1 react-hooks/set-state-in-effect src/app/ai-activity.ts
 1 react-hooks/set-state-in-effect src/app/askfromaddress.tsx
 1 react-hooks/set-state-in-effect src/app/palette.tsx
