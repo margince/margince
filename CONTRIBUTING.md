@@ -2,19 +2,16 @@
 # Contributing to Margince
 
 Margince is source-available under the Business Source License (BUSL-1.1). AI agents write most of
-its code, and a human is accountable for each change. Your changes are welcome, and they must meet the
-same rules as the code our own agents write.
+its code, and a human is accountable for each change. Your changes are welcome and must meet the
+same rules as the code our own agents write. You accept [CLA.md](CLA.md) before your first change
+merges; [LICENSING.md](LICENSING.md) says why.
 
 The [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) covers how we work together. It adds one rule:
 to send more code than you can explain wastes the time of the reviewers.
 
-## Accept the agreement
-
-You accept [CLA.md](CLA.md) before your first change merges; [LICENSING.md](LICENSING.md) says why.
-
 ## You answer for your change
 
-**You are accountable for every line you send.** You must explain every line. We expect you
+**You are accountable for every line you send.** We expect you
 to use AI help. We refuse a change you cannot explain, and more code than the task needs. If you cannot say
 why a line is there, what it does and why it is right, it is not ready. "The model wrote it" does not
 answer a review question.
