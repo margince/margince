@@ -65,8 +65,12 @@ var Routing = config.DefineStored(config.Spec[RoutingConfig]{
 // ConfigSettings are the ai settings an administrator may also change at run
 // time, apart from the provider keys, which Settings lists.
 func ConfigSettings() []config.Any {
-	return []config.Any{Routing, TaskOverridesSetting, BudgetSettings, PriceSyncSettings}
+	return append(RoutingSurface(), BudgetSettings, PriceSyncSettings)
 }
+
+// RoutingSurface are the settings whose locks GET /ai/routing reports: the
+// binding, and the task overrides that share its admin screen.
+func RoutingSurface() []config.Any { return []config.Any{Routing, TaskOverridesSetting} }
 
 // Definitions are the ai rows that are not configuration: the record of the
 // last price sync.

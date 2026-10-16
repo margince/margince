@@ -31965,7 +31965,9 @@ components:
         copy free to drift from the generated one.
       required: [profile, tiers, embeddings]
       properties:
-        locks: { $ref: '#/components/schemas/SettingLocks' }
+        locks:
+          $ref: '#/components/schemas/SettingLocks'
+          description: 'The settings a boot source sets among the binding and the task overrides; `/ai/task-overrides` is a map of tasks, so its lock is reported here.'
         profile:
           type: string
           enum: [eu_hosted, sovereign, cloud_frontier]

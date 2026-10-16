@@ -260,3 +260,22 @@ func overviewByKey(t *testing.T, entries []crmcontracts.ConfigurationEntry) map[
 	}
 	return byKey
 }
+
+// The task overrides answer as a map of tasks, so their lock is reported on
+// the routing response, beside the binding's, where the same screen reads it.
+func TestTheRoutingResponseReportsTheTaskOverridesLock(t *testing.T) {
+	e := apptest.SetupAppWithEnv(t, []string{`MARGINCE_AI_TASK_OVERRIDES={"capture_classify":{"thinking":"high"}}`})
+	e.BootstrapWorkspace(t)
+
+	var read crmcontracts.AiRouting
+	if status := e.Call(t, http.MethodGet, "/v1/ai/routing", nil, nil, &read); status != http.StatusOK || read.Locks == nil {
+		t.Fatalf("GET /ai/routing → %d, locks %v", status, read.Locks)
+	}
+	want := []crmcontracts.SettingLock{{
+		Key:    "ai.task_overrides",
+		Origin: crmcontracts.SettingOrigin{Source: crmcontracts.SettingOriginSourceEnv, Name: "MARGINCE_AI_TASK_OVERRIDES"},
+	}}
+	if got := *read.Locks; len(got) != 1 || got[0].Key != want[0].Key || got[0].Origin.Source != want[0].Origin.Source || got[0].Origin.Name != want[0].Origin.Name {
+		t.Fatalf("routing locks %+v, want %+v", got, want)
+	}
+}

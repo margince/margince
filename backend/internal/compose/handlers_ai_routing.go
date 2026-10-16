@@ -20,7 +20,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
@@ -49,7 +48,7 @@ func writeAiRouting(w http.ResponseWriter, r *http.Request, cfg ai.RoutingConfig
 		httperr.Write(w, r, err)
 		return
 	}
-	out.Locks = loadedLocks([]config.Any{ai.Routing})
+	out.Locks = loadedLocks(ai.RoutingSurface())
 	w.Header().Set("ETag", `"`+cfg.Revision()+`"`)
 	httperr.WriteJSON(w, http.StatusOK, out)
 }

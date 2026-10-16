@@ -21682,6 +21682,7 @@ export interface components {
          *     copy free to drift from the generated one.
          */
         AiRouting: {
+            /** @description The settings a boot source sets among the binding and the task overrides; `/ai/task-overrides` is a map of tasks, so its lock is reported here. */
             locks?: components["schemas"]["SettingLocks"];
             /**
              * @description The location ladder (§4). `sovereign` means zero egress by construction: a cloud
