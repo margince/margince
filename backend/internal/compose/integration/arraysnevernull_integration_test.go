@@ -101,7 +101,11 @@ func getJSON(t *testing.T, e *apptest.AppEnv, path string) (any, bool) {
 	if err != nil {
 		t.Fatalf("GET %s: %v", path, err)
 	}
-	defer apptest.CloseBody(t, resp)
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			t.Errorf("closing GET %s: %v", path, err)
+		}
+	}()
 	if resp.StatusCode != http.StatusOK || !strings.HasPrefix(resp.Header.Get("Content-Type"), "application/json") {
 		return nil, false
 	}
