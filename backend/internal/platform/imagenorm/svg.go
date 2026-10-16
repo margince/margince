@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/srwiley/oksvg"
 	"github.com/srwiley/rasterx"
@@ -67,11 +68,13 @@ var ErrSVGTextNotOutlined = fmt.Errorf("%w: the SVG draws live text, which has t
 // namespace prefix, so svg:text counts too.
 var svgTextElements = map[string]bool{"text": true, "tspan": true, "textpath": true}
 
+const svgClipPath = "clippath"
+
 // svgUndrawnElements drop their drawing in the renderer; inside <defs> only a
 // referenced one is refused. A clipPath of one viewBox-sized rect loses nothing.
 var svgUndrawnElements = map[string]bool{
 	"foreignobject": true, "image": true, "filter": true, "pattern": true,
-	"mask": true, "marker": true, "symbol": true, "clippath": true,
+	"mask": true, "marker": true, "symbol": true, svgClipPath: true,
 }
 
 // ErrSVGNotDrawable reports an SVG the renderer would draw blank or only partly.
@@ -96,9 +99,10 @@ type lossyScan struct {
 
 // svgClip collects the children of the <clipPath> being read inside <defs>.
 type svgClip struct {
-	id       string
-	children []xml.StartElement
-	depth    int
+	id          string
+	transformed bool
+	children    []xml.StartElement
+	depth       int
 }
 
 // refuseLossySVG rejects a document the renderer would only partly draw; the
@@ -146,8 +150,8 @@ func (s *lossyScan) start(t xml.StartElement) error {
 		s.viewBox = svgViewBox(t.Attr)
 	case name == "defs":
 		s.defsDepth++
-	case name == "clippath" && s.defsDepth > 0:
-		s.clip = &svgClip{id: svgElementID(t.Attr)}
+	case name == svgClipPath && s.defsDepth > 0:
+		s.clip = &svgClip{id: svgElementID(t.Attr), transformed: svgHasTransform(t.Attr)}
 	case svgUndrawnElements[name] && s.defsDepth > 0:
 		s.pending = append(s.pending, svgDefsElement{name, svgElementID(t.Attr)})
 	case svgUndrawnElements[name]:
@@ -162,9 +166,9 @@ func (s *lossyScan) end(name string) {
 	switch {
 	case s.clip != nil && s.clip.depth > 0:
 		s.clip.depth--
-	case s.clip != nil && name == "clippath":
-		if !svgIsArtboardClip(s.clip.children, s.viewBox) {
-			s.pending = append(s.pending, svgDefsElement{"clippath", s.clip.id})
+	case s.clip != nil && name == svgClipPath:
+		if s.clip.transformed || !svgIsArtboardClip(s.clip.children, s.viewBox) {
+			s.pending = append(s.pending, svgDefsElement{svgClipPath, s.clip.id})
 		}
 		s.clip = nil
 	case name == "defs":
@@ -185,7 +189,7 @@ func svgViewBox(attrs []xml.Attr) [4]float64 {
 		if attr.Name.Local != "viewBox" {
 			continue
 		}
-		fields := strings.FieldsFunc(attr.Value, func(r rune) bool { return r == ',' || r == ' ' })
+		fields := strings.FieldsFunc(attr.Value, func(r rune) bool { return r == ',' || unicode.IsSpace(r) })
 		if len(fields) != 4 {
 			return [4]float64{}
 		}
@@ -203,6 +207,9 @@ func svgViewBox(attrs []xml.Attr) [4]float64 {
 // svgIsArtboardClip reports a clip made of one rect that covers the viewBox.
 func svgIsArtboardClip(children []xml.StartElement, box [4]float64) bool {
 	if len(children) != 1 || strings.ToLower(children[0].Name.Local) != "rect" || box[2] <= 0 {
+		return false
+	}
+	if svgHasTransform(children[0].Attr) {
 		return false
 	}
 	rect := map[string]float64{}
@@ -225,6 +232,17 @@ func refuseAtEnd(hasText bool, pending []svgDefsElement, referenced map[string]b
 		return ErrSVGTextNotOutlined
 	}
 	return nil
+}
+
+// svgHasTransform reports a transform attribute, which moves or scales a clip
+// off the artboard.
+func svgHasTransform(attrs []xml.Attr) bool {
+	for _, attr := range attrs {
+		if attr.Name.Local == "transform" {
+			return true
+		}
+	}
+	return false
 }
 
 func svgElementID(attrs []xml.Attr) string {
