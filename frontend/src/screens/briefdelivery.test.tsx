@@ -83,8 +83,13 @@ describe("the delivery settings", () => {
         name: en["delivery.none"],
       }),
     );
-    expect((await screen.findByRole("alert")).textContent).toContain(
-      en["settings.saveFailed"],
-    );
+    const refusal = await screen.findByRole("alert");
+    expect(refusal.textContent).toContain(en["settings.saveFailed"]);
+    expect(refusal.id).not.toBe("");
+    expect(
+      within(screen.getByTestId("delivery-morning"))
+        .getByRole("combobox")
+        .getAttribute("aria-describedby"),
+    ).toContain(refusal.id);
   });
 });

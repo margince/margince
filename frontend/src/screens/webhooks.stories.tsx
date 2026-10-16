@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import { Badge } from "../design-system/atoms";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
@@ -248,19 +249,19 @@ export const SecretRevealed: Story = {
       await canvas.findByLabelText(/target url/i),
       "https://hooks.acme.test/inbound",
     );
-    // The event set is a `MultiSelect` (create.tsx), not a page of checkboxes:
-    // the options live in a listbox it portals to the body, so choosing one is
-    // open-then-pick. The list STAYS open after a pick — that is what makes
-    // choosing three of a hundred three clicks — so it is dismissed before the
-    // submit, which it would otherwise cover.
+    // The drawer's event picker: open it, tick one event, close it.
     await userEvent.click(
-      await canvas.findByRole("combobox", { name: "Event types" }),
+      await canvas.findByRole("button", { name: en["webhooks.events.add"] }),
     );
     await userEvent.click(
-      await canvas.findByRole("option", { name: "deal.stage_changed" }),
+      await canvas.findByRole("checkbox", {
+        name: /^Deal moved to another stage/,
+      }),
     );
-    await userEvent.keyboard("{Escape}");
-    await userEvent.click(canvas.getByRole("button", { name: "Create" }));
+    await userEvent.click(
+      canvas.getByRole("button", { name: en["webhooks.events.done"] }),
+    );
+    await userEvent.click(canvas.getByTestId("save-webhook-subscription"));
   },
 };
 
@@ -270,7 +271,7 @@ export const SecretRevealed: Story = {
 export const EditOpen: Story = {
   render: cardStory(baseRoutes()),
   play: async () => {
-    await clickTestIds(["edit-record"]);
+    await clickTestIds(["edit-webhook-subscription"]);
   },
 };
 

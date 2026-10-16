@@ -350,7 +350,8 @@
  * specificity and this rule is the later one, so it wins by default.
  */
 .btn:active:not(:disabled, [aria-disabled="true"]),
-.iconbtn:active:not(:disabled, [aria-disabled="true"]) {
+.iconbtn:active:not(:disabled, [aria-disabled="true"]),
+.btn.btn-bare:active:not(:disabled, [aria-disabled="true"]) {
   transform: translateY(1px);
   transition-duration: var(--dur-tap);
 }
@@ -681,7 +682,8 @@ kbd {
  */
 @media (prefers-reduced-motion: reduce) {
   .btn:active:not(:disabled, [aria-disabled="true"]),
-  .iconbtn:active:not(:disabled, [aria-disabled="true"]) {
+  .iconbtn:active:not(:disabled, [aria-disabled="true"]),
+  .btn.btn-bare:active:not(:disabled, [aria-disabled="true"]) {
     transform: none;
     filter: brightness(0.96);
   }

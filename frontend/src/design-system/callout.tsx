@@ -158,6 +158,7 @@ export function Callout({
   actions,
   live,
   dismiss,
+  id,
   children,
 }: Readonly<{
   tone?: CalloutTone;
@@ -180,11 +181,14 @@ export function Callout({
    * translated verb — this file holds no words.
    */
   dismiss?: Readonly<{ label: string; onDismiss: () => void }>;
+  /** For a control's `aria-describedby`, when the notice explains that control. */
+  id?: string;
   /** Whatever the heading does not already say, where there is more to say. */
   children?: ReactNode;
 }>) {
   return (
     <div
+      id={id}
       className={`callout callout-${tone}`}
       role={live ?? announcementFor(kind, tone)}
     >

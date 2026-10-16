@@ -54,7 +54,7 @@ export function MeetingSettings() {
         <WorkingHoursCard />
         <Callout
           tone="danger"
-          kind="outcome"
+          kind="standing"
           title={t("scheduling.bookRefused")}
         />
       </>

@@ -3,6 +3,7 @@ import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsRail } from "../app/shell";
+import { armHoverIntent } from "../design-system/hoverintent-testing";
 import { translate } from "../i18n";
 import type { Route } from "../lib/router";
 import * as router from "../lib/router";
@@ -166,6 +167,34 @@ describe("a page the rail does not carry is still the reader's to reach", () => 
     expect((await screen.findByRole("tooltip")).textContent).toBe(
       translate("en", "settings.home.readOnly"),
     );
+
+    await userEvent.setup().keyboard("{Escape}");
+
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    expect(document.activeElement).toBe(row);
+  });
+
+  it("names the lock in a tip when the pointer rests on it", async () => {
+    armHoverIntent();
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", settingsNavBackend(consultingRep));
+    renderHome();
+    await expectSnapshotResolved();
+    const row = await screen.findByRole("link", {
+      name: new RegExp(`^${labelOf("pipelines")}`),
+    });
+    const lock = row.querySelector(".settings-home-lock");
+    if (!(lock instanceof HTMLElement)) {
+      throw new Error("the read-only row drew no lock");
+    }
+
+    await user.hover(lock);
+
+    expect((await screen.findByRole("tooltip")).textContent).toBe(
+      translate("en", "settings.home.readOnly"),
+    );
+    await user.unhover(lock);
+    await waitFor(() => expect(screen.queryByRole("tooltip")).toBeNull());
   });
 
   // The control: a page this rep can change carries no marker.

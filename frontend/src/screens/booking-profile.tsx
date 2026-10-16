@@ -47,13 +47,7 @@ export function BookingProfileScreen({
         </header>
       )}
       <QueryGate pendingLabel={t("common.loading")} query={query}>
-        {(profile) => (
-          <ProfileForm
-            key={profile.public_url ?? ""}
-            profile={profile}
-            embedded={embedded}
-          />
-        )}
+        {(profile) => <ProfileForm profile={profile} embedded={embedded} />}
       </QueryGate>
     </div>
   );

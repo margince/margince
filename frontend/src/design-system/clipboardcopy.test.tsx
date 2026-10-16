@@ -104,6 +104,18 @@ describe("useClipboardCopy", () => {
     expect(screen.getByRole("button", { name: "Copy link" })).toBeTruthy();
   });
 
+  it("drops the failure notice once the text on offer changes", async () => {
+    const user = userEvent.setup();
+    stubClipboard("refuses");
+    renderProbe("the-link");
+    await user.click(screen.getByRole("button", { name: "Copy link" }));
+    await screen.findByText(/clipboard access denied/i);
+
+    await user.click(screen.getByRole("button", { name: "Edit the text" }));
+
+    expect(screen.queryByText(/clipboard access denied/i)).toBeNull();
+  });
+
   it("takes the notice away once a later attempt lands", async () => {
     const user = userEvent.setup();
     stubClipboard("refuses");

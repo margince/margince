@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import type { components } from "../api/schema";
 import { mount, view } from "../features/contacts/contactpage.testkit";
 import {
   installFetchStub,
@@ -26,6 +27,8 @@ import { BookingGuestScreen } from "./booking-guest";
 import { BookingInviteScreen } from "./booking-invite";
 import { BookingMeetingScreen } from "./booking-meeting";
 import { BookingProfileScreen } from "./booking-profile";
+
+type SchedulingProfile = components["schemas"]["SchedulingProfile"];
 
 afterEach(() => {
   cleanup();
@@ -291,4 +294,61 @@ it("names the link once on its own page, in the heading and not again on the car
   expect(screen.getAllByText(/One link for your email signature/)).toHaveLength(
     1,
   );
+});
+
+it("keeps focus on Accept bookings when the answer brings the first link", async () => {
+  const user = userEvent.setup();
+  let latest: SchedulingProfile = {
+    ...bookingProfile,
+    enabled: false,
+    public_url: undefined,
+  };
+  installFetchStub({
+    "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
+    "GET /scheduling/profile": () => jsonResponse(latest),
+    "PUT /scheduling/profile": () => {
+      latest = { ...bookingProfile, enabled: true };
+      return jsonResponse(latest);
+    },
+  });
+  render(
+    <StoryProviders>
+      <BookingProfileScreen />
+    </StoryProviders>,
+  );
+  const accept = await screen.findByRole("switch", { name: "Accept bookings" });
+  await user.click(accept);
+  await screen.findByRole("textbox", { name: "My booking link" });
+  expect(accept.getAttribute("aria-checked")).toBe("true");
+  expect(document.activeElement).toBe(accept);
+});
+
+it("hands focus back to Replace link once the new link lands", async () => {
+  const user = userEvent.setup();
+  let latest = { ...bookingProfile };
+  installFetchStub({
+    "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
+    "GET /scheduling/profile": () => jsonResponse(latest),
+    "PUT /scheduling/profile": () => {
+      latest = { ...latest, public_url: "https://book.example/new-link" };
+      return jsonResponse(latest);
+    },
+  });
+  render(
+    <StoryProviders>
+      <BookingProfileScreen />
+    </StoryProviders>,
+  );
+  const replace = await screen.findByRole("button", { name: "Replace link" });
+  await user.click(replace);
+  const dialog = await screen.findByRole("dialog");
+  await user.click(
+    within(dialog).getByRole("button", { name: "Replace booking link" }),
+  );
+  await waitFor(() =>
+    expect(
+      screen.getByRole("textbox", { name: "My booking link" }),
+    ).toHaveProperty("value", "https://book.example/new-link"),
+  );
+  await waitFor(() => expect(document.activeElement).toBe(replace));
 });

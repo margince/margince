@@ -9510,8 +9510,8 @@ export const vi = {
   "settings.voice.readOnly":
     "Chỉ đọc. Vai trò hiện tại không có quyền thay đổi Voice DNA.",
   "settings.voice.emptyBody":
-    "Thêm văn mẫu để dựng Voice DNA. Voice DNA chỉ bạn xem được và chỉ học từ những gì đã thêm. Lần dựng đầu mất khoảng một phút.",
-  "settings.voice.privacy": "Chỉ bạn xem được Voice DNA này.",
+    "Thêm văn mẫu để dựng Voice DNA. Chỉ bạn có thể xem Voice DNA, và Voice DNA chỉ học từ những gì đã thêm. Lần dựng đầu mất khoảng một phút.",
+  "settings.voice.privacy": "Chỉ bạn có thể xem Voice DNA này.",
   "settings.voice.status.collecting": "Đang thu thập",
   "settings.voice.status.stale": "Cần dựng lại",
   "settings.voice.bandThin": "mỏng",

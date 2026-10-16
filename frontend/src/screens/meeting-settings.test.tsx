@@ -623,10 +623,13 @@ it("says the booking page has no company to show rather than leaving the fact bl
   expect(term.nextElementSibling?.textContent).toContain("Not set");
 });
 
-it("tells a seat that may not book why, as an alert beside its hours", async () => {
+it("tells a seat that may not book why, as a standing notice beside its hours", async () => {
   mount({ "GET /me": meRoute({}) });
-  expect(await screen.findByRole("alert")).toHaveTextContent(
+  const notice = await screen.findByText(
     "An administrator must grant permission to book meetings.",
   );
+  expect(notice.closest(".callout-danger")).not.toBeNull();
+  // Known on load, so it does not interrupt a screen reader on every visit.
+  expect(screen.queryByRole("alert")).toBeNull();
   expect(screen.queryByRole("switch", { name: "Accept bookings" })).toBeNull();
 });

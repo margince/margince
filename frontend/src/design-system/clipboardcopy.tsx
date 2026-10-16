@@ -51,13 +51,15 @@ export function useClipboardCopy(
 }> {
   const t = useT();
   const [written, setWritten] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
+  // Keyed by the text it failed on, so a new text starts without the notice.
+  const [failedOn, setFailedOn] = useState<string | null>(null);
   // Which attempt the reader is waiting on. Two presses are two independent
   // writes that can settle in either order, and an older one landing last would
   // speak for the newer: a rejection arriving after a success draws the failure
   // notice over a copy that worked.
   const attempt = useRef(0);
   const copied = written === text;
+  const failed = failedOn === text;
 
   function copy() {
     // `navigator.clipboard` is UNDEFINED outside a secure context, so a missing
@@ -71,20 +73,20 @@ export function useClipboardCopy(
       // copied and then met a browser with no clipboard would otherwise draw
       // Copied and the danger notice at the same time.
       setWritten(null);
-      setFailed(true);
+      setFailedOn(text);
       return;
     }
     writer.writeText(text).then(
       () => {
         if (mine !== attempt.current) return;
         setWritten(text);
-        setFailed(false);
+        setFailedOn(null);
         onCopied?.();
       },
       () => {
         if (mine !== attempt.current) return;
         setWritten(null);
-        setFailed(true);
+        setFailedOn(text);
       },
     );
   }

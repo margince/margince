@@ -50,6 +50,7 @@ it("does not save on the Enter that ends an IME composition", async () => {
   const field = await screen.findByRole("textbox", { name: "Greeting name" });
   await user.type(field, "Việt");
   fireEvent.keyDown(field, { key: "Enter", isComposing: true });
+  fireEvent.keyDown(field, { key: "Enter", keyCode: 229 });
   expect(sent).toHaveLength(0);
   fireEvent.keyDown(field, { key: "Enter" });
   await waitFor(() => expect(sent).toHaveLength(1));
@@ -85,4 +86,45 @@ it("hands focus back to the field after Save", async () => {
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(sent).toHaveLength(1));
   await waitFor(() => expect(field).toHaveFocus());
+});
+
+it("hands focus back to the field after a refused Save", async () => {
+  const user = userEvent.setup();
+  mount(
+    () =>
+      new Response(JSON.stringify({ status: 503, code: "unavailable" }), {
+        status: 503,
+        headers: { "content-type": "application/problem+json" },
+      }),
+  );
+  const field = await screen.findByRole("textbox", { name: "Greeting name" });
+  await user.type(field, "Ada");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await screen.findByRole("alert");
+  await waitFor(() => expect(field).toHaveFocus());
+});
+
+it("leaves focus where the reader moved it while the save was out", async () => {
+  const user = userEvent.setup();
+  let land: (response: Response) => void = () => {};
+  const sent = mount(
+    () =>
+      new Promise<Response>((resolve) => {
+        land = resolve;
+      }),
+  );
+  const elsewhere = document.body.appendChild(document.createElement("button"));
+  const field = await screen.findByRole("textbox", { name: "Greeting name" });
+  await user.type(field, "Ada");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(sent).toHaveLength(1));
+  elsewhere.focus();
+  land(jsonResponse({ greeting_name: "Ada" }));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Save" })).not.toHaveAttribute(
+      "aria-busy",
+    ),
+  );
+  expect(elsewhere).toHaveFocus();
+  elsewhere.remove();
 });

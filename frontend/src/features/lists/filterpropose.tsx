@@ -29,6 +29,7 @@ import {
   fieldLabel,
   type VocabularyField,
 } from "../../lib/filterdata";
+import { isImeCommit } from "../../lib/imecommit";
 import { problemCodeOf, unwrap } from "../../lib/problem";
 import { decode, type Group, rootGroup } from "../../lib/segmentpredicate";
 import type { FilterDraftAction } from "./filterdraft";
@@ -198,7 +199,7 @@ export function PlainWordsFilter({
               if (
                 event.key === "Enter" &&
                 !event.shiftKey &&
-                !event.nativeEvent.isComposing
+                !isImeCommit(event)
               ) {
                 event.preventDefault();
                 words.submit();

@@ -4,6 +4,7 @@
 // the email that points to them, so they sit with the reader's own notifications.
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Panel } from "../design-system/panel";
@@ -40,6 +41,7 @@ export function BriefDeliveryPanel() {
 function BriefDeliveryRows() {
   const t = useT();
   const queryClient = useQueryClient();
+  const refusalId = useId();
   const settings = useQuery({
     queryKey: ["me", "brief-delivery"],
     queryFn: async () => {
@@ -62,6 +64,8 @@ function BriefDeliveryRows() {
   });
 
   const chosen = (value: Choice | undefined): Choice => value ?? "email";
+  const describedBy = (own: string | undefined) =>
+    [own, save.isError && refusalId].filter(Boolean).join(" ") || undefined;
   const options = CHOICES.map((choice) => ({
     value: choice,
     label: t(choice === "email" ? "delivery.byEmail" : "delivery.none"),
@@ -77,6 +81,7 @@ function BriefDeliveryRows() {
           control={(control) => (
             <Select
               {...control}
+              aria-describedby={describedBy(control["aria-describedby"])}
               className="settingrow-measure"
               value={chosen(settings.data?.morning_brief_delivery)}
               onChange={(next) => {
@@ -98,6 +103,7 @@ function BriefDeliveryRows() {
           control={(control) => (
             <Select
               {...control}
+              aria-describedby={describedBy(control["aria-describedby"])}
               className="settingrow-measure"
               value={chosen(settings.data?.weekly_delivery)}
               onChange={(next) => {
@@ -114,7 +120,11 @@ function BriefDeliveryRows() {
       <PanelNotices
         refused={
           save.isError
-            ? { title: t("settings.saveFailed"), error: save.error }
+            ? {
+                title: t("settings.saveFailed"),
+                error: save.error,
+                id: refusalId,
+              }
             : undefined
         }
       />

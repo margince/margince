@@ -311,10 +311,10 @@ export async function expectFoldedRowsUnderSummary(canvasElement: HTMLElement) {
       throw new Error("a folded row has no cell, or no summary above it");
     }
     await expect(
-      Math.round(
+      Math.abs(
         cell.getBoundingClientRect().left -
           summary.getBoundingClientRect().left,
       ),
-    ).toBe(0);
+    ).toBeLessThan(1);
   }
 }

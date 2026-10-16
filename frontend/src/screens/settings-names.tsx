@@ -6,6 +6,7 @@ import { SettingRow } from "../design-system/settingrow";
 import type { Toast } from "../design-system/toast";
 import { greetingNameOf } from "../format/greetingname";
 import { useT } from "../i18n";
+import { isImeCommit } from "../lib/imecommit";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 
@@ -114,6 +115,7 @@ function NameSettingRow({
   // types, so a `/me` refetch cannot overwrite what they are in the middle of.
   const [draft, setDraft] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
+  const actions = useRef<HTMLDivElement>(null);
   const shown = draft ?? stored;
   const save = useMutation({
     mutationFn: send,
@@ -133,10 +135,17 @@ function NameSettingRow({
   const tooLong = [...trimmed].length > maxRunes;
   const refusal = save.error ? problemMessageOf(save.error, t) : undefined;
   const savable = dirty && (emptyAllowed || trimmed !== "") && !tooLong;
-  // The Save button leaves once the name lands, so focus goes back to the
-  // field rather than to the page.
+  // The Save button leaves once the name lands. Focus left on it, or dropped
+  // to the page, goes back to the field; focus the reader moved stays put.
   const commit = () =>
-    save.mutate(trimmed, { onSettled: () => input.current?.focus() });
+    save.mutate(trimmed, {
+      onSettled: () => {
+        const active = document.activeElement;
+        if (active === document.body || actions.current?.contains(active)) {
+          input.current?.focus();
+        }
+      },
+    });
   return (
     <SettingRow
       label={label}
@@ -162,7 +171,7 @@ function NameSettingRow({
                   // An Enter that ends an IME composition picks the word.
                   if (
                     event.key === "Enter" &&
-                    !event.nativeEvent.isComposing &&
+                    !isImeCommit(event) &&
                     savable &&
                     !save.isPending
                   ) {
@@ -173,7 +182,7 @@ function NameSettingRow({
             )}
           </Field>
           {dirty && (
-            <div className="form-actions">
+            <div className="form-actions" ref={actions}>
               <Button
                 variant="primary"
                 disabled={!savable}

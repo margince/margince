@@ -7,6 +7,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ts from "typescript";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { appStylesheets, rulesOf } from "../../scripts/lib/css-rules";
 import {
   extensionFrontendFiles,
   filesMatching,
@@ -550,23 +551,90 @@ describe("the bare variant is the .iconbtn control, not a copy of it", () => {
     expect(classesOf("Notifications")).toContain("btn-bare");
   });
 
+  // Test files are outside every tsconfig, so the compile is run here.
+  it("compiles only as a glyph button", () => {
+    expect(
+      compileErrorLines(`import { Button } from "./atoms";
+export const glyph = <Button variant="bare" iconOnly aria-label="Bell" />;
+export const worded = <Button variant="bare">Bell</Button>;
+export const ghost = <Button variant="ghost">Bell</Button>;
+`),
+    ).toEqual([3]);
+  });
+
   // A rule for one of the two and not the other is where their looks part.
-  // A `.btn:` rule already reaches the variant through the button box.
+  // Each selector alternative, in every app sheet and inside every @media,
+  // needs its partner with the same declarations in the same sheet.
   it("shares every rule with .iconbtn, and outranks the button box", () => {
-    const sheet = stripComments(readFileSync(join(here, "base.css"), "utf8"));
-    const selectors = [...sheet.matchAll(/([^{}]*)\{[^}]*\}/g)]
-      .map(([, selector]) => selector.replace(/\s+/g, " ").trim())
-      .filter((selector) => /\.iconbtn|\.btn-bare/.test(selector));
-    expect(selectors.length).toBeGreaterThan(0);
-    for (const selector of selectors) {
-      if (/(^|, )\.btn:/.test(selector)) {
-        continue;
-      }
-      expect(selector).toContain(".iconbtn");
-      expect(selector).toContain(".btn.btn-bare");
-    }
+    const all = rulesOf(appStylesheets(join(here, "..", "..")));
+    const key = (file: string, selector: string, body: string) =>
+      `${file}|${selector}|${body.trim()}`;
+    const written = new Set(
+      all.map((rule) => key(rule.file, rule.selector, rule.body)),
+    );
+    const paired = all.flatMap((rule) => {
+      const partner = bareTwinOf(rule.selector);
+      return partner === undefined
+        ? []
+        : [{ rule, partner: key(rule.file, partner, rule.body) }];
+    });
+    expect(paired.length).toBeGreaterThan(0);
+    expect(
+      paired
+        .filter(({ partner }) => !written.has(partner))
+        .map(({ rule }) => `${relative(here, rule.file)}: ${rule.selector}`),
+    ).toEqual([]);
   });
 });
+
+// The 1-based lines of `source` that fail to type, compiled as a file beside
+// atoms.tsx under the app's own compiler options.
+function compileErrorLines(source: string): number[] {
+  const config = ts.getParsedCommandLineOfConfigFile(
+    join(here, "..", "..", "tsconfig.app.json"),
+    {},
+    { ...ts.sys, onUnRecoverableConfigFileDiagnostic: () => undefined },
+  );
+  if (config === undefined) {
+    throw new Error("tsconfig.app.json did not parse");
+  }
+  // Not composite: the fixture is no file the project lists.
+  const options = { ...config.options, composite: false };
+  const fixture = join(here, "button-shape.fixture.tsx");
+  const host = ts.createCompilerHost(options, true);
+  const readReal = host.getSourceFile.bind(host);
+  host.getSourceFile = (name, version, onError, shouldCreate) =>
+    name === fixture
+      ? ts.createSourceFile(name, source, version, true, ts.ScriptKind.TSX)
+      : readReal(name, version, onError, shouldCreate);
+  host.fileExists = (name) => name === fixture || ts.sys.fileExists(name);
+  const program = ts.createProgram([fixture], options, host);
+  const file = program.getSourceFile(fixture);
+  if (file === undefined) {
+    throw new Error("the fixture did not load");
+  }
+  const lines = program
+    .getSemanticDiagnostics(file)
+    .map(
+      (diagnostic) =>
+        file.getLineAndCharacterOfPosition(diagnostic.start ?? 0).line + 1,
+    );
+  return [...new Set(lines)];
+}
+
+// The same selector spelled for the other of the pair, or undefined for one
+// that names neither.
+function bareTwinOf(selector: string): string | undefined {
+  const iconbtn = /\.iconbtn(?![\w-])/g;
+  const bare = /\.btn\.btn-bare(?![\w-])/g;
+  if (selector.match(iconbtn)) {
+    return selector.replace(iconbtn, ".btn.btn-bare");
+  }
+  if (selector.match(bare)) {
+    return selector.replace(bare, ".iconbtn");
+  }
+  return undefined;
+}
 
 // The control owns its icon's size, and this is the fitness function for it.
 //
