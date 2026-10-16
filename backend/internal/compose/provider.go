@@ -159,8 +159,8 @@ func (p *Provider) ListFilters(t datasource.EntityType) []string {
 }
 
 // Search answers one page of records: one entity type's, or a SWEEP across
-// several — which is what the tool surface advertises when a caller names no
-// record type, and what this provider must therefore be able to page.
+// several, which SystemOfRecordProvider.Search admits by taking a list of
+// types. list_records and a named anchor ask for one type.
 //
 // The page is bounded ONCE, across the whole walk. Charging each type the full
 // limit and concatenating would answer five times the ceiling the caller

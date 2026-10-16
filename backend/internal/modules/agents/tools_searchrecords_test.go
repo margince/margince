@@ -1,0 +1,207 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package agents
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"slices"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+)
+
+// rankingProbe is a ranked engine that answers a fixed page and keeps the
+// query it was asked.
+type rankingProbe struct {
+	page  RecordSearchPage
+	err   error
+	asked *RecordSearchQuery
+}
+
+func (p *rankingProbe) search(_ context.Context, q RecordSearchQuery) (RecordSearchPage, error) {
+	p.asked = &q
+	return p.page, p.err
+}
+
+// searchReader is an agent that may read the named objects, every row of them.
+func searchReader(objects ...string) context.Context {
+	grants := map[string]principal.ObjectGrant{}
+	for _, object := range objects {
+		grants[object] = principal.ObjectGrant{Read: true}
+	}
+	return principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:search",
+		Permissions: principal.Permissions{Objects: grants, RowScope: principal.RowScopeAll},
+		Scopes:      principal.NewScopeSet(principal.ScopeRead),
+	})
+}
+
+func searchRecordsOver(provider datasource.SystemOfRecordProvider, engine *rankingProbe) searchRecords {
+	return searchRecords{p: provider, engine: engine.search}
+}
+
+func searchedPage(t *testing.T, raw json.RawMessage) SearchRecordsResult {
+	t.Helper()
+	var page SearchRecordsResult
+	if err := json.Unmarshal(raw, &page); err != nil {
+		t.Fatalf("decoding the answer %s: %v", raw, err)
+	}
+	return page
+}
+
+func TestASearchWithoutWordsIsSentToListRecords(t *testing.T) {
+	engine := &rankingProbe{}
+	tool := searchRecordsOver(nil, engine)
+	for _, args := range []string{`{"q":""}`, `{"q":"   ","record_type":"deal"}`} {
+		_, err := tool.Handle(searchReader("deal"), json.RawMessage(args))
+		badArgs, ok := errors.AsType[*BadArgsError](err)
+		if !ok || badArgs.Field != "q" || !strings.Contains(badArgs.Error(), "list_records") {
+			t.Errorf("%s → %v, want a refusal of `q` naming list_records", args, err)
+		}
+	}
+	if engine.asked != nil {
+		t.Errorf("the engine ran for a search with no words: %+v", *engine.asked)
+	}
+}
+
+func TestOneTypeAndAListOfTypesAreNotBothTaken(t *testing.T) {
+	_, err := searchRecordsOver(nil, &rankingProbe{}).Handle(searchReader("deal", "lead"),
+		json.RawMessage(`{"q":"Acme","record_type":"deal","record_types":["lead"]}`))
+	if badArgs, ok := errors.AsType[*BadArgsError](err); !ok || badArgs.Field != "record_types" {
+		t.Errorf("both type arguments → %v, want a refusal of record_types", err)
+	}
+}
+
+// The engine leaves a denied type out of its answer. A caller who named that
+// type would read the empty page as "nothing matches", so it hears the denial.
+func TestANamedTypeTheCallerCannotReadIsRefused(t *testing.T) {
+	engine := &rankingProbe{}
+	_, err := searchRecordsOver(nil, engine).Handle(searchReader("contact"),
+		json.RawMessage(`{"q":"Acme","record_types":["contact","deal"]}`))
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("naming a type the caller cannot read → %v, want ErrPermissionDenied", err)
+	}
+	if engine.asked != nil {
+		t.Error("the engine ran for a type the caller cannot read")
+	}
+}
+
+func TestTheArgumentsReachTheEngine(t *testing.T) {
+	perType := 3
+	for _, tc := range []struct {
+		args string
+		want RecordSearchQuery
+	}{
+		{
+			`{"q":"Acme"}`,
+			RecordSearchQuery{Text: "Acme", Types: []string{"contact", "company", "deal", "lead", "project"}},
+		},
+		{
+			`{"q":"Acme","record_type":"activity","limit":5,"cursor":"c1"}`,
+			RecordSearchQuery{Text: "Acme", Types: []string{"activity"}, Limit: 5, Cursor: "c1"},
+		},
+		{
+			`{"q":"Acme","record_types":["product","offer_template"],"per_type":3,"with_employees":true}`,
+			RecordSearchQuery{Text: "Acme", Types: []string{"product", "offer_template"}, PerType: &perType, WithEmployees: true},
+		},
+	} {
+		engine := &rankingProbe{}
+		ctx := searchReader("activity", "product", "offer_template")
+		if _, err := searchRecordsOver(nil, engine).Handle(ctx, json.RawMessage(tc.args)); err != nil {
+			t.Fatalf("%s: %v", tc.args, err)
+		}
+		got := *engine.asked
+		samePerType := (got.PerType == nil) == (tc.want.PerType == nil) &&
+			(got.PerType == nil || *got.PerType == *tc.want.PerType)
+		if got.Text != tc.want.Text || !slices.Equal(got.Types, tc.want.Types) || got.Limit != tc.want.Limit ||
+			got.Cursor != tc.want.Cursor || got.WithEmployees != tc.want.WithEmployees || !samePerType {
+			t.Errorf("%s asked the engine %+v, want %+v", tc.args, got, tc.want)
+		}
+	}
+}
+
+// Hits are read back in the engine's order. One gone since it ranked is left
+// out, and the rest keep their places and their match.
+func TestAHitThatCannotBeReadBackIsDropped(t *testing.T) {
+	first, gone, last := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	company, synced := ids.NewV7(), time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
+		first: recordAt(datasource.EntityContact, synced, true),
+		last:  recordAt(datasource.EntityCompany, synced, true),
+	}}
+	engine := &rankingProbe{page: RecordSearchPage{NextCursor: "next", Hits: []RecordSearchHit{
+		{
+			Ref:   datasource.EntityRef{Type: datasource.EntityContact, ID: first},
+			Match: RecordMatch{WorksAt: &RecordEmployer{CompanyID: company, CompanyName: "Acme"}},
+		},
+		{Ref: datasource.EntityRef{Type: datasource.EntityDeal, ID: gone}, Match: RecordMatch{Snippet: "Acme renewal"}},
+		{Ref: datasource.EntityRef{Type: datasource.EntityCompany, ID: last}},
+	}}}
+	raw, err := searchRecordsOver(provider, engine).Handle(searchReader(), json.RawMessage(`{"q":"Acme"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := searchedPage(t, raw)
+	if len(page.Records) != 2 || page.Records[0].ID != first || page.Records[1].ID != last {
+		t.Fatalf("the answer is %s, want the contact then the company, without the deal gone since it ranked", raw)
+	}
+	if works := page.Records[0].Match; works == nil || works.WorksAt == nil || works.WorksAt.CompanyID != company {
+		t.Errorf("the contact found through its employer does not say where it works: %s", raw)
+	}
+	if page.Records[1].Match != nil {
+		t.Errorf("a hit with no excerpt and no employer carries a match: %s", raw)
+	}
+	if page.NextCursor != "next" || page.TypesWithMore != nil {
+		t.Errorf("a ranked page answered cursor %q and types_with_more %v", page.NextCursor, page.TypesWithMore)
+	}
+}
+
+// A store that cannot answer is a fault, not a short page.
+func TestAFailedReadBackFailsTheSearch(t *testing.T) {
+	hit := ids.NewV7()
+	unreachable := errors.New("the store is unreachable")
+	provider := &queryProbeProvider{fail: map[ids.UUID]error{hit: unreachable}}
+	engine := &rankingProbe{page: RecordSearchPage{Hits: []RecordSearchHit{
+		{Ref: datasource.EntityRef{Type: datasource.EntityContact, ID: hit}},
+	}}}
+	if _, err := searchRecordsOver(provider, engine).Handle(searchReader(), json.RawMessage(`{"q":"Acme"}`)); !errors.Is(err, unreachable) {
+		t.Errorf("an unreachable store answered %v, want its fault", err)
+	}
+}
+
+// A grouped page says which types hold more, and says so with an empty list
+// when every type fit, which a ranked page never carries.
+func TestAGroupedPageNamesTheTypesWithMore(t *testing.T) {
+	for _, more := range [][]string{{"deal"}, {}} {
+		engine := &rankingProbe{page: RecordSearchPage{TypesWithMore: more}}
+		raw, err := searchRecordsOver(nil, engine).Handle(searchReader(), json.RawMessage(`{"q":"Acme","per_type":2}`))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(raw), `"types_with_more":[`) {
+			t.Errorf("a grouped page with %v holding more answered %s", more, raw)
+		}
+		if page := searchedPage(t, raw); page.TypesWithMore == nil || !slices.Equal(*page.TypesWithMore, more) {
+			t.Errorf("types_with_more = %v, want %v", page.TypesWithMore, more)
+		}
+	}
+}
+
+// The engine's own refusals reach the caller unchanged, so the field they
+// name and the code they carry classify as the route's do.
+func TestTheEnginesRefusalReachesTheCaller(t *testing.T) {
+	refusal := &BadArgsError{Field: "per_type", Cause: errors.New("per_type takes no cursor")}
+	_, err := searchRecordsOver(nil, &rankingProbe{err: refusal}).Handle(searchReader(),
+		json.RawMessage(`{"q":"Acme","per_type":2,"cursor":"c"}`))
+	if !errors.Is(err, refusal) {
+		t.Errorf("the engine's refusal reached the caller as %v", err)
+	}
+}

@@ -127,8 +127,13 @@ func TestEveryResultTypeSatisfiesTheSchemaDerivedFromIt(t *testing.T) {
 	record := wireRecord{RecordType: "deal", ID: id, Fields: json.RawMessage(`{"name":"Acme"}`), Version: 3}
 
 	for name, value := range map[string]any{
-		"SearchRecordsResult":  SearchRecordsResult{Records: []recordWithOwner{{wireRecord: record, Owner: &RecordOwner{ID: id, Name: "Sofia Meier"}}}, NextCursor: "cursor"},
-		"SearchRecordsEmpty":   SearchRecordsResult{Records: []recordWithOwner{}},
+		"ListRecordsResult": ListRecordsResult{Records: []recordWithOwner{{wireRecord: record, Owner: &RecordOwner{ID: id, Name: "Sofia Meier"}}}, NextCursor: "cursor"},
+		"ListRecordsEmpty":  ListRecordsResult{Records: []recordWithOwner{}},
+		"SearchRecordsResult": SearchRecordsResult{Records: []searchedRecord{{
+			wireRecord: record,
+			Match:      &RecordMatch{Snippet: "Acme", WorksAt: &RecordEmployer{CompanyID: id, CompanyName: "Acme"}},
+		}}, TypesWithMore: &[]string{"deal"}},
+		"SearchRecordsEmpty":   SearchRecordsResult{Records: []searchedRecord{}},
 		"recordWithOwner":      recordWithOwner{wireRecord: record},
 		"wireRecord":           record,
 		"ArchiveResult":        ArchiveResult{Archived: true, RecordType: "contact", ID: id},
@@ -203,6 +208,7 @@ func TestANilListIsReportedRatherThanServedAsNull(t *testing.T) {
 	for name, value := range map[string]any{
 		"a report with no deals list":   AtRiskReport{},
 		"a deal with no findings list":  AtRiskReport{Deals: []AtRiskDeal{{DealID: ids.NewV7(), Name: "Acme"}}},
+		"a list with no records list":   ListRecordsResult{},
 		"a search with no records list": SearchRecordsResult{},
 	} {
 		t.Run(name, func(t *testing.T) {

@@ -11971,6 +11971,30 @@
                   "type": "string",
                   "format": "uuid"
                 },
+                "match": {
+                  "type": "object",
+                  "properties": {
+                    "snippet": {
+                      "type": "string"
+                    },
+                    "works_at": {
+                      "type": "object",
+                      "properties": {
+                        "company_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "company_name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "company_id",
+                        "company_name"
+                      ]
+                    }
+                  }
+                },
                 "owner": {
                   "type": "object",
                   "properties": {
@@ -12005,6 +12029,12 @@
                 "id",
                 "record_type"
               ]
+            }
+          },
+          "types_with_more": {
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           }
         },

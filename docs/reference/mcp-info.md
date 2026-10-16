@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 121.1 KB |
+| Tool catalog | 121.6 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 31886 |
+| Approx. wire tokens | 32022 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 24.6 KB | 20% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 31.4 KB | 25% | Yes, every step |
-| Input schemas | 56.4 KB | 46% | Yes, every step |
+| Descriptions (incl. governance clause) | 31.5 KB | 25% | Yes, every step |
+| Input schemas | 56.8 KB | 46% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 7% | Partly |
-| **Description + input schema** | **87.8 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **88.3 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -73,7 +73,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1537 |
+| [`find_records`](#find_records) | Find records | yes |  | 1673 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 336 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
@@ -2930,15 +2930,16 @@ it runs; requires passport scope "enrich".)
 **Find records**
 
 ```text
-Find records, choosing the engine by the question. search matches the text stored on contacts,
-companies, deals, leads, projects and partners. list pages one record type by its filters and sort,
-newest first, and reaches the timeline (activity), offers, products and deal rooms. query runs a
-typed plan of fields, operators and one join, for counts, sums and the records near a place. meaning
-finds passages whose meaning matches, in notes, emails and transcripts. identify says which existing
-contact or company a name, email or domain refers to. search never reads a timeline; meaning does,
-and answers passages, not records. list needs record_type, and read_workspace topic list_filters
-names the filters each type takes. query names only fields read_workspace topic query lists.
-identify answers unresolved for a record you may not see, as for one that does not exist. Use
+Find records, choosing the engine by the question. search ranks contacts, companies, deals, leads
+and projects by how well their text matches your words, and products, offer templates or activity
+when named. list pages one record type by its filters and sort, newest first, and reaches the
+timeline (activity), offers, products and deal rooms. query runs a typed plan of fields, operators
+and one join, for counts, sums and the records near a place. meaning finds passages whose meaning
+matches, in notes, emails and transcripts. identify says which existing contact or company a name,
+email or domain refers to. search needs words and reads a timeline only when activity is named;
+meaning reads it and answers passages, not records. list needs record_type, and read_workspace topic
+list_filters names the filters each type takes. query names only fields read_workspace topic query
+lists. identify answers unresolved for a record you may not see, as for one that does not exist. Use
 read_record for one record you already have the id of, and read_context to learn what has been
 happening on it. Keep each record's id and version, and next_cursor to read on.
 ```
@@ -3012,7 +3013,7 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
       "type": "string"
     },
     "engine": {
-      "description": "search: records by their own text; list: one record type by its filters, newest first; query: a typed plan of fields, operators and one join; meaning: passages whose meaning matches; identify: which existing contact or company a name, email or domain is",
+      "description": "search: records ranked by how well their text matches your words; list: one record type by its filters, newest first; query: a typed plan of fields, operators and one join; meaning: passages whose meaning matches; identify: which existing contact or company a name, email or domain is",
       "enum": [
         "identify",
         "list",
@@ -3197,12 +3198,18 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
       "minimum": 1,
       "type": "integer"
     },
+    "per_type": {
+      "description": "search only: Answer up to this many of each type instead of one ranked list. Takes no cursor or limit; types_with_more names the types holding more.",
+      "maximum": 20,
+      "minimum": 1,
+      "type": "integer"
+    },
     "plan": {
       "description": "query only: A query plan, in the grammar published at margince://schema/query. That document, not this description, holds the record types, fields, operators and relationships this workspace admits: a name outside it is refused by name, never guessed at.",
       "type": "object"
     },
     "q": {
-      "description": "list, search only: Text to match, as the record type's list route takes it, alongside any filters. Types with no text of their own refuse it.",
+      "description": "list: text to match alongside any filters; search: the words to rank by, required",
       "type": "string"
     },
     "query": {
@@ -3232,18 +3239,25 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
       "type": "string"
     },
     "record_types": {
-      "description": "meaning, search only: Restrict the sweep to these types; omit to sweep all of them.",
+      "description": "search: these types in place of record_type, omitted for contact, company, deal, lead and project; meaning: these types, omitted for all five",
       "items": {
         "enum": [
-          "contact",
+          "activity",
           "company",
+          "contact",
           "deal",
           "lead",
+          "offer_template",
+          "product",
           "project"
         ],
         "type": "string"
       },
       "type": "array"
+    },
+    "with_employees": {
+      "description": "search only: Also find the contacts who work at a matching company; each carries match.works_at.",
+      "type": "boolean"
     }
   },
   "required": [

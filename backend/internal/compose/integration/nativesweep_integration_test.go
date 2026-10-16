@@ -5,8 +5,8 @@
 
 package integration
 
-// The native seam's multi-type sweep — what `search_records` answers when a
-// caller names no record type.
+// The native seam's multi-type sweep: what SystemOfRecordProvider.Search
+// answers when a caller names several record types, or none.
 //
 // Three claims, each of which a caller reads off the published schema and acts
 // on: the page is at most the limit it asked for, a page that says there is
@@ -53,7 +53,7 @@ func seedSweepable(t *testing.T, e *Env) {
 }
 
 // sweepingProvider is the composite provider over this fixture's pool — the
-// one `search_records` reaches.
+// one list_records reaches.
 func sweepingProvider(e *Env) *compose.Provider {
 	return compose.NewProvider(e.Pool)
 }

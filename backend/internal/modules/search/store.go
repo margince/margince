@@ -157,8 +157,8 @@ type Input struct {
 	// each type — instead of one ranked list. Nil is the ranked list.
 	PerType *int
 	// WithEmployees adds the employer arm (employerArmSQL): contacts found
-	// through a company the query matches. Only the HTTP surface asks for it, so
-	// the agent and plan lanes that reuse Search keep matching by own text alone.
+	// through a company the query matches. GET /v1/search and search_records ask
+	// for it; the retrieval and plan lanes keep matching by own text alone.
 	WithEmployees bool
 }
 

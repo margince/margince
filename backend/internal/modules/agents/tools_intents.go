@@ -25,9 +25,8 @@ import (
 // RegisterIntentTools wires the intent surface; compose passes the
 // search module's Retriever. No retriever, no tools — a surface that
 // cannot ground does not pretend to.
-// The provider is what resolves a `record_name`, and it is the SAME one
-// search_records resolves through — so a name means here exactly what that tool
-// would have said it means.
+// The provider is what resolves a `record_name`, through the same quick-find
+// list_records answers its `q` with.
 func RegisterIntentTools(
 	r *Registry, retriever retrieval.Retriever, brief MeetingBriefReader,
 	p datasource.SystemOfRecordProvider,

@@ -243,14 +243,11 @@ func relationshipNote(shapes map[datasource.EntityType]reflect.Type) string {
 // shape maps carry activity, so a record-type test alone put patch-only advice
 // in the create section too — which DOES accept links.
 func activityReachNotes(shapes map[datasource.EntityType]reflect.Type) []string {
-	// An activity is not searchable, and only the EDGE was ever told this.
-	// search_records' record_type enum has no activity, so an activity is
-	// retrievable afterwards only through the id its write returned — the same
-	// hazard the relationship note names, on the record type this surface creates
-	// far more often. Keyed on the create shapes (which carry `links`), because it
-	// is the write that hands out the only handle.
+	// A default record search leaves activity out, so the id the write returns
+	// is the sure handle. Keyed on the create shapes (which carry `links`),
+	// because it is the write that hands that id out.
 	if describesField(shapes, "links") {
-		return []string{"An activity is not searchable — a record search does not serve it — so keep the id " +
+		return []string{"A record search finds an activity only when activity is named, so keep the id " +
 			"an activity write returns; read_record answers it by that id."}
 	}
 	if _, hasActivity := shapes[datasource.EntityActivity]; !hasActivity {

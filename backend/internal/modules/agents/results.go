@@ -46,10 +46,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// SearchRecordsResult is what search_records answers: the matching records and,
-// when the search was confined to one type and more remain, the cursor that
-// resumes it.
-type SearchRecordsResult struct {
+// ListRecordsResult is what list_records answers: one page of records and,
+// when more remain, the cursor that resumes it.
+type ListRecordsResult struct {
 	Records []recordWithOwner `json:"records"`
 	// NextCursor is absent rather than empty when there is no next page — an
 	// empty string reads as a cursor a caller might try to use.

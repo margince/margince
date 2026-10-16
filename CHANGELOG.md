@@ -131,6 +131,15 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
   the morning digest, a backfill's progress, exchange rates, AI model prices,
   and a contact's or company's access and consent.
 
+- **`search_records` ranks as the app's search does.** The MCP tool and
+  `GET /v1/search` run one engine, so a query answers the same records in the
+  same order through both. It needs words in `q`; `list_records` lists without
+  them. It searches contacts, companies, deals, leads and projects, and
+  products, offer templates or activity when named. It takes `with_employees`
+  and `per_type` as the route does, and each record says why it matched in
+  `match`. Partners are no longer searched by name, and a cursor from the old
+  search no longer resumes.
+
 - **The company graph names its signal route.** In `GET /companies/{id}/graph`,
   `intro_path` is now `signal_route`. It is the contact the account's most recent
   open signal proposes. A node's `intro_path` flag is now `on_signal_route`, and

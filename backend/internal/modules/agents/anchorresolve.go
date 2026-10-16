@@ -38,10 +38,8 @@ const anchorResolveLimit = 5
 // Exactly one of the two is supplied — anchorArgs.validate settles that before
 // this runs — so this never has to decide which the caller meant.
 //
-// The search rides the same provider and the same query search_records uses, so
-// a name resolves here to exactly what that tool would have returned. Resolving
-// through a second reader would let the two disagree about which record a word
-// names, which is the confusion this change exists to remove rather than move.
+// The name resolves through the provider's quick-find for one type, the match
+// list_records answers for the same `q`.
 func resolveAnchor(
 	ctx context.Context, p datasource.SystemOfRecordProvider, args anchorArgs,
 ) (ids.UUID, error) {

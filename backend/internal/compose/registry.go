@@ -137,6 +137,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterIntentTools(registry, retriever, meetingBrief, provider)
 	agents.RegisterChannelProviderTools(registry, channelProviderDirectory{})
 	agents.RegisterContextSearchTool(registry, provider, retriever)
+	agents.RegisterRecordSearchTool(registry, provider, recordSearchSeam(pool))
 	agents.RegisterReportEvidenceTool(registry, provider, reportEvidenceSeam{
 		db: InstallationDB(pool), floor: analyticsquery.DefaultFloor,
 		ranker: searchRetriever, classifier: searchRetriever,
