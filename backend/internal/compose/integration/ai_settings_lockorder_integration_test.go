@@ -62,7 +62,7 @@ func TestAnIfMatchResendOfALockedBindingIsANoOp(t *testing.T) {
 }
 
 // A stale If-Match is answered as stale before the lock is, as the budget and
-// the overrides answer it, so the editor reloads rather than reads a lock.
+// the overrides answer it. So the editor reloads rather than reads a lock.
 func TestAStaleIfMatchUnderALockedBindingIsVersionSkew(t *testing.T) {
 	e := apptest.SetupAppWithEnv(t, []string{envBinding("env-model")})
 	e.BootstrapWorkspace(t)
