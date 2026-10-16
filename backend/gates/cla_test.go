@@ -26,7 +26,7 @@ import (
 //
 // gatekit:fixture the digest of each accepted CLA text
 var acceptedTexts = map[string]string{
-	"1.0": "3dfeaba6fdf954b9031c1090525c748ae59c9b9cc0ec80a702546e6c8171cc22",
+	"1.0": "3f20a38c42791b808b52f15cb12547daec621c31437cc10f2121f25fb1c7470f",
 }
 
 var (

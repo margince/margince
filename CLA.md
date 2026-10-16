@@ -1,6 +1,6 @@
 # Margince Contributor License Agreement
 
-**Version 1.0, [date of adoption]**
+**Version 1.0, 19 October 2026**
 
 Thank you for contributing to Margince. This agreement sets out the terms on which Gradion Pte. Ltd. accepts your contribution. Please read it before you submit code, documentation or other material to this project.
 
