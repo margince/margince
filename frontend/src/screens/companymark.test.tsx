@@ -348,3 +348,28 @@ it("shows the server's refusal of a removal beside the control", async () => {
     await screen.findByText(/being replaced by another write/),
   ).toBeTruthy();
 });
+
+it("tells the admin to outline the text when an SVG draws its words as text", async () => {
+  const user = userEvent.setup();
+  refuseUploads({
+    type: "about:blank",
+    title: "Unprocessable Entity",
+    status: 422,
+    code: "svg_text_not_outlined",
+    detail: "the SVG draws its words as text, which this server cannot render",
+  });
+  mark(WITHOUT_MARK);
+
+  await user.upload(
+    slot("Wide logo").getByLabelText("Wide logo"),
+    new File(["<svg/>"], "acme.svg", { type: "image/svg+xml" }),
+  );
+
+  const alert = await screen.findByRole("alert");
+  expect(
+    within(alert).getByText(
+      "This SVG has live text, which cannot be drawn. Convert the text to outlines in your design tool, or upload a PNG.",
+    ),
+  ).toBeTruthy();
+  expect(within(alert).queryByText(/cannot render/)).toBeNull();
+});

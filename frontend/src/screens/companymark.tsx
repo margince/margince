@@ -186,10 +186,11 @@ function useMarkWrites(
 type MarkRefusalState = NonNullable<MarkWrites["refusal"]>;
 
 // The server's sentence is for an API reader: lowercase, and a list of formats
-// with nothing to do. These two codes get a sentence that says what to do.
+// with nothing to do. These codes get a sentence that says what to do.
 const REFUSAL_COPY = new Map<string, MessageKey>([
   ["unsupported_media_type", "settings.companyMarkUnsupported"],
   ["body_too_large", "settings.companyMarkTooLarge"],
+  ["svg_text_not_outlined", "settings.companyMarkSvgText"],
 ]);
 
 // Below the tiles, not inside a slot: a notice in a slot widens it and pushes
