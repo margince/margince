@@ -80,7 +80,7 @@ func seedOneOfEachParent(t *testing.T, e *apptest.AppEnv) map[string]string {
 	owners := map[string]string{"pipelines": stages.PipelineID}
 	owners["deals"] = apptest.CreateOpenDeal(t, e, stages)
 	owners["companies"] = createdID(t, e, "/v1/companies", AnyMap{"display_name": "Bare Works", "source": "manual"})
-	owners["contacts"] = createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Bare Person", "source": "manual"})
+	owners["contacts"] = createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Bare Contact", "source": "manual"})
 	owners["leads"] = createdID(t, e, "/v1/leads", AnyMap{"full_name": "Bare Lead", "email": "bare@lead.test", "source": "manual"})
 	owners["projects"] = createdID(t, e, "/v1/projects", AnyMap{"name": "Bare Project", "company_id": owners["companies"], "source": "manual"})
 	owners["activities"] = createdID(t, e, "/v1/activities", AnyMap{"kind": "task", "subject": "Bare task"})
