@@ -192,9 +192,16 @@ function viaClientLine(locale: Locale): string {
 }
 
 async function expectViaClientLine(canvasElement: HTMLElement, locale: Locale) {
-  const line = await within(canvasElement).findByText(viaClientLine(locale));
+  const expected = viaClientLine(locale);
+  const line = await within(canvasElement).findByText(expected);
   await expect(line).toBeVisible();
-  await expect(within(canvasElement).queryByText(viaClient.summary)).toBeNull();
+  // The English line is the server's own sentence, so only another
+  // language can prove the summary was not drawn.
+  if (expected !== viaClient.summary) {
+    await expect(
+      within(canvasElement).queryByText(viaClient.summary),
+    ).toBeNull();
+  }
 }
 
 export const GermanReader: Story = {
