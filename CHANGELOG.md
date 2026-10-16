@@ -136,8 +136,12 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
   same order through both. It needs words in `q`; `list_records` lists without
   them. It searches contacts, companies, deals, leads and projects, and
   products, offer templates or activity when named. It takes `with_employees`
-  and `per_type` as the route does, and each record says why it matched in
-  `match`. Partners are no longer searched by name, and a cursor from the old
+  and `per_type` as the route does. A project, product or activity carries its
+  key, SKU or opening text in `match.snippet`, and a contact found through its
+  employer names that company in `match.works_at`. A page holds at most 25
+  records, 20 by default, and its `coverage` and `notes` say when more match or
+  a record could not be read back. Both doors refuse a `q` of more than 32
+  words. Partners are no longer searched by name, and a cursor from the old
   search no longer resumes.
 
 - **The company graph names its signal route.** In `GET /companies/{id}/graph`,
