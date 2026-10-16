@@ -1,6 +1,5 @@
 import { Menu, X } from "lucide-react";
 import {
-  type KeyboardEvent,
   type ReactNode,
   type RefObject,
   useCallback,
@@ -46,6 +45,7 @@ import {
   useNavLevel,
   useNavWalk,
 } from "./navlevel";
+import { useNavTip } from "./navtip";
 import {
   headsItself,
   PAGE_SUB_KEYS,
@@ -267,24 +267,19 @@ export function WorkspaceRail({
   section,
 }: Readonly<RailProps & { section?: NavSection }>) {
   const t = useT();
+  const nav = useRef<HTMLElement>(null);
   // Collapsed items are icon-only, so the label needs a tooltip that satisfies
   // WCAG 1.4.13: it appears on keyboard focus as well as hover, stays visible
   // while the pointer is on it (it renders inside the hovered wrapper), and is
   // dismissible with Escape without moving focus. The tooltip is never the
   // accessible name — aria-label carries that in both states.
-  const [tip, setTip] = useState<string | null>(null);
+  const navTip = useNavTip(collapsed, nav);
   // At phone width the same markup is a bottom bar; More expands it into a
   // sheet carrying every destination. One nav element, so there is still exactly
   // one navigation landmark and no second item list to keep in sync.
   const [sheetOpen, setSheetOpen] = useState(false);
   const phone = usePhoneViewport();
-  const nav = useRef<HTMLElement>(null);
   const more = useRef<HTMLButtonElement>(null);
-  const dismissTip = useCallback((event: KeyboardEvent) => {
-    if (event.key === "Escape") {
-      setTip(null);
-    }
-  }, []);
 
   // The sheet is a popover over the page, so it dismisses like every other one
   // in the chrome: Escape from anywhere, any click outside it — which is what
@@ -395,7 +390,6 @@ export function WorkspaceRail({
         ref={nav}
         className={railClasses({ collapsed, sheetOpen, leveled })}
         aria-label={t("shell.railAria")}
-        onKeyDown={dismissTip}
       >
         <div className="railhead">
           <BrandBlock narrow={collapsed && !sheetOpen} />
@@ -408,7 +402,7 @@ export function WorkspaceRail({
           level={level.shown}
           parent={level.parent}
           counts={counts}
-          state={{ collapsed, tip, onTip: setTip }}
+          state={navTip}
           onSelect={level.onSelect}
           onWalkUp={level.onWalkUp}
           // At phone width the agent stands in the MIDDLE of the bar rather

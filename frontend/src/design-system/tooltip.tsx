@@ -3,7 +3,6 @@
 
 import {
   type FocusEvent as ReactFocusEvent,
-  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
   type RefObject,
   useCallback,
@@ -14,6 +13,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { coveredByDialog } from "./dialogfocus";
 import { useHoverIntent } from "./hoverintent";
 import "./tooltip.css";
 
@@ -147,7 +147,6 @@ type Tooltip<T extends HTMLElement> = Readonly<{
     onPointerLeave: () => void;
     onFocus: (event: ReactFocusEvent<HTMLElement>) => void;
     onBlur: () => void;
-    onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => void;
   }>;
   /** Render inside the same element; it portals to the body regardless. */
   tip: ReactNode;
@@ -198,6 +197,40 @@ export function useTooltip<T extends HTMLElement = HTMLElement>(
 }
 
 /**
+ * Escape hides the tip wherever focus sits (WCAG 2.2 SC 1.4.13). Captured on
+ * the window: a layer under the tip opened first and would hear Escape first.
+ */
+export function useEscapeDismisses(
+  open: boolean,
+  anchor: RefObject<HTMLElement | null>,
+  raisedBy: RefObject<"pointer" | "focus">,
+  close: () => void,
+): void {
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (
+        event.key !== "Escape" ||
+        event.defaultPrevented ||
+        coveredByDialog(anchor.current)
+      ) {
+        return;
+      }
+      close();
+      // A focus-raised tip was not asked for, so Escape still leaves the layer.
+      if (raisedBy.current === "pointer") {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    globalThis.addEventListener("keydown", onKey, true);
+    return () => globalThis.removeEventListener("keydown", onKey, true);
+  }, [open, anchor, raisedBy, close]);
+}
+
+/**
  * The tip itself: what opens it, what closes it, and where it is drawn.
  *
  * `worthShowing` is asked at the moment of hover rather than at render, because
@@ -240,7 +273,7 @@ function useTip<T extends HTMLElement>(
     return () => globalThis.removeEventListener("resize", measure);
   }, [earnsTabStop, worthShowing]);
 
-  // WHICH of the two ways the tip is up matters to the Escape key alone, below.
+  // WHICH of the two ways the tip is up matters to the Escape key alone.
   const raisedBy = useRef<"pointer" | "focus">("focus");
   const reveal = useCallback(
     (by: "pointer" | "focus") => {
@@ -258,6 +291,7 @@ function useTip<T extends HTMLElement>(
   // Pointer reveal waits for intent; focus does not. A reader who tabbed here
   // has said what they want outright, and there is no pointer to measure.
   const hover = useHoverIntent(revealForPointer, close, { ownsState: true });
+  useEscapeDismisses(open, anchor, raisedBy, close);
 
   return {
     ref: anchor,
@@ -271,25 +305,6 @@ function useTip<T extends HTMLElement>(
       onPointerLeave: hover.onPointerLeave,
       onFocus: revealForFocus,
       onBlur: close,
-      onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => {
-        if (event.key !== "Escape" || !open) {
-          return;
-        }
-        // A tip the POINTER raised is content the reader asked for and can ask
-        // to be rid of (WCAG 2.2 SC 1.4.13), so Escape spends itself on the tip
-        // and the dialog or panel around it keeps standing.
-        //
-        // A tip raised by FOCUS is not asked for: it arrived because the reader
-        // walked here, or because a dialog opened and put them here. Swallowing
-        // their Escape then answers a question they did not ask with the one
-        // key that means "get me out of this surface" — and where the anchor is
-        // the dialog's own close control, the first press did nothing at all.
-        // The tip still goes; the key carries on to whatever was listening.
-        if (raisedBy.current === "pointer") {
-          event.stopPropagation();
-        }
-        close();
-      },
     },
     tip: open
       ? createPortal(

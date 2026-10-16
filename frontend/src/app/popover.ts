@@ -24,7 +24,11 @@ export function usePopoverDismiss(
       return;
     }
     const onKey = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== "Escape" || coveredByDialog(panel.current)) {
+      if (
+        event.key !== "Escape" ||
+        event.defaultPrevented ||
+        coveredByDialog(panel.current)
+      ) {
         return;
       }
       // One keystroke closes one layer. A row inside may open a layer of its

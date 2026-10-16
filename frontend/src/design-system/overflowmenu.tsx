@@ -94,7 +94,7 @@ export function OverflowMenu({
       return;
     }
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") {
+      if (event.key !== "Escape" || event.defaultPrevented) {
         return;
       }
       // A dialog or panel opened from this menu owns Escape while it is up.

@@ -169,7 +169,11 @@ export function Popover({
       return;
     }
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || coveredByDialog(trigger.current)) {
+      if (
+        event.key !== "Escape" ||
+        event.defaultPrevented ||
+        coveredByDialog(trigger.current)
+      ) {
         return;
       }
       event.preventDefault();
