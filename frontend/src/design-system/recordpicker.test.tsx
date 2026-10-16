@@ -219,7 +219,7 @@ describe("RecordPicker", () => {
   it("keeps a detail the server wrote for a reader", async () => {
     const user = userEvent.setup();
     const refused = new ProblemError({
-      code: "search_unavailable",
+      code: "schema_changed",
       detail: "Search is being rebuilt. Try again in a few minutes.",
     });
     rtlRender(

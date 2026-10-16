@@ -111,7 +111,7 @@ describe("the meeting brief drawer", () => {
       "GET /activities/a-1/meeting-brief": () => {
         attempts += 1;
         return attempts === 1
-          ? jsonResponse({ status: 503, code: "unavailable" }, 503)
+          ? jsonResponse({ status: 503, code: "assistant_unavailable" }, 503)
           : jsonResponse(briefReady);
       },
     });

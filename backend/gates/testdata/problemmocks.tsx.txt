@@ -1,0 +1,68 @@
+import { refusedWith } from "./problemmockhelper";
+import { unexported } from "./problemmockhelper";
+import { ProblemError, throwProblem } from "../lib/problem";
+
+// Each line marked `want:` must be read with exactly those codes; every other
+// line must be read as no Problem at all. A comment saying
+// { status: 403, code: "forbidden" } is not one, and neither is the string
+const quoted = '{ status: 403, code: "forbidden" }';
+const pattern = /"code":\s*"forbidden"/;
+
+const status = { status: 403, code: "forbidden" }; // want: forbidden
+const titled = { title: "Forbidden", code: "forbidden" }; // want: forbidden
+const detailed = { detail: "no", code: "forbidden" }; // want: forbidden
+const withDetails = { details: { a: 1 }, code: "forbidden" }; // want: forbidden
+const keyed = { "status": 403, "code": "forbidden" }; // want: forbidden
+const cast = { status: 403, code: "forbidden" as const }; // want: forbidden
+const either = { status: 403, code: ok ? "forbidden" : "not_found" }; // want: forbidden not_found
+const plain = { status: 403, code: `forbidden` }; // want: forbidden
+const built = { status: 403, code: `for${bidden}` }; // want: computed
+
+const bodyAndStatus = json({ code: "forbidden" }, 503); // want: forbidden
+const viaResponse = new Response(JSON.stringify({ code: "forbidden" }), { status: 403 }); // want: forbidden
+const viaMsw = HttpResponse.json({ code: "forbidden" }, { status: 403 }); // want: forbidden
+const statusVariable = new Response(JSON.stringify({ code: "forbidden" }), { status }); // want: forbidden
+const statusChosen = new Response(JSON.stringify({ code: "forbidden" }), { status: ok ? 200 : 403 }); // want: forbidden
+const either2 = new Response(JSON.stringify(ok ? { code: "forbidden" } : { code: "not_found" }), { status: 404 }); // want: forbidden not_found
+route.fulfill({ status: 503, body: JSON.stringify({ code: "forbidden" }) }); // want: forbidden
+const nested = { status: 403, error: { code: "forbidden" } }; // want: forbidden
+
+const base = { status: 403, title: "Forbidden" };
+const spread = { ...base, code: "forbidden" }; // want: forbidden
+const spreadIn = { title: "Forbidden", ...(ok ? { code: "forbidden" } : {}) }; // want: forbidden
+
+const thrown = new ProblemError({ code: "forbidden" }); // want: forbidden
+throwProblem({ code: "forbidden" }); // want: forbidden
+
+const CODE = "forbidden";
+const named = { status: 403, code: CODE }; // want: forbidden
+
+function refusal(code: string) {
+  return json({ title: "Refused", code }, 403);
+}
+refusal("forbidden"); // want: forbidden
+
+const problem = (status: number, code: string, detail: string) =>
+  jsonResponse({ status, code, detail }, status);
+problem(503, "unavailable", "down"); // want: unavailable
+
+function passesOn(code: string) {
+  return refusal(code);
+}
+passesOn("forbidden"); // want: forbidden
+
+refusedWith("forbidden"); // want: forbidden
+unexported("forbidden");
+
+const story = <Story problem={{ status: 403, code: "forbidden" }} />; // want: forbidden
+const text = <p>Don't "quote" a {"{ status: 403, code: 'forbidden' }"}</p>;
+const generic = <ListSurface<Row> rows={[]} />;
+
+const country = { code: "vn", name: "Vietnam" };
+const bare = { code: "vn" };
+const succeeded = json({ code: "vn" });
+const okStatus = json({ code: "vn" }, 200);
+const okResponse = new Response(JSON.stringify({ code: "vn" }), { status: 200 });
+const field = { status: 422, code: "validation_error", details: { errors: [{ field: "a", code: "too_long" }] } }; // want: validation_error
+const prop = <Create existing={{ id: "1", code: "duplicate_email" }} />;
+const type = (x: { code: string; status: number }) => x;

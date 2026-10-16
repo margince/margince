@@ -628,8 +628,11 @@ describe("a failure nobody wrote for a reader", () => {
         jsonResponse(previewOf(400)),
       "POST /connectors/gmail/backfill": () =>
         jsonResponse(
-          { code: "quota_exhausted", detail: "This month's budget is spent." },
-          429,
+          {
+            code: "backfill_running",
+            detail: "A backfill is already running for this mailbox.",
+          },
+          409,
         ),
     });
     render(<BackfillPanel provider="gmail" initial={{ state: "none" }} />);
@@ -639,7 +642,9 @@ describe("a failure nobody wrote for a reader", () => {
     );
 
     expect(
-      await screen.findByText("This month's budget is spent."),
+      await screen.findByText(
+        "A backfill is already running for this mailbox.",
+      ),
     ).toBeTruthy();
   });
 });

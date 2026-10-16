@@ -115,7 +115,7 @@ function stubTransport(
       // A route nobody scripted answers 503 rather than something plausible,
       // so a screen reaching for one fails here instead of rendering an error
       // card that looks like the server's.
-      return json({ code: "unavailable" }, 503);
+      return json({ code: "service_unavailable" }, 503);
     }
     return json(handler(raw === "" ? null : JSON.parse(raw)));
   };
@@ -188,9 +188,7 @@ describe("the openchannel screen", () => {
 
     renderScreen();
     expect(await screen.findByText("No endpoint open")).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "Open endpoint" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Open endpoint" })).toBeTruthy();
     // Nothing to mint against, so no control that would 404 on the way.
     expect(
       screen.queryByRole("button", { name: "Mint signing secret" }),
@@ -301,9 +299,7 @@ describe("the openchannel screen", () => {
 
     renderScreen();
     await screen.findByTestId("openchannel-curl");
-    expect(
-      screen.getByText(/can see it in the process list/),
-    ).toBeTruthy();
+    expect(screen.getByText(/can see it in the process list/)).toBeTruthy();
   });
 
   // The secret exists on a screen exactly once, and the sentence saying so is
@@ -562,9 +558,7 @@ describe("the openchannel screen", () => {
     // stronger claim than naming the four and is the one that survives a fifth
     // control being added.
     expect(screen.queryAllByRole("button")).toHaveLength(0);
-    expect(
-      screen.queryByLabelText("Outbound address"),
-    ).toBeNull();
+    expect(screen.queryByLabelText("Outbound address")).toBeNull();
   });
 
   // An ungranted seat is told so, and — the part that matters — no request is
@@ -607,9 +601,7 @@ describe("the openchannel screen", () => {
       within(alert).getByText("Could not load this view. Reload the page."),
     ).toBeTruthy();
     expect(screen.queryByText("No endpoint open")).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: "Open endpoint" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open endpoint" })).toBeNull();
   });
 
   // A failed write is ANNOUNCED, not merely rendered: it appears after the
@@ -675,7 +667,7 @@ describe("the openchannel screen", () => {
       }
       if (path === "/ext/openchannel/inbound") return json({ entries: [] });
       if (path === "/ext/openchannel/outbound") return json({ attempts: [] });
-      return json({ code: "unavailable" }, 503);
+      return json({ code: "service_unavailable" }, 503);
     };
     vi.stubGlobal("fetch", vi.fn(fetchStub));
 

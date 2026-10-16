@@ -1280,7 +1280,7 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
           JSON.stringify({
             title: "Unprocessable",
             status: 422,
-            code: "owner_not_assignable",
+            code: "validation_error",
             detail:
               "the owner must be an active colleague you may assign work to",
           }),

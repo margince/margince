@@ -151,9 +151,9 @@ describe("drafting a reply to a message that is gone", () => {
       "POST /activities/act-1/draft-email": () =>
         jsonResponse(
           {
-            title: "the draft could not be written",
-            detail: "The drafting model did not answer.",
-            code: "upstream_failure",
+            title: "Bad Gateway",
+            detail: "provider unusable",
+            code: "provider_unusable",
           },
           502,
         ),

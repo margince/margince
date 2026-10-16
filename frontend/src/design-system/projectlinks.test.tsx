@@ -116,8 +116,17 @@ describe("ProjectLinks", () => {
       // of production and proving nothing about it.
       attach: async () => {
         throw new ProblemError({
-          code: "project_link_conflict",
+          code: "validation_error",
           detail: "this company still has 2 deal(s) on the project",
+          details: {
+            errors: [
+              {
+                field: "company_id",
+                code: "company_has_deals_on_project",
+                message: "this company still has 2 deal(s) on the project",
+              },
+            ],
+          },
         });
       },
     });

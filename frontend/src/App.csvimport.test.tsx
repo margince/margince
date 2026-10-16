@@ -105,7 +105,7 @@ async function importFetch(input: Request | string | URL, init?: RequestInit) {
       ? { ...run, status }
       : answers(url.searchParams.get("view"))[key];
   return body === undefined
-    ? new Response(JSON.stringify({ code: "unavailable" }), {
+    ? new Response(JSON.stringify({ code: "service_unavailable" }), {
         status: 503,
         headers: { "Content-Type": "application/problem+json" },
       })

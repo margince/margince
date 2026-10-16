@@ -760,10 +760,20 @@ describe("the conversational voice act", () => {
       preview: documentPreview,
       ingests: [{ stats: documentStats, summary: summaryOf(820) }],
       buildStartRefusal: {
-        status: 429,
+        status: 422,
         body: {
-          code: "budget_exhausted",
-          detail: "This month's model budget is spent. It resets on the 1st.",
+          code: "validation_error",
+          detail: "The writing sample is too short to build a voice from.",
+          details: {
+            errors: [
+              {
+                field: "corpus",
+                code: "invalid",
+                message:
+                  "The writing sample is too short to build a voice from.",
+              },
+            ],
+          },
         },
       },
     });
@@ -776,7 +786,7 @@ describe("the conversational voice act", () => {
 
     expect(
       await screen.findByText(
-        "This month's model budget is spent. It resets on the 1st.",
+        "The writing sample is too short to build a voice from.",
       ),
     ).toBeTruthy();
   });

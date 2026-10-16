@@ -490,9 +490,19 @@ describe("a provider's settings on its sheet", () => {
           {
             title: "Unprocessable Entity",
             status: 422,
-            code: "no_host",
+            code: "validation_error",
             detail:
               "openai_compatible is bound by tier premium; give it a host or rebind those lanes first",
+            details: {
+              errors: [
+                {
+                  field: "ai.routing",
+                  code: "no_host",
+                  message:
+                    "openai_compatible is bound by tier premium; give it a host or rebind those lanes first",
+                },
+              ],
+            },
           },
           422,
         ),

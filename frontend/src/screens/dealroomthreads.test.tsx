@@ -177,7 +177,7 @@ describe("a refused reply", () => {
     const user = userEvent.setup();
     const reply = vi.fn(async () => {
       throw new ProblemError({
-        code: "version_conflict",
+        code: "deal_room_thread_resolved",
         detail: "The thread moved on. Read it again before replying.",
       });
     });
