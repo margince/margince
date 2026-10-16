@@ -51607,6 +51607,33 @@ components:
             travels here.
 
     # ---- Audit ----
+    AuditAction:
+      type: string
+      description: |
+        The verb of one audit row, as both the audit log and a record's history
+        serve it. One list, so the two reads cannot name the same row two ways.
+      # Every mutation is attributable (P12). connector captures audit as actor_type=connector.
+      # audit_log is record-mutations-only: login and bulk export moved to system_log,
+      # so `login` is not here. `export` stays — the DSR contact export is entity-bound.
+      # capture skip is NOT here either — it is a system_log 'capture_skip' event.
+      # `restrict`/`pin` are the statutory-retention verbs (ADR-0114,
+      # ADR-0116, migration 0287): an erasure shielded a record under the
+      # floor instead of destroying it, and an administrator placed a record
+      # under the floor the derivation could not see. `resolve` was in the DDL
+      # since 0047 and missing here — a row a strict client could not decode.
+      # `invite`/`revoke` are the Deal Room access verbs: admitting an outside
+      # contact to a room and taking that access away. Neither reuses an
+      # existing verb — `create`/`archive` would describe the participant ROW
+      # rather than the access it carries, and the question an auditor asks
+      # months later is "who let them in, and who took it back".
+      # `publish`/`pause`/`resume`/`close` are the Deal Room lifecycle verbs.
+      # None reuses an existing one, because none means the same thing:
+      # `publish` puts editorial text in front of a party outside the company,
+      # `close` freezes content while access continues, and `pause`/`resume`
+      # suspend reads without touching a single credential. `hold`/`release`
+      # and `expire` are retention and scheduling verbs and would read as those.
+      enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke, delete, place_legal_hold, lift_legal_hold, request_legal_review, withdraw_legal_review]
+
     AuditLogEntry:
       type: object
       description: An append-only audit row. Mirrors the `audit_log` table.
@@ -51636,28 +51663,7 @@ components:
         on_behalf_of_name: { type: [string, 'null'], description: Resolved display name for on_behalf_of. }
         batch_id: { type: [string, 'null'], format: uuid, description: 'The bulk change that wrote this row; null for a change made on its own.' }
         action:
-          type: string
-          # Every mutation is attributable (P12). connector captures audit as actor_type=connector.
-          # audit_log is record-mutations-only: login and bulk export moved to system_log,
-          # so `login` is not here. `export` stays — the DSR contact export is entity-bound.
-          # capture skip is NOT here either — it is a system_log 'capture_skip' event.
-          # `restrict`/`pin` are the statutory-retention verbs (ADR-0114,
-          # ADR-0116, migration 0287): an erasure shielded a record under the
-          # floor instead of destroying it, and an administrator placed a record
-          # under the floor the derivation could not see. `resolve` was in the DDL
-          # since 0047 and missing here — a row a strict client could not decode.
-          # `invite`/`revoke` are the Deal Room access verbs: admitting an outside
-          # contact to a room and taking that access away. Neither reuses an
-          # existing verb — `create`/`archive` would describe the participant ROW
-          # rather than the access it carries, and the question an auditor asks
-          # months later is "who let them in, and who took it back".
-          # `publish`/`pause`/`resume`/`close` are the Deal Room lifecycle verbs.
-          # None reuses an existing one, because none means the same thing:
-          # `publish` puts editorial text in front of a party outside the company,
-          # `close` freezes content while access continues, and `pause`/`resume`
-          # suspend reads without touching a single credential. `hold`/`release`
-          # and `expire` are retention and scheduling verbs and would read as those.
-          enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke, delete, place_legal_hold, lift_legal_hold, request_legal_review, withdraw_legal_review]
+          $ref: '#/components/schemas/AuditAction'
         entity_type: { type: string }
         entity_id: { type: string, format: uuid, description: Every audit_log row names the record it mutated (NOT NULL since 0075). }
         entity_label:
@@ -51892,8 +51898,10 @@ components:
       description: |
         One rendered history line for a record mutation. `before`/`after` are
         masked to the viewer's readable fields — an absent key was hidden, not null.
-        `summary` is server-composed plain language; field-level detail lives in
-        before/after for the client to render.
+        `summary` is server-composed plain language in English. A client that
+        renders the line in its reader's language builds it from `action` and the
+        actor fields, and falls back to `summary` for an action it does not know.
+        Field-level detail lives in before/after for the client to render.
       required: [id, actor_type, actor_id, action, occurred_at, summary]
       properties:
         id: { type: string, format: uuid }
@@ -51911,7 +51919,16 @@ components:
             registered client to name), when the client row is gone, and for
             every write that was not delegated. A reader that has it should say
             "via {agent_client}" where it would otherwise say "via an agent".
-        action: { type: string }
+        action:
+          $ref: '#/components/schemas/AuditAction'
+        passport_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            The Agent Seat Passport the change was made under, as FieldHistoryEntry
+            carries it. A machine row with a passport and no `on_behalf_of_name`
+            had a human authority the row failed to record; one without a
+            passport never had one.
         occurred_at: { type: string, format: date-time }
         authorization_rule: { type: [string, 'null'] }
         before: { type: [object, 'null'], additionalProperties: true }

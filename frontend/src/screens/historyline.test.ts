@@ -1,0 +1,191 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { describe, expect, it } from "vitest";
+import type { components } from "../api/schema";
+import { type Locale, translate } from "../i18n";
+import { de } from "../i18n/de";
+import { en, type MessageKey } from "../i18n/en";
+import { vi } from "../i18n/vi";
+import {
+  type HistoryLineFacts,
+  historyLine,
+  historySubject,
+} from "./historyline";
+
+type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];
+
+const CATALOGS: Record<Locale, Record<MessageKey, string>> = { en, de, vi };
+const LOCALES: readonly Locale[] = ["en", "de", "vi"];
+const PASSPORT = "0199a000-0000-7000-8000-000000000001";
+
+function fill(template: string, params: Record<string, string>): string {
+  return Object.entries(params).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, value),
+    template,
+  );
+}
+
+const base: AuditHistoryEntry = {
+  id: "h1",
+  actor_type: "human",
+  actor_id: "human:u1",
+  action: "update",
+  occurred_at: "2026-07-14T10:00:00Z",
+  summary: "the server's English sentence",
+};
+
+const SHAPES: ReadonlyArray<{
+  shape: string;
+  entry: Partial<AuditHistoryEntry>;
+  subject: { key: MessageKey; params?: Record<string, string> } | string;
+}> = [
+  {
+    shape: "a human edit",
+    entry: { actor_name: "Uma Underwriter" },
+    subject: "Uma Underwriter",
+  },
+  {
+    shape: "a member whose seat no longer resolves",
+    entry: { actor_name: null },
+    subject: "human:u1",
+  },
+  {
+    shape: "an agent on behalf of a member via a named client",
+    entry: {
+      actor_type: "agent",
+      actor_id: "agent:p1",
+      passport_id: PASSPORT,
+      on_behalf_of_name: "Ada Authority",
+      agent_client: "Claude",
+    },
+    subject: {
+      key: "history.subject.viaClient",
+      params: { name: "Ada Authority", client: "Claude" },
+    },
+  },
+  {
+    shape: "an agent on behalf of a member via an unnamed client",
+    entry: {
+      actor_type: "agent",
+      actor_id: "agent:p1",
+      passport_id: PASSPORT,
+      on_behalf_of_name: "Ada Authority",
+    },
+    subject: {
+      key: "history.subject.viaAgent",
+      params: { name: "Ada Authority" },
+    },
+  },
+  {
+    shape: "a connector on behalf of a member",
+    entry: {
+      actor_type: "connector",
+      actor_id: "connector:gmail",
+      on_behalf_of_name: "Ada Authority",
+    },
+    subject: {
+      key: "history.subject.viaConnector",
+      params: { name: "Ada Authority" },
+    },
+  },
+  {
+    shape: "a machine with a passport and no recorded authority",
+    entry: {
+      actor_type: "agent",
+      actor_id: "agent:p1",
+      passport_id: PASSPORT,
+      on_behalf_of_name: "",
+    },
+    subject: { key: "history.subject.unrecordedAuthority" },
+  },
+  {
+    shape: "the system",
+    entry: { actor_type: "system", actor_id: "system" },
+    subject: { key: "history.subject.system" },
+  },
+  {
+    shape: "an agent with no passport",
+    entry: { actor_type: "agent", actor_id: "agent:ext-job" },
+    subject: { key: "history.subject.agent" },
+  },
+  {
+    shape: "a connector with no granting member",
+    entry: { actor_type: "connector", actor_id: "connector:finance" },
+    subject: { key: "history.subject.connector" },
+  },
+  {
+    shape: "a Deal Room buyer",
+    entry: { actor_type: "buyer", actor_id: "buyer:b1" },
+    subject: { key: "history.subject.buyer" },
+  },
+];
+
+const VERBS = [
+  { action: "update", key: "history.verb.update" },
+  { action: "archive", key: "history.verb.archive" },
+] as const;
+
+describe("historyLine", () => {
+  for (const locale of LOCALES) {
+    const t = (key: MessageKey, params?: Record<string, string>) =>
+      translate(locale, key, params);
+    for (const { shape, entry, subject } of SHAPES) {
+      for (const verb of VERBS) {
+        it(`phrases ${shape} that ran ${verb.action} in ${locale}`, () => {
+          const row = { ...base, ...entry, action: verb.action };
+          const expectedSubject =
+            typeof subject === "string"
+              ? subject
+              : fill(CATALOGS[locale][subject.key], subject.params ?? {});
+          const expected = fill(CATALOGS[locale][verb.key], {
+            subject: expectedSubject,
+          });
+
+          expect(historySubject(row, t)).toBe(expectedSubject);
+          expect(historyLine(row, t)).toBe(expected);
+          expect(historyLine(row, t)).not.toBe(row.summary);
+        });
+      }
+    }
+  }
+
+  it("reads differently in each language for the same change", () => {
+    const row: AuditHistoryEntry = {
+      ...base,
+      ...SHAPES[2]?.entry,
+      action: "archive",
+    };
+    const lines = LOCALES.map((locale) =>
+      historyLine(row, (key, params) => translate(locale, key, params)),
+    );
+    expect(new Set(lines).size).toBe(LOCALES.length);
+  });
+
+  it("keeps the server's sentence for a link change", () => {
+    const row: AuditHistoryEntry = {
+      ...base,
+      action: "create",
+      summary: "Ada Admin linked Employer GmbH as cto",
+      edge: {
+        kind: "employment",
+        other_entity_type: "company",
+        other_entity_id: "c1",
+        other_label: "Employer GmbH",
+      },
+    };
+    expect(
+      historyLine(row, (key, params) => translate("de", key, params)),
+    ).toBe(row.summary);
+  });
+
+  it("keeps the server's sentence for a verb or actor kind it does not know", () => {
+    const t = (key: MessageKey, params?: Record<string, string>) =>
+      translate("vi", key, params);
+    const newerVerb: HistoryLineFacts = { ...base, action: "transmogrify" };
+    const newerActor: HistoryLineFacts = { ...base, actor_type: "robot" };
+
+    expect(historyLine(newerVerb, t)).toBe(base.summary);
+    expect(historyLine(newerActor, t)).toBe(base.summary);
+  });
+});

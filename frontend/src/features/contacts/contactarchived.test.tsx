@@ -46,7 +46,11 @@ describe("the contact page on an archived row", () => {
     ).toBeTruthy();
     expect(screen.getByText(en["record.archived"])).toBeTruthy();
     const reason = screen.getByText(en["contact.rail.archivedReadOnly"]);
-    expect(await screen.findByText(archiveEntry.summary)).toBeTruthy();
+    const archivedBy = en["history.verb.archive"].replace(
+      "{subject}",
+      archiveEntry.actor_name ?? archiveEntry.actor_id,
+    );
+    expect(await screen.findByText(archivedBy)).toBeTruthy();
     expect(
       screen.getByRole("button", { name: en["history.undo.action"] }),
     ).toBeTruthy();
