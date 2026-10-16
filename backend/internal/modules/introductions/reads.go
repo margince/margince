@@ -5,10 +5,10 @@ package introductions
 
 // Reading an ask, and reading the asks about one contact.
 //
-// The refusal is the same on both paths and it is a NOT-FOUND rather than a
-// denial: telling a stranger that the ask exists but is not theirs discloses
-// that this colleague was asked about this contact, which is the fact the row
-// exists to keep.
+// Both paths answer NOT-FOUND rather than a denial. Telling a stranger an ask
+// exists discloses that this colleague was asked about this contact, which is
+// the fact the row exists to keep. The list is also not found for a contact
+// the caller cannot open or one that is not there.
 
 import (
 	"context"
@@ -131,8 +131,6 @@ func (s *Store) ForContact(ctx context.Context, contactID ids.UUID, limit int) (
 	}
 	var out []Request
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// An id that names no contact, or one the caller cannot open, answers
-		// not-found.
 		if err := auth.EnsureVisibleExisting(ctx, tx, "contact", contactID); err != nil {
 			return err
 		}

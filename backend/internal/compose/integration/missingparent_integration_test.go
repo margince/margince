@@ -30,11 +30,33 @@ func TestSubResourceReadsOfAMissingParentAnswerNotFound(t *testing.T) {
 		"/v1/field-history?entity_type=lead&entity_id=" + missing,
 		"/v1/field-history?entity_type=project&entity_id=" + missing,
 		"/v1/field-history?entity_type=contact&entity_id=" + missing,
+		"/v1/records/deal/" + missing + "/history",
+		"/v1/records/lead/" + missing + "/history",
+		"/v1/companies/" + missing + "/documents",
+		"/v1/attachments?entity_type=contact&entity_id=" + missing,
+		"/v1/attachments?entity_type=company&entity_id=" + missing,
+		"/v1/records/company/" + missing + "/assignments",
+		"/v1/records/deal/" + missing + "/assignments",
+		"/v1/records/project/" + missing + "/assignments",
+		"/v1/scheduling/proposals?contact_id=" + missing,
 	} {
 		t.Run(route, func(t *testing.T) {
 			if status := e.Call(t, "GET", route, nil, nil, nil); status != http.StatusNotFound {
 				t.Errorf("GET %s → %d, want 404", route, status)
 			}
+		})
+	}
+}
+
+// The agent surface reads the same library the tabs read, so a missing parent
+// is refused there too, for every record type the tool names.
+func TestListDocumentsOfAMissingRecordIsRefusedOnTheAgentDoor(t *testing.T) {
+	d := newTwoDoors(t, "missingparent", "read")
+	const missing = "00000000-0000-7000-8000-0000000000ee"
+
+	for _, entityType := range []string{"company", "deal", "contact", "lead", "project"} {
+		t.Run(entityType, func(t *testing.T) {
+			d.mcp.CallRefused(t, "list_documents", map[string]any{"entity_type": entityType, "entity_id": missing})
 		})
 	}
 }

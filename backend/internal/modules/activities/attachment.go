@@ -52,7 +52,7 @@ func ensureAttachmentParentVisible(ctx context.Context, tx pgx.Tx, entityType st
 	if entityType == "activity" {
 		return auth.EnsureActivityContentVisible(ctx, tx, id)
 	}
-	return auth.EnsureVisible(ctx, tx, entityType, id)
+	return auth.EnsureVisibleExisting(ctx, tx, entityType, id)
 }
 
 // ensureAttachmentParentWritable gates every change to a file already on a
