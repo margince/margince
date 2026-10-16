@@ -46,6 +46,10 @@ func TestNoReadWritesNullWhereTheContractDeclaresAnArray(t *testing.T) {
 		if op == nil || hasRequiredQuery(op) {
 			continue
 		}
+		schema := okSchema(op)
+		if schema == nil {
+			continue
+		}
 		url, ok := resolveParents(route, owners)
 		if !ok {
 			skipped++
@@ -54,10 +58,6 @@ func TestNoReadWritesNullWhereTheContractDeclaresAnArray(t *testing.T) {
 		body, ok := getJSON(t, e, "/v1"+url)
 		if !ok {
 			skipped++
-			continue
-		}
-		schema := okSchema(op)
-		if schema == nil {
 			continue
 		}
 		read++
