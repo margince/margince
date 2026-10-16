@@ -28,6 +28,7 @@ type problemMock struct {
 type tsFunc struct {
 	name     string
 	params   []tsSpan
+	defaults map[int]tsSpan
 	paren    int
 	body     tsSpan
 	exported bool
@@ -35,11 +36,12 @@ type tsFunc struct {
 
 // codeSource is how a helper's parameter reaches a Problem's code: by its
 // position, then the member path below it. status is the parameter that
-// carries the Problem's status, when one does.
+// carries the Problem's status; fallback is the code its default gives.
 type codeSource struct {
-	index  int
-	path   []string
-	status *codeSource
+	index    int
+	path     []string
+	status   *codeSource
+	fallback []problemMock
 }
 
 // tsImport is one named import: the file it resolves to and its exported name.
@@ -78,10 +80,7 @@ type problemFileReader struct {
 	bindings []tsBinding
 	patterns map[int]bool
 	lines    []int
-	// statusParam is the helper parameter the object being judged takes its
-	// status from, set while its context is read.
-	statusParam *codeRead
-	scan        *problemFileScan
+	scan     *problemFileScan
 }
 
 // scanProblemFile reads one tokenized file. takers are the functions whose
@@ -329,8 +328,8 @@ func (r *problemFileReader) named(paren int) bool {
 // body, or an arrow's body to the end of its expression.
 func (r *problemFileReader) withBody(fn tsFunc, paren int) (tsFunc, bool) {
 	tr := r.tree
-	fn.paren = paren
-	for _, part := range tr.split(paren) {
+	fn.paren, fn.defaults = paren, map[int]tsSpan{}
+	for index, part := range tr.split(paren) {
 		if tr.is(part.from, "...") {
 			part.from++
 		}
@@ -339,6 +338,14 @@ func (r *problemFileReader) withBody(fn tsFunc, paren int) (tsFunc, bool) {
 			param.to = tr.match[part.from] + 1
 		}
 		fn.params = append(fn.params, param)
+		for i := param.to; i < part.to; i++ {
+			if tr.match[i] > i {
+				i = tr.match[i]
+			} else if tr.is(i, "=") {
+				fn.defaults[index] = tsSpan{i + 1, part.to}
+				break
+			}
+		}
 	}
 	after := tr.match[paren] + 1
 	for j := after; j < len(tr.tokens); j++ {
@@ -401,18 +408,18 @@ func (r *problemFileReader) readObject(open int) {
 	if !found || r.patterns[open] {
 		return
 	}
-	r.statusParam = nil
-	status, problem := r.problemContext(open, map[int]bool{})
-	if !problem {
+	context := r.problemContext(open, map[int]bool{})
+	if !context.refusal {
 		return
 	}
+	status := context.code
 	read, ok := r.resolve(entry.value, nil, 0)
 	switch {
 	case !ok:
 		r.scan.mocks = append(r.scan.mocks, problemMock{path: r.path, line: r.line(entry.keyAt), computed: true, status: status})
 	case read.helper != "":
-		if r.statusParam != nil && r.statusParam.helper == read.helper {
-			read.source.status = &r.statusParam.source
+		if context.param != nil && context.param.helper == read.helper {
+			read.source.status = &context.param.source
 		}
 		r.scan.helpers[read.helper] = read.source
 	default:
@@ -423,16 +430,24 @@ func (r *problemFileReader) readObject(open int) {
 // addMocks records each literal a code resolved to, at its own line when it
 // is not the code entry's own value.
 func (r *problemFileReader) addMocks(literals []int, status, at int, own bool) {
+	for _, mock := range r.mocksOf(literals, status) {
+		mock.own = own && mock.line == r.line(at)
+		r.scan.mocks = append(r.scan.mocks, mock)
+	}
+}
+
+// mocksOf answers the mocks the string literals among literals are.
+func (r *problemFileReader) mocksOf(literals []int, status int) []problemMock {
+	var mocks []problemMock
 	for _, literal := range literals {
 		token := r.tree.tokens[literal]
-		if token.kind == tkNumber {
-			continue
+		if token.kind != tkNumber {
+			mocks = append(mocks, problemMock{
+				path: r.path, line: r.line(literal), code: token.text, computed: token.computed, status: status,
+			})
 		}
-		r.scan.mocks = append(r.scan.mocks, problemMock{
-			path: r.path, line: r.line(literal), code: token.text, computed: token.computed, status: status,
-			own: own && r.line(literal) == r.line(at),
-		})
 	}
+	return mocks
 }
 
 func codeEntry(entries []tsEntry) (tsEntry, bool) {
@@ -502,7 +517,13 @@ func (r *problemFileReader) resolveName(at int, name string, path []string, dept
 		if fn.name == "" {
 			return codeRead{}, false
 		}
-		return codeRead{helper: fn.name, source: codeSource{index: index, path: path}}, true
+		source := codeSource{index: index, path: path}
+		if fallback, defaulted := fn.defaults[index]; defaulted && len(path) == 0 {
+			if read, ok := r.resolve(fallback, nil, depth+1); ok {
+				source.fallback = r.mocksOf(read.literals, 0)
+			}
+		}
+		return codeRead{helper: fn.name, source: source}, true
 	}
 	if literal, known := r.consts[name]; known && len(path) == 0 {
 		return codeRead{literals: []int{literal}}, true
@@ -580,16 +601,24 @@ func (r *problemFileReader) paramOf(at int, name string) (tsFunc, int, bool) {
 	return best, bestIndex, found
 }
 
+// statusRead is what a status says. It holds the refusal a literal names,
+// whether it can be one, and the helper parameter each call decides it by.
+type statusRead struct {
+	code    int
+	refusal bool
+	param   *codeRead
+}
+
 // problemContext reports whether the object at open is a Problem. It holds a
 // refusal status, is spread into a Problem, or is a 4xx or 5xx answer's body.
-func (r *problemFileReader) problemContext(open int, seen map[int]bool) (int, bool) {
+func (r *problemFileReader) problemContext(open int, seen map[int]bool) statusRead {
 	tr := r.tree
 	if seen[open] {
-		return 0, false
+		return statusRead{}
 	}
 	seen[open] = true
-	if status, refusal := r.ownStatus(open, map[int]bool{}); refusal {
-		return status, true
+	if own := r.ownStatus(open, map[int]bool{}); own.refusal {
+		return own
 	}
 	slot := tsSpan{open, tr.match[open] + 1}
 	for p := tr.parent[open]; p >= 0; p = tr.parent[p] {
@@ -603,44 +632,42 @@ func (r *problemFileReader) problemContext(open int, seen map[int]bool) (int, bo
 		case tr.is(p, "{"):
 			return r.sentAsValue(p, slot, seen)
 		default:
-			return 0, false
+			return statusRead{}
 		}
 	}
-	return 0, false
+	return statusRead{}
 }
 
 // sentAsArgument judges an argument of the call at paren. It is a Problem as
 // a Problem taker's first, or as a body beside a 4xx or 5xx status.
-func (r *problemFileReader) sentAsArgument(paren int, slot tsSpan) (int, bool) {
+func (r *problemFileReader) sentAsArgument(paren int, slot tsSpan) statusRead {
 	tr := r.tree
 	args := tr.split(paren)
 	index := slices.IndexFunc(args, func(arg tsSpan) bool { return r.fills(arg, slot) })
 	if index < 0 {
-		return 0, false
+		return statusRead{}
 	}
 	if index == 0 && r.takers[problemCallee(tr, paren)] {
-		return 0, true
+		return statusRead{refusal: true}
 	}
 	for i, arg := range args {
 		if i == index {
 			continue
 		}
+		read := r.boundStatus(arg)
 		if tr.is(arg.from, "{") && tr.match[arg.from] == arg.to-1 {
-			if code, refusal := r.statusOf(tr.entries(arg.from)); refusal {
-				return code, true
-			}
-			continue
+			read = r.statusOf(tr.entries(arg.from))
 		}
-		if code, refusal := r.boundStatus(arg); refusal {
-			return code, true
+		if read.refusal {
+			return read
 		}
 	}
-	return 0, false
+	return statusRead{}
 }
 
 // sentAsValue judges an entry's value in the object at brace. It is a
 // Problem spread into one, or as a body beside a 4xx or 5xx status.
-func (r *problemFileReader) sentAsValue(brace int, slot tsSpan, seen map[int]bool) (int, bool) {
+func (r *problemFileReader) sentAsValue(brace int, slot tsSpan, seen map[int]bool) statusRead {
 	tr := r.tree
 	for _, entry := range tr.entries(brace) {
 		if !r.fills(entry.value, slot) {
@@ -649,41 +676,58 @@ func (r *problemFileReader) sentAsValue(brace int, slot tsSpan, seen map[int]boo
 		if entry.spread {
 			return r.problemContext(brace, seen)
 		}
-		if code, refusal := r.statusOf(tr.entries(brace)); refusal {
-			return code, true
-		}
-		return 0, false
+		return r.statusOf(tr.entries(brace))
 	}
-	return 0, false
+	return statusRead{}
 }
 
 func refusalStatus(code int) bool { return code >= 400 && code <= 599 }
 
 // statusOf reads an object's status entry as a refusal status.
-func (r *problemFileReader) statusOf(entries []tsEntry) (int, bool) {
+func (r *problemFileReader) statusOf(entries []tsEntry) statusRead {
 	for _, entry := range entries {
 		if entry.key == "status" && !entry.spread {
 			return r.boundStatus(entry.value)
 		}
 	}
-	return 0, false
+	return statusRead{}
 }
 
 // boundStatus reads a status expression as a refusal: a 4xx or 5xx literal,
-// constant or table row, or a helper parameter its calls decide. A value it
-// cannot follow counts when it is named `status`.
-func (r *problemFileReader) boundStatus(span tsSpan) (int, bool) {
+// constant or table row, or a helper parameter its calls decide. Either side
+// of `??` or `||` counts. A value it cannot follow counts when named `status`.
+func (r *problemFileReader) boundStatus(span tsSpan) statusRead {
 	tr := r.tree
+	if left, right, ok := fallbackSides(tr, span); ok {
+		if read := r.boundStatus(left); read.refusal {
+			return read
+		}
+		return r.boundStatus(right)
+	}
 	read, ok := r.resolve(span, nil, 0)
 	switch {
 	case ok && read.helper != "":
-		r.statusParam = &read
-		return 0, true
+		return statusRead{refusal: true, param: &read}
 	case ok && len(read.literals) > 0:
-		return refusalOf(tr, read.literals)
+		code, refusal := refusalOf(tr, read.literals)
+		return statusRead{code: code, refusal: refusal}
 	}
 	chain, named := memberChain(tr, span)
-	return 0, named && chain[len(chain)-1] == "status"
+	return statusRead{refusal: named && chain[len(chain)-1] == "status"}
+}
+
+// fallbackSides splits `a ?? b` or `a || b` at its last depth-0 operator.
+func fallbackSides(tr *tsTree, span tsSpan) (left, right tsSpan, ok bool) {
+	for i := span.to - 1; i > span.from; i-- {
+		if tr.match[i] >= 0 && tr.match[i] < i {
+			i = tr.match[i]
+			continue
+		}
+		if tr.is(i, "??") || tr.is(i, "||") {
+			return tsSpan{span.from, i}, tsSpan{i + 1, span.to}, true
+		}
+	}
+	return tsSpan{}, tsSpan{}, false
 }
 
 // refusalOf answers the first refusal status among number literals.
@@ -698,26 +742,26 @@ func refusalOf(tr *tsTree, literals []int) (int, bool) {
 
 // ownStatus reads the refusal status an object holds, or one it spreads in
 // by name or as a literal.
-func (r *problemFileReader) ownStatus(open int, seen map[int]bool) (int, bool) {
+func (r *problemFileReader) ownStatus(open int, seen map[int]bool) statusRead {
 	if seen[open] {
-		return 0, false
+		return statusRead{}
 	}
 	seen[open] = true
 	entries := r.tree.entries(open)
-	if status, refusal := r.statusOf(entries); refusal {
-		return status, true
+	if read := r.statusOf(entries); read.refusal {
+		return read
 	}
 	for _, entry := range entries {
 		if !entry.spread {
 			continue
 		}
 		for _, spread := range r.objectsFilling(entry.value) {
-			if status, refusal := r.ownStatus(spread, seen); refusal {
-				return status, true
+			if read := r.ownStatus(spread, seen); read.refusal {
+				return read
 			}
 		}
 	}
-	return 0, false
+	return statusRead{}
 }
 
 // objectsFilling answers the object literals a value can be: itself, either
@@ -814,11 +858,12 @@ func (r *problemFileReader) readHelperCalls() {
 // made the calling function a helper.
 func (r *problemFileReader) readCall(call int, source codeSource) bool {
 	args := r.tree.split(call + 1)
-	if source.index >= len(args) {
-		return false
-	}
 	status, refusal, passed := r.callStatus(args, source.status)
 	if !refusal {
+		return false
+	}
+	if source.index >= len(args) {
+		r.scan.mocks = append(r.scan.mocks, source.fallback...)
 		return false
 	}
 	read, ok := r.resolve(args[source.index], source.path, 0)
@@ -844,6 +889,9 @@ func (r *problemFileReader) readCall(call int, source codeSource) bool {
 // it cannot follow may be a refusal.
 func (r *problemFileReader) callStatus(args []tsSpan, param *codeSource) (status int, refusal bool, passed *codeRead) {
 	if param == nil || param.index >= len(args) {
+		return 0, true, nil
+	}
+	if _, _, fallback := fallbackSides(r.tree, args[param.index]); fallback {
 		return 0, true, nil
 	}
 	read, ok := r.resolve(args[param.index], param.path, 0)
