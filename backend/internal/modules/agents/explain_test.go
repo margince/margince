@@ -5,6 +5,7 @@ package agents
 
 import (
 	"bytes"
+	"errors"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -106,6 +107,29 @@ func TestExplainSaysASingleFieldsRemedyOnce(t *testing.T) {
 	}
 	if !strings.Contains(got, "occurred_at=required") {
 		t.Errorf("explain = %q, want it to name the field and its code", got)
+	}
+}
+
+// A coded refusal may be one no corrected argument lifts. It names its field
+// and code, and never sends the agent back to the schema.
+func TestExplainAnswersACodedArgumentRefusalAsTheStoreDoes(t *testing.T) {
+	srv := NewDispatcher(nil, nil, "t", "0").
+		WithLogger(slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)))
+	cause := errors.New("only an administrator renames it")
+
+	coded := srv.explain("update_record", &BadArgsError{Field: "display_name", Code: "anchor_protected", Cause: cause})
+	stored := srv.explain("change_record_parts",
+		httperr.Validation("display_name", "anchor_protected", "arguments: only an administrator renames it"))
+
+	if coded != stored {
+		t.Errorf("a coded argument refusal reads\n%q\nwhere the store's reads\n%q", coded, stored)
+	}
+	if !strings.Contains(coded, "display_name=anchor_protected") || strings.Contains(coded, "inputSchema") {
+		t.Errorf("explain = %q, want the field and code, and no advice to fix the schema", coded)
+	}
+	uncoded := srv.explain("update_record", &BadArgsError{Field: "display_name", Cause: cause})
+	if !strings.Contains(uncoded, "inputSchema") {
+		t.Errorf("explain = %q, want an uncoded argument refusal sent back to the schema", uncoded)
 	}
 }
 

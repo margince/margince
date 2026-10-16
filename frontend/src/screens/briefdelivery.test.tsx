@@ -94,5 +94,10 @@ describe("the delivery settings", () => {
         .getByRole("combobox")
         .getAttribute("aria-describedby"),
     ).toContain(refusal.id);
+    expect(
+      within(screen.getByTestId("delivery-weekly"))
+        .getByRole("combobox")
+        .getAttribute("aria-describedby"),
+    ).not.toContain(refusal.id);
   });
 });
