@@ -55,10 +55,15 @@ func TestDecodeKeepsAnSVGWhoseTextElementsHoldNoCharacters(t *testing.T) {
 	}
 }
 
-func TestDecodeRefusesSVGContentTheRendererSkipsAsNotDrawableNotAsText(t *testing.T) {
+func TestDecodeRefusesAnSVGTheRendererCannotDrawAsNotDrawableAndNotAsText(t *testing.T) {
 	cases := map[string]string{
 		"foreignObject markup": svgOpen + `<foreignObject width="100" height="50"><div xmlns="http://www.w3.org/1999/xhtml">Acme</div></foreignObject></svg>`,
 		"an embedded image":    svgOpen + `<circle cx="25" cy="25" r="20"/><image href="data:image/png;base64,AAAA" width="10" height="10"/></svg>`,
+		"an image after text, so the fix that covers both is named": svgOpen + `<text>Acme</text><image href="data:image/png;base64,AAAA"/></svg>`,
+		"a use reference":      svgOpen + `<defs><circle id="c" r="5"/></defs><use href="#c"/></svg>`,
+		"an unclosed document": svgOpen + `<circle cx="25" cy="25" r="20"`,
+		"a currentColor fill the renderer cannot resolve": svgOpen + `<circle cx="25" cy="25" r="20" fill="currentColor"/></svg>`,
+		"an empty viewBox": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 0 0"><circle r="5"/></svg>`,
 	}
 	for name, doc := range cases {
 		t.Run(name, func(t *testing.T) {
