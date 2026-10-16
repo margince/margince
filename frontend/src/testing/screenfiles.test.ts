@@ -12,9 +12,11 @@ describe("the screen census the guards read", () => {
     expect(files.some((file) => file.includes("/deal360/"))).toBe(true);
   });
 
-  it("leaves out tests and stories", () => {
+  it("leaves out tests, testkits and stories", () => {
     expect(
-      screenFiles().filter((file) => /\.(test|stories)\.tsx$/.test(file)),
+      screenFiles().filter((file) =>
+        /\.(test|stories|testkit)\.tsx$/.test(file),
+      ),
     ).toEqual([]);
   });
 });
