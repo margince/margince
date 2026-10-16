@@ -43,7 +43,6 @@
 1725 frontend/src/screens/onboarding-facts.test.tsx
 1902 frontend/src/features/contacts/contactpage.stories.tsx
 1122 frontend/src/screens/analytics.tsx
-1434 frontend/src/design-system/atoms.tsx
 1524 frontend/src/screens/company360.tsx
 1504 frontend/src/screens/leads.tsx
 2217 frontend/src/screens/company360.test.tsx

@@ -369,12 +369,12 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
     expect(manifest.icons.length).toBeGreaterThanOrEqual(1);
   });
 
-  // One spelling of the button. `Button` (design-system/atoms.tsx) is what
-  // emits `btn` — a `className` that spells the base class itself is a
-  // hand-rolled copy of it, and a copy is frozen at the day it was written: the
-  // width floor, the focus ring, the icon sizing and the shared control height
-  // all landed on Button and reached none of the ten copies this gate was
-  // written to clear.
+  // One spelling of the button. `Button` (design-system/button.tsx) is what
+  // emits `btn`. A `className` that spells the base class itself is a
+  // hand-rolled copy of it, and a copy is frozen at the day it was written.
+  // The width floor, the focus ring, the icon sizing and the shared control
+  // height all landed on Button. They reached none of the ten copies this gate
+  // was written to clear.
   //
   // The rule is deliberately narrow so it states its own exception. It matches
   // the `btn` BASE token only — a `.btn-*` modifier in a STYLESHEET is how the
@@ -386,8 +386,8 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
   it("renders every button through Button — no hand-rolled btn classes", () => {
     const violations: string[] = [];
     for (const file of files) {
-      // atoms.tsx is Button's own file: it is where `btn` is minted.
-      if (!file.endsWith(".tsx") || file.endsWith("design-system/atoms.tsx")) {
+      // button.tsx is Button's own file: it is where `btn` is minted.
+      if (!file.endsWith(".tsx") || file.endsWith("design-system/button.tsx")) {
         continue;
       }
       const source = sourceFileAt(file);

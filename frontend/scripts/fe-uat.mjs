@@ -299,7 +299,7 @@ function viewportFor(tags) {
 }
 
 // What counts as painted. The canvas is the usual answer, but `Modal`
-// (src/design-system/atoms.tsx) returns `createPortal(…, document.body)` — a
+// (src/design-system/modal.tsx) returns `createPortal(…, document.body)` — a
 // dialog opened from inside a collapsed container would otherwise be hidden
 // along with it — so a drawer story renders FULLY while leaving
 // `#storybook-root` empty, and reading the canvas alone called four such
