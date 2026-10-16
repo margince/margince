@@ -102,7 +102,7 @@ func TestTheArgumentsReachTheEngine(t *testing.T) {
 	}{
 		{
 			`{"q":"Acme"}`,
-			RecordSearchQuery{Text: "Acme", Types: []string{"contact", "company", "deal", "lead", "project"}},
+			RecordSearchQuery{Text: "Acme", Types: []string{"contact", "company", "deal", "lead", "project"}, Limit: 20},
 		},
 		{
 			`{"q":"Acme","record_type":"activity","limit":5,"cursor":"c1"}`,

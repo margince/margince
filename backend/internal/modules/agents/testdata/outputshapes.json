@@ -11956,8 +11956,32 @@
       "data": {
         "type": "object",
         "properties": {
+          "coverage": {
+            "type": "string"
+          },
           "next_cursor": {
             "type": "string"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "detail"
+              ]
+            }
           },
           "records": {
             "type": "array",
@@ -12039,6 +12063,8 @@
           }
         },
         "required": [
+          "coverage",
+          "notes",
           "records"
         ]
       },

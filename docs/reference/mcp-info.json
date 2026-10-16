@@ -10,16 +10,16 @@
   "totals": {
     "tools": 37,
     "resources": 9,
-    "tool_catalog_bytes": 124500,
+    "tool_catalog_bytes": 124511,
     "resource_catalog_bytes": 3588,
-    "approx_wire_tokens_total": 32022,
+    "approx_wire_tokens_total": 32024,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 32245,
-      "input_schema_bytes": 58154,
+      "input_schema_bytes": 58165,
       "output_schema_bytes": 25189,
-      "description_plus_input_schema_bytes": 90399
+      "description_plus_input_schema_bytes": 90410
     }
   },
   "tools": {
@@ -4414,7 +4414,7 @@
               "type": "string"
             },
             "record_name": {
-              "description": "catch_up, meeting only: The record named in words, resolved the way a record search resolves it. Refused with the candidate ids when the name matches more than one, rather than guessing.",
+              "description": "catch_up, meeting only: The record named in words, found the way find_records with engine=list' q finds it. Refused with the candidate ids when the name matches more than one, rather than guessing.",
               "type": "string"
             },
             "record_type": {

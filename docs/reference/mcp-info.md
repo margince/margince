@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 9 |
 | Tool catalog | 121.6 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 32022 |
+| Approx. wire tokens | 32024 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -80,7 +80,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 834 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes |  | 326 |
-| [`read_context`](#read_context) | Get the story so far | yes |  | 394 |
+| [`read_context`](#read_context) | Get the story so far | yes |  | 393 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes |  | 826 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 220 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 745 |
@@ -4893,7 +4893,7 @@ cites to read or change those records next.
       "type": "string"
     },
     "record_name": {
-      "description": "catch_up, meeting only: The record named in words, resolved the way a record search resolves it. Refused with the candidate ids when the name matches more than one, rather than guessing.",
+      "description": "catch_up, meeting only: The record named in words, found the way find_records with engine=list' q finds it. Refused with the candidate ids when the name matches more than one, rather than guessing.",
       "type": "string"
     },
     "record_type": {

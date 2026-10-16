@@ -91,6 +91,13 @@ type searchedRecord struct {
 	Match *RecordMatch `json:"match,omitempty"`
 }
 
+// Every hit is read back through the provider with its owner, one read each,
+// so the page is bounded as search_context's is.
+const (
+	recordSearchMaxLimit     = 25
+	recordSearchDefaultLimit = 20
+)
+
 // recordSearchTypes are the types search_records reaches. tag is left out:
 // read_record cannot read a tag, and read_tags is the door to that vocabulary.
 var recordSearchTypes = []string{
@@ -139,9 +146,9 @@ func (t searchRecords) Spec() mcp.ToolSpec {
 			"record_types":{"type":"array","items":{"type":"string","enum":%[1]s},"description":"Search these types, in place of record_type. Omit both for contact, company, deal, lead and project."},
 			"with_employees":{"type":"boolean","description":"Also find the contacts who work at a matching company; each carries match.works_at."},
 			"per_type":{"type":"integer","minimum":1,"maximum":20,"description":"Answer up to this many of each type instead of one ranked list. Takes no cursor or limit; types_with_more names the types holding more."},
-			"limit":{"type":"integer","minimum":1,"maximum":50},
+			"limit":{"type":"integer","minimum":1,"maximum":%[2]d,"description":"Records on one page; %[3]d when left out."},
 			"cursor":{"type":"string","description":"next_cursor from the previous page."}},
-			"additionalProperties":false}`, types)),
+			"additionalProperties":false}`, types, recordSearchMaxLimit, recordSearchDefaultLimit)),
 		OutputSchema: schemaFor[SearchRecordsResult](),
 	}
 }
@@ -190,6 +197,10 @@ func (a searchRecordsArgs) query(ctx context.Context) (RecordSearchQuery, error)
 		return RecordSearchQuery{}, &BadArgsError{Field: "q", Cause: errors.New(
 			"`q` takes the words to search for; list_records lists records without words")}
 	}
+	limit := a.Limit
+	if limit == 0 && a.PerType == nil {
+		limit = recordSearchDefaultLimit
+	}
 	if a.RecordType != "" && len(a.RecordTypes) > 0 {
 		return RecordSearchQuery{}, &BadArgsError{
 			Field: "record_types", Cause: errors.New("name one record_type or a list of record_types, not both"),
@@ -208,7 +219,7 @@ func (a searchRecordsArgs) query(ctx context.Context) (RecordSearchQuery, error)
 		named = recordSearchDefaultTypes()
 	}
 	return RecordSearchQuery{
-		Text: a.Q, Types: named, Limit: a.Limit, Cursor: a.Cursor,
+		Text: a.Q, Types: named, Limit: limit, Cursor: a.Cursor,
 		PerType: a.PerType, WithEmployees: a.WithEmployees,
 	}, nil
 }

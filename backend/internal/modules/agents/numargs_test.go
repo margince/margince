@@ -204,7 +204,7 @@ func TestTheAdvertisedLimitsBindTheToolsThatAdvertiseThem(t *testing.T) {
 		{"a zero cap asks for nothing", "whats_slipping_this_week", `{"limit":0}`, "`limit` is 0, below its declared minimum of 1"},
 		{"a negative cap", "whats_slipping_this_week", `{"limit":-5}`, "`limit` is -5, below its declared minimum of 1"},
 		{"a cap far above the ceiling", "whats_slipping_this_week", `{"limit":999999}`, "`limit` is 999999, above its declared maximum of 50"},
-		{"one over the ceiling", "search_records", `{"q":"Acme","limit":51}`, "`limit` is 51, above its declared maximum of 50"},
+		{"one over the ceiling", "search_records", `{"q":"Acme","limit":26}`, "`limit` is 26, above its declared maximum of 25"},
 		{"the bulk writer's own ceiling", "draft_follow_ups_for", `{"segment":"slipping","limit":26}`, "`limit` is 26, above its declared maximum of 25"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

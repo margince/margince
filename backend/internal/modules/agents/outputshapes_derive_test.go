@@ -129,11 +129,14 @@ func TestEveryResultTypeSatisfiesTheSchemaDerivedFromIt(t *testing.T) {
 	for name, value := range map[string]any{
 		"ListRecordsResult": ListRecordsResult{Records: []recordWithOwner{{wireRecord: record, Owner: &RecordOwner{ID: id, Name: "Sofia Meier"}}}, NextCursor: "cursor"},
 		"ListRecordsEmpty":  ListRecordsResult{Records: []recordWithOwner{}},
-		"SearchRecordsResult": SearchRecordsResult{Records: []searchedRecord{{
-			wireRecord: record,
-			Match:      &RecordMatch{Snippet: "Acme", WorksAt: &RecordEmployer{CompanyID: id, CompanyName: "Acme"}},
-		}}, TypesWithMore: &[]string{"deal"}},
-		"SearchRecordsEmpty":   SearchRecordsResult{Records: []searchedRecord{}},
+		"SearchRecordsResult": SearchRecordsResult{
+			Records: []searchedRecord{{
+				wireRecord: record,
+				Match:      &RecordMatch{Snippet: "Acme", WorksAt: &RecordEmployer{CompanyID: id, CompanyName: "Acme"}},
+			}}, TypesWithMore: &[]string{"deal"}, Coverage: CoveragePartialDegraded,
+			Notes: []QueryNote{{Code: CodeMoreRecordsMatch, Detail: "more"}},
+		},
+		"SearchRecordsEmpty":   SearchRecordsResult{Records: []searchedRecord{}, Coverage: CoverageCompleteExact, Notes: []QueryNote{}},
 		"recordWithOwner":      recordWithOwner{wireRecord: record},
 		"wireRecord":           record,
 		"ArchiveResult":        ArchiveResult{Archived: true, RecordType: "contact", ID: id},
