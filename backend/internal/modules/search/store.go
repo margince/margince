@@ -162,6 +162,10 @@ type Input struct {
 	WithEmployees bool
 }
 
+// maxQueryWords bounds the words one query may hold. The employer arm binds a
+// parameter and a clause per word, so this caps the statement a request builds.
+const maxQueryWords = 32
+
 // Search runs the cross-object query (contract /search): one ranked list, or
 // with PerType one page grouped by type. Every branch carries archived_at IS
 // NULL and the caller's row scope; ranked keyset pagination orders (score
@@ -173,6 +177,11 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 	query := normalizeQuery(in.Query)
 	if strings.TrimSpace(query) == "" {
 		return Page{}, &BadQueryError{Field: "q", Reason: "q is required"}
+	}
+	if words := len(strings.Fields(query)); words > maxQueryWords {
+		return Page{}, &BadQueryError{Field: "q", Reason: fmt.Sprintf(
+			"q holds %d words and a search takes at most %d; keep the words that name what you are looking for",
+			words, maxQueryWords)}
 	}
 	types := in.Types
 	if len(types) == 0 {
