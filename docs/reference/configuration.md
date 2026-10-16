@@ -169,6 +169,7 @@ value gets a 409 that names the source, and a save of the same value changes not
 | `MARGINCE_AI_TASK_OVERRIDES` | `{}` | `ai.task_overrides`, the JSON object `PUT /ai/task-overrides` takes |
 | `MARGINCE_AI_BUDGET` | `{"tokens_per_full_user":12000000,"company_monthly_tokens":null}` (each 1 to 1000000000000) | `ai.budget` |
 | `MARGINCE_AI_PRICE_SYNC` | `{"auto_sync":true}` | `ai.price_sync` |
+| `MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS` | `2` (1 to 30) | `activities.follow_up_after_days` |
 
 A data reset keeps the saved rows of the first 12 settings, from `installation.name` to
 `identity.oidc_group_role_map`, and of `ai.routing`, `ai.task_overrides` and `ai.budget`. It

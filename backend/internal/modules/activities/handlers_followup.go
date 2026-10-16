@@ -8,14 +8,15 @@ import (
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
-// WithSettings binds the installation settings store the follow-up window is
-// written through, which validates, gates and audits the write.
-func (h Handlers) WithSettings(store *settings.Store) Handlers {
-	h.settings = store
+// WithSettings binds the configuration the follow-up window is read and
+// written through. Its save gates, refuses a boot-set value, validates and
+// audits the write.
+func (h Handlers) WithSettings(cfg *config.Config) Handlers {
+	h.settings = cfg
 	return h
 }
 
@@ -34,7 +35,7 @@ func (h Handlers) UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request)
 		writeStoreErr(w, r, errors.New("activities: the follow-up window is not wired; the installation cannot change it"))
 		return
 	}
-	if err := settings.Set(r.Context(), h.settings, FollowUpAfterDays, req.FollowUpAfterDays); err != nil {
+	if err := config.Save(r.Context(), h.settings, FollowUpAfterDays, req.FollowUpAfterDays); err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
@@ -48,7 +49,7 @@ func (h Handlers) writeFollowUpSettings(w http.ResponseWriter, r *http.Request) 
 		writeStoreErr(w, r, errors.New("activities: the follow-up window is not wired; the installation cannot read it"))
 		return
 	}
-	days, err := settings.Get(r.Context(), h.settings, FollowUpAfterDays)
+	days, err := config.StoredVal(r.Context(), h.settings, FollowUpAfterDays)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

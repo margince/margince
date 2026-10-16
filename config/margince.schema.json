@@ -704,6 +704,17 @@
           "type": "boolean"
         }
       }
+    },
+    "activities": {
+      "description": "The activity settings an operator may also set at boot. A value here locks the setting against a change in the product.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "follow_up_after_days": {
+          "description": "Days a sent message may go unanswered before the sender's worklist reminds them to follow up.",
+          "type": "integer"
+        }
+      }
     }
   },
   "$defs": {

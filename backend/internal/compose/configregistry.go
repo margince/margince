@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/margince/margince/backend/internal/compose/programsettings"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -39,6 +40,7 @@ func allSettings() []config.Any {
 		capture.ConfigSettings(),
 		integrations.ConfigSettings(),
 		ai.ConfigSettings(),
+		activities.ConfigSettings(),
 	)
 }
 
