@@ -12712,7 +12712,7 @@ components:
       type: object
       required: [template]
       properties:
-        locks: {$ref: '#/components/schemas/SettingLocks'}
+        locks: {$ref: '#/components/schemas/SettingLocks', readOnly: true}
         template:
           type: string
           maxLength: 4000
@@ -15913,7 +15913,7 @@ components:
       type: object
       required: [follow_up_after_days]
       properties:
-        locks: {$ref: '#/components/schemas/SettingLocks'}
+        locks: {$ref: '#/components/schemas/SettingLocks', readOnly: true}
         follow_up_after_days:
           type: integer
           minimum: 1

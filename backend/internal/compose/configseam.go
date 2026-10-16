@@ -32,14 +32,11 @@ func loadedLocks(surface []config.Any) *[]crmcontracts.SettingLock {
 	return &locks
 }
 
-// settingOrigin is the wire form of an origin. The API names one YAML source,
-// because which file held the value is what `file` says.
+// settingOrigin is the wire form of an origin, in the vocabulary a refusal's
+// message uses too (Origin.Reported).
 func settingOrigin(o config.Origin) crmcontracts.SettingOrigin {
-	source := o.Source
-	if source == config.SourceBaseFile {
-		source = config.SourceConfigFile
-	}
-	out := crmcontracts.SettingOrigin{Source: crmcontracts.SettingOriginSource(source), Name: o.Name}
+	o = o.Reported()
+	out := crmcontracts.SettingOrigin{Source: crmcontracts.SettingOriginSource(o.Source), Name: o.Name}
 	if o.File != "" {
 		file := o.File
 		out.File = &file

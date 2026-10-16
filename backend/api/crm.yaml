@@ -31967,6 +31967,7 @@ components:
       properties:
         locks:
           $ref: '#/components/schemas/SettingLocks'
+          readOnly: true
           description: 'The settings a boot source sets among the binding and the task overrides; `/ai/task-overrides` is a map of tasks, so its lock is reported here.'
         profile:
           type: string
@@ -34026,7 +34027,7 @@ components:
       type: object
       required: [enabled]
       properties:
-        locks: { $ref: '#/components/schemas/SettingLocks' }
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
         enabled: { type: boolean }
 
     DealSuggestion:
@@ -41736,7 +41737,7 @@ components:
       type: object
       required: [template]
       properties:
-        locks: { $ref: '#/components/schemas/SettingLocks' }
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
         template:
           type: string
           maxLength: 4000
@@ -47469,7 +47470,7 @@ components:
       type: object
       required: [follow_up_after_days]
       properties:
-        locks: { $ref: '#/components/schemas/SettingLocks' }
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
         follow_up_after_days:
           type: integer
           minimum: 1
@@ -55632,7 +55633,7 @@ components:
         Every field is optional and every field is free text. A jurisdiction pack declares WHICH
         disclosures a message carries; these are the words that meet them.
       properties:
-        locks: { $ref: '#/components/schemas/SettingLocks' }
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
         legal_name:
           type: string
           maxLength: 500

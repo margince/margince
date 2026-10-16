@@ -100,6 +100,10 @@ func TestSavingOverABootSourceIsAConflictThatNamesTheSource(t *testing.T) {
 	if code, message := locked.MessageFault(); code != "setting_locked_by_boot_source" || !strings.Contains(message, "X_TEST_CAP") {
 		t.Fatalf("the refusal answers %q %q, want the lock's code and the source", code, message)
 	}
+	fromBase := config.LockedError{Key: "test.cap", Origin: config.Origin{Source: config.SourceBaseFile, Name: "test.cap", File: "base.yaml"}}
+	if _, message := fromBase.MessageFault(); !strings.Contains(message, "config_file test.cap base.yaml") {
+		t.Fatalf("a base-file lock reads %q, want the config_file the lock reports", message)
+	}
 	// No database is attached, so reaching the store would fail rather than pass.
 	if err := config.Save(writer, cfg, storedCap, 900); err != nil {
 		t.Fatalf("saving the boot value itself is a no-op: %v", err)

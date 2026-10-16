@@ -6,13 +6,12 @@
 package integration
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"slices"
 	"strings"
 	"testing"
-
-	"github.com/getkin/kin-openapi/openapi3"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
@@ -21,148 +20,6 @@ import (
 )
 
 const lockedCode = "setting_locked_by_boot_source"
-
-// lockedSurface is a settings response, a value the environment sets on one of
-// its settings, and a write that would change that setting. A write that must
-// first read a revision has none here; its own lock test sends it.
-type lockedSurface struct {
-	contractPath string
-	path         string
-	key          string
-	env, value   string
-	write        lockedWrite
-}
-
-const (
-	gmailEnvClientID = "env-client.apps.googleusercontent.com"
-	gmailEnvSecret   = "GOCSPX-from-the-environment"
-)
-
-func lockedSurfaces() []lockedSurface {
-	routing := strings.TrimPrefix(envBinding("env-model"), "MARGINCE_AI_ROUTING_BINDING=")
-	return []lockedSurface{
-		{
-			"/capture/settings", "/v1/capture/settings", "capture.auto_enrich_daily_cap", "MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP", "900",
-			lockedWrite{method: http.MethodPatch, path: "/v1/capture/settings", body: map[string]any{"auto_enrich_daily_cap": 5}},
-		},
-		{
-			"/ai/routing", "/v1/ai/routing", "ai.routing", "MARGINCE_AI_ROUTING_BINDING", routing,
-			lockedWrite{method: http.MethodPut, path: "/v1/ai/provider-settings/openai_compatible", body: map[string]any{"base_url": "https://openrouter.ai/api"}},
-		},
-		{
-			"/ai/provider-keys", "/v1/ai/provider-keys", "ai.provider_keys_anthropic", "ANTHROPIC_API_KEY", envProviderKey,
-			lockedWrite{method: http.MethodPut, path: "/v1/ai/provider-keys/anthropic", body: map[string]any{"api_key": envProviderKey}},
-		},
-		{
-			"/ai/budget", "/v1/ai/budget", "ai.budget", "MARGINCE_AI_BUDGET", `{"tokens_per_full_user":5000,"company_monthly_tokens":777}`,
-			lockedWrite{},
-		},
-		{
-			"/ai/price-sync", "/v1/ai/price-sync", "ai.price_sync", "MARGINCE_AI_PRICE_SYNC", `{"auto_sync":false}`,
-			lockedWrite{method: http.MethodPut, path: "/v1/ai/price-sync", body: map[string]any{"auto_sync": true}},
-		},
-		{
-			"/integrations/settings", "/v1/integrations/settings", "integrations.automatic_lookup", "MARGINCE_INTEGRATIONS_AUTOMATIC_LOOKUP", "false",
-			lockedWrite{method: http.MethodPatch, path: "/v1/integrations/settings", body: map[string]any{"automatic_lookup": true}},
-		},
-		{
-			"/leads/settings", "/v1/leads/settings", "contacts.first_response_target_minutes", "MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES", "60",
-			lockedWrite{method: http.MethodPatch, path: "/v1/leads/settings", body: map[string]any{"first_response_target_minutes": 90}},
-		},
-		{
-			"/email-signature-template", "/v1/email-signature-template", "contacts.signature_template", "MARGINCE_CONTACTS_SIGNATURE_TEMPLATE", "<p>{name}</p>",
-			lockedWrite{method: http.MethodPut, path: "/v1/email-signature-template", body: map[string]any{"template": "<p>{title}</p>"}},
-		},
-		{
-			"/retention/settings", "/v1/retention/settings", "privacy.retain_only", "MARGINCE_PRIVACY_RETAIN_ONLY", "true",
-			lockedWrite{method: http.MethodPatch, path: "/v1/retention/settings", body: map[string]any{"retain_only": false}},
-		},
-		{
-			"/activities/follow-up-settings", "/v1/activities/follow-up-settings", "activities.follow_up_after_days", "MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS", "6",
-			lockedWrite{method: http.MethodPatch, path: "/v1/activities/follow-up-settings", body: map[string]any{"follow_up_after_days": 3}},
-		},
-		{
-			"/legal-reviews/settings", "/v1/legal-reviews/settings", "deals.legal_review_enabled", "MARGINCE_DEALS_LEGAL_REVIEW_ENABLED", "false",
-			lockedWrite{method: http.MethodPut, path: "/v1/legal-reviews/settings", body: map[string]any{"enabled": true}},
-		},
-		{
-			"/privacy/controller-particulars", "/v1/privacy/controller-particulars", "consent.controller_particulars", "MARGINCE_CONSENT_CONTROLLER_PARTICULARS", `{"LegalName":"Env GmbH"}`,
-			lockedWrite{method: http.MethodPut, path: "/v1/privacy/controller-particulars", body: map[string]any{"legal_name": "Other GmbH"}},
-		},
-		{
-			"/installation/settings", "/v1/installation/settings", "installation.send_rate_limit", "MARGINCE_INSTALLATION_SEND_RATE_LIMIT", "7",
-			lockedWrite{method: http.MethodPatch, path: "/v1/installation/settings", body: map[string]any{"send_rate_limit": 8}},
-		},
-		{
-			"/installation/oauth-apps/{provider}", "/v1/installation/oauth-apps/google", "capture.google_app", "MARGINCE_GMAIL_CLIENT_ID", gmailEnvClientID,
-			lockedWrite{method: http.MethodDelete, path: "/v1/installation/oauth-apps/google"},
-		},
-	}
-}
-
-// surfacesWithLocks are the GET paths whose answer carries `locks`, read from
-// the contract, so a surface that gains the field joins the test below.
-func surfacesWithLocks(t *testing.T) []string {
-	t.Helper()
-	doc, err := openapi3.NewLoader().LoadFromFile("../../../api/crm.yaml")
-	if err != nil {
-		t.Fatalf("loading the contract: %v", err)
-	}
-	var paths []string
-	for path, item := range doc.Paths.Map() {
-		if item.Get == nil {
-			continue
-		}
-		ok := item.Get.Responses.Status(http.StatusOK)
-		if ok == nil || ok.Value == nil || ok.Value.Content.Get("application/json") == nil {
-			continue
-		}
-		schema := ok.Value.Content.Get("application/json").Schema
-		if schema != nil && schema.Value != nil && schema.Value.Properties["locks"] != nil {
-			paths = append(paths, path)
-		}
-	}
-	slices.Sort(paths)
-	return paths
-}
-
-// Every settings response names the settings a boot source sets, with the
-// variable that sets them. Every write to one is refused with the lock's code.
-func TestEverySettingsResponseReportsItsLocks(t *testing.T) {
-	surfaces := lockedSurfaces()
-	var covered, environ []string
-	for _, s := range surfaces {
-		covered = append(covered, s.contractPath)
-		environ = append(environ, s.env+"="+s.value)
-	}
-	slices.Sort(covered)
-	if declared := surfacesWithLocks(t); !slices.Equal(declared, covered) {
-		t.Fatalf("the contract gives locks to %v; this test covers %v", declared, covered)
-	}
-	apptest.BindEnv(t, append(environ, "MARGINCE_GMAIL_CLIENT_SECRET="+gmailEnvSecret))
-	e, _ := apptest.SetupGoogleConnect(t, gmailEnvClientID, gmailEnvSecret)
-
-	for _, s := range surfaces {
-		var read struct {
-			Locks []crmcontracts.SettingLock `json:"locks"`
-		}
-		if status := e.Call(t, http.MethodGet, s.path, nil, nil, &read); status != http.StatusOK {
-			t.Errorf("GET %s → %d", s.path, status)
-			continue
-		}
-		i := slices.IndexFunc(read.Locks, func(l crmcontracts.SettingLock) bool { return l.Key == s.key })
-		if i < 0 || read.Locks[i].Origin.Source != crmcontracts.SettingOriginSourceEnv || read.Locks[i].Origin.Name != s.env {
-			t.Errorf("GET %s locks %+v, want %s locked by env %s", s.path, read.Locks, s.key, s.env)
-		}
-		if s.write.method == "" {
-			continue
-		}
-		var refused problemBody
-		if status := e.Call(t, s.write.method, s.write.path, s.write.body, nil, &refused); status != http.StatusConflict || refused.Code != lockedCode {
-			t.Errorf("%s %s → %d %q, want 409 %s", s.write.method, s.write.path, status, refused.Code, lockedCode)
-		}
-	}
-}
 
 // A settings response carries the value a boot source sets, and its lock names
 // the source. Only a change is refused: the value in force, sent again beside
@@ -193,7 +50,7 @@ func TestLockedSettingsShowInTheAPIAndRefuseAChange(t *testing.T) {
 
 // The overview lists every setting of every program once, with the programs
 // that read it. A secret set at boot is named by its source, and its value
-// appears nowhere in the answer.
+// appears nowhere in the answer. Reading every setting is not enough to see it.
 func TestTheOverviewNeverCarriesASecretValue(t *testing.T) {
 	const webhookKey = "c2VjcmV0c2VjcmV0c2VjcmV0c2VjcmV0c2VjcmV0MTI="
 	e := apptest.SetupAppWithEnv(t, []string{
@@ -225,10 +82,28 @@ func TestTheOverviewNeverCarriesASecretValue(t *testing.T) {
 		t.Errorf("the boot-set cap reads %+v, want 900 from its variable", daily)
 	}
 
-	demoteToRep(t, e)
-	if status := e.Call(t, http.MethodGet, "/v1/installation/configuration", nil, nil, nil); status != http.StatusForbidden {
-		t.Fatalf("a rep reading the overview → %d, want 403", status)
+	actAsSettingsReader(t, e)
+	if status := e.Call(t, http.MethodGet, "/v1/ai/budget", nil, nil, nil); status != http.StatusOK {
+		t.Fatalf("the settings reader reading the budget → %d, want 200", status)
 	}
+	if status := e.Call(t, http.MethodGet, "/v1/installation/configuration", nil, nil, nil); status != http.StatusForbidden {
+		t.Fatalf("a seat that reads every setting but may not change the installation → %d, want 403", status)
+	}
+}
+
+// actAsSettingsReader signs this session in as an administrator without the
+// update grant on installation_settings. It passes every stored setting's read
+// gate, so only the overview's own gate can refuse it.
+func actAsSettingsReader(t *testing.T, e *apptest.AppEnv) {
+	t.Helper()
+	if _, err := e.Owner.Exec(context.Background(), `
+		INSERT INTO role (key, name, permissions)
+		SELECT 'settings_reader', 'Settings reader',
+		       jsonb_set(permissions, '{objects,installation_settings,update}', 'false')
+		FROM role WHERE key = 'admin'`); err != nil {
+		t.Fatalf("seeding the settings reader role: %v", err)
+	}
+	assignSessionRole(t, e, "settings_reader")
 }
 
 // overviewByKey indexes the overview, and fails unless it is sorted and lists

@@ -29,7 +29,7 @@ func (e LockedError) Is(target error) bool { return target == apperrors.ErrConfl
 
 // MessageFault names no field of the request: the fix is in the boot source.
 func (e LockedError) MessageFault() (code, message string) {
-	return "setting_locked_by_boot_source", e.Error() + "; change it there"
+	return "setting_locked_by_boot_source", e.Key + " is set by " + originText(e.Origin.Reported()) + "; change it there"
 }
 
 // WithDatabase returns a copy that reads and writes stored settings through st,

@@ -21683,7 +21683,7 @@ export interface components {
          */
         AiRouting: {
             /** @description The settings a boot source sets among the binding and the task overrides; `/ai/task-overrides` is a map of tasks, so its lock is reported here. */
-            locks?: components["schemas"]["SettingLocks"];
+            readonly locks?: components["schemas"]["SettingLocks"];
             /**
              * @description The location ladder (§4). `sovereign` means zero egress by construction: a cloud
              *     provider on any tier is refused, and so is a local provider pointed at another host.
@@ -23623,7 +23623,7 @@ export interface components {
             comments?: string | null;
         };
         LegalReviewSettings: {
-            locks?: components["schemas"]["SettingLocks"];
+            readonly locks?: components["schemas"]["SettingLocks"];
             enabled: boolean;
         };
         /** @description One Deal Scout suggestion: a deal the evidence says should exist on a company with no open deal. */
@@ -29775,7 +29775,7 @@ export interface components {
             updated_at?: string | null;
         };
         EmailSignatureTemplate: {
-            locks?: components["schemas"]["SettingLocks"];
+            readonly locks?: components["schemas"]["SettingLocks"];
             /**
              * @description The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
              *     `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
@@ -34906,7 +34906,7 @@ export interface components {
             active?: boolean;
         };
         FollowUpSettings: {
-            locks?: components["schemas"]["SettingLocks"];
+            readonly locks?: components["schemas"]["SettingLocks"];
             /** @description Days a sent message may stay unanswered before its sender is reminded to follow up. */
             follow_up_after_days: number;
         };
@@ -40902,7 +40902,7 @@ export interface components {
          *     disclosures a message carries; these are the words that meet them.
          */
         ControllerParticulars: {
-            locks?: components["schemas"]["SettingLocks"];
+            readonly locks?: components["schemas"]["SettingLocks"];
             /** @description Who is writing, as the law would name them. Art. 13(1)(a) GDPR's identity of the controller, and the advertiser under Decree 91/2020. */
             legal_name?: string;
             /** @description Where they are, as a block of lines — including a register court and number where a business letter needs one. */

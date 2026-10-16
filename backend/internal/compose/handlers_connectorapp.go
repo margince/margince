@@ -109,6 +109,7 @@ func (h connectorAppHandlers) GetOauthApp(w http.ResponseWriter, r *http.Request
 	}
 	view := connectorAppView(p, status, h.composed[p])
 	locks := []crmcontracts.SettingLock{}
+	// Built here, not by Locks: a connector app is no registered setting.
 	if lock, ok := h.envLock(p); ok {
 		locks = append(locks, crmcontracts.SettingLock{Key: lock.Key, Origin: settingOrigin(lock.Origin)})
 	}
