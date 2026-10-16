@@ -91,10 +91,10 @@ export function useFilePreview(): FilePreview | null {
 /**
  * Where the preview lives: once, above the screens.
  *
- * One mount for the reason `OpenEmailDrawer` is one mount per record — a
- * dialog per surface is two `aria-modal` boxes and two Escape handlers the
- * first time two of them are open together — and held to this file by
- * `conformance.test.ts`.
+ * One mount, for the reason `OpenEmailDrawer` is one mount per record. A
+ * dialog per surface gives two `aria-modal` boxes and two Escape handlers the
+ * first time two of them are open together. `conformance.behaviour.test.ts`
+ * holds the mount to this file.
  */
 export function FilePreviewProvider({
   children,
