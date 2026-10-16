@@ -228,8 +228,7 @@ bootstrap_admin:
 #   provider_keys_openai_compatible: ${file:/run/secrets/ai.provider_keys_openai_compatible}
 #   # The tier-to-model binding, in the shape seeds.ai_routing takes (JSON in the environment). Unset
 #   # binds no models.
-#   # default: {"tiers":null,"embeddings":{"provider":"","model":"","base_url":"","dimensions":0},"profile":""}
-#   routing: {"tiers":null,"embeddings":{"provider":"","model":"","base_url":"","dimensions":0},"profile":""}
+#   routing:
 #   # Each task's thinking level and timeouts, as the JSON object PUT /ai/task-overrides takes. Unset
 #   # keeps the product's values.
 #   # default: {}

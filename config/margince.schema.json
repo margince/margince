@@ -10,6 +10,7 @@
       "type": "integer"
     },
     "workspace": {
+      "description": "Workspace names the installation's singleton workspace — the tenant every row is filed under, and what the schema has always called it. Consumed only when the workspace is created; it never reconciles into an existing installation (§6.3 of the ratified concept).",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -26,11 +27,13 @@
           "type": "string"
         },
         "country": {
+          "description": "Country is the jurisdiction the installation runs under, as a lower-case ISO 3166-1 alpha-2 code naming a compiled-in pack. Empty leaves it unset. Seeded once, also into an existing installation that has none stored; after that Settings → Jurisdiction changes it, never this file.",
           "type": "string"
         }
       }
     },
     "bootstrap_admin": {
+      "description": "BootstrapAdmin identifies the first administrator. The password is a reference so the secret can be deleted after first boot — once the workspace exists this whole section may be removed.",
       "type": [
         "object",
         "null"
@@ -44,6 +47,7 @@
           "type": "string"
         },
         "password": {
+          "description": "Password is the reference form: ${file:...} or ${env:...}.",
           "type": [
             "string",
             "null"
@@ -55,15 +59,18 @@
           ]
         },
         "password_file": {
+          "description": "PasswordFile is the original spelling, still honoured so an existing deployment boots unchanged. It is a bare path rather than a reference, which is why it is not a Secret: it names a file and cannot name the environment. Prefer `password`.",
           "type": "string"
         }
       }
     },
     "seeds": {
+      "description": "Seeds externalizes the workspace defaults bootstrap previously seeded from code. Every key is optional — an omitted key seeds the built-in default, so a minimal file behaves exactly like the historical bootstrap. Values are consumed once, at company creation.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "pipeline": {
+          "description": "PipelineSeed configures the default pipeline's open stages. Won/Lost terminal stages are appended by the deals module — stage semantics are a module invariant, not an operator choice.",
           "type": [
             "object",
             "null"
@@ -74,6 +81,7 @@
               "type": "string"
             },
             "stages": {
+              "description": "PipelineStage is one configured open stage: display name + win probability.",
               "type": "array",
               "items": {
                 "type": "object",
@@ -91,6 +99,7 @@
           }
         },
         "consent_purposes": {
+          "description": "ConsentPurpose seeds one row of the consent purpose catalog.",
           "type": "array",
           "items": {
             "type": "object",
@@ -109,6 +118,7 @@
           }
         },
         "retention": {
+          "description": "RetentionSeed selects the retention POSTURE a fresh installation is bootstrapped into (GCS-PARAM-7). It does not select the policy rows: those stay the data-model's pins (DM-SEED-1..8) under either posture, so an installation that must keep everything still SEES the ladder it is not running.",
           "type": [
             "object",
             "null"
@@ -116,6 +126,7 @@
           "additionalProperties": false,
           "properties": {
             "default_policy": {
+              "description": "DefaultPolicy is `standard` or `retain_only`. Empty means standard, which is the historical behaviour byte for byte.",
               "type": "string"
             }
           }
@@ -133,12 +144,14 @@
           ]
         },
         "legal_review": {
+          "description": "LegalReview set to false starts the installation with legal review switched off. Omitted or true leaves the default, which is on.",
           "type": [
             "boolean",
             "null"
           ]
         },
         "ai_routing": {
+          "description": "AIRouting is the tier→model binding a fresh installation is bootstrapped with, so a deployment can declare which vendor it uses in the file it reviews rather than having to call an API after first boot. Consumed exactly once, like every other seed here; the database is authoritative afterwards and an admin re-points a lane through /v1/ai/routing.",
           "$ref": "#/$defs/aiRouting"
         }
       }
@@ -318,17 +331,7 @@
             {
               "type": "null"
             }
-          ],
-          "default": {
-            "tiers": null,
-            "embeddings": {
-              "provider": "",
-              "model": "",
-              "base_url": "",
-              "dimensions": 0
-            },
-            "profile": ""
-          }
+          ]
         },
         "task_overrides": {
           "description": "Each task's thinking level and timeouts, as the JSON object PUT /ai/task-overrides takes. Unset keeps the product's values.",

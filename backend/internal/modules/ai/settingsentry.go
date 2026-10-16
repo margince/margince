@@ -57,7 +57,6 @@ var Routing = config.DefineStored(config.Spec[RoutingConfig]{
 	// and an old routing-file path in it must not be read as a binding.
 	Env:      "MARGINCE_AI_ROUTING_BINDING",
 	Type:     config.Struct[RoutingConfig](),
-	Default:  config.Some(RoutingConfig{}),
 	Validate: validateStoredRouting,
 	Doc:      "The tier-to-model binding, in the shape seeds.ai_routing takes (JSON in the environment). Unset binds no models.",
 }, config.Store{RBACObject: routingSettingsObject, AuditVerb: settingsAuditVerb, SurvivesDataReset: true})

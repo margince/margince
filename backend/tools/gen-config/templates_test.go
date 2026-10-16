@@ -16,9 +16,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
-// Uncommented, every default the example writes loads in every program, so a
-// line an operator copies reads back as the default it shows. Secrets are left
-// out: their file references name files no test has.
+// Uncommented, every default the example writes loads in every program and
+// reads back as the default it shows. Secrets are left out: their file
+// references name files no test has.
 func TestEveryDefaultTheExampleWritesLoads(t *testing.T) {
 	regs := compose.ProgramRegistries()
 	settings, err := collect(regs)
@@ -44,13 +44,27 @@ func TestEveryDefaultTheExampleWritesLoads(t *testing.T) {
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	compared := 0
 	for _, role := range slices.Sorted(maps.Keys(regs)) {
-		_, err := config.Load(regs[role], config.Sources{
+		cfg, err := config.Load(regs[role], config.Sources{
 			Args: []string{"--config", path}, Environ: []string{},
 			KnownKey: compose.AllSettingKeys, KnownEnv: compose.AllSettingEnvs, BootstrapRoots: deployconfig.Roots(),
 		})
 		if err != nil {
 			t.Errorf("%s: the example's defaults do not load: %v", role, err)
+			continue
 		}
+		for _, e := range cfg.Entries() {
+			if e.Default == nil {
+				continue
+			}
+			compared++
+			if e.Value == nil || *e.Value != *e.Default {
+				t.Errorf("%s: %s reads back as %v from the example, not its default %q", role, e.Key, e.Value, *e.Default)
+			}
+		}
+	}
+	if compared == 0 {
+		t.Error("no setting with a default was read back; this test compares nothing")
 	}
 }

@@ -99,9 +99,10 @@ func defaultCell(s setting) string {
 	return codeSpan(text)
 }
 
-// codeToken is a word of a doc that names something to type. That is a path,
-// a flag, a reference, or an identifier with an underscore or a slash.
-var codeToken = regexp.MustCompile(`^(/|--|\$\{)|[_/]`)
+// codeToken is a word of a doc that names something to type. That is a path
+// (a leading slash, or two slashes), a flag, a reference, or an identifier
+// with an underscore. A name such as Pub/Sub has one slash and stays a word.
+var codeToken = regexp.MustCompile(`^(/|--|\$\{)|_|/.*/`)
 
 // docText sets each such word of a doc in code. The hand-written prose of the
 // page does the same, so a key or a path reads as one.

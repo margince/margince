@@ -17,6 +17,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -34,6 +35,9 @@ const (
 	routingPath = "backend/internal/modules/ai/routingschema_gen.go"
 	// entrypointDir holds the image entrypoint scripts, an input.
 	entrypointDir = "scripts/deploy"
+	// bootstrapDir is the package of the bootstrap roots, whose field docs
+	// describe them in the schema.
+	bootstrapDir = "backend/internal/platform/deployconfig"
 )
 
 func main() {
@@ -64,7 +68,11 @@ func run(root string, check bool, out io.Writer) error {
 	if len(entrypoint) == 0 {
 		return fmt.Errorf("gen-config: no MARGINCE_* variable read under %s; the scripts moved", entrypointDir)
 	}
-	files, err := render(settings, string(page), envInputs{loader: config.LoaderVars(), entrypoint: entrypoint})
+	docs, err := readFieldDocs(filepath.Join(root, bootstrapDir), reflect.TypeFor[deployconfig.Bootstrap]().PkgPath())
+	if err != nil {
+		return err
+	}
+	files, err := render(settings, string(page), envInputs{loader: config.LoaderVars(), entrypoint: entrypoint}, docs)
 	if err != nil {
 		return err
 	}
@@ -97,7 +105,7 @@ func run(root string, check bool, out io.Writer) error {
 
 // render builds every output from the settings and the current reference
 // page, whose prose around the generated region it keeps.
-func render(settings []setting, page string, env envInputs) (map[string][]byte, error) {
+func render(settings []setting, page string, env envInputs, fields fieldDocs) (map[string][]byte, error) {
 	docs, err := spliceDocs(page, settings)
 	if err != nil {
 		return nil, err
@@ -106,7 +114,7 @@ func render(settings []setting, page string, env envInputs) (map[string][]byte, 
 	if err != nil {
 		return nil, err
 	}
-	schema, err := schemaJSON(settings, routing)
+	schema, err := schemaJSON(settings, routing, fields)
 	if err != nil {
 		return nil, err
 	}

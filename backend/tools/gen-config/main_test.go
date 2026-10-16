@@ -127,7 +127,7 @@ func TestASecretRendersNoValueAndNoDefaultInAnyOutput(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	files, err := render(settings, docsBegin+"\n"+docsEnd+"\n", envInputs{loader: config.LoaderVars(), entrypoint: entrypoint})
+	files, err := render(settings, docsBegin+"\n"+docsEnd+"\n", envInputs{loader: config.LoaderVars(), entrypoint: entrypoint}, fieldDocs{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,6 +174,13 @@ func TestCheckNamesTheFilesThatDiffer(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(scripts, "api-entrypoint.sh"), []byte(`: "${MARGINCE_DSN:?}"`+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	pkg := filepath.Join(root, bootstrapDir)
+	if err := os.MkdirAll(pkg, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(pkg, "doc.go"), []byte("package deployconfig\n\n// Bootstrap is the roots.\ntype Bootstrap struct{}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	var out bytes.Buffer
 	if err := run(root, true, &out); !errors.Is(err, errStale) || !strings.Contains(out.String(), envPath+"\n") {
 		t.Fatalf("a tree with no generated files passed -check (%v):\n%s", err, out.String())
@@ -203,9 +210,44 @@ func TestCheckNamesTheFilesThatDiffer(t *testing.T) {
 
 // A key, flag or path in a doc reads as code on the page; a plain word does not.
 func TestADocSetsWhatOneTypesInCode(t *testing.T) {
-	got := docText("Read by POST /v1/attachments (see license.token_file); defaults to --public-base-url.")
-	want := "Read by POST `/v1/attachments` (see `license.token_file`); defaults to `--public-base-url`."
+	got := docText("Read by POST /v1/attachments (see license.token_file) on the Pub/Sub push, topic projects/<p>/topics/<t>; defaults to --public-base-url.")
+	want := "Read by POST `/v1/attachments` (see `license.token_file`) on the Pub/Sub push, topic `projects/<p>/topics/<t>`; defaults to `--public-base-url`."
 	if got != want {
 		t.Errorf("docText = %q, want %q", got, want)
+	}
+}
+
+// A default the schema node of its setting refuses stops generation.
+func TestADefaultItsOwnSchemaRefusesStopsGeneration(t *testing.T) {
+	settings := twoSettings(t)
+	node := func(kind string) json.RawMessage {
+		return json.RawMessage(`{"properties":{"uploads":{"properties":{"attachment_mb":{"type":"` + kind + `"}}}}}`)
+	}
+	if err := checkDefaults(node("integer"), settings); err != nil {
+		t.Fatalf("a default its node takes was refused: %v", err)
+	}
+	if err := checkDefaults(node("string"), settings); err == nil || !strings.Contains(err.Error(), "uploads.attachment_mb") {
+		t.Fatalf("a default its node refuses passed, or the error names no setting: %v", err)
+	}
+}
+
+// The .env reader trims a value and cuts it at " #", so such a default is
+// quoted, with the quote the value does not hold.
+func TestAnEnvDefaultIsQuotedWhereTheReaderWouldChangeIt(t *testing.T) {
+	for text, want := range map[string]string{
+		"plain":        "plain",
+		" padded":      "' padded'",
+		"a #hash":      "'a #hash'",
+		"it's padded ": `"it's padded "`,
+		`"quoted"`:     `'"quoted"'`,
+	} {
+		s := config.Define(config.Spec[string]{Key: "x", Env: "X_ENV", Type: config.String, Default: config.Some(text), Doc: "d"})
+		shape, err := s.Shape()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := envDefault(setting{Any: s, shape: shape}); got != want {
+			t.Errorf("envDefault(%q) = %s, want %s", text, got, want)
+		}
 	}
 }

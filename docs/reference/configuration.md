@@ -106,16 +106,16 @@ admin can also change under Settings.
 | `gmail_client_id` | `MARGINCE_GMAIL_CLIENT_ID` | `--gmail-client-id` | `string` | — | api, worker | Google OAuth client id of the Gmail capture connector. |
 | `gmail_client_secret` | `MARGINCE_GMAIL_CLIENT_SECRET` | `--gmail-client-secret` | `string`, secret | — | api, worker | Google OAuth client secret of the Gmail capture connector. |
 | `gmail_jwks_url` | `MARGINCE_GMAIL_JWKS_URL` | `--gmail-jwks-url` | `string` | — | api | Override of the Google OIDC JWKS URL, for test and dev. |
-| `gmail_pubsub_topic` | `MARGINCE_GMAIL_PUBSUB_TOPIC` | `--gmail-pubsub-topic` | `string` | — | worker | Gmail `Pub/Sub` topic (`projects/<p>/topics/<t>`) that enables the push-watch job; unset leaves capture on the poll. |
-| `gmail_push_audience` | `MARGINCE_GMAIL_PUSH_AUDIENCE` | `--gmail-push-audience` | `string` | — | api | OIDC audience the `Pub/Sub` push subscription mints tokens for. |
-| `gmail_push_service_account` | `MARGINCE_GMAIL_PUSH_SERVICE_ACCOUNT` | `--gmail-push-service-account` | `string` | — | api | Google service account email that signs the `Pub/Sub` push OIDC tokens. |
-| `gmail_push_token` | `MARGINCE_GMAIL_PUSH_TOKEN` | `--gmail-push-token` | `string`, secret | — | api | Shared secret on the `Pub/Sub` push URL; unset, POST `/webhooks/gmail` is absent. |
+| `gmail_pubsub_topic` | `MARGINCE_GMAIL_PUBSUB_TOPIC` | `--gmail-pubsub-topic` | `string` | — | worker | Gmail Pub/Sub topic (`projects/<p>/topics/<t>`) that enables the push-watch job; unset leaves capture on the poll. |
+| `gmail_push_audience` | `MARGINCE_GMAIL_PUSH_AUDIENCE` | `--gmail-push-audience` | `string` | — | api | OIDC audience the Pub/Sub push subscription mints tokens for. |
+| `gmail_push_service_account` | `MARGINCE_GMAIL_PUSH_SERVICE_ACCOUNT` | `--gmail-push-service-account` | `string` | — | api | Google service account email that signs the Pub/Sub push OIDC tokens. |
+| `gmail_push_token` | `MARGINCE_GMAIL_PUSH_TOKEN` | `--gmail-push-token` | `string`, secret | — | api | Shared secret on the Pub/Sub push URL; unset, POST `/webhooks/gmail` is absent. |
 | `graph_client_id` | `MARGINCE_GRAPH_CLIENT_ID` | `--graph-client-id` | `string` | — | api, worker | Microsoft Entra app id of the Outlook and Microsoft 365 capture connector. |
 | `graph_client_secret` | `MARGINCE_GRAPH_CLIENT_SECRET` | `--graph-client-secret` | `string`, secret | — | api, worker | Microsoft client secret of the Outlook and Microsoft 365 capture connector. |
 | `graph_notification_url` | `MARGINCE_GRAPH_NOTIFICATION_URL` | `--graph-notification-url` | `string`, secret | — | worker | Public URL, token included, that Microsoft posts Graph change notices to; unset leaves Outlook capture on the poll. |
 | `graph_push_token` | `MARGINCE_GRAPH_PUSH_TOKEN` | `--graph-push-token` | `string`, secret | — | api | Shared secret on the Graph change notice URL; unset, POST `/webhooks/graph` is absent. |
 | `graph_tenant` | `MARGINCE_GRAPH_TENANT` | `--graph-tenant` | `string` | — | api, worker | Microsoft identity tenant of the capture consent endpoint and token refresh; unset means common. |
-| `inline_relay` | `MARGINCE_INLINE_RELAY` | `--inline-relay` | `bool` | `true` | api | Run the outbox relay in this process; false when `cmd/worker` runs it. |
+| `inline_relay` | `MARGINCE_INLINE_RELAY` | `--inline-relay` | `bool` | `true` | api | Run the outbox relay in this process; false when cmd/worker runs it. |
 | `job_drain_window` | `MARGINCE_JOB_DRAIN_WINDOW` | `--job-drain-window` | `duration` | `20s` | worker | How long a running job gets to finish at shutdown; the grace period must cover it, five more seconds and the shutdown steps. |
 | `keyvault_root_key` | `MARGINCE_KEYVAULT_ROOT_KEY` | — | `string`, secret | — | api, worker | Standard Base64 of the 32-byte root key that seals connector credentials; unset disables the vault. |
 | `log_format` | `MARGINCE_LOG_FORMAT` | `--log-format` | `enum(text\|json)` | `text` | api, worker | Log format. |
@@ -157,7 +157,7 @@ admin can also change under Settings.
 | `ai.provider_keys_jev_compatible` | `JEV_COMPATIBLE_API_KEY` | — | `string`, secret, stored | — | api, worker | API key for a `jev_compatible` decision server; sent when set and never required. |
 | `ai.provider_keys_openai` | `OPENAI_API_KEY` | — | `string`, secret, stored | — | api, worker | BYOK API key for the OpenAI provider; required only when a binding names it. |
 | `ai.provider_keys_openai_compatible` | `OPENAI_COMPATIBLE_API_KEY` | — | `string`, secret, stored | — | api, worker | BYOK API key for the `openai_compatible` provider; required only when a binding names it. |
-| `ai.routing` | `MARGINCE_AI_ROUTING_BINDING` | — | `object`, stored | `{"tiers":null,"embeddings":{"provider":"","model":"","base_url":"","dimensions":0},"profile":""}` | api, worker | The tier-to-model binding, in the shape `seeds.ai_routing` takes (JSON in the environment). Unset binds no models. |
+| `ai.routing` | `MARGINCE_AI_ROUTING_BINDING` | — | `object`, stored | — | api, worker | The tier-to-model binding, in the shape `seeds.ai_routing` takes (JSON in the environment). Unset binds no models. |
 | `ai.task_overrides` | `MARGINCE_AI_TASK_OVERRIDES` | — | `object`, stored | `{}` | api, worker | Each task's thinking level and timeouts, as the JSON object PUT `/ai/task-overrides` takes. Unset keeps the product's values. |
 
 ### `analytics`

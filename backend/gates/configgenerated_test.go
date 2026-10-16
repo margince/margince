@@ -15,10 +15,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
 // The generator lives in the tools module, so it runs under the root
@@ -63,12 +68,61 @@ func TestEveryShippedConfigValidatesAgainstTheSchema(t *testing.T) {
 
 // The loader reads an explicit null, or a key left bare, as unwritten. That is
 // how an operator comments a section out without deleting it, so the schema
-// accepts it at every level the loader does.
+// accepts it at every level the loader does. Both loaders read the probe
+// first, so a change to that premise fails here and not in the schema half.
 func TestTheSchemaAcceptsAnExplicitNullWhereTheLoaderDoes(t *testing.T) {
 	t.Parallel()
 	const withNulls = "version: 1\nbootstrap_admin: null\nuploads:\n  attachment_mb: null\nemail: null\nlog_level: null\nai:\n  routing: null\n"
+	path := filepath.Join(t.TempDir(), "margince.yaml")
+	if err := os.WriteFile(path, []byte(withNulls), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := deployconfig.LoadBootstrap(path); err != nil {
+		t.Fatalf("the bootstrap loader refuses an explicit null; this test's premise is gone: %v", err)
+	}
+	reg, err := compose.ProgramRegistry(config.RoleAPI)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := config.Load(reg, config.Sources{
+		Args: []string{"--config", path}, Environ: []string{},
+		KnownKey: compose.AllSettingKeys, KnownEnv: compose.AllSettingEnvs, BootstrapRoots: deployconfig.Roots(),
+	}); err != nil {
+		t.Fatalf("the settings loader refuses an explicit null; this test's premise is gone: %v", err)
+	}
 	if err := compiledConfigSchema(t).Validate(asJSONValue(t, "probe", []byte(withNulls))); err != nil {
 		t.Errorf("the schema rejects a null the loader accepts:\n%v", err)
+	}
+}
+
+// Uncommented, every setting line of the generated example validates against
+// the generated schema, the bootstrap part included. So the schema takes each
+// default it shows. Secrets stay commented: their reference names a file.
+func TestTheUncommentedExampleValidatesAgainstTheSchema(t *testing.T) {
+	t.Parallel()
+	raw, err := os.ReadFile("../config/margince.example.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	head, body, found := strings.Cut(string(raw), "\n# ---- ")
+	if !found {
+		t.Fatal("the example has no setting group; the generator's layout moved and this test checks nothing")
+	}
+	lines, uncommented := []string{head}, 0
+	for line := range strings.SplitSeq(body, "\n") {
+		text, commented := strings.CutPrefix(line, "# ")
+		if !commented || strings.HasPrefix(text, "---- ") || strings.Contains(text, "${file:/run/secrets/") {
+			continue
+		}
+		lines = append(lines, text)
+		uncommented++
+	}
+	if uncommented == 0 {
+		t.Fatal("no setting line was uncommented; this test checks nothing")
+	}
+	doc := []byte(strings.Join(lines, "\n") + "\n")
+	if err := compiledConfigSchema(t).Validate(asJSONValue(t, "the uncommented example", doc)); err != nil {
+		t.Errorf("the schema refuses the example's own defaults:\n%v", err)
 	}
 }
 

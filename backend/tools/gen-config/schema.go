@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/santhosh-tekuri/jsonschema/v6"
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -74,8 +75,8 @@ func number(path, text string) (json.RawMessage, error) {
 
 // schemaJSON is the whole margince.yaml schema: the bootstrap roots, then every
 // setting under its section, then the routing $defs.
-func schemaJSON(settings []setting, routing json.RawMessage) ([]byte, error) {
-	props, err := fieldsOf(reflect.TypeFor[deployconfig.Bootstrap](), "", false)
+func schemaJSON(settings []setting, routing json.RawMessage, docs fieldDocs) ([]byte, error) {
+	props, err := fieldsOf(reflect.TypeFor[deployconfig.Bootstrap](), "", reflection{docs: docs})
 	if err != nil {
 		return nil, err
 	}
@@ -92,6 +93,9 @@ func schemaJSON(settings []setting, routing json.RawMessage) ([]byte, error) {
 		with("additionalProperties", lit(false)).
 		with("properties", props.raw()).
 		with("$defs", routing).raw()
+	if err := checkDefaults(root, settings); err != nil {
+		return nil, err
+	}
 	var out bytes.Buffer
 	if err := json.Indent(&out, root, "", "  "); err != nil {
 		return nil, fmt.Errorf("gen-config: indenting the schema: %w", err)
@@ -212,7 +216,7 @@ func valueSchema(s setting) (object, error) {
 	case s.TypeName() == config.NonEmpty.Name():
 		return object{}.with("type", lit("string")).with("minLength", json.RawMessage("1")), nil
 	}
-	body, err := typeSchema(s.shape.Go, s.Key(), false)
+	body, err := typeSchema(s.shape.Go, s.Key(), reflection{})
 	if err != nil || !numeric(s.shape.Go) {
 		return body, err
 	}
@@ -270,10 +274,17 @@ func numeric(t reflect.Type) bool {
 	}
 }
 
+// reflection is how typeSchema reads a Go type: the names its decoder reads
+// fields by, and the doc comments that describe them.
+type reflection struct {
+	jsonNames bool
+	docs      fieldDocs
+}
+
 // typeSchema describes a Go value the way the loader decodes it. A struct that
 // decodes itself from JSON is read from YAML through that decoder. Its fields
 // are then named by their json tags, from there down.
-func typeSchema(t reflect.Type, path string, jsonNames bool) (object, error) {
+func typeSchema(t reflect.Type, path string, how reflection) (object, error) {
 	switch {
 	case routingPaths[path]:
 		return object{}.with("$ref", lit(routingRef)), nil
@@ -286,7 +297,7 @@ func typeSchema(t reflect.Type, path string, jsonNames bool) (object, error) {
 	}
 	switch t.Kind() {
 	case reflect.Pointer:
-		inner, err := typeSchema(t.Elem(), path, jsonNames)
+		inner, err := typeSchema(t.Elem(), path, how)
 		if err != nil {
 			return nil, err
 		}
@@ -302,32 +313,32 @@ func typeSchema(t reflect.Type, path string, jsonNames bool) (object, error) {
 	case reflect.String:
 		return object{}.with("type", lit("string")), nil
 	case reflect.Slice, reflect.Array:
-		return containerSchema("array", "items", t.Elem(), path+"[]", jsonNames)
+		return containerSchema("array", "items", t.Elem(), path+"[]", how)
 	case reflect.Map:
 		if t.Key().Kind() != reflect.String {
 			return nil, fmt.Errorf("gen-config: %s is a map keyed by %s, which YAML cannot name", path, t.Key())
 		}
-		return containerSchema("object", "additionalProperties", t.Elem(), path+".*", jsonNames)
+		return containerSchema("object", "additionalProperties", t.Elem(), path+".*", how)
 	case reflect.Struct:
-		return structSchema(t, path, jsonNames)
+		return structSchema(t, path, how)
 	default:
 		return nil, fmt.Errorf("gen-config: %s is a %s, which no source can write", path, t.Kind())
 	}
 }
 
-func containerSchema(kind, keyword string, elem reflect.Type, path string, jsonNames bool) (object, error) {
-	inner, err := typeSchema(elem, path, jsonNames)
+func containerSchema(kind, keyword string, elem reflect.Type, path string, how reflection) (object, error) {
+	inner, err := typeSchema(elem, path, how)
 	if err != nil {
 		return nil, err
 	}
 	return object{}.with("type", lit(kind)).with(keyword, inner.raw()), nil
 }
 
-func structSchema(t reflect.Type, path string, jsonNames bool) (object, error) {
+func structSchema(t reflect.Type, path string, how reflection) (object, error) {
 	if reflect.PointerTo(t).Implements(reflect.TypeFor[json.Unmarshaler]()) {
-		jsonNames = true
+		how.jsonNames = true
 	}
-	props, err := fieldsOf(t, path, jsonNames)
+	props, err := fieldsOf(t, path, how)
 	if err != nil {
 		return nil, err
 	}
@@ -338,13 +349,13 @@ func structSchema(t reflect.Type, path string, jsonNames bool) (object, error) {
 }
 
 // fieldsOf names each exported field as the decoder that reads it does.
-func fieldsOf(t reflect.Type, path string, jsonNames bool) (object, error) {
+func fieldsOf(t reflect.Type, path string, how reflection) (object, error) {
 	var props object
 	for f := range t.Fields() {
 		if !f.IsExported() {
 			continue
 		}
-		name, err := fieldName(f, jsonNames)
+		name, err := fieldName(f, how.jsonNames)
 		if err != nil {
 			return nil, fmt.Errorf("gen-config: %s.%s: %w", path, f.Name, err)
 		}
@@ -352,9 +363,12 @@ func fieldsOf(t reflect.Type, path string, jsonNames bool) (object, error) {
 			continue
 		}
 		here := strings.TrimPrefix(path+"."+name, ".")
-		body, err := typeSchema(f.Type, here, jsonNames)
+		body, err := typeSchema(f.Type, here, how)
 		if err != nil {
 			return nil, err
+		}
+		if doc := how.docs.of(t, f); doc != "" {
+			body = append(object{}.with("description", lit(doc)), body...)
 		}
 		props = props.with(name, body.raw())
 	}
@@ -393,4 +407,38 @@ func routingGoFile(routing json.RawMessage) ([]byte, error) {
 	return fmt.Appendf(nil, "// Code generated by gen-config; DO NOT EDIT.\n\npackage ai\n\n"+
 		"// routingSchemaJSON is the routing $defs of config/margince.schema.json.\n"+
 		"const routingSchemaJSON = %q\n", compact.String()), nil
+}
+
+// checkDefaults holds each written default to the schema node of its own
+// setting, so the schema never describes a default it refuses.
+func checkDefaults(root json.RawMessage, settings []setting) error {
+	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(root))
+	if err != nil {
+		return fmt.Errorf("gen-config: reading the schema back: %w", err)
+	}
+	compiler := jsonschema.NewCompiler()
+	if err := compiler.AddResource("margince.json", doc); err != nil {
+		return fmt.Errorf("gen-config: loading the schema: %w", err)
+	}
+	for _, s := range settings {
+		def, ok, err := schemaDefault(s)
+		if err != nil {
+			return err
+		}
+		if !ok || s.Secret() {
+			continue
+		}
+		node, err := compiler.Compile("margince.json#/properties/" + strings.ReplaceAll(s.Key(), ".", "/properties/"))
+		if err != nil {
+			return fmt.Errorf("gen-config: %s: compiling its schema node: %w", s.Key(), err)
+		}
+		value, err := jsonschema.UnmarshalJSON(bytes.NewReader(def))
+		if err != nil {
+			return fmt.Errorf("gen-config: %s: reading its default: %w", s.Key(), err)
+		}
+		if err := node.Validate(value); err != nil {
+			return fmt.Errorf("gen-config: %s: its default %s fails its own schema; give it no default or a valid one: %w", s.Key(), def, err)
+		}
+	}
+	return nil
 }
