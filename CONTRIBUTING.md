@@ -11,13 +11,12 @@ to send more code than you can explain wastes the time of the reviewers.
 
 ## You answer for your change
 
-**You are accountable for every line you send.** We expect you
+**You are accountable for every line you send.** You must explain every line. We expect you
 to use AI help. We refuse a change you cannot explain, and more code than the task needs. If you cannot say
 why a line is there, what it does and why it is right, it is not ready. "The model wrote it" does not
 answer a review question.
 
-This rule never changes. The AI note below keeps a human accountable, and it does not stop you from
-using AI.
+The AI note below keeps a human accountable; it does not stop you from using AI.
 
 ## Say how you used AI
 
