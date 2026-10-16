@@ -101,6 +101,7 @@ describe("the published frontend surface", () => {
       // record it was opened on, so it can fill in its form.
       "useEntryContext",
       "useLocale",
+      "useOAuthReturn",
       "useT",
     ]);
   });

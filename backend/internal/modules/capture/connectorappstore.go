@@ -40,6 +40,33 @@ type ConnectorAppStore struct {
 	// log carries the one failure this store cannot report to its caller: a
 	// superseded secret it could not delete after the write already committed.
 	log *slog.Logger
+	// unitApp answers the composed unit that declares provider's OAuth app,
+	// false for a provider no unit declares. Nil serves the core vendors alone.
+	unitApp func(provider string) (UnitApp, bool)
+}
+
+// WithUnitApps returns the store serving the composed units' OAuth apps beside
+// the core vendors'. A func rather than a list because compose learns the
+// composed set after the store is built.
+func (s *ConnectorAppStore) WithUnitApps(unitApp func(provider string) (UnitApp, bool)) *ConnectorAppStore {
+	widened := *s
+	widened.unitApp = unitApp
+	return &widened
+}
+
+// kindFor resolves a core vendor or a composed unit's app, or refuses it with
+// ErrUnknownAppProvider. A core name always wins: the boot refuses a unit
+// claiming one, and this order holds even if that check were skipped.
+func (s *ConnectorAppStore) kindFor(p AppProvider) (appKind, error) {
+	if k, err := appKindFor(p); err == nil {
+		return k, nil
+	}
+	if s.unitApp != nil {
+		if app, ok := s.unitApp(string(p)); ok {
+			return unitKind(p, app), nil
+		}
+	}
+	return appKind{}, fmt.Errorf("%w: %q", ErrUnknownAppProvider, string(p))
 }
 
 // NewConnectorAppStore builds the store over the settings catalog and the vault.
@@ -84,11 +111,11 @@ func (s *ConnectorAppStore) Read(ctx context.Context, p AppProvider) (ConnectorA
 	if err := auth.Require(ctx, captureSettingsObject, principal.ActionRead); err != nil {
 		return ConnectorAppStatus{}, err
 	}
-	k, err := appKindFor(p)
+	k, err := s.kindFor(p)
 	if err != nil {
 		return ConnectorAppStatus{}, err
 	}
-	app, err := settings.Get(ctx, s.settings, k.entry)
+	app, err := k.read(ctx, s.settings)
 	if err != nil {
 		return ConnectorAppStatus{}, err
 	}
@@ -123,11 +150,11 @@ func (s *ConnectorAppStore) Credentials(ctx context.Context, p AppProvider) (Con
 	if err := auth.Require(ctx, captureSettingsObject, principal.ActionRead); err != nil {
 		return ConnectorApp{}, false, err
 	}
-	k, err := appKindFor(p)
+	k, err := s.kindFor(p)
 	if err != nil {
 		return ConnectorApp{}, false, err
 	}
-	app, err := settings.Get(ctx, s.settings, k.entry)
+	app, err := k.read(ctx, s.settings)
 	if err != nil {
 		return ConnectorApp{}, false, err
 	}
@@ -164,7 +191,7 @@ func (s *ConnectorAppStore) Set(ctx context.Context, p AppProvider, clientID, cl
 	if err := auth.Require(ctx, captureSettingsObject, principal.ActionUpdate); err != nil {
 		return err
 	}
-	k, err := appKindFor(p)
+	k, err := s.kindFor(p)
 	if err != nil {
 		return err
 	}
@@ -216,7 +243,7 @@ func (s *ConnectorAppStore) Set(ctx context.Context, p AppProvider, clientID, cl
 // installation already holds — the operator rotating a secret sends both fields,
 // and refusing them would make rotation impossible.
 func refuseStrandingConnections(ctx context.Context, tx pgx.Tx, k appKind, current, next ConnectorApp) error {
-	if current.ClientID == "" || current.ClientID == next.ClientID {
+	if current.ClientID == "" || current.ClientID == next.ClientID || len(k.connectors) == 0 {
 		return nil
 	}
 	// 'error' counts as live, the same set sendableConnection and SyncOnce
@@ -236,7 +263,7 @@ func refuseStrandingConnections(ctx context.Context, tx pgx.Tx, k appKind, curre
 		return nil
 	}
 	return settings.InvalidValue{
-		Setting: k.entry.Key(), Code: settings.CodeInvalidValue,
+		Setting: k.settingKey(), Code: settings.CodeInvalidValue,
 		Reason: fmt.Sprintf("this installation has %d mailbox connection(s) authorized against the current "+
 			"%s client id, and a refresh token belongs to the client that issued it — changing the id would "+
 			"stop them syncing with no way to tell why. Disconnect them first and reconnect against the new "+
@@ -250,7 +277,7 @@ func refuseStrandingConnections(ctx context.Context, tx pgx.Tx, k appKind, curre
 func checkAppInput(k appKind, clientID, clientSecret, tenant string) error {
 	refuse := func(reason string) error {
 		return settings.InvalidValue{
-			Setting: k.entry.Key(), Code: settings.CodeInvalidValue, Reason: reason,
+			Setting: k.settingKey(), Code: settings.CodeInvalidValue, Reason: reason,
 		}
 	}
 	// The contract declares maxLength on each, and nothing generated enforces it:
@@ -283,7 +310,7 @@ func (s *ConnectorAppStore) Remove(ctx context.Context, p AppProvider) error {
 	if err := auth.Require(ctx, captureSettingsObject, principal.ActionUpdate); err != nil {
 		return err
 	}
-	k, err := appKindFor(p)
+	k, err := s.kindFor(p)
 	if err != nil {
 		return err
 	}
@@ -317,18 +344,18 @@ func (s *ConnectorAppStore) swap(
 	)
 	txErr := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
 		entered = true
-		if bodyErr = settings.LockForWrite(ctx, tx, k.entry.Key()); bodyErr != nil {
+		if bodyErr = settings.LockForWrite(ctx, tx, k.settingKey()); bodyErr != nil {
 			return bodyErr
 		}
 		var current ConnectorApp
-		if current, bodyErr = settings.GetTx(ctx, tx, k.entry); bodyErr != nil {
+		if current, bodyErr = k.readTx(ctx, tx); bodyErr != nil {
 			return bodyErr
 		}
 		if bodyErr = refuseStrandingConnections(ctx, tx, k, current, next); bodyErr != nil {
 			return bodyErr
 		}
 		previous = current.ClientSecretRef
-		bodyErr = settings.SetTx(ctx, s.settings, tx, k.entry, next)
+		bodyErr = k.writeTx(ctx, s.settings, tx, next)
 		return bodyErr
 	})
 	if txErr == nil {

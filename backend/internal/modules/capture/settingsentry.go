@@ -136,7 +136,7 @@ var SignatureEnrich = config.DefineStored(config.Spec[bool]{
 // such function, so this is opt-in rather than an interface every module must
 // satisfy.
 func Definitions() []settings.Definition {
-	return []settings.Definition{GoogleAppSetting, MicrosoftAppSetting}
+	return []settings.Definition{GoogleAppSetting, MicrosoftAppSetting, UnitAppsSetting}
 }
 
 // ConfigSettings are capture's settings in the configuration registry. Named

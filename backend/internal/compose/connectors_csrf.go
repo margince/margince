@@ -10,9 +10,11 @@ package compose
 // who started it.
 
 import (
+	"crypto/rand"
 	"crypto/subtle"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
 // oauthCSRFCookie is the base name of the per-flow nonce cookie (SameSite=Lax
@@ -56,14 +58,35 @@ func consumeCSRFNonce(w http.ResponseWriter, r *http.Request, provider string, s
 	if st.Version < stateVersionNamespacedCSRF {
 		name = legacyCSRFCookieName(provider)
 	}
+	return consumeNonceCookie(w, r, name, connectorCookiePath, st)
+}
+
+// connectorCookiePath scopes a capture flow's nonce cookie to the routes that
+// read it.
+const connectorCookiePath = "/v1/connectors"
+
+// setCSRFNonce starts one flow's nonce: a fresh value in a SameSite=Lax cookie
+// scoped to path, returned for the signed state to carry.
+func setCSRFNonce(w http.ResponseWriter, name, path string) string {
+	nonce := rand.Text()
+	http.SetCookie(w, &http.Cookie{
+		Name: name, Value: nonce, Path: path, MaxAge: int(connectStateTTL / time.Second),
+		HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode,
+	})
+	return nonce
+}
+
+// consumeNonceCookie checks one nonce cookie against the state and clears it
+// once it has matched.
+func consumeNonceCookie(w http.ResponseWriter, r *http.Request, name, path string, st connectState) bool {
 	csrf, err := r.Cookie(name)
 	if err != nil || st.Nonce == "" || subtle.ConstantTimeCompare([]byte(csrf.Value), []byte(st.Nonce)) != 1 {
-		slog.WarnContext(r.Context(), "connector callback: CSRF nonce missing/mismatched", "err", err, "provider", provider)
+		slog.WarnContext(r.Context(), "oauth callback: CSRF nonce missing/mismatched", "err", err, "flow", name)
 		return false
 	}
 	// Cleared with the same attributes it was set with, so the delete is honored.
 	http.SetCookie(w, &http.Cookie{
-		Name: name, Path: "/v1/connectors", MaxAge: -1,
+		Name: name, Path: path, MaxAge: -1,
 		HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode,
 	})
 	return true

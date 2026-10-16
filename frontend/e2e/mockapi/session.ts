@@ -85,9 +85,8 @@ function redirectUris(microsoft: boolean) {
 // One card per vendor, each supplied by the deployment (`environment`), the
 // state the card was written for. Only Microsoft has directories, and this
 // app is pinned to one.
-export const oauthApp: Handler = ({ json, path }) => {
-  const microsoft = path.endsWith("/microsoft");
-  return json({
+function coreOAuthApp(microsoft: boolean) {
+  return {
     provider: microsoft ? "microsoft" : "google",
     configured: true,
     client_id: microsoft
@@ -96,8 +95,15 @@ export const oauthApp: Handler = ({ json, path }) => {
     ...(microsoft ? { tenant: "99999999-8888-7777-6666-555555555555" } : {}),
     source: "environment",
     redirect_uris: redirectUris(microsoft),
-  });
-};
+  };
+}
+
+export const oauthApp: Handler = ({ json, path }) =>
+  json(coreOAuthApp(path.endsWith("/microsoft")));
+
+// The vanilla tree composes no unit, so the list is the two core vendors.
+export const oauthApps: Handler = ({ json }) =>
+  json({ data: [coreOAuthApp(false), coreOAuthApp(true)] });
 
 // The shell holds its first paint on this read: `timezone` is the clock every
 // record date renders in. Europe/Berlin, because the specs assert German

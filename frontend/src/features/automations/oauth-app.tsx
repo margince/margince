@@ -6,7 +6,7 @@ import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { describedByIds } from "../../design-system/describedby";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
-import { QueryGate } from "../../design-system/querystates";
+import { QueryGate, QueryStates } from "../../design-system/querystates";
 import { lockFor } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
@@ -14,8 +14,8 @@ import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { RedirectUriGroup } from "./oauth-redirects";
 
 /**
- * A connector OAuth app a mailbox connection is made through — Google's, or
- * Microsoft's.
+ * An OAuth app this installation holds: Google's or Microsoft's, which mailbox
+ * connections and sign-in go through, or one an extension unit declares.
  *
  * ONE card, rendered once per vendor. The two ask for the same three things and
  * differ only in the words around them, so a second component would be a second
@@ -63,14 +63,60 @@ export const vendorCopy = {
   },
 } as const;
 
+/**
+ * Which app a card is about: a core vendor by its key, or a unit's app by its
+ * provider and its title.
+ */
+export type OAuthAppIdentity =
+  | Readonly<{ provider: Vendor; title?: undefined }>
+  | Readonly<{ provider: string; title: string }>;
+
+type CardCopy = Readonly<{
+  title: string;
+  sub: string;
+  absent: string;
+  redirectSub: string;
+  clientIdPlaceholder?: string;
+  removeConfirmTitle: string;
+  removeConfirmBody: string;
+}>;
+
+// A unit's app is worded around its title, since the core knows nothing else
+// about the vendor.
+function cardCopy(app: OAuthAppIdentity, t: ReturnType<typeof useT>): CardCopy {
+  if (app.title === undefined) {
+    const copy = vendorCopy[app.provider];
+    return {
+      title: t(copy.title),
+      sub: t(copy.sub),
+      absent: t(copy.absent),
+      redirectSub: t(copy.redirectSub),
+      clientIdPlaceholder: t(copy.clientIdPlaceholder),
+      removeConfirmTitle: t(copy.removeConfirmTitle),
+      removeConfirmBody: t(copy.removeConfirmBody),
+    };
+  }
+  const title = { title: app.title };
+  return {
+    title: app.title,
+    sub: t("oauthApp.unit.sub", title),
+    absent: t("oauthApp.unit.absent", title),
+    redirectSub: t("oauthApp.unit.redirectSub"),
+    removeConfirmTitle: t("oauthApp.unit.removeConfirmTitle", title),
+    removeConfirmBody: t("oauthApp.unit.removeConfirmBody", title),
+  };
+}
+
 // The query key carries the vendor, so storing one app does not blank the
 // other's card — one key for both would make every write invalidate a view it
 // says nothing about.
-function appQueryKey(provider: Vendor) {
+function appQueryKey(provider: string) {
   return ["installation-oauth-app", provider];
 }
 
-export function useOAuthApp(provider: Vendor) {
+const APP_LIST_KEY = ["installation-oauth-apps"];
+
+export function useOAuthApp(provider: string) {
   return useQuery({
     queryKey: appQueryKey(provider),
     queryFn: async () => {
@@ -86,7 +132,7 @@ export function useOAuthApp(provider: Vendor) {
   });
 }
 
-export function useSetOAuthApp(provider: Vendor) {
+export function useSetOAuthApp(provider: string) {
   const queryClient = useQueryClient();
   return useMutation({
     // Collected the moment nothing observes it, because what this mutation's
@@ -117,13 +163,14 @@ export function useSetOAuthApp(provider: Vendor) {
       // connector roster, whose per-provider availability is decided by
       // whether this app exists.
       await queryClient.invalidateQueries({ queryKey: appQueryKey(provider) });
+      await queryClient.invalidateQueries({ queryKey: APP_LIST_KEY });
       await queryClient.invalidateQueries({ queryKey: ["installation-setup"] });
       await queryClient.invalidateQueries({ queryKey: ["connectors"] });
     },
   });
 }
 
-function useRemoveOAuthApp(provider: Vendor) {
+function useRemoveOAuthApp(provider: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
@@ -135,6 +182,7 @@ function useRemoveOAuthApp(provider: Vendor) {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: appQueryKey(provider) });
+      await queryClient.invalidateQueries({ queryKey: APP_LIST_KEY });
       await queryClient.invalidateQueries({ queryKey: ["installation-setup"] });
     },
   });
@@ -147,11 +195,12 @@ function useAppLock(
   loaded:
     | { locks?: Parameters<typeof lockFor>[0]; configured: boolean }
     | undefined,
-  provider: Vendor,
+  lockKey: string | undefined,
 ) {
   const t = useT();
   const lockId = useId();
-  const lock = lockFor(loaded?.locks, appKey[provider], t);
+  // A unit's app has no deployment setting, so no lock names it.
+  const lock = lockFor(loaded?.locks, lockKey ?? "", t);
   return {
     lock,
     lockId,
@@ -160,11 +209,72 @@ function useAppLock(
   };
 }
 
-export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
+/**
+ * Every OAuth app this installation holds: the two core vendors', then one per
+ * app an extension unit declares.
+ */
+export function OAuthAppCards() {
+  return (
+    <>
+      <OAuthAppCard provider="google" />
+      <OAuthAppCard provider="microsoft" />
+      <UnitOAuthAppCards />
+    </>
+  );
+}
+
+/**
+ * A card per OAuth app the composed extension units declare, in the list's
+ * order. Nothing renders on an installation whose units declare none, nor
+ * while the list loads, since most have none to wait for.
+ */
+export function UnitOAuthAppCards() {
   const t = useT();
-  const copy = vendorCopy[provider];
+  const apps = useQuery({
+    queryKey: APP_LIST_KEY,
+    queryFn: async () => {
+      const { data, error, response } = await api.GET(
+        "/installation/oauth-apps",
+      );
+      if (error || !response.ok) {
+        throwProblem(error);
+      }
+      return data.data;
+    },
+  });
+  if (apps.isError) {
+    const title = t("oauthApp.unit.listTitle");
+    return (
+      <Panel title={title}>
+        <PanelBody>
+          <QueryStates query={apps} pendingLabel={title}>
+            {null}
+          </QueryStates>
+        </PanelBody>
+      </Panel>
+    );
+  }
+  return (
+    <>
+      {(apps.data ?? []).map((app) =>
+        app.title === undefined ? null : (
+          <OAuthAppCard
+            key={app.provider}
+            provider={app.provider}
+            title={app.title}
+          />
+        ),
+      )}
+    </>
+  );
+}
+
+export function OAuthAppCard(app: OAuthAppIdentity) {
+  const { provider } = app;
+  const t = useT();
+  const copy = cardCopy(app, t);
   const canManage = useCanWrite("capture_settings", "update");
-  const app = useOAuthApp(provider);
+  const appQuery = useOAuthApp(provider);
   const save = useSetOAuthApp(provider);
   const remove = useRemoveOAuthApp(provider);
   const [clientId, setClientId] = useState("");
@@ -189,15 +299,18 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
   const ready = clientId.trim() !== "" && clientSecret.trim() !== "";
   const failure = save.error ?? remove.error;
   // A failed refetch keeps the old data while the gate above offers Retry.
-  const loaded = app.isError ? undefined : app.data;
-  const { lock, lockId, lockReasonId, stored } = useAppLock(loaded, provider);
+  const loaded = appQuery.isError ? undefined : appQuery.data;
+  const { lock, lockId, lockReasonId, stored } = useAppLock(
+    loaded,
+    app.title === undefined ? appKey[app.provider] : undefined,
+  );
   const replaceHint = stored ? t("oauthApp.replaceHint") : undefined;
 
   return (
-    <Panel title={t(copy.title)}>
+    <Panel title={copy.title}>
       <PanelBody>
-        <PanelIntro>{t(copy.sub)}</PanelIntro>
-        <QueryGate query={app} pendingLabel={t(copy.title)}>
+        <PanelIntro>{copy.sub}</PanelIntro>
+        <QueryGate query={appQuery} pendingLabel={copy.title}>
           {(status) => (
             <>
               {failure && (
@@ -214,7 +327,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
               <p className="t-body">
                 {status.configured
                   ? t("oauthApp.configured", { clientId: status.client_id })
-                  : t(copy.absent)}
+                  : copy.absent}
               </p>
               {/* Whatever the app's source: a directory pin is a fact about
                   who can sign in, and an operator debugging a refused login
@@ -234,7 +347,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
           <RedirectUriGroup
             open={!loaded.configured}
             uris={loaded.redirect_uris}
-            sub={t(copy.redirectSub)}
+            sub={copy.redirectSub}
           />
           <div className="form-stack">
             {lock.disabled && (
@@ -254,7 +367,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
                   value={clientId}
                   autoComplete="off"
                   disabled={!canManage || busy || lock.disabled}
-                  placeholder={t(copy.clientIdPlaceholder)}
+                  placeholder={copy.clientIdPlaceholder}
                   onChange={(e) => setClientId(e.target.value)}
                 />
               )}
@@ -345,7 +458,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
             <ConfirmModal
               open={confirming}
               onClose={() => setConfirming(false)}
-              title={t(copy.removeConfirmTitle)}
+              title={copy.removeConfirmTitle}
               confirmLabel={t("oauthApp.remove")}
               confirmVariant="danger"
               pending={remove.isPending}
@@ -367,7 +480,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
                 });
               }}
             >
-              {t(copy.removeConfirmBody)}
+              {copy.removeConfirmBody}
             </ConfirmModal>
           </div>
         </PanelBody>

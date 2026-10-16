@@ -11753,6 +11753,15 @@ export const vi = {
   "oauthApp.microsoft.removeConfirmTitle": "Gỡ ứng dụng Microsoft?",
   "oauthApp.microsoft.removeConfirmBody":
     "Không thể đọc lại client secret, nên muốn khôi phục ứng dụng phải nhập lại client ID và secret từ cổng Entra. Kết nối thư và lịch Outlook dùng ứng dụng này; hộp thư Google và IMAP không bị ảnh hưởng. Bước thiết lập ban đầu sẽ hỏi lại ứng dụng.",
+  "oauthApp.unit.sub":
+    "Tiện ích mở rộng {title} đọc API của nhà cung cấp qua một ứng dụng OAuth mà công ty đăng ký với nhà cung cấp đó.",
+  "oauthApp.unit.absent":
+    "Chưa lưu ứng dụng nào. Chỉ kết nối được tiện ích mở rộng {title} khi đã lưu một ứng dụng.",
+  "oauthApp.unit.redirectSub":
+    "Đăng ký URI này làm redirect URI của ứng dụng trong developer console của nhà cung cấp.",
+  "oauthApp.unit.removeConfirmTitle": "Gỡ ứng dụng {title}?",
+  "oauthApp.unit.removeConfirmBody":
+    "Không thể đọc lại client secret, nên muốn khôi phục ứng dụng phải nhập lại client ID và secret. Tiện ích mở rộng {title} không thể làm mới quyền truy cập cho đến khi lưu lại một ứng dụng.",
   "oauthApp.configured": "Đang dùng: {clientId}",
   "oauthApp.pinnedToDirectory": "Đã gắn với thư mục {tenant}.",
   "oauthApp.replaceHint":
@@ -11771,6 +11780,7 @@ export const vi = {
   "oauthApp.redirect.mailbox_connect": "Hộp thư",
   "oauthApp.redirect.calendar_connect": "Lịch",
   "oauthApp.redirect.sign_in": "Đăng nhập",
+  "oauthApp.redirect.extension_connect": "Kết nối",
   "oauthApp.redirectTitle": "URI chuyển hướng được ủy quyền",
   "oauthApp.clientId": "Client ID",
   "oauthApp.clientSecret": "Client secret",

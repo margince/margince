@@ -100,6 +100,12 @@ type unitManifest struct {
 
 	// Entries are the places on core screens that offer a way into the unit.
 	Entries []declaredEntry `json:"entries,omitempty"`
+
+	// OAuthApps are the vendors whose consent flow the core runs for the unit
+	// (see extension.OAuthApp). Each names where an admin is sent, what the
+	// consent asks for, and the endpoint that receives the client secret.
+	// omitempty for the reason the fields above have it.
+	OAuthApps []declaredOAuthApp `json:"oauth_apps,omitempty"`
 }
 
 // inboundEndpoint is one declared anonymous edge (see

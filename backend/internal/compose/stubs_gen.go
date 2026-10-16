@@ -1851,6 +1851,14 @@ func (stubs) DownloadExportBundle(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "DownloadExportBundle")
 }
 
+func (stubs) ExtOauthCallback(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.ExtOAuthProvider, params crmcontracts.ExtOauthCallbackParams) {
+	httperr.NotImplemented(w, r, "ExtOauthCallback")
+}
+
+func (stubs) ConnectExtOauth(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.ExtOAuthProvider) {
+	httperr.NotImplemented(w, r, "ConnectExtOauth")
+}
+
 func (stubs) ListExtensions(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListExtensions")
 }
@@ -2057,6 +2065,10 @@ func (stubs) DownloadJurisdictionDocument(w nethttp.ResponseWriter, r *nethttp.R
 
 func (stubs) GetLicenseEntitlement(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetLicenseEntitlement")
+}
+
+func (stubs) ListOauthApps(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListOauthApps")
 }
 
 func (stubs) DeleteOauthApp(w nethttp.ResponseWriter, r *nethttp.Request, provider string) {

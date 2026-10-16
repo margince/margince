@@ -303,6 +303,14 @@ func (r *unitReader) readExtension(fn *ast.FuncDecl, file *ast.File) (unitManife
 	return m, nil
 }
 
+func (r *unitReader) readMigrationsField(value ast.Expr) error {
+	r.sawMigrations = true
+	if name, ok := value.(*ast.Ident); ok && r.migrationEmbeds[name.Name] {
+		return nil
+	}
+	return r.errAt(value, "Migrations must name a package-level var whose //go:embed directive covers %s/ — the field is what cmd/migrate applies, so one pointing anywhere else leaves the unit's tables uncreated at boot", migrationsLayer)
+}
+
 func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitManifest) error {
 	kv, ok := elt.(*ast.KeyValueExpr)
 	if !ok {
@@ -396,11 +404,7 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		// is outside what a static reader can follow at all. What it does close
 		// is the whole population of accidents — the unset field, the typo, the
 		// var that embeds a different layer.
-		r.sawMigrations = true
-		name, ok := kv.Value.(*ast.Ident)
-		if !ok || !r.migrationEmbeds[name.Name] {
-			err = r.errAt(kv.Value, "Migrations must name a package-level var whose //go:embed directive covers %s/ — the field is what cmd/migrate applies, so one pointing anywhere else leaves the unit's tables uncreated at boot", migrationsLayer)
-		}
+		err = r.readMigrationsField(kv.Value)
 	case "Secrets":
 		var secrets []secretsRequest
 		secrets, err = r.readSecrets(kv.Value, file)
@@ -438,6 +442,12 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		endpoints, err = r.readInbound(kv.Value, file)
 		if err == nil {
 			m.Inbound = append(m.Inbound, endpoints...)
+		}
+	case "OAuthApps":
+		var apps []declaredOAuthApp
+		apps, err = r.readOAuthApps(kv.Value, file)
+		if err == nil {
+			m.OAuthApps = append(m.OAuthApps, apps...)
 		}
 	default:
 		// Fail closed: a field this generator does not recognize could be a

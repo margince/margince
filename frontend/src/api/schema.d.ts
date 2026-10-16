@@ -10645,6 +10645,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ext-oauth/{provider}/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The provider of an OAuth app a composed extension unit declares. Never `google` or `microsoft`: the boot refuses a unit that claims a core vendor's name. */
+                provider: components["parameters"]["ExtOAuthProvider"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start an admin's consent to an extension unit's OAuth app.
+         * @description Answers the vendor's consent URL for an OAuth app a composed extension unit declares, with
+         *     a signed `state` and a CSRF cookie. The flow completes at
+         *     `GET /ext-oauth/{provider}/callback`, where the core exchanges the code and keeps the
+         *     grant for the workspace; the unit reads a live access token from it and never sees the
+         *     refresh token.
+         *
+         *     Admin only: gated on `integrations` create, the grant that connects any integration, and
+         *     on a human session. The app's client id and secret must be stored first, through
+         *     `PUT /installation/oauth-apps/{provider}`.
+         */
+        post: operations["connectExtOauth"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ext-oauth/{provider}/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The provider of an OAuth app a composed extension unit declares. Never `google` or `microsoft`: the boot refuses a unit that claims a core vendor's name. */
+                provider: components["parameters"]["ExtOAuthProvider"];
+            };
+            cookie?: never;
+        };
+        /**
+         * OAuth redirect callback — completes an admin's consent to an extension unit's app.
+         * @description The redirect URI the vendor returns the admin's browser to. The signed `state` names the
+         *     workspace, the admin and the provider, and must match the CSRF cookie the connect set;
+         *     the session cookie is not sent on this cross-site redirect. On success the code is
+         *     exchanged, the grant is sealed for the workspace, and the unit's `OnGrant` runs with the
+         *     callback's other query parameters.
+         *
+         *     Always answers with a redirect to `#/ext/<unit>?oauth=<outcome>&provider=<provider>`,
+         *     where the outcome is one of `ok`, `denied`, `rejected`, `bad_client` or `error`. No
+         *     vendor error text is passed on.
+         */
+        get: operations["extOauthCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/connectors/{provider}/disconnect": {
         parameters: {
             query?: never;
@@ -11820,13 +11882,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/installation/oauth-apps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every vendor whose OAuth app this installation can hold, and whether it holds one.
+         * @description The core's own vendors (`google`, `microsoft`) first, then one entry per OAuth app a
+         *     composed extension unit declares, ordered by provider. A unit's entry carries the unit's
+         *     `title` for it and the `unit` that declared it. Each entry answers exactly what
+         *     `GET /installation/oauth-apps/{provider}` answers for that vendor.
+         *
+         *     Gated like the single read, on `capture_settings` read. Human session only.
+         */
+        get: operations["listOauthApps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/installation/oauth-apps/{provider}": {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description Which vendor's app. `google` is the Google Cloud OAuth client behind Gmail and Google Calendar; `microsoft` is the Entra app registration behind Outlook mail and Outlook calendar. One app per vendor per installation — keying it by connector instead would let one installation hold two Google projects and hand a rep whichever their first consent happened to reach. */
-                provider: "google" | "microsoft";
+                /** @description Which vendor's app. `google` is the Google Cloud OAuth client behind Gmail and Google Calendar; `microsoft` is the Entra app registration behind Outlook mail and Outlook calendar. Any other name is the provider of an OAuth app a composed extension unit declares, as `GET /installation/oauth-apps` lists them. One app per vendor per installation — keying it by connector instead would let one installation hold two Google projects and hand a rep whichever their first consent happened to reach. */
+                provider: string;
             };
             cookie?: never;
         };
@@ -21870,11 +21957,12 @@ export interface components {
         };
         ConnectorApp: {
             locks?: components["schemas"]["SettingLocks"];
-            /**
-             * @description Which vendor's app this describes, echoed so a cached response cannot be misread.
-             * @enum {string}
-             */
-            provider: "google" | "microsoft";
+            /** @description Which vendor's app this describes, echoed so a cached response cannot be misread. `google` or `microsoft` for the core's own vendors, otherwise the provider of an extension unit's OAuth app. */
+            provider: string;
+            /** @description What Settings calls an extension unit's app, as the unit declares it. Absent for the core's own vendors, whose names the client already knows. */
+            title?: string;
+            /** @description The extension unit that declares this app, absent for the core's own vendors. Its screen is `#/ext/<unit>`, where an admin connects the app once it is stored. */
+            unit?: string;
             /** @description Whether this vendor's app is available to this installation from any source — one stored through this surface, or the deployment's own. It answers "can this vendor's mail and calendar be connected", which is a different question from where the app came from: an entry in `locks` says the deployment set it. */
             configured: boolean;
             /** @description The vendor's public identifier for the app in use, or empty when there is none. Returned in the clear because it is not a secret — it travels in every authorization redirect — and an operator needs it to check which app the installation uses. */
@@ -22047,14 +22135,24 @@ export interface components {
             /** @description Whether this installation currently offers it on the login screen. */
             enabled: boolean;
         };
+        ConnectorAppList: {
+            data: components["schemas"]["ConnectorApp"][];
+        };
+        ExtOAuthConnectResponse: {
+            /**
+             * Format: uri
+             * @description The vendor's consent URL, carrying the signed `state`. Send the browser there.
+             */
+            authorize_url: string;
+        };
         /** @description One callback URL that must be registered as a redirect URI on the vendor's OAuth client. The `url` is the exact value this deployment sends the vendor, byte for byte — paste it as given rather than reconstructing it. */
         ConnectorAppRedirectUri: {
             /**
-             * @description Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
+             * @description Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. `extension_connect` is the consent callback of an extension unit's OAuth app, and the only purpose such an app lists. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
              *     None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
              * @enum {string}
              */
-            purpose: "sign_in" | "mailbox_connect" | "calendar_connect";
+            purpose: "sign_in" | "mailbox_connect" | "calendar_connect" | "extension_connect";
             /**
              * Format: uri
              * @description The absolute URL to register, exactly as it must be pasted.
@@ -48151,6 +48249,8 @@ export interface components {
          *     `value_key` alone is only unique within a field.
          */
         FactKey: string;
+        /** @description The provider of an OAuth app a composed extension unit declares. Never `google` or `microsoft`: the boot refuses a unit that claims a core vendor's name. */
+        ExtOAuthProvider: string;
         /**
          * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
          *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
@@ -65690,6 +65790,104 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    connectExtOauth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The provider of an OAuth app a composed extension unit declares. Never `google` or `microsoft`: the boot refuses a unit that claims a core vendor's name. */
+                provider: components["parameters"]["ExtOAuthProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The consent URL to send the browser to. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtOAuthConnectResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description No composed extension unit declares an OAuth app for this provider. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The app cannot run its consent flow: its client id and secret are not stored yet, or this deployment composed no OAuth transport (no state key or public base URL). */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description This installation has no key vault, so the app's client secret cannot be read. The remedy is the operator's — the vault root key. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    extOauthCallback: {
+        parameters: {
+            query: {
+                /** @description The vendor's authorization code */
+                code?: string;
+                /** @description Signed binding to the workspace */
+                state: string;
+                /** @description Set instead of `code` when the admin declined. */
+                error?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The provider of an OAuth app a composed extension unit declares. Never `google` or `microsoft`: the boot refuses a unit that claims a core vendor's name. */
+                provider: components["parameters"]["ExtOAuthProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirect back to the unit's screen with the outcome. */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No composed extension unit declares an OAuth app for this provider. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description This deployment composed no OAuth transport. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     disconnectConnector: {
         parameters: {
             query?: never;
@@ -66909,13 +67107,44 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
+    listOauthApps: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every vendor this build serves, without any secret. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectorAppList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description This installation has no key vault, so there is no sealed secret to report. The remedy is the operator's — the vault root key — not anything the caller sent. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     getOauthApp: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description Which vendor's app. `google` is the Google Cloud OAuth client behind Gmail and Google Calendar; `microsoft` is the Entra app registration behind Outlook mail and Outlook calendar. One app per vendor per installation — keying it by connector instead would let one installation hold two Google projects and hand a rep whichever their first consent happened to reach. */
-                provider: "google" | "microsoft";
+                /** @description Which vendor's app. `google` is the Google Cloud OAuth client behind Gmail and Google Calendar; `microsoft` is the Entra app registration behind Outlook mail and Outlook calendar. Any other name is the provider of an OAuth app a composed extension unit declares, as `GET /installation/oauth-apps` lists them. One app per vendor per installation — keying it by connector instead would let one installation hold two Google projects and hand a rep whichever their first consent happened to reach. */
+                provider: string;
             };
             cookie?: never;
         };
@@ -66932,7 +67161,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
-            /** @description No such vendor. This build serves `google` and `microsoft`; a name outside that set is refused rather than defaulted, because guessing would store one vendor's secret under another's key. A vendor this build DOES serve with no app stored is not this — it is a 200 reporting `source: none`, or a 204 from the delete. */
+            /** @description No such vendor. This build serves `google`, `microsoft` and the OAuth apps its composed extension units declare; a name outside that set is refused rather than defaulted, because guessing would store one vendor's secret under another's key. A vendor this build DOES serve with no app stored is not this — it is a 200 reporting `source: none`, or a 204 from the delete. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -66957,8 +67186,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Which vendor's app. `google` is the Google Cloud OAuth client behind Gmail and Google Calendar; `microsoft` is the Entra app registration behind Outlook mail and Outlook calendar. One app per vendor per installation — keying it by connector instead would let one installation hold two Google projects and hand a rep whichever their first consent happened to reach. */
-                provider: "google" | "microsoft";
+                /** @description Which vendor's app. `google` is the Google Cloud OAuth client behind Gmail and Google Calendar; `microsoft` is the Entra app registration behind Outlook mail and Outlook calendar. Any other name is the provider of an OAuth app a composed extension unit declares, as `GET /installation/oauth-apps` lists them. One app per vendor per installation — keying it by connector instead would let one installation hold two Google projects and hand a rep whichever their first consent happened to reach. */
+                provider: string;
             };
             cookie?: never;
         };
@@ -66977,7 +67206,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
-            /** @description No such vendor. This build serves `google` and `microsoft`; a name outside that set is refused rather than defaulted, because guessing would store one vendor's secret under another's key. A vendor this build DOES serve with no app stored is not this — it is a 200 reporting `source: none`, or a 204 from the delete. */
+            /** @description No such vendor. This build serves `google`, `microsoft` and the OAuth apps its composed extension units declare; a name outside that set is refused rather than defaulted, because guessing would store one vendor's secret under another's key. A vendor this build DOES serve with no app stored is not this — it is a 200 reporting `source: none`, or a 204 from the delete. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -67004,8 +67233,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Which vendor's app. `google` is the Google Cloud OAuth client behind Gmail and Google Calendar; `microsoft` is the Entra app registration behind Outlook mail and Outlook calendar. One app per vendor per installation — keying it by connector instead would let one installation hold two Google projects and hand a rep whichever their first consent happened to reach. */
-                provider: "google" | "microsoft";
+                /** @description Which vendor's app. `google` is the Google Cloud OAuth client behind Gmail and Google Calendar; `microsoft` is the Entra app registration behind Outlook mail and Outlook calendar. Any other name is the provider of an OAuth app a composed extension unit declares, as `GET /installation/oauth-apps` lists them. One app per vendor per installation — keying it by connector instead would let one installation hold two Google projects and hand a rep whichever their first consent happened to reach. */
+                provider: string;
             };
             cookie?: never;
         };
@@ -67020,7 +67249,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
-            /** @description No such vendor. This build serves `google` and `microsoft`; a name outside that set is refused rather than defaulted, because guessing would store one vendor's secret under another's key. A vendor this build DOES serve with no app stored is not this — it is a 200 reporting `source: none`, or a 204 from the delete. */
+            /** @description No such vendor. This build serves `google`, `microsoft` and the OAuth apps its composed extension units declare; a name outside that set is refused rather than defaulted, because guessing would store one vendor's secret under another's key. A vendor this build DOES serve with no app stored is not this — it is a 200 reporting `source: none`, or a 204 from the delete. */
             404: {
                 headers: {
                     [name: string]: unknown;

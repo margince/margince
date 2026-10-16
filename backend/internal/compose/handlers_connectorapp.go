@@ -12,6 +12,7 @@ package compose
 // to register — is looked up per provider rather than branched on here.
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -62,6 +63,9 @@ type connectorAppHandlers struct {
 	// composed carries each vendor's env-composed half. A vendor absent from
 	// the map composed nothing, which is not the same as being unknown.
 	composed map[capture.AppProvider]connectorAppComposition
+	// unitCallbackAPIBase and unitCallbackPublicBase build a unit app's
+	// callback URL from the bases the consent flow itself builds it from.
+	unitCallbackAPIBase, unitCallbackPublicBase string
 }
 
 // composeEnvApp records the app THIS process was composed with for one vendor.
@@ -102,19 +106,64 @@ func (h connectorAppHandlers) GetOauthApp(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
-	status, err := h.store.Read(r.Context(), p)
+	view, err := h.view(r.Context(), p)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	view := connectorAppView(p, status, h.composed[p])
+	httperr.WriteJSON(w, http.StatusOK, view)
+}
+
+// ListOauthApps implements (GET /installation/oauth-apps): the core vendors,
+// then every composed unit's app by provider.
+func (h connectorAppHandlers) ListOauthApps(w http.ResponseWriter, r *http.Request) {
+	if !h.admit(w, r, principal.ActionRead) {
+		return
+	}
+	providers := capture.AppProviders()
+	for _, app := range composedOAuthApps() {
+		providers = append(providers, capture.AppProvider(app.Provider))
+	}
+	list := crmcontracts.ConnectorAppList{Data: make([]crmcontracts.ConnectorApp, 0, len(providers))}
+	for _, p := range providers {
+		view, err := h.view(r.Context(), p)
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		list.Data = append(list.Data, view)
+	}
+	httperr.WriteJSON(w, http.StatusOK, list)
+}
+
+// view reads one vendor's app and renders it, with a unit app's title, unit
+// and callback URL in place of the core vendors' environment half.
+func (h connectorAppHandlers) view(ctx context.Context, p capture.AppProvider) (crmcontracts.ConnectorApp, error) {
+	status, err := h.store.Read(ctx, p)
+	if err != nil {
+		return crmcontracts.ConnectorApp{}, err
+	}
+	unit, app, isUnitApp := composedOAuthApp(string(p))
+	composed := h.composed[p]
+	if isUnitApp {
+		composed = connectorAppComposition{}
+		if uri := extOAuthCallbackURL(h.unitCallbackAPIBase, h.unitCallbackPublicBase, app.Provider); uri != "" {
+			composed.redirectURIs = []crmcontracts.ConnectorAppRedirectUri{
+				{Purpose: crmcontracts.ConnectorAppRedirectUriPurposeExtensionConnect, Url: uri},
+			}
+		}
+	}
+	view := connectorAppView(p, status, composed)
+	if isUnitApp {
+		view.Title, view.Unit = &app.Title, optionalString(string(unit.Name))
+	}
 	locks := []crmcontracts.SettingLock{}
 	// Built here, not by Locks: a connector app is no registered setting.
 	if lock, ok := h.envLock(p); ok {
 		locks = append(locks, crmcontracts.SettingLock{Key: lock.Key, Origin: settingOrigin(lock.Origin)})
 	}
 	view.Locks = &locks
-	httperr.WriteJSON(w, http.StatusOK, view)
+	return view, nil
 }
 
 // SetOauthApp implements (PUT /installation/oauth-apps/{provider}).
@@ -174,6 +223,34 @@ func (h connectorAppHandlers) DeleteOauthApp(w http.ResponseWriter, r *http.Requ
 func (h connectorAppHandlers) ready(
 	w http.ResponseWriter, r *http.Request, provider string, action principal.Action,
 ) (capture.AppProvider, bool) {
+	if !h.authorize(w, r, action) {
+		return "", false
+	}
+	p, err := knownAppProvider(provider)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return "", false
+	}
+	if !h.vaulted(w, r) {
+		return "", false
+	}
+	return p, true
+}
+
+// admit is ready for the list, which names no vendor.
+func (h connectorAppHandlers) admit(w http.ResponseWriter, r *http.Request, action principal.Action) bool {
+	return h.authorize(w, r, action) && h.vaulted(w, r)
+}
+
+// knownAppProvider reads a core vendor or a composed unit's app off the wire.
+func knownAppProvider(provider string) (capture.AppProvider, error) {
+	if _, _, ok := composedOAuthApp(provider); ok {
+		return capture.AppProvider(provider), nil
+	}
+	return capture.ParseAppProvider(provider)
+}
+
+func (h connectorAppHandlers) authorize(w http.ResponseWriter, r *http.Request, action principal.Action) bool {
 	// HUMAN ONLY, and asked here rather than per-handler because every route on
 	// this surface carries x-agent-access: human-only. An agent holding a
 	// borrowed passport with capture_settings.read would otherwise read back
@@ -182,17 +259,16 @@ func (h connectorAppHandlers) ready(
 	// identity boundary the operator configured.
 	if err := auth.RequireHuman(r.Context()); err != nil {
 		httperr.Write(w, r, err)
-		return "", false
+		return false
 	}
 	if err := auth.Require(r.Context(), capture.SettingsObject, action); err != nil {
 		httperr.Write(w, r, err)
-		return "", false
+		return false
 	}
-	p, err := capture.ParseAppProvider(provider)
-	if err != nil {
-		httperr.Write(w, r, err)
-		return "", false
-	}
+	return true
+}
+
+func (h connectorAppHandlers) vaulted(w http.ResponseWriter, r *http.Request) bool {
 	if h.store == nil {
 		// 503, not 501. The store is nil for exactly one reason — compose builds
 		// it inside WithKeyvault, so a role that composes no vault has none — and
@@ -201,9 +277,9 @@ func (h connectorAppHandlers) ready(
 		// operation, sending an integrator to look for a newer version that
 		// cannot help.
 		httperr.ServiceUnavailable(w, r, capture.ErrNoVault.Error())
-		return "", false
+		return false
 	}
-	return p, true
+	return true
 }
 
 // envAppSettings are the boot settings each vendor's environment app is read
@@ -268,7 +344,7 @@ func connectorAppView(
 	p capture.AppProvider, stored capture.ConnectorAppStatus, composed connectorAppComposition,
 ) crmcontracts.ConnectorApp {
 	app := crmcontracts.ConnectorApp{
-		Provider:     crmcontracts.ConnectorAppProvider(p),
+		Provider:     string(p),
 		Configured:   stored.Configured,
 		ClientId:     stored.ClientID,
 		Tenant:       optionalString(stored.Tenant),
