@@ -7,3 +7,13 @@ func fillEmbedded(w *wrapped) { w.Code = "planted_split_embedded" }
 func fillEmbeddedSelector(o outerWrap) { o.inner.Code = "planted_split_embedded_selector" }
 
 func fillPromoted(w wrapped) { w.DetailedError.Code = "planted_split_promoted" }
+
+func fillAliased(a *aliased) { a.Code = "planted_split_aliased" }
+
+func fillDefined(n *defined) { n.Code = "planted_split_defined" }
+
+type notCarrier struct{ Code string }
+
+type definedOther notCarrier
+
+func fillDefinedOther(n *definedOther) { n.Code = "not_a_problem" }

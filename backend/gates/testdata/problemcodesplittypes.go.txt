@@ -7,3 +7,7 @@ type holder struct{ d *httperr.DetailedError }
 type wrapped struct{ httperr.DetailedError }
 
 type outerWrap struct{ inner wrapped }
+
+type aliased = httperr.DetailedError
+
+type defined httperr.DetailedError
