@@ -13,10 +13,8 @@ import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemFieldErrorsOf } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
-import {
-  currencyNote,
-  useUpdateInstallationSettings,
-} from "../installation-settings";
+import { useUpdateInstallationSettings } from "../installation-settings";
+import { useCurrencyNote } from "../installation-settings.currency";
 import type {
   ConversationEvent,
   ConversationState,
@@ -65,6 +63,7 @@ function reportingPatch(
 
 export function BasisAct({ state, dispatch }: BasisActProps) {
   const t = useT();
+  const currencyNote = useCurrencyNote();
   const canManage = useCanWrite("installation_settings", "update");
   const settings = useInstallationSettings(canManage);
   // What the reader typed over the stored values, and nothing else: the
@@ -139,7 +138,7 @@ export function BasisAct({ state, dispatch }: BasisActProps) {
                 </Heading>
                 <Field
                   label={t("installationSettings.baseCurrency")}
-                  hint={currencyNote(current, t)}
+                  hint={currencyNote(current)}
                   error={refused.get("base_currency")}
                 >
                   {(control) => (

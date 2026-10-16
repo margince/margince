@@ -147,7 +147,7 @@ func TestNoSettingKeyIsAlsoADeploymentConfigKey(t *testing.T) {
 // trusted to compose.
 // gatekit:fixture the settings whose freeze probe crosses a module boundary, and what supplies it — expected wiring, not a waived cost
 var settingsWithInjectedFreeze = map[string]string{
-	"installation.base_currency": "deals.BaseCurrencyFrozen — once a deal has stamped a " +
+	"installation.base_currency": "deals.BaseCurrencyLock — once a deal has stamped a " +
 		"conversion rate, changing the base re-means every roll-up built on it (ADR-0085 §7)",
 }
 

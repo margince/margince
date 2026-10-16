@@ -3082,6 +3082,24 @@ func (e BackfillStatusWindow) Valid() bool {
 	}
 }
 
+// Defines values for BaseCurrencyLockReason.
+const (
+	BaseCurrencyLockReasonRateSheet   BaseCurrencyLockReason = "rate_sheet"
+	BaseCurrencyLockReasonRatesFrozen BaseCurrencyLockReason = "rates_frozen"
+)
+
+// Valid indicates whether the value is a known member of the BaseCurrencyLockReason enum.
+func (e BaseCurrencyLockReason) Valid() bool {
+	switch e {
+	case BaseCurrencyLockReasonRateSheet:
+		return true
+	case BaseCurrencyLockReasonRatesFrozen:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BillingContactRole.
 const (
 	BillingContactRoleBillingContactRoleAccountsPayable BillingContactRole = "accounts_payable"
@@ -27230,6 +27248,21 @@ type BackfillStatusState string
 // BackfillStatusWindow defines model for BackfillStatus.Window.
 type BackfillStatusWindow string
 
+// BaseCurrencyLock Why the base currency is locked, as facts a client words in its reader's language. Present exactly when `base_currency_locked_reason` is (ADR-0085 §7).
+type BaseCurrencyLock struct {
+	// BaseCurrency The ISO-4217 code the currency rates convert into. Sent only with `rate_sheet`, and absent there when the installation holds no stored base to name.
+	BaseCurrency *string `json:"base_currency,omitempty"`
+
+	// Count How many records froze a rate (`rates_frozen`), or how many currency rates convert into the base (`rate_sheet`).
+	Count int `json:"count"`
+
+	// Reason `rates_frozen`: closed deals, sent offers, mirrored invoices, contracts or commission entries have frozen a conversion rate against the base, and nothing undoes that. `rate_sheet`: currency rates convert into the base; clearing them lifts the lock.
+	Reason BaseCurrencyLockReason `json:"reason"`
+}
+
+// BaseCurrencyLockReason `rates_frozen`: closed deals, sent offers, mirrored invoices, contracts or commission entries have frozen a conversion rate against the base, and nothing undoes that. `rate_sheet`: currency rates convert into the base; clearing them lifts the lock.
+type BaseCurrencyLockReason string
+
 // BillingCompany One company a contact handles invoices for — the same edge read from the contact's end.
 type BillingCompany struct {
 	CompanyId      openapi_types.UUID `json:"company_id"`
@@ -38368,13 +38401,18 @@ type InstallationSettings struct {
 	// BaseCurrency ISO-4217 code every money roll-up converts to.
 	BaseCurrency string `json:"base_currency"`
 
+	// BaseCurrencyLock Why the base currency is locked, as facts a client words in its reader's language. Present exactly when `base_currency_locked_reason` is (ADR-0085 §7).
+	BaseCurrencyLock *BaseCurrencyLock `json:"base_currency_lock,omitempty"`
+
 	// BaseCurrencyLocked True once a conversion rate has been frozen against the base currency — by a closed
 	// deal, a sent offer, a mirrored invoice, a contract, a commission entry, or a loaded
 	// rate sheet — after which it can no longer be changed (ADR-0085 §7).
 	BaseCurrencyLocked bool `json:"base_currency_locked"`
 
-	// BaseCurrencyLockedReason Why the currency is locked, naming what has already converted against it. Absent
-	// when it is still changeable.
+	// BaseCurrencyLockedReason Why the currency is locked, naming what has already converted against it, as one
+	// English sentence. Absent when it is still changeable. A client words the reason
+	// from `base_currency_lock` instead, and reads this only from a server that does not
+	// send that object.
 	BaseCurrencyLockedReason *string `json:"base_currency_locked_reason,omitempty"`
 
 	// BaseLanguage The language AI writes in when what it writes is read by the whole team — claims,
