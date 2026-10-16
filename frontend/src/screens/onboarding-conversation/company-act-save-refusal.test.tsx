@@ -168,13 +168,17 @@ async function expectRefusalLine(): Promise<void> {
   expect(screen.getAllByText(new RegExp(DETAIL))).toHaveLength(1);
 }
 
-it("speaks a refused save beside Confirm in the deck view", async () => {
+it("speaks a refused save in the same foot as Confirm in the deck view", async () => {
   renderReview(REFUSED);
   expect(refusalLine()).toBeNull();
 
   await pressConfirm();
 
   await expectRefusalLine();
+  const confirm = screen.getByRole("button", { name: en["ob.deck.confirm"] });
+  const foot = confirm.closest(".ob-stage-acts");
+  expect(foot).not.toBeNull();
+  expect(refusalLine()?.closest(".ob-stage-acts")).toBe(foot);
 });
 
 it("keeps the refusal in the whole-record view", async () => {
@@ -211,5 +215,26 @@ it("renders no refusal line before a save is refused", async () => {
   await screen.findByRole("button", { name: en["ob.deck.confirm"] });
 
   expect(refusalLine()).toBeNull();
-  expect(screen.queryByText(en["ob.conv.review.confirmNotReady"])).toBeNull();
+});
+
+it("keeps one alert, on the same node, when the first edit adds Save", async () => {
+  renderReview(REFUSED);
+  await pressConfirm();
+  await expectRefusalLine();
+  fireEvent.click(
+    await screen.findByRole("button", { name: en["ob.deck.readWhole"] }),
+  );
+  await screen.findByRole("button", { name: en["ob.deck.backToOpen"] });
+  const before = refusalLine();
+
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Edit Company name" }),
+  );
+  const control = await screen.findByRole("textbox");
+  fireEvent.change(control, { target: { value: "Edited value" } });
+  fireEvent.keyDown(control, { key: "Enter" });
+
+  await screen.findByRole("button", { name: en["ob.digest.saveChanges"] });
+  await expectRefusalLine();
+  expect(refusalLine()).toBe(before);
 });

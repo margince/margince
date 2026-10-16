@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { StoryProviders } from "../../testing/story-utils";
 import { EMPTY_DRAFT } from "../onboarding";
 import {
@@ -72,14 +73,43 @@ export default meta;
 
 type Story = StoryObj<typeof Scene>;
 
-export const DeckRefused: Story = { args: { mode: "dossier" } };
+async function expectOneRefusal(canvasElement: HTMLElement) {
+  const alerts = await within(canvasElement).findAllByRole("alert");
+  await expect(alerts).toHaveLength(1);
+  await expect(alerts[0]).toHaveTextContent(REFUSAL);
+}
 
-export const WholeRecordRefused: Story = { args: { mode: "profile" } };
+export const DeckRefused: Story = {
+  args: { mode: "dossier" },
+  play: ({ canvasElement }) => expectOneRefusal(canvasElement),
+};
 
-export const FactBoardRefused: Story = { args: { mode: "record" } };
+export const WholeRecordRefused: Story = {
+  args: { mode: "profile" },
+  play: ({ canvasElement }) => expectOneRefusal(canvasElement),
+};
+
+export const WholeRecordEditedRefused: Story = {
+  args: {
+    mode: "profile",
+    draft: { ...EMPTY_DRAFT, edited: new Set(["display_name"]) },
+  },
+  play: ({ canvasElement }) => expectOneRefusal(canvasElement),
+};
+
+export const FactBoardRefused: Story = {
+  args: { mode: "record" },
+  play: ({ canvasElement }) => expectOneRefusal(canvasElement),
+};
 
 export const DeckNotRefused: Story = {
   args: { mode: "dossier", error: null },
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("button", {
+      name: "Confirm profile",
+    });
+    await expect(within(canvasElement).queryByRole("alert")).toBeNull();
+  },
 };
 
 export const DeckRefusedPhone: Story = {

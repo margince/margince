@@ -1,5 +1,6 @@
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
+import { StageActions } from "../../design-system/onboarding-stage";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { CompanyDraft, CompanyFieldName } from "../onboarding";
@@ -208,7 +209,11 @@ function WholeRecordScene({
       <Button variant="ghost" onClick={() => onSwitchMode("record")}>
         {t("ob.digest.pickFacts")}
       </Button>
-      {draft.edited.size === 0 && <SaveRefusalLine message={error} />}
+      {/* Its own fill of the stage foot, mounted in both states so the first
+          edit does not remount the alert and announce it again. */}
+      <StageActions>
+        <SaveRefusalLine message={error} />
+      </StageActions>
       {/* One Save for every corrected line, shown once one is: an untouched
           record already has the deck's Confirm. */}
       {draft.edited.size > 0 && (
@@ -222,14 +227,11 @@ function WholeRecordScene({
             t("ob.deck.stillNeeded", { fields: fields.join(", ") })
           }
           note={
-            <>
-              <SaveRefusalLine message={error} />
-              <p className="ob-stage-hint">
-                {plural("ob.digest.changed", draft.edited.size, {
-                  count: formatNumber(draft.edited.size, locale),
-                })}
-              </p>
-            </>
+            <p className="ob-stage-hint">
+              {plural("ob.digest.changed", draft.edited.size, {
+                count: formatNumber(draft.edited.size, locale),
+              })}
+            </p>
           }
           onGo={confirm.run}
         />
