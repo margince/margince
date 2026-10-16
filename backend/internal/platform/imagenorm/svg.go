@@ -57,6 +57,14 @@ func looksLikeSVG(src []byte) bool {
 	}
 }
 
+// ErrSVGTextNotOutlined reports live text, which the rasterizer draws no glyphs
+// for. It wraps ErrUnsupported so a candidate chain still skips the file.
+var ErrSVGTextNotOutlined = fmt.Errorf("%w: the SVG draws live text, which has to be converted to outlines", ErrUnsupported)
+
+// svgTextElements are the elements that put glyphs on the canvas. Names are
+// matched without their namespace prefix, so svg:text counts too.
+var svgTextElements = map[string]bool{"text": true, "tspan": true, "textpath": true}
+
 // svgMaxElements bounds how much document the rasterizer is asked to draw. A
 // company's mark is tens of shapes; a file with tens of thousands is not a
 // logo, and refusing it keeps one hostile favicon from occupying a deep-read
@@ -131,8 +139,15 @@ func refuseUnsafeSVG(src []byte) error {
 		if elements > svgMaxElements {
 			return fmt.Errorf("%w: the SVG carries more than %d elements", ErrUnsupported, svgMaxElements)
 		}
-		if start, ok := token.(xml.StartElement); ok && strings.EqualFold(start.Name.Local, "use") {
+		start, ok := token.(xml.StartElement)
+		if !ok {
+			continue
+		}
+		switch name := strings.ToLower(start.Name.Local); {
+		case name == "use":
 			return fmt.Errorf("%w: the SVG references other elements with <use>", ErrUnsupported)
+		case svgTextElements[name]:
+			return ErrSVGTextNotOutlined
 		}
 	}
 }

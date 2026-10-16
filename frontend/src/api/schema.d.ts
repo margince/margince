@@ -9367,7 +9367,10 @@ export interface paths {
          * @description Multipart upload. The image is re-encoded to an aspect-preserving PNG, so a wide
          *     wordmark remains wide and what is served from `logo_url` is always this origin's own
          *     bytes, never third-party markup. PNG, JPEG, GIF, WebP, ICO and SVG are accepted;
-         *     anything that will not decode is refused as 415.
+         *     anything that will not decode is refused as 415. An SVG that draws its words as
+         *     text (`<text>`, `<tspan>`, `<textPath>`) is refused as 422 with code
+         *     `svg_text_not_outlined`, because the rasterizer draws shapes and no glyphs, so
+         *     the words would be lost.
          *
          *     The upload is a HUMAN write and takes precedence: while it stands, a website read
          *     resolving a different mark leaves it alone. `DELETE` gives the field back — the
@@ -9409,7 +9412,8 @@ export interface paths {
          *
          *     Multipart upload, decoded and re-encoded exactly as the wide mark is: PNG, JPEG,
          *     GIF, WebP, ICO and SVG are accepted, what is served from `logo_icon_url` is always
-         *     this origin's own bytes, and anything that will not decode is refused as 415.
+         *     this origin's own bytes, and anything that will not decode is refused as 415. An SVG
+         *     that draws its words as text is refused as 422 with code `svg_text_not_outlined`.
          *
          *     `DELETE` takes the icon off. The two slots are independent: a company with only a
          *     wide mark keeps drawing that mark in the collapsed rail, which is what every

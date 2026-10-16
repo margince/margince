@@ -192,6 +192,13 @@ func decodeCompanyLogoUpload(w http.ResponseWriter, r *http.Request) (png []byte
 	}
 	img, err := imagenorm.Decode(source)
 	if err != nil {
+		if errors.Is(err, imagenorm.ErrSVGTextNotOutlined) {
+			httperr.Write(w, r, &httperr.DetailedError{
+				Status: http.StatusUnprocessableEntity, Code: "svg_text_not_outlined",
+				Detail: "the SVG draws its words as text, which this server cannot render; convert the text to outlines in your design tool, or upload a PNG",
+			})
+			return nil, "", false
+		}
 		if errors.Is(err, imagenorm.ErrUnsupported) {
 			httperr.Write(w, r, &httperr.DetailedError{
 				Status: http.StatusUnsupportedMediaType, Code: "unsupported_media_type",
