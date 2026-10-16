@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 0,
     "never_driven": 8,
     "permitted_but_never_required": 4,
-    "tokens_served_but_never_driven": 3413,
+    "tokens_served_but_never_driven": 3415,
     "use_case_cases": 35,
     "acceptance_criteria_named": 83,
     "tools_added_by_shipped_units": 0,
@@ -1837,7 +1837,7 @@
     },
     {
       "name": "read_context",
-      "tokens": 393,
+      "tokens": 395,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
