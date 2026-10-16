@@ -379,10 +379,19 @@ describe("deciding a commission entry", () => {
     const { ledgerReads } = stubRefusedDecision({
       status: 422,
       body: {
-        code: "validation_failed",
+        code: "validation_error",
         title: "Unprocessable",
         detail: "This entry is already settled.",
         status: 422,
+        details: {
+          errors: [
+            {
+              field: "decision",
+              code: "commission_transition_illegal",
+              message: "This entry is already settled.",
+            },
+          ],
+        },
       },
     });
 

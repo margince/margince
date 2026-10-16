@@ -104,7 +104,7 @@ function stubApi(): Sent[] {
       if (key === "POST /auth/reset-password") {
         return new Response(null, { status: 204 });
       }
-      return jsonResponse({ code: "unavailable" }, 503);
+      return jsonResponse({ code: "service_unavailable" }, 503);
     }),
   );
   return sent;

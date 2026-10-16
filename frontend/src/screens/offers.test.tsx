@@ -516,7 +516,16 @@ describe("regenerate action (OP-11)", () => {
         body: {
           title: "Unprocessable",
           detail: "offer is not in sent status",
-          code: "offer_not_sent",
+          code: "validation_error",
+          details: {
+            errors: [
+              {
+                field: "status",
+                code: "offer_not_sent",
+                message: "offer is not in sent status",
+              },
+            ],
+          },
         },
         status: 422,
       },
@@ -620,7 +629,7 @@ describe("render PDF action (OP-12)", () => {
         body: {
           title: "Unprocessable",
           detail: "offer has no line items to render",
-          code: "offer_empty",
+          code: "validation_error",
         },
         status: 422,
       },

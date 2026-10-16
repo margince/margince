@@ -208,7 +208,7 @@ describe("problemFieldErrors", () => {
     // unrelated fault into an actionable send refusal.
     expect(
       problemFieldErrors({
-        code: "internal_error",
+        code: "internal",
         details: {
           errors: [
             {

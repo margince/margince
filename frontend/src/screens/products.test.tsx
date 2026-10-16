@@ -162,7 +162,7 @@ describe("ProductsAdmin", () => {
             {
               title: "conflict",
               detail: "sku already in use",
-              code: "duplicate_sku",
+              code: "conflict",
             },
             409,
           ),

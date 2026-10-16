@@ -208,8 +208,17 @@ describe("one CSV through the run page", () => {
         jsonResponse(
           {
             status: 422,
-            code: "validation",
+            code: "validation_error",
             detail: "The uploaded file has no content.",
+            details: {
+              errors: [
+                {
+                  field: "file",
+                  code: "empty",
+                  message: "The uploaded file has no content.",
+                },
+              ],
+            },
           },
           422,
         ),

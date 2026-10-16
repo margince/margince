@@ -220,21 +220,21 @@ describe("ConsentPurposesCard", () => {
     stubRoutes({
       "POST /consent-purposes": () =>
         jsonResponse(
-          { title: "duplicate key", status: 422, code: "invalid" },
-          422,
+          { status: 409, code: "conflict", detail: 'purpose "news": conflict' },
+          409,
         ),
     });
     render(<ConsentPurposesCard />);
     await userEvent.click(
       await screen.findByRole("button", { name: /add purpose/i }),
     );
-    await userEvent.type(screen.getByLabelText(/key/i), "transactional");
+    await userEvent.type(screen.getByLabelText(/key/i), "news");
     await userEvent.type(screen.getByLabelText(/label/i), "Dupe");
     await userEvent.click(
       screen.getByRole("button", { name: /create purpose/i }),
     );
-    expect(await screen.findByText(/duplicate key/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/key/i)).toHaveValue("transactional");
+    expect(await screen.findByText(/"news": conflict/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/key/i)).toHaveValue("news");
   });
 
   // Appending to the registry asks `consent_config:create`, which a rep does

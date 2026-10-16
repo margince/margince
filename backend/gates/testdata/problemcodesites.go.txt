@@ -1,0 +1,100 @@
+package planted
+
+import (
+	"fmt"
+	"net/http"
+	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/httperr"
+)
+
+const plantedConst = "planted_const"
+
+const plantedConverted = string(plantedConst + "_converted")
+
+type reason string
+
+const (
+	reasonFirst  reason = "planted_typed_first"
+	reasonSecond reason = "planted_typed_second"
+)
+
+func literal() error {
+	return &httperr.DetailedError{Status: http.StatusConflict, Code: "planted_literal"}
+}
+
+func constant() error { return &httperr.DetailedError{Code: plantedConst} }
+
+func converted() error { return &httperr.DetailedError{Code: plantedConverted} }
+
+func refuse(code string) error { return &httperr.DetailedError{Code: code} }
+
+func passesOn(code string) error { return refuse(code) }
+
+func callers() {
+	_ = refuse("planted_param")
+	_ = passesOn("planted_passed_on")
+}
+
+type handler struct{}
+
+func (handler) deny(code string) error { return &httperr.DetailedError{Code: code} }
+
+func (h handler) callsMethod() error { return h.deny("planted_method") }
+
+type fieldError struct{ code string }
+
+func (e *fieldError) Error() string { return e.code }
+
+func (e *fieldError) MessageFault() (code, message string) { return e.code, "" }
+
+func builds() error { return &fieldError{code: "planted_field"} }
+
+type typedError struct{ Reason reason }
+
+func (e typedError) MessageFault() (string, string) { return string(e.Reason), "" }
+
+type literalFault struct{}
+
+func (literalFault) MessageFault() (code, message string) { return "planted_fault_return", "" }
+
+func assigned(conflict bool) error {
+	refusal := &httperr.DetailedError{Status: http.StatusConflict}
+	if conflict {
+		refusal.Code = "planted_assigned"
+	}
+	return refusal
+}
+
+func ranged(err error) error {
+	for _, row := range []struct {
+		cause error
+		code  string
+	}{
+		{nil, "planted_ranged"},
+	} {
+		if err == row.cause {
+			return &httperr.DetailedError{Code: row.code}
+		}
+	}
+	return nil
+}
+
+func elided() []*httperr.DetailedError {
+	return []*httperr.DetailedError{{Code: "planted_elided"}}
+}
+
+func relayed(err error) error {
+	var busy *httperr.DetailedError
+	return &httperr.DetailedError{Code: busy.Code}
+}
+
+func formatted(n int) error { return &httperr.DetailedError{Code: fmt.Sprintf("planted_%d", n)} }
+
+func lowered(s string) error { return &httperr.DetailedError{Code: strings.ToLower(s)} }
+
+func asValue() func(string) error {
+	return valueHelper
+}
+
+func valueHelper(code string) error { return &httperr.DetailedError{Code: code} }

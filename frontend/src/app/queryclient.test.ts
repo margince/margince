@@ -28,7 +28,6 @@ function problem(status: number): ProblemError {
   return new ProblemError({
     type: "about:blank",
     status,
-    code: "test_case",
     detail: "a server problem",
   });
 }

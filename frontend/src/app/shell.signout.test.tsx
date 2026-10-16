@@ -83,7 +83,7 @@ describe("Sign-out (AS-1)", () => {
         if (url.endsWith("/v1/me")) {
           meCalls += 1;
           if (loggedOut) {
-            return new Response(JSON.stringify({ code: "unauthenticated" }), {
+            return new Response(JSON.stringify({ code: "unauthorized" }), {
               status: 401,
               headers: { "Content-Type": "application/problem+json" },
             });
@@ -93,7 +93,7 @@ describe("Sign-out (AS-1)", () => {
             { status: 200, headers: { "Content-Type": "application/json" } },
           );
         }
-        return new Response(JSON.stringify({ code: "unavailable" }), {
+        return new Response(JSON.stringify({ code: "service_unavailable" }), {
           status: 503,
           headers: { "Content-Type": "application/problem+json" },
         });

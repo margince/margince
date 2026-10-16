@@ -467,7 +467,7 @@ describe("AgentRail", () => {
     stubAgentRailApi({
       connectors: () =>
         jsonResponse(
-          { code: "internal_error", title: "internal error", status: 500 },
+          { code: "internal", title: "internal error", status: 500 },
           500,
         ),
     });

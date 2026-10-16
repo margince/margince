@@ -538,14 +538,19 @@ describe("a build that fails", () => {
   it("shows the server's own cause when the server composed one", async () => {
     stubBuild(() =>
       jsonResponse(
-        { code: "budget_exhausted", detail: "The AI budget is spent." },
-        429,
+        {
+          code: "validation_error",
+          detail: "The writing sample is too short to build from.",
+        },
+        422,
       ),
     );
 
     await pressRebuild();
 
-    expect(await screen.findByText("The AI budget is spent.")).toBeTruthy();
+    expect(
+      await screen.findByText("The writing sample is too short to build from."),
+    ).toBeTruthy();
   });
 });
 

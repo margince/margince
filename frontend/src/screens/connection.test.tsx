@@ -54,7 +54,7 @@ describe("the connection screen after Margince could not be reached", () => {
         if (!apiUp) throw new TypeError("Failed to fetch");
         if (url === "/healthz") return new Response("ok");
         if (url.endsWith("/v1/me")) return sessionAnswer();
-        return json({ code: "unavailable" }, 503);
+        return json({ code: "service_unavailable" }, 503);
       }),
     );
   });
