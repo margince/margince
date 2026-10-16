@@ -1,5 +1,6 @@
 import { LoaderCircle } from "lucide-react";
 import { type ComponentPropsWithRef, type ReactNode, useId } from "react";
+import { describedByIds } from "./describedby";
 import { swallowWhileBusy, useSinglePress } from "./presslatch";
 
 // `federated` is the door into another company's sign-in: full-width,
@@ -285,7 +286,7 @@ function describedByFor({
 }>): string | undefined {
   const refusal =
     reasonId ?? (reason === undefined ? callerDescribedBy : ownReasonId);
-  return [refusal, busyLabelId].filter(Boolean).join(" ") || undefined;
+  return describedByIds(refusal, busyLabelId);
 }
 
 /**

@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api } from "../api/client";
 import { Button, Field, TextInput } from "../design-system/atoms";
+import { describedByIds } from "../design-system/describedby";
 import { SettingRow } from "../design-system/settingrow";
 import type { Toast } from "../design-system/toast";
 import { greetingNameOf } from "../format/greetingname";
@@ -159,10 +160,10 @@ function NameSettingRow({
                 {...field}
                 ref={input}
                 aria-labelledby={row["aria-labelledby"]}
-                aria-describedby={[field, row]
-                  .map((owner) => owner["aria-describedby"])
-                  .filter(Boolean)
-                  .join(" ")}
+                aria-describedby={describedByIds(
+                  field["aria-describedby"],
+                  row["aria-describedby"],
+                )}
                 value={shown}
                 placeholder={placeholder}
                 // No `maxLength`: UTF-16 units, not the runes `tooLong` counts.
