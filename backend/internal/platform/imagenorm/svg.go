@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"image"
 	"io"
+	"regexp"
 	"strings"
 
 	"github.com/srwiley/oksvg"
@@ -65,11 +66,8 @@ var ErrSVGTextNotOutlined = fmt.Errorf("%w: the SVG draws live text, which has t
 // namespace prefix, so svg:text counts too.
 var svgTextElements = map[string]bool{"text": true, "tspan": true, "textpath": true}
 
-// svgUndrawnElements are elements carrying drawing the renderer drops. oksvg's
-// strict mode is no substitute: it refuses metadata an editor always writes
-// (<metadata>, sodipodi:namedview) yet accepts a <filter> or <pattern> inside
-// <defs>. A <clipPath> is left out: an artboard clip is the viewBox it is drawn
-// into anyway.
+// svgUndrawnElements drop their drawing in the renderer. Inside <defs> only a
+// referenced one is refused; a <clipPath> is refused only outside <defs>.
 var svgUndrawnElements = map[string]bool{
 	"foreignobject": true, "image": true, "filter": true, "pattern": true,
 	"mask": true, "marker": true, "symbol": true,
@@ -79,20 +77,27 @@ var svgUndrawnElements = map[string]bool{
 // It wraps ErrUnsupported so a candidate chain still skips the file.
 var ErrSVGNotDrawable = fmt.Errorf("%w: the SVG has parts the renderer cannot draw", ErrUnsupported)
 
+var svgURLReference = regexp.MustCompile(`url\(\s*['"]?#([^)'"\s]+)`)
+
+// svgDefsElement is an undrawn element met inside <defs>, refused only if some
+// paint, clip or href names its id.
+type svgDefsElement struct{ name, id string }
+
 // refuseLossySVG rejects a document the renderer would only partly draw; the
 // stored PNG would drop content with no sign to the author.
 func refuseLossySVG(src []byte) error {
 	decoder := xml.NewDecoder(bytes.NewReader(src))
 	decoder.Strict = false
-	textDepth := 0
-	hasText := false
+	var (
+		textDepth, defsDepth int
+		hasText              bool
+		pending              []svgDefsElement
+		referenced           = map[string]bool{}
+	)
 	for {
 		token, err := decoder.Token()
 		if errors.Is(err, io.EOF) {
-			if hasText {
-				return ErrSVGTextNotOutlined
-			}
-			return nil
+			return refuseAtEnd(hasText, pending, referenced)
 		}
 		if err != nil {
 			return fmt.Errorf("%w: the SVG is not readable as XML: %w", ErrUnsupported, err)
@@ -100,20 +105,66 @@ func refuseLossySVG(src []byte) error {
 		switch t := token.(type) {
 		case xml.StartElement:
 			name := strings.ToLower(t.Name.Local)
-			if svgUndrawnElements[name] {
+			noteSVGReferences(t.Attr, referenced)
+			switch {
+			case name == "defs":
+				defsDepth++
+			case svgUndrawnElements[name] && defsDepth > 0:
+				pending = append(pending, svgDefsElement{name, svgElementID(t.Attr)})
+			case svgUndrawnElements[name] || (name == "clippath" && defsDepth == 0):
 				return fmt.Errorf("%w: the SVG holds <%s>", ErrSVGNotDrawable, name)
-			}
-			if svgTextElements[name] {
+			case svgTextElements[name]:
 				textDepth++
 			}
 		case xml.EndElement:
-			if svgTextElements[strings.ToLower(t.Name.Local)] {
+			name := strings.ToLower(t.Name.Local)
+			if name == "defs" {
+				defsDepth = max(0, defsDepth-1)
+			}
+			if svgTextElements[name] {
 				textDepth = max(0, textDepth-1)
 			}
 		case xml.CharData:
 			if textDepth > 0 && len(bytes.TrimSpace(t)) > 0 {
 				hasText = true
 			}
+			for _, m := range svgURLReference.FindAllSubmatch(t, -1) {
+				referenced[string(m[1])] = true
+			}
+		}
+	}
+}
+
+func refuseAtEnd(hasText bool, pending []svgDefsElement, referenced map[string]bool) error {
+	for _, element := range pending {
+		if element.id != "" && referenced[element.id] {
+			return fmt.Errorf("%w: the SVG uses <%s>", ErrSVGNotDrawable, element.name)
+		}
+	}
+	if hasText {
+		return ErrSVGTextNotOutlined
+	}
+	return nil
+}
+
+func svgElementID(attrs []xml.Attr) string {
+	for _, attr := range attrs {
+		if attr.Name.Local == "id" {
+			return attr.Value
+		}
+	}
+	return ""
+}
+
+// noteSVGReferences records every id an attribute points at, through url(#id)
+// in a paint, style or clip-path, or through href="#id".
+func noteSVGReferences(attrs []xml.Attr, referenced map[string]bool) {
+	for _, attr := range attrs {
+		for _, m := range svgURLReference.FindAllStringSubmatch(attr.Value, -1) {
+			referenced[m[1]] = true
+		}
+		if attr.Name.Local == "href" && strings.HasPrefix(attr.Value, "#") {
+			referenced[attr.Value[1:]] = true
 		}
 	}
 }
