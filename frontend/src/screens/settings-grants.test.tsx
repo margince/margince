@@ -86,7 +86,7 @@ describe("the grant that opens one settings page", () => {
     // jurisdiction, which this editor changes.
     await waitFor(() =>
       expect(offeredPages()).toEqual(
-        floorPlus("company", "jurisdiction", "system-health"),
+        floorPlus("company", "jurisdiction", "system-health", "configuration"),
       ),
     );
   });

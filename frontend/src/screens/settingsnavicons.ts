@@ -28,6 +28,7 @@ import {
   Scale,
   ScrollText,
   ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   SquareKanban,
   Tag,
@@ -85,6 +86,7 @@ export const PAGE_ICONS: Readonly<Record<SettingsPageId, LucideIcon>> = {
   jurisdiction: Scale,
   audit: History,
   "system-health": HeartPulse,
+  configuration: SlidersHorizontal,
   extensions: Blocks,
   reset: RotateCcw,
 };

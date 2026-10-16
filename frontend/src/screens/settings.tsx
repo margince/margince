@@ -66,6 +66,7 @@ import { AcquisitionSourcesCard } from "./acquisitionsources";
 import { ConnectionOutcomesCard } from "./connection-outcomes";
 import { FinanceSourceCard } from "./financesource";
 import { FollowUpSettingsCard } from "./followupsettings";
+import { InstallationConfigurationPage } from "./installation-configuration";
 import { LicenseCard } from "./license";
 import { NotificationSettingsCard } from "./notification-settings";
 import { FxRatesCard } from "./rates";
@@ -276,6 +277,8 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
       return <AuditLogCard />;
     case "system-health":
       return <SystemHealthPage />;
+    case "configuration":
+      return <InstallationConfigurationPage />;
     case "extensions":
       return <ExtensionAccessCard />;
     case "reset":

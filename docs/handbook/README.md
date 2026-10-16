@@ -25,6 +25,7 @@ Getting around Margince, and where to read about it:
 Settings in Margince, by page:
 - Where are the settings, and what settings pages are there? → [Settings](settings.md)
 - Which settings page do I need for something? → [Settings](settings.md)
+- Where does a setting's value come from, and how do I change one that is locked? → [Configuration](configuration.md)
 - How do I change my password, display name, language or theme? → [Your own settings](your-own-settings.md)
 - How do I add an email signature or set up my writing voice? → [Your own settings](your-own-settings.md)
 - How do I connect my mailbox or calendar? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
@@ -165,6 +166,8 @@ Records, deals and mail in Margince, by page:
   name, language and theme. Your email signature, the hours others can book,
   and your writing voice. Your agent passports and your mailbox connections.
   What the last 24 hours of your mail turned into.
+- [Configuration](configuration.md): the read-only list of every setting, its
+  value and where the value comes from, and how to change a locked one.
 - [Settings](settings.md): how to open Settings, every settings page and which
   one you need. Whose state each changes, and which permission opens it.
 - [Importing data](importing-data.md): what a CSV or a ZIP can bring in, the

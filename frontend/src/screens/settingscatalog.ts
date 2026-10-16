@@ -740,6 +740,14 @@ export const SETTINGS_PAGES = [
     ),
   },
   {
+    id: "configuration",
+    group: "governance",
+    scope: "installation",
+    // The update, as on Company: the endpoint answers only that grant.
+    requires: writes("installation_settings", ["update"]),
+    changes: acts(writes("installation_settings", ["update"])),
+  },
+  {
     id: "extensions",
     group: "governance",
     // Workspace, though the page READS the installation's unit inventory. Scope
