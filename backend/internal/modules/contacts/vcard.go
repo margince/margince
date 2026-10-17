@@ -163,7 +163,10 @@ func ParseVCards(r io.Reader) ([]VCardEntry, error) {
 // address and a fragment.
 func unfoldVCardLines(r io.Reader) ([]string, error) {
 	scanner := bufio.NewScanner(r)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1<<20)
+	// A line may be as long as the file may be. An embedded photo on one unfolded
+	// line imports as it does folded. A file past the bound is refused below in
+	// the product's words, not the scanner's.
+	scanner.Buffer(make([]byte, 0, 64*1024), vcardMaxBytes+2)
 	var lines []string
 	// The line under construction is built in ONE builder rather than by
 	// re-appending to the slice's last element: `lines[n-1] += x` copies the

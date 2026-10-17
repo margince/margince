@@ -196,6 +196,10 @@ export function LimitFields({
   );
 }
 
+// The limits crm.yaml gives SchedulingProfile.title and .location.
+const TITLE_MAX = 200;
+const LOCATION_MAX = 1000;
+
 export function videoDefaultLabel(provider: string): MessageKey {
   if (provider === "gcal") return "scheduling.videoDefaultGoogle";
   return provider === "graphcal"
@@ -226,6 +230,7 @@ export function DefaultFields({
           <TextInput
             {...control}
             required
+            maxLength={TITLE_MAX}
             value={form.title}
             onChange={(e) => onChange({ ...form, title: e.target.value })}
           />
@@ -270,6 +275,7 @@ export function DefaultFields({
           <TextInput
             {...control}
             placeholder={t("scheduling.locationExample")}
+            maxLength={LOCATION_MAX}
             value={form.location}
             onChange={(e) => onChange({ ...form, location: e.target.value })}
           />

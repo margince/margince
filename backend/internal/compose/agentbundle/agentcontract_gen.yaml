@@ -2535,7 +2535,9 @@ paths:
         `source_system: email` + the RFC822 Message-ID, one identity shared by every mail
         transport, so the same message reaching two connected mailboxes is one activity —
         and that reserved value is refused here (422): only a connector, or this system's
-        own send, may claim a mail identity. An activity may link to >1 entity
+        own send, may claim a mail identity. A `note` or a `call` needs a non-blank `subject` or
+        `body`, on create and on an edit that would leave it with neither (422 naming `subject`);
+        a task needs its `subject`. An activity may link to >1 entity
         (contact and deal). A link that names a record the caller cannot read answers `404`,
         the same for a missing record and for one hidden by row scope. `log_activity` is
         (reversible).
@@ -8997,7 +8999,7 @@ components:
         city: {type: [string, 'null']}
         region: {type: [string, 'null']}
         postal_code: {type: [string, 'null']}
-        country: {type: [string, 'null'], description: ISO-3166 alpha-2.}
+        country: {type: [string, 'null'], description: 'ISO-3166 alpha-2, stored upper-case. A contact or company write (and a CSV import cell) carrying a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`.'}
       additionalProperties: true
     Money:
       type: object

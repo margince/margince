@@ -227,6 +227,11 @@ func admitActivityPatch(
 		}
 		in.Subject = &subject
 	}
+	if !held && (in.Subject != nil || in.Body != nil) {
+		if err := checkEntryHasContent(string(current.Kind), firstSet(in.Subject, current.Subject), firstSet(in.Body, current.Body)); err != nil {
+			return crmcontracts.Activity{}, held, err
+		}
+	}
 	// The kind the ROW carries, not one the patch names — a patch cannot
 	// change a kind. Without this a note could be given `held` and read back
 	// afterwards as a meeting-shaped fact about something that was not one,

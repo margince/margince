@@ -23453,7 +23453,7 @@ type AddDealRoomDocumentRequest struct {
 type Address struct {
 	City *string `json:"city,omitempty"`
 
-	// Country ISO-3166 alpha-2.
+	// Country ISO-3166 alpha-2, stored upper-case. A contact or company write (and a CSV import cell) carrying a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`.
 	Country              *string                `json:"country,omitempty"`
 	Line1                *string                `json:"line1,omitempty"`
 	Line2                *string                `json:"line2,omitempty"`

@@ -4941,7 +4941,9 @@ export interface paths {
          *     `source_system: email` + the RFC822 Message-ID, one identity shared by every mail
          *     transport, so the same message reaching two connected mailboxes is one activity —
          *     and that reserved value is refused here (422): only a connector, or this system's
-         *     own send, may claim a mail identity. An activity may link to >1 entity
+         *     own send, may claim a mail identity. A `note` or a `call` needs a non-blank `subject` or
+         *     `body`, on create and on an edit that would leave it with neither (422 naming `subject`);
+         *     a task needs its `subject`. An activity may link to >1 entity
          *     (contact and deal). A link that names a record the caller cannot read answers `404`,
          *     the same for a missing record and for one hidden by row scope. `log_activity` is 🟢
          *     (reversible).
@@ -6034,7 +6036,13 @@ export interface paths {
         };
         /** Read the caller's reusable booking page and scheduling policy. */
         get: operations["getSchedulingProfile"];
-        /** Configure and activate the caller's booking page. */
+        /**
+         * Configure and activate the caller's booking page.
+         * @description Each setting outside its limit answers 422 naming that field (`duration_minutes`,
+         *     `notice_minutes`, `horizon_days`, `buffer_minutes`, `title`, `location`, `calendar_id`,
+         *     `blocking_calendars`). The four whole-number settings must be sent: a missing or null
+         *     one is refused rather than saved as 0.
+         */
         put: operations["putSchedulingProfile"];
         post?: never;
         delete?: never;
@@ -9772,6 +9780,10 @@ export interface paths {
          *     captured stays, and every connector advances its watermark past a message this
          *     suppresses, so a message dropped under a domain entered by mistake is not offered again.
          *     Idempotent on the folded domain.
+         *
+         *     A consumer-mail domain (the shipped list, as the workspace has edited it) is refused with
+         *     422 `consumer_mail_domain`: it is shared by unrelated senders, so registering it would drop
+         *     mail between strangers.
          */
         post: operations["createWorkspaceEmailDomain"];
         delete?: never;
@@ -13868,7 +13880,9 @@ export interface paths {
          *     moves — the physical column identity is stable across rename. Merge-PATCH:
          *     `column_name`, `object`, and `type` are absent from the request schema entirely.
          *     A retired field refuses rename with a 409 `conflict` — retirement is terminal,
-         *     so its label is frozen.
+         *     so its label is frozen. A label another field of the same object already holds
+         *     (compared by its text and by the slug it would derive) also answers 409 `conflict`,
+         *     as create does.
          */
         patch: operations["renameCustomField"];
         trace?: never;
@@ -25100,7 +25114,7 @@ export interface components {
             city?: string | null;
             region?: string | null;
             postal_code?: string | null;
-            /** @description ISO-3166 alpha-2. */
+            /** @description ISO-3166 alpha-2, stored upper-case. A contact or company write (and a CSV import cell) carrying a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`. */
             country?: string | null;
         } & {
             [key: string]: unknown;
