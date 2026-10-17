@@ -7,9 +7,9 @@ import { Badge } from "../design-system/atoms";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { Heading } from "../design-system/heading";
 import { type SectionState, sectionState } from "../design-system/surfacestate";
+import { roleOf } from "../features/capture/provider-status";
 import { formatNumber } from "../format/format";
 import { useLocale } from "../i18n";
-import { roleOf } from "./provider-status";
 
 // Small pieces the rail's own sections draw off — a leaf so companyrail.tsx
 // and companyrailtags.tsx do not import each other, the same no-cycle shape

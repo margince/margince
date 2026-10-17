@@ -18,6 +18,18 @@ import { ExtensionUnitsCard } from "../features/automations/extension-units";
 import { OAuthAppCard } from "../features/automations/oauth-app";
 import { OvernightGrantCard } from "../features/automations/overnight-grant";
 import { MeetingSettings } from "../features/booking/meeting-settings";
+import { BlockedDomainsCard } from "../features/capture/blocked-domains";
+import { CaptureActivityTab } from "../features/capture/capture-activity";
+import { OwnerIdentitiesCard } from "../features/capture/capture-owner-identities";
+import { CaptureSettingsCard } from "../features/capture/capture-settings";
+import { ConnectorsCard } from "../features/capture/connectors";
+import { ConsumerMailDomainsCard } from "../features/capture/consumer-mail-domains";
+import { ProviderCard } from "../features/capture/integrations-provider";
+import {
+  MailSharingCard,
+  MailSharingPostureRow,
+} from "../features/capture/mail-sharing";
+import { OwnDomainsCard } from "../features/capture/own-domains";
 import { ImportCard } from "../features/import/import";
 import { LinkedInImportCard } from "../features/import/linkedin-import";
 import { TagVocabularyCard } from "../features/lists/tagadmin";
@@ -36,20 +48,13 @@ import { AiRoutingCard } from "./ai-routing";
 import { AiTasksCard } from "./ai-tasks";
 import { AiCallsCard } from "./aicalls";
 import { AiUsageCard } from "./aiusage";
-import { BlockedDomainsCard } from "./blocked-domains";
 import { BriefDeliveryPanel } from "./briefdelivery";
-import { CaptureActivityTab } from "./capture-activity";
-import { OwnerIdentitiesCard } from "./capture-owner-identities";
-import { CaptureSettingsCard } from "./capture-settings";
 import { CompanyContextCard } from "./company-context";
 import { ConnectionOutcomesCard } from "./connection-outcomes";
-import { ConnectorsCard } from "./connectors";
-import { ConsumerMailDomainsCard } from "./consumer-mail-domains";
 import { CustomFieldsAdmin } from "./customfields";
 import { FinanceSourceCard } from "./financesource";
 import { FollowUpSettingsCard } from "./followupsettings";
 import { InstallationSettingsCard } from "./installation-settings";
-import { ProviderCard } from "./integrations-provider";
 import { KnowledgeCard } from "./knowledge";
 import {
   LeadDisqualifyReasonsCard,
@@ -57,10 +62,8 @@ import {
   LeadSourcesCard,
 } from "./leadvocab";
 import { LicenseCard } from "./license";
-import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
 import { NotificationSettingsCard } from "./notification-settings";
 import { OfferTemplatesAdmin } from "./offertemplates";
-import { OwnDomainsCard } from "./own-domains";
 import { ProductsAdmin } from "./products";
 import { FxRatesCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";

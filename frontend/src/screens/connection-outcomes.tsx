@@ -13,6 +13,13 @@ import { Heading } from "../design-system/heading";
 import { Panel } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import {
+  AwaitingContacts,
+  SenderDecisions,
+  useAwaitingDecision,
+  useSenders,
+} from "../features/capture/capture-senders";
+import { HeldThreads, useHeldThreads } from "../features/capture/held-threads";
+import {
   NetworkReach,
   reachCaveat,
   useLinkedInReach,
@@ -20,13 +27,6 @@ import {
 import { formatNumber } from "../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
-import {
-  AwaitingContacts,
-  SenderDecisions,
-  useAwaitingDecision,
-  useSenders,
-} from "./capture-senders";
-import { HeldThreads, useHeldThreads } from "./held-threads";
 
 // One row per list the mailboxes and LinkedIn import produced. Each list is
 // long and read rarely, so the row says how much there is and opens a drawer.

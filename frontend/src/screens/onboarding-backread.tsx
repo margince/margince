@@ -5,6 +5,7 @@ import type { components } from "../api/schema";
 import { Button, Skeleton } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
+import { errorClassKey } from "../features/capture/connector-status";
 import {
   type ImportWindow,
   isLiveRun,
@@ -16,7 +17,6 @@ import type { MessageKey } from "../i18n/en";
 import { useDrawsImportRun } from "../lib/import-onscreen";
 import { problemMessageOf } from "../lib/problem";
 import { ImportWindowPicker } from "../mail-history/window-picker";
-import { errorClassKey } from "./connector-status";
 import "./onboarding-backread.css";
 
 /**

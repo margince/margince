@@ -7,12 +7,15 @@ import { Button, Disclosure } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { PanelBody, PanelGroupHead, PanelRow } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
+import {
+  errorClassKey,
+  isUnhealthy,
+} from "../features/capture/connector-status";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { navigate } from "../lib/router";
 import { type MorningDigest, useMorningDigest } from "./brief.queries";
-import { errorClassKey, isUnhealthy } from "./connector-status";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
 
 // What the night shift did, as the last group of Home's receipt: counts with

@@ -9,9 +9,9 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import type { AccountScan } from "../features/capture/accountscan";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import type { AccountScan } from "./accountscan";
 import { TodayOnThisAccount } from "./companytoday";
 
 // The section earns its place by carrying what nothing else on the page says,

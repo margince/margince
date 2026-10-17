@@ -25,6 +25,7 @@ import {
   vendorCopy,
 } from "../features/automations/oauth-app";
 import { RedirectUris } from "../features/automations/oauth-redirects";
+import { ImapMailboxForm } from "../features/capture/imap-connect-form";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "../lib/problem";
@@ -37,7 +38,6 @@ import {
 } from "./ai-models";
 import { useSetProviderKey } from "./ai-provider-key-hooks";
 import { ModelRatePlate } from "./ai-rates";
-import { ImapMailboxForm } from "./imap-connect-form";
 import {
   usePlatformDeclined,
   useRememberPlatformDeclined,

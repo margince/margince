@@ -3,9 +3,9 @@
 
 import { useRef } from "react";
 import { EmailDetail } from "../design-system/emaildetail";
+import { EmailAccessEditor } from "../features/capture/emailaccesseditor";
 import { formatDateTime } from "../format/format";
 import { useLocale } from "../i18n";
-import { EmailAccessEditor } from "./emailaccesseditor";
 import { EmailRecordLinks } from "./emailrecords";
 import { EmailReplyAction } from "./emailreply";
 

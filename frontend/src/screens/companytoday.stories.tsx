@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import type { AccountScan } from "../features/capture/accountscan";
 import { StoryProviders } from "../testing/story-utils";
-import type { AccountScan } from "./accountscan";
 import { company360 } from "./company.fixtures";
 import {
   Company360Call,

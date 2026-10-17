@@ -14,7 +14,7 @@ import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
-import { useConnectors } from "../../screens/connectors";
+import { useConnectors } from "../capture/connectors";
 import { useBookingCalendar } from "./booking-calendar-state";
 import { BookingProfileScreen } from "./booking-profile";
 import {

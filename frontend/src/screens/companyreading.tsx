@@ -3,10 +3,10 @@
 
 import type { components } from "../api/schema";
 import { useRoster } from "../components/entityref";
+import { useAccountScan } from "../features/capture/accountscan";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useRecordZone } from "../lib/recordzone";
-import { useAccountScan } from "./accountscan";
 import { ThreadFold } from "./company/glance";
 import { recordNamesIn, StateStrip, type SuggestionAction } from "./company360";
 import { DeepReadPanel } from "./companydeepread";

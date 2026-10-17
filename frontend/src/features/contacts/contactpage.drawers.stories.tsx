@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { ProviderCard } from "../../screens/integrations-provider";
 import { ContactMeetingBrief } from "../../screens/meetingbrief";
+import { ProviderCard } from "../capture/integrations-provider";
 import { ContactResearchDrawer } from "./contactdrawers";
 import {
   completedProviderRun,

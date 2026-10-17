@@ -9,11 +9,15 @@ import { Badge, EmptyState, Skeleton } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { PanelBody, PanelRow } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
+import {
+  type AccountScan,
+  scanHasSettled,
+  scanIsLive,
+} from "../features/capture/accountscan";
 import { formatDateTime, formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useRecordZone } from "../lib/recordzone";
-import { type AccountScan, scanHasSettled, scanIsLive } from "./accountscan";
 import {
   ENGAGEMENT_LABELS,
   ENGAGEMENT_TONE,

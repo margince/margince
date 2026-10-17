@@ -1,0 +1,1000 @@
+/** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../../api/schema";
+import { LocaleProvider } from "../../i18n";
+import { useMe } from "../../lib/session";
+import { locationDouble } from "../../testing/locationdouble";
+import { meFixture } from "../../testing/mefixture";
+import { type RouteMap, stubWithSession } from "../../testing/story-utils";
+import { openRowMenu } from "../../testing/tablerow.testkit";
+import { ConnectorsCard } from "./connectors";
+
+// The connected-inboxes card makes the onboarding promise ("disconnect in one
+// click", "manage in Settings") real. It renders server facts only, and a
+// disconnect is confirmed-first before it stops capture.
+
+type CaptureConnection = components["schemas"]["CaptureConnection"];
+
+const gmailConnected: CaptureConnection = {
+  id: "018f3a1b-0000-7000-8000-0000000000c1",
+  provider: "gmail",
+  can_backfill: true,
+  status: "connected",
+  scopes: [
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.send",
+  ],
+  last_synced_at: "2026-07-23T09:30:00Z",
+  // Inert: "none" would fire the import's scope preview at an unstubbed route.
+  backfill: { state: "done" },
+};
+
+const gmailStale: CaptureConnection = {
+  ...gmailConnected,
+  status: "reauth_required",
+};
+
+// A mailbox connected before Margince asked for the send scope: healthy,
+// capturing, and permanently unable to send until it is reconnected — Google
+// will not widen an existing refresh token.
+const gmailNoSendGrant: CaptureConnection = {
+  ...gmailConnected,
+  scopes: ["https://www.googleapis.com/auth/gmail.readonly"],
+};
+
+const imapConnected: CaptureConnection = {
+  ...gmailConnected,
+  id: "018f3a1b-0000-7000-8000-0000000000c9",
+  provider: "imap",
+  can_backfill: false,
+  scopes: [],
+};
+
+// The calendar half of the same Google grant. Its account_label is the member's
+// own email address — the vendor gives the same identity for both connections —
+// so nothing on the row but its NAME says this is not their mailbox.
+const gcalConnected: CaptureConnection = {
+  ...gmailConnected,
+  id: "018f3a1b-0000-7000-8000-0000000000ca",
+  provider: "gcal",
+  can_backfill: false,
+  scopes: ["https://www.googleapis.com/auth/calendar.readonly"],
+};
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+type ChannelConnection = components["schemas"]["ChannelConnection"];
+
+type StubOpts = {
+  /** Fail the /connectors GET with this status (load-error path). */
+  listStatus?: number;
+  /** The connect (reconnect) POST response, or an error status. */
+  connect?: { authorize_url?: string } | { status: number };
+  /** The messaging-channel roster the Telegram panel reads. */
+  channels?: ChannelConnection[];
+  /** Answer GET /channel-connections with the 503 of a deployment without channels. */
+  channelsNotConfigured?: boolean;
+  /** The session GET /me answers; unset, an admin holding no object grants. */
+  me?: components["schemas"]["MeResponse"];
+  /** The installation's outward address, as GET /connectors reports it. */
+  publicOrigin?: {
+    origin: string;
+    reachable?: boolean | null;
+    detail?: string | null;
+  };
+};
+
+function stubApi(connections: CaptureConnection[], opts: StubOpts = {}) {
+  const calls: Request[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      calls.push(request);
+      const path = new URL(request.url).pathname;
+      if (path.endsWith("/connectors") && request.method === "GET") {
+        if (opts.listStatus) {
+          return jsonResponse({ detail: "boom" }, opts.listStatus);
+        }
+        return jsonResponse(
+          opts.publicOrigin
+            ? { data: connections, public_origin: opts.publicOrigin }
+            : { data: connections },
+        );
+      }
+      // Every ConnectorsCard mount now also reads the Telegram channel
+      // panel's own list — these tests exercise the mail-connector rows
+      // only, so an empty roster is the honest default rather than a
+      // fixture every one of them would otherwise have to repeat.
+      if (path.endsWith("/channel-connections") && request.method === "GET") {
+        if (opts.channelsNotConfigured) {
+          return jsonResponse(
+            { code: "channel_connections_not_configured" },
+            503,
+          );
+        }
+        return jsonResponse({ data: opts.channels ?? [] });
+      }
+      if (path.endsWith("/me") && request.method === "GET") {
+        return jsonResponse(opts.me ?? meFixture({}));
+      }
+      if (path.endsWith("/connect") && request.method === "POST") {
+        const c = opts.connect ?? {
+          authorize_url: "https://accounts.google/x",
+        };
+        if ("status" in c) {
+          const body =
+            c.status === 501
+              ? { code: "not_implemented", detail: "capture not wired" }
+              : { detail: "connect failed" };
+          return jsonResponse(body, c.status);
+        }
+        return jsonResponse(c);
+      }
+      if (path.endsWith("/disconnect") && request.method === "POST") {
+        return new Response(null, { status: 204 });
+      }
+      if (path.endsWith("/backfill") && request.method === "GET") {
+        return jsonResponse({ state: "done" });
+      }
+      throw new Error(`unstubbed: ${request.method} ${path}`);
+    }),
+  );
+  return calls;
+}
+
+function render(ui: ReactNode) {
+  return rtlRender(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <LocaleProvider initial="en">{ui}</LocaleProvider>
+    </QueryClientProvider>,
+  );
+}
+
+// The mail-half cases are about no grant: the session is an admin holding none.
+function stubMailRoutes(routes: RouteMap) {
+  stubWithSession(routes, {});
+}
+
+// Shares the card's cache entry, so it appears only once the grants it reads
+// have arrived.
+function SessionSettled() {
+  return useMe().isSuccess ? <span>session settled</span> : null;
+}
+
+function requestsTo(calls: Request[], suffix: string, method: string) {
+  return calls.filter(
+    (r) => new URL(r.url).pathname.endsWith(suffix) && r.method === method,
+  );
+}
+
+// The provider picks live in the dialog the header's verb opens. Every claim
+// about a pick opens that dialog first and scopes its queries to it.
+async function openAddDialog() {
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Add connector" }),
+  );
+  return screen.getByRole("dialog", { name: "Add connector" });
+}
+
+// A row's settings live behind its chevron, in a drawer named after it.
+async function openRowDrawer(name: string) {
+  await userEvent.click(
+    await screen.findByRole("button", { name: `Open ${name}` }),
+  );
+  return within(await screen.findByRole("dialog"));
+}
+
+beforeEach(() => {
+  vi.stubGlobal("scrollTo", vi.fn());
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  globalThis.location.hash = "";
+});
+
+describe("the connected-inboxes card", () => {
+  // A healthy connection is the normal case, so it carries no badge.
+  it("lists a live connection with its last-synced time and no status badge", async () => {
+    stubApi([gmailConnected]);
+    render(<ConnectorsCard />);
+    expect(await screen.findByText("Gmail")).toBeTruthy();
+    expect(screen.getByText(/Last synced/)).toBeTruthy();
+    expect(screen.queryByText("Capturing")).toBeNull();
+  });
+
+  // Mail capture and the workspace's messaging bot are two subjects, so they
+  // are two panels. The Telegram half used to be a level-3 heading buried under
+  // the mail roster, which put a workspace-wide bot inside a per-user card.
+  it("draws mail capture and the Telegram bot as two separate panels", async () => {
+    stubApi([gmailConnected]);
+    render(<ConnectorsCard />);
+    const inboxes = await screen.findByRole("heading", {
+      name: "Connected mailboxes and calendars",
+    });
+    const telegram = screen.getByRole("heading", { name: "Telegram bot" });
+    // Two panel headings means two panels: neither heading may sit inside the
+    // other's section, which is what a nested SectionHeader did.
+    expect(inboxes.closest(".panel")).not.toBe(telegram.closest(".panel"));
+  });
+
+  // The import fires a scope preview on render, so it waits in a dialog.
+  it("imports old emails from a dialog, never on page load", async () => {
+    const calls = stubApi([{ ...gmailConnected, backfill: { state: "none" } }]);
+    render(<ConnectorsCard />);
+    await screen.findByTestId("connector-gmail");
+    expect(requestsTo(calls, "/backfill/preview", "POST")).toHaveLength(0);
+    expect(document.querySelector(".backfill-setup")).toBeNull();
+
+    const menu = await openRowMenu(userEvent.setup(), "Gmail");
+    await userEvent.click(
+      menu.getByRole("button", { name: "Import old emails" }),
+    );
+    // Named for the task and the connection, so two imports are told apart.
+    const dialog = await screen.findByRole("dialog", {
+      name: "Import old emails Gmail",
+    });
+    expect(
+      within(dialog).getByRole("heading", { name: /Import old emails/ }),
+    ).toBeTruthy();
+  });
+
+  // The connector says whether old mail can come in; an IMAP mailbox cannot.
+  it("offers no import where the connector cannot import old mail", async () => {
+    stubApi([imapConnected]);
+    render(<ConnectorsCard />);
+    const menu = await openRowMenu(userEvent.setup(), "IMAP mailbox");
+    expect(
+      menu.queryByRole("button", { name: "Import old emails" }),
+    ).toBeNull();
+  });
+
+  // A calendar is not a mailbox: no history to import, no posture to take.
+  it("draws no mail-shaped verb or setting against a calendar connection", async () => {
+    stubApi([gcalConnected]);
+    render(<ConnectorsCard />);
+    const menu = await openRowMenu(userEvent.setup(), "Google Calendar");
+    expect(
+      menu.queryByRole("button", { name: "Import old emails" }),
+    ).toBeNull();
+    await userEvent.keyboard("{Escape}");
+    const drawer = await openRowDrawer("Google Calendar");
+    expect(drawer.queryByTestId("connector-gcal-mail-posture")).toBeNull();
+  });
+
+  // The control, so a card that drew no settings cannot pass the case above.
+  it("draws the mail-shaped verb and settings against a mailbox", async () => {
+    stubApi([gmailConnected]);
+    render(<ConnectorsCard />);
+    const menu = await openRowMenu(userEvent.setup(), "Gmail");
+    expect(
+      menu.getByRole("button", { name: "Import old emails" }),
+    ).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
+    const drawer = await openRowDrawer("Gmail");
+    expect(drawer.getByTestId("connector-gmail-mail-posture")).toBeTruthy();
+    // No account label: every id naming the drawer must still resolve.
+    const names = screen.getByRole("dialog").getAttribute("aria-labelledby");
+    for (const id of names?.split(" ") ?? []) {
+      expect(document.getElementById(id)).not.toBeNull();
+    }
+  });
+
+  // A meeting brings in contacts as a message does, so a calendar keeps a tag.
+  it("keeps the context tag row on a calendar connection", async () => {
+    stubApi([
+      {
+        ...gcalConnected,
+        context_tag: {
+          id: "t-cal",
+          name: "From the calendar",
+          archived: false,
+        },
+      },
+    ]);
+    render(<ConnectorsCard />);
+    const drawer = await openRowDrawer("Google Calendar");
+    expect(drawer.getByTestId("connector-gcal-context-tag")).toBeTruthy();
+  });
+
+  it("states an empty roster as one row that carries the connect verb", async () => {
+    stubApi([]);
+    render(<ConnectorsCard />);
+    const empty = await screen.findByTestId("connector-roster-empty");
+    expect(empty.textContent).toMatch(/No mailbox connected/);
+    // One verb, on the row that says there is nothing yet.
+    expect(
+      within(empty).getByRole("button", { name: "Add connector" }),
+    ).toBeTruthy();
+    expect(
+      screen.getAllByRole("button", { name: "Add connector" }),
+    ).toHaveLength(1);
+  });
+
+  it("offers every provider from the dialog when nothing is connected", async () => {
+    stubApi([]);
+    render(<ConnectorsCard />);
+    const dialog = await openAddDialog();
+    for (const provider of [
+      "Gmail",
+      "Google Calendar",
+      "Outlook",
+      "Outlook Calendar",
+      "IMAP mailbox",
+    ]) {
+      expect(
+        within(dialog).getByRole("button", { name: `Connect ${provider}` }),
+      ).toBeTruthy();
+    }
+  });
+
+  it("opens the inline IMAP form from the dialog instead of bouncing to onboarding", async () => {
+    stubApi([]);
+    render(<ConnectorsCard />);
+    const dialog = await openAddDialog();
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Connect IMAP mailbox" }),
+    );
+    // The chooser gives way rather than stacking behind the form: two overlays
+    // deep, Escape and the focus restore both answer to the wrong layer.
+    expect(
+      await screen.findByRole("dialog", { name: "Connect IMAP mailbox" }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: "Add connector" })).toBeNull();
+  });
+
+  it("offers reconnect only for a connection that needs re-auth", async () => {
+    stubApi([gmailStale]);
+    render(<ConnectorsCard />);
+    expect(await screen.findByText("Needs reconnect")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Reconnect/ })).toBeTruthy();
+  });
+
+  it("says a Gmail mailbox cannot send before the rep discovers it at send time", async () => {
+    stubApi([gmailNoSendGrant]);
+    render(<ConnectorsCard />);
+    expect(await screen.findByText("Capture only, no sending")).toBeTruthy();
+    // The prompt is only actionable if reconnecting is one click from here.
+    expect(screen.getByRole("button", { name: /Reconnect/ })).toBeTruthy();
+    const drawer = await openRowDrawer("Gmail");
+    expect(
+      drawer.getByText(/Reconnect this mailbox to send from it/),
+    ).toBeTruthy();
+  });
+
+  it("stays quiet about sending once the send scope is granted", async () => {
+    stubApi([gmailConnected]);
+    render(<ConnectorsCard />);
+    expect(await screen.findByText("Gmail")).toBeTruthy();
+    expect(screen.queryByText("Capture only, no sending")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Reconnect/ })).toBeNull();
+  });
+
+  it("never claims a non-Gmail mailbox cannot send — its scopes are not Google's", async () => {
+    stubApi([imapConnected]);
+    render(<ConnectorsCard />);
+    expect(await screen.findByText("IMAP mailbox")).toBeTruthy();
+    expect(screen.queryByText("Capture only, no sending")).toBeNull();
+  });
+
+  it("shows an honest waiting line for a connection that has never synced", async () => {
+    stubApi([{ ...gmailConnected, last_synced_at: null }]);
+    render(<ConnectorsCard />);
+    expect(await screen.findByText(/Awaiting first sync/)).toBeTruthy();
+  });
+
+  it("surfaces a load failure without crashing the card", async () => {
+    stubApi([], { listStatus: 500 });
+    render(<ConnectorsCard />);
+    // The card's own claim as the heading, the server's cause under it: both,
+    // because the heading alone says nothing about why.
+    expect(await screen.findByText(/Could not load connectors/)).toBeTruthy();
+    expect(await screen.findByText(/boom/)).toBeTruthy();
+  });
+
+  it("reconnect re-mints the consent URL and redirects", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", locationDouble({ assign }));
+    const calls = stubApi([gmailStale], {
+      connect: { authorize_url: "https://accounts.google/consent" },
+    });
+    render(<ConnectorsCard />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Reconnect/ }),
+    );
+    await waitFor(() =>
+      expect(requestsTo(calls, "/connect", "POST").length).toBe(1),
+    );
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith("https://accounts.google/consent"),
+    );
+  });
+
+  it("sends return_to=settings on reconnect so consent lands back on Settings", async () => {
+    vi.stubGlobal("location", locationDouble({ assign: vi.fn() }));
+    const calls = stubApi([gmailStale], {
+      connect: { authorize_url: "https://accounts.google/consent" },
+    });
+    render(<ConnectorsCard />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Reconnect/ }),
+    );
+    const connectRequests = await waitFor(() => {
+      const requests = requestsTo(calls, "/connect", "POST");
+      expect(requests.length).toBe(1);
+      return requests;
+    });
+    const body = await connectRequests[0].clone().json();
+    expect(body).toEqual({ return_to: "settings" });
+  });
+
+  it("offers the inline IMAP form to reconnect an imap connection instead of an OAuth reconnect", async () => {
+    stubApi([{ ...gmailStale, provider: "imap" }]);
+    render(<ConnectorsCard />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Reconnect/ }),
+    );
+    expect(await screen.findByText("Connect IMAP mailbox")).toBeTruthy();
+  });
+
+  it("surfaces a failed reconnect instead of redirecting", async () => {
+    const calls = stubApi([gmailStale], { connect: { status: 502 } });
+    render(<ConnectorsCard />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Reconnect/ }),
+    );
+    await waitFor(() =>
+      expect(requestsTo(calls, "/connect", "POST").length).toBe(1),
+    );
+    expect(await screen.findByText(/connect failed/)).toBeTruthy();
+    // Announced, and attached to the row whose Reconnect produced it: directly
+    // under that row at its full width, never in a band of its own under an
+    // unrelated heading — and never squeezed into the control column, where a
+    // sentence sharing a flex line with two buttons is a sentence nobody reads.
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toMatch(/connect failed/);
+    const row = screen
+      .getByRole("button", { name: /Reconnect/ })
+      .closest(".settingrow");
+    expect(row).not.toBeNull();
+    expect(row?.contains(alert)).toBe(false);
+    expect(row?.nextElementSibling).toBe(alert);
+  });
+
+  it("disconnects only after an explicit confirm", async () => {
+    const calls = stubApi([gmailConnected]);
+    render(<ConnectorsCard />);
+
+    // The row's Disconnect opens a confirm; nothing is called yet.
+    const menu = await openRowMenu(userEvent.setup(), "Gmail");
+    await userEvent.click(menu.getByRole("button", { name: "Disconnect" }));
+    expect(requestsTo(calls, "/disconnect", "POST").length).toBe(0);
+
+    // The confirm is the one that stops capture.
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Disconnect" }),
+    );
+    await waitFor(() =>
+      expect(requestsTo(calls, "/disconnect", "POST").length).toBe(1),
+    );
+  });
+});
+
+// The richer per-row health line (account_label, next_sync_due_at,
+// watch_expires_at, the error-class sentence) and the 501 calm state, all
+// exercised through the real story-utils route-map shape.
+describe("the connected-inboxes card's richer health line", () => {
+  it("shows the account label beside the provider name", async () => {
+    stubMailRoutes({
+      "GET /connectors": () =>
+        jsonResponse({
+          data: [{ ...gmailConnected, account_label: "lars@example.de" }],
+        }),
+    });
+    render(<ConnectorsCard />);
+    expect(await screen.findByText("lars@example.de")).toBeTruthy();
+  });
+
+  it("reads a null watch_expires_at as polled, never as expired", async () => {
+    stubMailRoutes({
+      "GET /connectors": () =>
+        jsonResponse({
+          data: [
+            { ...gmailConnected, provider: "imap", watch_expires_at: null },
+          ],
+        }),
+    });
+    render(<ConnectorsCard />);
+    const drawer = await openRowDrawer("IMAP mailbox");
+    expect(drawer.getByText(/polled/i)).toBeTruthy();
+    expect(drawer.queryByText(/expired/i)).toBeNull();
+  });
+
+  it("renders a push renewal deadline when watch_expires_at is set", async () => {
+    stubMailRoutes({
+      "GET /connectors": () =>
+        jsonResponse({
+          data: [
+            { ...gmailConnected, watch_expires_at: "2026-08-01T00:00:00Z" },
+          ],
+        }),
+    });
+    render(<ConnectorsCard />);
+    const drawer = await openRowDrawer("Gmail");
+    expect(drawer.getByText(/push renewal/i)).toBeTruthy();
+  });
+
+  it("renders the error-class sentence for a reauth_required connection", async () => {
+    stubMailRoutes({
+      "GET /connectors": () =>
+        jsonResponse({
+          data: [{ ...gmailStale, last_sync_error_class: "auth" }],
+        }),
+    });
+    render(<ConnectorsCard />);
+    expect(
+      await screen.findByText(/rejected the stored credentials/i),
+    ).toBeTruthy();
+  });
+
+  it("renders the 501 not-configured response as a calm state, not an error", async () => {
+    stubMailRoutes({
+      "GET /connectors": () => jsonResponse({ code: "not_implemented" }, 501),
+    });
+    render(<ConnectorsCard />);
+    expect(
+      await screen.findByText(/is not configured on this installation/i),
+    ).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByText(/couldn't load/i)).toBeNull();
+  });
+
+  it("shows the updated disconnect copy naming credential deletion and Google's own access list", async () => {
+    stubMailRoutes({
+      "GET /connectors": () => jsonResponse({ data: [gmailConnected] }),
+    });
+    render(<ConnectorsCard />);
+    const menu = await openRowMenu(userEvent.setup(), "Gmail");
+    await userEvent.click(menu.getByRole("button", { name: "Disconnect" }));
+    expect(
+      await screen.findByText(/deletes the stored credential/i),
+    ).toBeTruthy();
+    expect(screen.getByText(/Google may still list Margince/i)).toBeTruthy();
+  });
+
+  it("omits the vendor-access note for an IMAP disconnect (no upstream grant)", async () => {
+    stubMailRoutes({
+      "GET /connectors": () =>
+        jsonResponse({ data: [{ ...gmailConnected, provider: "imap" }] }),
+    });
+    render(<ConnectorsCard />);
+    const menu = await openRowMenu(userEvent.setup(), "IMAP mailbox");
+    await userEvent.click(menu.getByRole("button", { name: "Disconnect" }));
+    expect(
+      await screen.findByText(/deletes the stored credential/i),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Google may still list Margince/i)).toBeNull();
+  });
+});
+
+// The OAuth callback lands on #/settings/connections/{outcome}, and the card
+// says only what that segment confirms, in a note the reader can dismiss.
+describe("the OAuth return outcome", () => {
+  it("renders an honest denial note when the user declined access", async () => {
+    globalThis.location.hash = "#/settings/connections/denied";
+    stubMailRoutes({
+      "GET /connectors": () => jsonResponse({ data: [] }),
+    });
+    render(<ConnectorsCard />);
+    expect(
+      await screen.findByText(/Access was declined, so nothing/i),
+    ).toBeTruthy();
+    expect(screen.queryByText(/connection could not be completed/i)).toBeNull();
+  });
+
+  it("renders an honest failure note when the connection could not complete", async () => {
+    globalThis.location.hash = "#/settings/connections/error";
+    stubMailRoutes({
+      "GET /connectors": () => jsonResponse({ data: [] }),
+    });
+    render(<ConnectorsCard />);
+    expect(
+      await screen.findByText(/connection could not be completed/i),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Access was declined, so nothing/i)).toBeNull();
+  });
+
+  // A permanent failure must not tell the reader to try again: the provider's
+  // API is not enabled for this deployment, and only an administrator can
+  // change that.
+  it("names the remedy when the provider's API is not enabled here", async () => {
+    globalThis.location.hash = "#/settings/connections/misconfigured";
+    stubMailRoutes({
+      "GET /connectors": () => jsonResponse({ data: [] }),
+    });
+    render(<ConnectorsCard />);
+    expect(
+      await screen.findByText(/administrator must enable it/i),
+    ).toBeTruthy();
+    expect(screen.queryByText(/connection could not be completed/i)).toBeNull();
+  });
+
+  it("tells the reader to accept every permission when the provider declined", async () => {
+    globalThis.location.hash = "#/settings/connections/rejected";
+    stubMailRoutes({
+      "GET /connectors": () => jsonResponse({ data: [] }),
+    });
+    render(<ConnectorsCard />);
+    expect(
+      await screen.findByText(/Accept every requested permission/i),
+    ).toBeTruthy();
+    // The generic "couldn't be completed — please try again" must not also show.
+    expect(screen.queryByText(/connection could not be completed/i)).toBeNull();
+  });
+
+  it("renders a brief success note on ok — never an error", async () => {
+    globalThis.location.hash = "#/settings/connections/ok";
+    stubMailRoutes({
+      "GET /connectors": () => jsonResponse({ data: [gmailConnected] }),
+    });
+    render(<ConnectorsCard />);
+    expect(await screen.findByText(/mailbox is capturing/i)).toBeTruthy();
+    expect(screen.queryByText(/connection could not be completed/i)).toBeNull();
+    expect(screen.queryByText(/Access was declined, so nothing/i)).toBeNull();
+  });
+
+  it("renders no outcome note when the route carries none", async () => {
+    globalThis.location.hash = "#/settings/connections";
+    stubMailRoutes({
+      "GET /connectors": () => jsonResponse({ data: [] }),
+    });
+    render(<ConnectorsCard />);
+    await screen.findByTestId("connector-roster-empty");
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("dismisses the note and clears it", async () => {
+    globalThis.location.hash = "#/settings/connections/denied";
+    stubMailRoutes({
+      "GET /connectors": () => jsonResponse({ data: [] }),
+    });
+    render(<ConnectorsCard />);
+    await screen.findByText(/Access was declined, so nothing/i);
+    await userEvent.click(screen.getByRole("button", { name: /dismiss/i }));
+    expect(screen.queryByText(/Access was declined, so nothing/i)).toBeNull();
+  });
+});
+
+// The header's verb lists the providers still addable. An OAuth pick redirects,
+// IMAP opens its form, and a 501 is named in the dialog the press came from.
+describe("add a connection", () => {
+  it("offers only not-yet-connected providers when one is connected", async () => {
+    stubApi([gmailConnected]);
+    render(<ConnectorsCard />);
+    const dialog = await openAddDialog();
+    expect(
+      within(dialog).queryByRole("button", { name: "Connect Gmail" }),
+    ).toBeNull();
+    expect(
+      within(dialog).getByRole("button", { name: "Connect Google Calendar" }),
+    ).toBeTruthy();
+    expect(
+      within(dialog).getByRole("button", { name: "Connect Outlook" }),
+    ).toBeTruthy();
+    expect(
+      within(dialog).getByRole("button", { name: "Connect Outlook Calendar" }),
+    ).toBeTruthy();
+    expect(
+      within(dialog).getByRole("button", { name: "Connect IMAP mailbox" }),
+    ).toBeTruthy();
+  });
+
+  it("redirects the browser when an OAuth provider is chosen", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", locationDouble({ assign }));
+    stubApi([gmailConnected], {
+      connect: { authorize_url: "https://accounts.google/cal" },
+    });
+    render(<ConnectorsCard />);
+    const dialog = await openAddDialog();
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Connect Google Calendar" }),
+    );
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith("https://accounts.google/cal"),
+    );
+  });
+
+  it("shows an honest note when a provider is not configured (501)", async () => {
+    stubApi([gmailConnected], { connect: { status: 501 } });
+    render(<ConnectorsCard />);
+    const dialog = await openAddDialog();
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Connect Outlook" }),
+    );
+    expect(
+      await within(dialog).findByText(
+        "Outlook is not configured on this installation.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("reports a refused connect inside the dialog whose button produced it", async () => {
+    stubApi([gmailConnected], { connect: { status: 502 } });
+    render(<ConnectorsCard />);
+    const dialog = await openAddDialog();
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Connect Outlook" }),
+    );
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toMatch(/connect failed/);
+    // In the dialog the press happened in — not in a band of its own on the
+    // card behind it, where nothing says which press it answers.
+    expect(dialog.contains(alert)).toBe(true);
+  });
+
+  // Five provider names decide nothing: on both vendors the mail and the
+  // calendar are two halves of one account and two separate connections, only
+  // the OAuth mailboxes can send, and IMAP is the answer for every host with no
+  // OAuth. Each pick carries the sentence that says so, and it lands in that
+  // button's own aria-describedby.
+  it("gives every pick the sentence its choice needs", async () => {
+    stubApi([]);
+    render(<ConnectorsCard />);
+    await openAddDialog();
+    const gcal = await screen.findByTestId("connector-add-gcal");
+    expect(within(gcal).getByText(/separately from Gmail/i)).toBeTruthy();
+    const imap = screen.getByTestId("connector-add-imap");
+    expect(within(imap).getByText(/app password/i)).toBeTruthy();
+    const describedBy = within(imap)
+      .getByRole("button", { name: "Connect IMAP mailbox" })
+      .getAttribute("aria-describedby");
+    expect(describedBy).not.toBeNull();
+  });
+
+  it("withdraws the header verb when every provider is connected", async () => {
+    stubApi([
+      gmailConnected,
+      { ...gmailConnected, id: "c2", provider: "gcal" },
+      { ...gmailConnected, id: "c3", provider: "graph" },
+      { ...gmailConnected, id: "c4", provider: "graphcal" },
+      { ...gmailConnected, id: "c5", provider: "imap" },
+    ]);
+    render(<ConnectorsCard />);
+    await screen.findByText("Google Calendar"); // a roster row label
+    expect(screen.queryByRole("button", { name: "Add connector" })).toBeNull();
+  });
+});
+
+// A workspace may hold more than one live bot — nothing in the API forbids
+// connecting a second one — and a send refuses outright while it does. This
+// panel is the only surface that can take one of them away again, so it has
+// to show every one it is handed.
+describe("the Telegram connector panel", () => {
+  const salesBot: ChannelConnection = {
+    id: "018f3a1b-0000-7000-8000-0000000000d1",
+    provider: "telegram",
+    channelId: "555000111",
+    channelLabel: "acme_sales_bot",
+    status: "connected",
+    version: 1,
+  };
+  const supportBot: ChannelConnection = {
+    ...salesBot,
+    id: "018f3a1b-0000-7000-8000-0000000000d2",
+    channelId: "555000222",
+    channelLabel: "acme_support_bot",
+    status: "pending",
+  };
+  const botManager = meFixture({
+    allow: { channel_connection: ["read", "create", "update", "delete"] },
+  });
+
+  it("lists every connected bot, each with its own Disconnect", async () => {
+    stubApi([], { channels: [salesBot, supportBot], me: botManager });
+    render(<ConnectorsCard />);
+
+    const rows = await screen.findAllByTestId("telegram-connection");
+    expect(rows.length).toBe(2);
+    expect(within(rows[0]).getByText("@acme_sales_bot")).toBeTruthy();
+    expect(within(rows[1]).getByText("@acme_support_bot")).toBeTruthy();
+    // One shared Disconnect for two bots could only ever remove one of them,
+    // which is exactly the state an admin is here to escape.
+    for (const bot of ["@acme_sales_bot", "@acme_support_bot"]) {
+      const menu = await openRowMenu(userEvent.setup(), bot);
+      expect(menu.getByRole("button", { name: "Disconnect" })).toBeTruthy();
+      await userEvent.keyboard("{Escape}");
+    }
+  });
+
+  it("opens the replace-token form on the bot whose row was clicked", async () => {
+    stubApi([], { channels: [salesBot, supportBot], me: botManager });
+    render(<ConnectorsCard />);
+
+    const menu = await openRowMenu(userEvent.setup(), "@acme_support_bot");
+    await userEvent.click(menu.getByRole("button", { name: "Replace token" }));
+    // The second bot is the pending one: the form showing its status is the
+    // observable proof it bound to that row and not to the first.
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText(/^Pending/)).toBeTruthy();
+  });
+
+  const readOnlyNote =
+    "Only an administrator or operations user can connect or change the bot.";
+
+  it("offers the connect verb to a reader who holds channel_connection:create", async () => {
+    stubApi([], {
+      me: meFixture({ allow: { channel_connection: ["read", "create"] } }),
+    });
+    render(<ConnectorsCard />);
+    expect(await screen.findByTestId("telegram-connect")).toBeTruthy();
+    expect(screen.queryByText(readOnlyNote)).toBeNull();
+  });
+
+  // The seeded rep reads the bot and may change none of it: three buttons the
+  // server would refuse are withheld, and the line says who can act instead.
+  it("gives a reader without write grants the roster and the reason, no verbs", async () => {
+    stubApi([], {
+      channels: [salesBot],
+      me: meFixture({
+        roles: ["rep"],
+        allow: { channel_connection: ["read"] },
+      }),
+    });
+    render(<ConnectorsCard />);
+    expect(await screen.findByText(readOnlyNote)).toBeTruthy();
+    const row = screen.getByTestId("telegram-connection");
+    expect(within(row).getByText("@acme_sales_bot")).toBeTruthy();
+    expect(within(row).queryByRole("button")).toBeNull();
+  });
+
+  it("withholds Connect on an empty roster from a reader without channel_connection:create", async () => {
+    stubApi([], {
+      me: meFixture({
+        roles: ["rep"],
+        allow: { channel_connection: ["read"] },
+      }),
+    });
+    render(<ConnectorsCard />);
+    expect(await screen.findByText(readOnlyNote)).toBeTruthy();
+    expect(screen.queryByTestId("telegram-connect")).toBeNull();
+  });
+
+  it("withholds every verb from a read seat even when the role grants them", async () => {
+    stubApi([], {
+      channels: [salesBot],
+      me: meFixture({
+        seat: "read",
+        allow: { channel_connection: ["read", "create", "update", "delete"] },
+      }),
+    });
+    render(<ConnectorsCard />);
+    expect(await screen.findByText(readOnlyNote)).toBeTruthy();
+    expect(
+      within(screen.getByTestId("telegram-connection")).queryByRole("button"),
+    ).toBeNull();
+  });
+
+  it("gates each row verb on its own grant", async () => {
+    stubApi([], {
+      channels: [salesBot],
+      me: meFixture({ allow: { channel_connection: ["read", "update"] } }),
+    });
+    render(<ConnectorsCard />);
+    const menu = await openRowMenu(userEvent.setup(), "@acme_sales_bot");
+    expect(menu.getByRole("button", { name: "Replace token" })).toBeTruthy();
+    expect(menu.queryByRole("button", { name: "Disconnect" })).toBeNull();
+    expect(screen.queryByText(readOnlyNote)).toBeNull();
+  });
+
+  // No channels on this deployment withholds the verbs from an admin too, so
+  // the seat is not the reason and the read-only line would misdirect a rep.
+  it("lets the not-configured notice speak alone when neither applies", async () => {
+    stubApi([], {
+      channelsNotConfigured: true,
+      me: meFixture({
+        roles: ["rep"],
+        allow: { channel_connection: ["read"] },
+      }),
+    });
+    render(
+      <>
+        <ConnectorsCard />
+        <SessionSettled />
+      </>,
+    );
+    expect(
+      await screen.findByText(
+        "Messaging channels are not configured on this installation.",
+      ),
+    ).toBeTruthy();
+    // Absence proves nothing while /me is in flight, when every grant is false.
+    await screen.findByText("session settled");
+    expect(screen.queryByText(readOnlyNote)).toBeNull();
+  });
+  // The address this installation puts in emailed links, on the card that
+  // already asks whether it can reach the outside world.
+  //
+  // It exists because the value is otherwise invisible: a deployment
+  // configured with a localhost origin sends mail whose unsubscribe links
+  // open nothing, and the only way to find out was for a recipient to
+  // click one.
+  // A probe from inside cannot prove a recipient reaches it, so only a failed
+  // probe is news.
+  it("shows the address used in emailed links, with no badge while it answers", async () => {
+    stubApi([], {
+      publicOrigin: {
+        origin: "https://crm.example.com",
+        reachable: true,
+        detail: "http 200",
+      },
+    });
+    render(<ConnectorsCard />);
+
+    const row = await screen.findByTestId("public-origin");
+    expect(within(row).getByText("https://crm.example.com")).toBeTruthy();
+    expect(row.querySelector(".badge")).toBeNull();
+  });
+
+  it("says so when the address does not answer", async () => {
+    stubApi([], {
+      publicOrigin: { origin: "https://crm.example.com", reachable: false },
+    });
+    render(<ConnectorsCard />);
+    expect(
+      within(await screen.findByTestId("public-origin")).getByText(
+        "Unreachable",
+      ),
+    ).toBeTruthy();
+  });
+
+  // Null is "not asked yet", which must not read as a failure.
+  it("draws no failure for an address nobody has checked", async () => {
+    stubApi([], {
+      publicOrigin: { origin: "https://crm.example.com", reachable: null },
+    });
+    render(<ConnectorsCard />);
+    const row = await screen.findByTestId("public-origin");
+    expect(within(row).queryByText("Unreachable")).toBeNull();
+  });
+
+  // No origin configured is not a broken origin: the row is absent.
+  it("shows no address row when none is configured", async () => {
+    stubApi([]);
+    render(<ConnectorsCard />);
+    expect(screen.queryByTestId("public-origin")).toBeNull();
+  });
+});
+
+it("offers reconnect for a healthy read-only calendar", async () => {
+  stubApi([gcalConnected]);
+  render(<ConnectorsCard />);
+  expect(await screen.findByText("Read-only calendar")).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Reconnect Google Calendar" }),
+  ).toBeEnabled();
+});

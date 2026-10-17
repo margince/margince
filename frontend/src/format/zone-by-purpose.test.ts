@@ -438,7 +438,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Asserts the reporting zone is prefilled verbatim and left out of the patch when unchanged — the zone name is the content.",
   },
   {
-    file: "screens/integrations-provider.test.tsx",
+    file: "features/capture/integrations-provider.test.tsx",
     why: "The signed-in `me` fixture behind the provider screen carries the reader's stored `timezone` as wire data.",
   },
   {

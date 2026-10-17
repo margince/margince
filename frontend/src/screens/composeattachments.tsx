@@ -27,6 +27,7 @@ import { FileDropzone } from "../design-system/filedropzone";
 import { Heading } from "../design-system/heading";
 import { Popover } from "../design-system/popover";
 import { TokenList } from "../design-system/tokeninput";
+import { useProviderCarriage } from "../features/capture/channelproviders";
 import { formatBytes, formatNumber } from "../format/format";
 import {
   type Locale,
@@ -42,7 +43,6 @@ import {
 } from "../lib/attachmentupload";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { type CarriageViolation, carriageViolations } from "./carriage";
-import { useProviderCarriage } from "./channelproviders";
 import type { RelinkKind } from "./compose";
 import "./composeattachments.css";
 

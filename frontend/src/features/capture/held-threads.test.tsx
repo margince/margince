@@ -1,0 +1,512 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+/** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../../api/schema";
+import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
+import { ConnectionOutcomesCard } from "../../screens/connection-outcomes";
+import { meFixture } from "../../testing/mefixture";
+import { linkedInReachFixture } from "../../testing/reachfixture";
+
+// What this card must never do is state a fact it does not have. A thread whose
+// opening message was erased has no subject; a thread nobody has judged has no
+// kind; and a release that opened nothing must say so rather than looking as
+// though it worked.
+
+type HeldThread = components["schemas"]["HeldThread"];
+
+const PENDING: HeldThread = {
+  thread_key: "t-pending",
+  status: "pending",
+  pending: true,
+  attempts: 3,
+  has_message: true,
+  subject: "Angebot Q4",
+  occurred_at: "2026-08-30T09:12:00Z",
+};
+
+// A message this reader may read. The subject and the id come through the SAME
+// content clause on the server, so a row carrying one carries the other — a
+// fixture with a subject and no id would describe a record the server cannot
+// send, and every component judged against it would be judged against a shape
+// that does not exist.
+const JUDGED: HeldThread = {
+  thread_key: "t-legal",
+  status: "held",
+  pending: false,
+  attempts: 1,
+  has_message: true,
+  kind: "legal",
+  subject: "Entwurf Aufhebungsvertrag",
+  activity_id: "01a05500-0000-7000-8000-0000000000b1",
+  occurred_at: "2026-08-29T15:40:00Z",
+  participants: [],
+  participant_count: 0,
+};
+
+// And the refusal, as the server actually answers it: the message EXISTS —
+// `has_message` is read without the content gate — and neither its subject nor
+// its id crossed the clause.
+const WITHHELD: HeldThread = {
+  ...JUDGED,
+  thread_key: "t-withheld",
+  subject: undefined,
+  activity_id: undefined,
+  participants: undefined,
+  participant_count: undefined,
+};
+
+type Clock = components["schemas"]["CaptureVerdictClock"];
+
+// The list opens from the outcomes card's held-threads row, in a drawer.
+async function renderCard(
+  rows: HeldThread[],
+  share?: Record<string, unknown>,
+  threadVerdict?: Clock,
+) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = input instanceof Request ? input : null;
+      const url = new URL(
+        request ? request.url : String(input),
+        "https://test.local",
+      );
+      const method = request?.method ?? init?.method ?? "GET";
+      const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
+      if (key === "GET /me") {
+        return new Response(JSON.stringify(meFixture({})), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (key === "GET /capture/held-threads") {
+        return new Response(
+          JSON.stringify({ data: rows, thread_verdict: threadVerdict }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
+      // The drawer's own read. Served here so opening a thread does not throw
+      // on a body with no access block; what the drawer draws from it is
+      // emaildetail's contract, tested there.
+      if (key.endsWith("/email-presentation")) {
+        return new Response(
+          JSON.stringify({
+            id: "01a05500-0000-7000-8000-0000000000b1",
+            lifecycle: "delivered",
+            occurred_at: "2026-08-29T15:40:00Z",
+            summary: {
+              activity_id: "01a05500-0000-7000-8000-0000000000b1",
+              occurred_at: "2026-08-29T15:40:00Z",
+              version: 1,
+              subject: "Entwurf Aufhebungsvertrag",
+              display_status: "participants",
+              move: "none",
+              attachment_count: 0,
+            },
+            body: "…",
+            from: [],
+            to: [],
+            cc: [],
+            bcc: [],
+            bcc_withheld: false,
+            attachments: [],
+            links: [],
+            thread: { members: [], next_cursor: null },
+            access: {
+              content_state: "available",
+              audience: "participants",
+              selected_members: [],
+              display_status: "participants",
+              can_change: false,
+              change_mode: "message",
+              held_by_others: false,
+            },
+            can_reply: false,
+            can_relink: false,
+            version: 1,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (
+        key === "GET /capture/senders" ||
+        key === "GET /capture/contacts-awaiting-decision"
+      ) {
+        return new Response(JSON.stringify({ data: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (key === "GET /me/linkedin-reach") {
+        return new Response(JSON.stringify(linkedInReachFixture()), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (key.startsWith("POST /activities/threads/")) {
+        return new Response(JSON.stringify(share ?? { shared: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response("{}", {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }),
+  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const ui: ReactNode = (
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <ConnectionOutcomesCard />
+      </LocaleProvider>
+    </QueryClientProvider>
+  );
+  const user = userEvent.setup();
+  render(ui);
+  if (rows.length > 0) {
+    await user.click(
+      await screen.findByRole("button", { name: "View Held threads" }),
+    );
+    await screen.findByRole("dialog", { name: "Held threads" });
+  }
+  return user;
+}
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+describe("held threads", () => {
+  it("says a pending thread is waiting rather than leaving the reason blank", async () => {
+    // During an outage every row is pending. A blank reason column would read
+    // as a classifier that judged nothing rather than one that has not
+    // answered, and the attempts count is what tells a stalled model from a
+    // slow one.
+    await renderCard([PENDING]);
+    expect(
+      await screen.findByText(/awaiting classification/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Asked 3 times")).toBeInTheDocument();
+  });
+
+  it("counts a single attempt in the singular", async () => {
+    await renderCard([{ ...PENDING, attempts: 1 }]);
+    expect(await screen.findByText("Asked 1 time")).toBeInTheDocument();
+  });
+
+  it.each([
+    [1, /1 thread was asked about repeatedly/],
+    [2, /2 threads were asked about repeatedly/],
+  ])(
+    "counts the stalled threads in the backlog notice (%i)",
+    async (count, line) => {
+      const rows = Array.from({ length: count }, (_unused, index) => ({
+        ...PENDING,
+        thread_key: `t-stalled-${index}`,
+      }));
+      await renderCard(rows);
+      expect(await screen.findByText(line)).toBeInTheDocument();
+    },
+  );
+
+  it("names why a judged thread is held", async () => {
+    await renderCard([JUDGED]);
+    expect(await screen.findByText("Legal")).toBeInTheDocument();
+    expect(
+      screen.queryByText(/awaiting classification/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("says the opening message is gone rather than drawing an empty subject", async () => {
+    // The verdict outlives its evidence on purpose — losing it would re-open a
+    // thread a classifier already held — so this row is normal, not broken.
+    await renderCard([
+      {
+        ...JUDGED,
+        has_message: false,
+        subject: undefined,
+        occurred_at: undefined,
+      },
+    ]);
+    expect(
+      await screen.findByText(/first message erased/i),
+    ).toBeInTheDocument();
+  });
+
+  it("tells a message with no subject from no message at all", async () => {
+    // Both draw an unnamed row, and collapsing them would tell a reader their
+    // evidence was destroyed when it is sitting there unnamed. This one keeps
+    // its id: the content clause admitted the message, and the sender simply
+    // left the subject line empty.
+    await renderCard([{ ...JUDGED, subject: undefined }]);
+    expect(await screen.findByText(/^no subject$/i)).toBeInTheDocument();
+    expect(screen.queryByText(/first message erased/i)).not.toBeInTheDocument();
+    // And not the withheld reading either: a blank subject is a fact about the
+    // sender, "not shared with you" a fact about the reader.
+    expect(screen.queryByText(/not shared with you/i)).not.toBeInTheDocument();
+  });
+
+  it("does not report a withheld message as one that was erased", async () => {
+    // The three states are separate all the way down. A message this reader
+    // may not open still EXISTS, so telling them the evidence they are holding
+    // is gone would be false — and it is the release they would stop asking
+    // for.
+    await renderCard([WITHHELD]);
+    expect(await screen.findByText(/not shared with you/i)).toBeInTheDocument();
+    expect(screen.queryByText(/first message erased/i)).not.toBeInTheDocument();
+  });
+
+  // Every row's verb reads the same, so each carries its thread's subject.
+  it("describes each share verb by the thread it releases", async () => {
+    await renderCard([
+      JUDGED,
+      {
+        ...JUDGED,
+        thread_key: "t-offer",
+        subject: "Angebot Q4",
+        activity_id: "01a05500-0000-7000-8000-0000000000b2",
+      },
+    ]);
+    const verbs = await screen.findAllByRole("button", {
+      name: /share with the team/i,
+    });
+    expect(verbs[0]).toHaveAccessibleDescription(/Entwurf Aufhebungsvertrag/);
+    expect(verbs[1]).toHaveAccessibleDescription(/Angebot Q4/);
+  });
+
+  it("refuses the release when there is no message left to share", async () => {
+    // The release works on the seat's own messages on the thread, so with none
+    // left it answers not-found. A control whose only outcome is an error is
+    // worse than one that says why it cannot run.
+    await renderCard([{ ...JUDGED, has_message: false, subject: undefined }]);
+    const button = await screen.findByRole("button", {
+      name: /share with the team/i,
+    });
+    expect(button).toBeDisabled();
+    expect(screen.getByText(/no message left to share/i)).toBeInTheDocument();
+  });
+
+  // A message two mailboxes imported opens only when both owners release it.
+  // Reporting the other holder is the difference between a control that looks
+  // broken and one that says what happened.
+  it.each([
+    [1, /1 other mailbox imported this message and has not shared it/],
+    [2, /2 other mailboxes imported this message and have not shared it/],
+  ])(
+    "reports a release the other holders kept closed (%i)",
+    async (owners, line) => {
+      const user = await renderCard([JUDGED], {
+        shared: false,
+        held_by_others: owners,
+      });
+      await user.click(
+        await screen.findByRole("button", { name: /share with the team/i }),
+      );
+      expect(await screen.findByText(line)).toBeInTheDocument();
+    },
+  );
+
+  it("reports an empty list as nothing held rather than as a failure", async () => {
+    await renderCard([]);
+    const row = (
+      await screen.findByText(en["heldThreads.title"])
+    ).closest<HTMLElement>(".settingrow");
+    if (row === null) throw new Error("the held-threads row is missing");
+    expect(
+      await within(row).findByText(en["connectionOutcomes.none"]),
+    ).toBeInTheDocument();
+    expect(within(row).queryByRole("button")).toBeNull();
+  });
+});
+
+// A held thread whose message this reader may read opens it. The server sends
+// `activity_id` only for those — it reads the id off the gated join — so the
+// presence of the field IS the permission.
+it("opens the message a held thread is about", async () => {
+  const openable: HeldThread = {
+    ...JUDGED,
+    thread_key: "t-openable",
+    activity_id: "01a05500-0000-7000-8000-0000000000b1",
+  };
+  const user = await renderCard([openable]);
+
+  const button = await screen.findByRole("button", {
+    name: "Entwurf Aufhebungsvertrag",
+  });
+  expect(button.getAttribute("aria-haspopup")).toBe("dialog");
+  // Pressing it asks for THIS message's presentation — the screen's half of
+  // the job. What the drawer then draws is emaildetail's own contract.
+  await user.click(button);
+  await waitFor(() => {
+    const asked = (
+      globalThis.fetch as ReturnType<typeof vi.fn>
+    ).mock.calls.some((call) => {
+      const [input] = call;
+      const url = input instanceof Request ? input.url : String(input);
+      return url.includes(
+        "/activities/01a05500-0000-7000-8000-0000000000b1/email-presentation",
+      );
+    });
+    expect(asked).toBe(true);
+  });
+});
+
+// And a thread whose message it may NOT read says so and offers nothing.
+//
+// The server withholds the subject and the id together for a message outside
+// the caller's audience, so the row names itself as withheld rather than
+// printing words it was refused, and does not become a control — a button that
+// opened nothing would be worse than the plain text it replaced.
+it("says a thread is not the reader's without offering to open it", async () => {
+  await renderCard([WITHHELD]);
+
+  expect(await screen.findByText(/not shared with you/i)).toBeTruthy();
+  // The row is still LISTED: they are holding it and must be able to release
+  // it. Only the message's words are refused.
+  expect(screen.getByText("Legal")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /not shared/i })).toBeNull();
+});
+
+// A held thread that says only "waiting" is the same defect the capture
+// counters had: the classifier runs every ten minutes, the screen never said
+// so, and an owner watching an unchanged row can only read it as broken.
+it("says when the thread pass runs while a row is pending", async () => {
+  await renderCard([PENDING], undefined, {
+    every_seconds: 600,
+    running: false,
+    queued: false,
+    next_pass_at: "2026-08-30T09:20:00Z",
+  });
+
+  const note = await screen.findByTestId("verdict-pass-threads");
+  expect(note).toHaveTextContent(/every 10 minutes/i);
+  expect(note).toHaveTextContent(/next check/i);
+});
+
+// A thread held because the model judged it personnel is not waiting for
+// anything. Telling its owner when the next pass runs would promise a change
+// that is not coming.
+it("says nothing about the pass when no row is waiting on it", async () => {
+  await renderCard([JUDGED], undefined, {
+    every_seconds: 600,
+    running: false,
+    queued: false,
+    next_pass_at: "2026-08-30T09:20:00Z",
+  });
+
+  await screen.findByText("Legal");
+  expect(screen.queryByTestId("verdict-pass-threads")).toBeNull();
+});
+
+// A kind this build has no word for reads as words: never the raw token, and
+// never a blank badge that looks like "judged nothing".
+it("names a kind it has no translation for in words", async () => {
+  await renderCard([
+    { ...JUDGED, thread_key: "t-unknown", kind: "export_control" },
+  ]);
+
+  await screen.findByText(en["heldThreads.kind.other"]);
+  expect(screen.queryByText("export_control")).toBeNull();
+});
+
+it("says a row with no kind is held for another reason", async () => {
+  await renderCard([{ ...JUDGED, thread_key: "t-nokind", kind: undefined }]);
+
+  await screen.findByText(en["heldThreads.kind.other"]);
+  expect(screen.queryByText("held")).toBeNull();
+});
+
+// `unsure` is the classifier passing the call to the owner, not a kind.
+it("names a thread the classifier was unsure about", async () => {
+  await renderCard([
+    { ...JUDGED, thread_key: "t-unsure", status: "unsure", kind: undefined },
+  ]);
+
+  await screen.findByText(en["heldThreads.kind.unsure"]);
+  expect(screen.queryByText("unsure")).toBeNull();
+});
+
+// Who a thread is with tells two held threads apart; a contact on file is a link.
+it("names who a held thread is with, and counts the ones it leaves out", async () => {
+  await renderCard([
+    {
+      ...JUDGED,
+      participants: [
+        {
+          address: "k.huber@kanzlei.example",
+          contact_id: "0190b7a2-0000-7000-8000-0000000000c7",
+        },
+        { address: "office@kanzlei.example" },
+      ],
+      participant_count: 7,
+    },
+  ]);
+
+  const [beside, folded] = await screen.findAllByRole("link", {
+    name: "k.huber@kanzlei.example",
+  });
+  expect(beside.getAttribute("href")).toContain(
+    "0190b7a2-0000-7000-8000-0000000000c7",
+  );
+  // Under the subject, in the subject's own cell: one run of addresses that a
+  // narrow cell cuts short. The count is an element of its own.
+  const line = beside.closest(".held-threads-parties");
+  expect(line?.closest("td")?.textContent).toContain(JUDGED.subject);
+  expect(line?.querySelector(".held-threads-parties-list")?.textContent).toBe(
+    "k.huber@kanzlei.example, office@kanzlei.example",
+  );
+  expect(line?.querySelector(".held-threads-parties-more")?.textContent).toBe(
+    "+5 more",
+  );
+  // Folded, the same line is a column drawn only then, heading included.
+  const cell = folded.closest("td");
+  expect(cell?.getAttribute("data-fold")).toBe("only");
+  expect(cell?.textContent).toBe(
+    "k.huber@kanzlei.example, office@kanzlei.example+5 more",
+  );
+  expect(
+    screen.getByRole("columnheader", { name: en["heldThreads.colParties"] })
+      .className,
+  ).toBe("datatable-fold-only");
+  expect(
+    screen.queryByRole("link", { name: "office@kanzlei.example" }),
+  ).toBeNull();
+});
+
+// Withheld names nobody, and a thread only with colleagues has nobody to name.
+it.each([
+  ["a withheld message", WITHHELD],
+  ["a thread only with colleagues", JUDGED],
+])("draws no participant line for %s", async (_, row) => {
+  await renderCard([row]);
+
+  expect(await screen.findByText(en["heldThreads.kind.legal"])).toBeTruthy();
+  expect(
+    document.body.querySelector(
+      ".held-threads-parties, .held-threads-parties-all",
+    ),
+  ).toBeNull();
+});

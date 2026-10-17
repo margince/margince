@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { unwrap } from "../../lib/problem";
-import { missingCalendarWriteGrant } from "../../screens/connector-status";
-import { useConnectors } from "../../screens/connectors";
+import { missingCalendarWriteGrant } from "../capture/connector-status";
+import { useConnectors } from "../capture/connectors";
 
 export function useBookingCalendar(provider: string, loadCalendars = true) {
   const connections = useConnectors({ refetchOnWindowFocus: "always" });

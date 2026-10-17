@@ -1,0 +1,735 @@
+/** @vitest-environment happy-dom */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { SLOWEST_MEASURED_TEST_MS } from "../../../vitest.budget";
+import type { components } from "../../api/schema";
+import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
+import { ProviderCard } from "./integrations-provider";
+
+type Me = components["schemas"]["MeResponse"];
+type Grant = components["schemas"]["RbacObjectGrant"];
+type SeatType = components["schemas"]["Authorization"]["seat_type"];
+type ProviderConnection = components["schemas"]["ProviderConnection"];
+
+// A live connection: a key is in place, so both destructive actions are
+// eligible, and the provider has told us a balance — the reading every seat is
+// granted and the one the card must keep showing when the writes go away.
+const CONNECTION: ProviderConnection = {
+  provider: "surfe",
+  status: "connected",
+  credential_present: true,
+  configuration: {
+    mode: "automatic_on_create",
+    preset: "full",
+    automatic_individual_create: true,
+    automatic_import: false,
+    // The work email OFF and the free profile link ON, which is what a fresh
+    // connection resolves to. A fixture with the paid one already on could not
+    // tell a switch that writes from one rendered off a constant.
+    categories: { linkedin_profile: true, professional_email: false },
+  },
+  // Both halves, because the card treats them differently: the free set is what
+  // the automatic lookup takes and carries no switch of its own, and the priced
+  // set is what an admin may allow somebody to buy per contact.
+  catalog: [
+    { category: "linkedin_profile", free: true, cost: {} },
+    { category: "professional_email", free: false, cost: { email: 1 } },
+    // A category the provider only issues alongside another, priced for the
+    // pair. The real Surfe descriptor has exactly one, and without it here the
+    // card's dependency handling would be tested against a catalog where every
+    // purchase stands alone.
+    {
+      category: "mobile",
+      free: false,
+      cost: { email: 1, mobile: 1 },
+      requires: "professional_email",
+    },
+  ],
+  credits: { pools: { email: 120 } },
+  version: 4,
+  created_at: "2026-01-05T09:00:00Z",
+  updated_at: "2026-01-05T09:04:00Z",
+};
+
+// The card names a provider it knows by its brand, never by its registry key.
+const PROVIDER_NAME = "Surfe";
+
+function meResponse(seat: SeatType, integrations: Grant): Me {
+  return {
+    user: {
+      id: "00000000-0000-4000-8000-000000000001",
+      email: "mira@acme.test",
+      display_name: "Mira Voss",
+      timezone: "UTC",
+      status: "active",
+      is_agent: false,
+    },
+    workspace_name: "Acme",
+    non_production: true,
+    admin_password_link: false,
+    roles: [],
+    teams: [],
+    authorization: {
+      seat_type: seat,
+      objects: { integrations },
+      row_scope: "own",
+    },
+  };
+}
+
+// Admin/ops: the seat the seeded grants give the whole object to, because
+// connecting a provider spends money.
+const ME_OPERATOR = meResponse("full", {
+  create: true,
+  read: true,
+  update: true,
+  delete: true,
+});
+
+// A rep, exactly as the roster seeds it: read on `integrations` so a dated value
+// on a contact record has an explanation, and nothing more.
+const ME_READER = meResponse("full", {
+  create: false,
+  read: true,
+  update: false,
+  delete: false,
+});
+
+// The middle case, and the reason the two gates are asked separately: a
+// principal who may bind a key but may not destroy what it bought. Nothing
+// seeds this, and an operator who edits a role can produce it.
+const ME_CONNECT_ONLY = meResponse("full", {
+  create: true,
+  read: true,
+  update: false,
+  delete: false,
+});
+
+function backend(principal: Me, connection: ProviderConnection = CONNECTION) {
+  return vi.fn(async (input: RequestInfo | URL) => {
+    const request = input instanceof Request ? input : undefined;
+    const path = new URL(String(request ? request.url : input)).pathname;
+    // A PATCH answers with the row it just wrote, which is what the card folds
+    // back into its cache. Routed by METHOD as well as path: the same path
+    // serves the list this card reads on the way in.
+    if (request?.method === "PATCH") {
+      return new Response(JSON.stringify(connection), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    const body = routeBody(path, principal, connection);
+    return new Response(JSON.stringify(body), {
+      headers: { "Content-Type": "application/json" },
+    });
+  });
+}
+
+function routeBody(
+  path: string,
+  principal: Me,
+  connection: ProviderConnection,
+): unknown {
+  if (path === "/v1/me") {
+    return principal;
+  }
+  if (path === "/v1/provider-connections") {
+    return { data: [connection] };
+  }
+  if (path === "/v1/integrations/settings") {
+    // Off, which is the state the flip below moves away from. The installation
+    // default is ON, but a fixture that started there could not tell a working
+    // switch from one wired to a constant.
+    return { automatic_lookup: false };
+  }
+  throw new Error(`unstubbed request: ${path}`);
+}
+
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return (
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">{children}</LocaleProvider>
+    </QueryClientProvider>
+  );
+}
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+// Two round trips settle before anything is on screen — the connection list and
+// the /me snapshot the affordances are scoped by — and neither waits on a clock.
+// The default one-second budget is not enough when the whole suite runs in
+// parallel, so this states one that survives a loaded machine.
+const SETTLE_MS = 10_000;
+
+// `renderAs` runs one waiter at SETTLE_MS, and each case below awaits it. A
+// test may spend the SUM of its waiters' budgets without any one of them
+// failing, so its own ceiling has to cover that — and the suite's is derived
+// for tests that wait at the default. Stated here rather than borrowed, with
+// the SAME measured allowance for the work between the waits that the suite
+// ceiling uses, so the two rest on one measurement rather than on a round
+// number picked here. Without it these fail while the settle is still inside
+// its budget, and the failure names the test rather than the round trip that
+// was slow (issue 1144).
+const RENDER_TEST_MS = SETTLE_MS + SLOWEST_MEASURED_TEST_MS;
+
+// A case that also waits on a WRITE settles twice, so it carries both waiters'
+// budgets. Derived from the same two constants rather than stated as a number,
+// so raising either moves this with it.
+const WRITE_TEST_MS = SETTLE_MS + RENDER_TEST_MS;
+
+// A case that holds the refetch open waits a THIRD time — the render, the
+// write, and the release — so it carries three waiters' budgets. Derived from
+// the same constants for the reason the two above are: raising the settle
+// moves all three together rather than leaving one behind.
+const HELD_REFETCH_TEST_MS = SETTLE_MS + WRITE_TEST_MS;
+
+// The card sits on the Settings → Integrations entry, whose predicate opens for
+// all five roles, and the reads behind it are granted to all five. The writes
+// are not: connecting spends money and destroying the data is irreversible, and
+// the server admits neither for a manager, a rep or a read_only seat.
+describe("ProviderCard write posture", () => {
+  const READ_ONLY =
+    "Read-only: connecting a provider costs money, so only an administrator or operations user can do it.";
+  const CONNECT = "Replace API key";
+  const DISCONNECT = "Disconnect";
+  const DELETE_DATA = "Delete purchased data";
+  const KEY_FIELD = "Replace API key";
+  const AUTOMATIC_LOOKUP = en["provider.automaticLookup"];
+  // Disconnect and delete-data live behind the overflow, because neither is the
+  // same weight as Connect: one is recoverable and the other irreversibly
+  // destroys purchased contact data. The trigger's presence is what the grant
+  // decides; the two verbs are then inside it.
+  const MORE = "More actions";
+
+  async function openDestructiveMenu(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: MORE }));
+  }
+
+  async function renderAs(
+    principal: Me,
+    connection: ProviderConnection = CONNECTION,
+  ) {
+    const fetch = backend(principal, connection);
+    vi.stubGlobal("fetch", fetch);
+    render(
+      <Providers>
+        <ProviderCard />
+      </Providers>,
+    );
+    // The provider's own row, waited on rather than assumed: every assertion
+    // below is about a LOADED card, and a card still fetching offers nothing
+    // either way.
+    await screen.findByRole(
+      "heading",
+      { name: PROVIDER_NAME },
+      { timeout: SETTLE_MS },
+    );
+    return fetch;
+  }
+
+  it(
+    "withholds every write from a seat that holds none, and says so",
+    async () => {
+      await renderAs(ME_READER);
+
+      // The reading is granted, so it stays: a card that vanished would say this
+      // installation buys no contact data, which is a claim about the DATA.
+      expect(screen.getByRole("meter", { name: "email" })).toBeTruthy();
+      // Stated once, at the surface, rather than annotated onto each absent
+      // control.
+      expect(screen.getByText(READ_ONLY)).toBeTruthy();
+      expect(screen.queryByRole("button", { name: CONNECT })).toBeNull();
+      expect(screen.queryByRole("button", { name: MORE })).toBeNull();
+      // The key box exists only to feed the submit that is gone, and it is
+      // behind a verb this seat does not have — so there is nothing to open.
+      expect(screen.queryByLabelText(KEY_FIELD)).toBeNull();
+    },
+    RENDER_TEST_MS,
+  );
+
+  it(
+    "offers every write to the seat that pays the provider",
+    async () => {
+      const user = userEvent.setup();
+      await renderAs(ME_OPERATOR);
+
+      // Without this arm the test above would pass on a card that renders no
+      // controls for anybody.
+      const connect = screen.getByRole("button", { name: CONNECT });
+      expect(connect).toBeTruthy();
+      // The key is two inputs' worth of commitment — the secret and the
+      // acknowledgement that using it spends money — so it lives behind that
+      // verb rather than standing open on the card. The row is an answer; the
+      // form is not.
+      expect(screen.queryByLabelText(KEY_FIELD)).toBeNull();
+      await user.click(connect);
+      expect(screen.getByLabelText(KEY_FIELD)).toBeTruthy();
+      // And the confirm is refused until the field it needs is filled, so an
+      // empty dialog cannot POST an empty key.
+      const confirms = screen.getAllByRole("button", { name: CONNECT });
+      expect(confirms[confirms.length - 1].hasAttribute("disabled")).toBe(true);
+      await user.keyboard("{Escape}");
+
+      await openDestructiveMenu(user);
+      expect(screen.getByRole("button", { name: DISCONNECT })).toBeTruthy();
+      expect(screen.getByRole("button", { name: DELETE_DATA })).toBeTruthy();
+      // A reader who may write is told nothing about a posture they do not have.
+      expect(screen.queryByText(READ_ONLY)).toBeNull();
+    },
+    RENDER_TEST_MS,
+  );
+
+  it(
+    "buys nothing automatically until the lookup switch is flipped",
+    async () => {
+      const user = userEvent.setup();
+      const fetch = await renderAs(ME_OPERATOR);
+
+      const lookupSwitch = await screen.findByRole("switch", {
+        name: AUTOMATIC_LOOKUP,
+      });
+      expect(lookupSwitch.getAttribute("aria-checked")).toBe("false");
+      await user.click(lookupSwitch);
+
+      // Waited on rather than read straight after the click: the write leaves
+      // on a promise, so the call is recorded a tick later than the event. The
+      // client hands fetch a Request, so the method, body and headers are on
+      // that rather than on an init argument.
+      const patched = () =>
+        fetch.mock.calls
+          .map(([input]) => (input instanceof Request ? input : undefined))
+          .find((request) => request?.method === "PATCH");
+      await waitFor(() => expect(patched()).toBeTruthy(), {
+        timeout: SETTLE_MS,
+      });
+      const request = patched() as Request;
+      // The INSTALLATION's surface, not the connection's. The three
+      // per-connection fields that used to carry this answer are deprecated and
+      // ignored by admission, so a card still patching them would save, answer
+      // 200, and change nothing.
+      expect(new URL(request.url).pathname).toBe("/v1/integrations/settings");
+      expect(await request.clone().json()).toEqual({ automatic_lookup: true });
+    },
+    // Two waiters, not one: the card has to settle before the switch exists,
+    // and the write it sends is awaited after. The ceiling covers the sum, or
+    // the second can still be inside its own budget when the test is killed.
+    WRITE_TEST_MS,
+  );
+
+  // Allowing a purchase is not making one. The switch decides which buy buttons
+  // a rep is offered on a contact; every spend is still somebody pressing a
+  // priced button on one named record. Without this pair the card had no
+  // control at all for the paid half — the buy buttons existed on the contact
+  // page and nothing on any screen could switch their categories on, so an
+  // installation could see the price list and never reach it.
+  it(
+    "offers a switch per PRICED category, and none for the free ones",
+    async () => {
+      await renderAs(ME_OPERATOR);
+
+      expect(
+        screen.getByRole("switch", { name: "Allow buying work email" }),
+      ).toBeTruthy();
+      // The free set carries no switch: it is what the automatic lookup takes,
+      // the installation switch above already governs it as ONE decision, and a
+      // second control able to turn one of them off would half-disable that
+      // feature with nothing on screen explaining the difference.
+      expect(
+        screen.queryByRole("switch", { name: "Allow buying LinkedIn profile" }),
+      ).toBeNull();
+      // Counted, not just named. Asserting the absence of one spelling passes
+      // when the label is anything else — and it did, silently, until the
+      // filter was mutated away and this case stayed green over a card
+      // rendering a switch for every category the provider sells.
+      expect(
+        screen.getAllByRole("switch", { name: /^Allow buying / }),
+      ).toHaveLength(2);
+    },
+    RENDER_TEST_MS,
+  );
+
+  // The card let an admin allow a mobile purchase with the work email it
+  // depends on switched off. That combination buys nothing: the vendor refuses
+  // a mobile lookup without the email flag, so the contact page showed no
+  // button and the card gave no reason — a switch that was on, and a purchase
+  // that never appeared anywhere.
+  it(
+    "refuses a purchase whose prerequisite is off, and says what it needs",
+    async () => {
+      await renderAs(ME_OPERATOR);
+
+      // professional_email is false in the fixture's saved selection.
+      //
+      // The native attribute, which is what a stated reason sets: Switch reads
+      // `reason` as the refusal itself, so a caller cannot announce a denial
+      // and leave the control live.
+      const mobile = screen.getByRole("switch", {
+        name: "Allow buying mobile number",
+      });
+      expect(mobile).toHaveProperty("disabled", true);
+      // The reason is on screen, not merely implied by a dead control: an
+      // admin looking for the mobile has to learn what it depends on, and a
+      // disabled switch with no sentence reads as a permission they lack.
+      //
+      // ONCE, counted rather than merely present. The sentence belongs to the
+      // Switch's `reason`, which both renders and announces it; a copy in the
+      // row's description printed it twice on the card and read it twice to a
+      // screen reader, and a `getAllByText(...).length > 0` assertion passed
+      // over exactly that.
+      expect(
+        screen.getAllByText(/only together with the work email/),
+      ).toHaveLength(1);
+
+      // The row it depends on is unaffected — the dependency runs one way.
+      expect(
+        screen.getByRole("switch", { name: "Allow buying work email" }),
+      ).toHaveProperty("disabled", false);
+
+      // Priced for the PAIR, and plural. The row quotes the whole press, so a
+      // dependent category never names a figure smaller than pressing its
+      // button spends — and "2 credit" is what a figure formatted without a
+      // plural form prints, which no assertion here used to notice.
+      expect(screen.getByText(/priced at 2 credits/)).toBeDefined();
+      expect(screen.queryByText(/priced at 2 credit,/)).toBeNull();
+    },
+    RENDER_TEST_MS,
+  );
+
+  // Switching a prerequisite off leaves its dependent saved as on. Refusing
+  // that row outright stranded the admin: the only control able to undo the
+  // combination was the one they could not reach, so the way out was to turn
+  // the prerequisite back on purely to release the switch beneath it.
+  it(
+    "still lets a dependent purchase be switched OFF after its prerequisite went off",
+    async () => {
+      await renderAs(ME_OPERATOR, {
+        ...CONNECTION,
+        configuration: {
+          ...CONNECTION.configuration,
+          // The stranding combination: the dependent on, its prerequisite off.
+          categories: {
+            linkedin_profile: true,
+            professional_email: false,
+            mobile: true,
+          },
+        },
+      });
+
+      const mobile = screen.getByRole("switch", {
+        name: "Allow buying mobile number",
+      });
+      expect(mobile.getAttribute("aria-checked")).toBe("true");
+      // Operable, because the only flip it offers now is the one that resolves
+      // the combination.
+      expect(mobile).toHaveProperty("disabled", false);
+    },
+    RENDER_TEST_MS,
+  );
+
+  it(
+    "allows the dependent purchase once its prerequisite is on",
+    async () => {
+      await renderAs(ME_OPERATOR, {
+        ...CONNECTION,
+        configuration: {
+          ...CONNECTION.configuration,
+          categories: { linkedin_profile: true, professional_email: true },
+        },
+      });
+
+      // Mutation guard for the case above: a switch disabled for a reason
+      // unrelated to the dependency would pass that test and this one would
+      // catch it.
+      expect(
+        screen.getByRole("switch", { name: "Allow buying mobile number" }),
+      ).toHaveProperty("disabled", false);
+    },
+    RENDER_TEST_MS,
+  );
+
+  // A provider nobody has connected is listed anyway, with its catalog, so the
+  // card can say what it sells before a key exists. It has no row, so the server
+  // sends no version — while the contract declares `version` required, which is
+  // why nothing in the types objects to reading it. The switches would render
+  // enabled, and every press would send `If-Match: undefined` and be refused as
+  // malformed: a control that can never work, in the state a first-time admin
+  // meets first.
+  it(
+    "offers only the key before one exists: no purchase switch and no readings",
+    async () => {
+      const { version: _version, ...neverConnected } = CONNECTION;
+      await renderAs(ME_OPERATOR, {
+        ...neverConnected,
+        status: "disconnected",
+        credential_present: false,
+      } as ProviderConnection);
+
+      expect(
+        screen.queryAllByRole("switch", { name: /^Allow buying / }),
+      ).toHaveLength(0);
+      // The provider's one row offers the key, and nothing it would read
+      // through one: no balance and no spend before a key exists.
+      expect(
+        screen.getByRole("button", { name: en["provider.connect"] }),
+      ).toBeTruthy();
+      expect(screen.queryByRole("meter", { name: "email" })).toBeNull();
+      expect(screen.queryByText(en["provider.spend"])).toBeNull();
+    },
+    RENDER_TEST_MS,
+  );
+
+  it(
+    "sends the WHOLE selection when one priced category is switched on",
+    async () => {
+      const user = userEvent.setup();
+      const fetch = await renderAs(ME_OPERATOR);
+
+      const buyEmail = screen.getByRole("switch", {
+        name: "Allow buying work email",
+      });
+      expect(buyEmail.getAttribute("aria-checked")).toBe("false");
+      await user.click(buyEmail);
+
+      const patched = () =>
+        fetch.mock.calls
+          .map(([input]) => (input instanceof Request ? input : undefined))
+          .find((request) => request?.method === "PATCH");
+      await waitFor(() => expect(patched()).toBeTruthy(), {
+        timeout: SETTLE_MS,
+      });
+      const request = patched() as Request;
+      expect(new URL(request.url).pathname).toBe(
+        "/v1/provider-connections/surfe",
+      );
+      // The free category rides along UNCHANGED. The patch replaces the map
+      // rather than merging into it, so a body carrying only the pressed pair
+      // would switch off every category not named — including the ones the
+      // automatic lookup runs on, silently stopping it from the paid tier's
+      // control.
+      expect(await request.clone().json()).toEqual({
+        configuration: {
+          categories: { linkedin_profile: true, professional_email: true },
+        },
+      });
+      // The version the card was rendered from, so two admins deciding what the
+      // installation may spend on cannot lose each other's write.
+      expect(request.headers.get("If-Match")).toBe("4");
+    },
+    WRITE_TEST_MS,
+  );
+
+  // A switch that went idle before its refetch landed let the next press send
+  // the OLD map under the OLD version, and the server refused it with a
+  // conflict the admin had no way to account for. The press has to stay busy
+  // until the card holds what the write produced.
+  it(
+    "holds the priced switch busy until the connections refetch lands",
+    async () => {
+      const user = userEvent.setup();
+      // The refetch is held open, which is the window this is about: the PATCH
+      // has answered and the card has not yet been told what it now holds.
+      let releaseRefetch = () => {};
+      const held = new Promise<void>((resolve) => {
+        releaseRefetch = resolve;
+      });
+      let patched = false;
+      const fetch = vi.fn(async (input: RequestInfo | URL) => {
+        const request = input instanceof Request ? input : undefined;
+        const path = new URL(String(request ? request.url : input)).pathname;
+        if (request?.method === "PATCH") {
+          patched = true;
+          return new Response(JSON.stringify(CONNECTION), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        if (patched && path === "/v1/provider-connections") {
+          await held;
+        }
+        return new Response(
+          JSON.stringify(routeBody(path, ME_OPERATOR, CONNECTION)),
+          {
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      });
+      vi.stubGlobal("fetch", fetch);
+      render(
+        <Providers>
+          <ProviderCard />
+        </Providers>,
+      );
+      await screen.findByRole(
+        "heading",
+        { name: PROVIDER_NAME },
+        { timeout: SETTLE_MS },
+      );
+
+      const buyEmail = screen.getByRole("switch", {
+        name: "Allow buying work email",
+      });
+      await user.click(buyEmail);
+
+      // Still busy: the PATCH has answered and the card has not been told what
+      // it holds, so a second press here would write the stale map under the
+      // stale version. aria-busy rather than `disabled`, because the control
+      // stays focusable while it waits — it is working, not forbidden.
+      await waitFor(
+        () =>
+          expect(
+            screen
+              .getByRole("switch", { name: "Allow buying work email" })
+              .getAttribute("aria-busy"),
+          ).toBe("true"),
+        { timeout: SETTLE_MS },
+      );
+
+      releaseRefetch();
+      await waitFor(
+        () =>
+          expect(
+            screen
+              .getByRole("switch", { name: "Allow buying work email" })
+              .getAttribute("aria-busy"),
+          ).toBeNull(),
+        { timeout: SETTLE_MS },
+      );
+    },
+    HELD_REFETCH_TEST_MS,
+  );
+
+  it(
+    "keeps the destructive pair behind its own grant",
+    async () => {
+      await renderAs(ME_CONNECT_ONLY);
+
+      expect(screen.getByRole("button", { name: CONNECT })).toBeTruthy();
+      // `delete` is what the server demands for both of these, and this seat does
+      // not hold it — so neither may ride in on the grant that binds a key, and
+      // the overflow that would hold them is not offered at all.
+      expect(screen.queryByRole("button", { name: MORE })).toBeNull();
+      expect(screen.queryByRole("button", { name: DISCONNECT })).toBeNull();
+      expect(screen.queryByRole("button", { name: DELETE_DATA })).toBeNull();
+      // Not a read-only view: something here is still writable.
+      expect(screen.queryByText(READ_ONLY)).toBeNull();
+    },
+    RENDER_TEST_MS,
+  );
+});
+
+describe("ProviderCard across connections and deletions", () => {
+  const AUTOMATIC_LOOKUP = en["provider.automaticLookup"];
+
+  function mountWith(
+    fetch: ReturnType<typeof vi.fn>,
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+  ) {
+    vi.stubGlobal("fetch", fetch);
+    render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <ProviderCard />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    return client;
+  }
+
+  it(
+    "draws the installation's lookup switch once, however many providers are connected",
+    async () => {
+      const second = { ...CONNECTION, provider: "second_provider" };
+      mountWith(
+        vi.fn(async (input: RequestInfo | URL) => {
+          const request = input instanceof Request ? input : undefined;
+          const path = new URL(String(request ? request.url : input)).pathname;
+          const body =
+            path === "/v1/provider-connections"
+              ? { data: [CONNECTION, second] }
+              : routeBody(path, ME_OPERATOR, CONNECTION);
+          return new Response(JSON.stringify(body), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }),
+      );
+      await screen.findByRole(
+        "heading",
+        { name: "second_provider" },
+        { timeout: SETTLE_MS },
+      );
+      expect(screen.getByRole("heading", { name: PROVIDER_NAME })).toBeTruthy();
+      expect(
+        await screen.findAllByRole("switch", { name: AUTOMATIC_LOOKUP }),
+      ).toHaveLength(1);
+    },
+    RENDER_TEST_MS,
+  );
+
+  it(
+    "makes every cached contact read stale once the bought data is deleted",
+    async () => {
+      const user = userEvent.setup();
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      // A contact page already open in this session, with its bought marks.
+      const cached = [
+        ["contact360", "p-1"],
+        ["contact", "p-1"],
+        ["contactEmployments", "p-1", "cursor"],
+      ];
+      for (const key of cached) {
+        client.setQueryData(key, { bought_fields: [{ target: "title" }] });
+      }
+      mountWith(
+        vi.fn(async (input: RequestInfo | URL) => {
+          const request = input instanceof Request ? input : undefined;
+          if (request?.method === "DELETE") {
+            return new Response(null, { status: 204 });
+          }
+          const path = new URL(String(request ? request.url : input)).pathname;
+          return new Response(
+            JSON.stringify(routeBody(path, ME_OPERATOR, CONNECTION)),
+            { headers: { "Content-Type": "application/json" } },
+          );
+        }),
+        client,
+      );
+      await screen.findByRole(
+        "heading",
+        { name: PROVIDER_NAME },
+        { timeout: SETTLE_MS },
+      );
+      await user.click(screen.getByRole("button", { name: "More actions" }));
+      await user.click(
+        screen.getByRole("button", { name: en["provider.deleteData"] }),
+      );
+      await user.type(
+        screen.getByLabelText(en["provider.deleteDataConfirm.typed"]),
+        PROVIDER_NAME,
+      );
+      const confirms = screen.getAllByRole("button", {
+        name: en["provider.deleteData"],
+      });
+      await user.click(confirms[confirms.length - 1]);
+
+      await waitFor(
+        () => {
+          for (const key of cached) {
+            expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+          }
+        },
+        { timeout: SETTLE_MS },
+      );
+    },
+    WRITE_TEST_MS,
+  );
+});
