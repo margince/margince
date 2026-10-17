@@ -195,6 +195,12 @@ describe("currencyNote falls back for an older or newer server", () => {
     expect(currencyNote(wire, wordsFor("en"))).toBe(prose);
   });
 
+  it("shows the generic lock line when the server sends an empty reason", () => {
+    expect(
+      currencyNote(locked({ base_currency_locked_reason: "" }), wordsFor("en")),
+    ).toBe(catalogs.en["installationSettings.baseCurrencyLocked"]);
+  });
+
   it("shows the generic lock line when the server sends neither", () => {
     expect(currencyNote(locked(), wordsFor("vi"))).toBe(
       catalogs.vi["installationSettings.baseCurrencyLocked"],

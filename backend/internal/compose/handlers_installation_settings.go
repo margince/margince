@@ -222,8 +222,8 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 // arrives from composition rather than from the settings table — the same way
 // base_currency_locked is derived rather than kept.
 //
-// The lock reason and its facts are omitted while the currency is changeable.
-// An empty string would render as a reason that says nothing.
+// The lock reason and its facts are sent only when the lock has prose. An empty
+// reason, or one off the contract's enum, tells a client nothing.
 func (h installationSettingsHandlers) toContract(s identity.InstallationSettings) crmcontracts.InstallationSettings {
 	out := crmcontracts.InstallationSettings{
 		Name:                 s.Name,
@@ -245,8 +245,7 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 	timeFormat := crmcontracts.InstallationSettingsTimeFormat(s.TimeFormat)
 	out.DateFormat = &dateFormat
 	out.TimeFormat = &timeFormat
-	if s.BaseCurrencyLocked {
-		reason := s.BaseCurrencyLock.Prose()
+	if reason := s.BaseCurrencyLock.Prose(); s.BaseCurrencyLocked && reason != "" {
 		out.BaseCurrencyLockedReason = &reason
 		out.BaseCurrencyLock = toBaseCurrencyLock(s.BaseCurrencyLock)
 	}

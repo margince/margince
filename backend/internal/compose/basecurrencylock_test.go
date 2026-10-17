@@ -42,6 +42,15 @@ func TestTheLockFactsTravelExactlyWithTheirProse(t *testing.T) {
 		t.Errorf("lock = %+v, want rate_sheet, 3, EUR", got)
 	}
 
+	stray := h.toContract(identity.InstallationSettings{
+		BaseCurrencyLocked: true, BaseCurrencyLock: currencylock.Lock{Reason: "ledger_sealed", Count: 2},
+		AgentAllowances: allowances,
+	})
+	if !stray.BaseCurrencyLocked || stray.BaseCurrencyLock != nil || stray.BaseCurrencyLockedReason != nil {
+		t.Errorf("a lock with an unknown reason sent locked=%v, lock %+v, reason %v; want locked with neither",
+			stray.BaseCurrencyLocked, stray.BaseCurrencyLock, stray.BaseCurrencyLockedReason)
+	}
+
 	unnamed := toBaseCurrencyLock(currencylock.Lock{Reason: currencylock.RateSheet, Count: 1})
 	if unnamed.BaseCurrency != nil {
 		t.Errorf("base_currency = %q for a lock with no stored base, want it absent", *unnamed.BaseCurrency)

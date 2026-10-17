@@ -21,8 +21,8 @@ export function currencyNote(
     ? lockSentence(settings.base_currency_lock, words)
     : undefined;
   return (
-    worded ??
-    settings.base_currency_locked_reason ??
+    worded ||
+    settings.base_currency_locked_reason ||
     words.t("installationSettings.baseCurrencyLocked")
   );
 }

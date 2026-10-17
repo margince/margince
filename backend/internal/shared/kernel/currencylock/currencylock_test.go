@@ -28,6 +28,9 @@ func TestTheProseStatesTheFactsItWasWordedFrom(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			prose := tc.lock.Prose()
+			if refusal := tc.lock.Refusal(); refusal != prose {
+				t.Errorf("Refusal() = %q, want the prose %q", refusal, prose)
+			}
 			for _, want := range tc.want {
 				if !strings.Contains(prose, want) {
 					t.Errorf("Prose() = %q, want it to contain %q", prose, want)
@@ -44,6 +47,9 @@ func TestALockWithNoKnownReasonHasNoProse(t *testing.T) {
 	} {
 		if prose := lock.Prose(); prose != "" {
 			t.Errorf("%s: Prose() = %q, want none rather than another reason's sentence", name, prose)
+		}
+		if lock.Refusal() == "" {
+			t.Errorf("%s: Refusal() is empty, want a sentence a refused write can carry", name)
 		}
 	}
 }
