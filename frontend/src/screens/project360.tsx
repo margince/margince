@@ -22,6 +22,7 @@ import { RecordView } from "../design-system/recordview";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { groupChronology } from "../design-system/timelinegroups";
+import { OpenEmailDrawer } from "../features/mail/openemaildrawer";
 import {
   TaskDetailModal,
   useTaskUpdate,
@@ -37,7 +38,6 @@ import { useMe } from "../lib/session";
 import { ArchiveAction } from "./archive";
 import { NewDealAction } from "./companyactions";
 import { CustomFieldsPanel } from "./customfields.card";
-import { OpenEmailDrawer } from "./openemaildrawer";
 import { useProjectVerbRefusal } from "./project360.refusal";
 import { ProjectCompanies } from "./projectcompanies";
 import { ProjectIdentityFacts } from "./projectheaderfacts";

@@ -3,9 +3,9 @@
 
 import { type ReactNode, useCallback, useState } from "react";
 import { useConnectors } from "../features/capture/connectors";
+import { ComposeModal } from "../features/mail/compose";
 import { isMailbox } from "../format/connectorprovider";
 import { WriteToProvider, type WriteToTarget } from "../lib/writeto";
-import { ComposeModal } from "./compose";
 
 /**
  * Whether this reader has a mailbox the product can send from: a connected

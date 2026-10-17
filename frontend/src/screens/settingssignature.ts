@@ -4,8 +4,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { SIGN_OFF_QUERY } from "../features/mail/composesignoff";
 import { unwrap } from "../lib/problem";
-import { SIGN_OFF_QUERY } from "./composesignoff";
 
 type EmailSignature = components["schemas"]["EmailSignature"];
 

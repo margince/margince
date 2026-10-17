@@ -27,6 +27,7 @@ import {
 } from "../design-system/recordtimeline";
 import { RecordView } from "../design-system/recordview";
 import { useToast } from "../design-system/toast";
+import { OpenEmailDrawer } from "../features/mail/openemaildrawer";
 import {
   formatDateAbbrev,
   formatDecimal,
@@ -68,7 +69,6 @@ import { LeadManualSignals } from "./leadsignals";
 import { leadStanding } from "./leadstanding";
 import { leadTodoRows } from "./leadtoday";
 import { LogActivityAction } from "./logactivity";
-import { OpenEmailDrawer } from "./openemaildrawer";
 import { RecordReading, TimelineThread, TodayPanel } from "./record360";
 import { RecordCustomFields } from "./recordcustomfields";
 import { saveRecordEdit } from "./recordedit";

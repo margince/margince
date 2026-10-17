@@ -149,7 +149,7 @@ describe("the writing surface inside a host that hands it a height", () => {
   // frame free to shrink to nothing again.
   it("keeps a frame the composer cannot squeeze to nothing", () => {
     const css = readFileSync(
-      join(here, "..", "screens", "compose.css"),
+      join(here, "..", "features", "mail", "compose.css"),
       "utf8",
     );
     const frame =

@@ -18,7 +18,7 @@ import {
 } from "./book.testkit";
 import { BookingInviteScreen } from "./booking-invite";
 
-vi.mock("../../screens/compose", () => ({
+vi.mock("../mail/compose", () => ({
   ComposeModal: ({
     initialMessage,
   }: Readonly<{ initialMessage?: { subject: string; body: string } }>) => (

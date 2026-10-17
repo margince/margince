@@ -27,7 +27,7 @@ import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { useOpenEmail } from "../../lib/openemail";
 import { throwProblem } from "../../lib/problem";
-import { OpenEmailDrawer } from "../../screens/openemaildrawer";
+import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { CaptureActivityDrawer } from "./capture-activity-drawer";
 import { CaptureMessages } from "./capture-activity-messages";
 import { CaptureExclusionsCard } from "./capture-exclusions";

@@ -17,9 +17,9 @@ import { useRecordZone } from "../../lib/recordzone";
 import { scrollPageToTop } from "../../lib/reveal";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
-import { OpenEmailDrawer } from "../../screens/openemaildrawer";
 import { TimelineThread } from "../../screens/record360";
 import { usePendingApprovals } from "../automations/approvals.queries";
+import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { useLegalReviewAvailable } from "../privacy/legalreviews.queries";
 import { WorklistReturnLink } from "../worklist/worklist.return";
 import {

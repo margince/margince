@@ -214,7 +214,7 @@ export const LegalReviewsRoute = lazy(
 
 export const ScheduledSendsScreen = lazy(
   routed(() =>
-    import("./screens/scheduledsends").then((m) => ({
+    import("./features/mail/scheduledsends").then((m) => ({
       default: m.ScheduledSendsScreen,
     })),
   ),

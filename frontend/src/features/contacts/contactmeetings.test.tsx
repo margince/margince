@@ -37,7 +37,7 @@ type Proposal = components["schemas"]["MeetingProposal"];
 
 // The composer is the boundary here: what this tab owes it is the message and
 // the address it opens on, which is what the stand-in shows.
-vi.mock("../../screens/compose", () => ({
+vi.mock("../mail/compose", () => ({
   ComposeModal: ({
     initialMessage,
     recordAddress,

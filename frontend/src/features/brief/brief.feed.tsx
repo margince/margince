@@ -13,7 +13,7 @@ import { formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { navigate } from "../../lib/router";
-import { OpenEmailDrawer } from "../../screens/openemaildrawer";
+import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { worklistLaneHref } from "../worklist/worklist.header";
 import {
   type Worklist,

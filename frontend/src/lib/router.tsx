@@ -16,7 +16,7 @@ import { hashWithParams, type UrlParams } from "./urlstate";
 // module that owns the route owns the name. `ext` is lib/extensions.ts's
 // EXTENSION_SCREEN, `x` is app/custom.ts's CUSTOM_SCREEN, `reset-password` is
 // screens/auth.tsx's RESET_ROUTE, and `scheduled` is
-// screens/scheduledsends.tsx's SCHEDULED_SCREEN. All four are literal types
+// features/mail/scheduledsends.tsx's SCHEDULED_SCREEN. All four are literal types
 // used where a `Screen` is expected, so a rename there stops compiling here
 // rather than drifting.
 //

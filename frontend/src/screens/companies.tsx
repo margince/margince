@@ -51,6 +51,8 @@ import { groupChronology } from "../design-system/timelinegroups";
 import { ContactMeetingBrief } from "../features/brief/meetingbrief";
 import { CompanySuggestions } from "../features/deals/dealsuggestion";
 import { SaveViewAction, useSavedViewTabs } from "../features/lists/savedviews";
+import { ComposeModal } from "../features/mail/compose";
+import { OpenEmailDrawer } from "../features/mail/openemaildrawer";
 import {
   TaskDetailModal,
   TaskQuickActions,
@@ -127,9 +129,7 @@ import {
 } from "./companytab";
 import { TechnicalProfilePanel } from "./companytechnical";
 import { hasWorkInFlight } from "./companywork";
-import { ComposeModal } from "./compose";
 import { RecordHistoryTab } from "./history";
-import { OpenEmailDrawer } from "./openemaildrawer";
 import { PartnerTab } from "./partners";
 import { type OpenReceipt, openCitation } from "./record360";
 import {

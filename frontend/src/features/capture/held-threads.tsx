@@ -15,8 +15,8 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useOpenEmail } from "../../lib/openemail";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { OpenEmailDrawer } from "../../screens/openemaildrawer";
 import { useThreadAudience } from "../lists/audienceservice";
+import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { VerdictPassNote } from "./verdictpass";
 import "./held-threads.css";
 

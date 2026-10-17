@@ -474,11 +474,11 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Its `User` fixtures carry the member's own stored `timezone`, which is a field on the wire rather than a zone this code renders in.",
   },
   {
-    file: "screens/scheduledsends.stories.tsx",
+    file: "features/mail/scheduledsends.stories.tsx",
     why: "A scheduled send carries the zone the human picked it in; the story needs one that is NOT the host's, so it picks whichever of two named zones differs.",
   },
   {
-    file: "screens/scheduledsends.test.tsx",
+    file: "features/mail/scheduledsends.test.tsx",
     why: "Same pair, asserted: the row must state the picked zone when it differs from the reader's.",
   },
   {

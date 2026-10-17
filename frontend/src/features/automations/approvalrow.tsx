@@ -30,8 +30,8 @@ import {
 } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
-import { SendPermission } from "../../screens/sendpermission";
-import { useSendPermission } from "../../screens/usesendpermission";
+import { SendPermission } from "../mail/sendpermission";
+import { useSendPermission } from "../mail/usesendpermission";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import {
   ApprovalDetailModal,
