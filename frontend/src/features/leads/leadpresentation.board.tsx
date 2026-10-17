@@ -330,7 +330,7 @@ export function LeadBoard({
       )}
       {/* The two reads behind the terminal columns, when they fail. A failed
           report renders as 0 and a failed row read as an empty column, and
-          both read as fact — "nobody was ever disqualified" is a very
+          both read as fact. "Nobody was ever disqualified" is a very
           different statement from "we could not ask". */}
       {counts.isError && (
         <ErrorLine>{t("lead.boardCountsUnavailable")}</ErrorLine>

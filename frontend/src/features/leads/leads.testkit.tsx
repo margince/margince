@@ -61,7 +61,7 @@ export function render(ui: ReactNode): RenderResult {
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         {/* The region is the shell's in the running app (`main.tsx`); a suite whose
-          subject is what a write SAYS mounts it the same way. */}
+          subject is what a write says mounts it the same way. */}
         <ToastProvider>
           {/* The composer host is the shell's too (`App.tsx`): the header's
               address is a button into it. */}

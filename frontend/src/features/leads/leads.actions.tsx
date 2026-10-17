@@ -103,14 +103,14 @@ export function LeadActions({
           onClick={onQualify}
         >
           {/* The glyph is the promotion itself: a lead leaving this page
-              upward, for the contact and deal it becomes. No `size` — the
+              upward, for the contact and deal it becomes. No `size`: the
               button owns its icon's geometry, and a call site that names one
               is a second author of it. */}
           <ArrowUpRight aria-hidden="true" /> {t("lead.promote")}
         </Button>
       )}
       {/* The shared Email verb every record header carries. Its open state is
-          lifted so the overview's "Answer" row can open this SAME composer. */}
+          lifted so the overview's "Answer" row can open this same composer. */}
       <RecordEmailVerb
         entityType="lead"
         entityId={id}
@@ -163,10 +163,10 @@ export function LeadActions({
           list of named actions with one unnamed square in it makes that
           square the only row a reader has to hover to identify.
 
-          A terminal lead keeps these controls, DISABLED with the reason
-          (STATE-4a): hiding the control hides a fact the reader needs. Both
-          closures reach this page — disqualified and promoted — and the band
-          above names which. The sentence is passed in because a reason minted
+          A terminal lead keeps these controls, disabled with the reason:
+          hiding the control hides a fact the reader needs. Both closures
+          (disqualified and promoted) reach this page, and the band above
+          names which. The sentence is passed in because a reason minted
           in the panel would not exist until the menu was first opened. */}
       <OverflowMenu label={t("record.moreActions")}>
         <ShareAction
@@ -179,7 +179,7 @@ export function LeadActions({
                 the header, so it does not sit where a pointer sliding down
                 the list reaches it on the way to something routine. It asks
                 why, in its own dialog, and stays a secondary verb rather than
-                a red one — closing a lead is ordinary work, and the panel's
+                a red one. Closing a lead is ordinary work, and the panel's
                 seam (atoms.css) belongs to the destructive verbs. A terminal
                 lead keeps the control, disabled with the page's one reason. */}
         <Button
