@@ -28,14 +28,11 @@
 2217 frontend/src/screens/company360.test.tsx
 2228 frontend/src/screens/companies.test.tsx
 2081 frontend/src/screens/companies.tsx
-1082 frontend/src/features/mail/compose.tsx
 644 frontend/src/screens/settings.tsx
 2727 frontend/src/features/leads/leads.test.tsx
-3331 frontend/src/features/mail/compose.test.tsx
 509 frontend/src/screens/documentextraction.tsx
 508 frontend/src/screens/onboarding-backread.tsx
 532 frontend/src/features/leads/leadpresentation.tsx
-534 frontend/src/features/mail/scheduledsends.tsx
 554 frontend/src/screens/project360.tsx
 520 frontend/src/screens/adddocument.tsx
 513 frontend/src/screens/logactivity.tsx
