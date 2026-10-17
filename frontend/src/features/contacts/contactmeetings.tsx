@@ -26,7 +26,7 @@ import { useActivity } from "../../lib/activityread";
 import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
-import { useSchedulingProfile } from "../../screens/scheduling-profile-query";
+import { useSchedulingProfile } from "../booking/scheduling-profile-query";
 import { MeetingRow, NextMeetingCard } from "./contactmeetings.rows";
 import {
   type CopiedLink,

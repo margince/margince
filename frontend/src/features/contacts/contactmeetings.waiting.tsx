@@ -22,8 +22,8 @@ import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
 import { unwrap } from "../../lib/problem";
-import { proposalEmailBody } from "../../screens/booking-proposal-message";
 import { ComposeModal } from "../../screens/compose";
+import { proposalEmailBody } from "../booking/booking-proposal-message";
 
 type Proposal = components["schemas"]["MeetingProposal"];
 type Contact = components["schemas"]["Contact360"]["contact"];

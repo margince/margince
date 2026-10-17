@@ -17,6 +17,7 @@ import { ExtensionAccessCard } from "../features/automations/extension-access";
 import { ExtensionUnitsCard } from "../features/automations/extension-units";
 import { OAuthAppCard } from "../features/automations/oauth-app";
 import { OvernightGrantCard } from "../features/automations/overnight-grant";
+import { MeetingSettings } from "../features/booking/meeting-settings";
 import { ImportCard } from "../features/import/import";
 import { LinkedInImportCard } from "../features/import/linkedin-import";
 import { TagVocabularyCard } from "../features/lists/tagadmin";
@@ -57,7 +58,6 @@ import {
 } from "./leadvocab";
 import { LicenseCard } from "./license";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
-import { MeetingSettings } from "./meeting-settings";
 import { NotificationSettingsCard } from "./notification-settings";
 import { OfferTemplatesAdmin } from "./offertemplates";
 import { OwnDomainsCard } from "./own-domains";

@@ -150,7 +150,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Weekday names are generated from fixed Monday-through-Sunday UTC instants; these are locale labels, not event or record dates.",
   },
   {
-    file: "screens/book.testkit.ts",
+    file: "features/booking/book.testkit.ts",
     why: "The booking API fixture supplies the host’s effective working-hours timezone independently of the viewer’s zone, so the form can show the actual calendar policy.",
   },
   {
@@ -158,11 +158,11 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Asserts that a booked meeting's day is named in the record's zone; the day boundary is only checkable against zones the test chose.",
   },
   {
-    file: "screens/booking-guest-month.test.ts",
+    file: "features/booking/booking-guest-month.test.ts",
     why: "A month is read in the guest's zone, and only a zone with a fall-back clock change makes it longer than the server's 31-day bound.",
   },
   {
-    file: "screens/booking-picker.test.ts",
+    file: "features/booking/booking-picker.test.ts",
     why: "The week grid's empty working days depend on the host's zone against the reader's, so the test pins both to make them disagree.",
   },
   {
@@ -174,7 +174,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The next meeting's end comes from its calendar invitation, and the test names the record zone it renders that span in, so the expected span is stated rather than inherited.",
   },
   {
-    file: "screens/book.test.tsx",
+    file: "features/booking/book.test.tsx",
     why: "The guest deliberately selects Bangkok and the test verifies that its slot labels follow that chosen zone rather than the browser default.",
   },
   {
@@ -214,11 +214,11 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The guard's subject is dueInstant, which now TAKES the zone a deadline is resolved in — so a call to it cannot be written without naming one. UTC would prove nothing here: the case that matters is a day's last second landing before midnight on the very clock that minted it, and a zero offset makes the wire value and the wall clock identical whichever rule ran.",
   },
   {
-    file: "screens/working-hours.test.tsx",
+    file: "features/booking/working-hours.test.tsx",
     why: "The stub answers /me/working-hours with the SERVER's answer, and a contact who has chosen no zone is answered with the installation's — so the fixture has to name one, exactly as settings.testkit.tsx below does. The card renders the name it is given and no case asserts a rendered instant; reading the runner's zone would make the fixture describe whichever machine ran it.",
   },
   {
-    file: "screens/working-hours.stories.tsx",
+    file: "features/booking/working-hours.stories.tsx",
     why: "Same fixture, same reason as the suite above: the story answers /me/working-hours the way the SERVER does, and a contact who has chosen no zone is answered with the installation's — so the fixture names one. The card draws the name it is handed and the story asserts no instant, while a zone read off the runner would make the catalog frame describe whichever machine built it.",
   },
   {

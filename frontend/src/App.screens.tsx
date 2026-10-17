@@ -38,7 +38,9 @@ function routed<T>(factory: () => Promise<T>): () => Promise<T> {
 
 export const BookingScreen = lazy(
   routed(() =>
-    import("./screens/book").then((m) => ({ default: m.BookingScreen })),
+    import("./features/booking/book").then((m) => ({
+      default: m.BookingScreen,
+    })),
   ),
 );
 
