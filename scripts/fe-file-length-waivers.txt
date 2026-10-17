@@ -62,6 +62,5 @@
 845 frontend/src/screens/settingscatalog.ts
 592 frontend/src/screens/customfields.tsx
 888 frontend/src/screens/share.tsx
-798 frontend/src/features/capture/integrations-provider.tsx
 
 # The build scripts, frozen when the gate learned to read them.
