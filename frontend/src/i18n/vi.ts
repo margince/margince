@@ -6111,6 +6111,8 @@ export const vi = {
     "Tin nhắn cần một kênh nên không thể nhập từ tệp. Dùng ghi chú hoặc email.",
   "import.reason.task_not_importable":
     "Việc cần làm sẽ nằm mở trong danh sách của chính bạn nên không được nhập. Dùng ghi chú.",
+  "import.reason.activity_empty":
+    "Ghi chú hoặc cuộc gọi cần có tiêu đề hoặc nội dung. Hãy điền một trong hai ở hàng này.",
   "import.reason.occurred_at_unnamed":
     "Nêu ngày hoạt động xảy ra, dạng YYYY-MM-DD hoặc kèm múi giờ.",
   "import.reason.timestamp_needs_zone":

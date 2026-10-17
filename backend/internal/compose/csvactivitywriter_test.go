@@ -17,7 +17,9 @@ import (
 func TestARowWithoutATypeOrADateIsNotFiled(t *testing.T) {
 	w := &csvWriters{object: migration.ObjectActivity, sourceSystem: importSourceSystem("crm-old")}
 	when := time.Date(2025, 3, 2, 0, 0, 0, 0, time.UTC)
-	row := migration.Row{ExternalID: "A-1", Fields: map[string]any{activityTargetOccurredAt: "2025-03-02"}}
+	row := migration.Row{ExternalID: "A-1", Fields: map[string]any{
+		activityTargetOccurredAt: "2025-03-02", activityTargetSubject: "Intro call notes",
+	}}
 	cases := map[string]struct {
 		typed map[string]any
 		want  migration.ReasonCode
@@ -25,6 +27,17 @@ func TestARowWithoutATypeOrADateIsNotFiled(t *testing.T) {
 		"no type":    {map[string]any{activityTargetOccurredAt: when}, migration.ReasonActivityTypeUnnamed},
 		"no date":    {map[string]any{activityTargetType: "note"}, migration.ReasonOccurredAtUnnamed},
 		"both named": {map[string]any{activityTargetType: "note", activityTargetOccurredAt: when}, ""},
+	}
+	empty := migration.Row{ExternalID: "A-2", Fields: map[string]any{activityTargetBody: "  ", activityTargetOccurredAt: "2025-03-02"}}
+	for _, kind := range []string{"note", "call"} {
+		typed := map[string]any{activityTargetType: kind, activityTargetOccurredAt: when}
+		if _, why := w.activityBirthOf(empty, typed); why.Code != migration.ReasonActivityEmpty {
+			t.Errorf("an empty %s: reason = %q, want %q, so the dry run and the commit skip it alike", kind, why.Code, migration.ReasonActivityEmpty)
+		}
+	}
+	meeting := map[string]any{activityTargetType: "meeting", activityTargetOccurredAt: when}
+	if _, why := w.activityBirthOf(empty, meeting); why.Code != "" {
+		t.Errorf("a meeting with no subject or body: reason = %q, want it filed", why.Code)
 	}
 	for name, c := range cases {
 		in, why := w.activityBirthOf(row, c.typed)
@@ -47,6 +60,7 @@ func TestEachRefusalOfTheActivitiesStoreIsTheReasonTheReportShows(t *testing.T) 
 		err  error
 		want migration.ReasonCode
 	}{
+		"empty entry":     {fmt.Errorf("filing: %w", &activities.EmptyEntryError{Kind: "note"}), migration.ReasonActivityEmpty},
 		"too many links":  {&activities.TooManyLinksError{Count: activities.MaxLinks + 1}, migration.ReasonTooManyLinks},
 		"company meeting": {&activities.CompanyMeetingError{Kind: "meeting"}, migration.ReasonCompanyLinkOnMeeting},
 		"kind rule":       {fmt.Errorf("filing: %w", kindFault), migration.ReasonMeetingStatusNotForKind},

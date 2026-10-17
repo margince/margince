@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -95,6 +96,9 @@ func (s *Service) Create(ctx context.Context, spec FieldSpec) (crmcontracts.Cust
 // ALTER → catalog INSERT + audit, all as the schema pool's owner role.
 func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, creator ids.UUID, slug, column, ddl string) (crmcontracts.CustomField, error) {
 	if err := serializeSchemaChange(ctx, tx, spec.Object); err != nil {
+		return crmcontracts.CustomField{}, err
+	}
+	if err := refuseTakenLabel(ctx, tx, spec.Object, ids.Nil, spec.Label); err != nil {
 		return crmcontracts.CustomField{}, err
 	}
 	if err := refuseTakenColumn(ctx, tx, spec.Object, column); err != nil {
@@ -224,6 +228,32 @@ func refuseTakenColumn(ctx context.Context, tx pgx.Tx, object, column string) er
 			column, object, apperrors.ErrConflict)
 	}
 	return &ColumnTakenError{Column: column}
+}
+
+// refuseTakenLabel keeps one label from naming two fields of an object. A
+// label whose text another field holds reads the same in a picker, a column
+// header and a filter. A label whose slug another field holds would collide on
+// the unique key. Create and rename both ask it, and the caller holds the
+// schema advisory lock so two concurrent writes cannot both pass. A create
+// passes ids.Nil, which no row has.
+func refuseTakenLabel(ctx context.Context, tx pgx.Tx, object string, id ids.UUID, label string) error {
+	var heldLabel, heldSlug string
+	err := tx.QueryRow(ctx,
+		`SELECT label, slug FROM custom_field
+		  WHERE object = $1 AND id <> $2 AND (slug = $3 OR lower(btrim(label)) = lower(btrim($4)))
+		  ORDER BY (lower(btrim(label)) = lower(btrim($4))) DESC LIMIT 1`,
+		object, id, DeriveSlug(label), label).Scan(&heldLabel, &heldSlug)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("customfields: probing label namespace: %w", err)
+	}
+	if strings.EqualFold(strings.TrimSpace(heldLabel), strings.TrimSpace(label)) {
+		return fmt.Errorf("a custom field labelled %q already exists on %s: %w", label, object, apperrors.ErrConflict)
+	}
+	return fmt.Errorf("that label would reuse the key %q of the field labelled %q on %s; choose a different label: %w",
+		heldSlug, heldLabel, object, apperrors.ErrConflict)
 }
 
 // optionsJSON renders a picklist's option set for the jsonb catalog
