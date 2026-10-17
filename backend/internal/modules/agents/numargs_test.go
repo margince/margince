@@ -32,7 +32,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -181,21 +180,13 @@ func boundProbes(bound declaredBound) []boundProbe {
 	return probes
 }
 
-// boundProbeProvider is the composite provider seam under a call whose numbers
-// its schema forbids: reaching it at all is the defect.
-type boundProbeProvider struct {
-	seamProbeProvider
-	t *testing.T
-}
-
-func (p boundProbeProvider) Search(context.Context, datasource.SearchQuery) (datasource.SearchResult, error) {
-	p.t.Error("search_records reached the provider with a limit its schema forbids")
-	return datasource.SearchResult{}, nil
-}
-
 func TestTheAdvertisedLimitsBindTheToolsThatAdvertiseThem(t *testing.T) {
 	registry := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
-	RegisterCoreTools(registry, boundProbeProvider{t: t}, nil, nil, nil, nil, nil, nil)
+	RegisterCoreTools(registry, seamProbeProvider{}, nil, nil, nil, nil, nil, nil)
+	RegisterRecordSearchTool(registry, seamProbeProvider{}, func(context.Context, RecordSearchQuery) (RecordSearchPage, error) {
+		t.Error("search_records reached the engine with a limit its schema forbids")
+		return RecordSearchPage{}, nil
+	})
 	RegisterSlippingTools(registry,
 		func(context.Context, int) ([]SlippingDeal, error) {
 			t.Error("the deal lister ran for a limit the schema forbids")
@@ -213,7 +204,7 @@ func TestTheAdvertisedLimitsBindTheToolsThatAdvertiseThem(t *testing.T) {
 		{"a zero cap asks for nothing", "whats_slipping_this_week", `{"limit":0}`, "`limit` is 0, below its declared minimum of 1"},
 		{"a negative cap", "whats_slipping_this_week", `{"limit":-5}`, "`limit` is -5, below its declared minimum of 1"},
 		{"a cap far above the ceiling", "whats_slipping_this_week", `{"limit":999999}`, "`limit` is 999999, above its declared maximum of 50"},
-		{"one over the ceiling", "search_records", `{"limit":51}`, "`limit` is 51, above its declared maximum of 50"},
+		{"one over the ceiling", "search_records", `{"q":"Acme","limit":26}`, "`limit` is 26, above its declared maximum of 25"},
 		{"the bulk writer's own ceiling", "draft_follow_ups_for", `{"segment":"slipping","limit":26}`, "`limit` is 26, above its declared maximum of 25"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

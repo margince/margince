@@ -18,7 +18,7 @@ coverage-extensions.out
 # ships the placeholder, the approval lock, and the FIRST-PARTY units
 # enabled by default (extensions/de and extensions/vn, the German and
 # Vietnamese jurisdiction packs; extensions/openchannel, the reference
-# connector — presence under extensions/ IS the enablement, so a unit
+# connector; extensions/finance-demo, the demonstration accounting source — presence under extensions/ IS the enablement, so a unit
 # missing from the un-ignore list below is a unit no clone of this
 # repository has).
 /build/composition/
@@ -40,6 +40,7 @@ coverage-extensions.out
 !/extensions/.gitkeep
 !/extensions/approvals.lock
 !/extensions/de
+!/extensions/finance-demo
 !/extensions/openchannel
 !/extensions/vn
 # A unit's installed frontend dependencies. Its package.json and the workspace

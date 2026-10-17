@@ -39,7 +39,7 @@ func TestAReportEvidenceCitationWithheldAtReadBackTakesNothingWithIt(t *testing.
 		restricted: activityWithContent("withheld"),
 	}}
 	tool := searchReportEvidence{
-		hydrator: searchContext{p: provider},
+		p: provider,
 		search: func(context.Context, ReportEvidenceQuery) (ReportEvidence, error) {
 			return ReportEvidence{
 				Entity:    datasource.EntityActivity,
@@ -97,7 +97,7 @@ func TestAnAbstentionUnreadableAtReadBackIsNotServed(t *testing.T) {
 		readable: activityWithContent("available"),
 	}}
 	tool := searchReportEvidence{
-		hydrator: searchContext{p: provider},
+		p: provider,
 		search: func(context.Context, ReportEvidenceQuery) (ReportEvidence, error) {
 			return ReportEvidence{Entity: datasource.EntityActivity, Abstentions: []ids.UUID{readable, gone}}, nil
 		},

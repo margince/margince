@@ -176,6 +176,9 @@ func fullRegistry(t *testing.T) *Registry {
 	t.Helper()
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
 	RegisterCoreTools(r, nil, nil, nil, nil, nil, nil, nil)
+	RegisterRecordSearchTool(r, nil, func(context.Context, RecordSearchQuery) (RecordSearchPage, error) {
+		return RecordSearchPage{}, nil
+	})
 	RegisterReportingTool(r, func(context.Context, ReportingRead) (ReportingAnswer, error) { return ReportingAnswer{}, nil })
 	RegisterMeetingInvitationTool(r, nil, nil)
 	RegisterPipelineTool(r, func(context.Context, bool) ([]Pipeline, error) { return nil, nil })

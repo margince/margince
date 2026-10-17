@@ -6,9 +6,11 @@ package attention
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -40,7 +42,6 @@ func TestDoneIsWrittenOnlyForARowTheReadersDayDraws(t *testing.T) {
 	shown := RowRef{Source: sourceMeeting, RowID: meeting.String()}
 	unseen := RowRef{Source: sourceMeeting, RowID: ids.NewV7().String()}
 	unseenDeal := RowRef{Source: sourceAtRisk, RowID: ids.NewV7().String()}
-	aTask := RowRef{Source: sourceTask, RowID: meeting.String()}
 	alreadyDone := map[RowRef]time.Time{shown: rankInstant.Add(-time.Hour)}
 	cases := []struct {
 		name    string
@@ -52,7 +53,6 @@ func TestDoneIsWrittenOnlyForARowTheReadersDayDraws(t *testing.T) {
 		{"a row already marked done is still the reader's", []RowRef{shown}, nil, alreadyDone},
 		{"a row on no day the reader can see", []RowRef{shown, unseen}, apperrors.ErrNotFound, nil},
 		{"a deal the reader is not shown", []RowRef{unseenDeal}, apperrors.ErrNotFound, nil},
-		{"a source that never offers Done", []RowRef{aTask}, apperrors.ErrInvalidArgument, nil},
 	}
 	for _, tc := range cases {
 		spy := &doneStoreSpy{already: tc.already}
@@ -65,6 +65,26 @@ func TestDoneIsWrittenOnlyForARowTheReadersDayDraws(t *testing.T) {
 		if wrote := len(spy.marked) > 0; wrote != (tc.want == nil) {
 			t.Errorf("%s: wrote = %v, want %v", tc.name, wrote, tc.want == nil)
 		}
+	}
+}
+
+// A row in a lane that never offers Done is a fault in the body, answered as
+// the contract's 422 naming `rows`, and nothing is written.
+func TestDoneOnALaneThatNeverOffersItIsAValidationRefusal(t *testing.T) {
+	t.Parallel()
+	meeting := ids.NewV7()
+	spy := &doneStoreSpy{}
+	kickOff := Meeting{ID: meeting, Subject: "Kick-off", StartsAt: readInstant.Add(30 * time.Minute), PrepKnown: true}
+	svc := meetingPrepService([]Meeting{kickOff}).WithDone(spy)
+
+	err := svc.MarkRowsDone(meetingPrepReader(), []RowRef{{Source: sourceTask, RowID: meeting.String()}})
+
+	fault, ok := httperr.Classify(err)
+	if !ok || fault.Status != http.StatusUnprocessableEntity || len(fault.Fields) != 1 || fault.Fields[0].Field != "rows" {
+		t.Fatalf("answered %+v (classified %v), want a 422 naming rows", fault, ok)
+	}
+	if len(spy.marked) > 0 {
+		t.Fatalf("wrote %v for a refused batch", spy.marked)
 	}
 }
 

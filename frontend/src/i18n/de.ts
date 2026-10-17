@@ -6423,6 +6423,7 @@ export const de = {
   "jobs.kind.embed_drift_sweep": "Nachholen des Suchindex",
   "jobs.kind.embed_reindex": "Neuaufbau des Suchindex",
   "jobs.kind.employment_import_sweep": "Import des Werdegangs",
+  "jobs.kind.finance_sync": "Abgleich mit der Buchhaltung auf Anforderung",
   "jobs.kind.finance_sync_sweep": "Abgleich mit der Buchhaltung",
   "jobs.kind.follow_up_reconcile": "Vorschläge zum Nachfassen bei Deals",
   "jobs.kind.forecast_snapshot_sweep": "Täglicher Prognose-Snapshot",
@@ -11343,6 +11344,42 @@ export const de = {
   "ownDomains.remove": "{domain} entfernen",
   "ownDomains.candidateNote":
     "In einem verbundenen Postfach gesehen. Die Domain stoppt die Erfassung nicht, da sie nicht bestätigt ist.",
+
+  "financeSource.title": "Buchhaltungsquelle",
+  "financeSource.sub":
+    "Margince liest Rechnungen und Zahlungen aus einem Buchhaltungssystem und zeigt sie im Tab Finanzen jedes Unternehmens. In die Quelle schreibt Margince nie.",
+  "financeSource.readOnly":
+    "Nur Lesezugriff: Eine Buchhaltungsquelle verbinden oder abgleichen können nur Admins.",
+  "financeSource.noneInstalled": "Keine Buchhaltungsquelle installiert",
+  "financeSource.noneInstalledBody":
+    "Jede Buchhaltungsquelle kommt aus einer Erweiterung. Installiere eine, um sie hier zu verbinden.",
+  "financeSource.pick": "Quelle",
+  "financeSource.connect": "Verbinden",
+  "financeSource.lastSync": "Zuletzt synchronisiert {date}",
+  "financeSource.notSynced": "Noch nicht synchronisiert",
+  "financeSource.status.connecting": "Wird verbunden…",
+  "financeSource.status.active": "Aktiv",
+  "financeSource.status.error": "Synchronisierung fehlgeschlagen",
+  "financeSource.syncNow": "Jetzt synchronisieren",
+  "financeSource.syncQueued": "Synchronisierung eingeplant",
+  "financeSource.disconnect": "Trennen",
+  "financeSource.disconnectTitle": "Buchhaltungsquelle trennen?",
+  "financeSource.disconnectBody":
+    "Die Synchronisierung endet. Bereits gelesene Rechnungen und Zahlungen bleiben bei ihren Unternehmen.",
+  "financeSource.customers": "Kunden in der Quelle",
+  "financeSource.customer": "Kunde",
+  "financeSource.company": "Unternehmen",
+  "financeSource.notLinked": "Nicht verknüpft",
+  "financeSource.actions": "Aktionen",
+  "financeSource.link": "Verknüpfen",
+  "financeSource.relink": "Unternehmen ändern",
+  "financeSource.unlink": "Verknüpfung lösen",
+  "financeSource.noCustomers": "Noch keine Kunden",
+  "financeSource.noCustomersBody":
+    "Kunden kommen mit der ersten Synchronisierung. Wähle „Jetzt synchronisieren“, um sie zu starten.",
+  "financeSource.linkTitle": "{customer} mit einem Unternehmen verknüpfen",
+  "financeSource.findCompany": "Unternehmen suchen",
+  "financeSource.cancel": "Abbrechen",
 
   "webhooks.title": "Webhooks",
   "webhooks.readOnly":

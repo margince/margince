@@ -157,10 +157,14 @@ type Input struct {
 	// each type — instead of one ranked list. Nil is the ranked list.
 	PerType *int
 	// WithEmployees adds the employer arm (employerArmSQL): contacts found
-	// through a company the query matches. Only the HTTP surface asks for it, so
-	// the agent and plan lanes that reuse Search keep matching by own text alone.
+	// through a company the query matches. GET /v1/search and search_records ask
+	// for it; the retrieval and plan lanes keep matching by own text alone.
 	WithEmployees bool
 }
+
+// maxQueryWords bounds the words one query may hold. The employer arm binds a
+// parameter and a clause per word, so this caps the statement a request builds.
+const maxQueryWords = 32
 
 // Search runs the cross-object query (contract /search): one ranked list, or
 // with PerType one page grouped by type. Every branch carries archived_at IS
@@ -173,6 +177,11 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 	query := normalizeQuery(in.Query)
 	if strings.TrimSpace(query) == "" {
 		return Page{}, &BadQueryError{Field: "q", Reason: "q is required"}
+	}
+	if words := len(strings.Fields(query)); words > maxQueryWords {
+		return Page{}, &BadQueryError{Field: "q", Reason: fmt.Sprintf(
+			"q holds %d words and a search takes at most %d; keep the words that name what you are looking for",
+			words, maxQueryWords)}
 	}
 	types := in.Types
 	if len(types) == 0 {
@@ -233,16 +242,10 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			return err
 		}
 		page = shape.page(hits)
-		if err := s.countTagReach(ctx, tx, page.Hits); err != nil {
+		if err := noteCaptureWithheld(ctx, tx, types); err != nil {
 			return err
 		}
-		if err := s.attachEmailSummaries(ctx, tx, page.Hits); err != nil {
-			return err
-		}
-		if err := s.markPartners(ctx, tx, page.Hits); err != nil {
-			return err
-		}
-		return s.attachCompanyLogos(ctx, tx, page.Hits)
+		return s.decorate(ctx, tx, page.Hits)
 	})
 	if err != nil {
 		return Page{}, err
@@ -451,7 +454,7 @@ func (e *QueryTooBroadError) Unwrap() error { return e.Err }
 // FieldFault names `q`, because `q` is what the reader can change.
 func (e *QueryTooBroadError) FieldFault() (field, code, message string) {
 	return "q", "query_too_broad", "this search matched too much of the workspace to rank in time — " +
-		"add another word, or narrow it with types"
+		"add another word, or narrow it by record type"
 }
 
 func knownEntity(t string) bool {

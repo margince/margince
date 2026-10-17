@@ -172,6 +172,12 @@ func (h Handlers) AcknowledgeApprovalFailure(w http.ResponseWriter, r *http.Requ
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	// The contract requires failed_at; a body without it decodes to the zero
+	// time, which the service would read as an older failure.
+	if req.FailedAt.IsZero() {
+		writeErr(w, r, httperr.Validation("failed_at", "required", "failed_at is required: send the time the Worklist row shows for the failure"))
+		return
+	}
 	if err := h.svc.AcknowledgeEffectFailure(r.Context(), pathID[ids.ApprovalKind](id), req.FailedAt); err != nil {
 		writeErr(w, r, err)
 		return

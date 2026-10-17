@@ -7240,7 +7240,7 @@
           "task": "agent_loop",
           "best": {
             "provider": "openai_compatible",
-            "model": "openai/gpt-6-luna",
+            "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
           "band": "certified",
@@ -7254,7 +7254,7 @@
           "task": "agent_loop",
           "best": {
             "provider": "openai_compatible",
-            "model": "openai/gpt-6-luna",
+            "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
           "band": "certified",
@@ -11325,8 +11325,8 @@
       "recommended": {
         "binding": {
           "provider": "openai_compatible",
-          "model": "mistralai/mistral-medium-3-5",
-          "env": "eu_hosted"
+          "model": "openai/gpt-oss-120b",
+          "env": "cloud_frontier"
         },
         "band": "certified",
         "reliability": 1,
@@ -11366,8 +11366,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1249,
-          "latency_p95_ms": 2375,
+          "latency_p50_ms": 1352,
+          "latency_p95_ms": 1833,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -11451,8 +11451,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1970,
-          "latency_p95_ms": 3339,
+          "latency_p50_ms": 1885,
+          "latency_p95_ms": 2807,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -11504,8 +11504,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 2917,
-          "latency_p95_ms": 37001,
+          "latency_p50_ms": 2002,
+          "latency_p95_ms": 40736,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -11527,8 +11527,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1076,
-          "latency_p95_ms": 2132,
+          "latency_p50_ms": 1045,
+          "latency_p95_ms": 2204,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -11550,8 +11550,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1198,
-          "latency_p95_ms": 4121,
+          "latency_p50_ms": 1238,
+          "latency_p95_ms": 4595,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -11573,8 +11573,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 966,
-          "latency_p95_ms": 1818,
+          "latency_p50_ms": 955,
+          "latency_p95_ms": 1708,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -11596,8 +11596,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1840,
-          "latency_p95_ms": 3172,
+          "latency_p50_ms": 1645,
+          "latency_p95_ms": 2943,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -11619,8 +11619,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1997,
-          "latency_p95_ms": 4044,
+          "latency_p50_ms": 2047,
+          "latency_p95_ms": 4446,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -11642,8 +11642,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1229,
-          "latency_p95_ms": 3833,
+          "latency_p50_ms": 825,
+          "latency_p95_ms": 1611,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -11699,8 +11699,8 @@
       "recommended": {
         "binding": {
           "provider": "openai_compatible",
-          "model": "mistralai/mistral-medium-3-5",
-          "env": "eu_hosted"
+          "model": "openai/gpt-oss-120b",
+          "env": "cloud_frontier"
         },
         "band": "certified",
         "reliability": 1,
@@ -11740,8 +11740,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1249,
-          "latency_p95_ms": 2375,
+          "latency_p50_ms": 1352,
+          "latency_p95_ms": 1833,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -11825,8 +11825,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1970,
-          "latency_p95_ms": 3339,
+          "latency_p50_ms": 1885,
+          "latency_p95_ms": 2807,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -11878,8 +11878,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 2917,
-          "latency_p95_ms": 37001,
+          "latency_p50_ms": 2002,
+          "latency_p95_ms": 40736,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -11901,8 +11901,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1076,
-          "latency_p95_ms": 2132,
+          "latency_p50_ms": 1045,
+          "latency_p95_ms": 2204,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -11924,8 +11924,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1198,
-          "latency_p95_ms": 4121,
+          "latency_p50_ms": 1238,
+          "latency_p95_ms": 4595,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -11947,8 +11947,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 966,
-          "latency_p95_ms": 1818,
+          "latency_p50_ms": 955,
+          "latency_p95_ms": 1708,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -11970,8 +11970,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1840,
-          "latency_p95_ms": 3172,
+          "latency_p50_ms": 1645,
+          "latency_p95_ms": 2943,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -11993,8 +11993,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1997,
-          "latency_p95_ms": 4044,
+          "latency_p50_ms": 2047,
+          "latency_p95_ms": 4446,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -12016,8 +12016,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1229,
-          "latency_p95_ms": 3833,
+          "latency_p50_ms": 825,
+          "latency_p95_ms": 1611,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,

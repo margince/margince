@@ -15,8 +15,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/integrations"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
 func toProviderConnection(c integrations.Connection) crmcontracts.ProviderConnection {
@@ -182,51 +180,6 @@ func fromProviderBudgets(in *map[string]crmcontracts.ProviderPoolBudget) []integ
 	return out
 }
 
-func toProviderRun(r provider.Run) crmcontracts.ProviderRun {
-	cats := make([]string, 0, len(r.RequestedCategories))
-	for _, c := range r.RequestedCategories {
-		cats = append(cats, string(c))
-	}
-	out := crmcontracts.ProviderRun{
-		Id:              mustUUID(r.ID),
-		SubjectKind:     crmcontracts.ProviderRunSubjectKind(r.SubjectKind),
-		Provider:        crmcontracts.Provider(r.Provider),
-		Trigger:         crmcontracts.ProviderRunTrigger(r.Trigger),
-		State:           crmcontracts.ProviderRunState(r.State),
-		ClaimsUnwritten: r.ClaimsUnwritten,
-		Applied:         &r.Applied,
-		// The frozen snapshot, echoed so a caller can see what the run was
-		// admitted under rather than what the connection says now.
-		ConfigurationSnapshot: toProviderSnapshot(r.Snapshot),
-		ConnectionVersion:     r.ConnectionVersion,
-		RequestedCategories:   cats,
-		CreatedAt:             r.CreatedAt,
-		UpdatedAt:             r.UpdatedAt,
-		SubmittedAt:           r.SubmittedAt,
-		CompletedAt:           r.CompletedAt,
-	}
-	if r.ContactID != "" {
-		id := mustUUID(r.ContactID)
-		out.ContactId = &id
-	}
-	if r.SkipReason != "" {
-		reason := crmcontracts.ProviderRunSkipReason(r.SkipReason)
-		out.SkipReason = &reason
-	}
-	if r.SafeStatusCode != "" {
-		code := r.SafeStatusCode
-		out.SafeStatusCode = &code
-	}
-	for _, res := range r.Reservations {
-		out.Reservations = append(out.Reservations, struct {
-			ActualCredits   *int   `json:"actual_credits,omitempty"`
-			Pool            string `json:"pool"`
-			ReservedCredits int    `json:"reserved_credits"`
-		}{Pool: string(res.Pool), ReservedCredits: res.Reserved, ActualCredits: res.Actual})
-	}
-	return out
-}
-
 // derefString reads an optional contract string. The generated ApiKey is a
 // pointer because the schema marks it writeOnly; absent is empty, which the
 // store then refuses by name.
@@ -235,39 +188,6 @@ func derefString(s *string) string {
 		return ""
 	}
 	return *s
-}
-
-// toProviderSnapshot renders the frozen configuration in the same shape the
-// live configuration uses, so a caller comparing "what this run was allowed"
-// against "what the connection allows now" is comparing like with like.
-func toProviderSnapshot(s provider.Snapshot) crmcontracts.ProviderConfiguration {
-	cats := crmcontracts.ProviderCategorySelection{}
-	for _, c := range s.Categories {
-		cats[string(c)] = true
-	}
-	return crmcontracts.ProviderConfiguration{
-		Mode:                      crmcontracts.ProviderConnectionMode(s.Mode),
-		Preset:                    s.Preset,
-		AutomaticIndividualCreate: s.AutomaticCreate,
-		AutomaticImport:           s.AutomaticImport,
-		Categories:                cats,
-		RefreshAfterDays:          s.RefreshAfterDays,
-		DailyRunLimit:             s.DailyRunLimit,
-	}
-}
-
-// mustUUID parses an id the database produced. A malformed one is a
-// programming error rather than a caller's mistake, and the zero uuid is the
-// honest rendering of "this row's id did not parse".
-func mustUUID(s string) openapi_types.UUID {
-	// ids.Parse rather than uuid.Parse: the kernel helper is what the rest of
-	// compose speaks, and reaching for the vendor package directly is an
-	// import this layer is not granted (go-arch-lint).
-	parsed, err := ids.Parse(s)
-	if err != nil {
-		return openapi_types.UUID{}
-	}
-	return openapi_types.UUID(parsed)
 }
 
 // catalogWire renders the category price list. Present on every connection,

@@ -47,7 +47,7 @@ func TestAContactIsFoundThroughTheCompanyTheyWorkAt(t *testing.T) {
 
 	page = searchWith(e.Admin(), t, e, search.Input{Query: "quedlinburg"})
 	if hitFor(page, anna) != nil {
-		t.Error("the employee was found without WithEmployees — the agent and plan lanes must keep matching by own text alone")
+		t.Error("the employee was found without WithEmployees — a search that does not ask must match by own text alone")
 	}
 }
 

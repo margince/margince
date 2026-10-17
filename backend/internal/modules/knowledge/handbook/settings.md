@@ -144,7 +144,7 @@ The Members, Teams, Roles and permissions, and Seats and license pages sit in th
 
 The Integrations page in Settings (group **Data**) shows what the installation is connected to, as against what one colleague connected.
 
-**Contact data** is a licensed provider of contact data, with its budget and a policy for how often it refreshes the data. **Webhooks** send a signed message to another system when events you picked happen. You can look at each one sent and send it again. How to set one up, such as a message to a chat channel when a deal is won: [Sending events to other tools](sending-events-to-other-tools.md).
+**Contact data** is a licensed provider of contact data, with its budget and a policy for how often it refreshes the data. **Accounting source** connects the system your invoices come from and links its customers to companies; see [Contracts and invoices](contracts-and-invoices.md#how-do-i-connect-my-accounting-system). **Webhooks** send a signed message to another system when events you picked happen. You can look at each one sent and send it again. How to set one up, such as a message to a chat channel when a deal is won: [Sending events to other tools](sending-events-to-other-tools.md).
 
 ## Extensions
 

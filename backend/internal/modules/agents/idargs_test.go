@@ -341,6 +341,9 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterRecordFieldsTool(r, RecordFieldsResource{})
 	RegisterAnalyticsVocabularyTool(r, seamProbeAnalyticsVocabulary{})
 	RegisterContextSearchTool(r, seamProbeProvider{}, seamProbeRetriever{})
+	RegisterRecordSearchTool(r, seamProbeProvider{}, func(context.Context, RecordSearchQuery) (RecordSearchPage, error) {
+		return RecordSearchPage{}, nil
+	})
 	RegisterReportEvidenceTool(r, seamProbeProvider{}, func(context.Context, ReportEvidenceQuery) (ReportEvidence, error) {
 		return ReportEvidence{}, errSeamReached
 	})

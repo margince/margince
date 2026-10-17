@@ -25,8 +25,8 @@
 //
 // It is inert until somebody inserts a capture_connection naming it, which
 // only the demo seeder and scripts/seed-dev.sql do. An installation that never
-// seeds a demo carries the code and never runs it, exactly as the finance
-// mirror's offline_demo provider does.
+// seeds a demo carries the code and never runs it, as the finance-demo unit's
+// accounting source does.
 package offlinedemo
 
 import (
@@ -46,7 +46,7 @@ import (
 )
 
 // Name is the provider id, matching the capture_connection CHECK and the
-// finance mirror's own offline_demo.
+// finance-demo unit's accounting source.
 const Name = "offline_demo"
 
 // generatorVersion changes when the threads themselves change shape.
