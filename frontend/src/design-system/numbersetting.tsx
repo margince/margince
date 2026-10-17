@@ -4,6 +4,7 @@
 import { type ReactNode, useId, useState } from "react";
 import { isImeCommit } from "../lib/imecommit";
 import { TextInput } from "./atoms";
+import { describedByIds } from "./describedby";
 import { ErrorLine } from "./errorline";
 import { type SettingControlProps, SettingRow } from "./settingrow";
 import "./numbersetting.css";
@@ -38,6 +39,7 @@ export function NumberSetting({
   onCommit,
   disabled,
   reason,
+  describedBy,
   testId,
 }: Readonly<{
   control: SettingControlProps;
@@ -52,6 +54,11 @@ export function NumberSetting({
   disabled?: boolean;
   /** Why this reader may not change it, under the box; refuses the edit alone. */
   reason?: ReactNode;
+  /**
+   * An element elsewhere that describes this number, named after the row's
+   * own description.
+   */
+  describedBy?: string;
   testId?: string;
 }>) {
   // `sent` is the number this draft already committed: the blur that follows
@@ -97,16 +104,13 @@ export function NumberSetting({
     <div className="settingrow-measure numbersetting">
       <TextInput
         {...control}
-        aria-describedby={
-          [
-            control["aria-describedby"],
-            words ? readingId : null,
-            reason === undefined ? null : reasonId,
-            refused ? refusalId : null,
-          ]
-            .filter(Boolean)
-            .join(" ") || undefined
-        }
+        aria-describedby={describedByIds(
+          control["aria-describedby"],
+          describedBy,
+          words && readingId,
+          reason !== undefined && reasonId,
+          refused && refusalId,
+        )}
         aria-invalid={refused ? true : undefined}
         className="t-num"
         data-testid={testId}

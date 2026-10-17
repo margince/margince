@@ -14,7 +14,6 @@
 # raise.
 # Format: <frozen-line-count> <path>
 969 frontend/src/screens/webhooks.tsx
-847 frontend/src/app/shell.tsx
 999 frontend/src/App.tsx
 921 frontend/src/screens/installation-setup.tsx
 922 frontend/src/screens/auth.tsx
@@ -30,12 +29,8 @@
 932 frontend/src/features/worklist/worklist.row.tsx
 1072 frontend/src/screens/analytics.test.tsx
 1030 frontend/src/screens/company-context.tsx
-1278 frontend/src/components/listquery.test.tsx
-1319 frontend/src/components/listquery.tsx
 1264 frontend/src/screens/offers.tsx
-1360 frontend/src/app/agentrail.test.tsx
-1504 frontend/src/screens/onboarding-conversation/confirm-card.tsx
-1343 frontend/src/app/agentrail.tsx
+1488 frontend/src/screens/onboarding-conversation/confirm-card.tsx
 1725 frontend/src/screens/onboarding-facts.test.tsx
 1902 frontend/src/features/contacts/contactpage.stories.tsx
 1122 frontend/src/screens/analytics.tsx
@@ -57,7 +52,6 @@
 517 frontend/src/features/worklist/worklist.queries.ts
 554 frontend/src/screens/project360.tsx
 520 frontend/src/screens/adddocument.tsx
-513 frontend/src/app/account.tsx
 513 frontend/src/screens/logactivity.tsx
 575 frontend/src/screens/dealroomaccess.tsx
 579 frontend/src/features/worklist/taskactions.tsx
@@ -85,7 +79,6 @@
 503 frontend/src/features/contacts/contactmemory.tsx
 888 frontend/src/screens/share.tsx
 798 frontend/src/screens/integrations-provider.tsx
-854 frontend/src/components/create.tsx
 
 # The build scripts, frozen when the gate learned to read them.
 1060 frontend/scripts/ext-imports.test.ts

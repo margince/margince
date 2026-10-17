@@ -6,6 +6,7 @@ import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import type { CompanyFieldName } from "../onboarding";
 import type { ReviewRow } from "./company-review-state";
 import { fieldGuidance } from "./field-guidance";
+import { SaveRefusalLine } from "./save-refusal-line";
 import { WayOnward } from "./way-onward";
 import "./review-deck.css";
 
@@ -87,6 +88,7 @@ export function ReviewDeck({
   openQuestions,
   digest,
   goTo,
+  refusal = null,
 }: Readonly<{
   cards: readonly DeckCard[];
   /**
@@ -114,6 +116,8 @@ export function ReviewDeck({
    * Confirm is the one button here that does go grey.
    */
   held: boolean;
+  /** The sentence a refused save speaks beside Confirm; null when none. */
+  refusal?: string | null;
   /**
    * Questions the read raised that nobody has answered. They do not block —
    * the record is saved without them — but the rail says so, because a reader
@@ -204,13 +208,16 @@ export function ReviewDeck({
         t("ob.deck.stillNeeded", { fields: fields.join(", ") })
       }
       note={
-        openQuestions > 0 ? (
-          <p className="ob-stage-hint">
-            {plural("ob.deck.openLeft", openQuestions, {
-              count: formatNumber(openQuestions, locale),
-            })}
-          </p>
-        ) : undefined
+        <>
+          <SaveRefusalLine message={refusal} />
+          {openQuestions > 0 && (
+            <p className="ob-stage-hint">
+              {plural("ob.deck.openLeft", openQuestions, {
+                count: formatNumber(openQuestions, locale),
+              })}
+            </p>
+          )}
+        </>
       }
       onGo={onDone}
     />

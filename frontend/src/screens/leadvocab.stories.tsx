@@ -2,11 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
+  permissionDenied,
   StoryProviders,
 } from "../testing/story-utils";
 import { LeadHandlingCard } from "./leadvocab";
@@ -99,12 +100,18 @@ function story(
   allow: Parameters<typeof meRoute>[0],
   slaOn: boolean,
   refuseReasonName = false,
+  refuseWrites = false,
 ) {
   return () => {
     installFetchStub({
       "GET /me": meRoute(allow),
       ...(refuseReasonName && {
         "POST /lead-disqualify-reasons": () => jsonResponse(DUPLICATE, 409),
+      }),
+      ...(refuseWrites && {
+        "PATCH /lead-sources/src-trade_show": permissionDenied,
+        "PATCH /lead-disqualify-reasons/r2": permissionDenied,
+        "PATCH /leads/settings": permissionDenied,
       }),
       "GET /lead-sources": () => jsonResponse(SOURCES),
       "GET /lead-disqualify-reasons": () => jsonResponse(REASONS),
@@ -273,5 +280,34 @@ export const RowMenu: Story = {
         name: "Actions for Webinar",
       }),
     );
+  },
+};
+
+export const WritesRefused: Story = {
+  render: story(ADMIN, true, false, true),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const notSaved = expect.stringContaining("Change was not saved");
+    const source = await canvas.findByRole("switch", {
+      name: "Trade show is active",
+    });
+    const reason = await canvas.findByRole("switch", {
+      name: "Bad timing is active",
+    });
+    const firstResponse = await canvas.findByTestId(
+      "lead-first-response-switch",
+    );
+    for (const refused of [source, reason, firstResponse]) {
+      await userEvent.click(refused);
+      await waitFor(() =>
+        expect(refused).toHaveAccessibleDescription(notSaved),
+      );
+    }
+    await expect(
+      canvas.getByRole("combobox", { name: "Intent of Trade show" }),
+    ).not.toHaveAttribute("aria-describedby");
+    await expect(
+      canvas.getByTestId("lead-first-response-target"),
+    ).not.toHaveAccessibleDescription(notSaved);
   },
 };
