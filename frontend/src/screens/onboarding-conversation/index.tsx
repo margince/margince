@@ -5,14 +5,14 @@ import { useEffect, useReducer, useRef } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
+import {
+  type useCompany,
+  useInstallationDescribed,
+} from "../../features/sign-in/installationcompany";
 import { useLocale, useT } from "../../i18n";
 import { useHoldsAdminRole } from "../../lib/capability";
 import { throwProblem } from "../../lib/problem";
 import { navigate, navigateReplacing, useRoute } from "../../lib/router";
-import {
-  type useCompany,
-  useInstallationDescribed,
-} from "../installationcompany";
 import { EMPTY_DRAFT, loadWizardState, pickBuiltVersion } from "../onboarding";
 import { BuildScene } from "../onboarding-build-scene";
 import { BasisAct } from "./basis-act";

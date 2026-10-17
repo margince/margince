@@ -45,6 +45,8 @@ import { ImportCard } from "../features/import/import";
 import { LinkedInImportCard } from "../features/import/linkedin-import";
 import { TagVocabularyCard } from "../features/lists/tagadmin";
 import { SignatureTemplateCard } from "../features/mail/signaturetemplatecard";
+import { InstallationSettingsCard } from "../features/sign-in/installation-settings";
+import { SignInMethodsCard } from "../features/sign-in/sign-in-methods";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
@@ -58,7 +60,6 @@ import { ConnectionOutcomesCard } from "./connection-outcomes";
 import { CustomFieldsAdmin } from "./customfields";
 import { FinanceSourceCard } from "./financesource";
 import { FollowUpSettingsCard } from "./followupsettings";
-import { InstallationSettingsCard } from "./installation-settings";
 import { KnowledgeCard } from "./knowledge";
 import {
   LeadDisqualifyReasonsCard,
@@ -79,7 +80,6 @@ import { AgentToolsCard } from "./settings-agenttools";
 import { AuditLogCard } from "./settings-audit";
 import { AutonomyTiersCard } from "./settings-autonomytiers";
 import { PassportCard } from "./settings-passports";
-import { SignInMethodsCard } from "./sign-in-methods";
 import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
 import { VoiceDnaCard } from "./voice-dna";

@@ -14,8 +14,8 @@
 # raise.
 # Format: <frozen-line-count> <path>
 969 frontend/src/screens/webhooks.tsx
-921 frontend/src/screens/installation-setup.tsx
-922 frontend/src/screens/auth.tsx
+926 frontend/src/features/sign-in/installation-setup.tsx
+922 frontend/src/features/sign-in/auth.tsx
 1086 frontend/src/screens/onboarding-conversation/connect-act.test.tsx
 1133 frontend/src/screens/companyrail.test.tsx
 1134 frontend/src/screens/record360/spine.test.tsx
@@ -45,7 +45,7 @@
 655 frontend/src/screens/record360/citations.tsx
 530 frontend/src/screens/contractform.tsx
 731 frontend/src/screens/companytoday.tsx
-678 frontend/src/screens/installation-settings.tsx
+687 frontend/src/features/sign-in/installation-settings.tsx
 774 frontend/src/screens/onboarding-conversation/connect-scene.tsx
 775 frontend/src/screens/companycontacts/summary.tsx
 519 frontend/src/screens/voice-dna.tsx

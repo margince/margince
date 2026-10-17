@@ -10,6 +10,7 @@ import { Callout } from "../design-system/callout";
 import { CompanyLogo } from "../design-system/companylogo";
 import { FileDropzoneControl } from "../design-system/filedropzone";
 import { Panel, PanelBody } from "../design-system/panel";
+import { storeCompany } from "../features/sign-in/installationcompany";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { postMultipart } from "../lib/multipart";
@@ -19,7 +20,6 @@ import {
   problemMessageOf,
   unwrap,
 } from "../lib/problem";
-import { storeCompany } from "./installationcompany";
 import "./companymark.css";
 
 type CompanyProfile = components["schemas"]["CompanyProfile"];

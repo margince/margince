@@ -14396,8 +14396,8 @@ export const en = {
 
   // The machinery's receipt on Home: what ran while the reader was away, in
   // four lanes. The `magic.action.*` and `magic.consequence.*` families are
-  // the client half of a mirror the server sends keys against, so the set is
-  // the contract rather than one screen's copy (src/screens/magic.keys.ts).
+  // the client half of a mirror the server sends keys against. So the set is
+  // the contract (src/features/sign-in/magic.keys.ts), not one screen's copy.
   "magic.window.label": "Show",
   "magic.window.brief": "Since my last brief",
   "magic.window.week": "Last 7 days",

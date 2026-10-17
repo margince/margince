@@ -186,7 +186,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Pins different viewer and record zones to prove a delayed notification dates the original change in the viewer’s zone.",
   },
   {
-    file: "screens/installation-settings.regional.stories.tsx",
+    file: "features/sign-in/installation-settings.regional.stories.tsx",
     why: "The fixture supplies the contract-required installation timezone alongside regional settings.",
   },
   {
@@ -194,7 +194,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Regional notation must preserve explicit timezone and midnight fixtures.",
   },
   {
-    file: "screens/magic.timeline.test.ts",
+    file: "features/sign-in/magic.timeline.test.ts",
     why: "The receipt's axis names whole hours and midnights on the reader's own clock, so its expected instants exist only for a named zone: UTC for the plain arithmetic, Berlin to prove the ticks follow the viewer's offset rather than the server's, and Kathmandu for an offset that is not a whole hour. A zone read off the runner would move every expected tick with the machine.",
   },
   {
@@ -422,11 +422,11 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Same `me` fixture across the deal suites it serves: a stored user setting, not a formatting decision.",
   },
   {
-    file: "screens/installation-settings.stories.tsx",
+    file: "features/sign-in/installation-settings.stories.tsx",
     why: "The Admin settings card DISPLAYS the configured company timezone; the story needs a configured value.",
   },
   {
-    file: "screens/installation-settings.test.tsx",
+    file: "features/sign-in/installation-settings.test.tsx",
     why: "Asserts that same card shows the configured zone verbatim — the one screen where the zone name is the content.",
   },
   {

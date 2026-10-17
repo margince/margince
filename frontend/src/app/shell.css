@@ -112,7 +112,7 @@
   transition: --railW var(--dur-move) var(--ease-out);
 }
 /* The frame every screen sits in, INCLUDING the rail-less auth surface — which
-   sizes itself in dvh for a reason (screens/auth.css: on iOS, 100vh subtracts the
+   sizes itself in dvh for a reason (features/sign-in/auth.css: on iOS, 100vh subtracts the
    browser chrome from the wrong side and the primary action lands under the
    keyboard). A 100vh ancestor silently defeats that: the child asks for the
    visible viewport while the parent is sized to the larger one, so the document

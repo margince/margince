@@ -7,11 +7,11 @@ import {
   PendingBody,
   SectionHeader,
 } from "./design-system/atoms";
+import { AuthScreen } from "./features/sign-in/auth";
 import { useLocale, useT } from "./i18n";
 import type { MessageKey } from "./i18n/en";
 import { composedScreens, findExtension, unitTitle } from "./lib/extensions";
 import { navigate } from "./lib/router";
-import { AuthScreen } from "./screens/auth";
 
 // Static imports are what a first paint needs: the shell, the auth surfaces and
 // the router. screens/onboarding is static too, since the shell calls its

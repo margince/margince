@@ -13,7 +13,7 @@ import { useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
 import { useMe } from "../../lib/session";
-import { SETUP_PROVIDERS } from "../../screens/setup-providers";
+import { SETUP_PROVIDERS } from "../sign-in/setup-providers";
 import { useAiStatus } from "./ai-admin";
 import { BindingEditor } from "./ai-binding-editor";
 import { TIER_ORDER, tierLabel, tierRank } from "./ai-decision-labels";

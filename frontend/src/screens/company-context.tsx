@@ -32,6 +32,11 @@ import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
 import { WriteRefused } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { FieldDiff } from "../design-system/trust";
+import {
+  companySaveMessage,
+  storeCompany,
+  useCompany,
+} from "../features/sign-in/installationcompany";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -43,11 +48,6 @@ import { coldFieldLabel } from "./coldfieldlabels";
 import { ReadWarnings } from "./company-context.notices";
 import { CompanyFactsCard, PROFILE_GROUPS } from "./companycontextfacts";
 import { CompanyMark } from "./companymark";
-import {
-  companySaveMessage,
-  storeCompany,
-  useCompany,
-} from "./installationcompany";
 import "./company-context.css";
 
 type Capabilities = components["schemas"]["CompanyContextCapabilities"];

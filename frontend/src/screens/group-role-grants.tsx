@@ -9,6 +9,7 @@ import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select, type SelectOption } from "../design-system/select";
+import { useSaveSignInPolicy } from "../features/sign-in/sign-in-policy";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
 import {
@@ -17,7 +18,6 @@ import {
   roleOptions,
   useAssignableRoles,
 } from "./roles.queries";
-import { useSaveSignInPolicy } from "./sign-in-policy";
 
 // The server refuses a larger map; mirrored here so the refusal reaches the
 // admin before a request does.

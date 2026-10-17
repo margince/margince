@@ -29,14 +29,13 @@ const isOn = (value: unknown) => value === "1" || value === "true";
  * means the federated block, which IS designed and built, can only be seen in
  * Storybook. A UI/UX review of the login screen needs it on the login screen.
  *
- * What it does NOT do: it does not touch the wire or the query cache, and it
- * does not disable a REAL provider. `startFederatedSignIn` (screens/auth.tsx)
- * stays inert only when `previewedOidcProviders` actually invented the button
- * a click came from — an installation that genuinely serves OIDC providers
- * keeps working buttons even under this switch. Only the synthesized case has
- * nowhere real to go: the full-page navigation would be to an endpoint this
- * preview build never mounts, taking the whole review tab to a 404 instead of
- * drawing the design.
+ * What it does not do: it does not touch the wire or the query cache, and it
+ * does not disable a real provider. `startFederatedSignIn` in
+ * features/sign-in/auth.tsx stays inert only when `previewedOidcProviders`
+ * invented the button a click came from. An installation that serves OIDC
+ * providers keeps working buttons even under this switch. Only the synthesized
+ * case has nowhere real to go. Its full-page navigation would reach an endpoint
+ * this preview build never mounts, and take the review tab to a 404.
  *
  * Read at the call rather than at module load so a test can pin BOTH positions
  * of the switch without re-evaluating the module graph. `import.meta.env` is a
@@ -67,10 +66,10 @@ export function uiPreviewOidcEnabled(): boolean {
  * What it does NOT do: it does not wire a mailer, and it does not fake one. What
  * becomes reviewable is the link and the request card it opens — the real one,
  * posting to the real endpoint. Against a mailer-less installation that post is
- * answered `501 not_implemented` (`httperr.NotImplemented`; a status this path does
- * not enumerate in `crm.yaml`) and the card shows it as its failure note, so the
- * confirmation, the deep-link form and the spent-token refusal stay where they
- * were — asserted in `screens/auth.test.tsx`, not on this screen. The switch draws
+ * answered `501 not_implemented` (`httperr.NotImplemented`), a status this path
+ * does not enumerate in `crm.yaml`. The card shows it as its failure note. The
+ * confirmation, the deep-link form and the spent-token refusal stay asserted in
+ * `features/sign-in/auth.test.tsx`, not on this screen. The switch draws
  * the door and the door opens; the room behind it is the installation's to
  * configure.
  *
