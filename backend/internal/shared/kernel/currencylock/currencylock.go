@@ -49,3 +49,12 @@ func (l Lock) Prose() string {
 		return ""
 	}
 }
+
+// Refusal is the reason a refused write carries. A lock with no prose still
+// refuses, and an empty reason would tell the operator nothing.
+func (l Lock) Refusal() string {
+	if prose := l.Prose(); prose != "" {
+		return prose
+	}
+	return "conversion rates are already frozen against the base currency, so it cannot change"
+}

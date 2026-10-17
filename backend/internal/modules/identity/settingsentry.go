@@ -143,7 +143,7 @@ func LockBaseCurrencyWith(probe func(context.Context, pgx.Tx) (currencylock.Lock
 		if err != nil || !locked {
 			return false, "", err
 		}
-		return true, lock.Prose(), nil
+		return true, lock.Refusal(), nil
 	})
 }
 
