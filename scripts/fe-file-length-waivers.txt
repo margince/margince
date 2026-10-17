@@ -51,7 +51,7 @@
 655 frontend/src/screens/record360/citations.tsx
 530 frontend/src/screens/contractform.tsx
 727 frontend/src/screens/companytoday.tsx
-678 frontend/src/screens/installation-settings.tsx
+661 frontend/src/screens/installation-settings.tsx
 774 frontend/src/screens/onboarding-conversation/connect-scene.tsx
 775 frontend/src/screens/companycontacts/summary.tsx
 519 frontend/src/screens/voice-dna.tsx

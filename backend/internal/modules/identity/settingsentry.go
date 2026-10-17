@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/currencylock"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
@@ -124,6 +125,27 @@ var BaseCurrency = settings.Define[string](
 	// already shows the base currency. The gate would protect nothing and
 	// refuse a seat that may read the deals.
 	MachineryApplied()
+
+// baseCurrencyLockProbe is the deals module's answer to why BaseCurrency cannot
+// change. Nil until compose injects it, and nil reads as changeable.
+var baseCurrencyLockProbe func(context.Context, pgx.Tx) (currencylock.Lock, bool, error)
+
+// BaseCurrencyLockWired reports whether the read has a probe. HasFreezeProbe
+// sees only the write's slot, and a read without one reports "changeable".
+func BaseCurrencyLockWired() bool { return baseCurrencyLockProbe != nil }
+
+// LockBaseCurrencyWith wires one probe into both the read and the write, so a
+// client is shown the same facts a PATCH is refused on.
+func LockBaseCurrencyWith(probe func(context.Context, pgx.Tx) (currencylock.Lock, bool, error)) {
+	baseCurrencyLockProbe = probe
+	BaseCurrency.WithFreeze(func(ctx context.Context, tx pgx.Tx) (bool, string, error) {
+		lock, locked, err := probe(ctx, tx)
+		if err != nil || !locked {
+			return false, "", err
+		}
+		return true, lock.Refusal(), nil
+	})
+}
 
 // Country is where this installation is established, as a lower-case ISO
 // 3166-1 alpha-2 code. Empty means unstated, and unstated is the strict answer

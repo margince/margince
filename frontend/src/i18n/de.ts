@@ -10626,6 +10626,18 @@ export const de = {
     "ISO-4217-Code, in den alle Beträge für Gesamtsummen umgerechnet werden. Änderbar, bis der erste Betrag umgerechnet wurde.",
   "installationSettings.baseCurrencyLocked":
     "Gesperrt: Eine Änderung würde jede Gesamtsumme verändern, da Beträge bereits in diese Währung umgerechnet wurden.",
+  "installationSettings.baseCurrencyLock.ratesFrozen_one":
+    "Für {count} Eintrag ist bereits ein Wechselkurs zu dieser Währung festgeschrieben, daher ist sie nicht mehr änderbar.",
+  "installationSettings.baseCurrencyLock.ratesFrozen_other":
+    "Für {count} Einträge ist bereits jeweils ein Wechselkurs zu dieser Währung festgeschrieben, daher ist sie nicht mehr änderbar.",
+  "installationSettings.baseCurrencyLock.rateSheet_one":
+    "{count} Wechselkurs rechnet in {base} um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+  "installationSettings.baseCurrencyLock.rateSheet_other":
+    "{count} Wechselkurse rechnen in {base} um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+  "installationSettings.baseCurrencyLock.rateSheetUnnamed_one":
+    "{count} Wechselkurs rechnet in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+  "installationSettings.baseCurrencyLock.rateSheetUnnamed_other":
+    "{count} Wechselkurse rechnen in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
   "installationSettings.baseLanguage": "Basissprache",
   "installationSettings.baseLanguageHint":
     "Sprache, in der die KI schreibt, wenn das ganze Team den Text liest. Die Anzeigesprache ist davon getrennt, und Antworten nach außen folgen der Sprache des Threads.",
