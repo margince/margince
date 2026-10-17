@@ -1,4 +1,4 @@
-import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
+import { REPORTING_FIXTURE_ZONE } from "../features/analytics/reporting.fixtures";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 

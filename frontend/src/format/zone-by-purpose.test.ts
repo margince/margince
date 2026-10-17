@@ -142,11 +142,11 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
-    file: "screens/reporting.fixtures.ts",
+    file: "features/analytics/reporting.fixtures.ts",
     why: "The report API fixture carries the installation timezone so schedule and frozen-period rendering remain independent of the browser zone.",
   },
   {
-    file: "screens/reporting.schedule.tsx",
+    file: "features/analytics/reporting.schedule.tsx",
     why: "Weekday names are generated from fixed Monday-through-Sunday UTC instants; these are locale labels, not event or record dates.",
   },
   {
@@ -238,15 +238,15 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The case asserts that the weekly's 'written at' renders in the INSTALLATION's zone, so it provides one through RecordZoneProvider and formats its expectation against the same name. The alternative is naming FALLBACK_RECORD_ZONE, which the arm below forbids and rightly: the component reads that same constant, so the assertion would hold however wrong the zone decision was.",
   },
   {
-    file: "screens/analytics.forecast.test.tsx",
+    file: "features/analytics/analytics.forecast.test.tsx",
     why: "The stubbed readings carry the installation zone the SERVER sends — the frame is the server's answer, not the reader's setting. A zone read off the runner would make the fixture describe whichever machine ran it.",
   },
   {
-    file: "screens/analytics.stories.tsx",
+    file: "features/analytics/analytics.stories.tsx",
     why: "The stub answers a report with the frame a real result carries, and the frame's whole point is that the zone comes from the SERVER rather than the reader. A zone read off the runner would draw a different as-of caption on every machine the catalog builds on.",
   },
   {
-    file: "screens/analytics.testkit.tsx",
+    file: "features/analytics/analytics.testkit.tsx",
     why: "Same: the stubbed report result carries the installation zone the server sends, and the caption assertion is about that zone reaching the screen unchanged. Reading the runner's zone would make the assertion about the machine.",
   },
   {

@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useState } from "react";
 import { userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../design-system/panel";
+import { openAnalyticsSection } from "../features/analytics/analytics.address";
 import { useLocale, useT } from "../i18n";
 import {
   installFetchStub,
@@ -12,7 +13,6 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../testing/story-utils";
-import { openAnalyticsSection } from "./analytics.address";
 import {
   beforeHistoryWeeklyNumbers,
   firstWeek,

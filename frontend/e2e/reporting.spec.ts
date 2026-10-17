@@ -6,8 +6,8 @@ import {
   reportingStoryEvaluation,
   reportingStoryFramework,
   reportingStoryScope,
-} from "../src/screens/reporting.fixtures";
-import { forecastEvaluation } from "../src/screens/reporting.scenarios";
+} from "../src/features/analytics/reporting.fixtures";
+import { forecastEvaluation } from "../src/features/analytics/reporting.scenarios";
 import { mockApi } from "./seed";
 
 test.use({ locale: "en-GB" });

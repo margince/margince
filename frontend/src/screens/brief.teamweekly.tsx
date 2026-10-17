@@ -10,6 +10,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
+import { openAnalyticsSection } from "../features/analytics/analytics.address";
 import {
   type TeamWeeklyReview,
   type TeamWeekReach,
@@ -26,7 +27,6 @@ import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useRecordZone } from "../lib/recordzone";
 import { useUrlParams } from "../lib/urlstate";
-import { openAnalyticsSection } from "./analytics.address";
 import {
   anyUnrecorded,
   beforeRecordedHistory,

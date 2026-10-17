@@ -8,6 +8,7 @@ import { Select } from "../design-system/select";
 import { StatStrip } from "../design-system/statstrip";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { ProvenanceTag } from "../design-system/trust";
+import { openAnalyticsSection } from "../features/analytics/analytics.address";
 import { middayInstant } from "../format/calendarday";
 import {
   formatDate,
@@ -22,7 +23,6 @@ import type { MessageKey } from "../i18n/en";
 import { useRecordZone } from "../lib/recordzone";
 import { routeHash } from "../lib/router";
 import { useUrlParams } from "../lib/urlstate";
-import { openAnalyticsSection } from "./analytics.address";
 import {
   figureReading,
   type WeeklyFigure,
