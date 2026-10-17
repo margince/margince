@@ -86,7 +86,7 @@ type recordTool struct {
 func (r recordTool) Spec() mcp.ToolSpec { return r.spec }
 
 func (r recordTool) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
-	return json.Marshal(searchResult(ctx, nil, datasource.SearchResult{Records: r.records}))
+	return json.Marshal(listResult(ctx, nil, datasource.SearchResult{Records: r.records}))
 }
 
 // derivedTool answers the way an aggregate does: from records it read and does
@@ -109,7 +109,7 @@ func (d derivedTool) Handle(ctx context.Context, _ json.RawMessage) (json.RawMes
 
 func readToolOver(records ...datasource.Record) recordTool {
 	spec := objectSpec("read_probe", principal.ScopeRead)
-	spec.OutputSchema = schemaFor[SearchRecordsResult]()
+	spec.OutputSchema = schemaFor[ListRecordsResult]()
 	return recordTool{spec: spec, records: records}
 }
 
@@ -405,7 +405,7 @@ func TestABoundedReadSaysSoWithoutSayingHowMuch(t *testing.T) {
 // looking complete to a bounded caller.
 func TestABoundedCallerIsWarnedWhateverScopeTheToolAsksFor(t *testing.T) {
 	spec := objectSpec("write_probe", principal.ScopeWrite)
-	spec.OutputSchema = schemaFor[SearchRecordsResult]()
+	spec.OutputSchema = schemaFor[ListRecordsResult]()
 	env := sealedEnvelope(t, invokeSealed(scopedAgentCtx(principal.ScopeWrite), t, fullSeatAuthority{},
 		recordTool{spec: spec, records: []datasource.Record{recordAt(datasource.EntityContact, time.Time{}, true)}}))
 

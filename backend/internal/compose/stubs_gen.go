@@ -1815,6 +1815,34 @@ func (stubs) GetFilterVocabulary(w nethttp.ResponseWriter, r *nethttp.Request, p
 	httperr.NotImplemented(w, r, "GetFilterVocabulary")
 }
 
+func (stubs) DisconnectFinanceSource(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DisconnectFinanceSource")
+}
+
+func (stubs) GetFinanceSource(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetFinanceSource")
+}
+
+func (stubs) ConnectFinanceSource(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ConnectFinanceSource")
+}
+
+func (stubs) ListFinanceSourceCustomers(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListFinanceSourceCustomersParams) {
+	httperr.NotImplemented(w, r, "ListFinanceSourceCustomers")
+}
+
+func (stubs) UnlinkFinanceSourceCustomer(w nethttp.ResponseWriter, r *nethttp.Request, externalId string) {
+	httperr.NotImplemented(w, r, "UnlinkFinanceSourceCustomer")
+}
+
+func (stubs) LinkFinanceSourceCustomer(w nethttp.ResponseWriter, r *nethttp.Request, externalId string) {
+	httperr.NotImplemented(w, r, "LinkFinanceSourceCustomer")
+}
+
+func (stubs) SyncFinanceSource(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SyncFinanceSource")
+}
+
 func (stubs) GetForecast(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetForecastParams) {
 	httperr.NotImplemented(w, r, "GetForecast")
 }

@@ -10,7 +10,7 @@ package compose
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"slices"
 	"time"
 
@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -77,37 +76,10 @@ func NewProviderFor(db *database.DB) *Provider {
 
 var _ datasource.SystemOfRecordProvider = (*Provider)(nil)
 
-// searchable is the entity set Search sweeps when the query names none.
-// Activities are deliberately absent: the timeline is reached through
-// read_record/list on a named entity, not blind full-text sweep.
 // defaultSearchPageSize is the page a caller who named no limit gets: the
 // shared Limit parameter's own declared default (crm.yaml
-// components.parameters.Limit, `default: 50`), which /search refs like every
-// other paged operation.
-//
-// It is ONE number for both seams. This one answered 20 while the overlay
-// route answered the declared 50, so a query with no limit came back a
-// different size depending on which system of record served it — the same
-// divergence this file's sweep exists to close, in the parameter rather than
-// the page.
+// components.parameters.Limit, `default: 50`).
 const defaultSearchPageSize = 50
-
-// searchable is what an UNTYPED sweep visits, in the order it visits them.
-//
-// Partner is deliberately absent: a sweep carries no filters and matches on
-// text, and a partner has no text of its own — every word a caller would
-// search for lives on the company the partner row extends. Including it
-// would return the same companies twice under two type names.
-var searchable = []datasource.EntityType{datasource.EntityContact, datasource.EntityCompany, datasource.EntityDeal, datasource.EntityLead, datasource.EntityProject}
-
-// nameable is what a caller may ASK FOR BY NAME. It is a superset of
-// searchable, and the two are separate because they answer different
-// questions: "where does an unguided sweep look?" and "what may a caller
-// name?". Conflating them is how naming a type became impossible by the act
-// of keeping it out of the sweep — a type left out of the default set stopped
-// being reachable at all, which is the opposite of what excluding it meant.
-var nameable = append(append([]datasource.EntityType{}, searchable...), datasource.EntityPartner, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityActivity,
-	datasource.EntityOffer, datasource.EntityCommission, datasource.EntityDealRoom, datasource.EntityDealRoomThread, datasource.EntityDealRoomComment, datasource.EntityDealRoomDocument, datasource.EntityDealRoomParticipant)
 
 func (p *Provider) Read(ctx context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	switch ref.Type {
@@ -158,34 +130,23 @@ func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	}
 }
 
-// Search answers one page of records: one entity type's, or a SWEEP across
-// several — which is what the tool surface advertises when a caller names no
-// record type, and what this provider must therefore be able to page.
+// Search answers one page of one record type's records, which is what
+// list_records asks for. Ranking by words is the search module's engine, which
+// search_records, an intent tool's record_name and GET /v1/search share.
 //
-// The page is bounded ONCE, across the whole walk. Charging each type the full
-// limit and concatenating would answer five times the ceiling the caller
-// named, on the surface where that context is paid for and displaces the run's
-// own observations.
-//
-// It is walked type by type rather than ranked across them, because the types
-// have no common score to interleave by. What makes that pageable is the
-// composite cursor: the position is the type plus that type's own keyset, so a
-// caller resumes where the page stopped. HasMore is true if and only if there
-// is such a position — a page that reports a remainder it cannot hand back
-// leaves those records unreachable, and one that reports completeness it has
-// not established stops the caller looking.
+// The cursor names the type it was minted for. A token presented on another
+// type's search is refused rather than resumed in the wrong table.
 func (p *Provider) Search(ctx context.Context, q datasource.SearchQuery) (datasource.SearchResult, error) {
-	types, err := sweepOrder(q.EntityTypes)
+	if len(q.EntityTypes) != 1 {
+		return datasource.SearchResult{}, fmt.Errorf(
+			"compose: Search pages exactly one record type, and this query names %d", len(q.EntityTypes))
+	}
+	et := q.EntityTypes[0]
+	position, err := storekit.DecodeSweepCursor(q.Cursor)
 	if err != nil {
 		return datasource.SearchResult{}, err
 	}
-	position, err := resumeStream(q.Cursor)
-	if err != nil {
-		return datasource.SearchResult{}, err
-	}
-	// A sweep walks only the searchable types, so a position in a stream it
-	// never visits (a listed timeline, say) was minted elsewhere.
-	if len(q.EntityTypes) == 0 && position.Stream != "" && !slices.Contains(searchable, datasource.EntityType(position.Stream)) {
+	if position.Stream != "" && position.Stream != string(et) {
 		return datasource.SearchResult{}, &storekit.MalformedCursorError{}
 	}
 	text := &q.Text
@@ -196,42 +157,29 @@ func (p *Provider) Search(ctx context.Context, q datasource.SearchQuery) (dataso
 	if limit <= 0 {
 		limit = defaultSearchPageSize
 	}
-
-	out := datasource.SearchResult{Records: []datasource.Record{}}
-	inner := position.Inner
-	for i := resumeIndex(types, position.Stream); i < len(types); i++ {
-		et := types[i]
-		if string(et) != position.Stream {
-			// The stream the cursor was minted in is not this one, so this
-			// type starts at ITS beginning rather than inheriting a keyset
-			// from another.
-			inner = ""
-		}
-		records, next, err := p.searchOneType(ctx, et, text, limit-len(out.Records), inner, q.Filters, len(types) > 1)
-		if err != nil {
-			return datasource.SearchResult{}, err
-		}
-		out.Records = append(out.Records, records...)
-		if next != "" {
-			return sweepResumesAt(out, et, next)
-		}
-		inner = ""
-		if len(out.Records) >= limit && i+1 < len(types) {
-			return sweepResumesAt(out, types[i+1], "")
-		}
+	records, next, err := p.searchOneType(ctx, et, text, limit, position.Inner, q.Filters)
+	if err != nil {
+		return datasource.SearchResult{}, err
 	}
+	out := datasource.SearchResult{Records: records}
+	if out.Records == nil {
+		out.Records = []datasource.Record{}
+	}
+	if next == "" {
+		return out, nil
+	}
+	cursor, err := storekit.EncodeSweepCursor(storekit.SweepCursor{Stream: string(et), Inner: next})
+	if err != nil {
+		return datasource.SearchResult{}, err
+	}
+	out.NextCursor, out.HasMore = cursor, true
 	return out, nil
 }
 
-// searchOneType pages one entity type through the module that owns it.
-//
-// In a SWEEP a denied type is omitted; a caller who NAMED one type hears the
-// denial. Search shows a seat the object classes it can read and says nothing
-// about the rest — the posture ListObjects and the native /v1/search branches
-// already take — and refusing the whole walk for one missing grant would make
-// the advertised all-types sweep unusable for any seat that is not universal.
+// searchOneType pages one entity type through the module that owns it. A
+// denied type is the caller's to hear: an empty page would say it holds nothing.
 func (p *Provider) searchOneType(ctx context.Context, t datasource.EntityType, text *string, limit int,
-	cursor string, filters map[string]string, sweeping bool,
+	cursor string, filters map[string]string,
 ) ([]datasource.Record, string, error) {
 	var inner *string
 	if cursor != "" {
@@ -259,109 +207,7 @@ func (p *Provider) searchOneType(ctx context.Context, t datasource.EntityType, t
 	default:
 		return nil, "", &datasource.UnsupportedEntityError{Type: string(t)}
 	}
-	if err != nil {
-		if sweeping && errors.Is(err, apperrors.ErrPermissionDenied) {
-			return nil, "", nil
-		}
-		return nil, "", err
-	}
-	return records, next, nil
-}
-
-// sweepOrder resolves the types one query walks: the ones it named, or every
-// SEARCHABLE type when it named none.
-//
-// A named type is admitted from NAMEABLE, which is wider — see the two vars
-// above. What a sweep visits by default and what a caller may name are
-// different questions, and answering both from one list makes every type kept
-// out of the sweep unreachable by name too.
-//
-// Always in one fixed order and always without repeats, whatever order the
-// caller listed them in and however many times — a stream walked twice serves
-// its records twice, and a cursor names the type rather than one of its
-// appearances, so a resumed walk would re-serve them forever.
-func sweepOrder(named []datasource.EntityType) ([]datasource.EntityType, error) {
-	if len(named) == 0 {
-		return searchable, nil
-	}
-	asked := make(map[datasource.EntityType]bool, len(named))
-	for _, et := range named {
-		if !slices.Contains(nameable, et) {
-			return nil, &datasource.UnsupportedEntityError{Type: string(et)}
-		}
-		asked[et] = true
-	}
-	walk := make([]datasource.EntityType, 0, len(asked))
-	for _, et := range nameable {
-		if asked[et] {
-			walk = append(walk, et)
-		}
-	}
-	return walk, nil
-}
-
-// resumeStream reads the position a cursor names, refusing one this seam could
-// not have minted: a token whose stream is not a type this provider searches
-// at all — an overlay mirror's `activity` position presented here after a
-// cutover, say. Resuming "past" a stream this provider does not know would
-// answer a complete empty page to a caller holding a real token, which is the
-// confident-wrong-answer shape a resumable walk exists to remove.
-//
-// Whether THIS request still walks a stream it does know is a different
-// question with a different answer — see resumeIndex.
-func resumeStream(cursor string) (storekit.SweepCursor, error) {
-	position, err := storekit.DecodeSweepCursor(cursor)
-	if err != nil {
-		return storekit.SweepCursor{}, err
-	}
-	if position.Stream == "" {
-		return position, nil
-	}
-	// NAMEABLE, not searchable: a partner page mints a cursor in its own
-	// stream, and judging it against the sweep's default set would refuse this
-	// seam's own token as malformed on the second page.
-	if !slices.Contains(nameable, datasource.EntityType(position.Stream)) {
-		return storekit.SweepCursor{}, &storekit.MalformedCursorError{}
-	}
-	return position, nil
-}
-
-// resumeIndex is where in this walk the cursor's stream resumes.
-//
-// The token names a stream, not an index into one request's slice, so it still
-// means the same place when the request presenting it is not the one that
-// minted it — a narrowed type list, or a grant lost between pages. A stream
-// this request no longer walks resumes at the next type PAST it: the records
-// between belong to a stream this request is not reading, and the contract
-// already says changing a filter mid-walk changes what the remaining pages
-// see.
-func resumeIndex(walk []datasource.EntityType, stream string) int {
-	if stream == "" {
-		return 0
-	}
-	// NAMEABLE, not searchable: it is the order every walk is built in, and a
-	// stream absent from the list Index is asked about answers -1 — which
-	// compares below every position and restarts the walk at its first type,
-	// re-serving records the caller already has.
-	at := slices.Index(nameable, datasource.EntityType(stream))
-	for i, et := range walk {
-		if slices.Index(nameable, et) >= at {
-			return i
-		}
-	}
-	return len(walk)
-}
-
-// sweepResumesAt finishes a page that stopped short of the walk's end: the
-// position to continue from, and the flag that says one exists. They are set
-// together and only together.
-func sweepResumesAt(out datasource.SearchResult, et datasource.EntityType, inner string) (datasource.SearchResult, error) {
-	cursor, err := storekit.EncodeSweepCursor(storekit.SweepCursor{Stream: string(et), Inner: inner})
-	if err != nil {
-		return datasource.SearchResult{}, err
-	}
-	out.NextCursor, out.HasMore = cursor, true
-	return out, nil
+	return records, next, err
 }
 
 func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datasource.EntityRef, error) {

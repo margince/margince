@@ -240,7 +240,7 @@ func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilt
 		if f.EntityType == entityTypeActivity {
 			visErr = auth.EnsureActivityContentVisible(ctx, tx, f.EntityID)
 		} else {
-			visErr = auth.EnsureVisible(ctx, tx, f.EntityType, f.EntityID)
+			visErr = auth.EnsureVisibleExisting(ctx, tx, f.EntityType, f.EntityID)
 		}
 		if visErr != nil {
 			return visErr

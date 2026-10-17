@@ -726,7 +726,7 @@ paths:
       x-agent-access: human-only
       summary: What the background system is holding, and whose work failed.
       description: >
-        Admin-only. Reports the caller's own workspace's background jobs by kind — waiting,
+        Gated by the `job_health` read grant (admin and ops hold it by default). Reports the caller's own workspace's background jobs by kind — waiting,
         running, retrying, and dead — plus the untenanted dispatcher rows that fan work out
         to every workspace. Another workspace's jobs are never included: river_job carries no
         workspace column and therefore no RLS, so this endpoint imposes the scope itself.
@@ -743,7 +743,7 @@ paths:
         '403':
           description: >
             Refused: the caller is an agent/passport principal (this endpoint is human-only)
-            or a human without the admin role. Not an object/action RBAC grant denial.
+            or a seat without `job_health:read` (held by the admin and ops roles).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -756,7 +756,7 @@ paths:
       x-agent-access: human-only
       summary: What capture's judgement queues are holding, and in whose mailbox.
       description: >
-        Admin-only. Reports how much is waiting on a sender decision or a thread verdict,
+        Gated by the `job_health` read grant (admin and ops hold it by default). Reports how much is waiting on a sender decision or a thread verdict,
         by mailbox, plus the classifier queue as a whole. COUNTS AND AGES ONLY — never a
         subject, a body, or the reason a thread was held: those describe the correspondence,
         and an operational page is not an exemption from the capture-privacy boundary.
@@ -776,7 +776,7 @@ paths:
         '403':
           description: >
             Refused: the caller is an agent/passport principal (this endpoint is human-only)
-            or a human without the admin role. Not an object/action RBAC grant denial.
+            or a seat without `job_health:read` (held by the admin and ops roles).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -789,7 +789,7 @@ paths:
       x-agent-access: human-only
       summary: Which composed units are handing the core records it cannot express.
       description: >
-        Admin-only. Reports, per composed unit, how many records the core's ingress grammar
+        Gated by the `job_health` read grant (admin and ops hold it by default). Reports, per composed unit, how many records the core's ingress grammar
         refused over the reporting window and which check refused them.
 
 
@@ -815,7 +815,7 @@ paths:
         '403':
           description: >
             Refused: the caller is an agent/passport principal (this endpoint is human-only)
-            or a human without the admin role. Not an object/action RBAC grant denial.
+            or a seat without `job_health:read` (held by the admin and ops roles).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -2869,7 +2869,10 @@ paths:
       tags: [Companies]
       operationId: createCompany
       summary: Create a company.
-      description: Domains are normalized/lowercased and unique per workspace (409 on collision).
+      description: |
+        Domains are normalized/lowercased and unique per workspace (409 on collision).
+        A `parent_company_id` that names no company the caller can read answers `404`, the same
+        for a missing company and for one hidden by row scope.
       x-mcp-tool: { verb: create_record, record_type: company, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -2894,6 +2897,7 @@ paths:
               schema: { $ref: '#/components/schemas/Company' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '409':
           description: A domain already maps to another company.
           content:
@@ -4521,6 +4525,158 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /finance/source:
+    get:
+      tags: [Finance]
+      operationId: getFinanceSource
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Which accounting source is connected, and which this installation can connect.
+      description: |
+        The finance settings page's read. `available` lists every accounting source this build
+        composes; the core ships none of its own, so each one is an extension unit. Governed by
+        the `integrations` RBAC object.
+      responses:
+        '200':
+          description: The connected source, if any, and the sources on offer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FinanceSourceState' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [Finance]
+      operationId: connectFinanceSource
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Connect an accounting source (admin/ops).
+      description: |
+        Asks the source whether it can be read before anything is stored, so wrong credentials
+        are refused here rather than six hours later. Then records the connection and queues the
+        first sync, which brings in the source's customer directory. Connecting the source that is
+        already connected answers it unchanged; a different one is refused until the current one
+        is disconnected. Read only: nothing here writes to the accounting system.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConnectFinanceSourceRequest' }
+      responses:
+        '200':
+          description: Connected; the first sync is queued.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FinanceSourceState' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '502':
+          description: 'The source could not be read (`code: provider_unusable`); nothing was stored.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    delete:
+      tags: [Finance]
+      operationId: disconnectFinanceSource
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Disconnect the accounting source (admin/ops).
+      description: |
+        Stops the sync. The mirrored invoices and payments stay, labelled with the source they
+        came from, and the finance card reports that no source is connected.
+      responses:
+        '204': { description: 'Disconnected, or nothing was connected.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /finance/source/sync:
+    post:
+      tags: [Finance]
+      operationId: syncFinanceSource
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Queue a sync of the connected source now (admin/ops).
+      description: |
+        The six-hourly sweep keeps the mirror current on its own; this runs the same pass sooner,
+        for instance after linking customers. A second press while one is queued is a no-op.
+      responses:
+        '202':
+          description: Queued.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RefreshAccepted' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /finance/source/customers:
+    get:
+      tags: [Finance]
+      operationId: listFinanceSourceCustomers
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: The connected source's customers, and the company each is linked to.
+      description: |
+        The directory the last sync brought in, ordered by name. A customer is never linked
+        automatically: guessing which customer is which company puts money on the wrong account.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: One page of the directory.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FinanceSourceCustomerListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /finance/source/customers/{external_id}/link:
+    parameters:
+      - name: external_id
+        in: path
+        required: true
+        description: The customer's id in the accounting source.
+        schema: { type: string, minLength: 1, maxLength: 200 }
+    put:
+      tags: [Finance]
+      operationId: linkFinanceSourceCustomer
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Link a source customer to a company (admin/ops).
+      description: |
+        A company may hold several accounting customers; a customer belongs to one company.
+        Relinking a customer moves its invoices to the new company on the next sync.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LinkFinanceSourceCustomerRequest' }
+      responses:
+        '200':
+          description: Linked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FinanceSourceCustomer' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Finance]
+      operationId: unlinkFinanceSourceCustomer
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Remove a customer's link (admin/ops).
+      description: |
+        The sync stops reading this customer's ledger. What it already mirrored stays on the
+        company it was linked to.
+      responses:
+        '204': { description: 'Unlinked, or it was not linked.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /companies/{id}/capture-triage:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -5221,7 +5377,10 @@ paths:
       description: |
         Amount is integer minor-units + ISO-4217 currency (no float money). The stage
         must belong to the deal's pipeline (422 otherwise). Deals attach to contact/company,
-        never to a raw lead (ADR-0008 §5).
+        never to a raw lead (ADR-0008 §5). An id in the body that names nothing the caller can
+        read (`company_id`, `partner_company_id`, `project_id`, `stage_id`, among others) answers
+        `404`, the same for a missing record and for one hidden by row scope, so the answer does
+        not say which exists.
       x-mcp-tool: { verb: create_record, record_type: deal, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -5250,6 +5409,7 @@ paths:
               schema: { $ref: '#/components/schemas/Deal' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '422':
           description: Validation error (e.g. stage not in pipeline, lost without lost_reason).
           content:
@@ -7168,7 +7328,9 @@ paths:
         transport, so the same message reaching two connected mailboxes is one activity —
         and that reserved value is refused here (422): only a connector, or this system's
         own send, may claim a mail identity. An activity may link to >1 entity
-        (contact and deal). `log_activity` is 🟢 (reversible).
+        (contact and deal). A link that names a record the caller cannot read answers `404`,
+        the same for a missing record and for one hidden by row scope. `log_activity` is 🟢
+        (reversible).
       x-mcp-tool: { verb: log_activity, record_type: activity, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -7237,6 +7399,7 @@ paths:
               schema: { $ref: '#/components/schemas/Activity' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/{id}:
@@ -9935,7 +10098,8 @@ paths:
         With name + email returns 201 + stable UUID; round-trips on GET (features/01 §6.1).
         `company_name` is FREE TEXT — a lead has NO company FK. Lead-internal exact-email
         dedupe → 409 with existing lead id. Bulk/connector sourcing uses (source_system, source_id)
-        for idempotent re-import.
+        for idempotent re-import. A `project_id` that names no project the caller can read
+        answers `404`, the same for a missing project and for one hidden by row scope.
       x-mcp-tool: { verb: create_record, record_type: lead, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -9964,6 +10128,7 @@ paths:
               schema: { $ref: '#/components/schemas/Lead' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '409':
           description: A live lead already owns this email.
           content:
@@ -14034,7 +14199,10 @@ paths:
       tags: [Search]
       operationId: search
       summary: Cross-object search (contacts, companies, deals, activities, leads).
-      description: Hybrid full-text search. Results are scoped by RBAC; leads are a distinct result type.
+      description: >
+        Lexical full-text search, ranked by relevance: the query's words and prefixes matched
+        against each record's own text, with no meaning match. Results are scoped by RBAC; leads
+        are a distinct result type.
       x-mcp-tool: { verb: search_records, tier: auto_execute, scope: read }
       parameters:
         - name: q
@@ -19195,6 +19363,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/NoticeCase' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /privacy/notice-cases/{id}/assign:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -19223,6 +19394,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/NoticeCase' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /privacy/notice-cases/{id}/excuse:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -19258,6 +19433,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/NoticeCase' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /communication-reviews:
     get:
       tags: [Communication]
@@ -19487,6 +19666,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DataSubjectRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /confirm-submissions:
     get:
@@ -19642,6 +19825,10 @@ paths:
                   deliberately not pinned here, because a schema mirrored in the contract would
                   drift one release behind the export a gate checks for completeness.
                 additionalProperties: true
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /audit-log:
     get:
       tags: [Compliance]
@@ -19888,8 +20075,8 @@ paths:
         mutation's entries are never split across pages, so a page may exceed `limit` by the
         width of its final row. A visible record with no matching changes answers
         `200 {data: []}` — an empty history is honest, not a gap. A record outside the
-        caller's row scope answers 404 (existence-hiding), like every single-record read; an
-        unbounded caller asking about an id that never existed reads the same honest empty page.
+        caller's row scope answers 404 (existence-hiding), like every single-record read, and
+        so does an id that names no record, for an unbounded caller too.
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -22288,7 +22475,7 @@ paths:
       operationId: listExtensions
       security: [ { cookieAuth: [] } ]   # human session only — an operator console, not an agent surface
       x-agent-access: human-only
-      summary: List the composed extension units and what each contributes. Admin-only, human-only, read-only.
+      summary: List the composed extension units and what each contributes. Human-only, read-only; needs the extension_access read grant.
       description: |
         What this binary actually composed (ADR-0120): one entry per enabled unit under
         `extensions/`, with the RBAC objects, routes and jobs it contributes. The role editor
@@ -22302,8 +22489,10 @@ paths:
         reconciliation validated, so an entry here cannot describe a unit that is not serving.
 
         The extension set is a property of the BINARY, not of the workspace: it is identical for
-        every caller and changes only on deploy. Admin-only all the same — it enumerates the
-        installation's internal surface (routes, jobs, versions), which is operator information.
+        every caller and changes only on deploy. It is gated all the same — it enumerates the
+        installation's internal surface (routes, jobs, versions), which is operator information —
+        by the `extension_access` read grant, which the admin and ops roles hold by default.
+        Every other role answers 403.
       responses:
         '200':
           description: The composed extension set. Empty for an installation with no units enabled.
@@ -23649,8 +23838,8 @@ paths:
       summary: Open a thread as the seller's side — a question on a document, or a room-level update.
       description: |
         The first comment is the body. Refused once the room can no longer reach a
-        buyer (closed, expired, archived). A document thread is pinned to the
-        document's current version.
+        buyer (closed, expired, archived): `409 deal_room_content_not_editable`. A
+        document thread is pinned to the document's current version.
       x-mcp-tool: { verb: create_record, record_type: deal_room_thread, tier: auto_execute, scope: write }
       requestBody:
         required: true
@@ -23666,6 +23855,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /deal-rooms/{id}/threads/{threadId}/comments:
@@ -23679,7 +23869,10 @@ paths:
       tags: [Deals]
       operationId: replyDealRoomThread
       summary: Reply in a thread as the seller's side.
-      description: Refused on a resolved thread and in a room that can no longer reach a buyer.
+      description: |
+        Refused on a resolved thread (`409 deal_room_thread_resolved`: open a new
+        thread instead) and in a room that can no longer reach a buyer
+        (`409 deal_room_content_not_editable`).
       x-mcp-tool: { verb: create_record, record_type: deal_room_comment, tier: auto_execute, scope: write }
       requestBody:
         required: true
@@ -23695,6 +23888,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /deal-rooms/{id}/threads/{threadId}/resolve:
@@ -23723,6 +23917,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
 
   # -------------------------- offer templates ---------------------------
   # Branded, workspace-governed DE/EN PDF layouts for offers (B-E03.22/WP7,
@@ -28715,11 +28910,14 @@ paths:
       operationId: listAiModelRates
       security: [ { cookieAuth: [] } ]   # human session only — internal cost data is an admin view, not an agent surface
       x-agent-access: human-only
-      summary: List current AI model prices (latest per model), or one model's history.
+      summary: List the AI model price sheet (latest-dated price per model), or one model's history.
       description: |
         Admin/ops-only view. Prices are USD per 1M tokens (strings). Without
-        `provider`/`model_id`, returns the latest effective price per model; with both,
-        returns that model's effective-dated history, newest first.
+        `provider`/`model_id`, returns the head of the sheet: each model's latest-DATED price,
+        which is a price scheduled for a later day when one exists, so compare `effective_date`
+        with today before reading a row as the price in force. With both, returns that model's
+        effective-dated history, newest first, from which the price in force today is the first
+        row dated today or earlier.
       parameters:
         - name: provider
           in: query
@@ -29429,8 +29627,8 @@ components:
       in: query
       schema: { type: string }
       description: >-
-        The record named in words, found as `search_records` finds it. A name matching more
-        than one record is refused with the candidate ids rather than guessed at.
+        The record named in words, found the way `search_records` finds the same words. A name
+        matching more than one record is refused with the candidate ids rather than guessed at.
     AnchorMaxItems:
       name: max_items
       in: query
@@ -29633,7 +29831,12 @@ components:
         create (API-CC-6). **Scope:** the key is unique within
         `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
         returns the original status + body. Reusing the same key with a *different* request body
-        returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+        returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+        do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+        means the first request under the key is still running and carries `Retry-After`;
+        resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+        request under the key failed after it had started, so check whether it took effect before
+        retrying under a new key.
         **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
         answer lost": without it the blind retry answers `409 version_skew`, because the first
         attempt already bumped the version.
@@ -35752,6 +35955,14 @@ components:
             selection is a ceiling a rep must not be able to raise.
           items: { type: string }
 
+    ProviderRunReservation:
+      type: object
+      required: [pool, reserved_credits]
+      properties:
+        pool: { type: string }
+        reserved_credits: { type: integer, minimum: 0 }
+        actual_credits: { type: [integer, 'null'], minimum: 0 }
+
     ProviderRun:
       type: object
       required: [id, subject_kind, provider, trigger, state, claims_unwritten, connection_version, configuration_snapshot, requested_categories, reservations, created_at, updated_at]
@@ -35805,13 +36016,7 @@ components:
         reservations:
           type: array
           description: Maximum credits held per pool before submission, reconciled to actual spend on a terminal result (PI-FORM-1).
-          items:
-            type: object
-            required: [pool, reserved_credits]
-            properties:
-              pool: { type: string }
-              reserved_credits: { type: integer, minimum: 0 }
-              actual_credits: { type: [integer, 'null'], minimum: 0 }
+          items: { $ref: '#/components/schemas/ProviderRunReservation' }
         claims_unwritten:
           type: boolean
           default: false
@@ -37291,6 +37496,74 @@ components:
             a reader outside `activity:read` gets none either. Never stored, because
             it is assembled per reader: a cached brief that carried one would serve
             the first reader's access to the second.
+
+    FinanceSourceState:
+      type: object
+      required: [available]
+      properties:
+        available:
+          type: array
+          description: Every accounting source this build can connect, sorted by provider.
+          items: { $ref: '#/components/schemas/FinanceSourceOption' }
+        connection: { $ref: '#/components/schemas/FinanceConnection' }
+
+    FinanceSourceOption:
+      type: object
+      required: [provider, description]
+      properties:
+        provider: { type: string, description: "The source's key, stored on every mirrored row." }
+        description: { type: string, description: "What the extension unit supplying it says it is for." }
+
+    FinanceConnection:
+      type: object
+      required: [id, provider, status, connected_at]
+      properties:
+        id: { type: string, format: uuid }
+        provider: { type: string }
+        status:
+          type: string
+          enum: [connecting, active, error]
+          description: '`connecting` until the first sync finishes; `error` when the last one failed.'
+        connected_at: { type: string, format: date-time }
+        last_success_at: { type: [string, 'null'], format: date-time }
+        last_attempt_at: { type: [string, 'null'], format: date-time }
+        last_error_code: { type: [string, 'null'] }
+
+    ConnectFinanceSourceRequest:
+      type: object
+      required: [provider]
+      additionalProperties: false
+      properties:
+        provider: { type: string, minLength: 1, maxLength: 32 }
+
+    FinanceSourceCustomer:
+      type: object
+      required: [external_id, display_name]
+      properties:
+        external_id: { type: string }
+        display_name: { type: string }
+        company: { $ref: '#/components/schemas/FinanceLinkedCompany' }
+
+    FinanceSourceCustomerListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/FinanceSourceCustomer' } }
+        page: { $ref: '#/components/schemas/PageInfo' }
+
+    FinanceLinkedCompany:
+      type: object
+      required: [id, display_name]
+      properties:
+        id: { type: string, format: uuid }
+        display_name: { type: string }
+
+    LinkFinanceSourceCustomerRequest:
+      type: object
+      required: [company_id]
+      additionalProperties: false
+      properties:
+        company_id: { type: string, format: uuid }
 
     CompanyFinanceSummary:
       type: object
@@ -53502,7 +53775,7 @@ components:
         company_id: { type: [string, 'null'], format: uuid }
         root_url: { type: string, format: uri }
         status: { type: string, enum: [queued, deferred, reading, ready, partial, failed, confirmed, abandoned] }
-        status_code: { type: [string, 'null'], enum: [null, budget_deferred] }
+        status_code: { type: [string, 'null'], enum: [null, budget_deferred, bot_blocked, http_server_error, timeout, http_client_error, dns, tls, robots_disallowed, unreadable, internal, stale_reclaim], description: 'Why a read did not finish: budget_deferred, or the closed failure vocabulary a failed crawl is diagnosed with.' }
         status_detail: { type: [string, 'null'], description: 'Safe guidance only; never provider payload, prompt, SQL, or stack data.' }
         next_attempt_at: { type: [string, 'null'], format: date-time }
         stopped_reason:
@@ -53821,7 +54094,7 @@ components:
         company_id: { type: string, format: uuid }
         seed_url: { type: string, format: uri }
         status: { type: string, enum: [queued, deferred, running, done, partial, failed, cancelled] }
-        status_code: { type: [string, 'null'], enum: [null, budget_deferred] }
+        status_code: { type: [string, 'null'], enum: [null, budget_deferred, bot_blocked, http_server_error, timeout, http_client_error, dns, tls, robots_disallowed, unreadable, internal, stale_reclaim], description: 'Why a read did not finish: budget_deferred, or the closed failure vocabulary a failed crawl is diagnosed with.' }
         status_detail: { type: [string, 'null'], description: 'Safe guidance only; never provider payload, prompt, SQL, or stack data.' }
         next_attempt_at: { type: [string, 'null'], format: date-time }
         pages:

@@ -251,6 +251,7 @@ func jobEnqueueOptions(
 	opts := []compose.Option{
 		deepRead, accountScan, compose.WithVoiceBuildEnqueue(inserter), compose.WithRateRefresh(inserter), compose.WithAssuranceRun(inserter),
 		compose.WithTechnicalEnrich(inserter),
+		compose.WithFinanceSources(inserter),
 		compose.WithTranscriptRead(inserter),
 		compose.WithDocumentRead(inserter),
 		compose.WithKnowledgeIngest(inserter),

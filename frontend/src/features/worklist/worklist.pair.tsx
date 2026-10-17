@@ -104,7 +104,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
           const message =
             code === "permission_denied"
               ? "worklist.pair.refused"
-              : code === "conflict"
+              : code === "already_disposed"
                 ? "worklist.pair.alreadySettled"
                 : "worklist.pair.failed";
           // The two REASONED refusals stay until the reader dismisses them;
@@ -118,7 +118,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
           // is the only one of the three that means it.
           toast.show(t(message), {
             tone: "danger",
-            sticky: code === "permission_denied" || code === "conflict",
+            sticky: code === "permission_denied" || code === "already_disposed",
           });
         },
       },

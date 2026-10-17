@@ -37,7 +37,7 @@ func (s *Store) mirrorPayment(
 	if err != nil {
 		return wroteNothing, err
 	}
-	if found && before.SyncHash == hash {
+	if found && before.SyncHash == hash && before.CompanyID == args.companyID {
 		return wroteNothing, nil
 	}
 	if found {

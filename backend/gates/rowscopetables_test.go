@@ -57,6 +57,7 @@ var scopeSpellingTable = map[string]scopeSpelling{
 
 	"EnsureVisible":                 {argument: 2},
 	"EnsureVisibleLive":             {argument: 2},
+	"EnsureVisibleExisting":         {argument: 2},
 	"EnsureVisibleForSubjectRights": {argument: 2},
 	// The write-authority family takes the same (ctx, tx, table, id) shape as
 	// the visible family it opens with, so the table is in the same position.

@@ -167,18 +167,9 @@ func wireClaims(claims []contactdata.Claim) []crmcontracts.ContactResearchClaim 
 // conversation claim: it has no status, no needs-review and no dismissal,
 // because nobody said it in a conversation we captured.
 func (s *Service) Save(ctx context.Context, contactID ids.ContactID, in crmcontracts.SaveContactResearchRequest) (int, error) {
-	// Ahead of the empty-list return: the operation is human-only regardless
-	// of what it would have written, and an agent seat posting an empty list
-	// must see the same refusal a non-empty one gets. Nothing lands from
-	// either path, but "human-only" is a property of the call, not of its
-	// payload.
+	// Human-only holds for the call whatever its payload, an empty list included.
 	if err := auth.RequireHuman(ctx); err != nil {
 		return 0, err
-	}
-	if len(in.Claims) == 0 {
-		// Saving nothing is not an error — a reader who dismissed every claim
-		// made a decision, and it is the one this surface exists to allow.
-		return 0, nil
 	}
 	return s.contacts.SaveResearchClaims(ctx, contactID, toClaimInputs(in.Claims))
 }

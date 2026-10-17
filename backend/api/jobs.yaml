@@ -108,6 +108,14 @@ queues:
       message a contact pressed a button for and is waiting on, so the pool is
       wide enough that an ordinary text send is not queued behind two album
       uploads.
+  accounting_read:
+    max_workers: 2
+    reason: >-
+      A finance sync reads every linked customer's ledger from an accounting
+      system this deployment does not control, for up to five minutes a pass.
+      On the default queue a burst of admins pressing Sync would hold every
+      worker that capture syncs and close-date jobs need. Two, because the
+      sync is a six-hourly mirror nobody waits on beyond the card's spinner.
   deep_read:
     max_workers: 6
     reason: >-
@@ -286,7 +294,7 @@ kinds:
     role: worker
     fleet: true
     go_type: FinanceSyncSweepArgs
-    queue: default
+    queue: accounting_read
     timeout: 5m
     opts_owner: caller
     cadence: 6h
@@ -307,6 +315,20 @@ kinds:
       Each workspace's pass reads the source's customers and the ledger of each
       linked one, and writes only what changed. The hash covers the source's own
       values, so a pass over an unchanged ledger writes nothing.
+
+  finance_sync:
+    role: worker
+    go_type: FinanceSyncArgs
+    queue: accounting_read
+    timeout: 5m
+    opts_owner: caller
+    args:
+      Workspace: id
+    reason: >-
+      One workspace's pass, queued when an administrator connects a source or
+      presses Sync now, so the customer directory arrives without waiting for
+      the six-hourly sweep. It is the pass the sweep runs per workspace, under
+      the same five minutes.
 
   capture_backfill_reconcile:
     role: worker

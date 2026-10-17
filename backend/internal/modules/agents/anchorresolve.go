@@ -22,8 +22,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // anchorResolveLimit bounds the candidate read.
@@ -38,35 +39,35 @@ const anchorResolveLimit = 5
 // Exactly one of the two is supplied — anchorArgs.validate settles that before
 // this runs — so this never has to decide which the caller meant.
 //
-// The search rides the same provider and the same query search_records uses, so
-// a name resolves here to exactly what that tool would have returned. Resolving
-// through a second reader would let the two disagree about which record a word
-// names, which is the confusion this change exists to remove rather than move.
-func resolveAnchor(
-	ctx context.Context, p datasource.SystemOfRecordProvider, args anchorArgs,
-) (ids.UUID, error) {
+// The name is ranked by the engine search_records runs, scoped to the anchor's
+// one type. The two never disagree about which record a word names. Rank order
+// picks nothing: one hit is the record, and more are refused.
+func resolveAnchor(ctx context.Context, search RecordSearch, args anchorArgs) (ids.UUID, error) {
 	if args.RecordID != (ids.UUID{}) {
 		return args.RecordID, nil
 	}
-	res, err := p.Search(ctx, datasource.SearchQuery{
-		Text:        args.RecordName,
-		EntityTypes: []datasource.EntityType{datasource.EntityType(args.RecordType)},
-		Limit:       anchorResolveLimit,
+	// The engine drops a type the caller may not read, which would read as
+	// "nothing matches".
+	if err := auth.Require(ctx, args.RecordType, principal.ActionRead); err != nil {
+		return ids.UUID{}, err
+	}
+	page, err := search(ctx, RecordSearchQuery{
+		Text: args.RecordName, Types: []string{args.RecordType}, Limit: anchorResolveLimit,
 	})
 	if err != nil {
 		return ids.UUID{}, err
 	}
-	switch len(res.Records) {
+	switch len(page.Hits) {
 	case 0:
 		return ids.UUID{}, &BadArgsError{Cause: fmt.Errorf(
-			"no %s matches `record_name` %q — search_records finds what this workspace holds",
+			"no %s matches `record_name` %q — search_records ranks the same words the same way, so try other words there",
 			args.RecordType, args.RecordName)}
 	case 1:
-		return res.Records[0].Ref.ID, nil
+		return page.Hits[0].Ref.ID, nil
 	default:
 		return ids.UUID{}, &BadArgsError{Cause: fmt.Errorf(
 			"`record_name` %q matches %d %s records — name one by `record_id`: %s",
-			args.RecordName, len(res.Records), args.RecordType, candidateIDs(res.Records))}
+			args.RecordName, len(page.Hits), args.RecordType, candidateIDs(page.Hits))}
 	}
 }
 
@@ -77,10 +78,10 @@ func resolveAnchor(
 // says to somebody who asked only whether a word was ambiguous. An id is what
 // the caller needs to make the follow-up call, and read_record already gates
 // what they may then see.
-func candidateIDs(records []datasource.Record) string {
-	out := make([]string, 0, len(records))
-	for _, rec := range records {
-		out = append(out, rec.Ref.ID.String())
+func candidateIDs(hits []RecordSearchHit) string {
+	out := make([]string, 0, len(hits))
+	for _, hit := range hits {
+		out = append(out, hit.Ref.ID.String())
 	}
 	return strings.Join(out, ", ")
 }

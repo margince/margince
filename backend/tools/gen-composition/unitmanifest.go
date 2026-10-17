@@ -83,6 +83,10 @@ type unitManifest struct {
 	// declared, not discover from a message leaving the installation.
 	Channels []declaredChannel `json:"channels,omitempty"`
 
+	// FinanceSources are the accounting systems the unit reads into the
+	// finance mirror.
+	FinanceSources []declaredFinanceSource `json:"finance_sources,omitempty"`
+
 	// Inbound are the session-less HTTP edges the unit asks the core to mount
 	// (see extension.InboundEndpoint). It is the one entry in this document an
 	// operator must read before enabling the unit at all: every other capability

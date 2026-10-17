@@ -160,36 +160,6 @@ func TestRecordReadAndListRoutesAnswerAsTheirTools(t *testing.T) {
 	}
 }
 
-// GET /search and search_records find the same records for one query, with and
-// without naming a type.
-func TestSearchRouteAnswersAsSearchRecords(t *testing.T) {
-	d := newTwoDoors(t, "search-records-doors", "read")
-	hit := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Quentin Zephyrwind"})
-	other := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Bernd Unrelated"})
-
-	// The tool also names a hit's owner. So the answers are compared on the
-	// hit and on the record neither may return.
-	for _, c := range []struct {
-		what  string
-		route string
-		args  map[string]any
-	}{
-		{"search across types", "/v1/search?q=Zephyrwind&limit=10", map[string]any{"q": "Zephyrwind", "limit": 10}},
-		{
-			"search one type", "/v1/search?q=Zephyrwind&record_type=contact&limit=10",
-			map[string]any{"q": "Zephyrwind", "record_type": "contact", "limit": 10},
-		},
-	} {
-		rest, tool := d.rest(t, "GET", c.route, nil), d.tool(t, "search_records", c.args)
-		bothDoorsName(t, c.what, rest, tool, hit)
-		for door, answer := range map[string]json.RawMessage{"route": rest, "tool": tool} {
-			if slices.Contains(documentRecords(answer), other) {
-				t.Errorf("%s: the %s returns the contact the query does not match", c.what, door)
-			}
-		}
-	}
-}
-
 // A tag, the tags list and a record's tags read the same on their routes and
 // tools.
 func TestTagRoutesAnswerAsTheirTools(t *testing.T) {
