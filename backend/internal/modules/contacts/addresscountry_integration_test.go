@@ -87,7 +87,7 @@ func TestALegacyCountryDoesNotBlockAnUnrelatedEditOrAnUndo(t *testing.T) {
 	}
 
 	city := "Berlin"
-	edited, err := e.store.UpdateCompany(ctx, companyID, UpdateCompanyInput{Address: &crmcontracts.Address{City: &city, Country: ptrTo("Germany")}})
+	edited, err := e.store.UpdateCompany(ctx, companyID, UpdateCompanyInput{Address: &crmcontracts.Address{City: &city, Country: new("Germany")}})
 	if err != nil || *edited.Address.Country != "Germany" || *edited.Address.City != "Berlin" {
 		t.Fatalf("an edit carrying the stored legacy country back: %v / %v, want it kept and the city saved", edited.Address, err)
 	}
@@ -106,5 +106,3 @@ func TestALegacyCountryDoesNotBlockAnUnrelatedEditOrAnUndo(t *testing.T) {
 		t.Fatalf("an undo replaying the legacy country: %v / %v, want it put back", restored.Address, err)
 	}
 }
-
-func ptrTo(s string) *string { return &s }
