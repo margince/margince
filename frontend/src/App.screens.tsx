@@ -82,7 +82,7 @@ export const FiltersScreen = lazy(
 
 export const BriefScreen = lazy(
   routed(() =>
-    import("./screens/brief").then((m) => ({ default: m.BriefScreen })),
+    import("./features/brief/brief").then((m) => ({ default: m.BriefScreen })),
   ),
 );
 
@@ -243,7 +243,7 @@ const ShareScreen = lazy(
 );
 
 export const WorklistRedirect = lazy(() =>
-  import("./screens/brief.queue").then((m) => ({
+  import("./features/brief/brief.queue").then((m) => ({
     default: m.WorklistRedirect,
   })),
 );

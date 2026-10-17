@@ -18,7 +18,7 @@ The code:
 - `backend/internal/compose/weeklyjobs.go`, `weeklyteamjobs.go`, `weeklyenrichjobs.go` and `backend/internal/compose/weekly/`: the weekly review.
 - `backend/internal/modules/deals/closedate.go` and `closedatesweep.go`: the nightly close date repair; `changeacceptance.go`: **Accept**.
 - `backend/internal/modules/notices/store.go` and `backend/internal/modules/automation/handlers_event.go`: stage change notices.
-- `frontend/src/lib/router.tsx` and `frontend/src/screens/brief.queue.tsx`: old addresses.
+- `frontend/src/lib/router.tsx` and `frontend/src/features/brief/brief.queue.tsx`: old addresses.
 
 ## How a row is ranked
 

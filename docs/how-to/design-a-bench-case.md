@@ -17,7 +17,7 @@ Leave out screens opened rarely, such as settings or an import wizard.
 Read the screen, not the API contract. List its reads:
 
 ```sh
-grep -rn 'api.GET("/' frontend/src/screens/brief*.ts* frontend/src/features/worklist/worklist*.ts
+grep -rn 'api.GET("/' frontend/src/features/brief/brief*.ts* frontend/src/features/worklist/worklist*.ts
 ```
 
 Follow the query modules the screen imports, since some reads live there and in `frontend/src/app/`. Send

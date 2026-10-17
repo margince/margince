@@ -26,7 +26,7 @@ import { unwrap } from "../lib/problem";
 import { routeHash } from "../lib/router";
 import { type MagicLine, magicKey } from "./magic.queries";
 import { MagicUndoButton } from "./magic.undo";
-import "./brief.css";
+import "../features/brief/brief.css";
 
 type MagicLineRecord = components["schemas"]["MagicLineRecord"];
 type MagicFieldChange = components["schemas"]["MagicFieldChange"];

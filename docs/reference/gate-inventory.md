@@ -114,7 +114,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `lockspelling_test.go` | H2 | One lock, two modules, and no import between them. |
 | `logokeycolumns_test.go` | H3 | The mark reference check reads every column a mark's key can be stored in. |
 | `magiccaptureconcerns_test.go` | H2 | Every condition capture can raise is a condition the watching lane draws. |
-| `mailbrieflink_test.go` | H1 | The Brief's address is spelled twice: the frontend routes it (frontend/src/screens/brief.view.ts) and outbound mail links to it (internal/platform/mailcopy/link.go), because a message has to name a view before the app it opens is running. |
+| `mailbrieflink_test.go` | H1 | The Brief's address is spelled twice: the frontend routes it, and outbound mail links to it before the app it opens is running. |
 | `mailcopy_test.go` | H2 | The weekly message's labels are the weekly panel's labels. |
 | `meetinghorizonparity_test.go` | H2 | How far into the diary a meeting still says a relationship is live, spelled twice in two modules that may not import each other, and held equal here. |
 | `mergedecidableauthority_test.go` | H2 | Who may settle a duplicate pair has one answer, and the card must ask the same thing the write asks. |

@@ -52,7 +52,7 @@ import {
   useMagic,
 } from "./magic.queries";
 import { MagicTimeline, spansDays } from "./magic.timeline";
-import "./brief.css";
+import "../features/brief/brief.css";
 
 // The reading order: what waits on you, what broke, what needs restoring, and
 // what already happened. A list rather than four call sites, so a fifth lane is

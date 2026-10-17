@@ -10,11 +10,11 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { ContactMeetingBrief } from "../features/brief/meetingbrief";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
 import { CompanyScreen } from "./companies";
 import { AskSection } from "./company360";
-import { ContactMeetingBrief } from "./meetingbrief";
 
 // Every AI surface can be told which project it is about, through the one
 // picker, and every scoped output says so in one line the server's counts

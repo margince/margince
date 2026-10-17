@@ -17,7 +17,7 @@ import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { problemCodeOf, throwProblem } from "../../lib/problem";
 import { backStaysInApp, navigate } from "../../lib/router";
-import { ContactMeetingBrief } from "../../screens/meetingbrief/drawer";
+import { ContactMeetingBrief } from "../brief/meetingbrief/drawer";
 import { BookingFooter } from "./booking-common";
 import {
   DeliveryCard,

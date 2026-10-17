@@ -50,7 +50,7 @@ const sourceRoot = join(frontendRoot, "src");
  */
 const notARecordZone = new Map<string, string>([
   [
-    "screens/brief.weekly.learnings.tsx",
+    "features/brief/brief.weekly.learnings.tsx",
     "one learning of a list, titled by kind, inside the learnings panel's body",
   ],
   [

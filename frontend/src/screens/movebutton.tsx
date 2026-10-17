@@ -22,6 +22,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
+import { ContactMeetingBrief } from "../features/brief/meetingbrief";
 import {
   TaskDetailModal,
   useTaskUpdate,
@@ -32,7 +33,6 @@ import { useOpenEmail } from "../lib/openemail";
 import { unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { ComposeModal } from "./compose";
-import { ContactMeetingBrief } from "./meetingbrief";
 import { OpenEmailDrawer } from "./openemaildrawer";
 
 // What a move must carry to be performed. Both producers' shapes satisfy it.

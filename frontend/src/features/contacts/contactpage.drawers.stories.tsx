@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { ContactMeetingBrief } from "../../screens/meetingbrief";
+import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { ProviderCard } from "../capture/integrations-provider";
 import { ContactResearchDrawer } from "./contactdrawers";
 import {

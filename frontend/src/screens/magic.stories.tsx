@@ -2,15 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { BriefChanges } from "../features/brief/brief.changes";
+import { digest } from "../features/brief/brief.fixtures";
+import { OvernightDigest } from "../features/brief/brief.rail.overnight";
 import { automaticStageReceipt } from "../features/worklist/worklist.receiptreview.fixtures";
 import {
   jsonResponse,
   StoryProviders,
   stubWithSession,
 } from "../testing/story-utils";
-import { BriefChanges } from "./brief.changes";
-import { digest } from "./brief.fixtures";
-import { OvernightDigest } from "./brief.rail.overnight";
 import { MagicPanel } from "./magic";
 import { BUSY_NIGHT } from "./magic.fixtures";
 import type { MagicReceipt } from "./magic.queries";
