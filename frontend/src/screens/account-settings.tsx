@@ -6,6 +6,7 @@ import { useId } from "react";
 import { api } from "../api/client";
 import { THEME_LABEL_KEYS } from "../app/account";
 import { Avatar, Button } from "../design-system/atoms";
+import { describedByIds } from "../design-system/describedby";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
@@ -160,11 +161,10 @@ function LanguageSettingRow() {
         <div className="form-stack settingrow-measure">
           <Select
             {...control}
-            aria-describedby={
-              [control["aria-describedby"], remember.error && refusalId]
-                .filter(Boolean)
-                .join(" ") || undefined
-            }
+            aria-describedby={describedByIds(
+              control["aria-describedby"],
+              remember.isError && refusalId,
+            )}
             value={locale}
             onChange={(next) => {
               const picked = LOCALES.find((option) => option === next);

@@ -5,6 +5,7 @@ import {
   type ReactNode,
   useId,
 } from "react";
+import { describedByIds } from "./describedby";
 
 // `ComponentPropsWithRef`, not the bare attribute set. A caller that opens
 // this field itself needs the node, such as an edit-in-place value that puts
@@ -231,7 +232,7 @@ export function Field({
   // Both, when both are on screen. A field that is refused and still carries
   // its rule has two things to say. Naming only one in `aria-describedby`
   // picks which one sighted and non-sighted readers get.
-  const describedBy = [errorId, hintId].filter(Boolean).join(" ") || undefined;
+  const describedBy = describedByIds(errorId, hintId);
   const control = children({
     id,
     required,
