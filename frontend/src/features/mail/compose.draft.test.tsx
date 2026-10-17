@@ -227,9 +227,7 @@ describe("ComposeModal draft binding", () => {
       screen.getByRole("button", { name: "Discard draft" }),
     );
 
-    await waitFor(() =>
-      expect(screen.queryByDisplayValue("Draft A body.")).toBeNull(),
-    );
+    await waitFor(() => expect(messageText("Body")).not.toBe("Draft A body."));
     const rejections = sent.filter(
       (r) => r.key === "POST /voice-profiles/vp-1/draft-rejections",
     );
@@ -282,9 +280,7 @@ describe("ComposeModal draft binding", () => {
     ).toBe(false);
 
     landRejection();
-    await waitFor(() =>
-      expect(screen.queryByDisplayValue("Draft A body.")).toBeNull(),
-    );
+    await waitFor(() => expect(messageText("Body")).not.toBe("Draft A body."));
     expect(
       sent.some((r) => r.key === "POST /activities/act-1/send-email"),
     ).toBe(false);
@@ -455,9 +451,7 @@ describe("ComposeModal draft binding", () => {
     expect(messageText("Body")).toBe("Draft A body.");
 
     landRejection();
-    await waitFor(() =>
-      expect(screen.queryByDisplayValue("Draft A body.")).toBeNull(),
-    );
+    await waitFor(() => expect(messageText("Body")).not.toBe("Draft A body."));
   });
 
   it("records no rejection when the composer is merely closed", async () => {
