@@ -66,9 +66,9 @@ func NormalizeCountryCode(raw string) (string, error) {
 // edits share it so neither can stage a country the other would refuse.
 //
 // The country rule holds a country the edit changes. A save that carries the
-// stored country back, as an edit form or a CSV update does, is not new input,
-// so a row written before the rule keeps its country and stays editable. An
-// undo replays a value the row held itself, so it is exempt too.
+// stored country back, as an edit form or a CSV update does, is not new input.
+// A row written before the rule keeps its country and stays editable. An undo
+// replays a value the row held itself, so it is exempt too.
 func setAddress(p *storekit.Patch, current, edit *crmcontracts.Address, trail storekit.AuditTrail) error {
 	if edit == nil {
 		return nil

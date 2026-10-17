@@ -137,8 +137,8 @@ export function CalendarSection({
 }
 
 // The three limit fields as typed. A number kept only as a number cannot show a
-// cleared input, and an emptied one would read as 0, so each is held as text and
-// the form takes the number only once there is one.
+// cleared input, and an emptied one would read as 0. So each is held as text,
+// and the form takes the number only once there is one.
 export type LimitTexts = { notice: string; buffer: string; horizon: string };
 
 export function limitTextsOf(profile: Profile): LimitTexts {

@@ -115,8 +115,8 @@ func TestAFileLinkedInURLReplacesOnlyThatSocialHandle(t *testing.T) {
 }
 
 // An update row that names only a city carries the stored country forward,
-// whatever it is, so the store sees it unchanged and does not apply the
-// country rule to a row written before it.
+// whatever it is. The store then sees it unchanged and does not hold a row
+// written before the rule to it.
 func TestACsvUpdateCarriesAStoredLegacyCountryForward(t *testing.T) {
 	city := "Berlin"
 	merged, changed, err := addressMergedOnto([]byte(`{"address":{"city":"Bonn","country":"Germany"}}`), &crmcontracts.Address{City: &city})

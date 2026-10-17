@@ -66,9 +66,9 @@ func TestAnAddressCountryIsHeldToAlpha2OnEveryContactAndCompanyWrite(t *testing.
 	}
 }
 
-// A row written before the country rule keeps its country and stays editable:
-// the edit form and a CSV update carry the stored country back, and an undo
-// replays a value the row held itself.
+// A row written before the country rule keeps its country and stays editable.
+// The edit form and a CSV update carry the stored country back. An undo replays
+// a value the row held itself.
 func TestALegacyCountryDoesNotBlockAnUnrelatedEditOrAnUndo(t *testing.T) {
 	e := setupCapturePrivacy(t)
 	ctx := e.as(e.owner, principal.RowScopeAll)

@@ -106,8 +106,8 @@ func TestCustomFieldCreate_OntoALabelARenameGaveAnotherField_IsRefused(t *testin
 		t.Fatalf("creating a second %q after a rename gave the first one that label: err = %v, want conflict", "Bar", err)
 	}
 
-	// The renamed field still holds the key its first label derived, so a new
-	// label deriving the same key is a collision the sentence must say plainly.
+	// The renamed field still holds the key its first label derived. A new label
+	// deriving that key collides, and the sentence must say so plainly.
 	_, err = svc.Create(ctx, dateSpec("foo"))
 	if !errors.Is(err, apperrors.ErrConflict) || !strings.Contains(err.Error(), `key "foo"`) || !strings.Contains(err.Error(), `"Bar"`) {
 		t.Fatalf("a label reusing a renamed field's key: err = %v, want a conflict naming the key and the field that holds it", err)

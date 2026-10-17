@@ -7,8 +7,8 @@ package gates
 
 // The Meetings settings screen stops a title or a location at the contract's
 // length before the request is sent. The two lengths are a declared mirror of
-// crm.yaml's SchedulingProfile, not a second answer, and this makes that true:
-// a limit changed on one side and not the other fails here.
+// crm.yaml's SchedulingProfile, not a second answer. A limit changed on one side
+// and not the other fails here.
 
 import (
 	"os"
