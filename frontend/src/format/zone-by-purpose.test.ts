@@ -418,8 +418,8 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Same `me` fixture behind the saved-views suite: a stored user setting, not a formatting decision.",
   },
   {
-    file: "features/deals/deals.test.tsx",
-    why: "Same `me` fixture across the board suite's five scenarios: a stored user setting, not a formatting decision.",
+    file: "features/deals/deals.testkit.tsx",
+    why: "Same `me` fixture across the deal suites it serves: a stored user setting, not a formatting decision.",
   },
   {
     file: "screens/installation-settings.stories.tsx",

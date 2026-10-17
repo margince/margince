@@ -1,34 +1,22 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Link2 } from "lucide-react";
+import { Link2 } from "lucide-react";
 import { useState } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import {
-  Badge,
-  Button,
-  Field,
-  OverflowMenu,
-  TextInput,
-} from "../../design-system/atoms";
-import { ChoiceList } from "../../design-system/choicelist";
-import { useClipboardCopy } from "../../design-system/clipboardcopy";
-import { ConfirmModal } from "../../design-system/confirmmodal";
+import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { humanizeToken } from "../../screens/audit";
-import { IssuedNotice } from "./dealroomaccess.notices";
-import {
-  CAPABILITIES,
-  CAPABILITY_HINTS,
-  CAPABILITY_LABELS,
-} from "./dealroomcapability";
+import { CAPABILITIES, CAPABILITY_LABELS } from "./dealroomcapability";
 import "./dealroomaccess.css";
 import { SurfaceState } from "../../design-system/surfacestate";
-
+import {
+  CapabilityDialog,
+  InviteDialog,
+  ReissueDialog,
+  RevokeDialog,
+} from "./dealroomaccess.dialogs";
 // Who may enter the room, and the verbs that change it: invite, issue a new
 // link, change what a contact may do, revoke. Every link is shown once, with
 // Copy: the server never stores it in clear, and pasting it is the normal path.
@@ -36,75 +24,23 @@ import { SurfaceState } from "../../design-system/surfacestate";
 // Capability is a required, explained choice. The API defaults to `view`,
 // and a buyer invited with the default could read the documents and never be
 // able to say anything about them.
+import { useParticipants } from "./dealroomaccess.queries";
 
-type DealRoom = components["schemas"]["DealRoom"];
-type Participant = components["schemas"]["DealRoomParticipant"];
-type Capability = components["schemas"]["DealRoomParticipantCapability"];
-type Issued = components["schemas"]["DealRoomInvitationIssued"];
+export { buyerLink } from "./dealroomaccess.dialogs";
+export {
+  participantsKey,
+  refreshSeats,
+  useParticipants,
+  useRoomAttendance,
+} from "./dealroomaccess.queries";
 
-export function participantsKey(roomId: string) {
-  return ["deal-room-participants", roomId] as const;
-}
+export type DealRoom = components["schemas"]["DealRoom"];
 
-// Every read of "who sits where" — the room's roster and the contact page's
-// room list — goes stale together when a seat changes.
-export function refreshSeats(
-  queryClient: ReturnType<typeof useQueryClient>,
-  roomId: string,
-) {
-  return Promise.all([
-    queryClient.invalidateQueries({ queryKey: participantsKey(roomId) }),
-    queryClient.invalidateQueries({ queryKey: ["deal-rooms-of"] }),
-  ]);
-}
+export type Participant = components["schemas"]["DealRoomParticipant"];
 
-export function useParticipants(roomId: string) {
-  return useQuery({
-    queryKey: participantsKey(roomId),
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/deal-rooms/{id}/participants", {
-          params: { path: { id: roomId } },
-        }),
-      );
-    },
-  });
-}
+export type Capability = components["schemas"]["DealRoomParticipantCapability"];
 
-/**
- * Attendance, counted once: how many seats stand, how many have been through
- * the door, and when a buyer last looked.
- *
- * Two surfaces state it — the deal's Deal Room card and the head of the room's
- * own page — and before this each counted for itself. Two counters over one
- * list is two answers to one question, and the question is whether anybody has
- * actually walked in: a room that reads "2 signed in" in the deal's margin and
- * "3 signed in" on its own page has told a rep something false on one of them.
- *
- * Revoked seats are not invited any more, which is why the filter is on both
- * counts rather than on the second alone.
- */
-export function useRoomAttendance(roomId: string) {
-  const participants = useParticipants(roomId);
-  const rows = (participants.data?.data ?? []).filter((p) => !p.revoked_at);
-  return {
-    invited: rows.length,
-    active: rows.filter((p) => p.has_signed_in).length,
-    lastSeen: rows
-      .map((p) => p.last_seen_at)
-      .filter((v): v is string => typeof v === "string")
-      .sort()
-      .at(-1),
-    // Whether the count is a fact yet. A "0 invited" drawn while the read is in
-    // flight is a wrong statement rather than a loading one.
-    counted: participants.isSuccess,
-  };
-}
-
-/** The link a buyer opens: the public screen with the credential in the fragment. */
-export function buyerLink(credential: string): string {
-  return `${window.location.origin}/#/room?c=${encodeURIComponent(credential)}`;
-}
+export type Issued = components["schemas"]["DealRoomInvitationIssued"];
 
 export function DealRoomAccess({
   room,
@@ -270,306 +206,5 @@ function ParticipantRow({
         onClose={() => setConfirming(null)}
       />
     </PanelRow>
-  );
-}
-
-// The link, shown once. Copy is the verb; the sentence under it is the thing
-// a rep most needs to know and will otherwise learn from a locked-out buyer.
-function IssuedLink({ issued }: Readonly<{ issued: Issued }>) {
-  const t = useT();
-  const link = buyerLink(issued.credential);
-  const copy = useClipboardCopy(link, {
-    copy: t("access.issued.copy"),
-    copied: t("access.issued.copied"),
-    remedy: t("access.issued.copyFailed"),
-  });
-  return (
-    <div className="form-stack">
-      <IssuedNotice queued={issued.queued} email={issued.participant.email} />
-      <Field label={t("access.issued.linkLabel")}>
-        {(control) => <TextInput {...control} readOnly value={link} />}
-      </Field>
-      <div className="card-actions">
-        <Button onClick={copy.copy}>
-          <Copy aria-hidden />
-          {copy.label}
-        </Button>
-      </div>
-      {/* Below the row, not in it: beside its button the notice loses the
-          line it needs to say what to do instead. */}
-      {copy.notice}
-      <p className="t-caption">{t("access.issued.oneTime")}</p>
-    </div>
-  );
-}
-
-function InviteDialog({
-  room,
-  open,
-  onClose,
-}: Readonly<{ room: DealRoom; open: boolean; onClose: () => void }>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [capability, setCapability] = useState<Capability>("comment");
-  const [issued, setIssued] = useState<Issued | null>(null);
-  const invite = useMutation({
-    mutationFn: async (input: {
-      name: string;
-      email: string;
-      capability: Capability;
-    }) => {
-      return unwrap(
-        await api.POST("/deal-rooms/{id}/participants", {
-          params: { path: { id: room.id } },
-          body: {
-            full_name: input.name,
-            email: input.email,
-            capability: input.capability,
-            source: "manual",
-          },
-        }),
-        t,
-      );
-    },
-    onSuccess: (data) => {
-      void refreshSeats(queryClient, room.id);
-      if (data) {
-        setIssued(data);
-      }
-    },
-  });
-  const close = () => {
-    setIssued(null);
-    setName("");
-    setEmail("");
-    setCapability("comment");
-    invite.reset();
-    onClose();
-  };
-  return (
-    <ConfirmModal
-      open={open}
-      onClose={close}
-      title={
-        issued
-          ? t("access.issued.title", { name: issued.participant.full_name })
-          : t("access.inviteTitle")
-      }
-      confirmLabel={issued ? t("access.done") : t("access.inviteConfirm")}
-      confirmDisabled={!issued && (name.trim() === "" || email.trim() === "")}
-      pending={invite.isPending}
-      error={invite.isError ? problemMessageOf(invite.error, t) : null}
-      onConfirm={() =>
-        issued
-          ? close()
-          : invite.mutate({
-              name: name.trim(),
-              email: email.trim(),
-              capability,
-            })
-      }
-      intent="form"
-    >
-      {issued ? (
-        <IssuedLink issued={issued} />
-      ) : (
-        <>
-          <Field label={t("access.nameLabel")} required>
-            {(control) => (
-              <TextInput
-                {...control}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            )}
-          </Field>
-          <Field label={t("access.emailLabel")} required>
-            {(control) => (
-              <TextInput
-                {...control}
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            )}
-          </Field>
-          <ChoiceList
-            legend={t("access.capabilityLegend")}
-            value={capability}
-            onChange={setCapability}
-            choices={CAPABILITIES.map((c) => ({
-              value: c,
-              label: t(CAPABILITY_LABELS[c]),
-              description: t(CAPABILITY_HINTS[c]),
-            }))}
-          />
-          <p>{t("access.inviteNote")}</p>
-        </>
-      )}
-    </ConfirmModal>
-  );
-}
-
-function ReissueDialog({
-  room,
-  participant,
-  open,
-  onClose,
-}: Readonly<{
-  room: DealRoom;
-  participant: Participant;
-  open: boolean;
-  onClose: () => void;
-}>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const [issued, setIssued] = useState<Issued | null>(null);
-  const reissue = useMutation({
-    mutationFn: async () => {
-      return unwrap(
-        await api.POST("/deal-rooms/{id}/participants/{participantId}/resend", {
-          params: { path: { id: room.id, participantId: participant.id } },
-        }),
-        t,
-      );
-    },
-    onSuccess: (data) => {
-      void refreshSeats(queryClient, room.id);
-      if (data) {
-        setIssued(data);
-      }
-    },
-  });
-  const close = () => {
-    setIssued(null);
-    reissue.reset();
-    onClose();
-  };
-  return (
-    <ConfirmModal
-      open={open}
-      onClose={close}
-      title={t("access.issueLinkTitle", { name: participant.full_name })}
-      confirmLabel={issued ? t("access.done") : t("access.issueLink")}
-      pending={reissue.isPending}
-      error={reissue.isError ? problemMessageOf(reissue.error, t) : null}
-      onConfirm={() => (issued ? close() : reissue.mutate())}
-    >
-      {issued ? (
-        <IssuedLink issued={issued} />
-      ) : (
-        <p>{t("access.issueLinkBody")}</p>
-      )}
-    </ConfirmModal>
-  );
-}
-
-function RevokeDialog({
-  room,
-  participant,
-  open,
-  onClose,
-}: Readonly<{
-  room: DealRoom;
-  participant: Participant;
-  open: boolean;
-  onClose: () => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const queryClient = useQueryClient();
-  const revoke = useMutation({
-    mutationFn: async () => {
-      unwrap(
-        await api.POST("/deal-rooms/{id}/participants/{participantId}/revoke", {
-          params: { path: { id: room.id, participantId: participant.id } },
-        }),
-        t,
-      );
-    },
-    onSuccess: () => {
-      void refreshSeats(queryClient, room.id);
-      onClose();
-    },
-  });
-  return (
-    <ConfirmModal
-      open={open}
-      onClose={onClose}
-      title={t("access.revokeTitle", { name: participant.full_name })}
-      confirmLabel={t("access.revoke")}
-      confirmVariant="danger"
-      pending={revoke.isPending}
-      error={revoke.isError ? problemMessageOf(revoke.error, t) : null}
-      onConfirm={() => revoke.mutate()}
-    >
-      <p>
-        {participant.email}
-        {participant.last_seen_at
-          ? ` · ${t("access.lastSeen", { when: formatDateAbbrev(participant.last_seen_at, locale, recordZone) })}`
-          : ` · ${t("access.neverSignedIn")}`}
-      </p>
-      <p>{t("access.revokeBody")}</p>
-    </ConfirmModal>
-  );
-}
-
-function CapabilityDialog({
-  room,
-  participant,
-  open,
-  onClose,
-}: Readonly<{
-  room: DealRoom;
-  participant: Participant;
-  open: boolean;
-  onClose: () => void;
-}>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const [capability, setCapability] = useState<Capability>(
-    participant.capability,
-  );
-  const change = useMutation({
-    mutationFn: async (next: Capability) => {
-      unwrap(
-        await api.PATCH("/deal-rooms/{id}/participants/{participantId}", {
-          params: { path: { id: room.id, participantId: participant.id } },
-          body: { capability: next },
-        }),
-        t,
-      );
-    },
-    onSuccess: () => {
-      void refreshSeats(queryClient, room.id);
-      onClose();
-    },
-  });
-  return (
-    <ConfirmModal
-      open={open}
-      onClose={onClose}
-      title={t("access.changeCapabilityTitle", { name: participant.full_name })}
-      intent="form"
-      confirmLabel={t("access.save")}
-      confirmDisabled={capability === participant.capability}
-      pending={change.isPending}
-      error={change.isError ? problemMessageOf(change.error, t) : null}
-      onConfirm={() => change.mutate(capability)}
-    >
-      <ChoiceList
-        legend={t("access.capabilityLegend")}
-        value={capability}
-        onChange={setCapability}
-        choices={CAPABILITIES.map((c) => ({
-          value: c,
-          label: t(CAPABILITY_LABELS[c]),
-          description: t(CAPABILITY_HINTS[c]),
-        }))}
-      />
-    </ConfirmModal>
   );
 }

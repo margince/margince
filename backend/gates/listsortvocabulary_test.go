@@ -55,7 +55,7 @@ import (
 // renamed file or a retired vocabulary fails here rather than dropping a
 // surface out of the census quietly.
 var listSurfaces = map[string]struct{ vocabulary, source string }{
-	"features/deals/deals.tsx":          {"dealListFields", "internal/modules/deals/deal_read.go"},
+	"features/deals/deals.list.tsx":     {"dealListFields", "internal/modules/deals/deal_read.go"},
 	"features/contacts/contacts.tsx":    {"contactListFields", "internal/modules/contacts/contact_list.go"},
 	"screens/leads.list.tsx":            {"leadListFields", "internal/modules/contacts/lead_list.go"},
 	"screens/companies.tsx":             {"companyListFields", "internal/modules/contacts/company_list.go"},
