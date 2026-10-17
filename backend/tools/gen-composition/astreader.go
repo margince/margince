@@ -422,6 +422,12 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		if err == nil {
 			m.Channels = append(m.Channels, channels...)
 		}
+	case "FinanceSources":
+		var sources []declaredFinanceSource
+		sources, err = r.readFinanceSources(kv.Value, file)
+		if err == nil {
+			m.FinanceSources = append(m.FinanceSources, sources...)
+		}
 	case "Inbound":
 		var endpoints []inboundEndpoint
 		endpoints, err = r.readInbound(kv.Value, file)

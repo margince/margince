@@ -13,7 +13,19 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
-const idempotencyConflict = "idempotency_key_conflict"
+const (
+	// idempotencyConflict is a key reused for another body: a client error that
+	// no wait clears.
+	idempotencyConflict = "idempotency_key_conflict"
+	// idempotencyFailed is a key whose earlier attempt started and recorded no
+	// result: the caller checks the effect before choosing a new key.
+	idempotencyFailed = "idempotency_key_failed"
+)
+
+// idempotencyInProgressRetryAfter is the Retry-After, in seconds, of a retry
+// that met its own first attempt still running. The first attempt is one write
+// transaction, so a second is long enough.
+const idempotencyInProgressRetryAfter = 1
 
 // writeClaimOutcome answers a claim that did not win the race: a replay
 // (gated), a first attempt still in flight, or the same key reused for a
@@ -48,9 +60,10 @@ func writeClaimOutcome(w http.ResponseWriter, r *http.Request, pool *pgxpool.Poo
 		}
 	case claimInProgress:
 		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusConflict,
-			Code:   idempotencyConflict,
-			Detail: "a request with this idempotency key is still in progress",
+			Status:            http.StatusConflict,
+			Code:              httperr.IdempotencyInProgressCode,
+			Detail:            "a request with this idempotency key is still in progress; send the same request again in a moment to receive its answer",
+			RetryAfterSeconds: idempotencyInProgressRetryAfter,
 		})
 	case claimMismatch:
 		httperr.Write(w, r, &httperr.DetailedError{
@@ -69,7 +82,7 @@ func writeClaimOutcome(w http.ResponseWriter, r *http.Request, pool *pgxpool.Poo
 		// silent success for a call that failed.
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusConflict,
-			Code:   idempotencyConflict,
+			Code:   idempotencyFailed,
 			Detail: "an earlier request with this idempotency key failed after it had already started; " +
 				"check whether it took effect before retrying under a new key",
 		})

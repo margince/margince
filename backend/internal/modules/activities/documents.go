@@ -71,7 +71,7 @@ func (s *Store) ListCompanyDocuments(
 		page storekit.Page
 	)
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, "company", companyID); err != nil {
+		if err := auth.EnsureVisibleExisting(ctx, tx, "company", companyID); err != nil {
 			return err
 		}
 		var args []any

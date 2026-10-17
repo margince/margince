@@ -28,12 +28,11 @@ import { EmailVerb } from "./recordemail";
 type Company = components["schemas"]["Company"];
 
 // Which of LogActivityAction's two forms the drawer opens on: log what
-// happened, or set what happens next. Owned by the page rather than by two
-// separate LogActivityAction mounts, the same one-drawer-two-doors shape
-// contactpage.tsx's ContactActivityDrawer keeps for the identical pair — and
-// exported now that the daily brief's own leading card opens the same drawer,
-// so a rep who logs from the card and one who logs from the header meet one
-// drawer rather than two independent copies of it.
+// happened, or set what happens next. The page owns it, not two separate
+// LogActivityAction mounts. ContactActivityDrawer in contactpage.drawers.tsx
+// keeps the same one-drawer-two-doors shape for the same pair. It is exported
+// because the daily brief's leading card opens the same drawer. So a rep who
+// logs from the card and one who logs from the header meet one drawer.
 export type ActivityDrawer = "log" | "task" | null;
 
 export function CompanyHeaderActions({

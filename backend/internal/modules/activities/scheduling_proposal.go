@@ -241,7 +241,7 @@ func (s *Store) OpenProposals(ctx context.Context, contact ids.UUID) ([]crmcontr
 	}
 	var open []openProposal
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, linkEntityContact, contact); err != nil {
+		if err := auth.EnsureVisibleExisting(ctx, tx, linkEntityContact, contact); err != nil {
 			return err
 		}
 		var err error

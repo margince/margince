@@ -147,7 +147,7 @@ func (s *Store) ListHealth(
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		// The history is a fact about the record, gated exactly as the record
 		// is: a caller who cannot see the project is told it is not there.
-		if err := auth.EnsureVisible(ctx, tx, projectObject, id.UUID); err != nil {
+		if err := auth.EnsureVisibleExisting(ctx, tx, projectObject, id.UUID); err != nil {
 			return err
 		}
 		limit := 50

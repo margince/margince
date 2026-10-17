@@ -12,38 +12,28 @@ package agents
 // strictly better, and it is what these assert.
 
 import (
-	"context"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// searchingProvider answers a fixed set of hits and records what it was asked.
-type searchingProvider struct {
-	datasource.SystemOfRecordProvider
-	hits  []datasource.Record
-	asked datasource.SearchQuery
-	err   error
-}
-
-func (p *searchingProvider) Search(
-	_ context.Context, q datasource.SearchQuery,
-) (datasource.SearchResult, error) {
-	p.asked = q
-	if p.err != nil {
-		return datasource.SearchResult{}, p.err
+// rankedHits is an engine page of these refs, in the order given.
+func rankedHits(refs ...datasource.EntityRef) *rankingProbe {
+	page := RecordSearchPage{}
+	for _, ref := range refs {
+		page.Hits = append(page.Hits, RecordSearchHit{Ref: ref})
 	}
-	return datasource.SearchResult{Records: p.hits}, nil
+	return &rankingProbe{page: page}
 }
 
-// aCompany is a hit of the type every case here anchors on. Typed rather than
-// parameterised: a parameter only ever given one value reads as a choice the
-// tests make and do not.
-func aCompany() datasource.Record {
-	return datasource.Record{Ref: datasource.EntityRef{Type: "company", ID: ids.NewV7()}}
+// aCompany is a hit of the type every case here anchors on.
+func aCompany() datasource.EntityRef {
+	return datasource.EntityRef{Type: "company", ID: ids.NewV7()}
 }
 
 // requireBadArgs asserts the refusal is the actionable kind.
@@ -58,10 +48,10 @@ func requireBadArgs(t *testing.T, err error) {
 	}
 }
 
-// refuseAnchor resolves and requires a refusal, answering it for inspection.
-func refuseAnchor(t *testing.T, p datasource.SystemOfRecordProvider, args anchorArgs) error {
+// refuseAnchor resolves as a company reader and requires a refusal.
+func refuseAnchor(t *testing.T, engine *rankingProbe, args anchorArgs) error {
 	t.Helper()
-	got, err := resolveAnchor(context.Background(), p, args)
+	got, err := resolveAnchor(searchReader("company"), engine.search, args)
 	requireBadArgs(t, err)
 	if got != (ids.UUID{}) {
 		t.Errorf("returned id %s beside a refusal", got)
@@ -69,15 +59,10 @@ func refuseAnchor(t *testing.T, p datasource.SystemOfRecordProvider, args anchor
 	return err
 }
 
-// resolvesTo resolves and requires the id it should have found, answering the
-// provider so a caller can go on to ask what it was asked.
-//
-// The mirror of refuseAnchor: the two outcomes this function has are "the id"
-// and "a refusal", and each is asserted one way here rather than spelled out
-// per test.
-func resolvesTo(t *testing.T, p *searchingProvider, args anchorArgs, want ids.UUID) {
+// resolvesTo resolves as a company reader and requires the id it should find.
+func resolvesTo(t *testing.T, engine *rankingProbe, args anchorArgs, want ids.UUID) {
 	t.Helper()
-	got, err := resolveAnchor(context.Background(), p, args)
+	got, err := resolveAnchor(searchReader("company"), engine.search, args)
 	if err != nil {
 		t.Fatalf("resolveAnchor: %v", err)
 	}
@@ -89,45 +74,41 @@ func resolvesTo(t *testing.T, p *searchingProvider, args anchorArgs, want ids.UU
 // An id given outright is used as given: naming the record precisely must not
 // cost a search.
 func TestAnAnchorGivenAnIDDoesNotSearch(t *testing.T) {
-	p := &searchingProvider{}
+	engine := &rankingProbe{}
 	want := ids.NewV7()
 
-	resolvesTo(t, p, anchorArgs{RecordType: "company", RecordID: want}, want)
+	resolvesTo(t, engine, anchorArgs{RecordType: "company", RecordID: want}, want)
 
-	if p.asked.Text != "" {
-		t.Errorf("searched for %q when the caller had already named the record", p.asked.Text)
+	if engine.asked != nil {
+		t.Errorf("searched for %q when the caller had already named the record", engine.asked.Text)
 	}
 }
 
-// One match is the record. The search is scoped to the type the caller named,
-// so a company called Contoso does not resolve a contact of the same name.
+// One match is the record. The name is ranked by the engine search_records
+// runs, scoped to the type the caller named.
 func TestAnAnchorNamedInWordsResolvesToItsOneMatch(t *testing.T) {
 	hit := aCompany()
-	p := &searchingProvider{hits: []datasource.Record{hit}}
+	engine := rankedHits(hit)
 
-	resolvesTo(t, p, anchorArgs{RecordType: "company", RecordName: "Contoso"}, hit.Ref.ID)
+	resolvesTo(t, engine, anchorArgs{RecordType: "company", RecordName: "Contoso"}, hit.ID)
 
-	if p.asked.Text != "Contoso" {
-		t.Errorf("searched for %q, want the caller's own words", p.asked.Text)
-	}
-	if len(p.asked.EntityTypes) != 1 || p.asked.EntityTypes[0] != "company" {
-		t.Errorf("searched types %v, want only the type the caller named", p.asked.EntityTypes)
+	want := RecordSearchQuery{Text: "Contoso", Types: []string{"company"}, Limit: anchorResolveLimit}
+	if got := engine.asked; got == nil || got.Text != want.Text || !slices.Equal(got.Types, want.Types) ||
+		got.Limit != want.Limit || got.PerType != nil || got.WithEmployees || got.Cursor != "" {
+		t.Errorf("the engine was asked %+v, want %+v", got, want)
 	}
 }
 
-// Several matches are REFUSED with the candidates, never guessed. This is the
-// whole point: a guess here produces a briefing about the wrong record that
-// reads exactly like a briefing about the right one.
+// Several matches are REFUSED with the candidates, never guessed. The top hit
+// is not the record the caller meant just because it ranked first. The
+// candidates are listed in rank order.
 func TestAnAmbiguousNameIsRefusedWithItsCandidates(t *testing.T) {
 	first, second := aCompany(), aCompany()
-	p := &searchingProvider{hits: []datasource.Record{first, second}}
 
-	err := refuseAnchor(t, p, anchorArgs{RecordType: "company", RecordName: "Contoso"})
+	err := refuseAnchor(t, rankedHits(first, second), anchorArgs{RecordType: "company", RecordName: "Contoso"})
 
-	for _, want := range []ids.UUID{first.Ref.ID, second.Ref.ID} {
-		if !strings.Contains(err.Error(), want.String()) {
-			t.Errorf("the refusal does not name candidate %s: %v", want, err)
-		}
+	if !strings.Contains(err.Error(), first.ID.String()+", "+second.ID.String()) {
+		t.Errorf("the refusal does not name both candidates in rank order: %v", err)
 	}
 	// It says which argument to use, because a refusal that does not is one an
 	// agent answers by retrying the same call.
@@ -140,32 +121,44 @@ func TestAnAmbiguousNameIsRefusedWithItsCandidates(t *testing.T) {
 // id that names nothing reaches a store, matches no row, and tells the caller a
 // record they never mentioned does not exist.
 func TestANameMatchingNothingIsRefused(t *testing.T) {
-	p := &searchingProvider{}
-
-	err := refuseAnchor(t, p, anchorArgs{RecordType: "company", RecordName: "Nobody"})
+	err := refuseAnchor(t, &rankingProbe{}, anchorArgs{RecordType: "company", RecordName: "Nobody"})
 
 	// It quotes the name that found nothing, because the caller's next move is
 	// to try a different one and they need to know which was tried.
 	if !strings.Contains(err.Error(), "Nobody") {
 		t.Errorf("the refusal does not name what was searched for: %v", err)
 	}
+	// search_records ranks the same words on the same engine, so it is where
+	// the caller sees what the words do find.
+	if !strings.Contains(err.Error(), "search_records") {
+		t.Errorf("the refusal does not send the caller to search_records: %v", err)
+	}
+}
+
+// The engine leaves a type the caller may not read out of its answer. Naming
+// that type is a denial, not "nothing matches".
+func TestANameOfATypeTheCallerCannotReadIsDenied(t *testing.T) {
+	engine := rankedHits(aCompany())
+	_, err := resolveAnchor(searchReader("contact"), engine.search, anchorArgs{RecordType: "company", RecordName: "Contoso"})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("naming an unreadable type answered %v, want ErrPermissionDenied", err)
+	}
+	if engine.asked != nil {
+		t.Error("the engine ran for a type the caller cannot read")
+	}
 }
 
 // The candidate list carries ids and nothing else. The refusal travels to an
-// agent that may hold no grant on any of them, and a name or a field would
-// publish what the record says to somebody who asked only whether a word was
-// ambiguous.
+// agent that may hold no grant on any of them. A snippet would publish what the
+// record says to somebody who asked only whether a word was ambiguous.
 func TestTheCandidateListPublishesNoRecordContent(t *testing.T) {
-	first, second := aCompany(), aCompany()
-	first.Fields = []byte(`{"name":"Contoso Pharmaceuticals","owner":"a colleague"}`)
-	p := &searchingProvider{hits: []datasource.Record{first, second}}
+	engine := rankedHits(aCompany(), aCompany())
+	engine.page.Hits[0].Match = RecordMatch{Snippet: "Contoso Pharmaceuticals"}
 
-	err := refuseAnchor(t, p, anchorArgs{RecordType: "company", RecordName: "Contoso"})
+	err := refuseAnchor(t, engine, anchorArgs{RecordType: "company", RecordName: "Contoso"})
 
-	for _, leaked := range []string{"Pharmaceuticals", "a colleague"} {
-		if strings.Contains(err.Error(), leaked) {
-			t.Errorf("the refusal published record content (%q): %v", leaked, err)
-		}
+	if strings.Contains(err.Error(), "Pharmaceuticals") {
+		t.Errorf("the refusal published record content: %v", err)
 	}
 }
 

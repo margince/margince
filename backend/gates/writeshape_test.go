@@ -260,10 +260,9 @@ var auditOnlyWrites = gatekit.Waive(map[string]string{
 	"internal/compose/briefs:clearFindings":                    "the same pass erasing what the previous one said before writing its own, on identical ground: no brief.* verb exists in the closed catalog, the only reader is Home, and the erasure is one half of a replacement whose other half is audited beside it. The audit row records how many findings the pass cleared, which answers \"did tonight's pass drop yesterday's explanations\"",
 	"internal/compose/briefs:resurfaceExpiredSnoozes":          "the brief read model is ratified audit-only \u2014 the closed catalog (events.md \u00a75) defines no brief.* type and the closed-verb law forbids inventing one build-side",
 	"internal/modules/contacts:recordDedupeCandidate":          "a dedupe candidate is a QUESTION the system is asking about two records, not something that happened to either \u2014 the closed catalog (events.md \u00a75) defines no dedupe.* type, nothing downstream acts on a proposal, and an outbox row nobody consumes would be a kind invented to satisfy the rule rather than a reader. Audited because who proposed a merge, when, and on what evidence belongs on the record's own history rather than only in operator telemetry",
-	// The finance mirror's seven write sites. One rationale covers all of them,
-	// and each is keyed on its own function so an EIGHTH finance write arrives
-	// unratified instead of inheriting a waiver somebody wrote about four
-	// tables.
+	// The finance mirror's write sites. One rationale covers all of them.
+	// Each is keyed on its own function, so a new finance write arrives
+	// unratified rather than under a waiver written for other tables.
 	//
 	// The event catalog is CLOSED: an event type exists because the contract
 	// declares one, and a build may not mint a type to satisfy this rule. The
@@ -288,15 +287,18 @@ var auditOnlyWrites = gatekit.Waive(map[string]string{
 	// Said plainly because an exemption marked "waiting on a decision" is how a
 	// temporary state becomes permanent with nobody choosing it. The condition
 	// that reopens this one, so the silence has an expiry: a consumer that needs
-	// to learn an invoice arrived. Then the contract declares the type FIRST —
-	// the order a closed catalog requires — and these seven entries become emits
-	// at the same call sites.
-	"internal/modules/finance:insertInvoice":             "the mirror takes in an invoice \u2014 see the note above these seven entries",
+	// to learn an invoice arrived. Then the contract declares the type first,
+	// as a closed catalog requires, and these entries become emits at the same
+	// call sites.
+	"internal/modules/finance:insertInvoice":             "the mirror takes in an invoice \u2014 see the note above these entries",
 	"internal/modules/finance:updateInvoice":             "the source restated an invoice \u2014 same ground",
 	"internal/modules/finance:insertPayment":             "the mirror takes in a received payment \u2014 same ground",
 	"internal/modules/finance:updatePayment":             "the source restated a payment \u2014 same ground",
 	"internal/modules/finance:mirrorCustomer":            "the mirror takes in a directory entry \u2014 same ground, and this row carries no money at all: it records which name in the accounting source a link points at",
 	"internal/modules/finance:updateExternalCustomer":    "the source renamed a directory entry \u2014 same ground",
+	"internal/modules/finance:insertConnection":          "an administrator connected an accounting source \u2014 same ground, a state of the connection rather than a record fact",
+	"internal/modules/finance:writeLink":                 "an administrator linked a source customer onto a company \u2014 same ground; the money it moves arrives with the next sync, audited row by row",
+	"internal/modules/finance:UnlinkCustomer":            "an administrator removed that link \u2014 same ground",
 	"internal/modules/finance:auditConnectionTransition": "the accounting source went down or came back \u2014 same ground. This one is a STATE change rather than a record fact, so even a ratified finance catalog would want a connection verb rather than an invoice one",
 	"internal/modules/notices:MarkAllRead":               "one seat clearing their whole notification centre. notice.read exists and MarkRead emits it per notice, so the silence here is a DECISION rather than a missing contract type: this act settles N rows in one statement, and announcing it faithfully would put N events on the bus for one tap \u2014 a fan-out every consumer pays for to learn what one number says. One event for the set is not available, because the payload names a notice id and this act has no single notice. THE GAP THIS LEAVES, STATED RATHER THAN EXPLAINED AWAY: notice.read is a self-only webhook event (selfOnlyEvents in internal/modules/webhooks/deliveryvisibility.go), so the recipient's own external subscription hears one event per single settle and nothing at all for a bulk one \u2014 a subscriber tracking read state from the stream alone does miss those N transitions and has to re-read the lane. That is accepted, not overlooked: the product's own surfaces are unaffected (the badge and the panel read the table on the next open, and the delivery legs read read_at rather than caching it), and the alternative is a hundred-event burst on every reader's tap. The audit row is what the rows cannot say once they are all alike \u2014 who cleared them, when, and how many moved, which is the only thing that says how much this one entry covers",
 	// WriteFiltered no longer belongs here: the bulk export is a non-entity

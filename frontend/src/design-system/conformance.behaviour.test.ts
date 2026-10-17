@@ -381,8 +381,8 @@ describe("unsaved edits", () => {
     expect(
       wearers,
       "a second guard is a guard that unmounts with its own screen; render " +
-        "the one in App.tsx and claim from the card with `useUnsavedGuard`",
-    ).toEqual(["src/App.tsx"]);
+        "the one in App.views.tsx and claim from the card with `useUnsavedGuard`",
+    ).toEqual(["src/App.views.tsx"]);
   });
 });
 

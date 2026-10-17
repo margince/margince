@@ -1,0 +1,245 @@
+import type { Locale } from "../i18n";
+import { middayInstant } from "./calendarday";
+import { INTL_LOCALE } from "./intllocale";
+import {
+  dateTimePreferences,
+  formatPreferredDate,
+  hourCycle,
+} from "./preferences";
+
+/** A month number has no viewer timezone. UTC keeps Intl's scaffolding in the same month. */
+export function monthName(month: number, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    month: "long",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(2026, month - 1, 1)));
+}
+
+/**
+ * The month a calendar grid is showing, such as "August 2026".
+ *
+ * A month a reader is looking at, not a moment. The grid is built from local
+ * dates, so this reads the local date back instead of pinning a zone.
+ */
+export function monthAndYear(month: Date, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    month: "long",
+    year: "numeric",
+  }).format(month);
+}
+
+/**
+ * A weekday as the one or two letters a calendar's legend uses.
+ *
+ * From Intl rather than a list of our own. "S M T W T F S" is English, and a
+ * hand-written row would sit unchanged over a German or Vietnamese month.
+ */
+export function weekdayInitial(day: Date, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    weekday: "narrow",
+  }).format(day);
+}
+
+/**
+ * A calendar day written out in full, such as "Tuesday, 25 August 2026".
+ *
+ * The accessible name of a day in a grid. "25" alone names no month, and a
+ * screen reader reaches the grid's heading several stops away.
+ */
+export function fullDayName(day: Date, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    dateStyle: "full",
+  }).format(day);
+}
+
+// IANA zone names only (AC-DS-TZ4). Fixed offsets ("+01:00", "Etc/GMT-1")
+// freeze DST rules without a sign, so they throw at the edge.
+export function assertIanaZone(zone: string): void {
+  if (/^[+-]\d{2}:?\d{2}$/.test(zone) || /^(Etc\/)?GMT[+-]?\d*$/i.test(zone)) {
+    throw new Error(
+      `timezone must be an IANA name, got fixed offset "${zone}"`,
+    );
+  }
+  // Intl rejects unknown names: constructing with the zone throws a RangeError
+  // that propagates. format() forces the value to be consumed.
+  new Intl.DateTimeFormat("en-US", { timeZone: zone }).format();
+}
+
+/**
+ * Whether the formatters above will accept this zone, asked without throwing.
+ *
+ * A page rendering a list of moments cannot let one row's zone take it down,
+ * so it asks before it formats. A probe with Intl alone learns only that the
+ * name resolves. `Etc/GMT-1`, `GMT` and `+01:00` resolve, then throw inside
+ * `formatDate`. So this derives from the assertion, the one reading of
+ * "a zone this renders".
+ */
+export function isRenderableZone(zone: string): boolean {
+  try {
+    assertIanaZone(zone);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Calendar dates are not UTC-midnight instants: their day survives every zone.
+export function displayDay(value: string, zone: string): Date {
+  return new Date(
+    /^\d{4}-\d{2}-\d{2}$/.test(value) ? middayInstant(value, zone) : value,
+  );
+}
+
+// Zone by purpose: personal deadlines localize to the user zone, and
+// reporting-period labels bucket on the workspace zone. The caller picks the
+// purpose; this helper only attaches the zone.
+export function formatDate(
+  utcIso: string,
+  locale: Locale,
+  zone: string,
+): string {
+  assertIanaZone(zone);
+  const formatter = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    timeZone: zone,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  return formatPreferredDate(formatter, displayDay(utcIso, zone));
+}
+
+/**
+ * The day as a page names it over a greeting: the weekday, the day and the
+ * month written out, as in "Thursday, 4 September". Intl's own names in the
+ * reader's locale, so de and vi read correctly with no lookup table of ours.
+ * Zone-by-purpose as everywhere here: the day a reader is in, so it takes
+ * the viewer's zone, never the workspace's.
+ */
+export function formatDayLong(
+  utcIso: string,
+  locale: Locale,
+  zone: string,
+): string {
+  assertIanaZone(zone);
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    timeZone: zone,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(displayDay(utcIso, zone));
+}
+
+// A date a reader scans rather than keys into a form: a record's header meta
+// line, never a table column copied into a spreadsheet.
+// The abbreviated month (Intl's locale name, so de and vi read correctly) sets
+// it apart from `formatDate`, the numeric, sortable form.
+export function formatDateAbbrev(
+  utcIso: string,
+  locale: Locale,
+  zone: string,
+): string {
+  if (dateTimePreferences().dateFormat !== "locale")
+    return formatDate(utcIso, locale, zone);
+  assertIanaZone(zone);
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    timeZone: zone,
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(displayDay(utcIso, zone));
+}
+
+/** A day and month for dates whose surrounding period already supplies the year. */
+export function formatDayMonth(
+  utcIso: string,
+  locale: Locale,
+  zone: string,
+): string {
+  assertIanaZone(zone);
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    timeZone: zone,
+    day: "numeric",
+    month: "short",
+  }).format(displayDay(utcIso, zone));
+}
+
+/**
+ * The wall-clock time of an instant, with no date, as in "09:05".
+ *
+ * For a row whose date is already printed beside it, where repeating the date
+ * per line is noise. One caller today: it lives here because this module is
+ * where a locale reaches a formatter, not because a second caller is expected.
+ * A private copy in the screen would be a second locale decision, which is the
+ * thing this module exists to prevent.
+ */
+export function formatTimeOfDay(
+  utcIso: string,
+  locale: Locale,
+  zone: string,
+): string {
+  assertIanaZone(zone);
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    timeZone: zone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: hourCycle(),
+  }).format(new Date(utcIso));
+}
+
+export function formatDateTime(
+  utcIso: string,
+  locale: Locale,
+  zone: string,
+): string {
+  assertIanaZone(zone);
+  if (dateTimePreferences().dateFormat !== "locale") {
+    return `${formatDate(utcIso, locale, zone)}, ${formatTimeOfDay(utcIso, locale, zone)}`;
+  }
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    timeZone: zone,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: hourCycle(),
+  }).format(new Date(utcIso));
+}
+
+/**
+ * calendarDaysBetween counts whole days between two instants by the calendar,
+ * in UTC. It is the frontend spelling of the backend's shared/kernel/elapsed.Days.
+ *
+ * Not by elapsed milliseconds: calendar days and a duration divided by 24 hours
+ * agree only around midnight. The server counts calendar days, so a screen
+ * counting the other way would print two numbers for one silence.
+ *
+ * Held by: format.calendar-days.test.ts, which pins the boundary case the
+ * millisecond spelling gets wrong (23:00 to 01:00 is one day, not zero).
+ */
+export function calendarDaysBetween(from: Date, to: Date): number {
+  const day = 86_400_000;
+  const fromDay = Math.floor(from.getTime() / day);
+  const toDay = Math.floor(to.getTime() / day);
+  return toDay - fromDay;
+}
+
+/**
+ * The clock hour, 0-23, that an instant reads as in one zone.
+ *
+ * Here because this file constructs formatters. Outside it, a locale reaches
+ * `Intl` only through `INTL_LOCALE` (`one-locale.test.ts` holds that).
+ * The hour carries no locale (08 is 08 in every language). So the tag is `en-GB`
+ * for an unambiguous `hourCycle: "h23"`, and the zone is what the caller asks.
+ *
+ * Used to decide which greeting a reader gets, which is a fact about their
+ * morning rather than about any record.
+ */
+export function hourInZone(instant: Date, zone: string): number {
+  const hour = new Intl.DateTimeFormat(INTL_LOCALE.en, {
+    hour: "numeric",
+    hourCycle: "h23",
+    timeZone: zone,
+  }).format(instant);
+  return Number.parseInt(hour, 10);
+}

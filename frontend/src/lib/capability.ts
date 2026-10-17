@@ -273,10 +273,10 @@ export function holdsAdminRole(roles: readonly string[] | undefined): boolean {
  * alone would hide surfaces the server serves an ops principal, which is the
  * client disagreeing with the authority.
  *
- * The entries INSIDE the section keep their own read predicates, so an ops
- * principal still finds the two admin-only surfaces (job health, the danger
- * zone) withheld by the cards themselves. This predicate decides whether the
- * section exists for a reader, never what they may do inside it.
+ * The entries inside the section keep their own read predicates. A principal
+ * without the `job_health` read finds job health withheld by its card, and one
+ * without the admin role finds the danger zone withheld. This predicate decides
+ * whether the section exists for a reader, never what they may do inside it.
  */
 export function useHoldsOperatorSeat(): boolean {
   const roles = useMe().data?.roles ?? [];

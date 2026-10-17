@@ -52,20 +52,12 @@ func EncodeCursor(createdAt time.Time, id ids.UUID) (string, error) {
 	return EncodeOpaque(Cursor{CreatedAt: createdAt, ID: id})
 }
 
-// SweepCursor is a position in a walk across SEVERAL streams: which stream the
-// page stopped in, and where inside that stream it stopped.
+// SweepCursor is a position in one of several streams: which stream the page
+// stopped in, and where inside that stream it stopped.
 //
-// A walk with no ordering to interleave its streams by — a search across
-// record types, whose rows carry no common rank — can still be resumed if the
-// token says both. The stream alone would restart it; the inner position alone
-// would not say what it indexes into.
-//
-// Both providers that sweep mint this ONE token, rather than a shape each:
-// what a caller pages with must not depend on which system of record answered
-// them, and two codecs for one wire value drift the first time either changes.
-// The inner half stays opaque here — a keyset token on one side, an incumbent
-// mirror's own cursor on the other — because this type carries a position, not
-// a meaning.
+// The stream half lets a reader refuse a token minted for another stream
+// rather than resume a keyset in the wrong table. The inner half stays opaque
+// here, because this type carries a position, not a meaning.
 type SweepCursor struct {
 	Stream string `json:"s"`
 	Inner  string `json:"c"`

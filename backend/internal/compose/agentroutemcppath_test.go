@@ -294,6 +294,7 @@ var spelledOtherwiseByItsVerb = map[string]string{
 	"GET /v1/analytics/evidence#scope_kind":      "kind",
 	"GET /v1/analytics/evidence#scope_id":        "id",
 	"GET /v1/analytics/editions/compare#left_id": "id",
+	"GET /v1/search#types":                       "record_types",
 }
 
 // answeredByAnotherVerb are route parameters whose question an agent asks
@@ -306,8 +307,4 @@ var answeredByAnotherVerb = gatekit.Waive(map[string]string{
 // parameterGapsPendingParity are the route parameters no verb takes yet, as
 // "METHOD /v1/route#parameter". The list only shrinks: an entry that stops
 // being a gap fails the test above.
-var parameterGapsPendingParity = []string{
-	"GET /v1/search#per_type",
-	"GET /v1/search#types",
-	"GET /v1/search#with_employees",
-}
+var parameterGapsPendingParity = []string{}

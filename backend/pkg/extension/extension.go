@@ -271,6 +271,11 @@ type Extension struct {
 	// unit name one would undo the axis split from outside the core.
 	Channels []Channel
 
+	// FinanceSources are the accounting systems this unit can read into the
+	// core's finance mirror. Read only: nothing on the surface writes back to
+	// an accounting system. A provider may be supplied by one unit only.
+	FinanceSources []FinanceSource
+
 	// Secrets are the secret keys the unit declares it will use, by name and
 	// scope. Like a Tool's tier these are REQUESTS an operator resolves, not
 	// facts: declaring a key mints nothing and reads nothing, and the live

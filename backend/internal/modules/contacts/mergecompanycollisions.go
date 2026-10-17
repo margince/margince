@@ -77,39 +77,15 @@ func moveCompanySingletons(ctx context.Context, tx pgx.Tx, sourceID, targetID id
 	return nil
 }
 
-// moveCompanyFinanceMapping re-homes the ledger's "this external customer is
-// that company" mapping.
-//
-// The mapping is unique per (connection, company) among LIVE rows, so two
-// companies mapped on one connection cannot both move. The merged-away
-// mapping is left in place rather than archived, and that is deliberate:
-// SyncConnection reads only unarchived mappings, so archiving here would
-// silently stop syncing that external customer — an invoice that simply stops
-// arriving, with nothing anywhere saying why.
-//
-// Leaving it costs a mapping pointing at an archived company, which the sync
-// resolves to a record no page returns. That is visible and recoverable; a
-// ledger that quietly goes stale is neither. Two live mappings for one company
-// is a cardinality the schema does not allow today, so choosing between them
-// is a product decision rather than this merge's to make.
+// moveCompanyFinanceMapping re-homes every "this external customer is that
+// company" mapping, live or archived, onto the survivor. A company may hold
+// several accounting customers, so the loser's live mappings join the
+// survivor's, and the next sync moves their invoices with them.
 func moveCompanyFinanceMapping(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
-	if _, err := tx.Exec(ctx, `
-		UPDATE finance_customer_link a SET company_id = $2
-		 WHERE a.company_id = $1 AND a.archived_at IS NULL
-		   AND NOT EXISTS (
-		     SELECT 1 FROM finance_customer_link b
-		      WHERE b.company_id = $2 AND b.connection_id = a.connection_id
-		        AND b.archived_at IS NULL)`,
-		sourceID, targetID); err != nil {
-		return fmt.Errorf("move the finance customer mapping: %w", err)
-	}
-	// An archived mapping carries no uniqueness and is the record of a
-	// mapping that once held, so it follows the surviving company.
 	if _, err := tx.Exec(ctx,
-		`UPDATE finance_customer_link SET company_id = $2
-		 WHERE company_id = $1 AND archived_at IS NOT NULL`,
+		`UPDATE finance_customer_link SET company_id = $2 WHERE company_id = $1`,
 		sourceID, targetID); err != nil {
-		return fmt.Errorf("repoint the retired finance mappings: %w", err)
+		return fmt.Errorf("move the finance customer mappings: %w", err)
 	}
 	return nil
 }

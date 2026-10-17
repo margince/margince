@@ -73,7 +73,14 @@ func sendRuntimeFor(ctx context.Context, unit, version, via string, deps extensi
 	return unattendedRuntimeFor(ctx, unit, version, via, deps)
 }
 
-// unattendedRuntimeFor is what each of those three is: a Runtime for an
+// financeRuntimeFor mints the Runtime for one read of a unit's accounting
+// source. Unattended: a source only reads, so nothing it does needs the
+// governed core port, whether the sweep or an administrator's connect asked.
+func financeRuntimeFor(ctx context.Context, unit, version, via string, deps extensionRuntimeBinding) *callRuntime {
+	return unattendedRuntimeFor(ctx, unit, version, via, deps)
+}
+
+// unattendedRuntimeFor is what each of those is: a Runtime for an
 // invocation with nobody behind it. They stay separate NAMES because the call
 // sites are the distinct kinds of unattended work and a reader at any one of
 // them should see which it is — but the behaviour is one fact, spelled here, so
