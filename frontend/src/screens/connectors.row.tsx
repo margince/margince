@@ -10,12 +10,12 @@ import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { RowOpen } from "../design-system/rowopen";
 import { SettingRow } from "../design-system/settingrow";
+import { BackfillPanel } from "../features/import/backfill";
+import { isLiveRun } from "../features/import/backfill-run";
 import { isMailIcon, providerName } from "../format/connectorprovider";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { BackfillPanel } from "./backfill";
-import { isLiveRun } from "./backfill-run";
 import {
   errorClassKey,
   missingCalendarWriteGrant,

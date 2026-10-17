@@ -6,6 +6,7 @@ import { ifMatch, requireVersion } from "../api/version";
 import { rosterOwnerName, useRoster } from "../components/entityref";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { InlineChoice } from "../design-system/inlinechoice";
+import { MergeAction } from "../features/import/merge";
 import { AddToShortlistAction } from "../features/lists/addtoshortlist";
 import { useT } from "../i18n";
 import {
@@ -23,7 +24,6 @@ import { DecisionsChip } from "./companyapprovals";
 import { patchCompanyField, searchCompanyTargets } from "./companyform";
 import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
 import { CompanyRejectAction } from "./companyreject";
-import { MergeAction } from "./merge";
 import { ShareAction } from "./share";
 
 // The account header's editable pieces: the owner, changed in place

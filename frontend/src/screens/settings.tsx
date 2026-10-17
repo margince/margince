@@ -17,6 +17,8 @@ import { ExtensionAccessCard } from "../features/automations/extension-access";
 import { ExtensionUnitsCard } from "../features/automations/extension-units";
 import { OAuthAppCard } from "../features/automations/oauth-app";
 import { OvernightGrantCard } from "../features/automations/overnight-grant";
+import { ImportCard } from "../features/import/import";
+import { LinkedInImportCard } from "../features/import/linkedin-import";
 import { TagVocabularyCard } from "../features/lists/tagadmin";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -45,7 +47,6 @@ import { ConsumerMailDomainsCard } from "./consumer-mail-domains";
 import { CustomFieldsAdmin } from "./customfields";
 import { FinanceSourceCard } from "./financesource";
 import { FollowUpSettingsCard } from "./followupsettings";
-import { ImportCard } from "./import";
 import { InstallationSettingsCard } from "./installation-settings";
 import { ProviderCard } from "./integrations-provider";
 import { KnowledgeCard } from "./knowledge";
@@ -55,7 +56,6 @@ import {
   LeadSourcesCard,
 } from "./leadvocab";
 import { LicenseCard } from "./license";
-import { LinkedInImportCard } from "./linkedin-import";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
 import { MeetingSettings } from "./meeting-settings";
 import { NotificationSettingsCard } from "./notification-settings";

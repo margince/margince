@@ -38,7 +38,7 @@
 3331 frontend/src/screens/compose.test.tsx
 3165 frontend/src/screens/deals.tsx
 509 frontend/src/screens/documentextraction.tsx
-504 frontend/src/screens/onboarding-backread.tsx
+508 frontend/src/screens/onboarding-backread.tsx
 532 frontend/src/screens/leadpresentation.tsx
 534 frontend/src/screens/scheduledsends.tsx
 554 frontend/src/screens/project360.tsx

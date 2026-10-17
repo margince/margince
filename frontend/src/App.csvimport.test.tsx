@@ -11,8 +11,8 @@ import {
   ASYNC_UTIL_TIMEOUT_MS,
   SLOWEST_MEASURED_TEST_MS,
 } from "../vitest.budget";
+import { formatFixture } from "./features/import/import.fixtures";
 import { navigate } from "./lib/router";
-import { formatFixture } from "./screens/import.fixtures";
 import { memoryStorage, renderApp, teardownApp } from "./testing/appharness";
 import { meFixture } from "./testing/mefixture";
 
