@@ -58,7 +58,7 @@
 1 react-hooks/set-state-in-effect src/screens/billingcontactmodal.tsx
 3 react-hooks/refs src/features/brief/brief.readings.tsx
 1 react-hooks/set-state-in-effect src/features/capture/capture-purge-dialog.tsx
-6 react-hooks/refs src/features/companies/companies.tsx
+6 react-hooks/refs src/features/companies/companies.body.tsx
 1 react-hooks/set-state-in-effect src/features/companies/company-context.tsx
 3 react-hooks/refs src/features/companies/companyheaderactions.tsx
 1 react-hooks/set-state-in-effect src/features/companies/companyvatmark.tsx
