@@ -22,7 +22,6 @@ package compose
 
 import (
 	"context"
-	"crypto/rand"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -37,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -99,6 +99,9 @@ type connectorHandlers struct {
 	// wires this, and a test can hand over a fake without a database.
 	googleCredentials    appResolver
 	microsoftCredentials appResolver
+	// extOAuthGrants opens one unit's OAuth grants; nil reads them through the
+	// process's extension runtime binding, as the unit's Runtime does.
+	extOAuthGrants func(unit string) extOAuthGrants
 }
 
 // wired reports whether the Gmail OAuth app is composed for this role.
@@ -201,16 +204,8 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	app := avail.app
-	actor, ok := principal.Actor(r.Context())
-	ws, hasWS := principal.WorkspaceID(r.Context())
-	if !ok || actor.Type != principal.PrincipalHuman || !hasWS {
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusUnauthorized,
-			Code:   codeUnauthorized,
-			// Provider-neutral: this guard serves the calendars as well as the
-			// mailboxes, and naming a mailbox mislabels half the flows it refuses.
-			Detail: "Connecting an account is a signed-in human action.",
-		})
+	actor, ws, ok := signedInHuman(w, r)
+	if !ok {
 		return
 	}
 	// The body is optional for OAuth providers (they submit nothing), so an
@@ -232,16 +227,7 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 	// CSRF: a random nonce goes into both a SameSite=Lax cookie and the signed
 	// state; the callback requires them to match, so a victim can't complete an
 	// attacker-initiated flow (account-linking CSRF).
-	nonce := rand.Text()
-	http.SetCookie(w, &http.Cookie{
-		Name:     csrfCookieName(string(provider)),
-		Value:    nonce,
-		Path:     "/v1/connectors",
-		MaxAge:   int(connectStateTTL / time.Second),
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-	})
+	nonce := setCSRFNonce(w, csrfCookieName(string(provider)), connectorCookiePath)
 	state := h.signer.sign(
 		connectState{
 			Workspace: ws, User: actor.UserID, Provider: string(provider),
@@ -347,6 +333,24 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 		return
 	}
 	http.Redirect(w, r, h.landingURL(outcomeOK, returnTo, string(provider)), http.StatusFound)
+}
+
+// signedInHuman answers the human starting a consent and their workspace, or
+// writes the 401 and false.
+func signedInHuman(w http.ResponseWriter, r *http.Request) (principal.Principal, ids.UUID, bool) {
+	actor, ok := principal.Actor(r.Context())
+	ws, hasWS := principal.WorkspaceID(r.Context())
+	if !ok || actor.Type != principal.PrincipalHuman || !hasWS {
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusUnauthorized,
+			Code:   codeUnauthorized,
+			// Provider-neutral: this guard serves every consent flow, and
+			// naming a mailbox mislabels most of the ones it refuses.
+			Detail: "Connecting an account is a signed-in human action.",
+		})
+		return principal.Principal{}, ids.UUID{}, false
+	}
+	return actor, ws, true
 }
 
 // grantorContext reconstructs the granting human's authority from the trusted

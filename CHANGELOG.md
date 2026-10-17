@@ -20,6 +20,13 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
   `list_records` also lists products, offers, commissions, partners, activities
   and deal rooms. A route with no tool rule is refused to an agent.
 
+- **Extension sign-in to a vendor.** A unit declares `OAuthApps` (authorize
+  URL, token URL, scopes). An admin stores the app's client ID and secret on
+  **Settings → Sign-in and apps**, beside the Google and Microsoft apps. The
+  unit's screen starts the sign-in at `POST /v1/ext-oauth/{provider}/connect`.
+  The callback keeps the tokens sealed for the workspace, and the unit reads a
+  live access token with `Runtime.OAuthAccessToken`. A new
+  `GET /v1/installation/oauth-apps` lists every vendor the build serves.
 - **Core release in the account menu.** An image built with `CORE_VERSION`
   set shows two lines at the foot of the account menu: the instance release and
   the core release. A build without it keeps the single version line.

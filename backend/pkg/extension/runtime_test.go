@@ -39,6 +39,14 @@ func (r *fakeRuntime) Caller() Caller { return r.caller }
 // layer's (compose/extsyncnow.go), which is where its bounds are tested.
 func (r *fakeRuntime) SyncNow(context.Context, JobName) error { return nil }
 
+// The OAuth pair answers for the seam's shape only; compose/extoauthtoken.go
+// is where the token store and the refresh are tested.
+func (r *fakeRuntime) OAuthAccessToken(context.Context, OAuthProvider) (string, error) {
+	return "", ErrOAuthNotConnected
+}
+
+func (r *fakeRuntime) OAuthDisconnect(context.Context, OAuthProvider) error { return nil }
+
 func (r *fakeRuntime) Tx(ctx context.Context, fn func(context.Context, Tx) error) error {
 	if !r.live {
 		return ErrRuntimeExpired

@@ -10702,6 +10702,16 @@ export const de = {
   "oauthApp.microsoft.removeConfirmTitle": "Microsoft-App entfernen?",
   "oauthApp.microsoft.removeConfirmBody":
     "Der Clientschlüssel lässt sich nicht wieder auslesen. Um die App wiederherzustellen, müssen Client-ID und Clientschlüssel erneut aus dem Entra-Portal eingetragen werden. Outlook-E-Mail- und -Kalender-Verbindungen nutzen diese App. Google- und IMAP-Postfächer sind nicht betroffen. Die Ersteinrichtung fragt erneut nach einer App.",
+  "oauthApp.unit.listTitle": "Apps der Erweiterungen",
+  "oauthApp.unit.sub":
+    "Die Erweiterung {title} liest die API ihres Anbieters über eine OAuth-App, die dein Unternehmen bei diesem Anbieter registriert.",
+  "oauthApp.unit.absent":
+    "Es ist keine App gespeichert. Die Erweiterung {title} lässt sich erst verbinden, wenn eine gespeichert ist.",
+  "oauthApp.unit.redirectSub":
+    "Trage diese URI in der Entwicklerkonsole des Anbieters als Weiterleitungs-URI der App ein.",
+  "oauthApp.unit.removeConfirmTitle": "App für {title} entfernen?",
+  "oauthApp.unit.removeConfirmBody":
+    "Der Clientschlüssel lässt sich nicht wieder auslesen. Um die App wiederherzustellen, müssen Client-ID und Clientschlüssel erneut eingetragen werden. Die Erweiterung {title} kann ihren Zugriff erst wieder erneuern, wenn eine App gespeichert ist.",
   "oauthApp.configured": "In Verwendung: {clientId}",
   "oauthApp.fromEnvironment":
     "Aus der Konfiguration dieser Installation in Verwendung: {clientId}. Eine hier gespeicherte App hat Vorrang, bis sie entfernt wird.",
@@ -10723,6 +10733,7 @@ export const de = {
   "oauthApp.redirect.mailbox_connect": "Postfach",
   "oauthApp.redirect.calendar_connect": "Kalender",
   "oauthApp.redirect.sign_in": "Anmeldung",
+  "oauthApp.redirect.extension_connect": "Verbinden",
   "oauthApp.redirectTitle": "Autorisierte Weiterleitungs-URIs",
   "oauthApp.clientId": "Client-ID",
   "oauthApp.clientSecret": "Clientschlüssel",

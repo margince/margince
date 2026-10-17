@@ -97,6 +97,12 @@ type unitManifest struct {
 	// route" and "how much can one stranger make this installation read" are the
 	// same question. omitempty for the reason the fields above have it.
 	Inbound []inboundEndpoint `json:"inbound,omitempty"`
+
+	// OAuthApps are the vendors whose consent flow the core runs for the unit
+	// (see extension.OAuthApp). Each names where an admin is sent, what the
+	// consent asks for, and the endpoint that receives the client secret.
+	// omitempty for the reason the fields above have it.
+	OAuthApps []declaredOAuthApp `json:"oauth_apps,omitempty"`
 }
 
 // inboundEndpoint is one declared anonymous edge (see

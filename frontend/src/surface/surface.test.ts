@@ -98,6 +98,7 @@ describe("the published frontend surface", () => {
       "useCan",
       "useCanWrite",
       "useLocale",
+      "useOAuthReturn",
       "useT",
     ]);
   });

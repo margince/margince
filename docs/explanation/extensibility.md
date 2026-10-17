@@ -119,6 +119,7 @@ already exists:
 | `Subscriptions` | Event types the unit answers, each with the function that one delivery runs |
 | `Jobs` | Scheduled work: a job that runs on a fixed schedule and starts one worker run per tenant |
 | `Secrets` | The secret keys the unit will use, by name and scope. It is a request; it grants nothing |
+| `OAuthApps` | Vendors whose sign-in the core runs for an admin. The core keeps the tokens and gives the unit a live access token through `Runtime.OAuthAccessToken` |
 | `Migrations` | The SQL schema layer the unit owns, built into the binary instead of read from the tree |
 
 `Channels` and `Ingress` are separate fields, and neither one means the other. A unit may capture from a
@@ -208,6 +209,7 @@ the harm could go before turning the unit on:
 | `ingress` | `Ingress` | Which providers it lands records from, which kinds, and which identity keys the source **stands behind** (`merges`) |
 | `channels` | `Channels` | Which providers it supplies, whose credential each one uses (`credential_model`: required, no default), and whether it supplies a **transport** (`supplies_transport`) or only captures |
 | `finance_sources` | `FinanceSources` | Which accounting systems it reads |
+| `oauth_apps` | `OAuthApps` | Which vendors an admin is sent to, the scopes asked for, and the token URL that receives the client secret |
 
 The `extension.Extension` value the unit returns, and every field the manifest derives, must be written
 out in full in the source. A field the generate step does not know fails it, with the place in the file.

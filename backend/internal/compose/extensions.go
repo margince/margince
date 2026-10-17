@@ -209,6 +209,7 @@ func validateExtensionSet(exts []extension.Extension) error {
 	// composed SET, accumulated across the loop for claimedProviders' reason.
 	inboundMounts := make(map[string]extension.Name)
 	financeProviders := make(map[string]extension.Name)
+	oauthApps := make(map[string]extension.Name)
 	for _, e := range exts {
 		if err := e.Name.Validate(); err != nil {
 			return fmt.Errorf("compose: %w", err)
@@ -266,6 +267,9 @@ func validateExtensionSet(exts []extension.Extension) error {
 			return err
 		}
 		if err := reserveInboundMounts(e, inboundMounts); err != nil {
+			return err
+		}
+		if err := preflightOAuthApps(e, oauthApps); err != nil {
 			return err
 		}
 	}
