@@ -246,8 +246,7 @@ func (s *Store) validateBookingCalendars(ctx context.Context, host ids.UserID, p
 }
 
 // schedulingRanges are the whole-number settings and the closed range the
-// contract gives each. Walked in contract order so the first mistake the host
-// meets is the first field on the screen.
+// contract gives each, walked in the contract's order.
 var schedulingRanges = []struct {
 	field, label, unit string
 	lo, hi             int
@@ -269,7 +268,7 @@ const (
 )
 
 // validateSchedulingLimits refuses the first setting outside its limit, naming
-// that field and its limit so the screen can mark it.
+// that field and its limit, so the host is told which setting to correct.
 func validateSchedulingLimits(p crmcontracts.SchedulingProfile) error {
 	for _, r := range schedulingRanges {
 		if v := r.value(p); v < r.lo || v > r.hi {

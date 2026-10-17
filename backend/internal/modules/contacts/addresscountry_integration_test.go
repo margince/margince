@@ -9,6 +9,10 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -61,3 +65,46 @@ func TestAnAddressCountryIsHeldToAlpha2OnEveryContactAndCompanyWrite(t *testing.
 		t.Fatalf("company edit with a lower-case code: %v / %v, want FR", edited.Address, err)
 	}
 }
+
+// A row written before the country rule keeps its country and stays editable:
+// the edit form and a CSV update carry the stored country back, and an undo
+// replays a value the row held itself.
+func TestALegacyCountryDoesNotBlockAnUnrelatedEditOrAnUndo(t *testing.T) {
+	e := setupCapturePrivacy(t)
+	ctx := e.as(e.owner, principal.RowScopeAll)
+	var invalid *InvalidCountryError
+
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: "Altbau GmbH", Source: "manual", Address: countryOf("DE")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE company SET address_country = 'Germany' WHERE id = $1`, companyID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	city := "Berlin"
+	edited, err := e.store.UpdateCompany(ctx, companyID, UpdateCompanyInput{Address: &crmcontracts.Address{City: &city, Country: ptrTo("Germany")}})
+	if err != nil || *edited.Address.Country != "Germany" || *edited.Address.City != "Berlin" {
+		t.Fatalf("an edit carrying the stored legacy country back: %v / %v, want it kept and the city saved", edited.Address, err)
+	}
+	if _, err := e.store.UpdateCompany(ctx, companyID, UpdateCompanyInput{Address: countryOf("Austria")}); !errors.As(err, &invalid) {
+		t.Fatalf("changing the country to a name: err = %v, want an invalid-country refusal", err)
+	}
+
+	if _, err := e.store.UpdateCompany(ctx, companyID, UpdateCompanyInput{Address: countryOf("FR")}); err != nil {
+		t.Fatal(err)
+	}
+	restored, err := e.store.UpdateCompany(ctx, companyID, UpdateCompanyInput{
+		Address: countryOf("Germany"),
+		Trail:   storekit.AuditTrail{Verb: storekit.VerbRestore, Evidence: map[string]any{"undid_audit_log_id": ids.NewV7().String()}},
+	})
+	if err != nil || *restored.Address.Country != "Germany" {
+		t.Fatalf("an undo replaying the legacy country: %v / %v, want it put back", restored.Address, err)
+	}
+}
+
+func ptrTo(s string) *string { return &s }

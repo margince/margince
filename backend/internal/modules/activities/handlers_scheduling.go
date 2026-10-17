@@ -33,7 +33,7 @@ func (h Handlers) PutSchedulingProfile(w http.ResponseWriter, r *http.Request) {
 	// valid-looking notice or buffer the caller never chose.
 	for _, limit := range schedulingRanges {
 		if raw, sent := httperr.PresentField(r, limit.field); !sent || raw == nil {
-			httperr.Write(w, r, httperr.Validation(limit.field, "required", "Send "+limit.field+" as a whole number"))
+			httperr.Write(w, r, httperr.Validation(limit.field, "required", limit.label+" must be sent as a whole number"))
 			return
 		}
 	}

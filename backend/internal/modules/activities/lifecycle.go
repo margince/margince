@@ -228,7 +228,7 @@ func admitActivityPatch(
 		in.Subject = &subject
 	}
 	if !held && (in.Subject != nil || in.Body != nil) {
-		if err := checkEntryHasContent(string(current.Kind), firstSet(in.Subject, current.Subject), firstSet(in.Body, current.Body)); err != nil {
+		if err := CheckEntryHasContent(string(current.Kind), firstSet(in.Subject, current.Subject), firstSet(in.Body, current.Body)); err != nil {
 			return crmcontracts.Activity{}, held, err
 		}
 	}

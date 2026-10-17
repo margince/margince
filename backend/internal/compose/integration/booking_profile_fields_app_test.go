@@ -12,7 +12,7 @@ import (
 )
 
 // Saving the meeting settings refuses each mistake on the field it is about:
-// the screen marks that field instead of showing one generic sentence.
+// the response names that field instead of one generic sentence.
 func TestMeetingSettingsRefuseEachMistakeOnItsOwnField(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)

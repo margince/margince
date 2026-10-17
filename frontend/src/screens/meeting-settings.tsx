@@ -21,6 +21,8 @@ import {
   CalendarSection,
   DefaultFields,
   LimitFields,
+  limitIncomplete,
+  limitTextsOf,
   SetupChecklist,
 } from "./meeting-settings-sections";
 import { useSchedulingProfile } from "./scheduling-profile-query";
@@ -83,10 +85,6 @@ function MeetingPreferences() {
   );
 }
 
-function noticeText(profile: Profile) {
-  return String(Number((profile.notice_minutes / 60).toFixed(2)));
-}
-
 function MeetingSettingsForm({
   profile,
   hours,
@@ -95,7 +93,7 @@ function MeetingSettingsForm({
   const t = useT();
   const [baseline, setBaseline] = useState(profile);
   const [form, setForm] = useState(profile);
-  const [noticeHours, setNoticeHours] = useState(noticeText(profile));
+  const [limitTexts, setLimitTexts] = useState(limitTextsOf(profile));
   const [savedHours, setSavedHours] = useState(hours);
   const [hoursDraft, setHoursDraft] = useState(hours);
   const [narrowed, setNarrowed] = useState(false);
@@ -114,18 +112,19 @@ function MeetingSettingsForm({
   const save = useSaveMeetingSettings(setSavedHours, (value) => {
     setBaseline(value);
     setForm(value);
-    setNoticeHours(noticeText(value));
+    setLimitTexts(limitTextsOf(value));
   });
   const discard = () => {
     setForm(baseline);
-    setNoticeHours(noticeText(baseline));
+    setLimitTexts(limitTextsOf(baseline));
     setHoursDraft(savedHours);
   };
   const blocked =
-    profileDirty &&
-    (connections.isPending ||
-      calendars.isFetching ||
-      (calendar.needsCalendar && (!ready || !selected?.writable)));
+    limitIncomplete(limitTexts) ||
+    (profileDirty &&
+      (connections.isPending ||
+        calendars.isFetching ||
+        (calendar.needsCalendar && (!ready || !selected?.writable))));
   return (
     <div className="book-form">
       <SetupChecklist
@@ -201,16 +200,20 @@ function MeetingSettingsForm({
               <EmptyState>{t("state.unavailable")}</EmptyState>
             )}
             <LimitFields
-              form={form}
-              noticeHours={noticeHours}
-              onNotice={(value) => {
-                setNoticeHours(value);
+              texts={limitTexts}
+              onText={(field, text) => {
+                setLimitTexts({ ...limitTexts, [field]: text });
+                if (text.trim() === "") return;
+                const number = Number(text);
                 setForm({
                   ...form,
-                  notice_minutes: Math.round(Number(value) * 60),
+                  ...(field === "notice"
+                    ? { notice_minutes: Math.round(number * 60) }
+                    : field === "buffer"
+                      ? { buffer_minutes: number }
+                      : { horizon_days: number }),
                 });
               }}
-              onChange={setForm}
             />
             <WorkingHoursOutcome
               narrowed={narrowed}

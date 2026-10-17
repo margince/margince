@@ -92,3 +92,14 @@ func TestAPatchThatEmptiesANotesLastContentIsRefused(t *testing.T) {
 		t.Fatalf("blanking the body of a note whose subject is already blank: err = %v, want an empty-entry refusal", err)
 	}
 }
+
+func TestTheStoreRefusesAnEmptyNoteWhicheverDoorBuiltIt(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	for _, kind := range []string{"note", "call"} {
+		_, _, err := e.store(nil).LogActivity(ctx, LogActivityInput{Kind: kind, Source: "manual"})
+		if _, ok := errors.AsType[*EmptyEntryError](err); !ok {
+			t.Errorf("%s logged straight to the store: err = %v, want an empty-entry refusal", kind, err)
+		}
+	}
+}

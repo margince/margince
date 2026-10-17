@@ -107,6 +107,9 @@ func (s *Service) Rename(ctx context.Context, id ids.UUID, label string, ifVersi
 		if ifVersion != nil && *ifVersion != f.Version {
 			return apperrors.ErrVersionSkew
 		}
+		if err := serializeSchemaChange(ctx, tx, f.Object); err != nil {
+			return err
+		}
 		if err := refuseTakenLabel(ctx, tx, f.Object, id, label); err != nil {
 			return err
 		}
