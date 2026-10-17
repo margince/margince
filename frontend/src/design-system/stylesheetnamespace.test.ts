@@ -45,7 +45,7 @@ const namespaces = [
   { prefix: "library-", home: "screens/library.css" },
   { prefix: "listquery-", home: "components/listquery.css" },
   { prefix: "oauthconsent-", home: "features/automations/oauthconsent.css" },
-  { prefix: "offers-", home: "screens/offers.css" },
+  { prefix: "offers-", home: "features/deals/offers.css" },
   { prefix: "partnercommissions-", home: "screens/partnercommissions.css" },
   { prefix: "querygate-", home: "design-system/querystates.css" },
   { prefix: "relationshiprows-", home: "screens/relationshiprows.css" },

@@ -573,7 +573,7 @@ role, light beside dark), `elevation.stories.tsx`, `spacing.stories.tsx`, `motio
 ## Building a list screen
 
 A record list is `useListQuery` bound to `ListTable`, and a screen's job is to declare what its
-records are. `components/listquery.tsx` holds the binding. `screens/products.tsx` is the shortest full
+records are. `components/listquery.tsx` holds the binding. `features/deals/products.tsx` is the shortest full
 example, and `ListTable → Default` / `Paged` / `SortedByAMenu` in `listtable.stories.tsx` show the
 surface on its own.
 

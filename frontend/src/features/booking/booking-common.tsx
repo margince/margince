@@ -3,7 +3,7 @@ import { Button, Field } from "../../design-system/atoms";
 import { TimezoneSelect } from "../../design-system/timezoneselect";
 import { useT } from "../../i18n";
 import { navigate } from "../../lib/router";
-import { PoweredBy } from "../../screens/buyerroomframe";
+import { PoweredBy } from "../deals/buyerroomframe";
 
 export function BookingFooter() {
   return (

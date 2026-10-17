@@ -9,10 +9,10 @@
 
 import { isMessageKey, type useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { dealStatusLabel } from "../../screens/dealdials";
 import { LEAD_STATUS_FILTER_OPTIONS } from "../../screens/leadpresentation";
 import { sourceKeyLabel } from "../../screens/leadsources";
 import { isProjectPhase, PHASE_LABEL } from "../../screens/projects.form";
+import { dealStatusLabel } from "../deals/dealdials";
 
 // forecast_category dimension values (report.go's forecastCategoryExpr):
 // the four the deal itself can carry, plus the server-derived "slipped" —

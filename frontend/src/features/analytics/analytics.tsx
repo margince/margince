@@ -24,8 +24,8 @@ import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useRoute } from "../../lib/router";
-import { dealsFilteredBy } from "../../screens/dealsaddress";
-import { stagesOfEveryPipeline } from "../../screens/pipelinestages";
+import { dealsFilteredBy } from "../deals/dealsaddress";
+import { stagesOfEveryPipeline } from "../deals/pipelinestages";
 import {
   openAnalyticsSection,
   SECTIONS,

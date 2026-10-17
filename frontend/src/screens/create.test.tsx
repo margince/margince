@@ -27,10 +27,10 @@ import {
 } from "../components/customfields.form";
 import { pickOption, toggleOptions } from "../design-system/select-testing";
 import { ContactsScreen } from "../features/contacts/contacts";
+import { DealsScreen } from "../features/deals/deals";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { CompaniesScreen } from "./companies";
-import { DealsScreen } from "./deals";
 
 // Create flows (the "you can actually add a record" acceptance): the list
 // screens open a create modal, the POST body carries the server's shape

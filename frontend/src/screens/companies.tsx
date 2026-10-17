@@ -49,6 +49,7 @@ import type {
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { groupChronology } from "../design-system/timelinegroups";
 import { ContactMeetingBrief } from "../features/brief/meetingbrief";
+import { CompanySuggestions } from "../features/deals/dealsuggestion";
 import { SaveViewAction, useSavedViewTabs } from "../features/lists/savedviews";
 import {
   TaskDetailModal,
@@ -127,7 +128,6 @@ import {
 import { TechnicalProfilePanel } from "./companytechnical";
 import { hasWorkInFlight } from "./companywork";
 import { ComposeModal } from "./compose";
-import { CompanySuggestions } from "./dealsuggestion";
 import { RecordHistoryTab } from "./history";
 import { OpenEmailDrawer } from "./openemaildrawer";
 import { PartnerTab } from "./partners";

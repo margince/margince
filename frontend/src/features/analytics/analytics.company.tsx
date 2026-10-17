@@ -8,7 +8,7 @@ import {
   MONEY_ABSENT,
 } from "../../format/format";
 import { type Locale, useT } from "../../i18n";
-import { dealsFilteredBy } from "../../screens/dealsaddress";
+import { dealsFilteredBy } from "../deals/dealsaddress";
 import {
   BarFigure,
   CountLink,

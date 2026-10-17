@@ -54,19 +54,19 @@ export const ClientSurfaceScreen = lazy(
 
 const DealScreen = lazy(
   routed(() =>
-    import("./screens/deals").then((m) => ({ default: m.DealScreen })),
+    import("./features/deals/deals").then((m) => ({ default: m.DealScreen })),
   ),
 );
 
 const DealsScreen = lazy(
   routed(() =>
-    import("./screens/deals").then((m) => ({ default: m.DealsScreen })),
+    import("./features/deals/deals").then((m) => ({ default: m.DealsScreen })),
   ),
 );
 
 const DealRoomPage = lazy(
   routed(() =>
-    import("./screens/dealroompage").then((m) => ({
+    import("./features/deals/dealroompage").then((m) => ({
       default: m.DealRoomPage,
     })),
   ),
@@ -124,7 +124,7 @@ export const OAuthConsent = lazy(
 
 export const OfferScreen = lazy(
   routed(() =>
-    import("./screens/offers").then((m) => ({ default: m.OfferScreen })),
+    import("./features/deals/offers").then((m) => ({ default: m.OfferScreen })),
   ),
 );
 
@@ -167,7 +167,9 @@ export const ContactPageV2 = lazy(
 );
 
 export const BuyerRoomScreen = lazy(() =>
-  import("./screens/buyerroom").then((m) => ({ default: m.BuyerRoomScreen })),
+  import("./features/deals/buyerroom").then((m) => ({
+    default: m.BuyerRoomScreen,
+  })),
 );
 
 export const PreferenceCenterScreen = lazy(

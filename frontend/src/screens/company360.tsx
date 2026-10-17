@@ -20,6 +20,7 @@ import {
   SurfaceState,
   sectionState,
 } from "../design-system/surfacestate";
+import { dealsFilteredBy } from "../features/deals/dealsaddress";
 import {
   formatDate,
   formatDateAbbrev,
@@ -34,7 +35,6 @@ import { problemCodeOf, problemMessageOf, unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { navigate } from "../lib/router";
 import type { CompanyTab } from "./companytab";
-import { dealsFilteredBy } from "./dealsaddress";
 import { useFinanceSummary } from "./financesummary";
 import "./company360.css";
 import { EntityRef } from "../components/entityref";

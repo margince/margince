@@ -5,10 +5,10 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createQueryClient } from "../app/queryclient";
 import { useContact360 } from "../features/contacts/contact360";
+import { useDeal } from "../features/deals/deals";
+import { useDealStatusCard } from "../features/deals/dealstatus";
+import { useOutcomeReviews } from "../features/deals/outcomereview.queries";
 import { useCompany360 } from "./company360";
-import { useDeal } from "./deals";
-import { useDealStatusCard } from "./dealstatus";
-import { useOutcomeReviews } from "./outcomereview.queries";
 import { useProject360 } from "./project360";
 
 // A RECORD RE-READS ITSELF WHILE SOMEBODY IS LOOKING AT IT (FE-PARAM-5).

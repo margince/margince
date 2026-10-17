@@ -78,7 +78,7 @@
 1 react-hooks/set-state-in-effect src/screens/contractform.tsx
 3 react-hooks/set-state-in-effect src/screens/contractlifecycle.tsx
 1 react-hooks/set-state-in-effect src/screens/corpusask.tsx
-3 react-hooks/refs src/screens/deal360/outcomereviewmodal.tsx
+3 react-hooks/refs src/features/deals/deal360/outcomereviewmodal.tsx
 1 react-hooks/set-state-in-effect src/screens/embedreindex.tsx
 3 react-hooks/refs src/features/lists/filtereditor.tsx
 1 react-hooks/refs src/features/lists/filterlistedit.tsx

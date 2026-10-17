@@ -3,7 +3,7 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { stagesOfEveryPipeline } from "../../screens/pipelinestages";
+import { stagesOfEveryPipeline } from "../deals/pipelinestages";
 import { AnalyticsScreen } from "./analytics";
 import { render, reportsStub } from "./analytics.testkit";
 

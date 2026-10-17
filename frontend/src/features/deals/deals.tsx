@@ -1,0 +1,3169 @@
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
+import {
+  type ComponentProps,
+  type Dispatch,
+  type DragEvent,
+  type MouseEvent,
+  type ReactNode,
+  type SetStateAction,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { api } from "../../api/client";
+import type { components } from "../../api/schema";
+import { ifMatch, requireVersion } from "../../api/version";
+import { usePageName } from "../../app/pagemeta";
+import type { CreateField } from "../../components/create";
+import { CreateAction } from "../../components/create";
+import {
+  type ObjectCustomFields,
+  useObjectCustomFields,
+} from "../../components/customfields.form";
+import {
+  EntityRef,
+  type OwnerNaming,
+  rosterOwnerNaming,
+  useEntityName,
+} from "../../components/entityref";
+import {
+  LIST_PAGE_SIZES,
+  type ListQuery,
+  type ListState,
+  ListTable,
+  listPageOf,
+  listQueryFromParams,
+  mergeScreenDials,
+  paramsFromListQuery,
+  useTagChips,
+  withListPage,
+  withoutScreenDials,
+} from "../../components/listquery";
+import { useOwnerChips } from "../../components/ownerdials";
+import { PageAsideToggle, usePageAside } from "../../components/pageaside";
+import { RecordFields, rawRecord } from "../../components/recordfields";
+import { ActionRow } from "../../design-system/actionrow";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  SegmentedControl,
+} from "../../design-system/atoms";
+import { DataTable } from "../../design-system/datatable";
+import { ErrorLine } from "../../design-system/errorline";
+import { IconAction } from "../../design-system/iconaction";
+import { IdentityLine } from "../../design-system/identityline";
+import type { ListChip } from "../../design-system/listsurface";
+import {
+  CellStrip,
+  type ListColumn,
+  type ListSelection,
+} from "../../design-system/listtable";
+import { Panel, PanelBody } from "../../design-system/panel";
+import type {
+  BoardColumn,
+  BoardDeal,
+  BoardMoneyColumn,
+  PipelineBoard,
+} from "../../design-system/pipelineboard";
+import { provenanceOf } from "../../design-system/provenanceof";
+import { LoadMoreButton, QueryGate } from "../../design-system/querystates";
+import { FieldGuard } from "../../design-system/rbac";
+import { RecordTabs } from "../../design-system/recordtabs";
+import { useRecordTimeline } from "../../design-system/recordtimeline";
+import { RecordView } from "../../design-system/recordview";
+import { Select } from "../../design-system/select";
+import { Row } from "../../design-system/stack";
+import { useToast } from "../../design-system/toast";
+import { AutonomyDot, ProvenanceTag } from "../../design-system/trust";
+import { middayInstant } from "../../format/calendarday";
+import {
+  formatDate,
+  formatDuration,
+  formatMoney,
+  formatNumber,
+} from "../../format/format";
+import { toMajorUnits, toMinorUnits } from "../../format/minorunits";
+import { type Locale, translatePlural, useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import { dealRecordKeys, dealWinKeys } from "../../lib/activitykeys";
+import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
+import { useCanWriteRecord, useRecordWriteRefusal } from "../../lib/capability";
+import { useMemberNames } from "../../lib/membernames";
+import { useOpenEmail } from "../../lib/openemail";
+import { throwProblem, unwrap } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
+import { scrollPageToTop } from "../../lib/reveal";
+import { navigate, routeHash } from "../../lib/router";
+import { useMe, useViewerId } from "../../lib/session";
+import { parseTagIDs, parseTagMode, tagQueryParams } from "../../lib/tagfilter";
+import { currentParams, replaceDial, useUrlParams } from "../../lib/urlstate";
+import {
+  type AcquisitionSource,
+  useAcquisitionSources,
+} from "../../screens/acquisitionsources.queries";
+import { OpenEmailDrawer } from "../../screens/openemaildrawer";
+import type { Project } from "../../screens/projects.form";
+import {
+  RecordReading,
+  RecordReadingPair,
+  TimelineThread,
+} from "../../screens/record360";
+import { RecordCustomFields } from "../../screens/recordcustomfields";
+import { saveRecordEdit } from "../../screens/recordedit";
+import {
+  mineEmptyNote,
+  ownerColumn,
+  standardViews,
+  tagsColumn,
+} from "../../screens/recordlist";
+import { RecordListsPanel } from "../../screens/recordlists";
+import { useRecordOwners } from "../../screens/recordreferences";
+import { RecordTeam } from "../../screens/recordteam";
+import { approvalKindLabel } from "../automations/approvalkind";
+import { usePendingApprovals } from "../automations/approvals.queries";
+import { searchCompanies } from "../lists/filterreference";
+import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
+import { TagsPanel } from "../lists/tagspanel";
+import { LegalReviewQueueLink } from "../privacy/legalreviews";
+import { useLegalReviewAvailable } from "../privacy/legalreviews.queries";
+import { WorklistReturnLink } from "../worklist/worklist.return";
+import { toBoardDeal } from "./boarddeal";
+import {
+  type ClosedDeal,
+  CloseReviewOffer,
+  closedDealOf,
+} from "./deal360/closereviewoffer";
+import {
+  type AdvanceInput,
+  advanceErrorBehind,
+  ConfirmAdvanceModal,
+  type PendingAdvance,
+} from "./deal360/confirmadvance";
+import { DealActions } from "./deal360/dealactions";
+import { DealBrief } from "./deal360/dealbrief";
+import { DEAL_OFFERS_ANCHOR, DealCockpit } from "./deal360/dealcockpit";
+import {
+  commercialMotion,
+  dealCommercialFields,
+  dealPriority,
+  MOTION_OPTIONS,
+  PRIORITY_OPTIONS,
+} from "./deal360/dealcommercialfields";
+import { DealCommitteeCard } from "./deal360/dealcommitteecard";
+import { dealSurfaceChips } from "./deal360/dealfilterchips";
+import { DealIdentityFacts, DealSubtitle } from "./deal360/dealheaderfacts";
+import { DealHistoryTab } from "./deal360/dealhistorytab";
+import { DealLegalTab } from "./deal360/deallegaltab";
+import { DealPulse } from "./deal360/dealpulse";
+import { DealRoomTab } from "./deal360/dealroomtab";
+import { DealWatchCard } from "./deal360/dealwatchcard";
+import { OutcomeReviewPanel } from "./deal360/outcomereview";
+import { useDealCoverage } from "./deal360/usedealcoverage";
+import { DealBulkBar } from "./dealbulk";
+import { type CompanyNaming, useCompanyMarks } from "./dealcompanymarks";
+import { currencyBeside } from "./dealcurrency";
+import {
+  admittedDealFilters,
+  dealStatusFilter,
+  forecastCategoryFilter,
+  useAppliedCompanyName,
+} from "./dealdials";
+import { DealEmailAside } from "./dealemail";
+import { DealFiles } from "./dealfiles";
+import { lastMailColumn } from "./dealmailaside";
+import { DealPipelineBoard } from "./dealpipelineboard";
+import {
+  DealProjectChip,
+  dealProjectFields,
+  resolveDealProject,
+  StartDeliveryPrompt,
+  useProjectsOfCompany,
+} from "./dealproject";
+import { DealStatusCardPanel, useDealStatusCard } from "./dealstatus";
+import { useSuggestionGhosts } from "./dealsuggestion";
+import { usePipelines } from "./pipelines.queries";
+
+// Kanban, table and deal detail share the fetched records and approval flow.
+// Mixed-currency columns never sum native minor units; weighting stays server-side.
+
+type Deal = components["schemas"]["Deal"];
+type Company = components["schemas"]["Company"];
+type Stage = components["schemas"]["Stage"];
+type Pipeline = components["schemas"]["Pipeline"];
+type Offer = components["schemas"]["Offer"];
+
+/**
+ * The pipeline a record belongs to, falling back to the default.
+ *
+ * `pipelineId` is the deal's own. Without it this answered the DEFAULT
+ * pipeline for every deal, which was harmless while the stepper only drew
+ * stage names but is not once those stages are the moves on offer: the stages
+ * of a pipeline the deal is not in are targets the server refuses as a
+ * pipeline mismatch.
+ */
+function usePipeline(pipelineId?: string | null) {
+  return useQuery({
+    queryKey: ["pipelines", pipelineId ?? "default"],
+    queryFn: async () => {
+      const data = unwrap(
+        await api.GET("/pipelines", {
+          params: { query: {} },
+        }),
+      );
+      const pipeline =
+        (pipelineId &&
+          data.data.find((candidate) => candidate.id === pipelineId)) ||
+        data.data.find((candidate) => candidate.is_default) ||
+        data.data[0];
+      if (!pipeline) {
+        throw new Error("no pipeline");
+      }
+      return pipeline;
+    },
+  });
+}
+
+type DealFilters = {
+  pipelineId: string;
+  q: string;
+  sort: string;
+  includeArchived: boolean;
+  filters: Record<string, string>;
+};
+
+// Drawing mode and pipeline selection are URL dials, not deal-list filters.
+
+const PIPELINE_PARAM = "pipeline_id";
+const VIEW_PARAM = "view";
+
+// This screen's own dials, held out of the list's parameter space by the codec's
+// shared pair rather than by copies kept here: the copies were the difference
+// between this screen getting it right and the leads queue sending its drawing
+// choice to the server as a filter.
+const DEAL_SCREEN_DIALS: readonly string[] = [PIPELINE_PARAM, VIEW_PARAM];
+
+// dealsQueryParams builds the board's /deals query — the full dial set
+// (pipeline/stage/owner/company filters + sort).
+export function dealsQueryParams(f: DealFilters) {
+  const { filters } = f;
+  return {
+    limit: 100,
+    include_archived: f.includeArchived || undefined,
+    pipeline_id: f.pipelineId || undefined,
+    q: f.q || undefined,
+    sort: f.sort || undefined,
+    stage_id: filters.stage_id || undefined,
+    owner_id: filters.owner_id || undefined,
+    owner_team_id: filters.owner_team_id || undefined,
+    unassigned: filters.unassigned === "true" ? true : undefined,
+    company_id: filters.company_id || undefined,
+    status: dealStatusFilter(filters.status),
+    partner_company_id: filters.partner_company_id || undefined,
+    stalled: filters.stalled === "true" ? true : undefined,
+    forecast_category: forecastCategoryFilter(filters.forecast_category),
+    partner_sourced: filters.partner_sourced === "true" ? true : undefined,
+    // Several ids and their mode, out of the one comma-joined string the
+    // address carries them in. Spelled by the shared encoder rather than here,
+    // so this board and the three lists cannot read one address two ways.
+    ...tagQueryParams(
+      parseTagIDs(filters.tag_id),
+      parseTagMode(filters.tag_mode),
+    ),
+  };
+}
+
+/**
+ * The deals the board and the table share.
+ *
+ * A keyset walk rather than one fixed page. The board draws a column per
+ * stage out of whatever this holds, so a single capped read meant a busy
+ * stage quietly showed a fraction of its cards while its header — which
+ * comes from the deals-by-stage report over EVERY matching deal — went on
+ * naming the true count. A column saying "40 deals" above six cards is the
+ * one thing a pipeline view must not do.
+ */
+function useDeals(f: DealFilters) {
+  return useInfiniteQuery({
+    queryKey: ["deals", f],
+    // `as` steers useInfiniteQuery's TPageParam generic to the cursor type: a
+    // bare `undefined` infers TPageParam=undefined and the string cursor no
+    // longer type-checks.
+    initialPageParam: undefined as string | undefined,
+    queryFn: async ({ pageParam }) => {
+      return unwrap(
+        await api.GET("/deals", {
+          params: { query: { ...dealsQueryParams(f), cursor: pageParam } },
+        }),
+      );
+    },
+    getNextPageParam: (last) =>
+      last.page?.has_more ? (last.page.next_cursor ?? undefined) : undefined,
+  });
+}
+
+// dealsByStageReportFilters translates the board's own filter dials into
+// the deals-by-stage report's filter shape — the SAME dials dealsQueryParams
+// sends to /deals, so a card's stage total and the cards shown for it never
+// disagree about which deals are in scope. stage_id is deliberately absent:
+// the report is grouped BY stage_id, which already answers "per stage".
+function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
+  const { filters } = f;
+  const out: Record<string, unknown> = {};
+  if (f.pipelineId) out.pipeline_id = f.pipelineId;
+  if (filters.owner_id) out.owner_id = filters.owner_id;
+  if (filters.company_id) out.company_id = filters.company_id;
+  const status = dealStatusFilter(filters.status);
+  if (status) out.status = status;
+  if (filters.partner_company_id)
+    out.partner_company_id = filters.partner_company_id;
+  if (filters.stalled === "true") out.stalled = true;
+  if (filters.partner_sourced === "true") out.partner_sourced = true;
+  return out;
+}
+
+// useStageTotals reads the board's per-column totals from the
+// deals-by-stage report — a full aggregate over every matching deal, not
+// just the capped page useDeals fetches. Grouped by
+// [stage_id, currency] so a mixed-currency stage arrives as more than one
+// row, which buildStageTotals reads as "hide the sum" — the report never
+// includes archived deals (like every report), so the totals reflect the
+// live pipeline regardless of the board's "show archived" toggle.
+// Why the board may not state a stage total, or undefined when it may.
+//
+// ONE function for both the decision and the words. The query's `enabled` keys
+// on this answering undefined, and the column prints what it answers — so a
+// reason cannot be added to one without the other, and the column can never
+// explain a total by a rule that is not the one that withheld it.
+//
+// Derived from the FILTERS, never from the query's own status. A query that
+// errored also settles to idle-and-not-successful, and reading status would
+// have told a reader whose report answered 422 to press a filter instead of
+// showing them the failure.
+//
+// A tag, a search, a team and the unassigned queue have no filter field on the
+// report, and sending one is a 422. The totals would count deals the board is
+// not showing. The report takes every other dial, and it measures every deal
+// the reader may see, which is the set `GET /deals` draws as cards.
+function totalsWithheldBecause(f: DealFilters): MessageKey | undefined {
+  if (parseTagIDs(f.filters.tag_id).length > 0) {
+    return "deals.totalsNoTagFilter";
+  }
+  if (f.q) return "deals.totalsNoSearch";
+  if (f.filters.owner_team_id || f.filters.unassigned === "true") {
+    return "deals.totalsNoTeamFilter";
+  }
+  return undefined;
+}
+
+// The one reason the SERVER decides: an owner dial naming somebody whose
+// totals this reader may not measure answers 403. The cards stay, because
+// reading a deal and measuring its owner are different permissions.
+function totalsRefusedBecause(
+  totals: Map<string, StageTotals> | null | undefined,
+): MessageKey | undefined {
+  return totals === null ? "deals.totalsOwnerNotMeasurable" : undefined;
+}
+
+function useStageTotals(f: DealFilters) {
+  return useQuery({
+    // Under ["deals"] on purpose, so the ONE invalidation every deal mutation
+    // already fires refreshes the column headers along with the cards. Keyed
+    // apart from them, a moved card sat under a header still counting it in
+    // the stage it left — and a foreign-currency deal arriving in a
+    // single-currency stage left the old sum standing, which is the mixed-
+    // currency refusal not happening.
+    queryKey: ["deals", "by-stage-totals", f],
+    // Asked only when the report would count the deals the board is drawing.
+    // totalsWithheldBecause owns that decision and the words for it both, so
+    // the column cannot explain a missing total by the wrong rule.
+    enabled: totalsWithheldBecause(f) === undefined,
+    queryFn: async (): Promise<Map<string, StageTotals> | null> => {
+      const { data, error, response } = await api.POST("/reports/{report}", {
+        params: { path: { report: "deals-by-stage" } },
+        body: {
+          group_by: ["stage_id", "currency"],
+          aggregates: [
+            { fn: "count", as: "deals" },
+            { fn: "sum", field: "amount_minor", as: "raw_minor" },
+            {
+              fn: "sum",
+              field: "weighted_amount_minor",
+              as: "weighted_minor",
+            },
+          ],
+          filters: dealsByStageReportFilters(f),
+        },
+      });
+      if (error) {
+        if (response.status === 403) {
+          return null;
+        }
+        throwProblem(error);
+      }
+      return buildStageTotals(data.rows);
+    },
+  });
+}
+
+type UpdateDealRequest = components["schemas"]["UpdateDealRequest"];
+type CreateDealRequest = components["schemas"]["CreateDealRequest"];
+
+// Missing money stays blank; present figures use their currency's minor-unit scale.
+// This projection seeds both the controls and their update comparison.
+function moneyFieldValue(
+  minor: number | null | undefined,
+  currency?: string | null,
+): string {
+  return minor != null && currency ? String(toMajorUnits(minor, currency)) : "";
+}
+
+function dealEditRecord(deal: Deal): Record<
+  string,
+  string | number | undefined
+> & {
+  id: string;
+  version?: number;
+} {
+  return {
+    id: deal.id,
+    version: deal.version,
+    name: deal.name,
+    amount: moneyFieldValue(deal.amount_minor, deal.currency),
+    expected_arr: moneyFieldValue(deal.expected_arr_minor, deal.currency),
+    currency: deal.currency ?? "",
+    owner_id: deal.owner_id ?? "",
+    company_id: deal.company_id ?? "",
+    partner_company_id: deal.partner_company_id ?? "",
+    partner_attribution: deal.partner_attribution ?? "",
+    forecast_category: deal.forecast_category ?? "",
+    expected_close_date: deal.expected_close_date ?? "",
+    wait_until: deal.wait_until ?? "",
+    project_id: deal.project_id ?? "",
+    description: deal.description ?? "",
+    commercial_motion: deal.commercial_motion ?? "",
+    priority: deal.priority ?? "",
+    acquisition_source: deal.acquisition_source ?? "",
+  };
+}
+
+// The edit form's values are typed `unknown` per key; the project resolver
+// reads the three it needs as strings, and anything else is not one.
+function stringValues(values: Record<string, unknown>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(values)) {
+    if (typeof value === "string") {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
+// The attribution the form may send, narrowed the same way the forecast
+// category is: the wire type is a closed vocabulary, and a free string from a
+// form input is not one until something checks it.
+function partnerAttribution(
+  v: string,
+): UpdateDealRequest["partner_attribution"] {
+  switch (v) {
+    case "sourced":
+      return "sourced";
+    case "influenced":
+      return "influenced";
+    default:
+      return null;
+  }
+}
+
+function forecastCategory(v: string): UpdateDealRequest["forecast_category"] {
+  switch (v) {
+    case "commit":
+      return "commit";
+    case "best_case":
+      return "best_case";
+    case "pipeline":
+      return "pipeline";
+    case "omitted":
+      return "omitted";
+    default:
+      return null;
+  }
+}
+
+/**
+ * The edit form's values as a deal patch — a DIFF, not a snapshot.
+ *
+ * `seeded` is the record the form opened on (`dealEditRecord`). A key appears
+ * only where the form's value differs from it, and that is the whole point: the
+ * body used to carry every field on every save, so a deal missing a value the
+ * form does not even RENDER — `partner_attribution` on an installation with no
+ * partners — resubmitted `null` as a real instruction to clear it. The API reads
+ * an explicit null as "forget this" and refused, correctly, naming a field the
+ * contact had never seen. Nothing the contact did not touch travels now.
+ *
+ * A blank over a stored value is still a change, and still travels as null: the
+ * pickers offer "Unset" in words, so clearing a company or a partner is a
+ * choice somebody made rather than a gap in what the form knows.
+ *
+ * `amount` arrives in major units from the form and the wire is minor units
+ * (deal creation applies the same conversion above). The two money halves are
+ * compared as the form spells them, because that is where the contact's edit is.
+ *
+ * `masked` names the fields THIS reader was not shown. A withheld reference
+ * arrives as null with `masked_fields` naming it — deliberately, so a reader
+ * can tell "you may not see this" from "there is nothing here" — but the form
+ * has only the null, and sending it back would ask the server to clear a
+ * partner the reader never saw and never touched. So a masked field is left
+ * out of the patch entirely: omitted means unchanged.
+ */
+export function mapDealUpdate(
+  values: Record<string, unknown>,
+  seeded: Record<string, unknown> = {},
+  masked: readonly string[] = [],
+): UpdateDealRequest {
+  const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+  const currency = str(values.currency);
+  const amount = str(values.amount);
+  const expectedArr = str(values.expected_arr);
+  const patch: UpdateDealRequest = {};
+  // One reading of "the contact moved this field", over the form's own spelling
+  // of the value rather than the wire's: a select left alone holds exactly the
+  // string it was seeded with, and the wire shape (minor units, a narrowed
+  // vocabulary) is derived from that string afterwards.
+  //
+  // The wire key and the form key are named together at every call, because the
+  // one place this can go wrong is a field compared under one name and sent
+  // under another — which sends an untouched field, or swallows a real edit.
+  const moved = (formKey: string) =>
+    str(values[formKey]) !== str(seeded[formKey]);
+  function onMove<K extends keyof UpdateDealRequest>(
+    formKey: string,
+    wireKey: K,
+    value: () => UpdateDealRequest[K],
+  ) {
+    if (moved(formKey)) {
+      patch[wireKey] = value();
+    }
+  }
+  // A required field: an emptied name is a form the contact has not finished,
+  // not an instruction to erase the deal's name.
+  onMove("name", "name", () => str(values.name) || undefined);
+  // The money pair travels together whenever either half moves, because the
+  // SCALE is part of the amount: amount_minor is denominated in the currency's
+  // own minor units — a dong has none, a dinar has three — so a currency moving
+  // alone re-denominates the figure the row already holds. 10000 JPY re-saved as
+  // EUR became 10000 minor EUR, which is €100, and the fx freeze and the
+  // forecast history then recorded that as the price.
+  //
+  // The exception is a deal with no figure at all: naming a currency there is
+  // half a money value, and the server's own pair refusal says so better than an
+  // amount_minor this form would have to invent.
+  if (moved("amount") || (moved("currency") && amount)) {
+    patch.amount_minor = amount ? toMinorUnits(Number(amount), currency) : null;
+  }
+  // ARR carries its currency's scale for the same reason the amount does, and
+  // travels on a currency move for the same reason: the code is what says how
+  // many minor units the figure counts in.
+  if (moved("expected_arr") || (moved("currency") && expectedArr)) {
+    patch.expected_arr_minor = expectedArr
+      ? toMinorUnits(Number(expectedArr), currency)
+      : null;
+  }
+  onMove("currency", "currency", () => currency || undefined);
+  onMove("company_id", "company_id", () => str(values.company_id) || null);
+  onMove("owner_id", "owner_id", () => str(values.owner_id) || null);
+  onMove(
+    "partner_company_id",
+    "partner_company_id",
+    () => str(values.partner_company_id) || null,
+  );
+  // Only alongside a partner. Clearing the partner clears what they did with
+  // it — the two are one fact, stored under one CHECK — so sending the
+  // attribution's own null beside it would name a claim with nobody left to
+  // attribute it to, which the API refuses.
+  if (str(values.partner_company_id)) {
+    onMove("partner_attribution", "partner_attribution", () =>
+      partnerAttribution(str(values.partner_attribution)),
+    );
+  }
+  onMove("forecast_category", "forecast_category", () =>
+    forecastCategory(str(values.forecast_category)),
+  );
+  onMove(
+    "expected_close_date",
+    "expected_close_date",
+    () => str(values.expected_close_date) || null,
+  );
+  onMove("wait_until", "wait_until", () => str(values.wait_until) || null);
+  // Resolved by the screen before mapping: the "new project" answer has
+  // already become an id by the time the patch is built.
+  onMove("project_id", "project_id", () => str(values.project_id) || null);
+  if (values.description !== seeded.description)
+    patch.description =
+      typeof values.description === "string" && values.description.trim()
+        ? values.description
+        : null;
+  onMove("commercial_motion", "commercial_motion", () =>
+    commercialMotion(str(values.commercial_motion)),
+  );
+  onMove("priority", "priority", () => dealPriority(str(values.priority)));
+  onMove(
+    "acquisition_source",
+    "acquisition_source",
+    () => str(values.acquisition_source) || null,
+  );
+  return withoutMasked(patch, masked);
+}
+
+/**
+ * The patch minus every field the reader was not shown.
+ *
+ * `partner_company_id` carries its attribution: the server withholds the pair
+ * together, so returning one half of it would decide what a partner nobody
+ * could see is owed.
+ */
+function withoutMasked(
+  patch: UpdateDealRequest,
+  masked: readonly string[],
+): UpdateDealRequest {
+  if (masked.length === 0) {
+    return patch;
+  }
+  const out: Record<string, unknown> = { ...patch };
+  for (const field of masked) {
+    delete out[field];
+    if (field === "partner_company_id") {
+      delete out.partner_attribution;
+    }
+    if (field === "amount_minor" || field === "expected_arr_minor") {
+      // The server withholds the whole money reading as one unit, so a patch
+      // that kept either figure would write back a half it was never shown.
+      delete out.currency;
+      delete out.amount_minor;
+      delete out.expected_arr_minor;
+    }
+  }
+  return out as UpdateDealRequest;
+}
+
+/**
+ * The create form's values as the deal-birth body.
+ *
+ * A deal names its partner at birth rather than only through a later edit: the
+ * win that pays the partner can land before anybody revisits the record, and
+ * commission accrues on a `sourced` attribution alone. Both partner fields
+ * travel here for the same reason the update body carries them — a create that
+ * quietly dropped them told the caller its write had succeeded while the
+ * partner was gone.
+ */
+export function mapDealCreate(
+  values: Record<string, unknown>,
+  pipelineId: string,
+): CreateDealRequest {
+  const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+  const amount = str(values.amount);
+  const expectedArr = str(values.expected_arr);
+  const currency = str(values.currency) || "EUR";
+  return {
+    name: str(values.name),
+    pipeline_id: pipelineId,
+    stage_id: str(values.stage_id),
+    // The UI takes major units; the wire is minor units, at the scale THIS
+    // currency carries — a dong has none, so multiplying by a hundred here
+    // priced the deal a hundredfold and nothing downstream could tell.
+    amount_minor: amount ? toMinorUnits(Number(amount), currency) : null,
+    expected_arr_minor: expectedArr
+      ? toMinorUnits(Number(expectedArr), currency)
+      : null,
+    currency: currencyBeside(currency, amount, expectedArr),
+    company_id: str(values.company_id) || null,
+    partner_company_id: str(values.partner_company_id) || null,
+    // The empty option means the caller made no claim, and null is how that
+    // travels: the server then reads a named partner as `sourced`, which is
+    // what the option says it does. An attribution naming no partner is
+    // refused 422 rather than defaulted — there would be nobody to credit.
+    partner_attribution: partnerAttribution(str(values.partner_attribution)),
+    expected_close_date: str(values.expected_close_date) || null,
+    project_id: str(values.project_id) || null,
+    description: str(values.description) || null,
+    commercial_motion: commercialMotion(str(values.commercial_motion)),
+    priority: dealPriority(str(values.priority)),
+    acquisition_source: str(values.acquisition_source) || null,
+    source: "manual",
+  };
+}
+
+const FORECAST_OPTIONS: { value: string; label: MessageKey }[] = [
+  { value: "commit", label: "deal.fcCommit" },
+  { value: "best_case", label: "deal.fcBestCase" },
+  { value: "pipeline", label: "deal.fcPipeline" },
+  { value: "omitted", label: "deal.fcOmitted" },
+];
+
+// What a partner did for the deal. Only "sourced" earns commission — a partner
+// who helped a deal we already had is recorded, not paid.
+//
+// The empty value leads and says what leaving it unset MEANS. The server
+// defaults a named partner to "sourced", so a bare "Unset" here would let a
+// reader believe they had made no claim while the deal quietly became
+// commission-eligible. A field that offers the empty value in its own words
+// suppresses the generic entry (create.tsx), which is why this one is spelled
+// out rather than inherited.
+const ATTRIBUTION_OPTIONS: { value: string; label: MessageKey }[] = [
+  { value: "", label: "deal.attributionUnset" },
+  { value: "sourced", label: "deal.attributionSourced" },
+  { value: "influenced", label: "deal.attributionInfluenced" },
+];
+
+/**
+ * The companies a deal may name as the partner who brought it.
+ *
+ * Only companies that ARE partners: the picker once offered every
+ * company, which let a deal be attributed to an ordinary customer — and
+ * an attribution to a company with no partner row has no margin tier behind
+ * it, so it looks attributed and silently never earns anything.
+ *
+ * An empty list is also the answer to "is there a partner programme here": an
+ * installation that has never made a company a partner has no partner
+ * question to ask, and the two fields stay off the form entirely.
+ */
+export function usePartnerOptions(
+  companies: { id: string; display_name: string }[],
+): { value: string; label: string }[] {
+  const partners = useQuery({
+    queryKey: ["partners", "options"],
+    queryFn: async () => {
+      const data = unwrap(
+        await api.GET("/partners", {
+          params: { query: { limit: 200 } },
+        }),
+      );
+      return data.data;
+    },
+    staleTime: 60_000,
+  });
+  // The names come from a read of the PARTNER companies rather than from
+  // whatever page of companies the screen happens to hold.
+  //
+  // The caller's `companies` is one capped page (50 on the deals screen), and
+  // intersecting the two dropped any partner whose company fell outside it —
+  // silently, and differently depending on which screen asked. That is
+  // survivable for a form picker, which injects the deal's own stored partner
+  // when it is missing; a FILTER has no such fallback, so a partner it cannot
+  // name is a partner nobody can narrow by.
+  const names = useQuery({
+    queryKey: ["partners", "names"],
+    staleTime: 60_000,
+    queryFn: async () => {
+      // relationship_type=partner reads the same set from the other side, so
+      // the page is partner companies rather than the first N companies of
+      // any kind. The cap matches /partners' own.
+      const data = unwrap(
+        await api.GET("/companies", {
+          params: { query: { relationship_type: "partner", limit: 200 } },
+        }),
+      );
+      return data.data;
+    },
+  });
+  // Still the caller's page as a fallback while the keyed read is in flight,
+  // so the options do not blink empty on every mount.
+  const named = new Map<string, string>(
+    companies.map((company) => [company.id, company.display_name]),
+  );
+  for (const company of names.data ?? []) {
+    named.set(company.id, company.display_name);
+  }
+  return (partners.data ?? []).flatMap((partner) => {
+    const label = named.get(partner.company_id);
+    // A partner whose company the caller cannot read is left out rather
+    // than offered as a bare id: picking it would name a company the picker
+    // could not show them.
+    return label ? [{ value: partner.company_id, label }] : [];
+  });
+}
+
+/**
+ * The two fields that record a deal coming through a partner, for both the
+ * create form and the edit form — one spelling, so the two cannot drift.
+ *
+ * Nothing at all when the installation has no partners AND the deal names
+ * none: an empty picker asks a question with no answers in it, and a form that
+ * shows partner controls to a company running no partner programme is claiming
+ * a feature it does not have.
+ *
+ * `attributed` is what keeps that from eating data. A form omits nothing a
+ * record already carries: the pickable list is one capped page of companies, so
+ * a deal's own partner can be missing from it, and dropping the field would
+ * blank the stored partner the next time anybody edited anything else on the
+ * deal — taking the commission attribution with it, silently.
+ *
+ * The attribution follows the partner rather than standing beside it. What a
+ * partner DID is a question about a partner, so it appears once one is named
+ * and disappears when the choice is cleared — asking it first offers a claim
+ * with nobody to attach it to.
+ */
+function partnerFields(
+  t: (k: MessageKey) => string,
+  partnerOptions: { value: string; label: string }[],
+  attributed?: { id: string; label: string },
+  // The reader was not shown this deal's partner (`masked_fields` names it).
+  // Checked BEFORE the empty-list exit: a withheld partner is a fact about
+  // this deal, so it is stated whether or not the installation has partners
+  // left to offer.
+  withheld = false,
+): CreateField[] {
+  if (withheld) {
+    // One entry, and it names the field as withheld. A picker seeded blank
+    // over a partner the reader never saw invites them to choose a different
+    // one, and the attribution travels with the partner — so there is nothing
+    // here to attribute either. `mapDealUpdate` leaves both out of the patch.
+    return [
+      {
+        key: "partner_company_id",
+        label: "deal.partnerCompany",
+        type: "select",
+        options: [{ value: "", label: t("deal.partnerWithheld") }],
+      },
+    ];
+  }
+  if (partnerOptions.length === 0 && !attributed) {
+    return [];
+  }
+  // The deal's own partner is always among the choices, even when the capped
+  // page of partners this form could offer does not include it. A select whose
+  // stored value is not an option shows blank, and saving that blank clears the
+  // partner nobody meant to touch.
+  const options =
+    attributed && !partnerOptions.some((o) => o.value === attributed.id)
+      ? [{ value: attributed.id, label: attributed.label }, ...partnerOptions]
+      : partnerOptions;
+  return [
+    {
+      key: "partner_company_id",
+      label: "deal.partnerCompany",
+      type: "select",
+      options,
+    },
+    // Commission accrues on "sourced" only, so this is the field that decides
+    // whether a win pays the partner.
+    {
+      key: "partner_attribution",
+      label: "deal.partnerAttribution",
+      type: "select",
+      showWhen: (values) => Boolean(values.partner_company_id),
+      options: ATTRIBUTION_OPTIONS.map((o) => ({
+        value: o.value,
+        label: t(o.label),
+      })),
+    },
+  ];
+}
+
+/**
+ * The partner a deal already names, ready to stand as its own option.
+ *
+ * Falls back to the raw id when the company list cannot name it — an unreadable or
+ * off-page company. Ugly, and correct: the alternative is a blank select whose
+ * save clears an attribution the reader never touched.
+ */
+function attributedPartner(
+  deal: Deal,
+  companies: { id: string; display_name: string }[],
+): { id: string; label: string } | undefined {
+  if (!deal.partner_company_id) {
+    return undefined;
+  }
+  const named = companies.find(
+    (company) => company.id === deal.partner_company_id,
+  );
+  return {
+    id: deal.partner_company_id,
+    label: named?.display_name ?? deal.partner_company_id,
+  };
+}
+
+/**
+ * The company picker on a deal's edit form, in the three readings a stored
+ * company has.
+ *
+ * Withheld is the reading that offers no company at all. The reader was not
+ * shown which company this is, so a picker seeded blank invites them to pick
+ * one and silently re-point the deal away from the company a colleague linked;
+ * its single entry names the field as withheld instead, and `mapDealUpdate`
+ * leaves the field out of the patch entirely.
+ *
+ * A company the pickable page cannot reach is still an option, for the reason
+ * the partner field carries the same rule: a select whose stored value is not
+ * among its options shows blank, and saving that blank clears a link nobody
+ * meant to touch.
+ */
+function companyEditField(
+  t: (k: MessageKey) => string,
+  opts: {
+    companies: { id: string; display_name: string }[];
+    masked: readonly string[];
+    currentCompany?: { id: string; label: string };
+  },
+): CreateField {
+  if (opts.masked.includes("company_id")) {
+    return {
+      key: "company_id",
+      label: "create.relatedCompany",
+      type: "select",
+      options: [{ value: "", label: t("deal.companyWithheld") }],
+    };
+  }
+  const options = opts.companies.map((company) => ({
+    value: company.id,
+    label: company.display_name,
+  }));
+  const current = opts.currentCompany;
+  return {
+    key: "company_id",
+    label: "create.relatedCompany",
+    type: "select",
+    options:
+      current && !options.some((option) => option.value === current.id)
+        ? [{ value: current.id, label: current.label }, ...options]
+        : options,
+  };
+}
+
+export function dealEditFields(
+  t: (k: MessageKey) => string,
+  opts: {
+    companies: { id: string; display_name: string }[];
+    partnerOptions: { value: string; label: string }[];
+    // The partner this deal ALREADY names, when it names one. Keeps the field
+    // (and its stored value) on a form whose pickable list does not reach it.
+    attributedPartner?: { id: string; label: string };
+    // The company this deal already names, resolved even when the pickable
+    // page does not reach it — the same rule as `attributedPartner`, for the
+    // same reason.
+    currentCompany?: { id: string; label: string };
+    // The administered acquisition-source catalog, and the key this deal
+    // already carries — which may name a RETIRED entry the picker must still
+    // offer, or the next save clears a value nobody touched.
+    acquisitionSources?: AcquisitionSource[];
+    currentAcquisitionSource?: string | null;
+    // The fields of THIS deal the reader was not shown, as `masked_fields`
+    // named them. A withheld reference is offered as withheld rather than as
+    // an empty picker.
+    masked: readonly string[];
+    me: string;
+    currentOwner: string | null;
+    currency: string;
+  },
+): CreateField[] {
+  const currencies = ["EUR", "USD", "GBP", "CHF"];
+  if (opts.currency && !currencies.includes(opts.currency)) {
+    currencies.unshift(opts.currency);
+  }
+  const ownerOptions = [
+    ...(opts.currentOwner && opts.currentOwner !== opts.me
+      ? [{ value: opts.currentOwner, label: t("deal.ownerKeep") }]
+      : []),
+    { value: opts.me, label: t("deal.ownerMe") },
+    { value: "", label: t("deal.ownerUnassign") },
+  ];
+  return [
+    { key: "name", label: "create.dealName", required: true },
+    { key: "amount", label: "create.amount", type: "number", step: "any" },
+    // The recurring half of the price, annual, in the same currency as the
+    // amount above. Beside it rather than in a section of its own because the
+    // two are one money value on the row: they share the currency field below,
+    // and the server refuses either one stranded without it.
+    {
+      key: "expected_arr",
+      label: "deal.expectedArr",
+      type: "number",
+      step: "any",
+    },
+    {
+      key: "currency",
+      label: "create.currency",
+      type: "select",
+      required: true,
+      options: currencies.map((c) => ({ value: c, label: c })),
+    },
+    {
+      key: "owner_id",
+      label: "deal.ownerMe",
+      type: "select",
+      options: ownerOptions,
+    },
+    companyEditField(t, opts),
+    // Both partner fields are absent where no company has been made a partner:
+    // there is no partner programme to attribute anything to, and an empty
+    // picker is a question the reader cannot answer.
+    ...partnerFields(
+      t,
+      opts.partnerOptions,
+      opts.attributedPartner,
+      opts.masked.includes("partner_company_id"),
+    ),
+    {
+      key: "forecast_category",
+      label: "deal.forecastCategory",
+      type: "select",
+      options: FORECAST_OPTIONS.map((o) => ({
+        value: o.value,
+        label: t(o.label),
+      })),
+    },
+    { key: "expected_close_date", label: "create.expectedClose", type: "date" },
+    { key: "wait_until", label: "deal.waitUntil", type: "date" },
+    {
+      key: "__commercial__",
+      labelText: t("deal.commercialContext"),
+      divider: true,
+    },
+    ...dealCommercialFields(t, {
+      motionOptions: MOTION_OPTIONS,
+      priorityOptions: PRIORITY_OPTIONS,
+      sources: opts.acquisitionSources ?? [],
+      currentSource: opts.currentAcquisitionSource,
+    }),
+  ];
+}
+
+// StageTotals is one stage's count/raw/weighted total, sourced from the
+// deals-by-stage report rather than the board's own (capped) card fetch —
+// a pipeline with more deals than the board's one-screenful cap was
+// showing a confidently wrong sum.
+export type StageTotals = {
+  count: number;
+  // Null where the report stated no figure. A stage can hold a real count of
+  // deals nobody has priced, and its `SUM` then arrives as null with no
+  // currency beside it — which is not the zero a naive read makes of it.
+  rawMinor: number | null;
+  weightedMinor: number | null;
+  currency: string | null;
+  sumHidden: boolean;
+};
+
+// A report cell as a figure, or nothing. An absent or non-numeric cell is the
+// report declining to state an amount, and `Number(null)` turns that into a 0
+// the server never sent.
+function reportMinor(value: unknown): number | null {
+  if (value == null || value === "") {
+    return null;
+  }
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : null;
+}
+
+// buildStageTotals shapes a deals-by-stage report grouped by
+// `["stage_id","currency"]` into one entry per stage. More than one
+// currency row for a stage means the sum is genuinely cross-currency — the
+// same rule the board has always applied, decided here from the report's
+// full row set rather than from whichever cards happened to load.
+export function buildStageTotals(
+  rows: Record<string, unknown>[],
+): Map<string, StageTotals> {
+  const byStage = new Map<string, Record<string, unknown>[]>();
+  for (const row of rows) {
+    const stageId = String(row.stage_id ?? "");
+    const forStage = byStage.get(stageId) ?? [];
+    forStage.push(row);
+    byStage.set(stageId, forStage);
+  }
+  const totals = new Map<string, StageTotals>();
+  for (const [stageId, stageRows] of byStage) {
+    const count = stageRows.reduce(
+      (sum, row) => sum + Number(row.deals ?? 0),
+      0,
+    );
+    const mixed = stageRows.length > 1;
+    const [single] = stageRows;
+    if (single === undefined) continue;
+    // ONE row is not the same fact as one CURRENCY. A stage whose deals are all
+    // unpriced groups into a single row whose `currency` is null, so the
+    // cross-currency test says nothing about it — and its figures belong to no
+    // currency at all. Naming EUR there is indistinguishable from a real EUR
+    // total, which is the reading a rep would act on.
+    const currency =
+      !mixed && typeof single.currency === "string" && single.currency !== ""
+        ? single.currency
+        : null;
+    totals.set(stageId, {
+      count,
+      rawMinor: currency ? reportMinor(single.raw_minor) : null,
+      weightedMinor: currency ? reportMinor(single.weighted_minor) : null,
+      currency,
+      sumHidden: mixed,
+    });
+  }
+  return totals;
+}
+
+export function buildColumns(
+  stages: Stage[],
+  deals: Deal[],
+  totals: Map<string, StageTotals>,
+  naming: CompanyNaming,
+  // What to say where a stage total would go when the totals query was not
+  // asked at all — see measuresTheSamePopulation. Undefined when totals are in
+  // play, which is the ordinary case.
+  totalsWithheld?: string,
+  owners?: OwnerNaming,
+): BoardMoneyColumn[] {
+  return [...stages]
+    .sort((a, b) => a.position - b.position)
+    .map((stage) => {
+      const stageDeals = deals.filter((deal) => deal.stage_id === stage.id);
+      const stageTotals = totals.get(stage.id);
+      return {
+        stage: stage.id,
+        label: stage.name,
+        probabilityPct: stage.win_probability,
+        // No totals row yet — the report is still in flight, or this stage was
+        // not in it. Either way the figure is unknown rather than zero, and the
+        // column draws it as absent while still stating the count below.
+        rawMinor: stageTotals?.rawMinor ?? null,
+        weightedMinor: stageTotals?.weightedMinor ?? null,
+        currency: stageTotals?.currency ?? null,
+        deals: stageDeals.map((deal) => toBoardDeal(deal, naming, owners)),
+        // The true count, not the loaded page's — falls back to the page
+        // count while totals are still loading, so the column shows SOME
+        // number rather than a misleading 0.
+        count: stageTotals?.count ?? stageDeals.length,
+        // Withheld totals hide the sum for their own reason, which is NOT the
+        // mixed-currency one the column says by default.
+        sumHidden:
+          totalsWithheld !== undefined || (stageTotals?.sumHidden ?? false),
+        sumHiddenReason: totalsWithheld,
+      };
+    });
+}
+
+/**
+ * One of a deal's company references, as a table cell.
+ *
+ * Three readings, and only the last of them is blank. Withheld reads as
+ * withheld: the wire sends the id as null and names the field in
+ * `masked_fields`, so the null is a refusal rather than an absence, and a cell
+ * that drew nothing would state the opposite. A reference the reader may see
+ * resolves to the company's name. A deal that names no company has an empty
+ * cell, which is the one case where empty is the truth.
+ *
+ * `asText` because the row is already the link to the deal: a control nested
+ * inside one is invalid markup, and the second route would go where the first
+ * one already goes.
+ */
+function CompanyCell({
+  deal,
+  field,
+}: Readonly<{ deal: Deal; field: "company_id" | "partner_company_id" }>) {
+  if (deal.masked_fields?.includes(field)) {
+    return <FieldGuard mode="masked" />;
+  }
+  const id = deal[field];
+  if (!id) {
+    return null;
+  }
+  return <EntityRef kind="company" id={id} asText />;
+}
+
+// The amount's three readings, in one place because both the list and the
+// board draw them. Withheld is not empty — reading a refused amount as an
+// unpriced deal is the defect this cell exists to prevent.
+function AmountCell({
+  deal,
+  locale,
+}: Readonly<{ deal: Deal; locale: Locale }>) {
+  if (deal.masked_fields?.includes("amount_minor")) {
+    return <FieldGuard mode="masked" />;
+  }
+  if (deal.amount_minor == null || !deal.currency) {
+    return null;
+  }
+  return (
+    <span className="t-num">
+      {formatMoney(deal.amount_minor, deal.currency, locale)}
+    </span>
+  );
+}
+
+// The table-view column set, module-level because DealsScreen is already at
+// the cognitive-complexity ceiling.
+function dealColumns(
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+  recordZone: string,
+  stageName: Map<string, string>,
+): ListColumn<Deal>[] {
+  return [
+    {
+      key: "name",
+      header: t("contacts.name"),
+      cell: (deal) => deal.name,
+      // Alphabetical, which a list of deals had no way to offer until the
+      // API's sort vocabulary took the columns this list draws.
+      sort: "name",
+      fixed: true,
+    },
+    tagsColumn<Deal>(t),
+    {
+      // The company the deal is with. Withheld is not empty: the wire sends a
+      // null `company_id` and names the field in `masked_fields` when the
+      // reader may not read that company, and a blank cell cannot be told
+      // apart from a deal nobody has linked.
+      //
+      // Ordered by the company's NAME, not by the id the field is called
+      // after: the sort vocabulary names the reference and the server decides
+      // what ordering it means. A company this reader may not open sorts last,
+      // with the rest, because ordering by a name is reading it.
+      key: "company",
+      header: t("create.relatedCompany"),
+      sort: "company_id",
+      cell: (deal) => <CompanyCell deal={deal} field="company_id" />,
+    },
+    {
+      // Which partner brought the deal, when one did. Optional: a workspace
+      // that runs no partner programme has an empty column, and hiding it
+      // per-row is worse in a list than an empty cell — a column that comes
+      // and goes cannot be scanned down.
+      key: "partner",
+      header: t("deal.partnerCompany"),
+      sort: "partner_company_id",
+      cell: (deal) => <CompanyCell deal={deal} field="partner_company_id" />,
+    },
+    {
+      key: "stage",
+      header: t("deals.stage"),
+      // Ordered by the stage's place in its PIPELINE. Alphabetical stages are
+      // the funnel shuffled, which is never what somebody sorting by stage
+      // means.
+      sort: "stage_id",
+      cell: (deal) =>
+        deal.stage_id ? (stageName.get(deal.stage_id) ?? "") : "",
+    },
+    {
+      key: "amount",
+      header: t("deals.amount"),
+      numeric: true,
+      sort: "amount_minor",
+      cell: (deal) => <AmountCell deal={deal} locale={locale} />,
+    },
+    {
+      key: "close",
+      header: t("deals.close"),
+      sort: "expected_close_date",
+      cell: (deal) =>
+        deal.expected_close_date
+          ? formatDate(
+              middayInstant(deal.expected_close_date, recordZone),
+              locale,
+              recordZone,
+            )
+          : null,
+    },
+    ownerColumn<Deal>(t),
+    {
+      // How long since anything happened on this deal. It is the figure a
+      // forecast argument rests on — an amount with no recent signal behind it
+      // is a number nobody can defend — and the server already flags the ones
+      // that have gone quiet, so the row says so rather than leaving the reader
+      // to subtract dates.
+      key: "last_signal",
+      header: t("deals.lastSignal"),
+      numeric: true,
+      sort: "last_activity_at",
+      cell: (deal) =>
+        deal.last_activity_at ? (
+          <CellStrip>
+            <span>
+              {formatDuration(
+                Math.max(0, Date.now() - Date.parse(deal.last_activity_at)),
+                locale,
+              )}
+            </span>
+            {deal.stalled && (
+              <Badge tone="warning">{t("deal.stalledBadge")}</Badge>
+            )}
+          </CellStrip>
+        ) : (
+          <span>{t("deals.lastSignalNone")}</span>
+        ),
+    },
+    lastMailColumn(t),
+    {
+      key: "status",
+      header: t("lead.status"),
+      cell: (deal) => (
+        <Badge tone={dealStatusTone(deal.status)}>{deal.status}</Badge>
+      ),
+      // By the stored value, so the three groups sit together. Alphabetical
+      // rather than by lifecycle — `lost` before `open` before `won` — because
+      // `deal.status` is a text column and the machinery orders by the column
+      // rather than by a vocabulary this side would have to keep a second copy
+      // of.
+      sort: "status",
+    },
+  ];
+}
+
+/**
+ * The ONE way this screen advances a deal, shared by the board's drag and the
+ * record page's stepper.
+ *
+ * An advance is a write like any other, so it is pinned like any other: the
+ * version the reader's own card or record was drawn from rides the variables,
+ * and two contacts moving one deal at the same moment no longer both succeed —
+ * the second reads the version the first replaced and fails 409 version_skew
+ * instead of quietly undoing a stage change nobody saw.
+ */
+/**
+ * What a terminal advance says about HOW the deal closed, on top of the stage
+ * and status every advance carries.
+ *
+ * A lost deal states its reason. A won deal states one only when there is no
+ * signed contract to point at — the server looks for the contract first, and a
+ * win that has one says nothing here, which is what keeps "won with paper" and
+ * "won without it" distinguishable in reports.
+ */
+function closingFields(input: AdvanceInput) {
+  if (input.toStage.semantic === "lost") {
+    return { lost_reason: input.lostReason };
+  }
+  if (input.toStage.semantic === "won" && input.wonWithoutContractReason) {
+    return {
+      won_without_contract_reason: input.wonWithoutContractReason,
+      won_without_contract_detail: input.wonWithoutContractDetail,
+    };
+  }
+  return {};
+}
+
+function useAdvanceDeal() {
+  const toast = useToast();
+  const t = useT();
+  const queryClient = useQueryClient();
+  return useMutation({
+    // No single record: one instance serves every card on the board, and which
+    // deal is moving is known at mutate() time rather than here, so the agent
+    // rail names the write without naming a record (app/agentrail-copy.ts).
+    mutationKey: ["deal-edit"],
+    mutationFn: async (input: AdvanceInput) => {
+      const terminal = input.toStage.semantic !== "open";
+      return unwrap(
+        await api.POST("/deals/{id}/advance", {
+          params: {
+            path: { id: input.dealId },
+            ...ifMatch(requireVersion(input.version)),
+          },
+          body: {
+            to_stage_id: input.toStage.id,
+            ...(terminal ? { status: input.toStage.semantic } : {}),
+            ...closingFields(input),
+          },
+        }),
+        t,
+      );
+    },
+    onSuccess: (deal, input) => {
+      // The advanced deal goes into the cache SYNCHRONOUSLY, before the
+      // refetch the invalidation schedules. isPending clears the moment this
+      // returns, so a reader who clicks a second stage immediately would
+      // otherwise pin the version this write just replaced and read a 409 they
+      // did not cause.
+      if (deal) {
+        queryClient.setQueryData(["deal", input.dealId], deal);
+      }
+      queryClient.invalidateQueries({ queryKey: ["deals"] });
+      for (const queryKey of dealRecordKeys(input.dealId)) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+      // A win moves the deal's project into delivery in the same server
+      // write, so the project page and list are stale the moment this
+      // returns. Without this a reader who follows the project chip within
+      // the 30s stale window reads a won deal on a project still being
+      // pursued — the contradiction the server's one-transaction move exists
+      // to prevent.
+      for (const queryKey of dealWinKeys(deal)) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+      toast.show(t("deals.advanced", { stage: input.toStage.name }));
+    },
+  });
+}
+
+// Won reads success, lost reads danger, an open deal carries no status tone.
+// Exported so the partner page's sourced-deals panel reads a deal's status the
+// same way the board and the deal record do — a second mapping is how the same
+// status came to render in two colours on two screens.
+export function dealStatusTone(
+  status: Deal["status"],
+): "success" | "danger" | undefined {
+  if (status === "won") {
+    return "success";
+  }
+  if (status === "lost") {
+    return "danger";
+  }
+  return undefined;
+}
+
+// Bespoke selects for the filters whose option labels are runtime strings
+// (pipeline/stage/company names) — a chip's option label is a MessageKey, so
+// these three cannot go through ListTable's chips. Each writes into the
+// same ListQuery.filters bag the table's chips read, deleting the key on a
+// blank choice so the two stay in one coherent query state.
+function setOrClearFilter(
+  setQuery: Dispatch<SetStateAction<ListQuery>>,
+  key: string,
+  value: string,
+) {
+  setQuery((q) => {
+    const next = { ...q.filters };
+    if (value) {
+      next[key] = value;
+    } else {
+      delete next[key];
+    }
+    return { ...q, filters: next };
+  });
+}
+
+// Whether the reader has narrowed this list themselves.
+//
+// The same question `SaveViewAction` asks before it offers to save, asked here
+// because the pipeline has to be folded into the saved query WITHOUT being the
+// thing that makes the query look narrowed: a pipeline is always selected, so
+// counting it would offer to save the default list.
+function narrowsTheDealList(query: ListQuery): boolean {
+  return (
+    Boolean(query.q) ||
+    Boolean(query.sort) ||
+    query.includeArchived ||
+    Object.values(query.filters).some(Boolean)
+  );
+}
+
+// The stage and company filters. The stage list is loaded whole already (a
+// pipeline has few stages), so it stays a fixed chip; the company filter
+// searches rather than listing (see searchCompanies in filterreference.ts).
+// Both are still filters, so they read as the same chip as every other one
+// instead of as a native select sitting among them.
+function dealFilterChips(
+  stages: Stage[],
+  t: ReturnType<typeof useT>,
+  companyName: string | undefined,
+): ListChip[] {
+  return [
+    {
+      key: "stage_id",
+      label: t("deals.stage"),
+      allLabel: t("deals.filterStageAll"),
+      options: stages.map((stage) => ({ value: stage.id, label: stage.name })),
+    },
+    {
+      key: "company_id",
+      label: t("create.relatedCompany"),
+      allLabel: t("deals.filterCompanyAll"),
+      options: [],
+      search: searchCompanies,
+      appliedName: companyName,
+    },
+  ];
+}
+
+// How the deals are shown rather than which ones: the board/table switch and
+// the pipeline being looked at. Both sit on the right with the table's own
+// display controls.
+function DealViewTools({
+  view,
+  setView,
+  pipelines,
+  pipelineId,
+  setPipelineId,
+  setQuery,
+}: Readonly<{
+  view: "board" | "table";
+  setView: (v: "board" | "table") => void;
+  pipelines: Pipeline[];
+  pipelineId: string;
+  setPipelineId: (id: string) => void;
+  setQuery: Dispatch<SetStateAction<ListQuery>>;
+}>) {
+  const t = useT();
+  return (
+    <>
+      <SegmentedControl
+        options={["board", "table"] as const}
+        value={view}
+        onChange={setView}
+        labels={{
+          board: t("deals.viewBoard"),
+          table: t("deals.viewTable"),
+        }}
+      />
+      {/* Both views read one pipeline: the table binds the same query the
+          board does, and its stage chip offers that pipeline's stages. So the
+          picker stands in both — hidden on the table it locked the reader to a
+          pipeline they could neither see nor change.
+          A CHOICE OF ONE IS NOT A CHOICE. An installation with a single
+          pipeline was offered a menu whose only entry was the pipeline already
+          showing, which is a dial that refuses every press. The NAME still
+          stands, as text: the reader keeps the fact and loses only the control,
+          which is what they lost nothing by. */}
+      {pipelines.length > 1 ? (
+        <Select
+          className="input"
+          aria-label={t("deals.pipeline")}
+          placeholder={t("deals.pipeline")}
+          value={pipelineId}
+          onChange={(next) => {
+            // A stage belongs to one pipeline; switching pipeline strands any
+            // stage_id filter (the chip blanks out but useDeals would still
+            // forward the old id and filter a foreign stage → 0 rows).
+            setPipelineId(next);
+            setOrClearFilter(setQuery, "stage_id", "");
+          }}
+          options={pipelines.map((pipeline) => ({
+            value: pipeline.id,
+            label: pipeline.name,
+          }))}
+        />
+      ) : (
+        pipelines.length === 1 && (
+          <span className="lt-scope">
+            {/* The reader SEES a name where the dial was and infers what it
+                names from the place; a screen reader gets no place, so the
+                field says its own name to it. */}
+            <span className="sr-only">{`${t("deals.pipeline")}: `}</span>
+            {pipelines[0]?.name}
+          </span>
+        )
+      )}
+    </>
+  );
+}
+
+// The board surface's body, drawn only while the board is showing.
+//
+// Its own component because the choice it makes is three deep — a pipeline to
+// draw in, a first load that has not landed, then the board itself — and read
+// inside the screen that choice sat under every other dial the screen holds.
+function DealBoardBody({
+  dealsQuery,
+  pipelinesQuery,
+  effectivePipeline,
+  loadedDeals,
+  stageTotalsQuery,
+  companies,
+  companiesSettled,
+  openDeal,
+  cardDragHandlers,
+  columnDropHandlers,
+  totalsWithheld,
+}: Readonly<{
+  dealsQuery: ReturnType<typeof useDeals>;
+  pipelinesQuery: ReturnType<typeof usePipelines>;
+  effectivePipeline?: Pipeline;
+  loadedDeals: Deal[];
+  stageTotalsQuery: ReturnType<typeof useStageTotals>;
+  // Why no stage total is coming, or undefined when one is. Decided by
+  // totalsWithheldBecause where the query's own `enabled` reads it, so the
+  // column's explanation and the query's absence cannot disagree.
+  totalsWithheld?: MessageKey;
+  companies: Company[];
+  companiesSettled: boolean;
+  openDeal: ComponentProps<typeof PipelineBoard>["onOpen"];
+  cardDragHandlers: ComponentProps<typeof PipelineBoard>["cardDragHandlers"];
+  columnDropHandlers: ComponentProps<
+    typeof PipelineBoard
+  >["columnDropHandlers"];
+}>) {
+  const t = useT();
+  const recordZone = useRecordZone();
+  // Named by id, batched into one request for every card's owner at once;
+  // an unowned deal contributes no id, so a board of them asks nothing.
+  const ownerNames = useMemberNames(
+    loadedDeals.flatMap((deal) => (deal.owner_id ? [deal.owner_id] : [])),
+  );
+  // Every company the CARDS name. The picker's capped page answers most of them
+  // for free; the rest are resolved by id (useCompanyMarks), so no card is left
+  // standing over a company the board simply failed to look up.
+  //
+  // Only the board asks: the table names its companies through the same
+  // per-record reference every other cross-record cell uses, and handing it
+  // this map as well would read each company twice.
+  const companyMarks = useCompanyMarks(
+    loadedDeals,
+    companies,
+    companiesSettled,
+  );
+  const suggestionGhosts = useSuggestionGhosts(effectivePipeline?.id);
+  return (
+    <QueryGate query={pipelinesQuery} pendingLabel={t("nav.deals")}>
+      {() =>
+        effectivePipeline ? (
+          // Only the INITIAL load goes through the gate. An infinite
+          // query reports isError when ANY page fails, later ones
+          // included, so keeping the gate around a loaded board would
+          // let one failed "load more" throw away every card already on
+          // screen. Past the first page the board stands and the button
+          // retries.
+          (dealsQuery.data?.pages ?? []).length === 0 ? (
+            <QueryGate query={dealsQuery} pendingLabel={t("nav.deals")}>
+              {() => null}
+            </QueryGate>
+          ) : (
+            <>
+              <DealPipelineBoard
+                cardHref={(deal) => routeHash({ screen: "deals", id: deal.id })}
+                zone={recordZone}
+                columns={buildColumns(
+                  effectivePipeline.stages ?? [],
+                  loadedDeals,
+                  stageTotalsQuery.data ?? new Map(),
+                  companyMarks,
+                  totalsWithheld ? t(totalsWithheld) : undefined,
+                  rosterOwnerNaming(ownerNames),
+                )}
+                onOpen={openDeal}
+                cardDragHandlers={cardDragHandlers}
+                columnDropHandlers={columnDropHandlers}
+                columnExtras={suggestionGhosts}
+              />
+              <LoadMoreButton query={dealsQuery} />
+            </>
+          )
+        ) : null
+      }
+    </QueryGate>
+  );
+}
+
+// Everything the board does when it is touched: the drag it started, the drop
+// it landed, and the click that is a click rather than the tail of a drag.
+//
+// A hook rather than four callbacks in the screen. They share the two refs
+// that tell a drag from a click and nothing else on the screen reads those,
+// so holding them out here is what keeps the drag protocol readable in one
+// place instead of interleaved with the screen's dials.
+function useBoardInteractions({
+  stages,
+  loadedDeals,
+  advance,
+  setPending,
+}: Readonly<{
+  stages: Stage[];
+  loadedDeals: Deal[];
+  advance: ReturnType<typeof useAdvanceDeal>;
+  setPending: (pending: PendingAdvance) => void;
+}>) {
+  // Which card is in flight, and WHICH card a drag last ended on, with when —
+  // a drop and a click arrive as the same event pair, so the board tells them
+  // apart by time. The id travels with the timestamp because the window is
+  // board-wide otherwise: a reader who drops one card and reaches straight for
+  // another would have that second click swallowed, and a link that does
+  // nothing is indistinguishable from a broken one.
+  const dragging = useRef<string | null>(null);
+  const lastDrop = useRef<{ dealId: string; at: number } | null>(null);
+
+  const requestAdvance = (dealId: string, stageId: string) => {
+    const toStage = stages.find((stage) => stage.id === stageId);
+    if (!toStage) {
+      return;
+    }
+    // The version the reader saw. The cards and this lookup read the one deal
+    // array this render was handed, so the precondition names the row as it was
+    // drawn on the board rather than whatever it has become since — which is the
+    // whole claim optimistic concurrency makes.
+    const version = loadedDeals.find((deal) => deal.id === dealId)?.version;
+    if (toStage.semantic === "open") {
+      advance.mutate({ dealId, version, toStage });
+    } else {
+      // Terminal-stage advance is a 🟡 confirm (AC-deal-6).
+      setPending({ dealId, version, toStage });
+    }
+  };
+
+  // Board interactions are hoisted here so the render-prop tree below doesn't
+  // nest their event callbacks past the readable depth.
+  // The card is a LINK now, so this no longer navigates — the href does. What
+  // is left is the one thing a link cannot know: the click that ends a drag is
+  // not a click on the card, and following it would open a deal the reader was
+  // only moving.
+  const openDeal = (deal: BoardDeal, event: MouseEvent) => {
+    const drop = lastDrop.current;
+    if (drop?.dealId === deal.id && Date.now() - drop.at <= 250) {
+      event.preventDefault();
+    }
+  };
+
+  const cardDragHandlers = (deal: BoardDeal) => ({
+    draggable: true as const,
+    onDragStart: (event: DragEvent) => {
+      dragging.current = deal.id;
+      event.dataTransfer.setData("text/plain", deal.id);
+    },
+  });
+
+  const columnDropHandlers = (column: BoardColumn) => ({
+    onDragOver: (event: DragEvent) => {
+      event.preventDefault();
+      (event.currentTarget as HTMLElement).classList.add("droptarget");
+    },
+    onDragLeave: (event: DragEvent) => {
+      (event.currentTarget as HTMLElement).classList.remove("droptarget");
+    },
+    onDrop: (event: DragEvent) => {
+      event.preventDefault();
+      (event.currentTarget as HTMLElement).classList.remove("droptarget");
+      const dealId =
+        event.dataTransfer.getData("text/plain") || dragging.current;
+      dragging.current = null;
+      if (dealId) {
+        lastDrop.current = { dealId, at: Date.now() };
+        requestAdvance(dealId, column.stage);
+      }
+    },
+  });
+
+  return { openDeal, cardDragHandlers, columnDropHandlers };
+}
+
+// Every dial on this screen, read from and written to the ADDRESS.
+//
+// A hook of its own, because this screen hand-rolls what
+// components/listquery.tsx does for every other list. It drives a board as
+// well as a table. It uses the same codec, so a narrowed list's URL has one
+// answer. The hand-rolled part is worth reading in one piece.
+//
+// `pipeline_id` and `view` sit beside the query's own dials: the first is
+// already a wire parameter name, and the second is the one dial here that is
+// about DRAWING rather than about which deals exist.
+function useDealScreenDials({
+  pipelines,
+}: Readonly<{ pipelines?: Pipeline[] }>) {
+  const [params, setParams] = useUrlParams();
+  const opening = useMemo<ListQuery>(
+    () => ({
+      q: "",
+      sort: "",
+      includeArchived: false,
+      filters: {},
+      // The deal list reads its own fixed page (the board is capped at 100 and
+      // documented as such), so this is the shape's default rather than a dial
+      // the footer offers.
+      perPage: LIST_PAGE_SIZES[0],
+    }),
+    [],
+  );
+  const query = useMemo(() => {
+    const read = listQueryFromParams(
+      withoutScreenDials(params, DEAL_SCREEN_DIALS),
+      opening,
+      true,
+    );
+    const filters = admittedDealFilters(read.filters);
+    return filters === read.filters ? read : { ...read, filters };
+  }, [params, opening]);
+  const setQuery = (update: SetStateAction<ListQuery>) => {
+    const live = currentParams();
+    const next =
+      typeof update === "function"
+        ? update(
+            listQueryFromParams(
+              withoutScreenDials(live, DEAL_SCREEN_DIALS),
+              opening,
+              true,
+            ),
+          )
+        : update;
+    setParams(
+      mergeScreenDials(
+        // The rendered page is carried across rather than dropped, exactly as
+        // useListQuery carries it: the codec does not compute it, so a write
+        // that rebuilt the address from the query alone would take the page out
+        // of an address a reader had been sent to. A write that really is a
+        // narrowing still resets it — the table's own reset fires next.
+        withListPage(paramsFromListQuery(next, opening), listPageOf(live)),
+        live,
+        DEAL_SCREEN_DIALS,
+      ),
+    );
+  };
+  const pipelineId = params.get(PIPELINE_PARAM) ?? "";
+  const setPipelineId = (next: string) => replaceDial(PIPELINE_PARAM, next);
+  const effectivePipeline: Pipeline | undefined =
+    pipelines?.find((p) => p.id === pipelineId) ??
+    pipelines?.find((p) => p.is_default) ??
+    pipelines?.[0];
+  const dealFilters: DealFilters = {
+    pipelineId: effectivePipeline?.id ?? "",
+    q: query.q,
+    sort: query.sort,
+    includeArchived: query.includeArchived,
+    filters: query.filters,
+  };
+
+  const view: "board" | "table" =
+    params.get(VIEW_PARAM) === "table" ? "table" : "board";
+  const setView = (next: "board" | "table") =>
+    replaceDial(VIEW_PARAM, next === "table" ? next : undefined);
+
+  return {
+    query,
+    setQuery,
+    pipelineId,
+    setPipelineId,
+    effectivePipeline,
+    dealFilters,
+    view,
+    setView,
+  };
+}
+
+// The create form, with the one question it has to ask the server: which
+// projects the company named in the OPEN FORM is on.
+//
+// Its own component because that question is the form's and not the screen's.
+// The company comes from the form's own values, so the state that holds it
+// and the query that follows it belong beside the form rather than among the
+// screen's dials.
+function DealCreateAction({
+  pipeline,
+  cf,
+  openStages,
+  companies,
+  partnerOptions,
+  startOpen,
+}: Readonly<{
+  pipeline?: Pipeline;
+  // Read at screen level and handed down, so the schema request runs beside the
+  // screen's own rather than waiting for the pipelines this form is gated on.
+  cf: ObjectCustomFields;
+  openStages: Stage[];
+  companies: Company[];
+  partnerOptions: { value: string; label: string }[];
+  startOpen: boolean;
+}>) {
+  const t = useT();
+  // The picker asks the server for one company's projects, so it is keyed on
+  // the company the open form names. A create form has no record to take it
+  // from, and only the server knows which projects a company is on. The form
+  // publishes its answers (CreateAction's onValuesChange) and the query follows.
+  const [formCompany, setFormCompany] = useState("");
+  const openProjects = useProjectsOfCompany(formCompany || undefined);
+
+  const createDeal = async (
+    values: Record<string, string>,
+    _rows: unknown,
+    idempotencyKey: string,
+  ) => {
+    if (!pipeline) {
+      throwProblem(null);
+    }
+    // A project asked for on the form is born first, so the deal names it.
+    const projectId = await resolveDealProject(
+      values,
+      values.company_id?.trim() || null,
+      t,
+      idempotencyKey,
+    );
+    return unwrap(
+      await api.POST("/deals", {
+        params: { header: { "Idempotency-Key": idempotencyKey } },
+        body: {
+          ...mapDealCreate(
+            { ...values, project_id: projectId ?? "" },
+            pipeline.id,
+          ),
+          ...cf.toBody(values),
+        },
+      }),
+      t,
+    );
+  };
+
+  return (
+    <CreateAction
+      label={t("create.deal")}
+      invalidate="deals"
+      screen="deals"
+      create={createDeal}
+      startOpen={startOpen}
+      onValuesChange={(values) => setFormCompany(values.company_id ?? "")}
+      fields={[
+        { key: "name", label: "create.dealName", required: true },
+        { key: "amount", label: "create.amount", type: "number", step: "any" },
+        {
+          key: "currency",
+          label: "create.currency",
+          type: "select",
+          required: true,
+          options: ["EUR", "USD", "GBP", "CHF"].map((code) => ({
+            value: code,
+            label: code,
+          })),
+        },
+        {
+          key: "stage_id",
+          label: "create.stage",
+          type: "select",
+          required: true,
+          options: openStages.map((stage) => ({
+            value: stage.id,
+            label: stage.name,
+          })),
+        },
+        {
+          key: "company_id",
+          label: "create.relatedCompany",
+          type: "select",
+          options: companies.map((company) => ({
+            value: company.id,
+            label: company.display_name,
+          })),
+        },
+        // The body of work this deal is about, chosen or started here: a
+        // project begins during the deal, in its initiative phase.
+        // Narrowed BY THE SERVER, for the company the form currently names:
+        // the query above re-reads when the reader changes it, so the picker
+        // repopulates instead of going empty.
+        ...dealProjectFields(t, openProjects, undefined, formCompany),
+        // A deal brought by a partner is attributed at birth, not by editing
+        // it afterwards: the win that pays them can come before anybody thinks
+        // to revisit the record.
+        ...partnerFields(t, partnerOptions),
+        {
+          key: "expected_close_date",
+          label: "create.expectedClose",
+          type: "date",
+        },
+        ...cf.formFields,
+      ]}
+    />
+  );
+}
+
+// The bulk-selection contract the table is handed, and the board is not.
+//
+// The row checkboxes live inside the grid's identity cell, and the board draws
+// no rows to put one in. Offered while the board is showing, the bulk bar would
+// name rows the reader can neither see nor deselect.
+function dealRowSelection({
+  view,
+  liveSelection,
+  selectedRows,
+  stages,
+  setSelected,
+  t,
+}: Readonly<{
+  view: "board" | "table";
+  liveSelection: ReadonlySet<string>;
+  selectedRows: Deal[];
+  stages: Stage[];
+  setSelected: Dispatch<SetStateAction<ReadonlySet<string>>>;
+  t: ReturnType<typeof useT>;
+}>): ListSelection<Deal> | undefined {
+  return view === "board"
+    ? undefined
+    : {
+        selected: liveSelection,
+        // A closed or archived deal takes no bulk write: archiving it is
+        // done or meaningless, and moving it between open stages would be
+        // the silent reopen the stepper already refuses.
+        selectable: (deal) =>
+          deal.archived_at == null && deal.status === "open",
+        onToggle: (deal) =>
+          setSelected((prev) => {
+            const next = new Set(prev);
+            if (next.has(deal.id)) {
+              next.delete(deal.id);
+            } else {
+              next.add(deal.id);
+            }
+            return next;
+          }),
+        label: (deal) => t("bulk.selectRow", { name: deal.name }),
+        bar: (
+          <DealBulkBar
+            deals={selectedRows}
+            stages={stages}
+            // The rows that went through leave the selection; the ones that
+            // refused stay in it, named, so the reader can retry them once
+            // the list has refetched their versions.
+            onDone={(outcomes) =>
+              setSelected(
+                new Set(
+                  outcomes
+                    .filter((outcome) => outcome.error)
+                    .map((outcome) => outcome.id),
+                ),
+              )
+            }
+          />
+        ),
+      };
+}
+
+// A saved view of this list, with the pipeline folded in.
+//
+// The pipeline goes in as a filter because it is the strongest dial on this
+// screen and it lives in its own state, outside `query`. Left out, a view saved
+// while looking at one pipeline would restore against whichever pipeline
+// happened to be showing — a different list under the saved name.
+//
+// Folded in only once the reader has narrowed something else. A pipeline is
+// always selected, so folding it in unconditionally would make every list look
+// narrowed and offer to save the default view, which is the clutter
+// SaveViewAction's own check exists to prevent.
+function savableDealQuery(query: ListQuery, pipelineId: string): ListQuery {
+  return narrowsTheDealList(query)
+    ? { ...query, filters: { ...query.filters, pipeline_id: pipelineId } }
+    : query;
+}
+
+export function DealsScreen({
+  startCreating = false,
+}: Readonly<{ startCreating?: boolean }>) {
+  const t = useT();
+  const pageName = usePageName("deals");
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  const cf = useObjectCustomFields("deal");
+  const pipelinesQuery = usePipelines();
+  const ownerChips = useOwnerChips();
+  const viewerId = useViewerId();
+  const savedViews = useSavedViewTabs("deals");
+  const {
+    query,
+    setQuery,
+    setPipelineId,
+    effectivePipeline,
+    dealFilters,
+    view,
+    setView,
+  } = useDealScreenDials({ pipelines: pipelinesQuery.data });
+  const dealsQuery = useDeals(dealFilters);
+  // The board's column totals: a per-stage server aggregate
+  // over EVERY matching deal, not just the capped page useDeals fetches —
+  // built from the SAME filter dials so cards and totals never disagree
+  // about which deals are in view.
+  const stageTotalsQuery = useStageTotals(dealFilters);
+  // The same answer the query keys its `enabled` on, so the column explains the
+  // absence by the rule that caused it.
+  const totalsWithheld =
+    totalsWithheldBecause(dealFilters) ??
+    totalsRefusedBecause(stageTotalsQuery.data);
+  const [pending, setPending] = useState<PendingAdvance | null>(null);
+  // The deal that just closed, while the review is on offer for it. Separate
+  // from `pending`, which is the question BEFORE the close; this is the offer
+  // after one landed, and the close dialog is already gone by then.
+  const [closed, setClosed] = useState<ClosedDeal | null>(null);
+  // Bulk selection, by deal id. Cleared after any bulk run except for the rows
+  // that refused, since every other row's version has moved.
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+
+  const advance = useAdvanceDeal();
+
+  const stages = effectivePipeline?.stages ?? [];
+  const stageName = new Map(stages.map((stage) => [stage.id, stage.name]));
+  // Only ids the list currently holds count as selected: a row that left the
+  // result set (refetched away, filtered out, archived by this very run) must
+  // not linger as an invisible selection nobody can clear.
+  // Every page walked so far, in one list. The board draws its columns from
+  // this and the table renders it directly, so both surfaces grow together as
+  // the reader asks for more.
+  const loadedDeals = (dealsQuery.data?.pages ?? []).flatMap(
+    (page) => page.data,
+  );
+  const selectedRows = loadedDeals.filter((deal) => selected.has(deal.id));
+  const liveSelection = new Set(selectedRows.map((deal) => deal.id));
+
+  // The table's own dials over the same keyset walk the board reads, so
+  // "load more" on either surface advances both.
+  const dealsListState: ListState<Deal> = {
+    rows: loadedDeals,
+    query,
+    setQuery,
+    isPending: dealsQuery.isPending,
+    isError: dealsQuery.isError,
+    error: dealsQuery.error,
+    refetch: () => dealsQuery.refetch(),
+    hasMore: dealsQuery.hasNextPage,
+    loadMore: () => {
+      dealsQuery.fetchNextPage();
+    },
+  };
+
+  const companiesQuery = useQuery({
+    queryKey: ["companies"],
+    queryFn: async () => {
+      return unwrap(
+        await api.GET("/companies", {
+          params: { query: { limit: 50 } },
+        }),
+      );
+    },
+  });
+
+  const partnerOptions = usePartnerOptions(companiesQuery.data?.data ?? []);
+  // The channel catalog for the filter chip. Shared cache with the edit form's
+  // own read, so opening one after the other costs a single request.
+  const acquisitionSources = useAcquisitionSources().data;
+
+  // Open-stage targets only: a deal is born open (INV-CLOSE-PAST twin rule);
+  // won/lost are reached through the confirmed advance, never at create.
+  const openStages = stages.filter((stage) => stage.semantic === "open");
+
+  const { openDeal, cardDragHandlers, columnDropHandlers } =
+    useBoardInteractions({ stages, loadedDeals, advance, setPending });
+
+  // Shared between the board and the table surface: whichever view is
+  // showing, the action lives in the surface's own header, not a wrap sibling.
+  const createAction = openStages.length > 0 && (
+    <DealCreateAction
+      pipeline={effectivePipeline}
+      cf={cf}
+      openStages={openStages}
+      companies={companiesQuery.data?.data ?? []}
+      partnerOptions={partnerOptions}
+      startOpen={startCreating}
+    />
+  );
+
+  const pipelineId = effectivePipeline?.id ?? "";
+  // The board/table switch and the pipeline picker are shared, so the reader
+  // sees the same dials either way.
+  const tools = (
+    <DealViewTools
+      view={view}
+      setView={setView}
+      pipelines={pipelinesQuery.data ?? []}
+      pipelineId={pipelineId}
+      setPipelineId={setPipelineId}
+      setQuery={setQuery}
+    />
+  );
+  // Saving is NOT shared: a view holds a sort as well as its filters, and the
+  // board offers no way to see or change one — its order is the pipeline's
+  // stage order. Saving from there would pin an ordering the reader never
+  // chose into a view they will restore on the table.
+  const saveView = view === "table" && (
+    <SaveViewAction
+      resource="deals"
+      query={savableDealQuery(dealsListState.query, pipelineId)}
+    />
+  );
+  const companyName = useAppliedCompanyName(query.filters.company_id);
+  const dealChips = dealFilterChips(stages, t, companyName);
+  const tagChips = useTagChips();
+  const rowSelection = dealRowSelection({
+    view,
+    liveSelection,
+    selectedRows,
+    stages,
+    setSelected,
+    t,
+  });
+
+  // The board is the surface's alternate BODY, not a surface of its own. The
+  // saved views, the chips and the archived toggle all describe the ONE query
+  // both views read, and a board that replaced the surface took them with it —
+  // leaving the reader looking at a narrowed pipeline with nothing on screen
+  // saying what narrowed it, or how to widen it again.
+  //
+  // It carries its own continuation control, because `bodyOwnsPaging` withholds
+  // the surface's: that belongs to the paged grid this body does not draw, and
+  // the board holds every card loaded so far at once rather than a page of
+  // them. Its COUNT goes to the surface's head all the same (`bodyCount`) — a
+  // reader looks for how much is here beside the page's name, and under the
+  // toolbar it read as a caption about the dials above it.
+  const boardBody =
+    view === "board" ? (
+      <DealBoardBody
+        dealsQuery={dealsQuery}
+        pipelinesQuery={pipelinesQuery}
+        effectivePipeline={effectivePipeline}
+        loadedDeals={loadedDeals}
+        stageTotalsQuery={stageTotalsQuery}
+        totalsWithheld={totalsWithheld}
+        companies={companiesQuery.data?.data ?? []}
+        companiesSettled={companiesQuery.isSuccess}
+        openDeal={openDeal}
+        cardDragHandlers={cardDragHandlers}
+        columnDropHandlers={columnDropHandlers}
+      />
+    ) : undefined;
+
+  return (
+    <div className="wrap">
+      <ListTable
+        title={pageName}
+        state={dealsListState}
+        unit="deals.unit"
+        columns={dealColumns(t, locale, recordZone, stageName)}
+        rowKey={(deal) => deal.id}
+        rowRoute={(deal) => ({ screen: "deals", id: deal.id })}
+        action={
+          <>
+            <LegalReviewQueueLink />
+            {createAction}
+          </>
+        }
+        tools={tools}
+        saveView={saveView}
+        body={boardBody}
+        bodyOwnsPaging={view === "board"}
+        bodyCount={
+          view === "board" &&
+          dealsQuery.data &&
+          translatePlural(locale, "board.count", loadedDeals.length, {
+            count: formatNumber(loadedDeals.length, locale),
+          })
+        }
+        // The pipeline picker is screen state, not a filter, so switching it
+        // changes every row without touching `filters`. Naming it here is
+        // what puts the reader back on page 1.
+        scopeKey={effectivePipeline?.id ?? ""}
+        dataChips={[...ownerChips, ...dealChips, ...tagChips]}
+        dataViews={savedViews}
+        selection={rowSelection}
+        chips={dealSurfaceChips({
+          partnerOptions,
+          partnerApplied: query.filters.partner_company_id,
+          acquisitionSources,
+          retiredSuffix: t("deal.acquisitionRetired"),
+        })}
+        views={[...standardViews(viewerId, { sort: "" })]}
+        emptyNote={mineEmptyNote({
+          t,
+          state: dealsListState,
+          viewerId,
+          unit: "unit.deals",
+        })}
+      />
+      <ErrorLine error={advanceErrorBehind(advance.error, pending !== null)} />
+      <ConfirmAdvanceModal
+        pending={pending}
+        onClose={() => setPending(null)}
+        onConfirm={(input) => advance.mutateAsync(input)}
+        onClosed={(deal, reason) => setClosed(closedDealOf(deal, reason))}
+      />
+      {/* Offered the moment a deal closes, from the list as from the record
+          page: the reader who just said why is the one who can answer the
+          rest. */}
+      <CloseReviewOffer closed={closed} onDismiss={() => setClosed(null)} />
+    </div>
+  );
+}
+
+// The FX-converted base-currency sub-line (D-14): shown only when the deal
+// carries a frozen fx_rate_to_base (won/lost deals freeze it at close; open
+// deals in a non-base currency may not have one yet). Its body moved into
+// dealcockpit.tsx, where the money cell draws it as a second line; re-exported
+// here so this stays the one import path this file's own stories and tests
+// already use.
+export { FxLine } from "./deal360/dealcockpit";
+
+function editProjectFields(
+  t: (key: MessageKey) => string,
+  opts: Readonly<{
+    masked: readonly string[];
+    openProjects: readonly Project[];
+    currentProject?: { id: string; label: string };
+    company?: string;
+  }>,
+): CreateField[] {
+  if (opts.masked.includes("project_id")) {
+    // One entry, naming the field as withheld — the same reading the company
+    // and partner pickers carry, for the same reason. Dropping the field said
+    // nothing at all, and a form with no project row reads as a deal on no
+    // project rather than one this reader was not shown. `mapDealUpdate`
+    // leaves the field out of the patch either way, and neither a project to
+    // pick nor the "start a new one" option is offered: both would re-point
+    // the deal off a project the reader never saw.
+    return [
+      {
+        key: "project_id",
+        label: "deal.project",
+        type: "select",
+        options: [{ value: "", label: t("deal.projectWithheld") }],
+      },
+    ];
+  }
+  return dealProjectFields(
+    t,
+    opts.openProjects,
+    opts.currentProject,
+    opts.company,
+  );
+}
+
+export function DealDetails({
+  deal,
+  companies,
+  meId,
+}: Readonly<{
+  deal: Deal;
+  companies: { id: string; display_name: string }[];
+  meId: string;
+}>) {
+  const t = useT();
+  const partnerOptions = usePartnerOptions(companies);
+  const acquisitionSources = useAcquisitionSources().data;
+  const masked = deal.masked_fields ?? [];
+  const companyOnPage = companies.find(
+    (company) => company.id === deal.company_id,
+  );
+  const companyById = useEntityName(
+    "company",
+    companyOnPage ? null : deal.company_id,
+  );
+  const currentCompany = deal.company_id
+    ? {
+        id: deal.company_id,
+        label:
+          companyOnPage?.display_name ?? companyById.name ?? deal.company_id,
+      }
+    : undefined;
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
+  const formCompany = formValues.company_id ?? deal.company_id ?? undefined;
+  const openProjects = useProjectsOfCompany(formCompany);
+  const projectById = useEntityName("project", deal.project_id);
+  const currentProject = deal.project_id
+    ? { id: deal.project_id, label: projectById.name ?? deal.project_id }
+    : undefined;
+  const seeded = { ...dealEditRecord(deal), original: deal };
+  const canEdit = useCanWriteRecord("deal", deal) && !deal.archived_at;
+  const owners = useRecordOwners(deal.owner_id);
+  // Company/project and money/currency are coupled writes: changing a visible
+  // member must not silently rewrite a reference or unit the reader cannot see.
+  const readOnlyFields: Record<string, string> = Object.fromEntries(
+    masked.map((key) => [
+      key === "amount_minor"
+        ? "amount"
+        : key === "expected_arr_minor"
+          ? "expected_arr"
+          : key,
+      t("record.notShown"),
+    ]),
+  );
+  if (deal.arr_source_offer_id)
+    Object.assign(readOnlyFields, {
+      expected_arr: t("deal.arrFromOffer"),
+      currency: t("deal.arrFromOffer"),
+    });
+  return (
+    <>
+      <RecordFields
+        kind="deal"
+        onValuesChange={setFormValues}
+        canEdit={canEdit}
+        groups={[
+          {
+            label: t(
+              deal.arr_source_offer_id ? "deal.expectedArr" : "create.amount",
+            ),
+            keys: deal.arr_source_offer_id
+              ? ["expected_arr", "currency"]
+              : ["amount", "expected_arr", "currency"],
+          },
+          {
+            label: t("create.relatedCompany"),
+            keys: ["company_id", "project_id", "new_project_name"],
+          },
+          {
+            label: t("deal.partnerCompany"),
+            keys: ["partner_company_id", "partner_attribution"],
+          },
+        ]}
+        readOnlyFields={readOnlyFields}
+        maskedFields={masked
+          .filter((key) =>
+            ["amount_minor", "expected_arr_minor", "currency"].includes(key),
+          )
+          .map((key) =>
+            key === "amount_minor"
+              ? "amount"
+              : key === "expected_arr_minor"
+                ? "expected_arr"
+                : key,
+          )}
+        title={t("co.details.title")}
+        fields={[
+          ...dealEditFields(t, {
+            companies,
+            partnerOptions,
+            attributedPartner: attributedPartner(deal, companies),
+            currentCompany,
+            masked,
+            me: meId,
+            currentOwner: deal.owner_id ?? null,
+            currency: deal.currency ?? "",
+            acquisitionSources,
+            currentAcquisitionSource: deal.acquisition_source,
+          }).map(
+            (field): CreateField =>
+              field.key === "owner_id"
+                ? { ...field, label: "list.owner", options: owners }
+                : field,
+          ),
+          ...editProjectFields(t, {
+            masked,
+            openProjects,
+            currentProject:
+              formCompany === deal.company_id ? currentProject : undefined,
+            company: formCompany,
+          }),
+        ]}
+        record={seeded}
+        save={async (values, _rows, opened) => {
+          const submitted = stringValues({ ...opened, ...values });
+          const projectId = Object.hasOwn(values, "project_id")
+            ? await resolveDealProject(
+                submitted,
+                submitted.company_id?.trim() || null,
+                t,
+              )
+            : submitted.project_id;
+          return saveRecordEdit(
+            "deal",
+            rawRecord(opened),
+            mapDealUpdate(
+              { ...opened, ...values, project_id: projectId ?? "" },
+              opened,
+              masked,
+            ),
+          );
+        }}
+      />
+      <RecordCustomFields kind="deal" record={deal} />
+    </>
+  );
+}
+
+type Approval = components["schemas"]["Approval"];
+
+// The live 🟡 confirm-first staging queue for this deal — split out of
+// DealScreen's render for the same readability reason DealActions moved to
+// its own file (deal360/dealactions.tsx).
+function DealApprovals({
+  approvals,
+  decide,
+}: Readonly<{
+  approvals: Approval[];
+  decide: (input: {
+    approvalId: string;
+    verdict: "approve" | "reject";
+  }) => void;
+}>) {
+  const t = useT();
+  const tierMap = useAgentTierMap();
+  const viewerId = useViewerId();
+  if (approvals.length === 0) {
+    return null;
+  }
+  return (
+    <Panel title={t("deal.pendingApprovals")}>
+      {/* The interval between two staged cards belongs to the stack rather
+          than to each card, so the last one does not pay for a neighbour it
+          does not have. */}
+      <PanelBody className="form-stack">
+        {approvals.map((approval) => (
+          <div key={approval.id} className="staging-card">
+            <Row gap="2" wrap={false}>
+              <AutonomyDot tier={approvalDotTier(approval.kind, tierMap)} />
+              {/* The same two facts the approvals inbox states, said the same
+                way. Printed off the wire they read `advance_deal` and
+                `agent:capture` — the vocabulary the API speaks, on a page
+                whose reader never sees the API. */}
+              <span className="t-label">
+                {approvalKindLabel(approval.kind, t)}
+              </span>
+              <ProvenanceTag
+                provenance={provenanceOf(approval.proposed_by, viewerId)}
+              />
+            </Row>
+            <ActionRow
+              className="approval-gate"
+              primary={
+                <Button
+                  variant="primary"
+                  onClick={() =>
+                    decide({ approvalId: approval.id, verdict: "approve" })
+                  }
+                >
+                  {t("trust.accept")}
+                </Button>
+              }
+            >
+              {/* Dismiss here sends the `reject` verdict — the same answer the
+                decision card's trash can gives, so it wears the same glyph. */}
+              <IconAction
+                label={t("trust.dismiss")}
+                icon={<Trash2 aria-hidden />}
+                onClick={() =>
+                  decide({ approvalId: approval.id, verdict: "reject" })
+                }
+              />
+            </ActionRow>
+          </div>
+        ))}
+      </PanelBody>
+    </Panel>
+  );
+}
+
+// Exported so a render test can reach the refusal state directly. It is not as
+// self-contained as FxLine — it reads the system-of-record mode, so it needs a
+// query client around it — but whether the New-offer control is refused depends
+// on its props alone.
+export function OffersPanel({
+  offers,
+  creating,
+  locale,
+  dealCurrency,
+  refusedReasonId,
+  onCreate,
+}: Readonly<{
+  offers: Offer[] | undefined;
+  creating: boolean;
+  locale: Locale;
+  // An offer is written in the DEAL's currency, so a deal nobody has priced
+  // has nothing to write one in. Null refuses the control and says why rather
+  // than creating an offer denominated in a currency the code chose.
+  dealCurrency: string | null;
+  // The id of the page's sentence about why the deal takes no changes, when
+  // it does not. The server hangs a new offer off the deal through the deal's
+  // own write gate, so the control is refused by the same fact as Edit.
+  refusedReasonId?: string;
+  onCreate: (currency: string) => void;
+}>) {
+  const t = useT();
+  return (
+    <Panel
+      title={t("deal.offers")}
+      // The panel's ONE verb, in the header band beside the title: a single
+      // button that opens what the panel lists belongs to the panel's name
+      // rather than to a strip under its rows.
+      titleAction={
+        <Button
+          // `reason` disables the control AND points at the explanation. Passing
+          // `disabled` beside it would cancel the refusal it sets, so the
+          // in-flight case stays on `disabled` and the state case on `reason`.
+          // An empty code is as absent as a null one — `formatMoneyOrAbsent`
+          // already treats it that way, and Intl throws on it.
+          disabled={Boolean(dealCurrency) && creating}
+          reasonId={refusedReasonId}
+          reason={dealCurrency ? undefined : t("deal.offerNeedsCurrency")}
+          onClick={() => {
+            if (dealCurrency) {
+              onCreate(dealCurrency);
+            }
+          }}
+        >
+          {t("deal.newOffer")}
+        </Button>
+      }
+    >
+      <PanelBody>
+        {offers &&
+          (offers.length > 0 ? (
+            <DataTable
+              label={t("deal.offers")}
+              columns={[
+                {
+                  key: "offer_number",
+                  header: t("deal.offerNumber"),
+                  render: (offer: Offer) => offer.offer_number,
+                },
+                {
+                  key: "revision",
+                  header: t("deal.offerRevision"),
+                  render: (offer: Offer) => String(offer.revision),
+                },
+                {
+                  key: "status",
+                  header: t("lead.status"),
+                  render: (offer: Offer) => <Badge>{offer.status}</Badge>,
+                },
+                {
+                  key: "gross",
+                  header: t("deals.amount"),
+                  render: (offer: Offer) => (
+                    <span className="t-num">
+                      {formatMoney(offer.gross_minor, offer.currency, locale)}
+                    </span>
+                  ),
+                },
+              ]}
+              rows={offers}
+              rowKey={(offer) => offer.id}
+              onRowClick={(offer) =>
+                navigate({ screen: "offers", id: offer.id })
+              }
+            />
+          ) : (
+            <EmptyState>{t("deal.offersEmpty")}</EmptyState>
+          ))}
+      </PanelBody>
+    </Panel>
+  );
+}
+
+const DEAL_TABS = ["overview", "room", "files", "legal", "history"] as const;
+type DealTab = (typeof DEAL_TABS)[number];
+
+// The deal 360's "overview" pane, split out of DealScreen so the tab switch
+// doesn't push the render-prop closure over the cognitive-complexity budget.
+
+/**
+ * The deal's tags, drawn by the SHARED panel.
+ *
+ * Same three questions the server asks before it writes: the object grant,
+ * this record's own editability, and — inside the panel — whether the caller
+ * may see the vocabulary at all.
+ */
+function DealTagsSection({ deal }: Readonly<{ deal: Deal }>) {
+  // useCanWriteRecord, not useCan: applying a tag writes to the deal, so the
+  // verb owes the seat ceiling and this row's own `writable` alongside the
+  // object grant — a grant by itself would offer the picker on a colleague's
+  // deal, and to a read seat the server refuses before RBAC is consulted.
+  const canUpdate = useCanWriteRecord("deal", deal);
+  return (
+    <TagsPanel
+      entityType="deal"
+      entityID={deal.id}
+      canEdit={canUpdate && !deal.archived_at}
+    />
+  );
+}
+
+function DealOverviewPane({
+  deal,
+  dealApprovals,
+  onDecide,
+  offers,
+  creatingOffer,
+  locale,
+  onCreateOffer,
+  readOnly,
+  refusedReasonId,
+  pulse,
+  spine,
+  coverage,
+  onOpenEmail,
+}: Readonly<{
+  deal: Deal;
+  dealApprovals: Approval[];
+  onDecide: (input: {
+    approvalId: string;
+    verdict: "approve" | "reject";
+  }) => void;
+  offers: Offer[] | undefined;
+  creatingOffer: boolean;
+  locale: Locale;
+  onCreateOffer: (currency: string) => void;
+  /** Whether the deal takes NO field write at all — archived, or not this
+   * caller's to write. Deliberately NOT `advanceRefused`, which also refuses a
+   * CLOSED deal: reopening is its own deliberate action, while correcting the
+   * brief of a deal that was won last week is an ordinary edit the server
+   * accepts. Conflating them hid the brief control on every closed deal. */
+  readOnly: boolean;
+  /** The id of the page's sentence about why this deal takes no changes, or
+   * undefined while it does. An offer is hung off the deal, so a deal this
+   * caller cannot write takes no new offer from them either. */
+  refusedReasonId?: string;
+  // Whose move it is, in one sentence, drawn under the call inside the
+  // reading — it is the sentence the call rests on, not a header fact.
+  pulse: ReactNode | undefined;
+  // The deal's story as a thread, drawn under the call inside the reading.
+  spine: ReactNode;
+  // Who is on the deal, for the reading's reference pair beside the offers.
+  coverage: ReturnType<typeof useDealCoverage>;
+  // Opens a cited message in the page's own email drawer; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
+}>) {
+  return (
+    // The same stack every record's overview reads down, with its rhythm.
+    <div className="record-stack">
+      {/* The readings that used to open this stack — the four-tile strip and
+          the stage stepper — moved into the cockpit band above the tabs
+          (deals.tsx), which is where a reader now finds them on every tab
+          rather than one scroll into this one. */}
+      {/* A won deal with no project, on a company with exactly one open
+          project, is offered that project once. Nothing else here asks. */}
+      <StartDeliveryPrompt deal={deal} />
+      {/* ONE READING, IN PARTS: the call with the deal's thread, the move the
+          briefing names, then what is on the table beside who is in the room
+          (the deal's two sides), then what the customer committed to. */}
+      <RecordReading>
+        <DealStatusCardPanel
+          dealId={deal.id}
+          dealName={deal.name}
+          pulse={pulse}
+          spine={spine}
+          onOpenEmail={onOpenEmail}
+        />
+        <DealApprovals approvals={dealApprovals} decide={onDecide} />
+        <RecordReadingPair>
+          {/* The money reading's door scrolls here; the id is the strip's own
+              constant, so a rename cannot leave the door pointing at nothing. */}
+          <div id={DEAL_OFFERS_ANCHOR}>
+            <OffersPanel
+              offers={offers}
+              creating={creatingOffer}
+              locale={locale}
+              dealCurrency={deal.currency ?? null}
+              refusedReasonId={refusedReasonId}
+              onCreate={onCreateOffer}
+            />
+          </div>
+          <DealCommitteeCard
+            dealId={deal.id}
+            coverage={coverage.coverage}
+            withheld={coverage.withheld}
+            pending={coverage.pending}
+            refusedReasonId={refusedReasonId}
+          />
+        </RecordReadingPair>
+        <DealWatchCard dealId={deal.id} onOpenEmail={onOpenEmail} />
+      </RecordReading>
+      <DealBrief
+        brief={deal.description}
+        // The record's own write refusal, not the advance verb's. A CLOSED
+        // deal takes no stage move without a deliberate reopen, and takes an
+        // ordinary field edit perfectly well — the server asks only for update
+        // permission, row writability and an unarchived record.
+        readOnly={readOnly}
+      />
+      {/* Under the brief, and only on a closed deal: the panel returns null
+          while the deal is still open, because there is no outcome to review
+          yet and inviting one would be asking for a verdict nobody can give. */}
+      <OutcomeReviewPanel
+        dealId={deal.id}
+        status={deal.status}
+        closingOccurrenceId={deal.closing_occurrence_id}
+      />
+      {/* Neither the related-evidence panel nor the inline log form stands
+          here any more. The evidence it listed — recent touches, open tasks,
+          the contacts and companies around the deal — is already the reading
+          above and the rail beside it, and a reader given the same records
+          twice has two lists to reconcile. Logging is a verb, and the head
+          carries it (dealactions.tsx): a form always open at the foot of the
+          page asks for a note on every read. */}
+    </div>
+  );
+}
+
+// The page's ONE sentence about this deal being archived, said across the
+// whole header rather than repeated beside each of the four verbs the archive
+// refuses. Nothing at all while the deal is live — `undefined` rather than an
+// element that renders null, because RecordView reserves the band's space for
+// anything it is handed, and a page that always kept the gap would read as a
+// record with something to say about itself and nothing said.
+// One sentence for why this deal takes no changes, whichever reason applies,
+// so every refused control can point at it. Absent while the deal is live and
+// the reader's: a line always reserved would read as a record with something
+// to say about itself and nothing said.
+function dealBand({
+  reason,
+  reasonId,
+}: Readonly<{
+  reason: string | undefined;
+  reasonId: string;
+}>): ReactNode | undefined {
+  if (reason === undefined) {
+    return undefined;
+  }
+  return <p id={reasonId}>{reason}</p>;
+}
+
+/**
+ * useDeal is the deal page's read of the deal record itself.
+ *
+ * A hook rather than a query inline in the screen, so the four record reads
+ * are mounted the same way — which is what lets one suite prove the live
+ * cadence over all of them (FE-PARAM-5, app/queryclient.ts). The cadence
+ * itself is the client's, keyed on the read: nothing is spread in here to
+ * forget.
+ */
+export function useDeal(id: string) {
+  return useQuery({
+    queryKey: ["deal", id],
+    queryFn: async () => {
+      return unwrap(
+        await api.GET("/deals/{id}", {
+          params: { path: { id } },
+        }),
+      );
+    },
+  });
+}
+
+export function DealScreen({ id }: Readonly<{ id: string }>) {
+  const t = useT();
+  const details = usePageAside();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  const queryClient = useQueryClient();
+  // Minted here because the band that carries the sentence and the verbs that
+  // point at it are two different slots of the same header.
+  const readOnlyReasonId = useId();
+  const [tab, setTab] = useState<DealTab>("overview");
+  const legalReview = useLegalReviewAvailable();
+  const [pending, setPending] = useState<PendingAdvance | null>(null);
+  // The deal that just closed, while the review is on offer for it. Separate
+  // from `pending`, which is the question BEFORE the close; this is the offer
+  // after one landed, and the close dialog is already gone by then.
+  const [closed, setClosed] = useState<ClosedDeal | null>(null);
+  const advance = useAdvanceDeal();
+  const dealQuery = useDeal(id);
+  const pipelineQuery = usePipeline(dealQuery.data?.pipeline_id);
+  // Every write affordance on this page answers ONE question, asked once: an
+  // archived deal takes no changes, and one this caller cannot write takes
+  // none from them. The verbs used to ask only the first half, which offered a
+  // rep Edit on a colleague's deal and refused the save with a 403 after the
+  // form was filled in.
+  const readOnlyReason = useRecordWriteRefusal("deal", dealQuery.data, {
+    archived: t("deal.archivedReadOnly"),
+    notYours: t("deal.notYoursToChange"),
+  });
+  const readOnly = Boolean(readOnlyReason);
+  // The id every refused control points at, or nothing while the deal takes
+  // changes — resolved once here so the render below reads one name.
+  const refusedReasonId = readOnly ? readOnlyReasonId : undefined;
+  const me = useMe();
+  // Asked here rather than inside the aside, because an element is truthy
+  // whatever it renders: a slot filled with a component that draws nothing
+  // still reserves the aside column and its landmark.
+  const companies = useQuery({
+    queryKey: ["companies"],
+    queryFn: async () => {
+      return unwrap(
+        await api.GET("/companies", {
+          params: { query: { limit: 50 } },
+        }),
+      );
+    },
+  });
+  // The shared pending-approvals hook, not a second query on the same key: a
+  // private queryFn under ["approvals","pending"] takes over the cache entry the
+  // Inbox and the rail badge read, and this one stopped at the first page and
+  // kept expired rows — so a visit here could silently cap the badge at 50 and
+  // count approvals nobody can act on.
+  const approvalsQuery = usePendingApprovals();
+  // Both already fetched by children — the status card by Deal360, coverage by
+  // the signal chips and the coverage card. Read here so the header's sentence
+  // and the readings band share those cache entries rather than adding two
+  // requests for facts the page already holds.
+  const statusQuery = useDealStatusCard(id);
+  const coverageRead = useDealCoverage(id);
+  // The channel catalog, for the side pane's label. Same cache entry the edit
+  // form reads, so opening one after the other costs a single request.
+  // The pane's content, handed over whether or not it is showing: `asideOpen`
+  // folds the column, and its cards mount only while it is open or leaving.
+  const dealContext = (deal: Deal) => (
+    <DealContext
+      deal={deal}
+      companies={companies.data?.data ?? []}
+      meId={me.data?.user.id ?? ""}
+    />
+  );
+  // The thread under the call reads the WHOLE history, not whatever the
+  // History tab's own filter has narrowed: a filter is a view of that tab,
+  // and a call that said "no reply since" because the reader had hidden
+  // emails there would be false.
+  const threadQuery = useRecordTimeline("deal", id);
+  const [openEmail, setOpenEmail] = useOpenEmail();
+  const offersQuery = useQuery({
+    queryKey: ["deal-offers", id],
+    queryFn: async () => {
+      return unwrap(
+        await api.GET("/deals/{id}/offers", {
+          params: { path: { id } },
+        }),
+      );
+    },
+  });
+  const createOffer = useMutation({
+    mutationFn: async (currency: string) => {
+      return unwrap(
+        await api.POST("/deals/{id}/offers", {
+          params: { path: { id } },
+          body: { currency, source: "manual" },
+        }),
+      );
+    },
+    onSuccess: (offer: Offer) => {
+      navigate({ screen: "offers", id: offer.id });
+    },
+  });
+  const decide = useMutation({
+    mutationFn: async (input: {
+      approvalId: string;
+      verdict: "approve" | "reject";
+    }) => {
+      const path =
+        input.verdict === "approve"
+          ? "/approvals/{id}/approve"
+          : "/approvals/{id}/reject";
+      unwrap(
+        await api.POST(path, {
+          params: { path: { id: input.approvalId } },
+        }),
+      );
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["approvals", "pending"] }),
+  });
+
+  return (
+    <div className="wrap">
+      <QueryGate query={dealQuery} pendingLabel={t("nav.deals")}>
+        {(deal) => {
+          const stages = [...(pipelineQuery.data?.stages ?? [])].sort(
+            (a, b) => a.position - b.position,
+          );
+          const openStages = stages.filter(
+            (stage) => stage.semantic === "open",
+          );
+          const dealApprovals = (approvalsQuery.data?.data ?? []).filter(
+            (approval) => approval.target_entity_id === deal.id,
+          );
+          // Pinned to one closure so the cockpit's ladder and the overview's
+          // former stepper (now the same control) never drift into two
+          // versions of what an advance means.
+          const onAdvance = (toStage: Stage) => {
+            // The version this record was drawn from, exactly as the board
+            // pins the version its card was drawn from: the write names the
+            // deal as the reader saw it, so a change made elsewhere meanwhile
+            // fails loud.
+            const input = { dealId: deal.id, version: deal.version, toStage };
+            if (toStage.semantic === "open") {
+              advance.mutate(input);
+            } else {
+              setPending(input);
+            }
+          };
+          return (
+            <div className="record-sheet">
+              <RecordView
+                back={<WorklistReturnLink />}
+                // Context first: who these contacts are, before the verbs that
+                // act on them. The seats left the main column once the readings
+                // band counted them, or one screen said the same facts three
+                // times. Every record page draws this pane, fold and memory.
+                aside={dealContext(deal)}
+                asideOpen={details.open}
+                name={deal.name}
+                identity={deal.id}
+                // One rung under the record scale: the name is still the
+                // largest thing on the page, but beside a work column that
+                // opens on the reader's ask it no longer needs to be the size
+                // of a masthead.
+                scale="compact"
+                // The way in — which account this deal is on — on the name's
+                // own line, the same inline shape every other record's head
+                // draws its subtitle in.
+                nameBadge={<DealSubtitle deal={deal} />}
+                zone={recordZone}
+                actionsInline
+                // The deal's standing reads beside its name, not at the far
+                // end of the header among the verbs: a reader asking "is this
+                // still open?" was looking at the name and finding the answer
+                // across the page, above the buttons that act on it.
+                pulse={
+                  <IdentityLine separator="space">
+                    <Badge tone={dealStatusTone(deal.status)}>
+                      {deal.status}
+                    </Badge>
+                    <DealProjectChip deal={deal} />
+                  </IdentityLine>
+                }
+                // What it is worth, where it sits, when it is due, whose deal
+                // it is, which account it is on and how it reached Margince —
+                // the identity line's long dot-separated sentence went here,
+                // as named cells rather than a sentence to re-parse.
+                badges={
+                  <DealIdentityFacts
+                    deal={deal}
+                    stages={stages}
+                    locale={locale}
+                  />
+                }
+                actions={
+                  <DealActions
+                    deal={deal}
+                    openStages={openStages}
+                    refusedReasonId={refusedReasonId}
+                  />
+                }
+                // Where the deal stands, at the foot of its head: a reader
+                // arrives asking which stage this is in, and one who has
+                // already picked a tab has walked past the answer.
+                standing={
+                  <DealCockpit
+                    deal={deal}
+                    stages={stages}
+                    advancing={advance.isPending}
+                    // A deal that takes no changes — archived, or not this
+                    // caller's to write — is not moved through the
+                    // pipeline: a control that can only fail is worse than
+                    // none. A CLOSED deal is refused here too, but for a
+                    // different reason: reopening is its own deliberate
+                    // action, with a dialog that says the close date and
+                    // the frozen rate are being cleared. A stepper button
+                    // that reopened silently would be a second, quieter
+                    // door to the same write.
+                    advanceRefused={readOnly || deal.status !== "open"}
+                    refusedReasonId={refusedReasonId}
+                    onAdvance={onAdvance}
+                  />
+                }
+                // The sentence naming why this deal takes no changes, while
+                // it does not.
+                band={dealBand({
+                  reason: readOnlyReason,
+                  reasonId: readOnlyReasonId,
+                })}
+                // The strip frames the whole record rather than the work alone:
+                // it runs across both columns, and the details pane opens under
+                // it, so choosing a body and choosing what stands beside it read
+                // as two controls on one page instead of one nested in the other.
+                tabs={
+                  <RecordTabs
+                    options={DEAL_TABS.filter(
+                      (each) => legalReview || each !== "legal",
+                    )}
+                    value={tab}
+                    onChange={(next) => {
+                      setTab(next);
+                      scrollPageToTop();
+                    }}
+                    labels={{
+                      overview: t("tab.overview"),
+                      room: t("tab.dealRoom"),
+                      files: t("tab.documents"),
+                      legal: t("legalReview.tab"),
+                      history: t("tab.history"),
+                    }}
+                    // The switch for the deal's details column, at the end of the
+                    // tab row: it chooses what the page shows BESIDE the work, so
+                    // it stands with the controls that choose what the work
+                    // column shows, and never in the head among the deal's verbs.
+                    trailing={<PageAsideToggle />}
+                  />
+                }
+              >
+                {/* One stack for the whole overview: the work column draws its
+                  children with no interval of its own, so the reading and the
+                  contacts under it take the record's rhythm from here rather
+                  than from a margin one of them carries. */}
+                {tab === "overview" && (
+                  <div className="record-stack">
+                    <DealOverviewPane
+                      deal={deal}
+                      onOpenEmail={setOpenEmail}
+                      dealApprovals={dealApprovals}
+                      onDecide={(input) => decide.mutate(input)}
+                      offers={offersQuery.data?.data}
+                      creatingOffer={createOffer.isPending}
+                      locale={locale}
+                      onCreateOffer={(currency) => createOffer.mutate(currency)}
+                      pulse={
+                        <DealPulse
+                          card={statusQuery.data}
+                          timeline={threadQuery.activities}
+                        />
+                      }
+                      spine={
+                        <TimelineThread
+                          thread={threadQuery}
+                          commercial={{
+                            next_close_on: deal.expected_close_date,
+                          }}
+                          onOpenEmail={setOpenEmail}
+                        />
+                      }
+                      coverage={coverageRead}
+                      readOnly={readOnly}
+                      refusedReasonId={refusedReasonId}
+                    />
+                  </div>
+                )}
+                {tab === "room" && (
+                  <DealRoomTab dealId={deal.id} dealName={deal.name} />
+                )}
+                {tab === "files" && <DealFiles deal={deal} />}
+                {tab === "legal" && legalReview && <DealLegalTab deal={deal} />}
+                {tab === "history" && (
+                  <DealHistoryTab deal={deal} onOpenEmail={setOpenEmail} />
+                )}
+                {/* One drawer over the deal. Both the overview's citations and
+                  the history tab's own rows open it, so a message found from
+                  either place lands in the same reader. */}
+                <OpenEmailDrawer
+                  activityId={openEmail}
+                  zone={recordZone}
+                  onClose={() => setOpenEmail(null)}
+                />
+                <ErrorLine
+                  error={advanceErrorBehind(advance.error, pending !== null)}
+                />
+                <ConfirmAdvanceModal
+                  pending={pending}
+                  onClose={() => setPending(null)}
+                  onConfirm={(input) => advance.mutateAsync(input)}
+                  onClosed={(deal, reason) =>
+                    setClosed(closedDealOf(deal, reason))
+                  }
+                />
+                <CloseReviewOffer
+                  closed={closed}
+                  onDismiss={() => setClosed(null)}
+                />
+              </RecordView>
+            </div>
+          );
+        }}
+      </QueryGate>
+    </div>
+  );
+}
+
+// The deal's context, for the details pane: what the deal is, who of ours owns
+// it, then how the deal is filed and the mail card.
+function DealContext({
+  deal,
+  companies,
+  meId,
+}: Readonly<{
+  deal: Deal;
+  companies: { id: string; display_name: string }[];
+  meId: string;
+}>) {
+  // The same per-row answer the deal's other verbs read. An archived deal
+  // takes no new responsibilities, and neither does one this seat may read
+  // but not write.
+  const canWrite = useCanWriteRecord("deal", deal) && !deal.archived_at;
+  return (
+    <>
+      {/* What the deal IS commercially, then who OURS are on it. The buyer's
+          seats are not here: they live in the committee card in the column, with
+          the verbs that change them, and a rail copy of that list is what this
+          page carried three of. */}
+      <DealDetails deal={deal} companies={companies} meId={meId} />
+      <RecordTeam recordType="deal" recordId={deal.id} readOnly={!canWrite} />
+      <DealTagsSection deal={deal} />
+      <RecordListsPanel entityType="deal" entityId={deal.id} />
+      <DealEmailAside dealId={deal.id} />
+    </>
+  );
+}

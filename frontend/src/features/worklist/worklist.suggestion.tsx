@@ -11,8 +11,8 @@
 
 import type { ReactNode } from "react";
 import { useT } from "../../i18n";
-import { DealSuggestionCard } from "../../screens/dealsuggestion";
-import { useDealSuggestions } from "../../screens/dealsuggestions.queries";
+import { DealSuggestionCard } from "../deals/dealsuggestion";
+import { useDealSuggestions } from "../deals/dealsuggestions.queries";
 import { PairDecision } from "./worklist.pair";
 import type { WorklistItem } from "./worklist.queries";
 import { TagSuggestionDecision } from "./worklist.tagsuggestion";

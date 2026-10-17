@@ -7,6 +7,7 @@ import { Checkbox, Field, Textarea, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
+import { usePipelines } from "../features/deals/pipelines.queries";
 import { formatDate } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
 import { toMinorUnits } from "../format/minorunits";
@@ -15,7 +16,6 @@ import { type Locale, useLocale, useT } from "../i18n";
 import { leadPromotePreviewKey, leadWriteKeys } from "../lib/leadkeys";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useInstallationSettings } from "../lib/uploadlimit";
-import { usePipelines } from "./pipelines.queries";
 import "./leads.css";
 
 type Lead = components["schemas"]["Lead"];

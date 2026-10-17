@@ -2,11 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { CreateAction, type CreateField } from "../components/create";
+import { currencyBeside } from "../features/deals/dealcurrency";
 import { toMinorUnits } from "../format/minorunits";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
-import { currencyBeside } from "./dealcurrency";
 import { useProjectCreateForm } from "./projects.create";
 
 // What a rep can START from the company page.

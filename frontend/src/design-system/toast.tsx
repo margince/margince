@@ -25,7 +25,7 @@ import "./toast.css";
  * its own region, and all three things that go wrong when a global surface is
  * held locally went wrong. `screens/commissiondecide.tsx` called the hook and
  * rendered no region, so every approve/pay/void confirmation was written into a
- * `useState` nobody read. `screens/deals.tsx` had to carry a comment explaining
+ * `useState` nobody read. `features/deals/deals.tsx` had to carry a comment explaining
  * that the instance belongs to the CALLER, because a hook minting its own shows
  * its messages to nobody. And the region being a SIBLING of the page's cards
  * forced two layout rules to be written around a fixed box that takes no space

@@ -334,11 +334,11 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "DealCard takes the record's zone as a required prop for its close date; the story has to hand it a named one, and a zone read off the runner would draw a different date on every machine the catalog builds on.",
   },
   {
-    file: "screens/dealpipelineboard.stories.tsx",
+    file: "features/deals/dealpipelineboard.stories.tsx",
     why: "DealPipelineBoard passes the record's zone through to PipelineBoard for its cards' close dates; the story has to hand it a named one, and a zone read off the runner would draw a different date on every machine the catalog builds on.",
   },
   {
-    file: "screens/dealpipelineboard.test.tsx",
+    file: "features/deals/dealpipelineboard.test.tsx",
     why: "Same prop, satisfied rather than asserted: the suite is about the cards' verbs, and the zone only fills the board's required signature.",
   },
   {
@@ -406,19 +406,19 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The same installation-settings fixture, behind the contract form's custom-field seeding cases.",
   },
   {
-    file: "screens/dealbulk.stories.tsx",
+    file: "features/deals/dealbulk.stories.tsx",
     why: "Same `me` fixture behind the bulk-edit story: the reader's stored `timezone` is wire data the story has to supply.",
   },
   {
-    file: "screens/deals-company.test.tsx",
+    file: "features/deals/deals-company.test.tsx",
     why: "Same `me` fixture behind the company-scoped board: a stored user setting, not a formatting decision.",
   },
   {
-    file: "screens/deals-views.test.tsx",
+    file: "features/deals/deals-views.test.tsx",
     why: "Same `me` fixture behind the saved-views suite: a stored user setting, not a formatting decision.",
   },
   {
-    file: "screens/deals.test.tsx",
+    file: "features/deals/deals.test.tsx",
     why: "Same `me` fixture across the board suite's five scenarios: a stored user setting, not a formatting decision.",
   },
   {

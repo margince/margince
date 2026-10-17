@@ -326,7 +326,9 @@ describe("layout is a class, not a style attribute", () => {
     const paths = files.map(pathOf);
     expect(files.length).toBeGreaterThan(900);
     expect(paths).toContain("frontend/src/screens/company360.tsx");
-    expect(paths).toContain("frontend/src/screens/deal360/dealactions.tsx");
+    expect(paths).toContain(
+      "frontend/src/features/deals/deal360/dealactions.tsx",
+    );
     expect(paths).toContain("frontend/src/design-system/trust.tsx");
     expect(paths).toContain("frontend/src/design-system/anchoredpopup.ts");
     expect(paths).toContain("extensions/openchannel/frontend/screen.tsx");

@@ -7,10 +7,10 @@ import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { FieldGuard } from "../design-system/rbac";
+import { dealStatusTone } from "../features/deals/deals";
 import { formatMoney } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { unwrap } from "../lib/problem";
-import { dealStatusTone } from "./deals";
 
 // The deals this partner brought us, on the partner's own company page.
 //

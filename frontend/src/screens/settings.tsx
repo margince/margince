@@ -31,6 +31,9 @@ import {
   MailSharingPostureRow,
 } from "../features/capture/mail-sharing";
 import { OwnDomainsCard } from "../features/capture/own-domains";
+import { OfferTemplatesAdmin } from "../features/deals/offertemplates";
+import { ProductsAdmin } from "../features/deals/products";
+import { ReviewTemplatesCard } from "../features/deals/reviewtemplates";
 import { ImportCard } from "../features/import/import";
 import { LinkedInImportCard } from "../features/import/linkedin-import";
 import { TagVocabularyCard } from "../features/lists/tagadmin";
@@ -63,11 +66,8 @@ import {
 } from "./leadvocab";
 import { LicenseCard } from "./license";
 import { NotificationSettingsCard } from "./notification-settings";
-import { OfferTemplatesAdmin } from "./offertemplates";
-import { ProductsAdmin } from "./products";
 import { FxRatesCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
-import { ReviewTemplatesCard } from "./reviewtemplates";
 import { RolesSettings } from "./roles-settings";
 import { JurisdictionCard } from "./settings.jurisdiction";
 import { PipelinesCard } from "./settings.pipelines";
