@@ -23,10 +23,11 @@ func (e *EmptyEntryError) FieldFault() (field, code, message string) {
 	return fieldSubject, "subject_or_body_required", e.Error()
 }
 
-// checkEntryHasContent is the one rule for an entry that must say something.
-// The create wire and a patch of a stored entry both hold it. Writers that
-// capture mail or calendar events carry their own content and skip it.
-func checkEntryHasContent(kind string, subject, body *string) error {
+// CheckEntryHasContent is the one rule for an entry that must say something.
+// The store holds it on every create and on a patch of a stored entry. The
+// create wire and an import ask it first so a row is refused for its cells
+// before any write. Only a note and a call are held to it.
+func CheckEntryHasContent(kind string, subject, body *string) error {
 	if kind != string(crmcontracts.ActivityKindNote) && kind != string(crmcontracts.ActivityKindCall) {
 		return nil
 	}

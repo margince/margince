@@ -38,7 +38,7 @@ func buildCompanyPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Comp
 	if err := setCompanyCheckedFields(ctx, tx, p, current, in); err != nil {
 		return nil, err
 	}
-	if err := setAddress(p, current.Address, in.Address); err != nil {
+	if err := setAddress(p, current.Address, in.Address, in.Trail); err != nil {
 		return nil, err
 	}
 	return p, nil

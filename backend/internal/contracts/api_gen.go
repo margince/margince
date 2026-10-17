@@ -10608,6 +10608,7 @@ func (e ImportProblemKind) Valid() bool {
 
 // Defines values for ImportReasonCode.
 const (
+	ImportReasonCodeActivityEmpty                ImportReasonCode = "activity_empty"
 	ImportReasonCodeActivityHeld                 ImportReasonCode = "activity_held"
 	ImportReasonCodeActivityLinkAmbiguous        ImportReasonCode = "activity_link_ambiguous"
 	ImportReasonCodeActivityLinkAmbiguousDropped ImportReasonCode = "activity_link_ambiguous_dropped"
@@ -10724,6 +10725,8 @@ const (
 // Valid indicates whether the value is a known member of the ImportReasonCode enum.
 func (e ImportReasonCode) Valid() bool {
 	switch e {
+	case ImportReasonCodeActivityEmpty:
+		return true
 	case ImportReasonCodeActivityHeld:
 		return true
 	case ImportReasonCodeActivityLinkAmbiguous:
@@ -23453,7 +23456,7 @@ type AddDealRoomDocumentRequest struct {
 type Address struct {
 	City *string `json:"city,omitempty"`
 
-	// Country ISO-3166 alpha-2, stored upper-case. A contact or company write (and a CSV import cell) carrying a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`.
+	// Country ISO-3166 alpha-2. A contact or company write (and a CSV import cell) that changes the country to a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`; a code is stored upper-case. A country stored before this rule is kept as it is when a save carries it back unchanged.
 	Country              *string                `json:"country,omitempty"`
 	Line1                *string                `json:"line1,omitempty"`
 	Line2                *string                `json:"line2,omitempty"`

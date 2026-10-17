@@ -6376,6 +6376,8 @@ export const en = {
     "A message needs a channel, so it cannot be imported from a file. Use a note or an email instead.",
   "import.reason.task_not_importable":
     "A task would land open on your own list, so it is not imported. Use a note instead.",
+  "import.reason.activity_empty":
+    "A note or a call needs a subject or a body. Fill one of them in this row.",
   "import.reason.occurred_at_unnamed":
     "Give the day the activity happened, as YYYY-MM-DD or with its time zone.",
   "import.reason.timestamp_needs_zone":

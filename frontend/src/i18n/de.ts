@@ -6262,6 +6262,8 @@ export const de = {
     "Eine Nachricht braucht einen Kanal und lässt sich daher nicht aus einer Datei importieren. Nimm stattdessen eine Notiz oder eine E-Mail.",
   "import.reason.task_not_importable":
     "Eine Aufgabe würde offen auf deiner eigenen Liste landen und wird daher nicht importiert. Nimm stattdessen eine Notiz.",
+  "import.reason.activity_empty":
+    "Eine Notiz oder ein Anruf braucht einen Betreff oder einen Text. Fülle in dieser Zeile einen von beiden aus.",
   "import.reason.occurred_at_unnamed":
     "Gib den Tag an, an dem die Aktivität stattfand, als YYYY-MM-DD oder mit Zeitzone.",
   "import.reason.timestamp_needs_zone":

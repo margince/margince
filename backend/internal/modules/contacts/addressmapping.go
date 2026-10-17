@@ -62,18 +62,25 @@ func NormalizeCountryCode(raw string) (string, error) {
 	return code, nil
 }
 
-// setAddress stages a caller's address edit onto a patch, after the country
-// rule. Contact and company edits share it so neither can stage a country the
-// other would refuse.
-func setAddress(p *storekit.Patch, current, edit *crmcontracts.Address) error {
+// setAddress stages a caller's address edit onto a patch. Contact and company
+// edits share it so neither can stage a country the other would refuse.
+//
+// The country rule holds a country the edit changes. A save that carries the
+// stored country back, as an edit form or a CSV update does, is not new input,
+// so a row written before the rule keeps its country and stays editable. An
+// undo replays a value the row held itself, so it is exempt too.
+func setAddress(p *storekit.Patch, current, edit *crmcontracts.Address, trail storekit.AuditTrail) error {
 	if edit == nil {
 		return nil
 	}
-	checked, err := checkedAddress(edit)
-	if err != nil {
-		return err
-	}
 	cur := addressColumns(current)
+	checked := edit
+	if trail.Verb != storekit.VerbRestore && !sameCountry(cur.Country, edit.Country) {
+		var err error
+		if checked, err = checkedAddress(edit); err != nil {
+			return err
+		}
+	}
 	p.Set("address_line1", cur.Line1, checked.Line1)
 	p.Set("address_line2", cur.Line2, checked.Line2)
 	p.Set("address_city", cur.City, checked.City)
@@ -81,6 +88,10 @@ func setAddress(p *storekit.Patch, current, edit *crmcontracts.Address) error {
 	p.Set("address_postal_code", cur.PostalCode, checked.PostalCode)
 	p.Set("address_country", cur.Country, checked.Country)
 	return nil
+}
+
+func sameCountry(stored, edited *string) bool {
+	return stored != nil && edited != nil && *stored == *edited
 }
 
 // addressColumns destructures the contract's Address into the six

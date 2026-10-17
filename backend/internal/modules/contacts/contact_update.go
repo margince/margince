@@ -211,7 +211,7 @@ func buildContactPatch(current crmcontracts.Contact, in UpdateContactInput) (*st
 	if err := storekit.ApplyClears(p, in.Clear, clearableContactColumns(current)); err != nil {
 		return nil, err
 	}
-	if err := setAddress(p, current.Address, in.Address); err != nil {
+	if err := setAddress(p, current.Address, in.Address, in.Trail); err != nil {
 		return nil, err
 	}
 	if in.Social != nil || in.Emails != nil || in.Phones != nil {

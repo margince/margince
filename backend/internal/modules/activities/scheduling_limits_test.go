@@ -72,7 +72,7 @@ func TestSchedulingTextLimitsCountCharactersNotBytes(t *testing.T) {
 }
 
 // Each limit refuses in its own words and names the field to fix,
-// so the unsaved-changes bar can mark it.
+// so the caller is told which setting to correct.
 func TestEachSchedulingLimitNamesItsOwnField(t *testing.T) {
 	for name, tc := range map[string]struct {
 		change func(*crmcontracts.SchedulingProfile)

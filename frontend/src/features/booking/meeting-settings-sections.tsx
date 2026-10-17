@@ -136,16 +136,28 @@ export function CalendarSection({
   );
 }
 
+// The three limit fields as typed. A number kept only as a number cannot show a
+// cleared input, and an emptied one would read as 0, so each is held as text and
+// the form takes the number only once there is one.
+export type LimitTexts = { notice: string; buffer: string; horizon: string };
+
+export function limitTextsOf(profile: Profile): LimitTexts {
+  return {
+    notice: String(Number((profile.notice_minutes / 60).toFixed(2))),
+    buffer: String(profile.buffer_minutes),
+    horizon: String(profile.horizon_days),
+  };
+}
+
+export const limitIncomplete = (texts: LimitTexts) =>
+  Object.values(texts).some((text) => text.trim() === "");
+
 export function LimitFields({
-  form,
-  noticeHours,
-  onNotice,
-  onChange,
+  texts,
+  onText,
 }: Readonly<{
-  form: Profile;
-  noticeHours: string;
-  onNotice: (hours: string) => void;
-  onChange: (form: Profile) => void;
+  texts: LimitTexts;
+  onText: (field: keyof LimitTexts, text: string) => void;
 }>) {
   const t = useT();
   return (
@@ -159,8 +171,8 @@ export function LimitFields({
             max={168}
             step="any"
             required
-            value={noticeHours}
-            onChange={(e) => onNotice(e.target.value)}
+            value={texts.notice}
+            onChange={(e) => onText("notice", e.target.value)}
           />
         )}
       </Field>
@@ -171,10 +183,9 @@ export function LimitFields({
             type="number"
             min={0}
             max={120}
-            value={form.buffer_minutes}
-            onChange={(e) =>
-              onChange({ ...form, buffer_minutes: Number(e.target.value) })
-            }
+            required
+            value={texts.buffer}
+            onChange={(e) => onText("buffer", e.target.value)}
           />
         )}
       </Field>
@@ -185,10 +196,9 @@ export function LimitFields({
             type="number"
             min={1}
             max={90}
-            value={form.horizon_days}
-            onChange={(e) =>
-              onChange({ ...form, horizon_days: Number(e.target.value) })
-            }
+            required
+            value={texts.horizon}
+            onChange={(e) => onText("horizon", e.target.value)}
           />
         )}
       </Field>
