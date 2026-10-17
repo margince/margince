@@ -43,6 +43,11 @@ import { ProductsAdmin } from "../features/deals/products";
 import { ReviewTemplatesCard } from "../features/deals/reviewtemplates";
 import { ImportCard } from "../features/import/import";
 import { LinkedInImportCard } from "../features/import/linkedin-import";
+import {
+  LeadDisqualifyReasonsCard,
+  LeadHandlingCard,
+  LeadSourcesCard,
+} from "../features/leads/leadvocab";
 import { TagVocabularyCard } from "../features/lists/tagadmin";
 import { SignatureTemplateCard } from "../features/mail/signaturetemplatecard";
 import { InstallationSettingsCard } from "../features/sign-in/installation-settings";
@@ -61,11 +66,6 @@ import { CustomFieldsAdmin } from "./customfields";
 import { FinanceSourceCard } from "./financesource";
 import { FollowUpSettingsCard } from "./followupsettings";
 import { KnowledgeCard } from "./knowledge";
-import {
-  LeadDisqualifyReasonsCard,
-  LeadHandlingCard,
-  LeadSourcesCard,
-} from "./leadvocab";
 import { LicenseCard } from "./license";
 import { NotificationSettingsCard } from "./notification-settings";
 import { FxRatesCard } from "./rates";

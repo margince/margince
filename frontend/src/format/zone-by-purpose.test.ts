@@ -442,7 +442,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The signed-in `me` fixture behind the provider screen carries the reader's stored `timezone` as wire data.",
   },
   {
-    file: "screens/leads.test.tsx",
+    file: "features/leads/leads.test.tsx",
     why: "Installation-settings fixture backing the leads screen's settings read.",
   },
   {

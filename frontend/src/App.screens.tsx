@@ -88,13 +88,13 @@ export const BriefScreen = lazy(
 
 export const LeadScreen = lazy(
   routed(() =>
-    import("./screens/leads").then((m) => ({ default: m.LeadScreen })),
+    import("./features/leads/leads").then((m) => ({ default: m.LeadScreen })),
   ),
 );
 
 export const LeadsScreen = lazy(
   routed(() =>
-    import("./screens/leads").then((m) => ({ default: m.LeadsScreen })),
+    import("./features/leads/leads").then((m) => ({ default: m.LeadsScreen })),
   ),
 );
 

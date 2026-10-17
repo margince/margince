@@ -17,7 +17,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const RECORD_LISTS = [
   "features/contacts/contacts.tsx",
   "screens/companies.tsx",
-  "screens/leads.list.tsx",
+  "features/leads/leads.list.tsx",
 ];
 
 describe("one record list, three record types", () => {

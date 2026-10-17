@@ -86,11 +86,11 @@
 1 react-hooks/refs src/features/lists/filterview.tsx
 1 react-hooks/set-state-in-effect src/screens/historyfields.tsx
 1 react-hooks/refs src/screens/knowledge.documents.tsx
-1 react-hooks/set-state-in-effect src/screens/leadfillfromcontact.tsx
-1 react-hooks/set-state-in-effect src/screens/leadraillinks.tsx
-2 react-hooks/set-state-in-effect src/screens/leads.tsx
-1 react-hooks/refs src/screens/leadvocab.reasons.tsx
-1 react-hooks/refs src/screens/leadvocab.sources.tsx
+1 react-hooks/set-state-in-effect src/features/leads/leadfillfromcontact.tsx
+1 react-hooks/set-state-in-effect src/features/leads/leadraillinks.tsx
+2 react-hooks/set-state-in-effect src/features/leads/leads.tsx
+1 react-hooks/refs src/features/leads/leadvocab.reasons.tsx
+1 react-hooks/refs src/features/leads/leadvocab.sources.tsx
 3 react-hooks/refs src/features/lists/listlibrary.tsx
 5 react-hooks/refs src/features/lists/listpage.tsx
 2 react-hooks/refs src/screens/onboarding-conversation/company-act-state.ts
