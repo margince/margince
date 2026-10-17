@@ -46,6 +46,20 @@ func (a *assembly) readLastTouch() error {
 	return nil
 }
 
+// accountRelationshipTypes is the company's live types as the strip spells
+// them. A company with none answers `[]`, never null: the contract declares an
+// array, and a generated client reads null as a different shape.
+func accountRelationshipTypes(types *[]crmcontracts.CompanyRelationshipTypes) []crmcontracts.Company360StateStripAccountRelationshipTypes {
+	out := []crmcontracts.Company360StateStripAccountRelationshipTypes{}
+	if types == nil {
+		return out
+	}
+	for _, relType := range *types {
+		out = append(out, crmcontracts.Company360StateStripAccountRelationshipTypes(relType))
+	}
+	return out
+}
+
 // readStateStrip is the three readings the overview leads with (AC-company-13).
 //
 // The account half needs no grant beyond the company the caller already
@@ -61,12 +75,7 @@ func (a *assembly) readStateStrip() error {
 	if lc := a.out.Company.Lifecycle; lc != nil {
 		strip.Account.Lifecycle = crmcontracts.Company360StateStripAccountLifecycle(*lc)
 	}
-	if types := a.out.Company.RelationshipTypes; types != nil {
-		for _, relType := range *types {
-			strip.Account.RelationshipTypes = append(strip.Account.RelationshipTypes,
-				crmcontracts.Company360StateStripAccountRelationshipTypes(relType))
-		}
-	}
+	strip.Account.RelationshipTypes = accountRelationshipTypes(a.out.Company.RelationshipTypes)
 
 	if in.timeline {
 		strip.Engagement = new(struct {

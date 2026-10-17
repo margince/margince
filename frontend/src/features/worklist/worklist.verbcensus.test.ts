@@ -42,7 +42,7 @@ const ANSWERED_BY = {
   // Answered on this page, so a link would send the reader where they already
   // are — except an introduction ask, which routes to the colleague's own
   // Network tab through decideDestination.
-  decide: { how: "inline", file: "worklist.row.tsx" },
+  decide: { how: "inline", file: "worklist.row.answer.tsx" },
   merge: { how: "inline", file: "worklist.pair.tsx" },
   // The BRIEF's three verbs live in worklist.briefverbs.tsx: they post to the
   // brief's endpoints rather than to an activity's, and that distinction is why
@@ -53,14 +53,14 @@ const ANSWERED_BY = {
   // together inside BriefSetAsides; act is guarded at its placement, because it
   // is the row's primary slot and the row decides what fills it. This census
   // reads the guard, so each verb points at the file holding its own.
-  act: { how: "inline", file: "worklist.row.tsx" },
+  act: { how: "inline", file: "worklist.row.answer.tsx" },
   set_aside: { how: "inline", file: "worklist.briefverbs.tsx" },
   dismiss: { how: "inline", file: "worklist.briefverbs.tsx" },
-  acknowledge: { how: "inline", file: "worklist.row.tsx" },
+  acknowledge: { how: "inline", file: "worklist.row.answer.tsx" },
   // Running a failed rule again acts where the reader is standing. Routing it
   // would open the automations page, which is where the RULE is fixed — a
   // different act from re-running the firing that broke.
-  retry: { how: "inline", file: "worklist.row.tsx" },
+  retry: { how: "inline", file: "worklist.row.answer.tsx" },
   // Answering the buyer opens the composer over the row, through the same
   // ChannelReplyAction the 360 timelines mount. Routing it would send the
   // reader to the record to press reply there, which is the hand-off the queue

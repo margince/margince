@@ -151,6 +151,7 @@ const (
 	schemaEnum        = "enum"
 	schemaMinimum     = "minimum"
 	schemaMaximum     = "maximum"
+	schemaItems       = "items"
 )
 
 // argument is one property of a JSON schema, member by member.
@@ -259,12 +260,25 @@ func uniteArgument(seen, next argument) (argument, bool) {
 		delete(out, schemaEnum)
 		delete(out, schemaMinimum)
 		delete(out, schemaMaximum)
+		delete(out, schemaItems)
 		return out
 	}
 	if !maps.EqualFunc(shape(seen), shape(next), func(a, b json.RawMessage) bool { return string(a) == string(b) }) {
 		return nil, false
 	}
 	united := maps.Clone(seen)
+	// A list's items unite by the same rule, so two lists of words admit both.
+	if seen[schemaItems] != nil || next[schemaItems] != nil {
+		var seenItems, nextItems argument
+		if json.Unmarshal(seen[schemaItems], &seenItems) != nil || json.Unmarshal(next[schemaItems], &nextItems) != nil {
+			return nil, false
+		}
+		items, ok := uniteArgument(seenItems, nextItems)
+		if !ok {
+			return nil, false
+		}
+		united[schemaItems] = mustMarshal(items)
+	}
 	// A bound is the loosest the targets set, so a value any target takes is
 	// advertised; the target refuses its own excess by name. A target that sets
 	// no bound takes any value, so the router sets none either.

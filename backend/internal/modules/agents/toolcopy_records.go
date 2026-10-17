@@ -8,14 +8,13 @@ package agents
 // depend on. See toolcopy.go for what each field answers.
 
 var searchRecordsCopy = toolCopy{
-	Purpose: "Find contacts, companies, deals, leads and projects when you know roughly what " +
-		"they are called but not which record they are.",
-	Limits: "It matches text stored ON the record. It does not read a timeline: message bodies, " +
-		"call notes and meeting content are not searched, so a query describing what someone said " +
-		"or did will not find them.",
-	Instead: "Use list_records when the question is which records meet a condition rather than " +
-		"what one is called, read_record when you already hold the record's id, and run_report " +
-		"when the question is a count, a total or a breakdown rather than a set of records.",
+	Purpose: "Find records by the words they carry, best match first: contacts, companies, deals, " +
+		"leads and projects, and products, offer templates or activity when you name them.",
+	Limits: "It needs words in q. It searches the timeline (message bodies, call notes, meetings) " +
+		"only when you name activity.",
+	Instead: "Use list_records to list records without words or by a condition, read_record when " +
+		"you already hold the record's id, and run_report when the question is a count, a total " +
+		"or a breakdown rather than a set of records.",
 	Retain: "Keep each result's record_type and id together: every other tool identifies a record " +
 		"by both, and an id alone does not say which type it belongs to. A result's `owner` " +
 		"says who holds it. " + sayWhoseItIs,

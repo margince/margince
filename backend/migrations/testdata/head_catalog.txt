@@ -4032,7 +4032,7 @@ public.finance_customer_link.sync_hash text NOT NULL gen=- def=-
 public.finance_customer_link.trg_finance_customer_link_updated CREATE TRIGGER trg_finance_customer_link_updated BEFORE UPDATE ON public.finance_customer_link FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.finance_customer_link.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.finance_customer_link.version bigint NOT NULL gen=- def=1
-public.finance_customer_link_company_ux CREATE UNIQUE INDEX finance_customer_link_company_ux ON public.finance_customer_link USING btree (connection_id, company_id) WHERE (archived_at IS NULL)
+public.finance_customer_link_company_ix CREATE INDEX finance_customer_link_company_ix ON public.finance_customer_link USING btree (connection_id, company_id) WHERE (archived_at IS NULL)
 public.finance_customer_link_external_ux CREATE UNIQUE INDEX finance_customer_link_external_ux ON public.finance_customer_link USING btree (connection_id, external_customer_id) WHERE (archived_at IS NULL)
 public.finance_customer_link_pkey CREATE UNIQUE INDEX finance_customer_link_pkey ON public.finance_customer_link USING btree (id)
 public.finance_external_customer acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

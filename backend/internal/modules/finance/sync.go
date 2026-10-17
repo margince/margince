@@ -73,35 +73,62 @@ func (s *Store) SyncConnection(
 		return SyncResult{}, fmt.Errorf("read the source's customers: %w", err)
 	}
 	out.CustomersSeen = len(customers)
+	// The provider names itself on every row it produced. A reader can then
+	// ask which source a figure came from when it disagrees with the books.
+	source := provider.Name()
 
+	var (
+		conn      connection
+		connected bool
+		links     []link
+	)
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		conn, connected, err := readConnection(ctx, tx)
-		if err != nil {
+		conn, connected, err = readConnection(ctx, tx)
+		if err != nil || !connected {
 			return err
 		}
-		if !connected {
-			// Nothing configured. Not an error: a sweep that runs on a
-			// workspace with no accounting source has simply nothing to do.
-			return nil
-		}
-		// The provider names itself on every row it produced. Stamping a
-		// constant here instead would label a real source's invoices as the
-		// offline generator's, and `source` is what a reader asks when the
-		// figures disagree with the accounting system.
-		source := provider.Name()
 		if err := mirrorCustomers(ctx, tx, conn.id, customers, source); err != nil {
 			return err
 		}
-		links, err := readLinks(ctx, tx, conn.id)
+		links, err = readLinks(ctx, tx, conn.id)
+		return err
+	})
+	if err != nil || !connected {
+		// Not connected is not an error: the sweep has nothing to do here.
+		return SyncResult{}, err
+	}
+
+	// The ledgers are read with no transaction open. A vendor answers in
+	// seconds per customer, and a transaction held across every call would
+	// keep the mirror's rows locked for the whole pass.
+	ledgers := make(map[string]SourceLedger, len(links))
+	for _, l := range links {
+		ledger, err := provider.InvoicesFor(ctx, l.externalCustomerID)
+		if err != nil {
+			return SyncResult{}, fmt.Errorf("read the ledger for %s: %w", l.externalCustomerID, err)
+		}
+		ledgers[l.externalCustomerID] = ledger
+	}
+
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		// A source disconnected while the ledgers were read is left as the
+		// administrator set it; marking it synced would reconnect it.
+		live, stillConnected, err := readConnection(ctx, tx)
+		if err != nil || !stillConnected || live.id != conn.id {
+			return err
+		}
+		// The links as they stand now. One removed while the ledgers were read
+		// writes nothing, and one moved to another company follows the move.
+		current, err := readLinks(ctx, tx, conn.id)
 		if err != nil {
 			return err
 		}
-		for _, link := range links {
-			ledger, err := provider.InvoicesFor(ctx, link.externalCustomerID)
-			if err != nil {
-				return fmt.Errorf("read the ledger for %s: %w", link.externalCustomerID, err)
+		for _, l := range current {
+			ledger, fetched := ledgers[l.externalCustomerID]
+			if !fetched {
+				continue
 			}
-			if err := s.mirrorLedger(ctx, tx, conn.id, link, ledger, source, &out); err != nil {
+			if err := s.mirrorLedger(ctx, tx, conn.id, l, ledger, source, &out); err != nil {
 				return err
 			}
 		}

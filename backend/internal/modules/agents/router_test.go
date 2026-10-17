@@ -385,6 +385,30 @@ func TestARoutedArgumentCarriesEveryTargetsWords(t *testing.T) {
 	}
 }
 
+// Two targets taking a list of words advertise every word in the list's items.
+func TestARoutedListCarriesEveryTargetsWords(t *testing.T) {
+	r := NewRegistry(nil, nil)
+	r.Register(shapedTarget("fake_a", `{"colors":{"type":"array","items":{"type":"string","enum":["red","blue"]}}}`))
+	r.Register(shapedTarget("fake_b", `{"colors":{"type":"array","items":{"type":"string","enum":["blue","none"]}}}`))
+	r.Register(fakeRouter{name: "fake_ab", targets: map[string]string{"a": "fake_a", "b": "fake_b"}})
+	spec, _ := r.Spec("fake_ab")
+	var schema struct {
+		Properties map[string]struct {
+			Items struct {
+				Type string   `json:"type"`
+				Enum []string `json:"enum"`
+			} `json:"items"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+		t.Fatal(err)
+	}
+	items := schema.Properties["colors"].Items
+	if got := strings.Join(items.Enum, ","); got != "blue,none,red" || items.Type != "string" {
+		t.Errorf("colors items = %+v, want strings of every target's words", items)
+	}
+}
+
 // Two targets bounding one argument differently advertise the loosest bound, so
 // a value one target takes is never refused by a client holding the schema.
 func TestARoutedArgumentCarriesTheLoosestBound(t *testing.T) {
@@ -413,6 +437,7 @@ func TestARoutedArgumentCarriesTheLoosestBound(t *testing.T) {
 func TestRegisterRefusesARouterThatRestatesOrConflicts(t *testing.T) {
 	for why, tc := range map[string]struct{ a, b, own string }{
 		"two shapes for one argument":  {`{"x":{"type":"integer"}}`, `{"x":{"type":"string"}}`, ``},
+		"two shapes for one list item": {`{"x":{"type":"array","items":{"type":"integer"}}}`, `{"x":{"type":"array","items":{"type":"string"}}}`, ``},
 		"a router restating a shape":   {`{"x":{"type":"integer"}}`, `{}`, `{"x":{"type":"integer","description":"d"}}`},
 		"a router naming no argument":  {`{"x":{"type":"integer"}}`, `{}`, `{"y":{"description":"d"}}`},
 		"a route field a target takes": {`{"action":{"type":"string"}}`, `{}`, ``},

@@ -115,6 +115,11 @@ func (s *Store) SaveResearchClaims(ctx context.Context, contactID ids.ContactID,
 		if err := auth.EnsureWritableLive(ctx, tx, "contact", contactID.UUID); err != nil {
 			return err
 		}
+		// Dismissing every claim writes nothing, so no audit row and no event.
+		// The contact check above still ran, so a stale id is refused.
+		if len(claims) == 0 {
+			return nil
+		}
 		for _, claim := range claims {
 			// The one write in this table that REPLACES: somebody read the
 			// claim, its quote and the document behind it, and chose it.

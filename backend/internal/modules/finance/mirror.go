@@ -185,7 +185,10 @@ func (s *Store) mirrorInvoice(
 	// way for good, because the source has no reason to change again.
 	wantRate, _ := fxRateToBase(inv, args.baseCurrency)
 	rateMissing := wantRate != nil && existing.fxRate == nil
-	if found && existing.hash == hash && !rateMissing {
+	// A relinked customer's invoices move even when the source is unchanged:
+	// the hash covers the source, and the company is the link's.
+	relinked := found && existing.image.CompanyID != args.companyID
+	if found && existing.hash == hash && !rateMissing && !relinked {
 		// The source says exactly what it said last time. Rewriting the row
 		// would bump its version and write an audit row for a change that did
 		// not happen — history minted four times a day, forever, by a sweep

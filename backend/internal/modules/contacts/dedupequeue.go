@@ -28,9 +28,34 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// pairDecisionError is a 409 on a dedupe pair that carries the contract's
+// machine code, so a client branches on `code` and not on the sentence.
+type pairDecisionError struct {
+	code string
+	msg  string
+}
+
+func (e *pairDecisionError) Error() string { return "contacts: " + e.msg }
+
+func (e *pairDecisionError) MessageFault() (code, message string) { return e.code, e.msg }
+
+func (e *pairDecisionError) Unwrap() error { return apperrors.ErrConflict }
+
 // ErrNotUndoable marks an undo on a merged pair: the merge verb's
 // reversibility (PO-AC-M6) is not built, so the merge stands (409).
-var ErrNotUndoable = errors.New("contacts: a merged pair cannot be re-opened — the merge stands")
+var ErrNotUndoable = &pairDecisionError{
+	code: "not_undoable",
+	msg:  "a merged pair cannot be re-opened: the merge stands",
+}
+
+// errAlreadyDisposed refuses a second decision on a pair that already has one.
+// Nothing is left to do, which is what separates it from ErrNotUndoable.
+func errAlreadyDisposed(disposition string) error {
+	return &pairDecisionError{
+		code: "already_disposed",
+		msg:  "this pair was already decided (" + disposition + ")",
+	}
+}
 
 // DedupeInputError marks caller input the queue refuses (422 on the wire).
 type DedupeInputError struct {

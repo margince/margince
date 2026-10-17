@@ -18,6 +18,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // GetMorningDigest serves the caller's stored digest (CAP-WIRE-6): one
@@ -31,7 +32,7 @@ func (h backfillHandlers) GetMorningDigest(w http.ResponseWriter, r *http.Reques
 	if !ok {
 		return
 	}
-	if err := refuseAnEmptyDate(params); err != nil {
+	if err := refuseAnUnreadableDate(params); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -76,16 +77,22 @@ func missingDigest(day *time.Time) *httperr.DetailedError {
 	}
 }
 
-// refuseAnEmptyDate rejects `date=` sent with no value.
+// refuseAnUnreadableDate rejects a `date` that names no day the store can hold.
 //
-// An empty parameter binds to the zero date rather than to nil.
-//
-// So it read as a request for the year one, and was answered as a day with no
-// digest.
-func refuseAnEmptyDate(params crmcontracts.GetMorningDigestParams) error {
-	if params.Date != nil && params.Date.IsZero() {
+// The store is queried with the day's ISO text, and Postgres has no year 0.
+// That text must fall inside the range every request-stored date obeys.
+// An empty parameter binds to the zero date, which no caller asked for.
+func refuseAnUnreadableDate(params crmcontracts.GetMorningDigestParams) error {
+	if params.Date == nil {
+		return nil
+	}
+	if params.Date.IsZero() {
 		return httperr.Validation("date", "invalid_date",
 			"send `date` as a calendar day (YYYY-MM-DD), or omit it for the most recent digest.")
+	}
+	if !datasource.InstantInRange(params.Date.Time) {
+		return httperr.Validation("date", "out_of_range",
+			"that day is outside the years this product reads; send a recent calendar day (YYYY-MM-DD), or omit `date` for the most recent digest.")
 	}
 	return nil
 }

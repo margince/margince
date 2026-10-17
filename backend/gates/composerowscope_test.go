@@ -207,7 +207,7 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 var rowScopeSpellings = map[string]bool{
 	"ScopeClause": true, "ScopeClauseFor": true,
 	"OwnerPredicate": true, "VisiblePredicate": true,
-	"EnsureVisible": true, "EnsureVisibleLive": true, "EnsureVisibleForSubjectRights": true,
+	"EnsureVisible": true, "EnsureVisibleLive": true, "EnsureVisibleExisting": true, "EnsureVisibleForSubjectRights": true,
 	"EnsureLinkTarget": true, "EnsureAttachTarget": true,
 	"VisibleTo": true, "LinkTargetVisibleClause": true,
 	"ActivityDiscoverClause": true, "ActivityContentClause": true,

@@ -15,7 +15,9 @@ func (findRecords) Spec() mcp.ToolSpec {
 		Name: "find_records", Title: "Find records", Version: toolVersionV1,
 		Description: findRecordsCopy.render(), Instead: findRecordsCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"engine":{"description":"search: records by their own text; list: one record type by its filters, newest first; query: a typed plan of fields, operators and one join; meaning: passages whose meaning matches; identify: which existing contact or company a name, email or domain is"}}}`),
+			"engine":{"description":"search: records ranked by how well their text matches your words; list: one record type by its filters, newest first; query: a typed plan of fields, operators and one join; meaning: passages whose meaning matches; identify: which existing contact or company a name, email or domain is"},
+			"q":{"description":"list: text to match alongside any filters; search: the words to rank by, required"},
+			"record_types":{"description":"search: these types in place of record_type, omitted for contact, company, deal, lead and project; meaning: these types, omitted for all five"}}}`),
 	}
 }
 

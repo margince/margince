@@ -4,14 +4,16 @@
 package agents
 
 var findRecordsCopy = toolCopy{
-	Purpose: "Find records, choosing the engine by the question. search matches the text stored on " +
-		"contacts, companies, deals, leads, projects and partners. list pages one record type by " +
+	Purpose: "Find records, choosing the engine by the question. search ranks contacts, companies, " +
+		"deals, leads and projects by how well their text matches your words, and products, offer " +
+		"templates or activity when named. list pages one record type by " +
 		"its filters and sort, newest first, and reaches the timeline (activity), offers, " +
 		"products and deal rooms. query runs a typed plan of fields, operators and one join, for " +
 		"counts, sums and the records near a place. meaning finds passages whose meaning matches, " +
 		"in notes, emails and transcripts. identify says which existing contact or company a " +
 		"name, email or domain refers to.",
-	Limits: "search never reads a timeline; meaning does, and answers passages, not records. " +
+	Limits: "search needs words and reads a timeline only when activity is named; meaning reads " +
+		"it and answers passages, not records. " +
 		"list needs record_type, and read_workspace topic list_filters names the filters each " +
 		"type takes. query names only fields read_workspace topic query lists. identify " +
 		"answers unresolved for a record you may not see, as for one that does not exist.",

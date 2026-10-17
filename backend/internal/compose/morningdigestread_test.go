@@ -8,6 +8,7 @@ package compose
 // said the product had never run.
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 	"testing"
@@ -16,6 +17,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 func TestADayWithNoDigestIsNotAnInstallationWithNone(t *testing.T) {
@@ -50,22 +52,41 @@ func TestAnEmptyDateParameterIsRefusedRatherThanDated(t *testing.T) {
 	t.Parallel()
 	zero := openapi_types.Date{}
 
-	if err := refuseAnEmptyDate(crmcontracts.GetMorningDigestParams{Date: &zero}); err == nil {
+	if err := refuseAnUnreadableDate(crmcontracts.GetMorningDigestParams{Date: &zero}); err == nil {
 		t.Fatal("an empty date was accepted, and it names no day")
 	}
 
 	// Absent and present stay as they were.
-	if err := refuseAnEmptyDate(crmcontracts.GetMorningDigestParams{}); err != nil {
+	if err := refuseAnUnreadableDate(crmcontracts.GetMorningDigestParams{}); err != nil {
 		t.Errorf("absent date refused with %v, and omitting it asks for the latest", err)
 	}
 	if day := digestDay(crmcontracts.GetMorningDigestParams{}); day != nil {
 		t.Errorf("absent date = %v, want nil so the latest is served", day)
 	}
 	asked := openapi_types.Date{Time: time.Date(2026, 10, 9, 0, 0, 0, 0, time.UTC)}
-	if err := refuseAnEmptyDate(crmcontracts.GetMorningDigestParams{Date: &asked}); err != nil {
+	if err := refuseAnUnreadableDate(crmcontracts.GetMorningDigestParams{Date: &asked}); err != nil {
 		t.Errorf("a real date refused with %v", err)
 	}
 	if day := digestDay(crmcontracts.GetMorningDigestParams{Date: &asked}); day == nil || !day.Equal(asked.Time) {
 		t.Errorf("asked date = %v, want the day carried through", day)
+	}
+}
+
+// The digest read queries the store with the day's ISO text, which has no year 0.
+// A day outside the accepted range is refused with its field named.
+func TestADigestDayOutsideTheAcceptedRangeIsRefusedWithItsField(t *testing.T) {
+	t.Parallel()
+	for _, day := range []time.Time{
+		time.Date(0, time.January, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(0, time.December, 31, 0, 0, 0, 0, time.UTC),
+		time.Date(9999, time.December, 31, 0, 0, 0, 0, time.UTC),
+	} {
+		asked := openapi_types.Date{Time: day}
+		err := refuseAnUnreadableDate(crmcontracts.GetMorningDigestParams{Date: &asked})
+		var refusal *httperr.DetailedError
+		if !errors.As(err, &refusal) || refusal.Status != http.StatusUnprocessableEntity ||
+			len(refusal.Fields) != 1 || refusal.Fields[0].Field != "date" || refusal.Fields[0].Code != "out_of_range" {
+			t.Errorf("%s → %v, want a 422 out_of_range on date", day.Format(time.DateOnly), err)
+		}
 	}
 }

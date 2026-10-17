@@ -36,7 +36,7 @@ concurrency:
 
 jobs:
   # Resolve and VALIDATE before spending runner time on two bundles that
-  # compile PostgreSQL from source. Both checks below fail in seconds.
+  # compile PostgreSQL from source. Every check below fails in seconds.
   version:
     name: The tag is a version, on main, with a verdict
     runs-on: ubuntu-24.04-arm
@@ -88,6 +88,18 @@ jobs:
             echo "  Merge the work first, then tag the merge commit." >&2
             exit 1
           fi
+
+      - name: LICENSE carries this release's values
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # Fetched again by name so the ref holds the annotated tag object: its
+          # tagger date, in the tagger's own time zone, is the day the release
+          # was made. A checkout may store the tag as a bare commit ref instead.
+          git fetch --quiet --no-tags --force origin "refs/tags/$TAG:refs/tags/$TAG"
+          tag_date="$(git for-each-ref --format='%(taggerdate:short)' "refs/tags/$TAG")"
+          bash scripts/release-license-stamped.sh "$TAG" "$tag_date" LICENSE
 
       - name: The tagged commit has no adverse verdict
         env:

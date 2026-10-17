@@ -23,7 +23,7 @@
 // would be of the harness rather than of the product.
 //
 // The AST reads the three lists from the files that own them: the `SCREENS`
-// union in lib/router.tsx, the `SCREEN_VIEWS` dispatch in App.tsx, and
+// union in lib/router.tsx, the `SCREEN_VIEWS` dispatch in App.views.tsx, and
 // `RAIL_LESS_SCREENS` in app/nav.ts. It asserts the first two agree, so a
 // destination cannot be added and go unjudged. This is the same approach as
 // screens/mutation-variable-coverage.test.ts and
@@ -68,6 +68,8 @@ const srcRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ROUTER = join(srcRoot, "lib/router.tsx");
 const NAV = join(srcRoot, "app/nav.ts");
 const APP = join(srcRoot, "App.tsx");
+const APP_SCREENS = join(srcRoot, "App.screens.tsx");
+const APP_VIEWS = join(srcRoot, "App.views.tsx");
 
 /**
  * The screens whose surface this build does not author, so there is no root of
@@ -133,9 +135,10 @@ type Binding = { file: string; exported: string };
 const imports = new Map<string, ReadonlyMap<string, Binding>>();
 
 /**
- * Which module each name in a file comes from: static imports, `export … from`
- * re-exports, and the `lazy(routed(() => import("./x").then((m) => ({ default:
- * m.Y }))))` form every routed screen is declared with in App.tsx.
+ * Which module each name in a file comes from. The sources are static imports,
+ * `export … from` re-exports, and one lazy form. Every routed screen in
+ * App.screens.tsx is declared with that form: `lazy(routed(() =>
+ * import("./x").then((m) => ({ default: m.Y }))))`.
  */
 function bindingsOf(file: ts.SourceFile): ReadonlyMap<string, Binding> {
   const hit = imports.get(file.fileName);
@@ -300,10 +303,11 @@ function bodyOfComponent(
 }
 
 /**
- * The file that actually DECLARES a component, following as many doors as it
- * takes: App.tsx's `lazy` constant is one, and a screen file that re-exports its
- * list from a sibling (`export { LeadsScreen } from "./leads.list"`) is another.
- * Stopping at the first hop read a re-export as an unreadable component.
+ * The file that declares a component, following as many doors as it takes.
+ * App.screens.tsx's `lazy` constant is one door. A screen file that re-exports
+ * its list from a sibling (`export { LeadsScreen } from "./leads.list"`) is
+ * another. Stopping at the first hop read a re-export as an unreadable
+ * component.
  */
 function componentSource(
   file: ts.SourceFile,
@@ -649,7 +653,7 @@ function railLessNames(): string[] {
 
 /** Screen → the expression that renders it, from the dispatch that owns it. */
 function dispatch(): ReadonlyMap<string, ts.Expression> {
-  const file = sourceFileAt(APP);
+  const file = sourceFileAt(APP_VIEWS);
   const literal = declarationNamed(file, "SCREEN_VIEWS")?.initializer;
   const out = new Map<string, ts.Expression>();
   if (!literal || !ts.isObjectLiteralExpression(literal)) {
@@ -746,7 +750,7 @@ describe("page gutter", () => {
     const insetting = selfInsettingClasses();
     const railless = raillessComponents();
     expect(railless.size).toBeGreaterThan(0);
-    const app = sourceFileAt(APP);
+    const app = sourceFileAt(APP_SCREENS);
     const judged: string[] = [];
     const flush: string[] = [];
     for (const screen of screens) {

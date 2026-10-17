@@ -147,12 +147,17 @@ func scanReviewTemplate(row pgx.Row) (crmcontracts.ActivityReviewTemplate, error
 func wireQuestions(questions []ReviewQuestion) []crmcontracts.ReviewQuestion {
 	out := make([]crmcontracts.ReviewQuestion, 0, len(questions))
 	for _, q := range questions {
-		out = append(out, crmcontracts.ReviewQuestion{
+		wire := crmcontracts.ReviewQuestion{
 			Key: q.Key, Label: q.Label,
 			Type:     crmcontracts.ReviewQuestionType(q.Type),
 			Required: q.Required,
-			Options:  &q.Options,
-		})
+		}
+		// A text question has no choices, so the field is left off. A nil slice
+		// would be written as null where the contract declares an array.
+		if len(q.Options) > 0 {
+			wire.Options = &q.Options
+		}
+		out = append(out, wire)
 	}
 	return out
 }

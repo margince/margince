@@ -12,6 +12,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"testing"
 	"time"
 
@@ -123,6 +124,28 @@ func TestForecastRoutesAnswerAsTheirTools(t *testing.T) {
 		d.rest(t, "GET", "/v1/analytics/coverage", nil), d.tool(t, "data_coverage", map[string]any{}))
 	if coverage.RunID != check.RunID || len(coverage.Sources) != 2 {
 		t.Errorf("data coverage reads %+v, want the same run %s and its 2 sources", coverage, check.RunID)
+	}
+}
+
+// Before the first nightly input check, every door says no check has run yet.
+// A bare not-found reads as a check the caller may not see, which is a
+// different and false claim about the sources.
+func TestNoInputCheckYetIsSaidAlikeOnEveryDoor(t *testing.T) {
+	d := newTwoDoors(t, "no-input-check-doors", "read")
+	for _, c := range []struct{ path, tool string }{
+		{"/v1/forecast/assurance", "forecast_input_checks"},
+		{"/v1/analytics/coverage", "data_coverage"},
+	} {
+		var answer json.RawMessage
+		if status := d.e.Call(t, "GET", c.path, nil, d.bearer, &answer); status != http.StatusNotFound {
+			t.Fatalf("%s answered %d %s, want 404 before any check ran", c.path, status, answer)
+		}
+		if code := problemCode(t, answer); code != "no_input_check_yet" {
+			t.Errorf("%s refused with %q, want no_input_check_yet", c.path, code)
+		}
+		if refusal := d.toolRefused(t, c.tool, map[string]any{}); !namesCode(refusal, "no_input_check_yet") {
+			t.Errorf("%s refused with %s, not the route's no_input_check_yet", c.tool, refusal)
+		}
 	}
 }
 
