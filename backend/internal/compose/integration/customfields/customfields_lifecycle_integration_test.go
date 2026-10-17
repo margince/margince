@@ -60,6 +60,35 @@ func TestCustomFieldRename_LabelOnly_ColumnIdentityStable(t *testing.T) {
 	}
 }
 
+func TestCustomFieldRename_ToALabelAnotherFieldHolds_IsRefusedAsAConflict(t *testing.T) {
+	e := integration.Setup(t)
+	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
+	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
+
+	held, err := svc.Create(ctx, dateSpec("Renewal date"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := svc.Create(ctx, dateSpec("Signed date"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, label := range []string{"Renewal date", "  renewal DATE ", "Renewal-date"} {
+		if _, err := svc.Rename(ctx, ids.UUID(other.Id), label, nil); !errors.Is(err, apperrors.ErrConflict) {
+			t.Fatalf("renaming onto %q must answer conflict, got %v", label, err)
+		}
+	}
+	if _, err := svc.Rename(ctx, ids.UUID(held.Id), "Renewal date", nil); err != nil {
+		t.Fatalf("a field may keep the label it already holds: %v", err)
+	}
+	if n := e.WsCount(t,
+		`SELECT count(*) FROM audit_log WHERE entity_type = 'custom_field' AND entity_id = $1 AND action = 'update'`,
+		ids.UUID(other.Id)); n != 0 {
+		t.Fatalf("a refused rename must not audit, got %d", n)
+	}
+}
+
 func TestCustomFieldRetire_PreservesColumnAndValues(t *testing.T) {
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)

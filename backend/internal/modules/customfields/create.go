@@ -226,6 +226,28 @@ func refuseTakenColumn(ctx context.Context, tx pgx.Tx, object, column string) er
 	return &ColumnTakenError{Column: column}
 }
 
+// refuseTakenLabel keeps one label from naming two fields of an object. A
+// label whose slug or text another field holds reads the same in a picker, a
+// column header and a filter. Create refuses a duplicate slug, and the rename
+// does too. It takes the same advisory lock, so two concurrent renames cannot
+// both pass.
+func refuseTakenLabel(ctx context.Context, tx pgx.Tx, object string, id ids.UUID, label string) error {
+	if err := serializeSchemaChange(ctx, tx, object); err != nil {
+		return err
+	}
+	var taken bool
+	if err := tx.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM custom_field
+		  WHERE object = $1 AND id <> $2 AND (slug = $3 OR lower(btrim(label)) = lower(btrim($4))))`,
+		object, id, DeriveSlug(label), label).Scan(&taken); err != nil {
+		return fmt.Errorf("customfields: probing label namespace: %w", err)
+	}
+	if taken {
+		return fmt.Errorf("a custom field labelled %q already exists on %s: %w", label, object, apperrors.ErrConflict)
+	}
+	return nil
+}
+
 // optionsJSON renders a picklist's option set for the jsonb catalog
 // column; non-picklist fields store NULL (a nil []byte binds as SQL
 // NULL), not an empty array.

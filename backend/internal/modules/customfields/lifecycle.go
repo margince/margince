@@ -107,6 +107,9 @@ func (s *Service) Rename(ctx context.Context, id ids.UUID, label string, ifVersi
 		if ifVersion != nil && *ifVersion != f.Version {
 			return apperrors.ErrVersionSkew
 		}
+		if err := refuseTakenLabel(ctx, tx, f.Object, id, label); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx,
 			`UPDATE custom_field SET label = $1 WHERE id = $2`, label, id); err != nil {
 			return fmt.Errorf("customfields: updating label: %w", err)

@@ -211,14 +211,8 @@ func buildContactPatch(current crmcontracts.Contact, in UpdateContactInput) (*st
 	if err := storekit.ApplyClears(p, in.Clear, clearableContactColumns(current)); err != nil {
 		return nil, err
 	}
-	if in.Address != nil {
-		cur := addressColumns(current.Address)
-		p.Set("address_line1", cur.Line1, in.Address.Line1)
-		p.Set("address_line2", cur.Line2, in.Address.Line2)
-		p.Set("address_city", cur.City, in.Address.City)
-		p.Set("address_region", cur.Region, in.Address.Region)
-		p.Set("address_postal_code", cur.PostalCode, in.Address.PostalCode)
-		p.Set("address_country", cur.Country, in.Address.Country)
+	if err := setAddress(p, current.Address, in.Address); err != nil {
+		return nil, err
 	}
 	if in.Social != nil || in.Emails != nil || in.Phones != nil {
 		// The relation replacement rides the contact row's version

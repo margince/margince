@@ -42,6 +42,24 @@ func TestAPhoneAndALinkedInURLAreCheckedAndCarriedInTheStoresSpelling(t *testing
 	}
 }
 
+func TestAnAddressCountryCellIsHeldToTheStoresRule(t *testing.T) {
+	for _, object := range []string{migration.ObjectContact, migration.ObjectCompany} {
+		for _, bad := range []string{"Vietnam", "zz", "DEU", "12"} {
+			fields := map[string]string{fieldDisplayName: "Acme", fieldFullName: "Ada", fieldAddressCountry: bad}
+			_, problem := checkRow(object, fields, importCatalog{})
+			if problem == nil || problem.Target != fieldAddressCountry || problem.Value != bad || !strings.Contains(problem.Message, "ISO 3166-1") {
+				t.Errorf("%s country %q → %+v, want a problem on the country cell naming the rule", object, bad, problem)
+			}
+		}
+		for _, ok := range []string{"DE", "de", "", "  "} {
+			fields := map[string]string{fieldDisplayName: "Acme", fieldFullName: "Ada", fieldAddressCountry: ok}
+			if _, problem := checkRow(object, fields, importCatalog{}); problem != nil {
+				t.Errorf("%s country %q refused: %+v", object, ok, problem)
+			}
+		}
+	}
+}
+
 func TestACheckedPhoneComparesUnchangedAgainstTheStoredPrimary(t *testing.T) {
 	stored := []byte(`{"phones":[{"phone":"+84281234","phone_type":"mobile","is_primary":true},` +
 		`{"phone":"+49301234567","phone_type":"work","is_primary":true}],` +

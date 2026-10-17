@@ -132,6 +132,11 @@ func (s *Store) readyCompanyCreate(ctx context.Context, in *CreateCompanyInput) 
 	if err := parseCompanyDomains(in.Domains); err != nil {
 		return "", err
 	}
+	address, err := checkedAddress(in.Address)
+	if err != nil {
+		return "", err
+	}
+	in.Address = address
 	if in.LinkedInURL != nil {
 		normalized, err := NormalizeCompanyLinkedInURL(*in.LinkedInURL)
 		if err != nil {
