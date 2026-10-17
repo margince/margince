@@ -5,11 +5,11 @@ import { useMutation } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { Field, TextInput } from "../design-system/atoms";
 import { ServiceAccountKeyField } from "../design-system/serviceaccountkeyfield";
+import { VertexLocationField } from "../features/ai/vertex-location";
 import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
 import type { SetupProvider } from "./setup-providers";
-import { VertexLocationField } from "./vertex-location";
 
 // The model step's credential and where it is bound: the key (pasted, or a
 // service-account file for Vertex), the location Vertex is bound at, and the

@@ -5,11 +5,11 @@ import { EmptyState } from "../../design-system/atoms";
 import { PanelBody, PanelRow } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
-import { useProviderHealth } from "../../screens/ai-provider-health";
-import { ProviderHealthNotice } from "../../screens/ai-provider-health-notice";
-import { providerName } from "../../screens/ai-provider-names";
 import { HealthCard } from "../../screens/healthcard";
-import "../../screens/ai-settings.css";
+import { useProviderHealth } from "../ai/ai-provider-health";
+import { ProviderHealthNotice } from "../ai/ai-provider-health-notice";
+import { providerName } from "../ai/ai-provider-names";
+import "../ai/ai-settings.css";
 
 // Settings → System health: every AI provider that is not answering. The
 // Providers list shows the same entries per row; both read useProviderHealth.

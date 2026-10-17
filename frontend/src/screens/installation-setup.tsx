@@ -19,6 +19,15 @@ import { ProviderMark } from "../design-system/provider-mark";
 import { WriteRefused } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import {
+  suggestionsFor,
+  useAiModelCatalogue,
+  useVendorCatalogue,
+  type VendorCatalogue,
+  vendorSuggestions,
+} from "../features/ai/ai-models";
+import { useSetProviderKey } from "../features/ai/ai-provider-key-hooks";
+import { ModelRatePlate } from "../features/ai/ai-rates";
+import {
   useOAuthApp,
   useSetOAuthApp,
   type Vendor,
@@ -29,15 +38,6 @@ import { ImapMailboxForm } from "../features/capture/imap-connect-form";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "../lib/problem";
-import {
-  suggestionsFor,
-  useAiModelCatalogue,
-  useVendorCatalogue,
-  type VendorCatalogue,
-  vendorSuggestions,
-} from "./ai-models";
-import { useSetProviderKey } from "./ai-provider-key-hooks";
-import { ModelRatePlate } from "./ai-rates";
 import {
   usePlatformDeclined,
   useRememberPlatformDeclined,
@@ -51,6 +51,7 @@ import { Ignition, useIgnitionCore } from "./onboarding-ignition";
 // in the product from outside the censuses that keep the rest of it honest.
 import "./onboarding-first-run.css";
 import { serviceAccountProblem } from "../design-system/serviceaccountkeyfield";
+import { DEFAULT_VERTEX_LOCATION } from "../features/ai/vertex-location";
 import {
   AiKeyFields,
   choiceLabel,
@@ -61,7 +62,6 @@ import {
   SETUP_PROVIDERS,
   type SetupProviderId,
 } from "./setup-providers";
-import { DEFAULT_VERTEX_LOCATION } from "./vertex-location";
 
 /**
  * What a fresh installation must be told before it can be used: the model

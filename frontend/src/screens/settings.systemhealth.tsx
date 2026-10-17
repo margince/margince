@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useProviderHealth } from "../features/ai/ai-provider-health";
 import {
   CaptureHealthCard,
   useCaptureHealth,
@@ -16,7 +17,6 @@ import { useLocale, usePlural, useT } from "../i18n";
 import { useCan } from "../lib/capability";
 import { routeHash } from "../lib/router";
 import { useMe } from "../lib/session";
-import { useProviderHealth } from "./ai-provider-health";
 import {
   EmbedReindexCard,
   useEmbedReindexAvailable,

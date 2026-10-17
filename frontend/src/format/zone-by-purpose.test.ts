@@ -178,7 +178,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The guest deliberately selects Bangkok and the test verifies that its slot labels follow that chosen zone rather than the browser default.",
   },
   {
-    file: "screens/ai-admin.tsx",
+    file: "features/ai/ai-admin.tsx",
     why: "The allowance period resets on the server’s UTC month boundary; the card explicitly labels this operational clock UTC rather than presenting it as a record or viewer date.",
   },
   {
@@ -286,7 +286,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The zone IS the input under test: a stored timestamp is asserted to render at the RECORD's zone rather than at UTC, which needs a zone east of UTC to stand in. Read off the runner's own zone the suite would assert a different rendering on every machine.",
   },
   {
-    file: "screens/aiusage.test.tsx",
+    file: "features/ai/aiusage.test.tsx",
     why: "The reader's zone IS the input under test: the card is asserted at an instant where the reader's calendar and UTC's name different months, which needs one zone east of UTC to stand in and UTC itself to return to afterwards. A suite that read the runner's own zone would be asking a different question on every machine.",
   },
   {

@@ -7,9 +7,9 @@ import "@testing-library/jest-dom/vitest";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AiProviderKeysCard } from "../../screens/ai-provider-keys";
 import { jsonResponse, render } from "../../screens/settings.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { AiProviderKeysCard } from "../ai/ai-provider-keys";
 import { ProviderHealthCard } from "./providerhealth";
 
 // One endpoint feeds the System health card and the Providers list, so the two
