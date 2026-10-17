@@ -20,12 +20,10 @@
 1133 frontend/src/screens/companyrail.test.tsx
 1134 frontend/src/screens/record360/spine.test.tsx
 1182 frontend/src/screens/onboarding-conversation/company-act.test.tsx
-1072 frontend/src/features/analytics/analytics.test.tsx
 1030 frontend/src/screens/company-context.tsx
 1270 frontend/src/features/deals/offers.tsx
 1488 frontend/src/screens/onboarding-conversation/confirm-card.tsx
 1725 frontend/src/screens/onboarding-facts.test.tsx
-1122 frontend/src/features/analytics/analytics.tsx
 1524 frontend/src/screens/company360.tsx
 1504 frontend/src/screens/leads.tsx
 2217 frontend/src/screens/company360.test.tsx

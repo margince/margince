@@ -18,8 +18,8 @@ import { currentParams } from "../../lib/urlstate";
 // address changing the day a section grew a second result — breaking every
 // link anyone had saved to it.
 //
-// The order is the tab strip's, and `analytics.tsx` declares which reports each
-// section draws against this type, so a section cannot be addressable here and
+// The order is the tab strip's. `analytics.reports.tsx` declares each section's
+// reports against this type, so a section cannot be addressable here and
 // missing there.
 export const SECTIONS = [
   "performance",

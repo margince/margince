@@ -10,7 +10,13 @@
 // response no live server sends.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { type RenderResult, render as rtlRender } from "@testing-library/react";
+import {
+  type RenderResult,
+  render as rtlRender,
+  screen,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
@@ -293,3 +299,19 @@ export const ownLensContext = {
   timezone: "Europe/Berlin",
   base_currency: "EUR",
 };
+
+export async function openPipeline() {
+  await userEvent
+    .setup()
+    .click(await screen.findByRole("button", { name: "Pipeline" }));
+}
+
+// The stage table alone. The totals above it repeat a one-stage fixture's
+// figures, so a row's own cell is read inside its table.
+export async function stageTable() {
+  const table = (await screen.findByText("Qualify")).closest("table");
+  if (!(table instanceof HTMLElement)) {
+    throw new Error("the stage name is drawn outside a table");
+  }
+  return within(table);
+}
