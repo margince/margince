@@ -27,7 +27,7 @@ import {
   type StandingTone,
   VerdictHead,
 } from "../../screens/record360";
-import "../../screens/company360.css";
+import "../companies/company360.css";
 
 /**
  * LeadBrief is the lead's own call: the standing the ladder and the

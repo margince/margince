@@ -4,9 +4,9 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { company360 } from "../../features/companies/company.fixtures";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { company360 } from "../company.fixtures";
 import { RecordSpine } from "./spine";
 
 afterEach(() => {

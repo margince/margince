@@ -65,7 +65,7 @@ var profileVocabularyScreens = []struct {
 		why:    "the field renders as its own column name with the underscores spaced out",
 	},
 	{
-		file:   "../frontend/src/screens/companies.tsx",
+		file:   "../frontend/src/features/companies/companies.tsx",
 		opens:  "const PROFILE_FIELD_LABELS: Record<string, MessageKey> = {",
 		closes: "};",
 		why:    "the company record draws the field as its own column name",

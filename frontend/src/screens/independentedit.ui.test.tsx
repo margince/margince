@@ -12,13 +12,17 @@ import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { RecordShell } from "../app/testing/recordshell.testkit";
+import { CompanyScreen } from "../features/companies/companies";
+import {
+  company,
+  emptyPage,
+  jsonResponse,
+} from "../features/companies/company.fixtures";
+import { stubFetch } from "../features/companies/company.testkit";
 import { ContactDetails } from "../features/contacts/contactdetails";
 import { DealScreen } from "../features/deals/deals";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
-import { CompanyScreen } from "./companies";
-import { company, emptyPage, jsonResponse } from "./company.fixtures";
-import { stubFetch } from "./company.testkit";
 
 const anna: components["schemas"]["Contact"] = {
   id: "p-1",

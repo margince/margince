@@ -38,6 +38,7 @@ import {
   MailSharingPostureRow,
 } from "../features/capture/mail-sharing";
 import { OwnDomainsCard } from "../features/capture/own-domains";
+import { CompanyContextCard } from "../features/companies/company-context";
 import { OfferTemplatesAdmin } from "../features/deals/offertemplates";
 import { ProductsAdmin } from "../features/deals/products";
 import { ReviewTemplatesCard } from "../features/deals/reviewtemplates";
@@ -60,7 +61,6 @@ import { navigateReplacing, type Route } from "../lib/router";
 import { useMe } from "../lib/session";
 import { AccountSettings } from "./account-settings";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
-import { CompanyContextCard } from "./company-context";
 import { ConnectionOutcomesCard } from "./connection-outcomes";
 import { CustomFieldsAdmin } from "./customfields";
 import { FinanceSourceCard } from "./financesource";

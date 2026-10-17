@@ -75,7 +75,7 @@ Two more rules keep the read correct by the way it is built:
 ## The work in flight, and the account brief behind it
 
 The lead card of the overview is **the account's work in flight**
-(`frontend/src/screens/companywork.tsx`): one line per open deal, and one per live project. Each line
+(`frontend/src/features/companies/companywork.tsx`): one line per open deal, and one per live project. Each line
 holds at most one reason it needs a look: an overdue task, or a promise they made to us that is still
 open.
 
@@ -559,11 +559,11 @@ long run. See [composition-layer.md](composition-layer.md).
 | Logo streaming handler | `backend/internal/modules/contacts/handlers_company.go` |
 | Contract | `backend/api/crm.yaml`: `/companies/{id}/{360,graph,brief,ask,view-ack,suggestions/dismiss,scan,logo}` |
 | The ruling on who owns which table | `backend/gates/tableownership_test.go` |
-| The screen | `frontend/src/screens/companies.tsx` (`CompanyScreen`) |
+| The screen | `frontend/src/features/companies/companies.tsx` (`CompanyScreen`) |
 | The scan on the page: `ensure` on open, poll, the pending row | `frontend/src/features/capture/accountscan.tsx`, `companytoday.tsx` |
-| Data layer + cards in the right rail | `frontend/src/screens/company360.tsx`, `company360.css` |
+| Data layer + cards in the right rail | `frontend/src/features/companies/company360.tsx`, `company360.css` |
 | The connections view to compare | `frontend/src/features/contacts/coverageexplorer.tsx` on the Contacts tab, with `companygraph.ts` as its read |
-| Header actions (new deal, tag, list) | `frontend/src/screens/companyactions.tsx` |
+| Header actions (new deal, tag, list) | `frontend/src/features/companies/companyactions.tsx` |
 
 ## Where to go next
 

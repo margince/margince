@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import { jsonResponse } from "../../screens/company.fixtures";
+import { jsonResponse } from "../companies/company.fixtures";
 import { ForecastReview } from "./analytics.forecast.review";
 
 // A finding in the forecast review says WHICH deal it is about.

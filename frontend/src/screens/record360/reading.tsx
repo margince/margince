@@ -24,7 +24,7 @@ import { type Grounding, type StandingTone, VerdictHead } from "./verdict";
 // renaming them reaches four stylesheets. Imported HERE rather than left to
 // the caller, so the second page to mount the reading does not render it
 // unstyled.
-import "../company360.css";
+import "../../features/companies/company360.css";
 
 /** RecordReading is the group: the parts, in the page's own rhythm. */
 export function RecordReading({ children }: Readonly<{ children: ReactNode }>) {

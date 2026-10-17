@@ -15,15 +15,15 @@ import { routeHash } from "../../lib/router";
 // relied on from a sibling, for the same reason companyraildeals.tsx gives:
 // this file renders wherever it is mounted.
 import "../../design-system/recordcard.css";
-import "../../screens/company360.css";
-import "../../screens/companyrailprojects.css";
+import "../companies/company360.css";
+import "../companies/companyrailprojects.css";
 import { useEntityName } from "../../components/entityref";
 import { problemMessageOf } from "../../lib/problem";
-import { SectionSummary } from "../../screens/companyrailshared";
 import { useProjectRecord } from "../../screens/projectrecord";
 import { PhaseBadge } from "../../screens/projects";
 import type { Project } from "../../screens/projects.form";
 import { searchProjectReferences } from "../../screens/recordreferences";
+import { SectionSummary } from "../companies/companyrailshared";
 import { TagsPanel } from "../lists/tagspanel";
 import { LeadFillFromContact } from "./leadfillfromcontact";
 import type { LeadWriter } from "./leads";

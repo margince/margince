@@ -130,7 +130,7 @@ export const OfferScreen = lazy(
 
 export const CompaniesScreen = lazy(
   routed(() =>
-    import("./screens/companies").then((m) => ({
+    import("./features/companies/companies").then((m) => ({
       default: m.CompaniesScreen,
     })),
   ),
@@ -138,7 +138,7 @@ export const CompaniesScreen = lazy(
 
 export const CompanyScreen = lazy(
   routed(() =>
-    import("./screens/companies").then((m) => ({
+    import("./features/companies/companies").then((m) => ({
       default: m.CompanyScreen,
     })),
   ),

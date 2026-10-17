@@ -15,17 +15,17 @@
 # Format: <frozen-line-count> <path>
 969 frontend/src/screens/webhooks.tsx
 1086 frontend/src/screens/onboarding-conversation/connect-act.test.tsx
-1133 frontend/src/screens/companyrail.test.tsx
+1133 frontend/src/features/companies/companyrail.test.tsx
 1134 frontend/src/screens/record360/spine.test.tsx
 1182 frontend/src/screens/onboarding-conversation/company-act.test.tsx
-1030 frontend/src/screens/company-context.tsx
+1035 frontend/src/features/companies/company-context.tsx
 1488 frontend/src/screens/onboarding-conversation/confirm-card.tsx
 1725 frontend/src/screens/onboarding-facts.test.tsx
-1524 frontend/src/screens/company360.tsx
+1524 frontend/src/features/companies/company360.tsx
 1511 frontend/src/features/leads/leads.tsx
-2217 frontend/src/screens/company360.test.tsx
-2228 frontend/src/screens/companies.test.tsx
-2081 frontend/src/screens/companies.tsx
+2217 frontend/src/features/companies/company360.test.tsx
+2228 frontend/src/features/companies/companies.test.tsx
+2084 frontend/src/features/companies/companies.tsx
 644 frontend/src/screens/settings.tsx
 2727 frontend/src/features/leads/leads.test.tsx
 509 frontend/src/screens/documentextraction.tsx
@@ -39,9 +39,9 @@
 615 frontend/src/screens/partners.tsx
 655 frontend/src/screens/record360/citations.tsx
 530 frontend/src/screens/contractform.tsx
-731 frontend/src/screens/companytoday.tsx
+731 frontend/src/features/companies/companytoday.tsx
 774 frontend/src/screens/onboarding-conversation/connect-scene.tsx
-775 frontend/src/screens/companycontacts/summary.tsx
+775 frontend/src/features/companies/companycontacts/summary.tsx
 519 frontend/src/screens/voice-dna.tsx
 773 frontend/src/screens/record360/spine.tsx
 541 frontend/src/screens/relationships.tsx

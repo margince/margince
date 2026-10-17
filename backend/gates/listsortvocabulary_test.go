@@ -58,7 +58,7 @@ var listSurfaces = map[string]struct{ vocabulary, source string }{
 	"features/deals/deals.list.tsx":     {"dealListFields", "internal/modules/deals/deal_read.go"},
 	"features/contacts/contacts.tsx":    {"contactListFields", "internal/modules/contacts/contact_list.go"},
 	"features/leads/leads.list.tsx":     {"leadListFields", "internal/modules/contacts/lead_list.go"},
-	"screens/companies.tsx":             {"companyListFields", "internal/modules/contacts/company_list.go"},
+	"features/companies/companies.tsx":  {"companyListFields", "internal/modules/contacts/company_list.go"},
 	"screens/projects.tsx":              {"projectListFields", "internal/modules/projects/read.go"},
 	"features/deals/products.tsx":       {"productListFields", "internal/modules/deals/product.go"},
 	"features/deals/offertemplates.tsx": {"offerTemplateListFields", "internal/modules/deals/offer_template.go"},

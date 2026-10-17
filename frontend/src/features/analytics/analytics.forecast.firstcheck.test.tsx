@@ -8,7 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { LocaleProvider } from "../../i18n";
-import { jsonResponse } from "../../screens/company.fixtures";
+import { jsonResponse } from "../companies/company.fixtures";
 import { ForecastReview } from "./analytics.forecast.review";
 
 // The check a workspace has not had yet.

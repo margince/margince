@@ -4,11 +4,11 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createQueryClient } from "../app/queryclient";
+import { useCompany360 } from "../features/companies/company360";
 import { useContact360 } from "../features/contacts/contact360";
 import { useDeal } from "../features/deals/deals";
 import { useDealStatusCard } from "../features/deals/dealstatus";
 import { useOutcomeReviews } from "../features/deals/outcomereview.queries";
-import { useCompany360 } from "./company360";
 import { useProject360 } from "./project360";
 
 // A RECORD RE-READS ITSELF WHILE SOMEBODY IS LOOKING AT IT (FE-PARAM-5).

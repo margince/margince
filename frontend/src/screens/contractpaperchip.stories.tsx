@@ -12,7 +12,7 @@ import { ContractPaper } from "./contractpaperchip";
 // The row's own chrome (.rec-files and its label/items rows) is defined in
 // company360.css, which reaches this component by class from the screen that
 // hosts it — so a story mounting the chips alone has to load it.
-import "./company360.css";
+import "../features/companies/company360.css";
 
 // The signed paper on one agreement's row: the chips it reached, and — when
 // the documents endpoint said there was more — the sentence saying so.

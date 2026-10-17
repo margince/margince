@@ -32,7 +32,10 @@ const namespaces = [
   { prefix: "auth-", home: "features/sign-in/auth.css" },
   { prefix: "book-", home: "features/booking/book.css" },
   { prefix: "clientsurface-", home: "screens/client.css" },
-  { prefix: "companydeepread-", home: "screens/companydeepread.css" },
+  {
+    prefix: "companydeepread-",
+    home: "features/companies/companydeepread.css",
+  },
   { prefix: "corrections-", home: "features/contacts/contactcorrections.css" },
   { prefix: "create-", home: "components/create.css" },
   {

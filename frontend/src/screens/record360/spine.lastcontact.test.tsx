@@ -3,8 +3,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { components } from "../../api/schema";
+import { company360 } from "../../features/companies/company.fixtures";
 import { LocaleProvider } from "../../i18n";
-import { company360 } from "../company.fixtures";
 import { RecordSpine, type SpineSource } from "./spine";
 import { timelineSpineSource } from "./timelinespine";
 

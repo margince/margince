@@ -154,7 +154,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The booking API fixture supplies the host’s effective working-hours timezone independently of the viewer’s zone, so the form can show the actual calendar policy.",
   },
   {
-    file: "screens/companyhealthreason.test.tsx",
+    file: "features/companies/companyhealthreason.test.tsx",
     why: "Asserts that a booked meeting's day is named in the record's zone; the day boundary is only checkable against zones the test chose.",
   },
   {
@@ -166,7 +166,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The week grid's empty working days depend on the host's zone against the reader's, so the test pins both to make them disagree.",
   },
   {
-    file: "screens/companies.thread.test.tsx",
+    file: "features/companies/companies.thread.test.tsx",
     why: "The account page's email drawer must date a message in the record zone, so the test pins one fourteen hours off UTC that a drawer dated in the viewer's zone cannot match.",
   },
   {
@@ -386,11 +386,11 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Pins an audit line to the company's clock by reading it from a zone whose calendar day is already the next one — a claim that needs both the zone pretended in and the day compared against.",
   },
   {
-    file: "screens/company-context.test.tsx",
+    file: "features/companies/company-context.test.tsx",
     why: "The signed-in `me` fixture carries the reader's own `timezone` — a settings value arriving on the wire, not a zone this screen picks.",
   },
   {
-    file: "screens/companytasks.test.tsx",
+    file: "features/companies/companytasks.test.tsx",
     why: "Proves a task's deadline reads the same day on the row and in the detail modal, which only says anything from a zone where the record's clock has already turned over.",
   },
   {

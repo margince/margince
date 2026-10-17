@@ -11,13 +11,13 @@ import {
   useSoleProjectDefault,
 } from "../../design-system/projectpicker";
 import { unwrap } from "../../lib/problem";
-import { useCompany360 } from "../../screens/company360";
 import {
   stripSubjectTag,
   subjectTag,
   useProjectRecord,
   withSubjectTag,
 } from "../../screens/projectrecord";
+import { useCompany360 } from "../companies/company360";
 import { useContact360 } from "../contacts/contact360";
 import { useThreadProject } from "./composeanchor";
 import { recipientSuggestions } from "./composehead";

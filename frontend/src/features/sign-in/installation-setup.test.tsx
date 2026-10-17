@@ -13,8 +13,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption, pickSuggestion } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
-import { jsonResponse } from "../../screens/company.fixtures";
 import { meFixture } from "../../testing/mefixture";
+import { jsonResponse } from "../companies/company.fixtures";
 import { InstallationSetup, outstandingStep } from "./installation-setup";
 import { forgetPlatformDeclines } from "./installation-setup.decline";
 
