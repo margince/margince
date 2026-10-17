@@ -35,6 +35,8 @@ type Pipeline = components["schemas"]["Pipeline"];
 // rather than asked for as a technical trigger; a rep who qualifies a lead
 // nobody has heard from is recorded as the human who decided it.
 
+// The server's preview of a promotion, read without writing. An absent contact
+// on a `merge` means the match is outside the reader's row scope, not "no match".
 function usePromotePreview(id: string, open: boolean) {
   const t = useT();
   return useQuery({

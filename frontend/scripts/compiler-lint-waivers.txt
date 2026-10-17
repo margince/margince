@@ -88,7 +88,8 @@
 1 react-hooks/refs src/screens/knowledge.documents.tsx
 1 react-hooks/set-state-in-effect src/features/leads/leadfillfromcontact.tsx
 1 react-hooks/set-state-in-effect src/features/leads/leadraillinks.tsx
-2 react-hooks/set-state-in-effect src/features/leads/leads.tsx
+1 react-hooks/set-state-in-effect src/features/leads/leads.actions.tsx
+1 react-hooks/set-state-in-effect src/features/leads/leads.score.tsx
 1 react-hooks/refs src/features/leads/leadvocab.reasons.tsx
 1 react-hooks/refs src/features/leads/leadvocab.sources.tsx
 3 react-hooks/refs src/features/lists/listlibrary.tsx

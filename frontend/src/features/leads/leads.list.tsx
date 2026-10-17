@@ -1,6 +1,7 @@
 // The leads list: the queue a rep works from, as a table or a board. The
 // page a row opens lives in leads.tsx; the presentation both share sits in
 // leadpresentation.tsx.
+
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -21,8 +22,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { useOwnToast } from "../../design-system/toast";
 import { leadIdentityName } from "../../format/leadname";
 import { useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { ProblemError, unwrap } from "../../lib/problem";
+import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
@@ -45,11 +45,30 @@ import {
   useLeadSources,
 } from "./leadsources";
 import "./leads.css";
+import { createLead, UNASSIGNED_OWNER } from "./leads.list.queries";
 
-type Lead = components["schemas"]["Lead"];
-type CreateLeadRequest = components["schemas"]["CreateLeadRequest"];
+export { mapLeadBody, UNASSIGNED_OWNER } from "./leads.list.queries";
 
-async function fetchLeadsPage(
+export type Lead = components["schemas"]["Lead"];
+
+const leadStatusFilterOptions = LEAD_STATUS_FILTER_OPTIONS;
+
+// The score bands a reader triages by. `min_score` is a floor, so each band
+// names the bottom of a range, not a bucket. "60+" and "80+" overlap, because
+// that is what the parameter means.
+const LEAD_SCORE_BANDS = [
+  { value: "80", label: "lead.filterScoreHot" },
+  { value: "60", label: "lead.filterScoreWarm" },
+  { value: "40", label: "lead.filterScoreCool" },
+] as const;
+
+const LEAD_SLA_STATES = [
+  { value: "breached", label: "lead.sla.breached" },
+  { value: "at_risk", label: "lead.sla.atRisk" },
+  { value: "within_target", label: "lead.sla.withinTarget" },
+] as const;
+
+export async function fetchLeadsPage(
   query: ListQuery,
   cursor: string | null,
 ): Promise<ListPage<Lead>> {
@@ -75,90 +94,6 @@ async function fetchLeadsPage(
       total: data.page.total,
     },
   };
-}
-
-// Builds the create-lead request body: scalar fields trim to undefined when
-// blank (never sent rather than sent empty). Lead email is a single string —
-// not a repeatable list — so no rows channel is used here.
-export function mapLeadBody(values: Record<string, string>): CreateLeadRequest {
-  return {
-    full_name: values.full_name?.trim() || undefined,
-    email: values.email?.trim() || undefined,
-    linkedin_url: values.linkedin_url?.trim() || undefined,
-    title: values.title?.trim() || undefined,
-    company_name: values.company_name?.trim() || undefined,
-    contact_id: values.contact_id || undefined,
-    owner_id:
-      values.owner_id === UNASSIGNED_OWNER
-        ? undefined
-        : values.owner_id?.trim() || undefined,
-    status: "new",
-    source: values.source?.trim() || "manual",
-  };
-}
-
-// The owner picker's "nobody yet" choice. A sentinel rather than the empty
-// string because the field is required — the writer chooses the queue, they
-// do not skip the question. The server reads an omitted owner_id as exactly
-// that: an unassigned lead for routing or a claim to pick up.
-export const UNASSIGNED_OWNER = "unassigned";
-
-const leadStatusFilterOptions = LEAD_STATUS_FILTER_OPTIONS;
-
-// The score bands a reader triages by. `min_score` is a floor, so each band
-// names the bottom of a range rather than a bucket — "60+" and "80+" overlap
-// on purpose, because that is what the parameter means.
-const LEAD_SCORE_BANDS = [
-  { value: "80", label: "lead.filterScoreHot" },
-  { value: "60", label: "lead.filterScoreWarm" },
-  { value: "40", label: "lead.filterScoreCool" },
-] as const;
-
-const LEAD_SLA_STATES = [
-  { value: "breached", label: "lead.sla.breached" },
-  { value: "at_risk", label: "lead.sla.atRisk" },
-  { value: "within_target", label: "lead.sla.withinTarget" },
-] as const;
-
-async function createLead(
-  values: Record<string, string>,
-  customFields: Record<string, unknown>,
-  t: (key: MessageKey) => string,
-): Promise<Lead> {
-  const body = mapLeadBody(values);
-  const probes = [body.email, body.linkedin_url].filter(
-    (value): value is string => Boolean(value),
-  );
-  for (const probe of probes) {
-    const matches = unwrap(
-      await api.GET("/leads", {
-        params: { query: { q: probe, limit: 10 } },
-      }),
-      t,
-    );
-    const normalized = probe.toLowerCase().replace(/\/$/, "");
-    const existing = matches.data.find(
-      (lead) =>
-        lead.email?.toLowerCase() === normalized ||
-        lead.linkedin_url?.toLowerCase().replace(/\/$/, "") === normalized,
-    );
-    if (existing) {
-      throw new ProblemError(
-        {
-          code: "duplicate_lead",
-          detail: t("lead.duplicateFound"),
-          details: { existing_id: existing.id },
-        },
-        t,
-      );
-    }
-  }
-  return unwrap(
-    await api.POST("/leads", {
-      body: { ...body, ...customFields },
-    }),
-    t,
-  );
 }
 
 export function LeadsScreen() {
@@ -205,6 +140,7 @@ export function LeadsScreen() {
 // The queue's own dial: board or table. Not a wire parameter, because /leads
 // takes neither — it decides how the same rows are drawn.
 const LEAD_VIEW_PARAM = "view";
+
 const LEAD_SCREEN_DIALS: readonly string[] = [LEAD_VIEW_PARAM];
 
 function LeadsWorkbench({
