@@ -31,7 +31,7 @@ const isOn = (value: unknown) => value === "1" || value === "true";
  *
  * What it does not do: it does not touch the wire or the query cache, and it
  * does not disable a real provider. `startFederatedSignIn` in
- * features/sign-in/auth.tsx stays inert only when `previewedOidcProviders`
+ * features/sign-in/auth-providers.tsx stays inert only when `previewedOidcProviders`
  * invented the button a click came from. An installation that serves OIDC
  * providers keeps working buttons even under this switch. Only the synthesized
  * case has nowhere real to go. Its full-page navigation would reach an endpoint

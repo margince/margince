@@ -3,36 +3,13 @@ import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useUnsavedGuard } from "../../components/unsaved";
-import {
-  Button,
-  Field,
-  type FieldControl,
-  Modal,
-  SectionHeader,
-  TextInput,
-} from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
+import { Button, type FieldControl } from "../../design-system/atoms";
 import { describedByIds } from "../../design-system/describedby";
-import {
-  DrawerBody,
-  DrawerFoot,
-  DrawerHead,
-} from "../../design-system/drawerbands";
-import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { Select } from "../../design-system/select";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
-import { fiscalYearLabel } from "../../format/fiscalyear";
-import { identifierNumber, monthName } from "../../format/format";
-import {
-  LOCALES,
-  type Locale,
-  localeNameKey,
-  useLocale,
-  useT,
-} from "../../i18n";
+import { LOCALES, localeNameKey, useLocale, useT } from "../../i18n";
 import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "../../lib/aicaches";
 import { useCanWrite } from "../../lib/capability";
 import {
@@ -47,19 +24,27 @@ import {
   INSTALLATION_SETTINGS_KEY,
   useInstallationSettings,
 } from "../../lib/uploadlimit";
-import {
-  RegionalSettingsFields,
-  RegionalSettingsRows,
-} from "./installation-settings.regional";
-
 // Installation facts are readable by every role; only admin/ops may change them.
 // Each row opens the shared sparse-patch form with its own field focused.
 // A frozen base currency remains visible with the server's reason in both views.
+import {
+  currencyNote,
+  fiscalYearStartSummary,
+  InstallationProfileDialog,
+} from "./installation-settings.profile";
+import { RegionalSettingsRows } from "./installation-settings.regional";
+
+export {
+  currencyNote,
+  fiscalYearStartSummary,
+} from "./installation-settings.profile";
 
 // Both shapes come from the generated contract rather than being restated
 // here: a hand-written copy would drift the first time the contract gains a
 // field, and drift silently, since nothing compares the two.
-type InstallationSettings = components["schemas"]["InstallationSettings"];
+export type InstallationSettings =
+  components["schemas"]["InstallationSettings"];
+
 type Patch = components["schemas"]["UpdateInstallationSettingsRequest"];
 
 // The facts this form writes, in the order the rows show them. ONE list: the
@@ -79,7 +64,7 @@ const EDITABLE_FACTS = [
 // Which fact the reader pressed Edit on. The dialog always edits all of them —
 // one record, one sparse PATCH, one Save — so this decides nothing about what
 // is written, only where focus lands when the dialog opens.
-type EditedFact = (typeof EDITABLE_FACTS)[number];
+export type EditedFact = (typeof EDITABLE_FACTS)[number];
 
 // Exported for the onboarding's preferences act, which writes the same sparse
 // patch from the same fields: a second mutation would be a second answer to
@@ -158,69 +143,6 @@ export function InstallationSettingsCard() {
 function languageName(code: string, t: ReturnType<typeof useT>): string {
   const known = LOCALES.find((locale) => locale === code);
   return known ? t(localeNameKey(known)) : code;
-}
-
-// The fiscal-year row's own answer: the month it starts, and what a report will
-// then be labelled. "April — FY2026/27" rather than "4", because the number
-// answers a question nobody asked; the admin is deciding what their reports
-// will SAY, and this is the only place they see it before saving.
-//
-// The example year is a PARAMETER rather than `new Date()` read in here. The
-// caller holds the clock, so a test can state which year it is asserting
-// against — and the daily fe-clock-drift lane, which runs this suite 200 days
-// ahead, does not turn a correct string into a failure every new year.
-//
-// A month outside 1..12 renders as itself. Reachable the same way a stray
-// language code is: the contract and the setting both refuse it, but a row
-// written straight into the settings table can hold anything, and a row showing
-// the raw value is honest where a blank one is not.
-// The twelve months a fiscal year may start in, as the picker offers them.
-// Derived rather than typed out, so the list cannot go short of twelve.
-const MONTHS = Array.from({ length: 12 }, (_, index) => index + 1);
-
-// Which remaining deals a projected landing is built from, in the order the
-// server offers them: strictest first, then the two that soften it.
-//
-// Typed as the schema's own union with `satisfies`, so a measure added to the
-// contract and not to this list is a typecheck failure rather than an option
-// that silently stops being offered.
-type ForwardMeasure = NonNullable<
-  components["schemas"]["InstallationSettings"]["forecast_forward_measure"]
->;
-
-const FORWARD_MEASURES = [
-  "commit_evidence",
-  "weighted",
-  "manager_call",
-] as const satisfies readonly ForwardMeasure[];
-
-export function fiscalYearStartSummary(
-  month: number,
-  locale: Locale,
-  exampleYear: number,
-): string {
-  if (!Number.isInteger(month) || month < 1 || month > 12) {
-    return String(month);
-  }
-  return `${monthName(month, locale)} — ${fiscalYearLabel(month, exampleYear)}`;
-}
-
-// A frozen currency is frozen for an admin too, so the lock reason replaces the
-// advice about what to type — that advice is about a value nobody can set. The
-// row and the field inside the dialog say the same thing, from one expression,
-// because two copies of this rule would answer differently the day the server
-// stops sending a reason.
-export function currencyNote(
-  settings: InstallationSettings,
-  t: ReturnType<typeof useT>,
-): string {
-  if (!settings.base_currency_locked) {
-    return t("installationSettings.baseCurrencyHint");
-  }
-  return (
-    settings.base_currency_locked_reason ??
-    t("installationSettings.baseCurrencyLocked")
-  );
 }
 
 function InstallationSettingsForm({
@@ -414,265 +336,6 @@ function InstallationSettingsForm({
         />
       )}
     </Panel>
-  );
-}
-
-// The one form the three rows lead to: ONE dialog, ONE submit — the patch
-// already sends only the fields that changed, which is what keeps a save from
-// touching a frozen currency nobody edited. A field per row's Edit would
-// promise three independent writes the server does not offer.
-function InstallationProfileDialog({
-  settings,
-  draft,
-  focus,
-  canManage,
-  dirty,
-  pending,
-  refused,
-  blanketError,
-  describe,
-  onChange,
-  onClose,
-  onSubmit,
-}: Readonly<{
-  settings: InstallationSettings;
-  draft: InstallationSettings;
-  /** Which field the reader pressed Edit on, and so where focus lands. */
-  focus: EditedFact;
-  canManage: boolean;
-  dirty: boolean;
-  pending: boolean;
-  refused: Map<string, string>;
-  blanketError: string | null;
-  describe: (control: FieldControl) => string | undefined;
-  onChange: (next: InstallationSettings) => void;
-  onClose: () => void;
-  onSubmit: () => void;
-}>) {
-  const t = useT();
-  const refusalTitle = t("installationSettings.saveFailed");
-  const { locale } = useLocale();
-  const titleId = useId();
-  const formId = useId();
-  // Focus lands on the field whose Edit was pressed. Not `autoFocus`: the a11y
-  // lint refuses it.
-  const asked = useRef<HTMLInputElement>(null);
-  // A `Select` takes no ref, so its trigger is found by the `data-fact` it
-  // edits: a query for the role alone returns whichever combobox renders first.
-  const form = useRef<HTMLFormElement>(null);
-  useEffect(() => {
-    const picker = form.current?.querySelector<HTMLElement>(
-      `[data-fact="${focus}"] [role="combobox"]`,
-    );
-    if (picker) {
-      picker.focus();
-      return;
-    }
-    asked.current?.focus();
-  }, [focus]);
-  return (
-    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
-      <DrawerHead>
-        <Heading size="large" id={titleId} className="t-h2">
-          {t("installationSettings.companyTitle")}
-        </Heading>
-      </DrawerHead>
-      <DrawerBody>
-        <form
-          id={formId}
-          ref={form}
-          className="form-stack"
-          onSubmit={(event) => {
-            event.preventDefault();
-            onSubmit();
-          }}
-        >
-          <Field
-            label={t("installationSettings.timezone")}
-            hint={t("installationSettings.timezoneHint")}
-            error={refused.get("timezone")}
-          >
-            {(control) => (
-              <TextInput
-                {...control}
-                aria-describedby={describe(control)}
-                ref={focus === "timezone" ? asked : undefined}
-                value={draft.timezone}
-                disabled={!canManage}
-                onChange={(event) =>
-                  onChange({ ...draft, timezone: event.target.value })
-                }
-              />
-            )}
-          </Field>
-
-          {/* A section INSIDE the dialog's own heading: the currency rule needs
-              the room to be explained, and level 3 is what keeps that from
-              minting a second heading at the dialog's own rank. */}
-          <SectionHeader
-            level={3}
-            title={t("installationSettings.currencyTitle")}
-          />
-          <Field
-            label={t("installationSettings.baseCurrency")}
-            hint={currencyNote(settings, t)}
-            error={refused.get("base_currency")}
-          >
-            {(control) => (
-              <TextInput
-                {...control}
-                aria-describedby={describe(control)}
-                ref={focus === "base_currency" ? asked : undefined}
-                value={draft.base_currency}
-                disabled={!canManage || settings.base_currency_locked}
-                onChange={(event) =>
-                  onChange({ ...draft, base_currency: event.target.value })
-                }
-              />
-            )}
-          </Field>
-
-          <RegionalSettingsFields
-            draft={draft}
-            canManage={canManage}
-            refused={refused}
-            onChange={onChange}
-          />
-          <div data-fact="base_language">
-            <Field
-              label={t("installationSettings.baseLanguage")}
-              hint={t("installationSettings.baseLanguageHint")}
-              error={refused.get("base_language")}
-            >
-              {(control) => (
-                <Select
-                  {...control}
-                  // `control.id` is spread through UNCHANGED: `Field` renders its
-                  // label with `htmlFor` pointing at it, so replacing it would
-                  // leave the combobox with no accessible name. The focus effect
-                  // reads that same id back out of the DOM.
-                  aria-describedby={describe(control)}
-                  value={draft.base_language}
-                  disabled={!canManage}
-                  // Language names are proper nouns and deliberately untranslated,
-                  // so every option is in a different language from the page around
-                  // it — `lang` is WCAG 2.2 AA 3.1.2, and our locale codes are the
-                  // BCP 47 subtags it wants.
-                  options={LOCALES.map((locale) => ({
-                    value: locale,
-                    label: t(localeNameKey(locale)),
-                    lang: locale,
-                  }))}
-                  // `Select` reports a string; narrowing it back through LOCALES is
-                  // what makes it a locale without an assertion, and drops an
-                  // answer the control was never offering.
-                  onChange={(next) => {
-                    const picked = LOCALES.find((locale) => locale === next);
-                    if (picked) {
-                      onChange({ ...draft, base_language: picked });
-                    }
-                  }}
-                />
-              )}
-            </Field>
-          </div>
-
-          <div data-fact="fiscal_year_start_month">
-            <Field
-              label={t("installationSettings.fiscalYearStart")}
-              hint={t("installationSettings.fiscalYearStartHint")}
-              error={refused.get("fiscal_year_start_month")}
-            >
-              {(control) => (
-                <Select
-                  {...control}
-                  aria-describedby={describe(control)}
-                  value={identifierNumber(draft.fiscal_year_start_month)}
-                  disabled={!canManage}
-                  // Twelve months, each labelled with what a report would then be
-                  // called — "April — FY2026/27". A bare number would make the
-                  // admin work out the consequence of every option; this states it.
-                  options={MONTHS.map((month) => ({
-                    value: identifierNumber(month),
-                    label: fiscalYearStartSummary(
-                      month,
-                      locale,
-                      new Date().getFullYear(),
-                    ),
-                  }))}
-                  // `Select` reports a string. Narrowed back through MONTHS rather
-                  // than parsed, so an answer the control never offered cannot
-                  // reach the draft.
-                  onChange={(next) => {
-                    const picked = MONTHS.find(
-                      (month) => String(month) === next,
-                    );
-                    if (picked) {
-                      onChange({ ...draft, fiscal_year_start_month: picked });
-                    }
-                  }}
-                />
-              )}
-            </Field>
-          </div>
-
-          <div data-fact="forecast_forward_measure">
-            <Field
-              label={t("installationSettings.forwardMeasure")}
-              hint={t("installationSettings.forwardMeasureHint")}
-              error={refused.get("forecast_forward_measure")}
-            >
-              {(control) => (
-                <Select
-                  {...control}
-                  aria-describedby={describe(control)}
-                  value={draft.forecast_forward_measure}
-                  disabled={!canManage}
-                  options={FORWARD_MEASURES.map((measure) => ({
-                    value: measure,
-                    label: t(`installationSettings.forwardMeasure.${measure}`),
-                  }))}
-                  // Narrowed back through the offered set rather than cast, so a
-                  // value this build does not know cannot reach the draft and be
-                  // saved as a measure the server would then refuse on every read.
-                  onChange={(next) => {
-                    const picked = FORWARD_MEASURES.find(
-                      (measure) => measure === next,
-                    );
-                    if (picked) {
-                      onChange({ ...draft, forecast_forward_measure: picked });
-                    }
-                  }}
-                />
-              )}
-            </Field>
-          </div>
-
-          {/* Only what no field claimed: a refusal on the input AND again below
-              states one problem twice, and the second is what nobody reads. */}
-          {blanketError !== null ? (
-            <Callout tone="danger" kind="outcome" title={refusalTitle}>
-              {blanketError}
-            </Callout>
-          ) : null}
-        </form>
-      </DrawerBody>
-      <DrawerFoot className="actions">
-        <Button variant="ghost" type="button" onClick={onClose}>
-          {t("create.cancel")}
-        </Button>
-        <Button
-          type="submit"
-          form={formId}
-          variant="primary"
-          disabled={!pending && (!canManage || !dirty)}
-          pending={pending}
-          busyLabel={t("common.saving")}
-        >
-          {t("installationSettings.save")}
-        </Button>
-      </DrawerFoot>
-    </Modal>
   );
 }
 

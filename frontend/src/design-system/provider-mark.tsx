@@ -21,7 +21,7 @@ import "./provider-mark.css";
  * The mark is chosen from the provider's `key`, which is the ONLY part of a
  * provider this frontend decides. The button's label is the installation's own
  * string, served by `/auth/capabilities` — see `ProviderButtons` in
- * `features/sign-in/auth.tsx`.
+ * `features/sign-in/auth-providers.tsx`.
  */
 
 /**
