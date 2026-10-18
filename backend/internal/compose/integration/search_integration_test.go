@@ -566,6 +566,35 @@ func TestSearchFindsTheCatalogByNameAndSku(t *testing.T) {
 	}
 }
 
+// A lead found by its company's name shows that company beside the person.
+// Without it the reader meets a name with no reason it answered the search.
+func TestALeadHitShowsTheCompanyItNames(t *testing.T) {
+	e := SetupSearch(t)
+	person := e.SeedID(t, `INSERT INTO lead (id, full_name, company_name, email, source, captured_by)
+	                       VALUES ($1, 'Jonas Becker', 'Lübeck Shipyards', 'jonas@shipyards.test', 'manual', 'human:x')`)
+	companyOnly := e.SeedID(t, `INSERT INTO lead (id, company_name, email, source, captured_by)
+	                            VALUES ($1, 'Lübeck Ferries', 'info@ferries.test', 'manual', 'human:x')`)
+
+	page, err := e.Store.Search(e.Admin(), search.Input{Query: "lübeck", Types: []string{"lead"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	snippets := map[ids.UUID]string{}
+	for _, hit := range page.Hits {
+		snippets[hit.ID] = hit.Snippet
+	}
+	if len(snippets) != 2 {
+		t.Fatalf("searching the company name → %+v, want both leads", page.Hits)
+	}
+	if got := snippets[person]; got != "Lübeck Shipyards" {
+		t.Errorf("the named lead's excerpt is %q, want the company it was found by", got)
+	}
+	// Titled by the company already; the excerpt would only repeat the title.
+	if got := snippets[companyOnly]; got != "" {
+		t.Errorf("the company-only lead's excerpt is %q, want none", got)
+	}
+}
+
 // A discontinued product is still findable. It stands on last quarter's offers,
 // and a rep looking one up is usually holding one of them — so `active` is not
 // a discovery narrowing, while archived_at (which every branch carries) is.
