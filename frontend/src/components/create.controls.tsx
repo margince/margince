@@ -28,10 +28,10 @@ import {
   splitMultiselectValue,
 } from "./create.multiselect";
 
-// The control half of a field row; the wrapping `Field` owns the label, id and
+// The control half of a field row. The wrapping `Field` owns the label, id and
 // described-by seam, so the wiring arrives whole as `control`. The picked
-// candidate is held here because a searched record is usually on no page the
-// form loaded, so `options` alone would name it by its id.
+// candidate is held here: a searched record is usually on no page the form
+// loaded, so `options` alone would name it by its id.
 function ReferenceControl({
   field,
   searchTargets,
@@ -48,8 +48,8 @@ function ReferenceControl({
   t: (key: MessageKey) => string;
 }>) {
   const [picked, setPicked] = useState<RecordPickerCandidate | null>(null);
-  // Forgotten once the value moves off it, so a reset that later lands on the
-  // same id is named by the current options, not by a stale pick.
+  // Forgotten once the value moves off it. A reset that later lands on the
+  // same id is then named by the current options, not by a stale pick.
   if (picked && picked.id !== value) {
     setPicked(null);
   }
