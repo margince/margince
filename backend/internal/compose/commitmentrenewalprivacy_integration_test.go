@@ -50,7 +50,7 @@ func TestErasingEitherCitationWithdrawsTheRenewedProposal(t *testing.T) {
 			if got := f.e.WsCount(t, `SELECT count(*) FROM activity WHERE id=$1 AND body IS NULL`, f.messages[message]); got != 1 {
 				t.Fatal("the selected source was not erased")
 			}
-			if got := f.e.WsCount(t, `SELECT count(*) FROM approval WHERE id=$1 AND status='expired' AND proposed_change='{}'::jsonb`, f.work); got != 1 {
+			if got := f.e.WsCount(t, `SELECT count(*) FROM approval WHERE id=$1 AND status='expired' AND proposed_change='{}'::jsonb AND evidence IS NULL`, f.work); got != 1 {
 				t.Fatal("the proposal retained content from an erased citation")
 			}
 		})
@@ -242,6 +242,22 @@ func TestHeldDerivedWorkSurvivesErasureWithoutReleasingItsContent(t *testing.T) 
 		}
 	}
 	assertHeldRenewalRefused(t, f, before)
+	originalSubject := f.e.SeedContact(t, "Original evidence author", &f.e.Rep1)
+	integration.LinkActivity(t, integration.OwnerConn(t), f.messages[0], "contact", originalSubject)
+	redactions := f.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id=$1 AND after ? 'commitment_admission_redacted'`, f.messages[0])
+	audits := f.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id=$1`, f.work)
+	if err := privacy.NewEraser(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).EraseContact(f.e.Admin(), originalSubject, "Subject requested erasure"); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id=$1`, f.work); got != audits {
+		t.Fatal("erasing the other citation repeated the held task's withdrawal audit")
+	}
+	if got := f.e.WsCount(t, `SELECT count(*) FROM activity WHERE id=$1 AND body IS NULL`, f.messages[0]); got != 1 {
+		t.Fatal("the original citation was not erased")
+	}
+	if got := f.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id=$1 AND after ? 'commitment_admission_redacted'`, f.messages[0]); got != redactions {
+		t.Fatal("erasing the other citation repeated the admission redaction audit")
+	}
 	assertReleasedHoldFinishesErasure(t, f, before)
 }
 
@@ -283,6 +299,7 @@ func TestRefusedRenewalPreservesTheClaimAndItsEvidence(t *testing.T) {
 		t.Run(state, func(t *testing.T) {
 			unread := state != "pending"
 			f := setupRenewalPrivacy(t, 0.75)
+			proposal := f.e.WsScalar(t, `SELECT proposed_change::text FROM approval WHERE id=$1`, f.work)
 			if state == "legacy_unread" {
 				f.e.WsExec(t, `DELETE FROM activity_commitment_admission WHERE source_activity_id=$1`, f.messages[0])
 			}
@@ -318,6 +335,9 @@ func TestRefusedRenewalPreservesTheClaimAndItsEvidence(t *testing.T) {
 			}
 			if got := f.e.WsScalar(t, `SELECT to_char(due_at,'YYYY-MM-DD') FROM conversation_claim WHERE source_activity_id=$1`, f.messages[0]); got != "2026-10-19" {
 				t.Fatalf("pending proposal's claim moved to %s", got)
+			}
+			if got := f.e.WsScalar(t, `SELECT proposed_change::text FROM approval WHERE id=$1`, f.work); got != proposal {
+				t.Fatal("refused renewal rewrote the pending proposal")
 			}
 			if state == "legacy_unread" {
 				if got := f.e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission WHERE source_activity_id=$1`, f.messages[0]); got != 0 {
@@ -419,7 +439,10 @@ func assertHeldRenewalRefused(t *testing.T, f renewalPrivacyFixture, before stri
 	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), f.e.WS), "human:"+f.e.Rep1.String(), ids.NewV7())
 	dispatcher := NewCommitmentDispatcher(f.e.Pool, approvals.NewService(f.e.DB()))
 	if err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
-		_, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
+		outcome, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
+		if err == nil && outcome.wroteWork() {
+			t.Errorf("held evidence produced new work: %s", outcome)
+		}
 		return err
 	}); err != nil {
 		t.Fatal(err)
