@@ -176,6 +176,54 @@ func TestTheIdentityIgnoresTheObservedValue(t *testing.T) {
 	}
 }
 
+// A rule whose slots quote the deal's amount, or a total that differs from it
+// only by the masked gap, is in DealAmountTypes. The list read withholds those
+// slots from a masked reader by type, so a missing type would print the figure.
+// A listed type that quotes no money is a stale entry and fails too.
+func TestEveryRuleQuotingMoneyIsADealAmountType(t *testing.T) {
+	t.Parallel()
+	loaded := healthy()
+	loaded.AmountMinor = new(int64(987_654_321))
+	loaded.ExpectedClose = new(at(time.April, 30))
+	loaded.CloseProvisional = true
+	loaded.CloseDatePushes = 5
+	loaded.LastInboundAt = new(at(time.January, 5))
+	loaded.HasNextStep, loaded.HasEconomicBuyer = false, false
+	loaded.OfferTotalMinor = new(int64(123_456_789))
+	loaded.ContractTotalMinor = new(int64(234_567_891))
+	money := map[int64]bool{
+		*loaded.AmountMinor: true, *loaded.OfferTotalMinor: true, *loaded.ContractTotalMinor: true,
+	}
+
+	quoting := map[string]bool{}
+	for _, rule := range Rules() {
+		found := rule.Ask(at(time.May, 14), loaded, DefaultConfig())
+		if found == nil {
+			continue
+		}
+		for _, slots := range []map[string]any{found.Claim, found.Observed} {
+			for _, value := range slots {
+				if figure, isMoney := value.(int64); isMoney && money[figure] {
+					quoting[found.Type] = true
+				}
+			}
+		}
+	}
+	listed := map[string]bool{}
+	for _, kind := range DealAmountTypes() {
+		listed[kind] = true
+		if !quoting[kind] {
+			t.Errorf("%s is listed in DealAmountTypes but quotes no deal money", kind)
+		}
+	}
+	for kind := range quoting {
+		if !listed[kind] {
+			t.Errorf("%s quotes deal money in its slots but is not in DealAmountTypes — "+
+				"a reader under a mask on deal.amount_minor would read the figure", kind)
+		}
+	}
+}
+
 // The claim and the observed value hold structured values only. A frozen copy
 // of a protected sentence outlives the protection on its source, which is how
 // narrowing after birth stops being privacy.

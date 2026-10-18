@@ -163,10 +163,10 @@ func bundleableFindings(
 	ctx context.Context, tx pgx.Tx, runID ids.UUID,
 ) ([]assurance.Exception, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT `+exceptionColumns+`
+		SELECT `+exceptionSelect(rawFindingMoney)+`
 		  FROM assurance_exception e
 		  JOIN assurance_run_finding f ON f.exception_id = e.id AND f.run_id = $1
-		  `+findingPricedJoin+`
+		  `+findingPricedJoin(rawFindingMoney.affected)+`
 		 WHERE e.status = 'open'
 		   AND e.subject_kind = 'deal'
 		   AND NOT EXISTS (SELECT 1 FROM assurance_resolution r

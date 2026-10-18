@@ -76,6 +76,15 @@ const (
 	TypeCommitUnpriced   = "commit_unpriced"
 )
 
+// DealAmountTypes are the types whose claim and observed slots carry money that
+// discloses the deal's amount. That money is the amount itself, or the offer or
+// contract total it differs from by the masked gap. A reader under a mask on
+// deal.amount_minor is shown neither slot. Held by
+// TestEveryRuleQuotingMoneyIsADealAmountType.
+func DealAmountTypes() []string {
+	return []string{TypeAmountVsOffer, TypeAmountVsContract}
+}
+
 // The forecast categories a rule asks about. Named because a category spelled
 // four times can come to be spelled four ways, and a rule comparing against the
 // wrong spelling is quietly never true.
