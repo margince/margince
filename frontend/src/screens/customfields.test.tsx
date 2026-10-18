@@ -653,7 +653,7 @@ describe("CustomFieldsAdmin", () => {
     expect(toast.textContent).not.toMatch(/restore/i);
   });
 
-  // No route restores a retired field, so neither the dialog that asks nor the
+  // No route restores a retired field. Neither the dialog that asks nor the
   // toast that answers may promise one, in any language the product ships.
   it.each(LOCALES)(
     "says in %s that archiving is permanent, before and after",

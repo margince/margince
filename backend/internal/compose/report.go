@@ -171,13 +171,12 @@ type reportSpec struct {
 	filters      map[string]string
 	// rowKeys are the dimensions that each name one row. A listing report
 	// groups by them to list its records. A typed question that does so asks
-	// for groups of one, which the floor withholds every time, and a filter
-	// on one leaves a population of one. The typed vocabulary omits them.
+	// for groups of one, which the floor withholds every time. A filter on
+	// one leaves a population of one. The typed vocabulary omits them.
 	rowKeys []string
 	// rowMoments are the dimensions that differ for every row but order the
 	// rows: a timestamp. No group of one can answer, but a range over them
-	// can, so the typed vocabulary offers them to narrow by and not to group
-	// by.
+	// can. The typed vocabulary offers them to narrow by, never to group by.
 	rowMoments []string
 	// nativeMeasures are the measures denominated in the ROW's own currency
 	// rather than in one the whole answer shares. Summing one across a grouping

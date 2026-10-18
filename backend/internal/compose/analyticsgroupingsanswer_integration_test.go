@@ -26,8 +26,8 @@ import (
 )
 
 // seedDistinctProjects plants n delivering projects that share a company, an
-// owner and a phase and differ in everything that is the row's own: id, name,
-// key and both timestamps.
+// owner and a phase. They differ in what is the row's own: id, name, key and
+// both timestamps.
 func seedDistinctProjects(t *testing.T, e *integration.Env, n int) {
 	t.Helper()
 	company := ids.NewV7()
