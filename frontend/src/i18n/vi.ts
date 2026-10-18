@@ -12525,8 +12525,8 @@ export const vi = {
     "{word}: khớp bất kỳ điều kiện nào. Nhấn để chuyển sang khớp tất cả.",
   "filters.group.all": "Tất cả các điều kiện này",
   "filters.group.any": "Bất kỳ điều kiện nào",
-  "filters.rowsMore": "Tùy chọn khác cho các điều kiện này",
-  "filters.groupMore": "Tùy chọn khác cho nhóm này",
+  "filters.addGroupToGroup": "Thêm nhóm vào nhóm này",
+  "filters.group.match": "Điều kiện cần khớp",
   "filters.proposed": "Đề xuất",
   "filters.switch.title": "Chuyển sang {records}?",
   "filters.switch.body.contacts":
@@ -12964,6 +12964,7 @@ export const vi = {
   "filters.loadingVocabulary": "Đang tải trường…",
   "filters.noFields": "Loại hồ sơ này không có trường nào lọc được.",
   "filters.resultsTitle": "Hồ sơ khớp",
+  "filters.resultRefGone": "Đã bị xóa hoặc bạn không xem được",
   "filters.resultsCaption":
     "Trang đầu của kết quả khớp, để kiểm tra bộ lọc. Không phải toàn bộ lựa chọn.",
   "filters.noMatches":

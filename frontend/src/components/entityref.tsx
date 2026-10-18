@@ -79,7 +79,7 @@ export function rosterReading(
  * say the same thing wherever they happen: a read still in flight has said
  * nothing yet, and one that failed has said nothing about this id.
  */
-function missLabel(
+export function missLabel(
   reading: NameReading,
   t: ReturnType<typeof useT>,
   unlisted: string,

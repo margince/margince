@@ -24,6 +24,7 @@ import {
   type VocabularyField,
 } from "../../lib/filterdata";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
+import { ReferenceCell } from "./filterresultcell";
 
 /** A preview row: schema-derived, so its values span every type the table holds. */
 type PreviewRow = Record<string, unknown>;
@@ -136,15 +137,25 @@ export function FilterResults({
   const t = useT();
   const rows: readonly PreviewRow[] = preview?.rows ?? [];
   const names = previewColumnNames(preview?.columns ?? [], named);
-  const columns: ListColumn<PreviewRow>[] = names.map((name, index) => ({
-    key: name,
-    header: headerFor(name, fields, t),
-    // The identity column is fixed: it is what makes a row recognisable, so the
-    // picker may not hide it and the phone layout promotes it to the card's
-    // heading.
-    fixed: index === 0,
-    cell: (row) => cellText(row[name]),
-  }));
+  const columns: ListColumn<PreviewRow>[] = names.map((name, index) => {
+    const reference = fields.find((field) => field.name === name)?.references;
+    return {
+      key: name,
+      header: headerFor(name, fields, t),
+      // The identity column is fixed: it is what makes a row recognisable, so
+      // the picker may not hide it and the phone layout promotes it to the
+      // card's heading.
+      fixed: index === 0,
+      cell: (row) => {
+        const value = row[name];
+        return reference && typeof value === "string" && value !== "" ? (
+          <ReferenceCell reference={reference} id={value} />
+        ) : (
+          cellText(value)
+        );
+      },
+    };
+  });
 
   return (
     <ListTable<PreviewRow>

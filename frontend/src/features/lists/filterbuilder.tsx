@@ -11,13 +11,14 @@
 // field, no operator, and no value type of its own — which is why a clause it
 // builds cannot be one the engine refuses as unknown.
 //
-// It grows only as the reader builds. A group's join is drawn as the word
-// between its conditions, so it appears once there are two of them; a nested
-// group is offered from two conditions on, behind More, and arrives with a
-// condition already in it.
+// A group's join is drawn as the word between its conditions, and a nested
+// group also carries it as a switch in its head, because a group that holds
+// one condition has no word to click. "Add a group" sits beside "Add
+// condition" from the first condition on, so grouping is visible before a
+// reader goes looking for it.
 
-import { Fragment, useId } from "react";
-import { Button, OverflowMenu } from "../../design-system/atoms";
+import { Fragment } from "react";
+import { Button, SegmentedControl } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import "./filterbuilder.css";
 import type { VocabularyField } from "../../lib/filterdata";
@@ -90,7 +91,6 @@ function GroupNode({
   arrived,
 }: NodeProps & Readonly<{ group: Group; arrived: string | null }>) {
   const t = useT();
-  const titleID = useId();
   const nested = depth > 1;
   const rows = (
     <>
@@ -142,17 +142,30 @@ function GroupNode({
   if (!nested) {
     return <div className="filter-group">{rows}</div>;
   }
-  // A fieldset named by its head, so a screen reader hears where the group's
+  // A fieldset named by its join, so a screen reader hears where the group's
   // conditions start and end, and whose "Remove group" each control is.
   return (
     <fieldset
       className="filter-group filter-group-box"
-      aria-labelledby={titleID}
+      aria-label={t(
+        group.join === "and" ? "filters.group.all" : "filters.group.any",
+      )}
     >
       <div className="filter-group-head">
-        <span id={titleID} className="filter-group-title">
-          {t(group.join === "and" ? "filters.group.all" : "filters.group.any")}
-        </span>
+        <SegmentedControl<Group["join"]>
+          options={["and", "or"]}
+          value={group.join}
+          labels={{
+            and: t("filters.group.all"),
+            or: t("filters.group.any"),
+          }}
+          label={t("filters.group.match")}
+          onChange={(next) => {
+            if (next !== group.join) {
+              onChange(switchJoin(tree, group.id));
+            }
+          }}
+        />
         <Button
           variant="ghost"
           onClick={() => onChange(removeNode(tree, group.id))}
@@ -187,11 +200,7 @@ function Connector({
           all ? "filters.connector.matchAll" : "filters.connector.matchAny",
           { word },
         )}
-        // A group joined the other way is a group the reader rewrote, so
-        // its proposed rows are theirs now, as an edited row is.
-        onClick={() =>
-          onChange(ownGroup(rootGroup(toggleJoin(tree, group.id)), group.id))
-        }
+        onClick={() => onChange(switchJoin(tree, group.id))}
       >
         {word}
       </Button>
@@ -200,9 +209,17 @@ function Connector({
 }
 
 /**
- * How a group grows: another condition, and from two conditions on a nested
- * group of the opposite join. The nested group arrives holding a condition,
- * because an empty one stops the count until it is filled.
+ * Flips one group's join. A group joined the other way is a group the reader
+ * rewrote, so its proposed rows are theirs now, as an edited row is.
+ */
+function switchJoin(tree: Node, groupID: string): Node {
+  return ownGroup(rootGroup(toggleJoin(tree, groupID)), groupID);
+}
+
+/**
+ * How a group grows: another condition, or a nested group of the opposite
+ * join. The nested group arrives holding a condition, because an empty one
+ * stops the count until it is filled.
  *
  * Depth stops the offer at the engine's nesting bound: a fifth level would be
  * a tree the server refuses with `filter_too_deep`.
@@ -216,7 +233,9 @@ function GroupFoot({
 }: NodeProps & Readonly<{ group: Group }>) {
   const t = useT();
   const nested = depth > 1;
-  const canNest = group.children.length >= 2 && depth < MAX_GROUP_DEPTH;
+  // A group beside nothing would only wrap the whole filter in one more box,
+  // so the offer waits for the first condition.
+  const canNest = group.children.length >= 1 && depth < MAX_GROUP_DEPTH;
   return (
     <div className="filter-group-foot">
       <Button
@@ -228,25 +247,22 @@ function GroupFoot({
         {t(nested ? "filters.addToGroup" : "filters.addClause")}
       </Button>
       {canNest && (
-        <OverflowMenu
-          label={t(nested ? "filters.groupMore" : "filters.rowsMore")}
+        <Button
+          variant="link"
+          onClick={() =>
+            onChange(
+              addToGroup(
+                tree,
+                group.id,
+                newGroup(group.join === "and" ? "or" : "and", [
+                  firstClause(fields),
+                ]),
+              ),
+            )
+          }
         >
-          <Button
-            onClick={() =>
-              onChange(
-                addToGroup(
-                  tree,
-                  group.id,
-                  newGroup(group.join === "and" ? "or" : "and", [
-                    firstClause(fields),
-                  ]),
-                ),
-              )
-            }
-          >
-            {t("filters.addGroup")}
-          </Button>
-        </OverflowMenu>
+          {t(nested ? "filters.addGroupToGroup" : "filters.addGroup")}
+        </Button>
       )}
     </div>
   );

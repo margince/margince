@@ -37,10 +37,6 @@
   flex-wrap: wrap;
 }
 
-.filter-group-title {
-  font-weight: var(--fontWeightMedium);
-}
-
 .filter-group-children {
   display: flex;
   flex-direction: column;

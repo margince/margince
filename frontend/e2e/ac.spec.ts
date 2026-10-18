@@ -2943,11 +2943,8 @@ test.describe("filters and views", () => {
     ]);
     await page.keyboard.press("Escape");
 
-    // And nesting: from two conditions, More offers a group of the other join,
-    // arriving with a condition in it — what mixing AND with OR needs.
-    await page
-      .getByRole("button", { name: de["filters.rowsMore"], exact: true })
-      .click();
+    // And nesting: "Add a group" offers a group of the other join, arriving
+    // with a condition in it — what mixing AND with OR needs.
     await page
       .getByRole("button", { name: de["filters.addGroup"], exact: true })
       .click();

@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import type { FilterPreview, VocabularyField } from "../../lib/filterdata";
 import { FilterResults, previewColumnNames } from "./filterresults";
 
@@ -229,5 +231,121 @@ describe("a first page of many", () => {
     );
 
     expect(asked).toEqual([50]);
+  });
+});
+
+describe("a column that points at another record", () => {
+  const DEAL_FIELDS: VocabularyField[] = [
+    {
+      name: "owner_id",
+      type: "id",
+      operators: ["eq"],
+      references: "app_user",
+    },
+    { name: "stage_id", type: "id", operators: ["eq"], references: "stage" },
+    {
+      name: "company_id",
+      type: "id",
+      operators: ["eq"],
+      references: "company",
+    },
+  ];
+
+  function jsonResponse(body: unknown, status = 200) {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // Names only u-1, s-1 and c-1. Every other id is one the workspace no longer
+  // holds, the way a removed seat or a deleted stage is.
+  function stubWorkspace() {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname;
+        if (path.endsWith("/users/names")) {
+          return jsonResponse({
+            data: [{ id: "u-1", display_name: "Priya Shah" }],
+          });
+        }
+        if (path.endsWith("/stages")) {
+          return jsonResponse({ data: [{ id: "s-1", name: "Qualified" }] });
+        }
+        if (path.endsWith("/companies/c-1")) {
+          return jsonResponse({ id: "c-1", display_name: "Brandt GmbH" });
+        }
+        return jsonResponse({}, 404);
+      }),
+    );
+  }
+
+  function renderDeals(rows: readonly Record<string, unknown>[]) {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    return render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <FilterResults
+            preview={{
+              resource: "deal",
+              match_count: rows.length,
+              columns: ["id", "name", "owner_id", "stage_id", "company_id"],
+              rows: rows as FilterPreview["rows"],
+              truncated: false,
+            }}
+            fields={DEAL_FIELDS}
+            named={["owner_id", "stage_id", "company_id"]}
+            unit="deals"
+            widthsKey="filter-preview-deals"
+            pending={false}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+  }
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("names the owner, the stage and the company instead of their ids", async () => {
+    stubWorkspace();
+    renderDeals([
+      {
+        id: "d-1",
+        name: "Brandt renewal",
+        owner_id: "u-1",
+        stage_id: "s-1",
+        company_id: "c-1",
+      },
+    ]);
+
+    expect(await screen.findByText("Priya Shah")).toBeTruthy();
+    expect(await screen.findByText("Qualified")).toBeTruthy();
+    expect(await screen.findByText("Brandt GmbH")).toBeTruthy();
+    expect(screen.queryByText("u-1")).toBeNull();
+    expect(screen.queryByText("s-1")).toBeNull();
+    expect(screen.queryByText("c-1")).toBeNull();
+  });
+
+  it("says a reference is gone rather than printing an id nobody can read", async () => {
+    stubWorkspace();
+    renderDeals([
+      {
+        id: "d-2",
+        name: "Orphaned deal",
+        owner_id: "u-removed",
+        stage_id: "s-removed",
+        company_id: "c-removed",
+      },
+    ]);
+
+    await waitFor(() =>
+      expect(screen.getAllByText(en["filters.resultRefGone"])).toHaveLength(3),
+    );
+    expect(screen.queryByText("u-removed")).toBeNull();
+    expect(screen.queryByText("s-removed")).toBeNull();
+    expect(screen.queryByText("c-removed")).toBeNull();
   });
 });
