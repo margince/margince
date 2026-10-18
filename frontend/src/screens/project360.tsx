@@ -52,7 +52,7 @@ import {
   PROJECT_DEALS_ANCHOR,
   RollupsStrip,
 } from "./projectreadings";
-import { PhaseBadge, ProjectKeyChip, useCompanyOptions } from "./projects";
+import { PhaseBadge, ProjectKeyChip } from "./projects";
 import {
   mapProjectUpdate,
   type Project,
@@ -352,7 +352,6 @@ function ProjectActions({
 }>) {
   const t = useT();
   const me = useMe();
-  const companies = useCompanyOptions();
   return (
     <>
       {/* A project's mail is a NEW conversation with somebody on the account
@@ -376,7 +375,6 @@ function ProjectActions({
           savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
           fields={[
             ...projectFields(t, {
-              companies,
               me: me.data?.user.id ?? "",
               currentOwner: project.owner_id ?? null,
               mode: "edit",

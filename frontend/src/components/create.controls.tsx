@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import {
   Button,
   Field,
@@ -6,7 +6,10 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
-import { RecordPicker } from "../design-system/recordpicker";
+import {
+  RecordPicker,
+  type RecordPickerCandidate,
+} from "../design-system/recordpicker";
 import {
   MultiSelect,
   Select,
@@ -26,15 +29,35 @@ import {
 } from "./create.multiselect";
 
 // The control half of a field row; the wrapping `Field` owns the label, id and
-// described-by seam, so the wiring arrives whole as `control`.
-function referenceControl(
-  field: CreateField,
-  searchTargets: NonNullable<CreateField["searchTargets"]>,
-  control: FieldControl,
-  value: string,
-  setValue: (next: string) => void,
-  t: (key: MessageKey) => string,
-): ReactNode {
+// described-by seam, so the wiring arrives whole as `control`. The picked
+// candidate is held here because a searched record is usually on no page the
+// form loaded, so `options` alone would name it by its id.
+function ReferenceControl({
+  field,
+  searchTargets,
+  control,
+  value,
+  setValue,
+  t,
+}: Readonly<{
+  field: CreateField;
+  searchTargets: NonNullable<CreateField["searchTargets"]>;
+  control: FieldControl;
+  value: string;
+  setValue: (next: string) => void;
+  t: (key: MessageKey) => string;
+}>) {
+  const [picked, setPicked] = useState<RecordPickerCandidate | null>(null);
+  const selected: RecordPickerCandidate | null = !value
+    ? null
+    : picked?.id === value
+      ? picked
+      : {
+          id: value,
+          name:
+            field.options?.find((option) => option.value === value)?.label ??
+            value,
+        };
   return (
     <>
       <RecordPicker
@@ -42,17 +65,11 @@ function referenceControl(
         aria-describedby={control["aria-describedby"]}
         aria-invalid={control["aria-invalid"]}
         searchTargets={searchTargets}
-        selected={
-          value
-            ? {
-                id: value,
-                name:
-                  field.options?.find((option) => option.value === value)
-                    ?.label ?? value,
-              }
-            : null
-        }
-        onPick={(candidate) => setValue(candidate.id)}
+        selected={selected}
+        onPick={(candidate) => {
+          setPicked(candidate);
+          setValue(candidate.id);
+        }}
       />
       {value && !field.required && (
         <Button variant="link" onClick={() => setValue("")}>
@@ -73,13 +90,15 @@ export function fieldControl(
   values: Record<string, string> = {},
 ): ReactNode {
   if ("searchTargets" in field && field.searchTargets)
-    return referenceControl(
-      field,
-      field.searchTargets,
-      control,
-      value,
-      setValue,
-      t,
+    return (
+      <ReferenceControl
+        field={field}
+        searchTargets={field.searchTargets}
+        control={control}
+        value={value}
+        setValue={setValue}
+        t={t}
+      />
     );
   if (field.type === "select") {
     // Optional fields can be cleared; preserve a caller's existing empty choice.

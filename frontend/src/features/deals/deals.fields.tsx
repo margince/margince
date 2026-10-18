@@ -6,6 +6,7 @@ import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
 import type { AcquisitionSource } from "../../screens/acquisitionsources.queries";
 import type { Project } from "../../screens/projects.form";
+import { searchCompanyTargets } from "../companies/companyform";
 import {
   dealCommercialFields,
   MOTION_OPTIONS,
@@ -181,23 +182,20 @@ export function partnerFields(
 /**
  * The partner a deal already names, ready to stand as its own option.
  *
- * Falls back to the raw id when the company list cannot name it (an unreadable or
- * off-page company). Ugly, and correct: the alternative is a blank select whose
- * save clears an attribution the reader never touched.
+ * Falls back to the raw id while the name is unknown (still loading, or an
+ * unreadable company). Ugly, and correct: the alternative is a blank select
+ * whose save clears an attribution the reader never touched.
  */
 export function attributedPartner(
   deal: Deal,
-  companies: { id: string; display_name: string }[],
+  name: string | null,
 ): { id: string; label: string } | undefined {
   if (!deal.partner_company_id) {
     return undefined;
   }
-  const named = companies.find(
-    (company) => company.id === deal.partner_company_id,
-  );
   return {
     id: deal.partner_company_id,
-    label: named?.display_name ?? deal.partner_company_id,
+    label: name ?? deal.partner_company_id,
   };
 }
 
@@ -210,14 +208,13 @@ export function attributedPartner(
  * and re-point the deal away from the company a colleague linked. So its single
  * entry names the field as withheld, and `mapDealUpdate` leaves it out of the patch.
  *
- * A company the pickable page cannot reach is still an option, as on the
- * partner field. A select whose stored value is not among its options shows
- * blank, and saving that blank clears a link nobody meant to touch.
+ * Otherwise the company is searched, since no page a form could load up front
+ * reaches every company. The stored company rides along as the one option, so
+ * the picker names it rather than showing its id.
  */
 function companyEditField(
   t: (k: MessageKey) => string,
   opts: {
-    companies: { id: string; display_name: string }[];
     masked: readonly string[];
     currentCompany?: { id: string; label: string };
   },
@@ -230,33 +227,23 @@ function companyEditField(
       options: [{ value: "", label: t("deal.companyWithheld") }],
     };
   }
-  const options = opts.companies.map((company) => ({
-    value: company.id,
-    label: company.display_name,
-  }));
   const current = opts.currentCompany;
   return {
     key: "company_id",
     label: "create.relatedCompany",
-    type: "select",
-    options:
-      current && !options.some((option) => option.value === current.id)
-        ? [{ value: current.id, label: current.label }, ...options]
-        : options,
+    searchTargets: searchCompanyTargets,
+    options: current ? [{ value: current.id, label: current.label }] : [],
   };
 }
 
 export function dealEditFields(
   t: (k: MessageKey) => string,
   opts: {
-    companies: { id: string; display_name: string }[];
     partnerOptions: { value: string; label: string }[];
     // The partner this deal already names, when it names one. Keeps the field
     // (and its stored value) on a form whose pickable list does not reach it.
     attributedPartner?: { id: string; label: string };
-    // The company this deal already names, resolved even when the pickable
-    // page does not reach it. The same rule as `attributedPartner`, for the
-    // same reason.
+    // The company this deal already names, so the searched picker can name it.
     currentCompany?: { id: string; label: string };
     // The administered acquisition-source catalog, and the key this deal
     // already carries. That key may name a retired entry the picker must still
