@@ -12,6 +12,7 @@ package capture_test
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -163,8 +164,10 @@ func TestTheListSeparatesTheCompanysOwnClaimFromTheRegistry(t *testing.T) {
 }
 
 // The screen says a listed candidate does not stop capture, so the list leaves
-// out every row whose mail capture already drops. The check is the drop itself:
-// each listed candidate's mail is kept and each hidden row's mail is skipped.
+// out every candidate whose mail capture already drops. A verified row stays
+// even when the company profile covers it, because this list is the only place
+// to remove it. The check is the drop itself: a listed candidate's mail is kept,
+// and the mail of a verified row or a hidden candidate is skipped.
 func TestTheListShowsOnlyCandidatesCaptureStillKeeps(t *testing.T) {
 	ctx, db := ownDomainWorkspace(t)
 	seedAnchorDomain(ctx, t, db, "ourcompany.example")
@@ -172,7 +175,7 @@ func TestTheListShowsOnlyCandidatesCaptureStillKeeps(t *testing.T) {
 	if _, err := store.Add(ctx, "acme.com"); err != nil {
 		t.Fatalf("Add: %v", err)
 	}
-	hidden := []string{"ourcompany.example", "eu.ourcompany.example", "mail.acme.com"}
+	hidden := []string{"ourcompany.example", "mail.acme.com"}
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO workspace_email_domain (domain, source, verified) VALUES
@@ -193,8 +196,9 @@ func TestTheListShowsOnlyCandidatesCaptureStillKeeps(t *testing.T) {
 	for _, d := range list.Domains {
 		listed = append(listed, d.Domain)
 	}
-	if len(listed) != 2 || listed[0] != "acme.com" || listed[1] != "seen.example" {
-		t.Fatalf("registry = %v, want [acme.com seen.example]: a covered row is listed a second time", listed)
+	want := []string{"acme.com", "eu.ourcompany.example", "seen.example"}
+	if !slices.Equal(listed, want) {
+		t.Fatalf("registry = %v, want %v", listed, want)
 	}
 
 	ws, _ := principal.WorkspaceID(ctx)
@@ -204,8 +208,14 @@ func TestTheListShowsOnlyCandidatesCaptureStillKeeps(t *testing.T) {
 			mailRecord("listed-"+domain, "boss@"+domain, "boss@"+domain, "rep@"+domain))
 		return err
 	}
-	if err := upsert("seen.example"); err != nil {
-		t.Errorf("the listed candidate seen.example says capture keeps its mail, but Upsert = %v", err)
+	for _, row := range list.Domains {
+		err := upsert(row.Domain)
+		if row.Verified && !isSkip(err) {
+			t.Errorf("%s is listed as confirmed, so capture must drop its mail, but Upsert = %v", row.Domain, err)
+		}
+		if !row.Verified && err != nil {
+			t.Errorf("%s is listed as a candidate that does not stop capture, but Upsert = %v", row.Domain, err)
+		}
 	}
 	for _, domain := range hidden {
 		if err := upsert(domain); !isSkip(err) {

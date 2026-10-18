@@ -15,6 +15,7 @@ import {
   TextInput,
 } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { ErrorLine } from "../../design-system/errorline";
 import { useFocusHandoff } from "../../design-system/focushandoff";
 import { Heading } from "../../design-system/heading";
 import { IconAction } from "../../design-system/iconaction";
@@ -319,6 +320,7 @@ function ConfirmCandidate({
       >
         {t("ownDomains.confirm")}
       </Button>
+      <ErrorLine inline error={confirm.error} />
     </span>
   );
 }

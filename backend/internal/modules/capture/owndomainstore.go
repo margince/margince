@@ -68,9 +68,8 @@ type OwnDomainList struct {
 	AnchorDomains []string
 }
 
-// List returns the company's claimed domains and the registry rows that add to
-// them. A row the company profile already covers is left out, and so is a
-// candidate a trusted domain already covers, so every candidate listed is one
+// List returns the company's claimed domains and the registry. A candidate a
+// trusted domain already covers is left out, so every candidate listed is one
 // that does not stop capture yet.
 func (s *OwnDomainStore) List(ctx context.Context) (OwnDomainList, error) {
 	var out OwnDomainList
@@ -93,21 +92,19 @@ func (s *OwnDomainStore) List(ctx context.Context) (OwnDomainList, error) {
 			return err
 		}
 		out.AnchorDomains = claimed.Domains()
-		out.Domains = addedByRegistry(registry, claimed, trusted)
+		out.Domains = withoutCoveredCandidates(registry, trusted)
 		return nil
 	})
 	return out, err
 }
 
-// addedByRegistry keeps the rows that change what stops capture, or would once
-// confirmed. A verified row is in the trusted set itself, so only the company's
-// claim can make it redundant.
-func addedByRegistry(registry []OwnDomain, claimed, trusted InternalDomains) []OwnDomain {
+// withoutCoveredCandidates drops the candidates whose mail capture already
+// drops. A verified row always stays: it is a claim of its own, this screen is
+// the only place to remove it, and it keeps suppressing mail after the company
+// profile stops claiming the domain.
+func withoutCoveredCandidates(registry []OwnDomain, trusted InternalDomains) []OwnDomain {
 	kept := make([]OwnDomain, 0, len(registry))
 	for _, row := range registry {
-		if claimed.CoversDomain(row.Domain) {
-			continue
-		}
 		if !row.Verified && trusted.CoversDomain(row.Domain) {
 			continue
 		}

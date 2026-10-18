@@ -42,6 +42,8 @@ type BackendOptions = {
     source: "admin" | "mailbox";
     verified: boolean;
   }[];
+  /** A problem body every POST is refused with. */
+  postRefusal?: { status: number; detail: string };
 };
 
 // backendFor answers /me with the given grants and /capture/email-domains with
@@ -71,6 +73,12 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
         if (req.method === "POST") {
           const body: { domain: string } = await req.json();
           capturedPost = body;
+          if (opts.postRefusal) {
+            return new Response(JSON.stringify(opts.postRefusal), {
+              status: opts.postRefusal.status,
+              headers: { "content-type": "application/problem+json" },
+            });
+          }
           // Adding a candidate confirms it, as the server does.
           state.data = state.data.map((row) =>
             row.domain === body.domain
@@ -316,6 +324,29 @@ describe("OwnDomainsCard", () => {
     const remove = screen.getByRole("button", { name: /remove seen\.de/i });
     await waitFor(() => expect(document.activeElement).toBe(remove));
     expect(screen.queryByText(en["ownDomains.candidate"])).toBeNull();
+  });
+
+  it("says on the row why a confirm was refused", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, post } = backendFor(CAPTURE_EDITOR, {
+      domains: [{ domain: "seen.de", source: "mailbox", verified: false }],
+      postRefusal: { status: 422, detail: "seen.de cannot be confirmed now" },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OwnDomainsCard />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["ownDomains.confirmLabel"].replace("{domain}", "seen.de"),
+      }),
+    );
+    await waitFor(() => expect(post()).toEqual({ domain: "seen.de" }));
+    const managed = screen.getByTestId("own-domains-list");
+    expect((await within(managed).findByRole("alert")).textContent).toContain(
+      "seen.de cannot be confirmed now",
+    );
+    expect(screen.getByText(en["ownDomains.candidate"])).toBeTruthy();
   });
 
   it("refuses confirming a candidate for a role that cannot change the list", async () => {
