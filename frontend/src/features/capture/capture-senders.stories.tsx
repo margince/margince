@@ -92,6 +92,17 @@ const EVERY_KIND: SenderDecision[] = [
     record_exists: false,
     message_count: 0,
   },
+  // A generated address with no break in it, cut to one line.
+  {
+    address:
+      "bounces+srs=4f7a2c9e1b0d=mailer-relay-20261009-7731@notifications.example-mailer.com",
+    kind: "transactional",
+    status: "noise",
+    overruled: false,
+    record_exists: false,
+    message_count: 212,
+    last_seen_at: "2026-10-12T04:10:00Z",
+  },
 ];
 
 // The seat corrected the machine. The filled badge and the "you decided" clause

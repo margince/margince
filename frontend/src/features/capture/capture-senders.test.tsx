@@ -4,7 +4,7 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { formatDateTime } from "../../format/format";
@@ -292,4 +292,25 @@ it("names no contact and no date for a sender with neither", async () => {
   expect(row.queryByRole("link")).toBeNull();
   expect(row.getAllByText("—")).toHaveLength(2);
   expect(row.getByText("0")).toBeVisible();
+});
+
+it("keeps a long address on one line and gives its whole text on focus", async () => {
+  const generated = {
+    ...NEWSLETTER,
+    address:
+      "bounces+srs=4f7a2c9e1b0d=mailer-relay-7731@notifications.example-mailer.com",
+  };
+  stubRoutes([], [generated]);
+  const drawer = await openList(userEvent.setup(), en["senders.title"]);
+  const address = drawer.getByText(generated.address);
+  // happy-dom lays nothing out, so the clip the stylesheet makes is stated.
+  vi.spyOn(address, "scrollWidth", "get").mockReturnValue(480);
+  vi.spyOn(address, "clientWidth", "get").mockReturnValue(160);
+
+  act(() => address.focus());
+
+  expect(address).toHaveClass("capture-senders-sender");
+  expect(await screen.findByRole("tooltip")).toHaveTextContent(
+    generated.address,
+  );
 });

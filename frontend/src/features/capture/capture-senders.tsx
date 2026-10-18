@@ -15,6 +15,7 @@ import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
 import { RowOpen } from "../../design-system/rowopen";
 import { useToast } from "../../design-system/toast";
+import { useTruncationTooltip } from "../../design-system/tooltip";
 import { formatDate, formatDateTime, formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
@@ -207,9 +208,7 @@ function SenderTable({
       key: "address",
       header: t("senders.colSender"),
       grow: true,
-      render: (row) => (
-        <span className="capture-senders-address">{row.address}</span>
-      ),
+      render: (row) => <SenderAddress address={row.address} />,
     },
     {
       key: "decision",
@@ -271,6 +270,19 @@ function SenderTable({
       rowKey={(row) => row.address}
       columns={columns}
     />
+  );
+}
+
+// One line per sender, cut short with the whole address on hover and focus.
+// Broken at any character instead, a generated bounce address stood as a
+// column of fragments that read as several senders.
+function SenderAddress({ address }: Readonly<{ address: string }>) {
+  const { ref, trigger, tip } = useTruncationTooltip<HTMLSpanElement>(address);
+  return (
+    <span className="capture-senders-sender" ref={ref} {...trigger}>
+      {address}
+      {tip}
+    </span>
   );
 }
 
