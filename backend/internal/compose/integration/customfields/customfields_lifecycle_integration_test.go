@@ -75,7 +75,7 @@ func TestCustomFieldRename_ToALabelAnotherFieldHolds_IsRefusedAsAConflict(t *tes
 		t.Fatal(err)
 	}
 
-	for _, label := range []string{"Renewal date", "  renewal DATE ", "Renewal-date"} {
+	for _, label := range []string{"Renewal date", "  renewal DATE ", "Renewal-date", "Renewal date\t"} {
 		if _, err := svc.Rename(ctx, ids.UUID(other.Id), label, nil); !errors.Is(err, apperrors.ErrConflict) {
 			t.Fatalf("renaming onto %q must answer conflict, got %v", label, err)
 		}

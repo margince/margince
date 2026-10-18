@@ -17,7 +17,7 @@ func countryOf(value string) *crmcontracts.Address {
 // The contract declares an address country as an alpha-2 code, so the store
 // holds the code and nothing that merely resembles one.
 func TestACountryThatIsNotAnAssignedAlpha2CodeIsRefused(t *testing.T) {
-	for _, bad := range []string{"Vietnam", "12", "zz", "DEU", "D", "", "  ", "D1", "XX"} {
+	for _, bad := range []string{"Vietnam", "12", "zz", "DEU", "D", "", "  ", "D1", "XX", "XK", "UK", "YU", "EU"} {
 		_, err := checkedAddress(countryOf(bad))
 		if _, ok := errors.AsType[*InvalidCountryError](err); !ok {
 			t.Errorf("country %q: err = %v, want an invalid-country refusal", bad, err)
@@ -60,5 +60,16 @@ func TestTheInvalidCountryFaultNamesTheNestedField(t *testing.T) {
 	field, code, message := (&InvalidCountryError{}).FieldFault()
 	if field != "address.country" || code != "invalid_country_code" || message == "" {
 		t.Fatalf("fault = %q %q %q", field, code, message)
+	}
+}
+
+func TestTheAssignedCountryListIsTheTwoHundredFortyNineTheStandardAssigns(t *testing.T) {
+	if got := len(assignedCountry); got != 249 {
+		t.Fatalf("%d codes, want the 249 ISO 3166-1 assigns", got)
+	}
+	for _, code := range []string{"DE", "VN", "US", "GB", "SS", "SX", "AX"} {
+		if _, ok := assignedCountry[code]; !ok {
+			t.Errorf("%s is assigned and missing from the list", code)
+		}
 	}
 }

@@ -100,9 +100,16 @@ func (e *TooManyCardsError) FieldFault() (field, code, message string) {
 // that refuses, because the reader has no way to notice the contact who is
 // missing.
 func ParseVCards(r io.Reader) ([]VCardEntry, error) {
-	lines, err := unfoldVCardLines(io.LimitReader(r, vcardMaxBytes+1))
+	raw := &countingReader{r: io.LimitReader(r, vcardMaxBytes+1)}
+	lines, err := unfoldVCardLines(raw)
 	if err != nil {
 		return nil, err
+	}
+	// The line scanner drops the carriage return of a CRLF line, so its own
+	// count is short by one byte per line. The bytes actually read are the
+	// bound: one past it means the file was cut, and a prefix is not the file.
+	if raw.n > vcardMaxBytes {
+		return nil, fmt.Errorf("contacts: the vCard file exceeds %d bytes", vcardMaxBytes)
 	}
 	var out []VCardEntry
 	var current *VCardEntry
@@ -155,6 +162,18 @@ func ParseVCards(r io.Reader) ([]VCardEntry, error) {
 		return nil, errors.New("contacts: the file holds no vCard")
 	}
 	return out, nil
+}
+
+// countingReader counts the bytes that pass through it.
+type countingReader struct {
+	r io.Reader
+	n int
+}
+
+func (c *countingReader) Read(p []byte) (int, error) {
+	n, err := c.r.Read(p)
+	c.n += n
+	return n, err
 }
 
 // unfoldVCardLines joins continuation lines, which is the first thing any vCard

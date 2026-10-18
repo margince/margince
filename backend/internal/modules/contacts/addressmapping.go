@@ -11,8 +11,6 @@ package contacts
 import (
 	"strings"
 
-	"golang.org/x/text/language"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
@@ -52,11 +50,7 @@ func checkedAddress(a *crmcontracts.Address) (*crmcontracts.Address, error) {
 // a cell before it builds an address: an assigned alpha-2 code, upper-case.
 func NormalizeCountryCode(raw string) (string, error) {
 	code := strings.ToUpper(strings.TrimSpace(raw))
-	if len(code) != 2 {
-		return "", &InvalidCountryError{}
-	}
-	region, err := language.ParseRegion(code)
-	if err != nil || !region.IsCountry() {
+	if _, assigned := assignedCountry[code]; !assigned {
 		return "", &InvalidCountryError{}
 	}
 	return code, nil

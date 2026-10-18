@@ -104,6 +104,7 @@ function MeetingSettingsForm({
   const { provider, ready, selected, calendars, connections } = calendar;
   const profileDirty =
     JSON.stringify(form) !== JSON.stringify(baseline) ||
+    JSON.stringify(limitTexts) !== JSON.stringify(limitTextsOf(baseline)) ||
     (provider !== "" && provider !== baseline.provider);
   const hoursDirty =
     JSON.stringify(hoursDraft && savedForm(hoursDraft)) !==

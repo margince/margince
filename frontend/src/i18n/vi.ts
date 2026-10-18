@@ -6110,7 +6110,7 @@ export const vi = {
   "import.reason.task_not_importable":
     "Việc cần làm sẽ nằm mở trong danh sách của chính bạn nên không được nhập. Dùng ghi chú.",
   "import.reason.activity_empty":
-    "Ghi chú hoặc cuộc gọi cần có tiêu đề hoặc nội dung. Hãy điền một trong hai ở hàng này.",
+    "Ghi chú hoặc cuộc gọi cần có tiêu đề hoặc nội dung. Điền tiêu đề hoặc nội dung vào hàng này.",
   "import.reason.occurred_at_unnamed":
     "Nêu ngày hoạt động xảy ra, dạng YYYY-MM-DD hoặc kèm múi giờ.",
   "import.reason.timestamp_needs_zone":

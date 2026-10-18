@@ -160,6 +160,22 @@ func TestParseVCardsRefusesAnOversizedLineInTheProductsWords(t *testing.T) {
 	}
 }
 
+func TestParseVCardsRefusesACrlfFileCutAtTheBoundRatherThanReadingItsPrefix(t *testing.T) {
+	// The first card is complete inside the prefix and exactly fills it. The
+	// scanner drops each carriage return, so its own count stays under the bound
+	// and the cards after the cut would be dropped without a word.
+	const head, tail = "BEGIN:VCARD\r\nFN:First\r\nNOTE:", "\r\nEND:VCARD\r\n"
+	var b strings.Builder
+	b.WriteString(head)
+	b.WriteString(strings.Repeat("x", vcardMaxBytes+1-len(head)-len(tail)))
+	b.WriteString(tail)
+	b.WriteString("BEGIN:VCARD\r\nFN:Later\r\nEND:VCARD\r\n")
+	got, err := ParseVCards(strings.NewReader(b.String()))
+	if err == nil {
+		t.Fatalf("a CRLF file past the bound parsed %d cards, want a refusal", len(got))
+	}
+}
+
 func TestParseVCardsReadsEveryCardInAMultiCardFile(t *testing.T) {
 	file := "BEGIN:VCARD\nFN:First Contact\nEND:VCARD\n" +
 		"BEGIN:VCARD\nFN:Second Contact\nEND:VCARD\n" +

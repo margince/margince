@@ -230,6 +230,10 @@ func refuseTakenColumn(ctx context.Context, tx pgx.Tx, object, column string) er
 	return &ColumnTakenError{Column: column}
 }
 
+// foldedLabel is a stored label as the collision test reads it: trimmed of any
+// whitespace, as strings.TrimSpace trims the label being written, and lower-cased.
+const foldedLabel = `lower(regexp_replace(label, '^\s+|\s+$', '', 'g'))`
+
 // refuseTakenLabel keeps one label from naming two fields of an object. A
 // label whose text another field holds reads the same in a picker, a column
 // header and a filter. A label whose slug another field holds would collide on
@@ -240,9 +244,9 @@ func refuseTakenLabel(ctx context.Context, tx pgx.Tx, object string, id ids.UUID
 	var heldLabel, heldSlug string
 	err := tx.QueryRow(ctx,
 		`SELECT label, slug FROM custom_field
-		  WHERE object = $1 AND id <> $2 AND (slug = $3 OR lower(btrim(label)) = lower(btrim($4)))
-		  ORDER BY (lower(btrim(label)) = lower(btrim($4))) DESC LIMIT 1`,
-		object, id, DeriveSlug(label), label).Scan(&heldLabel, &heldSlug)
+		  WHERE object = $1 AND id <> $2 AND (slug = $3 OR `+foldedLabel+` = $4)
+		  ORDER BY (`+foldedLabel+` = $4) DESC LIMIT 1`,
+		object, id, DeriveSlug(label), strings.ToLower(strings.TrimSpace(label))).Scan(&heldLabel, &heldSlug)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}
