@@ -239,11 +239,11 @@ func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetI
 // contact onto the survivor. None of it is a relink of this module's own rows.
 func (s *Store) carryContactSatellitesTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
 	from, to := commsauthz.ContactStopSubject(sourceID), commsauthz.ContactStopSubject(targetID)
-	// In this order. The STOPS come across first and are not a relink (see
-	// stopcarry.go): relinkContactReferences moved the grants, and without the
-	// stops marketing resumed against somebody who had refused it. A rep's
-	// standing override follows for the same reason (overridecarry.go), then the
-	// links, bases and asks other modules keep about them (satellitecarry.go).
+	// In this order. The stops come across first and are not a relink (see
+	// stopcarry.go). Without them marketing resumed against somebody who had
+	// refused it. A rep's standing override follows for the same reason
+	// (overridecarry.go). Then come the links, bases and asks other modules
+	// keep about them (satellitecarry.go).
 	steps := []struct {
 		what string
 		run  func() error

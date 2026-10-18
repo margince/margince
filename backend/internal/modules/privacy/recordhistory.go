@@ -200,13 +200,10 @@ func admitRecordHistoryRead(ctx context.Context, f RecordHistoryFilter) error {
 }
 
 // ListRecordHistory reads one record's whole-mutation timeline, one line per
-// audit row, inside a single workspace tx. The gate stack is
-// ListFieldHistory's: a human session, object-level read on the entity type,
-// and the row-scope check (out of scope reads as not-found).
-//
-// There is no action allowlist, because a merge or export line belongs in this
-// view. The images are served as written, masked by top-level key. A writer
-// must therefore put a column value at the top level or the mask misses it.
+// audit row, inside a single workspace tx. The gate stack is ListFieldHistory's.
+// There is no action allowlist, because a merge or export line belongs here.
+// The images are served as written, masked by top-level key. A writer must
+// put a column value at the top level, or the mask misses it.
 func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilter) (RecordHistoryPage, error) {
 	if err := admitRecordHistoryRead(ctx, f); err != nil {
 		return RecordHistoryPage{}, err
