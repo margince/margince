@@ -24,6 +24,7 @@ const field: CustomField = {
   type: "text",
   status: "active",
   column_name: "cf_loyalty_band",
+  show_in_create: true,
   created_by: "00000000-0000-4000-8000-000000000001",
   created_at: "2026-09-01T00:00:00Z",
   updated_at: "2026-09-01T00:00:00Z",

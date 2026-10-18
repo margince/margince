@@ -6,6 +6,7 @@ import type { components } from "../api/schema";
 import {
   Badge,
   Button,
+  Checkbox,
   Disclosure,
   EmptyState,
   Field,
@@ -64,6 +65,7 @@ export type NewFieldDraft = {
   type: CfType;
   currency: string;
   options: string[];
+  showInCreate: boolean;
 };
 
 export function FieldBuilder({
@@ -86,6 +88,8 @@ export function FieldBuilder({
   const [type, setType] = useState<CfType>("text");
   const [currency, setCurrency] = useState("EUR");
   const [options, setOptions] = useState<string[]>([""]);
+  const [showInCreate, setShowInCreate] = useState(true);
+  const showInCreateHintId = useId();
   const structural = looksStructural(label);
   // A picklist with no non-blank option is not a picklist, and a currency field
   // needs a well-formed 3-letter ISO-4217 code — Confirm stays disabled until
@@ -117,7 +121,14 @@ export function FieldBuilder({
     if (!canConfirm) {
       return;
     }
-    onSubmit({ object, label: label.trim(), type, currency, options });
+    onSubmit({
+      object,
+      label: label.trim(),
+      type,
+      currency,
+      options,
+      showInCreate,
+    });
   };
 
   return (
@@ -205,6 +216,18 @@ export function FieldBuilder({
           </div>
         )}
 
+        <div className="field">
+          <Checkbox
+            checked={showInCreate}
+            onChange={(event) => setShowInCreate(event.target.checked)}
+            label={t("cf.showInCreate")}
+            aria-describedby={showInCreateHintId}
+          />
+          <p className="t-caption" id={showInCreateHintId}>
+            {t("cf.showInCreateHint")}
+          </p>
+        </div>
+
         {structural && (
           <Callout tone="danger" kind="standing" title={t("cf.refuse.title")}>
             <p>{t("cf.refuse.body")}</p>
@@ -260,6 +283,7 @@ function createBody(
     label: draft.label,
     type: draft.type,
     source: "manual",
+    show_in_create: draft.showInCreate,
     ...(draft.type === "currency" ? { currency: draft.currency } : {}),
     ...(draft.type === "picklist" || draft.type === "multiselect"
       ? { options: cleanOptions(draft.options) }
@@ -302,6 +326,7 @@ function stagedField(draft: NewFieldDraft, createdBy: string): CustomField {
       draft.type === "picklist" || draft.type === "multiselect"
         ? cleanOptions(draft.options)
         : null,
+    show_in_create: draft.showInCreate,
     created_by: createdBy,
     created_at: now,
     updated_at: now,
@@ -430,6 +455,35 @@ export function CustomFieldsAdmin() {
     },
   });
 
+  // The variable carries the field, so a flip that lands before React re-arms
+  // the mutation still writes the row the reader pressed.
+  const showInCreate = useMutation({
+    mutationFn: async (input: { field: CustomField; show: boolean }) => {
+      return unwrap(
+        await api.PATCH("/custom-fields/{id}", {
+          params: {
+            path: { id: input.field.id },
+            header: input.field.version
+              ? { "If-Match": String(input.field.version) }
+              : undefined,
+          },
+          body: { show_in_create: input.show },
+        }),
+      );
+    },
+    onSuccess: (_data, input) => {
+      invalidate();
+      toast.show(
+        t(input.show ? "cf.shownInCreate" : "cf.hiddenFromCreate", {
+          label: input.field.label,
+        }),
+      );
+    },
+    onError: (error) => {
+      toast.show(problemMessageOf(error, t), { tone: "danger" });
+    },
+  });
+
   const startRename = (field: CustomField) => {
     rename.reset();
     setRenaming(field);
@@ -506,6 +560,12 @@ export function CustomFieldsAdmin() {
           meUserId={meUserId}
           onRename={startRename}
           onArchive={setRetiring}
+          onShowInCreate={(field, show) => showInCreate.mutate({ field, show })}
+          savingShowInCreate={
+            showInCreate.isPending
+              ? showInCreate.variables?.field.id
+              : undefined
+          }
         />
       )}
       <PanelBody>

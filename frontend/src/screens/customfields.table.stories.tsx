@@ -35,6 +35,7 @@ const field = (over: Partial<CustomField> = {}): CustomField => ({
   type: "date",
   status: "active",
   column_name: "cf_renewal_date",
+  show_in_create: true,
   created_by: "u1",
   created_at: "2026-06-22T14:09:00Z",
   updated_at: "2026-06-22T14:09:00Z",
@@ -62,6 +63,14 @@ const FIELDS: CustomField[] = [
     column_name: "cf_ceiling",
     currency: "EUR",
     version: 1,
+  }),
+  field({
+    id: "01J2Z3K4M5N6P7Q8R9S0T1U2V7",
+    label: "Previous owner",
+    slug: "previous_owner",
+    type: "text",
+    column_name: "cf_previous_owner",
+    show_in_create: false,
   }),
   field({
     id: "01J2Z3K4M5N6P7Q8R9S0T1U2V6",
@@ -94,13 +103,15 @@ function Table({
           meUserId="u1"
           onRename={noop}
           onArchive={noop}
+          onShowInCreate={noop}
         />
       </Panel>
     </StoryProviders>
   );
 }
 
-/** Live fields, one retired: the retired row is badged and offers no verb. */
+/** Live fields, one kept out of create forms, one retired: the retired row is
+ * badged and offers no verb. */
 export const WithFields: Story = {
   render: () => <Table />,
 };

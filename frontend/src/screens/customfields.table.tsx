@@ -16,6 +16,7 @@ import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
+import { Switch } from "../design-system/switch";
 import { stable } from "../format/collate";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -52,6 +53,8 @@ export function FieldTable({
   meUserId,
   onRename,
   onArchive,
+  onShowInCreate,
+  savingShowInCreate,
 }: Readonly<{
   object: CfObject;
   fields: CustomField[];
@@ -62,6 +65,9 @@ export function FieldTable({
   meUserId?: string;
   onRename: (field: CustomField) => void;
   onArchive: (field: CustomField) => void;
+  onShowInCreate: (field: CustomField, show: boolean) => void;
+  // The id of the field whose create-dialog setting is being written.
+  savingShowInCreate?: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -86,6 +92,18 @@ export function FieldTable({
       render: (field) => <FieldName field={field} />,
     },
     { key: "type", header: t("cf.col.type"), render: typeWord },
+    {
+      key: "inCreate",
+      header: t("cf.col.inCreate"),
+      render: (field) => (
+        <ShowInCreateCell
+          field={field}
+          canEdit={canEdit}
+          pending={savingShowInCreate === field.id}
+          onChange={(show) => onShowInCreate(field, show)}
+        />
+      ),
+    },
     {
       key: "addedBy",
       header: t("cf.col.addedBy"),
@@ -149,6 +167,36 @@ function FieldName({ field }: Readonly<{ field: CustomField }>) {
       <span>{field.label}</span>
       {field.status === "retired" && <Badge>{t("cf.retired")}</Badge>}
     </span>
+  );
+}
+
+// A switch where the reader may flip it, and the plain answer where they may
+// not. A staged row has no id yet, and a retired field's settings are frozen.
+// `!== false` reads a server older than the setting as on, which it was.
+function ShowInCreateCell({
+  field,
+  canEdit,
+  pending,
+  onChange,
+}: Readonly<{
+  field: CustomField;
+  canEdit: boolean;
+  pending: boolean;
+  onChange: (show: boolean) => void;
+}>) {
+  const t = useT();
+  const shown = field.show_in_create !== false;
+  if (!canEdit || field.id === STAGED_ID || field.status === "retired") {
+    return <span>{shown ? t("field.yes") : t("field.no")}</span>;
+  }
+  return (
+    <Switch
+      label={t("cf.showInCreateFor", { label: field.label })}
+      labelHidden
+      checked={shown}
+      pending={pending}
+      onChange={onChange}
+    />
   );
 }
 

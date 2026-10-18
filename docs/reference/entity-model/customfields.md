@@ -6,7 +6,7 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 
 ## custom_field
 
-14 columns · primary key `(id)` · referenced by 0 foreign keys
+15 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -17,6 +17,7 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 | `label` | `text` | yes | Display label; the only thing a rename updates. |
 | `object` | `text` | yes | The existing core object this field is added to. |
 | `options` | `jsonb` |  | Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise. |
+| `show_in_create` | `boolean`, default `true` | yes | Whether the field is offered in the create dialog of its object. |
 | `slug` | `text` | yes | Admin-facing key the column_name derives from. |
 | `status` | `text`, default `'active'::text` | yes | retired = soft: hidden from the API and filtering, column and values preserved. |
 | `type` | `text` | yes | The supported field types. |

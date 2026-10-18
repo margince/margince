@@ -191,7 +191,7 @@ export function DealsScreen({
   const pageName = usePageName("deals");
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  const cf = useObjectCustomFields("deal");
+  const cf = useObjectCustomFields("deal", "create");
   const pipelinesQuery = usePipelines();
   const ownerChips = useOwnerChips();
   const viewerId = useViewerId();

@@ -129,10 +129,11 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, cre
 	if err != nil {
 		return crmcontracts.CustomField{}, err
 	}
-	row := tx.QueryRow(ctx, `INSERT INTO custom_field (object, slug, label, type, column_name, currency, options, created_by)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	showInCreate := spec.ShowInCreate == nil || *spec.ShowInCreate
+	row := tx.QueryRow(ctx, `INSERT INTO custom_field (object, slug, label, type, column_name, currency, options, show_in_create, created_by)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		 RETURNING `+catalogColumns,
-		spec.Object, slug, spec.Label, spec.Type, column, currency, optionsArg, creator)
+		spec.Object, slug, spec.Label, spec.Type, column, currency, optionsArg, showInCreate, creator)
 	out, err := scanCustomField(row)
 	if storekit.IsUniqueViolation(err) {
 		// The (object, slug/column_name) unique index fired: a duplicate
@@ -148,6 +149,7 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, cre
 	after := map[string]any{
 		fieldObject: string(out.Object), "slug": out.Slug, fieldLabel: out.Label,
 		fieldType: string(out.Type), "column_name": column, fieldStatus: string(out.Status),
+		fieldShow: out.ShowInCreate,
 	}
 	if out.Currency != nil {
 		after[fieldCurrency] = *out.Currency

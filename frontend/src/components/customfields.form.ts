@@ -309,10 +309,32 @@ export type ObjectCustomFields = {
 
 const EMPTY_CUSTOM_FIELDS: CustomField[] = [];
 
+// Which form the fields are drawn into. A create dialog leaves out the fields an
+// admin keeps off it. The record page shows every active field, because a value
+// that exists must stay readable and editable where the record is.
+export type CustomFieldSurface = "create" | "record";
+
+// The active fields one surface offers. `!== false` rather than a truthy check:
+// a server older than the setting sends no `show_in_create`, and every field
+// showed in create dialogs then.
+export function fieldsForSurface(
+  fields: CustomField[],
+  surface: CustomFieldSurface,
+): CustomField[] {
+  return fields.filter(
+    (field) =>
+      field.status === "active" &&
+      (surface === "record" || field.show_in_create !== false),
+  );
+}
+
 // Live active custom fields for one object, shaped for the record forms. A read
 // failure (or the schema-pool-less deployment) degrades to no custom fields —
 // the core form still works — rather than blocking the record's own edit.
-export function useObjectCustomFields(object: CfObject): ObjectCustomFields {
+export function useObjectCustomFields(
+  object: CfObject,
+  surface: CustomFieldSurface = "record",
+): ObjectCustomFields {
   const t = useT();
   const query = useQuery({
     queryKey: ["custom-fields", object],
@@ -327,8 +349,9 @@ export function useObjectCustomFields(object: CfObject): ObjectCustomFields {
     },
   });
 
-  const fields = (query.data?.data ?? EMPTY_CUSTOM_FIELDS).filter(
-    (field) => field.status === "active",
+  const fields = fieldsForSurface(
+    query.data?.data ?? EMPTY_CUSTOM_FIELDS,
+    surface,
   );
   const boolLabels = { yes: t("field.yes"), no: t("field.no") };
 

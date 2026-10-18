@@ -36,6 +36,7 @@ const field = (over: Partial<CustomField> = {}): CustomField => ({
   type: "date",
   status: "active",
   column_name: "cf_renewal_date",
+  show_in_create: true,
   created_by: "u1",
   created_at: "2026-06-22T14:09:00Z",
   updated_at: "2026-06-22T14:09:00Z",

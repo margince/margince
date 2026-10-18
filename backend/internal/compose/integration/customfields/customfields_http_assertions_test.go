@@ -406,6 +406,56 @@ func assertListFiltering(t *testing.T, e *apptest.AppEnv) {
 	}
 }
 
+// assertShowInCreateRoundTrip proves the create-dialog setting travels on
+// create, read and update. Omitted means on, and an import can create a field
+// with it off. A PATCH of only the setting leaves the label alone.
+func assertShowInCreateRoundTrip(t *testing.T, e *apptest.AppEnv) {
+	t.Helper()
+	status, plain, problem := createCustomField(t, e, integration.AnyMap{
+		"object": "project", "label": "Delivery Region", "type": "text", "source": "manual",
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("create status = %d, want 201: %+v", status, problem)
+	}
+	if plain.ShowInCreate == nil || !*plain.ShowInCreate {
+		t.Fatalf("a field created without the setting must answer show_in_create=true, got %v", plain.ShowInCreate)
+	}
+
+	status, provenance, problem := createCustomField(t, e, integration.AnyMap{
+		"object": "project", "label": "Previous Owner", "type": "text", "source": "import",
+		"show_in_create": false,
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("create status = %d, want 201: %+v", status, problem)
+	}
+	if provenance.ShowInCreate == nil || *provenance.ShowInCreate {
+		t.Fatalf("a field created with show_in_create=false must answer false, got %v", provenance.ShowInCreate)
+	}
+
+	var listed customFieldListWire
+	if s := e.Call(t, "GET", "/v1/custom-fields?object=project", nil, nil, &listed); s != http.StatusOK {
+		t.Fatalf("list status = %d, want 200: %+v", s, listed)
+	}
+	for _, f := range listed.Data {
+		if f.ID == provenance.ID && (f.ShowInCreate == nil || *f.ShowInCreate) {
+			t.Fatalf("the list must read back show_in_create=false, got %v", f.ShowInCreate)
+		}
+	}
+
+	var shown customFieldWire
+	if s := e.Call(t, "PATCH", "/v1/custom-fields/"+provenance.ID, integration.AnyMap{"show_in_create": true}, nil, &shown); s != http.StatusOK {
+		t.Fatalf("patch status = %d, want 200: %+v", s, shown)
+	}
+	if shown.ShowInCreate == nil || !*shown.ShowInCreate || shown.Label != "Previous Owner" {
+		t.Fatalf("a setting-only PATCH must turn the setting on and keep the label, got %v / %q", shown.ShowInCreate, shown.Label)
+	}
+
+	var problemBody customFieldProblem
+	if s := e.Call(t, "PATCH", "/v1/custom-fields/"+provenance.ID, integration.AnyMap{}, nil, &problemBody); s != http.StatusUnprocessableEntity {
+		t.Fatalf("an empty PATCH status = %d, want 422: %+v", s, problemBody)
+	}
+}
+
 func containsID(fields []customFieldWire, id string) bool {
 	for _, f := range fields {
 		if f.ID == id {

@@ -27,7 +27,7 @@ export function useProjectCreateForm(company: ProjectCreateCompany): {
   create: (values: Record<string, string>) => Promise<Project>;
 } {
   const t = useT();
-  const cf = useObjectCustomFields("project");
+  const cf = useObjectCustomFields("project", "create");
   const pinned = "pinned" in company ? company.pinned : undefined;
   const core = projectFields(t, {
     companies: "options" in company ? company.options : [],

@@ -12,6 +12,14 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Added
 
+- A custom field can stay out of create forms. Each custom field has a
+  **Show in create forms** setting, on by default, so every existing field
+  keeps showing. Turned off, the field leaves the dialogs that create a record
+  and stays on the record page, where it can still be edited. Settings →
+  **Fields** shows and changes it, and the custom-field API takes
+  `show_in_create` on create and update, so an import can create a field that
+  only keeps a value from a previous system.
+
 - **MCP tools match the API.** An MCP tool takes every
   filter, sort and option its REST route takes. `read_view` reads a route's
   views, such as a company's 360 or a deal's status. `change_record_parts`

@@ -80,11 +80,12 @@ func (h Handlers) CreateCustomField(w http.ResponseWriter, r *http.Request, _ cr
 		return
 	}
 	spec := FieldSpec{
-		Object:   string(req.Object),
-		Label:    req.Label,
-		Type:     string(req.Type),
-		Currency: req.Currency,
-		Source:   source,
+		Object:       string(req.Object),
+		Label:        req.Label,
+		Type:         string(req.Type),
+		Currency:     req.Currency,
+		Source:       source,
+		ShowInCreate: req.ShowInCreate,
 	}
 	if req.Options != nil {
 		spec.Options = *req.Options
@@ -98,9 +99,9 @@ func (h Handlers) CreateCustomField(w http.ResponseWriter, r *http.Request, _ cr
 	httperr.WriteJSON(w, http.StatusCreated, field)
 }
 
-// RenameCustomField updates the catalog label only (CUSTOM-FIELDS-WIRE-3):
-// merge-PATCH, so an absent label is the same "nothing to rename" refusal
-// as an explicit empty string — column_name/object/type never move.
+// RenameCustomField updates the catalog label, the create-dialog setting, or
+// both (CUSTOM-FIELDS-WIRE-3). It is a merge-PATCH, so an absent member is
+// left as it is; column_name, object and type never move.
 func (h Handlers) RenameCustomField(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.RenameCustomFieldParams) {
 	ifVersion, ok := httperr.IfMatchVersion(w, r)
 	if !ok {
@@ -110,11 +111,8 @@ func (h Handlers) RenameCustomField(w http.ResponseWriter, r *http.Request, id c
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	var label string
-	if req.Label != nil {
-		label = *req.Label
-	}
-	field, err := h.svc.Rename(r.Context(), ids.UUID(id), label, ifVersion)
+	patch := FieldPatch{Label: req.Label, ShowInCreate: req.ShowInCreate}
+	field, err := h.svc.Update(r.Context(), ids.UUID(id), patch, ifVersion)
 	if err != nil {
 		writeCustomFieldErr(w, r, err)
 		return

@@ -182,7 +182,7 @@ function ContactsList() {
   const viewerId = useViewerId();
   const ownerChips = useOwnerTagChips();
   const savedViews = useSavedViewTabs("contacts");
-  const cf = useObjectCustomFields("contact");
+  const cf = useObjectCustomFields("contact", "create");
   // The form that never closes gives no other feedback: without this, six
   // saved contacts look exactly like six that failed silently.
   const toast = useToast();

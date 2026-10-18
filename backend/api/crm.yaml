@@ -20303,15 +20303,16 @@ paths:
     patch:
       tags: [CustomFields]
       operationId: renameCustomField
-      summary: Rename a custom field's display label (not a schema change).
+      summary: Rename a custom field or change whether create dialogs offer it (not a schema change).
       description: |
-        CUSTOM-FIELDS-WIRE-3. Audited catalog `label` update only; `column_name` never
-        moves — the physical column identity is stable across rename. Merge-PATCH:
-        `column_name`, `object`, and `type` are absent from the request schema entirely.
-        A retired field refuses rename with a 409 `conflict` — retirement is terminal,
-        so its label is frozen. A label another field of the same object already holds (by its
-        text, or by the slug it would derive) answers 409 `conflict`, on rename and on create
-        alike; the sentence says which of the two collided.
+        CUSTOM-FIELDS-WIRE-3. Audited catalog update of `label`, `show_in_create`, or both;
+        `column_name` never moves — the physical column identity is stable across rename.
+        Merge-PATCH: `column_name`, `object`, and `type` are absent from the request schema
+        entirely, and a body with neither setting is refused with a 422. A retired field
+        refuses the update with a 409 `conflict` — retirement is terminal, so its settings
+        are frozen. A label another field of the same object already holds (by its text, or
+        by the slug it would derive) answers 409 `conflict`, on rename and on create alike;
+        the sentence says which of the two collided.
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
       parameters:
@@ -52085,7 +52086,7 @@ components:
         a column drop — CUSTOM-FIELDS-AC-13). Deliberately carries no
         `source`/`captured_by` — the catalog row itself has no such columns; provenance
         on create lives in the audit row.
-      required: [id, object, label, slug, type, status, column_name, created_by, created_at, updated_at]
+      required: [id, object, label, slug, type, status, column_name, show_in_create, created_by, created_at, updated_at]
       properties:
         id: { type: string, format: uuid }
         object:
@@ -52115,6 +52116,11 @@ components:
           type: [array, 'null']
           items: { type: string }
           description: Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise.
+        show_in_create:
+          type: boolean
+          description: >-
+            Whether the field is offered in the create dialog of its object. Off keeps it out of
+            create dialogs only: the record page still shows the field and edits its value.
         created_by: { type: string, format: uuid }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
@@ -52175,6 +52181,12 @@ components:
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         options: { type: [array, 'null'], items: { type: string } }
         source: { type: string }
+        show_in_create:
+          type: boolean
+          default: true
+          description: >-
+            Whether the field is offered in create dialogs. Omitted means true. An import that
+            keeps provenance from a previous system creates its field with this off.
       # Deliberately NOT additionalProperties: true — the x-extension
       # catch-all convention is for record schemas (data-model §9); on this
       # admin request an unknown key is a typo and answers the unknown_field
@@ -52183,10 +52195,12 @@ components:
     RenameCustomFieldRequest:
       type: object
       description: >-
-        Merge-PATCH; `label` only — `column_name`, `object`, and `type` are absent from this
+        Merge-PATCH of the two settings a live field may change: `label` and `show_in_create`.
+        At least one is required. `column_name`, `object`, and `type` are absent from this
         request schema entirely (immutable, not just ignored if sent).
       properties:
         label: { type: string }
+        show_in_create: { type: boolean }
 
     UpdateCustomFieldOptionsRequest:
       type: object

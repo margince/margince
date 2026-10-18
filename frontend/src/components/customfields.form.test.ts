@@ -8,6 +8,7 @@ import {
   customFieldsToBody,
   customFieldsToPatch,
   customFieldToFormField,
+  fieldsForSurface,
 } from "./customfields.form";
 
 const BOOL_LABELS = { yes: "Yes", no: "No" };
@@ -24,12 +25,42 @@ function cf(overrides: Partial<CustomField>): CustomField {
     type: "text",
     status: "active",
     column_name: "cf_field",
+    show_in_create: true,
     created_by: "u1",
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };
 }
+
+describe("fieldsForSurface", () => {
+  const shown = cf({ id: "shown", column_name: "cf_tier" });
+  const kept = cf({
+    id: "kept",
+    column_name: "cf_previous_owner",
+    show_in_create: false,
+  });
+  const retired = cf({ id: "retired", status: "retired" });
+
+  it("leaves a field kept off create forms out of a create dialog", () => {
+    expect(fieldsForSurface([shown, kept, retired], "create")).toEqual([shown]);
+  });
+
+  it("keeps every active field on the record page", () => {
+    expect(fieldsForSurface([shown, kept, retired], "record")).toEqual([
+      shown,
+      kept,
+    ]);
+  });
+
+  // A server older than the setting sends no show_in_create; every field
+  // showed in create dialogs then, so it still does.
+  it("offers a field with no setting on the wire in a create dialog", () => {
+    const older = { ...shown };
+    Reflect.deleteProperty(older, "show_in_create");
+    expect(fieldsForSurface([older], "create")).toEqual([older]);
+  });
+});
 
 describe("customFieldToFormField", () => {
   it("keys the control on the immutable column_name and shows the raw label", () => {

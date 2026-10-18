@@ -13875,14 +13875,15 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Rename a custom field's display label (not a schema change).
-         * @description CUSTOM-FIELDS-WIRE-3. Audited catalog `label` update only; `column_name` never
-         *     moves — the physical column identity is stable across rename. Merge-PATCH:
-         *     `column_name`, `object`, and `type` are absent from the request schema entirely.
-         *     A retired field refuses rename with a 409 `conflict` — retirement is terminal,
-         *     so its label is frozen. A label another field of the same object already holds (by its
-         *     text, or by the slug it would derive) answers 409 `conflict`, on rename and on create
-         *     alike; the sentence says which of the two collided.
+         * Rename a custom field or change whether create dialogs offer it (not a schema change).
+         * @description CUSTOM-FIELDS-WIRE-3. Audited catalog update of `label`, `show_in_create`, or both;
+         *     `column_name` never moves — the physical column identity is stable across rename.
+         *     Merge-PATCH: `column_name`, `object`, and `type` are absent from the request schema
+         *     entirely, and a body with neither setting is refused with a 422. A retired field
+         *     refuses the update with a 409 `conflict` — retirement is terminal, so its settings
+         *     are frozen. A label another field of the same object already holds (by its text, or
+         *     by the slug it would derive) answers 409 `conflict`, on rename and on create alike;
+         *     the sentence says which of the two collided.
          */
         patch: operations["renameCustomField"];
         trace?: never;
@@ -38123,6 +38124,8 @@ export interface components {
             currency?: string | null;
             /** @description Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise. */
             options?: string[] | null;
+            /** @description Whether the field is offered in the create dialog of its object. Off keeps it out of create dialogs only: the record page still shows the field and edits its value. */
+            show_in_create: boolean;
             /** Format: uuid */
             created_by: string;
             /** Format: date-time */
@@ -38170,10 +38173,16 @@ export interface components {
             currency?: string | null;
             options?: string[] | null;
             source: string;
+            /**
+             * @description Whether the field is offered in create dialogs. Omitted means true. An import that keeps provenance from a previous system creates its field with this off.
+             * @default true
+             */
+            show_in_create: boolean;
         };
-        /** @description Merge-PATCH; `label` only — `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). */
+        /** @description Merge-PATCH of the two settings a live field may change: `label` and `show_in_create`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). */
         RenameCustomFieldRequest: {
             label?: string;
+            show_in_create?: boolean;
         };
         /** @description CUSTOM-FIELDS-PARAM-5. Replaces the picklist's full allowed-option set (ordered); at least one option is required — an empty array is rejected (422). */
         UpdateCustomFieldOptionsRequest: {

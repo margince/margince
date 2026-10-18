@@ -9282,6 +9282,14 @@ export const en = {
     "“{label}” archived. It is hidden from new records and kept in audit and history. Archiving cannot be undone.",
   "cf.renamePrompt": "New label",
   "cf.renamed": "Renamed to “{label}”",
+  "cf.showInCreate": "Show in create forms",
+  "cf.showInCreateHint":
+    "Off keeps this field out of the dialog that creates a record. The record page still shows it, and you can edit it there.",
+  "cf.col.inCreate": "In create forms",
+  "cf.showInCreateFor": "Show “{label}” in create forms",
+  "cf.shownInCreate": "“{label}” now shows in create forms",
+  "cf.hiddenFromCreate":
+    "“{label}” no longer shows in create forms. The record page still shows it.",
   "cf.audit.title": "Recent field changes",
   "audit.kind.customField": "Custom field",
   "cf.audit.empty": "No custom field changes yet.",
