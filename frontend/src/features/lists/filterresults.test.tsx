@@ -247,13 +247,21 @@ describe("a column that points at another record", () => {
       type: "id",
       operators: ["eq"],
       references: "app_user",
+      custom: false,
     },
-    { name: "stage_id", type: "id", operators: ["eq"], references: "stage" },
+    {
+      name: "stage_id",
+      type: "id",
+      operators: ["eq"],
+      references: "stage",
+      custom: false,
+    },
     {
       name: "company_id",
       type: "id",
       operators: ["eq"],
       references: "company",
+      custom: false,
     },
   ];
 
