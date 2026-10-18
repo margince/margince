@@ -74,7 +74,6 @@ func AnalyticsSchemaFor(ctx context.Context) analyticsquery.Schema {
 	return analyticsquery.Schema{Entities: entities, Version: schemaVersion(entities)}
 }
 
-// withoutKeys is from less the named keys.
 func withoutKeys(from map[string]string, keys []string) map[string]string {
 	out := make(map[string]string, len(from))
 	for name, expr := range from {
@@ -85,7 +84,6 @@ func withoutKeys(from map[string]string, keys []string) map[string]string {
 	return out
 }
 
-// onlyKeys is the named keys of from.
 func onlyKeys(from map[string]string, keys []string) map[string]string {
 	out := make(map[string]string, len(keys))
 	for _, name := range keys {

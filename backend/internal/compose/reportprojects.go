@@ -84,10 +84,8 @@ func projectRowDimensions() map[string]string {
 	}
 }
 
-// projectRowKeys are the project dimensions that each name one project.
 var projectRowKeys = []string{fieldProjectID, fieldName, fieldKey}
 
-// projectRowMoments are the dimensions that give each project a time of its own.
 var projectRowMoments = []string{fieldLastActivityAt, fieldQuietSince}
 
 // colProjectCustomer is the company a project report GROUPS by: its customer,
