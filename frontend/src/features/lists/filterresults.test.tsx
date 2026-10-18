@@ -115,8 +115,14 @@ function preview(rows: readonly Record<string, unknown>[]): FilterPreview {
   };
 }
 
+// The table reads the companies its rows name, so it needs a query client
+// even when no column is a reference.
 function wrapper({ children }: { children: ReactNode }) {
-  return <LocaleProvider>{children}</LocaleProvider>;
+  return (
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider>{children}</LocaleProvider>
+    </QueryClientProvider>
+  );
 }
 
 function results(rows: readonly Record<string, unknown>[]) {
@@ -261,23 +267,35 @@ describe("a column that points at another record", () => {
   // Names only u-1, s-1 and c-1. Every other id is one the workspace no longer
   // holds, the way a removed seat or a deleted stage is.
   function stubWorkspace() {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (request: Request) => {
-        const path = new URL(request.url).pathname;
-        if (path.endsWith("/users/names")) {
-          return jsonResponse({
-            data: [{ id: "u-1", display_name: "Priya Shah" }],
-          });
-        }
-        if (path.endsWith("/stages")) {
-          return jsonResponse({ data: [{ id: "s-1", name: "Qualified" }] });
-        }
-        if (path.endsWith("/companies/c-1")) {
-          return jsonResponse({ id: "c-1", display_name: "Brandt GmbH" });
-        }
-        return jsonResponse({}, 404);
-      }),
+    const fetchMock = vi.fn(async (request: Request) => {
+      const url = new URL(request.url);
+      const path = url.pathname;
+      if (path.endsWith("/companies")) {
+        const asked = url.searchParams.getAll("id");
+        return jsonResponse({
+          data: asked.includes("c-1")
+            ? [{ id: "c-1", display_name: "Brandt GmbH" }]
+            : [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      if (path.endsWith("/users/names")) {
+        return jsonResponse({
+          data: [{ id: "u-1", display_name: "Priya Shah" }],
+        });
+      }
+      if (path.endsWith("/stages")) {
+        return jsonResponse({ data: [{ id: "s-1", name: "Qualified" }] });
+      }
+      return jsonResponse({}, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  function pathsAsked(fetchMock: ReturnType<typeof stubWorkspace>) {
+    return fetchMock.mock.calls.map(
+      ([request]) => new URL(request.url).pathname,
     );
   }
 
@@ -327,6 +345,26 @@ describe("a column that points at another record", () => {
     expect(screen.queryByText("u-1")).toBeNull();
     expect(screen.queryByText("s-1")).toBeNull();
     expect(screen.queryByText("c-1")).toBeNull();
+  });
+
+  it("reads every company on the page in one request", async () => {
+    const fetchMock = stubWorkspace();
+    renderDeals(
+      ["c-1", "c-2", "c-3", "c-1"].map((company, index) => ({
+        id: `d-${index}`,
+        name: `Deal ${index}`,
+        owner_id: "u-1",
+        stage_id: "s-1",
+        company_id: company,
+      })),
+    );
+
+    expect(await screen.findAllByText("Brandt GmbH")).toHaveLength(2);
+    const companyReads = pathsAsked(fetchMock).filter((path) =>
+      path.includes("/companies"),
+    );
+    expect(companyReads).toHaveLength(1);
+    expect(companyReads[0]).toMatch(/\/companies$/);
   });
 
   it("says a reference is gone rather than printing an id nobody can read", async () => {

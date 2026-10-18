@@ -15,6 +15,7 @@
 // every non-generated column of the table and thirty columns is not a table
 // anybody reads.
 
+import { useCompanyMarksByID } from "../../components/companymarks";
 import { type ListColumn, ListTable } from "../../design-system/listtable";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -137,8 +138,22 @@ export function FilterResults({
   const t = useT();
   const rows: readonly PreviewRow[] = preview?.rows ?? [];
   const names = previewColumnNames(preview?.columns ?? [], named);
+  const referenceOf = (name: string) =>
+    fields.find((field) => field.name === name)?.references;
+  // Every company the page names, read in one batch rather than one request
+  // per cell.
+  const companies = useCompanyMarksByID(
+    names
+      .filter((name) => referenceOf(name) === "company")
+      .flatMap((name) =>
+        rows.flatMap((row) => {
+          const value = row[name];
+          return typeof value === "string" ? [value] : [];
+        }),
+      ),
+  );
   const columns: ListColumn<PreviewRow>[] = names.map((name, index) => {
-    const reference = fields.find((field) => field.name === name)?.references;
+    const reference = referenceOf(name);
     return {
       key: name,
       header: headerFor(name, fields, t),
@@ -149,7 +164,11 @@ export function FilterResults({
       cell: (row) => {
         const value = row[name];
         return reference && typeof value === "string" && value !== "" ? (
-          <ReferenceCell reference={reference} id={value} />
+          <ReferenceCell
+            reference={reference}
+            id={value}
+            companies={companies}
+          />
         ) : (
           cellText(value)
         );

@@ -3,10 +3,12 @@
 
 // A preview cell that holds an id pointing at another record, named the way the
 // rest of the product names that record: a colleague by id, a team off the
-// roster walk, a company or project off its own read, and workspace
-// configuration off the filter builder's own option lists. The id itself is
-// never the label, because a reader checking a filter cannot act on a UUID.
+// roster walk, companies in one batch for the whole page, a project off its own
+// read, and workspace configuration off the filter builder's own option lists.
+// The id itself is never the label, because a reader checking a filter cannot
+// act on a UUID.
 
+import type { CompanyMarksByID } from "../../components/companymarks";
 import {
   missLabel,
   rosterMissLabel,
@@ -14,7 +16,11 @@ import {
   useRoster,
   useRosterPartial,
 } from "../../components/entityref";
-import { readingOf, usableName } from "../../components/entityref.queries";
+import {
+  type NameReading,
+  readingOf,
+  usableName,
+} from "../../components/entityref.queries";
 import { useT } from "../../i18n";
 import { useMemberName } from "../../lib/membernames";
 import { type Reference, useReferenceOptions } from "./filterreference";
@@ -24,15 +30,22 @@ type CellProps = Readonly<{ id: string }>;
 export function ReferenceCell({
   reference,
   id,
-}: Readonly<{ reference: Reference; id: string }>) {
+  companies,
+}: Readonly<{
+  reference: Reference;
+  id: string;
+  /** The page's companies, read once by the table rather than per cell. */
+  companies: CompanyMarksByID;
+}>) {
   switch (reference) {
     case "app_user":
       return <UserCell id={id} />;
     case "team":
       return <TeamCell id={id} />;
     case "company":
+      return <CompanyCell id={id} companies={companies} />;
     case "project":
-      return <RecordCell kind={reference} id={id} />;
+      return <ProjectCell id={id} />;
     default:
       return <OptionCell reference={reference} id={id} />;
   }
@@ -62,12 +75,29 @@ function TeamCell({ id }: CellProps) {
   );
 }
 
-function RecordCell({
-  kind,
+function CompanyCell({
   id,
-}: Readonly<{ kind: "company" | "project"; id: string }>) {
+  companies,
+}: Readonly<{ id: string; companies: CompanyMarksByID }>) {
   const t = useT();
-  const { name, reading } = useEntityName(kind, id);
+  const name = usableName(companies.marks.get(id)?.name);
+  const reading: NameReading = companies.pending.has(id)
+    ? "pending"
+    : companies.unreadable.has(id)
+      ? "failed"
+      : "unnamed";
+  return (
+    <span title={id}>
+      {name ?? missLabel(reading, t, t("filters.resultRefGone"))}
+    </span>
+  );
+}
+
+// `/projects` takes no id filter, so a project is named by its own read; the
+// query is keyed by id, so a page naming one project many times reads it once.
+function ProjectCell({ id }: CellProps) {
+  const t = useT();
+  const { name, reading } = useEntityName("project", id);
   return (
     <span title={id}>
       {name ?? missLabel(reading, t, t("filters.resultRefGone"))}

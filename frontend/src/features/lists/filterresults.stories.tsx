@@ -170,9 +170,11 @@ export const ReferencesByName: Story = {
         jsonResponse({ data: [{ id: "u-1", display_name: "Priya Shah" }] }),
       "GET /stages": () =>
         jsonResponse({ data: [{ id: "s-1", name: "Qualified" }] }),
-      "GET /companies/c-1": () =>
-        jsonResponse({ id: "c-1", display_name: "Brandt GmbH" }),
-      "GET /companies/c-removed": () => jsonResponse({}, 404),
+      "GET /companies": () =>
+        jsonResponse({
+          data: [{ id: "c-1", display_name: "Brandt GmbH" }],
+          page: { next_cursor: null, has_more: false },
+        }),
     });
     return (
       <FilterResults
