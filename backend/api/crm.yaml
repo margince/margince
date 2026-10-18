@@ -55474,7 +55474,7 @@ components:
         assignee_id: { type: [string, 'null'], format: uuid, description: 'null hands the request back to the unassigned pool.' }
         resolution:
           type: [string, 'null']
-          description: 'null clears the answer, which a fulfilled or rejected request refuses with 422: a closed request keeps its answer.'
+          description: 'A closed (fulfilled or rejected) request keeps its answer: null, or text other than the stored answer, is refused with 422. An open request takes any draft.'
 
     CaptureConsent:
       type: object

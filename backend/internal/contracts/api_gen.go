@@ -48675,7 +48675,7 @@ type UpdateDataSubjectRequest struct {
 	// AssigneeId null hands the request back to the unassigned pool.
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 
-	// Resolution null clears the answer, which a fulfilled or rejected request refuses with 422: a closed request keeps its answer.
+	// Resolution A closed (fulfilled or rejected) request keeps its answer: null, or text other than the stored answer, is refused with 422. An open request takes any draft.
 	Resolution *string                         `json:"resolution,omitempty"`
 	Status     *UpdateDataSubjectRequestStatus `json:"status,omitempty"`
 }

@@ -155,6 +155,41 @@ func TestAClosedRequestKeepsItsAnswer(t *testing.T) {
 	}
 }
 
+func TestAClosedRequestRefusesAnotherAnswerAndAcceptsItsOwn(t *testing.T) {
+	e := setupDSR(t)
+	request := e.mustCreate(t, dsrKindAccess, "rewrite@dsr.test")
+	if w := e.patchDSR(t, request.ID, `{"status":"rejected","resolution":"first answer"}`); w.Code != http.StatusOK {
+		t.Fatalf("rejecting → %d: %s", w.Code, w.Body)
+	}
+
+	w := e.patchDSR(t, request.ID, `{"resolution":"another answer"}`)
+	if w.Code != http.StatusUnprocessableEntity || validationField(t, w.Body.Bytes()) != fieldResolution {
+		t.Fatalf("a new answer on a rejected request → %d %s, want 422 naming resolution", w.Code, w.Body)
+	}
+	if after := e.read(t, request.ID); after.Resolution == nil || *after.Resolution != "first answer" {
+		t.Fatalf("a refused patch left the answer %v, want %q", after.Resolution, "first answer")
+	}
+	if w := e.patchDSR(t, request.ID, `{"resolution":"first answer"}`); w.Code != http.StatusOK {
+		t.Fatalf("resending the stored answer → %d: %s", w.Code, w.Body)
+	}
+}
+
+func TestARepeatedErasureFulfilmentIsAccepted(t *testing.T) {
+	e := setupDSR(t)
+	request := e.mustCreate(t, dsrKindErasure, ids.NewV7().String())
+	erase := func(context.Context, ids.UUID, string) error { return nil }
+	in := UpdateDSRInput{Status: new("fulfilled"), Resolution: new("erased on request")}
+
+	for attempt := 1; attempt <= 2; attempt++ {
+		if _, err := e.store.FulfilErasure(e.ctx, request.ID, in, erase); err != nil {
+			t.Fatalf("fulfilment attempt %d: %v", attempt, err)
+		}
+	}
+	if after := e.read(t, request.ID); after.Resolution == nil || *after.Resolution != erasedResolution {
+		t.Fatalf("the erased request holds %v, want %q", after.Resolution, erasedResolution)
+	}
+}
+
 func TestClosingCannotBlankADraftAnswer(t *testing.T) {
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindAccess, "draft-close@dsr.test")

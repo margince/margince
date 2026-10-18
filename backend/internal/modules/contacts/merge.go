@@ -6,6 +6,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -56,8 +57,24 @@ import (
 // Held by: TestAClaimedSpellingIsTheOnlySpellingWhereItIsUsed (backend/gates/claimedspelling_test.go)
 const (
 	auditKeyMergedInto = "merged_into_id"
+	auditKeyMergedFrom = "merged_from_id"
 	auditKeyFilled     = "filled"
 )
+
+// auditMergeSurvivor records a merge on the surviving record as well as the
+// archived one, because the survivor is where a person reads the record's
+// history afterwards: a value it took from the other record (an address, a
+// field fill) is otherwise unexplained there. No event pairs with it; the
+// merged event rides the archived record's row.
+func auditMergeSurvivor(ctx context.Context, tx pgx.Tx, entityType string, sourceID, targetID ids.UUID, detail map[string]any) error {
+	after := map[string]any{auditKeyMergedFrom: sourceID}
+	maps.Copy(after, detail)
+	if _, err := storekit.Audit(ctx, tx, "merge", entityType, targetID,
+		map[string]any{auditKeyMergedFrom: nil}, after); err != nil {
+		return fmt.Errorf("audit %s merge on the survivor: %w", entityType, err)
+	}
+	return nil
+}
 
 // MergeSelfError maps to 422: a record cannot merge into itself.
 type MergeSelfError struct{}
@@ -214,6 +231,10 @@ func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetI
 	// which neither contact.updated nor contact.archived can say.
 	if err := storekit.EmitEvent(ctx, tx, auditID, sourceID.UUID, contactMergedPayload(sourceID, targetID, counts)); err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("emit contact.merged: %w", err)
+	}
+	if err := auditMergeSurvivor(ctx, tx, "contact", sourceID.UUID, targetID.UUID,
+		map[string]any{"relinked": counts, auditKeyFilled: p.After()}); err != nil {
+		return crmcontracts.Contact{}, err
 	}
 	out, err := readContact(ctx, tx, targetID, storekit.LiveOnly, active)
 	if err != nil {

@@ -329,6 +329,9 @@ func validateDSRUpdate(current dsrRow, in UpdateDSRInput) *ValidationError {
 	case in.ClearResolution:
 		answer = nil
 	case in.Resolution != nil:
+		if closedDSRStatus(current.Status) && !sameAnswer(current.Resolution, in.Resolution) {
+			return &ValidationError{Field: fieldResolution, Reason: "a closed request keeps its answer"}
+		}
 		answer = in.Resolution
 	case next == current.Status:
 		// A patch that neither closes nor writes the answer leaves the stored one as it is.
@@ -341,6 +344,16 @@ func validateDSRUpdate(current dsrRow, in UpdateDSRInput) *ValidationError {
 		return &ValidationError{Field: fieldResolution, Reason: "closing a request needs its answer"}
 	}
 	return &ValidationError{Field: fieldResolution, Reason: "a closed request keeps its answer"}
+}
+
+// erasedResolution is what an erasure leaves in place of the officer's prose,
+// which can quote the subject.
+const erasedResolution = "erased"
+
+// sameAnswer lets a closed request take its own text again, so a client that
+// resends the whole record is not refused for changing nothing.
+func sameAnswer(stored, sent *string) bool {
+	return stored != nil && sent != nil && *stored == *sent
 }
 
 // closedDSRStatus reports the two statuses a request ends in.

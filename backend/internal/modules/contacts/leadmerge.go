@@ -107,6 +107,10 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	}); err != nil {
 		return crmcontracts.Lead{}, fmt.Errorf("emit lead.merged: %w", err)
 	}
+	if err := auditMergeSurvivor(ctx, tx, entityLead, sourceID.UUID, targetID.UUID,
+		map[string]any{auditKeyFilled: p.After()}); err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	out, err := readLead(ctx, tx, targetID, storekit.LiveOnly, active)
 	if err != nil {
 		return crmcontracts.Lead{}, fmt.Errorf("read surviving lead: %w", err)
