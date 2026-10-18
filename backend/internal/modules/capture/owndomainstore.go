@@ -68,39 +68,74 @@ type OwnDomainList struct {
 	AnchorDomains []string
 }
 
-// List returns the registry and the company's claimed domains.
+// List returns the company's claimed domains and the registry rows that add to
+// them. A row the company profile already covers is left out, and so is a
+// candidate a trusted domain already covers, so every candidate listed is one
+// that does not stop capture yet.
 func (s *OwnDomainStore) List(ctx context.Context) (OwnDomainList, error) {
 	var out OwnDomainList
 	if err := auth.Require(ctx, captureSettingsObject, principal.ActionRead); err != nil {
 		return OwnDomainList{}, err
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT domain, source, verified, created_at
-			  FROM workspace_email_domain ORDER BY domain`)
+		registry, err := registryRows(ctx, tx)
 		if err != nil {
-			return fmt.Errorf("capture: listing own domains: %w", err)
+			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var d OwnDomain
-			if err := rows.Scan(&d.Domain, &d.Source, &d.Verified, &d.CreatedAt); err != nil {
-				return fmt.Errorf("capture: listing own domains: %w", err)
-			}
-			out.Domains = append(out.Domains, d)
-		}
-		if err := rows.Err(); err != nil {
-			return fmt.Errorf("capture: listing own domains: %w", err)
-		}
-
 		claimed, err := queryDomains(ctx, tx, anchorDomains)
 		if err != nil {
 			return err
 		}
+		// The same set the capture drop reads, so the screen cannot call a
+		// domain unconfirmed while capture already treats it as ours.
+		trusted, err := trustedOwnDomainsTx(ctx, tx)
+		if err != nil {
+			return err
+		}
 		out.AnchorDomains = claimed.Domains()
+		out.Domains = addedByRegistry(registry, claimed, trusted)
 		return nil
 	})
 	return out, err
+}
+
+// addedByRegistry keeps the rows that change what stops capture, or would once
+// confirmed. A verified row is in the trusted set itself, so only the company's
+// claim can make it redundant.
+func addedByRegistry(registry []OwnDomain, claimed, trusted InternalDomains) []OwnDomain {
+	kept := make([]OwnDomain, 0, len(registry))
+	for _, row := range registry {
+		if claimed.CoversDomain(row.Domain) {
+			continue
+		}
+		if !row.Verified && trusted.CoversDomain(row.Domain) {
+			continue
+		}
+		kept = append(kept, row)
+	}
+	return kept
+}
+
+func registryRows(ctx context.Context, tx pgx.Tx) ([]OwnDomain, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT domain, source, verified, created_at
+		  FROM workspace_email_domain ORDER BY domain`)
+	if err != nil {
+		return nil, fmt.Errorf("capture: listing own domains: %w", err)
+	}
+	defer rows.Close()
+	var out []OwnDomain
+	for rows.Next() {
+		var d OwnDomain
+		if err := rows.Scan(&d.Domain, &d.Source, &d.Verified, &d.CreatedAt); err != nil {
+			return nil, fmt.Errorf("capture: listing own domains: %w", err)
+		}
+		out = append(out, d)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("capture: listing own domains: %w", err)
+	}
+	return out, nil
 }
 
 // Colleagues answers which addresses belong to the workspace itself, so a

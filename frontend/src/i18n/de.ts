@@ -11392,7 +11392,9 @@ export const de = {
   "ownDomains.addFailed": "Domain nicht hinzugefügt",
   "ownDomains.remove": "{domain} entfernen",
   "ownDomains.candidateNote":
-    "In einem verbundenen Postfach gesehen. Die Domain stoppt die Erfassung nicht, da sie nicht bestätigt ist.",
+    "In einem verbundenen Postfach gesehen. Nachrichten zwischen Teammitgliedern auf dieser Domain werden gespeichert, bis du die Domain bestätigst.",
+  "ownDomains.confirm": "Bestätigen",
+  "ownDomains.confirmLabel": "{domain} bestätigen",
 
   "financeSource.title": "Buchhaltungsquelle",
   "financeSource.sub":

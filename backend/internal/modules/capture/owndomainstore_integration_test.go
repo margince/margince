@@ -144,20 +144,7 @@ func TestRemovingADomainLetsItsMailBeCapturedAgain(t *testing.T) {
 // them as removable rows would promise an action this surface cannot perform.
 func TestTheListSeparatesTheCompanysOwnClaimFromTheRegistry(t *testing.T) {
 	ctx, db := ownDomainWorkspace(t)
-	if err := db.Tx(ctx, func(tx pgx.Tx) error {
-		companyID := ids.NewV7()
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO company (id, display_name, is_anchor, source, captured_by)
-			VALUES ($1, 'Our Company', true, 'manual', 'human:test')`, companyID); err != nil {
-			return err
-		}
-		_, err := tx.Exec(ctx, `
-			INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
-			VALUES ($1, 'ourcompany.example', true, 'manual', 'human:test')`, companyID)
-		return err
-	}); err != nil {
-		t.Fatalf("seeding the anchor company: %v", err)
-	}
+	seedAnchorDomain(ctx, t, db, "ourcompany.example")
 	store := capture.NewOwnDomainStore(db)
 	if _, err := store.Add(ctx, "acme.com"); err != nil {
 		t.Fatalf("Add: %v", err)
@@ -172,6 +159,77 @@ func TestTheListSeparatesTheCompanysOwnClaimFromTheRegistry(t *testing.T) {
 	}
 	if len(list.AnchorDomains) != 1 || list.AnchorDomains[0] != "ourcompany.example" {
 		t.Errorf("company claim = %v, want ourcompany.example reported apart from the registry", list.AnchorDomains)
+	}
+}
+
+// The screen says a listed candidate does not stop capture, so the list leaves
+// out every row whose mail capture already drops. The check is the drop itself:
+// each listed candidate's mail is kept and each hidden row's mail is skipped.
+func TestTheListShowsOnlyCandidatesCaptureStillKeeps(t *testing.T) {
+	ctx, db := ownDomainWorkspace(t)
+	seedAnchorDomain(ctx, t, db, "ourcompany.example")
+	store := capture.NewOwnDomainStore(db)
+	if _, err := store.Add(ctx, "acme.com"); err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+	hidden := []string{"ourcompany.example", "eu.ourcompany.example", "mail.acme.com"}
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO workspace_email_domain (domain, source, verified) VALUES
+			  ('ourcompany.example', 'mailbox', false),
+			  ('eu.ourcompany.example', 'admin', true),
+			  ('mail.acme.com', 'mailbox', false),
+			  ('seen.example', 'mailbox', false)`)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the registry: %v", err)
+	}
+
+	list, err := store.List(ctx)
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	var listed []string
+	for _, d := range list.Domains {
+		listed = append(listed, d.Domain)
+	}
+	if len(listed) != 2 || listed[0] != "acme.com" || listed[1] != "seen.example" {
+		t.Fatalf("registry = %v, want [acme.com seen.example]: a covered row is listed a second time", listed)
+	}
+
+	ws, _ := principal.WorkspaceID(ctx)
+	sink := capture.NewSink(db)
+	upsert := func(domain string) error {
+		_, err := sink.Upsert(mailSinkContext(context.Background(), ws),
+			mailRecord("listed-"+domain, "boss@"+domain, "boss@"+domain, "rep@"+domain))
+		return err
+	}
+	if err := upsert("seen.example"); err != nil {
+		t.Errorf("the listed candidate seen.example says capture keeps its mail, but Upsert = %v", err)
+	}
+	for _, domain := range hidden {
+		if err := upsert(domain); !isSkip(err) {
+			t.Errorf("%s is left out because capture drops its mail, but Upsert = %v", domain, err)
+		}
+	}
+}
+
+// seedAnchorDomain gives the workspace an anchor company that claims domain.
+func seedAnchorDomain(ctx context.Context, t *testing.T, db *database.DB, domain string) {
+	t.Helper()
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		companyID := ids.NewV7()
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO company (id, display_name, is_anchor, source, captured_by)
+			VALUES ($1, 'Our Company', true, 'manual', 'human:test')`, companyID); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
+			VALUES ($1, $2, true, 'manual', 'human:test')`, companyID, domain)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the anchor company: %v", err)
 	}
 }
 

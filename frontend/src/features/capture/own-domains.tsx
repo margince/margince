@@ -15,6 +15,7 @@ import {
   TextInput,
 } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { useFocusHandoff } from "../../design-system/focushandoff";
 import { Heading } from "../../design-system/heading";
 import { IconAction } from "../../design-system/iconaction";
 import {
@@ -268,6 +269,17 @@ function CuratedDomain({
       }
       control={
         <span className="cell-actions" ref={verbs}>
+          {!domain.verified && (
+            <ConfirmCandidate
+              domain={domain.domain}
+              refusal={refusal}
+              landing={() =>
+                Array.from(
+                  verbs.current?.querySelectorAll<HTMLElement>("button") ?? [],
+                ).at(-1) ?? null
+              }
+            />
+          )}
           <IconAction
             variant="ghost"
             label={t("ownDomains.remove", { domain: domain.domain })}
@@ -279,6 +291,35 @@ function CuratedDomain({
         </span>
       }
     />
+  );
+}
+
+// Confirming is adding the domain again, which marks the row verified. The
+// verb leaves with the candidate state, so focus moves to the row's remove verb.
+function ConfirmCandidate({
+  domain,
+  refusal,
+  landing,
+}: Readonly<{
+  domain: string;
+  refusal: string | undefined;
+  landing: () => HTMLElement | null;
+}>) {
+  const t = useT();
+  const confirm = useAddOwnDomain();
+  const self = useRef<HTMLSpanElement>(null);
+  useFocusHandoff(self, landing);
+  return (
+    <span ref={self}>
+      <Button
+        aria-label={t("ownDomains.confirmLabel", { domain })}
+        reasonId={refusal}
+        pending={confirm.isPending}
+        onClick={() => confirm.mutate(domain)}
+      >
+        {t("ownDomains.confirm")}
+      </Button>
+    </span>
   );
 }
 
