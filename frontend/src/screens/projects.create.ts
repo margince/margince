@@ -10,8 +10,8 @@ import { mapProjectCreate, type Project, projectFields } from "./projects.form";
 
 // The one create-project form both call sites open: the core fields, the
 // workspace's project custom fields, and the body the two become. The company
-// is searched on the projects screen; one pinned by the company page the rep
-// is standing on drops the picker and rides the body instead.
+// is searched on the projects screen. A company pinned by the company page
+// drops the picker and rides the body instead.
 export function useProjectCreateForm({
   pinned,
 }: Readonly<{ pinned?: string }> = {}): {
