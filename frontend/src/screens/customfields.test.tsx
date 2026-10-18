@@ -783,6 +783,48 @@ describe("the create-form setting on the field table", () => {
     ).toBeInTheDocument();
   });
 
+  // The list read after the first write never answers. So the second flip
+  // carries the right version only if the saved row went into the cache.
+  it("sends each flip the version the previous one saved", async () => {
+    const calls: Recorded[] = [];
+    const deal = [field({ id: "d1", version: 3, show_in_create: true })];
+    const backend = customFieldsBackend(deal, [], calls);
+    const sent: { ifMatch: string | null; body: unknown }[] = [];
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      if (!(input instanceof Request)) return backend(input);
+      if (input.method === "PATCH") {
+        const body = (await input.json()) as Partial<CustomField>;
+        sent.push({ ifMatch: input.headers.get("If-Match"), body });
+        deal[0] = { ...deal[0], ...body, version: (deal[0].version ?? 0) + 1 };
+        return jsonResponse(deal[0]);
+      }
+      if (sent.length > 0 && input.url.includes("/custom-fields?")) {
+        return new Promise<Response>(() => {});
+      }
+      return backend(input);
+    });
+    renderAdmin();
+    const name = "Show “Renewal date” in create forms";
+    await userEvent.click(await screen.findByRole("switch", { name }));
+    await waitFor(() =>
+      expect(screen.getByRole("switch", { name })).toHaveAttribute(
+        "aria-checked",
+        "false",
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("switch", { name })).not.toHaveAttribute(
+        "aria-busy",
+      ),
+    );
+    await userEvent.click(screen.getByRole("switch", { name }));
+    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent).toEqual([
+      { ifMatch: "3", body: { show_in_create: false } },
+      { ifMatch: "4", body: { show_in_create: true } },
+    ]);
+  });
+
   it("states the setting without a switch to a reader who may not change it", () => {
     wrap(
       <FieldTable

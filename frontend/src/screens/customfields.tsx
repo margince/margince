@@ -456,7 +456,10 @@ export function CustomFieldsAdmin() {
   });
 
   // The variable carries the field, so a flip that lands before React re-arms
-  // the mutation still writes the row the reader pressed.
+  // the mutation still writes the row the reader pressed. The saved row goes
+  // straight into the list of the field's own object. A refetch keyed by the
+  // object picked now could miss it, and the next flip would send a stale
+  // version.
   const showInCreate = useMutation({
     mutationFn: async (input: { field: CustomField; show: boolean }) => {
       return unwrap(
@@ -471,8 +474,16 @@ export function CustomFieldsAdmin() {
         }),
       );
     },
-    onSuccess: (_data, input) => {
-      invalidate();
+    onSuccess: (saved, input) => {
+      queryClient.setQueryData<CustomFieldList>(
+        ["custom-fields", input.field.object],
+        (old) =>
+          old && {
+            ...old,
+            data: old.data.map((one) => (one.id === saved.id ? saved : one)),
+          },
+      );
+      queryClient.invalidateQueries({ queryKey: ["cf-audit"] });
       toast.show(
         t(input.show ? "cf.shownInCreate" : "cf.hiddenFromCreate", {
           label: input.field.label,

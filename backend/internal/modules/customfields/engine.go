@@ -144,6 +144,8 @@ const (
 	fieldSource   = "source"
 	fieldStatus   = "status"
 	fieldShow     = "show_in_create"
+	fieldSlug     = "slug"
+	fieldColumn   = "column_name"
 	codeRequired  = "required"
 
 	// codeInvalidCharacters flags a picklist option carrying a NUL byte or
