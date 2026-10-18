@@ -46,10 +46,12 @@ var (
 	// A floor marker states a lower bound. The exclusive ones (">500", "over
 	// 500") start one above the number; the inclusive ones ("at least 500")
 	// start on it.
-	employeeRangeAbove   = regexp.MustCompile(`(?i)>|(^|[^\p{L}])(over|more than|mehr als|über)([^\p{L}]|$)`)
-	employeeRangeAtLeast = regexp.MustCompile(`(?i)≥|(^|[^\p{L}])(at least|mindestens)([^\p{L}]|$)`)
-	// A ceiling marker ("up to 50") could mean any band below it.
-	employeeRangeCeiling = regexp.MustCompile(`(?i)[<≤]|(^|[^\p{L}])(under|less than|fewer than|up to|unter|weniger als|bis zu|höchstens)([^\p{L}]|$)`)
+	employeeRangeAbove   = regexp.MustCompile(`(?i)>([^=]|$)|(^|[^\p{L}])(over|more than|mehr als|über)([^\p{L}]|$)`)
+	employeeRangeAtLeast = regexp.MustCompile(`(?i)≥|>=|(^|[^\p{L}])(at least|mindestens)([^\p{L}]|$)`)
+	// A ceiling marker ("up to 50") could mean any band below it. A negated
+	// floor ("no more than 500", "nicht mehr als 500") is a ceiling too, and
+	// is checked before the floors so it never reads as one.
+	employeeRangeCeiling = regexp.MustCompile(`(?i)[<≤]|(^|[^\p{L}])(under|less than|fewer than|up to|at most|unter|weniger als|bis zu|höchstens|maximal|(no|not|nicht)\s+(more than|greater than|over|mehr als|über))([^\p{L}]|$)`)
 	// A company-register marker means the digits are an identifier, not a
 	// headcount ("HRB 9001").
 	employeeRangeRegister = regexp.MustCompile(`(?i)(^|[^\p{L}])(hrb|hra|vr|vat|ust)([^\p{L}\d]|\d|$)`)
@@ -89,6 +91,12 @@ func sizeBandFromEmployeeRange(text string) (string, bool) {
 		}
 		if above {
 			return bandContaining(numbers[0] + 1)
+		}
+		// The enum spells its open band "5000+", so that floor names the band
+		// in every spelling ("5.000+", "5,000+ employees"), not the one below.
+		top := sizeBands[len(sizeBands)-1]
+		if strings.Contains(trimmed, "+") && numbers[0] == top.lo-1 {
+			return top.label, true
 		}
 		return bandContaining(numbers[0])
 	}

@@ -26,6 +26,11 @@ func TestSizeBandFromEmployeeRangeMapsOnlyUnambiguousPhrasings(t *testing.T) {
 		{"1.200 Mitarbeitende", "1001-5000", true},
 		// An open-ended count lands in the band holding its lower bound.
 		{"6000+", "5000+", true},
+		// The open band's own spelling names it with any thousands separator.
+		{"5.000+", "5000+", true},
+		{"5,000+ employees", "5000+", true},
+		{"5000+ Mitarbeiter", "5000+", true},
+		{"1.000+ Mitarbeiter", "501-1000", true},
 		{"140+", "51-200", true},
 		{"140+ employees", "51-200", true},
 		{"500+", "201-500", true},
@@ -103,7 +108,15 @@ func TestAWordedFloorLandsInTheBandOfItsLowerBound(t *testing.T) {
 		{"at least 500 employees", "201-500", true},
 		{"mindestens 50 Mitarbeiter", "11-50", true},
 		{"≥ 11", "11-50", true},
+		{">=500", "201-500", true},
+		{">= 500 employees", "201-500", true},
 		{"up to 50 employees", "", false},
+		// A negated floor is a ceiling, never the floor it negates.
+		{"no more than 500", "", false},
+		{"not over 500 employees", "", false},
+		{"nicht mehr als 500 Mitarbeiter", "", false},
+		{"höchstens 500", "", false},
+		{"at most 500", "", false},
 		{"over 50 to 200", "", false},
 	} {
 		band, ok := sizeBandFromEmployeeRange(tc.text)
