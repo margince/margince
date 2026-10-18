@@ -3,11 +3,11 @@
 
 import type { components } from "../api/schema";
 import type { CreateField } from "../components/create";
+import type { CreateFieldOption } from "../components/create.fields";
 import type { MessageKey } from "../i18n/en";
 
-// The project form's vocabulary and transport, with no React in it: what the
-// create and edit dialogs ask, and
-// sees it, and how the answers become the two request bodies.
+// The project form's vocabulary and transport, with no React in it. It holds
+// what the two dialogs ask and how the answers become the request bodies.
 
 export type Project = components["schemas"]["Project"];
 export type ProjectPhase = Project["phase"];
@@ -50,6 +50,9 @@ export function projectFields(
     // The company this project already names, so an edit form whose
     // pickable page does not reach it still shows the one it has.
     currentCompany?: { id: string; label: string };
+    // The colleagues an owner may be picked from (useRecordOwners), the
+    // current owner included even when the roster walk does not carry them.
+    owners: readonly CreateFieldOption[];
     me: string;
     currentOwner: string | null;
     mode: "create" | "edit";
@@ -60,13 +63,6 @@ export function projectFields(
     label: company.display_name,
   }));
   const current = opts.currentCompany;
-  const ownerOptions = [
-    ...(opts.currentOwner && opts.currentOwner !== opts.me
-      ? [{ value: opts.currentOwner, label: t("project.ownerKeep") }]
-      : []),
-    { value: opts.me, label: t("project.ownerMe") },
-    { value: "", label: t("project.ownerUnassign") },
-  ];
   return [
     { key: "name", label: "project.name", required: true },
     ...(opts.mode === "create"
@@ -87,23 +83,47 @@ export function projectFields(
           },
         ]
       : []),
-    // Owner is an edit-only field. On create the server stamps the creator
-    // (an unowned project would be nobody's to change, so the write gate
-    // could never attach it to a deal), and the only choices a create could
-    // offer — "Me" and "Unassign" — would both resolve to the creator, a
-    // choice that is no choice. Reassigning and unassigning stay on edit.
-    ...(opts.mode === "edit"
-      ? [
-          {
-            key: "owner_id",
-            label: "project.owner" as const,
-            type: "select" as const,
-            options: ownerOptions,
-          },
-        ]
-      : []),
+    ...ownerField(t, opts),
     { key: "description", label: "project.description", type: "textarea" },
     { key: "target_end_date", label: "project.targetEnd", type: "date" },
+  ];
+}
+
+// Anyone on the roster, the reader first: a required select opens on its
+// first option, so a create defaults to the creator. The server refuses an
+// owner the reader may not assign work to, as it does on reassignment.
+//
+// Required once the project has an owner, because a blank sends owner_id null
+// and the update contract reads null as "not supplied".
+function ownerField(
+  t: (key: MessageKey) => string,
+  opts: Readonly<{
+    owners: readonly CreateFieldOption[];
+    me: string;
+    currentOwner: string | null;
+    mode: "create" | "edit";
+  }>,
+): CreateField[] {
+  if (opts.mode === "create" && !opts.me) {
+    // Without a known reader there is no default to offer, and the server
+    // stamps the creator on a create that names nobody.
+    return [];
+  }
+  // Until the roster has answered, the reader still heads the list, so the
+  // create's default is never a colleague who happened to load first.
+  const mine =
+    opts.owners.find((option) => option.value === opts.me) ??
+    (opts.me ? { value: opts.me, label: t("project.ownerMe") } : undefined);
+  const others = opts.owners.filter((option) => option.value !== opts.me);
+  const options = mine ? [mine, ...others] : others;
+  return [
+    {
+      key: "owner_id",
+      label: "project.owner",
+      type: "select",
+      required: opts.mode === "create" || opts.currentOwner !== null,
+      options,
+    },
   ];
 }
 

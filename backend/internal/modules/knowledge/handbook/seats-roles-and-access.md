@@ -47,8 +47,8 @@ Also called: restore a user, re-enable an account.
 When a colleague leaves and you deactivate them in Margince, they stay the owner of their deals, leads, contacts and companies. Nothing gets a new owner on its own. Give the work to others before you deactivate them.
 1. List what they own: **Filters and views** → **New filter** → **Contacts** → **Add condition** → **Owner**.
 2. **Deals** and **Leads**: tick the rows and press **Assign** in the bar for many rows. See [Lists, filters and views](lists-filters-and-views.md).
-3. **Contacts**, **Companies** and **Projects**, one at a time: **Owner** in **Details**.
-On a project, use **More actions** → **Assign to a colleague**.
+3. **Contacts** and **Companies**, one at a time: **Owner** in **Details**.
+4. **Projects**, one at a time: open the project and choose **More actions** → **Assign to a colleague**.
 Also called: offboarding, handover, a rep left, transfer a colleague's accounts.
 
 ### How do I reset someone's password?

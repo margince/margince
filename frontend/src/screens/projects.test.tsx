@@ -16,9 +16,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
 import { jsonResponse } from "../features/companies/company.fixtures";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { ProjectsScreen } from "./projects";
 import { project } from "./projects.fixtures";
 import { projectsBackend } from "./projects.testing";
+
+const ME = meFixture().user.id;
 
 // The projects list: rows from GET /projects, the phase dial sent to the
 // server, the instructional first-run plate, and the create dialog's own
@@ -263,11 +266,51 @@ describe("ProjectsScreen", () => {
     expect(posted).toEqual({
       name: "CRM rollout",
       company_id: "o-1",
-      owner_id: null,
+      owner_id: ME,
       description: null,
       target_end_date: null,
       source: "manual",
     });
     expect(window.location.hash).toBe("#/projects/pr-new");
+  });
+
+  it("creates a project owned by the colleague picked as its owner", async () => {
+    const user = userEvent.setup();
+    let posted: { owner_id?: string } | null = null;
+    projectsBackend({
+      projects: [],
+      respond: async (url, method, request) => {
+        if (new URL(url).pathname === "/v1/users") {
+          return jsonResponse({
+            data: [
+              { id: ME, display_name: "Test User", email: "me@example.test" },
+              {
+                id: "u-42",
+                display_name: "Jane Doe",
+                email: "jane@example.test",
+              },
+            ],
+            page: { has_more: false },
+          });
+        }
+        if (method === "POST" && url.endsWith("/projects")) {
+          posted = JSON.parse(await request.text());
+          return jsonResponse(project({ id: "pr-new" }), 201);
+        }
+        return null;
+      },
+    });
+    render(<ProjectsScreen />);
+    await user.click(await screen.findByTestId("new-record"));
+    await user.type(screen.getByLabelText("Project name *"), "CRM rollout");
+    await pickOption(
+      user,
+      screen.getByLabelText("Company *"),
+      "Brandt Automotive",
+    );
+    await pickOption(user, screen.getByLabelText("Owner *"), "Jane Doe");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(posted?.owner_id).toBe("u-42"));
   });
 });

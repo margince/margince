@@ -78,6 +78,7 @@ import {
   useRecordChronology,
 } from "./recordchronology";
 import { RecordEmailVerb } from "./recordemail";
+import { useRecordOwners } from "./recordreferences";
 import { RecordTeam } from "./recordteam";
 import { ShareAction } from "./share";
 import { TimelineActions } from "./timelineactions";
@@ -353,6 +354,7 @@ function ProjectActions({
   const t = useT();
   const me = useMe();
   const companies = useCompanyOptions();
+  const owners = useRecordOwners(project.owner_id);
   return (
     <>
       {/* A project's mail is a NEW conversation with somebody on the account
@@ -377,6 +379,7 @@ function ProjectActions({
           fields={[
             ...projectFields(t, {
               companies,
+              owners,
               me: me.data?.user.id ?? "",
               currentOwner: project.owner_id ?? null,
               mode: "edit",

@@ -490,7 +490,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "privacy.assignee",
     "privacy.correctionNote",
     "privacy.correctionsSub",
-    "project.ownerKeep",
     "project.stakeholders.empty",
     "role.rep",
     "room.card.lastSeen",
