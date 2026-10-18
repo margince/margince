@@ -17,7 +17,7 @@ import (
 	"testing"
 )
 
-const meetingSettingsSections = "../frontend/src/screens/meeting-settings-sections.tsx"
+const meetingSettingsSections = "../frontend/src/features/booking/meeting-settings-sections.tsx"
 
 func TestTheMeetingSettingsScreenStopsTextAtTheContractsLengths(t *testing.T) {
 	t.Parallel()
