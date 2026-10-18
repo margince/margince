@@ -3681,12 +3681,12 @@ export const en = {
   "deal.expectedArr": "Expected ARR",
 
   "deal.monthlyApproximate": "approx.",
-  "assignments.title": "Responsible",
+  "assignments.title": "Responsibilities",
   "assignments.noAccessNote":
-    "Records who is accountable. It does not grant access to this record.",
+    "Records who looks after what. It does not grant access to this record.",
   "assignments.empty": "No one is assigned yet",
   "assignments.emptyDetail":
-    "Assign a colleague or a team to record who is accountable for this work.",
+    "Assign a colleague or a team to record who looks after this work.",
   "assignments.roleRetired": "(retired role)",
   "assignments.teamSuffix": "(team)",
   "assignments.subjectInactive": "(inactive)",
@@ -3714,7 +3714,7 @@ export const en = {
   "recordRoles.assigneeKinds": "Can be assigned to",
   "recordRoles.addLabel": "Name",
   "recordRoles.addHint":
-    "What the responsible party is accountable for, in plain words.",
+    "What the holder looks after, in plain words, for example Technical contact.",
   "recordRoles.addConfirm": "Add role",
   "recordRoles.activeFor": "{label} can be newly assigned",
   "recordRoles.colRole": "Role",
@@ -3728,6 +3728,11 @@ export const en = {
   "recordRoles.renameTitle": "Rename role",
   "recordRoles.duplicate":
     "A role with this name or key already exists. Choose another name.",
+  "recordRoles.intro":
+    "Put a role on a company, deal or project so everyone knows whom to ask about what. The owner stays responsible for the record. Built-in roles ship with Margince; custom roles were added by an admin.",
+  "recordRoles.colActive": "Active",
+  "recordRoles.builtIn": "Built-in",
+  "recordRoles.custom": "Custom",
   "deal.acquisitionUnset": "Not set",
   "deal.acquisitionRetired": "(retired)",
   "deal.waitUntil": "Wait until",
@@ -9338,7 +9343,7 @@ export const en = {
   "settings.page.acquisition.sub":
     "Business channels a deal can be attributed to.",
   "settings.page.recordroles.sub":
-    "What a colleague or team can be responsible for on a record. Grants no access.",
+    "Labels for what a colleague or team looks after on a record, such as account manager. A role grants no access; the owner and sharing decide who can edit.",
   "settings.page.leads.sub":
     "Where leads come from, why they are disqualified, and how fast they get a first reply.",
   "settings.page.fields.sub":

@@ -156,6 +156,26 @@ Saved views, automations and your writing voice keep the owner rule; a shared li
 
 Everyone can read a record with **no owner**, and nobody can write to it until someone claims it.
 
+## The owner and responsibility roles
+
+Every contact, company, lead, deal and project has one **owner**. The owner is the colleague who holds the sales responsibility for the record.
+
+The owner also decides who else may change it. Row scope reads the owner: a User changes the records they own, and a Team lead changes the records of their team. The owner can share the record with a colleague or a team. Someone who holds it through a share cannot change its owner or its sharing.
+
+A **responsibility role** is a label for what someone looks after on a company, deal or project, such as **Account manager** or **Technical contact**. You set them on a record under **Responsibilities**. Admin and Ops keep the list in **Settings → Responsibility roles**.
+
+A responsibility role controls nothing:
+
+- It gives no access to the record, and takes none away.
+- It does not change the owner. Nothing links the owner to the **Account manager** role, so the owner may hold it, or someone else may.
+- A role you turn off stays on the records that carry it, but nobody can be given it again.
+
+Margince comes with these responsibility roles: **Account manager**, **Sales engineer**, **Delivery lead**, **Project manager**, **Technical contact**, **Executive sponsor** and **Support team**. Admin and Ops can rename them and add more. **Settings → Responsibility roles** marks each one **Built-in** when it comes with Margince, or **Custom** when someone added it.
+
+These are different from the six roles above. A role in **Settings → Roles and permissions** decides what a member may do. A responsibility role decides nothing.
+
+In German, the owner is **Verantwortlich** and the responsibility roles are **Zuständigkeiten**.
+
 ## Seeing and sharing records
 
 ### Why can't I see a record?

@@ -211,7 +211,7 @@ the English opens lowercase ("Über Partner" for "via partner").
   Systemadministration".
 - **Person and Personen** appear only where a value means a human being, and
   then the key is on the German human-sense list in `record-noun.test.ts`: "die
-  zuständige Person", "die empfangende Person". A key that means the contact
+  verantwortliche Person", "die empfangende Person". A key that means the contact
   record says Kontakt. The gate sees the whole word only, so a compound such as
   Ansprechperson is the author's to judge.
 - **No Gendersternchen, colon, underscore, Binnen-I or slash form**: never
@@ -285,7 +285,7 @@ gives, because it is ordinary German in another sense.
 | A classifier's result | Ergebnis, Prüfung | `Urteil`, `Urteile`, `Verdikt` |
 | A read result | Befund, Befunde | Fund, Funde |
 | Something a party said they would do | Zusage | `Versprechen` |
-| Ownership of a deal | zuständig (label "Zuständig", "Neue Zuständigkeit") | `Owner`, `Besitzer`, `Inhaber` |
+| The owner of a record; a responsibility role on it | verantwortlich for the owner (label "Verantwortlich", "Neue Verantwortung"); Zuständigkeit, Zuständigkeiten for a role | `Owner`, `Besitzer`, `Inhaber`; zuständig for the owner; Verantwortung for a role |
 | Legal hold | Legal Hold | `Aufbewahrungssperre` |
 | Buying committee | Buying Center | `Einkaufskomitee`, `Kaufgremium` |
 | The legal entity behind an installation | Rechtsträger | rechtliche Einheit, juristische Person |

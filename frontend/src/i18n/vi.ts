@@ -3615,6 +3615,11 @@ export const vi = {
   "recordRoles.renameTitle": "Đổi tên vai trò",
   "recordRoles.duplicate":
     "Đã có vai trò mang tên hoặc khóa này. Hãy chọn tên khác.",
+  "recordRoles.intro":
+    "Gán vai trò cho công ty, deal hoặc dự án để mọi đồng nghiệp biết nên hỏi ai về việc gì. Phụ trách hồ sơ không thay đổi. Vai trò có sẵn đi kèm Margince; vai trò tùy chỉnh do quản trị viên thêm.",
+  "recordRoles.colActive": "Đang bật",
+  "recordRoles.builtIn": "Có sẵn",
+  "recordRoles.custom": "Tùy chỉnh",
   "deal.acquisitionUnset": "Chưa chọn",
   "deal.acquisitionRetired": "(đã ngừng dùng)",
   "deal.waitUntil": "Chờ đến",
@@ -8995,7 +9000,7 @@ export const vi = {
     "Các giai đoạn deal đi qua, áp dụng cho cả công ty.",
   "settings.page.acquisition.sub": "Các kênh kinh doanh mà deal có thể quy về.",
   "settings.page.recordroles.sub":
-    "Những gì một đồng nghiệp hoặc nhóm có thể phụ trách trên một hồ sơ. Không cấp quyền truy cập.",
+    "Những gì một đồng nghiệp hoặc nhóm lo trên một hồ sơ, ví dụ quản lý khách hàng. Vai trò không cấp quyền truy cập; quyền sửa đến từ phụ trách hồ sơ và việc chia sẻ.",
   "settings.page.leads.sub":
     "Nguồn lead, lý do loại lead và thời gian phản hồi đầu tiên.",
   "settings.page.fields.sub":
