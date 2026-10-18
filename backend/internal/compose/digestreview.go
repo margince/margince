@@ -44,7 +44,7 @@ func newDigestReviewSource(pool *pgxpool.Pool, svc *approvals.Service) capture.D
 		if err != nil {
 			return capture.DigestReviewCounts{}, err
 		}
-		waiting, err := countOrNoneVisible(pending.CountPending(ctx))
+		waiting, err := countOrNoneVisible(pending.CountPending(ctx, true))
 		if err != nil {
 			return capture.DigestReviewCounts{}, err
 		}

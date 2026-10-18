@@ -2470,6 +2470,15 @@ export const de = {
   "approval.field.connection_name": "Name auf LinkedIn",
   "approval.field.connection_company": "Unternehmen auf LinkedIn",
   "approval.field.contact_name": "Kontakt im CRM",
+  "approval.responsibility.requestedFrom": "Entscheidung angefragt bei",
+  "approval.commitment.promiser": "Zugesagt von",
+  "approval.commitment.effect": "Bei Freigabe",
+  "approval.commitment.unnamedColleague":
+    "Name des Teammitglieds nicht verfügbar",
+  "approval.commitment.unresolved": "Zusagende Person ungeklärt",
+  "approval.commitment.assignNamed": "Erstellt eine Aufgabe für {name}.",
+  "approval.commitment.assignDecider":
+    "Erstellt eine Aufgabe für die Person, die zustimmt.",
   "approval.field.owner": "Verantwortlich",
   "approval.field.to": "An",
   "approval.field.currency": "Währung",

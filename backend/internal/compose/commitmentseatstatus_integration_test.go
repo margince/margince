@@ -54,6 +54,28 @@ func TestAMailedPromiseByAColleagueWhoCannotHoldWorkIsProposed(t *testing.T) {
 				t.Errorf("%d commitment proposals staged, want one: a promise nobody can be "+
 					"given is still owed, and dropping it loses what the customer was told", n)
 			}
+			if n := e.WsCount(t, `SELECT count(*) FROM approval
+              WHERE kind = 'commitment_task'
+                AND proposed_change->>'promiser_seat_id' = $1
+                AND NOT (proposed_change ? 'seat_id')
+                AND on_behalf_of IS NULL`, e.Rep2.String()); n != 1 {
+				t.Fatal("inactive promiser attribution was lost or became an assigned decision")
+			}
+
+			approval, err := ids.Parse(e.WsScalar(t, `SELECT id::text FROM approval WHERE kind = 'commitment_task'`))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := approvalsServiceWithEffects(e.Pool).Decide(e.Admin(), ids.From[ids.ApprovalKind](approval), true, nil); err != nil {
+				t.Fatal(err)
+			}
+			if got := e.WsScalar(t, `SELECT assignee_id::text FROM activity WHERE kind = 'task'`); got != e.AdminUser.String() {
+				t.Fatalf("accepted reassignment belongs to %s, want the decider", got)
+			}
+			if got := e.WsScalar(t, `SELECT proposed_change->>'promiser_seat_id' FROM approval WHERE id = $1`, approval); got != e.Rep2.String() {
+				t.Fatal("acceptance replaced the original promiser")
+			}
+
 		})
 	}
 }

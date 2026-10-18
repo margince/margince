@@ -231,17 +231,6 @@ func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.T
 			return CommitmentRemembered, ids.UUID{}, err
 		}
 	}
-	// A seat that cannot be given the task is not NAMED on the proposal either: a
-	// commitment proposal is visible to its seat alone, so one staged for a colleague
-	// who has not arrived or has left waits where nobody can see it. Unnamed, it
-	// reaches whoever reviews the queue, the same way a promise naming nobody does.
-	//
-	// Except on private mail, where propose names the conversation's own owner and
-	// nobody else may be shown it. An owner who has not signed in yet finds it
-	// waiting when they do, which is what an invited colleague's queue is for.
-	if c.Seat != nil && !holdsWork && c.PrivateTo == nil {
-		c.Seat = nil
-	}
 	if holdsWork && c.Confidence >= CommitmentTaskConfidence && mayHoldPrivateTask(c.PrivateTo, *c.Seat) {
 		task, err := writeCommitmentTask(ctx, tx, d.tasks, d.claims, commitmentTask{
 			Extractor: c.Extractor, Locator: c.Locator, Summary: c.Summary, Body: c.Body,
@@ -250,7 +239,7 @@ func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.T
 		})
 		return CommitmentTaskWritten, task, err
 	}
-	return d.propose(ctx, tx, c, claimID, bundleID)
+	return d.propose(ctx, tx, c, holdsWork, claimID, bundleID)
 }
 
 func (d *CommitmentDispatcher) watchCommitment(ctx context.Context, tx pgx.Tx, c Commitment, reason activities.CommitmentAdmissionReason) (CommitmentOutcome, ids.UUID, error) {
@@ -343,9 +332,12 @@ func (d *CommitmentDispatcher) fileClaim(
 // propose stages the promise for a human. A proposal refused before, or one
 // still waiting, is not staged again: the identity is the locator.
 func (d *CommitmentDispatcher) propose(
-	ctx context.Context, tx pgx.Tx, c Commitment, claimID *ids.UUID, bundleID ids.UUID,
+	ctx context.Context, tx pgx.Tx, c Commitment, holdsWork bool, claimID *ids.UUID, bundleID ids.UUID,
 ) (CommitmentOutcome, ids.UUID, error) {
 	seat := c.Seat
+	if !holdsWork {
+		seat = nil
+	}
 	if c.PrivateTo != nil && !mayHoldPrivateTask(c.PrivateTo, derefSeat(seat)) {
 		seat = c.PrivateTo
 	}
@@ -354,7 +346,7 @@ func (d *CommitmentDispatcher) propose(
 	}
 	raw, err := json.Marshal(CommitmentTaskProposal{
 		SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party,
-		SeatID: seat, DueDate: c.DueDate, Links: c.Links, Quote: c.Quote,
+		SeatID: seat, PromiserSeatID: c.Seat, DueDate: c.DueDate, Links: c.Links, Quote: c.Quote,
 		Locator: c.Locator, ClaimID: claimID, Body: c.Body, PrivateTo: c.PrivateTo,
 	})
 	if err != nil {

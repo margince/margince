@@ -110,13 +110,8 @@ func ownedByWhoeverIsReading() ownerRef { return ownerRef{kind: ownerTheReader} 
 // wire step reads the deal the facts pass attached.
 func deferredToTheDeal() ownerRef { return ownerRef{kind: ownerFromTheDeal} }
 
-// ownerOnTheWire is the field a client draws, with the label still to resolve.
-//
-// The DEAL's owner is consulted only where the lane itself did not answer, and
-// the order matters for the reason answersTo documents: a waiting row absorbs a
-// drifting deal's facts for display between two passes, so asking the deal
-// first can answer differently on the second pass than on the first, and a
-// customer lands on neither contact's queue.
+// ownerOnTheWire resolves the producer's attribution for scope and display.
+// Deal facts decide ownership only when the producer explicitly defers to them.
 func ownerOnTheWire(row ranked, reader ids.UUID) *crmcontracts.WorklistOwner {
 	switch row.ownerRef.kind {
 	case ownerNamed:

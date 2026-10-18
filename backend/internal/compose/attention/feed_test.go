@@ -34,7 +34,7 @@ func (s stubApprovals) ListWire(context.Context, ApprovalQuery) ([]crmcontracts.
 	return s.rows, s.err
 }
 
-func (s stubApprovals) CountPending(context.Context) (int, error) {
+func (s stubApprovals) CountPending(context.Context, bool) (int, error) {
 	if s.pending > 0 {
 		return s.pending, s.err
 	}

@@ -638,3 +638,52 @@ describe("DecisionToolChip", () => {
     expect(container).toBeEmptyDOMElement();
   });
 });
+
+it.each(["row", "deck"] as const)(
+  "does not repeat the proposal summary in the %s body",
+  (layout) => {
+    render(
+      card({
+        layout,
+        approval: approval({
+          kind: "commitment_task",
+          summary: "Send revised pricing",
+          proposed_change: { summary: "Send revised pricing" },
+        }),
+        display: [
+          {
+            field: "summary",
+            label: "Task",
+            value: "Send revised pricing",
+            lead: true,
+          },
+        ],
+      }),
+    );
+    expect(screen.getAllByText("Send revised pricing")).toHaveLength(1);
+  },
+);
+
+it("keeps a distinct explanation below the proposal summary", () => {
+  render(
+    card({
+      approval: approval({
+        kind: "commitment_task",
+        summary: "Send revised pricing",
+        proposed_change: { summary: "Send revised pricing" },
+      }),
+      display: [
+        {
+          field: "reason",
+          label: "Reason",
+          value: "The customer requested updated terms.",
+          lead: true,
+        },
+      ],
+    }),
+  );
+  expect(screen.getByText("Send revised pricing")).toBeInTheDocument();
+  expect(
+    screen.getByText("The customer requested updated terms."),
+  ).toBeInTheDocument();
+});

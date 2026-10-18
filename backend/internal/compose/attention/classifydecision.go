@@ -14,6 +14,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // classifyDecision: a staged proposal or a duplicate pair.
@@ -36,22 +37,19 @@ func classifyDecision(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	// would put one decision in two groups across two reads.
 	facts := stagedFactsOf(item)
 	return ranked{
-		item: row,
-		// NOBODY, until somebody takes it. A duplicate pair and a staged
-		// approval are read under the caller's ROW SCOPE — a team-scoped reader
-		// sees their whole team's — so the read is not bound to one contact and
-		// "whoever is reading" would be the very inference this field exists to
-		// refuse: it would name a manager as the owner of every pair on their
-		// team, and each rep as the owner of the same pair when they looked.
-		//
-		// These queues have no owner column. Saying so is the honest answer and
-		// the one the unassigned scope is for; a claim endpoint is what would
-		// change it, and none exists yet.
-		ownerRef:      unassigned(),
+		item:          row,
+		ownerRef:      decisionOwner(item),
 		occurredAt:    occurredOf(item, asOf),
 		machineSender: facts.MachineSender,
 		knownCompany:  facts.KnownCompany,
 	}
+}
+
+func decisionOwner(item crmcontracts.AttentionItem) ownerRef {
+	if item.RequestedDeciderId != nil {
+		return ownedBy(ids.UUID(*item.RequestedDeciderId))
+	}
+	return unassigned()
 }
 
 // stagedFactsOf reads what the feed already worked out about a contact

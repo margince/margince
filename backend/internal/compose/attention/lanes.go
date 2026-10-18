@@ -24,7 +24,7 @@ import (
 // reader with forty decisions is told forty, then shown the nine worth a sitting.
 type Approvals interface {
 	ListWire(ctx context.Context, in ApprovalQuery) ([]crmcontracts.Approval, error)
-	CountPending(ctx context.Context) (int, error)
+	CountPending(ctx context.Context, requestedForReader bool) (int, error)
 }
 
 // MachineSender answers whether an address belongs to a sending system rather
@@ -49,8 +49,9 @@ type StagedFacts struct {
 // the engine's own input on purpose: the feed reads one page of one status and
 // takes no part in choosing scope, which stays the engine's to decide.
 type ApprovalQuery struct {
-	Status string
-	Limit  int
+	RequestedForReader bool
+	Status             string
+	Limit              int
 }
 
 // Duplicates is the dedupe queue, read through the contacts module. Every method

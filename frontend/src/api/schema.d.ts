@@ -39734,6 +39734,11 @@ export interface components {
         };
         /** @description A staged 🟡 confirm-first action awaiting human decision. */
         Approval: {
+            /**
+             * Format: uuid
+             * @description The member explicitly asked to decide, independent of who has permission to approve.
+             */
+            readonly requested_decider_id?: string;
             /** Format: uuid */
             id: string;
             /** @description Examples: coldstart | send_email | advance_deal | promote_lead | overnight | deal_follow_up | commitment_task. */
@@ -44178,6 +44183,11 @@ export interface components {
          *     adds none.
          */
         AttentionItem: {
+            /**
+             * Format: uuid
+             * @description The member explicitly asked to decide, independent of who has permission to approve.
+             */
+            readonly requested_decider_id?: string;
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
             id: string;

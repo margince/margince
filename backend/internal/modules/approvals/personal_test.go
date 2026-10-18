@@ -1,0 +1,42 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package approvals
+
+import (
+	"encoding/json"
+	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+func TestPersonalDecisionsRequireAnExplicitRecipient(t *testing.T) {
+	reader, colleague := ids.New[ids.UserKind](), ids.New[ids.UserKind]()
+	cases := []struct {
+		name     string
+		proposal row
+		own      bool
+	}{
+		{"requested promise", row{Kind: kindCommitmentTask, OnBehalfOf: &reader}, true},
+		{"colleague promise", row{Kind: kindCommitmentTask, OnBehalfOf: &colleague}, false},
+		{"unassigned promise", row{Kind: kindCommitmentTask}, false},
+		{"agent authority is not assignment", row{Kind: "advance_deal", OnBehalfOf: &reader}, false},
+		{"held send", row{Kind: KindScheduledSendHeld, OnBehalfOf: &reader}, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := requestedFor(c.proposal, reader.UUID); got != c.own {
+				t.Fatalf("personal = %v, want %v", got, c.own)
+			}
+		})
+	}
+	body, err := json.Marshal(approvalsubject.Counterparty{OwnerID: reader.UUID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	proposal := row{Kind: approvalsubject.KindCounterparty, ProposedChange: body, OnBehalfOf: &colleague}
+	if !requestedFor(proposal, reader.UUID) || requestedFor(proposal, colleague.UUID) {
+		t.Fatal("payload responsibility was replaced by the granting user")
+	}
+}

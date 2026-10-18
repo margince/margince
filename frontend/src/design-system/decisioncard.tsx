@@ -208,7 +208,11 @@ export function DecisionCard({
           <DecisionContent
             draft={payload.draft}
             diffs={payload.diffs}
-            lead={payload.lead}
+            lead={
+              payload.lead === named || payload.lead === approval.summary
+                ? null
+                : payload.lead
+            }
             rest={payload.rest}
             labels={labels}
           />

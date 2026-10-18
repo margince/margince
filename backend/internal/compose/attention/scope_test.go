@@ -159,8 +159,8 @@ func TestAColleaguesDealLeavesTheQueueAndTheSummaryUnderMine(t *testing.T) {
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	})
 	rows := []ranked{
-		{item: ownedDeal("mine", reader)},
-		{item: ownedDeal("theirs", colleague)},
+		{item: ownedDeal("mine", reader), ownerRef: deferredToTheDeal()},
+		{item: ownedDeal("theirs", colleague), ownerRef: deferredToTheDeal()},
 	}
 
 	kept := keepReadersOwn(ctx, rows)
@@ -252,7 +252,7 @@ func TestTheReadersOwnPromiseIsNotWorkNobodyAnswersFor(t *testing.T) {
 		Type: principal.PrincipalHuman, UserID: reader,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeOwn},
 	})
-	promise := []ranked{{item: crmcontracts.WorklistItem{
+	promise := []ranked{{ownerRef: ownedByWhoeverIsReading(), item: crmcontracts.WorklistItem{
 		Id: "my-promise", Source: sourceClaim, Actions: []crmcontracts.WorklistItemActions{},
 	}}}
 
