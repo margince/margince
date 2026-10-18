@@ -7064,6 +7064,8 @@ export const de = {
   "retention.scopeDealRiskDay":
     "Tägliche Aufzeichnung wichtiger gefährdeter Deals",
   "pipeline.new": "Neue Pipeline",
+  "pipeline.createRefused":
+    "Deine Rolle darf keine Pipelines anlegen. Frag einen Admin.",
   "pipeline.name": "Name",
   "pipeline.default": "Standard",
   "pipeline.notDefault": "Kein Standard",
@@ -7103,6 +7105,8 @@ export const de = {
   "pipeline.orderNotSaved":
     "Reihenfolge nicht gespeichert. Bitte versuche es erneut oder lade die Seite neu.",
   "stage.new": "Neue Phase",
+  "stage.createRefused":
+    "Deine Rolle darf keine Phasen hinzufügen. Frag einen Admin.",
   "stage.edit": "Phase bearbeiten",
   "stage.name": "Name",
   "stage.semantic": "Phasentyp",

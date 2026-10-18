@@ -96,7 +96,10 @@ async function createStage(
   );
 }
 
-export function StageCreate({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
+export function StageCreate({
+  pipeline,
+  reason,
+}: Readonly<{ pipeline: Pipeline; reason?: string }>) {
   const t = useT();
   const toast = useToast();
   const [open, setOpen] = useState(false);
@@ -113,6 +116,7 @@ export function StageCreate({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
     <>
       <Button
         data-testid={`new-stage-${pipeline.id}`}
+        reason={reason}
         onClick={() => setOpen(true)}
       >
         {t("stage.new")}

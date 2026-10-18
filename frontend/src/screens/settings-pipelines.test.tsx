@@ -265,6 +265,13 @@ function openStageNames(): string[] {
     );
 }
 
+// A refused button is disabled and points at its reason, which a reader sees.
+function expectRefused(button: HTMLElement, reason: string) {
+  expect((button as HTMLButtonElement).disabled).toBe(true);
+  const describedBy = button.getAttribute("aria-describedby") ?? "";
+  expect(document.getElementById(describedBy)?.textContent).toBe(reason);
+}
+
 describe("PipelinesCard: who is shown what", () => {
   it("shows create controls for an admin", async () => {
     server({});
@@ -272,15 +279,29 @@ describe("PipelinesCard: who is shown what", () => {
     expect(await screen.findByText("New pipeline")).toBeTruthy();
   });
 
-  it("gives a reader the catalog and the ladder, and no grip or verb", async () => {
+  it("gives a reader the catalog and the ladder, and no grip or row verb", async () => {
     server({ roles: ["rep"], allow: {} });
     renderPage();
     await screen.findByRole("table", { name: "Stages" });
-    expect(screen.queryByText("New pipeline")).toBeNull();
     expect(screen.queryByRole("button", { name: /^Move / })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Actions for / })).toBeNull();
     // The settings page says read-only once, above every card; the card adds none.
     expect(screen.queryByText(/Read-only/)).toBeNull();
+  });
+
+  // A hidden create verb reads as "this is all there can be": a reader who
+  // sees one pipeline and no button concludes the product holds one.
+  it("keeps the create verbs in sight for a reader, refused with the reason", async () => {
+    server({ roles: ["rep"], allow: {} });
+    renderPage();
+    expectRefused(
+      await screen.findByRole("button", { name: /New pipeline/ }),
+      "Your role cannot create pipelines. Ask an admin.",
+    );
+    expectRefused(
+      screen.getByTestId("new-stage-pl"),
+      "Your role cannot add stages. Ask an admin.",
+    );
   });
 
   // One grant at a time: create and update govern different controls, and a
@@ -292,14 +313,24 @@ describe("PipelinesCard: who is shown what", () => {
     expect(
       screen.getByRole("button", { name: "Move Proposal, step 2 of 2" }),
     ).toBeTruthy();
-    expect(screen.queryByText("New pipeline")).toBeNull();
+    expectRefused(
+      screen.getByRole("button", { name: /New pipeline/ }),
+      "Your role cannot create pipelines. Ask an admin.",
+    );
+    expect(
+      (screen.getByTestId("new-stage-pl") as HTMLButtonElement).disabled,
+    ).toBe(false);
   });
 
   it("offers the create affordance on create alone, without stage editing or ordering", async () => {
     server({ allow: { pipeline: ["create"] } });
     renderPage();
-    expect(await screen.findByText("New pipeline")).toBeTruthy();
-    expect(screen.queryByTestId("new-stage-pl")).toBeNull();
+    const create = await screen.findByRole("button", { name: /New pipeline/ });
+    expect((create as HTMLButtonElement).disabled).toBe(false);
+    expectRefused(
+      screen.getByTestId("new-stage-pl"),
+      "Your role cannot add stages. Ask an admin.",
+    );
     expect(screen.queryByRole("button", { name: /^Move / })).toBeNull();
   });
 
@@ -372,6 +403,16 @@ describe("PipelinesCard: the catalog", () => {
     const sales = await screen.findByRole("region", { name: "Sales" });
     expect(within(sales).getByText("New pipeline")).toBeTruthy();
     expect(screen.queryByRole("region", { name: "All pipelines" })).toBeNull();
+  });
+
+  it("tells a reader of a lone pipeline that more are possible, just not by them", async () => {
+    server({ roles: ["rep"], allow: {}, soloInUse: true, onlyPipeline: true });
+    renderPage();
+    const sales = await screen.findByRole("region", { name: "Sales" });
+    expectRefused(
+      within(sales).getByRole("button", { name: /New pipeline/ }),
+      "Your role cannot create pipelines. Ask an admin.",
+    );
   });
 
   // One pipeline in use has nothing to be ordered against: no grip, and no

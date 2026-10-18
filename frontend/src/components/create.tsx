@@ -125,9 +125,13 @@ export function CreateAction<Created extends { id: string }>({
   onCreated,
   onValuesChange,
   testId,
+  reason,
 }: Readonly<{
   label: string;
   fields: CreateField[];
+  // Why this reader may not create, drawn beside the refused button so the
+  // verb stays visible: a hidden create reads as "there is nothing to add".
+  reason?: string;
   // The form's live answers, for a screen whose field list depends on them —
   // a dependent picker whose options only the server can narrow. See
   // usePublishedValues.
@@ -199,6 +203,7 @@ export function CreateAction<Created extends { id: string }>({
         }}
         testId={testId}
         pending={creating && !shown}
+        reason={reason}
       />
       <CreateRecordModal
         open={shown}
@@ -224,6 +229,7 @@ export function NewRecordButton({
   onClick,
   testId = "new-record",
   pending,
+  reason,
 }: Readonly<{
   label: string;
   onClick: () => void;
@@ -231,9 +237,15 @@ export function NewRecordButton({
   // shared id would make both unaddressable.
   testId?: string;
   pending?: boolean;
+  reason?: string;
 }>) {
   return (
-    <Button onClick={onClick} data-testid={testId} pending={pending}>
+    <Button
+      onClick={onClick}
+      data-testid={testId}
+      pending={pending}
+      reason={reason}
+    >
       <Plus aria-hidden /> {label}
     </Button>
   );

@@ -27,6 +27,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { useUrlParams } from "../lib/urlstate";
 import { SETTINGS_PIPELINES, usePipelineOrder } from "./settings.pipelineorder";
 import { MakeDefault, PipelineRetirement } from "./settings.pipelineverbs";
@@ -205,7 +206,8 @@ function RetiredPipelines({
 }
 
 // "New pipeline": in the catalog's head, or in the one pipeline's head while
-// there is no catalog to hold it.
+// there is no catalog to hold it. A reader who may not create still sees it,
+// refused with the reason, or a lone pipeline reads as the only one possible.
 function NewPipeline({
   pipelines,
   onOpen,
@@ -215,7 +217,10 @@ function NewPipeline({
 }>) {
   const t = useT();
   const canCreate = useCanWrite("pipeline", "create");
-  if (!canCreate) return null;
+  // Every capability hook denies while /me is still loading, and that is no
+  // refusal yet: the verb waits for the answer instead of flashing refused.
+  const answered = useMe().isSuccess;
+  if (!canCreate && !answered) return null;
   const inUse = pipelines.filter((each) => !each.archived_at);
   const lastPosition = Math.max(0, ...inUse.map((each) => each.position));
   return (
@@ -224,6 +229,7 @@ function NewPipeline({
       invalidate="pipelines"
       screen="settings"
       stay
+      reason={canCreate ? undefined : t("pipeline.createRefused")}
       onCreated={(created) => onOpen(created.id)}
       // A new pipeline lands last and already holds the two ways out. Its
       // ladder is open stages plus the close.

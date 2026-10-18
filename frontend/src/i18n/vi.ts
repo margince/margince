@@ -6893,6 +6893,8 @@ export const vi = {
   "retention.scopeRawCapture": "Bản gốc tin nhắn đã lưu",
   "retention.scopeDealRiskDay": "Ghi nhận hằng ngày deal trọng yếu có rủi ro",
   "pipeline.new": "Pipeline mới",
+  "pipeline.createRefused":
+    "Vai trò của bạn không thể tạo pipeline. Liên hệ quản trị viên.",
   "pipeline.name": "Tên",
   "pipeline.default": "Mặc định",
   "pipeline.notDefault": "Không mặc định",
@@ -6930,6 +6932,8 @@ export const vi = {
     "Không thể lưu thứ tự. Một thành viên khác đã đổi thứ tự trước, nên đang hiển thị thứ tự mới nhất.",
   "pipeline.orderNotSaved": "Không thể lưu thứ tự. Thử lại hoặc tải lại trang.",
   "stage.new": "Giai đoạn mới",
+  "stage.createRefused":
+    "Vai trò của bạn không thể thêm giai đoạn. Liên hệ quản trị viên.",
   "stage.edit": "Sửa giai đoạn",
   "stage.name": "Tên",
   "stage.semantic": "Loại giai đoạn",

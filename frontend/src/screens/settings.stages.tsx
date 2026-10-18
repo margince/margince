@@ -22,6 +22,7 @@ import { formatNumber } from "../format/format";
 import { type PluralTranslator, useLocale, usePlural, useT } from "../i18n";
 import type { Locale } from "../i18n/locale";
 import { useCanWrite } from "../lib/capability";
+import { useMe } from "../lib/session";
 import {
   CriterionCreateDialog,
   StageExitCriteria,
@@ -201,6 +202,8 @@ export function StageLadderEditor({
   const order = useStageOrder();
   const writable = canEdit && !pipeline.archived_at;
   const canRemove = useCanWrite("pipeline", "delete") && !pipeline.archived_at;
+  // A /me still loading denies every verb without refusing any of them.
+  const answered = useMe().isSuccess;
   const ladder = ladderOf(pipeline);
   const open = ladder.filter((stage) => stage.semantic === "open");
   const orders = writable && open.length > 1;
@@ -209,7 +212,8 @@ export function StageLadderEditor({
     ladder,
     () =>
       document.querySelector<HTMLElement>(
-        `[data-testid="new-stage-${pipeline.id}"]`,
+        // A refused New stage cannot take focus, so the heading does.
+        `[data-testid="new-stage-${pipeline.id}"]:not(:disabled)`,
       ) ?? head.current,
   );
   const [adding, setAdding] = useState<Stage | null>(null);
@@ -238,7 +242,7 @@ export function StageLadderEditor({
           </span>
         }
         action={
-          writable && (
+          writable ? (
             <>
               <StageCreate pipeline={pipeline} />
               {orders && (
@@ -247,6 +251,16 @@ export function StageLadderEditor({
                 </span>
               )}
             </>
+          ) : (
+            // A retired ladder takes no stage from anyone and says so above;
+            // a live one refused by role keeps its verb and says why.
+            !pipeline.archived_at &&
+            answered && (
+              <StageCreate
+                pipeline={pipeline}
+                reason={t("stage.createRefused")}
+              />
+            )
           )
         }
       />
