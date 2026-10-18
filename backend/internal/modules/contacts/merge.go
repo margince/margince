@@ -238,36 +238,26 @@ func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetI
 // carryContactSatellitesTx moves what other modules keep about the merged-away
 // contact onto the survivor. None of it is a relink of this module's own rows.
 func (s *Store) carryContactSatellitesTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
-	// The STOPS come across too, and they are not a relink — see stopcarry.go.
-	// relinkContactReferences moved the grants; without this the objections
-	// stayed on a record no send evaluates any more, and marketing resumed
-	// against somebody who had explicitly refused it.
-	if err := s.carryStopsTx(ctx, tx,
-		commsauthz.ContactStopSubject(sourceID),
-		commsauthz.ContactStopSubject(targetID)); err != nil {
-		return fmt.Errorf("carry the merged-away contact's stops: %w", err)
+	from, to := commsauthz.ContactStopSubject(sourceID), commsauthz.ContactStopSubject(targetID)
+	// In this order. The STOPS come across first and are not a relink (see
+	// stopcarry.go): relinkContactReferences moved the grants, and without the
+	// stops marketing resumed against somebody who had refused it. A rep's
+	// standing override follows for the same reason (overridecarry.go), then the
+	// links, bases and asks other modules keep about them (satellitecarry.go).
+	steps := []struct {
+		what string
+		run  func() error
+	}{
+		{"stops", func() error { return s.carryStopsTx(ctx, tx, from, to) }},
+		{"overrides", func() error { return s.carryOverridesTx(ctx, tx, from, to) }},
+		{"consent links", func() error { return s.carryConsentSatellitesTx(ctx, tx, from, to) }},
+		{"introduction asks", func() error { return s.carryIntrosTx(ctx, tx, sourceID, targetID) }},
+		{"grants", func() error { return s.carryGrantsTx(ctx, tx, "contact", sourceID.UUID, targetID.UUID) }},
 	}
-	// A rep's standing override travels the same way, and for the same
-	// reason: a merge that carried the stops but dropped a live vouch would
-	// leave the survivor refused again for a category a rep already cleared —
-	// see overridecarry.go.
-	if err := s.carryOverridesTx(ctx, tx,
-		commsauthz.ContactStopSubject(sourceID),
-		commsauthz.ContactStopSubject(targetID)); err != nil {
-		return fmt.Errorf("carry the merged-away contact's overrides: %w", err)
-	}
-	// And the links, bases and asks other modules keep about them — see
-	// satellitecarry.go.
-	if err := s.carryConsentSatellitesTx(ctx, tx,
-		commsauthz.ContactStopSubject(sourceID),
-		commsauthz.ContactStopSubject(targetID)); err != nil {
-		return fmt.Errorf("carry the merged-away contact's consent links: %w", err)
-	}
-	if err := s.carryIntrosTx(ctx, tx, sourceID, targetID); err != nil {
-		return fmt.Errorf("carry the merged-away contact's introduction asks: %w", err)
-	}
-	if err := s.carryGrantsTx(ctx, tx, "contact", sourceID.UUID, targetID.UUID); err != nil {
-		return fmt.Errorf("carry the merged-away contact's grants: %w", err)
+	for _, step := range steps {
+		if err := step.run(); err != nil {
+			return fmt.Errorf("carry the merged-away contact's %s: %w", step.what, err)
+		}
 	}
 	return nil
 }
