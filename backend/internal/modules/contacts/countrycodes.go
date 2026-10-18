@@ -5,10 +5,10 @@ package contacts
 
 import "strings"
 
-// isoCountryCodes are the officially assigned ISO 3166-1 alpha-2 codes. A
-// locale library's notion of a country is wider: it keeps retired codes such as
-// YU, reserved ones such as UK and user-assigned ones such as XK, and a stored
-// address country must be one the standard assigns.
+// isoCountryCodes are the officially assigned ISO 3166-1 alpha-2 codes. A locale
+// library's notion of a country is wider. It keeps retired codes such as YU,
+// reserved ones such as UK and user-assigned ones such as XK. A stored address
+// country must be one the standard assigns.
 const isoCountryCodes = `AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ
 BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ
 CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ

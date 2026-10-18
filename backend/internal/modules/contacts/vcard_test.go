@@ -161,9 +161,9 @@ func TestParseVCardsRefusesAnOversizedLineInTheProductsWords(t *testing.T) {
 }
 
 func TestParseVCardsRefusesACrlfFileCutAtTheBoundRatherThanReadingItsPrefix(t *testing.T) {
-	// The first card is complete inside the prefix and exactly fills it. The
-	// scanner drops each carriage return, so its own count stays under the bound
-	// and the cards after the cut would be dropped without a word.
+	// The first card is complete inside the prefix and fills it. The scanner
+	// drops each carriage return, so its own count stays under the bound. The
+	// cards after the cut would be dropped without a word.
 	const head, tail = "BEGIN:VCARD\r\nFN:First\r\nNOTE:", "\r\nEND:VCARD\r\n"
 	var b strings.Builder
 	b.WriteString(head)
