@@ -43,7 +43,7 @@ func mergedPair(t *testing.T, e *Env) (survivor, source ids.UUID) {
 	return survivor, source
 }
 
-func mergeEntryOf(t *testing.T, reader context.Context, e *Env, record ids.UUID) privacy.RecordHistoryEntry {
+func mergeEntryOf(reader context.Context, t *testing.T, e *Env, record ids.UUID) privacy.RecordHistoryEntry {
 	t.Helper()
 	page, err := privacy.ListRecordHistory(reader, e.DB(), privacy.RecordHistoryFilter{EntityType: "contact", EntityID: record})
 	if err != nil {
@@ -62,7 +62,7 @@ func TestTheSurvivorsHistoryTellsWhatItTookAndHonoursTheFieldMask(t *testing.T) 
 	e := Setup(t)
 	survivor, source := mergedPair(t, e)
 
-	admin := mergeEntryOf(t, e.Admin(), e, survivor)
+	admin := mergeEntryOf(e.Admin(), t, e, survivor)
 	if admin.After["merged_from_id"] != source.String() {
 		t.Errorf("the entry names %v as the record folded in, want %s", admin.After["merged_from_id"], source)
 	}
@@ -72,7 +72,7 @@ func TestTheSurvivorsHistoryTellsWhatItTookAndHonoursTheFieldMask(t *testing.T) 
 
 	perms := RepPerms
 	perms.FieldMasks = []principal.FieldMask{{Object: "contact", Field: "title", Condition: principal.MaskAlways}}
-	masked := mergeEntryOf(t, e.As(e.Rep1, []ids.UUID{e.Team1}, perms), e, survivor)
+	masked := mergeEntryOf(e.As(e.Rep1, []ids.UUID{e.Team1}, perms), t, e, survivor)
 	encoded, err := json.Marshal(masked)
 	if err != nil {
 		t.Fatalf("encoding the entry: %v", err)
@@ -81,7 +81,7 @@ func TestTheSurvivorsHistoryTellsWhatItTookAndHonoursTheFieldMask(t *testing.T) 
 		t.Errorf("a role masked from title reads %q in the survivor's merge entry: %s", foldedInTitle, encoded)
 	}
 
-	archived := mergeEntryOf(t, e.Admin(), e, source)
+	archived := mergeEntryOf(e.Admin(), t, e, source)
 	if encoded, err := json.Marshal(archived); err != nil || containsText(encoded, foldedInTitle) {
 		t.Errorf("the archived record's merge entry carries the filled value (%v): %s", err, encoded)
 	}
