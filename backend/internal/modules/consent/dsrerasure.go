@@ -148,7 +148,7 @@ func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in Updat
 		}
 		return dsrRow{}, err
 	}
-	if err := auditDSRUpdate(ctx, tx, current, out, in.Resolution != nil); err != nil {
+	if err := auditDSRUpdate(ctx, tx, current, out); err != nil {
 		return dsrRow{}, err
 	}
 	return out, nil

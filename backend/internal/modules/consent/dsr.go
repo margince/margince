@@ -350,6 +350,15 @@ func validateDSRUpdate(current dsrRow, in UpdateDSRInput) *ValidationError {
 // which can quote the subject.
 const erasedResolution = "erased"
 
+// resolutionChanged is what the audit row claims about the answer. A write that
+// leaves the stored text as it was, such as resending it, has not touched it.
+func resolutionChanged(before, after *string) bool {
+	if before == nil || after == nil {
+		return before != after
+	}
+	return *before != *after
+}
+
 // sameAnswer lets a closed request take its own text again, so a client that
 // resends the whole record is not refused for changing nothing.
 func sameAnswer(stored, sent *string) bool {
@@ -394,18 +403,18 @@ func (s *Store) UpdateDSR(ctx context.Context, id ids.UUID, in UpdateDSRInput) (
 		if out, err = scanDSR(tx.QueryRow(ctx, sql, args...)); err != nil {
 			return err
 		}
-		return auditDSRUpdate(ctx, tx, current, out, in.Resolution != nil || in.ClearResolution)
+		return auditDSRUpdate(ctx, tx, current, out)
 	})
 	return out, err
 }
 
 // auditDSRUpdate is the update audit both writers share. The images carry the
 // assignee, so a hand-back says who let the request go.
-func auditDSRUpdate(ctx context.Context, tx pgx.Tx, current, out dsrRow, resolutionTouched bool) error {
+func auditDSRUpdate(ctx context.Context, tx pgx.Tx, current, out dsrRow) error {
 	_, err := storekit.Audit(ctx, tx, "update", "data_subject_request", out.ID, map[string]any{
 		fieldStatus: current.Status, fieldAssigneeID: current.AssigneeID,
 	}, map[string]any{
-		fieldStatus: out.Status, fieldAssigneeID: out.AssigneeID, fieldResolution: resolutionTouched,
+		fieldStatus: out.Status, fieldAssigneeID: out.AssigneeID, fieldResolution: resolutionChanged(current.Resolution, out.Resolution),
 	})
 	return err
 }

@@ -188,6 +188,53 @@ func TestARepeatedErasureFulfilmentIsAccepted(t *testing.T) {
 	if after := e.read(t, request.ID); after.Resolution == nil || *after.Resolution != erasedResolution {
 		t.Fatalf("the erased request holds %v, want %q", after.Resolution, erasedResolution)
 	}
+	if claims := e.auditedResolutionClaims(t, request.ID); len(claims) != 2 || claims[0] != "true" || claims[1] != "false" {
+		t.Fatalf("the update rows claim the answer changed as %v, want [true false]: the repeat changed nothing", claims)
+	}
+}
+
+// auditedResolutionClaims lists, oldest first, what each update row of the
+// request says about its answer.
+func (e *dsrEnv) auditedResolutionClaims(t *testing.T, id ids.UUID) []any {
+	t.Helper()
+	var claims []any
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(e.ctx, `
+			SELECT after->'resolution' FROM audit_log
+			 WHERE entity_type = 'data_subject_request' AND entity_id = $1 AND action = 'update'
+			 ORDER BY occurred_at, id`, id)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var claim []byte
+			if err := rows.Scan(&claim); err != nil {
+				return err
+			}
+			claims = append(claims, string(claim))
+		}
+		return rows.Err()
+	}); err != nil {
+		t.Fatalf("reading the audit rows: %v", err)
+	}
+	return claims
+}
+
+func TestAnAnswerIsAuditedAsChangedOnlyWhenItChanged(t *testing.T) {
+	e := setupDSR(t)
+	request := e.mustCreate(t, dsrKindAccess, "audit-claim@dsr.test")
+	if w := e.patchDSR(t, request.ID, `{"status":"fulfilled","resolution":"package sent"}`); w.Code != http.StatusOK {
+		t.Fatalf("fulfilling → %d: %s", w.Code, w.Body)
+	}
+	if w := e.patchDSR(t, request.ID, `{"resolution":"package sent"}`); w.Code != http.StatusOK {
+		t.Fatalf("resending the stored answer → %d: %s", w.Code, w.Body)
+	}
+
+	claims := e.auditedResolutionClaims(t, request.ID)
+	if len(claims) != 2 || claims[0] != "true" || claims[1] != "false" {
+		t.Fatalf("the update rows claim the answer changed as %v, want [true false]", claims)
+	}
 }
 
 func TestClosingCannotBlankADraftAnswer(t *testing.T) {

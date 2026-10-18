@@ -6,6 +6,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -98,7 +99,7 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	}
 	auditID, err := storekit.Audit(ctx, tx, "merge", entityLead, sourceID.UUID,
 		map[string]any{auditKeyMergedInto: nil},
-		map[string]any{auditKeyMergedInto: targetID, auditKeyFilled: p.After()})
+		map[string]any{auditKeyMergedInto: targetID, auditKeyFilled: filledColumns(p.After())})
 	if err != nil {
 		return crmcontracts.Lead{}, fmt.Errorf("audit lead merge: %w", err)
 	}
@@ -107,7 +108,10 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	}); err != nil {
 		return crmcontracts.Lead{}, fmt.Errorf("emit lead.merged: %w", err)
 	}
-	before, after := survivorMergeImages(sourceID.UUID, map[string]any{auditKeyFilled: p.After()})
+	before := map[string]any{auditKeyMergedFrom: nil}
+	after := map[string]any{auditKeyMergedFrom: sourceID.UUID}
+	maps.Copy(before, p.Before())
+	maps.Copy(after, p.After())
 	if _, err := storekit.Audit(ctx, tx, "merge", entityLead, targetID.UUID, before, after); err != nil {
 		return crmcontracts.Lead{}, fmt.Errorf("audit lead merge on the survivor: %w", err)
 	}

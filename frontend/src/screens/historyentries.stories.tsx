@@ -129,6 +129,54 @@ export const UndoConfirm: Story = {
   },
 };
 
+// A contact that took in another: the survivor's History names the record
+// folded in and what moved over, instead of printing a bare id.
+export const MergedIn: Story = {
+  render: () => {
+    seedWorkspace();
+    installFetchStub({
+      "GET /me": meRoute({}),
+      "GET /records/contact/c1/history": () =>
+        jsonResponse({
+          data: [
+            {
+              id: "h3",
+              actor_type: "human",
+              actor_id: "u1",
+              actor_name: "Demo Admin",
+              action: "merge",
+              occurred_at: "2026-07-15T10:00:00Z",
+              summary: "Demo Admin merged the record",
+              before: { merged_from_id: null, title: null },
+              after: {
+                merged_from_id: "0190a7f2-0000-7000-8000-0000000000a1",
+                title: "Chief Merge Officer",
+                relinked_emails: 2,
+                relinked_phones: 0,
+                relinked_relationships: 1,
+                relinked_activity_links: 3,
+              },
+            },
+            created,
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "GET /contacts/0190a7f2-0000-7000-8000-0000000000a1": () =>
+        jsonResponse({
+          id: "0190a7f2-0000-7000-8000-0000000000a1",
+          full_name: "Ann Smith",
+        }),
+    });
+    return (
+      <StoryProviders>
+        <div style={{ maxWidth: 720 }}>
+          <RecordHistory kind="contact" id="c1" currency={null} />
+        </div>
+      </StoryProviders>
+    );
+  },
+};
+
 // Nothing recorded for this record yet: the honest empty state, not a list
 // with no rows in it.
 export const Empty: Story = {

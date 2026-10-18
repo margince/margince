@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -59,17 +60,28 @@ const (
 	auditKeyMergedInto = "merged_into_id"
 	auditKeyMergedFrom = "merged_from_id"
 	auditKeyFilled     = "filled"
+	// The tally a contact merge writes on both rows: how many references of
+	// each kind moved over. Counts only, never the values.
+	auditKeyRelinkedEmails        = "relinked_emails"
+	auditKeyRelinkedPhones        = "relinked_phones"
+	auditKeyRelinkedRelationships = "relinked_relationships"
+	auditKeyRelinkedActivityLinks = "relinked_activity_links"
 )
 
-// survivorMergeImages are the images of the merge row written on the surviving
-// record as well as the archived one. A reader of the survivor's history
-// otherwise cannot tell where a value it took from the other record came
-// from (an address, a field fill). The merged event rides the archived
-// record's row, so no event pairs with this one.
-func survivorMergeImages(sourceID ids.UUID, detail map[string]any) (before, after map[string]any) {
-	after = map[string]any{auditKeyMergedFrom: sourceID}
-	maps.Copy(after, detail)
-	return map[string]any{auditKeyMergedFrom: nil}, after
+// filledColumns names the columns a merge filled on the survivor, for the
+// archived record's row, which must not carry the values themselves.
+func filledColumns(filled map[string]any) []string {
+	return slices.Sorted(maps.Keys(filled))
+}
+
+// heldNothing is the before image of a fill-only write: every column it set
+// held nothing until now, which is the only case a fill covers.
+func heldNothing(filled map[string]any) map[string]any {
+	before := make(map[string]any, len(filled))
+	for column := range filled {
+		before[column] = nil
+	}
+	return before
 }
 
 // MergeSelfError maps to 422: a record cannot merge into itself.
@@ -177,36 +189,8 @@ func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetI
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	// The STOPS come across too, and they are not a relink — see stopcarry.go.
-	// relinkContactReferences moved the grants; without this the objections
-	// stayed on a record no send evaluates any more, and marketing resumed
-	// against somebody who had explicitly refused it.
-	if err := s.carryStopsTx(ctx, tx,
-		commsauthz.ContactStopSubject(sourceID),
-		commsauthz.ContactStopSubject(targetID)); err != nil {
-		return crmcontracts.Contact{}, fmt.Errorf("carry the merged-away contact's stops: %w", err)
-	}
-	// A rep's standing override travels the same way, and for the same
-	// reason: a merge that carried the stops but dropped a live vouch would
-	// leave the survivor refused again for a category a rep already cleared —
-	// see overridecarry.go.
-	if err := s.carryOverridesTx(ctx, tx,
-		commsauthz.ContactStopSubject(sourceID),
-		commsauthz.ContactStopSubject(targetID)); err != nil {
-		return crmcontracts.Contact{}, fmt.Errorf("carry the merged-away contact's overrides: %w", err)
-	}
-	// And the links, bases and asks other modules keep about them — see
-	// satellitecarry.go.
-	if err := s.carryConsentSatellitesTx(ctx, tx,
-		commsauthz.ContactStopSubject(sourceID),
-		commsauthz.ContactStopSubject(targetID)); err != nil {
-		return crmcontracts.Contact{}, fmt.Errorf("carry the merged-away contact's consent links: %w", err)
-	}
-	if err := s.carryIntrosTx(ctx, tx, sourceID, targetID); err != nil {
-		return crmcontracts.Contact{}, fmt.Errorf("carry the merged-away contact's introduction asks: %w", err)
-	}
-	if err := s.carryGrantsTx(ctx, tx, "contact", sourceID.UUID, targetID.UUID); err != nil {
-		return crmcontracts.Contact{}, fmt.Errorf("carry the merged-away contact's grants: %w", err)
+	if err := s.carryContactSatellitesTx(ctx, tx, sourceID, targetID); err != nil {
+		return crmcontracts.Contact{}, err
 	}
 	p := buildSurvivorshipPatch(tgt, src)
 	if !p.Empty() {
@@ -219,7 +203,11 @@ func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetI
 	}
 	auditID, err := storekit.Audit(ctx, tx, "merge", "contact", sourceID.UUID,
 		map[string]any{auditKeyMergedInto: nil},
-		map[string]any{auditKeyMergedInto: targetID, "relinked": counts, auditKeyFilled: p.After()})
+		map[string]any{
+			auditKeyMergedInto: targetID, auditKeyFilled: filledColumns(p.After()),
+			auditKeyRelinkedEmails: counts.Emails, auditKeyRelinkedPhones: counts.Phones,
+			auditKeyRelinkedRelationships: counts.Relationships, auditKeyRelinkedActivityLinks: counts.ActivityLinks,
+		})
 	if err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("audit contact merge: %w", err)
 	}
@@ -228,7 +216,15 @@ func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetI
 	if err := storekit.EmitEvent(ctx, tx, auditID, sourceID.UUID, contactMergedPayload(sourceID, targetID, counts)); err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("emit contact.merged: %w", err)
 	}
-	before, after := survivorMergeImages(sourceID.UUID, map[string]any{"relinked": counts, auditKeyFilled: p.After()})
+	// Each filled column is its own top-level key, as in an update row. The
+	// history read masks by key, so a nested value would pass the mask.
+	before := map[string]any{auditKeyMergedFrom: nil}
+	after := map[string]any{
+		auditKeyMergedFrom: sourceID.UUID, auditKeyRelinkedEmails: counts.Emails, auditKeyRelinkedPhones: counts.Phones,
+		auditKeyRelinkedRelationships: counts.Relationships, auditKeyRelinkedActivityLinks: counts.ActivityLinks,
+	}
+	maps.Copy(before, p.Before())
+	maps.Copy(after, p.After())
 	if _, err := storekit.Audit(ctx, tx, "merge", "contact", targetID.UUID, before, after); err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("audit contact merge on the survivor: %w", err)
 	}
@@ -237,6 +233,43 @@ func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetI
 		return crmcontracts.Contact{}, fmt.Errorf("read surviving contact: %w", err)
 	}
 	return out, nil
+}
+
+// carryContactSatellitesTx moves what other modules keep about the merged-away
+// contact onto the survivor. None of it is a relink of this module's own rows.
+func (s *Store) carryContactSatellitesTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
+	// The STOPS come across too, and they are not a relink — see stopcarry.go.
+	// relinkContactReferences moved the grants; without this the objections
+	// stayed on a record no send evaluates any more, and marketing resumed
+	// against somebody who had explicitly refused it.
+	if err := s.carryStopsTx(ctx, tx,
+		commsauthz.ContactStopSubject(sourceID),
+		commsauthz.ContactStopSubject(targetID)); err != nil {
+		return fmt.Errorf("carry the merged-away contact's stops: %w", err)
+	}
+	// A rep's standing override travels the same way, and for the same
+	// reason: a merge that carried the stops but dropped a live vouch would
+	// leave the survivor refused again for a category a rep already cleared —
+	// see overridecarry.go.
+	if err := s.carryOverridesTx(ctx, tx,
+		commsauthz.ContactStopSubject(sourceID),
+		commsauthz.ContactStopSubject(targetID)); err != nil {
+		return fmt.Errorf("carry the merged-away contact's overrides: %w", err)
+	}
+	// And the links, bases and asks other modules keep about them — see
+	// satellitecarry.go.
+	if err := s.carryConsentSatellitesTx(ctx, tx,
+		commsauthz.ContactStopSubject(sourceID),
+		commsauthz.ContactStopSubject(targetID)); err != nil {
+		return fmt.Errorf("carry the merged-away contact's consent links: %w", err)
+	}
+	if err := s.carryIntrosTx(ctx, tx, sourceID, targetID); err != nil {
+		return fmt.Errorf("carry the merged-away contact's introduction asks: %w", err)
+	}
+	if err := s.carryGrantsTx(ctx, tx, "contact", sourceID.UUID, targetID.UUID); err != nil {
+		return fmt.Errorf("carry the merged-away contact's grants: %w", err)
+	}
+	return nil
 }
 
 // contactMergedPayload builds the contact.merged wire payload from
