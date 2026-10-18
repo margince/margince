@@ -157,7 +157,7 @@ func (f *Fetcher) FetchPage(ctx context.Context, rawURL string) (Page, error) {
 	if base == nil {
 		base = parsed
 	}
-	body := string(got.body)
+	body := got.text()
 	head := extractHeadAssets(body, base)
 	external, modules := countScripts(body)
 	return Page{
@@ -166,7 +166,7 @@ func (f *Fetcher) FetchPage(ctx context.Context, rawURL string) (Page, error) {
 		Text:            StripTags(body),
 		Sections:        HeadingSections(body),
 		Links:           extractLinks(body, base),
-		Bytes:           len(body),
+		Bytes:           len(got.body),
 		OGImage:         head.ogImage,
 		Icons:           head.icons,
 		Logos:           declaredLogos(body, base),
