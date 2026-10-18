@@ -25,13 +25,67 @@ const UNIT_LABEL: Readonly<Record<UnitKey, MessageKey>> = {
   flat_fee: "product.unitFlatFee",
 };
 
-function isUnitKey(unit: string): unit is UnitKey {
-  return (UNIT_KEYS as readonly string[]).includes(unit);
+// A unit's spelling, lower-cased, to its key; each key spells itself. Rows
+// written while the unit was free text ("Tag", "Stunde", "unit") show as their
+// key without being rewritten. A declared mirror of UnitSpellings in
+// backend/internal/modules/deals/unit.go, which stores a known spelling as its
+// key; backend/gates/frontendunitspellings_test.go holds the two equal.
+const UNIT_SPELLINGS: Readonly<Record<string, UnitKey>> = {
+  piece: "piece",
+  pieces: "piece",
+  unit: "piece",
+  units: "piece",
+  pc: "piece",
+  pcs: "piece",
+  each: "piece",
+  item: "piece",
+  items: "piece",
+  stück: "piece",
+  stueck: "piece",
+  stk: "piece",
+  cái: "piece",
+  hour: "hour",
+  hours: "hour",
+  h: "hour",
+  hr: "hour",
+  hrs: "hour",
+  stunde: "hour",
+  stunden: "hour",
+  std: "hour",
+  giờ: "hour",
+  day: "day",
+  days: "day",
+  tag: "day",
+  tage: "day",
+  personentag: "day",
+  personentage: "day",
+  ngày: "day",
+  month: "month",
+  months: "month",
+  monat: "month",
+  monate: "month",
+  tháng: "month",
+  flat_fee: "flat_fee",
+  "flat fee": "flat_fee",
+  "flat rate": "flat_fee",
+  "lump sum": "flat_fee",
+  pauschal: "flat_fee",
+  pauschale: "flat_fee",
+  festpreis: "flat_fee",
+  "trọn gói": "flat_fee",
+};
+
+function unitKeyOf(stored: string): UnitKey | undefined {
+  const spelling = stored.trim().toLowerCase();
+  return Object.hasOwn(UNIT_SPELLINGS, spelling)
+    ? UNIT_SPELLINGS[spelling]
+    : undefined;
 }
 
 // A stored unit as a reader sees it: a key in their language, typed text as typed.
 export function unitLabel(stored: string, t: Translator): string {
-  return isUnitKey(stored) ? t(UNIT_LABEL[stored]) : stored;
+  const key = unitKeyOf(stored);
+  return key === undefined ? stored : t(UNIT_LABEL[key]);
 }
 
 // The choices a unit picker offers: the keys in words, then "Other".
@@ -48,10 +102,19 @@ export function unitChoiceOf(stored: string): {
   choice: string;
   other: string;
 } {
-  if (stored === "" || isUnitKey(stored)) {
-    return { choice: stored, other: "" };
+  if (stored === "") {
+    return { choice: "", other: "" };
   }
-  return { choice: OTHER_UNIT, other: stored };
+  const key = unitKeyOf(stored);
+  return key === undefined
+    ? { choice: OTHER_UNIT, other: stored }
+    : { choice: key, other: "" };
+}
+
+// "Other" picked with nothing typed: a unit the reader started to name and did
+// not, which a form refuses rather than sending no unit.
+export function isUnnamedOtherUnit(value: UnitChoice): boolean {
+  return value.choice === OTHER_UNIT && value.other.trim() === "";
 }
 
 // The picker's two controls joined into what the wire stores: the key, or the

@@ -18959,7 +18959,7 @@ components:
         name: {type: string}
         sku: {type: [string, 'null'], description: Optional; unique per workspace while live.}
         description: {type: [string, 'null']}
-        unit: {type: string, description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. Display only."}
+        unit: {type: string, description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. A row written before the keys may hold a known spelling such as `Tag`, which a client shows as its key. Display only."}
         unit_price_minor: {type: integer, format: int64, description: Integer minor units (P11); no float money.}
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.'}
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
@@ -18986,7 +18986,7 @@ components:
         name: {type: string}
         sku: {type: [string, 'null']}
         description: {type: [string, 'null']}
-        unit: {type: [string, 'null'], description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. Defaults to `piece`."}
+        unit: {type: [string, 'null'], description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`."}
         unit_price_minor: {type: integer, format: int64, minimum: 0}
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.'}
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
@@ -19408,7 +19408,7 @@ components:
         position: {type: [integer, 'null'], minimum: 1, description: Defaults to the next free position.}
         product_id: {type: [string, 'null'], format: uuid}
         description: {type: [string, 'null']}
-        unit: {type: [string, 'null'], description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. Defaults to the product's unit, else `piece`."}
+        unit: {type: [string, 'null'], description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to the product's unit, else `piece`."}
         quantity: {type: number, format: double, description: '> 0, up to 3 decimal places.'}
         unit_price_minor: {type: [integer, 'null'], format: int64, minimum: 0}
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.'}

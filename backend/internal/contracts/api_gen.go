@@ -34224,7 +34224,7 @@ type CreateProductRequest struct {
 	Sku            *string  `json:"sku,omitempty"`
 	Source         string   `json:"source"`
 
-	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. Defaults to `piece`.
+	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`.
 	Unit                 *string                `json:"unit,omitempty"`
 	UnitPriceMinor       int64                  `json:"unit_price_minor"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -42086,7 +42086,7 @@ type OfferLineItemInput struct {
 	Quantity float64  `json:"quantity"`
 	TaxRate  *float64 `json:"tax_rate,omitempty"`
 
-	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. Defaults to the product's unit, else `piece`.
+	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to the product's unit, else `piece`.
 	Unit           *string `json:"unit,omitempty"`
 	UnitPriceMinor *int64  `json:"unit_price_minor,omitempty"`
 }
@@ -42922,7 +42922,7 @@ type Product struct {
 	Sku    *string `json:"sku,omitempty"`
 	Source string  `json:"source"`
 
-	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. Display only.
+	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. A row written before the keys may hold a known spelling such as `Tag`, which a client shows as its key. Display only.
 	Unit string `json:"unit"`
 
 	// UnitPriceMinor Integer minor units (P11); no float money.

@@ -316,6 +316,35 @@ describe("OfferLineEditor (OP-7/OP-13)", () => {
     expect(screen.queryByText("€1,240.00")).toBeNull();
   });
 
+  it("refuses an Other unit with nothing typed, and sends the typed unit once there is one", async () => {
+    const mutations: { method: string; url: string; body: unknown }[] = [];
+    stubOfferWithMutations(
+      { ...baseOffer, line_items: [existingLine] },
+      { ...baseOffer, line_items: [existingLine] },
+      mutations,
+    );
+    const user = userEvent.setup();
+    render(<OfferScreen id="o-1" />);
+    await screen.findByText("ANG-2026-0007");
+    await user.type(screen.getByTestId("new-line-description"), "Seats");
+    await user.type(screen.getByTestId("new-line-quantity"), "3");
+    await pickOption(user, screen.getByTestId("new-line-unit"), "Other");
+
+    await user.click(screen.getByTestId("add-line"));
+    expect(
+      await screen.findByText("Type the unit, or pick one from the list."),
+    ).toBeTruthy();
+    expect(mutations).toHaveLength(0);
+
+    await user.type(screen.getByTestId("new-line-unit-other"), "Seat");
+    expect(
+      screen.queryByText("Type the unit, or pick one from the list."),
+    ).toBeNull();
+    await user.click(screen.getByTestId("add-line"));
+    await waitFor(() => expect(mutations).toHaveLength(1));
+    expect(mutations[0].body).toMatchObject({ unit: "Seat" });
+  });
+
   it("removes a line using the delete response's recomputed totals", async () => {
     const afterRemove = {
       ...baseOffer,

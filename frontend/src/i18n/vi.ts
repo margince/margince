@@ -10215,6 +10215,8 @@ export const vi = {
   "product.unitFlatFee": "Trọn gói",
   "product.unitOther": "Khác",
   "product.unitOtherLabel": "Đơn vị khác",
+  "product.unitOtherRequired":
+    "Nhập đơn vị hoặc chọn một đơn vị trong danh sách.",
   "product.unitPrice": "Đơn giá",
   "product.currency": "Loại tiền",
   "product.taxRate": "Thuế suất mặc định %",

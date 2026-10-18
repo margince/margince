@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ProductsAdmin } from "./products";
@@ -113,9 +114,10 @@ async function offered(user: User, field: string) {
 }
 
 async function pick(user: User, field: string, choice: string) {
-  await user.click(await screen.findByRole("combobox", { name: field }));
-  await user.click(
-    within(screen.getByRole("listbox")).getByRole("option", { name: choice }),
+  await pickOption(
+    user,
+    await screen.findByRole("combobox", { name: field }),
+    choice,
   );
 }
 

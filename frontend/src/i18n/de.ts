@@ -10472,6 +10472,8 @@ export const de = {
   "product.unitFlatFee": "Pauschale",
   "product.unitOther": "Andere",
   "product.unitOtherLabel": "Andere Einheit",
+  "product.unitOtherRequired":
+    "Gib die Einheit ein oder wähle eine aus der Liste.",
   "product.unitPrice": "Einzelpreis",
   "product.currency": "Währung",
   "product.taxRate": "Standardsteuersatz %",

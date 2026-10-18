@@ -28,10 +28,6 @@ import (
 // numeric(5,2) scale the columns hold.
 const zeroPct = "0.00"
 
-// defaultUnit is the unit key a product or line gets when nobody named one. It
-// matches the column default; the client translates the key for its reader.
-const defaultUnit = "piece"
-
 // resolveProductSnapshot fills a line's description/unit/price/tax defaults
 // from its product; a line with no product keeps the caller's values. The
 // snapshot is copied ONCE, here — a later product edit never touches the
@@ -85,7 +81,7 @@ func resolveProductSnapshot(ctx context.Context, tx pgx.Tx, productID *ids.Produ
 func normalizeLineDefaults(unit, discountPct, taxRate *string) (unitVal, discount, tax string) {
 	unitVal = defaultUnit
 	if unit != nil && values.HasVisibleText(*unit) {
-		unitVal = strings.TrimSpace(*unit)
+		unitVal = canonicalUnit(strings.TrimSpace(*unit))
 	}
 	discount = zeroPct
 	if discountPct != nil {

@@ -10546,6 +10546,7 @@ export const en = {
   "product.unitFlatFee": "Flat fee",
   "product.unitOther": "Other",
   "product.unitOtherLabel": "Other unit",
+  "product.unitOtherRequired": "Type the unit, or pick one from the list.",
   "product.unitPrice": "Unit price",
   "product.currency": "Currency",
   "product.taxRate": "Default tax rate %",
