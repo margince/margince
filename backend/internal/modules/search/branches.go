@@ -71,6 +71,21 @@ type searchBranch struct {
 	// rankSample, when set, is how many visible matches the branch scores at
 	// most; the scan stops there, and the best hits come from that sample.
 	rankSample int
+	// snippetIsContext marks an excerpt shown beside the record whatever text
+	// matched. Retrieval cites the title instead, because evidence must be text
+	// that could have ranked the hit.
+	snippetIsContext bool
+}
+
+// snippetIsEvidence reports whether a hit's excerpt may be cited as the text
+// that ranked it.
+func snippetIsEvidence(entity string) bool {
+	for _, branch := range searchBranches {
+		if branch.entity == entity {
+			return !branch.snippetIsContext
+		}
+	}
+	return true
 }
 
 // activityRankSample bounds the mail the activity branch ranks. A common word
@@ -215,7 +230,7 @@ var searchBranches = []searchBranch{
 	// A lead with no person name is already titled by that company.
 	{
 		entity: "lead", table: entityLead, title: "coalesce(full_name, company_name, email)",
-		snippet: "CASE WHEN t.full_name IS NOT NULL THEN t.company_name END",
+		snippet: "CASE WHEN t.full_name IS NOT NULL THEN t.company_name END", snippetIsContext: true,
 	},
 	// A project's name alone does not say which account's work it is, and two
 	// accounts can run a "Phase 2". The excerpt is the key and the company,

@@ -30,6 +30,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
 )
 
 // A role with NO contact grant gets no contact hits — search must not
@@ -592,6 +594,27 @@ func TestALeadHitShowsTheCompanyItNames(t *testing.T) {
 	// Titled by the company already; the excerpt would only repeat the title.
 	if got := snippets[companyOnly]; got != "" {
 		t.Errorf("the company-only lead's excerpt is %q, want none", got)
+	}
+}
+
+// The company beside a lead is shown whatever matched. An agent citing it as
+// the text that ranked a lead found by name would quote words the query never
+// touched.
+func TestALeadsCompanyIsNotRetrievalEvidence(t *testing.T) {
+	e := SetupSearch(t)
+	lead := e.SeedID(t, `INSERT INTO lead (id, full_name, company_name, email, source, captured_by)
+	                     VALUES ($1, 'Jonas Becker', 'Lübeck Shipyards', 'jonas@shipyards.test', 'manual', 'human:x')`)
+
+	found, err := search.NewRetriever(e.Store, nil).Search(e.Admin(),
+		retrieval.Query{Text: "becker", EntityTypes: []datasource.EntityType{"lead"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(found.Hits) != 1 || found.Hits[0].Ref.ID != lead || len(found.Hits[0].Evidence) != 1 {
+		t.Fatalf("retrieving the lead by name → %+v, want the one lead with one excerpt", found.Hits)
+	}
+	if got := found.Hits[0].Evidence[0].Snippet; got != "Jonas Becker" {
+		t.Errorf("the lead's evidence is %q, want the name that ranked it", got)
 	}
 }
 
