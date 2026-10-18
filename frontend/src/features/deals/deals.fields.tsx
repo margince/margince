@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { CreateField } from "../../components/create";
 import { currencyOptions } from "../../format/currencychoices";
@@ -86,12 +86,18 @@ export function usePartnerOptions(
       return data.data;
     },
   });
+  // A failed names read falls back to reading the partners' own companies by
+  // id. Without it a working /partners answer names nobody, and both partner
+  // fields leave the form.
+  const byId = usePartnerCompaniesById(
+    names.isError ? (partners.data ?? []).map((p) => p.company_id) : [],
+  );
   // Still the caller's page as a fallback while the keyed read is in flight,
   // so the options do not blink empty on every mount.
   const named = new Map<string, string>(
     companies.map((company) => [company.id, company.display_name]),
   );
-  for (const company of names.data ?? []) {
+  for (const company of [...(names.data ?? []), ...byId]) {
     named.set(company.id, company.display_name);
   }
   return (partners.data ?? []).flatMap((partner) => {
@@ -100,6 +106,31 @@ export function usePartnerOptions(
     // as a bare id. Picking it would name a company the picker could not show.
     return label ? [{ value: partner.company_id, label }] : [];
   });
+}
+
+// The id filter takes at most this many ids per request.
+const COMPANY_ID_BATCH = 100;
+
+function usePartnerCompaniesById(
+  ids: readonly string[],
+): { id: string; display_name: string }[] {
+  const batches: string[][] = [];
+  for (let at = 0; at < ids.length; at += COMPANY_ID_BATCH) {
+    batches.push(ids.slice(at, at + COMPANY_ID_BATCH));
+  }
+  const reads = useQueries({
+    queries: batches.map((batch) => ({
+      queryKey: ["partners", "names", "by-id", batch],
+      staleTime: 60_000,
+      queryFn: async () =>
+        unwrap(
+          await api.GET("/companies", {
+            params: { query: { id: batch, limit: batch.length } },
+          }),
+        ).data,
+    })),
+  });
+  return reads.flatMap((read) => read.data ?? []);
 }
 
 /**

@@ -343,7 +343,7 @@ export function DealsScreen({
         stageTotalsQuery={stageTotalsQuery}
         totalsWithheld={totalsWithheld}
         companies={companiesQuery.data?.data ?? []}
-        companiesSettled={companiesQuery.isSuccess}
+        companiesSettled={!companiesQuery.isPending}
         openDeal={openDeal}
         cardDragHandlers={cardDragHandlers}
         columnDropHandlers={columnDropHandlers}

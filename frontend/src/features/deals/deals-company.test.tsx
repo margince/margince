@@ -122,6 +122,8 @@ function stubBackend(opts: {
   // Resolves before the companies page answers, so a test can look at what
   // the board asked for while that read was still out.
   pageGate?: Promise<void>;
+  // The capped companies page answers with a server error.
+  pageFails?: boolean;
   single?: Deal;
   // The project a deal names, as its own per-id read answers it.
   project?: { id: string; name: string };
@@ -169,6 +171,9 @@ function stubBackend(opts: {
     if (url.includes("/companies")) {
       if (opts.pageGate) {
         await opts.pageGate;
+      }
+      if (opts.pageFails) {
+        return jsonResponse({ title: "Boom" }, 500);
       }
       return jsonResponse({
         data: opts.page ?? [],
@@ -354,6 +359,23 @@ describe("the board past the picker's first page", () => {
       stubBackend({
         deals: [deal({ company_id: "o-offpage" })],
         page: [{ id: "o1", display_name: "Acme Corp" }],
+        byId: {
+          "o-offpage": { id: "o-offpage", display_name: "Northgate Systems" },
+        },
+      }),
+    );
+    render(<DealsScreen />);
+
+    expect(await screen.findByText("Northgate Systems")).toBeTruthy();
+  });
+
+  // A failed page is settled too: the cards still get their names by id.
+  it("names a company by id when the picker's page fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      stubBackend({
+        deals: [deal({ company_id: "o-offpage" })],
+        pageFails: true,
         byId: {
           "o-offpage": { id: "o-offpage", display_name: "Northgate Systems" },
         },

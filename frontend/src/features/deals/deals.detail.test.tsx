@@ -238,6 +238,44 @@ describe("DealScreen — edit, archive (A3)", () => {
     expect("partner_attribution" in body).toBe(false);
   });
 
+  // The partner companies' names come from one keyed read. When it fails, the
+  // partners are named by id instead, so the form still asks the question.
+  it("offers the partner picker when the partner names read fails", async () => {
+    const user = userEvent.setup();
+    const d = deal({ id: "x", version: 4, partner_company_id: null });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        if (url.pathname.endsWith("/partners")) {
+          return jsonResponse({
+            data: [{ company_id: "p9" }],
+            page: { next_cursor: null },
+          });
+        }
+        if (url.searchParams.get("relationship_type") === "partner") {
+          return jsonResponse({ title: "Boom" }, 500);
+        }
+        if (url.searchParams.getAll("id").includes("p9")) {
+          return jsonResponse({
+            data: [{ id: "p9", display_name: "Northgate Partners" }],
+            page: { next_cursor: null },
+          });
+        }
+        return stubBackend([d], { single: d })(request);
+      }),
+    );
+
+    render(<DealScreen id="x" />);
+    await user.click(
+      await screen.findByRole("button", { name: "Change via partner" }),
+    );
+    await user.click(screen.getByLabelText("via partner"));
+    expect(
+      await screen.findByRole("option", { name: "Northgate Partners" }),
+    ).toBeTruthy();
+  });
+
   // Each fact is its own cell: adjacent spans in one text row run together
   // ("€48,000.00Acme Corpvia Northgate") while every text assertion passes.
   it("keeps each fact in its own cell rather than running them together", async () => {

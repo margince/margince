@@ -48,6 +48,11 @@ function ReferenceControl({
   t: (key: MessageKey) => string;
 }>) {
   const [picked, setPicked] = useState<RecordPickerCandidate | null>(null);
+  // Forgotten once the value moves off it, so a reset that later lands on the
+  // same id is named by the current options, not by a stale pick.
+  if (picked && picked.id !== value) {
+    setPicked(null);
+  }
   const selected: RecordPickerCandidate | null = !value
     ? null
     : picked?.id === value
