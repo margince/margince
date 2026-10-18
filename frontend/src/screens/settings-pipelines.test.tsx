@@ -289,7 +289,7 @@ describe("PipelinesCard: who is shown what", () => {
     expect(screen.queryByText(/Read-only/)).toBeNull();
   });
 
-  // A hidden create verb reads as "this is all there can be": a reader who
+  // A hidden create verb reads as "this is all there can be". A reader who
   // sees one pipeline and no button concludes the product holds one.
   it("keeps the create verbs in sight for a reader, refused with the reason", async () => {
     server({ roles: ["rep"], allow: {} });

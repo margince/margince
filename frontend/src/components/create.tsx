@@ -129,8 +129,8 @@ export function CreateAction<Created extends { id: string }>({
 }: Readonly<{
   label: string;
   fields: CreateField[];
-  // Why this reader may not create, drawn beside the refused button so the
-  // verb stays visible: a hidden create reads as "there is nothing to add".
+  // Why this reader may not create, drawn beside the refused button. The verb
+  // stays visible, because a hidden create reads as "there is nothing to add".
   reason?: string;
   // The form's live answers, for a screen whose field list depends on them —
   // a dependent picker whose options only the server can narrow. See
@@ -206,7 +206,7 @@ export function CreateAction<Created extends { id: string }>({
         reason={reason}
       />
       <CreateRecordModal
-        // A refusal that lands while the dialog is open closes it: a verb the
+        // A refusal that lands while the dialog is open closes it. A verb the
         // reader may no longer take must not stay one press from the server.
         open={shown && reason === undefined}
         onClose={() => setCreating(false)}

@@ -177,7 +177,7 @@ describe("PipelinesCard: a refusal that lands mid-edit", () => {
 });
 
 describe("PipelinesCard: a read seat", () => {
-  // The role grants both verbs; the seat is what refuses, so the sentence
+  // The role grants both verbs and the seat is what refuses. So the sentence
   // must send the reader to a seat upgrade rather than a role change.
   it("refuses the create verbs for the seat, not the role", async () => {
     server(TWO_PIPELINES, { seat: "read" });
