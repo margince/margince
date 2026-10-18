@@ -32484,6 +32484,28 @@ export interface components {
             /** Format: date-time */
             end?: string;
         };
+        /** @description A recorded decision about whether a promise creates current work. Re-reading replaces this decision without changing human-owned work. */
+        CommitmentAdmission: {
+            locator: string;
+            summary: string;
+            source_quote: string;
+            outcome: string;
+            current_work: boolean;
+            rule_version: string;
+            evidence_ids: string[];
+            /** Format: date-time */
+            evaluated_at: string;
+            /**
+             * Format: uuid
+             * @description The later message that explicitly renewed this promise.
+             */
+            renewed_by?: string;
+            /**
+             * Format: date-time
+             * @description The renewing message's source time when the decision was recorded.
+             */
+            renewed_at?: string;
+        };
         /**
          * @description A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
          *     **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
@@ -32496,6 +32518,8 @@ export interface components {
          *     when `kind=message` (ADR-0107).
          */
         Activity: {
+            /** @description Decisions about promises read from this source, included on list and detail reads when its content is visible. */
+            readonly commitment_admissions?: components["schemas"]["CommitmentAdmission"][];
             /** Format: uuid */
             id: string;
             /** @enum {string} */

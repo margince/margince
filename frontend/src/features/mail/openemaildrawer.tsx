@@ -2,9 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useRef } from "react";
+import { CommitmentReview } from "../../design-system/commitmentreview";
 import { EmailDetail } from "../../design-system/emaildetail";
+import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime } from "../../format/format";
-import { useLocale } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
+import { useActivity } from "../../lib/activityread";
 import { EmailAccessEditor } from "../capture/emailaccesseditor";
 import { EmailRecordLinks } from "./emailrecords";
 import { EmailReplyAction } from "./emailreply";
@@ -72,6 +75,13 @@ export function OpenEmailDrawer({
       open={activityId !== null}
       onClose={onClose}
       formatWhen={(iso) => formatDateTime(iso, locale, zone)}
+      renderRelated={() => (
+        <SourceCommitmentReview
+          activityId={activityId ?? undefined}
+          open={activityId !== null}
+          zone={zone}
+        />
+      )}
       renderAccess={(presentation) => (
         <EmailAccessEditor presentation={presentation} />
       )}
@@ -81,6 +91,33 @@ export function OpenEmailDrawer({
       renderReply={(presentation) => (
         <EmailReplyAction presentation={presentation} onSent={onReplySent} />
       )}
+    />
+  );
+}
+
+function SourceCommitmentReview({
+  activityId,
+  open,
+  zone,
+}: Readonly<{ activityId: string | undefined; open: boolean; zone: string }>) {
+  const read = useActivity(activityId, open);
+  const t = useT();
+  if (!open || read.data?.content_state === "withheld") return null;
+  if (read.isError)
+    return (
+      <SurfaceState
+        state="failed"
+        emptyLabel={t("commitment.review.title")}
+        loadingLabel={t("activity.detail.loading")}
+        detail={{ onRetry: () => void read.refetch() }}
+      >
+        {null}
+      </SurfaceState>
+    );
+  return (
+    <CommitmentReview
+      decisions={read.data?.commitment_admissions}
+      zone={zone}
     />
   );
 }

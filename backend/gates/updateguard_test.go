@@ -273,7 +273,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/privacy:anonymizeSubjectRows":   "terminal absolute write: the erasure overwrites the PII columns regardless of concurrent state, by design",
 	"internal/modules/privacy:archiveActivity":        "terminal absolute write: the retention sweep archives an over-age activity regardless of concurrent state, by design — a concurrent edit does not make the record younger",
 	"internal/modules/privacy:archiveDeal":            "terminal absolute write: the retention sweep archives an over-age lost/won deal regardless of concurrent state, by design",
-	"internal/modules/privacy:eraseActivityContent":   "terminal absolute write: the sweep's activity/erase action empties the body and stamps the tombstone subject regardless of concurrent state, by design",
 	"internal/modules/privacy:anonymizeContactRecord": "terminal absolute write: the sweep's contact/anonymize action overwrites the PII columns regardless of concurrent state, by design",
 
 	// A function the package-level folding attributes a statement to without its

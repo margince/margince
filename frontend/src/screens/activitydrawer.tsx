@@ -6,6 +6,7 @@ import type { components } from "../api/schema";
 import { EntityRef } from "../components/entityref";
 import { writtenAsMarkdown } from "../design-system/activitytimeline";
 import { Badge, Modal } from "../design-system/atoms";
+import { CommitmentReview } from "../design-system/commitmentreview";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Heading } from "../design-system/heading";
@@ -168,6 +169,12 @@ function ActivityBody({
         )}
       </div>
       {withheldOrBody(activity, t)}
+      {activity.content_state !== "withheld" && (
+        <CommitmentReview
+          decisions={activity.commitment_admissions}
+          zone={zone}
+        />
+      )}
     </div>
   );
 }

@@ -23223,6 +23223,9 @@ type Activity struct {
 	// ColleagueIds The colleagues recorded as taking part: the one who logged a call or meeting, the ones named as attending, and the seats capture stamped on a captured one, never a blind copy. Filled wherever one activity is answered whole (its read, its update); a list leaves it out. Withheld with the content, so it is absent whenever `content_state` is `withheld`.
 	ColleagueIds *[]openapi_types.UUID `json:"colleague_ids,omitempty"`
 
+	// CommitmentAdmissions Decisions about promises read from this source, included on list and detail reads when its content is visible.
+	CommitmentAdmissions *[]CommitmentAdmission `json:"commitment_admissions,omitempty"`
+
 	// ContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
 	ContentState *ActivityContentState `json:"content_state,omitempty"`
 	CreatedAt    time.Time             `json:"created_at"`
@@ -29072,6 +29075,24 @@ type CommissionSummaryRow struct {
 
 	// Status accrued → approved → paid, with void as the exit at any point.
 	Status CommissionStatus `json:"status"`
+}
+
+// CommitmentAdmission A recorded decision about whether a promise creates current work. Re-reading replaces this decision without changing human-owned work.
+type CommitmentAdmission struct {
+	CurrentWork bool                 `json:"current_work"`
+	EvaluatedAt time.Time            `json:"evaluated_at"`
+	EvidenceIds []openapi_types.UUID `json:"evidence_ids"`
+	Locator     string               `json:"locator"`
+	Outcome     string               `json:"outcome"`
+
+	// RenewedAt The renewing message's source time when the decision was recorded.
+	RenewedAt *time.Time `json:"renewed_at,omitempty"`
+
+	// RenewedBy The later message that explicitly renewed this promise.
+	RenewedBy   *openapi_types.UUID `json:"renewed_by,omitempty"`
+	RuleVersion string              `json:"rule_version"`
+	SourceQuote string              `json:"source_quote"`
+	Summary     string              `json:"summary"`
 }
 
 // CommunicationContext What kind of communication a message is — the closed vocabulary the engine resolves

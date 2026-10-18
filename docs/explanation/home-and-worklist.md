@@ -109,6 +109,34 @@ mail alike:
 - A promise nobody can be named for is proposed to the member the reading belongs to.
 - In private mail, `PrivateTo` keeps the promise with its owner, and the task is readable by its holder alone.
 
+Before writing new work, `CommitmentAdmissionEvidenceTx` checks the source and any later mail. The dispatcher uses the source date saved by capture, or reads the original mail date for older rows.
+Its rule version is `CommitmentAdmissionVersion`, in `backend/internal/modules/activities/commitmentadmission.go`.
+The commitment window uses `automaticCommitmentHorizonDays` (30). A promise or agreed deadline within that window stays current, as does a deadline still ahead.
+
+Unknown times and unread later context stop new work. This does not mark the promise done.
+Existing tasks keep their human changes. Open customer claims and pending proposals from before admission tracking also stay current until their own lifecycle changes them.
+
+Canceled meetings create no new work after their scheduled start. A future booked meeting waits until it has taken place.
+Promises that need review do not create fresh open account signals.
+
+A history read adds the newest bounded thread window, without moving the history cursor past unread older messages.
+`extractContextMessages` bounds both windows together. A gap or unread new text stops admission. A cut counts as read only when every line left out is quoted history; an inline answer below the cut stays unread.
+
+`activity_commitment_admission` keeps the reason, source quote, rule version and read time under the source's access rules.
+The activity audit stores decision metadata without copying source text. Later read times stop stale results from replacing newer ones.
+Contact and company timelines show commitment review counts on sources and their threads.
+
+Open **Commitment review** in the source drawer to see why no work was created. Readers can check later replies and add a follow-up from a linked record.
+This is the bounded review route for threads with more later context than the read window holds; the scan still moves forward.
+A transcript reading also reports why a commitment needs more evidence.
+
+Partial delivery leaves the original promise open. A repeated promise keeps the original source and quoted clause, so it cannot create a second task for the same work.
+A stated renewal records its message and source time. It can update the deadline on an open automatic task and its claim; human changes and completed or archived tasks keep their state.
+The dispatcher locks the original source before applying a renewal. An older renewing message cannot replace a newer one, even when a later pass reads it.
+
+The signal reader uses the `premium` tier by default. Its current certification passes the renewal corpus; the cheaper binding does not meet the quality threshold.
+Each reading uses tokens at that tier. Work waits in the queue when the budget runs out.
+
 The 0.85 sits in the gap the certification records show. A plain dated promise reads at 0.9 or more and a soft one at 0.3 or less, and the extractors drop anything under 0.7.
 `TestCommitmentTaskConfidenceSitsInTheCertifiedGap` holds it there.
 

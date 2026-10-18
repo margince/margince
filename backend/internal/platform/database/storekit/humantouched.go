@@ -13,13 +13,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// AuditNotFromAnImport is the audit_log predicate (alias a) for a row a user
+// AuditNotFromAnImport is the audit_log predicate for a row a user
 // wrote, as against one an import run landed. A re-import's update carries the
 // approving user as its actor but is the import's own write. It must not make
 // an earlier run's undo keep the row. A bulk change's batch is not an
 // import run and still counts. The undo's page check and HumanActedSince
 // share it.
-const AuditNotFromAnImport = `(a.batch_id IS NULL OR NOT EXISTS (SELECT 1 FROM import_run ir WHERE ir.id = a.batch_id))`
+func AuditNotFromAnImport(alias string) string {
+	return fmt.Sprintf(`(%[1]s.batch_id IS NULL OR NOT EXISTS (SELECT 1 FROM import_run ir WHERE ir.id = %[1]s.batch_id))`, alias)
+}
 
 // HumanActedSince reports whether a human has acted on one record after `at`.
 // Acting is any human-actor audit row on the entity, not only an update. A
@@ -35,7 +37,7 @@ func HumanActedSince(ctx context.Context, tx pgx.Tx, entityType string, id ids.U
 			SELECT 1 FROM audit_log a
 			 WHERE a.entity_type = $1 AND a.entity_id = $2
 			   AND a.actor_type = 'human' AND a.occurred_at > $3
-			   AND `+AuditNotFromAnImport+`)`,
+			   AND `+AuditNotFromAnImport("a")+`)`,
 		entityType, id, at).Scan(&touched); err != nil {
 		return false, fmt.Errorf("checking whether a colleague has acted on this %s: %w", entityType, err)
 	}

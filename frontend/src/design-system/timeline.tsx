@@ -11,6 +11,7 @@ import { VisibilityBadge } from "./visibility";
 import "./composed.css";
 
 import {
+  CommitmentReviewFlag,
   directionClass,
   dotClass,
   groupCountLabel,
@@ -265,6 +266,9 @@ export function TimelineRow({
             // As above: absent on the reply composer and nowhere else.
             whyNotOpenable="noReader"
           />
+          <CommitmentReviewFlag
+            count={entry.withheld ? 0 : entry.commitmentReviewCount}
+          />
           {flag}
           {entry.actions && <span className="tl-actions">{entry.actions}</span>}
         </div>
@@ -325,6 +329,9 @@ export function TimelineRow({
               <VisibilityBadge state={entry.audience} />
             )
           )}
+          <CommitmentReviewFlag
+            count={entry.withheld ? 0 : entry.commitmentReviewCount}
+          />
           {flag}
         </span>
         {entry.withheld ? (

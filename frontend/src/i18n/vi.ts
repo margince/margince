@@ -1011,6 +1011,8 @@ export const vi = {
   "history.reversal.undoneBy": "{undoer} đã hoàn tác",
   "history.reversal.unpaired": "Hoàn tác một thay đổi trước đó",
   "history.edge.marker": "Liên kết",
+  "history.field.commitment_evidence_unavailable":
+    "Bằng chứng cam kết không còn khả dụng",
   "history.field.address": "Địa chỉ",
   "history.field.admission": "Kiểm tra đầu vào tên miền",
   "history.field.admission_reason": "Lý do kiểm tra đầu vào",
@@ -2638,6 +2640,21 @@ export const vi = {
   "email.detail.cc": "Cc",
   "email.detail.filedUnder": "Xếp vào",
   "email.detail.when": "Thời gian gửi",
+  "commitment.review.count_one": "Cam kết cần xem lại: {count}",
+  "commitment.review.count_other": "Cam kết cần xem lại: {count}",
+  "commitment.review.title": "Xem lại cam kết",
+  "commitment.review.detail":
+    "Chưa tạo việc từ các kết quả này. Xem lại nguồn và phản hồi sau đó trước khi thêm việc tiếp theo từ hồ sơ liên kết.",
+  "commitment.review.historical": "Cam kết cũ không có hạn chót hiện tại.",
+  "commitment.review.incomplete":
+    "Chưa đọc hết các tin nhắn sau đó. Cam kết có thể đã được hoàn thành.",
+  "commitment.review.unknownDate": "Chưa xác minh được ngày của nguồn.",
+  "commitment.review.conflictingDates":
+    "Ngày trên thư khác với ngày thư đến hộp thư. Xem lại ngày gốc.",
+  "commitment.review.canceledMeeting": "Cuộc họp đã bị hủy.",
+  "commitment.review.pendingMeeting": "Cuộc họp chưa diễn ra.",
+  "commitment.review.unavailable": "Xem lại nguồn trước khi tạo việc.",
+  "commitment.review.evaluated": "Đã xem lại {when}",
   "activity.detail.loading": "Đang tải hoạt động…",
   "activity.detail.none": "Hoạt động này",
   "activity.detail.withheldReason": "Nội dung hoạt động bị giữ lại",

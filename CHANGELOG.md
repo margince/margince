@@ -191,6 +191,10 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Fixed
 
+- Old conversation history no longer creates fresh commitment tasks without current evidence.
+  Promises with future deadlines remain eligible, and human-edited work is preserved.
+  Graph and IMAP retain provider arrival times, and replies join sent mail before its mailbox copy arrives.
+
 - **An approval reads the same on every door.** A write held for approval over
   REST now opens with the sentence the tool door shows, naming the records it
   changes, such as the two tags a merge folds together. Each field of the

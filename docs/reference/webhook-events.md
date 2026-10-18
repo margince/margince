@@ -621,12 +621,12 @@ Payload for conversation_claim.captured, something promised, asked or decided in
 
 Record: `contact` · version 1
 
-Payload for conversation_claim.changed, a human typed over the machine, or dismissed a claim outright. Published because a correction is SHARED truth, unlike a moment dismissal: a downstream reader holding the old claim needs to know it no longer stands.
+Payload for conversation_claim.changed. A claim was corrected, renewed, dismissed or erased. A downstream reader holding the old claim needs to refresh it, or remove it when the status is erased.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.claim_id` | string (uuid) | yes |  |
-| `data.status` | string | yes | The claim's status after the correction, open, done or dismissed. A plain string for the same reason as `kind` above. |
+| `data.status` | string | yes | The claim's status after the change: open, done, dismissed or erased. A plain string for the same reason as `kind` above. |
 
 ### `deal.archived`
 

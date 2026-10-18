@@ -51,6 +51,23 @@ export default meta;
 export const RecordDrawer: StoryObj = {
   render: () => {
     installFetchStub({
+      [`GET /activities/${BASE.activity_id}`]: () =>
+        jsonResponse({
+          id: BASE.activity_id,
+          content_state: "available",
+          commitment_admissions: [
+            {
+              locator: "pricing",
+              summary: "Send revised pricing",
+              source_quote: "I will send revised pricing.",
+              outcome: "historical_without_current_deadline",
+              current_work: false,
+              rule_version: "1",
+              evidence_ids: [],
+              evaluated_at: "2026-10-18T10:00:00Z",
+            },
+          ],
+        }),
       "GET /activities/11111111-1111-4111-8111-111111111111/email-presentation":
         () =>
           jsonResponse({
@@ -113,6 +130,23 @@ export const RecordDrawer: StoryObj = {
 export const RecordDrawerHeld: StoryObj = {
   render: () => {
     installFetchStub({
+      [`GET /activities/${BASE.activity_id}`]: () =>
+        jsonResponse({
+          id: BASE.activity_id,
+          content_state: "available",
+          commitment_admissions: [
+            {
+              locator: "pricing",
+              summary: "Send revised pricing",
+              source_quote: "I will send revised pricing.",
+              outcome: "historical_without_current_deadline",
+              current_work: false,
+              rule_version: "1",
+              evidence_ids: [],
+              evaluated_at: "2026-10-18T10:00:00Z",
+            },
+          ],
+        }),
       "GET /activities/11111111-1111-4111-8111-111111111111/email-presentation":
         () =>
           jsonResponse({

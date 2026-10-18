@@ -9,8 +9,11 @@ package compose
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -34,13 +37,15 @@ const transcriptProposalActor = "agent:transcript-proposer"
 // a colleague's name must not have their promise written as our task.
 func (p *TranscriptProposer) commitmentFrom(
 	ctx context.Context, tx pgx.Tx, step proposedStep,
-	reading activities.TranscriptReading, activityID ids.ActivityID,
+	reading activities.TranscriptReading, activityID ids.ActivityID, asOf time.Time,
 ) (Commitment, error) {
 	cited := quotedFromTranscript(step, reading.Lines)
 	owner := strings.TrimSpace(step.Owner)
 	c := Commitment{
+		AsOf:             asOf,
 		Extractor:        transcriptProposalActor,
 		SourceActivityID: activityID.UUID,
+		ReadMessages:     []ids.UUID{activityID.UUID},
 		Summary:          step.Summary,
 		Quote:            cited,
 		Party:            owner,
@@ -116,17 +121,26 @@ func transcriptCommitmentBody(owner string, sourceLines []int) string {
 // one, which FinishTranscriptRead refuses to let collapse, and a task written
 // without asking is said here because no question shows it.
 func transcriptReadDetail(found int, staged transcriptStaging) string {
-	switch {
-	case found == 0:
-		return "this transcript states no next steps clearly enough to propose one"
-	case staged.tasks > 0 || staged.watched > 0:
-		return "added " + counted(staged.tasks, "task for a colleague", "tasks for colleagues") +
-			" and noted " + counted(staged.watched, "commitment the customer made", "commitments the customer made")
-	case len(staged.proposals) > 0:
-		return ""
-	default:
-		return "every next step this transcript states has already been put to you"
+	var details []string
+	if staged.tasks > 0 {
+		details = append(details, "added "+counted(staged.tasks, "task for a colleague", "tasks for colleagues"))
 	}
+	if staged.watched > 0 {
+		details = append(details, "noted "+counted(staged.watched, "commitment the customer made", "commitments the customer made"))
+	}
+	if len(staged.proposals) > 0 {
+		details = append(details, counted(len(staged.proposals), "proposal awaits your decision", "proposals await your decision"))
+	}
+	for _, reason := range slices.Sorted(maps.Keys(staged.withheld)) {
+		details = append(details, counted(staged.withheld[reason], "commitment", "commitments")+": "+transcriptWithheldReason(reason))
+	}
+	if len(details) > 0 {
+		return strings.Join(details, "; ")
+	}
+	if found == 0 {
+		return "this transcript states no next steps clearly enough to propose one"
+	}
+	return "every next step this transcript states has already been put to you"
 }
 
 // counted spells a count with the noun in the right number.
@@ -135,4 +149,23 @@ func counted(n int, one, many string) string {
 		return "1 " + one
 	}
 	return strconv.Itoa(n) + " " + many
+}
+
+func transcriptWithheldReason(outcome CommitmentOutcome) string {
+	switch activities.CommitmentAdmissionReason(outcome) {
+	case activities.CommitmentHistorical:
+		return "kept as history without creating new work"
+	case activities.CommitmentIncomplete, activities.CommitmentContextUnassessed:
+		return "needs later conversation evidence before creating work"
+	case activities.CommitmentSourceUnknown:
+		return "needs a verified source date before creating work"
+	case activities.CommitmentTimeContradicted:
+		return "has conflicting message dates; review the source before creating work"
+	case activities.CommitmentMeetingCancelled:
+		return "belongs to a canceled meeting; no work created"
+	case activities.CommitmentMeetingPending:
+		return "belongs to a meeting that has not taken place; no work created"
+	default:
+		return "source is no longer available; no work created"
+	}
 }

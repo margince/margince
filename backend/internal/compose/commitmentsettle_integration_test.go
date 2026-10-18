@@ -212,8 +212,8 @@ func TestASettlementIsMadeAsTheHumanWhoCausedIt(t *testing.T) {
 // can no longer be read, as settling it directly would not.
 func TestTickingATaskLeavesACommitmentFromAConversationTheyMayNotRead(t *testing.T) {
 	k := seedKeptCommitment(t)
-	k.WsExec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, k.activity.UUID)
 	k.setDone(t, true)
+	k.WsExec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, k.activity.UUID)
 	k.deliver(t, k.newest(t, eventActivityUpdated, `envelope->'entity'->>'id' = $2`, k.task.String()))
 	if got := k.claimStatus(t); got != "open" {
 		t.Errorf("ticking a task settled a commitment from a conversation the rep may not read (status %q)", got)

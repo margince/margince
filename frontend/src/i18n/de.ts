@@ -1039,6 +1039,8 @@ export const de = {
   "history.reversal.undoneBy": "Rückgängig gemacht von {undoer}",
   "history.reversal.unpaired": "Macht eine frühere Änderung rückgängig",
   "history.edge.marker": "Verknüpfung",
+  "history.field.commitment_evidence_unavailable":
+    "Nachweis der Zusage nicht verfügbar",
   "history.field.address": "Adresse",
   "history.field.admission": "Eingangsprüfung der Domain",
   "history.field.admission_reason": "Grund der Eingangsprüfung",
@@ -2692,6 +2694,24 @@ export const de = {
   "email.detail.cc": "Cc",
   "email.detail.filedUnder": "Abgelegt unter",
   "email.detail.when": "Gesendet",
+  "commitment.review.count_one": "Zusage zur Prüfung: {count}",
+  "commitment.review.count_other": "Zusagen zur Prüfung: {count}",
+  "commitment.review.title": "Zusagen prüfen",
+  "commitment.review.detail":
+    "Aus diesen Auswertungen wurden keine Aufgaben erstellt. Prüfe die Quelle und spätere Antworten, bevor du im verknüpften Datensatz eine Folgeaufgabe anlegst.",
+  "commitment.review.historical": "Ältere Zusage ohne aktuelle Frist.",
+  "commitment.review.incomplete":
+    "Spätere Nachrichten wurden nicht vollständig gelesen. Die Zusage könnte bereits erfüllt sein.",
+  "commitment.review.unknownDate":
+    "Das Datum der Quelle konnte nicht geprüft werden.",
+  "commitment.review.conflictingDates":
+    "Nachrichtendatum und Eingang im Postfach widersprechen sich. Prüfe die ursprünglichen Daten.",
+  "commitment.review.canceledMeeting": "Der Termin wurde abgesagt.",
+  "commitment.review.pendingMeeting":
+    "Der Termin hat noch nicht stattgefunden.",
+  "commitment.review.unavailable":
+    "Prüfe die Quelle, bevor du eine Aufgabe erstellst.",
+  "commitment.review.evaluated": "Geprüft {when}",
   "activity.detail.loading": "Aktivität wird geladen…",
   "activity.detail.none": "Diese Aktivität",
   "activity.detail.withheldReason": "Inhalt der Aktivität ist zurückgehalten",

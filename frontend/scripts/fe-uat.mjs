@@ -305,7 +305,7 @@ async function captureStory(page, port, story) {
 
 async function openPage(browser, lane) {
   lane.page = await browser.newPage({
-    viewport: DESKTOP,
+    viewport: viewportFor([]),
     deviceScaleFactor: 2,
   });
   lane.crashed = false;

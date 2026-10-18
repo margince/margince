@@ -1010,6 +1010,8 @@ export const en = {
   "history.reversal.undoneBy": "Undone by {undoer}",
   "history.reversal.unpaired": "Undoes an earlier change",
   "history.edge.marker": "Link",
+  "history.field.commitment_evidence_unavailable":
+    "Commitment evidence unavailable",
   "history.field.address": "Address",
   "history.field.admission": "Domain intake check",
   "history.field.admission_reason": "Intake check reason",
@@ -2748,6 +2750,23 @@ export const en = {
   "email.detail.cc": "Cc",
   "email.detail.filedUnder": "Filed under",
   "email.detail.when": "Sent",
+  "commitment.review.count_one": "Commitment to review: {count}",
+  "commitment.review.count_other": "Commitments to review: {count}",
+  "commitment.review.title": "Commitment review",
+  "commitment.review.detail":
+    "No task was created from these readings. Review the source and later replies before adding a follow-up from a linked record.",
+  "commitment.review.historical":
+    "Historical commitment without a current deadline.",
+  "commitment.review.incomplete":
+    "Later messages were not fully read. The commitment may already be fulfilled.",
+  "commitment.review.unknownDate": "The source date could not be verified.",
+  "commitment.review.conflictingDates":
+    "The message date and mailbox arrival disagree. Review the original dates.",
+  "commitment.review.canceledMeeting": "The meeting was canceled.",
+  "commitment.review.pendingMeeting": "The meeting has not taken place yet.",
+  "commitment.review.unavailable":
+    "The source needs review before creating work.",
+  "commitment.review.evaluated": "Reviewed {when}",
   "activity.detail.loading": "Loading activity…",
   "activity.detail.none": "This activity",
   "activity.detail.withheldReason": "Activity content is withheld",

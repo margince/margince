@@ -61,8 +61,10 @@ const certSentDefault = "2026-09-07"
 // signalExtractExpectation is one event the scenario says the conversation
 // states: its kind, and the 1-based position of the message stating it.
 type signalExtractExpectation struct {
-	Kind    string `json:"kind"`
-	Message int    `json:"message"`
+	Kind            string `json:"kind"`
+	Message         int    `json:"message"`
+	RestatedMessage int    `json:"restated_message,omitempty"`
+	DueDate         string `json:"due_date,omitempty"`
 }
 
 // signalExtractCases serves the one site that reads material events out of a
@@ -126,18 +128,16 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 }
 
 // refuseUnreadableThread names a conversation the thread read could never have
-// returned: it takes at most extractThreadMessages and truncates every body to
-// extractBodyLimit, so a fixture beyond either bound would certify a prompt the
-// product cannot send.
+// returned. History reads add a recent window; every body still has the same size bound.
 func refuseUnreadableThread(messages signalExtractFixture) error {
 	if len(messages) == 0 {
 		return errors.New(
 			"signal_extract/thread_events: the fixture supplies no message, so there is no conversation to read")
 	}
-	if len(messages) > extractThreadMessages {
+	if len(messages) > extractContextMessages {
 		return fmt.Errorf(
 			"signal_extract/thread_events: the fixture carries %d messages, but one call reads at most %d",
-			len(messages), extractThreadMessages)
+			len(messages), extractContextMessages)
 	}
 	for i, message := range messages {
 		if n := utf8.RuneCountInString(message.Body); n > extractBodyLimit {
@@ -169,6 +169,9 @@ func refuseUnreachableEvents(want []signalExtractExpectation, messages int) erro
 			return fmt.Errorf(
 				"signal_extract/thread_events: expectation %d names kind %q, which this site never records",
 				i+1, event.Kind)
+		}
+		if event.RestatedMessage != 0 && (event.RestatedMessage <= event.Message || event.RestatedMessage > messages) {
+			return fmt.Errorf("signal_extract/thread_events: expectation %d has an invalid restatement position", i+1)
 		}
 		if event.Message < 1 || event.Message > messages {
 			return fmt.Errorf(
@@ -279,6 +282,19 @@ func (c *signalExtractCase) disagreements(payload extractPayload) []string {
 		wanted[fmt.Sprintf("%s@%d", event.Kind, event.Message)] = true
 	}
 	var out []string
+	for _, expected := range c.expected {
+		for _, event := range payload.events() {
+			if event.Kind != expected.Kind || position[event.MessageID] != expected.Message {
+				continue
+			}
+			if expected.RestatedMessage != 0 && position[event.RestatedMessageID] != expected.RestatedMessage {
+				out = append(out, "the renewed promise does not cite its restatement")
+			}
+			if expected.DueDate != "" && event.DueDate != expected.DueDate {
+				out = append(out, "the renewed deadline does not match its source date")
+			}
+		}
+	}
 	for key := range wanted {
 		if !reported[key] {
 			out = append(out, fmt.Sprintf("the conversation states %s and the reply does not report it", key))

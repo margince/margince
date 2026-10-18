@@ -126,6 +126,13 @@ One pipeline step runs *inside* the Sink, before anything is written:
   The `ThreadKey` (Gmail `threadId` / Graph `conversationId` / the root of the RFC822 `References`) is
   the join key behind `engagement.reply`, which finds replies.
 
+The provider's arrival time stays separate from the message's sent time and the local capture time.
+Graph delta and backfill carry `receivedDateTime`; IMAP requests `INTERNALDATE`.
+A missing value stays unknown. `source_occurred_at` keeps the message date apart from provider arrival and capture time. It stays when the raw original is deleted. A later capture may fill an empty `provider_received_at`, but cannot replace a value already stored.
+
+A reply can join mail sent from Margince before the mailbox captures its sent copy.
+The stored sender identity proves ownership. A message from another seat cannot join this way.
+
 ## Credentials & the vault
 
 A connector credential (an OAuth refresh token, or a standing IMAP password) is never stored in plain

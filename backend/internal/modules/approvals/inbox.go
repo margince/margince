@@ -304,7 +304,7 @@ func listForTarget(ctx context.Context, tx pgx.Tx, p principal.Principal, in Lis
 		scanned = &batch[len(batch)-1]
 	}
 	granted := func(a row) (bool, error) {
-		return requireDecisionGrants(p, a) == nil && !withheldFromOtherSeats(p, a), nil
+		return proposalReadable(ctx, tx, p, a)
 	}
 	out, _, err := appendDecidable(batch, nil, in.Limit+1, granted)
 	if err != nil {

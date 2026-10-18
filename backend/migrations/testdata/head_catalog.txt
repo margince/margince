@@ -142,6 +142,24 @@ BEGIN
   RETURN NULL;
 END;
 
+public.activity_commitment_admission acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.activity_commitment_admission.activity_commitment_admission_check CHECK (((renewed_by IS NULL) = (renewed_at IS NULL)))
+public.activity_commitment_admission.activity_commitment_admission_pkey PRIMARY KEY (source_activity_id, locator)
+public.activity_commitment_admission.activity_commitment_admission_renewed_by_fkey FOREIGN KEY (renewed_by) REFERENCES activity(id) ON DELETE RESTRICT
+public.activity_commitment_admission.activity_commitment_admission_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES activity(id) ON DELETE RESTRICT
+public.activity_commitment_admission.captured_by text NOT NULL gen=- def=-
+public.activity_commitment_admission.current_work boolean NOT NULL gen=- def=-
+public.activity_commitment_admission.evaluated_at timestamp with time zone NOT NULL gen=- def=-
+public.activity_commitment_admission.evidence_ids uuid[] NOT NULL gen=- def=-
+public.activity_commitment_admission.locator text NOT NULL gen=- def=-
+public.activity_commitment_admission.outcome text NOT NULL gen=- def=-
+public.activity_commitment_admission.renewed_at timestamp with time zone gen=- def=-
+public.activity_commitment_admission.renewed_by uuid gen=- def=-
+public.activity_commitment_admission.rule_version text NOT NULL gen=- def=-
+public.activity_commitment_admission.source_activity_id uuid NOT NULL gen=- def=-
+public.activity_commitment_admission.source_quote text NOT NULL gen=- def=-
+public.activity_commitment_admission.summary text NOT NULL gen=- def=-
+public.activity_commitment_admission_pkey CREATE UNIQUE INDEX activity_commitment_admission_pkey ON public.activity_commitment_admission USING btree (source_activity_id, locator)
 public.activity_identity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_identity.activity_id uuid NOT NULL gen=- def=-
 public.activity_identity.activity_identity_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
@@ -1716,6 +1734,7 @@ public.capture_import.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_import.imported_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_import.posture_at_import text gen=- def=-
 public.capture_import.provider_received_at timestamp with time zone gen=- def=-
+public.capture_import.source_occurred_at timestamp with time zone gen=- def=-
 public.capture_import.user_id uuid NOT NULL gen=- def=-
 public.capture_import.verdict_reason text gen=- def=-
 public.capture_import.verdict_reasons text[] gen=- def=-

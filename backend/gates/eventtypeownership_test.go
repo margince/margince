@@ -281,7 +281,10 @@ func modulesEmitting(sites []emitSite) []string {
 // module announces a fact that IS the first module's fact. None is a second
 // meaning for one name, which is what the rule protects.
 var sharedEventTypes = gatekit.Waive(map[string]string{
-	"activity.updated <- internal/modules/contacts": "the cohort repair files captured mail under the contact it belongs to, which IS a relink — the same association change activities publishes for a human's relink, carrying the same typed Relinked ref. Contacts emits it rather than handing the activity to activities because the repair is defined by contact_email and the merge redirect, neither of which activities can read without importing a sibling; what the name MEANS is unchanged, and the interaction graph folds both the same way",
+	"activity.updated <- internal/modules/privacy":            "Privacy removes or redacts commitment evidence in its erasure transaction. The activity event invalidates the same admission projection the owning activity writer updates; importing that module would violate module boundaries.",
+	"conversation_claim.changed <- internal/modules/contacts": "The claim owner publishes corrections, renewals and settlement.",
+	"conversation_claim.changed <- internal/modules/privacy":  "Privacy deletes quoted claims in its erasure transaction and publishes erased status so consumers discard their copies. The event retains only claim identity and status, never erased content.",
+	"activity.updated <- internal/modules/contacts":           "the cohort repair files captured mail under the contact it belongs to, which IS a relink — the same association change activities publishes for a human's relink, carrying the same typed Relinked ref. Contacts emits it rather than handing the activity to activities because the repair is defined by contact_email and the merge redirect, neither of which activities can read without importing a sibling; what the name MEANS is unchanged, and the interaction graph folds both the same way",
 	// Structure 0 — ai_task.state_changed is SHARED BY DESIGN, and it is the one
 	// type in this set where sharing is the feature rather than a tolerated
 	// exception.

@@ -14443,6 +14443,27 @@ components:
         provider: {type: string, enum: [gcal, graphcal], description: The calendar provider that holds the event. Omitted on guest reads.}
         video_call: {type: boolean, description: A video call link was requested for this meeting.}
         video_url: {type: string, description: "The join link the calendar created. Absent until the calendar accepts the invitation, or when it could not create one."}
+    CommitmentAdmission:
+      type: object
+      description: A recorded decision about whether a promise creates current work. Re-reading replaces this decision without changing human-owned work.
+      required: [locator, summary, source_quote, outcome, current_work, rule_version, evidence_ids, evaluated_at]
+      properties:
+        locator: {type: string}
+        summary: {type: string}
+        source_quote: {type: string}
+        outcome: {type: string}
+        current_work: {type: boolean}
+        rule_version: {type: string}
+        evidence_ids: {type: array, items: {type: string, format: uuid}}
+        evaluated_at: {type: string, format: date-time}
+        renewed_by:
+          type: string
+          format: uuid
+          description: The later message that explicitly renewed this promise.
+        renewed_at:
+          type: string
+          format: date-time
+          description: The renewing message's source time when the decision was recorded.
     Activity:
       type: object
       description: |-
@@ -14454,6 +14475,11 @@ components:
         what the DB CHECK would reject, rather than 500-ing at write time).
       required: [id, kind, occurred_at, source, captured_by, created_at, updated_at]
       properties:
+        commitment_admissions:
+          type: array
+          readOnly: true
+          description: Decisions about promises read from this source, included on list and detail reads when its content is visible.
+          items: {$ref: '#/components/schemas/CommitmentAdmission'}
         id: {type: string, format: uuid}
         kind: {type: string, enum: [email, call, meeting, note, task, message]}
         channel_provider:

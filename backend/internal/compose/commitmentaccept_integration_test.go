@@ -42,14 +42,7 @@ func stageMailedProposal(t *testing.T) mailedProposal {
 	ines := e.SeedContact(t, "Ines Huber", &e.Rep1)
 	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
 		VALUES ('employment', $1, $2, 'manual', 'human:x')`, ines, company)
-	sent := time.Now().Add(-48 * time.Hour).UTC().Format(time.RFC3339Nano)
-	message := integration.SeedIDRow(t, integration.OwnerConn(t), `INSERT INTO activity
-		(id, kind, direction, subject, body, thread_key, occurred_at, created_at, source, captured_by)
-		VALUES ($1, 'email', 'outbound', 'Pricing', 'Hi Ines, `+mailedPromise+`', 'thread-accept',
-		        '`+sent+`', '`+sent+`', 'gmail', 'connector:gmail')`)
-	integration.LinkActivity(t, integration.OwnerConn(t), message, "contact", ines)
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, user_id, contact_id, role) VALUES ($1, $2, NULL, 'from')`, message, e.Rep2)
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, user_id, contact_id, role) VALUES ($1, NULL, $2, 'to')`, message, ines)
+	message := captureSeatPromise(t, e, ines, "thread-accept@buyer.example", mailedPromise, time.Now().Add(-48*time.Hour))
 
 	reply, err := json.Marshal(map[string]any{"events": []map[string]any{{
 		"kind": "commitment_made", "message_id": message.String(), "summary": "Send the revised pricing",

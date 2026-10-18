@@ -78,7 +78,8 @@ type threadMessage struct {
 	// identically, and the reading is drawn from the head either way. The
 	// remainder is the half that says which happened, and how far the model's
 	// view of the exchange falls short of it.
-	UnreadRunes int
+	UnreadRunes     int
+	QuotedRemainder bool
 	// OffThread is the kind of an answer of ours from outside the thread
 	// (email, call or meeting), shown to the settlement model as such. Empty
 	// for a message of the thread itself.

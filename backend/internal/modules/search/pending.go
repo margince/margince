@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -74,7 +75,7 @@ var pendingSources = map[string]pendingSource{
 	entityCompany:  {table: entityCompany, text: "concat_ws(' ', t.display_name, t.legal_name, t.industry)"},
 	entityDeal:     {table: entityDeal, text: "t.name"},
 	entityLead:     {table: entityLead, text: "concat_ws(' ', t.full_name, t.company_name, t.title)"},
-	entityActivity: {table: entityActivity, text: "concat_ws(' ', t.subject, t.body)", embeddable: "t.audience = 'workspace'"},
+	entityActivity: {table: entityActivity, text: "concat_ws(' ', t.subject, t.body)", embeddable: activityIndexable("t")},
 	entityProject:  {table: entityProject, text: "concat_ws(' ', t.name, t.key, t.description)"},
 }
 
@@ -216,4 +217,8 @@ func (s *Store) workspacePending(ctx context.Context, currentIdentity string) (c
 		return 0, 0, txErr
 	}
 	return count, length, nil
+}
+
+func activityIndexable(alias string) string {
+	return alias + ".audience = 'workspace' AND " + alias + ".restricted_at IS NULL AND " + auth.CommitmentContentRetainedClause(alias)
 }

@@ -52,6 +52,7 @@ type ClaimInput struct {
 	// quotes a slightly different clause of the same promise finds the same
 	// claim. Empty for a human's claim, which is keyed on its exact quote.
 	Locator string
+	Renewal bool
 }
 
 // RecordConversationClaim writes one claim through the audited write shape.
@@ -156,7 +157,7 @@ func (s *Store) ClaimsForContact(ctx context.Context, tx pgx.Tx, contactID ids.C
 // Two spellings of one read is how the two end up disagreeing about which
 // claims exist.
 func (s *Store) OpenCommitmentsForContact(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, within *ids.ProjectID, limit int) ([]crmcontracts.ConversationClaim, error) {
-	const open = `c.kind = 'commitment_ours' AND c.status = 'open' AND NOT c.needs_review`
+	const open = `c.kind = 'commitment_ours' AND c.status = 'open' AND NOT c.needs_review AND ` + currentCommitmentAdmission
 	return s.readClaims(ctx, tx, contactID, within, open, "c.due_at ASC NULLS LAST, a.occurred_at ASC, c.id", limit)
 }
 
@@ -179,7 +180,7 @@ func (s *Store) readClaims(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	contactPos := arg(contactID)
-	scope, err := auth.ActivityContentClause(ctx, "a", arg)
+	scope, err := claimContentClause(ctx, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -308,7 +309,7 @@ func (s *Store) CommitmentsTheirsForProjects(ctx context.Context, tx pgx.Tx, pro
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	projectsPos := arg(projectIDs)
 	nowPos := arg(now)
-	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+	activityScope, err := claimContentClause(ctx, arg)
 	if err != nil {
 		return nil, false, err
 	}
