@@ -62,10 +62,10 @@ const (
 )
 
 // auditMergeSurvivor records a merge on the surviving record as well as the
-// archived one, because the survivor is where a person reads the record's
-// history afterwards: a value it took from the other record (an address, a
-// field fill) is otherwise unexplained there. No event pairs with it; the
-// merged event rides the archived record's row.
+// archived one. A person reads the history on the survivor afterwards. A value
+// it took from the other record (an address, a field fill) is otherwise
+// unexplained there. The merged event rides the archived record's row, so no
+// event pairs with this one.
 func auditMergeSurvivor(ctx context.Context, tx pgx.Tx, entityType string, sourceID, targetID ids.UUID, detail map[string]any) error {
 	after := map[string]any{auditKeyMergedFrom: sourceID}
 	maps.Copy(after, detail)

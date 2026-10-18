@@ -92,9 +92,9 @@ func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInpu
 	return out, err
 }
 
-// withoutReplayedAnswer drops the officer's text from a fulfilment that repeats
-// an erasure already done: the erasure replaced that text, so the retry is a
-// no-op and not a rewrite of a closed request's answer.
+// withoutReplayedAnswer drops the officer's text from a repeated fulfilment.
+// The erasure already replaced that text, so the retry is a no-op and not a
+// rewrite of a closed request's answer.
 func withoutReplayedAnswer(current dsrRow, in UpdateDSRInput) UpdateDSRInput {
 	if closedDSRStatus(current.Status) && current.Resolution != nil && *current.Resolution == erasedResolution {
 		in.Resolution = nil
