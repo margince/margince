@@ -158,7 +158,7 @@ Everyone can read a record with **no owner**, and nobody can write to it until s
 
 ## The owner and responsibility roles
 
-Every contact, company, lead, deal and project has one **owner**. The owner is the colleague who holds the sales responsibility for the record.
+A contact, company, lead, deal or project can have one **owner**. When it has one, the owner is the colleague who holds the sales responsibility for the record.
 
 The owner also decides who else may change it. Row scope reads the owner: a User changes the records they own, and a Team lead changes the records of their team. The owner can share the record with a colleague or a team. Someone who holds it through a share cannot change its owner or its sharing.
 

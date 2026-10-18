@@ -3729,7 +3729,7 @@ export const en = {
   "recordRoles.duplicate":
     "A role with this name or key already exists. Choose another name.",
   "recordRoles.intro":
-    "Put a role on a company, deal or project so everyone knows whom to ask about what. The owner stays responsible for the record. Built-in roles ship with Margince; custom roles were added by an admin.",
+    "Put a role on a company, deal or project so everyone knows whom to ask about what. The owner stays responsible for the record. Built-in roles ship with Margince; custom roles were added in this installation.",
   "recordRoles.colActive": "Active",
   "recordRoles.builtIn": "Built-in",
   "recordRoles.custom": "Custom",

@@ -3616,7 +3616,7 @@ export const vi = {
   "recordRoles.duplicate":
     "Đã có vai trò mang tên hoặc khóa này. Hãy chọn tên khác.",
   "recordRoles.intro":
-    "Gán vai trò cho công ty, deal hoặc dự án để mọi đồng nghiệp biết nên hỏi ai về việc gì. Phụ trách hồ sơ không thay đổi. Vai trò có sẵn đi kèm Margince; vai trò tùy chỉnh do quản trị viên thêm.",
+    "Gán vai trò cho công ty, deal hoặc dự án để mọi đồng nghiệp biết nên hỏi ai về việc gì. Phụ trách hồ sơ không thay đổi. Vai trò có sẵn đi kèm Margince; vai trò tùy chỉnh được thêm tại đây.",
   "recordRoles.colActive": "Đang bật",
   "recordRoles.builtIn": "Có sẵn",
   "recordRoles.custom": "Tùy chỉnh",
