@@ -378,7 +378,9 @@ describe("WebhooksCard — markup", () => {
       await waitFor(() => expect(document.body.textContent).toContain(text));
       const nesting = errors.mock.calls
         .map((call) => call.join(" "))
-        .filter((line) => line.includes("cannot be a descendant"));
+        .filter((line) =>
+          /In HTML,|cannot be a descendant|cannot be a child of/.test(line),
+        );
       errors.mockRestore();
       expect(nesting).toEqual([]);
     },

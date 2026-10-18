@@ -56,13 +56,13 @@ func AnalyticsSchemaFor(ctx context.Context) analyticsquery.Schema {
 			BaseWhere: granted.baseWhere,
 			Fields:    map[string]analyticsquery.Field{},
 		}
-		addFields(entity.Fields, withoutKeys(granted.dimensions, granted.rowKeys), analyticsquery.KindDimension)
+		addFields(entity.Fields, withoutKeys(granted.dimensions, slices.Concat(granted.rowKeys, granted.rowMoments)), analyticsquery.KindDimension)
 		addFields(entity.Fields, granted.measures, analyticsquery.KindMeasure)
 		// Narrowed by grant, not spec.filters. A filter reading another record
 		// type owes that type's read grant, and naming one the caller lacks
 		// would advertise a narrowing that answers 403.
 		addFields(entity.Fields, grantedFilters(ctx, spec), analyticsquery.KindFilter)
-		addFields(entity.Fields, onlyKeys(granted.dimensions, granted.rowKeys), analyticsquery.KindFilter)
+		addFields(entity.Fields, onlyKeys(granted.dimensions, granted.rowMoments), analyticsquery.KindFilter)
 		// An entity with nothing left to name is not offered. A population a
 		// caller can see the existence of but ask nothing about is a name that
 		// only tells them a report exists.

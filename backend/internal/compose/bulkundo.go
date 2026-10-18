@@ -173,14 +173,15 @@ func undoOne(
 		if archiver, err = archiverOf(target); err == nil {
 			report, err = archiver.restore(ctx, tx, ids.UUID(item.Id), item.Version, change.pendingLinks)
 		}
-		var owner *ids.UUID
+		// A restore leaves the owner as it was, so the live row names it for both sides.
+		var back bulkRow
 		if err == nil {
-			owner, err = ownerOf(ctx, tx, change.recordType, ids.UUID(item.Id))
+			back, err = target.lock(ctx, tx, ids.UUID(item.Id))
 		}
 		sample = crmcontracts.BulkSampleRow{
 			Id: item.Id, Label: report.Label,
-			Before: crmcontracts.BulkRecordState{OwnerId: wireOwner(owner), Archived: true},
-			After:  crmcontracts.BulkRecordState{OwnerId: wireOwner(owner)},
+			Before: crmcontracts.BulkRecordState{OwnerId: wireOwner(back.ownerID), Archived: true},
+			After:  crmcontracts.BulkRecordState{OwnerId: wireOwner(back.ownerID)},
 		}
 		leftBehind = report.LeftBehind
 		restored = report
@@ -197,17 +198,6 @@ func undoOne(
 		})
 	}
 	return applied, skip, err
-}
-
-// ownerOf reads one record's owner, archived or not. The table is the record
-// type, which an archive only ever names for the four record types with an
-// owner.
-func ownerOf(ctx context.Context, tx pgx.Tx, recordType crmcontracts.BulkRecordType, id ids.UUID) (*ids.UUID, error) {
-	var owner *ids.UUID
-	err := tx.QueryRow(ctx,
-		`SELECT owner_id FROM `+pgx.Identifier{string(recordType)}.Sanitize()+` WHERE id = $1`,
-		id).Scan(&owner)
-	return owner, err
 }
 
 // handBack gives one record back to the owner it had before the change.

@@ -1,10 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { currencyCodes, currencyOptions } from "./currencychoices";
 
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe("currencyCodes", () => {
+  it("falls back to the leading four where the platform has no currency list", () => {
+    vi.stubGlobal("Intl", { ...Intl, supportedValuesOf: undefined });
+    expect(currencyCodes("NOK")).toEqual(["EUR", "USD", "GBP", "CHF", "NOK"]);
+  });
+
   it("offers the currencies the workspace prices in, not only four", () => {
     const codes = currencyCodes();
     expect(codes).toContain("JPY");

@@ -9,9 +9,11 @@ const LEADING = ["EUR", "USD", "GBP", "CHF"];
 
 /** Every currency code a money field can offer, the leading four first. */
 export function currencyCodes(current?: string | null): string[] {
-  const rest = Intl.supportedValuesOf("currency").filter(
-    (code) => !LEADING.includes(code),
-  );
+  const platform =
+    typeof Intl.supportedValuesOf === "function"
+      ? Intl.supportedValuesOf("currency")
+      : [];
+  const rest = platform.filter((code) => !LEADING.includes(code));
   const extra = current && !LEADING.includes(current) ? [current] : [];
   return [...new Set([...LEADING, ...extra, ...rest])];
 }

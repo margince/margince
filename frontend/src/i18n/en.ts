@@ -9256,7 +9256,7 @@ export const en = {
   "cf.retired": "Retired",
   "cf.retire.title": "Archive “{label}”?",
   "cf.retire.body":
-    "It is hidden from new records and filters. The values already stored are kept.",
+    "It is hidden from new records and filters. The values already stored are kept. Archiving cannot be undone.",
   "cf.retire.lists":
     "These Live Lists filter on it. They keep working on the stored values, and each asks its steward to replace the clause:",
   "cf.retire.unseen_one":

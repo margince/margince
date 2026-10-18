@@ -9143,7 +9143,7 @@ export const de = {
   "cf.retired": "Stillgelegt",
   "cf.retire.title": "„{label}“ archivieren?",
   "cf.retire.body":
-    "Das Feld verschwindet aus neuen Datensätzen und Filtern. Gespeicherte Werte bleiben erhalten.",
+    "Das Feld verschwindet aus neuen Datensätzen und Filtern. Gespeicherte Werte bleiben erhalten. Das Archivieren lässt sich nicht rückgängig machen.",
   "cf.retire.lists":
     "Diese Live-Listen filtern danach. Mit den gespeicherten Werten funktionieren sie weiter und bitten ihre Verantwortlichen, die Bedingung zu ersetzen:",
   "cf.retire.unseen_one":
