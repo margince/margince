@@ -42,7 +42,7 @@ func TestAPromotionMergedIntoAContactIsToldOnTheContact(t *testing.T) {
 		Scan(&auditID, &before, &after); err != nil {
 		t.Fatalf("the contact's history holds no update for the fill: %v", err)
 	}
-	if after["converted_from_lead_id"] != lead.UUID.String() {
+	if after["converted_from_lead_id"] != lead.String() {
 		t.Errorf("the contact's row names %v as the lead it came from, want %s", after["converted_from_lead_id"], lead.UUID)
 	}
 	if value, present := before["converted_from_lead_id"]; !present || value != nil {

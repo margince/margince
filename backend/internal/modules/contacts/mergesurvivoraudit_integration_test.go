@@ -93,7 +93,7 @@ func TestAContactMergeIsToldOnTheSurvivor(t *testing.T) {
 	}
 
 	archived := e.mergeRowsOn(ctx, t, "contact", merged.UUID)
-	if len(archived) != 1 || archived[0][auditKeyMergedInto] != survivor.UUID.String() {
+	if len(archived) != 1 || archived[0][auditKeyMergedInto] != survivor.String() {
 		t.Fatalf("the archived contact's row = %v, want it to name %s", archived, survivor.UUID)
 	}
 	if got := archived[0][auditKeyFilled]; !reflect.DeepEqual(got, []any{"title"}) {
@@ -143,7 +143,12 @@ func TestAMergeIntoAContactCountsAsAHumanActOnIt(t *testing.T) {
 	ctx := e.editorCtx()
 	survivor := e.seedContact(ctx, t, "Ann Smith", []string{"ann@newco.test"}, nil)
 	merged := e.seedContact(ctx, t, "A. Smith", []string{"a.smith@newco.test"}, nil)
-	cutoff := time.Now().UTC()
+	var cutoff time.Time
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT clock_timestamp()`).Scan(&cutoff)
+	}); err != nil {
+		t.Fatalf("reading the database clock: %v", err)
+	}
 	acted := func() bool {
 		var touched bool
 		if err := e.store.tx(ctx, func(tx pgx.Tx) (err error) {
