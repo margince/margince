@@ -5621,7 +5621,7 @@ public.offer_line_item.proposal_state text NOT NULL gen=- def='accepted'::text
 public.offer_line_item.quantity numeric(14,3) NOT NULL gen=- def=-
 public.offer_line_item.tax_rate numeric(5,2) NOT NULL gen=- def=0
 public.offer_line_item.trg_oli_updated CREATE TRIGGER trg_oli_updated BEFORE UPDATE ON public.offer_line_item FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
-public.offer_line_item.unit text NOT NULL gen=- def='unit'::text
+public.offer_line_item.unit text NOT NULL gen=- def='piece'::text
 public.offer_line_item.unit_price_minor bigint NOT NULL gen=- def=-
 public.offer_line_item.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.offer_line_item.uq_oli_position UNIQUE (offer_id, "position")
@@ -5828,7 +5828,7 @@ public.product.search_tsv tsvector gen=s def=((((setweight(to_tsvector('simple':
 public.product.sku text gen=- def=-
 public.product.source text NOT NULL gen=- def=-
 public.product.trg_product_updated CREATE TRIGGER trg_product_updated BEFORE UPDATE ON public.product FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
-public.product.unit text NOT NULL gen=- def='unit'::text
+public.product.unit text NOT NULL gen=- def='piece'::text
 public.product.unit_price_minor bigint NOT NULL gen=- def=-
 public.product.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.product.version bigint NOT NULL gen=- def=1

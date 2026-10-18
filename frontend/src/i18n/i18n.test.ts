@@ -254,7 +254,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "history.field.email",
   "settings.voice.register.email",
   "settings.voice.kind.email",
-  "product.sku",
   "compose.cc",
   "compose.bcc",
   "compose.transportEmail",

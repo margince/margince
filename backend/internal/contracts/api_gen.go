@@ -34224,7 +34224,7 @@ type CreateProductRequest struct {
 	Sku            *string  `json:"sku,omitempty"`
 	Source         string   `json:"source"`
 
-	// Unit Defaults to 'unit'.
+	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. Defaults to `piece`.
 	Unit                 *string                `json:"unit,omitempty"`
 	UnitPriceMinor       int64                  `json:"unit_price_minor"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -42083,10 +42083,12 @@ type OfferLineItemInput struct {
 	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 
 	// Quantity > 0, up to 3 decimal places.
-	Quantity       float64  `json:"quantity"`
-	TaxRate        *float64 `json:"tax_rate,omitempty"`
-	Unit           *string  `json:"unit,omitempty"`
-	UnitPriceMinor *int64   `json:"unit_price_minor,omitempty"`
+	Quantity float64  `json:"quantity"`
+	TaxRate  *float64 `json:"tax_rate,omitempty"`
+
+	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. Defaults to the product's unit, else `piece`.
+	Unit           *string `json:"unit,omitempty"`
+	UnitPriceMinor *int64  `json:"unit_price_minor,omitempty"`
 }
 
 // OfferLineItemInputBillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
@@ -42920,7 +42922,7 @@ type Product struct {
 	Sku    *string `json:"sku,omitempty"`
 	Source string  `json:"source"`
 
-	// Unit 'unit' | 'hour' | 'day' | …; display only, free text.
+	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. Display only.
 	Unit string `json:"unit"`
 
 	// UnitPriceMinor Integer minor units (P11); no float money.
