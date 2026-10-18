@@ -1,4 +1,5 @@
-import { backStaysInApp, parseHash, routeHash, type Screen } from "./router";
+import { stepsBackOutOf } from "./historydepth";
+import { parseHash, type Route, routeHash, type Screen } from "./router";
 import { GLOBAL_DIALS, hashWithParams, parseParams } from "./urlstate";
 
 // The address each list screen last stood at in this page load, its filter
@@ -32,15 +33,20 @@ export function listAddress(screen: Screen): string {
 /**
  * Leave a record for the screen before it.
  *
- * The installed app has no browser Back, so this is the only way out. With an
+ * The installed app has no browser Back, so this is the only way out. The
+ * record's own tabs are views of one page, so they are stepped over. With an
  * earlier screen of ours in history, history is the truest answer, because it
- * also brings back the list's scroll offset. A record opened cold has none of
- * ours behind it, so it goes to its list instead of out of the app.
+ * also brings back the list's filter and scroll offset. A record with none of
+ * ours behind it goes to its list instead of out of the app.
  */
-export function leaveRecord(screen: Screen): void {
-  if (backStaysInApp()) {
-    globalThis.history.back();
+export function leaveRecord(record: Route): void {
+  const steps = stepsBackOutOf((hash) => {
+    const route = parseHash(hash);
+    return route.screen === record.screen && route.id === record.id;
+  });
+  if (steps > 0) {
+    globalThis.history.go(-steps);
     return;
   }
-  globalThis.location.hash = listAddress(screen);
+  globalThis.location.hash = listAddress(record.screen);
 }

@@ -201,7 +201,7 @@ export function TopBar({
           <IconAction
             label={t("shell.back")}
             icon={<ArrowLeft size={17} />}
-            onClick={() => leaveRecord(route.screen)}
+            onClick={() => leaveRecord(route)}
           />
         )}
         <Breadcrumb items={crumbs} label={t("shell.breadcrumbAria")} />

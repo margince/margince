@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { navigate, useRoute } from "../lib/router";
+import { navigate, type Route, useRoute } from "../lib/router";
 import { sessionOnlyFetch } from "../testing/appharness";
 import { ignoreSearch, newClient, renderWith } from "./testing/shellharness";
 import { TopBar } from "./topbar";
@@ -14,12 +14,13 @@ import { TopBar } from "./topbar";
 // browser Back, so the bar's own control and the trail's parent are the only
 // ways out, and both must land on the list as the reader left it.
 //
-// The bar is mounted over the real address store, so every move here is a
-// real hash change, and Back is the real `history.back()`.
+// The bar is mounted over the real address store and the real history, so
+// every move here is a real hash change and every step back a real one.
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 // The bar as the shell mounts it: it re-renders with whatever the address says.
@@ -28,14 +29,19 @@ function RoutedTopBar() {
   return <TopBar route={route} collapsed={false} onOpenSearch={ignoreSearch} />;
 }
 
-// Arrives at `hash` the way a cold page load does. The bar mounts only after
-// the arrival's `hashchange` has been delivered, so the app sees no move of its
-// own; that event also drains any change an earlier hook left queued.
-async function mountAt(hash: string) {
-  vi.stubGlobal("fetch", vi.fn(sessionOnlyFetch()));
-  const arrived = new Promise((resolve) =>
+// Resolves once the browser has delivered the next `hashchange`. Listened for
+// after the app's own listener, so by then the app has seen the move too.
+function nextHashChange(): Promise<unknown> {
+  return new Promise((resolve) =>
     window.addEventListener("hashchange", resolve, { once: true }),
   );
+}
+
+// Arrives at `hash` the way a cold page load does: the bar mounts only after
+// the arrival is delivered, so the app sees no move of its own.
+async function mountAt(hash: string) {
+  vi.stubGlobal("fetch", vi.fn(sessionOnlyFetch()));
+  const arrived = nextHashChange();
   window.location.hash = hash;
   await arrived;
   const client = newClient();
@@ -43,44 +49,84 @@ async function mountAt(hash: string) {
   return renderWith(client, <RoutedTopBar />);
 }
 
+async function moveTo(route: Route) {
+  const moved = nextHashChange();
+  navigate(route);
+  await moved;
+}
+
+async function pressBack(user: ReturnType<typeof userEvent.setup>) {
+  const moved = nextHashChange();
+  await user.click(screen.getByRole("button", { name: "Back" }));
+  await moved;
+}
+
 const trail = () => screen.getByRole("navigation", { name: "Breadcrumb" });
+const ANNA: Route = { screen: "contacts", id: "p-anna" };
 
 describe("Top bar way back from a record", () => {
-  // First in the file on purpose: `backStaysInApp` is per page load, and this
-  // case is a record opened before the app has moved anywhere.
   it("goes to the plain list when the record was opened cold", async () => {
     const user = userEvent.setup();
-    const back = vi.spyOn(globalThis.history, "back");
+    const go = vi.spyOn(globalThis.history, "go");
     await mountAt("#/contacts/p-anna");
 
-    await user.click(screen.getByRole("button", { name: "Back" }));
+    await pressBack(user);
 
-    await waitFor(() => expect(window.location.hash).toBe("#/contacts"));
-    expect(back).not.toHaveBeenCalled();
+    expect(window.location.hash).toBe("#/contacts");
+    expect(go).not.toHaveBeenCalled();
   });
 
-  it("returns to the filtered list a record was opened from", async () => {
+  // The browser's own Back, where there is one, returns to the record opened
+  // cold. Nothing of ours is behind it still, so the bar's Back must not step
+  // out of the app (in the installed app that step does nothing at all).
+  it("stays in the app after the reader steps back to a record opened cold", async () => {
+    const user = userEvent.setup();
+    await mountAt("#/contacts/p-anna");
+    await pressBack(user);
+    const returned = nextHashChange();
+    globalThis.history.back();
+    await returned;
+    expect(window.location.hash).toBe("#/contacts/p-anna");
+
+    const go = vi.spyOn(globalThis.history, "go");
+    await pressBack(user);
+
+    expect(window.location.hash).toBe("#/contacts");
+    expect(go).not.toHaveBeenCalled();
+  });
+
+  it("returns to the filtered list a record was opened from, past its tabs", async () => {
     const user = userEvent.setup();
     await mountAt("#/contacts?city=Berlin&sort=name");
     // A list is the page itself, with nothing above it to go back to.
     expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
 
-    navigate({ screen: "contacts", id: "p-anna" });
-    const parent = await within(trail()).findByRole("link", {
-      name: "Contacts",
-    });
-    expect(parent.getAttribute("href")).toBe(
-      "#/contacts?city=Berlin&sort=name",
-    );
+    await moveTo(ANNA);
+    expect(
+      within(trail())
+        .getByRole("link", { name: "Contacts" })
+        .getAttribute("href"),
+    ).toBe("#/contacts?city=Berlin&sort=name");
+    await moveTo({ ...ANNA, id2: "activity" });
+    await moveTo({ ...ANNA, id2: "deals" });
 
-    const back = vi.spyOn(globalThis.history, "back");
-    await user.click(screen.getByRole("button", { name: "Back" }));
+    const go = vi.spyOn(globalThis.history, "go");
+    await pressBack(user);
 
-    await waitFor(() =>
-      expect(window.location.hash).toBe("#/contacts?city=Berlin&sort=name"),
-    );
-    // History, not a fresh push: the list's entry, scroll offset and all.
-    expect(back).toHaveBeenCalledTimes(1);
+    expect(window.location.hash).toBe("#/contacts?city=Berlin&sort=name");
+    // History rather than a fresh push: the list's own entry, scroll and all.
+    expect(go).toHaveBeenCalledWith(-3);
+  });
+
+  it("returns to the screen before the record when it was not opened from a list", async () => {
+    const user = userEvent.setup();
+    await mountAt("#/home");
+    await moveTo(ANNA);
+    await moveTo({ ...ANNA, id2: "activity" });
+
+    await pressBack(user);
+
+    expect(window.location.hash).toBe("#/home");
   });
 
   // The Ask dialog stands over a list rather than being part of it, so a way
@@ -88,10 +134,12 @@ describe("Top bar way back from a record", () => {
   it("keeps the filter and drops the Ask dialog from the trail's parent", async () => {
     await mountAt("#/contacts?ask=1&askq=Who&city=Hamburg");
 
-    navigate({ screen: "contacts", id: "p-anna" });
-    const parent = await within(trail()).findByRole("link", {
-      name: "Contacts",
-    });
-    expect(parent.getAttribute("href")).toBe("#/contacts?city=Hamburg");
+    await moveTo(ANNA);
+
+    expect(
+      within(trail())
+        .getByRole("link", { name: "Contacts" })
+        .getAttribute("href"),
+    ).toBe("#/contacts?city=Hamburg");
   });
 });
