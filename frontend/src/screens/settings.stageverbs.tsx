@@ -122,7 +122,8 @@ export function StageCreate({
         {t("stage.new")}
       </Button>
       <CreateRecordModal
-        open={open}
+        // Closes when a refusal lands mid-edit, as CreateAction's does.
+        open={open && reason === undefined}
         onClose={() => setOpen(false)}
         title={t("stage.new")}
         fields={stageFields(t)}

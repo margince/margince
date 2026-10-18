@@ -206,7 +206,9 @@ export function CreateAction<Created extends { id: string }>({
         reason={reason}
       />
       <CreateRecordModal
-        open={shown}
+        // A refusal that lands while the dialog is open closes it: a verb the
+        // reader may no longer take must not stay one press from the server.
+        open={shown && reason === undefined}
         onClose={() => setCreating(false)}
         title={label}
         fields={fields}

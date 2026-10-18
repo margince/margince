@@ -9269,6 +9269,8 @@ export const de = {
     "Einstellungen auf dieser Seite betreffen unterschiedliche Personen. Jede Einstellung nennt, wen sie betrifft.",
   "settings.readOnlyPageTitle": "Schreibgeschützte Einstellungen",
   "settings.readOnlyPage": "Deine Rolle darf diese Einstellungen nicht ändern.",
+  "settings.seatRefused":
+    "Du hast einen Leseplatz. Frag einen Admin nach einem vollen Platz.",
   "settings.saveFailed": "Änderung nicht gespeichert",
   "settings.mintFailed": "Passport nicht erstellt",
   "settings.search.label": "Einstellungen durchsuchen",

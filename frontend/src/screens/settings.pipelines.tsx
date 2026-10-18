@@ -25,7 +25,7 @@ import { SortableList } from "../design-system/sortablelist";
 import { LegalReviewSettingsCard } from "../features/privacy/legalreviewsettings";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { useCanWrite } from "../lib/capability";
+import { useCanWrite, useWriteRefusal } from "../lib/capability";
 import { unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 import { useUrlParams } from "../lib/urlstate";
@@ -216,11 +216,14 @@ function NewPipeline({
   onOpen: (id: string) => void;
 }>) {
   const t = useT();
-  const canCreate = useCanWrite("pipeline", "create");
+  const refusal = useWriteRefusal("pipeline", "create", {
+    seat: t("settings.seatRefused"),
+    grant: t("pipeline.createRefused"),
+  });
   // Every capability hook denies while /me is still loading, and that is no
   // refusal yet: the verb waits for the answer instead of flashing refused.
   const answered = useMe().isSuccess;
-  if (!canCreate && !answered) return null;
+  if (!answered) return null;
   const inUse = pipelines.filter((each) => !each.archived_at);
   const lastPosition = Math.max(0, ...inUse.map((each) => each.position));
   return (
@@ -229,7 +232,7 @@ function NewPipeline({
       invalidate="pipelines"
       screen="settings"
       stay
-      reason={canCreate ? undefined : t("pipeline.createRefused")}
+      reason={refusal}
       onCreated={(created) => onOpen(created.id)}
       // A new pipeline lands last and already holds the two ways out. Its
       // ladder is open stages plus the close.

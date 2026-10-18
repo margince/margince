@@ -9378,6 +9378,8 @@ export const en = {
     "Settings on this page affect different people; each one states which.",
   "settings.readOnlyPageTitle": "Read-only settings",
   "settings.readOnlyPage": "Your role cannot change these settings.",
+  "settings.seatRefused":
+    "Your seat is read-only. Ask an admin for a full seat.",
   "settings.saveFailed": "Change not saved",
   "settings.mintFailed": "Passport not created",
   "settings.search.label": "Search settings",

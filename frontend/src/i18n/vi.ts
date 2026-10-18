@@ -9039,6 +9039,8 @@ export const vi = {
   "settings.readOnlyPageTitle": "Cài đặt chỉ đọc",
   "settings.readOnlyPage":
     "Vai trò hiện tại không có quyền thay đổi các cài đặt này.",
+  "settings.seatRefused":
+    "Tài khoản của bạn chỉ có quyền xem. Liên hệ quản trị viên để được cấp tài khoản đầy đủ quyền.",
   "settings.saveFailed": "Không thể lưu thay đổi",
   "settings.mintFailed": "Không thể tạo passport",
   "settings.search.label": "Tìm cài đặt",
