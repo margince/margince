@@ -153,13 +153,26 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 		t.Fatalf("size_band after re-accept = %v, want the first fill kept", got)
 	}
 
+	// An open-ended count fills the band holding its lower bound.
+	openEnded := insertCompany(t, e, e.Rep1, "open.example", "")
+	if err := store.ApplyDeepRead(ctx, contacts.DeepReadProposal{
+		CompanyID: ids.From[ids.CompanyKind](openEnded),
+		SourceURL: "https://open.example",
+		Facts:     employeeRangeFact("140+ employees"),
+	}); err != nil {
+		t.Fatalf("open-ended ApplyDeepRead: %v", err)
+	}
+	if got := readSizeBand(openEnded); got == nil || *got != "51-200" {
+		t.Fatalf("size_band after \"140+ employees\" = %v, want 51-200", got)
+	}
+
 	// A range spanning two bands abstains: the fact lands as evidence, the
 	// column stays empty rather than holding a guess.
 	vague := insertCompany(t, e, e.Rep1, "vague.example", "")
 	if err := store.ApplyDeepRead(ctx, contacts.DeepReadProposal{
 		CompanyID: ids.From[ids.CompanyKind](vague),
 		SourceURL: "https://vague.example",
-		Facts:     employeeRangeFact("50-200 employees"),
+		Facts:     employeeRangeFact("45-200 employees"),
 	}); err != nil {
 		t.Fatalf("ambiguous ApplyDeepRead: %v", err)
 	}
@@ -174,7 +187,7 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("reading the fact row: %v", err)
 	}
-	if factValue != "50-200 employees" {
+	if factValue != "45-200 employees" {
 		t.Fatalf("fact row = %q, want the raw stated range kept as evidence", factValue)
 	}
 
@@ -200,6 +213,99 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 	}
 	if got := readSizeBand(claimed); got != nil {
 		t.Fatalf("a refused fact still promoted size_band = %q, want NULL", *got)
+	}
+}
+
+// A home page that names the company's own industry and an open-ended
+// headcount fills both empty columns, each stamped as the agent's work, so the
+// record page shows them as AI-derived and a person can revert them.
+func TestDeepReadFillsTheCompanysOwnIndustryAndSizeFromItsHomePage(t *testing.T) {
+	e := integration.Setup(t)
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
+	site := &fakeSite{pages: map[string]fakeSitePage{
+		seedURL: {text: readable("Acme home.") + " Acme builds industrial automation software. 140+ employees."},
+	}}
+	brain := laneFake{
+		profileReply: `{"fields":[{"f":"industry","v":"Industrial automation software","e":"s0","c":0.9}]}`,
+		pageReplies: map[string]string{
+			seedURL: `{"facts":[{"f":"employee_range","v":"140+ employees","e":"s0"}],"contacts":[]}`,
+		},
+	}
+	worker, _ := newDeepReadTestWorker(e, site, brain)
+	_, args := startDeepRead(t, e, company)
+	if err := worker.run(context.Background(), args); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+
+	var industry, sizeBand *string
+	stamps := map[string]string{}
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		ctx := context.Background()
+		if err := tx.QueryRow(ctx, `SELECT industry, size_band FROM company WHERE id = $1`,
+			company).Scan(&industry, &sizeBand); err != nil {
+			return err
+		}
+		rows, err := tx.Query(ctx, `SELECT field_name, source || ' ' || captured_by FROM field_provenance
+			WHERE object_type = 'company' AND object_id = $1 AND field_name IN ('industry', 'size_band')`, company)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var field, stamp string
+			if err := rows.Scan(&field, &stamp); err != nil {
+				return err
+			}
+			stamps[field] = stamp
+		}
+		return rows.Err()
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if industry == nil || *industry != "Industrial automation software" {
+		t.Fatalf("industry = %v, want the sector the home page names", industry)
+	}
+	if sizeBand == nil || *sizeBand != "51-200" {
+		t.Fatalf("size_band = %v, want 51-200 for \"140+ employees\"", sizeBand)
+	}
+	for _, field := range []string{"industry", "size_band"} {
+		if stamps[field] != "site_read agent:deepread" {
+			t.Errorf("%s provenance = %q, want \"site_read agent:deepread\"", field, stamps[field])
+		}
+	}
+}
+
+// The read fills the industry only where it is empty: a value a person set
+// stays, and the read's finding is kept as evidence beside it.
+func TestDeepReadNeverOverwritesAnIndustryAPersonSet(t *testing.T) {
+	e := integration.Setup(t)
+	company := insertCompany(t, e, e.Rep1, "acme.example", "Logistics")
+	if err := contacts.NewStore(e.DB()).ApplyDeepRead(e.As(e.Rep1, nil, integration.AdminPerms), contacts.DeepReadProposal{
+		CompanyID: ids.From[ids.CompanyKind](company),
+		SourceURL: seedURL,
+		Fields: []contacts.DeepReadField{{
+			Field: "industry", Value: "Industrial automation software",
+			EvidenceSnippet: "Acme builds industrial automation software.", SourceURL: seedURL, Confidence: 0.9,
+		}},
+	}); err != nil {
+		t.Fatalf("ApplyDeepRead: %v", err)
+	}
+	var industry, evidence string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		ctx := context.Background()
+		if err := tx.QueryRow(ctx, `SELECT industry FROM company WHERE id = $1`, company).Scan(&industry); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx, `SELECT value FROM company_profile_field
+			WHERE company_id = $1 AND field = 'industry'`, company).Scan(&evidence)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if industry != "Logistics" {
+		t.Fatalf("industry = %q, want the person's value kept", industry)
+	}
+	if evidence != "Industrial automation software" {
+		t.Fatalf("industry evidence = %q, want the read's finding kept beside the column", evidence)
 	}
 }
 
