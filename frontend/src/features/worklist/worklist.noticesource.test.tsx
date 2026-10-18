@@ -7,8 +7,19 @@
 // Home page's Updates panel where such notices are read.
 
 import "@testing-library/jest-dom/vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  focusManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
@@ -113,6 +124,14 @@ function stubServer() {
   return fetchMock;
 }
 
+// How many requests named this path, query aside.
+function readsOf(fetchMock: ReturnType<typeof stubServer>, path: string) {
+  return fetchMock.mock.calls.filter((call) => {
+    const url = call[0] instanceof Request ? call[0].url : String(call[0]);
+    return new URL(url, "http://localhost").pathname.endsWith(path);
+  }).length;
+}
+
 function renderUpdates(queue: WorklistItem[]) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -142,16 +161,14 @@ describe("a notice about an activity", () => {
       await within(drawer).findByRole("heading", { name: "Pricing for Q4" }),
     ).toBeVisible();
     expect(
-      fetchMock.mock.calls.some((call) =>
-        String(call[0] instanceof Request ? call[0].url : call[0]).includes(
-          "email-presentation",
-        ),
-      ),
-    ).toBe(true);
+      readsOf(fetchMock, `/activities/${MAIL_ID}/email-presentation`),
+    ).toBe(1);
+    // The kind read is the drawer's only read of the activity itself.
+    expect(readsOf(fetchMock, `/activities/${MAIL_ID}`)).toBe(1);
   });
 
   it("opens a meeting it names in the activity drawer", async () => {
-    stubServer();
+    const fetchMock = stubServer();
     renderUpdates([
       notice({
         subject: {
@@ -172,6 +189,37 @@ describe("a notice about an activity", () => {
     expect(
       await within(drawer).findByText("We agreed on the rollout."),
     ).toBeVisible();
+    expect(readsOf(fetchMock, `/activities/${MEETING_ID}`)).toBe(1);
+  });
+
+  it("reads nothing more once its drawer is closed", async () => {
+    const fetchMock = stubServer();
+    const user = userEvent.setup();
+    renderUpdates([
+      notice({
+        subject: {
+          type: "activity",
+          id: MEETING_ID,
+          label: "Quarterly review",
+        },
+      }),
+    ]);
+    await user.click(
+      screen.getByRole("button", {
+        name: "Summary updated · Quarterly review",
+      }),
+    );
+    await screen.findByText("We agreed on the rollout.");
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    // A reader coming back to the tab is what refetches a live read.
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+
+    expect(readsOf(fetchMock, `/activities/${MEETING_ID}`)).toBe(1);
   });
 
   // The server leaves the label off an activity this reader may not read, mail
@@ -184,12 +232,6 @@ describe("a notice about an activity", () => {
     expect(
       screen.queryByRole("button", { name: "Summary updated" }),
     ).toBeNull();
-    expect(
-      fetchMock.mock.calls.some((call) =>
-        String(call[0] instanceof Request ? call[0].url : call[0]).includes(
-          "/activities/",
-        ),
-      ),
-    ).toBe(false);
+    expect(readsOf(fetchMock, `/activities/${MAIL_ID}`)).toBe(0);
   });
 });

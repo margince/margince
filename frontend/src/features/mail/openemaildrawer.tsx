@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useRef } from "react";
+import type { components } from "../../api/schema";
 import { CommitmentReview } from "../../design-system/commitmentreview";
 import { EmailDetail } from "../../design-system/emaildetail";
 import { SurfaceState } from "../../design-system/surfacestate";
@@ -11,6 +12,8 @@ import { useActivity } from "../../lib/activityread";
 import { EmailAccessEditor } from "../capture/emailaccesseditor";
 import { EmailRecordLinks } from "./emailrecords";
 import { EmailReplyAction } from "./emailreply";
+
+type Activity = components["schemas"]["Activity"];
 
 /**
  * The record page's one email drawer.
@@ -41,6 +44,7 @@ export function OpenEmailDrawer({
   zone,
   onClose,
   onReplySent,
+  activity,
 }: Readonly<{
   activityId: string | null;
   /** The record's timezone, which the page owns. */
@@ -57,6 +61,9 @@ export function OpenEmailDrawer({
    * had gone.
    */
   onReplySent?: () => void;
+  /** The answer of a live read of this activity the host already holds, so
+   *  the drawer does not read it a second time. Absent, the drawer reads it. */
+  activity?: Activity;
 }>) {
   const { locale } = useLocale();
   // The id the drawer was opened with, kept after the host clears it: the
@@ -80,6 +87,11 @@ export function OpenEmailDrawer({
           activityId={activityId ?? undefined}
           open={activityId !== null}
           zone={zone}
+          given={
+            activity !== undefined && activity.id === activityId
+              ? activity
+              : undefined
+          }
         />
       )}
       renderAccess={(presentation) => (
@@ -99,10 +111,17 @@ function SourceCommitmentReview({
   activityId,
   open,
   zone,
-}: Readonly<{ activityId: string | undefined; open: boolean; zone: string }>) {
-  const read = useActivity(activityId, open);
+  given,
+}: Readonly<{
+  activityId: string | undefined;
+  open: boolean;
+  zone: string;
+  given?: Activity;
+}>) {
+  const read = useActivity(activityId, open && given === undefined);
+  const activity = given ?? read.data;
   const t = useT();
-  if (!open || read.data?.content_state === "withheld") return null;
+  if (!open || activity?.content_state === "withheld") return null;
   if (read.isError)
     return (
       <SurfaceState
@@ -115,9 +134,6 @@ function SourceCommitmentReview({
       </SurfaceState>
     );
   return (
-    <CommitmentReview
-      decisions={read.data?.commitment_admissions}
-      zone={zone}
-    />
+    <CommitmentReview decisions={activity?.commitment_admissions} zone={zone} />
   );
 }

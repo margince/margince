@@ -39,8 +39,10 @@ export function useNoticeSource(item: WorklistItem): Readonly<{
   const source = noticeSourceId(item);
   return {
     open: source === undefined ? undefined : () => setOpened(source),
+    // Mounted only while open, so a closed drawer keeps no read that refetches
+    // on every window focus, once for each row a reader ever opened.
     drawer:
-      source === undefined ? null : (
+      opened === null ? null : (
         <SourceDrawer
           activityId={opened}
           onClose={() => setOpened(null)}
@@ -56,19 +58,20 @@ export function useNoticeSource(item: WorklistItem): Readonly<{
  * A mail in the email drawer, anything else in the activity drawer.
  *
  * The row knows only that its subject is an activity. The kind comes from the
- * activity read, which also decides what this reader may see. A failed read
- * goes to the activity drawer, which says so and offers a retry.
+ * activity read, which also decides what this reader may see. Its answer goes
+ * down to the drawer, so the activity is read once. A failed read goes to the
+ * activity drawer, which says so and offers a retry.
  */
 function SourceDrawer({
   activityId,
   onClose,
   onReplySent,
 }: Readonly<{
-  activityId: string | null;
+  activityId: string;
   onClose: () => void;
   onReplySent: () => void;
 }>) {
-  const read = useActivity(activityId ?? undefined, activityId !== null);
+  const read = useActivity(activityId);
   const answered = read.data !== undefined || read.isError;
   const email = read.data?.kind === "email";
   const zone = viewerZone();
@@ -79,11 +82,13 @@ function SourceDrawer({
         zone={zone}
         onClose={onClose}
         onReplySent={onReplySent}
+        activity={read.data}
       />
       <OpenActivityDrawer
         activityId={answered && !email ? activityId : null}
         zone={zone}
         onClose={onClose}
+        activity={read.data}
       />
     </>
   );
