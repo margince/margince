@@ -113,9 +113,16 @@ func (w *csvWriters) predictLink(ctx context.Context, edge migration.Assoc) (mig
 }
 
 // predictPages walks the source and tallies what the commit would do with each
-// row, page by page, the same way the engine will walk it. A row predicted to
+// row, page by page, the same way the engine will walk it. Each row is judged
+// against the estate and against the file's earlier rows. A row predicted to
 // land is marked pending, so a later file's link to it resolves.
 func predictPages(ctx context.Context, source *migration.CSVSource, writers *csvWriters, object string) (p prediction, err error) {
+	earlier, err := newInFileLedger(ctx, writers)
+	if err != nil {
+		return prediction{}, err
+	}
+	writers.earlier = earlier
+	defer func() { writers.earlier = nil }()
 	for offset := 0; ; offset += importPredictPage {
 		rows, err := source.Rows(ctx, object, offset, importPredictPage)
 		if err != nil {
@@ -129,6 +136,11 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 			if err != nil {
 				return prediction{}, err
 			}
+			outcome, problem, err = earlier.reconsider(ctx, row, outcome, problem)
+			if err != nil {
+				return prediction{}, err
+			}
+			earlier.record(row, outcome)
 			if !p.tally(object, row, outcome, problem) {
 				writers.links.markRefused(object, row.ExternalID)
 				continue

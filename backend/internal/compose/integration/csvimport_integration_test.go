@@ -74,12 +74,13 @@ type importDispositionDTO struct {
 }
 
 type importIssueDTO struct {
-	Line   int    `json:"line"`
-	Reason string `json:"reason"`
-	File   string `json:"file"`
-	Kind   string `json:"kind"`
-	Column string `json:"column"`
-	Value  string `json:"value"`
+	Line       int    `json:"line"`
+	Reason     string `json:"reason"`
+	ReasonCode string `json:"reason_code"`
+	File       string `json:"file"`
+	Kind       string `json:"kind"`
+	Column     string `json:"column"`
+	Value      string `json:"value"`
 }
 
 type importLinksDTO struct {

@@ -69,11 +69,7 @@ func (w *csvWriters) collidesWithExisting(ctx context.Context, row migration.Row
 }
 
 func (w *csvWriters) companyCollides(ctx context.Context, row migration.Row) (bool, error) {
-	fields := textFields(row.Fields)
-	candidate := contacts.CompanyCandidate{
-		DisplayName: strings.TrimSpace(fields[fieldDisplayName]),
-		LegalName:   strings.TrimSpace(fields["legal_name"]),
-	}
+	candidate := companyCandidateOf(textFields(row.Fields))
 	if candidate.DisplayName == "" && candidate.LegalName == "" {
 		return false, nil
 	}
@@ -125,6 +121,14 @@ func (w *csvWriters) companyCollides(ctx context.Context, row migration.Row) (bo
 			candidate.DisplayName, err)
 	}
 	return visible, nil
+}
+
+// companyCandidateOf is what the collision check asks the ladder about a row.
+func companyCandidateOf(fields map[string]string) contacts.CompanyCandidate {
+	return contacts.CompanyCandidate{
+		DisplayName: strings.TrimSpace(fields[fieldDisplayName]),
+		LegalName:   strings.TrimSpace(fields[fieldLegalName]),
+	}
 }
 
 // candidatesOf answers every company the ladder matched, best first.

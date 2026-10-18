@@ -70,6 +70,9 @@ type csvWriters struct {
 	heldEmails map[string]bool
 	// consumerMail is the workspace's consumer-mail list, read once per run.
 	consumerMail *freemail.Matcher
+	// earlier is the dry run's ledger of the file's earlier rows; nil on the
+	// commit, which meets them in the estate.
+	earlier *inFileLedger
 
 	// nativeIDs caches external key → native id within one run. A resumed run
 	// rebuilds it lazily through lookup, which falls back to the engine-owned
@@ -257,6 +260,13 @@ func (w *csvWriters) ensureRow(ctx context.Context, object string, row migration
 	if found {
 		return w.reconcile(ctx, id, row, typed)
 	}
+	refused, err := w.createPathRefusal(ctx, row, typed)
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	if refused.Code != "" {
+		return skippedFor(refused), nil
+	}
 	// Not a row this importer has landed before — but the estate may hold the
 	// record anyway, and the run says what to do about that. The check runs on
 	// the commit as well as the dry run so the two cannot disagree.
@@ -299,7 +309,7 @@ func (w *csvWriters) ensureRow(ctx context.Context, object string, row migration
 	}
 	// The flag rides the create rather than replacing it: a duplicate the run
 	// asked to keep IS a created row, and the review queue picks up the pair.
-	created.Duplicate = collides
+	created.Duplicate = collides && created.Created
 	return created, nil
 }
 
@@ -357,6 +367,9 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 			// The company half of the same case: a corrected file moving a domain
 			// onto a company that is not its owner.
 			return skippedFor(domainClaimedWhy), nil
+		}
+		if _, ok := errors.AsType[*contacts.DuplicateLeadError](err); ok {
+			return skippedFor(leadEmailClaimedWhy), nil
 		}
 		if linkedInClaimed(err) {
 			return skippedFor(linkedInClaimedWhy), nil
@@ -416,42 +429,6 @@ func (w *csvWriters) apply(
 	default:
 		return fmt.Errorf("import: %q is not an importable object", w.object)
 	}
-}
-
-// different input builder, a different store call, a different emptiness to
-// refuse and a different sentence to refuse it with. Folding them together
-// would mean a generic seam that exists to satisfy a linter and nothing else.
-//
-//nolint:dupl // createContact has the same SHAPE and not the same job: a
-func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
-	in := companyCreateFrom(textFields(row.Fields), typed, w.sourceSystem, w.provenanceOf(row.ExternalID))
-	if in.DisplayName == "" {
-		return skippedFor(companyNameEmptyWhy), nil
-	}
-	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
-		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
-			return ids.UUID{}, err
-		}
-		company, err := w.contacts.CreateCompanyTx(ctx, tx, in, w.cols.store)
-		if err != nil {
-			return ids.UUID{}, fmt.Errorf("import: creating company %s: %w", row.ExternalID, err)
-		}
-		return ids.UUID(company.Id), nil
-	})
-	if _, ok := errors.AsType[*contacts.DuplicateDomainError](err); ok {
-		// A domain names ONE company across the estate, so a row claiming one
-		// another company already holds is refused by the store — the same shape
-		// a contact's claimed email has. One bad row is a skip with a reason, not
-		// a failed run: the rest of the file still lands.
-		return skippedFor(domainClaimedWhy), nil
-	}
-	if linkedInClaimed(err) {
-		return skippedFor(linkedInClaimedWhy), nil
-	}
-	if err != nil {
-		return migration.EnsureResult{}, err
-	}
-	return migration.EnsureResult{Created: true}, nil
 }
 
 // land commits one native record, its identity-map row and its tags in one

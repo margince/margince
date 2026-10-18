@@ -15,6 +15,7 @@ import (
 	"cmp"
 	"context"
 	"errors"
+	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -97,6 +98,8 @@ func (w *csvWriters) predictLanding(ctx context.Context, row migration.Row, type
 		if target.why.Code != "" {
 			return predictUnwritable, target.why, nil
 		}
+		// Linkable even when the update is refused, as ensureRow binds it.
+		w.links.markPending(w.object, row.ExternalID)
 		return w.reconcilePrediction(ctx, target.id, row, typed)
 	}
 	id, found, err := w.lookup(ctx, w.object, row.ExternalID)
@@ -115,14 +118,7 @@ func (w *csvWriters) predictLanding(ctx context.Context, row migration.Row, type
 // predictCreatePath is what the commit will do with a row no previous run of
 // this importer landed.
 //
-// Two questions, in this order and the order matters. First, whether a contact's
-// address is already spoken for: uq_contact_email_dedupe is estate-wide, so the
-// store refuses that row whoever holds the address, and a preview promising a
-// create would simply be wrong. It runs BEFORE the collision check and is not a
-// disclosure decision — the outcome is identical for an incumbent the caller can
-// see and one they cannot, which is what stops the commit's answer being an
-// existence oracle.
-//
+// Two questions, in this order and the order matters. First, createPathRefusal.
 // Second, whether the estate holds a record this row would duplicate. The CRM
 // may hold it from mail, by hand or from a seed, none of which the identity map
 // can see, so the create gets the same dedupe read the create path performs.
@@ -136,26 +132,12 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row, t
 	case migration.ObjectActivity:
 		return w.predictActivityCreate(ctx, row, typed)
 	}
-	claimed, err := w.contactEmailAlreadyHeld(ctx, row)
+	refused, err := w.createPathRefusal(ctx, row, typed)
 	if err != nil {
 		return predictCreate, migration.Reason{}, err
 	}
-	if claimed {
-		return predictUnwritable, contactEmailClaimedWhy, nil
-	}
-	takenDomain, err := w.companyDomainAlreadyHeld(ctx, row)
-	if err != nil {
-		return predictCreate, migration.Reason{}, err
-	}
-	if takenDomain {
-		return predictUnwritable, domainClaimedWhy, nil
-	}
-	takenLinkedIn, err := w.linkedInAlreadyHeld(ctx, typed)
-	if err != nil {
-		return predictCreate, migration.Reason{}, err
-	}
-	if takenLinkedIn {
-		return predictUnwritable, linkedInClaimedWhy, nil
+	if refused.Code != "" {
+		return predictUnwritable, refused, nil
 	}
 	collides, err := w.collidesWithExisting(ctx, row)
 	if err != nil {
@@ -168,6 +150,19 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row, t
 		return predictCollidesSkipped, migration.Reason{}, nil
 	}
 	return predictCollides, migration.Reason{}, nil
+}
+
+// unnamedWhy is why a create is refused for naming no record, or the zero
+// Reason. An update is not refused for it: an absent name leaves the stored
+// one alone.
+func unnamedWhy(object string, fields map[string]string) migration.Reason {
+	switch {
+	case object == migration.ObjectCompany && strings.TrimSpace(fields[fieldDisplayName]) == "":
+		return companyNameEmptyWhy
+	case object == migration.ObjectContact && contactFullName(fields) == "":
+		return contactUnnamedWhy
+	}
+	return migration.Reason{}
 }
 
 // predictReconcile is what reconcile would do to this record, without writing.
@@ -197,6 +192,13 @@ func (w *csvWriters) reconcilePrediction(
 	}
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return predictUnwritable, cannotEditWhy(w.object), nil
+	}
+	refused, err := w.updateKeyRefusal(ctx, id, current, changed, typed)
+	if err != nil {
+		return predictCreate, migration.Reason{}, err
+	}
+	if refused.Code != "" {
+		return predictUnwritable, refused, nil
 	}
 	return predictUpdate, migration.Reason{}, nil
 }

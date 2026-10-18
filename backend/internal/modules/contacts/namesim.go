@@ -204,7 +204,13 @@ func undottedForm(word string) string {
 // nameSimilarity is `name_sim`: Jaro-Winkler over normalized input,
 // in [0,1].
 func nameSimilarity(a, b string) float64 {
-	return jaroWinkler(normalizeName(a), normalizeName(b))
+	return normalizedNameSimilarity(normalizeName(a), normalizeName(b))
+}
+
+// normalizedNameSimilarity is nameSimilarity over names already through
+// normalizeName, for a scorer that prepares each name once.
+func normalizedNameSimilarity(a, b string) float64 {
+	return jaroWinkler(a, b)
 }
 
 // jaroWinkler applies the Winkler prefix boost unconditionally — the
@@ -309,7 +315,7 @@ func jaro(a, b string) float64 {
 // cannot fold its two sides with different normalizations of one name.
 //
 // One function because there is one question. NormalizeContactName is
-// normalizeName plus a whitespace collapse, and companyNamesAreTheSame is the
+// normalizeName plus a whitespace collapse, and foldedNameKey is the
 // same pair — case, accents and spacing folded away, and nothing else. The
 // company lane's legal-suffix key is a DIFFERENT question and is not this one:
 // see CompanyCandidateScore.ExactName for why "Baqend GmbH" and "Baqend Inc"

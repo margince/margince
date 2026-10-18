@@ -215,9 +215,8 @@ func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactRe
 		    ON od.company_id = r.company_id AND od.archived_at IS NULL
 		 WHERE p.archived_at IS NULL
 		   AND ($3::uuid IS NULL OR p.id <> $3)
-		   AND (f_fold_apostrophes(lower(p.full_name)) % f_fold_apostrophes(lower($1))
-		        OR ($2::uuid IS NOT NULL AND r.company_id = $2)
-		        OR `+exactNameKeySQL("p.full_name")+` = `+exactNameKeySQL("$1")+`)`,
+		   AND (`+contactNameAdmitsSQL("p.full_name", "$1")+`
+		        OR ($2::uuid IS NOT NULL AND r.company_id = $2))`,
 		c.FullName, c.CurrentPrimaryCompanyID, c.ExcludeID)
 	if err != nil {
 		return ContactResolution{}, fmt.Errorf("dedupe contact candidate set: %w", err)
@@ -290,14 +289,29 @@ func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactRe
 	return ContactResolution{Decision: DecisionNoMatch}, nil
 }
 
+// contactNameAdmitsSQL is the name half of the fuzzy tier's candidate
+// predicate: a row is scored only when it passes. ContactBatch asks the same
+// question of rows not yet written.
+func contactNameAdmitsSQL(column, param string) string {
+	return "f_fold_apostrophes(lower(" + column + ")) % f_fold_apostrophes(lower(" + param + "))" +
+		" OR " + exactNameKeySQL(column) + " = " + exactNameKeySQL(param)
+}
+
 // contactConfidence is the PO-F-1 score: weights sum to 1.0, so the
 // result is in [0,1] and comparable against the threshold directly.
 func contactConfidence(c ContactCandidate, row contactCandidateRow) float64 {
-	name := dedupeNameWeight * nameSimilarity(c.FullName, row.fullName)
-	if !namesCorroborate(c.FullName, row.fullName) {
+	corroborated := namesCorroborate(c.FullName, row.fullName)
+	return contactScore(nameSimilarity(c.FullName, row.fullName), companyMatch(c, row), corroborated)
+}
+
+// contactScore weighs PO-F-1's two terms, for a scorer that measures them
+// itself. The employer counts only for names that corroborate.
+func contactScore(nameSim, employer float64, corroborated bool) float64 {
+	name := dedupeNameWeight * nameSim
+	if !corroborated {
 		return name
 	}
-	return name + dedupeCompanyDomainWeight*companyMatch(c, row)
+	return name + dedupeCompanyDomainWeight*employer
 }
 
 // companyMatch is PO-F-1's employer agreement term, most-specific first: a shared

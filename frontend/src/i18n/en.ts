@@ -6257,7 +6257,7 @@ export const en = {
   "import.reason.contact_duplicate_skipped":
     "Someone matching this row is already in the CRM, and this run was asked to skip duplicates.",
   "import.reason.contact_email_held":
-    "This email address is already held in the CRM, so the row cannot create a second contact under it.",
+    "Another contact already has this email address, in the CRM or in an earlier row of this file, so the row cannot create a second contact under it.",
   "import.reason.contact_unnamed":
     "The row carries neither a name nor an email, so it names no contact.",
   "import.reason.currency_unset":
@@ -6265,7 +6265,7 @@ export const en = {
   "import.reason.description_too_long":
     "The description is {length} characters. A company description holds at most {max}.",
   "import.reason.domain_held":
-    "This domain is already held by another company in the CRM, so the row cannot create a second company under it.",
+    "Another company already has this domain, in the CRM or in an earlier row of this file, so the row cannot create a second company under it.",
   "import.reason.duplicate_email":
     "This email address already belongs to another contact.",
   "import.reason.employer_column_empty":
@@ -6285,6 +6285,8 @@ export const en = {
     "No company you can see has the id “{value}”. It may have been archived or merged away, or come from a different system.",
   "import.reason.id_on_non_company":
     "Only a company row can name an “{column}”. A {object} row is identified by its own key.",
+  "import.reason.lead_email_held":
+    "Another lead already has this email address, in the CRM or in an earlier row of this file, so the row cannot give it to a second lead.",
   "import.reason.link_ambiguous":
     "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer.",
   "import.reason.link_ambiguous_dropped":
@@ -6294,7 +6296,7 @@ export const en = {
   "import.reason.link_not_found_dropped":
     "No company with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
   "import.reason.linkedin_held":
-    "This LinkedIn URL is already held by another record in the CRM, so the row cannot claim it.",
+    "Another record already has this LinkedIn URL, in the CRM or in an earlier row of this file, so the row cannot claim it.",
   "import.reason.natural_key_taken": "A record with this key already exists.",
   "import.reason.not_a_date":
     "“{value}” is not a date. Write it as YYYY-MM-DD.",
