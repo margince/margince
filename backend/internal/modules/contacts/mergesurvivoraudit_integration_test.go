@@ -6,7 +6,7 @@
 package contacts
 
 // A merge is told on the surviving record as well as on the archived one. The
-// survivor's history is where a person reads why it holds a value nobody typed.
+// survivor's history is where a reader finds why it holds a value nobody typed.
 
 import (
 	"context"

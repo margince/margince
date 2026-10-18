@@ -241,9 +241,9 @@ func finalizeCompanyMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids
 	}); err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("emit company.merged: %w", err)
 	}
-	if err := auditMergeSurvivor(ctx, tx, "company", sourceID.UUID, targetID.UUID,
-		map[string]any{auditKeyFilled: filled}); err != nil {
-		return crmcontracts.Company{}, err
+	before, after := survivorMergeImages(sourceID.UUID, map[string]any{auditKeyFilled: filled})
+	if _, err := storekit.Audit(ctx, tx, "merge", "company", targetID.UUID, before, after); err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("audit company merge on the survivor: %w", err)
 	}
 	out, err := readCompany(ctx, tx, targetID, storekit.LiveOnly, active)
 	if err != nil {

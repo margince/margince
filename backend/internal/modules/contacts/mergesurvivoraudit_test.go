@@ -4,19 +4,22 @@
 package contacts
 
 import (
-	"context"
-	"strings"
 	"testing"
-
-	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestAMergeWhoseSurvivorRowCannotBeWrittenFailsTheMerge(t *testing.T) {
-	var tx pgx.Tx // never reached: an audit with no actor is refused before any SQL
-	err := auditMergeSurvivor(context.Background(), tx, "contact", ids.NewV7(), ids.NewV7(), nil)
-	if err == nil || !strings.Contains(err.Error(), "audit contact merge on the survivor") {
-		t.Fatalf("auditMergeSurvivor = %v, want the failure named for the survivor's row", err)
+func TestTheSurvivorsMergeRowNamesTheRecordFoldedIn(t *testing.T) {
+	source := ids.NewV7()
+	before, after := survivorMergeImages(source, map[string]any{auditKeyFilled: map[string]any{"title": "CTO"}})
+
+	if before[auditKeyMergedFrom] != nil {
+		t.Errorf("before = %v, want the survivor to have had nothing folded in", before)
+	}
+	if after[auditKeyMergedFrom] != source {
+		t.Errorf("after names %v, want %v", after[auditKeyMergedFrom], source)
+	}
+	if _, kept := after[auditKeyFilled]; !kept {
+		t.Errorf("after = %v, lost what the survivor took in", after)
 	}
 }

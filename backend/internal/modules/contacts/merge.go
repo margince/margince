@@ -61,19 +61,15 @@ const (
 	auditKeyFilled     = "filled"
 )
 
-// auditMergeSurvivor records a merge on the surviving record as well as the
-// archived one. A person reads the history on the survivor afterwards. A value
-// it took from the other record (an address, a field fill) is otherwise
-// unexplained there. The merged event rides the archived record's row, so no
-// event pairs with this one.
-func auditMergeSurvivor(ctx context.Context, tx pgx.Tx, entityType string, sourceID, targetID ids.UUID, detail map[string]any) error {
-	after := map[string]any{auditKeyMergedFrom: sourceID}
+// survivorMergeImages are the images of the merge row written on the surviving
+// record as well as the archived one. A reader of the survivor's history
+// otherwise cannot tell where a value it took from the other record came
+// from (an address, a field fill). The merged event rides the archived
+// record's row, so no event pairs with this one.
+func survivorMergeImages(sourceID ids.UUID, detail map[string]any) (before, after map[string]any) {
+	after = map[string]any{auditKeyMergedFrom: sourceID}
 	maps.Copy(after, detail)
-	if _, err := storekit.Audit(ctx, tx, "merge", entityType, targetID,
-		map[string]any{auditKeyMergedFrom: nil}, after); err != nil {
-		return fmt.Errorf("audit %s merge on the survivor: %w", entityType, err)
-	}
-	return nil
+	return map[string]any{auditKeyMergedFrom: nil}, after
 }
 
 // MergeSelfError maps to 422: a record cannot merge into itself.
@@ -232,9 +228,9 @@ func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetI
 	if err := storekit.EmitEvent(ctx, tx, auditID, sourceID.UUID, contactMergedPayload(sourceID, targetID, counts)); err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("emit contact.merged: %w", err)
 	}
-	if err := auditMergeSurvivor(ctx, tx, "contact", sourceID.UUID, targetID.UUID,
-		map[string]any{"relinked": counts, auditKeyFilled: p.After()}); err != nil {
-		return crmcontracts.Contact{}, err
+	before, after := survivorMergeImages(sourceID.UUID, map[string]any{"relinked": counts, auditKeyFilled: p.After()})
+	if _, err := storekit.Audit(ctx, tx, "merge", "contact", targetID.UUID, before, after); err != nil {
+		return crmcontracts.Contact{}, fmt.Errorf("audit contact merge on the survivor: %w", err)
 	}
 	out, err := readContact(ctx, tx, targetID, storekit.LiveOnly, active)
 	if err != nil {
