@@ -40,7 +40,8 @@ type CommitmentTaskProposal struct {
 	// and then accepting it makes it the decider's.
 	SeatID *ids.UUID `json:"seat_id,omitempty"`
 	// PromiserSeatID preserves attribution when the proposed assignee must differ.
-	PromiserSeatID *ids.UUID `json:"promiser_seat_id,omitempty"`
+	PromiserSeatID     *ids.UUID `json:"promiser_seat_id,omitempty"`
+	PromiserUnresolved bool      `json:"promiser_unresolved,omitempty"`
 	// DueDate is a day, YYYY-MM-DD, or empty. Text rather than an instant, so a
 	// reviewer edits a day and acceptance decides when that day ends.
 	DueDate string                         `json:"due_date,omitempty"`

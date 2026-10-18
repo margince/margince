@@ -6,10 +6,12 @@
 package approvals
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestPersonalDecisionsRemainReachableBehindATeamBacklog(t *testing.T) {
@@ -19,7 +21,11 @@ func TestPersonalDecisionsRemainReachableBehindATeamBacklog(t *testing.T) {
 	personal := map[ids.UUID]bool{}
 	stage := func(kind string, sequence int) ids.UUID {
 		t.Helper()
-		id, err := e.svc.Stage(agent, StageInput{
+		ctx := agent
+		if kind == "advance_deal" {
+			ctx = principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "background-review")
+		}
+		id, err := e.svc.Stage(ctx, StageInput{
 			Kind: kind, ProposedChange: []byte(`{"body":"Review the proposal."}`),
 			DiffHash: fmt.Sprintf("personal-queue-%d", sequence), TargetType: tableDeal, TargetID: target,
 			Summary: "Review the proposal",
@@ -79,5 +85,61 @@ func TestPersonalDecisionsRemainReachableBehindATeamBacklog(t *testing.T) {
 			}
 			t.Fatal("personal pagination did not finish")
 		})
+	}
+}
+
+func TestADelegatedAgentDecisionReachesItsRequestingSeat(t *testing.T) {
+	e := setupStaging(t)
+	target := newDealSeeder(t, e).deal(t)
+	id, err := e.svc.Stage(e.asAgent(t), StageInput{
+		Kind: "advance_deal", ProposedChange: []byte(`{"stage":"won"}`), DiffHash: "delegated-deal-decision",
+		TargetType: tableDeal, TargetID: target, Summary: "Review the proposed deal stage",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, _, err := e.svc.ListWire(seatFor(e.ws, e.rep, tableDeal, objectActivity), ListInput{RequestedForReader: true, Limit: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || ids.UUID(rows[0].Id) != id.UUID || rows[0].RequestedDeciderId == nil || ids.UUID(*rows[0].RequestedDeciderId) != e.rep {
+		t.Fatalf("delegated decision lost its requested reviewer: %#v", rows)
+	}
+}
+
+func TestUnassignedDecisionsRemainReachableBehindDelegatedWork(t *testing.T) {
+	e := setupStaging(t)
+	target := newDealSeeder(t, e).deal(t)
+	background := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "background-review")
+	delegated := e.asAgent(t)
+	var unassigned ids.UUID
+	for i := range inboxBatch + 2 {
+		actor := delegated
+		if i == 0 {
+			actor = background
+		}
+		id, err := e.svc.Stage(actor, StageInput{Kind: "advance_deal", ProposedChange: []byte(`{"stage":"won"}`), DiffHash: fmt.Sprintf("delegation-backlog-%d", i), TargetType: tableDeal, TargetID: target, Summary: "Review proposed stage"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if i == 0 {
+			unassigned = id.UUID
+		}
+	}
+	reader := seatFor(e.ws, e.rep, tableDeal, objectActivity)
+	rows, _, err := e.svc.ListWire(reader, ListInput{OnlyUnassigned: true, Limit: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || ids.UUID(rows[0].Id) != unassigned {
+		t.Fatalf("unassigned decision starved behind delegated work: %#v", rows)
+	}
+	rows, _, err = e.svc.ListWire(reader, ListInput{RequestedForOwners: []ids.UUID{ids.Nil, ids.NewV7()}, Limit: 1})
+	if err != nil || len(rows) != 1 || ids.UUID(rows[0].Id) != unassigned {
+		t.Fatalf("unassigned decision starved behind out-of-team work: rows=%d err=%v", len(rows), err)
+	}
+	rows, _, err = e.svc.ListWire(reader, ListInput{RequestedForOwners: []ids.UUID{}, Limit: 1})
+	if err != nil || len(rows) != 0 {
+		t.Fatalf("empty team widened to all decisions: rows=%d err=%v", len(rows), err)
 	}
 }

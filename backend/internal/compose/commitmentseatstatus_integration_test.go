@@ -75,7 +75,6 @@ func TestAMailedPromiseByAColleagueWhoCannotHoldWorkIsProposed(t *testing.T) {
 			if got := e.WsScalar(t, `SELECT proposed_change->>'promiser_seat_id' FROM approval WHERE id = $1`, approval); got != e.Rep2.String() {
 				t.Fatal("acceptance replaced the original promiser")
 			}
-
 		})
 	}
 }
@@ -111,16 +110,16 @@ func seedMailedPromise(t *testing.T, status string) (*integration.Env, string) {
 	if status != "active" {
 		e.WsExec(t, `UPDATE app_user SET status = $2 WHERE id = $1`, e.Rep2, status)
 	}
-	return e, mailedCommitmentReply(t, message, taskWorthyConfidence)
+	return e, mailedCommitmentReply(t, message, e.Rep2, taskWorthyConfidence)
 }
 
 // mailedCommitmentReply is the one event the model is arranged to return.
-func mailedCommitmentReply(t *testing.T, message ids.UUID, confidence float64) string {
+func mailedCommitmentReply(t *testing.T, message, promiser ids.UUID, confidence float64) string {
 	t.Helper()
 	reply, err := json.Marshal(map[string]any{"events": []map[string]any{{
 		"kind": "commitment_made", "message_id": message.String(),
 		"summary": "Send the revised pricing", "quote": seatStatusPromise,
-		"due_date": "", "confidence": confidence,
+		"due_date": "", "confidence": confidence, "promiser_ref": "seat:" + promiser.String(),
 	}}})
 	if err != nil {
 		t.Fatalf("building the model reply: %v", err)
@@ -387,6 +386,7 @@ func TestAPromiseNamingAnAgentSeatIsProposed(t *testing.T) {
 // whoever sent the mail.
 func TestAPrivatePromiseNamingNobodyStillReachesItsOwner(t *testing.T) {
 	e, reply := seedMailedPromise(t, "active")
+	reply = mailedReplyWithoutPromiser(t, reply)
 	// No colleague on the line: the sender participant goes, so nothing names a seat.
 	e.WsExec(t, `DELETE FROM activity_participant WHERE role = 'from' AND user_id IS NOT NULL`)
 	e.WsExec(t, `UPDATE contact SET visibility = 'owner', owner_id = $1
@@ -430,4 +430,20 @@ func captureSeatPromise(t *testing.T, e *integration.Env, contact ids.UUID, key,
 		t.Fatal(err)
 	}
 	return message
+}
+
+func mailedReplyWithoutPromiser(t *testing.T, reply string) string {
+	t.Helper()
+	var payload extractPayload
+	if err := json.Unmarshal([]byte(reply), &payload); err != nil {
+		t.Fatal(err)
+	}
+	for i := range *payload.Events {
+		(*payload.Events)[i].PromiserRef = ""
+	}
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(raw)
 }

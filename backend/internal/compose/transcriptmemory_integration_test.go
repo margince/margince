@@ -29,9 +29,13 @@ import (
 // says so differently — what a second pass over one transcript actually looks
 // like.
 func reworded(t *testing.T, summary string, line int) string {
+	return rewordedAttributed(t, summary, line, "")
+}
+
+func rewordedAttributed(t *testing.T, summary string, line int, promiser string) string {
 	t.Helper()
 	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
-		"summary": summary, "owner": "Priya",
+		"summary": summary, "owner": "Priya", "promiser_ref": promiser,
 		"source_lines": []int{line}, "confidence": 0.9,
 	}}})
 	if err != nil {

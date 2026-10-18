@@ -40,7 +40,7 @@ func seedKeptCommitment(t *testing.T) keptCommitment {
 	e.GrantRole(t, e.AdminUser, "admin")
 	ines := linkInes(t, e)
 	e.WsExec(t, `UPDATE contact SET owner_id = $2 WHERE id = $1`, ines, e.Rep2)
-	e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.9)})
+	e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.9)})
 	task, err := ids.Parse(e.wsString(t, `SELECT id::text FROM activity WHERE kind = 'task'`))
 	if err != nil {
 		t.Fatalf("want the colleague's task written: %v", err)

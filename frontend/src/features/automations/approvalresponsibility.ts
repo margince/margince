@@ -33,8 +33,11 @@ export function commitmentResponsibility(
   const party = typeof change.party === "string" ? change.party.trim() : "";
   const madeBy =
     typeof promiser === "string" && promiser
-      ? (names.get(promiser) ?? t("approval.commitment.unnamedColleague"))
-      : party || t("approval.commitment.unresolved");
+      ? (names.get(promiser) ?? party) ||
+        t("approval.commitment.unnamedColleague")
+      : change.promiser_unresolved === true && party
+        ? t("approval.commitment.unverifiedNamed", { name: party })
+        : party || t("approval.commitment.unresolved");
   const effect =
     typeof assignee === "string" && assignee
       ? t("approval.commitment.assignNamed", {

@@ -126,9 +126,10 @@ func NewSignalExtractor(pool *pgxpool.Pool, brain completer, now func() time.Tim
 
 // extractedEvent is one material event as the model reports it.
 type extractedEvent struct {
-	Kind      string `json:"kind"`
-	MessageID string `json:"message_id"`
-	Summary   string `json:"summary"`
+	PromiserRef string `json:"promiser_ref"`
+	Kind        string `json:"kind"`
+	MessageID   string `json:"message_id"`
+	Summary     string `json:"summary"`
 	// Quote is the cited message's own words the event is stated in. For a
 	// commitment it is what a reader checks the promise against, and where the
 	// server finds the sentence that identifies it across readings.
@@ -169,6 +170,9 @@ func (x *SignalExtractor) readThread(
 ) (int, error) {
 	if len(thread.Messages) == 0 {
 		return 0, nil
+	}
+	if err := x.readCommitmentParties(ctx, &thread); err != nil {
+		return 0, err
 	}
 	events, err := x.ask(ctx, thread)
 	if errors.Is(err, errRefusedReading) {
@@ -389,13 +393,19 @@ func extractRequest(thread settledThread, lang string) model.Request {
 		body := fmt.Sprintf("Direction: %s\nSent: %s\nSubject: %s\n%s",
 			directionWord(message.Direction), message.At.Format(time.DateOnly), message.Subject,
 			textlang.CurrentMessage(message.Body))
+		body += "\nVerified participants (reference, role, name, address):\n" + commitmentPartyPrompt(message.Parties, textlang.CurrentMessage(message.Body))
 		prompt.WriteString(fence.WrapAttr("source_id", message.ID.String(), body) + "\n")
 	}
 	fmt.Fprintf(&prompt,
-		`Return JSON: { "events": [ { "kind", "message_id", "summary", "quote", "restated_message_id", "restated_quote", "due_date", "confidence" } ] } — `+
+		`Return JSON: { "events": [ { "kind", "message_id", "summary", "quote", "restated_message_id", "restated_quote", "due_date", "promiser_ref", "confidence" } ] } — `+
 			`at most %d, and an empty list when the conversation states none. `+
 			`"summary" is one plain sentence a colleague could act on. `+
 			`"message_id" must be one of the ids above. `+
+			`"promiser_ref" is the verified participant reference for who made the quoted promise, `+
+			`not necessarily its sender. For "you agreed", resolve the addressed party; for a named `+
+			`third party, use a reference only when the clause identifies them unambiguously. `+
+			`CC membership alone never means someone promised. Use "" for unresolved or collective `+
+			`attribution, same-name ambiguity, and non-commitment events. Never invent a reference. `+
 			`"quote" is the words of that message the event is stated in, copied exactly; `+
 			`for "commitment_made" it is the clause the promise is made in, one promise per event. `+
 			`"due_date" is the day a commitment is due, as YYYY-MM-DD, resolving anything relative `+

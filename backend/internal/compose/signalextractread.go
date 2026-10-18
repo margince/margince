@@ -66,6 +66,7 @@ const (
 
 // threadMessage is one message of a conversation as the prompt sees it.
 type threadMessage struct {
+	Parties   []commitmentParty
 	ID        ids.UUID
 	Direction string
 	Subject   string

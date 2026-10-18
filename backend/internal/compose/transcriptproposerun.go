@@ -83,8 +83,12 @@ func (p *TranscriptProposer) Read(ctx context.Context, store transcriptReadStore
 	// to give it — the meeting's own summary is what the reader recognises, so
 	// an unnamed reading draws the rail's unnamed sentence rather than a
 	// quotation from somebody's transcript.
+	parties, err := p.readCommitmentParties(ctx, activityID)
+	if err != nil {
+		return err
+	}
 	steps, err := p.ask(ai.WithSubject(ctx, activityID.Ref(), ""),
-		reading.Lines, reading.OccurredAt.Format(time.DateOnly))
+		reading.Lines, reading.OccurredAt.Format(time.DateOnly), parties)
 	if err != nil {
 		if errors.Is(err, errRefusedTranscript) {
 			p.log.WarnContext(ctx, "transcript reading refused",

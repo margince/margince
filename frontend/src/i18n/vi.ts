@@ -2425,6 +2425,7 @@ export const vi = {
   "approval.commitment.promiser": "Người cam kết",
   "approval.commitment.effect": "Khi phê duyệt",
   "approval.commitment.unnamedColleague": "Tên đồng nghiệp không khả dụng",
+  "approval.commitment.unverifiedNamed": "Chưa xác minh: {name}",
   "approval.commitment.unresolved": "Chưa xác định người cam kết",
   "approval.commitment.assignNamed": "Tạo công việc giao cho {name}.",
   "approval.commitment.assignDecider":

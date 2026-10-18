@@ -87,13 +87,16 @@ type Commitment struct {
 	// DueDate is the day the source stated, YYYY-MM-DD, or empty.
 	DueDate    string
 	Confidence float64
-	Links      []activities.ActivityLinkInput
+	// NeedsConfirmation keeps reported promises from assigning work without review.
+	NeedsConfirmation bool
+	Links             []activities.ActivityLinkInput
 	// PrivateTo is the one member the conversation answers to, when it is
 	// private mail. The task is theirs alone to read, and nobody else's to
 	// hold: a promise in mail only they may read is proposed to them.
 	PrivateTo *ids.UUID
 	// Locator identifies the promise across readings; see commitmentLocator.
 	Locator string
+	Span    string
 	// Body says where the task came from, in words a rep can go and check.
 	Body            string
 	Evidence        approvals.Evidence
@@ -173,6 +176,13 @@ func (d *CommitmentDispatcher) routeCommitment(ctx context.Context, tx pgx.Tx, c
 	if err != nil {
 		return CommitmentRemembered, ids.UUID{}, err
 	}
+	if reason == activities.CommitmentSourceUnavailable {
+		return CommitmentOutcome(reason), ids.UUID{}, nil
+	}
+	offered, err := d.offeredBefore(ctx, tx, c)
+	if err != nil || offered {
+		return CommitmentRemembered, ids.UUID{}, err
+	}
 	if c.Theirs == nil {
 		written, err := d.tasks.CommitmentTaskWritten(filing, tx, c.Locator)
 		if err != nil {
@@ -203,10 +213,6 @@ func (d *CommitmentDispatcher) routeCommitment(ctx context.Context, tx pgx.Tx, c
 func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.Tx, c Commitment, bundleID ids.UUID) (CommitmentOutcome, ids.UUID, error) {
 	filing := extractorContext(ctx, c.Extractor)
 
-	offered, err := d.offeredBefore(ctx, tx, c)
-	if err != nil || offered {
-		return CommitmentRemembered, ids.UUID{}, err
-	}
 	var claimID *ids.UUID
 	if c.PromisedTo != nil {
 		claim, _, err := d.fileClaim(filing, tx, c, *c.PromisedTo, claimKindOurs, activities.CommitmentCurrent)
@@ -231,7 +237,7 @@ func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.T
 			return CommitmentRemembered, ids.UUID{}, err
 		}
 	}
-	if holdsWork && c.Confidence >= CommitmentTaskConfidence && mayHoldPrivateTask(c.PrivateTo, *c.Seat) {
+	if !c.NeedsConfirmation && holdsWork && c.Confidence >= CommitmentTaskConfidence && mayHoldPrivateTask(c.PrivateTo, *c.Seat) {
 		task, err := writeCommitmentTask(ctx, tx, d.tasks, d.claims, commitmentTask{
 			Extractor: c.Extractor, Locator: c.Locator, Summary: c.Summary, Body: c.Body,
 			SourceActivityID: c.SourceActivityID, Links: c.Links, DueDate: c.DueDate,
@@ -295,14 +301,14 @@ func (d *CommitmentDispatcher) offeredBefore(ctx context.Context, tx pgx.Tx, c C
 		return false, err
 	}
 	for _, held := range offers {
-		if !held.Pending() && !held.Rejected() {
+		if !held.Pending() && !held.Rejected() && !held.Approved() {
 			continue
 		}
 		var offer CommitmentTaskProposal
 		if err := json.Unmarshal(held.Change, &offer); err != nil {
 			return false, fmt.Errorf("compose: unmarshal a commitment proposal: %w", err)
 		}
-		if offer.Locator == c.Locator {
+		if (offer.Locator == c.Locator && !held.Approved()) || resolvedPriorPromise(c, offer) {
 			return true, nil
 		}
 	}
@@ -346,7 +352,7 @@ func (d *CommitmentDispatcher) propose(
 	}
 	raw, err := json.Marshal(CommitmentTaskProposal{
 		SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party,
-		SeatID: seat, PromiserSeatID: c.Seat, DueDate: c.DueDate, Links: c.Links, Quote: c.Quote,
+		SeatID: seat, PromiserSeatID: c.Seat, PromiserUnresolved: c.Seat == nil, DueDate: c.DueDate, Links: c.Links, Quote: c.Quote,
 		Locator: c.Locator, ClaimID: claimID, Body: c.Body, PrivateTo: c.PrivateTo,
 	})
 	if err != nil {

@@ -13,6 +13,7 @@ import (
 
 func TestPersonalDecisionsRequireAnExplicitRecipient(t *testing.T) {
 	reader, colleague := ids.New[ids.UserKind](), ids.New[ids.UserKind]()
+	passport := ids.New[ids.PassportKind]()
 	cases := []struct {
 		name     string
 		proposal row
@@ -22,6 +23,8 @@ func TestPersonalDecisionsRequireAnExplicitRecipient(t *testing.T) {
 		{"colleague promise", row{Kind: kindCommitmentTask, OnBehalfOf: &colleague}, false},
 		{"unassigned promise", row{Kind: kindCommitmentTask}, false},
 		{"agent authority is not assignment", row{Kind: "advance_deal", OnBehalfOf: &reader}, false},
+		{"delegated deal decision", row{Kind: "advance_deal", PassportID: &passport, OnBehalfOf: &reader}, true},
+		{"delegated colleague decision", row{Kind: "send_email", PassportID: &passport, OnBehalfOf: &colleague}, false},
 		{"held send", row{Kind: KindScheduledSendHeld, OnBehalfOf: &reader}, true},
 	}
 	for _, c := range cases {
@@ -35,7 +38,7 @@ func TestPersonalDecisionsRequireAnExplicitRecipient(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	proposal := row{Kind: approvalsubject.KindCounterparty, ProposedChange: body, OnBehalfOf: &colleague}
+	proposal := row{Kind: approvalsubject.KindCounterparty, ProposedChange: body, OnBehalfOf: &colleague, PassportID: &passport}
 	if !requestedFor(proposal, reader.UUID) || requestedFor(proposal, colleague.UUID) {
 		t.Fatal("payload responsibility was replaced by the granting user")
 	}

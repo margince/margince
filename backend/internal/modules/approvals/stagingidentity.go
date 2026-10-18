@@ -302,9 +302,14 @@ func (o Offer) Pending() bool { return o.Status == statusPending }
 // Rejected reports whether a human turned the offer down.
 func (o Offer) Rejected() bool { return o.Status == approvalStatusRejected }
 
+func (o Offer) Approved() bool { return o.Status == approvalStatusApproved }
+
 // OffersForTx reads the offers of this kind against this target, LOCKED, for
 // a caller that must not act around one still waiting as well as one refused.
 func (s *Service) OffersForTx(ctx context.Context, tx pgx.Tx, kind string, targetID ids.UUID) ([]Offer, error) {
+	if err := storekit.LockWriteIdentity(ctx, tx, "approval_offers", kind+":"+targetID.String()); err != nil {
+		return nil, err
+	}
 	// EVERY offer is locked, not only the already-rejected ones: a pending row
 	// is exactly the one a human is about to reject, and leaving it unlocked
 	// would reopen the gap this closes.

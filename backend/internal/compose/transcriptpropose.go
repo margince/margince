@@ -37,7 +37,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -90,8 +89,7 @@ type TranscriptProposer struct {
 	pool     *pgxpool.Pool
 	brain    completer
 	dispatch *CommitmentDispatcher
-	users    *identity.Service
-	contacts *contacts.Store
+	messages *activities.Store
 	now      func() time.Time
 	log      *slog.Logger
 }
@@ -104,15 +102,16 @@ func NewTranscriptProposer(
 ) *TranscriptProposer {
 	return &TranscriptProposer{
 		pool: pool, brain: brain, dispatch: NewCommitmentDispatcher(pool, approval),
-		users: identity.NewService(pool), contacts: contacts.NewStore(InstallationDB(pool)),
-		now: now, log: log,
+		messages: activities.NewStore(InstallationDB(pool)),
+		now:      now, log: log,
 	}
 }
 
 // proposedStep is one next step as the model reports it.
 type proposedStep struct {
-	Summary string `json:"summary"`
-	Owner   string `json:"owner"`
+	PromiserRef string `json:"promiser_ref"`
+	Summary     string `json:"summary"`
+	Owner       string `json:"owner"`
 	// DueDate is the day the transcript says the thing is due, as YYYY-MM-DD,
 	// or empty where it says none.
 	//
@@ -153,19 +152,23 @@ var errRefusedTranscript = errors.New("compose: the reading could not be used")
 // hand-rewritten prompt certifies nothing about what runs.
 //
 //promptvoice:exempt returns next steps and commitments as structured rows quoted from the transcript; the task list that renders them is the surface a reader reads.
-func transcriptRequest(lines []string, meetingDay string, lang string) model.Request {
+func transcriptRequest(lines []string, meetingDay string, lang string, parties []commitmentParty) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder
+	prompt.WriteString(fence.Wrap("Verified participants (reference, role, name, address):\n"+commitmentPartyPrompt(parties, strings.Join(lines, "\n"))) + "\n")
 	prompt.WriteString("One meeting transcript, in order (untrusted). Each line is numbered:\n")
 	for i, line := range lines {
 		prompt.WriteString(fence.WrapAttr("line", strconv.Itoa(i+1), line) + "\n")
 	}
 	fmt.Fprintf(&prompt,
 		`This meeting happened on %s.`+"\n"+
-			`Return JSON: { "proposals": [ { "summary", "owner", "due_date", "source_lines", "confidence" } ] } — `+
+			`Return JSON: { "proposals": [ { "summary", "owner", "promiser_ref", "due_date", "source_lines", "confidence" } ] } — `+
 			`at most %d, and an empty list when the transcript states none. `+
 			`"summary" is one plain sentence naming the thing to be done. `+
-			`"owner" is the party who said they would do it, as the transcript names them. `+
+			`"owner" is the party who promised, as the transcript names them; a speaker may report someone else's promise. `+
+			`"promiser_ref" is that person's verified participant reference. Use "" when the cited clause `+
+			`does not distinguish the person, including same-name or collective attribution, or when no `+
+			`verified participant matches. Never substitute the speaker or the person who logged the meeting. `+
 			`"due_date" is the day it is due, as YYYY-MM-DD, resolving anything said `+
 			`relative to the meeting date above — "by Friday" is the Friday after that day. `+
 			`Use "" when the transcript states no deadline, and when what it states is `+
@@ -196,11 +199,12 @@ func transcriptSchema() json.RawMessage {
 				map[string]schema.Node{
 					"summary":               schema.String(),
 					"owner":                 schema.String(),
+					"promiser_ref":          schema.String(),
 					"due_date":              schema.String(),
 					"source_lines":          schema.Array(schema.Integer()),
 					extractionConfidenceKey: schema.Number(),
 				},
-				"summary", "owner", "due_date", "source_lines", extractionConfidenceKey,
+				"summary", "owner", "promiser_ref", "due_date", "source_lines", extractionConfidenceKey,
 			)),
 		},
 		"proposals",
@@ -211,13 +215,13 @@ func transcriptSchema() json.RawMessage {
 // line one this call actually supplied. The citation check is the whole point —
 // a proposal that cannot point at a line it read is a guess, and staging a
 // guess with a citation shaped like evidence is worse than staging nothing.
-func transcriptShapeValid(lineCount int) ai.Validator {
+func transcriptShapeValid(lineCount int, parties []commitmentParty) ai.Validator {
 	return func(text string) error {
 		var payload transcriptPayload
 		if err := json.Unmarshal([]byte(ai.Unfence(text)), &payload); err != nil {
 			return fmt.Errorf("output is not the required JSON shape: %w", err)
 		}
-		if msg := validateTranscriptPayload(payload, lineCount); msg != "" {
+		if msg := validateTranscriptPayload(payload, lineCount, parties); msg != "" {
 			return errors.New(msg)
 		}
 		return nil
@@ -226,7 +230,7 @@ func transcriptShapeValid(lineCount int) ai.Validator {
 
 // validateTranscriptPayload names the first fidelity violation, or "" when the
 // payload is one this site may act on.
-func validateTranscriptPayload(payload transcriptPayload, lineCount int) string {
+func validateTranscriptPayload(payload transcriptPayload, lineCount int, parties []commitmentParty) string {
 	if payload.Proposals == nil {
 		return "the reply carries no proposals key, so it did not answer the question"
 	}
@@ -236,6 +240,11 @@ func validateTranscriptPayload(payload transcriptPayload, lineCount int) string 
 			len(proposals), maxTranscriptProposals)
 	}
 	for _, step := range proposals {
+		if step.PromiserRef != "" {
+			if _, found := referencedPromiser(step.PromiserRef, parties); !found {
+				return "a proposal names a promiser outside the verified meeting participants"
+			}
+		}
 		if msg := validateProposedStep(step, lineCount); msg != "" {
 			return msg
 		}
@@ -298,9 +307,9 @@ func validProposedDueDate(day string) bool {
 }
 
 // ask puts one transcript to the model and returns what it may act on.
-func (p *TranscriptProposer) ask(ctx context.Context, lines []string, meetingDay string) ([]proposedStep, error) {
-	req := transcriptRequest(lines, meetingDay, identity.BaseLanguageForPrompt(ctx, p.pool))
-	validate := transcriptShapeValid(len(lines))
+func (p *TranscriptProposer) ask(ctx context.Context, lines []string, meetingDay string, parties []commitmentParty) ([]proposedStep, error) {
+	req := transcriptRequest(lines, meetingDay, identity.BaseLanguageForPrompt(ctx, p.pool), parties)
+	validate := transcriptShapeValid(len(lines), parties)
 	resp, err := ai.Ask(ctx, p.brain, req, validate)
 	if err != nil {
 		if ai.ModelDeclined(err) {
@@ -315,7 +324,7 @@ func (p *TranscriptProposer) ask(ctx context.Context, lines []string, meetingDay
 	if err := json.Unmarshal([]byte(ai.Unfence(resp.Text)), &payload); err != nil {
 		return nil, fmt.Errorf("%w: unparseable model output: %w", errRefusedTranscript, err)
 	}
-	if msg := validateTranscriptPayload(payload, len(lines)); msg != "" {
+	if msg := validateTranscriptPayload(payload, len(lines), parties); msg != "" {
 		return nil, fmt.Errorf("%w: %s", errRefusedTranscript, msg)
 	}
 	return payload.proposals(), nil

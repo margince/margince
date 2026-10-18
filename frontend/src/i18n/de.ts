@@ -2475,6 +2475,7 @@ export const de = {
   "approval.commitment.effect": "Bei Freigabe",
   "approval.commitment.unnamedColleague":
     "Name des Teammitglieds nicht verfügbar",
+  "approval.commitment.unverifiedNamed": "Nicht bestätigt: {name}",
   "approval.commitment.unresolved": "Zusagende Person ungeklärt",
   "approval.commitment.assignNamed": "Erstellt eine Aufgabe für {name}.",
   "approval.commitment.assignDecider":

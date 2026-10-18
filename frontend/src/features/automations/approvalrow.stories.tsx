@@ -201,7 +201,11 @@ export const UnresolvedPromiser: Story = {
       subject={approval({
         kind: "commitment_task",
         summary: "Confirm the delivery date",
-        proposed_change: { summary: "Confirm the delivery date" },
+        proposed_change: {
+          summary: "Confirm the delivery date",
+          party: "Mira",
+          promiser_unresolved: true,
+        },
       })}
     />
   ),

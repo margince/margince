@@ -23,6 +23,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -44,7 +46,7 @@ func newDigestReviewSource(pool *pgxpool.Pool, svc *approvals.Service) capture.D
 		if err != nil {
 			return capture.DigestReviewCounts{}, err
 		}
-		waiting, err := countOrNoneVisible(pending.CountPending(ctx, true))
+		waiting, err := countOrNoneVisible(pending.CountPending(ctx, attention.ApprovalQuery{RequestedForReader: true}))
 		if err != nil {
 			return capture.DigestReviewCounts{}, err
 		}

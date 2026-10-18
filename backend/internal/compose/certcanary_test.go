@@ -225,11 +225,8 @@ func (c *recordingCompleter) Complete(_ context.Context, req model.Request) (mod
 // nothing to do with the instruction channel, and the gate would then measure
 // the refusal instead of the prompt.
 //
-// So the two are told apart by asking the site rather than by guessing: each
-// single-word field is stamped ALONE and offered to the site's own Prepare, and
-// it joins the run only if the site still accepts it. A closed vocabulary is
-// exactly the thing that refuses a value outside it, and the site's validator
-// is the only authority on which of its fields those are.
+// Each single-word probe preserves the accepted probes before it. Related
+// fixture references must still resolve when the combined request is prepared.
 //
 // What this does NOT establish is that every stamped single-word field reached
 // the model at all. A field the site reads for its own purposes and never sends
@@ -268,7 +265,11 @@ func plantCanary(fixture json.RawMessage, accepts func(json.RawMessage) bool, co
 
 	freeWords := map[int]bool{}
 	for _, at := range words {
-		probe, err := stampStringLeaves(fixture, func(leaf fixtureLeaf) bool { return leaf.index == at })
+		// References may have aliases: changing either alone can be valid while
+		// changing both loses the last reference the expected answer names.
+		probe, err := stampStringLeaves(fixture, func(leaf fixtureLeaf) bool {
+			return prose[leaf.index] || freeWords[leaf.index] || leaf.index == at
+		})
 		if err != nil {
 			return nil, 0, err
 		}
@@ -350,4 +351,29 @@ func stampStringLeaves(fixture json.RawMessage, keep func(fixtureLeaf) bool) (js
 		return nil, err
 	}
 	return stamped, nil
+}
+
+func TestCanaryStampingPreservesAReferencedIdentityWithAliases(t *testing.T) {
+	fixture := json.RawMessage(`{"aliases":["buyer","buyer"],"body":"A customer asks for pricing."}`)
+	accepts := func(raw json.RawMessage) bool {
+		var value struct {
+			Aliases []string `json:"aliases"`
+		}
+		if err := json.Unmarshal(raw, &value); err != nil {
+			return false
+		}
+		for _, alias := range value.Aliases {
+			if alias == "buyer" {
+				return true
+			}
+		}
+		return false
+	}
+	stamped, prose, err := plantCanary(fixture, accepts, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !accepts(stamped) || prose != 1 || strings.Count(string(stamped), canary) != 2 {
+		t.Fatalf("reference or free-text probes lost: %s, prose=%d", stamped, prose)
+	}
 }

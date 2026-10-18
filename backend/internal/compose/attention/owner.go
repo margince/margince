@@ -292,33 +292,13 @@ func anyOwnerNeedsAName(queue []crmcontracts.WorklistItem) bool {
 	return false
 }
 
-// assigneeID is the assignee as the SCOPE filters read it.
-//
-// The same value ownerFromAssignee turns into the wire's answer, in the shape
-// answersTo wants: a zero id where nobody holds the row. Both readings come off
-// this one field so a task cannot be unowned to the filters and owned to the
-// client — which is how an outside-team assignee reached both the page and the
-// wire while `keepTeams` counted the row as nobody's.
-func assigneeID(assignee *openapi_types.UUID) ids.UUID {
-	if assignee == nil {
-		return ids.UUID{}
+// A missing owner is unassigned only when the owning record was readable.
+func waitingOwner(owner ids.UUID, known bool) ownerRef {
+	if !owner.IsZero() {
+		return ownedBy(owner)
 	}
-	return ids.UUID(*assignee)
-}
-
-// waitingOwner is the waiting lane's answer, where a zero id is ambiguous.
-//
-// Every other owner-column lane can read a zero as "nobody has taken it". This
-// one cannot: its eligibility is qualified through an ungated lookup and its
-// owner through a visibility-gated one, so a row whose owning record the reader
-// may not open reaches here indistinguishable from an unowned customer.
-//
-// It says nothing in that case. A withheld owner reported as `unassigned` is a
-// claim the workspace never made — somebody does owe that reply — and the
-// reader has nothing on the row to tell them the difference.
-func waitingOwner(owner ids.UUID) ownerRef {
-	if owner.IsZero() {
-		return ownerRef{kind: ownerUnreadable}
+	if known {
+		return unassigned()
 	}
-	return ownedBy(owner)
+	return ownerRef{kind: ownerUnreadable}
 }

@@ -1,0 +1,22 @@
+name: meeting_speaker_reports_customer_promise
+task: transcript_propose
+site: next_steps
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture:
+  participants:
+    - {key: mira, kind: seat, role: organizer, name: Mira Chen, address: mira@example.test}
+    - {key: ines, kind: contact, role: attendee, name: Ines Huber, address: ines@example.test}
+  lines:
+    - 'Mira Chen: Ines Huber agreed to send the payment by Friday.'
+    - 'Ines Huber: Yes, that is agreed.'
+expect:
+  outcome: accepted
+  answer:
+    - {line: 1, promiser: ines}
+  rubric: >
+    Ines made the payment promise; Mira reports it. Use the verified contact
+    reference for Ines and cite line 1. The speaker and organizer must not inherit
+    a promise made by the customer. The confirmation on line 2 adds evidence,
+    not a second promise.
+  bands: {certified_min: 70, degraded_min: 50, floor: 40}

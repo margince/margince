@@ -26,15 +26,7 @@ import (
 // on the decision's audit row, which is where "who approved this" belongs.
 const transcriptProposalActor = "agent:transcript-proposer"
 
-// commitmentFrom names who made one promise a transcript states.
-//
-// The owner arrives as PROSE — "Lena Fischer", "Frédéric", "the team" —
-// because that is what a transcript states. A colleague is matched strictly
-// (identity.ResolveColleague): an exact name or email, one live seat, or
-// nobody. Failing that, a contact linked to the meeting under exactly that name
-// is the customer who promised. A name that is neither, or both, stays unnamed,
-// and the rule proposes it rather than guessing whose it is: a customer sharing
-// a colleague's name must not have their promise written as our task.
+// commitmentFrom rechecks the quoted promiser against the meeting participants.
 func (p *TranscriptProposer) commitmentFrom(
 	ctx context.Context, tx pgx.Tx, step proposedStep,
 	reading activities.TranscriptReading, activityID ids.ActivityID, asOf time.Time,
@@ -52,40 +44,24 @@ func (p *TranscriptProposer) commitmentFrom(
 		DueDate:          step.DueDate,
 		Confidence:       float64(step.Confidence),
 		Links:            reading.Links,
-		Body:             transcriptCommitmentBody(owner, step.SourceLines),
 		Evidence:         stepEvidence(step, reading.Lines, activityID),
 	}
 	reader := extractorContext(ctx, transcriptProposalActor)
-	kind, party := claimKindOurs, "name:"+strings.ToLower(owner)
-	colleague, found, err := p.users.ResolveColleague(reader, owner)
+	parties, err := p.messages.PartiesOf(reader, tx, activityID.UUID)
 	if err != nil {
 		return Commitment{}, err
 	}
-	linked := linkedContacts(reading.Links)
-	contact, named, err := p.contacts.ContactNamedAmong(reader, tx, linked, owner)
-	if err != nil {
-		return Commitment{}, err
-	}
-	switch {
-	case found && !named:
-		seat := colleague.UserID
-		c.Seat, party = &seat, "seat:"+seat.String()
-	case named && !found:
-		c.Theirs, kind, party = &contact, claimKindTheirs, "contact:"+contact.String()
-	}
-	// A colleague's promise is filed on the customer's record too, when the
-	// meeting names exactly one; with several, nothing says which was promised.
-	// An unnamed one is filed nowhere until a human says whose it is.
-	if c.Seat != nil && len(linked) == 1 {
-		promisedTo := ids.From[ids.ContactKind](linked[0])
-		c.PromisedTo = &promisedTo
-	}
+	verified := verifiedCommitmentParties(parties)
+	kind, party := attributeCommitment(&c, step.PromiserRef, verified)
+	c.NeedsConfirmation = !transcriptPromiserSpoke(step, reading.Lines, verified)
+	c.Body = transcriptCommitmentBody(c.Party, step.SourceLines)
 	// The first cited line is part of the span: the same words said twice in
 	// one meeting are two promises.
 	span := cited
 	if len(step.SourceLines) > 0 {
 		span = strconv.Itoa(step.SourceLines[0]) + ":" + cited
 	}
+	c.Span = span
 	c.Locator = commitmentLocator(activityID.UUID, kind, party, span)
 	return c, nil
 }
@@ -113,7 +89,7 @@ func transcriptCommitmentBody(owner string, sourceLines []int) string {
 	if len(lines) > 1 {
 		where = "lines " + strings.Join(lines, ", ")
 	}
-	return fmt.Sprintf("%s committed to this in the meeting transcript (%s).", owner, where)
+	return fmt.Sprintf("Promiser: %s. Commitment in the meeting transcript (%s).", owner, where)
 }
 
 // transcriptReadDetail says what a reading produced besides its questions. A
@@ -168,4 +144,21 @@ func transcriptWithheldReason(outcome CommitmentOutcome) string {
 	default:
 		return "source is no longer available; no work created"
 	}
+}
+
+func transcriptPromiserSpoke(step proposedStep, lines []string, parties []commitmentParty) bool {
+	promiser, found := referencedPromiser(step.PromiserRef, parties)
+	if !found || strings.TrimSpace(promiser.Name) == "" {
+		return false
+	}
+	for _, number := range step.SourceLines {
+		if number < 1 || number > len(lines) {
+			continue
+		}
+		speaker, _, labeled := strings.Cut(lines[number-1], ":")
+		if labeled && strings.EqualFold(strings.TrimSpace(speaker), strings.TrimSpace(promiser.Name)) {
+			return true
+		}
+	}
+	return false
 }

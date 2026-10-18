@@ -47,7 +47,7 @@ type attentionApprovals struct{ svc *approvals.Service }
 
 func (a attentionApprovals) ListWire(ctx context.Context, in attention.ApprovalQuery) ([]crmcontracts.Approval, error) {
 	status := in.Status
-	rows, _, err := a.svc.ListWire(ctx, approvals.ListInput{Status: &status, Limit: in.Limit, RequestedForReader: in.RequestedForReader})
+	rows, _, err := a.svc.ListWire(ctx, approvals.ListInput{Status: &status, Limit: in.Limit, RequestedForReader: in.RequestedForReader, RequestedForOwners: in.RequestedForOwners, OnlyUnassigned: in.OnlyUnassigned})
 	return rows, err
 }
 
@@ -59,12 +59,14 @@ func (a attentionApprovals) ListWire(ctx context.Context, in attention.ApprovalQ
 // result means "this many or more". The lane it feeds is bounded far below the
 // cap, so the number stops being exact only once it is already large enough to
 // mean the same thing to a reader.
-func (a attentionApprovals) CountPending(ctx context.Context, requestedForReader bool) (int, error) {
+func (a attentionApprovals) CountPending(ctx context.Context, in attention.ApprovalQuery) (int, error) {
 	status := stagedAndUndecided
 	rows, _, err := a.svc.ListWire(ctx, approvals.ListInput{
 		Status:             &status,
 		Limit:              approvals.PendingScanCap,
-		RequestedForReader: requestedForReader,
+		RequestedForReader: in.RequestedForReader,
+		RequestedForOwners: in.RequestedForOwners,
+		OnlyUnassigned:     in.OnlyUnassigned,
 	})
 	if err != nil {
 		return 0, err

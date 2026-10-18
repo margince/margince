@@ -64,3 +64,14 @@ func TestAWaitNobodyOwnsIsNotPersonalWork(t *testing.T) {
 		}
 	}
 }
+
+func TestAReadableUnassignedWaitIsDistinctFromAWithheldOwner(t *testing.T) {
+	visible := classifyWaiting(WaitingCustomer{OwnerKnown: true}, readInstant)
+	withheld := classifyWaiting(WaitingCustomer{}, readInstant)
+	if visible.ownerRef.kind != ownerNobody || withheld.ownerRef.kind != ownerUnreadable {
+		t.Fatal("unassigned responsibility was confused with inaccessible ownership")
+	}
+	if ownedByReader(visible, reader()) {
+		t.Fatal("unassigned work became personal")
+	}
+}

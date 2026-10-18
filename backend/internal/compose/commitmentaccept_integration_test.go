@@ -46,7 +46,7 @@ func stageMailedProposal(t *testing.T) mailedProposal {
 
 	reply, err := json.Marshal(map[string]any{"events": []map[string]any{{
 		"kind": "commitment_made", "message_id": message.String(), "summary": "Send the revised pricing",
-		"quote": mailedPromise, "due_date": "", "confidence": 0.75,
+		"quote": mailedPromise, "due_date": "", "confidence": 0.75, "promiser_ref": "seat:" + e.Rep2.String(),
 	}}})
 	if err != nil {
 		t.Fatalf("building the model reply: %v", err)

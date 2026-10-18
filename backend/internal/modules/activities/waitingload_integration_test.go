@@ -315,3 +315,47 @@ func TestAWaitNamesTheOwnerOfTheRecordItNames(t *testing.T) {
 			got.DealID, got.OwnerID, secondOwner)
 	}
 }
+
+func TestAReadableWaitingRecordCanBeExplicitlyUnassigned(t *testing.T) {
+	e := setupLoad(t)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Unassigned buyer', 'seed', 'system')`, contact)
+	activity := e.seedWait(t, "Question about pricing", "contact_id", contact)
+	row := e.waitFor(t, activity)
+	if !row.OwnerKnown || !row.OwnerID.IsZero() {
+		t.Fatalf("readable unassigned ownership lost: known=%v owner=%s", row.OwnerKnown, row.OwnerID)
+	}
+}
+
+func TestAnUnreadableWaitingOwnerIsNotReportedAsUnassigned(t *testing.T) {
+	e := setupLoad(t)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by) VALUES ($1, 'Private buyer', $2, 'seed', 'system')`, contact, e.other)
+	e.exec(t, `UPDATE contact SET visibility='owner', captured_by=$2 WHERE id=$1`, contact, "human:"+e.other.String())
+	activity := e.seedWait(t, "Question about pricing", "contact_id", contact)
+	visible := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Visible unassigned buyer', 'seed', 'system')`, visible)
+	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id) VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), activity, visible)
+	ctx := e.as()
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		t.Fatal("fixture has no reader")
+	}
+	actor.Permissions.RowScope = principal.RowScopeOwn
+	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, user_id, address) VALUES ($1, $2, 'to', $3, 'rep@example.test')`, ids.NewV7(), activity, e.rep)
+	ctx = principal.WithActor(ctx, actor)
+	rows, err := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).WaitingReplies(ctx, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range rows {
+		if row.ActivityID != activity {
+			continue
+		}
+		if row.OwnerKnown || !row.OwnerID.IsZero() {
+			t.Fatal("unreadable ownership was disclosed or called unassigned")
+		}
+		return
+	}
+	t.Fatal("the visible message disappeared with its unreadable contact")
+}

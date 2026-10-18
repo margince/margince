@@ -244,6 +244,16 @@ describe("commitment responsibility", () => {
       "Creates a task assigned to Mira.",
     ],
     [
+      { promiser_seat_id: "missing-id", party: "Theo" },
+      "Theo",
+      "Creates a task assigned to the person who approves.",
+    ],
+    [
+      { party: "Mira", promiser_unresolved: true },
+      "Unverified: Mira",
+      "Creates a task assigned to the person who approves.",
+    ],
+    [
       { promiser_seat_id: "missing-id" },
       "Colleague name unavailable",
       "Creates a task assigned to the person who approves.",

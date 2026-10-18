@@ -128,6 +128,8 @@ const statusPending = "pending"
 type ListInput struct {
 	// RequestedForReader narrows personal attention before pagination.
 	RequestedForReader bool
+	RequestedForOwners []ids.UUID
+	OnlyUnassigned     bool
 	Status             *string
 	Kind               *string
 	TargetType         *string
@@ -250,7 +252,7 @@ func (s *Service) List(ctx context.Context, in ListInput) ([]row, storekit.Page,
 // re-filtering the newest rows on every request.
 func scanInbox(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInput, start *keysetStart) ([]row, storekit.Page, error) {
 	decide := func(a row) (bool, error) {
-		if in.RequestedForReader && !requestedFor(a, p.UserID) {
+		if !requestedInScope(a, p.UserID, in) {
 			return false, nil
 		}
 		return decidable(ctx, tx, p, a)
@@ -311,7 +313,7 @@ func listForTarget(ctx context.Context, tx pgx.Tx, p principal.Principal, in Lis
 		scanned = &batch[len(batch)-1]
 	}
 	granted := func(a row) (bool, error) {
-		if in.RequestedForReader && !requestedFor(a, p.UserID) {
+		if !requestedInScope(a, p.UserID, in) {
 			return false, nil
 		}
 		return proposalReadable(ctx, tx, p, a)

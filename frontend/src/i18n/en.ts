@@ -2527,6 +2527,7 @@ export const en = {
   "approval.commitment.promiser": "Promised by",
   "approval.commitment.effect": "On approval",
   "approval.commitment.unnamedColleague": "Colleague name unavailable",
+  "approval.commitment.unverifiedNamed": "Unverified: {name}",
   "approval.commitment.unresolved": "Promiser unresolved",
   "approval.commitment.assignNamed": "Creates a task assigned to {name}.",
   "approval.commitment.assignDecider":
