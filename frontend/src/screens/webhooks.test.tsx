@@ -357,6 +357,34 @@ describe("WebhooksCard", () => {
   });
 });
 
+// React reports an invalid element nesting (a block inside a paragraph) as a
+// console error, on every load of the page that draws it.
+describe("WebhooksCard — markup", () => {
+  const states: ReadonlyArray<
+    readonly [string, GrantSpec, number, boolean, string]
+  > = [
+    ["a list the seat can manage", WEBHOOK_OPERATOR, 200, true, "example.test"],
+    ["a list the seat only reads", {}, 200, true, "example.test"],
+    ["a deployment without a signing key", {}, 200, false, "example.test"],
+    ["a deployment answering not configured", {}, 503, false, "enabled"],
+  ];
+  it.each(states)(
+    "nests validly in %s",
+    async (_name, allow, status, enabled, text) => {
+      const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+      vi.stubGlobal("fetch", backendFor(allow, status, enabled));
+      render(<WebhooksCard />);
+
+      await waitFor(() => expect(document.body.textContent).toContain(text));
+      const nesting = errors.mock.calls
+        .map((call) => call.join(" "))
+        .filter((line) => line.includes("cannot be a descendant"));
+      errors.mockRestore();
+      expect(nesting).toEqual([]);
+    },
+  );
+});
+
 describe("WebhooksCard — archive", () => {
   it("confirms then DELETEs /webhook-subscriptions/{id}", async () => {
     const user = userEvent.setup();

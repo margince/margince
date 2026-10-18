@@ -9245,7 +9245,7 @@ export const en = {
   "cf.edit": "Edit label",
   "cf.archive": "Archive field",
   "cf.archived":
-    "“{label}” archived. It is hidden from new records, kept in audit and history, and can be restored.",
+    "“{label}” archived. It is hidden from new records and kept in audit and history. Archiving cannot be undone.",
   "cf.renamePrompt": "New label",
   "cf.renamed": "Renamed to “{label}”",
   "cf.audit.title": "Recent field changes",

@@ -14,6 +14,7 @@ import {
 } from "../../components/listquery";
 import { useOwnerChips } from "../../components/ownerdials";
 import { ErrorLine } from "../../design-system/errorline";
+import { currencyOptions } from "../../format/currencychoices";
 import { formatNumber } from "../../format/format";
 import { translatePlural, useLocale, useT } from "../../i18n";
 import { throwProblem, unwrap } from "../../lib/problem";
@@ -141,10 +142,7 @@ function DealCreateAction({
           label: "create.currency",
           type: "select",
           required: true,
-          options: ["EUR", "USD", "GBP", "CHF"].map((code) => ({
-            value: code,
-            label: code,
-          })),
+          options: currencyOptions(),
         },
         {
           key: "stage_id",

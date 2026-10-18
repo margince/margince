@@ -38,11 +38,8 @@ import {
   useDismissDealSuggestion,
 } from "./dealsuggestions.queries";
 import "./dealsuggestion.css";
+import { currencyOptions } from "../../format/currencychoices";
 import { usePipelines } from "./pipelines.queries";
-
-// The currencies a rep can pick without typing one, plus whatever the
-// suggestion already carries.
-const COMMON_CURRENCIES = ["EUR", "USD", "GBP", "CHF"];
 
 function confidenceLevel(confidence: number): ConfidenceLevel {
   if (confidence >= 0.8) {
@@ -263,7 +260,6 @@ export function AcceptSuggestionDialog({
     pipelines.data?.find((pipeline) => pipeline.id === suggestion.pipeline_id)
       ?.stages ?? []
   ).filter((stage) => stage.semantic === "open");
-  const currencies = [...new Set([...COMMON_CURRENCIES, draft.currency])];
   const set = (patch: Partial<Draft>) =>
     setDraft((current) => ({ ...current, ...patch }));
   const submit = () =>
@@ -320,10 +316,7 @@ export function AcceptSuggestionDialog({
             {(control) => (
               <Select
                 {...control}
-                options={currencies.map((code) => ({
-                  value: code,
-                  label: code,
-                }))}
+                options={currencyOptions(draft.currency)}
                 value={draft.currency}
                 onChange={(currency) => set({ currency })}
               />

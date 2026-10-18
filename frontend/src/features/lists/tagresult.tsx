@@ -4,6 +4,7 @@
 import { skipToken, useQuery } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
 import { Building2, Contact, Handshake, UserPlus } from "lucide-react";
+import { useEffect } from "react";
 
 import { api } from "../../api/client";
 import { Button } from "../../design-system/atoms";
@@ -14,7 +15,7 @@ import { isTagTone } from "../../design-system/tagpill";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
+import { navigate, navigateReplacing } from "../../lib/router";
 import "./tagresult.css";
 
 /**
@@ -49,6 +50,13 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
       : skipToken,
   });
 
+  // `#/tags` names no tag, and the tags a reader can find are listed in
+  // Settings. A redirect, so Back never lands on the empty address again.
+  useEffect(() => {
+    if (!tagID) {
+      navigateReplacing({ screen: "settings", id: "tags" });
+    }
+  }, [tagID]);
   if (!tagID || tag.isPending) {
     return null;
   }

@@ -26,6 +26,7 @@ import { useMe } from "../../lib/session";
 import { ArchiveAction } from "../../screens/archive";
 import { billingOf, billingPatchOf } from "../../screens/billingclassification";
 import "../lists/listsection.css";
+import { currencyOptions } from "../../format/currencychoices";
 
 type Product = components["schemas"]["Product"];
 
@@ -86,10 +87,7 @@ function productFields(t: Translator): CreateField[] {
       label: "product.currency",
       type: "select",
       required: true,
-      options: ["EUR", "USD", "GBP", "CHF"].map((c) => ({
-        value: c,
-        label: c,
-      })),
+      options: currencyOptions(),
     },
     { key: "default_tax_rate", label: "product.taxRate", type: "number" },
     {

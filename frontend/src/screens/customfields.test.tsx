@@ -14,7 +14,9 @@ import type { components } from "../api/schema";
 import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider, translate } from "../i18n";
+import { de } from "../i18n/de";
 import { en } from "../i18n/en";
+import { vi as viCatalog } from "../i18n/vi";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { CustomFieldsAdmin, FieldBuilder } from "./customfields";
 import { AuditRail, FieldTable } from "./customfields.table";
@@ -646,9 +648,18 @@ describe("CustomFieldsAdmin", () => {
     );
     const retire = calls.find((call) => call.url.includes("/retire"));
     expect(retire?.url).toContain("/custom-fields/d1/retire");
-    await waitFor(() =>
-      expect(screen.getByText(/archived/)).toBeInTheDocument(),
-    );
+    // Retirement is terminal: no route restores a field, so the toast must not
+    // promise one.
+    const toast = await screen.findByText(/archived/);
+    expect(toast.textContent).not.toMatch(/restore/i);
+  });
+
+  it("promises no restore in any language, since retirement is terminal", () => {
+    for (const catalog of [en, de, viCatalog]) {
+      expect(catalog["cf.archived"]).not.toMatch(
+        /restore|wiederherstell|khôi phục/i,
+      );
+    }
   });
 
   it("names the Live Lists that filter on a field before it is archived, and only counts the rest", async () => {

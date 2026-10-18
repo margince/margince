@@ -56,12 +56,13 @@ func AnalyticsSchemaFor(ctx context.Context) analyticsquery.Schema {
 			BaseWhere: granted.baseWhere,
 			Fields:    map[string]analyticsquery.Field{},
 		}
-		addFields(entity.Fields, granted.dimensions, analyticsquery.KindDimension)
+		addFields(entity.Fields, withoutKeys(granted.dimensions, granted.rowKeys), analyticsquery.KindDimension)
 		addFields(entity.Fields, granted.measures, analyticsquery.KindMeasure)
 		// Narrowed by grant, not spec.filters. A filter reading another record
 		// type owes that type's read grant, and naming one the caller lacks
 		// would advertise a narrowing that answers 403.
 		addFields(entity.Fields, grantedFilters(ctx, spec), analyticsquery.KindFilter)
+		addFields(entity.Fields, onlyKeys(granted.dimensions, granted.rowKeys), analyticsquery.KindFilter)
 		// An entity with nothing left to name is not offered. A population a
 		// caller can see the existence of but ask nothing about is a name that
 		// only tells them a report exists.
@@ -71,6 +72,28 @@ func AnalyticsSchemaFor(ctx context.Context) analyticsquery.Schema {
 		entities[key] = entity
 	}
 	return analyticsquery.Schema{Entities: entities, Version: schemaVersion(entities)}
+}
+
+// withoutKeys is from less the named keys.
+func withoutKeys(from map[string]string, keys []string) map[string]string {
+	out := make(map[string]string, len(from))
+	for name, expr := range from {
+		if !slices.Contains(keys, name) {
+			out[name] = expr
+		}
+	}
+	return out
+}
+
+// onlyKeys is the named keys of from.
+func onlyKeys(from map[string]string, keys []string) map[string]string {
+	out := make(map[string]string, len(keys))
+	for _, name := range keys {
+		if expr, ok := from[name]; ok {
+			out[name] = expr
+		}
+	}
+	return out
 }
 
 func addFields(into map[string]analyticsquery.Field, from map[string]string, kind analyticsquery.FieldKind) {

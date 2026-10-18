@@ -169,6 +169,11 @@ type reportSpec struct {
 	dimensions   map[string]string
 	measures     map[string]string
 	filters      map[string]string
+	// rowKeys are the dimensions that each name one row. A listing report
+	// groups by them to list its records. A typed question that does so asks
+	// for groups of one, which the floor withholds every time. They are
+	// offered to a typed question to narrow by, never to group by.
+	rowKeys []string
 	// nativeMeasures are the measures denominated in the ROW's own currency
 	// rather than in one the whole answer shares. Summing one across a grouping
 	// that does not split by currency adds euros to dollars and returns a plain

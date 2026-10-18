@@ -1,6 +1,7 @@
 import type { components } from "../../api/schema";
 import { Field } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
+import { currencyOptions } from "../../format/currencychoices";
 import { useT } from "../../i18n";
 
 type Offer = components["schemas"]["Offer"];
@@ -50,12 +51,7 @@ export function OfferCurrencyField({
           disabled={priced > 0}
           value={value}
           onChange={onChange}
-          // A currency code is its own label — an ISO 4217 code is not copy, so
-          // there is nothing to translate.
-          options={["EUR", "USD", "GBP", "CHF"].map((code) => ({
-            value: code,
-            label: code,
-          }))}
+          options={currencyOptions(value)}
         />
       )}
     </Field>

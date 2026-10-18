@@ -183,3 +183,34 @@ func TestAPopulationWhoseEntityTheSeatCannotReadIsAbsent(t *testing.T) {
 		t.Fatal("no prebuilt report reads deals, so this test swept nothing")
 	}
 }
+
+// A grouping that names one row answers a group of one, below any floor.
+// The menu would offer a choice that can only ever say "withheld".
+func TestNoGroupingNamesOneRow(t *testing.T) {
+	t.Parallel()
+	schema := AnalyticsSchemaFor(seatWith("deal", "activity", "contact", "company", "project", "partner"))
+	for _, name := range []string{"project-commitments", "projects-gone-quiet"} {
+		entity, ok := schema.Entities[name]
+		if !ok {
+			t.Fatalf("%s is absent from a vocabulary that holds every grant", name)
+		}
+		for _, field := range []string{fieldProjectID, fieldName, fieldKey} {
+			got, named := entity.Fields[field]
+			if !named || got.Kind != analyticsquery.KindFilter {
+				t.Errorf("%s.%s = %+v, want a field to narrow by and not to group by", name, field, got)
+			}
+		}
+		for _, field := range []string{fieldPhase, fieldOwnerID, fieldCompanyID} {
+			if got := entity.Fields[field]; got.Kind != analyticsquery.KindDimension {
+				t.Errorf("%s.%s = %+v, want it still offered as a grouping", name, field, got)
+			}
+		}
+	}
+	for name, entity := range schema.Entities {
+		for field, def := range entity.Fields {
+			if def.Kind == analyticsquery.KindDimension && def.Expr == colRowID {
+				t.Errorf("%s.%s groups by the row's own id", name, field)
+			}
+		}
+	}
+}

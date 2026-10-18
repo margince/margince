@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { CreateAction, type CreateField } from "../../components/create";
+import { currencyOptions } from "../../format/currencychoices";
 import { toMinorUnits } from "../../format/minorunits";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
@@ -83,10 +84,7 @@ export function NewDealAction({
       label: "create.currency",
       type: "select",
       required: true,
-      options: ["EUR", "USD", "GBP", "CHF"].map((code) => ({
-        value: code,
-        label: code,
-      })),
+      options: currencyOptions(),
     },
     {
       key: "stage_id",

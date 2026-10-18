@@ -84,6 +84,9 @@ func projectRowDimensions() map[string]string {
 	}
 }
 
+// projectRowKeys are the project dimensions that each name one project.
+var projectRowKeys = []string{fieldProjectID, fieldName, fieldKey}
+
 // colProjectCustomer is the company a project report GROUPS by: its customer,
 // the first company attached with that role.
 //
@@ -161,6 +164,7 @@ func projectCommitmentsSpec() reportSpec {
 		// breakdown by owner, so it answers whole.
 		population: measureEveryReadableRow,
 		dimensions: projectRowDimensions(),
+		rowKeys:    projectRowKeys,
 		measures: map[string]string{
 			measureOpenCommitments: openCommitmentsExpr,
 			measureOverdue:         overdueCommitmentsExpr,
@@ -200,6 +204,7 @@ func projectsGoneQuietSpec() reportSpec {
 		// Install-wide, as projectCommitmentsSpec.
 		population: measureEveryReadableRow,
 		dimensions: dimensions,
+		rowKeys:    projectRowKeys,
 		measures:   map[string]string{},
 		filters: map[string]string{
 			fieldCompanyID: colProjectAnyCompany,

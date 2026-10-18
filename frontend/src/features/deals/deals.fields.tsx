@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { CreateField } from "../../components/create";
+import { currencyOptions } from "../../format/currencychoices";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
 import type { AcquisitionSource } from "../../screens/acquisitionsources.queries";
@@ -271,10 +272,6 @@ export function dealEditFields(
     currency: string;
   },
 ): CreateField[] {
-  const currencies = ["EUR", "USD", "GBP", "CHF"];
-  if (opts.currency && !currencies.includes(opts.currency)) {
-    currencies.unshift(opts.currency);
-  }
   const ownerOptions = [
     ...(opts.currentOwner && opts.currentOwner !== opts.me
       ? [{ value: opts.currentOwner, label: t("deal.ownerKeep") }]
@@ -300,7 +297,7 @@ export function dealEditFields(
       label: "create.currency",
       type: "select",
       required: true,
-      options: currencies.map((c) => ({ value: c, label: c })),
+      options: currencyOptions(opts.currency),
     },
     {
       key: "owner_id",
