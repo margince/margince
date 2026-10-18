@@ -8,11 +8,18 @@ import { useAcquisitionSources } from "../../screens/acquisitionsources.queries"
 import { RecordCustomFields } from "../../screens/recordcustomfields";
 import { saveRecordEdit } from "../../screens/recordedit";
 import { RecordListsPanel } from "../../screens/recordlists";
-import { useRecordOwners } from "../../screens/recordreferences";
+import {
+  useOwnerPicker,
+  useRecordOwners,
+} from "../../screens/recordreferences";
 import { RecordTeam } from "../../screens/recordteam";
 import { TagsPanel } from "../lists/tagspanel";
 import { DealEmailAside } from "./dealemail";
-import { resolveDealProject, useProjectsOfCompany } from "./dealproject";
+import {
+  NEW_PROJECT_OWNER,
+  resolveDealProject,
+  useProjectsOfCompany,
+} from "./dealproject";
 import type { Deal } from "./deals";
 import {
   attributedPartner,
@@ -56,6 +63,7 @@ export function DealDetails({
   const currentProject = deal.project_id
     ? { id: deal.project_id, label: projectById.name ?? deal.project_id }
     : undefined;
+  const projectOwner = useOwnerPicker(null);
   const seeded = { ...dealEditRecord(deal), original: deal };
   const canEdit = useCanWriteRecord("deal", deal) && !deal.archived_at;
   const owners = useRecordOwners(deal.owner_id);
@@ -93,7 +101,12 @@ export function DealDetails({
           },
           {
             label: t("create.relatedCompany"),
-            keys: ["company_id", "project_id", "new_project_name"],
+            keys: [
+              "company_id",
+              "project_id",
+              "new_project_name",
+              NEW_PROJECT_OWNER,
+            ],
           },
           {
             label: t("deal.partnerCompany"),
@@ -137,6 +150,7 @@ export function DealDetails({
             currentProject:
               formCompany === deal.company_id ? currentProject : undefined,
             company: formCompany,
+            owner: projectOwner,
           }),
         ]}
         record={seeded}

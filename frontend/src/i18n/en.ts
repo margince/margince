@@ -1602,6 +1602,7 @@ export const en = {
   // never becomes a link, because a name that did not load cannot be trusted as
   // a destination.
   "ref.nameLoadFailed": "Name did not load",
+  "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
   "ref.notInRoster": "Currently assigned (no longer in the user list)",
 
   // A record search that ANSWERED and found nothing. Distinct from a search
@@ -13456,6 +13457,7 @@ export const en = {
   "project.advance.reason": "Reason",
   "project.advance.reasonRequired": "A closed project needs a reason.",
   "deal.project": "Project",
+  "deal.newProjectOwner": "Project owner",
   "deal.projectNew": "New project…",
   "deal.projectWithheld": "Project withheld",
   "deal.projectNeedsCompany":

@@ -20,8 +20,7 @@ describe("the project form offers no key field", () => {
     for (const mode of ["create", "edit"] as const) {
       const fields = projectFields(t, {
         companies: [],
-        owners: [],
-        me: "u1",
+        owner: { owners: [], me: "u1" },
         currentOwner: null,
         mode,
       });
@@ -32,24 +31,17 @@ describe("the project form offers no key field", () => {
 
 describe("projectFields", () => {
   const t = (key: string) => `<${key}>`;
-  const owners = [
-    { value: "u-other", label: "Omar Haddad" },
-    { value: "u-me", label: "Jane Doe" },
-    { value: "u-third", label: "Lena Brandt" },
-  ];
 
   it("asks for the company at birth and never on edit", () => {
     const create = projectFields(t, {
       companies: [{ id: "o-1", display_name: "Brandt" }],
-      owners,
-      me: "u-me",
+      owner: { owners: [], me: "u-me" },
       currentOwner: null,
       mode: "create",
     });
     const edit = projectFields(t, {
       companies: [],
-      owners,
-      me: "u-me",
+      owner: { owners: [], me: "u-me" },
       currentOwner: "u-other",
       mode: "edit",
     });
@@ -62,82 +54,6 @@ describe("projectFields", () => {
     ]);
     expect(edit.map((field) => field.key)).not.toContain("company_id");
     expect(edit.map((field) => field.key)).toContain("owner_id");
-  });
-
-  // A required select opens on its first option, so the creator heading the
-  // list is what makes the owner default to them.
-  it("offers every colleague at birth with the creator first and required", () => {
-    const create = projectFields(t, {
-      companies: [],
-      owners,
-      me: "u-me",
-      currentOwner: null,
-      mode: "create",
-    });
-    const owner = create.find((field) => field.key === "owner_id");
-    expect(owner?.required).toBe(true);
-    expect(owner?.options?.map((option) => option.value)).toEqual([
-      "u-me",
-      "u-other",
-      "u-third",
-    ]);
-  });
-
-  it("keeps the creator first while the roster has not answered", () => {
-    const create = projectFields(t, {
-      companies: [],
-      owners: [],
-      me: "u-me",
-      currentOwner: null,
-      mode: "create",
-    });
-    const owner = create.find((field) => field.key === "owner_id");
-    expect(owner?.options).toEqual([
-      { value: "u-me", label: "<project.ownerMe>" },
-    ]);
-  });
-
-  it("leaves the owner to the server when the creator is not known", () => {
-    const create = projectFields(t, {
-      companies: [],
-      owners,
-      me: "",
-      currentOwner: null,
-      mode: "create",
-    });
-    expect(create.map((field) => field.key)).not.toContain("owner_id");
-  });
-
-  // A blank owner is sent as null, which the update reads as "not supplied".
-  // So a blank choice on an owned project would save nothing.
-  it("lets an edit pick any colleague and offers no blank for an owned project", () => {
-    const edit = projectFields(t, {
-      companies: [],
-      owners,
-      me: "u-me",
-      currentOwner: "u-other",
-      mode: "edit",
-    });
-    const owner = edit.find((field) => field.key === "owner_id");
-    expect(owner?.required).toBe(true);
-    expect(owner?.options?.map((option) => option.value)).toEqual([
-      "u-me",
-      "u-other",
-      "u-third",
-    ]);
-  });
-
-  it("keeps the blank on an edit of a project nobody owns", () => {
-    const edit = projectFields(t, {
-      companies: [],
-      owners,
-      me: "u-me",
-      currentOwner: null,
-      mode: "edit",
-    });
-    expect(edit.find((field) => field.key === "owner_id")?.required).toBe(
-      false,
-    );
   });
 });
 

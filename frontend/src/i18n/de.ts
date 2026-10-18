@@ -1596,6 +1596,8 @@ export const de = {
   "common.saving": "Wird gespeichert…",
   "common.loading": "Wird geladen…",
   "ref.nameLoadFailed": "Name wurde nicht geladen",
+  "owner.rosterFailed":
+    "Die Teammitglieder konnten nicht geladen werden. Lade die Seite neu, um eines zu wählen.",
   "ref.notInRoster":
     "Aktuell zugewiesen (nicht mehr in der Liste der Nutzenden)",
   "picker.noMatch": "Kein Treffer",
@@ -13428,6 +13430,7 @@ export const de = {
   "project.advance.reasonRequired":
     "Ein abgeschlossenes Projekt braucht eine Begründung.",
   "deal.project": "Projekt",
+  "deal.newProjectOwner": "Zuständig für das Projekt",
   "deal.projectNew": "Neues Projekt…",
   "deal.projectWithheld": "Projekt ausgeblendet",
   "deal.projectNeedsCompany":

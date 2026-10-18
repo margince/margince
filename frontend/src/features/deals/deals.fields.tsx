@@ -5,6 +5,7 @@ import { currencyOptions } from "../../format/currencychoices";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
 import type { AcquisitionSource } from "../../screens/acquisitionsources.queries";
+import type { ProjectOwnerPicker } from "../../screens/projectownerfield";
 import type { Project } from "../../screens/projects.form";
 import {
   dealCommercialFields,
@@ -347,6 +348,7 @@ export function editProjectFields(
     openProjects: readonly Project[];
     currentProject?: { id: string; label: string };
     company?: string;
+    owner?: ProjectOwnerPicker;
   }>,
 ): CreateField[] {
   if (opts.masked.includes("project_id")) {
@@ -369,5 +371,6 @@ export function editProjectFields(
     opts.openProjects,
     opts.currentProject,
     opts.company,
+    opts.owner,
   );
 }

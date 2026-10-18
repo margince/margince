@@ -6,14 +6,13 @@ import type { CreateField } from "../components/create";
 import { useObjectCustomFields } from "../components/customfields.form";
 import { useT } from "../i18n";
 import { unwrap } from "../lib/problem";
-import { useMe } from "../lib/session";
 import {
   mapProjectCreate,
   type Project,
   type ProjectCompanyOption,
   projectFields,
 } from "./projects.form";
-import { useRecordOwners } from "./recordreferences";
+import { useOwnerPicker } from "./recordreferences";
 
 // Which company a new project names: picked from a list on the projects
 // screen, or pinned by the company page the rep is standing on.
@@ -31,12 +30,10 @@ export function useProjectCreateForm(company: ProjectCreateCompany): {
   const t = useT();
   const cf = useObjectCustomFields("project");
   const pinned = "pinned" in company ? company.pinned : undefined;
-  const me = useMe();
-  const owners = useRecordOwners(null);
+  const owner = useOwnerPicker(null);
   const core = projectFields(t, {
     companies: "options" in company ? company.options : [],
-    owners,
-    me: me.data?.user.id ?? "",
+    owner,
     currentOwner: null,
     mode: "create",
   }).filter((field) => pinned === undefined || field.key !== "company_id");

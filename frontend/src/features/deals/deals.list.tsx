@@ -22,6 +22,7 @@ import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
 import { useAcquisitionSources } from "../../screens/acquisitionsources.queries";
 import { mineEmptyNote, standardViews } from "../../screens/recordlist";
+import { useOwnerPicker } from "../../screens/recordreferences";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import { LegalReviewQueueLink } from "../privacy/legalreviews";
 import {
@@ -95,6 +96,7 @@ function DealCreateAction({
   // publishes its answers (CreateAction's onValuesChange) and the query follows.
   const [formCompany, setFormCompany] = useState("");
   const openProjects = useProjectsOfCompany(formCompany || undefined);
+  const projectOwner = useOwnerPicker(null);
 
   const createDeal = async (
     values: Record<string, string>,
@@ -168,7 +170,13 @@ function DealCreateAction({
         // Narrowed by the server, for the company the form names now. The
         // query above re-reads when the reader changes it, so the picker
         // repopulates instead of going empty.
-        ...dealProjectFields(t, openProjects, undefined, formCompany),
+        ...dealProjectFields(
+          t,
+          openProjects,
+          undefined,
+          formCompany,
+          projectOwner,
+        ),
         // A deal brought by a partner is attributed at birth, not by editing
         // it afterwards. The win that pays them can come before anybody
         // thinks to revisit the record.

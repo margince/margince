@@ -35,7 +35,6 @@ import { useOpenEmail } from "../lib/openemail";
 import { unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { navigate } from "../lib/router";
-import { useMe } from "../lib/session";
 import { ArchiveAction } from "./archive";
 import { CustomFieldsPanel } from "./customfields.card";
 import { useProjectVerbRefusal } from "./project360.refusal";
@@ -78,7 +77,7 @@ import {
   useRecordChronology,
 } from "./recordchronology";
 import { RecordEmailVerb } from "./recordemail";
-import { useRecordOwners } from "./recordreferences";
+import { useOwnerPicker } from "./recordreferences";
 import { RecordTeam } from "./recordteam";
 import { ShareAction } from "./share";
 import { TimelineActions } from "./timelineactions";
@@ -352,9 +351,8 @@ function ProjectActions({
   cf: ObjectCustomFields;
 }>) {
   const t = useT();
-  const me = useMe();
   const companies = useCompanyOptions();
-  const owners = useRecordOwners(project.owner_id);
+  const owner = useOwnerPicker(project.owner_id);
   return (
     <>
       {/* A project's mail is a NEW conversation with somebody on the account
@@ -379,8 +377,7 @@ function ProjectActions({
           fields={[
             ...projectFields(t, {
               companies,
-              owners,
-              me: me.data?.user.id ?? "",
+              owner,
               currentOwner: project.owner_id ?? null,
               mode: "edit",
             }),

@@ -118,6 +118,7 @@ function dealBackend(opts: {
   projectCompanies?: Record<string, string[]>;
   // What the deal reads back as once a PATCH has landed.
   afterPatch?: (row: Deal) => Deal;
+  users?: { id: string; display_name: string; is_agent: boolean }[];
 }): Call[] {
   const writes: Call[] = [];
   let current: Deal = opts.deals?.[0] ?? deal();
@@ -174,6 +175,12 @@ function dealBackend(opts: {
             },
           }),
         );
+      }
+      if (pathname.endsWith("/users")) {
+        return jsonResponse({
+          data: opts.users ?? [],
+          page: { next_cursor: null, has_more: false },
+        });
       }
       if (pathname.endsWith("/pipelines")) {
         return jsonResponse({
@@ -299,6 +306,36 @@ describe("the deal form's project picker", () => {
     expect(writes[0].url.endsWith("/projects")).toBe(true);
     expect(writes[1].url.endsWith("/deals")).toBe(true);
     expect(writes[1].body).toMatchObject({ project_id: "pr-born" });
+  });
+
+  // An agent seat is never offered: the server refuses one as an owner.
+  it("starts the new project owned by the colleague picked as its owner", async () => {
+    const user = userEvent.setup();
+    const writes = dealBackend({
+      projects: [],
+      users: [
+        { id: "u-42", display_name: "Jane Doe", is_agent: false },
+        { id: "agent-1", display_name: "Runner Bot", is_agent: true },
+      ],
+    });
+    render(<DealsScreen />);
+    await user.click(await screen.findByTestId("new-record"));
+    await user.type(screen.getByLabelText("Deal name *"), "Phase two");
+    await pickOption(
+      user,
+      inForm().getByLabelText("Company"),
+      "Brandt Automotive",
+    );
+    await pickOption(user, screen.getByLabelText("Project"), "New project…");
+    await user.type(screen.getByLabelText("Project name *"), "Born here");
+    await user.click(inForm().getByLabelText("Project owner"));
+    await screen.findByRole("option", { name: "Jane Doe" });
+    expect(screen.queryByRole("option", { name: "Runner Bot" })).toBeNull();
+    await user.click(screen.getByRole("option", { name: "Jane Doe" }));
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(writes).toHaveLength(2));
+    expect(writes[0].body).toMatchObject({ owner_id: "u-42" });
   });
 
   // The case the create form could not serve at all, and the reason
