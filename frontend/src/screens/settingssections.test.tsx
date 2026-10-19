@@ -15,8 +15,8 @@ import { settingsPageSections } from "./settingssearch";
 
 const t = (key: MessageKey) => translate("en", key);
 
-// Drawn, and not offered to search: an empty state's label, one a grant the
-// search cannot see decides, or a field that filters a record list.
+// Drawn, and not offered to search. Each is an empty state's label, one decided
+// by a grant the search cannot see, or a field that filters a record list.
 type NotOffered = Readonly<{
   key: MessageKey;
   why: "empty-state" | "grant" | "record-filter";
@@ -132,7 +132,7 @@ describe("each settings page's sections are the names it draws", () => {
     });
   });
 
-  // An empty state or a grant cannot be checked from one render, and each entry
+  // An empty state or a grant cannot be checked from one render. Each entry
   // hides a name from search, so a new one takes an edit here.
   it("pins the unchecked exceptions to three", () => {
     const unchecked = Object.values(DRAWN_NOT_OFFERED)

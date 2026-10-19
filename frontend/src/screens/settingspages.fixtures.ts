@@ -5,6 +5,7 @@ import type { components } from "../api/schema";
 import { allowance, status } from "../features/ai/ai-admin.testkit";
 import { defaultAgentAllowances } from "../features/automations/agentallowances.fixtures";
 import { bookingProfile } from "../features/booking/book.testkit";
+import { readingsDay } from "../features/brief/brief.fixtures";
 import { formatFixture } from "../features/import/import.fixtures";
 import { CORE_OBJECTS } from "../format/rbacobjects";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
@@ -14,8 +15,8 @@ import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 
 type Schemas = components["schemas"];
 
-// Every verb on every object: an admin who meets every card a page can draw,
-// including the ones gated on grants the page itself does not ask for.
+// Every verb on every object, so the admin meets every card a page can draw.
+// That includes cards gated on grants the page itself does not ask for.
 export const EVERY_GRANT: GrantSpec = Object.fromEntries(
   Object.keys(CORE_OBJECTS).map((object) => [
     object,
@@ -122,6 +123,9 @@ export const NOTIFICATION_ROUTES: RouteMap = {
   "GET /me/notification-preferences": () =>
     jsonResponse(NOTIFICATION_PREFERENCES),
   "GET /me/brief-delivery": () => jsonResponse({}),
+  "GET /teams": () => jsonResponse({ data: [] }),
+  "GET /worklist": () =>
+    jsonResponse({ ...readingsDay({}, [], []), team_week: "none" }),
 };
 
 // Every page story routes all of these: a card can sit on more than one page.

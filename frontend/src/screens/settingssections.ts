@@ -4,7 +4,7 @@
 import type { MessageKey } from "../i18n/en";
 import type { SettingsPageId } from "./settingscatalog";
 
-// The panel titles and setting names each page draws, as catalog keys, so search
+// The panel titles and setting names each page draws, as catalog keys. Search
 // finds a page by one of its settings in the reader's language.
 export const SETTINGS_SECTIONS = {
   account: [
@@ -61,6 +61,10 @@ export const SETTINGS_SECTIONS = {
     "notifications.class.system.label",
     "delivery.morningLabel",
     "delivery.weeklyLabel",
+    "delivery.hourLabel",
+    "delivery.weekdayLabel",
+    "delivery.quietLabel",
+    "delivery.combineLabel",
   ],
   connections: [
     "mailSharing.title",
