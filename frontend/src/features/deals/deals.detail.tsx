@@ -125,19 +125,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // changes, resolved once here so the render below reads one name.
   const refusedReasonId = readOnly ? readOnlyReasonId : undefined;
   const me = useMe();
-  // Asked here rather than inside the aside, because an element is truthy
-  // whatever it renders. A slot filled with a component that draws nothing
-  // still reserves the aside column and its landmark.
-  const companies = useQuery({
-    queryKey: ["companies"],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/companies", {
-          params: { query: { limit: 50 } },
-        }),
-      );
-    },
-  });
   // The shared pending-approvals hook, not a second query on the same key. A
   // private queryFn under ["approvals","pending"] takes over the cache entry
   // the Inbox and the rail badge read. One that stops at the first page and
@@ -152,11 +139,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // The pane's content, handed over whether or not it is showing: `asideOpen`
   // folds the column, and its cards mount only while it is open or leaving.
   const dealContext = (deal: Deal) => (
-    <DealContext
-      deal={deal}
-      companies={companies.data?.data ?? []}
-      meId={me.data?.user.id ?? ""}
-    />
+    <DealContext deal={deal} meId={me.data?.user.id ?? ""} />
   );
   // The thread under the call reads the whole history, not what the History
   // tab's own filter has narrowed. A filter is a view of that tab. A call that

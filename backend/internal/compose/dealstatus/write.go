@@ -59,28 +59,29 @@ func composeDeterministic(f facts, mv crmcontracts.DealStatusCardMove) crmcontra
 // storyLines say what has happened: the deal's own fields, then the last
 // contact, then what is still owed.
 func storyLines(f facts) []sentence {
-	lines := []sentence{plain(fmt.Sprintf("%s is %s.", f.deal.Name, f.deal.Status))}
+	said := statusCopyFor(f.lang)
+	lines := []sentence{plain(fmt.Sprintf(said.Say(statusWords.Story), f.deal.Name, said.dealStatus(string(f.deal.Status))))}
 	if last, ok := lastContact(f); ok {
-		lines = append(lines, cited(
-			fmt.Sprintf("The last contact was %s: %s.", since(f.now, last.OccurredAt), subjectOf(last)),
+		lines = append(lines, said.cited(
+			fmt.Sprintf(said.Say(statusWords.LastContact), said.since(f.now, last.OccurredAt), said.subjectOf(last)),
 			last))
 	} else {
-		lines = append(lines, plain(noContactYet+"."))
+		lines = append(lines, plain(said.Say(statusWords.NoContact)))
 	}
 	if n := len(f.openTasks); n > 0 {
-		lines = append(lines, plain(openTasksLine(n, f.moreTasks)))
+		lines = append(lines, plain(said.openTasksLine(n, f.moreTasks)))
 	}
 	return lines
 }
 
-func openTasksLine(n int, more bool) string {
+func (said statusCopy) openTasksLine(n int, more bool) string {
 	if more {
-		return fmt.Sprintf("At least %d tasks are still open on this deal.", n)
+		return fmt.Sprintf(said.Say(statusWords.OpenTasksAtLeast), n)
 	}
 	if n == 1 {
-		return "One task is still open on this deal."
+		return said.Say(statusWords.OpenTaskOne)
 	}
-	return fmt.Sprintf("%d tasks are still open on this deal.", n)
+	return fmt.Sprintf(said.Say(statusWords.OpenTasks), n)
 }
 
 // blockerLines name what is holding the deal up, and say nothing when nothing
@@ -96,7 +97,7 @@ func blockerLines(f facts) []sentence {
 		return nil
 	}
 	var lines []sentence
-	for _, r := range deals.HealthReasons(*f.health, f.now) {
+	for _, r := range deals.HealthReasons(*f.health, f.now, f.lang) {
 		if r.Value >= atRiskFactor {
 			continue
 		}
@@ -121,15 +122,15 @@ func plain(text string) sentence {
 }
 
 // cited is a sentence resting on one activity the reader can open.
-func cited(text string, a crmcontracts.Activity) sentence {
-	return sentence{Text: text, Evidence: []crmcontracts.CompanyBriefEvidence{activityEvidence(a)}}
+func (said statusCopy) cited(text string, a crmcontracts.Activity) sentence {
+	return sentence{Text: text, Evidence: []crmcontracts.CompanyBriefEvidence{said.activityEvidence(a)}}
 }
 
 // activityEvidence points at one activity, named by its subject where the
 // reader may read it. A withheld row is cited by kind: the citation says
 // contact happened without repeating words the reader may not see.
-func activityEvidence(a crmcontracts.Activity) crmcontracts.CompanyBriefEvidence {
-	name := subjectOf(a)
+func (said statusCopy) activityEvidence(a crmcontracts.Activity) crmcontracts.CompanyBriefEvidence {
+	name := said.subjectOf(a)
 	return crmcontracts.CompanyBriefEvidence{
 		EntityType: crmcontracts.CompanyBriefEvidenceEntityTypeActivity,
 		EntityId:   a.Id,
@@ -220,7 +221,7 @@ func moveEvidence(reason WrittenLine, f facts) []crmcontracts.DealNextBestAction
 	out := make([]crmcontracts.DealNextBestActionEvidence, 0, len(reason.Evidence))
 	for _, id := range reason.Evidence {
 		if a, ok := citedRecord(f, id); ok {
-			out = append(out, evidenceOf(a, subjectOf(a)))
+			out = append(out, evidenceOf(a, statusCopyFor(f.lang).subjectOf(a)))
 		}
 	}
 	return out
@@ -241,7 +242,7 @@ func wire(lines []WrittenLine, f facts) []sentence {
 		evidence := make([]crmcontracts.CompanyBriefEvidence, 0, len(line.Evidence))
 		for _, id := range line.Evidence {
 			if a, ok := citedRecord(f, id); ok {
-				evidence = append(evidence, activityEvidence(a))
+				evidence = append(evidence, statusCopyFor(f.lang).activityEvidence(a))
 			}
 		}
 		if len(evidence) == 0 {

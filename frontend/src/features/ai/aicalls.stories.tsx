@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { translate } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -281,7 +282,10 @@ const openAttemptTrail: NonNullable<Story["play"]> = async ({
 }) => {
   const canvas = within(canvasElement);
   const disclosure = await canvas.findByRole("button", {
-    name: /Show attempts for capture_classify/,
+    name: (label) =>
+      label.startsWith(
+        `Show attempts for ${translate("en", "aiTask.name.capture_classify")} at `,
+      ),
   });
   await userEvent.click(disclosure);
   await canvas.findByRole("heading", { name: "Attempts" });
@@ -299,7 +303,9 @@ export const RowPressed: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findByRole("button", { name: /Show attempts/ });
-    await userEvent.click(canvas.getByText("capture_classify"));
+    await userEvent.click(
+      canvas.getByText(translate("en", "aiTask.name.capture_classify")),
+    );
     await canvas.findByRole("heading", { name: "Attempts" });
   },
 };

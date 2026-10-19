@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { LocaleProvider } from "../../i18n";
+import { LocaleProvider, translate } from "../../i18n";
 import { jsonResponse, stubWithSession } from "../../testing/story-utils";
 import { LeadHistoryTab } from "./leadhistory";
 
@@ -58,10 +58,14 @@ const CHANGE_ROW = {
   id: "h1",
   actor_type: "human",
   actor_id: "u-1",
+  actor_name: "Demo Admin",
   action: "update",
   occurred_at: "2026-07-13T10:00:00Z",
   summary: "Lead score changed",
 };
+const CHANGE_LINE = translate("en", "history.verb.update", {
+  subject: CHANGE_ROW.actor_name,
+});
 
 // The lead's History tab reads the same ONE chronology every other record
 // page does (contacttabs.test.tsx pins the contact's copy): what was said and
@@ -103,9 +107,7 @@ describe("LeadHistoryTab", () => {
     await screen.findByText("Fleet renewal");
     await userEvent.click(screen.getByRole("button", { name: "Changes" }));
 
-    await waitFor(() =>
-      expect(screen.getByText("Lead score changed")).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(CHANGE_LINE)).toBeTruthy());
     expect(screen.queryByText("Fleet renewal")).toBeNull();
     // The narrowing row stands down with the exchanges it would have
     // narrowed — a reader who picked Changes has no kind left to filter.

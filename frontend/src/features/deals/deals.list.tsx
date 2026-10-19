@@ -23,6 +23,7 @@ import { useViewerId } from "../../lib/session";
 import { useAcquisitionSources } from "../../screens/acquisitionsources.queries";
 import { mineEmptyNote, standardViews } from "../../screens/recordlist";
 import { useOwnerPicker } from "../../screens/recordreferences";
+import { searchCompanyTargets } from "../companies/companyform";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import { LegalReviewQueueLink } from "../privacy/legalreviews";
 import {
@@ -42,7 +43,7 @@ import {
   resolveDealProject,
   useProjectsOfCompany,
 } from "./dealproject";
-import type { Company, Deal, Pipeline, Stage } from "./deals";
+import type { Deal, Pipeline, Stage } from "./deals";
 import {
   DealBoardBody,
   useAdvanceDeal,
@@ -76,7 +77,6 @@ function DealCreateAction({
   pipeline,
   cf,
   openStages,
-  companies,
   partnerOptions,
   startOpen,
 }: Readonly<{
@@ -85,7 +85,6 @@ function DealCreateAction({
   // screen's own. It does not wait for the pipelines this form is gated on.
   cf: ObjectCustomFields;
   openStages: Stage[];
-  companies: Company[];
   partnerOptions: { value: string; label: string }[];
   startOpen: boolean;
 }>) {
@@ -156,14 +155,12 @@ function DealCreateAction({
             label: stage.name,
           })),
         },
+        // Searched: the screen's own page of companies names board cards and
+        // stops short of a large workspace.
         {
           key: "company_id",
           label: "create.relatedCompany",
-          type: "select",
-          options: companies.map((company) => ({
-            value: company.id,
-            label: company.display_name,
-          })),
+          searchTargets: searchCompanyTargets,
         },
         // The body of work this deal is about, chosen or started here: a
         // project begins during the deal, in its initiative phase.
@@ -294,7 +291,6 @@ export function DealsScreen({
       pipeline={effectivePipeline}
       cf={cf}
       openStages={openStages}
-      companies={companiesQuery.data?.data ?? []}
       partnerOptions={partnerOptions}
       startOpen={startCreating}
     />
@@ -355,7 +351,7 @@ export function DealsScreen({
         stageTotalsQuery={stageTotalsQuery}
         totalsWithheld={totalsWithheld}
         companies={companiesQuery.data?.data ?? []}
-        companiesSettled={companiesQuery.isSuccess}
+        companiesSettled={!companiesQuery.isPending}
         openDeal={openDeal}
         cardDragHandlers={cardDragHandlers}
         columnDropHandlers={columnDropHandlers}

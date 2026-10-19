@@ -256,6 +256,7 @@ func approvalItem(approval crmcontracts.Approval, machine MachineSender) crmcont
 		Title:   approval.Summary,
 		Actions: []crmcontracts.AttentionItemActions{"decide"},
 	}
+	item.RequestedDeciderId = approval.RequestedDeciderId
 	if approval.ExpiresAt != nil {
 		item.DueAt = approval.ExpiresAt
 	}

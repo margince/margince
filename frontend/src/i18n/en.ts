@@ -3,6 +3,10 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "aiWait.provider":
+    "The AI provider is unavailable. This work resumes automatically when it recovers.",
+  "aiWait.budget":
+    "The AI budget has reached its limit. This work resumes automatically when budget is available.",
   "reporting.latestSnapshot": "Latest snapshot",
   "reporting.contextDetails": "Reporting details",
   "reporting.targetRemaining": "{amount} remaining",
@@ -934,6 +938,33 @@ export const en = {
   "systemJob.technical_lookup": "Company technical lookup",
   "systemJob.vatcheck": "VAT number check",
   "systemJob.weekly_review": "Weekly review",
+  "agentJob.agent_task_retention": "Agent task cleanup",
+  "agentJob.attachment_extractor": "Attachment reader",
+  "agentJob.auto_apply": "Automatic approval",
+  "agentJob.capture_confidentiality_verdict": "Confidentiality check",
+  "agentJob.capture_counterparty": "New contact from mail",
+  "agentJob.capture_counterparty_verdict": "Mail sender check",
+  "agentJob.coldstart": "First approach",
+  "agentJob.company_name_promotion": "Company name update",
+  "agentJob.deal_scout": "Deal Scout",
+  "agentJob.dealscout": "Deal Scout",
+  "agentJob.deepread": "Website reader",
+  "agentJob.document_extractor": "Document reader",
+  "agentJob.enrich": "Signature reader",
+  "agentJob.idempotency_retention": "Request record cleanup",
+  "agentJob.knowledge_ingest": "Knowledge import",
+  "agentJob.lifecycle_change": "Lifecycle update",
+  "agentJob.offer_drafting": "Offer drafting",
+  "agentJob.overnight": "Overnight agent",
+  "agentJob.propose_roles": "Buying team reader",
+  "agentJob.rate_refresh": "Exchange rate update",
+  "agentJob.scrape": "Website capture",
+  "agentJob.signal_scan": "Mail reader",
+  "agentJob.site_read": "Website reader",
+  "agentJob.tag_scout": "Tag suggestions",
+  "agentJob.technical_lookup": "Company lookup",
+  "agentJob.transcript_proposer": "Meeting transcript reader",
+  "agentJob.voice_builder": "Writing style builder",
   "trust.connectorTag": "Via {connector}",
   "trust.stagedProposal": "Proposed value",
   "trust.evidenceFrom": "Evidence from {source}",
@@ -1010,10 +1041,76 @@ export const en = {
   "history.reversal.undoneBy": "Undone by {undoer}",
   "history.reversal.unpaired": "Undoes an earlier change",
   "history.edge.marker": "Link",
+  "history.subject.viaClient": "{name}, via {client},",
+  "history.subject.viaAgent": "{name}, via an agent,",
+  "history.subject.viaConnector": "{name}, via a connector,",
+  "history.subject.unrecordedAuthority":
+    "A machine (no human authority recorded)",
+  "history.subject.system": "System",
+  "history.subject.agent": "Agent",
+  "history.subject.connector": "Connector",
+  "history.subject.buyer": "A Deal Room participant",
+  "history.subject.buyerNamed": "{name}, in the Deal Room,",
+  "history.verb.create": "{subject} created the record",
+  "history.verb.update": "{subject} updated the record",
+  "history.verb.archive": "{subject} archived the record",
+  "history.verb.merge": "{subject} merged the record",
+  "history.verb.promote": "{subject} promoted the record",
+  "history.verb.demote": "{subject} demoted the record",
+  "history.verb.disqualify": "{subject} disqualified the record",
+  "history.verb.restore": "{subject} restored the record",
+  "history.verb.export": "{subject} exported the record",
+  "history.verb.erase": "{subject} erased the record",
+  "history.verb.anonymize": "{subject} anonymized the record",
+  "history.verb.assign": "{subject} assigned the record",
+  "history.verb.advanceStage": "{subject} advanced the stage of the record",
+  "history.verb.advancePhase": "{subject} advanced the phase of the record",
+  "history.verb.sendEmail": "{subject} sent an email for the record",
+  "history.verb.consentGrant": "{subject} granted consent for the record",
+  "history.verb.consentWithdraw": "{subject} withdrew consent for the record",
+  "history.verb.approve": "{subject} approved the record",
+  "history.verb.reject": "{subject} rejected the record",
+  "history.verb.recordShare": "{subject} shared the record",
+  "history.verb.recordUnshare": "{subject} unshared the record",
+  "history.verb.activityRelink": "{subject} relinked the record",
+  "history.verb.import": "{subject} imported the record",
+  "history.verb.importUndo": "{subject} undid the import of the record",
+  "history.verb.resetData": "{subject} reset the record",
+  "history.verb.passwordLinkIssued":
+    "{subject} issued a set-password link for the record",
+  "history.verb.connect": "{subject} connected the record",
+  "history.verb.disconnect": "{subject} disconnected the record",
+  "history.verb.schedule": "{subject} scheduled the record",
+  "history.verb.reschedule": "{subject} rescheduled the record",
+  "history.verb.cancel": "{subject} canceled the record",
+  "history.verb.release": "{subject} released the record for sending",
+  "history.verb.hold": "{subject} held the record for review",
+  "history.verb.expire":
+    "{subject} let the decision window close on the record",
+  "history.verb.resolve": "{subject} resolved the record",
+  "history.verb.restrict": "{subject} withheld the record",
+  "history.verb.pin": "{subject} pinned the record for statutory retention",
+  "history.verb.accrue": "{subject} accrued commission on the record",
+  "history.verb.pay": "{subject} paid the record",
+  "history.verb.publish": "{subject} published the record",
+  "history.verb.pause": "{subject} paused the record",
+  "history.verb.resume": "{subject} resumed the record",
+  "history.verb.close": "{subject} closed the record",
+  "history.verb.invite": "{subject} invited a participant to the record",
+  "history.verb.revoke": "{subject} revoked access for the record",
+  "history.verb.delete": "{subject} deleted the record",
+  "history.verb.placeLegalHold": "{subject} put the record under legal hold",
+  "history.verb.liftLegalHold": "{subject} released the record from legal hold",
+  "history.verb.requestLegalReview":
+    "{subject} asked legal to review the record",
+  "history.verb.withdrawLegalReview":
+    "{subject} withdrew the legal review request for the record",
   "history.field.commitment_evidence_unavailable":
     "Commitment evidence unavailable",
   "history.field.address": "Address",
   "history.field.admission": "Domain intake check",
+  "history.field.admission_reason_code": "Intake reason category",
+  "history.field.admission_sender_kind": "Sender category",
   "history.field.admission_reason": "Intake check reason",
   "history.field.admission_source": "Intake check source",
   "history.field.amount_minor": "Value",
@@ -1162,6 +1259,7 @@ export const en = {
   "shell.beta": "Beta",
   "shell.searchEverything": "Search or ask Margince",
   "shell.breadcrumbAria": "Breadcrumb",
+  "shell.back": "Back",
   "shell.license.none": "No license",
   "shell.license.refused": "License refused",
   "shell.signOutAria": "Sign out",
@@ -2524,7 +2622,17 @@ export const en = {
   "approval.field.connection_name": "Name on LinkedIn",
   "approval.field.connection_company": "Company on LinkedIn",
   "approval.field.contact_name": "Contact in CRM",
+  "approval.responsibility.requestedFrom": "Decision requested from",
+  "approval.commitment.promiser": "Promised by",
+  "approval.commitment.effect": "On approval",
+  "approval.commitment.unnamedColleague": "Colleague name unavailable",
+  "approval.commitment.unverifiedNamed": "Unverified: {name}",
+  "approval.commitment.unresolved": "Promiser unresolved",
+  "approval.commitment.assignNamed": "Creates a task assigned to {name}.",
+  "approval.commitment.assignDecider":
+    "Creates a task assigned to the person who approves.",
   "approval.field.owner": "Owner",
+  "approval.field.sourceText": "Original text",
   "approval.field.to": "To",
   "approval.field.currency": "Currency",
   "approval.field.rate": "New rate",
@@ -2889,6 +2997,7 @@ export const en = {
   "co.intro.writing": "Writing…",
   "co.intro.fromTemplate":
     "Written from a template. This installation has no model configured.",
+  "co.intro.agent": "Reply drafting",
   "co.intro.subject": "Subject",
   "co.intro.body": "Message",
   "co.intro.basedOn": "Based on",
@@ -3690,12 +3799,12 @@ export const en = {
   "deal.expectedArr": "Expected ARR",
 
   "deal.monthlyApproximate": "approx.",
-  "assignments.title": "Responsible",
+  "assignments.title": "Responsibilities",
   "assignments.noAccessNote":
-    "Records who is accountable. It does not grant access to this record.",
+    "Records who looks after what. It does not grant access to this record.",
   "assignments.empty": "No one is assigned yet",
   "assignments.emptyDetail":
-    "Assign a colleague or a team to record who is accountable for this work.",
+    "Assign a colleague or a team to record who looks after this work.",
   "assignments.roleRetired": "(retired role)",
   "assignments.teamSuffix": "(team)",
   "assignments.subjectInactive": "(inactive)",
@@ -3723,7 +3832,7 @@ export const en = {
   "recordRoles.assigneeKinds": "Can be assigned to",
   "recordRoles.addLabel": "Name",
   "recordRoles.addHint":
-    "What the responsible party is accountable for, in plain words.",
+    "What the holder looks after, in plain words, for example Technical contact.",
   "recordRoles.addConfirm": "Add role",
   "recordRoles.activeFor": "{label} can be newly assigned",
   "recordRoles.colRole": "Role",
@@ -3737,6 +3846,11 @@ export const en = {
   "recordRoles.renameTitle": "Rename role",
   "recordRoles.duplicate":
     "A role with this name or key already exists. Choose another name.",
+  "recordRoles.intro":
+    "Put a role on a company, deal or project so everyone knows whom to ask about what. The owner stays responsible for the record. Built-in roles ship with Margince; custom roles were added in this installation.",
+  "recordRoles.colActive": "Active",
+  "recordRoles.builtIn": "Built-in",
+  "recordRoles.custom": "Custom",
   "deal.acquisitionUnset": "Not set",
   "deal.acquisitionRetired": "(retired)",
   "deal.waitUntil": "Wait until",
@@ -3943,6 +4057,7 @@ export const en = {
   "offer.position": "Position",
   "offer.description": "Description",
   "offer.unit": "Unit",
+  "offer.unitFromProduct": "From the product",
   "offer.quantity": "Quantity",
   "offer.unitPrice": "Unit price",
   "offer.discountPct": "Discount %",
@@ -3998,6 +4113,13 @@ export const en = {
   "decision.detail": "Approval detail",
   "decision.detailLoading": "Loading approval…",
   "decision.detailTechnical": "Technical details",
+  "decision.evidenceSource.activity": "Activity",
+  "decision.evidenceSource.deal": "Deal",
+  "decision.evidenceSource.signal": "Signal",
+  "decision.evidenceSource.relationship": "Relationship",
+  "decision.evidenceSource.page": "Web page",
+  "decision.evidenceSource.contract": "Contract",
+  "decision.evidenceSource.unknown": "Source",
   "decision.detailAsked": "Asked",
   "decision.detailDecided": "Decided",
   // The confirmation after an approval, and the way back to the change it
@@ -4271,7 +4393,7 @@ export const en = {
   "brief.weekly.pickWeek": "Open another week",
   "brief.weekly.none":
     "No weekly review yet. The first one is created on the Monday after your first full week.",
-  "brief.weekly.tasksDelivered": "Tasks delivered",
+  "brief.weekly.tasksDelivered": "Due tasks completed",
   "brief.weekly.ofDue": "{done} of {due}",
   "brief.weekly.dealsWon": "Won",
   "brief.weekly.dealsLost": "Lost",
@@ -4402,6 +4524,8 @@ export const en = {
   // The same control where NOTHING in the tray will be sent. It still commits —
   // that is what moves the skips out of the deck and opens an edit on its own
   // form — so it says what pressing it does rather than offering a send.
+  "brief.deck.acceptanceChanged":
+    "Some approvals changed and need another look. Their acceptances were not sent.",
   "brief.deck.commitNothingToSend": "Clear skipped",
   "brief.deck.unstage": "Undo last",
   "brief.deck.clearedTitle": "Deck clear",
@@ -4429,7 +4553,9 @@ export const en = {
   "deepread.starting": "Starting…",
   "deepread.unavailable": "Website research is not configured on this server.",
   "deepread.statusQueued": "Queued",
-  "deepread.statusDeferred": "Waiting for AI budget",
+  "deepread.statusDeferred": "Waiting to resume",
+  "deepread.statusBudgetWait": "Waiting for AI budget",
+  "deepread.statusProviderWait": "Waiting for AI provider",
   "deepread.statusRunning": "Reading website…",
   "deepread.statusDone": "Done",
   "deepread.statusPartial": "Stopped early",
@@ -5615,13 +5741,45 @@ export const en = {
   "settings.signatureNone": "No sign-off set",
   "settings.signatureCancel": "Cancel",
   // One line under the readings strip, naming what the day could not read.
+  "delivery.loadFailed":
+    "Email choices could not be loaded. Reload to try again.",
   "delivery.morningLabel": "Morning brief",
   "delivery.morningHelp":
     "Also sends the day’s brief by email. It always appears on Home.",
   "delivery.weeklyLabel": "Weekly review",
-  "delivery.weeklyHelp": "Also sends Monday’s review by email.",
+  "delivery.weeklyHelp":
+    "Sends the last closed reporting week on your chosen working day.",
   "delivery.byEmail": "By email",
   "delivery.none": "Not by email",
+  "delivery.hourLabel": "Routine email time",
+  "delivery.scheduleHelp":
+    "Choose a personal time to use your working days and timezone, with a three-hour delivery window. Your previous schedule stays until you change it.",
+  "delivery.legacyTime": "Previous morning schedule (reporting timezone):",
+  "delivery.workingStart": "Start of my working hours",
+  "delivery.weekdayLabel": "Weekly review day",
+  "delivery.weekdayHelp":
+    "Uses the next working day if your chosen day is off. The reporting week stays fixed; later working days allow catch-up.",
+  "delivery.quietLabel": "Quiet mornings",
+  "delivery.onlyUseful": "Only when there is useful content",
+  "delivery.quietAlso": "Also send a status summary on quiet mornings",
+  "delivery.combineLabel": "Combine routine emails",
+  "delivery.combineHelp":
+    "One routine email per reporting day combines weekly results, current actions and your chosen digest classes when available. Immediate approvals stay separate.",
+  "delivery.separate": "Separate routine emails",
+  "delivery.combined": "Combine available content",
+  "delivery.scopeLabel": "Routine email scope",
+  "delivery.scope.personal": "My work",
+  "delivery.scope.team": "Selected team",
+  "delivery.scope.combined": "My work and selected team",
+  "delivery.teamHelp":
+    "Choose a team before enabling its view. Access is checked again when mail is sent.",
+  "delivery.weekday1": "Monday",
+  "delivery.weekday2": "Tuesday",
+  "delivery.weekday3": "Wednesday",
+  "delivery.weekday4": "Thursday",
+  "delivery.weekday5": "Friday",
+  "delivery.weekday6": "Saturday",
+  "delivery.weekday7": "Sunday",
   "delivery.panelTitle": "Email summaries",
   "settings.appearance": "Appearance",
   "settings.appearanceHelp":
@@ -6404,6 +6562,8 @@ export const en = {
     "A message needs a channel, so it cannot be imported from a file. Use a note or an email instead.",
   "import.reason.task_not_importable":
     "A task would land open on your own list, so it is not imported. Use a note instead.",
+  "import.reason.activity_empty":
+    "A note or a call needs a subject or a body. Fill one of them in this row.",
   "import.reason.occurred_at_unnamed":
     "Give the day the activity happened, as YYYY-MM-DD or with its time zone.",
   "import.reason.timestamp_needs_zone":
@@ -6807,7 +6967,7 @@ export const en = {
   "audit.action.import": "Imported",
   "audit.action.importUndo": "Import undone",
   "audit.action.resetData": "Data reset",
-  "audit.action.passwordLinkIssued": "Password link sent",
+  "audit.action.passwordLinkIssued": "Password link issued",
   "audit.action.connect": "Connected",
   "audit.action.disconnect": "Disconnected",
   "audit.action.schedule": "Scheduled",
@@ -9349,7 +9509,7 @@ export const en = {
   "settings.page.acquisition.sub":
     "Business channels a deal can be attributed to.",
   "settings.page.recordroles.sub":
-    "What a colleague or team can be responsible for on a record. Grants no access.",
+    "Labels for what a colleague or team looks after on a record, such as account manager. A role grants no access; the owner and sharing decide who can edit.",
   "settings.page.leads.sub":
     "Where leads come from, why they are disqualified, and how fast they get a first reply.",
   "settings.page.fields.sub":
@@ -9961,6 +10121,20 @@ export const en = {
   "voice.candidate.concernsLabel": "Why this version needs review",
   "voice.candidate.applyHint":
     "If it reads like you, use it. If not, keep your current voice and add more writing samples; the next build learns from them.",
+  "voice.candidate.reason.uncomparable":
+    "The previous voice profile could not be compared. Review this version before replacing it.",
+  "voice.candidate.reason.identity":
+    "Your characteristic vocabulary changed (similarity {score}). Review whether it still sounds like you.",
+  "voice.candidate.reason.signature":
+    "Your characteristic phrasing changed (similarity {score}). Review the sample drafts.",
+  "voice.candidate.reason.regression":
+    "This version scored {score}; your active version scored {active}. Review it before replacing your current voice.",
+  "voice.candidate.reason.smallCorpus":
+    "There are too few samples for a separate evaluation. Add more sources to enable scoring.",
+  "voice.candidate.reason.corpusChanged":
+    "Your writing samples changed during this build. Review the version before using it.",
+  "voice.candidate.reason.activeChanged":
+    "Your active voice changed during this evaluation. Review the version before using it.",
   "voice.candidate.reason.malformed":
     "The scoring check could not read some sample drafts, so the score is based on fewer samples than usual.",
   "voice.candidate.reason.lowScore":
@@ -9968,7 +10142,7 @@ export const en = {
   "voice.candidate.reason.hardFailures":
     "Phrases this voice should avoid that appeared in the sample drafts: {n}.",
   "voice.candidate.reason.rulesRemoved":
-    "Rules about what to avoid dropped since your previous version: {n}.",
+    "Rules about wording and register dropped since your previous version: {n}.",
   "voice.candidate.apply": "Use this version",
   "voice.candidate.reject": "Keep current voice",
   "voice.history.label": "Versions and learning",
@@ -10400,6 +10574,10 @@ export const en = {
   "settings.companyMarkUnsupported":
     "Use a PNG, JPEG, GIF, WebP, ICO or SVG file.",
   "settings.companyMarkTooLarge": "Use a smaller file.",
+  "settings.companyMarkSvgNotDrawable":
+    "This SVG has parts that cannot be drawn here, or draws nothing. Export the logo as a PNG from your design tool.",
+  "settings.companyMarkSvgText":
+    "This SVG holds its words as text, which cannot be drawn. Convert the text to outlines in your design tool, or upload a PNG.",
   "settings.companyMarkAddWide": "Add wide logo",
   "settings.companyMarkReplaceWide": "Replace wide logo",
   "settings.companyMarkRemoveWide": "Remove wide logo",
@@ -10469,6 +10647,14 @@ export const en = {
   "product.sku": "SKU",
   "product.description": "Description",
   "product.unit": "Unit",
+  "product.unitPiece": "Piece",
+  "product.unitHour": "Hour",
+  "product.unitDay": "Day",
+  "product.unitMonth": "Month",
+  "product.unitFlatFee": "Flat fee",
+  "product.unitOther": "Other",
+  "product.unitOtherLabel": "Other unit",
+  "product.unitOtherRequired": "Type the unit, or pick one from the list.",
   "product.unitPrice": "Unit price",
   "product.currency": "Currency",
   "product.taxRate": "Default tax rate %",
@@ -10723,6 +10909,18 @@ export const en = {
     "ISO 4217 code that all amounts convert to for roll-ups. Can be changed until the first amount is converted.",
   "installationSettings.baseCurrencyLocked":
     "Locked: amounts are already converted to this currency, so changing it would alter every roll-up.",
+  "installationSettings.baseCurrencyLock.ratesFrozen_one":
+    "{count} record has frozen a conversion rate against this currency, so it cannot change.",
+  "installationSettings.baseCurrencyLock.ratesFrozen_other":
+    "{count} records have frozen a conversion rate against this currency, so it cannot change.",
+  "installationSettings.baseCurrencyLock.rateSheet_one":
+    "{count} currency rate converts into {base}. Clear the currency rates first to change the base currency.",
+  "installationSettings.baseCurrencyLock.rateSheet_other":
+    "{count} currency rates convert into {base}. Clear the currency rates first to change the base currency.",
+  "installationSettings.baseCurrencyLock.rateSheetUnnamed_one":
+    "{count} currency rate converts into a base currency that is not on record. Clear the currency rates first to change the base currency.",
+  "installationSettings.baseCurrencyLock.rateSheetUnnamed_other":
+    "{count} currency rates convert into a base currency that is not on record. Clear the currency rates first to change the base currency.",
   "installationSettings.baseLanguage": "Base language",
   "installationSettings.baseLanguageHint":
     "Language AI writes in when the whole team reads the text. Display language is separate, and customer replies follow the language of the thread.",
@@ -11427,7 +11625,9 @@ export const en = {
   "ownDomains.addFailed": "Domain not added",
   "ownDomains.remove": "Remove {domain}",
   "ownDomains.candidateNote":
-    "Seen on a connected mailbox. Not confirmed, so it does not stop capture.",
+    "Seen on a connected mailbox. Mail between colleagues on this domain is still stored until you confirm it.",
+  "ownDomains.confirm": "Confirm",
+  "ownDomains.confirmLabel": "Confirm {domain}",
 
   "financeSource.title": "Accounting source",
   "financeSource.sub":
@@ -12625,6 +12825,9 @@ export const en = {
   "today.scan.readDeals_other": "{count} deals",
   "today.scan.stale":
     "The company has changed since. It is analyzed again within the hour.",
+  "today.scan.providerResumes":
+    "Analysis retries {when}. Waiting for the AI provider.",
+  "today.scan.scheduledResumes": "Analysis resumes {when}.",
   "today.scan.resumes": "Analysis resumes {when}. Paused by the AI budget.",
   "provider.title": "Contact data",
   "provider.readOnly":
@@ -12800,8 +13003,8 @@ export const en = {
     "{word}: match any of these. Press to match all.",
   "filters.group.all": "All of these",
   "filters.group.any": "Any of these",
-  "filters.rowsMore": "More for these conditions",
-  "filters.groupMore": "More for this group",
+  "filters.addGroupToGroup": "Add nested group",
+  "filters.group.match": "Conditions to match",
   "filters.proposed": "Proposed",
   "filters.switch.title": "Switch to {records}?",
   "filters.switch.body.contacts":
@@ -13227,6 +13430,7 @@ export const en = {
   "filters.loadingVocabulary": "Loading fields…",
   "filters.noFields": "No filterable fields for this record type.",
   "filters.resultsTitle": "Matching records",
+  "filters.resultRefGone": "Removed, or hidden from you",
   "filters.resultsCaption":
     "First page of matches, for checking the filter. Not the full selection.",
   "filters.noMatches":
@@ -13292,6 +13496,12 @@ export const en = {
     "Its send time passed while the system was not running, and it is now too late to send. Reschedule or withdraw it.",
   "sched.held.timerExhausted":
     "The send job ran out of attempts. Reschedule it to retry.",
+  "sched.held.passportRevoked":
+    "The agent credential was revoked. Review the message before choosing another sender.",
+  "sched.held.followupSettled":
+    "The request was answered or completed after scheduling. Review whether this follow-up is still needed.",
+  "sched.held.meetingCanceled":
+    "The meeting was canceled after scheduling. Review this message before sending it.",
   "sched.held.sendRefused":
     "A check blocked this message when it was due. Nothing was sent.",
   "sched.inZone": "in {zone}",
@@ -14578,6 +14788,19 @@ export const en = {
     "Promoting a lead is waiting for your word",
   "magic.action.approval_overnight":
     "An overnight proposal is waiting for your word",
+  "approval.commitment.proposalExpiresIn": "Proposal expires in {countdown}",
+  "approval.commitment.noDueDay": "No day stated",
+  "approval.commitment.promiseStatus": "Commitment status",
+  "approval.commitment.notFulfilled":
+    "Creating the task does not mark the commitment as fulfilled.",
+  "approval.commitment.inactiveAssignment":
+    "Cannot create a task for {name}: this account cannot receive tasks. Dismiss this proposal and create a task for an active colleague.",
+  "approval.commitment.createTask_other": "Create {count} tasks",
+  "approval.commitment.createTask_one": "Create task",
+  "magic.action.approval_commitment_task_named": "{party}: {summary}",
+  "magic.action.approval_commitment_task_summary": "{summary}",
+  "magic.action.approval_commitment_task_unverified":
+    "{party} (unverified): {summary}",
   "magic.action.approval_commitment_task":
     "A commitment from a conversation is waiting for your word",
   "magic.action.approval_capture_counterparty":
@@ -14969,6 +15192,40 @@ export const en = {
   "legalReview.offerLineRecurring_other": "{cadence} for {count} periods",
   "legalReview.offerLineStaged": "Proposed, not yet in the total",
   "legalReview.packBinding": "Other offers sent to the buyer",
+  "aiTask.name.account_scan": "Reading what an account needs",
+  "aiTask.name.agent_loop": "Agent reasoning loop",
+  "aiTask.name.brief_ranking": "Morning brief ranking",
+  "aiTask.name.capture_classify": "Message classification",
+  "aiTask.name.capture_confidentiality_verdict": "Thread confidentiality check",
+  "aiTask.name.capture_counterparty_verdict": "First-time sender check",
+  "aiTask.name.cert_judge": "Certification judging",
+  "aiTask.name.cold_start": "Onboarding read",
+  "aiTask.name.corpus_ask": "Document corpus question",
+  "aiTask.name.deal_health": "Deal status card",
+  "aiTask.name.document_extract": "Document extraction",
+  "aiTask.name.draft_reply": "Reply drafting",
+  "aiTask.name.enrich": "Signature enrichment",
+  "aiTask.name.growth_fit": "Company fit assessment",
+  "aiTask.name.nl_search": "Natural-language search",
+  "aiTask.name.offer_draft": "Offer drafting",
+  "aiTask.name.owed_verdict": "Unanswered-message triage",
+  "aiTask.name.propose_roles": "Buying-role reading",
+  "aiTask.name.rate_extract": "Exchange rate extraction",
+  "aiTask.name.request_settlement":
+    "Checking whether the reply answered the request",
+  "aiTask.name.signal_extract": "Signal extraction",
+  "aiTask.name.site_extract": "Website research",
+  "aiTask.name.site_fact_extract": "Website fact extraction",
+  "aiTask.name.site_triage": "Website triage",
+  "aiTask.name.stage_evidence_extract": "Stage evidence extraction",
+  "aiTask.name.summarize": "Record summary",
+  "aiTask.name.tag_suggest": "Tag suggestions",
+  "aiTask.name.transcript": "Transcript reading",
+  "aiTask.name.transcript_propose": "Meeting follow-up extraction",
+  "aiTask.name.voice_build": "Voice DNA build",
+  "aiTask.name.weekly_learnings": "What last week taught",
+  "aiTask.name.weekly_review": "Weekly review narrative",
+  "aiTask.name.unknown": "AI task",
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -47,6 +47,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
@@ -112,8 +113,10 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err != nil {
 		return err
 	}
-	moment := deriveMomentPast(ctx, now, out, dismissed, proposer(ctx, out, sent, zone, dismissed))
-	momentaction.Withhold(ctx, &moment)
+	said := momentCopyFor(string(identity.BaseLanguageForRecord(ctx, tx)))
+	said.zone = zone
+	moment := said.deriveMomentPast(ctx, now, out, dismissed, said.proposer(ctx, out, sent, zone, dismissed))
+	momentaction.Withhold(ctx, string(said.Lang()), &moment)
 	out.Moment = &moment
 	return nil
 }
@@ -179,8 +182,8 @@ func (s *Service) momentDismissals(ctx context.Context, tx pgx.Tx, contactID ids
 // Rungs 3 (job change) and 7 (public signal) are absent by design — both need
 // inputs this build does not have, and a rule that cannot fire belongs nowhere
 // on the page.
-func deriveMoment(ctx context.Context, now time.Time, page *crmcontracts.Contact360) crmcontracts.ContactMoment {
-	return deriveMomentPast(ctx, now, page, func(crmcontracts.ContactMoment) bool { return false },
+func (said momentCopy) deriveMoment(ctx context.Context, now time.Time, page *crmcontracts.Contact360) crmcontracts.ContactMoment {
+	return said.deriveMomentPast(ctx, now, page, func(crmcontracts.ContactMoment) bool { return false },
 		func(moment crmcontracts.ContactMoment) crmcontracts.ContactMoment { return moment })
 }
 
@@ -197,12 +200,12 @@ func deriveMoment(ctx context.Context, now time.Time, page *crmcontracts.Contact
 // A rung that fires and is dismissed is passed over rather than ending the
 // walk, so the ladder's order still decides what the reader sees — they see
 // the highest rung they have NOT put away.
-func deriveMomentPast(
+func (said momentCopy) deriveMomentPast(
 	ctx context.Context, now time.Time, page *crmcontracts.Contact360,
 	dismissed func(crmcontracts.ContactMoment) bool,
 	propose func(crmcontracts.ContactMoment) crmcontracts.ContactMoment,
 ) crmcontracts.ContactMoment {
-	for _, plain := range momentLadder {
+	for _, plain := range said.ladder() {
 		rung := proposing(plain, propose)
 		moment, ok := rung(ctx, now, page)
 		if !ok || !dismissed(moment) {
@@ -221,37 +224,19 @@ func deriveMomentPast(
 	}
 	// 10. Nothing needs you today. A quiet success state, not a blank card:
 	// "there is nothing here" is an answer, and the reader came for an answer.
-	return nothingNeededMoment(ctx, now, page)
+	return said.nothingNeededMoment(ctx, now, page)
 }
 
 // ladderRung answers one rung's question over the assembled page.
 type ladderRung = func(context.Context, time.Time, *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool)
 
-// momentLadder is the ladder itself, named so a test can walk every rung.
-//
-// A rule that is only reachable through deriveMoment can only be tested by
-// constructing a page that makes it win, and the rungs below it then never run
-// at all - which is how three dead buttons sat on untested rungs while a test
-// claiming to be a general rule covered two.
-var momentLadder = []ladderRung{
-	meetingPrepMoment,    // 1. a meeting within 72 hours
-	reEngagedMoment,      // 2. new inbound after a material quiet period
-	overduePromiseMoment, // 4. a promise of ours is past its date, from mail or the task list
-	goneQuietMoment,      // 5. outbound unanswered past the configured rule
-	openPromiseMoment,    // 5b. an open task we owe them, undated or ahead
-	// 6 is absent, and deliberately. It was role_change, and the only signal it
-	// read was relstrength's replied_after_gap — which is not a role change, and
-	// nothing in the system emits one. So it reached rung 2's conclusion from
-	// rung 2's evidence while reporting a different rule and a different claim
-	// key: two re-engagement rungs, one of them named for something it had not
-	// observed. Noticing that somebody's seat on a deal has moved is worth
-	// building; it needs a producer on the deal-stakeholder read, and the slot
-	// comes back when that exists rather than being held warm by a stand-in.
-	missingNextStepMoment,  // 8. an open deal with no next step involving them
-	thinRelationshipMoment, // 9. no captured interaction or network
+// A meeting deadline wins over a reply, followed by promises and relationship gaps.
+// Role changes need recorded role-change evidence; reply gaps cannot establish them.
+func (said momentCopy) ladder() []ladderRung {
+	return []ladderRung{said.meetingPrepMoment, said.reEngagedMoment, said.overduePromiseMoment, said.goneQuietMoment, said.openPromiseMoment, said.missingNextStepMoment, said.thinRelationshipMoment}
 }
 
-// momentLadderNames names the rungs in momentLadder order, for tests that
+// momentLadderNames names the rungs in ladder order, for tests that
 // report which rung they are talking about. A rung that does not fire returns
 // a zero ContactMoment whose Rule is empty, so the name cannot come from the
 // value — it has to be stated here.
@@ -267,7 +252,7 @@ var momentLadderNames = []string{
 
 // meetingPrepMoment: a meeting is close enough that preparing for it is the
 // most valuable thing the reader could do.
-func meetingPrepMoment(_ context.Context, now time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
+func (said momentCopy) meetingPrepMoment(_ context.Context, now time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
 	if page.NextMeeting == nil {
 		return crmcontracts.ContactMoment{}, false
 	}
@@ -275,7 +260,7 @@ func meetingPrepMoment(_ context.Context, now time.Time, page *crmcontracts.Cont
 	if !meeting.StartsAt.After(now) || meeting.StartsAt.After(now.Add(meetingHorizonHours*time.Hour)) {
 		return crmcontracts.ContactMoment{}, false
 	}
-	label := "Meeting"
+	label := said.Say(momentWords.Meeting)
 	if meeting.Subject != nil && *meeting.Subject != "" {
 		label = *meeting.Subject
 	}
@@ -291,14 +276,14 @@ func meetingPrepMoment(_ context.Context, now time.Time, page *crmcontracts.Cont
 		Rule:                crmcontracts.ContactMomentRuleMeetingPrep,
 		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
-		Headline:            fmt.Sprintf("Prepare for %s", label),
-		WhyNow:              "Prepare before the meeting, not after.",
+		Headline:            fmt.Sprintf(said.Say(momentWords.Prepare), label),
+		WhyNow:              said.Say(momentWords.PrepareWhy),
 		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:            evidence,
 		FreshnessAt:         &meeting.StartsAt,
 		RecommendedAction: crmcontracts.ContactMomentAction{
 			Kind:  crmcontracts.ContactMomentActionKindOpenMeetingBrief,
-			Label: "Open meeting brief",
+			Label: said.Say(momentWords.Brief),
 			State: crmcontracts.ContactMomentActionStateAvailable,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface:    crmcontracts.ContactMomentDestinationSurfaceMeetingBrief,
@@ -308,7 +293,7 @@ func meetingPrepMoment(_ context.Context, now time.Time, page *crmcontracts.Cont
 		},
 		SecondaryActions: &[]crmcontracts.ContactMomentAction{{
 			Kind:  crmcontracts.ContactMomentActionKindDraftReply,
-			Label: "Draft agenda",
+			Label: said.Say(momentWords.Agenda),
 			State: crmcontracts.ContactMomentActionStateWillConfirm,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
@@ -320,7 +305,7 @@ func meetingPrepMoment(_ context.Context, now time.Time, page *crmcontracts.Cont
 
 // reEngagedMoment: they came back. The strongest reason captured data alone can
 // produce, and the one most likely to be acted on the same hour.
-func reEngagedMoment(_ context.Context, now time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
+func (said momentCopy) reEngagedMoment(_ context.Context, now time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
 	// Imported mail is history, not a reply, so this rung reads the inbound
 	// that is not import-written.
 	if page.LastLiveInboundAt == nil {
@@ -343,7 +328,7 @@ func reEngagedMoment(_ context.Context, now time.Time, page *crmcontracts.Contac
 	if sinceWeWrote < reEngagedQuietDays {
 		return crmcontracts.ContactMoment{}, false
 	}
-	evidence := []crmcontracts.ContactMomentEvidence{inboundEvidence(page, inbound)}
+	evidence := []crmcontracts.ContactMomentEvidence{said.inboundEvidence(page, inbound)}
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:re_engaged",
 		Rule:                crmcontracts.ContactMomentRuleReEngaged,
@@ -360,15 +345,14 @@ func reEngagedMoment(_ context.Context, now time.Time, page *crmcontracts.Contac
 		//
 		// The interval itself is real; only its owner was wrong. It is the age
 		// of OUR last message, which is the fact this rung fires on anyway.
-		Headline: fmt.Sprintf("They wrote back; your last message was %d days earlier", sinceWeWrote),
-		WhyNow: "They're waiting on a reply, and your last message to them is older than the " +
-			"re-engagement rule allows.",
+		Headline:    fmt.Sprintf(said.Say(momentWords.Replied), sinceWeWrote),
+		WhyNow:      said.Say(momentWords.RepliedWhy),
 		Confidence:  crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:    evidence,
 		FreshnessAt: &inbound,
 		RecommendedAction: crmcontracts.ContactMomentAction{
 			Kind:  crmcontracts.ContactMomentActionKindDraftReply,
-			Label: "Draft a reply",
+			Label: said.Say(momentWords.Reply),
 			State: crmcontracts.ContactMomentActionStateWillConfirm,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
@@ -383,7 +367,7 @@ func reEngagedMoment(_ context.Context, now time.Time, page *crmcontracts.Contac
 // The moment names the rule in its own text. A reader who disagrees with the
 // verdict can see what produced it, which is the difference between a system
 // that judges and one that explains.
-func goneQuietMoment(_ context.Context, now time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
+func (said momentCopy) goneQuietMoment(_ context.Context, now time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
 	if page.LastOutboundAt == nil {
 		return crmcontracts.ContactMoment{}, false
 	}
@@ -400,28 +384,28 @@ func goneQuietMoment(_ context.Context, now time.Time, page *crmcontracts.Contac
 	if page.LastInboundAt != nil {
 		quietFor = elapsed.Days(*page.LastInboundAt, now)
 	}
-	evidence := outboundEvidence(page, outbound)
+	evidence := said.outboundEvidence(page, outbound)
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:gone_quiet",
 		Rule:                crmcontracts.ContactMomentRuleGoneQuiet,
 		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
-		Headline:            fmt.Sprintf("No reply for %d days", quietFor),
-		WhyNow: fmt.Sprintf("Your last message went out %d days ago. The rule flags no reply after %d days.",
+		Headline:            fmt.Sprintf(said.Say(momentWords.Quiet), quietFor),
+		WhyNow: fmt.Sprintf(said.Say(momentWords.QuietWhy),
 			waiting, goneQuietAfterDays),
 		Confidence:  crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:    evidence,
 		FreshnessAt: &outbound,
 		RecommendedAction: crmcontracts.ContactMomentAction{
 			Kind:  crmcontracts.ContactMomentActionKindDraftReply,
-			Label: "Draft a follow-up",
+			Label: said.Say(momentWords.FollowUp),
 			State: crmcontracts.ContactMomentActionStateWillConfirm,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
 				Prefill: new(map[string]string{prefillIntent: "follow_up"}),
 			},
 		},
-		SecondaryActions: &[]crmcontracts.ContactMomentAction{askColleague()},
+		SecondaryActions: &[]crmcontracts.ContactMomentAction{said.askColleague()},
 	}, true
 }
 
@@ -440,11 +424,11 @@ func goneQuietMoment(_ context.Context, now time.Time, page *crmcontracts.Contac
 // the same GET /contacts/{id}/network read. What does not exist is the step after
 // that — a screen for asking one of them — so the reason says that, and not
 // that Margince cannot tell who they are. It sits beside a card listing them.
-func askColleague() crmcontracts.ContactMomentAction {
-	reason := "Asking a colleague for context isn't available yet"
+func (said momentCopy) askColleague() crmcontracts.ContactMomentAction {
+	reason := said.Say(momentWords.AskUnavailable)
 	return crmcontracts.ContactMomentAction{
 		Kind:          crmcontracts.ContactMomentActionKindAskColleague,
-		Label:         "Ask for context",
+		Label:         said.Say(momentWords.Ask),
 		State:         crmcontracts.ContactMomentActionStateBlocked,
 		BlockedReason: &reason,
 	}
@@ -454,10 +438,10 @@ func askColleague() crmcontracts.ContactMomentAction {
 // pending: write down something that happened off-system. It opens the
 // log-activity form the contact page mounts, the same form the deal and lead
 // pages keep in their rail.
-func logInteraction() crmcontracts.ContactMomentAction {
+func (said momentCopy) logInteraction() crmcontracts.ContactMomentAction {
 	return crmcontracts.ContactMomentAction{
 		Kind:  crmcontracts.ContactMomentActionKindLogActivity,
-		Label: "Log an interaction",
+		Label: said.Say(momentWords.Log),
 		State: crmcontracts.ContactMomentActionStateAvailable,
 		Destination: &crmcontracts.ContactMomentDestination{
 			Surface: crmcontracts.ContactMomentDestinationSurfaceActivityLog,
@@ -471,8 +455,8 @@ func logInteraction() crmcontracts.ContactMomentAction {
 // It is a moment rather than an absence because the reader opened the page to
 // be told what to do, and "nothing" is a legitimate answer that an empty card
 // fails to give.
-func nothingNeededMoment(_ context.Context, now time.Time, page *crmcontracts.Contact360) crmcontracts.ContactMoment {
-	why := "No meeting coming up, nothing owed, nobody waiting on a reply."
+func (said momentCopy) nothingNeededMoment(_ context.Context, now time.Time, page *crmcontracts.Contact360) crmcontracts.ContactMoment {
+	why := said.Say(momentWords.QuietNothing)
 	// Every rung above this one either fired or found nothing, and "found
 	// nothing" includes "was not allowed to look". Saying nobody is waiting on
 	// a reply when the timeline was withheld states a fact about data this
@@ -483,18 +467,18 @@ func nothingNeededMoment(_ context.Context, now time.Time, page *crmcontracts.Co
 		crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedNextSteps,
 		crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedClaims,
 		crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedCommercial) {
-		why = "Nothing needs you in what you can see. Parts of this record are hidden from you."
+		why = said.Say(momentWords.HiddenNothing)
 	}
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:nothing_needed",
 		Rule:                crmcontracts.ContactMomentRuleNothingNeeded,
 		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: "quiet",
-		Headline:            "Nothing needs you today",
+		Headline:            said.Say(momentWords.Nothing),
 		WhyNow:              why,
 		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:            []crmcontracts.ContactMomentEvidence{},
 		FreshnessAt:         &now,
-		RecommendedAction:   logInteraction(),
+		RecommendedAction:   said.logInteraction(),
 	}
 }

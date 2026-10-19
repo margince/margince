@@ -144,7 +144,8 @@ func TestActivityLogInputAcceptsAnOrdinarySource(t *testing.T) {
 	// The guard is a prefix rule, not a ban on the field: an ordinary
 	// provenance string has to survive, or every capture connector that
 	// stamps its own source would start failing at the wire.
-	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Kind: "note", Source: "webform"})
+	subject := "Form submission"
+	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Kind: "note", Subject: &subject, Source: "webform"})
 	if err != nil {
 		t.Fatalf("an ordinary source must stay writable: %v", err)
 	}

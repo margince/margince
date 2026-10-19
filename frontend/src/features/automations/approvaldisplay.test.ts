@@ -220,3 +220,136 @@ describe("what a staged proposal shows", () => {
     }
   });
 });
+
+describe("commitment responsibility", () => {
+  const day = (value: string) => value;
+  const names = new Map([
+    ["original", "Theo"],
+    ["assignee", "Mira"],
+  ]);
+  it.each([
+    [
+      { promiser_seat_id: "original", seat_id: "assignee" },
+      "Theo",
+      "Creates a task assigned to Mira.",
+    ],
+    [
+      { promiser_seat_id: "original" },
+      "Theo",
+      "Creates a task assigned to the person who approves.",
+    ],
+    [
+      { seat_id: "assignee" },
+      "Promiser unresolved",
+      "Creates a task assigned to Mira.",
+    ],
+    [
+      { promiser_seat_id: "missing-id", party: "Theo" },
+      "Theo",
+      "Creates a task assigned to the person who approves.",
+    ],
+    [
+      { party: "Mira", promiser_unresolved: true },
+      "Unverified: Mira",
+      "Creates a task assigned to the person who approves.",
+    ],
+    [
+      { promiser_seat_id: "missing-id" },
+      "Colleague name unavailable",
+      "Creates a task assigned to the person who approves.",
+    ],
+  ])(
+    "keeps original attribution separate from assignment: %j",
+    (change, promiser, effect) => {
+      const fields = resolveDisplay("commitment_task", change, t, day, names);
+      expect(fields.find((field) => field.field === "party")?.value).toBe(
+        promiser,
+      );
+      expect(fields.find((field) => field.field === "assignment")?.value).toBe(
+        effect,
+      );
+      expect(JSON.stringify(fields)).not.toContain("missing-id");
+    },
+  );
+});
+
+it("shows explicit decision responsibility independently of the task assignee", () => {
+  const fields = resolveDisplay(
+    "commitment_task",
+    { seat_id: "assignee" },
+    t,
+    (value) => value,
+    new Map([
+      ["assignee", "Theo"],
+      ["reviewer", "Mira"],
+    ]),
+    "reviewer",
+  );
+  expect(
+    fields.find((field) => field.field === "requested_decider")?.value,
+  ).toBe("Mira");
+  expect(fields.find((field) => field.field === "assignment")?.value).toBe(
+    "Creates a task assigned to Theo.",
+  );
+});
+
+it("does not infer a requested reviewer from agent authority", () => {
+  const fields = resolveDisplay(
+    "advance_deal",
+    { on_behalf_of: "reviewer" },
+    t,
+    (value) => value,
+  );
+  expect(fields.some((field) => field.field === "requested_decider")).toBe(
+    false,
+  );
+});
+it.each(LOCALES)(
+  "keeps an undated promise distinct from a fulfilled task in %s",
+  (locale) => {
+    const tr = (
+      key: Parameters<typeof translate>[1],
+      params?: Record<string, string>,
+    ) => translate(locale, key, params);
+    const fields = resolveDisplay(
+      "commitment_task",
+      { summary: "Send the revised scope", party: "Alex Beck" },
+      tr,
+      (day) => day,
+    );
+    expect(fields.find((field) => field.field === "due_date")?.value).toBe(
+      tr("approval.commitment.noDueDay"),
+    );
+    expect(
+      fields.find((field) => field.field === "promise_status")?.value,
+    ).toBe(tr("approval.commitment.notFulfilled"));
+  },
+);
+
+it.each(LOCALES)(
+  "keeps the named inactive assignee separate from the promiser in %s",
+  (locale) => {
+    const t = (
+      key: Parameters<typeof translate>[1],
+      params?: Record<string, string>,
+    ) => translate(locale, key, params);
+    const fields = resolveDisplay(
+      "commitment_task",
+      { promiser_seat_id: "original", seat_id: "assignee" },
+      t,
+      (day) => day,
+      new Map([
+        ["original", "Theo"],
+        ["assignee", "Mira"],
+      ]),
+      undefined,
+      true,
+    );
+    expect(fields.find((field) => field.field === "party")?.value).toBe("Theo");
+    expect(fields.find((field) => field.field === "assignment")?.value).toBe(
+      translate(locale, "approval.commitment.inactiveAssignment", {
+        name: "Mira",
+      }),
+    );
+  },
+);

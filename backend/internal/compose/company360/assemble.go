@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // The section names, spelled once. They are the contract's
@@ -208,6 +209,7 @@ type assembly struct {
 	// them (the 360's query budget is what noticed).
 	baseCurrency     string
 	baseCurrencyRead bool
+	baseLanguage     textlang.Lang
 
 	contacts      []contacts.ContactStrength
 	contactsRead  bool
@@ -357,7 +359,7 @@ func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 				return a.advice, a.adviceErr
 			}
 			a.advice, a.adviceErr = gatherSuggestionInputs(
-				a.ctx, a.tx, a.companyID, a.now, facts, heading, base, a.opts)
+				a.ctx, a.tx, a.companyID, a.now, facts, heading, base, a.opts, a.recordLanguage())
 		}
 		a.adviceRead = true
 	}
@@ -486,4 +488,12 @@ func (a *assembly) installationBaseCurrency() (string, error) {
 	}
 	a.baseCurrency, a.baseCurrencyRead = base, true
 	return base, nil
+}
+
+// One assembly uses one language even if the setting changes during its reads.
+func (a *assembly) recordLanguage() textlang.Lang {
+	if a.baseLanguage == "" {
+		a.baseLanguage = identity.BaseLanguageForRecord(a.ctx, a.tx)
+	}
+	return a.baseLanguage
 }

@@ -57,7 +57,7 @@ func TestTheTeamScopeReportsARosterThatCameBackAtItsCap(t *testing.T) {
 
 	svc := &Service{now: func() time.Time { return boardInstant }}
 	svc.teammates = cutRoster{{UserID: theColleague}}
-	rows := []ranked{{item: crmcontracts.WorklistItem{Id: "teammate"}, owner: theColleague}}
+	rows := []ranked{{item: crmcontracts.WorklistItem{Id: "teammate"}, ownerRef: ownedBy(theColleague)}}
 
 	kept, note := svc.narrowToScope(boardReaderAt(principal.RowScopeTeam), rows, scopeTeam, ids.UUID{})
 	if len(kept) != 1 {
@@ -405,9 +405,9 @@ func TestTheTeamScopeKeepsTheTeamsRowsAndNobodyElses(t *testing.T) {
 		now: func() time.Time { return boardInstant },
 	}
 	rows := []ranked{
-		{item: crmcontracts.WorklistItem{Id: "mine"}, owner: theReader},
-		{item: crmcontracts.WorklistItem{Id: "teammate"}, owner: theColleague},
-		{item: crmcontracts.WorklistItem{Id: "outsider"}, owner: outsider},
+		{item: crmcontracts.WorklistItem{Id: "mine"}, ownerRef: ownedBy(theReader)},
+		{item: crmcontracts.WorklistItem{Id: "teammate"}, ownerRef: ownedBy(theColleague)},
+		{item: crmcontracts.WorklistItem{Id: "outsider"}, ownerRef: ownedBy(outsider)},
 		{item: crmcontracts.WorklistItem{Id: "nobody"}},
 	}
 
@@ -441,7 +441,7 @@ func TestTheTeamScopeFailsClosedWithoutTheMembershipReader(t *testing.T) {
 	t.Parallel()
 
 	svc := &Service{now: func() time.Time { return boardInstant }}
-	rows := []ranked{{item: crmcontracts.WorklistItem{Id: "somebody's"}, owner: theColleague}}
+	rows := []ranked{{item: crmcontracts.WorklistItem{Id: "somebody's"}, ownerRef: ownedBy(theColleague)}}
 	got, note := svc.narrowToScope(boardReaderAt(principal.RowScopeTeam), rows, scopeTeam, ids.UUID{})
 	if len(got) != 0 {
 		t.Fatalf("the team scope answered %d rows with no membership reader bound", len(got))

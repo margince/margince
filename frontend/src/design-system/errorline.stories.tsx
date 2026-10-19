@@ -29,7 +29,7 @@ export default meta;
 type Story = StoryObj;
 
 const conflict = new ProblemError({
-  code: "version_conflict",
+  code: "version_skew",
   detail: "Somebody else changed this record. Re-read it and try again.",
 });
 

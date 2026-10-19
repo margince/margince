@@ -220,7 +220,7 @@ describe("walking to the rest of the queue", () => {
         }
         asked += 1;
         if (asked > 1) {
-          return new Response(JSON.stringify({ code: "unavailable" }), {
+          return new Response(JSON.stringify({ code: "service_unavailable" }), {
             status: 503,
             headers: { "content-type": "application/problem+json" },
           });

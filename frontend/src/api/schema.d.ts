@@ -4941,7 +4941,9 @@ export interface paths {
          *     `source_system: email` + the RFC822 Message-ID, one identity shared by every mail
          *     transport, so the same message reaching two connected mailboxes is one activity —
          *     and that reserved value is refused here (422): only a connector, or this system's
-         *     own send, may claim a mail identity. An activity may link to >1 entity
+         *     own send, may claim a mail identity. A `note` or a `call` needs a non-blank `subject` or
+         *     `body`, on create and on an edit that would leave it with neither (422 naming `subject`);
+         *     a task needs its `subject`. An activity may link to >1 entity
          *     (contact and deal). A link that names a record the caller cannot read answers `404`,
          *     the same for a missing record and for one hidden by row scope. `log_activity` is 🟢
          *     (reversible).
@@ -6034,7 +6036,13 @@ export interface paths {
         };
         /** Read the caller's reusable booking page and scheduling policy. */
         get: operations["getSchedulingProfile"];
-        /** Configure and activate the caller's booking page. */
+        /**
+         * Configure and activate the caller's booking page.
+         * @description Each setting outside its limit answers 422 naming that field (`duration_minutes`,
+         *     `notice_minutes`, `horizon_days`, `buffer_minutes`, `title`, `location`, `calendar_id`,
+         *     `blocking_calendars`). The four whole-number settings must be sent: a missing or null
+         *     one is refused rather than saved as 0.
+         */
         put: operations["putSchedulingProfile"];
         post?: never;
         delete?: never;
@@ -9481,7 +9489,12 @@ export interface paths {
          * @description Multipart upload. The image is re-encoded to an aspect-preserving PNG, so a wide
          *     wordmark remains wide and what is served from `logo_url` is always this origin's own
          *     bytes, never third-party markup. PNG, JPEG, GIF, WebP, ICO and SVG are accepted;
-         *     anything that will not decode is refused as 415.
+         *     a file that is not one of those types is refused as 415. An SVG that draws its words as
+         *     text (`<text>`, `<tspan>`, `<textPath>`) is refused as 422 with code
+         *     `svg_text_not_outlined`, because the rasterizer draws shapes and no glyphs, so
+         *     the words would be lost. An SVG the rasterizer cannot draw faithfully (for example
+         *     embedded images, filters, masks or a blank result) is refused as 422 with code
+         *     `svg_not_drawable`.
          *
          *     The upload is a HUMAN write and takes precedence: while it stands, a website read
          *     resolving a different mark leaves it alone. `DELETE` gives the field back — the
@@ -9523,7 +9536,10 @@ export interface paths {
          *
          *     Multipart upload, decoded and re-encoded exactly as the wide mark is: PNG, JPEG,
          *     GIF, WebP, ICO and SVG are accepted, what is served from `logo_icon_url` is always
-         *     this origin's own bytes, and anything that will not decode is refused as 415.
+         *     this origin's own bytes, and a file that is not one of those types is refused as
+         *     415. An SVG that draws its words as text is refused as 422 with code
+         *     `svg_text_not_outlined`, and one with parts it cannot draw as 422 with code
+         *     `svg_not_drawable`.
          *
          *     `DELETE` takes the icon off. The two slots are independent: a company with only a
          *     wide mark keeps drawing that mark in the collapsed rail, which is what every
@@ -9772,6 +9788,10 @@ export interface paths {
          *     captured stays, and every connector advances its watermark past a message this
          *     suppresses, so a message dropped under a domain entered by mistake is not offered again.
          *     Idempotent on the folded domain.
+         *
+         *     A consumer-mail domain (the shipped list, as the workspace has edited it) is refused with
+         *     422 `consumer_mail_domain`: it is shared by unrelated senders, so registering it would drop
+         *     mail between strangers.
          */
         post: operations["createWorkspaceEmailDomain"];
         delete?: never;
@@ -11306,9 +11326,10 @@ export interface paths {
          *     (PATCH). Governed by the `installation_settings` RBAC object.
          *
          *     `base_currency_locked` reports whether the currency has stopped being changeable, and
-         *     `base_currency_locked_reason` says why, naming how many deals have already frozen a
-         *     conversion rate against it (ADR-0085 §7). A client renders the field read-only from
-         *     the flag rather than discovering the refusal by attempting a write.
+         *     `base_currency_lock` says why as facts: which reason holds it and how many records or
+         *     currency rates hold it (ADR-0085 §7). `base_currency_locked_reason` carries the same
+         *     facts as one English sentence for older clients. A client renders the field read-only
+         *     from the flag rather than discovering the refusal by attempting a write.
          */
         get: operations["getInstallationSettings"];
         put?: never;
@@ -13868,7 +13889,9 @@ export interface paths {
          *     moves — the physical column identity is stable across rename. Merge-PATCH:
          *     `column_name`, `object`, and `type` are absent from the request schema entirely.
          *     A retired field refuses rename with a 409 `conflict` — retirement is terminal,
-         *     so its label is frozen.
+         *     so its label is frozen. A label another field of the same object already holds (by its
+         *     text, or by the slug it would derive) answers 409 `conflict`, on rename and on create
+         *     alike; the sentence says which of the two collided.
          */
         patch: operations["renameCustomField"];
         trace?: never;
@@ -20714,10 +20737,13 @@ export interface components {
              */
             base_currency_locked: boolean;
             /**
-             * @description Why the currency is locked, naming what has already converted against it. Absent
-             *     when it is still changeable.
+             * @description Why the currency is locked, naming what has already converted against it, as one
+             *     English sentence. Absent when it is still changeable. A client words the reason
+             *     from `base_currency_lock` instead, and reads this only from a server that does not
+             *     send that object.
              */
             base_currency_locked_reason?: string;
+            base_currency_lock?: components["schemas"]["BaseCurrencyLock"];
             /**
              * Format: int64
              * @description The largest upload request this installation accepts, in bytes — set by whoever
@@ -21408,6 +21434,18 @@ export interface components {
             oidc_group_role_map: {
                 [key: string]: string;
             };
+        };
+        /** @description Why the base currency is locked, as facts a client words in its reader's language. Present exactly when `base_currency_locked_reason` is (ADR-0085 §7). */
+        BaseCurrencyLock: {
+            /**
+             * @description `rates_frozen`: closed deals, sent offers, mirrored invoices, contracts or commission entries have frozen a conversion rate against the base, and nothing undoes that. `rate_sheet`: currency rates convert into the base; clearing them lifts the lock.
+             * @enum {string}
+             */
+            reason: "rates_frozen" | "rate_sheet";
+            /** @description How many records froze a rate (`rates_frozen`), or how many currency rates convert into the base (`rate_sheet`). */
+            count: number;
+            /** @description The ISO-4217 code the currency rates convert into. Sent only with `rate_sheet`, and absent there when the installation holds no stored base to name. */
+            base_currency?: string;
         };
         /** @description One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen. */
         SignInProvider: {
@@ -24363,7 +24401,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_held" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -25100,7 +25138,7 @@ export interface components {
             city?: string | null;
             region?: string | null;
             postal_code?: string | null;
-            /** @description ISO-3166 alpha-2. */
+            /** @description ISO-3166 alpha-2. A contact or company write (and a CSV import cell) that changes the country to a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`; a code is stored upper-case. A country stored before this rule is kept as it is when a save carries it back unchanged. */
             country?: string | null;
         } & {
             [key: string]: unknown;
@@ -33597,9 +33635,12 @@ export interface components {
              *     `missed_window` — it came due while nothing was running and is now too late to be the
              *     message that was written. `timer_exhausted` — the job that wakes it ran out of
              *     attempts. `send_refused` — a gate refused for another reason at fire.
+             *     `passport_revoked` — the agent credential was revoked.
+             *     `followup_settled` — the recorded request was answered or completed after scheduling.
+             *     `meeting_canceled` — the meeting named as follow-up evidence was canceled.
              * @enum {string|null}
              */
-            held_reason?: "consent_withdrawn" | "sender_inactive" | "missed_window" | "timer_exhausted" | "send_refused" | null;
+            held_reason?: "consent_withdrawn" | "sender_inactive" | "passport_revoked" | "missed_window" | "timer_exhausted" | "send_refused" | "followup_settled" | "meeting_canceled" | null;
             /**
              * Format: uuid
              * @description The review this message's refusal opened, when one stands. Null on every message
@@ -35943,6 +35984,8 @@ export interface components {
             blocks: components["schemas"]["ReportingBlockKind"][];
         };
         ReportingContext: {
+            /** @description Base language used for generated explanations. Absent on legacy readings, which use English. */
+            prose_language?: string;
             period_kind: string;
             scope: components["schemas"]["ReportingScope"];
             /** Format: uuid */
@@ -36651,12 +36694,24 @@ export interface components {
              *     and "tell me every morning either way" are different asks.
              */
             quiet_day_notice?: boolean;
-            /**
-             * @description The local hour a delivery should not arrive before, in the installation's
-             *     reporting timezone. Absent means the job's own hour, which is what every seat
-             *     gets today.
-             */
+            /** @description Legacy morning-only hour floor in the installation reporting timezone. Kept unchanged until routine_delivery_time is explicitly chosen. */
             delivery_hour_local?: number;
+            /** @description Personal working-hours start, or a whole hour in the existing personal timezone. The three-hour window can cross midnight. Choosing working restores the default. Existing explicit morning-only hours remain effective until this field is chosen. */
+            routine_delivery_time?: string;
+            /**
+             * @description Optional chosen scope; team content is checked against live team-review authority at delivery.
+             * @enum {string}
+             */
+            routine_mail_scope?: "personal" | "team" | "combined";
+            /**
+             * Format: uuid
+             * @description The selected live team for team or combined scope. Personal scope ignores a retained selection.
+             */
+            routine_mail_team_id?: string;
+            /** @description Earliest weekday, Monday 1 through Sunday 7. A non-working choice rolls to the next working weekday; later workdays allow catch-up. */
+            weekly_delivery_day?: number;
+            /** @description Combine eligible notices and current actions with the weekly message when it is ready, using one routine email per reporting day. Defaults to false; class opt-outs remain effective. */
+            combine_routine_email?: boolean;
         };
         /** @description Four money readings over one period, the counts that say what they leave out, and the frame they were computed in. */
         ForecastReadings: {
@@ -37914,6 +37969,12 @@ export interface components {
             /** @description The job layer's vetted operator sentence. A failure whose stored text did not come from that closed vocabulary reports a fixed substitute instead — the raw cause never travels here. */
             reason: string;
         };
+        /**
+         * @description The verb of one audit row, as both the audit log and a record's history
+         *     serve it. One list, so the two reads cannot name the same row two ways.
+         * @enum {string}
+         */
+        AuditAction: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke" | "delete" | "place_legal_hold" | "lift_legal_hold" | "request_legal_review" | "withdraw_legal_review";
         /** @description An append-only audit row. Mirrors the `audit_log` table. */
         AuditLogEntry: {
             /** Format: uuid */
@@ -37955,8 +38016,7 @@ export interface components {
              * @description The bulk change that wrote this row; null for a change made on its own.
              */
             batch_id?: string | null;
-            /** @enum {string} */
-            action: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke" | "delete" | "place_legal_hold" | "lift_legal_hold" | "request_legal_review" | "withdraw_legal_review";
+            action: components["schemas"]["AuditAction"];
             entity_type: string;
             /**
              * Format: uuid
@@ -38168,8 +38228,12 @@ export interface components {
         /**
          * @description One rendered history line for a record mutation. `before`/`after` are
          *     masked to the viewer's readable fields — an absent key was hidden, not null.
-         *     `summary` is server-composed plain language; field-level detail lives in
-         *     before/after for the client to render.
+         *     `summary` is server-composed plain language in English. A client that
+         *     renders the line in its reader's language builds it from `action` and the
+         *     actor fields. It falls back to `summary` for an edge row, whose role
+         *     travels only in the sentence, and for an action or actor kind it does
+         *     not know.
+         *     Field-level detail lives in before/after for the client to render.
          */
         AuditHistoryEntry: {
             /** Format: uuid */
@@ -38195,7 +38259,16 @@ export interface components {
              *     "via {agent_client}" where it would otherwise say "via an agent".
              */
             agent_client?: string | null;
-            action: string;
+            action: components["schemas"]["AuditAction"];
+            /**
+             * Format: uuid
+             * @description The Agent Seat Passport the change was made under, as FieldHistoryEntry
+             *     carries it. A machine row with a passport and no `on_behalf_of` had a
+             *     human authority the row failed to record; one without a passport
+             *     never had one. With `on_behalf_of` set and no `on_behalf_of_name`,
+             *     the authority was recorded and the member no longer resolves.
+             */
+            passport_id?: string | null;
             /** Format: date-time */
             occurred_at: string;
             authorization_rule?: string | null;
@@ -38550,6 +38623,11 @@ export interface components {
              */
             granted: boolean;
         };
+        /**
+         * @description AI task key from the task catalog, used to localize its display name.
+         * @enum {string}
+         */
+        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "request_settlement" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
         /**
          * @description What kind of AI work an occurrence is. Every AI task this build can run reports here,
          *     because a task that reports nothing is AI work the product performed and then denied.
@@ -39396,6 +39474,8 @@ export interface components {
              * @enum {string|null}
              */
             status_code: null | "budget_deferred" | "bot_blocked" | "http_server_error" | "timeout" | "http_client_error" | "dns" | "tls" | "robots_disallowed" | "unreadable" | "internal" | "stale_reclaim";
+            /** @description Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons. */
+            deferral_reason?: string;
             /** @description Safe guidance only; never provider payload, prompt, SQL, or stack data. */
             status_detail: string | null;
             /** Format: date-time */
@@ -39660,6 +39740,8 @@ export interface components {
              * @enum {string|null}
              */
             status_code: null | "budget_deferred" | "bot_blocked" | "http_server_error" | "timeout" | "http_client_error" | "dns" | "tls" | "robots_disallowed" | "unreadable" | "internal" | "stale_reclaim";
+            /** @description Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons. */
+            deferral_reason?: string;
             /** @description Safe guidance only; never provider payload, prompt, SQL, or stack data. */
             status_detail: string | null;
             /** Format: date-time */
@@ -39720,6 +39802,13 @@ export interface components {
         };
         /** @description A staged 🟡 confirm-first action awaiting human decision. */
         Approval: {
+            /** @description For a pending commitment, whether its named task assignee cannot receive the task. True for invited, deactivated, archived, missing, or agent seats. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee. */
+            readonly assignee_inactive?: boolean;
+            /**
+             * Format: uuid
+             * @description The member explicitly asked to decide, independent of who has permission to approve.
+             */
+            readonly requested_decider_id?: string;
             /** Format: uuid */
             id: string;
             /** @description Examples: coldstart | send_email | advance_deal | promote_lead | overnight | deal_follow_up | commitment_task. */
@@ -41514,6 +41603,8 @@ export interface components {
             candidate_action: "none" | "auto_activated" | "review_required";
             /** @enum {string|null} */
             status_code: null | "budget_deferred" | "model_unavailable" | "invalid_output" | "quality_regression" | "material_drift" | "internal";
+            /** @description Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons. */
+            deferral_reason?: string;
             /** @description Safe operator guidance; never provider payload, prompt, SQL, or stack data. */
             status_detail: string | null;
             /** Format: date-time */
@@ -41530,7 +41621,16 @@ export interface components {
             /** Format: date-time */
             archived_at: string | null;
         };
+        VoiceReviewReason: {
+            code: string;
+            text: string;
+            values: {
+                [key: string]: number;
+            };
+        };
         VoiceProfileEvaluation: {
+            /** @description Typed explanations in the same order as review_reasons. Unknown codes use their recorded text. */
+            review_reason_details?: components["schemas"]["VoiceReviewReason"][];
             /** @constant */
             held_out_prompts: 5;
             /** @constant */
@@ -41639,7 +41739,7 @@ export interface components {
             /** @description Optional; unique per workspace while live. */
             sku?: string | null;
             description?: string | null;
-            /** @description 'unit' | 'hour' | 'day' | …; display only, free text. */
+            /** @description A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. A row written before the keys may hold a known spelling such as `Tag`, which a client shows as its key. Display only. */
             unit: string;
             /**
              * Format: int64
@@ -41684,7 +41784,7 @@ export interface components {
             name: string;
             sku?: string | null;
             description?: string | null;
-            /** @description Defaults to 'unit'. */
+            /** @description A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`. */
             unit?: string | null;
             /** Format: int64 */
             unit_price_minor: number;
@@ -42470,6 +42570,7 @@ export interface components {
             /** Format: uuid */
             product_id?: string | null;
             description?: string | null;
+            /** @description A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to the product's unit, else `piece`. */
             unit?: string | null;
             /**
              * Format: double
@@ -44164,6 +44265,11 @@ export interface components {
          *     adds none.
          */
         AttentionItem: {
+            /**
+             * Format: uuid
+             * @description The member explicitly asked to decide, independent of who has permission to approve.
+             */
+            readonly requested_decider_id?: string;
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
             id: string;
@@ -44261,6 +44367,7 @@ export interface components {
              *     that was renamed, while a reader shown `automation_run:01a0…` learns nothing.
              */
             cause_ref?: string;
+            ai_task?: components["schemas"]["AiTask"];
             /**
              * @description What `cause_ref` identifies, in words — the automation's name, the mailbox that
              *     stopped.
@@ -45679,6 +45786,7 @@ export interface components {
              *     parsed. Absent on a row that reports no shared condition.
              */
             cause_ref?: string;
+            ai_task?: components["schemas"]["AiTask"];
             /**
              * @description What `cause_ref` identifies, in words — the automation's name, the mailbox that
              *     stopped. This is the half a reader sees; the identity beside it is not drawable.
@@ -64486,9 +64594,9 @@ export interface operations {
                  *     message has no assignee, so its owner is the owner of the record it is filed
                  *     under — deal, then lead, then contact, then company, first owner found. A
                  *     thread no owned record attributes to anybody is the customer nobody is looking
-                 *     at, which is exactly what this queue is opened to find. Such a message stays
-                 *     reachable from `mine` as well, on the ground that an unowned customer writing
-                 *     in is everybody's until somebody takes them.
+                 *     at, which is exactly what this queue is opened to find. Unassigned work stays
+                 *     in this queue until somebody takes responsibility for it. `mine` requires
+                 *     a verified personal assignment or an explicitly requested decision.
                  *
                  *     WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
                  *     going quiet, meetings and duplicate pairs are read under the caller's row

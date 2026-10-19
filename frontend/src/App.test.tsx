@@ -95,7 +95,7 @@ describe("the custom-fields admin, at its address inside settings", () => {
           );
         }
         if (url.includes("/email-presentation")) {
-          return new Response(JSON.stringify({ code: "unavailable" }), {
+          return new Response(JSON.stringify({ code: "service_unavailable" }), {
             status: 503,
             headers: { "Content-Type": "application/problem+json" },
           });
@@ -170,7 +170,7 @@ describe("the custom-fields admin, at its address inside settings", () => {
             headers: { "Content-Type": "application/json" },
           });
         }
-        return new Response(JSON.stringify({ code: "unavailable" }), {
+        return new Response(JSON.stringify({ code: "service_unavailable" }), {
           status: 503,
           headers: { "Content-Type": "application/problem+json" },
         });
@@ -305,11 +305,11 @@ function mount() {
 }
 
 describe("auth boundary states (login spec §4)", () => {
-  const probe = (status: number) =>
+  const probe = (status: number, code: string) =>
     vi.fn(async (input: Request | string | URL) => {
       const url = String(input instanceof Request ? input.url : input);
       if (url.endsWith("/v1/me")) {
-        return new Response(JSON.stringify({ code: "x" }), {
+        return new Response(JSON.stringify({ code }), {
           status,
           headers: { "Content-Type": "application/problem+json" },
         });
@@ -321,7 +321,7 @@ describe("auth boundary states (login spec §4)", () => {
     });
 
   it("renders login on 401 — not signed in is an authentication state", async () => {
-    vi.stubGlobal("fetch", probe(401));
+    vi.stubGlobal("fetch", probe(401, "unauthorized"));
     mount();
     expect(
       await screen.findByRole("heading", { name: "Sign in to Margince" }),
@@ -329,7 +329,7 @@ describe("auth boundary states (login spec §4)", () => {
   });
 
   it("renders the connection problem on 5xx — an outage is never a login", async () => {
-    vi.stubGlobal("fetch", probe(500));
+    vi.stubGlobal("fetch", probe(500, "internal"));
     mount();
     expect(
       await screen.findByText("Margince could not be reached"),
@@ -338,7 +338,7 @@ describe("auth boundary states (login spec §4)", () => {
   });
 
   it("renders installation-unavailable on 503 and retry re-probes /me", async () => {
-    const fetchMock = probe(503);
+    const fetchMock = probe(503, "service_unavailable");
     vi.stubGlobal("fetch", fetchMock);
     mount();
     expect(await screen.findByText("Installation not ready")).toBeTruthy();
@@ -357,7 +357,7 @@ describe("auth boundary states (login spec §4)", () => {
       vi.fn(async (input: Request | string | URL) => {
         const url = String(input instanceof Request ? input.url : input);
         if (url.endsWith("/v1/me")) {
-          return new Response(JSON.stringify({ code: "x" }), {
+          return new Response(JSON.stringify({ code: "service_unavailable" }), {
             status: 503,
             headers: { "Content-Type": "application/problem+json" },
           });
@@ -388,7 +388,7 @@ describe("auth boundary states (login spec §4)", () => {
         const url = String(input instanceof Request ? input.url : input);
         if (url.endsWith("/setup/status")) throw new TypeError("probe down");
         if (url.endsWith("/v1/me")) {
-          return new Response(JSON.stringify({ code: "x" }), {
+          return new Response(JSON.stringify({ code: "service_unavailable" }), {
             status: 503,
             headers: { "Content-Type": "application/problem+json" },
           });
@@ -422,7 +422,7 @@ describe("auth boundary states (login spec §4)", () => {
           });
         }
         if (url.endsWith("/v1/me")) {
-          return new Response(JSON.stringify({ code: "x" }), {
+          return new Response(JSON.stringify({ code: "service_unavailable" }), {
             status: 503,
             headers: { "Content-Type": "application/problem+json" },
           });

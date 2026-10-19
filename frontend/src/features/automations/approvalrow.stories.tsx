@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import type { Locale } from "../../i18n";
 import {
   installFetchStub,
   jsonResponse,
@@ -54,10 +55,12 @@ function approval(over: Partial<Approval>): Approval {
 // refusal states answers that route with the problem document the server sends.
 function Row({
   subject,
+  locale = "en",
   decided,
   decide,
 }: Readonly<{
   subject: Approval;
+  locale?: Locale;
   decided?: boolean;
   decide?: () => Response;
 }>) {
@@ -67,6 +70,28 @@ function Row({
     // this surface could read — so the grants here are the ones the DECISIONS
     // land on rather than a grant for the row itself.
     "GET /me": meRoute({ deal: ["read", "update"] }),
+    "GET /users/names": () =>
+      jsonResponse({
+        data: [
+          { id: "original", display_name: "Theo" },
+          { id: "assignee", display_name: "Mira" },
+        ],
+      }),
+    "GET /activities/22222222-2222-4222-8222-222222222222": () =>
+      jsonResponse({
+        id: "22222222-2222-4222-8222-222222222222",
+        kind: "meeting",
+        subject: "Quarterly account review",
+        body: "Alex: I will send the revised scope.",
+        occurred_at: "2026-09-01T09:00:00Z",
+        is_done: true,
+        source: "manual",
+        captured_by: "human:reviewer",
+        created_at: "2026-09-01T09:00:00Z",
+        updated_at: "2026-09-01T09:00:00Z",
+        links: [],
+        version: 1,
+      }),
     "GET /agent-tools": () =>
       jsonResponse({
         data: [{ name: "send_email", tier: "confirm" }],
@@ -80,7 +105,7 @@ function Row({
       : {}),
   });
   return (
-    <StoryProviders>
+    <StoryProviders locale={locale}>
       <ApprovalRow approval={subject} decided={decided} />
     </StoryProviders>
   );
@@ -143,6 +168,113 @@ export const AlreadyDecided: Story = {
           409,
         )
       }
+    />
+  ),
+};
+
+export const ReassignedCommitment: Story = {
+  render: () => (
+    <Row
+      subject={approval({
+        kind: "commitment_task",
+        requested_decider_id: "assignee",
+        summary: "Send revised pricing",
+        proposed_change: {
+          summary: "Send revised pricing",
+          party: "Theo",
+          promiser_seat_id: "original",
+          seat_id: "assignee",
+          due_date: "2026-10-23",
+        },
+      })}
+    />
+  ),
+};
+
+export const InactivePromiser: Story = {
+  render: () => (
+    <Row
+      subject={approval({
+        kind: "commitment_task",
+        summary: "Send revised pricing",
+        proposed_change: {
+          summary: "Send revised pricing",
+          party: "Theo",
+          promiser_seat_id: "original",
+          due_date: "2026-10-23",
+        },
+      })}
+    />
+  ),
+};
+
+export const InactivePromiserDark: Story = {
+  ...InactivePromiser,
+  globals: { theme: "dark" },
+};
+
+export const UnresolvedPromiser: Story = {
+  render: () => (
+    <Row
+      subject={approval({
+        kind: "commitment_task",
+        summary: "Confirm the delivery date",
+        proposed_change: {
+          summary: "Confirm the delivery date",
+          party: "Mira",
+          promiser_unresolved: true,
+        },
+      })}
+    />
+  ),
+};
+
+function CommitmentReading({ locale }: Readonly<{ locale: Locale }>) {
+  return (
+    <Row
+      locale={locale}
+      subject={approval({
+        kind: "commitment_task",
+        summary: "Send the revised scope for the fleet renewal",
+        target_entity_type: "activity",
+        target_entity_id: "22222222-2222-4222-8222-222222222222",
+        proposed_change: {
+          summary: "Send the revised scope for the fleet renewal",
+          party:
+            "Alexandra Beck · Regional account development and service delivery",
+          promiser_unresolved: true,
+        },
+      })}
+    />
+  );
+}
+export const CommitmentEnglish: Story = {
+  render: () => <CommitmentReading locale="en" />,
+};
+export const CommitmentGerman: Story = {
+  render: () => <CommitmentReading locale="de" />,
+};
+export const CommitmentVietnamese: Story = {
+  render: () => <CommitmentReading locale="vi" />,
+};
+export const CommitmentGermanDark: Story = {
+  ...CommitmentGerman,
+  globals: { theme: "dark" },
+};
+
+export const InactiveAssignee: Story = {
+  render: () => (
+    <Row
+      subject={approval({
+        kind: "commitment_task",
+        summary: "Send the revised scope",
+        assignee_inactive: true,
+        proposed_change: {
+          summary: "Send the revised scope",
+          party: "Alex Beck",
+          seat_id: "assignee",
+        },
+      })}
     />
   ),
 };

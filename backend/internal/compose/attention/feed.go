@@ -241,35 +241,6 @@ type Service struct {
 	teamRoster *rosterRead
 }
 
-// forOwner returns a copy that reads one named contact's queue. Same
-// copy-per-read reason as forReader: a service is shared by every request, and
-// an owner set on it would follow one manager's question onto another reader's
-// page.
-func (s *Service) forOwner(owner ids.UUID) *Service {
-	narrowed := *s
-	narrowed.taskScope = TasksOwnedBy
-	narrowed.taskOwner = owner
-	return &narrowed
-}
-
-// forReader returns a copy of this service that reads only the acting reader's
-// own work. A copy rather than a field mutation: one Service is shared by every
-// request, and a flag set on it would follow one reader's scope onto another
-// reader's page.
-func (s *Service) forReader() *Service {
-	narrowed := *s
-	narrowed.taskScope = TasksMine
-	return &narrowed
-}
-
-// forUnowned returns a copy that reads the work nobody answers for. Same
-// copy-per-read reason as forReader.
-func (s *Service) forUnowned() *Service {
-	narrowed := *s
-	narrowed.taskScope = TasksUnassigned
-	return &narrowed
-}
-
 // NewService binds the feed to its readers.
 func NewService(
 	a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing,
@@ -440,11 +411,12 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	if err != nil {
 		return nil, laneCount{}, err
 	}
-	staged, err := s.approvals.ListWire(ctx, ApprovalQuery{Status: "pending", Limit: depth})
+	query := s.approvalQuery(depth)
+	staged, err := s.approvals.ListWire(ctx, query)
 	if err != nil {
 		return nil, laneCount{}, err
 	}
-	openStaged, err := s.approvals.CountPending(ctx)
+	openStaged, err := s.approvals.CountPending(ctx, query)
 	if err != nil {
 		return nil, laneCount{}, err
 	}

@@ -4,130 +4,27 @@
 package mailer
 
 import (
-	"bufio"
 	"context"
 	"net"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/outbound"
+	"github.com/margince/margince/backend/internal/shared/testsmtp"
 )
 
-// fakeRelay is a minimal in-process SMTP server on the loopback — the one
-// posture where the mailer permits a cleartext exchange, so the protocol
-// walk is testable without TLS plumbing. It records the DATA payload.
-type fakeRelay struct {
-	ln         net.Listener
-	rejectRcpt bool
-	// dropOnQuit closes the connection instead of answering QUIT, after the
-	// message itself was accepted.
-	dropOnQuit bool
-
-	mu   sync.Mutex
-	data string
-}
-
-func startFakeRelay(t *testing.T, rejectRcpt bool) *fakeRelay {
-	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	r := &fakeRelay{ln: ln, rejectRcpt: rejectRcpt}
-	go r.serveOne()
-	t.Cleanup(func() {
-		//craft:ignore swallowed-errors test-fixture teardown; the assertions ran already
-		_ = ln.Close()
-	})
-	return r
-}
-
-func (r *fakeRelay) addrParts(t *testing.T) (host string, port int) {
-	t.Helper()
-	tcp, ok := r.ln.Addr().(*net.TCPAddr)
-	if !ok {
-		t.Fatalf("listener addr %T is not TCP", r.ln.Addr())
-	}
-	return tcp.IP.String(), tcp.Port
-}
-
-func (r *fakeRelay) serveOne() {
-	conn, err := r.ln.Accept()
-	if err != nil {
-		return
-	}
-	//craft:ignore swallowed-errors test-fixture teardown; the client side asserts the outcome
-	defer func() { _ = conn.Close() }()
-	w := bufio.NewWriter(conn)
-	sc := bufio.NewScanner(conn)
-	say := func(line string) {
-		//craft:ignore swallowed-errors a broken test pipe surfaces as the client's protocol error
-		_, _ = w.WriteString(line + "\r\n")
-		//craft:ignore swallowed-errors same pipe
-		_ = w.Flush()
-	}
-	say("220 fake ESMTP")
-	inData := false
-	var data strings.Builder
-	for sc.Scan() {
-		line := sc.Text()
-		if inData {
-			if line == "." {
-				inData = false
-				r.mu.Lock()
-				r.data = data.String()
-				r.mu.Unlock()
-				say("250 queued")
-				continue
-			}
-			// The client dot-stuffs a line that starts with '.'; undo it as a
-			// relay does.
-			data.WriteString(strings.TrimPrefix(line, ".") + "\n")
-			continue
-		}
-		switch {
-		case strings.HasPrefix(line, "EHLO"), strings.HasPrefix(line, "HELO"):
-			say("250-fake")
-			say("250 8BITMIME") // deliberately NO STARTTLS: loopback path
-		case strings.HasPrefix(line, "MAIL FROM"):
-			say("250 ok")
-		case strings.HasPrefix(line, "RCPT TO"):
-			if r.rejectRcpt {
-				say("550 no such user")
-				continue
-			}
-			say("250 ok")
-		case line == "DATA":
-			inData = true
-			say("354 go ahead")
-		case line == "QUIT":
-			if !r.dropOnQuit {
-				say("221 bye")
-			}
-			return
-		default:
-			say("250 ok")
-		}
-	}
-}
-
-func (r *fakeRelay) received() string {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return r.data
-}
+func startFakeRelay(t *testing.T, reject bool) *testsmtp.Relay { return testsmtp.Start(t, reject) }
 
 func TestSendWalksTheFullExchangeOnALoopbackRelay(t *testing.T) {
 	relay := startFakeRelay(t, false)
-	host, port := relay.addrParts(t)
+	host, port := relay.Address(t)
 	s := SMTP{Host: host, Port: port, FromAddress: "crm@example.test"}
 
 	err := s.Send(context.Background(), "ada@example.test", "Reset your password", "the link body")
 	if err != nil {
 		t.Fatalf("Send: %v", err)
 	}
-	got := relay.received()
+	got := relay.Received()
 	if !strings.Contains(got, "To: ada@example.test") ||
 		!strings.Contains(got, "Subject: Reset your password") ||
 		!strings.Contains(got, "the link body") {
@@ -147,7 +44,7 @@ func TestSendRefusesHeaderInjection(t *testing.T) {
 
 func TestSendSurfacesARefusedRecipient(t *testing.T) {
 	relay := startFakeRelay(t, true)
-	host, port := relay.addrParts(t)
+	host, port := relay.Address(t)
 	s := SMTP{Host: host, Port: port, FromAddress: "crm@example.test"}
 
 	err := s.Send(context.Background(), "nobody@example.test", "s", "b")

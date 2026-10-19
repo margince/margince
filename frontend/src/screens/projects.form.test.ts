@@ -19,7 +19,6 @@ describe("the project form offers no key field", () => {
   it("leaves the key out of both dialogs", () => {
     for (const mode of ["create", "edit"] as const) {
       const fields = projectFields(t, {
-        companies: [],
         owner: { owners: [], me: "u1" },
         currentOwner: null,
         mode,
@@ -34,13 +33,11 @@ describe("projectFields", () => {
 
   it("asks for the company at birth and never on edit", () => {
     const create = projectFields(t, {
-      companies: [{ id: "o-1", display_name: "Brandt" }],
       owner: { owners: [], me: "u-me" },
       currentOwner: null,
       mode: "create",
     });
     const edit = projectFields(t, {
-      companies: [],
       owner: { owners: [], me: "u-me" },
       currentOwner: "u-other",
       mode: "edit",

@@ -25,7 +25,7 @@ var catalog = buildCatalog()
 // does not compile — which a map of key to translations would have allowed,
 // and which nothing else here would catch.
 func buildCatalog() map[Language]Copy {
-	en, de, vi := &Copy{}, &Copy{}, &Copy{}
+	en, de, vi := &Copy{Language: English}, &Copy{Language: German}, &Copy{Language: Vietnamese}
 	line := func(field func(*Copy) *string, english, german, vietnamese string) {
 		*field(en), *field(de), *field(vi) = english, german, vietnamese
 	}
@@ -41,6 +41,7 @@ func buildCatalog() map[Language]Copy {
 	digestLines(line)
 	confirmLines(line)
 	noticeLines(line)
+	presentationLines(line)
 
 	return map[Language]Copy{English: *en, German: *de, Vietnamese: *vi}
 }

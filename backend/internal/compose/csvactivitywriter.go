@@ -66,6 +66,8 @@ func (w *csvWriters) activityBirthOf(row migration.Row, typed map[string]any) (a
 		return in, migration.Why(migration.ReasonActivityTypeUnnamed)
 	case in.OccurredAt == nil:
 		return in, migration.Why(migration.ReasonOccurredAtUnnamed)
+	case activities.CheckEntryHasContent(in.Kind, in.Subject, in.Body) != nil:
+		return in, migration.Why(migration.ReasonActivityEmpty)
 	}
 	return in, migration.Reason{}
 }
@@ -99,6 +101,8 @@ func activityRefusalOf(err error, fields map[string]string) (migration.Reason, b
 		return why, true
 	}
 	switch {
+	case wrapsA[*activities.EmptyEntryError](err):
+		return migration.Why(migration.ReasonActivityEmpty), true
 	case errors.Is(err, apperrors.ErrRetentionHold):
 		return migration.Why(migration.ReasonActivityHeld), true
 	case errors.Is(err, apperrors.ErrPermissionDenied), errors.Is(err, apperrors.ErrNotFound):

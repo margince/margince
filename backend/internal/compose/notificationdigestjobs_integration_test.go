@@ -44,7 +44,7 @@ const digestMailOrigin = "https://crm.example.test"
 // digestMorning is past the briefing hour in the fixture's own zone, which the
 // harness seeds as UTC. A FIXED day rather than one derived from the clock, so
 // a case reads the same window whatever hour the suite runs at.
-var digestMorning = time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
+var digestMorning = time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC)
 
 // digestNight is the same local day, before the morning has started.
 var digestNight = time.Date(2026, 6, 4, 4, 0, 0, 0, time.UTC)
@@ -417,13 +417,11 @@ func TestTheDigestNeverNamesARecordItsReaderMayNoLongerOpen(t *testing.T) {
 	if !strings.Contains(body, "Your captured mail is waiting on the classifier") {
 		t.Errorf("the digest withheld a notice that names no record at all:\n%s", body)
 	}
-	// The withheld line is COUNTED. A reader is told how much is waiting; they
-	// are not told which of it was kept from them.
-	if !strings.Contains(body, "1 more") {
-		t.Errorf("the withheld notice was dropped rather than counted:\n%s", body)
+	if strings.Contains(body, "1 more") {
+		t.Errorf("withheld content was advertised as overflow: %s", body)
 	}
-	if subject := d.relay.subjects[0]; !strings.Contains(subject, "(3)") {
-		t.Errorf("the subject %q does not count the notice it could not name", subject)
+	if subject := d.relay.subjects[0]; !strings.Contains(subject, "(2)") {
+		t.Errorf("subject counts inaccessible content: %s", subject)
 	}
 }
 
@@ -594,5 +592,17 @@ func TestTheDigestCarriesNoLineANoticeForged(t *testing.T) {
 	}
 	if body := d.relay.bodies[0]; strings.Contains(body, "\nFrom: finance@margince.test") {
 		t.Errorf("a notice wrote a line of its own into the message:\n%s", body)
+	}
+}
+
+func TestDigestIncludesWorkBeforeTheRecipientsMorning(t *testing.T) {
+	d := setupDigest(t)
+	subject := "The quote was approved before your working day"
+	d.raise(t, subject, datasource.EntityRef{})
+	d.recordedAt(t, "digest_suite:"+subject, digestMorning.Add(-30*time.Minute))
+	d.now = digestMorning
+	d.run(t)
+	if d.relay.count() != 1 || !strings.Contains(d.relay.bodies[0], subject) {
+		t.Fatal("the recipient’s morning lost a notice recorded after the company’s old cutoff")
 	}
 }

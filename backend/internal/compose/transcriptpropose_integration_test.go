@@ -39,8 +39,8 @@ import (
 // transcriptBody is already in ADR-0058's canonical form, which is what the
 // write path stores: the commitment is on line 3.
 const transcriptBody = "Dana: Thanks for walking us through the rollout plan.\n" +
-	"Priya: Any concerns from the security side?\n" +
-	"Priya: I'll send the revised pricing over by Friday.\n" +
+	"Priya Raman: Any concerns from the security side?\n" +
+	"Priya Raman: I'll send the revised pricing over by Friday.\n" +
 	"Dana: Perfect, we'll review it then."
 
 // transcriptPerms is a rep who may create activities, read the timeline and
@@ -97,7 +97,7 @@ func setupTranscript(t *testing.T) *transcriptEnv {
 	t.Helper()
 	e := &transcriptEnv{Env: integration.Setup(t), owner: integration.OwnerConn(t)}
 	e.ctx = e.As(e.Rep1, []ids.UUID{e.Team1}, transcriptPerms)
-	e.svc = approvals.NewService(e.DB())
+	e.svc = newApprovalsService(e.DB())
 	e.svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(e.svc, e.Activities, e.Contacts))
 	e.svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck(e.Activities))
 
@@ -106,7 +106,8 @@ func setupTranscript(t *testing.T) *transcriptEnv {
 	body := transcriptBody
 	activity, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
 		Kind: "meeting", Subject: &subject, Body: &body,
-		SourceSystem: &sourceSystem, Source: "manual",
+		AttendeeUserIDs: []ids.UserID{ids.From[ids.UserKind](e.Rep2)},
+		SourceSystem:    &sourceSystem, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("logging the transcript: %v", err)
@@ -720,7 +721,7 @@ func TestAConfidentPromiseByANamedColleagueIsTheirTaskWithoutAsking(t *testing.T
 	// three humans the display name "Rep", which is the ambiguous case below.
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 
-	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.9)})
+	read := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.9)})
 	if len(read.ProposalIDs) != 0 {
 		t.Fatalf("a confident promise by a named colleague was put to a human (%d proposals)", len(read.ProposalIDs))
 	}
@@ -738,7 +739,7 @@ func TestAnUnsurePromiseIsProposedToTheColleagueWhoMadeIt(t *testing.T) {
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 
-	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.75)})
+	read := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.75)})
 	if len(read.ProposalIDs) != 1 {
 		t.Fatalf("want the unsure promise proposed, got %d proposals", len(read.ProposalIDs))
 	}
@@ -790,9 +791,9 @@ func TestACustomersPromiseIsWatchedAndNeverATask(t *testing.T) {
 	if err != nil {
 		t.Fatalf("creating the customer: %v", err)
 	}
-	integration.LinkActivity(t, e.owner, e.activity.UUID, "contact", ids.UUID(contact.Id))
+	e.linkTranscriptContact(t, ids.UUID(contact.Id))
 
-	read := e.read(t, cannedBrain{reply: ownedReply(t, "Frédéric de Gombert", 0.9)})
+	read := e.read(t, cannedBrain{reply: attributedReply(t, "Frédéric de Gombert", "contact:"+contact.Id.String(), 0.9)})
 	if len(read.ProposalIDs) != 0 || e.taskCount(t) != 0 {
 		t.Fatalf("the customer's promise became %d proposal(s) and %d task(s); it must become neither",
 			len(read.ProposalIDs), e.taskCount(t))
@@ -810,9 +811,13 @@ func TestACustomersPromiseIsWatchedAndNeverATask(t *testing.T) {
 // Line 3 is where this suite's transcript states the promise, so every case
 // cites it and the line is not a parameter.
 func ownedReply(t *testing.T, owner string, confidence float64) string {
+	return attributedReply(t, owner, "", confidence)
+}
+
+func attributedReply(t *testing.T, owner, promiser string, confidence float64) string {
 	t.Helper()
 	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
-		"summary": "Send the revised pricing", "owner": owner,
+		"summary": "Send the revised pricing", "owner": owner, "promiser_ref": promiser,
 		"due_date": "", "source_lines": []int{3}, "confidence": confidence,
 	}}})
 	if err != nil {
@@ -835,6 +840,9 @@ func TestAFirstNameAloneDoesNotResolveToAColleague(t *testing.T) {
 	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya", 0.9)})
 	if len(read.ProposalIDs) != 1 {
 		t.Fatalf("a first name must leave the promise to a human, got %d proposals", len(read.ProposalIDs))
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM approval WHERE id=$1 AND proposed_change->>'promiser_unresolved'='true' AND proposed_change->>'party'='Priya'`, read.ProposalIDs[0]); got != 1 {
+		t.Fatal("unresolved named attribution was not retained as structured data")
 	}
 	if _, err := e.svc.Decide(e.ctx, ids.From[ids.ApprovalKind](read.ProposalIDs[0]), true, nil); err != nil {
 		t.Fatalf("approving the proposal: %v", err)

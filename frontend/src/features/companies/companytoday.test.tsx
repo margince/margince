@@ -700,6 +700,7 @@ describe("the account scan on the needs list", () => {
           company_id: "o-1",
           state: "queued",
           resumes_at: "2026-08-07T09:30:00Z",
+          degrade_reason: "budget_deferred",
           findings: [ruleRow],
           findings_dropped: 0,
         },
@@ -708,6 +709,28 @@ describe("the account scan on the needs list", () => {
     expect(
       screen.getByText(/Analysis resumes .*Paused by the AI budget/),
     ).toBeTruthy();
+  });
+
+  it.each([
+    ["provider_deferred", /Analysis retries .*Waiting for the AI provider/],
+    ["future_reason", /Analysis resumes/],
+    [undefined, /Analysis resumes/],
+  ])("does not blame the budget for %s", (reason, expected) => {
+    show(
+      { ...BASE, suggestions: [ruleRow] },
+      {
+        scan: {
+          company_id: "o-1",
+          state: "queued",
+          resumes_at: "2026-08-07T09:30:00Z",
+          degrade_reason: reason,
+          findings: [ruleRow],
+          findings_dropped: 0,
+        },
+      },
+    );
+    expect(screen.getByText(expected)).toBeTruthy();
+    expect(screen.queryByText(/Paused by the AI budget/)).toBeNull();
   });
 
   it("counts one exchange and one deal in the singular", () => {

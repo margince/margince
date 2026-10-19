@@ -3,8 +3,8 @@
 
 package contacts
 
-// The stored reasons are English sentences, so the machine-written ones are
-// spelled here beside the read that turns them back into codes.
+// Old rows encode reasons in English. New writes carry codes beside the
+// compatibility sentence, so a changed sentence cannot change its meaning.
 
 import (
 	"strings"
@@ -12,13 +12,22 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
+type domainAdmissionReason struct {
+	Text       string
+	Code       crmcontracts.BlockedDomainReasonCode
+	SenderKind crmcontracts.BlockedDomainSenderKind
+}
+
+func statedAdmissionReason(text string) domainAdmissionReason {
+	return domainAdmissionReason{Text: text, Code: crmcontracts.BlockedDomainReasonCodeStated}
+}
+
 // claimedDomainReason is the reason a contact's company claim records, read
 // back as reason_code company_created.
 const claimedDomainReason = "a contact put this domain on a company they created"
 
-// KeptDomainReason is the reason keeping an open domain question records, read
-// back as reason_code kept_as_company.
-const KeptDomainReason = "Kept from the open domain question: a colleague judged this domain a company."
+// keptDomainReason remains readable to clients that predate reason codes.
+const keptDomainReason = "Kept from the open domain question: a colleague judged this domain a company."
 
 // The stored sentence a bulk-sender refusal carries. One pair writes it and
 // reads the sender kind back, so the list names the kind in any language.
@@ -50,6 +59,21 @@ func reasonCodeOf(e BlockedDomain) (crmcontracts.BlockedDomainReasonCode, *strin
 		}
 		return crmcontracts.BlockedDomainReasonCodeUnknown, nil, nil
 	}
+	if e.ReasonCode != "" {
+		code := crmcontracts.BlockedDomainReasonCode(e.ReasonCode)
+		if !code.Valid() {
+			return crmcontracts.BlockedDomainReasonCodeUnknown, nil, nil
+		}
+		if code == crmcontracts.BlockedDomainReasonCodeStated {
+			note := e.Reason
+			return code, &note, nil
+		}
+		kind := crmcontracts.BlockedDomainSenderKind(e.SenderKind)
+		if code == crmcontracts.BlockedDomainReasonCodeBulkSender && kind.Valid() {
+			return code, nil, &kind
+		}
+		return code, nil, nil
+	}
 	switch e.Source {
 	case AdmissionSourceVerdict:
 		if kind, ok := bulkSenderKind(e.Reason); ok {
@@ -60,7 +84,7 @@ func reasonCodeOf(e BlockedDomain) (crmcontracts.BlockedDomainReasonCode, *strin
 		switch e.Reason {
 		case claimedDomainReason:
 			return crmcontracts.BlockedDomainReasonCodeCompanyCreated, nil, nil
-		case KeptDomainReason:
+		case keptDomainReason:
 			return crmcontracts.BlockedDomainReasonCodeKeptAsCompany, nil, nil
 		case "":
 			return crmcontracts.BlockedDomainReasonCodeUnknown, nil, nil
@@ -70,3 +94,9 @@ func reasonCodeOf(e BlockedDomain) (crmcontracts.BlockedDomainReasonCode, *strin
 	}
 	return crmcontracts.BlockedDomainReasonCodeUnknown, nil, nil
 }
+
+// An older writer advances admission_at without knowing the code columns.
+// Its newer decision must not inherit the previous writer's explanation.
+const domainReasonCodeColumns = `
+ COALESCE(CASE WHEN d.admission_reason_coded_at = d.admission_at THEN d.admission_reason_code END, ''),
+ COALESCE(CASE WHEN d.admission_reason_coded_at = d.admission_at THEN d.admission_sender_kind END, '')`

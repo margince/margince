@@ -53,8 +53,8 @@ type RecordSearchHit struct {
 }
 
 // RecordMatch is what the engine shows beside a hit. Snippet is a project's
-// key, a product's SKU or an activity's opening text. WorksAt is the company a
-// contact was found through. Other hits carry neither.
+// key, a product's SKU, a lead's company or an activity's opening text. WorksAt
+// is the company a contact was found through. Other hits carry neither.
 type RecordMatch struct {
 	Snippet string          `json:"snippet,omitempty"`
 	WorksAt *RecordEmployer `json:"works_at,omitempty"`

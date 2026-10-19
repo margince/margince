@@ -182,6 +182,7 @@ func messagingRules() messaging.Rules {
 			Messages: vnAdvertisingMessagesPerDay,
 			Window:   vnAdvertisingWindow,
 		},
-		OptOutAcknowledgement: true,
+		OptOutAcknowledgement:       true,
+		OptOutAcknowledgementWithin: 24 * time.Hour,
 	}
 }

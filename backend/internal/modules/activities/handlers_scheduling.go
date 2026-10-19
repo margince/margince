@@ -29,6 +29,14 @@ func (h Handlers) PutSchedulingProfile(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	// A whole number the body left out or sent as null decodes to 0. That is a
+	// valid-looking notice or buffer the caller never chose.
+	for _, limit := range schedulingRanges {
+		if raw, sent := httperr.PresentField(r, limit.field); !sent || raw == nil {
+			httperr.Write(w, r, httperr.Validation(limit.field, "required", limit.label+" must be sent as a whole number"))
+			return
+		}
+	}
 	profile, err := h.store.SaveSchedulingProfile(r.Context(), req)
 	if err != nil {
 		writeStoreErr(w, r, err)

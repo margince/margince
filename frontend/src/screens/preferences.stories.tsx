@@ -107,7 +107,16 @@ export const PartialSave: Story = {
         {
           title: "not a tracked consent purpose",
           status: 422,
-          code: "invalid",
+          code: "validation_error",
+          details: {
+            errors: [
+              {
+                field: "purpose_key",
+                code: "invalid",
+                message: "not a tracked consent purpose",
+              },
+            ],
+          },
         },
         422,
       ),

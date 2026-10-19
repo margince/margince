@@ -189,8 +189,8 @@ func TestASentMessageIsAddressedOnlyToTheContactsItsHeadersName(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("reading the message's parties: %v", err)
 	}
-	if len(parties.RecipientContacts) != 1 || parties.RecipientContacts[0] != named {
-		t.Fatalf("recipients read %v, want only the addressed contact %v", parties.RecipientContacts, named)
+	if recipients := partyContacts(parties.To); len(recipients) != 1 || !recipients[named] {
+		t.Fatalf("recipients read %v, want only the addressed contact %v", parties.To, named)
 	}
 }
 
@@ -225,8 +225,8 @@ func TestAnArchivedAddressStillNamesItsContactOnTheHeader(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("reading the message's parties: %v", err)
 	}
-	if len(parties.RecipientContacts) != 1 || parties.RecipientContacts[0] != named {
-		t.Fatalf("recipients read %v, want the contact the header named %v", parties.RecipientContacts, named)
+	if recipients := partyContacts(parties.To); len(recipients) != 1 || !recipients[named] {
+		t.Fatalf("recipients read %v, want the contact the header named %v", parties.To, named)
 	}
 }
 

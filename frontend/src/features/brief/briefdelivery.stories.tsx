@@ -10,12 +10,16 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
+import { readingsDay } from "./brief.fixtures";
 import { BriefDeliveryPanel } from "./briefdelivery";
 
 function story(delivery: Record<string, string>, routes: RouteMap = {}) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({}),
+      "GET /teams": () => jsonResponse({ data: [] }),
+      "GET /worklist": () =>
+        jsonResponse({ ...readingsDay(), team_week: "none" }),
       "GET /me/brief-delivery": () => jsonResponse(delivery),
       ...routes,
     });

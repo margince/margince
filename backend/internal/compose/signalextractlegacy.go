@@ -128,6 +128,9 @@ func (x *SignalExtractor) convertLegacyCommitment(ctx context.Context, legacy le
 				continue
 			}
 			if _, err := x.dispatchCommitment(ctx, tx, thread, event, legacy.cited, asOf); err != nil {
+				if errors.Is(err, errRefusedReading) {
+					continue
+				}
 				return err
 			}
 		}

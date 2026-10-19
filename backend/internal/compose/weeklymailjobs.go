@@ -3,15 +3,6 @@
 
 package compose
 
-// The weekly retrospective's mail, at most once.
-//
-// Its own file rather than another rung in weeklyjobs.go, because it is a
-// different obligation. The measurement pass may run as often as the schedule
-// likes — the counts converge on one review and the sentence is a correction.
-// The mail may not: a message is not idempotent once a relay has taken it, so
-// this lane is the one place in the weekly arc where running twice is a defect
-// rather than a no-op.
-
 import (
 	"context"
 	"time"
@@ -23,124 +14,166 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// WeeklyMailConfig is the weekly retrospective's outbound channel.
-//
-// BOTH halves are optional and the lane needs the relay. An installation that
-// configured no operator mail mails no weeklies, which is the honest posture
-// rather than a boot error — the review is on the screen either way, and the
-// mail is a nudge toward it.
+// WeeklyMailConfig keeps the internal reporting relay separate from correspondence.
 type WeeklyMailConfig struct {
-	// Mailer is the operator relay. Nil turns the lane off by omission.
-	Mailer mailer.Mailer
-	// PublicBaseURL is the installation's own canonical origin, for the one
-	// link the message carries. Empty omits the link rather than mailing an
-	// unusable one built on an empty base.
+	Mailer        mailer.Mailer
 	PublicBaseURL string
 }
 
-// mailWeekly hands one rep's review to the relay, at most once ever.
-//
-// It returns nothing, for the same reason narrate does: a rep who does not get
-// the mail still has the whole review on Home, so a relay outage must not fail
-// a job that measured a team's week. What it must not do is send twice, and
-// that is the claim's job rather than this function's.
-func (w *weeklyGenerateWorker) mailWeekly(
-	ctx context.Context, reviewID ids.UUID, now time.Time,
-) {
+type weeklyMailCandidate struct {
+	review   weekly.Review
+	settings identity.Delivery
+	words    mailcopy.Copy
+	body     string
+}
+
+type weeklySubmission struct {
+	attempt  weekly.MailAttempt
+	combined routineClaim
+	part     morningDigest
+	body     string
+}
+
+func (w *weeklyGenerateWorker) mailWeekly(ctx context.Context, reviewID ids.UUID, now time.Time) {
 	if w.mail.Mailer == nil {
-		// No relay configured. Not an error and not worth a line every Monday.
 		return
 	}
-	// THE OPT-OUT BEFORE THE CLAIM, and the order is the whole point.
-	//
-	// The claim spends a rep's ONE attempt for the week, ever. Checking after it
-	// would burn that attempt on a rep who asked for no mail — so if they later
-	// turned it back on, the week they changed their mind in could never be
-	// sent, and nothing would say why.
-	//
-	// A member who has never chosen is not opted out: they have no value, which
-	// follows the installation's default, and today that default is to send.
-	if w.optedOutOfWeekly(ctx) {
+	candidate, ready := w.prepareWeeklyMail(ctx, reviewID, now)
+	if !ready {
 		return
 	}
-	// THE CLAIM FIRST, always. Everything after this point is allowed to fail
-	// and lose the message; nothing after this point is allowed to produce a
-	// second one. See Engine.ClaimMailAttempt for why the trade goes this way,
-	// and why turning this into a retry is the wrong repair.
-	attempt, claimed, err := w.engine.ClaimMailAttempt(ctx, reviewID, now)
+	submission, claimed, err := w.claimWeeklyMail(ctx, candidate, now)
 	if err != nil {
-		w.log.WarnContext(ctx, "the weekly mail was not attempted: the claim failed",
-			"review", reviewID, "cause", err)
+		w.log.WarnContext(ctx, "weekly claim unavailable", "cause", err)
 		return
 	}
 	if !claimed {
-		// A previous pass already spent this week's one attempt.
 		return
 	}
-	if attempt.Email == "" {
-		w.recordMailFailure(ctx, reviewID, "the seat has no email address")
+	if submission.attempt.Email == "" {
+		if routineCombines(candidate.settings) {
+			recordRoutineFailure(ctx, w.pool, submission.combined, submission.part, "the seat has no email address", w.log)
+		} else {
+			w.recordMailFailure(ctx, reviewID, "the seat has no email address")
+		}
 		return
 	}
-
-	// The installation's own language, resolved once per message. A rep reads
-	// their Home panel in it and then this summary of the same numbers, so an
-	// English message to a German installation is the product changing language
-	// on its way out of the browser.
-	//
-	// BaseLanguageForPrompt answers English on any failure and logs it, which is
-	// the right trade here too: a week's summary in the wrong language is worth
-	// more than no summary, and the claim above is already spent.
-	words := mailcopy.For(identity.BaseLanguageForPrompt(ctx, w.pool))
-
-	// Bounded like the narration is, and for the same reason: the workspace
-	// job's deadline belongs to every rep in it, and one unreachable relay
-	// must not be able to spend it on the first.
+	if unchanged, err := routineChoicesUnchanged(ctx, w.users, candidate.settings); err != nil || !unchanged {
+		if routineCombines(candidate.settings) {
+			recordRoutineFailure(ctx, w.pool, submission.combined, submission.part, "delivery choices changed or could not be rechecked", w.log)
+		} else {
+			w.recordMailFailure(ctx, reviewID, "delivery choices changed or could not be rechecked")
+		}
+		return
+	}
 	bounded, cancel := context.WithTimeout(ctx, mailBudget)
 	defer cancel()
-	if err := w.mail.Mailer.Send(bounded, attempt.Email,
-		weekly.MailSubject(attempt.Review, words),
-		weekly.MailBody(attempt.Review, w.mail.PublicBaseURL, words)); err != nil {
-		// LOGGED AND RECORDED, never retried. The attempt is spent; what is
-		// left to do is make the absence answerable.
-		w.log.WarnContext(ctx, "the weekly mail was attempted and did not go out",
-			"review", reviewID, "cause", err)
-		w.recordMailFailure(ctx, reviewID, err.Error())
+	if err := mailer.SendLocalized(bounded, w.mail.Mailer, submission.attempt.Email, weekly.MailSubject(candidate.review, candidate.words), submission.body, string(candidate.words.Language)); err != nil {
+		w.log.WarnContext(ctx, "weekly relay submission failed", "review", reviewID, "cause", err)
+		if routineCombines(candidate.settings) {
+			recordRoutineFailure(ctx, w.pool, submission.combined, submission.part, "relay submission failed", w.log)
+		} else {
+			w.recordMailFailure(ctx, reviewID, err.Error())
+		}
 	}
 }
 
-// recordMailFailure writes the cause onto the claimed row.
-//
-// Separate so the failure path has one spelling: the two callers above differ
-// only in what went wrong, and a second copy of the log-and-store pair is how
-// one of them comes to store nothing.
+func (w *weeklyGenerateWorker) prepareWeeklyMail(ctx context.Context, reviewID ids.UUID, now time.Time) (weeklyMailCandidate, bool) {
+	var out weeklyMailCandidate
+	if w.optedOutOfWeekly(ctx) {
+		return out, false
+	}
+	settings, err := w.users.MyDelivery(ctx)
+	if err != nil {
+		w.log.WarnContext(ctx, "weekly preferences unavailable", "cause", err)
+		return out, false
+	}
+	if !w.weeklyDeliveryDue(ctx, settings, now) {
+		return out, false
+	}
+	review, err := currentMailReview(ctx, w.pool, w.engine, now)
+	if err != nil || review.ID != reviewID {
+		return out, false
+	}
+	if !weekly.MailUseful(review) && settings.ScopeChoice() == identity.RoutinePersonal {
+		return out, false
+	}
+	pending, err := w.engine.MailPending(ctx, reviewID)
+	if err != nil || !pending {
+		return out, false
+	}
+	words := mailcopy.For(identity.BaseLanguageForPrompt(ctx, w.pool))
+	body, err := w.weeklyMessage(ctx, review, settings, now, words)
+	if err != nil {
+		w.log.WarnContext(ctx, "weekly content unavailable", "cause", err)
+		return out, false
+	}
+	return weeklyMailCandidate{review: review, settings: settings, words: words, body: body}, true
+}
+
+func (w *weeklyGenerateWorker) weeklyDeliveryDue(ctx context.Context, settings identity.Delivery, now time.Time) bool {
+	window, allowed, err := routineWindowFor(ctx, w.users, now, settings)
+	if err != nil {
+		w.log.WarnContext(ctx, "weekly schedule unavailable", "cause", err)
+		return false
+	}
+	if !allowed {
+		return false
+	}
+	if settings.WeeklyDay == nil {
+		return true
+	}
+	hours, _, err := w.users.MyWorkingHours(ctx)
+	if err != nil {
+		w.log.WarnContext(ctx, "weekly working days unavailable", "cause", err)
+		return false
+	}
+	return (int(window.Open.Weekday())+6)%7+1 >= weeklyMailDay(hours, *settings.WeeklyDay)
+}
+
+func (w *weeklyGenerateWorker) claimWeeklyMail(ctx context.Context, candidate weeklyMailCandidate, now time.Time) (weeklySubmission, bool, error) {
+	out := weeklySubmission{body: candidate.body}
+	if !routineCombines(candidate.settings) {
+		attempt, claimed, err := w.engine.ClaimMailAttempt(ctx, candidate.review.ID, now)
+		out.attempt = attempt
+		return out, claimed, err
+	}
+	part, err := prepareRoutineDigest(ctx, w.pool, mailUser(ctx), now, candidate.settings)
+	if err != nil {
+		return out, false, err
+	}
+	window, allowed, err := routineWindowFor(ctx, w.users, now, candidate.settings)
+	if err != nil || !allowed {
+		return out, false, err
+	}
+	run, err := routineBriefEngine(w.pool).SnapshotRun(ctx, window.Open)
+	if err != nil {
+		return out, false, err
+	}
+	claim, claimed, err := claimRoutine(ctx, w.pool, run.ID, candidate.review.ID, part, now)
+	if err != nil || !claimed {
+		return out, false, err
+	}
+	out.attempt, out.combined, out.part = claim.week, claim, part
+	if claim.digest {
+		out.body += "\n\n" + digestMessage(part.lines, w.mail.PublicBaseURL, candidate.words)
+	}
+	return out, true, nil
+}
+
 func (w *weeklyGenerateWorker) recordMailFailure(ctx context.Context, reviewID ids.UUID, cause string) {
 	if err := w.engine.MailFailed(ctx, reviewID, cause); err != nil {
-		w.log.WarnContext(ctx, "the weekly mail's failure could not be recorded",
-			"review", reviewID, "cause", err)
+		w.log.WarnContext(ctx, "weekly failure could not be recorded", "review", reviewID, "cause", err)
 	}
 }
 
-// mailBudget bounds ONE rep's send.
-//
-// mailer.SMTP already puts a 30-second deadline on the exchange and 15 on the
-// dial, but those are the transport's own and a caller that trusted them would
-// be trusting a number in another package to stay small. This is the weekly
-// job's ceiling on the same exchange, stated where the job's deadline is being
-// spent.
 const mailBudget = 45 * time.Second
 
-// optedOutOfWeekly reports whether the rep in ctx asked for no weekly mail.
-//
-// Fails OPEN: a settings read that errors leaves the mail going out, because a
-// rep who wanted their weekly and did not get it is worse served than one who
-// gets a message they meant to switch off. The second is an annoyance they can
-// fix from the same page; the first is silence they have no way to notice.
 func (w *weeklyGenerateWorker) optedOutOfWeekly(ctx context.Context) bool {
 	settings, err := w.users.MyDelivery(ctx)
 	if err != nil {
-		w.log.WarnContext(ctx, "the weekly delivery preference could not be read; sending anyway",
-			"cause", err)
-		return false
+		w.log.WarnContext(ctx, "weekly preference unavailable; deferring email", "cause", err)
+		return true
 	}
 	return settings.Weekly != nil && *settings.Weekly == identity.DeliveryNone
 }

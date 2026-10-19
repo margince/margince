@@ -73,7 +73,10 @@ describe("the contact page's row read", () => {
     it(`cannot open the page when the row answers ${status}, whatever the 360 says`, async () => {
       const routes = liveRoutes();
       routes["GET /contacts/p-1"] = () =>
-        jsonResponse({ status, code: "refused" }, status);
+        jsonResponse(
+          { status, code: status === 404 ? "not_found" : "internal" },
+          status,
+        );
       // No retries: the case is the settled refusal, not the wait before it.
       const client = createQueryClient();
       client.setDefaultOptions({

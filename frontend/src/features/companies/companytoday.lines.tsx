@@ -82,9 +82,15 @@ export function scanFoot({
     return null;
   }
   if (scanIsLive(scan) && scan.resumes_at) {
+    const resumeKey =
+      scan.degrade_reason === "provider_deferred"
+        ? "today.scan.providerResumes"
+        : scan.degrade_reason === "budget_deferred"
+          ? "today.scan.resumes"
+          : "today.scan.scheduledResumes";
     return (
       <p className="co-row-meta">
-        {t("today.scan.resumes", {
+        {t(resumeKey, {
           when: formatDateTime(scan.resumes_at, locale, recordZone),
         })}
       </p>

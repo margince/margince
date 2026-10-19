@@ -86,7 +86,7 @@ func recordHistoryEntryToWire(e RecordHistoryEntry) crmcontracts.AuditHistoryEnt
 		ActorType:         crmcontracts.AuditHistoryEntryActorType(e.ActorType),
 		ActorId:           e.ActorID,
 		ActorName:         e.ActorName,
-		Action:            e.Action,
+		Action:            crmcontracts.AuditAction(e.Action),
 		OccurredAt:        e.OccurredAt,
 		AuthorizationRule: e.AuthorizationRule,
 		OnBehalfOfName:    e.OnBehalfOfName,
@@ -96,6 +96,10 @@ func recordHistoryEntryToWire(e RecordHistoryEntry) crmcontracts.AuditHistoryEnt
 	if e.OnBehalfOf != nil {
 		onBehalfOf := openapi_types.UUID(*e.OnBehalfOf)
 		out.OnBehalfOf = &onBehalfOf
+	}
+	if e.PassportID != nil {
+		passport := openapi_types.UUID(*e.PassportID)
+		out.PassportId = &passport
 	}
 	if e.UndidAuditLogID != nil {
 		undid := openapi_types.UUID(*e.UndidAuditLogID)

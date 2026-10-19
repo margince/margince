@@ -86,7 +86,7 @@ func TestTheVoiceDraftEvaluationReAsksThroughItsOwnParse(t *testing.T) {
 	}
 	brain := &reAskingEvalBrain{judgeScore: 0.9}
 
-	result, err := evaluateVoiceCandidate(t.Context(), brain, artifact, "", heldOut, nil)
+	result, err := voiceCopyFor("en").evaluateVoiceCandidate(t.Context(), brain, artifact, "", heldOut, nil)
 	if err != nil {
 		t.Fatalf("evaluating: %v", err)
 	}

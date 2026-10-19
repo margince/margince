@@ -3,6 +3,7 @@
 
 import type { components } from "../api/schema";
 import type { CreateField } from "../components/create";
+import { searchCompanyTargets } from "../features/companies/companyform";
 import type { MessageKey } from "../i18n/en";
 import {
   type ProjectOwnerPicker,
@@ -39,8 +40,6 @@ export function isProjectPhase(value: string): value is ProjectPhase {
   return (PROJECT_PHASES as readonly string[]).includes(value);
 }
 
-export type ProjectCompanyOption = { id: string; display_name: string };
-
 /**
  * The fields both dialogs share. The company is the one difference: a project
  * names its company at birth and the update body carries no
@@ -50,20 +49,11 @@ export type ProjectCompanyOption = { id: string; display_name: string };
 export function projectFields(
   t: (key: MessageKey) => string,
   opts: Readonly<{
-    companies: readonly ProjectCompanyOption[];
-    // The company this project already names, so an edit form whose
-    // pickable page does not reach it still shows the one it has.
-    currentCompany?: { id: string; label: string };
     owner: ProjectOwnerPicker;
     currentOwner: string | null;
     mode: "create" | "edit";
   }>,
 ): CreateField[] {
-  const companyOptions = opts.companies.map((company) => ({
-    value: company.id,
-    label: company.display_name,
-  }));
-  const current = opts.currentCompany;
   return [
     { key: "name", label: "project.name", required: true },
     ...(opts.mode === "create"
@@ -71,16 +61,10 @@ export function projectFields(
           {
             key: "company_id",
             label: "project.company" as const,
-            type: "select" as const,
             required: true,
-            options:
-              current &&
-              !companyOptions.some((option) => option.value === current.id)
-                ? [
-                    { value: current.id, label: current.label },
-                    ...companyOptions,
-                  ]
-                : companyOptions,
+            // Searched, because a workspace holds more companies than any
+            // page a form could load up front.
+            searchTargets: searchCompanyTargets,
           },
         ]
       : []),

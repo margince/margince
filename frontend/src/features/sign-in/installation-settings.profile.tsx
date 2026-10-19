@@ -26,6 +26,7 @@ import {
   useT,
 } from "../../i18n";
 import type { EditedFact, InstallationSettings } from "./installation-settings";
+import { useCurrencyNote } from "./installation-settings.currency";
 import { RegionalSettingsFields } from "./installation-settings.regional";
 
 // The twelve months a fiscal year may start in, as the picker offers them.
@@ -73,23 +74,6 @@ export function fiscalYearStartSummary(
   return `${monthName(month, locale)} — ${fiscalYearLabel(month, exampleYear)}`;
 }
 
-// A frozen currency is frozen for an admin too, so the lock reason replaces the
-// advice about what to type. That advice is about a value nobody can set. The row and
-// the dialog field share one expression. Two copies would disagree the day the
-// server stops sending a reason.
-export function currencyNote(
-  settings: InstallationSettings,
-  t: ReturnType<typeof useT>,
-): string {
-  if (!settings.base_currency_locked) {
-    return t("installationSettings.baseCurrencyHint");
-  }
-  return (
-    settings.base_currency_locked_reason ??
-    t("installationSettings.baseCurrencyLocked")
-  );
-}
-
 // The one form the three rows lead to: one dialog, one submit. The patch sends
 // only the fields that changed, so a save never touches a frozen currency nobody
 // edited. A field per row's Edit would promise three independent writes the
@@ -123,6 +107,7 @@ export function InstallationProfileDialog({
   onSubmit: () => void;
 }>) {
   const t = useT();
+  const currencyNote = useCurrencyNote();
   const refusalTitle = t("installationSettings.saveFailed");
   const { locale } = useLocale();
   const titleId = useId();
@@ -188,7 +173,7 @@ export function InstallationProfileDialog({
           />
           <Field
             label={t("installationSettings.baseCurrency")}
-            hint={currencyNote(settings, t)}
+            hint={currencyNote(settings)}
             error={refused.get("base_currency")}
           >
             {(control) => (

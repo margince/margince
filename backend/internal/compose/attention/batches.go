@@ -297,6 +297,7 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 		// and two failing rules stay two rows.
 		Id:          batchID(key, cause),
 		Source:      "batch",
+		AiTask:      members[0].item.AiTask,
 		Category:    category,
 		Level:       level,
 		Consequence: consequence,

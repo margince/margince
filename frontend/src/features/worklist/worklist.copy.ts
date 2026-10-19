@@ -6,6 +6,7 @@ import { floorFigure } from "../../format/figure";
 import { formatNumber } from "../../format/format";
 import type { Locale, useT } from "../../i18n";
 import { isMessageKey, translatePlural } from "../../i18n";
+import { aiTaskLabel } from "../../lib/ai-task-label";
 import { ENTITY, recordRoute } from "../../lib/entity";
 import { routeHash } from "../../lib/router";
 import { settingsHref } from "../../screens/settingsrouting";
@@ -280,6 +281,15 @@ export function moveLabel(item: WorklistItem, t: T): string {
   );
 }
 
+function batchCause(item: WorklistItem, t: T): string {
+  if (item.ai_task) return aiTaskLabel(item.ai_task, t, item.batch?.label);
+  return (
+    item.batch?.label ??
+    connectionName(item, t) ??
+    t("worklist.batch.unnamedCause")
+  );
+}
+
 // One item's headline.
 //
 // The server sends a sentence where it HAS one — an approval summary composed
@@ -306,10 +316,7 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
     // Typed as a plural base, so a batch kind the catalog carries no pair for
     // fails the build; only the incident sentence reads `cause`.
     const base = `worklist.batch.${item.batch.key}` as const;
-    const cause =
-      item.batch.label ??
-      connectionName(item, t) ??
-      t("worklist.batch.unnamedCause");
+    const cause = batchCause(item, t);
     // A kind from a newer server has no pair here: its own label, else the
     // generic group name, rather than a lookup that throws.
     if (!isMessageKey(`${base}_other`)) {

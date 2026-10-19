@@ -51,7 +51,7 @@ import {
   PROJECT_DEALS_ANCHOR,
   RollupsStrip,
 } from "./projectreadings";
-import { PhaseBadge, ProjectKeyChip, useCompanyOptions } from "./projects";
+import { PhaseBadge, ProjectKeyChip } from "./projects";
 import {
   mapProjectUpdate,
   type Project,
@@ -351,7 +351,6 @@ function ProjectActions({
   cf: ObjectCustomFields;
 }>) {
   const t = useT();
-  const companies = useCompanyOptions();
   const owner = useOwnerPicker(project.owner_id);
   return (
     <>
@@ -376,7 +375,6 @@ function ProjectActions({
           savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
           fields={[
             ...projectFields(t, {
-              companies,
               owner,
               currentOwner: project.owner_id ?? null,
               mode: "edit",

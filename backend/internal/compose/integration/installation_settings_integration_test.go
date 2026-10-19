@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/currencylock"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -397,8 +398,11 @@ func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 	if !got.BaseCurrencyLocked {
 		t.Fatal("the base currency is still reported changeable after a deal froze a rate against it")
 	}
-	if !strings.Contains(got.BaseCurrencyLockedReason, "1 record") {
-		t.Errorf("lock reason = %q, want it to name how many records converted", got.BaseCurrencyLockedReason)
+	if want := (currencylock.Lock{Reason: currencylock.RatesFrozen, Count: 1}); got.BaseCurrencyLock != want {
+		t.Errorf("lock = %+v, want %+v", got.BaseCurrencyLock, want)
+	}
+	if !strings.Contains(got.BaseCurrencyLock.Prose(), "1 record") {
+		t.Errorf("lock reason = %q, want it to name how many records converted", got.BaseCurrencyLock.Prose())
 	}
 
 	// And the write is refused, as a field fault naming the setting.
@@ -511,9 +515,89 @@ func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 		t.Errorf("reason = %q, want it to name the repair", message)
 	}
 
+	read, err := store.GetInstallation(admin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := (currencylock.Lock{Reason: currencylock.RateSheet, Count: 1, BaseCurrency: base.BaseCurrency}); read.BaseCurrencyLock != want {
+		t.Errorf("lock = %+v, want %+v", read.BaseCurrencyLock, want)
+	}
+
 	// Re-asserting the base already in force is not a change, so a priced sheet
 	// does not break an idempotent patch.
 	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{BaseCurrency: &base.BaseCurrency}); err != nil {
 		t.Fatalf("re-setting the base already in force: %v", err)
+	}
+}
+
+// Every table that carries a frozen rate adds to the one count the reader is
+// shown. The number names all that changing the base would re-mean.
+func TestTheFrozenRateCountSumsEveryKindOfRecord(t *testing.T) {
+	e := SetupSearch(t)
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
+
+	pipeline := e.SeedID(t, `INSERT INTO pipeline (id, name, is_default) VALUES ($1, 'Census fixture', false)`)
+	stage := e.SeedID(t, `
+		INSERT INTO stage (id, pipeline_id, name, position, semantic, win_probability)
+		VALUES ($1, $2, 'Won', 1, 'won', 100)`, pipeline)
+	deal := e.SeedID(t, `
+		INSERT INTO deal (id, name, pipeline_id, stage_id, source, captured_by, amount_minor, currency, fx_rate_to_base, status, closed_at)
+		VALUES ($1, 'Converted deal', $2, $3, 'seed', 'system:test', 100000, 'EUR', 1.0850000000, 'won', now())`,
+		pipeline, stage)
+	e.SeedID(t, `
+		INSERT INTO offer (id, deal_id, offer_number, currency, status, fx_rate_to_base, fx_rate_date, source, captured_by)
+		VALUES ($1, $2, 'AN-2026-002', 'EUR', 'sent', 1.0850000000, current_date, 'seed', 'system:test')`, deal)
+	company := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Census GmbH', 'seed', 'system:test')`)
+	e.SeedID(t, `
+		INSERT INTO contract (id, company_id, title, value_minor, currency, status, fx_rate_to_base, fx_rate_date, source, captured_by)
+		VALUES ($1, $2, 'MSA', 4100000, 'EUR', 'active', 1.0850000000, current_date, 'seed', 'system:test')`, company)
+	connection := e.SeedID(t, `
+		INSERT INTO finance_connection (id, provider, credential_ref, source, captured_by)
+		VALUES ($1, 'lexoffice', 'ref', 'seed', 'system:test')`)
+	e.SeedID(t, `
+		INSERT INTO finance_invoice (id, connection_id, company_id, external_id, issued_at, status, currency,
+		                             net_minor, gross_minor, fx_rate_to_base, fx_rate_date, sync_hash, source, captured_by)
+		VALUES ($1, $2, $3, 'ext-census', current_date, 'open', 'EUR', 1000, 1190, 1.0850000000, current_date,
+		        'hash', 'lexoffice', 'system:test')`, connection, company)
+	e.SeedID(t, `
+		INSERT INTO commission_entry (id, deal_id, partner_company_id, attribution_at_accrual, basis_amount_minor,
+		                              rate_bps, amount_minor, currency, fx_rate_to_base, captured_by)
+		VALUES ($1, $2, $3, 'sourced', 100000, 1000, 10000, 'EUR', 1.0850000000, 'system:test')`, deal, company)
+
+	got, err := store.GetInstallation(admin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := (currencylock.Lock{Reason: currencylock.RatesFrozen, Count: 5}); got.BaseCurrencyLock != want {
+		t.Errorf("lock = %+v, want one count over all five kinds: %+v", got.BaseCurrencyLock, want)
+	}
+}
+
+// A sheet with no stored base still locks the currency. The facts leave the
+// base unnamed, not the default the read falls back to.
+func TestARateSheetWithNoStoredBaseLocksWithoutNamingOne(t *testing.T) {
+	e := SetupSearch(t)
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
+
+	if _, err := e.Owner.Exec(context.Background(), `DELETE FROM setting WHERE key = $1`, identity.BaseCurrency.Key()); err != nil {
+		t.Fatal(err)
+	}
+	for _, from := range []string{"USD", "GBP"} {
+		e.SeedID(t, `
+			INSERT INTO fx_rate (id, from_currency, to_currency, rate, rate_date)
+			VALUES ($1, $2, 'EUR', 0.9150000000, current_date)`, from)
+	}
+
+	got, err := store.GetInstallation(admin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.BaseCurrencyLocked {
+		t.Fatal("a priced sheet with no stored base left the currency changeable")
+	}
+	if want := (currencylock.Lock{Reason: currencylock.RateSheet, Count: 2}); got.BaseCurrencyLock != want {
+		t.Errorf("lock = %+v, want %+v", got.BaseCurrencyLock, want)
 	}
 }

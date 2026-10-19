@@ -32,6 +32,10 @@ const fieldPhone = "phone"
 // LinkedIn handle in a contact's social links.
 const fieldLinkedIn = "linkedin_url"
 
+// fieldAddressCountry is the country of a contact's or company's address, which
+// the stores hold as an ISO 3166-1 alpha-2 code.
+const fieldAddressCountry = "address.country"
+
 // fieldEmail is the lead's identifying field: the natural key an import
 // recognizes a row by, and the one value the store canonicalizes on write.
 const fieldEmail = "email"
@@ -443,7 +447,7 @@ func addressFrom(fields map[string]string) *crmcontracts.Address {
 		City:       importString(fields, "address.city"),
 		Region:     importString(fields, "address.region"),
 		PostalCode: importString(fields, "address.postal_code"),
-		Country:    importString(fields, "address.country"),
+		Country:    importString(fields, fieldAddressCountry),
 	}
 	if addr.Line1 == nil && addr.Line2 == nil && addr.City == nil &&
 		addr.Region == nil && addr.PostalCode == nil && addr.Country == nil {

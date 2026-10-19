@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // lastMessage is the newest two-way exchange on an account, as the no-reply
@@ -179,6 +180,7 @@ func hasOpenTask(
 // gatherers would let the two disagree about what a suggestion IS, and then a
 // dismissal would silently match nothing.
 type suggestionInputs struct {
+	language textlang.Lang
 	// timeline and pipeline are the two grants that decide which rules run at
 	// all. They are the object grants, which is exactly what makes a 360 section
 	// absent — row scope narrows a section, it does not withhold it.
@@ -235,12 +237,12 @@ func (in suggestionInputs) advisable() bool { return in.timeline || in.pipeline 
 func gatherSuggestionInputs(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time,
 	facts signalFacts, heading companyHeading, baseCurrency string,
-	opts AssembleOptions,
+	opts AssembleOptions, language textlang.Lang,
 ) (suggestionInputs, error) {
 	timeline := auth.ReadGranted(ctx, "activity")
 	pipeline := auth.ReadGranted(ctx, "deal")
 	contractsGranted := auth.ReadGranted(ctx, "contract")
-	in := suggestionInputs{timeline: timeline, pipeline: pipeline, contracts: contractsGranted}
+	in := suggestionInputs{timeline: timeline, pipeline: pipeline, contracts: contractsGranted, language: language}
 	if in.contracts {
 		strip, err := readContractStrip(ctx, tx, companyID, now, baseCurrency)
 		if err != nil {

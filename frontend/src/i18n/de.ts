@@ -5,6 +5,10 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de = {
+  "aiWait.provider":
+    "Der KI-Anbieter ist nicht erreichbar. Die Arbeit wird automatisch fortgesetzt, sobald er wieder verfügbar ist.",
+  "aiWait.budget":
+    "Das KI-Budget ist ausgeschöpft. Die Arbeit wird automatisch fortgesetzt, sobald wieder Budget verfügbar ist.",
   "reporting.latestSnapshot": "Letzter Snapshot",
   "reporting.contextDetails": "Berichtsdetails",
   "reporting.targetRemaining": "{amount} fehlen zum Ziel",
@@ -119,7 +123,7 @@ export const de = {
   "brief.weekly.legacyDefinitions":
     "Frühere Definitionen · Gespeicherte Werte bleiben unverändert.",
   "brief.weekly.sharedDefinitions":
-    "Bestätigte Kundentermine und Abschlüsse nach damaliger Zuständigkeit · Neue Pipeline zählt neu eröffnete Deals, keine qualifizierten Einträge.",
+    "Bestätigte Kundentermine und Abschlüsse nach damaliger Verantwortung · Neue Pipeline zählt neu eröffnete Deals, keine qualifizierten Einträge.",
   "brief.weekly.numericPartial":
     "Einige Nachweise sind nicht verfügbar. Die Werte enthalten nur lesbare Datensätze mit bekanntem Wert.",
   "reporting.edit": "Bericht bearbeiten",
@@ -191,7 +195,7 @@ export const de = {
   "reporting.end": "Enddatum (nicht eingeschlossen)",
   "reporting.bookings_trend": "Gewonnener Umsatz im Verlauf",
   "reporting.stage_distribution": "Offene Pipeline nach Phase",
-  "reporting.owner_attainment": "Gewonnener Umsatz nach Zuständigkeit",
+  "reporting.owner_attainment": "Gewonnener Umsatz nach Verantwortung",
   "reporting.stage_age": "Zeit in der aktuellen Phase",
   "reporting.sdr_outcomes": "Termine und angenommene Übergaben",
   "reporting.target_progress": "Fortschritt zum Ziel",
@@ -632,7 +636,7 @@ export const de = {
   "brief.weekly.tasksCompleted": "Aufgaben erledigt",
   "teamweekly.noPriority": "Die erfassten Kennzahlen zeigen keine Priorität",
   "teamweekly.basis":
-    "Übersichten je Mitglied für die erfasste Woche. Aktuelle Pläne und Worklists zeigen die heutigen Zuständigkeiten.",
+    "Übersichten je Mitglied für die erfasste Woche. Aktuelle Pläne und Worklists zeigen, wer heute verantwortlich ist.",
   "brief.weekly.noMeetings": "Keine erfasst",
   "brief.weekly.noLeads": "Keine eingegangen",
   "brief.weekly.noCommitments": "Keine fällig",
@@ -738,7 +742,7 @@ export const de = {
   "dealSuggestion.field.amount": "Betrag",
   "dealSuggestion.field.currency": "Währung",
   "dealSuggestion.field.stage": "Phase",
-  "dealSuggestion.field.owner": "Zuständig",
+  "dealSuggestion.field.owner": "Verantwortlich",
   "dealSuggestion.ownerMe": "Selbst",
   "dealSuggestion.field.closeDate": "Voraussichtlicher Abschluss",
   "dealSuggestion.closeDateHint":
@@ -870,7 +874,7 @@ export const de = {
   "systemJob.approval_expiry": "Ablauf von Freigaben",
   "systemJob.approval_notice_retract": "Rücknahme von Freigabehinweisen",
   "systemJob.approval_notify": "Freigabebenachrichtigung",
-  "systemJob.assign_owner_release": "Freigabe der Zuständigkeit",
+  "systemJob.assign_owner_release": "Freigabe der Verantwortung",
   "systemJob.assurance": "Prognoseprüfung",
   "systemJob.audience_rescope": "Aktualisierung der Zielgruppe",
   "systemJob.authz_disagreement": "Prüfung der Versandberechtigung",
@@ -957,6 +961,33 @@ export const de = {
   "systemJob.technical_lookup": "Technische Abfrage für Unternehmen",
   "systemJob.vatcheck": "Prüfung der Umsatzsteuer-ID",
   "systemJob.weekly_review": "Wochenrückblick",
+  "agentJob.agent_task_retention": "Bereinigung von Agentenaufgaben",
+  "agentJob.attachment_extractor": "Anhangsanalyse",
+  "agentJob.auto_apply": "Automatische Freigabe",
+  "agentJob.capture_confidentiality_verdict": "Vertraulichkeitsprüfung",
+  "agentJob.capture_counterparty": "Neuer Kontakt aus E-Mail",
+  "agentJob.capture_counterparty_verdict": "Prüfung der Absendeadressen",
+  "agentJob.coldstart": "Erstansprache",
+  "agentJob.company_name_promotion": "Aktualisierung des Firmennamens",
+  "agentJob.deal_scout": "Deal Scout",
+  "agentJob.dealscout": "Deal Scout",
+  "agentJob.deepread": "Website-Analyse",
+  "agentJob.document_extractor": "Dokumentanalyse",
+  "agentJob.enrich": "Signaturerkennung",
+  "agentJob.idempotency_retention": "Bereinigung von Anfrageprotokollen",
+  "agentJob.knowledge_ingest": "Wissensimport",
+  "agentJob.lifecycle_change": "Aktualisierung des Lebenszyklus",
+  "agentJob.offer_drafting": "Angebotsentwurf",
+  "agentJob.overnight": "Nacht-Agent",
+  "agentJob.propose_roles": "Analyse des Einkaufsteams",
+  "agentJob.rate_refresh": "Aktualisierung der Wechselkurse",
+  "agentJob.scrape": "Website-Erfassung",
+  "agentJob.signal_scan": "E-Mail-Analyse",
+  "agentJob.site_read": "Website-Analyse",
+  "agentJob.tag_scout": "Tag-Vorschläge",
+  "agentJob.technical_lookup": "Unternehmensabfrage",
+  "agentJob.transcript_proposer": "Transkript-Analyse",
+  "agentJob.voice_builder": "Schreibstil-Analyse",
   "trust.connectorTag": "Über {connector}",
   "trust.stagedProposal": "Vorgeschlagener Wert",
   "trust.evidenceFrom": "Beleg aus {source}",
@@ -1039,10 +1070,88 @@ export const de = {
   "history.reversal.undoneBy": "Rückgängig gemacht von {undoer}",
   "history.reversal.unpaired": "Macht eine frühere Änderung rückgängig",
   "history.edge.marker": "Verknüpfung",
+  "history.subject.viaClient": "{name} (über {client})",
+  "history.subject.viaAgent": "{name} (über einen Agenten)",
+  "history.subject.viaConnector": "{name} (über einen Connector)",
+  "history.subject.unrecordedAuthority":
+    "Ein automatisierter Vorgang (keine menschliche Autorisierung erfasst)",
+  "history.subject.system": "Das System",
+  "history.subject.agent": "Ein Agent",
+  "history.subject.connector": "Ein Connector",
+  "history.subject.buyer": "Ein Gast im Deal Room",
+  "history.subject.buyerNamed": "{name} (im Deal Room)",
+  "history.verb.create": "{subject} hat den Datensatz erstellt",
+  "history.verb.update": "{subject} hat den Datensatz aktualisiert",
+  "history.verb.archive": "{subject} hat den Datensatz archiviert",
+  "history.verb.merge": "{subject} hat den Datensatz zusammengeführt",
+  "history.verb.promote": "{subject} hat den Datensatz hochgestuft",
+  "history.verb.demote": "{subject} hat den Datensatz herabgestuft",
+  "history.verb.disqualify": "{subject} hat den Datensatz disqualifiziert",
+  "history.verb.restore": "{subject} hat den Datensatz wiederhergestellt",
+  "history.verb.export": "{subject} hat den Datensatz exportiert",
+  "history.verb.erase": "{subject} hat den Datensatz endgültig gelöscht",
+  "history.verb.anonymize": "{subject} hat den Datensatz anonymisiert",
+  "history.verb.assign": "{subject} hat den Datensatz zugewiesen",
+  "history.verb.advanceStage":
+    "{subject} hat die Phase des Datensatzes gewechselt",
+  "history.verb.advancePhase":
+    "{subject} hat die Projektphase des Datensatzes gewechselt",
+  "history.verb.sendEmail": "{subject} hat eine E-Mail zum Datensatz gesendet",
+  "history.verb.consentGrant":
+    "{subject} hat die Einwilligung für den Datensatz erteilt",
+  "history.verb.consentWithdraw":
+    "{subject} hat die Einwilligung für den Datensatz widerrufen",
+  "history.verb.approve": "{subject} hat den Datensatz freigegeben",
+  "history.verb.reject": "{subject} hat den Datensatz abgelehnt",
+  "history.verb.recordShare": "{subject} hat den Datensatz geteilt",
+  "history.verb.recordUnshare":
+    "{subject} hat das Teilen des Datensatzes beendet",
+  "history.verb.activityRelink": "{subject} hat den Datensatz neu verknüpft",
+  "history.verb.import": "{subject} hat den Datensatz importiert",
+  "history.verb.importUndo":
+    "{subject} hat den Import des Datensatzes rückgängig gemacht",
+  "history.verb.resetData": "{subject} hat den Datensatz zurückgesetzt",
+  "history.verb.passwordLinkIssued":
+    "{subject} hat einen Passwort-Link für den Datensatz erstellt",
+  "history.verb.connect": "{subject} hat den Datensatz verbunden",
+  "history.verb.disconnect":
+    "{subject} hat die Verbindung des Datensatzes getrennt",
+  "history.verb.schedule": "{subject} hat den Datensatz geplant",
+  "history.verb.reschedule": "{subject} hat den Datensatz verschoben",
+  "history.verb.cancel": "{subject} hat den Datensatz abgebrochen",
+  "history.verb.release": "{subject} hat den Datensatz zum Senden übergeben",
+  "history.verb.hold": "{subject} hat den Datensatz zur Prüfung zurückgehalten",
+  "history.verb.expire":
+    "{subject} hat die Entscheidungsfrist für den Datensatz verstreichen lassen",
+  "history.verb.resolve": "{subject} hat den Datensatz erledigt",
+  "history.verb.restrict": "{subject} hat den Datensatz einbehalten",
+  "history.verb.pin":
+    "{subject} hat den Datensatz für die gesetzliche Aufbewahrung angeheftet",
+  "history.verb.accrue":
+    "{subject} hat eine Provision für den Datensatz verbucht",
+  "history.verb.pay": "{subject} hat den Datensatz bezahlt",
+  "history.verb.publish": "{subject} hat den Datensatz veröffentlicht",
+  "history.verb.pause": "{subject} hat den Datensatz pausiert",
+  "history.verb.resume": "{subject} hat den Datensatz fortgesetzt",
+  "history.verb.close": "{subject} hat den Datensatz geschlossen",
+  "history.verb.invite": "{subject} hat einen Gast zum Datensatz eingeladen",
+  "history.verb.revoke":
+    "{subject} hat den Zugriff für den Datensatz widerrufen",
+  "history.verb.delete": "{subject} hat den Datensatz gelöscht",
+  "history.verb.placeLegalHold":
+    "{subject} hat den Datensatz unter Legal Hold gestellt",
+  "history.verb.liftLegalHold":
+    "{subject} hat den Legal Hold für den Datensatz aufgehoben",
+  "history.verb.requestLegalReview":
+    "{subject} hat eine Rechtsprüfung für den Datensatz angefragt",
+  "history.verb.withdrawLegalReview":
+    "{subject} hat die Anfrage zur Rechtsprüfung für den Datensatz zurückgezogen",
   "history.field.commitment_evidence_unavailable":
     "Nachweis der Zusage nicht verfügbar",
   "history.field.address": "Adresse",
   "history.field.admission": "Eingangsprüfung der Domain",
+  "history.field.admission_reason_code": "Kategorie des Aufnahmegrunds",
+  "history.field.admission_sender_kind": "Absenderkategorie",
   "history.field.admission_reason": "Grund der Eingangsprüfung",
   "history.field.admission_source": "Quelle der Eingangsprüfung",
   "history.field.amount_minor": "Wert",
@@ -1107,7 +1216,7 @@ export const de = {
   "history.field.note": "Notiz",
   "history.field.occurred_at": "Zeitpunkt",
   "history.field.company_id": "Unternehmen",
-  "history.field.owner_id": "Zuständig",
+  "history.field.owner_id": "Verantwortlich",
   "history.field.provider_claims_received": "Erhaltene Anbieterangaben",
   "history.field.reachability": "Erreichbar",
   "history.field.reply_verdict": "Ergebnis der Antwort",
@@ -1190,6 +1299,7 @@ export const de = {
   "shell.beta": "Beta",
   "shell.searchEverything": "Suchen oder Margince fragen",
   "shell.breadcrumbAria": "Navigationspfad",
+  "shell.back": "Zurück",
   "shell.license.none": "Keine Lizenz",
   "shell.license.refused": "Lizenz abgelehnt",
   "shell.signOutAria": "Abmelden",
@@ -1353,7 +1463,7 @@ export const de = {
   "record.archivedReadOnly":
     "Dieses Unternehmen ist archiviert und lässt keine Änderungen zu.",
   "record.notYoursToChange":
-    "Du kannst dieses Unternehmen nicht bearbeiten. Frage die zuständige Person, ob sie es mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
+    "Du kannst dieses Unternehmen nicht bearbeiten. Frage die verantwortliche Person, ob sie es mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
   "record.logActivityRefused":
     "Du hast keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
   "record.share": "Teilen",
@@ -1380,7 +1490,7 @@ export const de = {
   "share.access.readNote":
     "Kann diesen Datensatz öffnen und lesen, aber nicht bearbeiten oder senden.",
   "share.access.writeNote":
-    "Kann diesen Datensatz öffnen, bearbeiten und ergänzen, aber weder die Zuständigkeit noch das Teilen ändern.",
+    "Kann diesen Datensatz öffnen, bearbeiten und ergänzen, aber weder die Verantwortung noch das Teilen ändern.",
   "share.expiry": "Ablauf",
   "share.expiry.none": "Kein Ablauf (bis zum Widerruf)",
   "share.expiry.day": "Läuft in 24 Stunden ab",
@@ -1711,12 +1821,12 @@ export const de = {
 
   "contacts.name": "Name",
   "contacts.email": "E-Mail",
-  "list.owner": "Zuständig",
+  "list.owner": "Verantwortlich",
   "list.unowned": "Nicht zugewiesen",
   "list.created": "Erstellt",
   "list.lastActivity": "Letzte Aktivität",
-  "list.filterOwnerMe": "In deiner Zuständigkeit",
-  "list.filterOwnerAll": "Alle Zuständigen",
+  "list.filterOwnerMe": "In deiner Verantwortung",
+  "list.filterOwnerAll": "Alle Verantwortlichen",
   "list.filterOwnerUnassigned": "Nicht zugewiesen",
   "list.team": "Team",
   "list.filterTeamAll": "Alle Teams",
@@ -2119,7 +2229,7 @@ export const de = {
   "room.state.closed": "Geschlossen",
   "room.state.expired": "Abgelaufen",
   "room.state.archived": "Archiviert",
-  "co.pulse.owner": "Zuständig",
+  "co.pulse.owner": "Verantwortlich",
   "co.pulse.sizeBand": "{band} Mitarbeitende",
   "co.pulse.strongestLead": "Bester Zugang",
   "co.pulse.strengthTail_one": ", die einzige Kontaktperson",
@@ -2430,7 +2540,7 @@ export const de = {
   "approval.kind.disqualify_lead": "Lead disqualifizieren",
   "approval.kind.demote_lead": "Lead-Qualifizierung zurücknehmen",
   "approval.kind.advance_project_phase": "Projektphase voranbringen",
-  "approval.kind.assign_owner": "Zuständigkeit zuweisen",
+  "approval.kind.assign_owner": "Verantwortung zuweisen",
   "approval.kind.commit_import": "Import übernehmen",
   "approval.kind.emit_flow_event": "Automatisierungsschritt erfassen",
   "approval.kind.relink_activity": "Aktivität neu zuordnen",
@@ -2472,7 +2582,18 @@ export const de = {
   "approval.field.connection_name": "Name auf LinkedIn",
   "approval.field.connection_company": "Unternehmen auf LinkedIn",
   "approval.field.contact_name": "Kontakt im CRM",
-  "approval.field.owner": "Zuständig",
+  "approval.responsibility.requestedFrom": "Entscheidung angefragt bei",
+  "approval.commitment.promiser": "Zugesagt von",
+  "approval.commitment.effect": "Bei Freigabe",
+  "approval.commitment.unnamedColleague":
+    "Name des Teammitglieds nicht verfügbar",
+  "approval.commitment.unverifiedNamed": "Nicht bestätigt: {name}",
+  "approval.commitment.unresolved": "Zusagende Person ungeklärt",
+  "approval.commitment.assignNamed": "Erstellt eine Aufgabe für {name}.",
+  "approval.commitment.assignDecider":
+    "Erstellt eine Aufgabe für die Person, die zustimmt.",
+  "approval.field.owner": "Verantwortlich",
+  "approval.field.sourceText": "Originaltext",
   "approval.field.to": "An",
   "approval.field.currency": "Währung",
   "approval.field.rate": "Neuer Kurs",
@@ -2824,7 +2945,7 @@ export const de = {
   "co.contacts.map.onDeal": "am Deal beteiligt",
   "co.contacts.map.routesWithheld":
     "Zugänge zu diesem Kontakt sind für dich ausgeblendet",
-  "co.contacts.map.assignHint": "Für diesen Deal ist niemand zuständig",
+  "co.contacts.map.assignHint": "Für diesen Deal ist niemand verantwortlich",
   "co.contacts.map.scope":
     "{count} im Buying Center · nur der ausgewählte Deal.",
   "co.contacts.map.scopePartial":
@@ -2837,6 +2958,7 @@ export const de = {
   "co.intro.writing": "Wird geschrieben…",
   "co.intro.fromTemplate":
     "Aus einer Vorlage geschrieben. In dieser Installation ist kein Modell eingerichtet.",
+  "co.intro.agent": "Antwortentwurf",
   "co.intro.subject": "Betreff",
   "co.intro.body": "Nachricht",
   "co.intro.basedOn": "Grundlage",
@@ -3247,8 +3369,8 @@ export const de = {
   "lead.filterScore": "Score",
   "lead.filterScoreAll": "Beliebiger Score",
   "lead.bulkSelected": "{count} ausgewählt",
-  "lead.bulkOwner": "Neue Zuständigkeit",
-  "lead.bulkOwnerPick": "Zuständigkeit wählen",
+  "lead.bulkOwner": "Neue Verantwortung",
+  "lead.bulkOwnerPick": "Verantwortung wählen",
   "lead.bulkAssign": "Zuweisen",
   "lead.bulkDisqualify": "Disqualifizieren",
   "lead.bulkDisqualifyTitle_one": "Diesen Lead disqualifizieren?",
@@ -3286,7 +3408,7 @@ export const de = {
   "lead.terminalReadOnly":
     "Dieser Lead ist geschlossen und lässt sich nicht ändern.",
   "lead.notYoursToChange":
-    "Du kannst diesen Lead nicht bearbeiten. Frage die zuständige Person, ob sie ihn mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
+    "Du kannst diesen Lead nicht bearbeiten. Frage die verantwortliche Person, ob sie ihn mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
   "lead.boardCountsUnavailable":
     "Die Anzahlen für Qualifiziert und Disqualifiziert konnten nicht geladen werden.",
   "lead.boardTerminalRowsUnavailable":
@@ -3413,7 +3535,7 @@ export const de = {
   "lead.factor.manual:web_traffic": "Website-Traffic (manuell)",
   "lead.factor.manual:employees": "Beschäftigtenzahl (manuell)",
   "lead.factor.manual:budget_hint": "Budget (manuell)",
-  "lead.ownerLabel": "Zuständig",
+  "lead.ownerLabel": "Verantwortlich",
   "lead.ownerYou": "Du",
   "lead.overriddenBadge": "überschrieben",
   "lead.unassigned": "Nicht zugewiesen",
@@ -3437,7 +3559,7 @@ export const de = {
   "lead.segregation":
     "Qualifizierst du einen Lead, wird er zum Kontakt. Um einen vorhandenen Kontakt als Lead zu bearbeiten, öffne den Kontakt und wähle „Als Lead bearbeiten“.",
   "lead.segregationDismiss": "Hinweis ausblenden",
-  "list.emptyMine": "Keine {unit}, für die du zuständig bist.",
+  "list.emptyMine": "Keine {unit}, für die du verantwortlich bist.",
   "list.showAll": "Alle anzeigen",
   "lead.assignedAway":
     "{names} an {owner} zugewiesen. Nicht mehr unter „Meine“.",
@@ -3537,7 +3659,7 @@ export const de = {
   "deals.advanced": "Nach {stage} verschoben",
   "deal.pendingApprovals": "Wartet auf Freigabe",
 
-  "deal.ownerKeep": "Aktuelle Zuständigkeit behalten",
+  "deal.ownerKeep": "Aktuelle Verantwortung behalten",
   "deal.ownerMe": "Mir zuweisen",
   "deal.ownerUnassign": "Zuweisung aufheben",
   "deal.partnerCompany": "Über Partner",
@@ -3634,7 +3756,7 @@ export const de = {
 
   "deal.briefEmpty": "Noch kein Bericht geschrieben",
   "deal.briefEmptyDetail":
-    "Halte fest, was der Kunde braucht und wann der Deal als gewonnen gilt, damit das nächste zuständige Teammitglied den Kontext hat.",
+    "Halte fest, was der Kunde braucht und wann der Deal als gewonnen gilt, damit das nächste verantwortliche Teammitglied den Kontext hat.",
 
   "deal.motion": "Deal-Typ",
   "deal.motionUnset": "Nicht festgelegt",
@@ -3653,12 +3775,12 @@ export const de = {
   "deal.expectedArr": "Erwarteter ARR",
 
   "deal.monthlyApproximate": "etwa",
-  "assignments.title": "Verantwortlich",
+  "assignments.title": "Zuständigkeiten",
   "assignments.noAccessNote":
-    "Die Zuweisung hält fest, wer verantwortlich ist. Die Zuweisung gewährt keinen Zugriff auf diesen Datensatz.",
+    "Hält fest, wer sich worum kümmert. Eine Zuständigkeit gewährt keinen Zugriff auf diesen Datensatz.",
   "assignments.empty": "Noch niemand zugewiesen",
   "assignments.emptyDetail":
-    "Weise ein Teammitglied oder ein Team zu, um festzuhalten, wer für diese Arbeit verantwortlich ist.",
+    "Weise ein Teammitglied oder ein Team zu, um festzuhalten, wer sich um diese Arbeit kümmert.",
   "assignments.roleRetired": "(stillgelegte Rolle)",
   "assignments.teamSuffix": "(Team)",
   "assignments.subjectInactive": "(inaktiv)",
@@ -3666,7 +3788,7 @@ export const de = {
   "assignments.change": "Ändern",
   "assignments.changeOne": "Zuweisung ändern: {who}",
   "assignments.removeOne": "Zuweisung entfernen: {who}",
-  "assignments.addTitle": "Verantwortung zuweisen",
+  "assignments.addTitle": "Zuständigkeit zuweisen",
   "assignments.changeTitle": "Zuweisung ändern",
   "assignments.subjectKind": "Teammitglied oder Team",
   "assignments.kindUser": "Teammitglied",
@@ -3686,7 +3808,7 @@ export const de = {
   "recordRoles.assigneeKinds": "Zuweisbar an",
   "recordRoles.addLabel": "Name",
   "recordRoles.addHint":
-    "Wofür die zuständige Seite verantwortlich ist, in einfachen Worten.",
+    "Worum sich die zugewiesene Seite kümmert, in einfachen Worten, etwa Technischer Kontakt.",
   "recordRoles.addConfirm": "Rolle hinzuf\u00fcgen",
   "recordRoles.activeFor": "{label} kann neu zugewiesen werden",
   "recordRoles.colRole": "Rolle",
@@ -3700,6 +3822,11 @@ export const de = {
   "recordRoles.renameTitle": "Rolle umbenennen",
   "recordRoles.duplicate":
     "Eine Rolle mit diesem Namen oder Schlüssel gibt es schon. Wähle einen anderen Namen.",
+  "recordRoles.intro":
+    "Vergib eine Zuständigkeit an einem Unternehmen, Deal oder Projekt, damit alle wissen, wen sie wozu fragen. An der Verantwortung für den Datensatz ändert sie nichts. Vorgegebene Zuständigkeiten liefert Margince mit, selbst angelegte kamen in dieser Installation hinzu.",
+  "recordRoles.colActive": "Aktiv",
+  "recordRoles.builtIn": "Vorgegeben",
+  "recordRoles.custom": "Selbst angelegt",
   "deal.acquisitionUnset": "Nicht festgelegt",
   "deal.acquisitionRetired": "(stillgelegt)",
   "deal.waitUntil": "Warten bis",
@@ -3710,7 +3837,7 @@ export const de = {
   "deal.archivedReadOnly":
     "Dieser Deal ist archiviert und lässt keine Änderungen zu.",
   "deal.notYoursToChange":
-    "Du kannst diesen Deal nicht ändern. Frage die zuständige Person, ob sie ihn mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
+    "Du kannst diesen Deal nicht ändern. Frage die verantwortliche Person, ob sie ihn mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
   "deal.closedTakesNoStage":
     "Dieser Deal ist abgeschlossen. Öffne den Deal wieder, um ihn in eine andere Phase zu verschieben.",
   "deal.reopen": "Wieder öffnen",
@@ -3726,7 +3853,7 @@ export const de = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Nur stockende",
   "deals.totalsOwnerNotMeasurable":
-    "Nur geladene Deals. Die Summen der zuständigen Person darfst du nicht auswerten.",
+    "Nur geladene Deals. Die Summen der verantwortlichen Person darfst du nicht auswerten.",
   "deals.totalsNoTagFilter":
     "Nur geladene Deals. Keine Summe, solange ein Tag-Filter aktiv ist.",
   "deals.totalsNoSearch":
@@ -3762,11 +3889,11 @@ export const de = {
   "bulk.selected_one": "{count} ausgewählt",
   "bulk.selected_other": "{count} ausgewählt",
   "bulk.selectRow": "{name} auswählen",
-  "bulk.owner": "Neue Zuständigkeit",
-  "bulk.ownerPick": "Zuständigkeit wählen",
-  "bulk.assign": "Zuständigkeit zuweisen",
+  "bulk.owner": "Neue Verantwortung",
+  "bulk.ownerPick": "Verantwortung wählen",
+  "bulk.assign": "Verantwortung zuweisen",
   "bulk.archive": "Archivieren",
-  "bulk.titleReassign": "Zuständigkeit für ausgewählte {unit} ändern?",
+  "bulk.titleReassign": "Verantwortung für ausgewählte {unit} ändern?",
   "bulk.titleUndo": "Änderung an diesen {unit} rückgängig machen?",
   "bulk.confirmUndo": "Änderung rückgängig machen",
   "bulk.titleArchive": "Ausgewählte {unit} archivieren?",
@@ -3791,7 +3918,7 @@ export const de = {
   "bulk.reason.not_found": "Nicht gefunden oder schon archiviert",
   "bulk.reason.not_writable": "Keine Berechtigung zum Ändern",
   "bulk.reason.changed_since_preview": "Seit dem Laden der Liste geändert",
-  "bulk.reason.no_change": "Zuständigkeit bereits gesetzt",
+  "bulk.reason.no_change": "Verantwortung bereits gesetzt",
   "bulk.reason.anchor_company": "Das eigene Unternehmen wird nie archiviert",
   "bulk.reason.refused": "Für diesen Datensatz nicht erlaubt",
   "bulk.reason.not_previewed": "Nicht in der bestätigten Vorschau",
@@ -3800,13 +3927,13 @@ export const de = {
   "bulk.reason.erased": "Personenbezogene Daten wurden gelöscht",
   "bulk.reason.value_taken":
     "E-Mail oder Domain gehört jetzt einem anderen Datensatz",
-  "bulk.reason.no_previous_owner": "Hatte vorher keine Zuständigkeit",
+  "bulk.reason.no_previous_owner": "Hatte vorher keine Verantwortung",
   "bulk.refusal.sole_project_company":
     "Einziges Unternehmen eines laufenden Projekts",
   "bulk.refusal.locked": "Legal Hold oder Aufbewahrung aktiv",
   "bulk.refusal.anchor_protected": "Das eigene Unternehmen ist geschützt",
-  "bulk.refusal.required": "Private Kontakte brauchen eine Zuständigkeit",
-  "bulk.confirmReassign": "Zuständigkeit ändern",
+  "bulk.refusal.required": "Private Kontakte brauchen eine Verantwortung",
+  "bulk.confirmReassign": "Verantwortung ändern",
   "bulk.confirmArchive": "{unit} archivieren",
   "bulk.addToShortlist": "Zur Shortlist hinzuf\u00fcgen",
   "bulk.titleAddToList": "Ausgew\u00e4hlte {unit} zu {list} hinzuf\u00fcgen?",
@@ -3909,6 +4036,7 @@ export const de = {
   "offer.position": "Position",
   "offer.description": "Beschreibung",
   "offer.unit": "Einheit",
+  "offer.unitFromProduct": "Wie im Produkt",
   "offer.quantity": "Menge",
   "offer.unitPrice": "Einzelpreis",
   "offer.discountPct": "Rabatt %",
@@ -3960,6 +4088,13 @@ export const de = {
   "decision.detail": "Details zur Freigabe",
   "decision.detailLoading": "Freigabe wird geladen…",
   "decision.detailTechnical": "Technische Details",
+  "decision.evidenceSource.activity": "Aktivität",
+  "decision.evidenceSource.deal": "Deal",
+  "decision.evidenceSource.signal": "Signal",
+  "decision.evidenceSource.relationship": "Beziehung",
+  "decision.evidenceSource.page": "Webseite",
+  "decision.evidenceSource.contract": "Vertrag",
+  "decision.evidenceSource.unknown": "Quelle",
   "decision.detailAsked": "Angefragt",
   "decision.detailDecided": "Entschieden",
   "decision.applied": "Übernommen",
@@ -4215,7 +4350,7 @@ export const de = {
   "brief.weekly.pickWeek": "Andere Woche öffnen",
   "brief.weekly.none":
     "Noch kein Wochenrückblick. Der erste wird am Montag nach deiner ersten vollen Woche erstellt.",
-  "brief.weekly.tasksDelivered": "Aufgaben erledigt",
+  "brief.weekly.tasksDelivered": "Fällige Aufgaben erledigt",
   "brief.weekly.ofDue": "{done} von {due}",
   "brief.weekly.dealsWon": "Gewonnen",
   "brief.weekly.dealsLost": "Verloren",
@@ -4319,6 +4454,8 @@ export const de = {
   "brief.deck.skipped_other": "{count} übersprungen",
   "brief.deck.edited_one": "1 in Bearbeitung",
   "brief.deck.edited_other": "{count} in Bearbeitung",
+  "brief.deck.acceptanceChanged":
+    "Einige Vorschläge haben sich geändert und müssen erneut geprüft werden. Deine Freigaben wurden nicht gesendet.",
   "brief.deck.commitNothingToSend": "Übersprungene entfernen",
   "brief.deck.unstage": "Letzte rückgängig machen",
   "brief.deck.clearedTitle": "Stapel leer",
@@ -4342,7 +4479,9 @@ export const de = {
   "deepread.unavailable":
     "Die Website-Recherche ist auf diesem Server nicht eingerichtet.",
   "deepread.statusQueued": "Geplant",
-  "deepread.statusDeferred": "Wartet auf KI-Kontingent",
+  "deepread.statusDeferred": "Wartet auf Fortsetzung",
+  "deepread.statusBudgetWait": "Wartet auf KI-Budget",
+  "deepread.statusProviderWait": "Wartet auf KI-Anbieter",
   "deepread.statusRunning": "Website wird analysiert…",
   "deepread.statusDone": "Fertig",
   "deepread.statusPartial": "Vorzeitig beendet",
@@ -4740,13 +4879,13 @@ export const de = {
   "recordAccess.contact.privateOf":
     "Privat für {owner}. Du kannst diesen Kontakt sehen, da er mit dir oder deinem Team geteilt wurde.",
   "recordAccess.contact.privateOfOwner":
-    "Privat für das zuständige Teammitglied. Du kannst diesen Kontakt sehen, da er mit dir oder deinem Team geteilt wurde.",
+    "Privat für das verantwortliche Teammitglied. Du kannst diesen Kontakt sehen, da er mit dir oder deinem Team geteilt wurde.",
   "recordAccess.contact.published":
     "Dieser Kontakt ist jetzt für alle Nutzenden sichtbar.",
   "recordAccess.contact.madePrivate":
-    "Dieser Kontakt ist jetzt privat für das zuständige Teammitglied. Nutzende und Teams, mit denen der Kontakt geteilt wurde, behalten den Zugriff.",
+    "Dieser Kontakt ist jetzt privat für das verantwortliche Teammitglied. Nutzende und Teams, mit denen der Kontakt geteilt wurde, behalten den Zugriff.",
   "recordAccess.contact.leftYourAccess":
-    "Dieser Kontakt ist jetzt privat für das zuständige Teammitglied. Du hast keinen Zugriff mehr auf diesen Kontakt.",
+    "Dieser Kontakt ist jetzt privat für das verantwortliche Teammitglied. Du hast keinen Zugriff mehr auf diesen Kontakt.",
   "recordAccess.company.title": "Wer dieses Unternehmen sehen kann",
   "recordAccess.company.shared":
     "Alle Nutzenden im Unternehmen können diesen Datensatz sehen.",
@@ -4755,24 +4894,24 @@ export const de = {
   "recordAccess.company.privateOf":
     "Privat für {owner}. Du kannst dieses Unternehmen sehen, da es mit dir oder deinem Team geteilt wurde.",
   "recordAccess.company.privateOfOwner":
-    "Privat für das zuständige Teammitglied. Du kannst dieses Unternehmen sehen, da es mit dir oder deinem Team geteilt wurde.",
+    "Privat für das verantwortliche Teammitglied. Du kannst dieses Unternehmen sehen, da es mit dir oder deinem Team geteilt wurde.",
   "recordAccess.company.published":
     "Dieses Unternehmen ist jetzt für alle Nutzenden sichtbar.",
   "recordAccess.company.madePrivate":
-    "Dieses Unternehmen ist jetzt privat für das zuständige Teammitglied. Deals, Kontakte und E-Mails, die diesem Unternehmen zugeordnet sind, behalten ihre eigene Sichtbarkeit.",
+    "Dieses Unternehmen ist jetzt privat für das verantwortliche Teammitglied. Deals, Kontakte und E-Mails, die diesem Unternehmen zugeordnet sind, behalten ihre eigene Sichtbarkeit.",
   "recordAccess.company.leftYourAccess":
-    "Dieses Unternehmen ist jetzt privat für das zuständige Teammitglied. Du hast keinen Zugriff mehr auf dieses Unternehmen.",
-  "recordAccess.option.owner": "Nur das zuständige Teammitglied",
+    "Dieses Unternehmen ist jetzt privat für das verantwortliche Teammitglied. Du hast keinen Zugriff mehr auf dieses Unternehmen.",
+  "recordAccess.option.owner": "Nur das verantwortliche Teammitglied",
   "recordAccess.option.ownerHint":
     "Nutzende und Teams, mit denen der Datensatz geteilt ist, behalten den Zugriff.",
   "recordAccess.option.ownerHintNotYours":
     "Du verlierst den Zugriff, es sei denn, der Datensatz ist mit dir oder deinem Team geteilt.",
   "recordAccess.option.ownerNeeded":
-    "Lege zuerst ein zuständiges Teammitglied fest.",
+    "Lege zuerst ein verantwortliches Teammitglied fest.",
   "recordAccess.option.workspace": "Alle Nutzenden im Unternehmen",
   "recordAccess.manage": "Zugriff verwalten",
   "whoCanSee.title": "Wer diesen Datensatz sehen kann",
-  "whoCanSee.group.owner": "Zuständig",
+  "whoCanSee.group.owner": "Verantwortlich",
   "whoCanSee.group.shared": "Direkt geteilt",
   "whoCanSee.group.teamShared": "Mit einem Team geteilt",
   "whoCanSee.everyone.contact_one":
@@ -4790,11 +4929,11 @@ export const de = {
   "whoCanSee.canChange": "Kann bearbeiten",
   "whoCanSee.until": "bis {date}",
   "whoCanSee.reason.workspace": "Für alle Nutzenden offen",
-  "whoCanSee.reason.owner": "Zuständig",
+  "whoCanSee.reason.owner": "Verantwortlich",
   "whoCanSee.reason.userShare": "Direkt geteilt",
   "whoCanSee.reason.teamShare": "Mit einem Team geteilt",
   "whoCanSee.reason.teamShareNamed": "Über das Team {team}",
-  "whoCanSee.reason.sameTeam": "Im Team des zuständigen Teammitglieds",
+  "whoCanSee.reason.sameTeam": "Im Team des verantwortlichen Teammitglieds",
   "whoCanSee.reason.allRecords": "Rolle umfasst alle Datensätze",
   "whoCanSee.reason.writeShare": "Geteilt mit Bearbeitungsrechten",
   "whoCanSee.you.change.contact":
@@ -5176,7 +5315,7 @@ export const de = {
   "analytics.field.open_commitments": "Offene Zusagen",
   "analytics.field.open_deal_value_minor": "Offener Deal-Wert",
   "analytics.field.overdue_commitments": "Überfällige Zusagen",
-  "analytics.field.owner_id": "Zuständig",
+  "analytics.field.owner_id": "Verantwortlich",
   "analytics.field.partner_company_id": "Partnerunternehmen",
   "analytics.field.partner_sourced": "Von Partnern vermittelt",
   "analytics.field.period_month": "Abschlussmonat",
@@ -5504,7 +5643,7 @@ export const de = {
   "explain.sources": "Quellzeilen",
   "explain.col.record": "Deal",
   "explain.col.stage": "Phase",
-  "explain.col.owner": "Zuständig",
+  "explain.col.owner": "Verantwortlich",
   "explain.col.pipeline": "Pipeline",
 
   "settings.profileTitle": "Profil",
@@ -5542,14 +5681,45 @@ export const de = {
   "settings.signatureEdit": "Signatur bearbeiten",
   "settings.signatureNone": "Keine Grußformel festgelegt",
   "settings.signatureCancel": "Abbrechen",
+  "delivery.loadFailed":
+    "Die E-Mail-Einstellungen konnten nicht geladen werden. Lade die Seite erneut.",
   "delivery.morningLabel": "Morgenbericht",
   "delivery.morningHelp":
     "Sendet den täglichen Morgenbericht der Home-Seite zusätzlich per E-Mail.",
   "delivery.weeklyLabel": "Wochenrückblick",
   "delivery.weeklyHelp":
-    "Sendet den Wochenrückblick vom Montag zusätzlich per E-Mail.",
+    "Sendet die letzte abgeschlossene Berichtswoche an deinem gewählten Arbeitstag.",
   "delivery.byEmail": "Per E-Mail",
   "delivery.none": "Nicht per E-Mail",
+  "delivery.hourLabel": "Uhrzeit für Zusammenfassungen",
+  "delivery.scheduleHelp":
+    "Eine persönliche Uhrzeit nutzt deine Arbeitstage und Zeitzone mit einem Versandfenster von drei Stunden. Der bisherige Plan bleibt bis zu deiner Änderung.",
+  "delivery.legacyTime": "Bisheriger Morgenplan (Berichtszeitzone):",
+  "delivery.workingStart": "Beginn meiner Arbeitszeit",
+  "delivery.weekdayLabel": "Tag des Wochenrückblicks",
+  "delivery.weekdayHelp":
+    "Ein freier Tag wird auf den nächsten Arbeitstag verschoben. Die Berichtswoche bleibt fest; spätere Arbeitstage erlauben eine Nachholung.",
+  "delivery.quietLabel": "Ruhige Morgen",
+  "delivery.onlyUseful": "Nur mit nützlichem Inhalt",
+  "delivery.quietAlso": "Auch eine Statusübersicht an ruhigen Morgen",
+  "delivery.combineLabel": "Routine-E-Mails zusammenfassen",
+  "delivery.combineHelp":
+    "Eine Zusammenfassung pro Berichtstag verbindet verfügbare Wochenergebnisse, aktuelle Aufgaben und gewählte Sammel-Kategorien. Sofortige Freigaben bleiben separat.",
+  "delivery.separate": "Separate Routine-E-Mails",
+  "delivery.combined": "Verfügbare Inhalte zusammenfassen",
+  "delivery.scopeLabel": "Umfang der Zusammenfassungen",
+  "delivery.scope.personal": "Meine Arbeit",
+  "delivery.scope.team": "Gewähltes Team",
+  "delivery.scope.combined": "Meine Arbeit und gewähltes Team",
+  "delivery.teamHelp":
+    "Wähle ein Team, bevor du seine Ansicht aktivierst. Der Zugriff wird beim Versand erneut geprüft.",
+  "delivery.weekday1": "Montag",
+  "delivery.weekday2": "Dienstag",
+  "delivery.weekday3": "Mittwoch",
+  "delivery.weekday4": "Donnerstag",
+  "delivery.weekday5": "Freitag",
+  "delivery.weekday6": "Samstag",
+  "delivery.weekday7": "Sonntag",
   "delivery.panelTitle": "Zusammenfassungen per E-Mail",
   "settings.appearance": "Darstellung",
   "settings.appearanceHelp":
@@ -6229,9 +6399,9 @@ export const de = {
   "import.reason.options_need_semicolons":
     "„{value}“: Trenne mehrere Werte mit Semikolons.",
   "import.reason.owner_refused":
-    "Du darfst dieses Mitglied nicht als zuständig eintragen, daher bist du für seine Zeilen zuständig.",
+    "Du darfst dieses Mitglied nicht als verantwortlich eintragen, daher bist du für seine Zeilen verantwortlich.",
   "import.reason.owner_unknown":
-    "Kein Mitglied hat diese E-Mail-Adresse, daher bist du zuständig; ein Lead bleibt nicht zugewiesen. Betroffene Zeilen: {rows}.",
+    "Kein Mitglied hat diese E-Mail-Adresse, daher bist du verantwortlich; ein Lead bleibt nicht zugewiesen. Betroffene Zeilen: {rows}.",
   "import.reason.phone_needs_country":
     "„{value}“ braucht die Landesvorwahl, zum Beispiel +49 30 1234567.",
   "import.reason.record_archived":
@@ -6292,6 +6462,8 @@ export const de = {
     "Eine Nachricht braucht einen Kanal und lässt sich daher nicht aus einer Datei importieren. Nimm stattdessen eine Notiz oder eine E-Mail.",
   "import.reason.task_not_importable":
     "Eine Aufgabe würde offen auf deiner eigenen Liste landen und wird daher nicht importiert. Nimm stattdessen eine Notiz.",
+  "import.reason.activity_empty":
+    "Eine Notiz oder ein Anruf braucht einen Betreff oder einen Text. Fülle in dieser Zeile einen von beiden aus.",
   "import.reason.occurred_at_unnamed":
     "Gib den Tag an, an dem die Aktivität stattfand, als YYYY-MM-DD oder mit Zeitzone.",
   "import.reason.timestamp_needs_zone":
@@ -6350,7 +6522,7 @@ export const de = {
   "import.problem.broken_link": "Fehlerhafte Verknüpfung",
   "import.problem.dropped_link": "Verknüpfung ausgelassen",
   "import.problem.invalid_value": "Ungültiger Wert",
-  "import.problem.unknown_owner": "Zuständigkeit unbekannt",
+  "import.problem.unknown_owner": "Verantwortung unbekannt",
   "import.problem.new_tag": "Neuer Tag",
   "import.problem.duplicate": "Duplikat",
   "import.problem.permission": "Keine Berechtigung",
@@ -6695,7 +6867,7 @@ export const de = {
   "audit.action.import": "Importiert",
   "audit.action.importUndo": "Import rückgängig gemacht",
   "audit.action.resetData": "Daten zurückgesetzt",
-  "audit.action.passwordLinkIssued": "Passwort-Link gesendet",
+  "audit.action.passwordLinkIssued": "Passwort-Link erstellt",
   "audit.action.connect": "Verbunden",
   "audit.action.disconnect": "Getrennt",
   "audit.action.schedule": "Geplant",
@@ -9026,7 +9198,7 @@ export const de = {
   "auto.trigger.listEvaluated": "Live-Liste geändert",
   "auto.action.createTask": "Aufgabe erstellen",
   "auto.action.notify": "Benachrichtigung senden",
-  "auto.action.assignOwner": "Zuständigkeit zuweisen",
+  "auto.action.assignOwner": "Verantwortung zuweisen",
   "auto.action.setField": "Feld setzen",
   "auto.action.draftEmail": "E-Mail entwerfen",
   "auto.action.requestApproval": "Freigabe anfordern",
@@ -9237,7 +9409,7 @@ export const de = {
   "settings.page.acquisition.sub":
     "Vertriebskanäle, denen ein Deal zugeordnet werden kann.",
   "settings.page.recordroles.sub":
-    "Wofür ein Teammitglied oder ein Team bei einem Datensatz zuständig sein kann. Gewährt keinen Zugriff.",
+    "Bezeichnungen dafür, worum sich ein Teammitglied oder Team bei einem Datensatz kümmert, etwa die Kundenbetreuung. Eine Zuständigkeit gewährt keinen Zugriff; wer bearbeiten darf, hängt von der Verantwortung und vom Teilen ab.",
   "settings.page.leads.sub":
     "Woher Leads kommen, warum sie disqualifiziert werden und wie schnell sie eine erste Antwort bekommen.",
   "settings.page.fields.sub":
@@ -9875,6 +10047,20 @@ export const de = {
   "voice.candidate.concernsLabel": "Warum diese Version eine Prüfung braucht",
   "voice.candidate.applyHint":
     "Wenn diese Version nach dir klingt, verwende sie. Wenn nicht, behalte deinen aktuellen Schreibstil und füge weitere Schreibproben hinzu. Der nächste Aufbau lernt aus diesen Schreibproben.",
+  "voice.candidate.reason.uncomparable":
+    "Das vorherige Stimmprofil konnte nicht verglichen werden. Prüfe diese Version, bevor du es ersetzt.",
+  "voice.candidate.reason.identity":
+    "Dein typisches Vokabular hat sich verändert (Ähnlichkeit {score}). Prüfe, ob es noch nach dir klingt.",
+  "voice.candidate.reason.signature":
+    "Deine typischen Formulierungen haben sich verändert (Ähnlichkeit {score}). Prüfe die Beispielentwürfe.",
+  "voice.candidate.reason.regression":
+    "Diese Version erreichte {score}, deine aktive Version {active}. Prüfe sie, bevor du dein aktuelles Stimmprofil ersetzt.",
+  "voice.candidate.reason.smallCorpus":
+    "Für eine getrennte Bewertung gibt es zu wenige Beispiele. Füge weitere Quellen hinzu, um eine Bewertung zu ermöglichen.",
+  "voice.candidate.reason.corpusChanged":
+    "Deine Textbeispiele haben sich während der Erstellung geändert. Prüfe die Version, bevor du sie verwendest.",
+  "voice.candidate.reason.activeChanged":
+    "Dein aktives Stimmprofil hat sich während der Bewertung geändert. Prüfe die Version, bevor du sie verwendest.",
   "voice.candidate.reason.malformed":
     "Die Bewertung beruht auf weniger Beispielen als üblich, da einige Beispielentwürfe nicht gelesen werden konnten.",
   "voice.candidate.reason.lowScore":
@@ -9882,7 +10068,7 @@ export const de = {
   "voice.candidate.reason.hardFailures":
     "Formulierungen, die dieser Schreibstil vermeiden soll und die in den Beispielentwürfen vorkamen: {n}.",
   "voice.candidate.reason.rulesRemoved":
-    "Seit deiner vorherigen Version weggefallene Regeln darüber, was zu vermeiden ist: {n}.",
+    "Seit deiner vorherigen Version weggefallene Regeln zu Formulierungen und Sprachregister: {n}.",
   "voice.candidate.apply": "Diese Version verwenden",
   "voice.candidate.reject": "Aktuellen Schreibstil behalten",
   "voice.history.label": "Versionen und Lernen",
@@ -10323,6 +10509,10 @@ export const de = {
   "settings.companyMarkUnsupported":
     "Nimm eine PNG-, JPEG-, GIF-, WebP-, ICO- oder SVG-Datei.",
   "settings.companyMarkTooLarge": "Nimm eine kleinere Datei.",
+  "settings.companyMarkSvgNotDrawable":
+    "Diese SVG-Datei enthält Teile, die sich hier nicht darstellen lassen, oder sie zeigt nichts. Exportiere das Logo in deinem Grafikprogramm als PNG-Datei.",
+  "settings.companyMarkSvgText":
+    "Diese SVG-Datei enthält Text, der sich nicht darstellen lässt. Wandle den Text in deinem Grafikprogramm in Pfade um, oder lade eine PNG-Datei hoch.",
   "settings.companyMarkAddWide": "Breites Logo hinzufügen",
   "settings.companyMarkReplaceWide": "Breites Logo ersetzen",
   "settings.companyMarkRemoveWide": "Breites Logo entfernen",
@@ -10393,9 +10583,18 @@ export const de = {
   "product.archiveConfirm":
     "Dieses Produkt archivieren? Bestehende Angebotspositionen behalten ihren Snapshot.",
   "product.name": "Name",
-  "product.sku": "SKU",
+  "product.sku": "Artikelnummer",
   "product.description": "Beschreibung",
   "product.unit": "Einheit",
+  "product.unitPiece": "Stück",
+  "product.unitHour": "Stunde",
+  "product.unitDay": "Tag",
+  "product.unitMonth": "Monat",
+  "product.unitFlatFee": "Pauschale",
+  "product.unitOther": "Andere",
+  "product.unitOtherLabel": "Andere Einheit",
+  "product.unitOtherRequired":
+    "Gib die Einheit ein oder wähle eine aus der Liste.",
   "product.unitPrice": "Einzelpreis",
   "product.currency": "Währung",
   "product.taxRate": "Standardsteuersatz %",
@@ -10660,6 +10859,18 @@ export const de = {
     "ISO-4217-Code, in den alle Beträge für Gesamtsummen umgerechnet werden. Änderbar, bis der erste Betrag umgerechnet wurde.",
   "installationSettings.baseCurrencyLocked":
     "Gesperrt: Eine Änderung würde jede Gesamtsumme verändern, da Beträge bereits in diese Währung umgerechnet wurden.",
+  "installationSettings.baseCurrencyLock.ratesFrozen_one":
+    "Für {count} Eintrag ist bereits ein Wechselkurs zu dieser Währung festgeschrieben, daher ist sie nicht mehr änderbar.",
+  "installationSettings.baseCurrencyLock.ratesFrozen_other":
+    "Für {count} Einträge ist bereits jeweils ein Wechselkurs zu dieser Währung festgeschrieben, daher ist sie nicht mehr änderbar.",
+  "installationSettings.baseCurrencyLock.rateSheet_one":
+    "{count} Wechselkurs rechnet in {base} um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+  "installationSettings.baseCurrencyLock.rateSheet_other":
+    "{count} Wechselkurse rechnen in {base} um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+  "installationSettings.baseCurrencyLock.rateSheetUnnamed_one":
+    "{count} Wechselkurs rechnet in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+  "installationSettings.baseCurrencyLock.rateSheetUnnamed_other":
+    "{count} Wechselkurse rechnen in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
   "installationSettings.baseLanguage": "Basissprache",
   "installationSettings.baseLanguageHint":
     "Sprache, in der die KI schreibt, wenn das ganze Team den Text liest. Die Anzeigesprache ist davon getrennt, und Antworten nach außen folgen der Sprache des Threads.",
@@ -11377,7 +11588,9 @@ export const de = {
   "ownDomains.addFailed": "Domain nicht hinzugefügt",
   "ownDomains.remove": "{domain} entfernen",
   "ownDomains.candidateNote":
-    "In einem verbundenen Postfach gesehen. Die Domain stoppt die Erfassung nicht, da sie nicht bestätigt ist.",
+    "In einem verbundenen Postfach gesehen. Nachrichten zwischen Teammitgliedern auf dieser Domain werden gespeichert, bis du die Domain bestätigst.",
+  "ownDomains.confirm": "Bestätigen",
+  "ownDomains.confirmLabel": "{domain} bestätigen",
 
   "financeSource.title": "Buchhaltungsquelle",
   "financeSource.sub":
@@ -11560,11 +11773,11 @@ export const de = {
   "webhooks.event.deal.created.when": "Ein Deal wird eröffnet.",
   "webhooks.event.deal.updated.label": "Deal-Daten geändert",
   "webhooks.event.deal.updated.when":
-    "Felder eines Deals ändern sich, außer Phase und Zuständigkeit.",
+    "Felder eines Deals ändern sich, außer Phase und Verantwortung.",
   "webhooks.event.deal.stage_changed.label": "Deal in andere Phase verschoben",
   "webhooks.event.deal.stage_changed.when":
     "Ein Deal wechselt in eine neue Phase, Gewonnen und Verloren eingeschlossen.",
-  "webhooks.event.deal.owner_changed.label": "Zuständigkeit für Deal geändert",
+  "webhooks.event.deal.owner_changed.label": "Verantwortung für Deal geändert",
   "webhooks.event.deal.owner_changed.when":
     "Ein Deal wird einem anderen Teammitglied zugewiesen.",
   "webhooks.event.deal.archived.label": "Deal archiviert",
@@ -12320,7 +12533,7 @@ export const de = {
   "contact.page.loading": "Wird geladen…",
   "contact.page.notOpened": "Dieser Kontakt konnte nicht geöffnet werden.",
   "contact.page.buyingRole": "Rolle im Kaufprozess",
-  "contact.page.owner": "Zuständig",
+  "contact.page.owner": "Verantwortlich",
   "contact.page.ownerUnassigned": "Nicht zugewiesen",
   "contact.page.linkedin": "LinkedIn",
 
@@ -12328,7 +12541,7 @@ export const de = {
   "contact.rail.archivedReadOnly":
     "Dieser Kontakt ist archiviert und lässt keine Änderungen zu.",
   "contact.notYoursToChange":
-    "Du kannst diesen Kontakt nicht bearbeiten. Frage die zuständige Person, ob sie ihn mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
+    "Du kannst diesen Kontakt nicht bearbeiten. Frage die verantwortliche Person, ob sie ihn mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
   "contact.rail.employmentVersionUnresolved":
     "Die aktuelle Version dieser Zeile konnte nicht geladen werden. Bitte lade die Seite neu und versuche es erneut.",
   "contact.rail.employmentTitle": "Unternehmen",
@@ -12611,6 +12824,9 @@ export const de = {
   "today.scan.readDeals_other": "{count} Deals",
   "today.scan.stale":
     "Das Unternehmen hat sich seitdem geändert. Das Unternehmen wird innerhalb einer Stunde erneut analysiert.",
+  "today.scan.providerResumes":
+    "Die Analyse wird {when} erneut versucht. Der KI-Anbieter ist derzeit nicht verfügbar.",
+  "today.scan.scheduledResumes": "Die Analyse wird {when} fortgesetzt.",
   "today.scan.resumes":
     "Die Analyse wird am {when} fortgesetzt. Das KI-Kontingent hat die Analyse pausiert.",
   "provider.readOnly":
@@ -12777,8 +12993,8 @@ export const de = {
     "{word}: Eine davon muss zutreffen. Drücke, damit alle zutreffen müssen.",
   "filters.group.all": "Alle davon",
   "filters.group.any": "Mindestens eine davon",
-  "filters.rowsMore": "Mehr zu diesen Bedingungen",
-  "filters.groupMore": "Mehr zu dieser Gruppe",
+  "filters.addGroupToGroup": "Untergruppe hinzufügen",
+  "filters.group.match": "Zu erfüllende Bedingungen",
   "filters.proposed": "Vorgeschlagen",
   "filters.switch.title": "Zu {records} wechseln?",
   "filters.switch.body.contacts":
@@ -12836,7 +13052,7 @@ export const de = {
   "filters.field.last_activity_at": "Letzte Aktivität",
   "filters.field.mail_provider": "E-Mail-System",
   "filters.field.operated_service": "Betriebener Dienst",
-  "filters.field.owner_team_id": "Zuständiges Team",
+  "filters.field.owner_team_id": "Verantwortliches Team",
   "filters.field.phase": "Projektphase",
   "filters.field.pipeline_id": "Pipeline",
   "filters.field.relationship_type": "Beziehungstyp",
@@ -13208,6 +13424,7 @@ export const de = {
   "filters.loadingVocabulary": "Felder werden geladen…",
   "filters.noFields": "Keine filterbaren Felder f\u00fcr diesen Datensatztyp.",
   "filters.resultsTitle": "Passende Datens\u00e4tze",
+  "filters.resultRefGone": "Entfernt oder für dich nicht sichtbar",
   "filters.resultsCaption":
     "Erste Seite der Treffer, zum Prüfen des Filters. Nicht die vollständige Auswahl.",
   "filters.noMatches":
@@ -13264,6 +13481,12 @@ export const de = {
     "Der Sendezeitpunkt ist verstrichen, während das System nicht lief, und für den Versand ist es jetzt zu spät. Plane die Nachricht neu oder ziehe sie zurück.",
   "sched.held.timerExhausted":
     "Der Sendeauftrag hat keine Versuche mehr. Plane die Nachricht neu, um es erneut zu versuchen.",
+  "sched.held.passportRevoked":
+    "Die Agenten-Berechtigung wurde widerrufen. Prüfe die Nachricht vor einem neuen Versand.",
+  "sched.held.followupSettled":
+    "Die Anfrage wurde nach der Planung beantwortet oder erledigt. Prüfe, ob diese Nachfrage noch nötig ist.",
+  "sched.held.meetingCanceled":
+    "Der Termin wurde nach der Planung abgesagt. Prüfe diese Nachricht vor dem Versand.",
   "sched.held.sendRefused":
     "Eine Prüfung hat die Nachricht bei Fälligkeit blockiert. Es wurde nichts gesendet.",
   "sched.inZone": "in {zone}",
@@ -13337,7 +13560,7 @@ export const de = {
   "project.keyMinted":
     "Jedes Projekt erhält ein Kürzel. Setze [{key}] in den Betreff einer E-Mail, um sie unter diesem Projekt abzulegen.",
   "project.company": "Unternehmen",
-  "project.owner": "Zuständig",
+  "project.owner": "Verantwortlich",
   "project.ownerMe": "Selbst",
   "project.assignOwner": "Einem Teammitglied zuweisen",
   "project.assignOwnerTitle": "Einem Teammitglied zuweisen",
@@ -13357,7 +13580,7 @@ export const de = {
   "project.archivedReadOnly":
     "Dieses Projekt ist archiviert und lässt keine Änderungen zu.",
   "project.notYoursToChange":
-    "Du kannst dieses Projekt nicht bearbeiten. Frage die zuständige Person, ob sie es mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
+    "Du kannst dieses Projekt nicht bearbeiten. Frage die verantwortliche Person, ob sie es mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
   "project.phaseLabel": "Phase",
   "project.filterPhaseAll": "Alle Phasen",
   "project.viewDelivering": "In Umsetzung",
@@ -13521,7 +13744,7 @@ export const de = {
   "worklist.disposition.verb.handled": "Erledigt",
   "worklist.disposition.verb.not_mine": "Nicht zuständig",
   "worklist.disposition.hint.not_mine":
-    "Entfernt den Eintrag nur von deiner Liste. Die Zuständigkeit bleibt unverändert. Wechselt die Zuständigkeit, kommt der Eintrag zurück.",
+    "Entfernt den Eintrag nur von deiner Liste. Die Verantwortung bleibt unverändert. Wechselt die Verantwortung, kommt der Eintrag zurück.",
   "worklist.disposition.verb.not_sales": "Kein Kunde",
   "worklist.disposition.doneSnooze_one": "Morgen wieder auf deiner Liste.",
   "worklist.disposition.doneSnooze_other":
@@ -13533,7 +13756,7 @@ export const de = {
   "worklist.disposition.done.handledRow":
     "Für dich erledigt. Wenn sich daran etwas Neues tut, kommt der Eintrag zurück.",
   "worklist.disposition.done.not_mine":
-    "Von deiner Liste entfernt. Wechselt die Zuständigkeit, kommt der Eintrag zurück.",
+    "Von deiner Liste entfernt. Wechselt die Verantwortung, kommt der Eintrag zurück.",
   "worklist.disposition.done.not_sales": "Von allen Listen entfernt.",
   "worklist.disposition.swipeCancel": "Behalten",
   "worklist.disposition.undo": "Rückgängig",
@@ -14561,6 +14784,19 @@ export const de = {
     "Eine Lead-Umwandlung wartet auf deine Freigabe",
   "magic.action.approval_overnight":
     "Ein Vorschlag aus der Nacht wartet auf deine Freigabe",
+  "approval.commitment.proposalExpiresIn": "Vorschlag läuft in {countdown} ab",
+  "approval.commitment.noDueDay": "Kein Tag genannt",
+  "approval.commitment.promiseStatus": "Stand der Zusage",
+  "approval.commitment.notFulfilled":
+    "Das Erstellen der Aufgabe markiert die Zusage nicht als erfüllt.",
+  "approval.commitment.inactiveAssignment":
+    "Für {name} kann keine Aufgabe erstellt werden: Dieses Konto kann keine Aufgaben erhalten. Verwirf den Vorschlag und erstelle eine Aufgabe für ein aktives Teammitglied.",
+  "approval.commitment.createTask_other": "{count} Aufgaben erstellen",
+  "approval.commitment.createTask_one": "Aufgabe erstellen",
+  "magic.action.approval_commitment_task_named": "{party}: {summary}",
+  "magic.action.approval_commitment_task_summary": "{summary}",
+  "magic.action.approval_commitment_task_unverified":
+    "{party} (nicht bestätigt): {summary}",
   "magic.action.approval_commitment_task":
     "Eine Zusage aus einem Gespräch wartet auf deine Freigabe",
   "magic.action.approval_capture_counterparty":
@@ -14576,7 +14812,7 @@ export const de = {
   "magic.consequence.stage_moved":
     "Der Deal steht jetzt in einer späteren Phase.",
   "magic.consequence.lead_promoted": "In der Pipeline steht ein neuer Deal.",
-  "magic.consequence.owner_changed": "Jetzt ist jemand anders zuständig.",
+  "magic.consequence.owner_changed": "Jetzt ist jemand anders verantwortlich.",
   "magic.consequence.record_relinked":
     "Der Austausch steht jetzt beim richtigen Datensatz.",
   "magic.consequence.message_sent":
@@ -14936,7 +15172,7 @@ export const de = {
   "legalReview.packValue": "Wert",
   "legalReview.packStage": "Phase",
   "legalReview.packClose": "Abschlussdatum",
-  "legalReview.packOwner": "Zuständig",
+  "legalReview.packOwner": "Verantwortlich",
   "legalReview.packOffer": "Aktuelles Angebot",
   "legalReview.offerNumber": "Angebot",
   "legalReview.offerRevision": "{number}, Version {revision}",
@@ -14958,7 +15194,7 @@ export const de = {
   "legalReview.settingsTitle": "Rechtsprüfung",
   "legalReview.settingsSwitch": "Rechtsprüfung bei Deals",
   "legalReview.settingsHint":
-    "Zuständige Teammitglieder können einen Deal von der Rechtsabteilung prüfen lassen, und eine Phase kann deren Freigabe verlangen. Ist die Rechtsprüfung deaktiviert, ist beides ausgeblendet, und alle erfassten Prüfungen bleiben erhalten.",
+    "Verantwortliche Teammitglieder können einen Deal von der Rechtsabteilung prüfen lassen, und eine Phase kann deren Freigabe verlangen. Ist die Rechtsprüfung deaktiviert, ist beides ausgeblendet, und alle erfassten Prüfungen bleiben erhalten.",
   "legalReview.settingsReadOnly": "Diese Einstellung ändert ein Admin.",
   "legalReview.notSaved": "Einstellung wurde nicht gespeichert.",
   "stage.criteria.kindLegalReviewed": "Rechtlich freigegeben",
@@ -14970,4 +15206,38 @@ export const de = {
   "legalReview.offerLineRecurring_other": "{cadence} über {count} Perioden",
   "legalReview.offerLineStaged": "Vorgeschlagen, noch nicht in der Summe",
   "legalReview.packBinding": "Weitere an die Käuferseite gesendete Angebote",
+  "aiTask.name.account_scan": "Analyse des Kundenbedarfs",
+  "aiTask.name.agent_loop": "Agentensteuerung",
+  "aiTask.name.brief_ranking": "Priorisierung der Morgenübersicht",
+  "aiTask.name.capture_classify": "Nachrichtenklassifizierung",
+  "aiTask.name.capture_confidentiality_verdict":
+    "Vertraulichkeitsprüfung des Gesprächs",
+  "aiTask.name.capture_counterparty_verdict": "Erstkontaktprüfung",
+  "aiTask.name.cert_judge": "Bewertung der Modellzertifizierung",
+  "aiTask.name.cold_start": "Auswertung der Einrichtung",
+  "aiTask.name.corpus_ask": "Fragen zum Dokumentenbestand",
+  "aiTask.name.deal_health": "Deal-Statusübersicht",
+  "aiTask.name.document_extract": "Dokumentenauswertung",
+  "aiTask.name.draft_reply": "Antwortentwurf",
+  "aiTask.name.enrich": "Ergänzung aus Signaturen",
+  "aiTask.name.growth_fit": "Bewertung der Unternehmenseignung",
+  "aiTask.name.nl_search": "Suche in natürlicher Sprache",
+  "aiTask.name.offer_draft": "Angebotsentwurf",
+  "aiTask.name.owed_verdict": "Prüfung unbeantworteter Nachrichten",
+  "aiTask.name.propose_roles": "Erkennung von Einkaufsrollen",
+  "aiTask.name.rate_extract": "Erfassung von Wechselkursen",
+  "aiTask.name.request_settlement": "Prüfung der Antwort auf das Anliegen",
+  "aiTask.name.signal_extract": "Erkennung von Gesprächssignalen",
+  "aiTask.name.site_extract": "Ausführliche Website-Auswertung",
+  "aiTask.name.site_fact_extract": "Erfassung von Website-Fakten",
+  "aiTask.name.site_triage": "Website-Prüfung",
+  "aiTask.name.stage_evidence_extract": "Erkennung von Phasenbelegen",
+  "aiTask.name.summarize": "Datensatzzusammenfassung",
+  "aiTask.name.tag_suggest": "Tag-Vorschläge",
+  "aiTask.name.transcript": "Transkriptauswertung",
+  "aiTask.name.transcript_propose": "Erkennung von Besprechungsaufgaben",
+  "aiTask.name.voice_build": "Erstellung der Voice DNA",
+  "aiTask.name.weekly_learnings": "Erkenntnisse der letzten Woche",
+  "aiTask.name.weekly_review": "Wöchentlicher Rückblick",
+  "aiTask.name.unknown": "KI-Aufgabe",
 } as const satisfies Record<MessageKey, string>;

@@ -65,7 +65,9 @@ func readDealMetricFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Repo
 	if position == "" {
 		position = "0"
 	}
-	query := "SELECT " + spec.key + ",t.id,t.name," + spec.owner + ",COALESCE(u.display_name,'Unassigned')," + spec.at + "," + value + "," + spec.stage + "," + spec.stageLabel + "," + spec.outcome + "," + spec.provenance + "," + position + " FROM deal t " + from + " LEFT JOIN app_user u ON u.id=" + spec.owner + " WHERE " + where + " ORDER BY " + spec.key + " LIMIT " + b.add(reportingFactLimit+1)
+	said := reporting.ExplanationCopy(frame)
+	stageLabel := "COALESCE(" + spec.stageLabel + "," + b.add(said.Say(reportingLabelWords.Unmapped)) + ")"
+	query := "SELECT " + spec.key + ",t.id,t.name," + spec.owner + ",COALESCE(u.display_name," + b.add(said.Say(reportingLabelWords.Unassigned)) + ")," + spec.at + "," + value + "," + spec.stage + "," + stageLabel + "," + spec.outcome + "," + spec.provenance + "," + position + " FROM deal t " + from + " LEFT JOIN app_user u ON u.id=" + spec.owner + " WHERE " + where + " ORDER BY " + spec.key + " LIMIT " + b.add(reportingFactLimit+1)
 	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
@@ -151,7 +153,7 @@ func readReportingAge(ctx context.Context, tx pgx.Tx, frame crmcontracts.Reporti
 }
 
 func openMetricQuery(age bool) metricFactQuery {
-	query := metricFactQuery{stagePosition: "COALESCE(s.position,0)", from: "LEFT JOIN stage s ON s.id=t.stage_id", where: "t.archived_at IS NULL AND t.status='open'", owner: colOwnerID, at: "NULL::timestamptz", key: "t.id::text", stage: "t.stage_id::text", stageLabel: "COALESCE(s.name,'Unmapped')", outcome: "'open'", provenance: "'current_state'", money: !age}
+	query := metricFactQuery{stagePosition: "COALESCE(s.position,0)", from: "LEFT JOIN stage s ON s.id=t.stage_id", where: "t.archived_at IS NULL AND t.status='open'", owner: colOwnerID, at: "NULL::timestamptz", key: "t.id::text", stage: "t.stage_id::text", stageLabel: "s.name", outcome: "'open'", provenance: "'current_state'", money: !age}
 	if age {
 		query.from += " " + currentStageEntryJoin
 		query.value = "current_stage_age"

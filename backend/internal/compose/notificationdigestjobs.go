@@ -3,33 +3,7 @@
 
 package compose
 
-// The morning digest: one message a day to a colleague who asked for a class of
-// notice in a batch rather than one at a time.
-//
-// HOURLY AND NOT DAILY, for the reason the overnight brief ticks hourly: the
-// morning it aims at is the installation's LOCAL one, an hourly tick crosses
-// that hour in every zone the setting can name, and the per-(recipient, day)
-// claim is what stops twenty-four ticks producing twenty-four messages. The
-// same property makes a missed morning self-healing — a worker down until nine
-// sends the digest on its next tick rather than skipping the day.
-//
-// WHAT A LATER TICK MAY CARRY is bounded by the window rather than by the tick:
-// notices.Window closes at the instant the local morning began, so the nine
-// o'clock tick sends exactly what the five o'clock one would have. Without that
-// ceiling the hourly pass quietly becomes a rolling send — a colleague who held
-// nothing at five gets a one-line "daily digest" at three in the afternoon —
-// and that is not the batch the settings screen offered them.
-//
-// It is SEAT MAIL, on the terms the brief digest and the immediate notice mail
-// are: a colleague being told what reached their own queue, by the route they
-// chose for it. There is no consent question about telling a colleague what
-// their own worklist holds, and routing it through the delivery lane would file
-// an internal batch on a customer's timeline
-// (backend/gates/directmailbypass_test.go carries the ratification).
-//
-// WHAT IT MAY SAY is decided in notificationdigestrender.go, under the
-// recipient's own authority. Read that file before changing anything here that
-// touches the body: this one is about WHEN a message goes and to WHOM.
+// Digest content closes when each recipient’s delivery window opens.
 
 import (
 	"context"
@@ -42,12 +16,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -158,9 +133,6 @@ func (w *notificationDigestWorker) digestWorkspace(ctx context.Context, wsID ids
 	if err != nil {
 		return err
 	}
-	if !pass.due {
-		return nil
-	}
 	candidates, err := w.notices.DigestCandidates(sysCtx, pass.window)
 	if err != nil {
 		return err
@@ -194,9 +166,6 @@ func (w *notificationDigestWorker) digestWorkspace(ctx context.Context, wsID ids
 // whether this is the workspace's morning at all, which local day it is, and who
 // has a morning here.
 type digestPass struct {
-	// due is false when this tick is not the workspace's morning — an hour
-	// before the briefing hour. Nothing follows.
-	due bool
 	// window is the local day every claim is filed under, and the instant that
 	// day's morning began, which is as late as a notice may be and still be in
 	// this message.
@@ -206,37 +175,19 @@ type digestPass struct {
 	roster map[ids.UUID]string
 }
 
-// morningFor answers which local day this tick belongs to, and whether the
-// workspace's morning has arrived at all.
-//
-// THE FLOOR IS CHECKED BEFORE ANYTHING IS CLAIMED, which is why it lives up
-// here rather than inside the per-seat loop: a tick at four in the morning must
-// leave every seat's attempt unspent so the five o'clock tick can still send.
-//
-// briefs.LocalDayAt and briefingHour rather than a second spelling of either:
-// this is the same morning the overnight brief aims at, and two answers to
-// "which local day is it, and has the morning started" would let one colleague's
-// brief and their digest disagree about the day they are both about.
+// morningFor resolves the reporting window and the live recipient roster.
 func (w *notificationDigestWorker) morningFor(
 	ctx context.Context, now time.Time,
 ) (digestPass, error) {
 	var pass digestPass
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		day, local, err := briefs.LocalDayAt(ctx, tx, now)
+		var err error
+		// Candidate routing includes notices up to this tick; each recipient gets their own cutoff.
+		pass.window, err = notificationWindow(ctx, tx, now)
 		if err != nil {
 			return err
 		}
-		if local.Hour() < briefingHour {
-			return nil
-		}
-		// The ceiling is read in the installation's own zone and not by
-		// subtracting hours from the tick: briefingHour is a LOCAL hour, and a
-		// tick that crossed a daylight-saving boundary is a different number of
-		// hours from that morning than the one before it was.
-		morning := time.Date(local.Year(), local.Month(), local.Day(),
-			briefingHour, 0, 0, 0, local.Location())
-		pass.due = true
-		pass.window = notices.Window{Day: day, Morning: morning.UTC()}
+
 		pass.roster, err = seatsWithAMorning(ctx, tx)
 		return err
 	})
@@ -256,6 +207,40 @@ func (w *notificationDigestWorker) morningFor(
 func (w *notificationDigestWorker) digestFor(
 	ctx context.Context, wsID ids.UUID, seat ids.UserID, address string, window notices.Window,
 ) error {
+	seatCtx, live, err := seatContext(ctx, w.users, wsID, seat.UUID)
+	if err != nil || !live {
+		return err
+	}
+	settings, err := w.users.MyDelivery(seatCtx)
+	if err != nil {
+		return err
+	}
+	if routineCombines(settings) && auth.Require(seatCtx, "deal", principal.ActionRead) == nil && (settings.MorningBrief == nil || *settings.MorningBrief != identity.DeliveryNone) {
+		return nil
+	}
+	clock := w.now
+	if clock == nil {
+		clock = time.Now
+	}
+	allowed, err := routineMailWindow(seatCtx, w.users, clock(), settings)
+	if err != nil || !allowed {
+		return err
+	}
+	personal, _, err := routineWindowFor(seatCtx, w.users, clock(), settings)
+	if err != nil {
+		return err
+	}
+	if err := database.WithWorkspaceTx(seatCtx, w.pool, func(tx pgx.Tx) error {
+		var err error
+		window, err = notificationWindow(seatCtx, tx, personal.Open)
+		return err
+	}); err != nil {
+		return err
+	}
+	if routineCombines(settings) && auth.Require(seatCtx, "deal", principal.ActionRead) == nil {
+		return w.combinedDigestFor(seatCtx, seat, address, window, personal, settings, clock())
+	}
+
 	wanted, err := w.notices.DigestStillDue(ctx, seat, window)
 	if err != nil {
 		return err
@@ -330,9 +315,9 @@ func (w *notificationDigestWorker) deliver(
 	words := mailcopy.For(identity.BaseLanguageForPrompt(sysCtx, w.pool))
 	bounded, cancel := context.WithTimeout(sysCtx, notificationDigestBudget)
 	defer cancel()
-	if err := w.mail.Mailer.Send(bounded, address,
+	if err := mailer.SendLocalized(bounded, w.mail.Mailer, address,
 		digestSubject(lines, words),
-		digestMessage(lines, w.mail.PublicBaseURL, words)); err != nil {
+		digestMessage(lines, w.mail.PublicBaseURL, words)+routineFooter(w.mail.PublicBaseURL, words), string(words.Language)); err != nil {
 		// LOGGED AND RECORDED, never retried. SMTP returns no receipt, so a
 		// second attempt could not tell a refused message from a delivered one.
 		w.log.WarnContext(sysCtx, "the morning digest was attempted and did not go out",
@@ -353,4 +338,35 @@ func (w *notificationDigestWorker) recordFailure(
 		w.log.WarnContext(ctx, "the morning digest's failure could not be recorded",
 			"user", seat, "cause", err)
 	}
+}
+
+func (w *notificationDigestWorker) combinedDigestFor(seatCtx context.Context, seat ids.UserID, address string, window notices.Window, personal routineWindow, settings identity.Delivery, now time.Time) error {
+	worker := briefGenerateWorker{pool: w.pool, users: w.users, log: w.log, mail: BriefMailConfig(w.mail)}
+	if (settings.Weekly == nil || *settings.Weekly != identity.DeliveryNone) && worker.sendReadyWeekly(seatCtx, now) {
+		return nil
+	}
+	lines, err := w.readDigestLines(seatCtx, seat, window)
+	if err != nil || lines.total == 0 {
+		return err
+	}
+	run, err := routineBriefEngine(w.pool).SnapshotRun(seatCtx, personal.Open)
+	if err != nil {
+		return err
+	}
+	part := morningDigest{lines: lines, window: window}
+	claim, won, err := claimRoutine(seatCtx, w.pool, run.ID, ids.Nil, part, now)
+	if err != nil || !won || !claim.digest {
+		return err
+	}
+	if unchanged, err := routineChoicesUnchanged(seatCtx, w.users, settings); err != nil || !unchanged {
+		recordRoutineFailure(seatCtx, w.pool, claim, part, "delivery choices changed or could not be rechecked", w.log)
+		return nil
+	}
+	words := mailcopy.For(identity.BaseLanguageForPrompt(seatCtx, w.pool))
+	bounded, cancel := context.WithTimeout(seatCtx, notificationDigestBudget)
+	defer cancel()
+	if err := mailer.SendLocalized(bounded, w.mail.Mailer, address, digestSubject(lines, words), digestMessage(lines, w.mail.PublicBaseURL, words)+routineFooter(w.mail.PublicBaseURL, words), string(words.Language)); err != nil {
+		recordRoutineFailure(seatCtx, w.pool, claim, part, "relay submission failed", w.log)
+	}
+	return nil
 }

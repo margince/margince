@@ -79,7 +79,7 @@ var Columns = withActivityColumns(map[string]Column{
 	}, Example: same("mai@yourcompany.com · Mai Nguyen")},
 	"owner_email": {Description: langcopy.Phrase{
 		En: "Email of the Margince user who owns the record. If no user has this email, you become the owner and the import preview says so. A lead stays unassigned.",
-		De: "E-Mail-Adresse des Mitglieds, das für den Datensatz zuständig ist. Hat kein Mitglied diese Adresse, wirst du zuständig, und die Importvorschau weist darauf hin. Ein Lead bleibt nicht zugewiesen.",
+		De: "E-Mail-Adresse des Mitglieds, das für den Datensatz verantwortlich ist. Hat kein Mitglied diese Adresse, wirst du verantwortlich, und die Importvorschau weist darauf hin. Ein Lead bleibt nicht zugewiesen.",
 		Vi: "Email của thành viên Margince phụ trách hồ sơ. Nếu không thành viên nào có email này, bạn sẽ là người phụ trách và bản xem trước lần nhập sẽ báo điều này. Lead vẫn chưa giao.",
 	}, Example: same("mai@yourcompany.com")},
 	"tags": {Description: langcopy.Phrase{

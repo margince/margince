@@ -94,7 +94,8 @@ func TestLogActivityInputAcceptsANonMessageWithNoTransport(t *testing.T) {
 		crmcontracts.CreateActivityRequestKindCreateActivityRequestKindEmail,
 		crmcontracts.CreateActivityRequestKindCreateActivityRequestKindMeeting,
 	} {
-		in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Kind: kind, Source: "human"})
+		subject := "Quarterly sync"
+		in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Kind: kind, Subject: &subject, Source: "human"})
 		if err != nil {
 			t.Fatalf("mapping a %s activity: %v", kind, err)
 		}

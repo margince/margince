@@ -43,7 +43,7 @@ func TestLateWordsCountWholeDaysBehind(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, late := owedwork.LateWords(tc.due, now)
+			got, late := owedwork.LateWords(tc.due, now, "en")
 			if got != tc.want || late != tc.late {
 				t.Fatalf("LateWords = %q/%t, want %q/%t", got, late, tc.want, tc.late)
 			}

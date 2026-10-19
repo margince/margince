@@ -28,9 +28,9 @@ func TestQuietReasonNamesWhoWeOweAReplyTo(t *testing.T) {
 		LastOutbound: &QuietSide{At: quietAt(-30)},
 	}
 
-	got := quietReason(facts, QuietNames{anna: "Anna Weber"}, quietToday, time.UTC)
+	got := quietCopyFor("en").quietReason(facts, QuietNames{anna: "Anna Weber"}, quietToday, time.UTC)
 
-	for _, want := range []string{"Anna Weber", "nobody has answered", "3 weeks ago", "5 August"} {
+	for _, want := range []string{"Anna Weber", "nobody has answered", "3 weeks ago", "2026-08-05"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("reason = %q, want it to contain %q", got, want)
 		}
@@ -44,7 +44,7 @@ func TestQuietReasonSaysWeGotNoReplyWhenWeSpokeLast(t *testing.T) {
 		LastOutbound: &QuietSide{At: quietAt(-10), ContactID: anna},
 	}
 
-	got := quietReason(facts, QuietNames{anna: "Anna Weber"}, quietToday, time.UTC)
+	got := quietCopyFor("en").quietReason(facts, QuietNames{anna: "Anna Weber"}, quietToday, time.UTC)
 
 	if !strings.Contains(got, "We wrote to Anna Weber") {
 		t.Errorf("reason = %q, want it to say we wrote to Anna Weber", got)
@@ -64,7 +64,7 @@ func TestQuietReasonPicksTheDirectionOfTheNewerMessage(t *testing.T) {
 	them, us := ids.NewV7(), ids.NewV7()
 	names := QuietNames{them: "Anna Weber", us: "Boris Klein"}
 
-	theyRepliedLast := quietReason(QuietFacts{
+	theyRepliedLast := quietCopyFor("en").quietReason(QuietFacts{
 		LastInbound:  &QuietSide{At: quietAt(-5), ContactID: them},
 		LastOutbound: &QuietSide{At: quietAt(-9), ContactID: us},
 	}, names, quietToday, time.UTC)
@@ -72,7 +72,7 @@ func TestQuietReasonPicksTheDirectionOfTheNewerMessage(t *testing.T) {
 		t.Errorf("reason = %q, want the inbound reading — they spoke most recently", theyRepliedLast)
 	}
 
-	weWroteLast := quietReason(QuietFacts{
+	weWroteLast := quietCopyFor("en").quietReason(QuietFacts{
 		LastInbound:  &QuietSide{At: quietAt(-9), ContactID: them},
 		LastOutbound: &QuietSide{At: quietAt(-5), ContactID: us},
 	}, names, quietToday, time.UTC)
@@ -97,26 +97,26 @@ func TestQuietReasonSaysWhatActuallyHappened(t *testing.T) {
 		// Both halves of the sentence follow the verb: you do not "answer" a
 		// call, and a meeting never gets a "reply".
 		{
-			"call", "Anna Weber called on 6 August and nobody has followed up since",
-			"We called Anna Weber on 6 August and nothing has happened since",
+			"call", "Anna Weber called on 2026-08-06 and nobody has followed up since",
+			"We called Anna Weber on 2026-08-06 and nothing has happened since",
 		},
 		{
-			"meeting", "Anna Weber met us on 6 August and nobody has followed up since",
-			"We met Anna Weber on 6 August and nothing has happened since",
+			"meeting", "Anna Weber met us on 2026-08-06 and nobody has followed up since",
+			"We met Anna Weber on 2026-08-06 and nothing has happened since",
 		},
 		{
-			"email", "Anna Weber wrote on 6 August and nobody has answered since",
-			"We wrote to Anna Weber on 6 August and there has been no reply",
+			"email", "Anna Weber wrote on 2026-08-06 and nobody has answered since",
+			"We wrote to Anna Weber on 2026-08-06 and there has been no reply",
 		},
 	} {
-		theyLast := quietReason(QuietFacts{
+		theyLast := quietCopyFor("en").quietReason(QuietFacts{
 			LastInbound: &QuietSide{At: quietAt(-20), ContactID: anna, Kind: tc.kind},
 		}, names, quietToday, time.UTC)
 		if !strings.Contains(theyLast, tc.inbound) {
 			t.Errorf("inbound %s reason = %q, want %q in it", tc.kind, theyLast, tc.inbound)
 		}
 
-		weLast := quietReason(QuietFacts{
+		weLast := quietCopyFor("en").quietReason(QuietFacts{
 			LastOutbound: &QuietSide{At: quietAt(-20), ContactID: anna, Kind: tc.kind},
 		}, names, quietToday, time.UTC)
 		if !strings.Contains(weLast, tc.outbound) {
@@ -128,7 +128,7 @@ func TestQuietReasonSaysWhatActuallyHappened(t *testing.T) {
 // An unrecognised kind takes the neutral verb rather than vanishing or
 // guessing — a new activity kind must not silently produce a broken sentence.
 func TestQuietReasonDegradesAnUnknownKindToTheNeutralVerb(t *testing.T) {
-	got := quietReason(QuietFacts{
+	got := quietCopyFor("en").quietReason(QuietFacts{
 		LastInbound: &QuietSide{At: quietAt(-20), Kind: "carrier_pigeon"},
 	}, nil, quietToday, time.UTC)
 
@@ -143,7 +143,7 @@ func TestQuietReasonDegradesAnUnknownKindToTheNeutralVerb(t *testing.T) {
 func TestQuietReasonDegradesToAGenericNounWithoutAName(t *testing.T) {
 	facts := QuietFacts{LastInbound: &QuietSide{At: quietAt(-8)}}
 
-	got := quietReason(facts, nil, quietToday, time.UTC)
+	got := quietCopyFor("en").quietReason(facts, nil, quietToday, time.UTC)
 
 	if !strings.HasPrefix(got, "The contact wrote") {
 		t.Errorf("reason = %q, want it to open with the generic noun", got)
@@ -154,7 +154,7 @@ func TestQuietReasonDegradesToAGenericNounWithoutAName(t *testing.T) {
 }
 
 func TestQuietReasonSaysSoWhenThereIsNoCorrespondenceAtAll(t *testing.T) {
-	got := quietReason(QuietFacts{}, nil, quietToday, time.UTC)
+	got := quietCopyFor("en").quietReason(QuietFacts{}, nil, quietToday, time.UTC)
 
 	if !strings.Contains(got, "no correspondence") {
 		t.Errorf("reason = %q, want it to say there is nothing to judge the deal by", got)
@@ -175,7 +175,7 @@ func TestQuietForSpeaksInTheUnitAContactWouldUse(t *testing.T) {
 		{15, "2 weeks ago"},
 		{45, "6 weeks ago"},
 	} {
-		if got := quietFor(quietAt(-tc.daysAgo), quietToday, time.UTC); got != tc.want {
+		if got := quietCopyFor("en").quietFor(quietAt(-tc.daysAgo), quietToday, time.UTC); got != tc.want {
 			t.Errorf("quietFor(%d days ago) = %q, want %q", tc.daysAgo, got, tc.want)
 		}
 	}
@@ -190,20 +190,20 @@ func TestQuietDayIsTheWorkspacesOwnCalendarDay(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading the zone: %v", err)
 	}
-	// 00:30 on 6 August in Berlin is 22:30 on 5 August in UTC.
+	// 00:30 on 2026-08-06 in Berlin is 22:30 on 5 August in UTC.
 	justAfterMidnight := time.Date(2026, 8, 6, 0, 30, 0, 0, berlin)
 
-	if got := quietDay(justAfterMidnight, berlin); got != "6 August" {
-		t.Errorf("quietDay in Berlin = %q, want %q", got, "6 August")
+	if got := quietDay(justAfterMidnight, berlin); got != "2026-08-06" {
+		t.Errorf("quietDay in Berlin = %q, want %q", got, "2026-08-06")
 	}
-	if got := quietDay(justAfterMidnight, time.UTC); got != "5 August" {
-		t.Errorf("quietDay in UTC = %q, want %q — the zones must genuinely differ here", got, "5 August")
+	if got := quietDay(justAfterMidnight, time.UTC); got != "2026-08-05" {
+		t.Errorf("quietDay in UTC = %q, want %q — the zones must genuinely differ here", got, "2026-08-05")
 	}
 }
 
 // A clock that has not caught up must not print a negative span.
 func TestQuietForNeverReportsTheFuture(t *testing.T) {
-	if got := quietFor(quietAt(3), quietToday, time.UTC); got != "that was today" {
+	if got := quietCopyFor("en").quietFor(quietAt(3), quietToday, time.UTC); got != "that was today" {
 		t.Errorf("quietFor(future) = %q, want it clamped to today", got)
 	}
 }
@@ -212,14 +212,14 @@ func TestQuietForNeverReportsTheFuture(t *testing.T) {
 // arithmetic that produced it — a formula is not a reason a rep can weigh.
 func TestPacedBasisExplainsWithoutShowingTheFormula(t *testing.T) {
 	for _, stages := range []int{1, 4} {
-		got := pacedBasis(stages)
+		got := quietCopyFor("en").pacedBasis(stages)
 		for _, forbidden := range []string{"×", "*", "velocity", "stage(s)"} {
 			if strings.Contains(got, forbidden) {
 				t.Errorf("pacedBasis(%d) = %q, want no %q in it", stages, got, forbidden)
 			}
 		}
 	}
-	if got := pacedBasis(1); strings.Contains(got, "1 stages") {
+	if got := quietCopyFor("en").pacedBasis(1); strings.Contains(got, "1 stages") {
 		t.Errorf("pacedBasis(1) = %q, want the singular reading", got)
 	}
 }

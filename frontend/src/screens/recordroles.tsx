@@ -4,6 +4,7 @@
 import { type FormEvent, useId, useState } from "react";
 import { rowsOf } from "../api/rows";
 import {
+  Badge,
   Button,
   Checkbox,
   EmptyState,
@@ -19,7 +20,7 @@ import {
   nameRefusal,
   useRefusedName,
 } from "../design-system/namedialog";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { PanelNotices } from "../design-system/panelnotices";
 import { useSinglePress } from "../design-system/presslatch";
 import { QueryStates } from "../design-system/querystates";
@@ -91,7 +92,16 @@ function roleColumns({
       key: "name",
       header: t("recordRoles.colRole"),
       grow: true,
-      render: (role) => role.label,
+      render: (role) => (
+        <CellStack>
+          <span>{role.label}</span>
+          {role.system ? (
+            <Badge>{t("recordRoles.builtIn")}</Badge>
+          ) : (
+            <Badge tone="accent">{t("recordRoles.custom")}</Badge>
+          )}
+        </CellStack>
+      ),
     },
     {
       key: "reach",
@@ -100,7 +110,7 @@ function roleColumns({
     },
     {
       key: "active",
-      header: t("leadSources.colActive"),
+      header: t("recordRoles.colActive"),
       fold: "end",
       render: (role) => (
         <Switch
@@ -253,7 +263,8 @@ function AddRoleDialog({
   );
 }
 
-// A role names what somebody answers for on a record and grants no access.
+// A role names what somebody looks after on a record and grants no access;
+// the owner stays the one responsible.
 // No delete: a role an assignment carried must stay resolvable, so the switch
 // retires it. Where a role applies is set at creation only.
 export function RecordRolesCard() {
@@ -295,6 +306,9 @@ export function RecordRolesCard() {
         )
       }
     >
+      <PanelBody>
+        <PanelIntro>{t("recordRoles.intro")}</PanelIntro>
+      </PanelBody>
       {query.isSuccess && roles.length > 0 ? (
         <DataTable
           bleed

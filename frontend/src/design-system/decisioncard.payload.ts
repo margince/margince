@@ -49,6 +49,51 @@ export type DecisionDisplay = Readonly<{
   lead?: boolean;
 }>;
 
+/**
+ * The display without a lead that only repeats the approval's own summary.
+ *
+ * The summary is already the card's headline or the line under it. A stager
+ * often writes the same sentence into the payload it leads with, and one
+ * sentence printed twice reads as two facts. A lead that differs still shows.
+ */
+export function withoutRepeatedLead(
+  display: readonly DecisionDisplay[],
+  summary: string | null | undefined,
+): readonly DecisionDisplay[] {
+  const said = summary ? displayNormalized(summary) : "";
+  return said
+    ? display.filter((entry) => !(entry.lead && repeats(entry.value, said)))
+    : display;
+}
+
+// The server stores a summary with control and format characters dropped,
+// whitespace collapsed and the length bounded with a trailing ellipsis
+// (sanitizeSummary in modules/approvals/summary.go). The payload copy is raw,
+// so both are compared after the same cleaning, and a bounded summary matches
+// the lead it was cut from.
+const SUMMARY_CUT = "…";
+
+function displayNormalized(text: string): string {
+  return text
+    .replace(/\s+/gu, " ")
+    .replace(/[\p{Cc}\p{Cf}]/gu, "")
+    .trim();
+}
+
+function repeats(lead: string | null, said: string): boolean {
+  if (!lead) {
+    return false;
+  }
+  const value = displayNormalized(lead);
+  if (value === said) {
+    return true;
+  }
+  const head = said.endsWith(SUMMARY_CUT)
+    ? said.slice(0, -SUMMARY_CUT.length).trim()
+    : "";
+  return head !== "" && value.startsWith(head);
+}
+
 /** One remaining payload field, as the two strings a fact list draws. */
 export type PayloadField = Readonly<{
   /** The payload key, which is also the row's identity in the list. */

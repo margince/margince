@@ -90,29 +90,13 @@ export function provenanceOf(
   return { kind: "unknown" };
 }
 
-// What an `agent:<rest>` principal is called on screen.
-//
-// A passport call stamps `agent:<passport_id>`, a uuid with no name behind it
-// on this side. The design system holds no record lookups, so there is
-// nothing here to resolve it to. The tag then says only what the wire
-// says (an agent produced this) instead of printing an identifier. A named
-// tool (`agent:enrich`) keeps its name.
+// What an `agent:<rest>` principal is called on screen. A passport uuid names
+// nothing on this side, so the tag says only that an agent acted. A named tool
+// (`agent:signal-scan`) is handed on as `job`, which the tag reads through the
+// catalogue; the identifier itself is never printed.
 function agentProvenance(rest: string): Provenance {
   const named = rest === "" || OPAQUE_ID.test(rest) ? undefined : rest;
-  return { kind: "agent", agent: named && humanizeAgent(named) };
-}
-
-// A tool's own name, in words.
-//
-// The wire spells a job the way the code does: `capture_counterparty_verdict`.
-// Printing that at a reader shows them the plumbing and calls it information.
-// The underscores go and the name stays, because the name identifies the tool.
-//
-// The case is left alone. A one-word tool reads as `capture`, and changing
-// that is a separate decision from removing an identifier's punctuation.
-function humanizeAgent(name: string): string {
-  const words = name.replaceAll("_", " ").trim();
-  return words === "" ? name : words;
+  return { kind: "agent", job: named };
 }
 
 /** A uuid: an identifier with no name in it, so no tag may print it. */

@@ -124,6 +124,9 @@ type Rules struct {
 	//
 	// Held by the same gate as Disclosures.
 	OptOutAcknowledgement bool
+
+	// OptOutAcknowledgementWithin bounds receipt delivery from the recorded refusal; zero declares no deadline.
+	OptOutAcknowledgementWithin time.Duration
 }
 
 // ExceptionKind names a route to lawful advertising without consent. Closed:
@@ -301,6 +304,9 @@ func (r Rules) Validate() error {
 	// apply gets refused.
 	if r.Version > math.MaxInt32 {
 		return fmt.Errorf("messaging rules for %q carry version %d — a decision records the version on a 32-bit column, so a larger number would refuse every send under this pack rather than being recorded", string(r.Jurisdiction), r.Version)
+	}
+	if r.OptOutAcknowledgementWithin < 0 || (r.OptOutAcknowledgementWithin > 0 && !r.OptOutAcknowledgement) {
+		return errors.New("messaging rules declare an invalid opt-out receipt deadline")
 	}
 	if r.ReplyWindow < 0 || r.DealFollowUpWindow < 0 {
 		return fmt.Errorf("messaging rules for %q carry a negative window — a window reaches back, never forward", string(r.Jurisdiction))

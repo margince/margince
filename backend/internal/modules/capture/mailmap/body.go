@@ -33,7 +33,7 @@ func extractText(reader *mail.Reader) (string, []Part, []PartDrop, calendarPart)
 			break
 		}
 		part, err := reader.NextPart()
-		if err != nil {
+		if !usablePart(err) {
 			if !errors.Is(err, io.EOF) {
 				// A structural failure ends the walk, so any file after this
 				// point is lost. Recorded rather than passed over: a message
@@ -147,9 +147,9 @@ func readInlinePart(
 	}
 	switch {
 	case strings.HasPrefix(contentType, "text/plain") && *plain == "":
-		*plain = string(content)
+		*plain = string(toUTF8(content, params["charset"]))
 	case strings.HasPrefix(contentType, "text/html") && *html == "":
-		*html = string(content)
+		*html = string(toUTF8(content, params["charset"]))
 	}
 	return true
 }

@@ -54,6 +54,11 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+// The detail the store's CHECK-constraint net answers when a render's write
+// is refused with a 422.
+const VALUE_REFUSED =
+  "a value violates a rule on this record; check the picklist options";
+
 const baseOffer = {
   id: "o-1",
   deal_id: "d-1",
@@ -316,6 +321,35 @@ describe("OfferLineEditor (OP-7/OP-13)", () => {
     expect(screen.queryByText("€1,240.00")).toBeNull();
   });
 
+  it("refuses an Other unit with nothing typed, and sends the typed unit once there is one", async () => {
+    const mutations: { method: string; url: string; body: unknown }[] = [];
+    stubOfferWithMutations(
+      { ...baseOffer, line_items: [existingLine] },
+      { ...baseOffer, line_items: [existingLine] },
+      mutations,
+    );
+    const user = userEvent.setup();
+    render(<OfferScreen id="o-1" />);
+    await screen.findByText("ANG-2026-0007");
+    await user.type(screen.getByTestId("new-line-description"), "Seats");
+    await user.type(screen.getByTestId("new-line-quantity"), "3");
+    await pickOption(user, screen.getByTestId("new-line-unit"), "Other");
+
+    await user.click(screen.getByTestId("add-line"));
+    expect(
+      await screen.findByText("Type the unit, or pick one from the list."),
+    ).toBeTruthy();
+    expect(mutations).toHaveLength(0);
+
+    await user.type(screen.getByTestId("new-line-unit-other"), "Seat");
+    expect(
+      screen.queryByText("Type the unit, or pick one from the list."),
+    ).toBeNull();
+    await user.click(screen.getByTestId("add-line"));
+    await waitFor(() => expect(mutations).toHaveLength(1));
+    expect(mutations[0].body).toMatchObject({ unit: "Seat" });
+  });
+
   it("removes a line using the delete response's recomputed totals", async () => {
     const afterRemove = {
       ...baseOffer,
@@ -516,7 +550,16 @@ describe("regenerate action (OP-11)", () => {
         body: {
           title: "Unprocessable",
           detail: "offer is not in sent status",
-          code: "offer_not_sent",
+          code: "validation_error",
+          details: {
+            errors: [
+              {
+                field: "status",
+                code: "offer_not_sent",
+                message: "offer is not in sent status",
+              },
+            ],
+          },
         },
         status: 422,
       },
@@ -618,9 +661,12 @@ describe("render PDF action (OP-12)", () => {
       baseOffer,
       {
         body: {
-          title: "Unprocessable",
-          detail: "offer has no line items to render",
-          code: "offer_empty",
+          title: "Unprocessable Entity",
+          detail: VALUE_REFUSED,
+          code: "validation_error",
+          details: {
+            errors: [{ field: "body", code: "value_not_allowed" }],
+          },
         },
         status: 422,
       },
@@ -632,9 +678,7 @@ describe("render PDF action (OP-12)", () => {
     await userEvent.click(screen.getByTestId("render-pdf"));
 
     await waitFor(() => expect(calls).toHaveLength(1));
-    expect(
-      await screen.findByText("offer has no line items to render"),
-    ).toBeTruthy();
+    expect(await screen.findByText(VALUE_REFUSED)).toBeTruthy();
     expect(screen.queryByTestId("pdf-unavailable")).toBeNull();
   });
 });

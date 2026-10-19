@@ -40,7 +40,7 @@ func TestTheDealMoveReadsRunAgainstTheRealSchema(t *testing.T) {
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		moves, hidden, err = meetingbrief.ReadDealMovesForTest(ctx, tx, dealID,
-			time.Now().UTC().AddDate(0, 0, -30), time.Now().UTC())
+			time.Now().UTC().AddDate(0, 0, -30), time.Now().UTC(), "en")
 		return err
 	}); err != nil {
 		t.Fatalf("the deal-move reads did not run: %v", err)
@@ -71,7 +71,7 @@ func TestAReaderWithoutTheRoomGrantIsToldTheRoomWasLeftOut(t *testing.T) {
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		_, hidden, err = meetingbrief.ReadDealMovesForTest(ctx, tx, dealID,
-			time.Now().UTC().AddDate(0, 0, -30), time.Now().UTC())
+			time.Now().UTC().AddDate(0, 0, -30), time.Now().UTC(), "en")
 		return err
 	}); err != nil {
 		t.Fatalf("the deal-move reads refused a reader they should have served: %v", err)
@@ -98,7 +98,7 @@ func TestAReaderWithoutDealAccessIsToldNothingAboutTheDeal(t *testing.T) {
 
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, _, err := meetingbrief.ReadDealMovesForTest(ctx, tx, dealID,
-			time.Now().UTC().AddDate(0, 0, -30), time.Now().UTC())
+			time.Now().UTC().AddDate(0, 0, -30), time.Now().UTC(), "en")
 		return err
 	})
 	if err == nil {

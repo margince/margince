@@ -12,7 +12,6 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { pickOption } from "../design-system/select-testing";
 import { jsonResponse } from "../features/companies/company.fixtures";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
@@ -87,10 +86,9 @@ describe("the New project dialog's owner", () => {
     render(<ProjectsScreen />);
     await user.click(await screen.findByTestId("new-record"));
     await user.type(screen.getByLabelText("Project name *"), "CRM rollout");
-    await pickOption(
-      user,
-      screen.getByLabelText("Company *"),
-      "Brandt Automotive",
+    await user.type(screen.getByLabelText("Company *"), "Brandt");
+    await user.click(
+      await screen.findByRole("button", { name: /Brandt Automotive/ }),
     );
     // The server refuses an agent seat as an owner, so none is offered.
     await user.click(screen.getByLabelText("Owner"));

@@ -1,0 +1,26 @@
+{
+  "name": "tentative_promise_with_a_day",
+  "task": "transcript_propose",
+  "site": "next_steps",
+  "source": "hand_authored",
+  "sanitized_by": "hand_authored/codex",
+  "fixture": [
+    "Mira: I will try to send pricing by Friday."
+  ],
+  "expect": {
+    "outcome": "accepted",
+    "answer": [
+      {
+        "line": 1,
+        "due_date": "2026-03-06"
+      }
+    ],
+    "rubric": "The proposed next step must preserve the tentative wording, with confidence at most 0.3. A stated date does not turn trying into a firm promise.",
+    "bands": {
+      "certified_min": 70,
+      "degraded_min": 50,
+      "floor": 40
+    }
+  },
+  "commitment_band": "hedged"
+}

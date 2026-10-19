@@ -292,7 +292,7 @@ describe("ServingSection when the check fails", () => {
           );
         if (req.url.includes("/ai/routing/schema")) return jsonResponse(SCHEMA);
         return jsonResponse(
-          { title: "Unavailable", status: 503, code: "unavailable" },
+          { title: "Unavailable", status: 503, code: "service_unavailable" },
           503,
         );
       }),

@@ -5,14 +5,11 @@ package compose
 
 import (
 	"context"
-	"fmt"
-	"slices"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -54,8 +51,8 @@ func (x *SignalExtractor) withRestatedCommitment(ctx context.Context, tx pgx.Tx,
 	if err != nil {
 		return Commitment{}, false, err
 	}
-	if !samePromiser(commitment, parties) {
-		return Commitment{}, false, fmt.Errorf("%w: a renewal does not have the original promiser and recipient", errRefusedReading)
+	if !samePromiser(commitment, verifiedCommitmentParties(parties)) {
+		return Commitment{}, false, errRefusedReading
 	}
 	message, found := citedMessage(thread, id)
 	if !found {
@@ -69,14 +66,35 @@ func (x *SignalExtractor) withRestatedCommitment(ctx context.Context, tx pgx.Tx,
 	return commitment, true, nil
 }
 
-func samePromiser(commitment Commitment, parties activities.MessageParties) bool {
+func samePromiser(commitment Commitment, parties []commitmentParty) bool {
+	var expected string
 	if commitment.Theirs != nil {
-		sender, one := onlyOne(parties.SenderContacts)
-		return one && sender == commitment.Theirs.UUID
-	}
-	sender, one := onlyOne(parties.SenderSeats)
-	if !one || commitment.Seat == nil || sender != *commitment.Seat {
+		expected = "contact:" + commitment.Theirs.String()
+	} else if commitment.Seat != nil {
+		expected = "seat:" + commitment.Seat.String()
+	} else {
 		return false
 	}
-	return commitment.PromisedTo == nil || slices.Contains(parties.RecipientContacts, commitment.PromisedTo.UUID)
+	if commitment.NeedsConfirmation {
+		for _, original := range commitment.parties {
+			if original.Ref == expected && commitmentPartyHasRole(parties, expected, original.Role) {
+				return true
+			}
+		}
+		return false
+	}
+	found := false
+	for _, party := range parties {
+		if party.Role != commitmentSenderRole {
+			continue
+		}
+		if party.Ref != expected {
+			return false
+		}
+		found = true
+	}
+	if !found || commitment.PromisedTo == nil {
+		return found
+	}
+	return commitmentPartyHasRole(parties, "contact:"+commitment.PromisedTo.String(), "to")
 }

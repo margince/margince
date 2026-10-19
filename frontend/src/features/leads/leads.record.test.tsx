@@ -4,6 +4,7 @@ import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { translate } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { LeadScreen, promoteEligible, scoreTone, terminalBadge } from "./leads";
 import {
@@ -573,6 +574,7 @@ describe("LeadScreen — History tab", () => {
               id: "h1",
               actor_type: "human",
               actor_id: "u1",
+              actor_name: "Demo Admin",
               action: "update",
               occurred_at: "2026-07-13T10:00:00Z",
               summary: "Lead score changed",
@@ -591,8 +593,8 @@ describe("LeadScreen — History tab", () => {
     await userEvent.click(screen.getByRole("button", { name: /history/i }));
     await userEvent.click(screen.getByRole("button", { name: "Changes" }));
 
-    await waitFor(() =>
-      expect(screen.getByText("Lead score changed")).toBeTruthy(),
+    await screen.findByText(
+      translate("en", "history.verb.update", { subject: "Demo Admin" }),
     );
     // The identity header (name) stays visible on the History tab, not just
     // the overview. It sits above the tab switch, like the persistent

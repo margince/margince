@@ -1,8 +1,8 @@
-import { useQueries } from "@tanstack/react-query";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { stable } from "../../format/collate";
-import { unwrap } from "../../lib/problem";
+import {
+  type CompanyMark,
+  useCompanyMarksByID,
+} from "../../components/companymarks";
 
 // The companies a deals board names, resolved to the names and marks its
 // cards draw.
@@ -10,8 +10,7 @@ import { unwrap } from "../../lib/problem";
 type Deal = components["schemas"]["Deal"];
 type Company = components["schemas"]["Company"];
 
-/** A company's display name and the mark drawn beside it. */
-export type CompanyMark = { name: string; logoUrl?: string | null };
+export type { CompanyMark } from "../../components/companymarks";
 
 /**
  * Every company the loaded deals name, id → mark (`useCompanyMarks` resolves them).
@@ -41,16 +40,10 @@ export type CompanyNaming = Readonly<{
 /**
  * The company marks the board draws, for every company its cards name.
  *
- * The create form's picker reads ONE capped page of companies, and the
- * board took its marks from exactly that page — so a deal whose company fell
- * outside it drew a card with no company row at all, which a reader reads as a
- * deal nobody has linked. The set that has to be resolvable is the set the
- * loaded deals actually name, so the ids that page did not cover are read by
- * id, a hundred to a request: one request per company made a cold board wait
- * on dozens of reads before its cards had names.
- *
- * A withheld company is never among them — the wire sends no id to read — so
- * this cannot turn a mask into a name.
+ * The create form's picker reads one capped page of companies. A company
+ * outside that page would leave its card with no company row, so the ids the
+ * page did not cover are read by id (`useCompanyMarksByID`). A withheld company
+ * sends no id, so this cannot turn a mask into a name.
  */
 export function useCompanyMarks(
   deals: Deal[],
@@ -68,76 +61,16 @@ export function useCompanyMarks(
   // the deals have arrived and the companies have not, `fromPage` is empty
   // and every company a loaded deal names looks unresolved.
   const unnamed = pageSettled
-    ? [
-        ...new Set(
-          deals.flatMap((deal) =>
-            deal.company_id && !fromPage.has(deal.company_id)
-              ? [deal.company_id]
-              : [],
-          ),
-        ),
-      ].sort(stable)
+    ? deals.flatMap((deal) =>
+        deal.company_id && !fromPage.has(deal.company_id)
+          ? [deal.company_id]
+          : [],
+      )
     : [];
-  const batches: string[][] = [];
-  for (let at = 0; at < unnamed.length; at += COMPANY_MARK_BATCH) {
-    batches.push(unnamed.slice(at, at + COMPANY_MARK_BATCH));
-  }
-  const reads = useQueries({
-    queries: batches.map((batch) => ({
-      queryKey: ["companies", "marks", batch],
-      queryFn: async (): Promise<Map<string, CompanyMark>> => {
-        // A refused read is held as an error, as components/entityref.tsx does. Each
-        // card it covers then says its company did not load, not drawing none.
-        const data = unwrap(
-          await api.GET("/companies", {
-            params: {
-              // Archived as well: archiving a company leaves its deals naming
-              // it, and the single-record read these replaced answered those.
-              query: {
-                id: batch,
-                include_anchor: true,
-                include_archived: true,
-                limit: batch.length,
-              },
-            },
-          }),
-        );
-        // An id missing from the answer is archived, or row scope hides it
-        // from this reader, and no retry turns that into a name: the card has
-        // no company to draw.
-        return new Map(
-          data.data.map((company) => [
-            company.id,
-            { name: company.display_name, logoUrl: company.logo_url },
-          ]),
-        );
-      },
-      // A company's name and mark change far more rarely than the board
-      // refetches, so a card that already has one does not ask again.
-      staleTime: 60_000,
-    })),
-  });
+  const byID = useCompanyMarksByID(unnamed);
   const marks = new Map(fromPage);
-  const unreadable = new Set<string>();
-  reads.forEach((read, index) => {
-    const batch = batches[index] ?? [];
-    if (read.data) {
-      for (const [id, mark] of read.data) {
-        marks.set(id, mark);
-      }
-      return;
-    }
-    // The error the queryFn deliberately threw rather than settling as an
-    // absence. Read here, or the cards it belongs to say "no company" — which
-    // is the one thing this read exists to stop them saying.
-    if (read.isError) {
-      for (const id of batch) {
-        unreadable.add(id);
-      }
-    }
-  });
-  return { marks, unreadable };
+  for (const [id, mark] of byID.marks) {
+    marks.set(id, mark);
+  }
+  return { marks, unreadable: byID.unreadable };
 }
-
-/** The most companies one read asks for — the contract's own `id` bound. */
-const COMPANY_MARK_BATCH = 100;

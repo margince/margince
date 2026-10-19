@@ -149,7 +149,7 @@ func TestClassifySeedTakesAConfidentDecision(t *testing.T) {
 	}
 	seed := crawlPage{URL: "https://acme.example", Text: "This domain is for sale."}
 
-	verdict, err := (&siteDeepReadWorker{triageBrain: lane}).classifySeed(context.Background(), seed)
+	verdict, err := (&siteDeepReadWorker{triageBrain: lane}).classifySeed(context.Background(), domainEvidenceCopyFor("en"), seed)
 	if err != nil {
 		t.Fatalf("classifying: %v", err)
 	}
@@ -174,7 +174,7 @@ func TestClassifySeedFallsBackBelowTheFloor(t *testing.T) {
 	}
 	seed := crawlPage{URL: "https://acme.example", Text: "We build robots."}
 
-	verdict, err := (&siteDeepReadWorker{triageBrain: lane}).classifySeed(context.Background(), seed)
+	verdict, err := (&siteDeepReadWorker{triageBrain: lane}).classifySeed(context.Background(), domainEvidenceCopyFor("en"), seed)
 	if err != nil {
 		t.Fatalf("classifying: %v", err)
 	}
@@ -198,7 +198,7 @@ func TestClassifySeedAsksTheLLMOnALaneThatCannotDecide(t *testing.T) {
 	seed := crawlPage{URL: "https://acme.example", Text: "We build robots."}
 	worker := &siteDeepReadWorker{triageBrain: completerOnlyLane{reply: triageLLMReply}}
 
-	verdict, err := worker.classifySeed(context.Background(), seed)
+	verdict, err := worker.classifySeed(context.Background(), domainEvidenceCopyFor("en"), seed)
 	if err != nil {
 		t.Fatalf("classifying: %v", err)
 	}

@@ -2837,7 +2837,7 @@ test.describe("filters and views", () => {
       "Branche",
       "Lebenszyklus",
       "Tag",
-      "Zuständig",
+      "Verantwortlich",
       // The custom field, and it sorts after the core ones — a reader scanning
       // for a column they added finds it in one place rather than interleaved.
       "fleet size",
@@ -2943,11 +2943,8 @@ test.describe("filters and views", () => {
     ]);
     await page.keyboard.press("Escape");
 
-    // And nesting: from two conditions, More offers a group of the other join,
-    // arriving with a condition in it — what mixing AND with OR needs.
-    await page
-      .getByRole("button", { name: de["filters.rowsMore"], exact: true })
-      .click();
+    // Nesting: "Add a group" adds a group of the other join with one condition
+    // in it. That is how a filter mixes "and" with "or".
     await page
       .getByRole("button", { name: de["filters.addGroup"], exact: true })
       .click();

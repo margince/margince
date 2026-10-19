@@ -26,18 +26,14 @@ import {
 } from "../../lib/uploadlimit";
 // Installation facts are readable by every role; only admin/ops may change them.
 // Each row opens the shared sparse-patch form with its own field focused.
-// A frozen base currency remains visible with the server's reason in both views.
+import { useCurrencyNote } from "./installation-settings.currency";
 import {
-  currencyNote,
   fiscalYearStartSummary,
   InstallationProfileDialog,
 } from "./installation-settings.profile";
 import { RegionalSettingsRows } from "./installation-settings.regional";
 
-export {
-  currencyNote,
-  fiscalYearStartSummary,
-} from "./installation-settings.profile";
+export { fiscalYearStartSummary } from "./installation-settings.profile";
 
 // Both shapes come from the generated contract rather than being restated
 // here: a hand-written copy would drift the first time the contract gains a
@@ -153,6 +149,7 @@ function InstallationSettingsForm({
   canManage: boolean;
 }) {
   const t = useT();
+  const currencyNote = useCurrencyNote();
   const { locale } = useLocale();
   const toast = useToast();
   const [editing, setEditing] = useState<EditedFact | null>(null);
@@ -267,7 +264,7 @@ function InstallationSettingsForm({
         />
         <SettingRow
           label={t("installationSettings.baseCurrency")}
-          description={currencyNote(settings, t)}
+          description={currencyNote(settings)}
           value={settings.base_currency}
           control={editVerb(
             "base_currency",

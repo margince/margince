@@ -198,7 +198,7 @@ To build a detailed filter in Margince, open **Filters and views** in the sideba
 2. Pick a field under **Select field**. Then pick how to compare (**is**, **is not**, **is any of**, **contains**…) and the value.
 3. Press **Add condition** for more. The **and** between conditions means all of them must match.
 4. Press **and** to switch it to **or**: then any one of them may match.
-5. From two conditions on, **⋯** under them → **Add a group** puts a group inside the filter. Groups go at most 4 levels down.
+5. **Add a group**, next to **Add condition**, puts a group inside the filter. At the top of a group, press **All of these** or **Any of these** to choose how its conditions match. Groups go at most 4 levels down.
 6. Once a condition is full, the count ("12 contacts match") and **Matching records** show. They update as you go.
 To change the record type, press **Contacts**, **Companies**, **Deals** or **Leads** at the top. With conditions in place it asks first, because a switch clears them.
 Also called: advanced search, segment, query builder.

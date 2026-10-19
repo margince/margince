@@ -168,30 +168,41 @@ describe("company-360 deep read", () => {
     }
   });
 
-  it("shows a budget deferral as an automatic resume, not a failed read", async () => {
-    const { calls } = stubDeepRead({
-      report: () =>
-        jsonResponse({
-          ...runningRead,
-          status: "deferred",
-          status_code: "budget_deferred",
-          status_detail:
-            "AI budget reached its current limit. This website read will resume automatically.",
-          next_attempt_at: "2026-08-01T00:00:00Z",
-        }),
-    });
-    render(<CompanyScreen id="o-1" />);
-    await startDeepRead(calls);
+  it.each([
+    {
+      reason: "budget",
+      label: "Waiting for AI budget",
+      explanation: /This work resumes automatically when budget is available/,
+    },
+    {
+      reason: "provider",
+      label: "Waiting for AI provider",
+      explanation: /This work resumes automatically when it recovers/,
+    },
+  ])(
+    "explains a $reason deferral and its automatic retry",
+    async ({ reason, label, explanation }) => {
+      const { calls } = stubDeepRead({
+        report: () =>
+          jsonResponse({
+            ...runningRead,
+            status: "deferred",
+            status_code: "budget_deferred",
+            deferral_reason: reason,
+            status_detail:
+              "AI budget reached its current limit. This website read will resume automatically.",
+            next_attempt_at: "2026-08-01T00:00:00Z",
+          }),
+      });
+      render(<CompanyScreen id="o-1" />);
+      await startDeepRead(calls);
 
-    await waitFor(() =>
-      expect(screen.getByText("Waiting for AI budget")).toBeTruthy(),
-    );
-    expect(
-      screen.getByText(/This website read will resume automatically/),
-    ).toBeTruthy();
-    expect(screen.getByText(/Resumes automatically/)).toBeTruthy();
-    expect(screen.queryByText("Failed")).toBeNull();
-  });
+      await waitFor(() => expect(screen.getByText(label)).toBeTruthy());
+      expect(screen.getByText(explanation)).toBeTruthy();
+      expect(screen.getByText(/Resumes automatically/)).toBeTruthy();
+      expect(screen.queryByText("Failed")).toBeNull();
+    },
+  );
 
   it("a page cap reads as the size the read was given, not as a fault", async () => {
     const { calls } = stubDeepRead({
