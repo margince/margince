@@ -187,3 +187,47 @@ func TestOnlyAnEditorListsAReportsRevisions(t *testing.T) {
 		t.Error("a reader who may not edit the report listed its revisions")
 	}
 }
+
+// A draft is checked again under whoever publishes it. A team manager may not
+// publish a draft scoped to a team they do not oversee, though its author could.
+func TestPublishingADraftChecksItUnderThePublisher(t *testing.T) {
+	f := reportingBusiness(t)
+	teamScope := f.selection()
+	teamScope.Scope = crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(f.env.Team1)}
+	report, err := f.service.CreateReport(f.human, crmcontracts.ReportingReportInput{
+		Name: "Team review", Audience: "team", AudienceTeamId: ptrUUID(f.env.Team1), Selection: teamScope,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := ids.UUID(report.Id)
+	elsewhere := f.selection()
+	elsewhere.Scope = crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(f.env.Team2)}
+	drafted, err := f.service.SaveReportDraft(f.human, id, report.Version,
+		crmcontracts.ReportingReportDraftInput{Selection: elsewhere})
+	if err != nil {
+		t.Fatalf("the author could not draft a team scope they may measure: %v", err)
+	}
+
+	actor, ok := principal.Actor(f.human)
+	if !ok {
+		t.Fatal("missing actor")
+	}
+	actor.UserID = f.env.Rep3
+	actor.ID = "human:" + f.env.Rep3.String()
+	actor.TeamIDs = []ids.UUID{f.env.Team1}
+	actor.Permissions.RowScope = principal.RowScopeTeam
+	manager := principal.WithActor(f.human, actor)
+	opened, err := f.service.GetReport(manager, id)
+	if err != nil || opened.CanManage == nil || !*opened.CanManage {
+		t.Fatalf("the team manager cannot edit the team report (%v), so the refusal below proves nothing", err)
+	}
+	if _, err := f.service.PublishReportDraft(manager, id, drafted.Version); err == nil {
+		t.Fatal("a manager published a draft scoped to a team they do not oversee")
+	}
+	after, err := f.service.GetReport(f.human, id)
+	if err != nil || after.Revision != 1 || after.DraftRevision == nil {
+		t.Errorf("after the refused publish the report is at %d with draft %v (%v), want 1 and the draft kept",
+			after.Revision, after.DraftRevision, err)
+	}
+}

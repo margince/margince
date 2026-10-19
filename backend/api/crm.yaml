@@ -49462,9 +49462,11 @@ components:
     ReportingReportRevision:
       type: object
       additionalProperties: false
-      required: [revision, state, created_at, created_by]
+      required: [revision, state, created_at, created_by, selection]
       properties:
         revision: { type: integer, format: int64 }
+        selection:
+          $ref: '#/components/schemas/ReportingSelection'
         state:
           type: string
           enum: [draft, published, earlier]

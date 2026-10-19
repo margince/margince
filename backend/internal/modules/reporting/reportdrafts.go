@@ -125,6 +125,14 @@ func (s *Service) PublishReportDraft(ctx context.Context, id ids.UUID, version i
 		if err != nil {
 			return err
 		}
+		// Checked again under the publisher: another editor may have saved the
+		// draft, and the scope and calendar it was checked against may have moved.
+		if err := s.validateRevision(ctx, tx, &selection); err != nil {
+			return err
+		}
+		if err := s.rewriteDraftSelection(ctx, tx, id, *before.DraftRevision, selection); err != nil {
+			return err
+		}
 		out = before
 		out.Revision, out.Selection, out.DraftRevision = *before.DraftRevision, selection, nil
 		out.Version++
@@ -186,13 +194,13 @@ func (s *Service) ListReportRevisions(ctx context.Context, id ids.UUID) (crmcont
 			return err
 		}
 		var b bindings
-		rows, err := tx.Query(ctx, "SELECT revision,created_at,created_by FROM report_definition_revision WHERE report_id="+b.add(id)+" ORDER BY revision DESC", b.values...)
+		rows, err := tx.Query(ctx, "SELECT revision,created_at,created_by,selection FROM report_definition_revision WHERE report_id="+b.add(id)+" ORDER BY revision DESC", b.values...)
 		if err != nil {
 			return err
 		}
 		out.Data, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.ReportingReportRevision, error) {
 			var r crmcontracts.ReportingReportRevision
-			err := row.Scan(&r.Revision, &r.CreatedAt, &r.CreatedBy)
+			err := row.Scan(&r.Revision, &r.CreatedAt, &r.CreatedBy, &r.Selection)
 			r.State = revisionState(report, r.Revision)
 			return r, err
 		})
@@ -222,6 +230,18 @@ func (s *Service) writeDraftState(ctx context.Context, tx pgx.Tx, before, after 
 		return fmt.Errorf("reporting: moving a report's revisions: %w", err)
 	}
 	return recordChange(ctx, tx, "report_definition", ids.UUID(after.Id), action, &before, after)
+}
+
+// rewriteDraftSelection stores a draft's selection as checked at publish, so
+// the published revision holds what the publisher resolved.
+func (s *Service) rewriteDraftSelection(ctx context.Context, tx pgx.Tx, id ids.UUID, revision int64, selection crmcontracts.ReportingSelection) error {
+	encoded, err := encode(selection)
+	if err != nil {
+		return err
+	}
+	var b bindings
+	_, err = tx.Exec(ctx, "UPDATE report_definition_revision SET selection="+b.add(encoded)+" WHERE report_id="+b.add(id)+" AND revision="+b.add(revision), b.values...)
+	return err
 }
 
 func (s *Service) dropRevision(ctx context.Context, tx pgx.Tx, id ids.UUID, revision int64) error {

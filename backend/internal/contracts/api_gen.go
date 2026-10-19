@@ -45850,6 +45850,7 @@ type ReportingReportRevision struct {
 	CreatedAt time.Time          `json:"created_at"`
 	CreatedBy openapi_types.UUID `json:"created_by"`
 	Revision  int64              `json:"revision"`
+	Selection ReportingSelection `json:"selection"`
 
 	// State The draft, the revision readers see, or one published before it.
 	State ReportingReportRevisionState `json:"state"`
