@@ -5,11 +5,11 @@
 
 package compose
 
-// The Territory example end to end: an admin adds a single-choice Territory
+// The Territory example end to end. An admin adds a single-choice Territory
 // field on Deal, puts it in reports, and the team fills it. Sales won then
-// groups by territory with an unassigned share, a reclassification moves money
-// between territories without changing the total, and the forecast takes the
-// same filter. Every deal is written through the deal store, at the shipped
+// groups by territory with an unassigned share. A reclassification moves money
+// between territories without changing the total. The forecast takes the same
+// filter. Every deal is written through the deal store, at the shipped
 // group floor.
 
 import (
@@ -115,6 +115,8 @@ func (b territoryBook) ask(t *testing.T, q analyticsquery.Query, measure string)
 }
 
 // wholeNumber reads a count or a sum as the engine answers it.
+//
+//craft:ignore naked-any An answer row is map[string]any, and a count and a sum arrive as different types.
 func wholeNumber(t *testing.T, value any) int64 {
 	t.Helper()
 	if numeric, ok := value.(pgtype.Numeric); ok {
