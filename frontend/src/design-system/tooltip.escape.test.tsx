@@ -31,8 +31,8 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-// The clock is taken for the settle alone and handed back, so the keys after
-// it run on the real one: `userEvent` never returns on the hover clock.
+// The clock is taken for the settle alone and handed back. The keys after it
+// run on the real one, because `userEvent` never returns on the hover clock.
 function settleOn(element: HTMLElement) {
   takeHoverClock();
   armHoverIntent();

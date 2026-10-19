@@ -275,7 +275,7 @@ function useTip<T extends HTMLElement>(
     return () => globalThis.removeEventListener("resize", measure);
   }, [earnsTabStop, worthShowing]);
 
-  // WHICH of the two ways the tip is up matters to the Escape key alone.
+  // Which of the two ways the tip is up matters to the Escape key alone.
   const raisedBy = useRef<"pointer" | "focus">("focus");
   const reveal = useCallback(
     (by: "pointer" | "focus") => {
