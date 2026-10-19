@@ -6025,7 +6025,7 @@ export const en = {
   "aiAccess.connect.toolQuestion": "Which AI do you use?",
   "aiAccess.connect.planQuestion": "Who pays for it?",
   "aiAccess.plan.company": "My company",
-  "aiAccess.plan.own": "Just me",
+  "aiAccess.plan.own": "Only me",
   "aiAccess.connect.adminFirst": "First, your admin.",
   "aiAccess.connect.adminSend":
     "Send them the setup guide. It holds the steps and your Margince address.",

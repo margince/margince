@@ -5646,7 +5646,7 @@ export const de = {
   "passport.noneOption": "Kein Passport",
   "settings.passportUseAi": "In einem Skript oder einem anderen KI-Tool",
   "settings.passportUseAiDetail":
-    "Installiere den Margince-Skill in einem Tool, das sich nicht selbst anmelden kann, und gib ihm dann deinen Passport. Claude Code, Codex und Antigravity melden sich ohne an, unter Kommandozeilen-Tools.",
+    "Installiere den Margince-Skill in einem Tool, das sich nicht selbst anmelden kann, und gib ihm dann deinen Passport. Claude Code, Codex und Antigravity brauchen keinen Passport; sie melden sich unter Kommandozeilen-Tools selbst an.",
   "settings.skillDownload": "Skill herunterladen",
   "settings.skillDownloadFailed": "Skill nicht heruntergeladen",
   "settings.passportUseCode": "In deinem eigenen Code",
@@ -5911,7 +5911,7 @@ export const de = {
   "aiAccess.connect.help": "Hilfe von {vendor}",
   "aiAccess.connect.helpAdmin": "Hilfe von {vendor} für deine Admins",
   "aiAccess.connect.devHint":
-    "Nutzt du ein Kommandozeilen-Tool oder eigenen Code? Siehe Für Entwickler unten.",
+    "Nutzt du ein Kommandozeilen-Tool oder eigenen Code? Siehe Für die Entwicklung unten.",
   "aiAccess.step.allow":
     "Margince öffnet sich. Melde dich an und wähle Autorisieren. Fertig.",
   "aiAccess.claude.openConnectors":
@@ -5945,7 +5945,7 @@ export const de = {
   "aiAccess.chatgpt.ownFinish":
     "Wähle „Create as a plugin“. Margince öffnet sich. Melde dich an und wähle Autorisieren. Fertig.",
   "aiAccess.chatgpt.ownNote":
-    "Mit einem eigenen Tarif braucht das Pro, und ChatGPT kann in Margince nachsehen, aber nichts ändern.",
+    "Mit einem eigenen Tarif geht das nur mit Pro, und ChatGPT kann in Margince nachsehen, aber nichts ändern.",
   "aiAccess.copilot.adminLine":
     "Jemand in deinem Unternehmen fügt Margince einmal zu einem Copilot-Agenten hinzu.",
   "aiAccess.copilot.admin1":
@@ -5978,7 +5978,7 @@ export const de = {
   "aiAccess.guide.teamHead": "Was dein Team danach tut",
   "aiAccess.guide.officialHead": "Offizielle Anleitung",
   "aiAccess.guide.checked": "Diese Schritte wurden am {date} geprüft.",
-  "aiAccess.dev.title": "Für Entwickler",
+  "aiAccess.dev.title": "Für die Entwicklung",
   "aiAccess.dev.sub":
     "Kommandozeilen-Tools, Passports für Skripte und eigenen Code, die Tool-Liste und Autonomie-Einstellungen.",
   "aiAccess.cli.title": "Kommandozeilen-Tools",

@@ -100,7 +100,7 @@ describe("ConnectAiToolCard", () => {
 
   it("shows the address inside the step that asks the reader to paste it", async () => {
     renderCard();
-    await choose("Just me");
+    await choose("Only me");
     const address = screen.getByRole("textbox", { name: "Margince address" });
     expect(address.textContent).toBe(MCP_URL);
     const items = within(pathBox()).getAllByRole("listitem");
@@ -112,7 +112,7 @@ describe("ConnectAiToolCard", () => {
 
   it("says a path cannot connect instead of giving steps, and gives them back", async () => {
     renderCard();
-    await choose("Microsoft Copilot", "Just me");
+    await choose("Microsoft Copilot", "Only me");
     expect(
       screen.getByText(/Copilot outside work cannot connect to other apps/),
     ).toBeTruthy();
@@ -161,7 +161,7 @@ describe("ConnectAiToolCard", () => {
   it("copies the address, and says how to copy it by hand when the clipboard is missing", async () => {
     const writeText = vi.fn(async () => undefined);
     renderCard();
-    const user = await choose("Gemini", "Just me");
+    const user = await choose("Gemini", "Only me");
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText },
@@ -185,7 +185,7 @@ describe("ConnectAiToolCard", () => {
 
   it("links to the vendor's own guide, and names the admin where the guide is theirs", async () => {
     renderCard();
-    await choose("Gemini", "Just me");
+    await choose("Gemini", "Only me");
     const help = screen.getByRole("link", { name: /Help from Google/ });
     expect(help.getAttribute("href")).toBe(
       "https://support.google.com/gemini/answer/17209137",
