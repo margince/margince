@@ -507,6 +507,8 @@ takes the product's own features back in small form: each one there, and none at
 - **The details panel is hidden until asked**. The Details control at the end of the tab row opens it
   on the right at 300px, with the fields, the contacts and the tags. It is the only thing on the
   glance that starts closed.
+- **Origin goes in the panel**. Created and Source stand in an Origin group in the details panel,
+  and the facts line keeps what the record names.
 - No zone numbers. Commercial and the rest of About are the deep overview, one click away, with the
   same panes.
 
@@ -525,7 +527,7 @@ what changes is the content of each slot.
 | Slot | Company | Contact | Deal | Lead |
 |---|---|---|---|---|
 | Live dot | In conversation | Your move (warning) | Your move (warning) | In motion |
-| Facts | city · industry · size · owner · way in | title · employer · email · phone · way in | account · value · stage · close · owner · partner | title · company · email · source · owner |
+| Facts | domain · industry · size · owner · way in | email · phone · city · LinkedIn · owner · buying role | value · close · owner · account · partner | title · company · email · source · owner |
 | Verbs (base, never the task) | Write email · Log activity · Add task · more | Write email · Call · Add task · more | Write email · Log activity · Edit deal · more | Qualify · Write email · Edit · Disqualify · more |
 | Readings | Open pipeline · Invoiced · Conversation · Last touch · Next | Whose move · Open promises · Deals she decides · Next meeting · She answers in | The money · The close · Stage · The contacts · Momentum | Company · Score · First response · Next · Your move |
 | 360 word | Good | Promise overdue | Live | In motion |
@@ -759,11 +761,14 @@ date at 11.5px in `--ink3`, the **rail**, the title at 13px, and the detail. The
 rule with a 9px filled dot at its start. So the rule to the right of a dot is the time that stop
 covers.
 
-The gap stop takes 1.5× the width, because on this axis the width is the waiting. Its date row is the
+Each stop's width is the days it covers, up to the next dated stop, over a floor of 6.5rem. So
+the width is the waiting, and a long silence is a wide stop. The gap stop's date row is the
 day count at 26px 600 in amber in the display face. It is the one count on the spine outside the body
 face, because it is read as a word ("12 days") and set against nothing. Its rule is dashed amber, and
-it has no dot, because nothing happened. On the record's lead the gap is also a soft amber field. A
-reader finds the silence there before reading a date.
+it has no dot, because nothing happened.
+
+On the record's lead the gap is also a soft amber field. A reader finds the silence there before
+reading a date.
 
 **Today is a marker**: a 2px × 15px black bar on the rail, with "Today" on an ink pill and the date
 under it. Its column is only as wide as its label. Right of it, the rule turns dotted grey and the
@@ -903,7 +908,7 @@ The primitives in the catalog keep their names and `props`; this is how each one
 | `Callout` | The parts of an alert on the ground of the pane: the glyph of the tone and the heading on one line, the heading in the ink of the tone, and a body in plain ink below if there is one. The verbs are aligned right at the end of the heading line, with the dismiss after them. A callout must have a heading; a heading alone is the most common callout. Below 640px the verbs drop under the body. Seven tones: `info`, `accent` (the strong ask, in the brand accent, never indigo), `success`, `warning`, `danger`, `discovery` (new to this reader; no verdict) and `ai`. The tone colours the glyph and the heading only, never a filled box. No `className`. |
 | `StagingCard` / `DecisionCard` | The agent's row: `--aiBg`, 14px radius, the indigo mark on its own tile (no label beside it: the tile is the claim), the verdict word at 15px 600 (amber when warning, green when calm), the sentence in `--ink`, `What this rests on · n sources` in `--aiText`, and the agent's verb in `--ai`. A staged change is a row with a dashed `--aiLine` edge, Accept and Dismiss. |
 | `Kbd` | 10.5px in `--ink4` with a `--line` outline, 4px radius. On the search field and the ask field. |
-| `Spine` | The product's own spine: per stop a date, a 2px accent rule with a 9px dot at its start, a title, and a detail. The gap stop is at 1.5× width, as a 26px amber day count over a dashed amber rule with no dot. Today is a 2px black bar with TODAY and the date under it, and dotted grey and hollow dots come after it. |
+| `Spine` | The product's own spine: per stop a date, a 2px accent rule with a 9px dot at its start, a title, and a detail. Each stop is as wide as the days it covers. The gap stop is a 26px amber day count over a dashed amber rule with no dot. Today is a 2px black bar with "Today" on an ink pill and the date under it, and dotted grey and hollow dots come after it. |
 | `RecordTimeline` | The rail: a 76px date column in tabular figures, and a 1px rail of full height with a mark per kind (solid, hollow, indigo, dashed indigo, a glyph in a circle for a thread). Then the kind in upper case, direction words, title, the message text cut to three lines, and a meta line; threads as a card on the rail. |
 | `RelationshipMap` | Three lanes at 184/200/184 with 72px gutters; nodes with round corners by kind, and a dashed amber gap node. Route edges have bands, strong / developing / cold, and being part of something is a hairline. A selected node lights its route and fades the rest. A 280px panel holds the best route and the one write. |
 | `EvidenceMark` / `Citations` | A **source chip**: `--bg3`, 11.5px, a note glyph and a short label ("email · 1 Sep"). On hover or focus it opens a popover with the quote it rests on, in an indigo block ruled on the left, and the origin line under it. Every claim the agent makes carries them; they are how a reader checks the 360 without leaving it. |

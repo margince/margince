@@ -4,11 +4,9 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { RecordOriginFacts } from "../../design-system/recordfacts";
 import { LocaleProvider } from "../../i18n";
-import {
-  CompanyIdentityFacts,
-  CompanyOriginFacts,
-} from "./companyheaderfacts";
+import { CompanyIdentityFacts } from "./companyheaderfacts";
 
 // Who wrote the record, beside when it was written, and the rest of the facts
 // strip CompanyIdentityLine used to draw as one running sentence. The tag has
@@ -88,7 +86,7 @@ function renderInApp(ui: ReactNode) {
 }
 
 function renderOrigin() {
-  renderInApp(<CompanyOriginFacts company={COMPANY} />);
+  renderInApp(<RecordOriginFacts record={COMPANY} />);
 }
 
 // The tag is one badge carrying "Typed by" and the name as sibling text
@@ -163,8 +161,8 @@ describe("a record imported from somewhere else", () => {
   it("names who wrote it there, not the seat that ran the import", async () => {
     stub([{ id: "u-author", display_name: "Sofia Meier" }]);
     renderInApp(
-      <CompanyOriginFacts
-        company={{
+      <RecordOriginFacts
+        record={{
           ...COMPANY,
           author: { display_name: "Mutaz Suleiman", via: "HubSpot" },
         }}
@@ -188,8 +186,8 @@ describe("a company an import wrote", () => {
   it("an imported company is labelled imported, not typed by you", async () => {
     stub([{ id: "u-reader", display_name: "The Reader" }]);
     renderInApp(
-      <CompanyOriginFacts
-        company={{
+      <RecordOriginFacts
+        record={{
           ...COMPANY,
           captured_by: "human:u-reader",
           source: "mirror:csv:pipedrive-export:company:co-12",

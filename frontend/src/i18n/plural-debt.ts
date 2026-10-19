@@ -28,7 +28,6 @@ const STANDALONE: readonly string[] = [
   "brief.sentence.rest",
   "brief.weekly.scorecard.answeredDetail",
   "brief.weekly.scorecard.regressionsDetail",
-  "co.360.threadCount",
   "co.contacts.band.reachable",
   "co.contacts.band.seatsHeld",
   "co.contacts.band.someHidden",

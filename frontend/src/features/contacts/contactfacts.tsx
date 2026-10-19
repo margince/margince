@@ -6,16 +6,10 @@ import type { components } from "../../api/schema";
 import { rosterOwnerName } from "../../components/entityref";
 import { ContactLink } from "../../design-system/contactlink";
 import { OffsiteLink } from "../../design-system/offsitelink";
-import { Popover } from "../../design-system/popover";
-import { provenanceOf } from "../../design-system/provenanceof";
 import { Fact, RecordFacts } from "../../design-system/recordfacts";
-import { ProvenanceTag } from "../../design-system/trust";
-import { formatDateAbbrev } from "../../format/format";
 import { linkedinUrl } from "../../format/weburl";
-import { useLocale, useT } from "../../i18n";
+import { useT } from "../../i18n";
 import { useMemberName } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
-import { useViewerId } from "../../lib/session";
 import { buyingRoleLabel } from "../companies/companycontacts/summary";
 
 type Contact = components["schemas"]["Contact"];
@@ -43,9 +37,6 @@ export function ContactFacts({
   buyingRole,
 }: Readonly<{ contact: Contact; buyingRole?: string | null }>): ReactNode {
   const t = useT();
-  const { locale } = useLocale();
-  const zone = useRecordZone();
-  const viewerId = useViewerId();
   const ownerName = useMemberName(contact.owner_id);
   const email = contact.emails?.[0]?.email;
   const phone = contact.phones?.[0]?.phone;
@@ -79,7 +70,7 @@ export function ContactFacts({
           <ProfileLink href={contact.social.linkedin} />
         </Fact>
       )}
-      <Fact label={t("contact.page.owner")}>
+      <Fact label={t("contact.page.owner")} named>
         {rosterOwnerName(
           contact.owner_id,
           ownerName,
@@ -88,33 +79,10 @@ export function ContactFacts({
         )}
       </Fact>
       {buyingRole && (
-        <Fact label={t("contact.page.buyingRole")}>
+        <Fact label={t("contact.page.buyingRole")} named>
           {buyingRoleLabel(buyingRole, t)}
         </Fact>
       )}
-      <Fact label={t("list.created")}>
-        {formatDateAbbrev(contact.created_at, locale, zone)}
-      </Fact>
-      {/* The provenance pill names the KIND of source (the sparkle, the
-          words); the popover behind it answers WHICH one, which for a mailbox
-          capture is a message id no reader should have to scan past. */}
-      <Fact label={t("history.field.source")}>
-        <Popover
-          label={
-            <ProvenanceTag
-              provenance={provenanceOf(
-                contact.captured_by,
-                viewerId,
-                contact.author,
-                contact.source,
-                contact.imported_from,
-              )}
-            />
-          }
-        >
-          <p className="t-body">{contact.source || t("trust.sourceUnknown")}</p>
-        </Popover>
-      </Fact>
     </RecordFacts>
   );
 }

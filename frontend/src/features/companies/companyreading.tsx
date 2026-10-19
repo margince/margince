@@ -12,7 +12,6 @@ import {
   WrittenBy,
 } from "../../screens/record360";
 import { useAccountScan } from "../capture/accountscan";
-import { ThreadFold } from "./company/glance";
 import { recordNamesIn, StateStrip, type SuggestionAction } from "./company360";
 import { DeepReadPanel } from "./companydeepread";
 import type { CompanyTab } from "./companytab";
@@ -56,7 +55,6 @@ export function CompanyReading({
   view,
   loading,
   failed,
-  onOpenHistory,
   onOpenRecord,
   onOpenReceipt,
   onOpenEmail,
@@ -141,16 +139,6 @@ export function CompanyReading({
           // roster. Colleagues come from the workspace roster: whoever held a
           // meeting is one of ours.
           nameOf={nameOf}
-          onOpenEmail={onOpenEmail}
-        />
-        {/* Keyed on the account: the page stays mounted across companies, and a
-            thread opened on one must not arrive open on the next. */}
-        <ThreadFold
-          key={company.id}
-          view={view}
-          loading={loading}
-          onOpenHistory={onOpenHistory}
-          onOpenRecord={onOpenRecord}
           onOpenEmail={onOpenEmail}
         />
       </Company360Call>

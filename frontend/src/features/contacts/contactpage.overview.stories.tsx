@@ -112,7 +112,7 @@ export const OverviewPanels: Story = {
           />
           <ContactCommercialCard view={populated} />
           <ContactCommitmentsCard view={populated} firstName="Dana" />
-          <ContactMattersCard view={populated} firstName="Dana" />
+          <ContactMattersCard view={populated} />
           <ContactMemory view={populated} />
         </div>
       </StoryProviders>

@@ -13,6 +13,12 @@
   flex-direction: column;
   gap: var(--space-1);
 }
+/* On the head's one facts line the caveats follow the date on its line. */
+.record-head .deal-fact-close {
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--space-2);
+}
 
 /* A date nobody confirmed, or one already past, is a warning about the DATE
    rather than about the deal: the tone marks the figure alone. */

@@ -12,11 +12,8 @@
 import type { ReactNode } from "react";
 import type { components } from "../../../api/schema";
 import { EntityRef, rosterOwnerName } from "../../../components/entityref";
-import { Popover } from "../../../design-system/popover";
-import { provenanceOf } from "../../../design-system/provenanceof";
 import { FieldGuard } from "../../../design-system/rbac";
 import { Fact, RecordFacts } from "../../../design-system/recordfacts";
-import { ProvenanceTag } from "../../../design-system/trust";
 import { calendarDaysUntil } from "../../../format/daysuntil";
 import {
   formatDayMonth,
@@ -27,7 +24,7 @@ import { type Locale, translatePlural, useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { useMemberName } from "../../../lib/membernames";
 import { useRecordZone } from "../../../lib/recordzone";
-import { useViewerId } from "../../../lib/session";
+import "./dealheaderfacts.css";
 import { useInstallationSettings } from "../../../lib/uploadlimit";
 import {
   LostReasonFact,
@@ -105,10 +102,9 @@ export function DealSubtitle({
  * DealIdentityFacts is the head's facts line: what the deal is worth, when it
  * is due, whose deal it is and which account it is on. Where it sits on the
  * board is the 360's stage path, and how it reached Margince is with its
- * fields (DealOriginFacts). A partner and how a contract-less deal was won follow
- * when the deal carries either; they used to stand on the identity line for
- * the same reason DealDetails argues for the partner alone — a fact a
- * commission is computed from has to be visible on the record it came from.
+ * fields (RecordOriginFacts). A partner and how a contract-less deal was won
+ * follow when the deal carries either. A fact a commission is computed from
+ * has to be visible on the record it came from.
  */
 export function DealIdentityFacts({
   deal,
@@ -316,37 +312,4 @@ function forecastLabel(value: string, t: (key: MessageKey) => string): string {
     ? FORECAST_LABELS[value]
     : undefined;
   return key === undefined ? value.replaceAll("_", " ") : t(key);
-}
-
-/**
- * DealOriginFacts is how the deal reached Margince: a fact about the record
- * rather than about the deal, so it stands with the fields beside the record
- * and not in the line under its name.
- */
-export function DealOriginFacts({
-  deal,
-}: Readonly<{ deal: DealIdentity }>): ReactNode {
-  const t = useT();
-  const viewerId = useViewerId();
-  return (
-    <RecordFacts>
-      <Fact label={t("history.field.source")}>
-        <Popover
-          label={
-            <ProvenanceTag
-              provenance={provenanceOf(
-                deal.captured_by,
-                viewerId,
-                deal.author,
-                deal.source,
-                deal.imported_from,
-              )}
-            />
-          }
-        >
-          <p className="t-body">{deal.source || t("trust.sourceUnknown")}</p>
-        </Popover>
-      </Fact>
-    </RecordFacts>
-  );
 }

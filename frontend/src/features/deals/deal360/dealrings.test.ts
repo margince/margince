@@ -25,7 +25,7 @@ const coverage: DealCoverage = {
   our_side: [],
   risks: [
     { kind: "coverage_gap", summary: "No economic buyer" },
-    { kind: "coverage_gap", summary: "No technical evaluator" },
+    { kind: "single_threaded_theirs", summary: "One contact engaged" },
     { kind: "going_cold", summary: "Quiet for 12 days" },
   ],
   sections_omitted: [],

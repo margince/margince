@@ -2,7 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import { formatDateAbbrev } from "../format/format";
+import { useLocale, useT } from "../i18n";
+import { useMemberName } from "../lib/membernames";
+import { useRecordZone } from "../lib/recordzone";
+import { useViewerId } from "../lib/session";
 import { Eyebrow } from "./eyebrow";
+import { Popover } from "./popover";
+import { ProvenanceTag, type SourceAuthor } from "./provenance";
+import { provenanceOf } from "./provenanceof";
 
 // The head's facts strip: caption over value, cells laid along the row and
 // wrapping when the head narrows. Every record's head has one (the contact
@@ -41,5 +49,62 @@ export function Fact({
       </dt>
       <dd>{children}</dd>
     </div>
+  );
+}
+
+/** The columns of a record row that say where it came from. */
+export type RecordOrigin = Readonly<{
+  created_at?: string;
+  captured_by?: string;
+  author?: SourceAuthor | null;
+  source?: string | null;
+  imported_from?: string | null;
+}>;
+
+/**
+ * RecordOriginFacts is when a record's row was written and by whom. It is a
+ * fact about the record, not about what the record names. So it stands in the
+ * fields column and not in the line under the name.
+ */
+export function RecordOriginFacts({
+  record,
+}: Readonly<{ record: RecordOrigin }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
+  const viewerId = useViewerId();
+  const provenance = provenanceOf(
+    record.captured_by,
+    viewerId,
+    record.author,
+    record.source,
+    record.imported_from,
+  );
+  const authorName = useMemberName(
+    provenance.kind === "human" ? provenance.userId : undefined,
+  );
+  return (
+    <RecordFacts>
+      {record.created_at && (
+        <Fact label={t("list.created")} named>
+          {formatDateAbbrev(record.created_at, locale, zone)}
+        </Fact>
+      )}
+      {/* The tag names the KIND of source; the popover behind it answers
+          WHICH one, which for a mailbox capture is a message id no reader
+          should have to scan past. */}
+      <Fact label={t("history.field.source")}>
+        <Popover
+          label={
+            <ProvenanceTag
+              provenance={provenance}
+              renderUser={() => authorName.data ?? undefined}
+            />
+          }
+        >
+          <p className="t-body">{record.source || t("trust.sourceUnknown")}</p>
+        </Popover>
+      </Fact>
+    </RecordFacts>
   );
 }

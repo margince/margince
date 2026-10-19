@@ -633,6 +633,10 @@
 .record-sheet .record-hero > .panel-head .panel-title {
   color: var(--textSecondary);
 }
+/* The rings stand beside the verdict, not under it, so no rule parts them. */
+.record-sheet .record-hero > .panel-body + .panel-body.r360-rings::before {
+  content: none;
+}
 
 /* THE OVERVIEW'S SECTIONS read as a document: each section's title in a
  * column of its own on the left, its rows on the right, and one hairline

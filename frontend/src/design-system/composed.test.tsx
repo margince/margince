@@ -516,9 +516,8 @@ describe("RecordView's chrome", () => {
       first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING,
     );
 
-  // The strip and the band head the record's sheet, the work column, and the
-  // open tab's work follows them: the fields column beside the sheet takes no
-  // part in that order.
+  // The strip and the band head the record's sheet, and the open tab's work
+  // follows them. The fields column beside the sheet takes no part in that order.
   it("draws the tab strip above the band, and the band above the tab's work", () => {
     render(
       <RecordView
@@ -540,9 +539,7 @@ describe("RecordView's chrome", () => {
     expect(precedes(tabs, band), "the band is drawn above the strip").toBe(
       true,
     );
-    expect(precedes(band, work), "the band is drawn below the work").toBe(
-      true,
-    );
+    expect(precedes(band, work), "the band is drawn below the work").toBe(true);
   });
 
   it("draws the tab strip on a record that carries no band", () => {

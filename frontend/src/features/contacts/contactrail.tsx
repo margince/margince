@@ -1,5 +1,6 @@
 import type { components } from "../../api/schema";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { RecordOriginFacts } from "../../design-system/recordfacts";
 import { omitted, type SectionState } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
 import { type Locale, translatePlural, useT } from "../../i18n";
@@ -87,6 +88,7 @@ export function ContactRail({
   guardFailed?: boolean;
   onRetryGuard?: () => void;
 }>) {
+  const t = useT();
   // A plain div: RecordView's own <aside> is the landmark around this, and a
   // second labelled region inside it would give a reader two names for one
   // column.
@@ -96,6 +98,12 @@ export function ContactRail({
         contact={view.contact}
         profiles={view.provider_profiles}
       />
+      {/* When the row was written and by whom, filed with its fields. */}
+      <Panel title={t("record.origin")}>
+        <PanelBody>
+          <RecordOriginFacts record={view.contact} />
+        </PanelBody>
+      </Panel>
       {/* Under the fields it is about: what the enrichment pass read into
           them and a reader has not yet confirmed, with the way to Data &
           tools where each value can be judged. */}

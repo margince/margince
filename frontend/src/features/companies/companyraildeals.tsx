@@ -1,50 +1,38 @@
 import type { components } from "../../api/schema";
-import { Button, Disclosure } from "../../design-system/atoms";
-import { PanelBody } from "../../design-system/panel";
+import { Button } from "../../design-system/atoms";
+import { Panel, PanelBody } from "../../design-system/panel";
+import { StagePips } from "../../design-system/stagepips";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import {
   formatDate,
   formatMoneyOrAbsent,
   formatNumber,
 } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
+import { usePipelines } from "../deals/pipelines.queries";
 import { NewDealAction } from "./companyactions";
-// The row and card shapes this file draws — co-row-meta, co-deal-card — live
-// in company360.css, and the card face itself is the design system's
-// `.record-card`. Both imported HERE rather than relied on from the rail:
-// this file renders wherever it is mounted, and a sibling having loaded
-// either stylesheet first is not something it can assume.
-import "../../design-system/recordcard.css";
+// The row shapes this file draws live in company360.css, imported here
+// because a sibling having loaded it first is not something to assume.
 import "./company360.css";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import {
   RAIL_ROW_LIMIT,
-  SectionSummary,
   sectionAnswered,
   wholeCount,
 } from "./companyrailshared";
 
-// The account's open pipeline at a glance. Extracted from companyrail.tsx so
-// that file stays under the length cap; the rail imports it and mounts it in
-// the same place it always sat.
-
 type Company360 = components["schemas"]["Company360"];
 type Company = components["schemas"]["Company"];
 type Deal = components["schemas"]["Company360Deal"];
+type Pipeline = components["schemas"]["Pipeline"];
 
 /**
- * DealsSection is the account's open pipeline at a glance: the top
- * RAIL_ROW_LIMIT deals, each with its stage, expected close, and the deal's
- * own reason for needing attention ahead of everything else about it.
- * `view.deals.data` is already open-only (the 360's own contract — closed
- * deals are reported through `won_lifetime` and `lost_count`, never listed),
- * so nothing here filters on `status` a second time.
- *
- * "Top" means: a deal carrying an attention flag before one without, and the
- * larger amount before the smaller — the row a rep would want surfaced is
- * the one that needs a move or carries the money.
+ * DealsSection is the account's open pipeline on the overview. It lists the
+ * top RAIL_ROW_LIMIT deals with their stage and worth, then what was won.
+ * The 360 lists open deals only and counts closed ones, so nothing here
+ * filters on `status` again. "Top" puts a flagged deal first, then the money.
  */
 export function DealsSection({
   view,
@@ -57,6 +45,7 @@ export function DealsSection({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const plural = usePlural();
   const deals = view?.deals;
   const rows = rankedDeals(deals?.data ?? []);
   const count = wholeCount(deals);
@@ -68,31 +57,61 @@ export function DealsSection({
     loading,
   );
   const answered = sectionAnswered(state);
+  // Read only for rows to place: a withheld or empty section has no stage.
+  const pipelines = usePipelines(state === "ready");
   // Closed history vs. never having had a deal: the two empty accounts read
-  // differently — one has simply not started, the other has already been
-  // through a cycle and stands between two of them.
+  // differently. One has simply not started; the other stands between cycles.
   const hasClosedHistory = Boolean(
     deals &&
       ((deals.won_lifetime?.amount_minor ?? 0) > 0 || deals.lost_count > 0),
   );
+  const won =
+    deals && deals.won_count > 0
+      ? plural("co.deals.won", deals.won_count, {
+          count: formatNumber(deals.won_count, locale),
+          amount: formatMoneyOrAbsent(
+            deals.won_lifetime?.amount_minor,
+            deals.won_lifetime?.currency,
+            locale,
+          ),
+        })
+      : undefined;
   return (
-    <Disclosure
-      className="co-sect"
-      summary={
-        <SectionSummary
-          title={t("co.rail.deals.title")}
-          count={answered ? count : undefined}
-        />
+    <Panel
+      title={
+        <>
+          {t("co.rail.deals.title")}
+          {answered && count != null && (
+            <span className="co-section-count">
+              {formatNumber(count, locale)}
+            </span>
+          )}
+        </>
+      }
+      titleAction={
+        state === "ready" && (
+          <Button variant="link" onClick={() => onTab("deals")}>
+            {count != null
+              ? t("co.rail.all", { count: formatNumber(count, locale) })
+              : t("co.rail.allUncounted")}
+          </Button>
+        )
       }
     >
       {state === "ready" ? (
-        <ul className="record-card-list">
-          {rows.slice(0, RAIL_ROW_LIMIT).map((deal) => (
-            <li key={deal.deal_id}>
-              <DealRailRow deal={deal} />
-            </li>
-          ))}
-        </ul>
+        <PanelBody>
+          <ul className="co-deal-rows">
+            {rows.slice(0, RAIL_ROW_LIMIT).map((deal) => (
+              <li key={deal.deal_id}>
+                <DealSectionRow
+                  deal={deal}
+                  stage={stagePlace(pipelines.data, deal.stage_id)}
+                />
+              </li>
+            ))}
+          </ul>
+          {won && <p className="co-deal-won t-caption">{won}</p>}
+        </PanelBody>
       ) : (
         <PanelBody>
           <SurfaceState
@@ -113,19 +132,29 @@ export function DealsSection({
               onTab={onTab}
             />
           )}
+          {won && <p className="co-deal-won t-caption">{won}</p>}
         </PanelBody>
       )}
-      {state === "ready" && (
-        <div className="card-actions">
-          <Button variant="ghost" onClick={() => onTab("deals")}>
-            {count != null
-              ? t("co.rail.all", { count: formatNumber(count, locale) })
-              : t("co.rail.allUncounted")}
-          </Button>
-        </div>
-      )}
-    </Disclosure>
+    </Panel>
   );
+}
+
+type StagePlace = { at: number; of: number };
+
+// A stage's place among its pipeline's open stages, or nothing while the
+// pipelines are unread or the stage is not among them.
+function stagePlace(
+  pipelines: readonly Pipeline[] | undefined,
+  stageId: string | null | undefined,
+): StagePlace | undefined {
+  const pipeline = pipelines?.find((one) =>
+    (one.stages ?? []).some((stage) => stage.id === stageId),
+  );
+  const open = (pipeline?.stages ?? [])
+    .filter((stage) => stage.semantic === "open")
+    .sort((a, b) => a.position - b.position);
+  const at = open.findIndex((stage) => stage.id === stageId);
+  return at < 0 ? undefined : { at: at + 1, of: open.length };
 }
 
 // The ONE verb an empty pipeline carries. An account that never started gets
@@ -215,12 +244,12 @@ function dealFlag(deal: Deal, t: ReturnType<typeof useT>): string | undefined {
   return deal.stalled ? t("deal.stalled") : undefined;
 }
 
-// The same card face the contact page's employer card wears
-// (design-system/recordcard.css): border, r-md, elevated background, hover.
-// The whole card is the link, not a name inside it — a deal row carries no
-// other control to collide with, unlike RecordCard's contact use, which
-// keeps the link to the mark alone because a popover trigger sits beside it.
-function DealRailRow({ deal }: Readonly<{ deal: Deal }>) {
+// The name links to the deal; its close date and any flag sit under it, its
+// stage and amount beside it.
+function DealSectionRow({
+  deal,
+  stage,
+}: Readonly<{ deal: Deal; stage: StagePlace | undefined }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -229,20 +258,26 @@ function DealRailRow({ deal }: Readonly<{ deal: Deal }>) {
         date: formatDate(deal.expected_close_date, locale, recordZone),
       })
     : t("co.rail.deals.noCloseDate");
-  const flag = dealFlag(deal, t);
-  const note = [flag, deal.stage_name ?? t("co.deals.noStage"), closes]
-    .filter(Boolean)
-    .join(" · ");
+  const note = [dealFlag(deal, t), closes].filter(Boolean).join(" · ");
+  const stageName = deal.stage_name ?? t("co.deals.noStage");
   return (
-    <a
-      className="record-card co-deal-card"
-      href={routeHash({ screen: "deals", id: deal.deal_id })}
-      // Named for the deal alone: the card's other text (the amount, the
-      // note) would otherwise lead the link's computed name, the same reason
-      // RecordCard's own link carries an explicit label.
-      aria-label={deal.name}
-    >
-      <span className="record-card-name">{deal.name}</span>
+    <div className="co-deal-row">
+      <div className="co-deal-name">
+        <a href={routeHash({ screen: "deals", id: deal.deal_id })}>
+          {deal.name}
+        </a>
+        <span className="t-caption">{note}</span>
+      </div>
+      {stage ? (
+        <StagePips
+          at={stage.at}
+          of={stage.of}
+          stalled={deal.stalled}
+          label={stageName}
+        />
+      ) : (
+        <span className="co-deal-stage">{stageName}</span>
+      )}
       <span className="t-num co-deal-amount">
         {formatMoneyOrAbsent(
           deal.amount?.amount_minor,
@@ -250,7 +285,6 @@ function DealRailRow({ deal }: Readonly<{ deal: Deal }>) {
           locale,
         )}
       </span>
-      <p className="co-row-meta t-caption co-deal-meta">{note}</p>
-    </a>
+    </div>
   );
 }

@@ -7,6 +7,7 @@ import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { IdentityLine } from "../../design-system/identityline";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { RecordOriginFacts } from "../../design-system/recordfacts";
 import { RecordView } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import { invalidateRecord } from "../../lib/recordwritekeys";
@@ -51,7 +52,13 @@ export function ArchivedContactPage({
             <RecordAccess key={contact.id} kind="contact" record={contact} />
           </IdentityLine>
         }
-        badges={<ContactFacts contact={contact} />}
+        // No fields column on an archived contact, so its origin stays here.
+        subtitle={
+          <>
+            <ContactFacts contact={contact} />
+            <RecordOriginFacts record={contact} />
+          </>
+        }
         actions={
           <ContactActions
             view={{ contact }}

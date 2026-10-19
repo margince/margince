@@ -15,12 +15,7 @@ import type { components } from "../../api/schema";
 import { RecordShell } from "../../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../../i18n";
 import { CompanyScreen } from "./companies";
-import {
-  company,
-  company360,
-  companyBackstop,
-  jsonResponse,
-} from "./company.fixtures";
+import { company360, companyBackstop, jsonResponse } from "./company.fixtures";
 import { stubFetch } from "./company.testkit";
 
 afterEach(() => {
@@ -133,10 +128,10 @@ async function openedReceipt(value: string) {
 }
 
 describe("a cited receipt on the company page opens the page's drawer", () => {
-  it("from the overview's dossier, stepping to the sentence's next receipt", async () => {
+  it("from the Profile tab's dossier, stepping to the sentence's next receipt", async () => {
     const user = userEvent.setup();
     drawAccount();
-    await screen.findByRole("heading", { name: company.display_name });
+    await user.click(await screen.findByRole("button", { name: "Profile" }));
 
     await user.click(
       await screen.findByRole("button", { name: "2 profile fields" }),
@@ -148,17 +143,6 @@ describe("a cited receipt on the company page opens the page's drawer", () => {
     expect(
       await within(drawer).findByText("Energy-intensive manufacturers"),
     ).toBeTruthy();
-  });
-
-  it("from the Profile tab's dossier", async () => {
-    const user = userEvent.setup();
-    drawAccount();
-    await user.click(await screen.findByRole("button", { name: "Profile" }));
-
-    await user.click(
-      await screen.findByRole("button", { name: "2 profile fields" }),
-    );
-    await openedReceipt("Load-shifting software");
   });
 
   it("from a suggestion's grounds", async () => {
@@ -175,6 +159,8 @@ describe("a cited receipt on the company page opens the page's drawer", () => {
   it("from an answer to a prepared question", async () => {
     const user = userEvent.setup();
     drawAccount();
+    // The prepared questions stand on Profile with the account's readings.
+    await user.click(await screen.findByRole("button", { name: "Profile" }));
     await user.click(
       await screen.findByRole("button", { name: "What is open here?" }),
     );

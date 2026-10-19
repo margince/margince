@@ -30,8 +30,8 @@ export function Avatar({
    */
   size?: "sm" | "md" | "lg" | "xl";
   /**
-   * `tile` is a company's or a deal's mark on its own record page: a rounded
-   * square, so the record reads as a thing and a contact as a face. Everywhere
+   * `tile` is a company's or a deal's mark on its own record page. Its rounded
+   * square reads as a thing, and a contact's round mark as a face. Everywhere
    * else every mark is round, a company's included, so a list stays one shape.
    */
   shape?: "round" | "tile";

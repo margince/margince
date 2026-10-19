@@ -3,6 +3,7 @@ import type { CreateField } from "../../components/create";
 import { useEntityName } from "../../components/entityref";
 import { RecordFields, rawRecord } from "../../components/recordfields";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { RecordOriginFacts } from "../../design-system/recordfacts";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { useAcquisitionSources } from "../../screens/acquisitionsources.queries";
@@ -15,7 +16,6 @@ import {
 } from "../../screens/recordreferences";
 import { RecordTeam } from "../../screens/recordteam";
 import { TagsPanel } from "../lists/tagspanel";
-import { DealOriginFacts } from "./deal360/dealheaderfacts";
 import { DealEmailAside } from "./dealemail";
 import {
   NEW_PROJECT_OWNER,
@@ -215,7 +215,7 @@ export function DealContext({
           its fields rather than in the line under its name. */}
       <Panel title={t("record.origin")}>
         <PanelBody>
-          <DealOriginFacts deal={deal} />
+          <RecordOriginFacts record={deal} />
         </PanelBody>
       </Panel>
       <RecordTeam recordType="deal" recordId={deal.id} readOnly={!canWrite} />

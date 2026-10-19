@@ -160,17 +160,12 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // Sheet, rung and facts are one change, argued in projectheaderfacts.tsx.
   return (
     <RecordView
-      // WHO is on this work comes first, then the paperwork. The column used
-      // to open with the phase history — a log of moves the stepper above
-      // already shows the current state of — so a reader scanning for "whose
-      // project is this" read a changelog first. The three record-keeping
-      // cards below answer questions a reader comes looking for on purpose;
-      // the two above answer the one they arrive with.
-      // The details pane beside the work: the same pane, fold and memory of
-      // it as every other record page.
-      // The cards stand straight in the pane: `RecordView` gives the aside
-      // column the rail's own rhythm, and a wrapper of ours inside it was a
-      // second answer to how far apart a record's rail cards sit.
+      // Who is on this work comes first, then the paperwork. The phase history
+      // logs moves the stepper above already shows, so it does not open the
+      // column. The three record-keeping cards answer questions a reader comes
+      // looking for; the two above answer the one they arrive with. The cards
+      // stand straight in the pane. `RecordView` gives the aside the rail's
+      // rhythm, so a wrapper of ours would be a second answer to card spacing.
       aside={
         <>
           <ProjectCompanies
@@ -200,11 +195,9 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       scale="compact"
       badges={<ProjectIdentityFacts view={view} locale={locale} />}
       zone={recordZone}
-      // The phase and the key read beside the name, not at the far end of
-      // the header among the verbs: both are tags ON the record — where it
-      // stands and what a human calls it in a subject line — and a reader
-      // looking at the name was finding them across the page, above the
-      // buttons that act on it.
+      // The phase and the key read beside the name, not among the verbs at
+      // the far end of the header. Both are tags on the record: where it
+      // stands and what a human calls it in a subject line.
       nameBadge={
         <>
           <PhaseBadge phase={project.phase} />
@@ -218,13 +211,11 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           cf={cf}
         />
       }
-      // In the header row, where a reader looks for a record's verbs — as the
-      // company, contact and lead pages already put them. Without it the row
-      // fell to the full-width strip UNDER the header, so the one record page
-      // with no primary action was also the one whose verbs were somewhere
-      // else.
+      // In the header row, where a reader looks for a record's verbs, as the
+      // company, contact and lead pages put them. Without it the verbs fall to
+      // the full-width strip under the header.
       actionsInline
-      // Where the project stands, at the foot of its head — the same row a
+      // Where the project stands, at the foot of its head, the same row a
       // deal's stage ladder and a lead's stepper stand in. It is the question a
       // reader arrives with, so it is answered before the body rather than as
       // the first card inside it.
@@ -238,7 +229,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       }
       tabs={<ProjectTabs />}
       band={
-        // ONE sentence and nothing else: why this record takes no changes, so
+        // One sentence and nothing else: why this record takes no changes, so
         // every control it refuses points at it. Absent while the project is
         // writable, where a reserved gap reads as a record with nothing said.
         readOnlyReason ? (
@@ -266,12 +257,12 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           <ProjectDealsCard
             view={view}
             actions={
-              // New Deal from HERE binds the deal to this project, and binding is
-              // held to project WRITE authority rather than deal permission
-              // alone: winning the deal later advances the project's phase
-              // without re-checking, so `EnsureAttachable` proves the authority
-              // at the moment of attaching. A caller who may read this project
-              // but not write it can still work deals — just not born into it.
+              // New Deal from here binds the deal to this project. Binding needs
+              // project write authority, not deal permission alone: winning the
+              // deal later advances the project's phase without re-checking. So
+              // `EnsureAttachable` proves the authority at the moment of
+              // attaching. A caller who may read this project but not write it
+              // can still work deals, just not born into it.
               !readOnly &&
               project.company_id && (
                 <NewDealAction

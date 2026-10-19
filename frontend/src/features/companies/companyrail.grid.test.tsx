@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -367,24 +367,5 @@ describe("CompanyRail", () => {
         address: { city: "Stuttgart", country: "DE" },
       }),
     );
-  });
-
-  it("marks a withheld section restricted instead of drawing it empty", () => {
-    stub();
-    renderRail({ view: view({ sections_omitted: ["contacts"] }) });
-    expect(screen.getAllByText("Hidden for your role").length).toBeGreaterThan(
-      0,
-    );
-    // A withheld section carries no header link. A count would have nothing
-    // true to show, and an "Add" would write into a section the reader cannot
-    // see. Scoped to the Contacts panel: Deals shows its own "Add" when empty.
-    const contactsPanel = screen
-      .getByRole("heading", { name: "Key contacts" })
-      .closest<HTMLElement>("details");
-    expect(contactsPanel).not.toBeNull();
-    expect(
-      contactsPanel &&
-        within(contactsPanel).queryByRole("button", { name: /All \d|^Add$/ }),
-    ).toBeNull();
   });
 });

@@ -14,6 +14,7 @@ import type { Company, Company360View } from "./companies";
 import type { useCitedReceipt } from "./companies.chronology";
 import {
   CompanyOverviewStack,
+  CompanyReadings,
   offerResearchOnOverview,
 } from "./companies.overview";
 import { CompanyProfileTab } from "./companies.profile";
@@ -317,6 +318,15 @@ export function CompanyRecordBody({
         onOpenRecord={openCitation}
         onOpenReceipt={receipt.open}
         onOpenEmail={receipt.openEmail}
+        readings={
+          <CompanyReadings
+            company={company}
+            view={view}
+            onOpenRecord={openCitation}
+            onOpenReceipt={receipt.open}
+            onOpenEmail={receipt.openEmail}
+          />
+        }
       />
     </>
   );

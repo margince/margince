@@ -2,10 +2,10 @@ import { Panel } from "../../design-system/panel";
 import { AssistantPanel } from "../../screens/assistant";
 import { CompanySuggestions } from "../deals/dealsuggestion";
 import type { Company360View } from "./companies";
-import { recordNamesIn } from "./company360";
-import { DossierPanel } from "./companydossier";
+import { LatestSection } from "./company/glance";
 import { GrowthFitPanel } from "./companygrowthfit";
-import { SignalsSection } from "./companyrail";
+import { PeopleSection, SignalsSection } from "./companyrail";
+import { DealsSection } from "./companyraildeals";
 import { type CompanyOverviewProps, CompanyReading } from "./companyreading";
 import { hasWorkInFlight } from "./companywork";
 
@@ -58,29 +58,53 @@ export function offerResearchOnOverview({
   return !read && nothingOnFile(view);
 }
 
-// The overview's own stack: one column of same-shaped panels, in the order a
-// rep works them. It lives apart from CompanyPage so the page stays a layout
+// The overview's own stack: the 360, then its sections in the order a rep
+// works them. It lives apart from CompanyPage so the page stays a layout
 // rather than a list of per-tab conditions.
 export function CompanyOverviewStack(props: CompanyOverviewProps) {
-  const { company, view, onOpenRecord, onOpenReceipt, onOpenEmail } = props;
-  const records = recordNamesIn(view);
+  const { company, view, loading, onOpenHistory, onOpenTab } = props;
   return (
     <div className="co-overview-stack record-sections">
-      {!company.archived_at && <CompanyReading {...props} />}
-      {/* The account in prose, beside the reading of it. The 360 answers what
-          to do. This answers what the account is, in sentences with their
-          sources under them. */}
-      <DossierPanel
-        companyId={company.id}
-        nameOf={records}
-        onOpenRecord={onOpenRecord}
-        onOpenReceipt={onOpenReceipt}
-        onOpenEmail={onOpenEmail}
-      />
-      {/* The prepared questions are the ones the 360 answers in prose. Both
-          are written server-side from this reader's own 360, and both cite
-          records through the same receipt. They sit beside the reading, not
-          at the foot of the page, so a reader can ask at the top. */}
+      {/* The server refuses an archived account's 360 and its lists. */}
+      {!company.archived_at && (
+        <>
+          <CompanyReading {...props} />
+          <LatestSection
+            key={company.id}
+            view={view}
+            loading={loading}
+            onOpenHistory={onOpenHistory}
+            onOpenRecord={props.onOpenRecord}
+            onOpenEmail={props.onOpenEmail}
+          />
+          <DealsSection view={view} loading={loading} onTab={onOpenTab} />
+          <PeopleSection view={view} loading={loading} onTab={onOpenTab} />
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * CompanyReadings is what Margince read into the account beyond its 360. It
+ * holds the prepared questions, the growth fit, a suggested deal and the
+ * signals. They stand on Profile, so the overview keeps to the account's
+ * own records.
+ */
+export function CompanyReadings({
+  company,
+  view,
+  onOpenRecord,
+  onOpenReceipt,
+  onOpenEmail,
+}: Readonly<
+  Pick<
+    CompanyOverviewProps,
+    "company" | "view" | "onOpenRecord" | "onOpenReceipt" | "onOpenEmail"
+  >
+>) {
+  return (
+    <>
       <div className="co-glance-ask">
         <AssistantPanel
           companyId={company.id}
@@ -91,9 +115,7 @@ export function CompanyOverviewStack(props: CompanyOverviewProps) {
         />
       </div>
       {/* Is this an account we should be selling to at all: the question an
-          account with nothing in flight is asking. Its own card,
-          carrying its own attribution and its own reassess verb in a footer
-          band. */}
+          account with nothing in flight is asking. */}
       {!hasWorkInFlight(view) && (
         <GrowthFitPanel
           companyId={company.id}
@@ -102,15 +124,12 @@ export function CompanyOverviewStack(props: CompanyOverviewProps) {
           onOpenEmail={onOpenEmail}
         />
       )}
-      {/* What Margince noticed on this account that nobody asked it to look
-          for: promises made, blockers named, risks read out of meetings,
-          mail and invoices. */}
-      {/* A deal the evidence says this account should have, when Deal Scout
-          found one: beside the signals it was partly read from. */}
+      {/* A deal the evidence says this account should have, beside the
+          signals it was partly read from. */}
       <CompanySuggestions companyId={company.id} />
       <Panel className="co-signals">
         <SignalsSection companyId={company.id} />
       </Panel>
-    </div>
+    </>
   );
 }

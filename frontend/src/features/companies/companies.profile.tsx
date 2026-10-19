@@ -66,6 +66,7 @@ export function CompanyProfileTab({
   onOpenRecord,
   onOpenReceipt,
   onOpenEmail,
+  readings,
 }: Readonly<{
   active: boolean;
   company: Company;
@@ -79,6 +80,8 @@ export function CompanyProfileTab({
   onOpenRecord?: (entityType: string, entityId: string) => void;
   onOpenReceipt: OpenReceipt;
   onOpenEmail?: (activityId: string) => void;
+  // What Margince read into the account beyond its 360, led by the questions.
+  readings?: ReactNode;
 }>) {
   if (!active) {
     return null;
@@ -93,6 +96,7 @@ export function CompanyProfileTab({
       onOpenRecord={onOpenRecord}
       onOpenReceipt={onOpenReceipt}
       onOpenEmail={onOpenEmail}
+      readings={readings}
     />
   );
 }
@@ -106,6 +110,7 @@ function ReferenceDisclosures({
   onOpenRecord,
   onOpenReceipt,
   onOpenEmail,
+  readings,
 }: Readonly<{
   company: Company;
   offerOnOverview: boolean;
@@ -117,6 +122,7 @@ function ReferenceDisclosures({
   onOpenRecord?: (entityType: string, entityId: string) => void;
   onOpenReceipt: OpenReceipt;
   onOpenEmail?: (activityId: string) => void;
+  readings?: ReactNode;
 }>): ReactNode {
   return (
     <CompanyProfileForm
@@ -128,6 +134,7 @@ function ReferenceDisclosures({
       onOpenEmail={onOpenEmail}
       tools={
         <>
+          {readings}
           {/* Each of these names itself, so they stand in the profile's own
               stack, not a titled panel inside a titled panel. Documents have
               their own tab and stay off this one, so a reader never has two

@@ -123,3 +123,21 @@ a.record-card-open:focus-visible {
   padding: 0;
   list-style: none;
 }
+
+/* The stack as a row of round pills, for a list read as who is there rather
+   than one by one: the mark and name, then the position beside them. */
+.record-card-list.record-card-pills {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+.record-card-pills .record-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-4) var(--space-1) var(--space-1);
+  border-radius: var(--r-full);
+  corner-shape: round;
+}
+.record-card-pills .record-card-position {
+  color: var(--textSecondary);
+}

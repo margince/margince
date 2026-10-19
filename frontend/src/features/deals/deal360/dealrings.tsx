@@ -3,10 +3,11 @@
 
 import type { components } from "../../../api/schema";
 import { RingsLegend, type RingTone } from "../../../design-system/rings";
-import { calendarDaysBetween, formatNumber } from "../../../format/format";
+import { formatNumber } from "../../../format/format";
 import { useNow } from "../../../format/now";
 import { useLocale, usePlural, useT } from "../../../i18n";
 import { ghostCount } from "./dealcommittee";
+import { daysInStage } from "./stagetime";
 
 type DealStatusCard = components["schemas"]["DealStatusCard"];
 type DealCoverage = components["schemas"]["DealCoverage"];
@@ -23,10 +24,10 @@ export type DealRing = {
 };
 
 /**
- * The two shares a deal is read from: how far into the usual time in its
+ * The two shares a deal is read from. How far into the usual time in its
  * stage it is, and how many of its buying roles are named. A ring is drawn
- * only from a reading there is: no usual time below the won-deal history the
- * median needs, and no committee while the coverage read is withheld.
+ * only from a reading there is. No usual time exists below the won-deal
+ * history the median needs, and no committee while coverage is withheld.
  */
 export function dealRings(
   card: DealStatusCard,
@@ -37,11 +38,8 @@ export function dealRings(
   // Whole days, the unit the caption counts in; the median is a fraction.
   const usual =
     card.stage_usual_days == null ? null : Math.round(card.stage_usual_days);
-  if (usual !== null && usual >= 1) {
-    const days = Math.max(
-      calendarDaysBetween(new Date(card.stage_entered_at), new Date(now)),
-      0,
-    );
+  const days = daysInStage(card.stage_entered_at, now);
+  if (usual !== null && usual >= 1 && days !== null) {
     rings.push({
       key: "stage",
       value: Math.min(days, usual),

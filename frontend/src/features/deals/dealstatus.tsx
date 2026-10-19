@@ -7,9 +7,11 @@ import { Badge, Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
-import { useT } from "../../i18n";
+import { formatDayMonth } from "../../format/format";
+import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { hasMoveControl, MoveButton } from "../../screens/movebutton";
 import {
@@ -112,7 +114,7 @@ export function DealStatusCardPanel({
   dealId: string;
   dealName: string;
   // Where the deal stands on its pipeline, drawn in the call in every state
-  // of the read: it comes from the deal, not from the card.
+  // of the read. It comes from the deal, not from the card.
   path?: ReactNode;
   // Opens a cited message in the deal page's own email drawer. The card cites
   // the conversations the deal was read from, and the page already mounts the
@@ -219,6 +221,8 @@ function Briefing({
   rewriting: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
   // The findings ride the coverage card's own query, so this costs no second
   // request and the two cannot disagree about what is wrong with the deal.
   const coverage = useDealSignals(dealId);
@@ -234,6 +238,15 @@ function Briefing({
           a card whose whole premise is that they can. */}
       <CallCard
         name={dealName}
+        // A date that cannot be read keeps the kit's own head; Intl throws on it.
+        title={
+          Number.isNaN(Date.parse(card.generated_at))
+            ? undefined
+            : t("record.howItStands", {
+                when: formatDayMonth(card.generated_at, locale, recordZone),
+              })
+        }
+        titleAction={<WrittenBy by={card.generated_by} />}
         standing={
           card.verdict
             ? {

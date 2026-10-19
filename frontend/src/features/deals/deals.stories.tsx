@@ -252,3 +252,134 @@ export const HeaderMenu: Story = {
     );
   },
 };
+
+// A deal in Proposal well past the usual time, one buying role named of three,
+// twelve days since the buyer last wrote. The deal's lead is designed around
+// this shape; the stories above carry no status read.
+const pipeline = {
+  id: "pl",
+  name: "New business",
+  is_default: true,
+  stages: [
+    {
+      id: "s0",
+      pipeline_id: "pl",
+      name: "Discovery",
+      position: 1,
+      semantic: "open",
+      probability: 10,
+    },
+    {
+      id: "s0b",
+      pipeline_id: "pl",
+      name: "Qualification",
+      position: 2,
+      semantic: "open",
+      probability: 30,
+    },
+    {
+      id: "s1",
+      pipeline_id: "pl",
+      name: "Proposal",
+      position: 3,
+      semantic: "open",
+      probability: 60,
+    },
+    {
+      id: "s2",
+      pipeline_id: "pl",
+      name: "Negotiation",
+      position: 4,
+      semantic: "open",
+      probability: 80,
+    },
+    {
+      id: "won",
+      pipeline_id: "pl",
+      name: "Won",
+      position: 5,
+      semantic: "won",
+      probability: 100,
+    },
+    {
+      id: "lost",
+      pipeline_id: "pl",
+      name: "Lost",
+      position: 6,
+      semantic: "lost",
+      probability: 0,
+    },
+  ],
+};
+
+const drifting = {
+  deal_id: "d1",
+  story: {
+    sentences: [
+      {
+        text: "Dana asked for a week on the retrofit review and has not written since.",
+        evidence: [],
+      },
+    ],
+  },
+  verdict: {
+    standing: "drifting",
+    because: {
+      sentences: [
+        {
+          text: "Your reply to Dana has been due for twelve days, and the offer is still a draft.",
+          evidence: [],
+        },
+      ],
+    },
+  },
+  stage_entered_at: "2026-06-18T09:00:00Z",
+  stage_usual_days: 30,
+  generated_at: "2026-08-13T08:00:00Z",
+  generated_by: "model",
+};
+
+export const Drifting: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /deals/d1": () =>
+        jsonResponse({ ...deal, expected_close_date: "2026-09-30" }),
+      "GET /deals/d1/offers": () =>
+        jsonResponse({
+          data: [offer],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "GET /deals/d1/stakeholders": () => jsonResponse(emptyPage),
+      "GET /deals/d1/status": () => jsonResponse(drifting),
+      "GET /deals/d1/coverage": () =>
+        jsonResponse({
+          deal_id: "d1",
+          stakeholders: [
+            { contact_id: "p-1", role: "champion", engaged: true },
+          ],
+          our_side: [],
+          risks: [
+            { kind: "coverage_gap", summary: "No economic buyer named" },
+            {
+              kind: "single_threaded_theirs",
+              summary: "Only one contact at the buyer is engaged",
+            },
+          ],
+          sections_omitted: [],
+        }),
+      "GET /pipelines": () =>
+        jsonResponse({ data: [pipeline], page: { next_cursor: null } }),
+      "GET /approvals": () =>
+        jsonResponse({ data: [], page: { next_cursor: null } }),
+      "GET /activities": () => jsonResponse(emptyPage),
+      "GET /records/deal/d1/context": () =>
+        jsonResponse({ anchor: { type: "deal", id: "d1" }, sections: [] }),
+      "GET /me": () => jsonResponse(ungrantedCaller),
+    });
+    return (
+      <StoryProviders>
+        <DealScreen id="d1" />
+      </StoryProviders>
+    );
+  },
+};

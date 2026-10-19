@@ -8,6 +8,7 @@ import { OffsiteLink } from "../../design-system/offsitelink";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { Popover } from "../../design-system/popover";
 import { RecordCard } from "../../design-system/recordcard";
+import { RecordOriginFacts } from "../../design-system/recordfacts";
 import {
   type SectionState,
   SurfaceState,
@@ -24,9 +25,7 @@ import { RecordCustomFields } from "../../screens/recordcustomfields";
 import { RecordTeam } from "../../screens/recordteam";
 import { CounterpartyHoldRow } from "../privacy/counterparty-hold";
 import { CompanyReachCard } from "./company-reach";
-import { CompanyOriginFacts } from "./companyheaderfacts";
 import { CompanyDetails } from "./companydetails";
-import { DealsSection } from "./companyraildeals";
 import { CompanyProfileDetails } from "./companyraildetails";
 import { ProjectsSection } from "./companyrailprojects";
 import {
@@ -127,7 +126,7 @@ export function CompanyRail({
             <PanelBody>
               {/* The record row the head reads, before the 360's copy of it:
                   the two may carry different provenance mid-refresh. */}
-              <CompanyOriginFacts company={company ?? resolved} />
+              <RecordOriginFacts record={company ?? resolved} />
             </PanelBody>
           </Panel>
         </>
@@ -155,19 +154,11 @@ export function CompanyRail({
               bare
             />
           </Disclosure>
-          {/* Both summaries stand on every tab, the open one included: the
-            column is the reader's anchor while they move between tabs, and
-            each shows only the top RAIL_ROW_LIMIT rows — a summary beside a
-            tab is not a duplicate of it, a full copy would be. */}
           {/* The server refuses an archived account's 360 and its lists. */}
           {!resolved?.archived_at && (
             <>
-              <DealsSection view={view} loading={loading} onTab={onTab} />
               <ProjectsSection view={view} loading={loading} onTab={onTab} />
-              <ContactsSection view={view} loading={loading} onTab={onTab} />
-              {/* Beside the contacts, answering the same question from the
-                  other side. Those are the contacts on file here. This is who
-                  on the team can reach the ones that are not. */}
+              {/* Who on the team can reach the contacts not yet on file. */}
               {resolved && <CompanyReachCard companyId={resolved.id} />}
               <ListsSection companyId={companyId} />
             </>
@@ -229,12 +220,11 @@ function hostOf(website: string | null | undefined): string | undefined {
 }
 
 /**
- * ContactsSection is a glance at the roster: who is here, how they have
- * answered, and, where the graph read supports it, the colleagues already in
- * contact with them. The set-role and route-in verbs stay on the Contacts tab's
- * own roster rather than being rebuilt here a second time.
+ * PeopleSection is who is on the account: the top of the roster as pills, each
+ * opening the contact. The set-role and route-in verbs stay on the Contacts
+ * tab's own roster rather than being rebuilt here a second time.
  */
-function ContactsSection({
+export function PeopleSection({
   view,
   loading,
   onTab,
@@ -245,66 +235,63 @@ function ContactsSection({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  // Already ranked. The server orders the contacts section by engagement, then
-  // relationship strength, then id (contacts.RankContacts) BEFORE it cuts to
-  // twenty-five, so re-sorting here would be a second spelling of that rule —
-  // and the copy that drifts, since only one of the two is what chose which
-  // twenty-five arrived.
+  // Already ranked: the server orders contacts by engagement, strength and id
+  // (contacts.RankContacts) before it cuts to twenty-five. Re-sorting here
+  // would be a second spelling of that rule.
   const { contacts, count, state } = contactsSlice(view, loading);
   const answered = sectionAnswered(state);
-  // Starts open while the reader has opened no other section of the rail.
   return (
-    <Disclosure
-      className="co-sect"
-      open
-      summary={
-        <SectionSummary
-          title={t("co.rail.contacts.title")}
-          count={answered ? count : undefined}
-        />
-      }
-    >
-      {state === "ready" ? (
-        // The top of the byReach order: the rail glances at who matters most
-        // on the account, and the Contacts tab is the full roster.
-        <ul className="record-card-list">
-          {contacts.slice(0, RAIL_ROW_LIMIT).map((contact) => (
-            <li key={contact.contact_id}>
-              <ContactCard contact={contact} />
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <PanelBody>
-          <SurfaceState
-            state={state}
-            emptyLabel={t("co.rail.contacts.empty")}
-            loadingLabel={t("co.rail.contacts.title")}
-          >
-            {null}
-          </SurfaceState>
-          {/* The empty state's one verb; the foot below stands only once
-              there are rows, so an empty roster never offers the same
-              tab twice under two names. */}
-          {state === "empty" && (
-            <div className="card-actions">
-              <Button variant="ghost" onClick={() => onTab("contacts")}>
-                {t("co.rail.contacts.add")}
-              </Button>
-            </div>
+    <Panel
+      title={
+        <>
+          {t("co.rail.contacts.title")}
+          {answered && count != null && (
+            <span className="co-section-count">
+              {formatNumber(count, locale)}
+            </span>
           )}
-        </PanelBody>
-      )}
-      {state === "ready" && (
-        <div className="card-actions">
-          <Button variant="ghost" onClick={() => onTab("contacts")}>
+        </>
+      }
+      titleAction={
+        state === "ready" && (
+          <Button variant="link" onClick={() => onTab("contacts")}>
             {count != null
               ? t("co.rail.all", { count: formatNumber(count, locale) })
               : t("co.rail.allUncounted")}
           </Button>
-        </div>
-      )}
-    </Disclosure>
+        )
+      }
+    >
+      <PanelBody>
+        {state === "ready" ? (
+          <ul className="record-card-list record-card-pills">
+            {contacts.slice(0, RAIL_ROW_LIMIT).map((contact) => (
+              <li key={contact.contact_id}>
+                <ContactCard contact={contact} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <>
+            <SurfaceState
+              state={state}
+              emptyLabel={t("co.rail.contacts.empty")}
+              loadingLabel={t("co.rail.contacts.title")}
+            >
+              {null}
+            </SurfaceState>
+            {/* The empty state's one verb. */}
+            {state === "empty" && (
+              <div className="card-actions">
+                <Button variant="ghost" onClick={() => onTab("contacts")}>
+                  {t("co.rail.contacts.add")}
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+      </PanelBody>
+    </Panel>
   );
 }
 

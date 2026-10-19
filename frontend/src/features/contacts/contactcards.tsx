@@ -49,14 +49,11 @@ const MATTERS: ReadonlyArray<{ kind: string; labelKey: MessageKey }> = [
   { kind: "success_criterion", labelKey: "contact.matters.successCriteria" },
 ];
 
-export function ContactMattersCard({
-  view,
-  firstName,
-}: Readonly<{ view: Contact360; firstName: string }>) {
+export function ContactMattersCard({ view }: Readonly<{ view: Contact360 }>) {
   const t = useT();
   const claims = view.claims ?? [];
   return (
-    <Panel title={t("contact.matters.title", { name: firstName })}>
+    <Panel title={t("contact.matters.title")}>
       {MATTERS.map((row) => {
         const match = claims.find(
           (claim) => claim.kind === row.kind && claim.status !== "dismissed",

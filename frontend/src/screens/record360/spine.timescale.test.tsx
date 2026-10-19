@@ -66,9 +66,9 @@ function columns(): string[] {
   return (track?.style.gridTemplateColumns ?? "").split(/\s(?=minmax|max)/);
 }
 
-// The thread runs on one time scale: each stop is as wide as the days until
-// the next, so a week's gap between two conversations and twelve days of
-// silence are drawn in the proportion they took.
+// The thread runs on one time scale. Each stop is as wide as the days until
+// the next. A week's gap between two conversations and twelve days of silence
+// keep their proportion.
 describe("the thread's time scale", () => {
   it("sizes each stop by the days until the next one", () => {
     expect(columns()).toEqual([

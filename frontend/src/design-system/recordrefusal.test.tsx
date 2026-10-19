@@ -36,17 +36,19 @@ function renderRecord(aside: boolean) {
 }
 
 // A refused verb's reason is said once, in the access note at the foot of the
-// fields column, and the verb still names it as its description from the head.
+// fields column. The verb in the head still names it as its description.
 describe("a record's refusals", () => {
   it("stand in the fields column's access note", () => {
     const { container } = renderRecord(true);
     const reason = screen.getByText(/permission to log activities/);
     expect(reason.closest(".record-access-lines")).toBeTruthy();
-    expect(container.querySelector(".record-actions .record-refusal")).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Log activity" }).getAttribute(
-        "aria-describedby",
-      ),
+      container.querySelector(".record-actions .record-refusal"),
+    ).toBeNull();
+    expect(
+      screen
+        .getByRole("button", { name: "Log activity" })
+        .getAttribute("aria-describedby"),
     ).toBe(reason.id);
   });
 

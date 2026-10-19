@@ -1,9 +1,10 @@
 import { useId } from "react";
 import type { components } from "../../api/schema";
 import { StageLadder, type StageStep } from "../../design-system/stageladder";
-import { calendarDaysBetween, formatNumber } from "../../format/format";
+import { formatNumber } from "../../format/format";
 import { useNow } from "../../format/now";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
+import { daysInStage } from "./deal360/stagetime";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
@@ -73,9 +74,10 @@ export function DealStageLadder({
       ? t("deal.closedTakesNoStage")
       : undefined;
   const stageName = stages.find((stage) => stage.id === deal.stage_id)?.name;
+  const days = inStage ? daysInStage(inStage.enteredAt, now) : null;
   const stageTime =
-    inStage && stageName && deal.status === "open"
-      ? stageTimeLine(inStage, stageName, now, { t, plural, locale })
+    inStage && days !== null && stageName && deal.status === "open"
+      ? stageTimeLine(days, inStage.usualDays, stageName, { t, plural, locale })
       : undefined;
   return (
     <StageLadder
@@ -95,23 +97,19 @@ export function DealStageLadder({
 // How long the deal has stood in its stage, against how long won deals usually
 // stand there: the reading a stalled deal is found by.
 function stageTimeLine(
-  inStage: { enteredAt: string; usualDays: number | null },
+  days: number,
+  usualDays: number | null,
   stageName: string,
-  now: number,
   { t, plural, locale }: Words,
 ): string {
-  const days = Math.max(
-    calendarDaysBetween(new Date(inStage.enteredAt), new Date(now)),
-    0,
-  );
   const span = (count: number) =>
     plural("co.spine.days", count, { count: formatNumber(count, locale) });
-  return inStage.usualDays === null
+  return usualDays === null
     ? t("deal.stage.time", { stage: stageName, days: span(days) })
     : t("deal.stage.timeUsual", {
         stage: stageName,
         days: span(days),
-        usual: span(Math.round(inStage.usualDays)),
+        usual: span(Math.round(usualDays)),
       });
 }
 

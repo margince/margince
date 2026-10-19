@@ -1,44 +1,7 @@
 /* ===== The company glance =====
  *
- * The overview a rep reads in ten seconds (DESIGN.md §7, "Glance, then
- * depth"): the readings row, the 360 as the first pane at the full measure,
- * then one column: what needs a contact, the money, then the Ask box. One
- * column at every width, because these are content-driven cards of unequal
- * height, and a tall needs list beside a short one leaves the short one's row
- * half empty. */
-
-/* The 360's foot: the row that opens the thread, with the whole history at its
-   end. No bottom margin: the panel body's padding already ends the section. */
-.co-thread-fold.disclosure {
-  margin-bottom: 0;
-}
-
-/* The section's own name never gives way: it is what says where pressing this
-   row leads, and a name broken across two lines makes the row read as two. */
-.co-thread-name {
-  flex: none;
-  white-space: nowrap;
-}
-
-/* The newest exchange, teased on the row that opens the rest. Quieter than the
-   section's own name and after it: the name says what pressing this gets you,
-   the teaser says whether it is worth pressing. It gives way first when the
-   row runs out of width — the label and the chevron are what make the row
-   legible as a control. */
-.co-thread-teaser {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* The teaser sits after the section's name on one line, with the room between
-   them that keeps it from reading as part of the name. */
-.co-thread-fold .disclosure-summary .disclosure-label {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-}
+ * The overview a rep reads in ten seconds: the 360 at the full measure, then
+ * its sections, each with its title in a column of its own. */
 
 /* Ask as prepared questions: each one a full-width row rather than a chip in
    a wrapping line. The buttons are the assistant's own — the indigo that says
@@ -75,4 +38,9 @@
    width of two. */
 .co-signals > .co-sect > .disclosure-body {
   margin-top: 0;
+}
+
+/* The Latest section's rows carry no frame of their own. */
+.co-latest .panel-body {
+  padding-block-end: 0;
 }

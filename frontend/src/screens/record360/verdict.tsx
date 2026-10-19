@@ -205,11 +205,11 @@ export function Proof({
 }
 
 /**
- * SourcesPill is the working behind a record's call as one pill in the head of
- * its 360: who reached the call and how many readings it rests on, opening
- * them as a list over the card. In the head rather than under the verdict, so
- * the claim and its receipts are read together before the call itself, and
- * the verdict keeps its line to itself.
+ * SourcesPill is the working behind a record's call, as one pill in the head
+ * of its 360. It says who reached the call and how many readings it rests on,
+ * and opens them as a list over the card. In the head rather than under the
+ * verdict, so the claim and its receipts are read together before the call.
+ * The verdict keeps its line to itself.
  */
 export function SourcesPill({
   items,

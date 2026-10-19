@@ -244,18 +244,14 @@ describe("company view — the verbs that change a section", () => {
     );
     renderCompany();
 
-    // Two surfaces read the same missing grant: the details column's Deals
-    // slice — which rides on the page's own mount and never unmounts across
-    // a tab switch — and the Deals tab body itself. The header's facts line
-    // carries no pipeline figure (the readings row under the tabs does, and
-    // it is not drawn on the Deals tab). The count is pinned EXACTLY rather
-    // than as "at least one": a floor would pass on a tab that rendered
-    // nothing while some other surface still spoke.
+    // The Deals tab body is the one surface on that tab that reads the grant.
+    // The count is pinned at one, not "at least one". A floor would pass on a
+    // tab that rendered nothing while some other surface still spoke.
     await userEvent.click(
       await screen.findByRole("button", { name: /^Deals/ }),
     );
     await waitFor(() =>
-      expect(screen.queryAllByText("Hidden for your role")).toHaveLength(2),
+      expect(screen.queryAllByText("Hidden for your role")).toHaveLength(1),
     );
     // And the empty state it did NOT draw: "no open deal" is a claim about
     // the account that this payload cannot support.
@@ -429,7 +425,7 @@ describe("company view — a section still loading is not one that failed", () =
     // arrives.
     const brief = () => {
       const panel = screen
-        .getByRole("heading", { name: "Needs attention" })
+        .getByRole("heading", { name: "Next" })
         .closest("section");
       if (!panel) {
         throw new Error("the day's brief has no section wrapper");

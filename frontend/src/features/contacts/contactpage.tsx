@@ -221,34 +221,30 @@ export function ContactPageV2({
       <ContactWriteTo contactId={id} onWrite={() => openComposer("")}>
         <RecordView
           back={<WorklistReturnLink />}
-          // The contact's context, in the details pane beside the work: it is
-          // true of the CONTACT, not of the open tab, so a tab change leaves
-          // it put. The same pane, fold and memory as every other record.
-          // At phone width there is no column to fold: the same cards open as
-          // the drawer below instead, so the record hands the view no pane at
-          // all rather than one that folds to nothing beside nothing.
+          // The contact's context, in the details pane beside the work. It is
+          // true of the contact, not of the open tab, so a tab change leaves
+          // it put. The same pane, fold and memory as every other record. At
+          // phone width the same cards open as the drawer below instead.
           aside={narrow ? undefined : contactDetails}
           asideOpen={details.open}
           name={contact.full_name}
           identity={contact.id}
-          // One rung under the record scale: the name is still the largest
-          // thing on the page, but beside a work column that opens on the
-          // agent's ask it no longer needs to be the size of a masthead.
+          // One rung under the record scale. The name is still the largest
+          // thing on the page, but beside the agent's ask it need not be the
+          // size of a masthead.
           scale="compact"
-          // The role and the company on the name's own line, the marks under
-          // it, and the ways to reach them as a strip across the head: three
-          // registers a reader takes in one glance rather than a stack of
-          // lines under a masthead.
+          // The role and the company on the name's own line, then the ways
+          // to reach them on one line, then the marks.
           nameBadge={<ContactSubtitle view={view.data} />}
-          pulse={<ContactMarks view={view.data} tab={tab} />}
-          badges={
+          subtitle={
             <ContactFacts
               contact={contact}
               buyingRole={view.data.commercial?.role}
             />
           }
+          pulse={<ContactMarks view={view.data} tab={tab} />}
           actions={
-            // refusedReasonId is the SAME sentence the band below states —
+            // refusedReasonId is the same sentence the band below states:
             // one write-gate for the whole header, not a narrower one per
             // verb. Edit, merge and archive ride inside the header's menu,
             // so they read it too.
@@ -264,7 +260,7 @@ export function ContactPageV2({
           }
           actionsInline
           zone={recordZone}
-          // Stated ONCE for the page, where both columns and every tab can see
+          // Stated once for the page, where both columns and every tab can see
           // it. Every control the record refuses points at its reason by id.
           band={band}
           tabs={
@@ -275,7 +271,7 @@ export function ContactPageV2({
                 navigateKeepingReturn(contactTabRoute(id, next));
                 scrollPageToTop();
               }}
-              // The switch for the details pane, at the end of the tab row: it
+              // The switch for the details pane, at the end of the tab row. It
               // chooses what the page shows beside the work, so it stands with
               // the controls that choose what the work column shows.
               trailing={
@@ -303,10 +299,10 @@ export function ContactPageV2({
                 documents: t(TAB_LABEL_KEYS.documents),
               }}
               // At least one connected provider has never been asked about this
-              // contact, so there is a lookup waiting behind the tab. ANY of them
+              // contact, so there is a lookup waiting behind the tab. Any of them
               // is enough: the reader still has somebody to ask, even if another
               // provider already answered. A CANCELLED run reads as never_run
-              // too, and the dot coming back is right — nothing was bought.
+              // too, and the dot coming back is right: nothing was bought.
               marks={{
                 research: (view.data.provider_profiles ?? []).some(
                   (profile) => profile.state === "never_run",

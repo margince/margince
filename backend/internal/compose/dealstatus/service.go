@@ -217,7 +217,7 @@ func (s *Service) cardAndTimeline(
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, nil, err
 	}
-	// Stamped after the cache, on every path: the stage entry and the usual
+	// Stamped after the cache, on every path. The stage entry and the usual
 	// stay can both move without moving the fingerprint the cache is keyed on.
 	stampStageClock(&card, f.health)
 	return card, append(f.timeline, f.requests...), nil

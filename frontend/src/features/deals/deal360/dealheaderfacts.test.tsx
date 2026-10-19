@@ -9,13 +9,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { RecordOriginFacts } from "../../../design-system/recordfacts";
 import { LocaleProvider } from "../../../i18n";
 import { en } from "../../../i18n/en";
-import {
-  DealIdentityFacts,
-  DealOriginFacts,
-  DealSubtitle,
-} from "./dealheaderfacts";
+import { DealIdentityFacts, DealSubtitle } from "./dealheaderfacts";
 
 // The facts a rep checks first, on the record's head: value, stage, owner —
 // the same three questions DealIdentityLine's dot-joined sentence answered,
@@ -252,11 +249,8 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
 
   it("names how the record reached Margince, behind the provenance tag", async () => {
     show(
-      <DealOriginFacts
-        deal={{
-          amount_minor: 1000,
-          currency: "EUR",
-          stage_id: "st-1",
+      <RecordOriginFacts
+        record={{
           source: "csv import",
         }}
       />,
@@ -271,11 +265,8 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
   // one that knows, and the tag has to prefer it.
   it("names who wrote an imported deal there, not the seat that ran the import", () => {
     show(
-      <DealOriginFacts
-        deal={{
-          amount_minor: 1000,
-          currency: "EUR",
-          stage_id: "st-1",
+      <RecordOriginFacts
+        record={{
           source: "hubspot",
           captured_by: "human:u-importer",
           author: { display_name: "Mutaz Suleiman", via: "HubSpot" },
@@ -399,11 +390,8 @@ describe("the close date says how much it is worth believing", () => {
 describe("a deal an import wrote", () => {
   const imported = (importedFrom: string | null) =>
     show(
-      <DealOriginFacts
-        deal={{
-          amount_minor: 1000,
-          currency: "EUR",
-          stage_id: "st-1",
+      <RecordOriginFacts
+        record={{
           captured_by: "human:admin",
           source: "manual",
           imported_from: importedFrom,

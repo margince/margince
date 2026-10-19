@@ -636,6 +636,41 @@
   padding-top: var(--space-3);
   border-top: 1px solid var(--borderSubtle);
 }
+/* Past a phone the compact head is a grid: the name and the verbs share the
+   first row, and the facts and pills under them span both columns. As flex
+   rows, the facts took only the width the verbs left and wrapped there. */
+@media (min-width: 721px) {
+  .record-head-compact {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    column-gap: var(--space-4);
+    row-gap: 0;
+    align-items: start;
+  }
+  .record-head-compact > .avatar {
+    grid-row: 1 / span 3;
+  }
+  .record-head-compact .record-id {
+    display: contents;
+  }
+  .record-head-compact .record-name-row {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+  }
+  .record-head-compact > :is(.record-actions-inline, .record-controls) {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: center;
+  }
+  .record-head-compact > :is(.record-badges, .record-standing),
+  .record-head-compact .record-id > :is(.record-sub, .record-pulse) {
+    grid-column: 2 / -1;
+  }
+  .record-head-compact .record-sub {
+    margin-top: var(--space-2);
+  }
+}
 
 /* The record as one sheet: head, strip and the open tab's work on one raised
    surface with a hairline round it, so the record reads as a document on the
@@ -724,9 +759,18 @@
    strip of captions. A value that does not say what it is on its own
    ("Way in: Dana Buyer") prints its label (`Fact named`); every other label
    is kept for a screen reader only. */
+/* Every fact opens with its dot, and the line starts one dot early with that
+   dot clipped off: so a fact that wraps starts its line without a dot. The
+   clip leaves room for a focus ring on every side. */
 .record-head .record-facts {
+  --factSep: var(--space-6);
   justify-content: flex-start;
   gap: var(--space-1) 0;
+  margin-inline-start: calc(-1 * var(--factSep));
+  clip-path: inset(
+    calc(-1 * var(--space-1)) calc(-1 * var(--space-1))
+      calc(-1 * var(--space-1)) calc(var(--factSep) - var(--space-1))
+  );
   color: var(--textSecondary);
 }
 .record-head .record-fact {
@@ -734,10 +778,12 @@
   align-items: baseline;
   gap: var(--space-1);
 }
-.record-head .record-fact + .record-fact::before {
+.record-head .record-fact::before {
   content: "·";
-  margin-inline: var(--space-2);
-  color: var(--textSecondary);
+  flex: none;
+  inline-size: var(--factSep);
+  margin-inline-end: calc(-1 * var(--space-1));
+  text-align: center;
 }
 /* In the fields column they are rows like every other field there: the
    label at the field grid's own measure, the value beside it. */

@@ -54,7 +54,13 @@ function dealsSection(
   wonLifetime: Money,
   data: Company360Deal[] = [],
 ): Company360Deals {
-  return { data, page: PAGE, won_lifetime: wonLifetime, lost_count: 0, won_count: 0 };
+  return {
+    data,
+    page: PAGE,
+    won_lifetime: wonLifetime,
+    lost_count: 0,
+    won_count: 0,
+  };
 }
 
 function view(deals: Company360Deals): Company360 {

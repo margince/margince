@@ -36,6 +36,7 @@ import type { MessageKey } from "../../i18n/en";
 import { useRecordZone } from "../../lib/recordzone";
 import { EXCHANGE_KINDS, type ExchangeKind, isExchange } from "./exchangekinds";
 import { isContactBy, lastContactAt, waitingSince } from "./lastcontact";
+import { stopColumn } from "./spine.timescale";
 import "./spine.css";
 
 /**
@@ -192,8 +193,8 @@ export function RecordSpine({
   if (stops.length === 0) {
     return null;
   }
-  // Each stop is as wide as the time it covers (stopColumn): on a horizontal
-  // axis the WIDTH is the waiting, so a silence drawn as wide as the meeting
+  // Each stop is as wide as the time it covers (stopColumn). On a horizontal
+  // axis the width is the waiting. A silence drawn as wide as the meeting
   // before it would say the two took the same amount of time.
   const columns = stops.map(stopColumn).join(" ");
   return (
@@ -233,42 +234,6 @@ export function RecordSpine({
       </div>
     </PanelBody>
   );
-}
-
-// The narrowest a stop may be drawn. A date is set on one line — broken across
-// two it reads as two moments — so under any less than this the dates run into
-// each other and the row becomes one smear of digits. At the floor the track
-// outgrows its card and the thread scrolls, which is what this axis already
-// does with more history than fits; crushing the stops is what it may not do.
-const STOP_FLOOR = "6.5rem";
-
-// How much of the axis a stop takes: the days until the next dated stop, so
-// the thread runs on ONE time scale and its rule to the right of a dot is the
-// time that stop covers. A conversation a day before the next is narrow, and
-// a fortnight's silence is wide, because the width is the waiting. Today's
-// marker takes only its label's width, because it is a line and not a span.
-function stopColumn(stop: Stop, index: number, stops: readonly Stop[]): string {
-  if (stop.tone === "now") {
-    // Its label's width and not a share of the axis. `auto` reads the stop's
-    // MINIMUM contribution, which every stop declares as zero so a long
-    // subject cannot widen the thread — so once the track outgrew its card the
-    // marker was the one column that collapsed, and today vanished off an axis
-    // whose whole reading is what falls either side of it.
-    return "max-content";
-  }
-  return `minmax(${STOP_FLOOR}, ${daysCovered(stop, stops.slice(index + 1))}fr)`;
-}
-
-// The calendar days from a stop to the next one that carries a date, at
-// least one: a stop with no date, or none after it, takes a day's share and
-// stands on its floor.
-function daysCovered(stop: Stop, after: readonly Stop[]): number {
-  const next = after.find((one) => one.at !== undefined);
-  if (!stop.at || !next?.at) {
-    return 1;
-  }
-  const days = calendarDaysBetween(new Date(stop.at), new Date(next.at));
-  return Math.max(days, 1);
 }
 
 type Ctx = {

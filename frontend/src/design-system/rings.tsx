@@ -89,9 +89,9 @@ export function Rings({
 export type LabelledRing = Ring & { label: ReactNode; caption: ReactNode };
 
 /**
- * RingsLegend is the figure with its legend beside it: each ring's name, led
- * by its tone's dot, and the count it was read from under it, in the figure's
- * order. `label` names the figure for a screen reader.
+ * RingsLegend is the figure with its legend beside it. In the figure's order,
+ * each ring's name is led by its tone's dot, with the count it was read from
+ * under it. `label` names the figure for a screen reader.
  */
 export function RingsLegend({
   rings,

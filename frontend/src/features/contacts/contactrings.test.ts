@@ -13,7 +13,9 @@ const ours = populated.claims?.find(
   (claim) => claim.kind === "commitment_ours",
 );
 if (!sam || !ours) {
-  throw new Error("the populated contact fixture lost its colleague or promise");
+  throw new Error(
+    "the populated contact fixture lost its colleague or promise",
+  );
 }
 
 const strength: NonNullable<Contact360["strength"]> = {
@@ -24,8 +26,8 @@ const strength: NonNullable<Contact360["strength"]> = {
   outbound_90d: 11,
 };
 
-// Nine of twenty messages hers, one of two colleagues in touch this quarter,
-// one of two promises kept and one dismissed.
+// Nine of twenty messages from the contact, one of two colleagues in touch
+// this quarter, one of two promises kept and one dismissed.
 const view: Contact360 = {
   ...populated,
   strength,
@@ -40,7 +42,7 @@ const view: Contact360 = {
 };
 
 describe("a contact's rings", () => {
-  it("count her part of the exchange, the colleagues in touch and the promises kept", () => {
+  it("count the contact's part of the exchange, the colleagues in touch and the promises kept", () => {
     expect(contactRings(view)).toEqual([
       { key: "conversation", value: 9, max: 20, tone: "calm" },
       { key: "reach", value: 1, max: 2, tone: "warning" },
@@ -48,7 +50,7 @@ describe("a contact's rings", () => {
     ]);
   });
 
-  it("call a conversation one way when under a third of it is hers", () => {
+  it("call a conversation one way when under a third of it is theirs", () => {
     const quiet: Contact360 = {
       ...view,
       strength: { ...strength, inbound_90d: 2, outbound_90d: 10 },

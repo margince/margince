@@ -77,12 +77,7 @@ export function ContactOverview({
       <ContactOverviewCoverage view={view} />
       <ContactMemory view={view} onOpenEmail={onOpenEmail} hideEmpty />
       {hasCommercial(view) && <ContactCommercialCard view={view} />}
-      {hasMatters(view) && (
-        <ContactMattersCard
-          view={view}
-          firstName={view.contact.full_name.split(" ")[0] ?? ""}
-        />
-      )}
+      {hasMatters(view) && <ContactMattersCard view={view} />}
     </div>
   );
 }

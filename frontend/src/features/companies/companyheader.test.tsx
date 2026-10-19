@@ -734,8 +734,8 @@ describe("the lifecycle control beside the name", () => {
   });
 });
 
-// The name's own line carries the name and its stage only; what the account
-// is stands in the facts line under it, and the marks row says only what the
+// The name's own line carries the name and its stage only. What the account
+// is stands in the facts line under it. The marks row says only what the
 // account is to us and who may read it.
 describe("the header's two lines", () => {
   const withSite: Company = { ...COMPANY, industry: "Automotive" };

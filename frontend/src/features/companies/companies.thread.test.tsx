@@ -160,17 +160,15 @@ describe("the account overview's thread opens the messages it names", () => {
     ).toBeTruthy();
   });
 
-  it("opens a message row in the folded thread in the page's email drawer", async () => {
+  it("opens a message row under Latest in the page's email drawer", async () => {
     const user = userEvent.setup();
     const { container } = drawAccount();
     await screen.findByRole("heading", { name: company.display_name });
 
-    const fold = container.querySelector<HTMLElement>(".co-thread-fold");
-    const summary = fold?.querySelector("summary");
-    if (!fold || !summary) {
-      throw new Error("the overview draws no thread fold to open");
+    const fold = container.querySelector<HTMLElement>(".co-latest");
+    if (!fold) {
+      throw new Error("the overview draws no Latest section");
     }
-    await user.click(summary);
     await user.click(
       await within(fold).findByRole("button", { name: /About capacity/ }),
     );
@@ -180,17 +178,15 @@ describe("the account overview's thread opens the messages it names", () => {
     ).toBeTruthy();
   });
 
-  it("sends the folded thread's deal chip to the deal", async () => {
+  it("sends a deal chip under Latest to the deal", async () => {
     const user = userEvent.setup();
     const { container } = drawAccount();
     await screen.findByRole("heading", { name: company.display_name });
 
-    const fold = container.querySelector<HTMLElement>(".co-thread-fold");
-    const summary = fold?.querySelector("summary");
-    if (!fold || !summary) {
-      throw new Error("the overview draws no thread fold to open");
+    const fold = container.querySelector<HTMLElement>(".co-latest");
+    if (!fold) {
+      throw new Error("the overview draws no Latest section");
     }
-    await user.click(summary);
     await user.click(
       await within(fold).findByRole("button", { name: "on a deal" }),
     );

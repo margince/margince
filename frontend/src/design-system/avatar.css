@@ -8,8 +8,6 @@
    once and picked by the `size` prop rather than by whatever context a caller
    happened to drop the chip into. */
 .avatar {
-  border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--accentMed);
   color: var(--accentText);
   display: inline-flex;
@@ -55,6 +53,11 @@
 .avatar-xl {
   width: 72px;
   height: 72px;
+}
+/* A tile keeps the tree's own corner, so the round shape is the circle's alone. */
+.avatar:not(.avatar-tile) {
+  border-radius: var(--r-full);
+  corner-shape: round;
 }
 /* The record page's own mark for a company or a deal: the pane's corner on a
    square, in the house corner rather than the round chip's circle. */
@@ -112,6 +115,11 @@
   width: calc(100% - 4px);
   height: calc(100% - 4px);
   object-fit: contain;
+}
+.avatar:not(.avatar-tile) .avatar-img {
   border-radius: var(--r-full);
   corner-shape: round;
+}
+.avatar-tile .avatar-img {
+  border-radius: var(--r-md);
 }

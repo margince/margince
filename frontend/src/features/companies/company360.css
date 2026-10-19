@@ -153,13 +153,52 @@
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
-.co-deal-amount {
-  grid-column: 2;
-  grid-row: 1;
-}
-.co-deal-meta {
-  grid-column: 1 / -1;
+/* The overview's deal rows: the name over its close date, the stage, and the
+   amount at the end, on three tracks every row shares. */
+.co-deal-rows {
+  display: flex;
+  flex-direction: column;
   margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.co-deal-rows > li + li {
+  border-top: 1px solid var(--borderSubtle);
+}
+.co-deal-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 11rem 7rem;
+  gap: var(--space-1) var(--space-4);
+  align-items: center;
+  padding-block: var(--space-3);
+}
+.co-deal-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.co-deal-stage {
+  color: var(--textSecondary);
+}
+.co-deal-amount {
+  text-align: end;
+}
+.co-deal-won {
+  margin: var(--space-2) 0 0;
+}
+/* A section's count sits beside its title in the secondary ink. */
+.co-section-count {
+  margin-inline-start: var(--space-2);
+  color: var(--textSecondary);
+}
+@container work (max-width: 40rem) {
+  .co-deal-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .co-deal-row > .stage-pips,
+  .co-deal-row > .co-deal-stage {
+    grid-row: 2;
+  }
 }
 
 /* A row's own line: the icon sits with the text rather than on its baseline. */

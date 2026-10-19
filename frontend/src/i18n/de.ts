@@ -1974,9 +1974,6 @@ export const de = {
   "co.strip.lastTouch.never": "Keiner",
   "co.strip.nextMeeting": "Nächster Termin",
   "co.strip.next.none": "Kein Termin geplant",
-  "co.360.thread": "Aktivitäten",
-  "co.360.threadCount": "Aktivitäten · {count}",
-  "co.360.fullHistory": "Vollständiger Verlauf",
   "co.strip.healthQuiet": "Ruhig",
   "co.strip.noInboundEver": "Keine eingehenden Nachrichten",
   "co.strip.unanswered": "Unbeantwortet",
@@ -2441,7 +2438,7 @@ export const de = {
   "co.next.undated": "Kein Fälligkeitsdatum",
   "commitment.dismiss": "Verwerfen",
   "commitment.quote": "„{quote}“",
-  "deal.watch.title": "Zusagen des Kunden",
+  "deal.watch.title": "Zusagen",
   "deal.watch.incomplete":
     "Einige Zusagen dieses Unternehmens sind für dich nicht sichtbar.",
   "deal.watch.more":
@@ -2659,13 +2656,17 @@ export const de = {
   "co.rail.all": "Alle {count}",
   "co.rail.add": "Hinzufügen",
   "co.rail.allUncounted": "Alle",
-  "co.rail.deals.title": "Aktive Deals",
+  "co.rail.deals.title": "Deals",
+  "co.latest.title": "Neueste",
+  "co.latest.all": "Alle Aktivitäten",
+  "co.deals.won_one": "{count} gewonnen · {amount} bisher",
+  "co.deals.won_other": "{count} gewonnen · {amount} bisher",
   "co.rail.deals.empty": "Noch keine Deals zu diesem Unternehmen.",
   "co.rail.deals.emptyClosedOnly": "Keine offenen Deals, nur abgeschlossene.",
   "co.rail.deals.noCloseDate": "kein Abschlussdatum",
   "co.rail.deals.attentionOverdue": "Überfällig",
   "co.rail.deals.attentionCommitment": "Zusage der Käuferseite fällig",
-  "co.rail.contacts.title": "Wichtige Kontakte",
+  "co.rail.contacts.title": "Kontakte",
   "co.rail.contacts.empty": "Noch keine Kontakte.",
   "co.rail.contacts.add": "Kontakt hinzufügen",
   "co.rail.contacts.inTouch": "Bereits in Kontakt",
@@ -4676,7 +4677,7 @@ export const de = {
   "co.spine.expectedClose": "Erwarteter Abschluss",
   "co.360.subject": "{name} · 360",
   "co.360.subjectUnnamed": "Dieses Unternehmen · 360",
-  "today.title": "Handlungsbedarf",
+  "today.title": "Als Nächstes",
   "co.spine.earlier_other": "{count} frühere Threads",
   "co.spine.earlier_one": "{count} früherer Thread",
   "today.failed":
@@ -12749,13 +12750,13 @@ export const de = {
   "contact.brief.sourceActivity": "Aktivität",
   "contact.brief.sourceDeal": "Deal-Notizen",
 
-  "contact.matters.title": "Was {name} wichtig ist",
+  "contact.matters.title": "Was wichtig ist",
   "contact.matters.priorities": "Prioritäten",
   "contact.matters.objections": "Einwände",
   "contact.matters.successCriteria": "Erfolgskriterien",
   "contact.matters.absent": "Noch nichts erfasst",
 
-  "contact.commercial.title": "Offener Deal und Rolle im Kaufprozess",
+  "contact.commercial.title": "Deals",
   "contact.commercial.withheld":
     "Du hast keinen Zugriff auf die Deals dieses Kontakts.",
   "contact.commercial.noDeal": "Kein offener Deal.",
@@ -12763,7 +12764,7 @@ export const de = {
   "contact.commercial.committee": "Buying Center",
   "contact.commercial.openDeal": "Deal öffnen",
 
-  "contact.loops.title": "Zusagen und offene Fragen",
+  "contact.loops.title": "Zusagen",
   "contact.loops.empty":
     "Keine Zusagen oder Fragen in den erfassten Nachrichten.",
   "contact.loops.ours": "Du",
@@ -12778,7 +12779,7 @@ export const de = {
   "contact.loops.waiting": "Wartet",
   "contact.loops.openBadge": "Offen",
 
-  "contact.memory.title": "Aktivitäten",
+  "contact.memory.title": "Neueste",
   "contact.memory.showAll": "Alle Aktivitäten anzeigen",
   "contact.memory.empty": "Auf diesem Kanal noch keine Aktivitäten erfasst.",
   "contact.memory.all": "Alle",
@@ -14618,7 +14619,7 @@ export const de = {
   "firstRun.ai.foot":
     "Bis du „Weiter“ wählst, wird nichts an den Anbieter gesendet.",
   "contact.readings.title": "Kontaktstatus",
-  "deal360.brief": "Deal-Zusammenfassung",
+  "deal360.brief": "Zusammenfassung",
   "lead.brief.title": "Lead-Bericht",
   "lead.standing.qualified": "Qualifiziert",
   "lead.standing.qualifiedOn":

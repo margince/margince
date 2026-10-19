@@ -6,6 +6,7 @@ import { useId, useRef } from "react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { ListPopover } from "../../design-system/listpopover";
+import { RecordRefusal } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
@@ -13,7 +14,6 @@ import { useMe } from "../../lib/session";
 import { LogActivityAction } from "../../screens/logactivity";
 import { searchCompanyContacts } from "../../screens/meetingattendees";
 import { EmailVerb } from "../../screens/recordemail";
-import { RecordRefusal } from "../../design-system/recordview";
 import { ComposeModal } from "../mail/compose";
 
 // The account header's verbs, in the shape every record page draws them:
