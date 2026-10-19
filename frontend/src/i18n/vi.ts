@@ -10811,7 +10811,7 @@ export const vi = {
   "forecast.landingFromCall": "Theo nhận định · {won} đã chốt đến nay",
   "forecast.landingRecords": "Theo dữ liệu deal",
   "forecast.landingRecordsDetail":
-    "Đã chốt cộng đã cam kết, chưa tính dự báo của quản lý",
+    "Đã chốt cộng các deal Commit có ngày chốt đã xác nhận, chưa tính dự báo của quản lý",
   "forecast.landingCaveat": "Dự kiến cuối kỳ có lưu ý",
   "forecast.landing.caveat.call_absent":
     "Kỳ này chưa có nhận định nào, nên số này hiển thị bằng chứng Commit.",
