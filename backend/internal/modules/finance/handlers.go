@@ -19,6 +19,7 @@ import (
 // Handlers shadows the generated finance stubs.
 type Handlers struct {
 	store *Store
+	queue SyncQueue
 }
 
 // NewHandlers binds the transport to the pool the mirror is read through.

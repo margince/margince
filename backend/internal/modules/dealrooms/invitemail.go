@@ -4,10 +4,12 @@
 package dealrooms
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 )
 
@@ -70,17 +72,22 @@ func (h Handlers) buyerLink(credential string) string {
 // in the invitation rather than on the room screen, so it reaches them before
 // the first act rather than at the moment of it.
 func (h Handlers) sendInvite(r *http.Request, issued IssuedInvitation) error {
-	body := "You have been given access to a Deal Room.\n\n" +
-		"Open it here:\n\n  " + h.buyerLink(issued.Credential) + "\n\n" +
-		"This link is personal to you and works once, until " +
-		issued.ExpiresAt.Format("2 January 2006") + ".\n" +
-		"If you were not expecting this, you can ignore this message.\n\n" +
-		"When you use the room, the contacts managing it can see that you\n" +
-		"signed in and which documents you downloaded."
+	language := "en"
+	if h.mailLanguage != nil {
+		language = h.mailLanguage(r.Context())
+	}
+	words := mailcopy.For(language)
+	body := words.RoomIntro + "\n\n" + mailcopy.OneLine(issued.RoomTitle) + "\n\n" + words.RoomAction + "\n\n" + h.buyerLink(issued.Credential) + "\n\n" + fmt.Sprintf(words.RoomPersonal, issued.ExpiresAt.Format(mailcopy.DateLayout)) + "\n\n" + words.RoomIgnore + "\n\n" + words.RoomDisclosure
 
-	if err := h.inviteMailer.Send(r.Context(), string(issued.Participant.Email),
-		"You have been given access to a Deal Room", body); err != nil {
+	if err := mailer.SendLocalized(r.Context(), h.inviteMailer, string(issued.Participant.Email),
+		words.RoomSubject, body, string(words.Language)); err != nil {
 		return fmt.Errorf("send deal room invitation: %w", err)
 	}
 	return nil
+}
+
+// WithMailLanguage supplies the inviter’s display language.
+func (h Handlers) WithMailLanguage(reader func(context.Context) string) Handlers {
+	h.mailLanguage = reader
+	return h
 }

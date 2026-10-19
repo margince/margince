@@ -170,15 +170,17 @@ func TestTheContentGateIsTheDiscoverGateNarrowedByAudience(t *testing.T) {
 		t.Errorf("an all-scope human skips the audience arm: %s", adminContent)
 	}
 
-	// Only the system principal reads the arm away.
-	system := principal.Principal{Type: principal.PrincipalSystem, ID: "system",
-		Permissions: principal.Permissions{RowScope: principal.RowScopeAll}}
+	// System readers bypass audience membership, not erased evidence.
+	system := principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system",
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	}
 	systemContent, err := ActivityContentClause(principal.WithActor(context.Background(), system), "a", arg)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if systemContent != ActivityAvailableClause("a") {
-		t.Errorf("system content gate = %q, want the availability test alone", systemContent)
+	if strings.Contains(systemContent, "a.audience") || !strings.Contains(systemContent, "a.restricted_at IS NULL") || !strings.Contains(systemContent, "erased_commitment.outcome = 'source_unavailable'") {
+		t.Errorf("system content gate lost availability or erased evidence: %s", systemContent)
 	}
 }
 

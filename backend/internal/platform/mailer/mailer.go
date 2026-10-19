@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/outbound"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -57,7 +58,7 @@ type SMTP struct {
 // docker mailhog or a host postfix), where the wire never leaves the
 // machine.
 func (s SMTP) Send(ctx context.Context, to, subject, textBody string) error {
-	return s.SendIdentified(ctx, to, subject, textBody, "")
+	return s.SendAlternative(ctx, to, subject, textBody, emailview.Render(emailview.Message{Title: subject, Text: textBody}), "")
 }
 
 // SendIdentified is Send with the Message-ID header set to messageID. An
@@ -67,13 +68,18 @@ func (s SMTP) Send(ctx context.Context, to, subject, textBody string) error {
 // that fails after it is logged and the send still succeeds. Reporting it
 // would make the dispatcher retry and mail a second copy.
 func (s SMTP) SendIdentified(ctx context.Context, to, subject, textBody, messageID string) error {
+	return s.SendAlternative(ctx, to, subject, textBody, "", messageID)
+}
+
+// SendAlternative submits readable text and HTML under one message identity.
+func (s SMTP) SendAlternative(ctx context.Context, to, subject, textBody, htmlBody, messageID string) error {
 	if strings.ContainsAny(to, "\r\n") || strings.ContainsAny(subject, "\r\n") {
 		return errors.New("mailer: recipient and subject must be single-line (header injection)")
 	}
 	if messageID != "" && !connector.ValidMessageID(messageID) {
 		return connector.ErrInvalidMessageID
 	}
-	msg, err := s.compose(to, subject, textBody, messageID)
+	msg, err := s.composeAlternative(to, subject, textBody, htmlBody, messageID)
 	if err != nil {
 		return err
 	}
@@ -189,4 +195,9 @@ func isLoopback(host string) bool {
 func closeQuietly(c io.Closer) {
 	//craft:ignore swallowed-errors error-path transport cleanup — the send's own error is already on its way to the caller
 	_ = c.Close()
+}
+
+// AlternativeSender preserves the already-authorized HTML and text alternatives.
+type AlternativeSender interface {
+	SendAlternative(ctx context.Context, to, subject, textBody, htmlBody, messageID string) error
 }

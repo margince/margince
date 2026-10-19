@@ -189,10 +189,11 @@ func wireArc(arc []ArcSentence, known map[Evidence]string) []crmcontracts.Meetin
 // meeting is happening, which is true of every advance and is why the floor
 // legs cite it in the first place.
 func wireAdvance(advance Advance, in Input, known map[Evidence]string) crmcontracts.MeetingPlanAdvance {
+	said := briefCopyFor(in.Language)
 	return crmcontracts.MeetingPlanAdvance{
-		Minimum:  advanceLeg(advance.Minimum, in, known, "Leave with one named next step, owned and dated."),
-		Best:     advanceLeg(advance.Best, in, known, "Leave with the next meeting booked and its purpose agreed."),
-		Fallback: advanceLeg(advance.Fallback, in, known, "Leave with what you will send and who decides on it."),
+		Minimum:  advanceLeg(advance.Minimum, in, known, said.Say(advanceWords.GroundedMinimum)),
+		Best:     advanceLeg(advance.Best, in, known, said.Say(advanceWords.GroundedBest)),
+		Fallback: advanceLeg(advance.Fallback, in, known, said.Say(advanceWords.GroundedFallback)),
 	}
 }
 

@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/providerwire"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -199,7 +200,7 @@ func (h integrationsHandlers) CreateContactEnrichmentRun(w http.ResponseWriter, 
 		return
 	}
 	// 202: the run is durable, and the provider has not been called yet.
-	httperr.WriteJSON(w, http.StatusAccepted, toProviderRun(run))
+	httperr.WriteJSON(w, http.StatusAccepted, providerwire.Run(run))
 }
 
 func (h integrationsHandlers) GetContactEnrichmentRun(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, runID openapi_types.UUID) {
@@ -212,7 +213,7 @@ func (h integrationsHandlers) GetContactEnrichmentRun(w http.ResponseWriter, r *
 		writeRunError(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, toProviderRun(run))
+	httperr.WriteJSON(w, http.StatusOK, providerwire.Run(run))
 }
 
 // requestedCategories converts the wire's optional list into the port's.

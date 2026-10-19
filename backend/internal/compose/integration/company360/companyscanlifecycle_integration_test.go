@@ -35,12 +35,14 @@ import (
 // failingLane answers with the error it was given, or with words no parser
 // takes, so the read exercises the paths a broken lane takes.
 type failingLane struct {
-	err   error
-	calls int
+	err      error
+	calls    int
+	requests []model.Request
 }
 
-func (l *failingLane) Complete(context.Context, model.Request) (model.Response, error) {
+func (l *failingLane) Complete(_ context.Context, request model.Request) (model.Response, error) {
 	l.calls++
+	l.requests = append(l.requests, request)
 	if l.err != nil {
 		return model.Response{}, l.err
 	}

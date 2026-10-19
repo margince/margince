@@ -20,24 +20,24 @@ import { viewerZone } from "../../format/timezone";
 import { LocaleProvider, translate } from "../../i18n";
 import { RecordZoneProvider } from "../../lib/recordzone";
 import {
-  bookingProfile,
-  bookingProposals,
-  bookingSlots,
-} from "../../screens/book.testkit";
-import { proposalEmailBody } from "../../screens/booking-proposal-message";
-import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
 } from "../../testing/story-utils";
+import {
+  bookingProfile,
+  bookingProposals,
+  bookingSlots,
+} from "../booking/book.testkit";
+import { proposalEmailBody } from "../booking/booking-proposal-message";
 import { ContactMeetingsTab } from "./contactmeetings";
 
 type Proposal = components["schemas"]["MeetingProposal"];
 
 // The composer is the boundary here: what this tab owes it is the message and
 // the address it opens on, which is what the stand-in shows.
-vi.mock("../../screens/compose", () => ({
+vi.mock("../mail/compose", () => ({
   ComposeModal: ({
     initialMessage,
     recordAddress,

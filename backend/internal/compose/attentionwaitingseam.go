@@ -141,6 +141,7 @@ func (w attentionWaiting) asWaitingCustomers(
 			ConfirmedRequest:  row.OwedVerdict == activities.OwedVerdictAsksUs,
 			ActionUnconfirmed: row.OwedVerdict == "",
 			OwnerID:           row.OwnerID,
+			OwnerKnown:        row.OwnerKnown,
 			EarlierRequests:   row.EarlierRequests,
 			FirstAskedAt:      row.FirstAskedAt,
 			MeetingBookedAt:   row.MeetingBookedAt,

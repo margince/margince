@@ -12,7 +12,7 @@ import type { MessageKey } from "../i18n/en";
 // It is its own map rather than a reuse of the three that already exist,
 // because none of them is about this subject. `COLD_FIELD_LABELS`
 // (screens/coldfieldlabels.ts) names the enrichment vocabulary.
-// `PROFILE_FIELD_LABELS` (screens/companies.tsx) names company profile facts,
+// `PROFILE_FIELD_LABELS` (features/companies/companies.profile.tsx) names company profile facts,
 // and today.merge's map names the fields a merge compares. This one names the
 // columns a record's UPDATE writes. `historyfieldlabels.test.ts` derives that
 // set from the contract, so a field added upstream fails the gate instead of
@@ -102,11 +102,17 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
 // this lookup carries no entity context, so `suppression_kind` rather than
 // `kind`.
 const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
+  [
+    "commitment_evidence_unavailable",
+    "history.field.commitment_evidence_unavailable",
+  ],
   ["proposal_status", "history.field.proposal_status"],
   ["reminder_status", "history.field.reminder_status"],
   ["invitation_status", "history.field.invitation_status"],
   ["admission", "history.field.admission"],
   ["admission_reason", "history.field.admission_reason"],
+  ["admission_reason_code", "history.field.admission_reason_code"],
+  ["admission_sender_kind", "history.field.admission_sender_kind"],
   ["admission_source", "history.field.admission_source"],
   ["bounce", "history.field.bounce"],
   ["capture_question", "history.field.capture_question"],
@@ -120,6 +126,13 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["decided_by_level", "history.field.decided_by_level"],
   ["disposition", "history.field.disposition"],
   ["domain", "history.field.domain"],
+  ["merged_from_id", "history.field.merged_from_id"],
+  ["merged_into_id", "history.field.merged_into_id"],
+  ["filled", "history.field.filled"],
+  ["relinked_emails", "history.field.relinked_emails"],
+  ["relinked_phones", "history.field.relinked_phones"],
+  ["relinked_relationships", "history.field.relinked_relationships"],
+  ["relinked_activity_links", "history.field.relinked_activity_links"],
   ["lifted_by", "history.field.lifted_by"],
   ["lifted_by_level", "history.field.lifted_by_level"],
   ["lifted_suppression", "history.field.lifted_suppression"],

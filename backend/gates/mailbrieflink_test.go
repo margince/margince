@@ -5,10 +5,10 @@
 
 package gates
 
-// The Brief's address is spelled twice: the frontend routes it
-// (frontend/src/screens/brief.view.ts) and outbound mail links to it
-// (internal/platform/mailcopy/link.go), because a message has to name a view
-// before the app it opens is running.
+// The Brief's address is spelled twice: the frontend routes it, and outbound
+// mail links to it before the app it opens is running. The two spellings are
+// in frontend/src/features/brief/brief.view.ts and
+// internal/platform/mailcopy/link.go.
 //
 // This pair drifts SILENTLY, and in the one direction nobody notices. The app
 // is hash-routed and resolves an unknown view by FALLING BACK to the morning —
@@ -30,9 +30,9 @@ package gates
 //
 // WHAT IT CANNOT SEE: whether the app's route table still answers to "home", or
 // whether the parameter is still called "view". Both are read off the frontend
-// as literals here rather than derived, so a rename of either passes this and
-// is caught by frontend/src/screens/brief.view.test.ts round-tripping every
-// combination it offers.
+// as literals here rather than derived, so a rename of either passes this.
+// frontend/src/features/brief/brief.view.test.ts catches it instead, by
+// round-tripping every combination it offers.
 
 import (
 	"regexp"
@@ -41,7 +41,7 @@ import (
 )
 
 const (
-	frontendBriefView = "../frontend/src/screens/brief.view.ts"
+	frontendBriefView = "../frontend/src/features/brief/brief.view.ts"
 	frontendRouter    = "../frontend/src/lib/router.tsx"
 	backendMailLink   = "internal/platform/mailcopy/link.go"
 )

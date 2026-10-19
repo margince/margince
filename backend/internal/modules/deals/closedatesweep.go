@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
 
 // closeDateBatch bounds how many deals one workspace pass corrects — a
@@ -38,6 +39,8 @@ const closeDateBatch = 200
 
 // CloseDateCorrector drives the sweep; the worker ticks it nightly.
 type CloseDateCorrector struct {
+	language baselanguage.Resolver
+	said     quietCopy
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db       *database.DB
 	policy   CorrectionPolicy
@@ -89,7 +92,9 @@ func (c *CloseDateCorrector) WithClock(clock func() time.Time) *CloseDateCorrect
 // its own job row, so a failed pass is a failed row rather than a log line
 // inside a run River recorded as completed.
 func (c *CloseDateCorrector) SweepWorkspace(ctx context.Context) error {
-	return c.sweepWorkspace(ctx)
+	runner := *c
+	runner.said = quietCopyFor(string(c.language.Resolve(ctx)))
+	return runner.sweepWorkspace(ctx)
 }
 
 // closeDateCandidate is one open deal the SQL pre-filter surfaced; the
@@ -424,4 +429,11 @@ func sameOwner(before, now *ids.UUID) bool {
 		return before == nil && now == nil
 	}
 	return *before == *now
+}
+
+// WithBaseLanguage resolves the language before recording a shared correction.
+func (c *CloseDateCorrector) WithBaseLanguage(language baselanguage.Resolver) *CloseDateCorrector {
+	configured := *c
+	configured.language = language
+	return &configured
 }

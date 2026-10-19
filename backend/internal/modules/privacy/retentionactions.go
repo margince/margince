@@ -78,7 +78,7 @@ func (*RetentionService) archiveDeal(ctx context.Context, tx pgx.Tx, id ids.UUID
 }
 
 func (s *RetentionService) anonymizeContact(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	return anonymizeContactRecord(ctx, tx, id, s.eraser.payloads)
+	return anonymizeContactRecord(ctx, tx, id, s.eraser)
 }
 
 // apply runs ONE action on ONE record in one audited transaction.
@@ -131,16 +131,8 @@ func (s *RetentionService) apply(ctx context.Context, pol retentionPolicy, id id
 
 // Anonymization clears identifiers without suppressing a subject who may return.
 // The erasure parity gate holds table coverage; custom fields need the same depth of scrub.
-func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, payloads PayloadPurger) error {
-	if err := redactSubjectReporting(ctx, tx, ids.From[ids.ContactKind](id)); err != nil {
-		return err
-	}
-	if err := eraseContactMeetingCapabilities(ctx, tx, id, payloads); err != nil {
-		return err
-	}
-	// Both acts have to reach this one: the prose is keyed by contact id, so unlike
-	// the deal-room seats there is nothing the anonymize cannot see.
-	if err := redactIntroductionRequests(ctx, tx, ids.From[ids.ContactKind](id)); err != nil {
+func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser *Eraser) error {
+	if err := eraseContactMeetingCapabilities(ctx, tx, id, eraser.payloads); err != nil {
 		return err
 	}
 	// The identifiers the graph holds the subject by, read BEFORE the deletes
@@ -228,6 +220,12 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, payload
 }
 
 func purgeAnonymizedContactJudgments(ctx context.Context, tx pgx.Tx, id ids.UUID, subjectEmails []string) error {
+	if err := redactSubjectReporting(ctx, tx, ids.From[ids.ContactKind](id)); err != nil {
+		return err
+	}
+	if err := redactIntroductionRequests(ctx, tx, ids.From[ids.ContactKind](id)); err != nil {
+		return err
+	}
 	// The cached brief is the broadest judgement of the set: a model's prose.
 	if err := purgeSubjectBriefCache(ctx, tx, ids.From[ids.ContactKind](id)); err != nil {
 		return err
@@ -252,6 +250,9 @@ func purgeAnonymizedContactJudgments(ctx context.Context, tx pgx.Tx, id ids.UUID
 	}
 	if err == nil {
 		err = deleteRequestSettlementsFor(ctx, tx, id, subjectEmails)
+	}
+	if err == nil {
+		err = redactCommitmentAdmissionsFor(ctx, tx, id, subjectEmails)
 	}
 	if err == nil {
 		err = deleteSubjectHandoffs(ctx, tx, id)

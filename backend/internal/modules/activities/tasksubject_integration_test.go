@@ -70,3 +70,36 @@ func TestABlankSubjectPatchOnANoteKeepsItsBehaviour(t *testing.T) {
 		t.Fatalf("a note's subject stays editable to blank: %v", err)
 	}
 }
+
+func TestAPatchThatEmptiesANotesLastContentIsRefused(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	note := loggedNote(ctx, t, e)
+	id := ids.From[ids.ActivityKind](ids.UUID(note.Id))
+
+	blank := "  "
+	var empty *EmptyEntryError
+	_, err := e.store(nil).UpdateActivity(ctx, id, UpdateActivityInput{Subject: &blank, Body: &blank})
+	if !errors.As(err, &empty) {
+		t.Fatalf("blanking both fields: err = %v, want an empty-entry refusal", err)
+	}
+
+	if _, err := e.store(nil).UpdateActivity(ctx, id, UpdateActivityInput{Subject: &blank}); err != nil {
+		t.Fatalf("blanking the subject of a note that keeps its body: %v", err)
+	}
+	_, err = e.store(nil).UpdateActivity(ctx, id, UpdateActivityInput{Body: &blank})
+	if !errors.As(err, &empty) {
+		t.Fatalf("blanking the body of a note whose subject is already blank: err = %v, want an empty-entry refusal", err)
+	}
+}
+
+func TestTheStoreRefusesAnEmptyNoteWhicheverDoorBuiltIt(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	for _, kind := range []string{"note", "call"} {
+		_, _, err := e.store(nil).LogActivity(ctx, LogActivityInput{Kind: kind, Source: "manual"})
+		if _, ok := errors.AsType[*EmptyEntryError](err); !ok {
+			t.Errorf("%s logged straight to the store: err = %v, want an empty-entry refusal", kind, err)
+		}
+	}
+}

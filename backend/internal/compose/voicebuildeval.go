@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strings"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -83,7 +84,7 @@ type voiceEvaluationResult struct {
 	Classification string
 	Action         string
 	StatusCode     string
-	ReviewReasons  []string
+	Reasons        []crmcontracts.VoiceReviewReason
 }
 
 // splitVoiceHeldOut deterministically reserves up to voiceEvalHeldOutPrompts
@@ -277,14 +278,14 @@ func readVoiceEvalDraft(text string) (voiceEvalDraftReply, error) {
 // evaluateVoiceCandidate drafts against the held-out prompts and scores the
 // candidate. Every model error bubbles unwrapped so the worker can map
 // budget deferral onto the build row.
-func evaluateVoiceCandidate(ctx context.Context, brain completer, artifact ai.VoiceArtifact, personality string, heldOut []ai.VoiceSample, predecessor *ai.VoiceProfileVersion) (voiceEvaluationResult, error) {
+func (said voiceCopy) evaluateVoiceCandidate(ctx context.Context, brain completer, artifact ai.VoiceArtifact, personality string, heldOut []ai.VoiceSample, predecessor *ai.VoiceProfileVersion) (voiceEvaluationResult, error) {
 	if len(heldOut) == 0 {
 		// A starter corpus barely over the build floor cannot spare held-out
 		// samples. The builder's own validation already ran; a FIRST profile
 		// activates as the starter voice, while an unevaluable REBUILD of an
 		// existing profile goes to review — never silently replacing an
 		// evaluated artifact with an unevaluated one.
-		return unevaluatedVoiceResult(artifact, predecessor), nil
+		return said.unevaluatedVoiceResult(artifact, predecessor), nil
 	}
 	drafts := make([]voiceEvalDraft, 0, len(heldOut)*voiceEvalRepeatsPerPrompt)
 	hardFailures := 0
@@ -331,7 +332,7 @@ func evaluateVoiceCandidate(ctx context.Context, brain completer, artifact ai.Vo
 			drafts[base+i].score = round4(0.5*proximity + 0.5*judged)
 		}
 	}
-	return scoreVoiceCandidate(artifact, drafts, hardFailures, structuredValid, predecessor), nil
+	return said.scoreVoiceCandidate(artifact, drafts, hardFailures, structuredValid, predecessor), nil
 }
 
 // voiceEvalJudgeSchema is the judge's answer: a list of scores.

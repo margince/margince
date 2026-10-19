@@ -135,17 +135,24 @@ func (s *Service) checkCredentials(ctx context.Context, tx pgx.Tx, email, plaint
 		}
 		return loginCredentials{}, err
 	}
-	// §27: success resets the streak. Guarded so the common clean login
-	// never churns the row (and its updated_at).
-	if lock.FailedCount != 0 || lock.LockedUntil != nil {
-		if _, err := tx.Exec(ctx,
-			`UPDATE app_user SET failed_login_count = 0, locked_until = NULL WHERE id = $1`,
-			account.UserID); err != nil {
-			return loginCredentials{}, err
-		}
+	if err := resetLockoutStreak(ctx, tx, account.UserID, lock); err != nil {
+		return loginCredentials{}, err
 	}
 	account.DeviceProof = mintDeviceProof(account.UserID, *hash, s.now())
 	return account, nil
+}
+
+// resetLockoutStreak clears the lockout streak on a verified sign-in. The
+// password step of an MFA login runs it inside the transaction errMFARequired
+// rolls back. So for such a member, only the completed second factor clears
+// it. Guarded so a clean sign-in never churns the row (and its updated_at).
+func resetLockoutStreak(ctx context.Context, tx pgx.Tx, userID ids.UserID, lock lockoutState) error {
+	if lock.FailedCount == 0 && lock.LockedUntil == nil {
+		return nil
+	}
+	_, err := tx.Exec(ctx,
+		`UPDATE app_user SET failed_login_count = 0, locked_until = NULL WHERE id = $1`, userID)
+	return err
 }
 
 // recordFailedLogin commits one failed password attempt: the §27 counter
@@ -170,6 +177,22 @@ func detachedForFailure(ctx context.Context) (context.Context, context.CancelFun
 	return context.WithTimeout(context.WithoutCancel(ctx), failureRecordTimeout)
 }
 
+// countFailure folds one failed attempt into a member's lockout streak and reports
+// whether this failure is the one that locked the account. Every door to the
+// same account (password, password change, second factor) counts through it, so
+// they share one lock. The caller holds the app_user row FOR UPDATE and read
+// state under that lock; without it two concurrent failures lose an increment.
+func (s *Service) countFailure(ctx context.Context, tx pgx.Tx, userID ids.UserID, state lockoutState) (bool, error) {
+	now := s.now()
+	next := state.fail(now)
+	if _, err := tx.Exec(ctx,
+		`UPDATE app_user SET failed_login_count = $2, locked_until = $3 WHERE id = $1`,
+		userID, next.FailedCount, next.LockedUntil); err != nil {
+		return false, err
+	}
+	return next.locked(now) && !state.locked(now), nil
+}
+
 func (s *Service) recordFailedLogin(ctx context.Context, email string) error {
 	ctx, cancel := detachedForFailure(ctx)
 	defer cancel()
@@ -188,14 +211,11 @@ func (s *Service) recordFailedLogin(ctx context.Context, email string) error {
 		case err != nil:
 			return err
 		default:
-			now := s.now()
-			next := state.fail(now)
-			if _, err := tx.Exec(ctx,
-				`UPDATE app_user SET failed_login_count = $2, locked_until = $3 WHERE id = $1`,
-				userID, next.FailedCount, next.LockedUntil); err != nil {
+			lockedNow, err := s.countFailure(ctx, tx, userID, state)
+			if err != nil {
 				return err
 			}
-			if next.locked(now) && !state.locked(now) {
+			if lockedNow {
 				outcome = "lockout" // §27: the lock transition is its own audited fact
 			}
 		}

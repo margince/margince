@@ -59,7 +59,7 @@ import (
 // directly, and the Ensure* probes reach it through
 // EnsureActivityContentVisible.
 var audienceScopeMarkers = []string{
-	"ActivityContentClause", "ActivityAudienceArm", "AudienceWorkspaceOnly",
+	"ActivityContentClause", "ActivityAudienceArm", "AudienceWorkspaceOnly", "AutomaticMailContent",
 	"EnsureActivityContentVisible", "EnsureActivityContentVisibleLive",
 	"EnsureActivityWritable",
 	// The documents library reaches the clause two hops down —
@@ -99,6 +99,9 @@ var audienceLiteralMarkers = []*regexp.Regexp{
 // without the audience test and may. Keyed by FILE AND FUNCTION, so a waiver
 // covers one reader and not every reader added to that file afterwards.
 var audienceReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/search/embedgen.go:EmbedGen.HandleEvent": "the activity entry in embedText appends activityIndexable, the same workspace-audience, restriction and erased-evidence predicate used by rebuild and the locked embedding writer. The static string census cannot expand this function call in the map value",
+	"internal/modules/search/embedgen.go:Store.healEntity":     "the repair reader uses the same embedText activity query and activityIndexable predicate as event indexing. It admits only workspace-audience, unrestricted content with retained evidence; the static string census cannot expand the query's function call",
+
 	"internal/compose/tagscout.go:tagScoutSQL":                                       "the tag scout matches a suggestible tag's phrases against captured subjects and bodies as the system principal, across every audience on purpose: a suggestion from mail only its owner may read is shown to that owner. Nothing it reads leaves the pass but activity ids, which become evidence rows; every reader of a suggestion passes auth.ActivityContentClause on EACH cited activity (collections visibleTagSuggestionsQuery), so a suggestion is invisible to anybody who could not open its evidence",
 	"internal/modules/capture/importrow.go:replayClaimIsProvenTx":                    "establishes whether a replay may acquire an import grant by comparing the content and attachment checksums already delivered to that seat; applying the audience it establishes would reject legitimate second-mailbox imports. Only a boolean leaves the query, never stored content. The cost is an internal comparison against a held message; TestAForgedMessageIDBuysNoAccessToAColleaguesHeldMail covers forged message identities and the legitimate second-mailbox case",
 	"internal/compose/assurancebundletask.go:taskStillOpenTx":                        "the nightly assurance pass holding the task it is about to file findings onto, as the system principal. It reads two columns — is_done and archived_at — and what survives the transaction is one boolean: whether this is still a row a rep would open. No subject, no body, no participant and no text of any kind reaches a caller, and the task is one this same pass minted. It composes no audience because the answer decides whether the SWEEP may write, not whether a reader may see: gating it would leave a limited deal's findings filed onto a task somebody had already answered, which is the defect it exists to close. The cost is nil; nothing it reads is returned",

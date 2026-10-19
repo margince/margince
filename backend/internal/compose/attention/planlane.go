@@ -151,7 +151,7 @@ func planRowsOf(entries []PlanWork, now time.Time) []ranked {
 			Actions: []crmcontracts.WorklistItemActions{},
 		}
 		stampDeadline(&row, &due, now)
-		rows = append(rows, ranked{item: row, owner: entry.OwnerID, ownerRef: ownedBy(entry.OwnerID), deadlineAt: due, overdue: deadline.Passed(&due, now), occurredAt: now})
+		rows = append(rows, ranked{item: row, ownerRef: ownedBy(entry.OwnerID), deadlineAt: due, overdue: deadline.Passed(&due, now), occurredAt: now})
 	}
 	return rows
 }

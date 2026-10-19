@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Panel } from "../design-system/panel";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { ListsSection } from "../features/companies/companyraillists";
 import {
   LIVE_ID,
   listsMe,
@@ -20,7 +21,6 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../testing/story-utils";
-import { ListsSection } from "./companyraillists";
 import { RecordListsPanel } from "./recordlists";
 
 // The lists one record is on, on its own page, and the check that says why it

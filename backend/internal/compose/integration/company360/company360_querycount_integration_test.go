@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -41,8 +42,9 @@ import (
 // transaction and GUC plumbing every workspace transaction pays once —
 // what is under test is how the section reads scale, not BEGIN.
 type countingTracer struct {
-	mu    sync.Mutex
-	count int
+	mu            sync.Mutex
+	count         int
+	languageReads int
 }
 
 func (t *countingTracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
@@ -54,6 +56,11 @@ func (t *countingTracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data 
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.count++
+	for _, arg := range data.Args {
+		if key, ok := arg.(string); ok && key == identity.BaseLanguage.Key() {
+			t.languageReads++
+		}
+	}
 	return ctx
 }
 
@@ -124,122 +131,13 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 			"the composite read must be flat in the size of the account, or it is the round-trip stack it replaced",
 			largeCost, smallCost)
 	}
-	// A ceiling as well as a shape: ten sections, a handful of queries each
-	// at most. If this ever needs raising, the reason belongs in the commit
-	// that raises it.
-	//
-	// Raised 25 → 27 for the last_touch section (ADR-0079 arc): it is a new
-	// section, and it costs its own grant check and its own read. Two rather
-	// than one because the read is gated like every other section — a caller
-	// without the activity grant gets silence, not a timestamp.
-	//
-	// Raised 27 → 28 for next_meeting: ONE query, not the two it would take to
-	// read the meeting and then its attendees. The attendees arrive as JSON
-	// from a lateral sub-select carrying their own row-scope predicate, so the
-	// section stays flat in the size of the meeting as well as the account. It
-	// reuses the activity grant the timeline already checked, so it costs no
-	// second admission.
-	//
-	// Raised 28 → 29 for the contacts' internal routes: ONE query for the whole
-	// contact set, not one per contact, which is the difference between a
-	// composite that costs the same on every account and one that costs most on
-	// the accounts with the most contacts. It rides the contact grant the
-	// contacts section already checked, so it costs no second admission.
-	//
-	// Raised 29 → 30 for last_meeting_at: ONE query, the most recent meeting
-	// that has already happened. It is the opposite question from the
-	// next-meeting section — backwards rather than forwards — so it cannot be
-	// read off that section's row, and it carries the activity scope clause
-	// itself rather than trusting a read that asked something else. It reuses
-	// the activity grant the timeline already checked, so it costs no second
-	// admission, and it stays flat in the size of the account like every
-	// other section here.
-	//
-	// It landed without this line, so the assembly issued 30 against a budget
-	// of 29 and every branch cut afterwards inherited a red gate.
-	//
-	// 31 since the contracts block (ADR-0109/A160): one more indexed read for
-	// what the account is under contract for, gated on its own grant. It is
-	// FLAT in the size of the account like every section here — one query
-	// whether the company holds one agreement or forty — which is the property
-	// this budget exists to protect, rather than the absolute number.
-	//
-	// 32 since A165/ADR-0114: the activity visibility probe no longer skips
-	// the unbounded principal — the availability test (a held record reads
-	// as gone, admin included) runs for everyone. One indexed read by primary
-	// key, flat in the size of the account.
-	//
-	// 34 since #1621: the company read now carries how many contacts work at
-	// the account and how many deals are open on it. Two reads, both issued for
-	// the whole company set at once rather than per row — the counts arrive
-	// grouped by company_id, so they are flat in the size of the account
-	// exactly like every section above, which is the property this budget
-	// protects. The number moved without this line and the gate went red on main
-	// for every branch cut afterwards.
-	//
-	// 35 since the projects section: one read of the account's unarchived
-	// projects under the caller's project row scope, capped at 25 rows and
-	// flat in the size of the account.
-	//
-	// 39 since the writable flag: the company, its contacts, its deals and
-	// its projects each answer "may this caller change this row" for their whole
-	// page in ONE statement — auth.StampWritable over the page's ids, plus the
-	// live filter that keeps an archived row from being reported as editable.
-	// Four reads, one per record type on the page rather than one per row, so
-	// they are flat in the size of the account exactly like every section above.
-	// The flatness assertion higher up is what actually protects that; this
-	// number only records where the flat cost now sits.
-	// 42 since the work-in-flight card: three reads that say why the account's
-	// deals and projects need a contact — the overdue task per deal, the same
-	// per project, and the open commitment they made to us per project. Each
-	// is one statement over the whole page's ids, so the cost is flat in the
-	// number of deals and projects exactly like the sections they decorate.
-	//
-	// 43 since the account owes card (#3629): one read of the open promises
-	// filed against the account, bounded by its own limit rather than by how
-	// many there are — the same statement the next-steps section already ran,
-	// asked a second time at a different bound. Flat in the size of the
-	// account, like every section above.
-	// 44 since the harness's admin gained the `tag` grant the real seed
-	// always gave it: one read of the account's tag chips. The section is
-	// not new — assemble.readTags has always run for a caller holding
-	// tag.read, which every production admin does — so this line records a
-	// cost the budget had been blind to rather than a cost just added. One
-	// statement for the account's own chips, flat in the size of the
-	// account like every section above.
-	// 45 since an email says how many files came with it (#3897): one
-	// count of the timeline page's attachments, keyed by activity id over
-	// the whole page rather than asked per row. Flat in the size of the
-	// account like every section above — a page of twenty emails costs the
-	// same one statement as a page of two.
-	// 46 since an email says what HAPPENED to it (#2071): one read of the
-	// page's delivery rows, keyed by activity id over the whole page beside
-	// the attachment count above and for the same reason. Flat in the size of
-	// the account — twenty emails and two cost the one statement — which is
-	// the property this budget protects rather than the absolute number.
-	// 47 since a company says who receives its invoices (#5452): one read of
-	// the account's billing contacts, joined to the contacts it names so the
-	// panel has their titles and addresses without asking per row. Flat in the
-	// size of the account like every section above — an account naming three
-	// billing contacts costs the same one statement as one naming none, which
-	// is what the shape half of this test above has just confirmed.
-	// 48 since the under-contract strip judges "active today" on the
-	// installation's calendar day rather than UTC's (#3266): one read of the
-	// installation timezone, flat in the size of the account — the same one
-	// statement whether the account holds two contracts or two hundred.
-	// 49 since the mail badge tells "everyone here" apart from "whoever this
-	// record admits" (#5749): one read asking which of the page's emails a seat
-	// with no standing could still find. Keyed by activity id over the whole
-	// page, beside the attachment count and the delivery read above and for the
-	// same reason — a page of twenty emails costs the same one statement as a
-	// page of two, which is the property this budget protects rather than the
-	// absolute number. It cannot be asked per row: the word would then grow with
-	// the page, which is the shape this test exists to refuse.
-	// 50 since the account's open commitments are counted from the claims and
-	// tasks the commitment rule files, rather than from the signal table the
-	// health facts already read: one statement over the account's employed
-	// contacts, the same one whether it employs two or two hundred.
-	const budget = 50
+	// Every timeline page reads commitment admission evidence in one batch.
+	// The equality above also holds this cost flat as the account grows.
+	// Shared prose adds one language read, reused by every section.
+	const budget = 52
+	if tracer.languageReads != 2 {
+		t.Errorf("two assemblies read base language %d times, want once each", tracer.languageReads)
+	}
 	if smallCost > budget {
 		t.Errorf("one 360 issued %d queries, budget is %d", smallCost, budget)
 	}

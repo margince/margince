@@ -11,9 +11,9 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { EntityRef } from "../components/entityref";
+import { DealBulkBar } from "../features/deals/dealbulk";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { DealBulkBar } from "./dealbulk";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];

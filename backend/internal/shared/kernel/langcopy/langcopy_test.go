@@ -47,3 +47,10 @@ func TestASpokenNamesItsLanguage(t *testing.T) {
 		t.Fatalf("a German Spoken names itself %q", got)
 	}
 }
+
+func TestZeroSpokenUsesEnglishForBothProseAndLanguage(t *testing.T) {
+	var said langcopy.Spoken
+	if said.Lang() != textlang.English || said.Say(langcopy.Phrase{En: "English"}) != "English" {
+		t.Fatal("zero value language and prose disagree")
+	}
+}

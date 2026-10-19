@@ -52,6 +52,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
+// mergeAuditVerb is the audit action a merge writes.
+const mergeAuditVerb = "merge"
+
 const (
 	historyLabelSource = "../frontend/src/lib/historyfieldlabels.ts"
 	syntheticLabelMap  = "const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>(["
@@ -85,17 +88,20 @@ func TestEveryProjectedAuditKeyHasALabel(t *testing.T) {
 	for _, parsed := range files {
 		consts := constantsByPackage[filepath.Dir(parsed.Path)]
 		for _, site := range auditSitesIn(parsed) {
-			if auditDoorsWithBeforeImage[site.door] {
+			action, known := site.action(consts)
+			// The record's history prints a merge's images beside an update's
+			// fields, on the archived record and on the survivor.
+			readAsALine := known && action == mergeAuditVerb
+			if auditDoorsWithBeforeImage[site.door] && !readAsALine {
 				continue
 			}
-			action, known := site.action(consts)
 			entity, entityKnown := resolveString(site.argAt(auditEntityTypeArg), consts)
 			// An unresolvable verb or record type is READ AS PROJECTED rather
 			// than skipped. Under-recognition is the one direction a census
 			// must not have: a site this walk cannot place would otherwise
 			// carry its keys past the map unasked, which is exactly how the
 			// original gap survived.
-			if (known && !actions[action]) || (entityKnown && !entities[entity]) {
+			if (known && !actions[action] && !readAsALine) || (entityKnown && !entities[entity]) {
 				continue
 			}
 			for _, key := range site.imageKeys(t, consts, callsByPackage[filepath.Dir(parsed.Path)]) {

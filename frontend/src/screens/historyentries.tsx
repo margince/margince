@@ -28,6 +28,7 @@ import { HistoryEdgeDetail } from "./historyedge";
 import { HistoryFieldDiff } from "./historyfielddiff";
 import { LeftBehindNotice, useLeftBehind } from "./historyleftbehind";
 import { historyLine } from "./historyline";
+import { isMergeReference, MergedRecordName } from "./historymergedref";
 import { historyRows } from "./historyreversal";
 import { actorName, ReversalPairRow } from "./historyreversalrow";
 import { undoRefusalKey, VERSION_SKEW_CODE } from "./historyundo";
@@ -92,9 +93,11 @@ export function useRecordHistory(
 function EntryFieldDetail({
   changes,
   currency,
+  kind,
 }: Readonly<{
   changes: readonly EntryFieldChange[];
   currency: string | null | undefined;
+  kind: EntityKind;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -108,12 +111,16 @@ function EntryFieldDetail({
       {changes.map((change) => (
         <li key={change.field} className="entry-field">
           <span>{historyFieldLabel(change.field, t)}</span>
-          <HistoryFieldDiff
-            field={change.field}
-            oldValue={change.oldValue}
-            newValue={change.newValue}
-            values={valueCtx}
-          />
+          {isMergeReference(change.field) && change.newValue ? (
+            <MergedRecordName kind={kind} id={change.newValue} />
+          ) : (
+            <HistoryFieldDiff
+              field={change.field}
+              oldValue={change.oldValue}
+              newValue={change.newValue}
+              values={valueCtx}
+            />
+          )}
         </li>
       ))}
     </ul>
@@ -362,7 +369,7 @@ function HistoryEntryRow({
         {edge ? (
           <HistoryEdgeDetail edge={edge} />
         ) : (
-          <EntryFieldDetail changes={changes} currency={currency} />
+          <EntryFieldDetail changes={changes} currency={currency} kind={kind} />
         )}
         {restore && (
           <UndoButton

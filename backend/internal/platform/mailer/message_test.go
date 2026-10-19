@@ -21,12 +21,12 @@ import (
 func sendAndParse(t *testing.T, subject, body, messageID string) (*mail.Message, string) {
 	t.Helper()
 	relay := startFakeRelay(t, false)
-	host, port := relay.addrParts(t)
+	host, port := relay.Address(t)
 	s := SMTP{Host: host, Port: port, FromAddress: "privacy@example.test"}
 	if err := s.SendIdentified(context.Background(), "ada@example.test", subject, body, messageID); err != nil {
 		t.Fatalf("SendIdentified: %v", err)
 	}
-	raw := relay.received()
+	raw := relay.Received()
 	msg, err := mail.ReadMessage(strings.NewReader(raw))
 	if err != nil {
 		t.Fatalf("the relay received an unparseable message: %v\n%s", err, raw)
@@ -110,14 +110,14 @@ func TestAShortSubjectWithSpacesDecodesBackExactly(t *testing.T) {
 // failure: the dispatcher would retry and mail a second copy.
 func TestAFailedQuitAfterTheMessageWasAcceptedIsASuccess(t *testing.T) {
 	relay := startFakeRelay(t, false)
-	relay.dropOnQuit = true
-	host, port := relay.addrParts(t)
+	relay.DropOnQuit = true
+	host, port := relay.Address(t)
 	s := SMTP{Host: host, Port: port, FromAddress: "crm@example.test"}
 
 	if err := s.SendIdentified(context.Background(), "ada@example.test", "s", "b", "x@y.test"); err != nil {
 		t.Fatalf("SendIdentified reported %v for a message the relay accepted", err)
 	}
-	if relay.received() == "" {
+	if relay.Received() == "" {
 		t.Fatal("the relay received nothing, so this test proves nothing about QUIT")
 	}
 }

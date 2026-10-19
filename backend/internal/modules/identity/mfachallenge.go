@@ -82,6 +82,14 @@ func (s *Service) mfaMandatory(ctx context.Context) (bool, error) {
 // transaction. Resolving the identity afterwards (as a fresh Authenticate
 // would) could fail AFTER the commit, answering the member an error while a
 // live session and a success audit row already exist.
+//
+// The code is a six-digit secret, so guesses are capped per account, durably.
+// The transaction first takes the member row FOR UPDATE and refuses while the
+// account lockout holds. A wrong code commits its failure into that same
+// streak. Concurrent guesses queue on the row lock, and each sees every failure
+// before it. So neither parallel requests nor a pile of fresh challenges buys
+// more than the lockout threshold. A wrong code leaves the nonce unspent, so the
+// member can retype a mistyped code on the same challenge.
 func (s *Service) CompleteMFAChallenge(ctx context.Context, userID ids.UserID, jti, code string) (Identity, string, error) {
 	rawWsID, ok := principal.WorkspaceID(ctx)
 	if !ok {
@@ -98,16 +106,30 @@ func (s *Service) CompleteMFAChallenge(ctx context.Context, userID ids.UserID, j
 		return Identity{}, "", err
 	}
 	var id Identity
+	// A wrong code is a refusal the transaction must commit, because the
+	// failure it counts has to land. It travels out beside the nil return.
+	var wrongCode error
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := spendMFAChallenge(ctx, tx, jti); err != nil {
+		lock, err := lockSecondFactorStreak(ctx, tx, userID)
+		if err != nil {
 			return err
+		}
+		if lock.locked(s.now()) {
+			return errAccountLocked
 		}
 		verified, err := s.verifyMFA(ctx, tx, wsID, userID, code)
 		if err != nil {
 			return err
 		}
 		if !verified {
-			return errBadMFACode
+			wrongCode = errBadMFACode
+			return s.recordFailedSecondFactor(ctx, tx, userID, lock)
+		}
+		if err := spendMFAChallenge(ctx, tx, jti); err != nil {
+			return err
+		}
+		if err := resetLockoutStreak(ctx, tx, userID, lock); err != nil {
+			return err
 		}
 		if err := insertSession(ctx, tx, userID, tokenHash); err != nil {
 			return err
@@ -119,10 +141,43 @@ func (s *Service) CompleteMFAChallenge(ctx context.Context, userID ids.UserID, j
 		id, idErr = signedInIdentity(ctx, tx, wsID, userID)
 		return idErr
 	})
+	if err == nil {
+		err = wrongCode
+	}
 	if err != nil {
 		return Identity{}, "", err
 	}
 	return id, token, nil
+}
+
+// lockSecondFactorStreak reads the member's lockout streak under the app_user row
+// lock that serializes every second-factor attempt on the account. A member who
+// stopped being live is refused as neutrally as a wrong code.
+func lockSecondFactorStreak(ctx context.Context, tx pgx.Tx, userID ids.UserID) (lockoutState, error) {
+	var lock lockoutState
+	err := tx.QueryRow(ctx,
+		`SELECT failed_login_count, locked_until, updated_at FROM app_user
+		  WHERE id = $1 AND `+LiveMemberSQL("")+`
+		  FOR UPDATE`, userID).
+		Scan(&lock.FailedCount, &lock.LockedUntil, &lock.LastFailure)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return lockoutState{}, errBadMFACode
+	}
+	return lock, err
+}
+
+// recordFailedSecondFactor counts a wrong code against the lockout streak the
+// password shares, and leaves the evidence.
+func (s *Service) recordFailedSecondFactor(ctx context.Context, tx pgx.Tx, userID ids.UserID, lock lockoutState) error {
+	lockedNow, err := s.countFailure(ctx, tx, userID, lock)
+	if err != nil {
+		return err
+	}
+	detail := "wrong second-factor code"
+	if lockedNow {
+		detail = "wrong second-factor code; the account is now locked"
+	}
+	return logAuthEvent(ctx, tx, userID, "mfa_challenge_failed", detail)
 }
 
 // spendMFAChallenge consumes a challenge's one-time nonce: the first completion

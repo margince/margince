@@ -7,10 +7,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { AccountMenu } from "../app/account";
 import { pickOption } from "../design-system/select-testing";
+import { allowance } from "../features/ai/ai-admin.testkit";
+import { SIGN_OFF_QUERY } from "../features/mail/composesignoff";
 import { LOCALES, localeNameKey, translate } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
-import { allowance } from "./ai-admin.testkit";
-import { SIGN_OFF_QUERY } from "./composesignoff";
 import { SettingsScreen, tabContent } from "./settings";
 import {
   auditEntry,
@@ -772,10 +772,9 @@ describe("SettingsScreen restructured pages", () => {
     expect(asked.some((url) => url.includes("/audit-log"))).toBe(false);
   });
 
-  // The admin-ONLY surface inside System health, from an ops seat that reaches
-  // the page on the reindex read. The page's own gate is not the card's, so this
-  // is what proves opening the page did not also hand over what the server
-  // spells with RequireAdmin.
+  // The job health inside System health, from a seat that reaches the page on
+  // the reindex read alone. The page's own gate is not the card's, so this
+  // proves opening the page did not also hand over what `job_health` guards.
   it("renders the reindex on System health for an operator holding only that grant, and withholds job health", async () => {
     vi.stubGlobal(
       "fetch",
@@ -796,8 +795,8 @@ describe("SettingsScreen restructured pages", () => {
     expect(
       await screen.findByRole("heading", { name: "Search index" }),
     ).toBeTruthy();
-    // The job report keeps its place and withholds its content: the endpoint is
-    // the admin's, and an absent card here would read as "nothing is queued".
+    // The job report keeps its place and withholds its content. The endpoint is
+    // gated by `job_health`, and an absent card would read as "nothing is queued".
     expect(
       screen.getByRole("heading", { name: "Background jobs" }),
     ).toBeTruthy();

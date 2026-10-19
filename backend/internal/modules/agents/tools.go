@@ -15,7 +15,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
 
@@ -65,7 +64,6 @@ type StageResolver interface {
 // those functions. A declared verb with no tool is not a gap to describe here:
 // TestEveryDeclaredToolVerbIsRegistered fails the build for it.
 func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, ownership FieldOwnership, consumerMail ConsumerMail, duplicates OpenDuplicatesFor, tagOffer TagOfferFor) {
-	r.Register(searchRecords{p: p, name: r.seats})
 	r.Register(readRecord{p: p, name: r.seats})
 	r.Register(createRecord{p: p, duplicates: duplicates, tagOffer: tagOffer, language: r.language})
 	r.Register(updateRecord{p: p, ownership: ownership, staging: r.approvals, language: r.language})
@@ -109,63 +107,6 @@ func schema(s string) json.RawMessage {
 	return json.RawMessage(compact.String())
 }
 
-// --- search_records (🟢 read) ---
-
-type searchRecords struct {
-	p    datasource.SystemOfRecordProvider
-	name SeatNamer
-}
-
-func (t searchRecords) Spec() mcp.ToolSpec {
-	return mcp.ToolSpec{
-		Name: "search_records", Title: "Search records", Version: toolVersionV1,
-		Description:   searchRecordsCopy.render(),
-		Instead:       searchRecordsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		Unlisted: true,
-		// The cross-object search operation, not the per-type list ones: those
-		// declare list_records now, and naming them here would leave the two
-		// tools claiming one operation family between them.
-		OpenAPIOp: "search",
-		InputSchema: schema(`{"type":"object","properties":{
-			"q":{"type":"string","description":"What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched. Not accepted with record_type=partner, which has no text of its own."},
-			"record_type":{"type":"string","enum":["contact","company","deal","lead","project","partner"],"description":"Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these. A sweep never visits partner: name it to reach one."},
-			"record_types":{"type":"array","items":{"type":"string","enum":["contact","company","deal","lead","project"]},"description":"Restrict the sweep to these types, in place of record_type."},
-			"limit":{"type":"integer","minimum":1,"maximum":50},
-			"cursor":{"type":"string","description":"Keyset cursor from the previous page, which a page reporting more always carries. A sweep of every type resumes by it too."}},
-			"additionalProperties":false}`),
-		OutputSchema: schemaFor[SearchRecordsResult](),
-	}
-}
-
-func (t searchRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
-	var args struct {
-		Q           string   `json:"q"`
-		RecordType  string   `json:"record_type"`
-		RecordTypes []string `json:"record_types"`
-		Limit       int      `json:"limit"`
-		Cursor      string   `json:"cursor"`
-	}
-	if err := decodeArgs(in, &args); err != nil {
-		return nil, err
-	}
-	if args.RecordType != "" && len(args.RecordTypes) > 0 {
-		return nil, &BadArgsError{Field: "record_types", Cause: errors.New("name one record_type or a list of record_types, not both")}
-	}
-	q := datasource.SearchQuery{Text: args.Q, Limit: args.Limit, Cursor: args.Cursor}
-	if args.RecordType != "" {
-		q.EntityTypes = []datasource.EntityType{datasource.EntityType(args.RecordType)}
-	}
-	for _, recordType := range args.RecordTypes {
-		q.EntityTypes = append(q.EntityTypes, datasource.EntityType(recordType))
-	}
-	res, err := t.p.Search(ctx, q)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(searchResult(ctx, t.name, res))
-}
-
 type wireRecord struct {
 	RecordType string          `json:"record_type"`
 	ID         ids.UUID        `json:"id"`
@@ -200,12 +141,12 @@ func newWireRecord(ctx context.Context, rec datasource.Record) wireRecord {
 	}
 }
 
-func searchResult(ctx context.Context, name SeatNamer, res datasource.SearchResult) SearchRecordsResult {
+func listResult(ctx context.Context, name SeatNamer, res datasource.SearchResult) ListRecordsResult {
 	records := make([]wireRecord, 0, len(res.Records))
 	for _, r := range res.Records {
 		records = append(records, newWireRecord(ctx, r))
 	}
-	return SearchRecordsResult{Records: withOwners(ctx, name, records), NextCursor: res.NextCursor}
+	return ListRecordsResult{Records: withOwners(ctx, name, records), NextCursor: res.NextCursor}
 }
 
 // --- read_record (🟢 read) ---

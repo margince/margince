@@ -76,13 +76,13 @@ func RegisterReportEvidenceTool(r *Registry, p datasource.SystemOfRecordProvider
 	if search == nil {
 		return
 	}
-	r.Register(searchReportEvidence{hydrator: searchContext{p: p}, search: search})
+	r.Register(searchReportEvidence{p: p, search: search})
 }
 
 type searchReportEvidence struct {
-	// hydrator is search_context's read-back, used for its seam read alone.
-	hydrator searchContext
-	search   ReportEvidenceSearcher
+	// p reads each hit back through readServable, as search_context does.
+	p      datasource.SystemOfRecordProvider
+	search ReportEvidenceSearcher
 }
 
 func (t searchReportEvidence) Spec() mcp.ToolSpec {
@@ -197,7 +197,7 @@ func (t searchReportEvidence) answer(ctx context.Context, found ReportEvidence, 
 	}
 	dropped := false
 	for _, hit := range found.Citations[:min(limit, len(found.Citations))] {
-		record, readable, err := t.hydrator.read(ctx, hit.Ref)
+		record, readable, err := readServable(ctx, t.p, hit.Ref)
 		if err != nil {
 			return SearchReportEvidenceResult{}, err
 		}
@@ -210,7 +210,7 @@ func (t searchReportEvidence) answer(ctx context.Context, found ReportEvidence, 
 		})
 	}
 	for _, id := range found.Counterexamples[:min(limit, len(found.Counterexamples))] {
-		record, readable, err := t.hydrator.read(ctx, datasource.EntityRef{Type: found.Entity, ID: id})
+		record, readable, err := readServable(ctx, t.p, datasource.EntityRef{Type: found.Entity, ID: id})
 		if err != nil {
 			return SearchReportEvidenceResult{}, err
 		}
@@ -221,7 +221,7 @@ func (t searchReportEvidence) answer(ctx context.Context, found ReportEvidence, 
 		result.Counterexamples = append(result.Counterexamples, newWireRecord(ctx, record))
 	}
 	for _, id := range found.Abstentions[:min(limit, len(found.Abstentions))] {
-		record, readable, err := t.hydrator.read(ctx, datasource.EntityRef{Type: found.Entity, ID: id})
+		record, readable, err := readServable(ctx, t.p, datasource.EntityRef{Type: found.Entity, ID: id})
 		if err != nil {
 			return SearchReportEvidenceResult{}, err
 		}

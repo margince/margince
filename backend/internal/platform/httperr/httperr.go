@@ -274,6 +274,7 @@ type Fault struct {
 // of those spends its whole step budget on a call that was already settled.
 var transientCodes = map[string]struct{}{
 	"rate_limited":               {},
+	IdempotencyInProgressCode:    {},
 	"incumbent_budget_exhausted": {},
 	schemaChangedCode:            {},
 	writeContentionCode:          {},
@@ -346,6 +347,8 @@ func Classify(err error) (Fault, bool) {
 			Detail:  withDetails.Detail,
 			Details: withDetails.Details,
 			Fields:  withDetails.Fields,
+
+			RetryAfterSeconds: withDetails.RetryAfterSeconds,
 		}, true
 	}
 
@@ -488,6 +491,9 @@ type DetailedError struct {
 	// a surface reading Fields and a client reading the body can never be
 	// looking at two different lists.
 	Fields []FieldError
+
+	// RetryAfterSeconds, when positive, is rendered as a Retry-After header.
+	RetryAfterSeconds int
 }
 
 func (e *DetailedError) Error() string { return fmt.Sprintf("%s: %s", e.Code, e.Detail) }

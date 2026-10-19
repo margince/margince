@@ -245,7 +245,7 @@ func TestVoiceEvalDraftCaseRunsWhatProductionRuns(t *testing.T) {
 		},
 		{
 			name: "a draft carrying a tell", reply: voiceEvalTellReply,
-			wantReason: "anti-AI hard failures survived sanitizing", wantTell: "ai_ese",
+			wantReason: "Anti-AI hard failures remaining after sanitizing: 3", wantTell: "ai_ese",
 			wantResult: aitasks.OutcomeAccepted,
 		},
 	}
@@ -253,7 +253,7 @@ func TestVoiceEvalDraftCaseRunsWhatProductionRuns(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			artifact, sample := voiceEvalCorpus(t)
 			brain := &voiceEvalBrainRecorder{draftReply: tc.reply}
-			result, err := evaluateVoiceCandidate(context.Background(), brain, artifact,
+			result, err := voiceCopyFor("en").evaluateVoiceCandidate(context.Background(), brain, artifact,
 				"Writes short. States the verdict first.", []ai.VoiceSample{sample}, nil)
 			if err != nil {
 				t.Fatalf("the evaluation did not complete: %v", err)
@@ -357,7 +357,11 @@ func voiceEvalRecordCount(t *testing.T, result voiceEvaluationResult, key string
 // to activate on, and it says why in the reasons a reviewer is shown.
 func assertEvaluationReason(t *testing.T, result voiceEvaluationResult, want string) {
 	t.Helper()
-	reasons := strings.Join(result.ReviewReasons, "; ")
+	texts := make([]string, len(result.Reasons))
+	for i, reason := range result.Reasons {
+		texts[i] = reason.Text
+	}
+	reasons := strings.Join(texts, "; ")
 	if want == "" {
 		if result.Action != voiceActionAutoActivated {
 			t.Errorf("the evaluation took %q on a clean candidate, and said: %s", result.Action, reasons)

@@ -14,18 +14,18 @@ import { RoleBadge } from "../design-system/rbac";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
+import { MfaSettingRow } from "../features/sign-in/mfacard";
+import { PasswordSettingRow } from "../features/sign-in/passwordcard";
+import { ThisDevicePanel } from "../features/sign-in/thisdevice";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import { unwrap } from "../lib/problem";
 import { useLogout, useMe } from "../lib/session";
 import { setThemeChoice, THEME_CHOICES, useThemeChoice } from "../lib/theme";
-import { MfaSettingRow } from "./mfacard";
-import { PasswordSettingRow } from "./passwordcard";
 import {
   DisplayNameSettingRow,
   GreetingNameSettingRow,
 } from "./settings-names";
 import { SignatureSettingRow } from "./settingssignaturerow";
-import { ThisDevicePanel } from "./thisdevice";
 
 export function AccountSettings() {
   return (

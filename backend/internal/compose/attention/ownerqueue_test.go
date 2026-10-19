@@ -136,7 +136,7 @@ func TestBothNarrowingPassesKeepTheSameWaitingRow(t *testing.T) {
 			Source: sourceWaiting,
 			Deal:   &crmcontracts.WorklistDealFacts{OwnerId: &alice},
 		},
-		owner: theRep,
+		ownerRef: ownedBy(theRep),
 	}
 
 	reader := principal.Principal{Type: principal.PrincipalHuman, UserID: theRep}

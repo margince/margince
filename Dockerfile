@@ -370,7 +370,7 @@ ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # ── web: runtime ──────────────────────────────────────────────────────────────
 # nginx-unprivileged runs as a non-root user (uid 101) and listens on 8080.
-FROM nginxinc/nginx-unprivileged:alpine@sha256:884e0b7f42f303641b0f4e78755aea647521dca0b89ca3be7992ad78b5c07434 AS web
+FROM nginxinc/nginx-unprivileged:alpine@sha256:378d0c32f6562f7fd9629170797f57d2b953aa09be983b3daaf4809bb039ca00 AS web
 
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=web-build /app/frontend/dist /usr/share/nginx/html

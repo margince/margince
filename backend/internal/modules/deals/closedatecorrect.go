@@ -178,7 +178,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		RemainingOpenStages: StagesRemaining(cand.remainingOpen),
 		Asking:              AskingIsThisDateRight,
 		Flags:               hygiene.Flags,
-		Basis:               pacedBasis(StagesToGo(cand.remainingOpen)),
+		Basis:               c.said.pacedBasis(StagesToGo(cand.remainingOpen)),
 	}
 
 	takenBack, err := c.answeredByAReversal(ctx, cand, hygiene, proposal)
@@ -354,7 +354,7 @@ func (c *CloseDateCorrector) quietBasis(ctx context.Context, dealID ids.DealID, 
 	if err != nil {
 		c.log.WarnContext(ctx, "close-date quiet review fell back to a generic reason",
 			"deal_id", dealID, "error", err)
-		return quietFallbackBasis
+		return c.said.Say(quietWords.Fallback)
 	}
-	return quietReason(facts, names, now, loc)
+	return c.said.quietReason(facts, names, now, loc)
 }

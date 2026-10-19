@@ -12,7 +12,7 @@ import (
 )
 
 func TestCalendarWriteGrantMatchesFrontend(t *testing.T) {
-	source, err := os.ReadFile("../../../../frontend/src/screens/connector-status.ts")
+	source, err := os.ReadFile("../../../../frontend/src/features/capture/connector-status.ts")
 	if err != nil {
 		t.Fatal(err)
 	}

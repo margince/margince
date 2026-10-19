@@ -165,7 +165,8 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/capture:MarkWithheldFromWorkspaceTx": "withheld_from_workspace = true is a one-way constant, and withholding twice withholds",
 	"internal/modules/comms:ClearPayloadRef":               "payload_ref = NULL after the vault entry is already destroyed, and one clearing is one clearing; the order is what the file explains",
 	"internal/modules/comms:reKey":                         "the re-key writes the provider's own message id and derives the thread key in SQL from the row's current one, so nothing read into Go is written back",
-	"internal/modules/identity:checkCredentials":           "failed_login_count = 0 and locked_until = NULL on a successful sign-in are constants, and two sign-ins clearing one lockout clear it once",
+	"internal/modules/identity:resetLockoutStreak":         "failed_login_count = 0 and locked_until = NULL on a successful sign-in are constants, and two sign-ins clearing one lockout clear it once",
+	"internal/modules/identity:countFailure":               "every caller reads the streak it folds under its own app_user FOR UPDATE in the same transaction (recordFailedLogin, recordFailedChange, lockSecondFactorStreak), one hop past what this witness's AST walk follows",
 	"internal/modules/identity:Authenticate":               "the idle window rolls forward in SQL from now(), never from a value read into Go, so two requests on one session both move it forward",
 	"internal/modules/integrations:applyOneStored":         "applied_at = now() marks one stored row as applied, and the selector that chose it will not choose it again",
 	"internal/modules/integrations:discardClaims":          "claims_unwritten = true and next_attempt_at = NULL are constants naming what the run could not do, not a state this caller read",
@@ -176,7 +177,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:foldGhostInto":              "the fold coalesces every column onto the survivor's own value in SQL, so the new value is computed from the two rows as the statement sees them rather than from a value read into Go; the grouping is held FOR UPDATE by holdsItsGrouping first",
 	"internal/modules/dealrooms:touchSession":              "last_seen_at = now() on a session the visitor already holds, with room_id beside the id as a second key",
 	"internal/modules/identity:SaveMyLocale":               "the member writes their own locale under the live-member predicate that keeps a retired seat from writing at all, and the value is what they chose rather than a state read from the row",
-	"internal/modules/identity:SaveMyDelivery":             "the member's own delivery preferences, written from what they chose under the same live-member predicate",
 	"internal/modules/knowledge:ArchiveCorpus":             "archived_at = now() on the corpus and, set-based, on its chunks and documents; a corpus archived twice is archived",
 	"internal/modules/knowledge:setReindexing":             "the reindex flag is the value the caller chose rather than one it read, and the liveness predicate beside the id only keeps an archived corpus from being marked",
 	"internal/modules/contacts:touchRevertedContact":       "the aggregate bump after a revert removed a child row. RevertProviderFills holds this contact FOR UPDATE from the top of its transaction — LockRow with IncludeArchived, because the contact may be archived — so the guard is the caller's lock rather than a second one here; re-taking it would be the liveness refusal this function exists to avoid",
@@ -272,7 +272,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/privacy:anonymizeSubjectRows":   "terminal absolute write: the erasure overwrites the PII columns regardless of concurrent state, by design",
 	"internal/modules/privacy:archiveActivity":        "terminal absolute write: the retention sweep archives an over-age activity regardless of concurrent state, by design — a concurrent edit does not make the record younger",
 	"internal/modules/privacy:archiveDeal":            "terminal absolute write: the retention sweep archives an over-age lost/won deal regardless of concurrent state, by design",
-	"internal/modules/privacy:eraseActivityContent":   "terminal absolute write: the sweep's activity/erase action empties the body and stamps the tombstone subject regardless of concurrent state, by design",
 	"internal/modules/privacy:anonymizeContactRecord": "terminal absolute write: the sweep's contact/anonymize action overwrites the PII columns regardless of concurrent state, by design",
 
 	// A function the package-level folding attributes a statement to without its

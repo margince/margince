@@ -56,6 +56,7 @@ type Delivery struct {
 	// today is that Art. 17 destroys the material and clears this reference.
 	PayloadRef       string
 	PayloadExpiresAt *time.Time
+	DueAt            *time.Time
 	// LinkID is the confirm_token this message carries, when it carries one.
 	LinkID     ids.UUID
 	Provider   string

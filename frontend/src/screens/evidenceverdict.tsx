@@ -5,12 +5,12 @@ import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
+import { factsKey } from "../features/companies/companyfactspanel";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { invalidateCompany } from "../lib/recordwritekeys";
 import { useRecordZone } from "../lib/recordzone";
-import { factsKey } from "./companyfactspanel";
 import "./evidenceverdict.css";
 
 // A human's verdict on a machine's claim: agree with it, or correct it.

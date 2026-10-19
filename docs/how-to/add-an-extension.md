@@ -3,7 +3,8 @@
 
 Ship a named add-on with a version under `extensions/<name>/`, without editing files of the main project. A
 unit can add a country pack, agent tools under the rules, HTTP routes, its own tables and secrets. It can also
-add scheduled jobs, event handlers, capture from its own provider, or a message transport. Read
+add scheduled jobs, event handlers, capture from its own provider, a message transport, or a source of
+accounting data. Read
 [explanation/extensibility.md](../explanation/extensibility.md) first. It says why the seam is a declaration
 checked when the code compiles, and what the surface promises. For a country pack, the live capability is
 retention floors; the example below builds one.
@@ -699,6 +700,49 @@ The outbound rules of the tier still apply: you may not spend an outbound scope 
 Set `Activity.ChannelProvider` on the records you capture on that transport. A message with no transport cannot
 be replied to on anything, and the gate refuses it.
 
+## Read an accounting system: give a finance source
+
+A `FinanceSource` lets the finance card on a company page show what your accounting system invoiced and
+was paid. The core ships no source of its own. `extensions/finance-demo` is the demo source and the
+smallest one to copy:
+
+```go
+FinanceSources: []extension.FinanceSource{{
+	Provider: "books", Check: check, Customers: customers, InvoicesFor: invoicesFor,
+}},
+Secrets: []extension.SecretsRequest{{Key: "books_token", Scope: extension.SecretScopeWorkspace}},
+```
+
+```go
+func check(ctx context.Context, rt extension.Runtime, conn accounting.Connection) error
+func customers(ctx context.Context, rt extension.Runtime, conn accounting.Connection) ([]accounting.Customer, error)
+func invoicesFor(ctx context.Context, rt extension.Runtime, conn accounting.Connection, customerID string) (accounting.Ledger, error)
+```
+
+The core does the rest. An admin connects your source on **Settings → Integrations**, and the core
+calls `Check` first. An error there refuses the connect and stores nothing. The sync then reads
+`Customers`, and the admin links each customer to a company. Every six hours, and when the admin asks,
+the sync reads `InvoicesFor` for each linked customer. It writes only what changed.
+
+- **Report only what the vendor said.** `accounting.Invoice` has no status field.
+  "Overdue" depends on today, and the mirror works it out on read. Send the dates and money values as
+  the vendor holds them.
+- **Give the same answer for the same data.** The sync compares a hash of each record. A field that
+  moves on its own, such as a time you read from the clock, writes the row again on every pass.
+- **Keep the credential in your own secrets.** Ask for a `workspace` key, read it with
+  `rt.Secrets().Get`, and store a new token with `Put` when the vendor hands one back. Each call gets a
+  new `Runtime` that ends when the call returns, so do not keep one.
+- **Read every page.** `Customers` returns the whole list, and `InvoicesFor` the whole ledger of one
+  customer. Follow the vendor's paging until it says there is no more.
+- **Return an error when you could not read.** The sync then marks the connection as failed, keeps what it
+  read last time, and tries again on the next pass. Nothing is half written.
+- **Never write to the accounting system.** The surface has no way to, and the unit must not add one.
+- **`Provider` is `snake_case`**, with the rule a `Channel` provider follows. Two units cannot declare the
+  same provider: the boot refuses it.
+
+Test the three functions against answers you recorded from the vendor's own API docs, so the test needs
+no network. A check against the live vendor runs on a schedule, outside the merge gate.
+
 ## Write the unit's own test
 
 Each unit is its own Go module, so the `./...` of the backend never reaches it. It carries its own tests, which
@@ -732,7 +776,8 @@ the gates:
    A unit that is only a country pack asks for none, so its list is empty.
 
    The manifest also records what the unit **reaches**. That is its `secrets`, its `subscriptions`, its
-   `ingress` (with the keys the source stands behind) and its `channels` (with `supplies_transport`).
+   `ingress` (with the keys the source stands behind), its `channels` (with `supplies_transport`) and its
+   `finance_sources`.
 
    Commit the manifest with the unit. The drift gate fails one that is old or edited by hand. The manifest is
    read from the AST of your `New()`. The returned `extension.Extension` value, and every field it reads,

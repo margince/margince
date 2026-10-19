@@ -35,7 +35,7 @@ import (
 
 const (
 	outcomeOwner      = "internal/compose/connectors_outcome.go"
-	outcomeScreenGlob = "../frontend/src/screens/connectors*.tsx"
+	outcomeScreenGlob = "../frontend/src/features/capture/connectors*.tsx"
 	outcomePanelsMap  = "../frontend/src/screens/onboarding-connect-panels.tsx"
 )
 

@@ -105,9 +105,11 @@ export function SettingRow({
           {label}
         </span>
         {description !== undefined && (
-          <p className="settingrow-description" id={descriptionId}>
+          // A div, not a paragraph: a row may put its verbs under the name.
+          // A button menu is a block that a <p> cannot hold.
+          <div className="settingrow-description" id={descriptionId}>
             {description}
-          </p>
+          </div>
         )}
       </div>
       <div className="settingrow-control">

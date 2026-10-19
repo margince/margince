@@ -13,11 +13,11 @@ import { Heading } from "../design-system/heading";
 import { WriteRefused } from "../design-system/querystates";
 import { SettingRow } from "../design-system/settingrow";
 import type { Toast } from "../design-system/toast";
+import { useSignOff } from "../features/mail/composesignoff";
+import { SignatureHtml } from "../features/mail/signaturehtml";
 import { useT } from "../i18n";
 import { unwrap } from "../lib/problem";
-import { useSignOff } from "./composesignoff";
 import { useSaveSignature } from "./settingssignature";
-import { SignatureHtml } from "./signaturehtml";
 
 type Draft = { body: string; title: string; phone: string };
 

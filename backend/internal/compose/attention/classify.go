@@ -281,12 +281,6 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		// saying "unassigned" in its reasons while naming an owner beside them
 		// is a row a reader cannot make sense of.
 		ownerRef: ownerFromAssignee(item.AssigneeId),
-		// And the SAME id where the scope filters read it. Without this a task
-		// answers nobody to answersTo, so keepTeams keeps it as unowned work —
-		// which is the hole its own comment describes for link-less tasks, and
-		// which now also puts an outside-team colleague's user id on the wire
-		// through the owner field. One assignee, read by both.
-		owner: assigneeID(item.AssigneeId),
 	}
 }
 

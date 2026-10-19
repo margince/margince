@@ -123,7 +123,7 @@ func promiseBehind(ctx context.Context, moment crmcontracts.ContactMoment, page 
 
 // mayBeDone turns a promise card into the question whether our last email
 // kept it, when that email went out strictly after the promise was made.
-func mayBeDone(ctx context.Context, moment crmcontracts.ContactMoment, page *crmcontracts.Contact360, sent *wroteTo, zone *time.Location) (crmcontracts.ContactMoment, bool) {
+func (said momentCopy) mayBeDone(ctx context.Context, moment crmcontracts.ContactMoment, page *crmcontracts.Contact360, sent *wroteTo, zone *time.Location) (crmcontracts.ContactMoment, bool) {
 	if sent == nil {
 		return crmcontracts.ContactMoment{}, false
 	}
@@ -133,7 +133,7 @@ func mayBeDone(ctx context.Context, moment crmcontracts.ContactMoment, page *crm
 	}
 	label := sent.subject
 	if label == "" {
-		label = "Your email"
+		label = said.Say(momentWords.YourEmail)
 	}
 	at := sent.at
 	email := sent.id
@@ -150,7 +150,7 @@ func mayBeDone(ctx context.Context, moment crmcontracts.ContactMoment, page *crm
 		Rule:                moment.Rule,
 		RuleVersion:         moment.RuleVersion,
 		EvidenceFingerprint: fingerprintOf(evidence) + promise.holder,
-		Headline:            fmt.Sprintf("You may have done this — you wrote to them on %s", at.In(zone).Format("2 Jan")),
+		Headline:            fmt.Sprintf(said.Say(momentWords.MaybeDone), at.In(zone).Format(time.DateOnly)),
 		WhyNow:              strings.TrimRight(moment.Headline, ".") + ". " + moment.WhyNow,
 		// An inference from timing, not an observed fact: the email may be
 		// about something else entirely.
@@ -159,7 +159,7 @@ func mayBeDone(ctx context.Context, moment crmcontracts.ContactMoment, page *crm
 		FreshnessAt: &at,
 		RecommendedAction: crmcontracts.ContactMomentAction{
 			Kind:  crmcontracts.ContactMomentActionKindCompleteTask,
-			Label: "Done",
+			Label: said.Say(momentWords.Done),
 			State: crmcontracts.ContactMomentActionStateAvailable,
 		},
 		MayBeDone: &crmcontracts.ContactMomentMayBeDone{
@@ -175,12 +175,12 @@ func mayBeDone(ctx context.Context, moment crmcontracts.ContactMoment, page *crm
 // the reader already answered Not yet to it. Not yet dismisses the question,
 // so the plain promise card comes back rather than the walk moving past the
 // promise.
-func proposer(
+func (said momentCopy) proposer(
 	ctx context.Context,
 	page *crmcontracts.Contact360, sent *wroteTo, zone *time.Location, dismissed func(crmcontracts.ContactMoment) bool,
 ) func(crmcontracts.ContactMoment) crmcontracts.ContactMoment {
 	return func(moment crmcontracts.ContactMoment) crmcontracts.ContactMoment {
-		if question, ok := mayBeDone(ctx, moment, page, sent, zone); ok && !dismissed(question) {
+		if question, ok := said.mayBeDone(ctx, moment, page, sent, zone); ok && !dismissed(question) {
 			return question
 		}
 		return moment

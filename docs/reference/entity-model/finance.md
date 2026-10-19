@@ -17,7 +17,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `last_error_code` | `text` |  |  |
 | `last_success_at` | `timestamp with time zone` |  |  |
 | `provider` | `text` | yes |  |
-| `status` | `text`, default `'connecting'::text` | yes | One of `connecting`, `active`, `error`, `disconnected`. |
+| `status` | `text`, default `'connecting'::text` | yes | `connecting` until the first sync finishes; `error` when the last one failed. |
 | `sync_cursor` | `text` |  |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -71,7 +71,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 **Indexes**
 
-- `finance_customer_link_company_ux`: `unique, btree (connection_id, company_id) WHERE (archived_at IS NULL)`
+- `finance_customer_link_company_ix`: `btree (connection_id, company_id) WHERE (archived_at IS NULL)`
 - `finance_customer_link_external_ux`: `unique, btree (connection_id, external_customer_id) WHERE (archived_at IS NULL)`
 - `finance_customer_link_pkey`: `unique, btree (id)`
 

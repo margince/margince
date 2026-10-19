@@ -29,7 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
-const frontendSiteReadStops = "../frontend/src/screens/sitereadkind.ts"
+const frontendSiteReadStops = "../frontend/src/features/companies/sitereadkind.ts"
 
 // tsStopReason reads one quoted entry out of the TypeScript array.
 var tsStopReason = regexp.MustCompile(`["']([a-z_]+)["']`)

@@ -175,7 +175,7 @@ func (s *Store) CountOpenCommitmentsDue(ctx context.Context, owner ids.UserID, b
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		ownerPos := arg(owner)
 		byPos := arg(by)
-		activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+		activityScope, err := claimContentClause(ctx, arg)
 		if err != nil {
 			return err
 		}
@@ -207,7 +207,7 @@ func openCommitmentsDue(
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	ownerPos := arg(owner)
 	byPos := arg(by)
-	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+	activityScope, err := claimContentClause(ctx, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +278,7 @@ func (s *Store) CountOpenCommitmentsDueByOwner(
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		ownersPos := arg(owners)
 		byPos := arg(by)
-		activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+		activityScope, err := claimContentClause(ctx, arg)
 		if err != nil {
 			return err
 		}

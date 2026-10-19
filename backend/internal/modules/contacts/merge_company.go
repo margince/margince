@@ -11,6 +11,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -231,7 +232,7 @@ func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontrac
 func finalizeCompanyMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID, filled map[string]any, active []fieldcatalog.Column) (crmcontracts.Company, error) {
 	auditID, err := storekit.Audit(ctx, tx, "merge", "company", sourceID.UUID,
 		map[string]any{auditKeyMergedInto: nil},
-		map[string]any{auditKeyMergedInto: targetID, auditKeyFilled: filled})
+		map[string]any{auditKeyMergedInto: targetID, auditKeyFilled: filledColumns(filled)})
 	if err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("audit company merge: %w", err)
 	}
@@ -240,6 +241,13 @@ func finalizeCompanyMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids
 		MergedIntoId: openapi_types.UUID(targetID.UUID),
 	}); err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("emit company.merged: %w", err)
+	}
+	before := map[string]any{auditKeyMergedFrom: nil}
+	after := map[string]any{auditKeyMergedFrom: sourceID.UUID}
+	maps.Copy(before, heldNothing(filled))
+	maps.Copy(after, filled)
+	if _, err := storekit.Audit(ctx, tx, "merge", "company", targetID.UUID, before, after); err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("audit company merge on the survivor: %w", err)
 	}
 	out, err := readCompany(ctx, tx, targetID, storekit.LiveOnly, active)
 	if err != nil {

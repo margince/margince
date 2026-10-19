@@ -172,7 +172,7 @@ var piiTables = map[string]piiHandling{
 			// the row keeps saying a meeting happened while saying nothing
 			// about what was in it, and a sweep that stopped writing it would
 			// leave the old subject line standing.
-			"subject = $2",
+			"subject = @subject",
 			// Read FROM the words being emptied, so it describes erased text
 			// rather than the row. Same ruling as reply_verdict on the sibling
 			// eraser: a conclusion drawn from content does not outlive it.
@@ -382,7 +382,8 @@ var piiTables = map[string]piiHandling{
 	// reply verdicts' own ground, and more plainly still: a subject asking what
 	// we concluded about their mail is asking for exactly this, and here the
 	// answer can be an outstanding obligation TO them.
-	"activity_request_settlement": {erasureWrite: true, sarRead: true},
+	"activity_request_settlement":   {erasureWrite: true, sarRead: true},
+	"activity_commitment_admission": {erasureWrite: true, sarRead: true},
 	// The preference-center token (0048) is a live capability over the
 	// subject's consent record — held by whoever has the emailed
 	// List-Unsubscribe URL, honoured with no session at all. Registered so

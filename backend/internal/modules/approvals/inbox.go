@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -105,6 +104,11 @@ func (a row) effectiveStatus(now time.Time) string {
 	return a.Status
 }
 
+// PendingAt applies the same lazy expiry as the approval inbox.
+func (a row) PendingAt(now time.Time) bool {
+	return a.effectiveStatus(now) == statusPending
+}
+
 // inboxBatch is the scan window List filters per round trip; List keeps
 // paging until the display limit is met or the table is exhausted, so a
 // burst of undecidable stagings can never starve older visible rows out
@@ -126,10 +130,14 @@ const statusPending = "pending"
 // every type of that id, so the transport refuses a half-reference and one
 // never reaches here.
 type ListInput struct {
-	Status     *string
-	Kind       *string
-	TargetType *string
-	TargetID   *ids.UUID
+	// RequestedForReader narrows personal attention before pagination.
+	RequestedForReader bool
+	RequestedForOwners []ids.UUID
+	OnlyUnassigned     bool
+	Status             *string
+	Kind               *string
+	TargetType         *string
+	TargetID           *ids.UUID
 	// BundleID narrows the read to the proposals ONE act staged together. It
 	// composes with the other filters rather than replacing them, and it does
 	// not relax the per-row decidability probe: a member the caller could not
@@ -247,7 +255,12 @@ func (s *Service) List(ctx context.Context, in ListInput) ([]row, storekit.Page,
 // page returned, so the batches walk forward through the table instead of
 // re-filtering the newest rows on every request.
 func scanInbox(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInput, start *keysetStart) ([]row, storekit.Page, error) {
-	decide := func(a row) (bool, error) { return decidable(ctx, tx, p, a) }
+	decide := func(a row) (bool, error) {
+		if !requestedInScope(a, p.UserID, in) {
+			return false, nil
+		}
+		return decidable(ctx, tx, p, a)
+	}
 	var out []row
 	from := start
 	for {
@@ -304,7 +317,10 @@ func listForTarget(ctx context.Context, tx pgx.Tx, p principal.Principal, in Lis
 		scanned = &batch[len(batch)-1]
 	}
 	granted := func(a row) (bool, error) {
-		return requireDecisionGrants(p, a) == nil && !withheldFromOtherSeats(p, a), nil
+		if !requestedInScope(a, p.UserID, in) {
+			return false, nil
+		}
+		return proposalReadable(ctx, tx, p, a)
 	}
 	out, _, err := appendDecidable(batch, nil, in.Limit+1, granted)
 	if err != nil {

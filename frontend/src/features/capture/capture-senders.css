@@ -1,0 +1,21 @@
+/* SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion
+ */
+
+/* An address has no spaces, so without this it would hold the column open
+   past the panel's edge. */
+.capture-senders-address {
+  overflow-wrap: anywhere;
+}
+
+/* The sender column's one line. Zero width with a full-width floor keeps the
+   address out of the table's content sizing, so the column takes the spare
+   width and the ellipsis falls at its edge instead of widening the table. */
+.capture-senders-sender {
+  display: block;
+  width: 0;
+  min-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

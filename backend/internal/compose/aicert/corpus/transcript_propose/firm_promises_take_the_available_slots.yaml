@@ -1,0 +1,48 @@
+{
+  "name": "firm_promises_take_the_available_slots",
+  "task": "transcript_propose",
+  "site": "next_steps",
+  "source": "hand_authored",
+  "sanitized_by": "hand_authored/codex",
+  "fixture": [
+    "Mira: I will try to send a brochure sometime.",
+    "Mira: I will send pricing by Friday.",
+    "Theo: I will send the security checklist by Friday.",
+    "Ines: I will provide transaction volumes by Friday.",
+    "Dana: I will send the contract by Friday.",
+    "Petra: I will deliver the interface specification by Friday.",
+    "Theo: Maybe I will follow up about hosting sometime."
+  ],
+  "expect": {
+    "outcome": "accepted",
+    "answer": [
+      {
+        "line": 2,
+        "due_date": "2026-03-06"
+      },
+      {
+        "line": 3,
+        "due_date": "2026-03-06"
+      },
+      {
+        "line": 4,
+        "due_date": "2026-03-06"
+      },
+      {
+        "line": 5,
+        "due_date": "2026-03-06"
+      },
+      {
+        "line": 6,
+        "due_date": "2026-03-06"
+      }
+    ],
+    "rubric": "Return the five firm dated promises. Tentative remarks on lines 1 and 7 must not displace any of those commitments or exceed the limit.",
+    "bands": {
+      "certified_min": 70,
+      "degraded_min": 50,
+      "floor": 40
+    }
+  },
+  "commitment_band": "firm"
+}

@@ -9,8 +9,11 @@ package compose
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -23,64 +26,42 @@ import (
 // on the decision's audit row, which is where "who approved this" belongs.
 const transcriptProposalActor = "agent:transcript-proposer"
 
-// commitmentFrom names who made one promise a transcript states.
-//
-// The owner arrives as PROSE — "Lena Fischer", "Frédéric", "the team" —
-// because that is what a transcript states. A colleague is matched strictly
-// (identity.ResolveColleague): an exact name or email, one live seat, or
-// nobody. Failing that, a contact linked to the meeting under exactly that name
-// is the customer who promised. A name that is neither, or both, stays unnamed,
-// and the rule proposes it rather than guessing whose it is: a customer sharing
-// a colleague's name must not have their promise written as our task.
+// commitmentFrom rechecks the quoted promiser against the meeting participants.
 func (p *TranscriptProposer) commitmentFrom(
 	ctx context.Context, tx pgx.Tx, step proposedStep,
-	reading activities.TranscriptReading, activityID ids.ActivityID,
+	reading activities.TranscriptReading, activityID ids.ActivityID, asOf time.Time,
 ) (Commitment, error) {
 	cited := quotedFromTranscript(step, reading.Lines)
 	owner := strings.TrimSpace(step.Owner)
 	c := Commitment{
+		AsOf:             asOf,
 		Extractor:        transcriptProposalActor,
 		SourceActivityID: activityID.UUID,
+		ReadMessages:     []ids.UUID{activityID.UUID},
 		Summary:          step.Summary,
 		Quote:            cited,
 		Party:            owner,
 		DueDate:          step.DueDate,
 		Confidence:       float64(step.Confidence),
 		Links:            reading.Links,
-		Body:             transcriptCommitmentBody(owner, step.SourceLines),
 		Evidence:         stepEvidence(step, reading.Lines, activityID),
 	}
 	reader := extractorContext(ctx, transcriptProposalActor)
-	kind, party := claimKindOurs, "name:"+strings.ToLower(owner)
-	colleague, found, err := p.users.ResolveColleague(reader, owner)
+	parties, err := p.messages.PartiesOf(reader, tx, activityID.UUID)
 	if err != nil {
 		return Commitment{}, err
 	}
-	linked := linkedContacts(reading.Links)
-	contact, named, err := p.contacts.ContactNamedAmong(reader, tx, linked, owner)
-	if err != nil {
-		return Commitment{}, err
-	}
-	switch {
-	case found && !named:
-		seat := colleague.UserID
-		c.Seat, party = &seat, "seat:"+seat.String()
-	case named && !found:
-		c.Theirs, kind, party = &contact, claimKindTheirs, "contact:"+contact.String()
-	}
-	// A colleague's promise is filed on the customer's record too, when the
-	// meeting names exactly one; with several, nothing says which was promised.
-	// An unnamed one is filed nowhere until a human says whose it is.
-	if c.Seat != nil && len(linked) == 1 {
-		promisedTo := ids.From[ids.ContactKind](linked[0])
-		c.PromisedTo = &promisedTo
-	}
+	verified := verifiedCommitmentParties(parties)
+	kind, party := attributeCommitment(&c, step.PromiserRef, verified)
+	c.NeedsConfirmation = !transcriptPromiserSpoke(step, reading.Lines, verified)
+	c.Body = transcriptCommitmentBody(c.Party, step.SourceLines)
 	// The first cited line is part of the span: the same words said twice in
 	// one meeting are two promises.
 	span := cited
 	if len(step.SourceLines) > 0 {
 		span = strconv.Itoa(step.SourceLines[0]) + ":" + cited
 	}
+	c.Span = span
 	c.Locator = commitmentLocator(activityID.UUID, kind, party, span)
 	return c, nil
 }
@@ -108,31 +89,68 @@ func transcriptCommitmentBody(owner string, sourceLines []int) string {
 	if len(lines) > 1 {
 		where = "lines " + strings.Join(lines, ", ")
 	}
-	return fmt.Sprintf("%s committed to this in the meeting transcript (%s).", owner, where)
+	return fmt.Sprintf("Promiser: %s. Commitment in the meeting transcript (%s).", owner, where)
 }
 
 // transcriptReadDetail says what a reading produced besides its questions. A
 // run that finishes with nothing and no reason reads exactly like a broken
 // one, which FinishTranscriptRead refuses to let collapse, and a task written
 // without asking is said here because no question shows it.
-func transcriptReadDetail(found int, staged transcriptStaging) string {
-	switch {
-	case found == 0:
-		return "this transcript states no next steps clearly enough to propose one"
-	case staged.tasks > 0 || staged.watched > 0:
-		return "added " + counted(staged.tasks, "task for a colleague", "tasks for colleagues") +
-			" and noted " + counted(staged.watched, "commitment the customer made", "commitments the customer made")
-	case len(staged.proposals) > 0:
-		return ""
+func (said transcriptCopy) transcriptReadDetail(found int, staged transcriptStaging) string {
+	var details []string
+	if staged.tasks > 0 {
+		details = append(details, said.count(staged.tasks, transcriptWords.TasksOne, transcriptWords.Tasks))
+	}
+	if staged.watched > 0 {
+		details = append(details, said.count(staged.watched, transcriptWords.WatchedOne, transcriptWords.Watched))
+	}
+	if len(staged.proposals) > 0 {
+		details = append(details, said.count(len(staged.proposals), transcriptWords.ProposalsOne, transcriptWords.Proposals))
+	}
+	for _, reason := range slices.Sorted(maps.Keys(staged.withheld)) {
+		details = append(details, said.count(staged.withheld[reason], transcriptWords.WithheldOne, transcriptWords.Withheld, said.transcriptWithheldReason(reason)))
+	}
+	if len(details) > 0 {
+		return strings.Join(details, "; ")
+	}
+	if found == 0 {
+		return said.Say(transcriptWords.Empty)
+	}
+	return said.Say(transcriptWords.AlreadyKnown)
+}
+
+func (said transcriptCopy) transcriptWithheldReason(outcome CommitmentOutcome) string {
+	switch activities.CommitmentAdmissionReason(outcome) {
+	case activities.CommitmentHistorical:
+		return said.Say(transcriptWords.History)
+	case activities.CommitmentIncomplete, activities.CommitmentContextUnassessed:
+		return said.Say(transcriptWords.Incomplete)
+	case activities.CommitmentSourceUnknown:
+		return said.Say(transcriptWords.SourceUnknown)
+	case activities.CommitmentTimeContradicted:
+		return said.Say(transcriptWords.Contradicted)
+	case activities.CommitmentMeetingCancelled:
+		return said.Say(transcriptWords.Cancelled)
+	case activities.CommitmentMeetingPending:
+		return said.Say(transcriptWords.Pending)
 	default:
-		return "every next step this transcript states has already been put to you"
+		return said.Say(transcriptWords.SourceMissing)
 	}
 }
 
-// counted spells a count with the noun in the right number.
-func counted(n int, one, many string) string {
-	if n == 1 {
-		return "1 " + one
+func transcriptPromiserSpoke(step proposedStep, lines []string, parties []commitmentParty) bool {
+	promiser, found := referencedPromiser(step.PromiserRef, parties)
+	if !found || strings.TrimSpace(promiser.Name) == "" {
+		return false
 	}
-	return strconv.Itoa(n) + " " + many
+	for _, number := range step.SourceLines {
+		if number < 1 || number > len(lines) {
+			continue
+		}
+		speaker, _, labeled := strings.Cut(lines[number-1], ":")
+		if labeled && strings.EqualFold(strings.TrimSpace(speaker), strings.TrimSpace(promiser.Name)) {
+			return true
+		}
+	}
+	return false
 }

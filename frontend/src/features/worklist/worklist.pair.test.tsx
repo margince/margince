@@ -177,7 +177,7 @@ describe("deciding a duplicate pair on the row", () => {
       "fetch",
       vi.fn(
         async () =>
-          new Response(JSON.stringify({ code: "conflict" }), {
+          new Response(JSON.stringify({ code: "already_disposed" }), {
             status: 409,
             headers: { "content-type": "application/problem+json" },
           }),
@@ -230,7 +230,11 @@ describe("deciding a duplicate pair on the row", () => {
   // on a loaded runner as on an idle laptop.
   it.each([
     { what: "a refusal", code: "permission_denied", status: 403 },
-    { what: "a pair somebody else settled", code: "conflict", status: 409 },
+    {
+      what: "a pair somebody else settled",
+      code: "already_disposed",
+      status: 409,
+    },
   ])(
     "keeps $what on screen until it is dismissed",
     async ({ code, status }) => {

@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem, unwrap } from "../lib/problem";
 import {
   ManualCompanySetup,
   useCompanyContextCapabilities,
-} from "./company-context";
+} from "../features/companies/company-context";
+import { throwProblem, unwrap } from "../lib/problem";
 import { OnboardingConversationScreen } from "./onboarding-conversation/index";
 import "./onboarding.css";
 import type { MessageKey } from "../i18n/en";

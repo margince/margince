@@ -11,6 +11,7 @@ import { type Visibility, VisibilityBadge } from "./visibility";
 import "./composed.css";
 
 import {
+  CommitmentReviewFlag,
   conversationDirection,
   directionClass,
   groupCountLabel,
@@ -231,6 +232,9 @@ function ThreadMessage({
           <b className="tl-msg-who">{lead.actor}</b>
           {lead.verb && <span>{lead.verb}</span>}
           {visibility && <VisibilityBadge state={visibility} />}
+          <CommitmentReviewFlag
+            count={entry.withheld ? 0 : entry.commitmentReviewCount}
+          />
         </span>
         <MessageWords entry={entry} t={t} />
       </span>
@@ -318,6 +322,14 @@ export function ThreadRow({
                 message. It goes on the card that stands for it, never on the
                 members inside. */}
             {conversationDirection(newest) && <MoveFlag entry={newest} />}
+            <CommitmentReviewFlag
+              count={group.entries.reduce(
+                (count, entry) =>
+                  count +
+                  (entry.withheld ? 0 : (entry.commitmentReviewCount ?? 0)),
+                0,
+              )}
+            />
             {/* The newest member's verbs stand for the conversation: Reply
                 answers it, and Relink on it offers to move the rest of the
                 thread. */}

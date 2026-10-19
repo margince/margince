@@ -268,12 +268,16 @@ func finalizeLeadPromotion(ctx context.Context, tx pgx.Tx, id ids.LeadID, in Pro
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, leadPromotedPayload(contactID, outcome, in.Trigger, in.EvidenceActivityID, carried)); err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("emit lead.promoted: %w", err)
 	}
-	// A fill-only merge that changed nothing has no contact.updated to emit —
-	// a changed_fields note with no fields would be a false claim, so skip it
-	// (lead.promoted above still records the promotion). A create always emits
-	// contact.created.
+	// A fill-only merge that changed nothing emits no contact.updated: a note
+	// with no fields would be a false claim. A create always emits contact.created.
 	if contactPayload := promotedContactPayload(contact, merged, mergeFields); contactPayload != nil {
-		if err := storekit.EmitEvent(ctx, tx, auditID, contactID.UUID, contactPayload); err != nil {
+		contactAuditID := auditID
+		if merged {
+			if contactAuditID, err = storekit.Audit(ctx, tx, "update", "contact", contactID.UUID, heldNothing(mergeFields), mergeFields); err != nil {
+				return crmcontracts.Contact{}, fmt.Errorf("audit the contact a lead merged into: %w", err)
+			}
+		}
+		if err := storekit.EmitEvent(ctx, tx, contactAuditID, contactID.UUID, contactPayload); err != nil {
 			return crmcontracts.Contact{}, fmt.Errorf("emit %s: %w", contactPayload.EventType(), err)
 		}
 	}

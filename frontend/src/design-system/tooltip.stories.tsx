@@ -3,6 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import { Button } from "./atoms";
 import { useTruncationTooltip } from "./tooltip";
 
 /**
@@ -102,4 +104,27 @@ export const NearTheTop: Story = {
       </Card>
     </div>
   ),
+};
+
+export const EscapeDismisses: Story = {
+  render: () => (
+    <Card>
+      <Row text={LONG} />
+      <Button>Elsewhere</Button>
+    </Card>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const elsewhere = canvas.getByRole("button", { name: "Elsewhere" });
+    elsewhere.focus();
+    await userEvent.hover(canvas.getByText(LONG));
+    // In the body: the tip is portalled out of the story's root.
+    const body = within(document.body);
+    await waitFor(() => expect(body.getByRole("tooltip")).toBeVisible());
+
+    await userEvent.keyboard("{Escape}");
+
+    await waitFor(() => expect(body.queryByRole("tooltip")).toBeNull());
+    await expect(elsewhere).toHaveFocus();
+  },
 };

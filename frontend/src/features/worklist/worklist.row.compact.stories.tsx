@@ -212,3 +212,31 @@ export const VisibleStandingAndReason: Story = {
     return <WorklistRow {...args} />;
   },
 };
+
+// An update about a MAIL. An activity has no page, so the name is a press that
+// opens the message in its drawer. It reads as the other names do.
+export const UpdateAboutAMail: Story = {
+  args: {
+    ...COMPACT,
+    item: {
+      id: "row-notice",
+      source: "notice",
+      category: "tasks",
+      level: 3,
+      consequence: "none",
+      title: "Summary updated",
+      detail: "The buyer asked to hold the Q4 price until Friday.",
+      because: [],
+      actions: ["acknowledge"],
+      subject: {
+        type: "activity",
+        id: "01a05500-0000-7000-8000-0000000000f1",
+        label: "Pricing for Q4",
+      },
+    },
+  },
+  render: (args) => {
+    stubRow();
+    return <WorklistRow {...args} />;
+  },
+};

@@ -6,6 +6,7 @@ import type { components } from "../api/schema";
 import { EntityRef } from "../components/entityref";
 import { writtenAsMarkdown } from "../design-system/activitytimeline";
 import { Badge, Modal } from "../design-system/atoms";
+import { CommitmentReview } from "../design-system/commitmentreview";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Heading } from "../design-system/heading";
@@ -37,11 +38,15 @@ export function OpenActivityDrawer({
   activityId,
   zone,
   onClose,
+  activity,
 }: Readonly<{
   activityId: string | null;
   /** The record's timezone, which the page owns. */
   zone: string;
   onClose: () => void;
+  /** The answer of a live read the host already holds, so the drawer does not
+   *  read the activity a second time. Absent, the drawer reads it. */
+  activity?: Activity;
 }>) {
   const [shown, setShown] = useState<string | null>(activityId);
   if (activityId !== null && activityId !== shown) {
@@ -56,6 +61,7 @@ export function OpenActivityDrawer({
       open={activityId !== null}
       zone={zone}
       onClose={onClose}
+      given={activity?.id === shown ? activity : undefined}
     />
   );
 }
@@ -65,17 +71,19 @@ function ActivityDetail({
   open,
   zone,
   onClose,
+  given,
 }: Readonly<{
   activityId: string;
   open: boolean;
   zone: string;
   onClose: () => void;
+  given?: Activity;
 }>) {
   const t = useT();
   const titleId = useId();
   // Read while closing too, so the panel keeps its words as it animates out.
-  const read = useActivity(activityId);
-  const activity = read.data;
+  const read = useActivity(activityId, given === undefined);
+  const activity = given ?? read.data;
   const withheld = activity?.content_state === "withheld";
   const title = !activity
     ? t("activity.detail.none")
@@ -168,6 +176,12 @@ function ActivityBody({
         )}
       </div>
       {withheldOrBody(activity, t)}
+      {activity.content_state !== "withheld" && (
+        <CommitmentReview
+          decisions={activity.commitment_admissions}
+          zone={zone}
+        />
+      )}
     </div>
   );
 }

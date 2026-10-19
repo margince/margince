@@ -50,7 +50,7 @@ const sourceRoot = join(frontendRoot, "src");
  */
 const notARecordZone = new Map<string, string>([
   [
-    "screens/brief.weekly.learnings.tsx",
+    "features/brief/brief.weekly.learnings.tsx",
     "one learning of a list, titled by kind, inside the learnings panel's body",
   ],
   [
@@ -207,7 +207,7 @@ describe("a titled zone is a Panel", () => {
     // have reached — including one a directory deep, because a walk that
     // stopped at the top level clears any floor the flat screens supply.
     expect(modules.length).toBeGreaterThan(80);
-    expect(modules.map(pathOf)).toContain("screens/company360.tsx");
+    expect(modules.map(pathOf)).toContain("features/companies/company360.tsx");
     expect(modules.map(pathOf)).toContain("components/recordfields.tsx");
     expect(modules.map(pathOf)).toContain(
       "features/contacts/contactnetwork/edgedetail.tsx",

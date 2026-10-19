@@ -93,21 +93,14 @@ type deltaEntry struct {
 	removed bool
 }
 
-// entryIDs drops the timestamps and the tombstones: what survives is what
-// there is something to FETCH for, whatever window it belongs to. A removal
-// carries no message, so it travels its own way (removedIDs).
-func entryIDs(entries []deltaEntry) []string {
-	if len(entries) == 0 {
-		return nil
-	}
-	out := make([]string, 0, len(entries))
-	for _, e := range entries {
-		if e.removed {
-			continue
+func fetchableEntries(entries []deltaEntry) []MessageRef {
+	var messages []MessageRef
+	for _, entry := range entries {
+		if !entry.removed {
+			messages = append(messages, MessageRef{ID: entry.id, ReceivedAt: entry.receivedAt})
 		}
-		out = append(out, e.id)
 	}
-	return out
+	return messages
 }
 
 // countWithin counts the DISTINCT entries a walk named that belong to
@@ -142,7 +135,7 @@ func countWithin(entries []deltaEntry, after, before time.Time) int {
 	return len(seen)
 }
 
-func (a *httpAPI) DeltaInit(ctx context.Context, accessToken, folder string, after time.Time) ([]string, string, error) {
+func (a *httpAPI) DeltaInit(ctx context.Context, accessToken, folder string, after time.Time) ([]MessageRef, string, error) {
 	opened := time.Now().UTC()
 	// $select, so the walk is answered in the two fields it reconciles on rather
 	// than in whatever Graph would send by default: receivedDateTime is not
@@ -187,7 +180,7 @@ func (a *httpAPI) DeltaInit(ctx context.Context, accessToken, folder string, aft
 			"graph: the %s anchor closed holding %d message(s) from the window but the folder holds %d since %s: %w",
 			folder, walked, held, after.UTC().Format(time.RFC3339), ErrUnreachable)
 	}
-	return entryIDs(entries), deltaLink, nil
+	return fetchableEntries(entries), deltaLink, nil
 }
 
 // countInFolder reports how many messages one folder holds for a filter, so a
@@ -223,7 +216,7 @@ func (a *httpAPI) countInFolder(ctx context.Context, accessToken, folder, filter
 	return *out.Count, nil
 }
 
-func (a *httpAPI) Delta(ctx context.Context, accessToken, deltaLink string) ([]string, []string, string, error) {
+func (a *httpAPI) Delta(ctx context.Context, accessToken, deltaLink string) ([]MessageRef, []string, string, error) {
 	if err := a.sameAPIOrigin(deltaLink); err != nil {
 		return nil, nil, "", err
 	}
@@ -231,10 +224,10 @@ func (a *httpAPI) Delta(ctx context.Context, accessToken, deltaLink string) ([]s
 	if err != nil {
 		return nil, nil, "", err
 	}
-	return entryIDs(entries), removedIDs(entries), next, nil
+	return fetchableEntries(entries), removedIDs(entries), next, nil
 }
 
-// removedIDs is entryIDs' other half: the ids Graph tombstoned in this round.
+// removedIDs names the messages Graph tombstoned in this round.
 func removedIDs(entries []deltaEntry) []string {
 	var out []string
 	for _, e := range entries {

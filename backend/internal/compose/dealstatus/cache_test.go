@@ -116,18 +116,18 @@ func TestTheWordingChangesOnlyWhenTheCacheKeyDoes(t *testing.T) {
 	// nothing able to notice.
 	contact := time.Date(2026, 8, 20, 14, 0, 0, 0, time.UTC)
 	sameDay := time.Date(2026, 8, 20, 23, 30, 0, 0, time.UTC)
-	if got := since(sameDay, contact); got != "today" {
+	if got := statusCopyFor("en").since(sameDay, contact); got != "today" {
 		t.Fatalf("late on the same day = %q, want today", got)
 	}
 	// 24 hours have NOT elapsed, but the calendar day has turned — and so has
 	// the cache key, so the wording must turn with it.
 	justAfterMidnight := time.Date(2026, 8, 21, 0, 30, 0, 0, time.UTC)
-	if got := since(justAfterMidnight, contact); got != "yesterday" {
+	if got := statusCopyFor("en").since(justAfterMidnight, contact); got != "yesterday" {
 		t.Fatalf("just after midnight = %q, want yesterday", got)
 	}
 	// The reverse: 24 hours HAVE elapsed but the day has not turned again.
 	sameDayNextAfternoon := time.Date(2026, 8, 21, 15, 0, 0, 0, time.UTC)
-	if got := since(sameDayNextAfternoon, contact); got != "yesterday" {
+	if got := statusCopyFor("en").since(sameDayNextAfternoon, contact); got != "yesterday" {
 		t.Fatalf("a day later in the afternoon = %q, want yesterday — the key has not moved again", got)
 	}
 }

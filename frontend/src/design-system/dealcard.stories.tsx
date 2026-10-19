@@ -112,8 +112,8 @@ export const BoardCardStatesDark: StoryObj = {
 
 // A card's mail line with the flyout a caller gave it: the last few subjects,
 // read on hover, without opening the deal. The aside's content is the
-// caller's — here the same stacked citations screens/dealmailaside.tsx reads
-// from the timeline, handed in as fixtures — so what this canvas holds is the
+// caller's. Here it is the stacked citations features/deals/dealmailaside.tsx
+// reads from the timeline, handed in as fixtures. So this canvas holds the
 // trigger, the panel and where it sits against the card.
 export const BoardCardMailFlyout: StoryObj = {
   render: () => (

@@ -1,6 +1,6 @@
 import type { Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { WON_REASON_LABELS, WON_REASONS } from "../../screens/winreason";
+import { WON_REASON_LABELS, WON_REASONS } from "../deals/winreason";
 import { KIND_LABEL } from "./approvalkindlabel";
 
 // Re-exported so the surfaces that read the map by name keep their import, and

@@ -14,6 +14,10 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "aiWait.provider":
+    "Nhà cung cấp AI hiện không khả dụng. Công việc sẽ tự động tiếp tục khi nhà cung cấp hoạt động trở lại.",
+  "aiWait.budget":
+    "Ngân sách AI đã đạt giới hạn. Công việc sẽ tự động tiếp tục khi có ngân sách.",
   "reporting.latestSnapshot": "Ảnh chụp mới nhất",
   "reporting.contextDetails": "Chi tiết báo cáo",
   "reporting.targetRemaining": "Còn {amount}",
@@ -1074,8 +1078,12 @@ export const vi = {
     "{subject} đã yêu cầu rà soát pháp lý cho hồ sơ",
   "history.verb.withdrawLegalReview":
     "{subject} đã rút yêu cầu rà soát pháp lý cho hồ sơ",
+  "history.field.commitment_evidence_unavailable":
+    "Bằng chứng cam kết không còn khả dụng",
   "history.field.address": "Địa chỉ",
   "history.field.admission": "Kiểm tra đầu vào tên miền",
+  "history.field.admission_reason_code": "Loại lý do tiếp nhận",
+  "history.field.admission_sender_kind": "Loại người gửi",
   "history.field.admission_reason": "Lý do kiểm tra đầu vào",
   "history.field.admission_source": "Nguồn kiểm tra đầu vào",
   "history.field.amount_minor": "Giá trị",
@@ -1088,6 +1096,14 @@ export const vi = {
   "history.field.corrected": "Đã sửa kết quả",
   "history.field.disposition": "Kết quả xử lý",
   "history.field.domain": "Tên miền",
+  "history.field.merged_from_id": "Gộp vào từ",
+  "history.field.merged_into_id": "Đã gộp vào",
+  "history.field.filled": "Các trường được điền thêm",
+  "history.field.relinked_emails": "Địa chỉ email đã chuyển sang",
+  "history.field.relinked_phones": "Số điện thoại đã chuyển sang",
+  "history.field.relinked_relationships": "Mối quan hệ đã chuyển sang",
+  "history.field.relinked_activity_links": "Liên kết hoạt động đã chuyển sang",
+  "history.mergedRecordUnnamed": "một bản ghi khác",
   "history.field.expected_arr_minor": "ARR dự kiến",
   "history.field.assignee_id": "Giao cho",
   "history.field.body": "Ghi chú",
@@ -2474,6 +2490,15 @@ export const vi = {
   "approval.field.connection_name": "Tên trên LinkedIn",
   "approval.field.connection_company": "Công ty trên LinkedIn",
   "approval.field.contact_name": "Liên hệ trong CRM",
+  "approval.responsibility.requestedFrom": "Người được yêu cầu quyết định",
+  "approval.commitment.promiser": "Người cam kết",
+  "approval.commitment.effect": "Khi phê duyệt",
+  "approval.commitment.unnamedColleague": "Tên đồng nghiệp không khả dụng",
+  "approval.commitment.unverifiedNamed": "Chưa xác minh: {name}",
+  "approval.commitment.unresolved": "Chưa xác định người cam kết",
+  "approval.commitment.assignNamed": "Tạo công việc giao cho {name}.",
+  "approval.commitment.assignDecider":
+    "Tạo công việc giao cho người phê duyệt.",
   "approval.field.owner": "Phụ trách",
   "approval.field.to": "Đến",
   "approval.field.currency": "Loại tiền",
@@ -2701,6 +2726,21 @@ export const vi = {
   "email.detail.cc": "Cc",
   "email.detail.filedUnder": "Xếp vào",
   "email.detail.when": "Thời gian gửi",
+  "commitment.review.count_one": "Cam kết cần xem lại: {count}",
+  "commitment.review.count_other": "Cam kết cần xem lại: {count}",
+  "commitment.review.title": "Xem lại cam kết",
+  "commitment.review.detail":
+    "Chưa tạo việc từ các kết quả này. Xem lại nguồn và phản hồi sau đó trước khi thêm việc tiếp theo từ hồ sơ liên kết.",
+  "commitment.review.historical": "Cam kết cũ không có hạn chót hiện tại.",
+  "commitment.review.incomplete":
+    "Chưa đọc hết các tin nhắn sau đó. Cam kết có thể đã được hoàn thành.",
+  "commitment.review.unknownDate": "Chưa xác minh được ngày của nguồn.",
+  "commitment.review.conflictingDates":
+    "Ngày trên thư khác với ngày thư đến hộp thư. Xem lại ngày gốc.",
+  "commitment.review.canceledMeeting": "Cuộc họp đã bị hủy.",
+  "commitment.review.pendingMeeting": "Cuộc họp chưa diễn ra.",
+  "commitment.review.unavailable": "Xem lại nguồn trước khi tạo việc.",
+  "commitment.review.evaluated": "Đã xem lại {when}",
   "activity.detail.loading": "Đang tải hoạt động…",
   "activity.detail.none": "Hoạt động này",
   "activity.detail.withheldReason": "Nội dung hoạt động bị giữ lại",
@@ -3661,6 +3701,11 @@ export const vi = {
   "recordRoles.renameTitle": "Đổi tên vai trò",
   "recordRoles.duplicate":
     "Đã có vai trò mang tên hoặc khóa này. Hãy chọn tên khác.",
+  "recordRoles.intro":
+    "Gán vai trò cho công ty, deal hoặc dự án để mọi đồng nghiệp biết nên hỏi ai về việc gì. Phụ trách hồ sơ không thay đổi. Vai trò có sẵn đi kèm Margince; vai trò tùy chỉnh được thêm tại đây.",
+  "recordRoles.colActive": "Đang bật",
+  "recordRoles.builtIn": "Có sẵn",
+  "recordRoles.custom": "Tùy chỉnh",
   "deal.acquisitionUnset": "Chưa chọn",
   "deal.acquisitionRetired": "(đã ngừng dùng)",
   "deal.waitUntil": "Chờ đến",
@@ -4170,7 +4215,7 @@ export const vi = {
   "brief.weekly.pickWeek": "Mở tuần khác",
   "brief.weekly.none":
     "Chưa có bản tổng kết tuần. Bản đầu tiên sẽ có vào thứ Hai sau tuần đầy đủ đầu tiên.",
-  "brief.weekly.tasksDelivered": "Việc cần làm đã hoàn tất",
+  "brief.weekly.tasksDelivered": "Việc đến hạn đã hoàn tất",
   "brief.weekly.ofDue": "{done} trên {due}",
   "brief.weekly.dealsWon": "Thắng",
   "brief.weekly.dealsLost": "Thua",
@@ -4296,7 +4341,9 @@ export const vi = {
   "deepread.starting": "Đang bắt đầu…",
   "deepread.unavailable": "Máy chủ này chưa cấu hình tìm hiểu trang web.",
   "deepread.statusQueued": "Đang chờ xử lý",
-  "deepread.statusDeferred": "Đang chờ hạn mức AI",
+  "deepread.statusDeferred": "Đang chờ tiếp tục",
+  "deepread.statusBudgetWait": "Đang chờ ngân sách AI",
+  "deepread.statusProviderWait": "Đang chờ nhà cung cấp AI",
   "deepread.statusRunning": "Đang đọc trang web…",
   "deepread.statusDone": "Xong",
   "deepread.statusPartial": "Đã dừng sớm",
@@ -5095,12 +5142,10 @@ export const vi = {
   "analytics.field.direction": "Hướng",
   "analytics.field.forecast_category": "Danh mục dự báo",
   "analytics.field.host_user_id": "Chủ trì cuộc họp",
-  "analytics.field.key": "Mã dự án",
   "analytics.field.kind": "Loại hoạt động",
   "analytics.field.last_activity_at": "Hoạt động gần nhất",
   "analytics.field.lost_reason": "Lý do thua",
   "analytics.field.meeting_status": "Trạng thái cuộc họp",
-  "analytics.field.name": "Tên dự án",
   "analytics.field.open_commitments": "Cam kết đang mở",
   "analytics.field.open_deal_value_minor": "Giá trị deal đang mở",
   "analytics.field.overdue_commitments": "Cam kết quá hạn",
@@ -5464,13 +5509,44 @@ export const vi = {
   "settings.signatureEdit": "Sửa chữ ký",
   "settings.signatureNone": "Chưa có lời kết",
   "settings.signatureCancel": "Hủy",
+  "delivery.loadFailed": "Không thể tải lựa chọn email. Tải lại để thử lại.",
   "delivery.morningLabel": "Bản tin sáng",
   "delivery.morningHelp":
     "Gửi thêm bản tin trong ngày qua email. Bản tin luôn hiển thị trên Trang chủ.",
   "delivery.weeklyLabel": "Tổng kết tuần",
-  "delivery.weeklyHelp": "Gửi thêm bản tổng kết thứ Hai qua email.",
+  "delivery.weeklyHelp":
+    "Gửi tuần báo cáo đã kết thúc vào ngày làm việc bạn chọn.",
   "delivery.byEmail": "Qua email",
   "delivery.none": "Không qua email",
+  "delivery.hourLabel": "Giờ gửi email định kỳ",
+  "delivery.scheduleHelp":
+    "Chọn giờ cá nhân để dùng ngày làm việc và múi giờ của bạn, trong cửa sổ gửi ba giờ. Lịch trước đây giữ nguyên cho đến khi bạn đổi.",
+  "delivery.legacyTime": "Lịch buổi sáng trước đây (múi giờ báo cáo):",
+  "delivery.workingStart": "Bắt đầu giờ làm việc",
+  "delivery.weekdayLabel": "Ngày tổng kết tuần",
+  "delivery.weekdayHelp":
+    "Nếu ngày đã chọn là ngày nghỉ, dùng ngày làm việc kế tiếp. Tuần báo cáo giữ nguyên; có thể gửi bù vào ngày làm việc sau.",
+  "delivery.quietLabel": "Buổi sáng ít việc",
+  "delivery.onlyUseful": "Chỉ khi có nội dung hữu ích",
+  "delivery.quietAlso": "Cũng gửi bản tóm tắt trạng thái vào buổi sáng ít việc",
+  "delivery.combineLabel": "Gộp email định kỳ",
+  "delivery.combineHelp":
+    "Một email định kỳ mỗi ngày báo cáo gộp kết quả tuần, việc hiện tại và các nhóm thông báo bạn chọn khi có. Phê duyệt tức thì vẫn riêng.",
+  "delivery.separate": "Email định kỳ riêng biệt",
+  "delivery.combined": "Gộp nội dung có sẵn",
+  "delivery.scopeLabel": "Phạm vi email định kỳ",
+  "delivery.scope.personal": "Việc của tôi",
+  "delivery.scope.team": "Nhóm đã chọn",
+  "delivery.scope.combined": "Việc của tôi và nhóm đã chọn",
+  "delivery.teamHelp":
+    "Chọn nhóm trước khi bật chế độ xem. Quyền truy cập được kiểm tra lại khi gửi.",
+  "delivery.weekday1": "Thứ Hai",
+  "delivery.weekday2": "Thứ Ba",
+  "delivery.weekday3": "Thứ Tư",
+  "delivery.weekday4": "Thứ Năm",
+  "delivery.weekday5": "Thứ Sáu",
+  "delivery.weekday6": "Thứ Bảy",
+  "delivery.weekday7": "Chủ Nhật",
   "delivery.panelTitle": "Bản tóm tắt qua email",
   "settings.appearance": "Giao di\u1ec7n",
   "settings.appearanceHelp":
@@ -6174,6 +6250,8 @@ export const vi = {
     "Tin nhắn cần một kênh nên không thể nhập từ tệp. Dùng ghi chú hoặc email.",
   "import.reason.task_not_importable":
     "Việc cần làm sẽ nằm mở trong danh sách của chính bạn nên không được nhập. Dùng ghi chú.",
+  "import.reason.activity_empty":
+    "Ghi chú hoặc cuộc gọi cần có tiêu đề hoặc nội dung. Điền tiêu đề hoặc nội dung vào hàng này.",
   "import.reason.occurred_at_unnamed":
     "Nêu ngày hoạt động xảy ra, dạng YYYY-MM-DD hoặc kèm múi giờ.",
   "import.reason.timestamp_needs_zone":
@@ -6329,6 +6407,7 @@ export const vi = {
   "jobs.kind.embed_drift_sweep": "Cập nhật bù chỉ mục tìm kiếm",
   "jobs.kind.embed_reindex": "Dựng lại chỉ mục tìm kiếm",
   "jobs.kind.employment_import_sweep": "Nhập lịch sử công tác",
+  "jobs.kind.finance_sync": "Đồng bộ dữ liệu kế toán theo yêu cầu",
   "jobs.kind.finance_sync_sweep": "Đồng bộ dữ liệu kế toán",
   "jobs.kind.follow_up_reconcile": "Đề xuất việc tiếp theo cho deal",
   "jobs.kind.forecast_snapshot_sweep": "Ảnh chụp dự báo hằng ngày",
@@ -6940,6 +7019,8 @@ export const vi = {
   "retention.scopeRawCapture": "Bản gốc tin nhắn đã lưu",
   "retention.scopeDealRiskDay": "Ghi nhận hằng ngày deal trọng yếu có rủi ro",
   "pipeline.new": "Pipeline mới",
+  "pipeline.createRefused":
+    "Vai trò của bạn không thể tạo pipeline. Liên hệ quản trị viên.",
   "pipeline.name": "Tên",
   "pipeline.default": "Mặc định",
   "pipeline.notDefault": "Không mặc định",
@@ -6977,6 +7058,8 @@ export const vi = {
     "Không thể lưu thứ tự. Một thành viên khác đã đổi thứ tự trước, nên đang hiển thị thứ tự mới nhất.",
   "pipeline.orderNotSaved": "Không thể lưu thứ tự. Thử lại hoặc tải lại trang.",
   "stage.new": "Giai đoạn mới",
+  "stage.createRefused":
+    "Vai trò của bạn không thể thêm giai đoạn. Liên hệ quản trị viên.",
   "stage.edit": "Sửa giai đoạn",
   "stage.name": "Tên",
   "stage.semantic": "Loại giai đoạn",
@@ -8973,7 +9056,7 @@ export const vi = {
   "cf.edit": "Sửa nhãn",
   "cf.archive": "Chuyển trường vào kho lưu trữ",
   "cf.archived":
-    "Đã chuyển “{label}” vào kho lưu trữ. Trường bị ẩn khỏi hồ sơ mới, vẫn giữ trong nhật ký hoạt động và lịch sử, và có thể khôi phục.",
+    "Đã chuyển “{label}” vào kho lưu trữ. Trường bị ẩn khỏi hồ sơ mới, vẫn giữ trong nhật ký hoạt động và lịch sử. Không thể hoàn tác việc lưu trữ.",
   "cf.renamePrompt": "Nhãn mới",
   "cf.renamed": "Đã đổi tên thành “{label}”",
   "cf.audit.title": "Thay đổi trường gần đây",
@@ -8984,7 +9067,7 @@ export const vi = {
   "cf.retired": "Đã ngừng dùng",
   "cf.retire.title": "Chuyển “{label}” vào kho lưu trữ?",
   "cf.retire.body":
-    "Trường sẽ bị ẩn khỏi hồ sơ mới và bộ lọc. Giá trị đã lưu vẫn được giữ.",
+    "Trường sẽ bị ẩn khỏi hồ sơ mới và bộ lọc. Giá trị đã lưu vẫn được giữ. Không thể hoàn tác việc lưu trữ.",
   "cf.retire.lists":
     "Các danh sách động này lọc theo trường này. Các danh sách này vẫn hoạt động với giá trị đã lưu, và mỗi danh sách sẽ nhắc thành viên phụ trách thay điều kiện lọc:",
   "cf.retire.unseen_one":
@@ -9042,7 +9125,7 @@ export const vi = {
     "Các giai đoạn deal đi qua, áp dụng cho cả công ty.",
   "settings.page.acquisition.sub": "Các kênh kinh doanh mà deal có thể quy về.",
   "settings.page.recordroles.sub":
-    "Những gì một đồng nghiệp hoặc nhóm có thể phụ trách trên một hồ sơ. Không cấp quyền truy cập.",
+    "Những gì một đồng nghiệp hoặc nhóm lo trên một hồ sơ, ví dụ quản lý khách hàng. Vai trò không cấp quyền truy cập; quyền sửa đến từ phụ trách hồ sơ và việc chia sẻ.",
   "settings.page.leads.sub":
     "Nguồn lead, lý do loại lead và thời gian phản hồi đầu tiên.",
   "settings.page.fields.sub":
@@ -9082,6 +9165,8 @@ export const vi = {
   "settings.readOnlyPageTitle": "Cài đặt chỉ đọc",
   "settings.readOnlyPage":
     "Vai trò hiện tại không có quyền thay đổi các cài đặt này.",
+  "settings.seatRefused":
+    "Tài khoản của bạn chỉ có quyền xem. Liên hệ quản trị viên để được cấp tài khoản đầy đủ quyền.",
   "settings.saveFailed": "Không thể lưu thay đổi",
   "settings.mintFailed": "Không thể tạo passport",
   "settings.search.label": "Tìm cài đặt",
@@ -9659,6 +9744,20 @@ export const vi = {
   "voice.candidate.concernsLabel": "Vì sao phiên bản này cần xem lại",
   "voice.candidate.applyHint":
     "Nếu bản này đúng văn phong của bạn, hãy dùng. Nếu không, giữ giọng văn hiện tại và thêm văn mẫu; bản dựng tiếp theo sẽ học từ đó.",
+  "voice.candidate.reason.uncomparable":
+    "Không thể so sánh hồ sơ giọng văn trước đó. Hãy kiểm tra phiên bản này trước khi thay thế.",
+  "voice.candidate.reason.identity":
+    "Từ vựng đặc trưng đã thay đổi (độ tương đồng {score}). Hãy kiểm tra xem giọng văn có còn phù hợp không.",
+  "voice.candidate.reason.signature":
+    "Cách diễn đạt đặc trưng đã thay đổi (độ tương đồng {score}). Hãy kiểm tra các bản nháp mẫu.",
+  "voice.candidate.reason.regression":
+    "Phiên bản này đạt {score}; phiên bản đang dùng đạt {active}. Hãy kiểm tra trước khi thay thế giọng văn hiện tại.",
+  "voice.candidate.reason.smallCorpus":
+    "Chưa đủ mẫu để đánh giá riêng. Hãy thêm nguồn để có thể chấm điểm.",
+  "voice.candidate.reason.corpusChanged":
+    "Các mẫu văn bản đã thay đổi trong quá trình tạo. Hãy kiểm tra phiên bản trước khi sử dụng.",
+  "voice.candidate.reason.activeChanged":
+    "Giọng văn đang dùng đã thay đổi trong quá trình đánh giá. Hãy kiểm tra phiên bản trước khi sử dụng.",
   "voice.candidate.reason.malformed":
     "Bước chấm điểm không thể đọc một số bản nháp mẫu, nên điểm số dựa trên ít mẫu hơn thường lệ.",
   "voice.candidate.reason.lowScore":
@@ -9666,7 +9765,7 @@ export const vi = {
   "voice.candidate.reason.hardFailures":
     "Cụm từ giọng này cần tránh nhưng vẫn xuất hiện trong bản nháp mẫu: {n}.",
   "voice.candidate.reason.rulesRemoved":
-    "Số quy tắc về điều cần tránh đã bị bỏ so với phiên bản trước: {n}.",
+    "Số quy tắc về cách diễn đạt và văn phong đã bị bỏ so với phiên bản trước: {n}.",
   "voice.candidate.apply": "Dùng phiên bản này",
   "voice.candidate.reject": "Giữ giọng văn hiện tại",
   "voice.history.label": "Phiên bản và học hỏi",
@@ -10100,6 +10199,10 @@ export const vi = {
   "settings.companyMarkUnsupported":
     "Hãy dùng tệp PNG, JPEG, GIF, WebP, ICO hoặc SVG.",
   "settings.companyMarkTooLarge": "Hãy dùng tệp nhỏ hơn.",
+  "settings.companyMarkSvgNotDrawable":
+    "Tệp SVG này có phần không thể hiển thị ở đây, hoặc không hiển thị gì. Xuất logo dưới dạng tệp PNG từ công cụ thiết kế.",
+  "settings.companyMarkSvgText":
+    "Tệp SVG này chứa chữ chưa chuyển thành đường nét nên không thể hiển thị. Chuyển chữ thành đường nét (outline) trong công cụ thiết kế, hoặc tải lên tệp PNG.",
   "settings.companyMarkAddWide": "Thêm logo rộng",
   "settings.companyMarkReplaceWide": "Thay logo rộng",
   "settings.companyMarkRemoveWide": "Gỡ logo rộng",
@@ -11134,7 +11237,45 @@ export const vi = {
   "ownDomains.addFailed": "Không thể thêm tên miền",
   "ownDomains.remove": "Gỡ {domain}",
   "ownDomains.candidateNote":
-    "Thấy trên một hộp thư đã kết nối. Chưa xác nhận nên chưa chặn việc thu thập.",
+    "Thấy trên một hộp thư đã kết nối. Thư giữa các đồng nghiệp trên tên miền này vẫn được lưu cho đến khi bạn xác nhận.",
+  "ownDomains.confirm": "Xác nhận",
+  "ownDomains.confirmLabel": "Xác nhận {domain}",
+
+  "financeSource.title": "Nguồn kế toán",
+  "financeSource.sub":
+    "Margince đọc hóa đơn và khoản thanh toán từ hệ thống kế toán và hiển thị chúng trong tab Tài chính của từng công ty. Margince không bao giờ ghi vào nguồn này.",
+  "financeSource.readOnly":
+    "Chỉ xem: chỉ quản trị viên mới có thể kết nối hoặc đồng bộ nguồn kế toán.",
+  "financeSource.noneInstalled": "Chưa cài nguồn kế toán nào",
+  "financeSource.noneInstalledBody":
+    "Mỗi nguồn kế toán đến từ một tiện ích mở rộng. Cài một tiện ích để kết nối tại đây.",
+  "financeSource.pick": "Nguồn",
+  "financeSource.connect": "Kết nối",
+  "financeSource.lastSync": "Đồng bộ lần cuối {date}",
+  "financeSource.notSynced": "Chưa đồng bộ",
+  "financeSource.status.connecting": "Đang kết nối…",
+  "financeSource.status.active": "Đang hoạt động",
+  "financeSource.status.error": "Lỗi đồng bộ",
+  "financeSource.syncNow": "Đồng bộ ngay",
+  "financeSource.syncQueued": "Đã xếp lịch đồng bộ",
+  "financeSource.disconnect": "Ngắt kết nối",
+  "financeSource.disconnectTitle": "Ngắt kết nối nguồn kế toán?",
+  "financeSource.disconnectBody":
+    "Việc đồng bộ dừng lại. Hóa đơn và khoản thanh toán đã đọc vẫn ở lại với công ty của chúng.",
+  "financeSource.customers": "Khách hàng trong nguồn",
+  "financeSource.customer": "Khách hàng",
+  "financeSource.company": "Công ty",
+  "financeSource.notLinked": "Chưa liên kết",
+  "financeSource.actions": "Thao tác",
+  "financeSource.link": "Liên kết",
+  "financeSource.relink": "Đổi công ty",
+  "financeSource.unlink": "Bỏ liên kết",
+  "financeSource.noCustomers": "Chưa có khách hàng",
+  "financeSource.noCustomersBody":
+    "Khách hàng xuất hiện sau lần đồng bộ đầu tiên. Chọn Đồng bộ ngay để bắt đầu.",
+  "financeSource.linkTitle": "Liên kết {customer} với một công ty",
+  "financeSource.findCompany": "Tìm công ty",
+  "financeSource.cancel": "Hủy",
 
   "webhooks.title": "Webhook",
   "webhooks.readOnly":
@@ -12289,6 +12430,9 @@ export const vi = {
   "today.scan.readDeals_other": "{count} deal",
   "today.scan.stale":
     "Công ty đã có thay đổi kể từ đó. Margince sẽ phân tích lại trong vòng một giờ.",
+  "today.scan.providerResumes":
+    "Phân tích sẽ thử lại {when}. Đang chờ nhà cung cấp AI.",
+  "today.scan.scheduledResumes": "Phân tích tiếp tục {when}.",
   "today.scan.resumes":
     "Đang tạm dừng vì đã chạm ngân sách AI. Sẽ tiếp tục phân tích {when}.",
   "provider.readOnly":
@@ -12943,6 +13087,12 @@ export const vi = {
     "Đã qua giờ gửi trong lúc hệ thống không chạy, và giờ đã quá muộn để gửi. Đổi giờ gửi hoặc thu hồi tin nhắn.",
   "sched.held.timerExhausted":
     "Tác vụ gửi đã hết lượt thử. Đổi giờ gửi để thử lại.",
+  "sched.held.passportRevoked":
+    "Quyền của tác nhân đã bị thu hồi. Hãy xem lại thư trước khi chọn tài khoản gửi khác.",
+  "sched.held.followupSettled":
+    "Yêu cầu đã được trả lời hoặc hoàn thành sau khi lên lịch. Hãy xem còn cần thư theo dõi này không.",
+  "sched.held.meetingCanceled":
+    "Cuộc họp đã bị hủy sau khi lên lịch. Hãy xem lại thư trước khi gửi.",
   "sched.held.sendRefused":
     "Một bước kiểm tra đã chặn tin nhắn này khi đến giờ gửi. Không có gì được gửi.",
   "sched.inZone": "theo giờ {zone}",

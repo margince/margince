@@ -31,9 +31,9 @@ func Link(b *strings.Builder, base, fragment, label string) {
 
 // The Brief's two addresses, as a message must spell them.
 //
-// The morning is the view the Brief opens on, so it needs no parameter — its
-// address is the page itself, and frontend/src/screens/brief.view.ts writes
-// only what DIFFERS from that default. The weekly names itself.
+// The morning is the view the Brief opens on, so it needs no parameter: its
+// address is the page itself. frontend/src/features/brief/brief.view.ts writes
+// only what differs from that default. The weekly names itself.
 //
 // Held by backend/gates/mailbrieflink_test.go, which reads the view words out
 // of the frontend's own VIEWS list: a rename there without one here would leave
@@ -57,3 +57,13 @@ const (
 // that says nothing about the decision they were told was waiting, and nothing
 // on either side would fail.
 const WorklistFragment = "/#/worklist"
+
+// These destinations are shared by product mail and checked against the router.
+const (
+	PreferencesFragment   = "/#/settings/notifications"
+	DealRecordFragment    = "/#/deals/"
+	ContactRecordFragment = "/#/contacts/"
+	CompanyRecordFragment = "/#/companies/"
+	LeadRecordFragment    = "/#/leads/"
+	ProjectRecordFragment = "/#/projects/"
+)

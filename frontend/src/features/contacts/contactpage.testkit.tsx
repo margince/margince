@@ -17,7 +17,7 @@ import type { CONTACT_TABS } from "./contacttab";
 // place: a second suite reading its own copy of this fixture is the shape
 // that drifts the two apart.
 
-type Contact360 = components["schemas"]["Contact360"];
+export type Contact360 = components["schemas"]["Contact360"];
 export type ContactConsentGuardEntry =
   components["schemas"]["ContactConsentGuardEntry"];
 
@@ -149,4 +149,38 @@ export async function openRecordMenu(): Promise<void> {
 export async function pressRecordVerb(testId: string): Promise<void> {
   await openRecordMenu();
   await userEvent.click(await screen.findByTestId(testId));
+}
+
+// The gone-quiet rung, carrying the reason the server put in its destination.
+// The label promises a follow-up; the prefill is the only place the reason it
+// fired for is written down.
+export const quietMoment: Contact360["moment"] = {
+  claim_key: "gone_quiet:p-1",
+  evidence_fingerprint: "fp-1",
+  rule: "gone_quiet",
+  headline: "Dana has gone quiet",
+  why_now: "Six weeks since her last reply",
+  confidence: "observed_fact",
+  evidence: [{ type: "activity", label: "Fleet renewal", id: "a-1" }],
+  recommended_action: {
+    kind: "draft_reply",
+    label: "Draft a follow-up",
+    state: "available",
+    destination: { surface: "composer", prefill: { intent: "follow_up" } },
+  },
+};
+
+// The record's header, which is where the page's verbs live. Found through the
+// heading it names rather than by class. The header is a landmark for the
+// record, and the rail offers verbs of its own that must not be mistaken for it.
+export async function recordHeader(): Promise<HTMLElement> {
+  const name = await screen.findByRole("heading", {
+    level: 1,
+    name: "Dana Buyer",
+  });
+  const header = name.closest("header");
+  if (!(header instanceof HTMLElement)) {
+    throw new Error("the record's header is not around its own heading");
+  }
+  return header;
 }

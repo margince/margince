@@ -11956,8 +11956,32 @@
       "data": {
         "type": "object",
         "properties": {
+          "coverage": {
+            "type": "string"
+          },
           "next_cursor": {
             "type": "string"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "detail"
+              ]
+            }
           },
           "records": {
             "type": "array",
@@ -11970,6 +11994,30 @@
                 "id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "match": {
+                  "type": "object",
+                  "properties": {
+                    "snippet": {
+                      "type": "string"
+                    },
+                    "works_at": {
+                      "type": "object",
+                      "properties": {
+                        "company_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "company_name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "company_id",
+                        "company_name"
+                      ]
+                    }
+                  }
                 },
                 "owner": {
                   "type": "object",
@@ -12006,9 +12054,17 @@
                 "record_type"
               ]
             }
+          },
+          "types_with_more": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
+          "coverage",
+          "notes",
           "records"
         ]
       },

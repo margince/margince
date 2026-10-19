@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"mime/quotedprintable"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/mailwire"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // headerLineLimit is the RFC 5322 recommended line length. The hard limit is
@@ -26,7 +29,7 @@ func (s SMTP) compose(to, subject, textBody, messageID string) ([]byte, error) {
 	if messageID != "" {
 		fmt.Fprintf(&msg, "Message-ID: <%s>\r\n", messageID)
 	}
-	msg.WriteString("MIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n" +
+	msg.WriteString(s.privacyHeaders() + "MIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n" +
 		"Content-Transfer-Encoding: quoted-printable\r\n\r\n")
 	body := quotedprintable.NewWriter(&msg)
 	if _, err := body.Write([]byte(textBody)); err != nil {
@@ -98,4 +101,33 @@ func plainASCII(text string) bool {
 		}
 	}
 	return true
+}
+
+func (s SMTP) composeAlternative(to, subject, textBody, htmlBody, messageID string) ([]byte, error) {
+	if htmlBody == "" {
+		return s.compose(to, subject, textBody, messageID)
+	}
+	var message strings.Builder
+	fmt.Fprintf(&message, "From: %s\r\nTo: %s\r\nSubject: %s\r\n", s.FromAddress, to, foldedSubject(subject))
+	if messageID != "" {
+		fmt.Fprintf(&message, "Message-ID: <%s>\r\n", messageID)
+	}
+	message.WriteString(s.privacyHeaders() + "MIME-Version: 1.0\r\n")
+	body, err := mailwire.SMTPBody(connector.EmailMessage{Body: textBody, HTMLBody: htmlBody, MessageID: messageID})
+	if err != nil {
+		return nil, err
+	}
+	message.WriteString(body)
+	return []byte(message.String()), nil
+}
+
+// SendGrid's SMTP filter is per message; other relays ignore the extension.
+// https://www.twilio.com/docs/sendgrid/for-developers/sending-email/smtp-filters
+const relayPrivacyHeaders = "X-SMTPAPI: {\"filters\":{\r\n \"clicktrack\":{\"settings\":{\"enable\":0,\"enable_text\":false}},\r\n \"opentrack\":{\"settings\":{\"enable\":0}}}}\r\n"
+
+func (s SMTP) privacyHeaders() string {
+	if strings.EqualFold(s.Host, "smtp.sendgrid.net") {
+		return relayPrivacyHeaders
+	}
+	return ""
 }

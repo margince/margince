@@ -544,6 +544,8 @@ paths:
       summary: Create a company.
       description: |-
         Domains are normalized/lowercased and unique per workspace (409 on collision).
+        A `parent_company_id` that names no company the caller can read answers `404`, the same
+        for a missing company and for one hidden by row scope.
 
         Needs the passport permission Change records.
 
@@ -571,6 +573,7 @@ paths:
               schema: {$ref: '#/components/schemas/Company'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
         '409':
           description: A domain already maps to another company.
           content:
@@ -1394,7 +1397,10 @@ paths:
       description: |-
         Amount is integer minor-units + ISO-4217 currency (no float money). The stage
         must belong to the deal's pipeline (422 otherwise). Deals attach to contact/company,
-        never to a raw lead.
+        never to a raw lead. An id in the body that names nothing the caller can
+        read (`company_id`, `partner_company_id`, `project_id`, `stage_id`, among others) answers
+        `404`, the same for a missing record and for one hidden by row scope, so the answer does
+        not say which exists.
 
         Needs the passport permission Change records.
 
@@ -1426,6 +1432,7 @@ paths:
               schema: {$ref: '#/components/schemas/Deal'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
         '422':
           description: Validation error (e.g. stage not in pipeline, lost without lost_reason).
           content:
@@ -2528,8 +2535,12 @@ paths:
         `source_system: email` + the RFC822 Message-ID, one identity shared by every mail
         transport, so the same message reaching two connected mailboxes is one activity —
         and that reserved value is refused here (422): only a connector, or this system's
-        own send, may claim a mail identity. An activity may link to >1 entity
-        (contact and deal). `log_activity` is (reversible).
+        own send, may claim a mail identity. A `note` or a `call` needs a non-blank `subject` or
+        `body`, on create and on an edit that would leave it with neither (422 naming `subject`);
+        a task needs its `subject`. An activity may link to >1 entity
+        (contact and deal). A link that names a record the caller cannot read answers `404`,
+        the same for a missing record and for one hidden by row scope. `log_activity` is
+        (reversible).
 
         Needs the passport permission Change records.
 
@@ -2556,6 +2567,7 @@ paths:
               schema: {$ref: '#/components/schemas/Activity'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /activities/{id}:
     parameters:
@@ -3336,7 +3348,8 @@ paths:
         With name + email returns 201 + stable UUID; round-trips on GET.
         `company_name` is FREE TEXT — a lead has NO company FK. Lead-internal exact-email
         dedupe → 409 with existing lead id. Bulk/connector sourcing uses (source_system, source_id)
-        for idempotent re-import.
+        for idempotent re-import. A `project_id` that names no project the caller can read
+        answers `404`, the same for a missing project and for one hidden by row scope.
 
         Needs the passport permission Change records.
 
@@ -3368,6 +3381,7 @@ paths:
               schema: {$ref: '#/components/schemas/Lead'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
         '409':
           description: A live lead already owns this email.
           content:
@@ -5608,7 +5622,7 @@ paths:
       tags: [Search]
       operationId: search
       summary: Cross-object search (contacts, companies, deals, activities, leads).
-      description: Hybrid full-text search. Results are scoped by RBAC; leads are a distinct result type.
+      description: 'Lexical full-text search, ranked by relevance: the query''s words and prefixes matched against each record''s own text, with no meaning match. Results are scoped by RBAC; leads are a distinct result type.'
       parameters:
         - name: q
           in: query
@@ -6386,8 +6400,8 @@ paths:
       summary: Open a thread as the seller's side — a question on a document, or a room-level update.
       description: |-
         The first comment is the body. Refused once the room can no longer reach a
-        buyer (closed, expired, archived). A document thread is pinned to the
-        document's current version.
+        buyer (closed, expired, archived): `409 deal_room_content_not_editable`. A
+        document thread is pinned to the document's current version.
 
         Needs the passport permission Change records.
 
@@ -6406,6 +6420,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /deal-rooms/{id}/threads/{threadId}/comments:
     parameters:
@@ -6419,7 +6434,9 @@ paths:
       operationId: replyDealRoomThread
       summary: Reply in a thread as the seller's side.
       description: |-
-        Refused on a resolved thread and in a room that can no longer reach a buyer.
+        Refused on a resolved thread (`409 deal_room_thread_resolved`: open a new
+        thread instead) and in a room that can no longer reach a buyer
+        (`409 deal_room_content_not_editable`).
 
         Needs the passport permission Change records.
 
@@ -6438,6 +6455,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /offer-templates:
     get:
@@ -7850,7 +7868,7 @@ components:
       in: query
       schema: {type: string}
       description: >-
-        The record named in words, found as `search_records` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at.
+        The record named in words, found the way `search_records` finds the same words. A name matching more than one record is refused with the candidate ids rather than guessed at.
     AnchorMaxItems:
       name: max_items
       in: query
@@ -7966,7 +7984,12 @@ components:
         create. **Scope:** the key is unique within
         `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
         returns the original status + body. Reusing the same key with a *different* request body
-        returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+        returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+        do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+        means the first request under the key is still running and carries `Retry-After`;
+        resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+        request under the key failed after it had started, so check whether it took effect before
+        retrying under a new key.
         **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
         answer lost": without it the blind retry answers `409 version_skew`, because the first
         attempt already bumped the version.
@@ -8531,7 +8554,7 @@ components:
       description: 'What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.'
     ImportReasonCode:
       type: string
-      enum: [activity_held, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_unreadable]
+      enum: [activity_empty, activity_held, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_unreadable]
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
     CreateImportRunRequest:
       type: object
@@ -8976,7 +8999,7 @@ components:
         city: {type: [string, 'null']}
         region: {type: [string, 'null']}
         postal_code: {type: [string, 'null']}
-        country: {type: [string, 'null'], description: ISO-3166 alpha-2.}
+        country: {type: [string, 'null'], description: 'ISO-3166 alpha-2. A contact or company write (and a CSV import cell) that changes the country to a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`; a code is stored upper-case. A country stored before this rule is kept as it is when a save carries it back unchanged.'}
       additionalProperties: true
     Money:
       type: object
@@ -9160,6 +9183,13 @@ components:
           type: object
           description: Per-pool ceilings keyed by the provider's declared credit pools.
           additionalProperties: {$ref: '#/components/schemas/ProviderPoolBudget'}
+    ProviderRunReservation:
+      type: object
+      required: [pool, reserved_credits]
+      properties:
+        pool: {type: string}
+        reserved_credits: {type: integer, minimum: 0}
+        actual_credits: {type: [integer, 'null'], minimum: 0}
     ProviderRun:
       type: object
       required: [id, subject_kind, provider, trigger, state, claims_unwritten, connection_version, configuration_snapshot, requested_categories, reservations, created_at, updated_at]
@@ -9210,13 +9240,7 @@ components:
         reservations:
           type: array
           description: Maximum credits held per pool before submission, reconciled to actual spend on a terminal result.
-          items:
-            type: object
-            required: [pool, reserved_credits]
-            properties:
-              pool: {type: string}
-              reserved_credits: {type: integer, minimum: 0}
-              actual_credits: {type: [integer, 'null'], minimum: 0}
+          items: {$ref: '#/components/schemas/ProviderRunReservation'}
         claims_unwritten:
           type: boolean
           default: false
@@ -14421,6 +14445,27 @@ components:
         provider: {type: string, enum: [gcal, graphcal], description: The calendar provider that holds the event. Omitted on guest reads.}
         video_call: {type: boolean, description: A video call link was requested for this meeting.}
         video_url: {type: string, description: "The join link the calendar created. Absent until the calendar accepts the invitation, or when it could not create one."}
+    CommitmentAdmission:
+      type: object
+      description: A recorded decision about whether a promise creates current work. Re-reading replaces this decision without changing human-owned work.
+      required: [locator, summary, source_quote, outcome, current_work, rule_version, evidence_ids, evaluated_at]
+      properties:
+        locator: {type: string}
+        summary: {type: string}
+        source_quote: {type: string}
+        outcome: {type: string}
+        current_work: {type: boolean}
+        rule_version: {type: string}
+        evidence_ids: {type: array, items: {type: string, format: uuid}}
+        evaluated_at: {type: string, format: date-time}
+        renewed_by:
+          type: string
+          format: uuid
+          description: The later message that explicitly renewed this promise.
+        renewed_at:
+          type: string
+          format: date-time
+          description: The renewing message's source time when the decision was recorded.
     Activity:
       type: object
       description: |-
@@ -14432,6 +14477,11 @@ components:
         what the DB CHECK would reject, rather than 500-ing at write time).
       required: [id, kind, occurred_at, source, captured_by, created_at, updated_at]
       properties:
+        commitment_admissions:
+          type: array
+          readOnly: true
+          description: Decisions about promises read from this source, included on list and detail reads when its content is visible.
+          items: {$ref: '#/components/schemas/CommitmentAdmission'}
         id: {type: string, format: uuid}
         kind: {type: string, enum: [email, call, meeting, note, task, message]}
         channel_provider:
@@ -15129,13 +15179,16 @@ components:
           description: The timeline activity this produced, once released.
         held_reason:
           type: [string, 'null']
-          enum: [consent_withdrawn, sender_inactive, missed_window, timer_exhausted, send_refused, null]
+          enum: [consent_withdrawn, sender_inactive, passport_revoked, missed_window, timer_exhausted, send_refused, followup_settled, meeting_canceled, null]
           description: |-
             Why a human has to look at it. `consent_withdrawn` — a recipient withdrew consent
             after it was scheduled. `sender_inactive` — the scheduler lost their seat or mailbox.
             `missed_window` — it came due while nothing was running and is now too late to be the
             message that was written. `timer_exhausted` — the job that wakes it ran out of
             attempts. `send_refused` — a gate refused for another reason at fire.
+            `passport_revoked` — the agent credential was revoked.
+            `followup_settled` — the recorded request was answered or completed after scheduling.
+            `meeting_canceled` — the meeting named as follow-up evidence was canceled.
         review_id:
           type: [string, 'null']
           format: uuid
@@ -16591,6 +16644,9 @@ components:
         - definition_version
         - member_ids
       properties:
+        prose_language:
+          type: string
+          description: Base language used for generated explanations. Absent on legacy readings, which use English.
         period_kind: {type: string}
         scope:
           $ref: '#/components/schemas/ReportingScope'
@@ -18559,7 +18615,8 @@ components:
         company_id: {type: string, format: uuid}
         seed_url: {type: string, format: uri}
         status: {type: string, enum: [queued, deferred, running, done, partial, failed, cancelled]}
-        status_code: {type: [string, 'null'], enum: [null, budget_deferred]}
+        status_code: {type: [string, 'null'], enum: [null, budget_deferred, bot_blocked, http_server_error, timeout, http_client_error, dns, tls, robots_disallowed, unreadable, internal, stale_reclaim], description: 'Why a read did not finish: budget_deferred, or the closed failure vocabulary a failed crawl is diagnosed with.'}
+        deferral_reason: {type: string, description: 'Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons.'}
         status_detail: {type: [string, 'null'], description: 'Safe guidance only; never provider payload, prompt, SQL, or stack data.'}
         next_attempt_at: {type: [string, 'null'], format: date-time}
         pages:
@@ -18613,6 +18670,11 @@ components:
       description: A staged confirm-first action awaiting human decision.
       required: [id, kind, status, proposed_by, created_at]
       properties:
+        requested_decider_id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: The member explicitly asked to decide, independent of who has permission to approve.
         id: {type: string, format: uuid}
         kind: {type: string, description: 'Examples: coldstart | send_email | advance_deal | promote_lead | overnight | deal_follow_up | commitment_task.'}
         status: {type: string, enum: [pending, approved, rejected, expired]}

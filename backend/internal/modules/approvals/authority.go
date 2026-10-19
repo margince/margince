@@ -378,11 +378,9 @@ var targetResolvedGrants = map[string]principal.Action{
 // (decidedByTheSeatStagedFor). An unknown kind (no mapping) or unknown target type is not
 // decidable: fail-closed.
 func decidable(ctx context.Context, tx pgx.Tx, p principal.Principal, a row) (bool, error) {
-	if requireDecisionGrants(p, a) != nil {
-		return false, nil
-	}
-	if withheldFromOtherSeats(p, a) {
-		return false, nil
+	readable, err := proposalReadable(ctx, tx, p, a)
+	if err != nil || !readable {
+		return false, err
 	}
 	return targetDecidable(ctx, tx, a.TargetType, a.TargetID)
 }
