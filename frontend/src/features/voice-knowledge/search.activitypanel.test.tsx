@@ -84,6 +84,8 @@ function stubServer(activity: Record<string, unknown> = meeting) {
       return json({ id: "c-1", display_name: "Demo GmbH" });
     if (url.includes("/deals/d-1"))
       return json({ id: "d-1", name: "Demo rollout" });
+    if (url.includes("/attachments"))
+      return json({ data: [], page: { next_cursor: null, has_more: false } });
     if (url.includes("/users/names"))
       return json({
         data: [

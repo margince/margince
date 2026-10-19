@@ -20,13 +20,13 @@ export const E2E_ADMIN_GRANTS: GrantSpec = {
   report_definition: ["read"],
   reporting_framework: ["read"],
   // The four records the specs write: deals, leads, projects and the notes the
-  // lead composer logs. A record page's write verbs ask the object grant and
-  // the row's `writable` before they draw. No spec disqualifies or archives,
-  // so the deletes stay unclaimed.
+  // lead composer logs, with the files attached to them. A record page's write
+  // verbs ask the object grant and the row's `writable` before they draw. No
+  // spec disqualifies or archives, so the deletes stay unclaimed.
   deal: ["read", "create", "update"],
   lead: ["read", "create", "update"],
   project: ["read", "create", "update"],
-  activity: ["read", "create"],
+  activity: ["read", "create", "update"],
   automation: ["create", "read", "update", "delete"],
   pipeline: ["create", "read", "update", "delete"],
   custom_field: ["create", "read", "update", "delete"],

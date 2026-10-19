@@ -83,6 +83,25 @@ describe("choosing a file", () => {
     expect(picked.mock.calls[0][0].name).toBe("order_form.txt");
   });
 
+  it("takes no file and lights nothing while disabled", () => {
+    const picked = vi.fn();
+    render(
+      <LocaleProvider initial="en">
+        <FileDropzone
+          label="Document"
+          emptyLabel="Drop a file here, or click to choose one"
+          onPick={picked}
+          disabled
+        />
+      </LocaleProvider>,
+    );
+    expect(target().hasAttribute("disabled")).toBe(true);
+    fireEvent.dragOver(target(), { dataTransfer: { files: [] } });
+    expect(zone().className).not.toContain("dragover");
+    fireEvent.drop(target(), { dataTransfer: { files: [ORDER_FORM()] } });
+    expect(picked).not.toHaveBeenCalled();
+  });
+
   it("admits it will accept the file while one is held over it", () => {
     show(vi.fn());
 

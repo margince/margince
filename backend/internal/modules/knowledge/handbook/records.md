@@ -263,7 +263,7 @@ To log an activity in Margince, open the contact, company, lead or deal and choo
 2. Set the **Date** (or **Due date** for a task), and the **Assignee** for a task.
 3. For a call or meeting, add the contacts who took part under **Other attendees**, or **Attendees** on a company. Add colleagues who took part under **Colleagues who attended**.
 4. Enter a **Subject** (required) and the **Details**. **Details** keeps its format, such as lists, headings and links. You can paste it from a document or as markdown. If you enter a meeting transcript, tick **This text is a transcript**. The text then stays plain, and you can paste it or use **Or upload a file** (`.txt` only).
-5. Choose **Log**. A call or meeting shows in the History of each contact you named, and of their companies.
+5. Add any files under **Attach files**, then choose **Log**. A call or meeting shows in the History of each contact you named, and of their companies.
 Without permission you see "You do not have permission to log activities on this record."
 Also called: add a note, record a call, write a comment.
 

@@ -416,3 +416,71 @@ it("keeps the movement label readable in its evidence drawer", async () => {
   expect(await screen.findByText(/Reopened or archived/)).toBeInTheDocument();
   expect(screen.queryByText(/reopened_or_archived/)).not.toBeInTheDocument();
 });
+
+it("marks one failed chart and keeps drawing the others", () => {
+  installFetchStub(reportingStoryRoutes());
+  const baseline = render(
+    <StoryProviders>
+      <ReportingCharts
+        evaluation={reportingStoryEvaluation}
+        onEvidence={() => {}}
+      />
+    </StoryProviders>,
+  );
+  const figuresBefore = screen.getAllByRole("figure").length;
+  baseline.unmount();
+
+  const [first, ...others] = reportingStoryEvaluation.charts;
+  const evaluation = {
+    ...reportingStoryEvaluation,
+    charts: [
+      {
+        ...first,
+        points: [],
+        coverage: {
+          status: "failed",
+          withheld: false,
+          reason: "This figure could not be calculated just now.",
+        },
+      },
+      ...others,
+    ],
+  } satisfies typeof reportingStoryEvaluation;
+  render(
+    <StoryProviders>
+      <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  expect(screen.getAllByText("Could not be calculated")).toHaveLength(1);
+  expect(
+    screen.getByText("This figure could not be calculated just now."),
+  ).toBeInTheDocument();
+  expect(screen.getAllByRole("figure").length).toBeGreaterThanOrEqual(
+    figuresBefore - 1,
+  );
+});
+
+it("keeps the accepted-opportunities series when only the meetings reading failed", () => {
+  installFetchStub(reportingStoryRoutes(sdrEvaluation));
+  const evaluation = {
+    ...sdrEvaluation,
+    charts: sdrEvaluation.charts.map((chart) =>
+      chart.kind === "sdr_outcomes" && chart.metric === "meetings_held"
+        ? {
+            ...chart,
+            points: [],
+            coverage: { status: "failed", withheld: false },
+          }
+        : chart,
+    ),
+  } satisfies typeof sdrEvaluation;
+  render(
+    <StoryProviders>
+      <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  expect(screen.getAllByText("Could not be calculated").length).toBeGreaterThan(
+    0,
+  );
+  expect(screen.getAllByText(/Week 1/).length).toBeGreaterThan(0);
+});

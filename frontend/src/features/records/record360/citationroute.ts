@@ -9,6 +9,7 @@ import { navigate } from "../../../lib/router";
 export const CITED_RECORD_KINDS = [
   "deal",
   "contact",
+  "lead",
 ] as const satisfies readonly EntityKind[];
 
 const CITED_RECORDS: ReadonlySet<string> = new Set(CITED_RECORD_KINDS);

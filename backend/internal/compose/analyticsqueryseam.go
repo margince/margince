@@ -53,7 +53,7 @@ func AnalyticsSchemaFor(ctx context.Context) analyticsquery.Schema {
 			// the report engine's FROM, and the two would disagree the first
 			// time a spec grew a join.
 			From:      granted.fromClause(),
-			BaseWhere: granted.baseWhere,
+			BaseWhere: granted.populationWhere(),
 			Fields:    map[string]analyticsquery.Field{},
 		}
 		addFields(entity.Fields, withoutKeys(granted.dimensions, slices.Concat(granted.rowKeys, granted.rowMoments)), analyticsquery.KindDimension)
@@ -63,6 +63,10 @@ func AnalyticsSchemaFor(ctx context.Context) analyticsquery.Schema {
 		// would advertise a narrowing that answers 403.
 		addFields(entity.Fields, grantedFilters(ctx, spec), analyticsquery.KindFilter)
 		addFields(entity.Fields, onlyKeys(granted.dimensions, granted.rowMoments), analyticsquery.KindFilter)
+		for name, field := range entity.Fields {
+			field.Domain = filterDomain(spec, field.Expr)
+			entity.Fields[name] = field
+		}
 		// An entity with nothing left to name is not offered. A population a
 		// caller can see the existence of but ask nothing about is a name that
 		// only tells them a report exists.
@@ -151,6 +155,9 @@ func schemaVersion(entities map[string]analyticsquery.Entity) string {
 	for _, name := range slices.Sorted(maps.Keys(entities)) {
 		sum.Write([]byte(name))
 		entity := entities[name]
+		// The population is part of the meaning: a saved answer over a base
+		// predicate that has since narrowed must not look comparable to today's.
+		sum.Write([]byte(entity.BaseWhere))
 		for _, field := range slices.Sorted(maps.Keys(entity.Fields)) {
 			sum.Write([]byte(field))
 			sum.Write([]byte(entity.Fields[field].Expr))

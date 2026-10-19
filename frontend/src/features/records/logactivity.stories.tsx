@@ -8,6 +8,7 @@ import { en } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { LogActivity, LogActivityAction } from "./logactivity";
@@ -146,5 +147,37 @@ export const WithFollowUp: Story = {
 };
 export const WithFollowUpDark: Story = {
   ...WithFollowUp,
+  globals: { theme: "dark" },
+};
+
+// Files picked while logging wait in the form, each removable, and are uploaded
+// against the activity once it is created. The hint states the installation's
+// limit.
+export const WithFiles: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["create", "update"] }),
+      "GET /installation/settings": () =>
+        jsonResponse({ max_upload_bytes: 25_000_000 }),
+    });
+    return (
+      <StoryProviders>
+        <LogActivity entityType="contact" entityId="p1" askedKind="call" />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.upload(await canvas.findByLabelText(en["log.files"]), [
+      new File(["prices"], "price-list-2026.pdf", { type: "application/pdf" }),
+      new File(["agenda"], "agenda.docx"),
+    ]);
+    await expect(
+      await canvas.findByRole("button", { name: /price-list-2026\.pdf/ }),
+    ).toBeVisible();
+  },
+};
+export const WithFilesDark: Story = {
+  ...WithFiles,
   globals: { theme: "dark" },
 };

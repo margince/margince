@@ -23,6 +23,7 @@ import { foldForMatch } from "../../format/collate";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { activityFileStaleKeys } from "../../lib/activitykeys";
 import {
   ACCEPTED_ATTACHMENT_ATTR,
   type AttachmentParent,
@@ -451,18 +452,14 @@ export function AddDocumentDialog({
 }
 
 /**
- * What a landed upload makes stale, per anchor.
- *
- * The two libraries are read by different surfaces and so by different keys:
- * the account's is one unpaginated read plus the 360 that counts it, the
- * contact's is its own cursor-paginated tab and nothing else — the contact 360
- * carries no attachments section, so invalidating it would refetch a composite
- * that says nothing about the file just filed.
+ * What a landed upload makes stale, per anchor. Each library is read under its
+ * own key. The contact 360 carries no attachments, so it is not refetched.
  */
 function staleAfterUpload(anchor: DocumentAnchor): readonly QueryKey[] {
   if (anchor.record === "contact") {
     return [["attachments", "contact", anchor.id]];
   }
+  if (anchor.record === "activity") return activityFileStaleKeys(anchor.id);
   if (anchor.record === "deal") {
     return [
       ["deal-documents", anchor.id],

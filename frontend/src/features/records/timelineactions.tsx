@@ -39,6 +39,7 @@ import {
   RelinkModal,
 } from "../mail/compose";
 import { ProjectFilingAction } from "../projects/projectfiling";
+import { ActivityFilesAction } from "./activityfiles";
 
 type Activity = components["schemas"]["Activity"];
 type ActivityAudience = components["schemas"]["ActivityAudience"];
@@ -101,6 +102,7 @@ export function TimelineActions({
         </Button>
       )}
       {extra?.(activity)}
+      <ActivityFilesAction activity={activity} />
       <Button onClick={() => setRelink(true)}>{t("compose.relink")}</Button>
       {/* Every row on a project's timeline is filed under that project, so this
           is the one surface where taking the filing back is always meaningful. */}

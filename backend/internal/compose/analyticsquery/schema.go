@@ -35,6 +35,8 @@ type Field struct {
 	// literal that would have bound — recoverable advice either way, and never
 	// the opaque fault an unbindable value used to become.
 	Shape ColumnShape
+	// Domain bounds the values a filter on this field may name.
+	Domain ValueDomain
 }
 
 // ColumnShape is what a column holds — named for the COLUMN because the

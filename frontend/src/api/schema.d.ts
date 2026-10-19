@@ -26742,7 +26742,7 @@ export interface components {
         /** @description One record a brief sentence was written from. */
         CompanyBriefEvidence: {
             /** @enum {string} */
-            entity_type: "deal" | "activity" | "contact" | "company" | "fact" | "profile_field";
+            entity_type: "deal" | "activity" | "contact" | "company" | "lead" | "fact" | "profile_field";
             /** Format: uuid */
             entity_id: string;
             /**
@@ -36082,8 +36082,13 @@ export interface components {
         ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing";
         /** @enum {string} */
         ReportingBlockKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading";
-        /** @enum {string} */
-        ReportingStatus: "ok" | "no_data" | "not_configured" | "insufficient_sample" | "partial" | "unsupported" | "unavailable";
+        /**
+         * @description `failed` means the database could not calculate this figure on this
+         *     read. The other figures in the same evaluation are unaffected, and a
+         *     later read may succeed.
+         * @enum {string}
+         */
+        ReportingStatus: "ok" | "no_data" | "not_configured" | "insufficient_sample" | "partial" | "unsupported" | "unavailable" | "failed";
         ReportingScope: {
             /** @enum {string} */
             kind: "owner" | "team" | "workspace" | "managed_teams";
