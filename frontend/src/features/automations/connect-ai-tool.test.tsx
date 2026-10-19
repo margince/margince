@@ -82,7 +82,7 @@ describe("ConnectAiToolCard", () => {
     expect(steps()).toEqual([
       "In Claude, open “Customize”, then “Connectors”.",
       "Find Margince and choose “Connect”.",
-      "Margince opens. Sign in and choose “Allow”. Done.",
+      "Margince opens. Sign in and choose Authorize. Done.",
     ]);
     expect(
       screen.queryByRole("textbox", { name: "Margince address" }),

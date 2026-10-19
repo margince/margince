@@ -5984,7 +5984,7 @@ export const en = {
   "aiAccess.connect.helpAdmin": "Help from {vendor} for your admin",
   "aiAccess.connect.devHint":
     "Using a command-line tool or your own code? See For developers below.",
-  "aiAccess.step.allow": "Margince opens. Sign in and choose “Allow”. Done.",
+  "aiAccess.step.allow": "Margince opens. Sign in and choose Authorize. Done.",
   "aiAccess.claude.openConnectors":
     "In Claude, open “Customize”, then “Connectors”.",
   "aiAccess.claude.addCustom":
@@ -6031,7 +6031,7 @@ export const en = {
     "Open Copilot in Teams or Microsoft 365 and choose the agent with Margince.",
   "aiAccess.copilot.ask": "Ask it about one of your deals.",
   "aiAccess.copilot.allow":
-    "When it asks, sign in to Margince and choose “Allow”. Done.",
+    "When it asks, sign in to Margince and choose Authorize. Done.",
   "aiAccess.copilot.ownUnavailable":
     "Copilot outside work cannot connect to other apps. Use Copilot through work, or another AI on this list.",
   "aiAccess.gemini.companyUnavailable":
@@ -12149,7 +12149,7 @@ export const en = {
   "consent.scopeNote.enrich":
     "spends enrichment credits; each purchase still asks you first",
   "consent.ceiling":
-    "Never more than your own permissions. You can disconnect at any time in Settings under Agents.",
+    "Never more than your own permissions. You can disconnect at any time in Settings under AI access.",
   "consent.pickOne": "Pick at least one, or deny.",
   "consent.offline":
     "It stays connected and renews access without asking again until you revoke it.",

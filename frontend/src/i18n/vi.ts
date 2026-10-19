@@ -5719,7 +5719,7 @@ export const vi = {
   "aiAccess.connect.helpAdmin": "Trợ giúp từ {vendor} cho quản trị viên",
   "aiAccess.connect.devHint":
     "Bạn dùng công cụ dòng lệnh hoặc mã của riêng bạn? Xem Dành cho nhà phát triển bên dưới.",
-  "aiAccess.step.allow": "Margince mở ra. Đăng nhập và chọn “Allow”. Xong.",
+  "aiAccess.step.allow": "Margince mở ra. Đăng nhập và chọn Cấp quyền. Xong.",
   "aiAccess.claude.openConnectors":
     "Trong Claude, mở “Customize”, rồi “Connectors”.",
   "aiAccess.claude.addCustom":
@@ -5766,7 +5766,7 @@ export const vi = {
     "Mở Copilot trong Teams hoặc Microsoft 365 và chọn agent có Margince.",
   "aiAccess.copilot.ask": "Hỏi agent về một giao dịch của bạn.",
   "aiAccess.copilot.allow":
-    "Khi được hỏi, đăng nhập Margince và chọn “Allow”. Xong.",
+    "Khi được hỏi, đăng nhập Margince và chọn Cấp quyền. Xong.",
   "aiAccess.copilot.ownUnavailable":
     "Copilot ngoài công việc không kết nối được với ứng dụng khác. Hãy dùng Copilot qua công ty, hoặc một AI khác trong danh sách này.",
   "aiAccess.gemini.companyUnavailable":
@@ -11854,7 +11854,7 @@ export const vi = {
   "consent.scopeNote.enrich":
     "tiêu credit bổ sung dữ liệu; mỗi lần mua vẫn hỏi bạn trước",
   "consent.ceiling":
-    "Không bao giờ vượt quá quyền của chính bạn. Có thể ngắt kết nối bất cứ lúc nào trong Cài đặt, mục Trợ lý AI.",
+    "Không bao giờ vượt quá quyền của chính bạn. Có thể ngắt kết nối bất cứ lúc nào trong Cài đặt, mục Quyền truy cập AI.",
   "consent.pickOne": "Chọn ít nhất một quyền, hoặc từ chối.",
   "consent.offline":
     "Ứng dụng giữ kết nối và tự gia hạn quyền truy cập mà không hỏi lại, cho đến khi bạn thu hồi.",
