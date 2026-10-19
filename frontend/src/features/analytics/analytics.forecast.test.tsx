@@ -124,8 +124,8 @@ function forecastStub(opts: StubOpts = {}) {
 }
 
 describe("ForecastView", () => {
-  // The strip lays out one column per child, so the records' figure beside a
-  // call must be a child of its own or it wraps into a half row.
+  // The strip lays out one column per child. The records' figure beside a
+  // call is a child of its own, or it wraps into a half row.
   it("gives the deal records' figure its own slot beside the call", async () => {
     vi.stubGlobal(
       "fetch",
