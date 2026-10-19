@@ -15,33 +15,57 @@ import (
 	"github.com/margince/margince/backend/internal/modules/reporting"
 )
 
-// readIsolated reads one metric under a savepoint. A database failure marks
-// only that metric failed: rolling back to the savepoint leaves the
-// transaction usable, so the metrics after it still read. Any other error
-// (a refused grant, a cancelled request) still fails the whole evaluation.
+// readIsolated reads one metric under a savepoint, so a database failure
+// marks only that metric failed and the metrics after it still read.
 func (e metricEvaluator) readIsolated(
 	ctx context.Context, tx pgx.Tx, spec metricSpec,
 	frame crmcontracts.ReportingContext, framework crmcontracts.ReportingFramework,
 ) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
-	savepoint, err := tx.Begin(ctx)
+	var facts []reporting.Fact
+	var coverage crmcontracts.ReportingCoverage
+	failed, err := underSavepoint(ctx, tx, string(spec.definition.Id), func(savepoint pgx.Tx) error {
+		var err error
+		facts, coverage, err = spec.read(ctx, savepoint, frame, framework, e)
+		if err != nil {
+			return err
+		}
+		coverage, err = reportingHistoryCoverage(ctx, savepoint, frame, spec.definition.Id, coverage)
+		return err
+	})
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
-	facts, coverage, err := spec.read(ctx, savepoint, frame, framework, e)
-	if err == nil {
-		coverage, err = reportingHistoryCoverage(ctx, savepoint, frame, spec.definition.Id, coverage)
+	if failed {
+		return nil, calculationFailed(frame), nil
 	}
+	return facts, coverage, nil
+}
+
+func calculationFailed(frame crmcontracts.ReportingContext) crmcontracts.ReportingCoverage {
+	return reportingGap(reportingFailed, reporting.ExplanationCopy(frame).Say(reportingCoverageWords.CalculationFailed))
+}
+
+// underSavepoint runs read under a savepoint. A database error is rolled
+// back to the savepoint, logged, and reported as failed, which leaves the
+// transaction usable. Any other error (a refused grant, a cancelled request)
+// is returned and still fails the whole evaluation.
+func underSavepoint(ctx context.Context, tx pgx.Tx, figure string, read func(pgx.Tx) error) (bool, error) {
+	savepoint, err := tx.Begin(ctx)
+	if err != nil {
+		return false, err
+	}
+	err = read(savepoint)
 	if err == nil {
-		return facts, coverage, savepoint.Commit(ctx)
+		return false, savepoint.Commit(ctx)
 	}
 	var database *pgconn.PgError
 	if !errors.As(err, &database) || ctx.Err() != nil {
-		return nil, crmcontracts.ReportingCoverage{}, errors.Join(err, savepoint.Rollback(ctx))
+		return false, errors.Join(err, savepoint.Rollback(ctx))
 	}
 	if rollback := savepoint.Rollback(ctx); rollback != nil {
-		return nil, crmcontracts.ReportingCoverage{}, errors.Join(err, rollback)
+		return false, errors.Join(err, rollback)
 	}
-	slog.ErrorContext(ctx, "reporting: a metric could not be calculated; the other figures are served",
-		"metric", spec.definition.Id, "sqlstate", database.Code, "err", err)
-	return nil, reportingGap(reportingFailed, reporting.ExplanationCopy(frame).Say(reportingCoverageWords.CalculationFailed)), nil
+	slog.ErrorContext(ctx, "reporting: a figure could not be calculated; the other figures are served",
+		"figure", figure, "sqlstate", database.Code, "err", err)
+	return true, nil
 }

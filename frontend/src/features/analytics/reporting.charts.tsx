@@ -52,9 +52,13 @@ export function ReportingCharts({
       !(
         chart.kind === "sdr_outcomes" &&
         chart.metric === "accepted_opportunities" &&
+        // The meetings chart draws both series, unless its own reading
+        // failed; then the acceptance series keeps its own card.
         evaluation.charts.some(
           (other) =>
-            other.kind === "sdr_outcomes" && other.metric === "meetings_held",
+            other.kind === "sdr_outcomes" &&
+            other.metric === "meetings_held" &&
+            other.coverage.status !== "failed",
         )
       ),
   );

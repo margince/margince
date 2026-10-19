@@ -459,3 +459,28 @@ it("marks one failed chart and keeps drawing the others", () => {
     figuresBefore - 1,
   );
 });
+
+it("keeps the accepted-opportunities series when only the meetings reading failed", () => {
+  installFetchStub(reportingStoryRoutes(sdrEvaluation));
+  const evaluation = {
+    ...sdrEvaluation,
+    charts: sdrEvaluation.charts.map((chart) =>
+      chart.kind === "sdr_outcomes" && chart.metric === "meetings_held"
+        ? {
+            ...chart,
+            points: [],
+            coverage: { status: "failed", withheld: false },
+          }
+        : chart,
+    ),
+  } satisfies typeof sdrEvaluation;
+  render(
+    <StoryProviders>
+      <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  expect(screen.getAllByText("Could not be calculated").length).toBeGreaterThan(
+    0,
+  );
+  expect(screen.getAllByText(/Week 1/).length).toBeGreaterThan(0);
+});
