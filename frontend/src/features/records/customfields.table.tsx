@@ -85,7 +85,7 @@ export function FieldTable({
   onRename: (field: CustomField) => void;
   onArchive: (field: CustomField) => void;
   onSetting: (field: CustomField, setting: FieldSetting, on: boolean) => void;
-  // The id of the field whose settings are being written; both its switches
+  // The id of the field whose settings are being written. Both its switches
   // wait, so a second flip cannot send a version the first one moved.
   savingField?: string;
 }>) {
