@@ -125,3 +125,34 @@ func TestParseKeepsALegacyCharsetAttachmentByteIdentical(t *testing.T) {
 		t.Errorf("body = %q, want it to carry %q", fields.Body, "Grüße, Dirk Hörig")
 	}
 }
+
+// Mail clients label Windows-1252 text as ISO-8859-1. Its curly quotes sit in
+// 0x80-0x9F, which must come out as quotes and not as control characters.
+func TestParseReadsISO88591HeaderWordsAsWindows1252(t *testing.T) {
+	raw := crlf(
+		"From: =?iso-8859-1?Q?=93Dirk_H=F6rig=94?= <dirk@acme.de>",
+		"To: me@myco.com",
+		"Subject: =?ISO-8859-1?Q?=93Angebot=94_=96_neu?=",
+		"Date: Wed, 04 Jun 2026 08:00:00 +0000",
+		"Message-ID: <latin1-quotes@acme.de>",
+		"Content-Type: text/plain; charset=utf-8",
+		"",
+		"Hallo",
+		"",
+	)
+	msg, err := Parse(raw, "me@myco.com")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	rec := msg.ToRecord("imap", raw)
+	if got := rec.Counterparty.DisplayName; got != "“Dirk Hörig”" {
+		t.Errorf("counterparty name = %q, want %q", got, "“Dirk Hörig”")
+	}
+	fields, ok := rec.Fields.(capture.ActivityFields)
+	if !ok {
+		t.Fatalf("Fields is %T, want capture.ActivityFields", rec.Fields)
+	}
+	if fields.Subject != "“Angebot” – neu" {
+		t.Errorf("subject = %q, want %q", fields.Subject, "“Angebot” – neu")
+	}
+}

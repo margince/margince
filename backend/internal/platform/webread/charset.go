@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"golang.org/x/net/html/charset"
+	"golang.org/x/text/encoding/charmap"
 )
 
 // charsetSniffBytes is how far into a body a meta charset declaration is
@@ -20,18 +21,17 @@ const charsetSniffBytes = 1024
 // A valid UTF-8 body is kept even under a declared Latin charset. Misconfigured
 // servers send that header over UTF-8 pages, and decoding would garble them.
 func (got fetched) text() string {
-	if !decodableText(parseMediaType(got.contentType)) {
+	if !decodableText(parseMediaType(got.contentType)) || utf8.Valid(got.body) {
 		return string(got.body)
 	}
-	body := got.body
-	if got.capped {
-		body = withoutCutRune(body)
-	}
-	if utf8.Valid(body) {
-		return string(body)
+	if kept, cut := utf8CutByCap(got); cut {
+		return string(kept)
 	}
 	sniff := got.body[:min(len(got.body), charsetSniffBytes)]
-	encoding, _, _ := charset.DetermineEncoding(sniff, got.contentType)
+	encoding, name, _ := charset.DetermineEncoding(sniff, got.contentType)
+	if name == "utf-8" || name == "windows-1252" {
+		return utf8WithLegacyBytes(got.body)
+	}
 	decoded, err := encoding.NewDecoder().Bytes(got.body)
 	if err != nil {
 		// A decoder that refuses its input leaves the body as it arrived. Text
@@ -50,17 +50,53 @@ func decodableText(mediaType string) bool {
 	return strings.HasPrefix(mediaType, "text/") || mediaType == "application/xhtml+xml"
 }
 
-// withoutCutRune drops a multi-byte rune the size cap cut short at the end of
-// body. Without this a capped UTF-8 page would fail the validity check on its
-// last few bytes and be decoded as Windows-1252 throughout.
-func withoutCutRune(body []byte) []byte {
+// utf8CutByCap returns a capped body without the multi-byte rune the cap cut
+// short, and reports whether the body ends in such a rune.
+//
+// The rest must be valid UTF-8 with at least one non-ASCII rune. An ASCII body
+// ending in one high byte is more likely Latin-1 than a cut rune.
+func utf8CutByCap(got fetched) ([]byte, bool) {
+	if !got.capped {
+		return nil, false
+	}
+	body := got.body
 	for i := len(body) - 1; i >= 0 && i >= len(body)-utf8.UTFMax; i-- {
-		if utf8.RuneStart(body[i]) {
-			if utf8.FullRune(body[i:]) {
-				return body
-			}
-			return body[:i]
+		if !utf8.RuneStart(body[i]) {
+			continue
+		}
+		if utf8.FullRune(body[i:]) {
+			return nil, false
+		}
+		rest := body[:i]
+		return rest, utf8.Valid(rest) && !isASCII(rest)
+	}
+	return nil, false
+}
+
+func isASCII(body []byte) bool {
+	for _, b := range body {
+		if b >= utf8.RuneSelf {
+			return false
 		}
 	}
-	return body
+	return true
+}
+
+// utf8WithLegacyBytes reads body as UTF-8, and every byte outside a valid
+// UTF-8 sequence as Windows-1252.
+//
+// A page built from a UTF-8 template with a Latin-1 snippet keeps both halves.
+// A pure Latin-1 body comes out as a plain Windows-1252 decode would give it.
+func utf8WithLegacyBytes(body []byte) string {
+	var out strings.Builder
+	out.Grow(len(body) + len(body)/8)
+	for len(body) > 0 {
+		r, size := utf8.DecodeRune(body)
+		if r == utf8.RuneError && size == 1 {
+			r = charmap.Windows1252.DecodeByte(body[0])
+		}
+		out.WriteRune(r)
+		body = body[size:]
+	}
+	return out.String()
 }

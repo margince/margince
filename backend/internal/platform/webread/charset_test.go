@@ -125,12 +125,42 @@ func TestFetchKeepsAUTF8PageThatOverrunsTheCap(t *testing.T) {
 	}
 }
 
-// Only the cap can cut a rune. A whole Latin-1 body that happens to end in a
-// byte shaped like a UTF-8 lead byte is still Latin-1 and must be decoded.
-func TestTextDecodesAnUncappedLatin1BodyEndingInALeadByte(t *testing.T) {
-	whole := fetched{body: latin1("Inhaber: José"), contentType: "text/html"}
-	if got := whole.text(); got != "Inhaber: José" {
-		t.Errorf("text() = %q, want %q", got, "Inhaber: José")
+// Only the cap can cut a rune. A whole body that happens to end in a byte
+// shaped like a UTF-8 lead byte ends in a Latin-1 letter.
+func TestTextDecodesAnUncappedBodyEndingInALeadByte(t *testing.T) {
+	bodies := map[string][]byte{
+		"Inhaber: José":        latin1("Inhaber: José"),
+		"Inhaber: Hörig, José": append([]byte("Inhaber: Hörig, Jos"), 0xe9),
+	}
+	for want, body := range bodies {
+		if got := (fetched{body: body, contentType: "text/html"}).text(); got != want {
+			t.Errorf("text() = %q, want %q", got, want)
+		}
+	}
+}
+
+// At the cap, a trailing lead byte is a cut rune only when the rest is valid
+// UTF-8 with an umlaut in it. Otherwise it is a Latin-1 letter.
+func TestTextDecodesACappedBodyEndingInALatin1Letter(t *testing.T) {
+	for _, want := range []string{"Inhaber: José", "Dirk Hörig, José"} {
+		capped := fetched{body: latin1(want), contentType: "text/html", capped: true}
+		if got := capped.text(); got != want {
+			t.Errorf("text() = %q, want %q", got, want)
+		}
+	}
+}
+
+// A UTF-8 page can carry a Windows-1252 byte past the charset sniff window,
+// for example from an included snippet. Both halves must come out readable,
+// whatever charset the header names.
+func TestTextReadsAUTF8PageWithALateLegacyByte(t *testing.T) {
+	body := []byte("Dirk Hörig " + strings.Repeat("a", charsetSniffBytes) + " 2019\x962026")
+	for _, contentType := range []string{"text/html", "text/html; charset=utf-8", "text/html; charset=iso-8859-1"} {
+		got := fetched{body: body, contentType: contentType}.text()
+		if !strings.HasPrefix(got, "Dirk Hörig ") || !strings.HasSuffix(got, " 2019–2026") {
+			t.Errorf("text() for %q = %q…%q, want the UTF-8 name and the en dash",
+				contentType, got[:12], got[len(got)-12:])
+		}
 	}
 }
 

@@ -15,6 +15,7 @@ import (
 	"io"
 	"mime"
 	netmail "net/mail"
+	"regexp"
 
 	"github.com/emersion/go-message"
 	"github.com/emersion/go-message/mail"
@@ -33,11 +34,22 @@ func legacyCharsetReader(label string, input io.Reader) (io.Reader, error) {
 	return encoding.NewDecoder().Reader(input), nil
 }
 
+// stdlibDecodedWord matches the encoded words the stdlib decodes itself and
+// never hands to legacyCharsetReader. Its ISO-8859-1 maps 0x80-0x9F to control
+// characters, where mail clients mean Windows-1252 quotes and dashes.
+var stdlibDecodedWord = regexp.MustCompile(`(?i)=\?(?:iso-8859-1|us-ascii)\?`)
+
+// asWindows1252Words relabels those words, so the WHATWG table decodes them as
+// it decodes a body part in the same charset.
+func asWindows1252Words(raw string) string {
+	return stdlibDecodedWord.ReplaceAllLiteralString(raw, "=?windows-1252?")
+}
+
 // headerText is one unstructured header field with its encoded words decoded.
 // A word in an unknown charset leaves the field as it arrived.
 func headerText(header mail.Header, key string) string {
 	raw := header.Get(key)
-	decoded, err := headerWords.DecodeHeader(raw)
+	decoded, err := headerWords.DecodeHeader(asWindows1252Words(raw))
 	if err != nil {
 		return raw
 	}
@@ -53,7 +65,7 @@ func addressList(header mail.Header, key string) ([]*mail.Address, error) {
 		return nil, nil
 	}
 	parser := netmail.AddressParser{WordDecoder: headerWords}
-	return parser.ParseList(raw)
+	return parser.ParseList(asWindows1252Words(raw))
 }
 
 // toUTF8 decodes a text body part from the charset its Content-Type declared.
