@@ -7054,6 +7054,17 @@ paths:
       description: |-
         What the nightly check found, ordered the way a manager with ten minutes before a
         call needs it: high severity first, then by the money at stake.
+      parameters:
+        - name: scope_kind
+          in: query
+          schema: {type: string, enum: [workspace, team, owner]}
+          description: >-
+            Narrows the findings to the deals of one population, as the forecast and the reports measure it. Omitted means every finding the caller can see. A scope the caller may not measure is refused.
+        - name: scope_id
+          in: query
+          schema: {type: string, format: uuid}
+          description: >-
+            The team or owner, for a team or owner scope. Refused with the workspace scope, which names no subject.
       responses:
         '200':
           description: The open findings, most material first.
@@ -7069,6 +7080,7 @@ paths:
                 additionalProperties: false
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /forecast/movement:
     get:
       tags: [Reports]

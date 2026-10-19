@@ -22195,6 +22195,27 @@ func (e GetForecastParamsScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for ListInputChecksParamsScopeKind.
+const (
+	ListInputChecksParamsScopeKindOwner     ListInputChecksParamsScopeKind = "owner"
+	ListInputChecksParamsScopeKindTeam      ListInputChecksParamsScopeKind = "team"
+	ListInputChecksParamsScopeKindWorkspace ListInputChecksParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ListInputChecksParamsScopeKind enum.
+func (e ListInputChecksParamsScopeKind) Valid() bool {
+	switch e {
+	case ListInputChecksParamsScopeKindOwner:
+		return true
+	case ListInputChecksParamsScopeKindTeam:
+		return true
+	case ListInputChecksParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListForecastCallsParamsPeriod.
 const (
 	ListForecastCallsParamsPeriodForecastCallsPeriodMonth   ListForecastCallsParamsPeriod = "month"
@@ -56434,6 +56455,18 @@ type GetForecastParamsPeriod string
 // GetForecastParamsScopeKind defines parameters for GetForecast.
 type GetForecastParamsScopeKind string
 
+// ListInputChecksParams defines parameters for ListInputChecks.
+type ListInputChecksParams struct {
+	// ScopeKind Narrows the findings to the deals of one population, as the forecast and the reports measure it. Omitted means every finding the caller can see. A scope the caller may not measure is refused.
+	ScopeKind *ListInputChecksParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+
+	// ScopeId The team or owner, for a team or owner scope. Refused with the workspace scope, which names no subject.
+	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+}
+
+// ListInputChecksParamsScopeKind defines parameters for ListInputChecks.
+type ListInputChecksParamsScopeKind string
+
 // ListForecastCallsParams defines parameters for ListForecastCalls.
 type ListForecastCallsParams struct {
 	// Period The window length. Quarters follow the installation's financial year.
@@ -71978,7 +72011,7 @@ type ServerInterface interface {
 	GetForecastAssurance(w http.ResponseWriter, r *http.Request)
 	// The open findings this caller can see.
 	// (GET /forecast/assurance/exceptions)
-	ListInputChecks(w http.ResponseWriter, r *http.Request)
+	ListInputChecks(w http.ResponseWriter, r *http.Request, params ListInputChecksParams)
 	// Answer a finding from the nightly input check.
 	// (POST /forecast/assurance/exceptions/{id}/resolve)
 	ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -75917,7 +75950,7 @@ func (_ Unimplemented) GetForecastAssurance(w http.ResponseWriter, r *http.Reque
 
 // The open findings this caller can see.
 // (GET /forecast/assurance/exceptions)
-func (_ Unimplemented) ListInputChecks(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) ListInputChecks(w http.ResponseWriter, r *http.Request, params ListInputChecksParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -98006,6 +98039,9 @@ func (siw *ServerInterfaceWrapper) GetForecastAssurance(w http.ResponseWriter, r
 // ListInputChecks operation middleware
 func (siw *ServerInterfaceWrapper) ListInputChecks(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -98014,8 +98050,37 @@ func (siw *ServerInterfaceWrapper) ListInputChecks(w http.ResponseWriter, r *htt
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListInputChecksParams
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListInputChecks(w, r)
+		siw.Handler.ListInputChecks(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

@@ -73875,7 +73875,12 @@ export interface operations {
     };
     listInputChecks: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Narrows the findings to the deals of one population, as the forecast and the reports measure it. Omitted means every finding the caller can see. A scope the caller may not measure is refused. */
+                scope_kind?: "workspace" | "team" | "owner";
+                /** @description The team or owner, for a team or owner scope. Refused with the workspace scope, which names no subject. */
+                scope_id?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -73895,6 +73900,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     resolveInputCheck: {

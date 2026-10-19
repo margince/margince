@@ -279,7 +279,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// is a job rather than a request, so the handler set is a read.
 		assuranceHandlers: assurance.NewHandlers(
 			assurance.NewStore(InstallationDB(pool)),
-			AssuranceExceptions,
+			AssuranceExceptionsIn,
 			func() time.Time { return time.Now().UTC() },
 		),
 		// One assembler, shared with the test that drives this handler: the

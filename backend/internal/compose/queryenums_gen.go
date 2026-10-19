@@ -135,6 +135,9 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "period", Values: []string{"quarter", "month", "week"}, Array: false, Explode: true},
 		{Name: "scope_kind", Values: []string{"workspace", "team", "owner"}, Array: false, Explode: true},
 	},
+	"GET /v1/forecast/assurance/exceptions": {
+		{Name: "scope_kind", Values: []string{"workspace", "team", "owner"}, Array: false, Explode: true},
+	},
 	"GET /v1/forecast/calls": {
 		{Name: "period", Values: []string{"quarter", "month", "week"}, Array: false, Explode: true},
 		{Name: "scope_kind", Values: []string{"workspace", "team", "owner"}, Array: false, Explode: true},

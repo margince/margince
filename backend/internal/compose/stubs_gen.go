@@ -1851,7 +1851,7 @@ func (stubs) GetForecastAssurance(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "GetForecastAssurance")
 }
 
-func (stubs) ListInputChecks(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) ListInputChecks(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListInputChecksParams) {
 	httperr.NotImplemented(w, r, "ListInputChecks")
 }
 

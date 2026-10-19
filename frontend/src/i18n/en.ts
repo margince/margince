@@ -5402,7 +5402,7 @@ export const en = {
   "analytics.filters": "Filters",
   "analytics.attention": "Needs your attention",
   "analytics.attentionNoOwner": "No owner",
-  "analytics.attentionFindingDetail": "{owner} · {amount} at stake",
+  "analytics.attentionAtStake": "{amount} at stake",
   "analytics.attentionReview": "Review",
   "analytics.attentionChecks_one": "1 forecast check to answer",
   "analytics.attentionChecks_other": "{count} forecast checks to answer",

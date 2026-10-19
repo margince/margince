@@ -25330,6 +25330,20 @@ paths:
         `claim` and `observed` hold structured values whose keys depend on the exception
         type — a date, a minor-unit amount, an id. Never a snippet lifted from an activity
         body: a frozen copy of a protected sentence outlives the protection on its source.
+      parameters:
+        - name: scope_kind
+          in: query
+          schema: { type: string, enum: [workspace, team, owner] }
+          description: >-
+            Narrows the findings to the deals of one population, as the forecast and the
+            reports measure it. Omitted means every finding the caller can see. A scope the
+            caller may not measure is refused.
+        - name: scope_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: >-
+            The team or owner, for a team or owner scope. Refused with the workspace scope,
+            which names no subject.
       x-mcp-tool: { verb: list_input_checks, tier: auto_execute, scope: read }
       responses:
         '200':
@@ -25346,6 +25360,7 @@ paths:
                 additionalProperties: false
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /forecast/assurance/exceptions/{id}/resolve:
     post:
       tags: [Reports]
