@@ -59,6 +59,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `docscodeofconduct_test.go` | H3 | CODE\_OF\_CONDUCT.md is the Contributor Covenant 2.1 as adopted, plus the project's enforcement contact. |
 | `dsrerasedsentinel_test.go` | H3 | The word an erasure leaves in place of a request's answer has two writers in two modules, and a module cannot import its sibling. |
 | `dsrqueueishumanonly_test.go` | H2 | The subject-request queue is human-only in the contract because it is human-only in the store. |
+| `emaildesign_test.go` | H1 | _(no doc comment)_ |
 | `emailsplitterparity_test.go` | H3 | The server composes a row's preview and the browser folds the quoted tail in the drawer, from two copies of one vocabulary. |
 | `entitymodel_test.go` | H3 | The entity model pages say what the schema says. |
 | `enumsync_test.go` | H3 | Where domain logic branches on a typed Go enum, its constant set equals the schema's CHECK (col IN (...)) set for the column it mirrors. |
@@ -173,6 +174,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `teamweeklycopy_test.go` | H3 | The team week names coverage only against its basis. |
 | `textlimitparity_test.go` | H2 | Each text cap a module applies is a hand-typed mirror of a number `api/crm.yaml` publishes, because the generated server enforces no string length. |
 | `transcriptmarker_test.go` | H3 | One value, spelled in two modules, because a module never imports a sibling. |
+| `voicereasoncoverage_test.go` | H3 | The forwarding method's argument is checked at every call above. |
 | `webhookeventsdoc_test.go` | H3 | eventSchema is the part of a public-events.yaml schema the reference prints. |
 | `webtierheaders_test.go` | H2 | The app shell and the api send the same browser-facing headers. |
 | `wonreasondetailbound_test.go` | H2 | The paperless-win detail's length bound is one number, in three places that each need it. |
@@ -345,6 +347,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `recencyorigins_test.go` | H2 | Every reading of "when was this record last touched" excludes the origins the system wrote itself. |
 | `recordsourcespelling_test.go` | H2 | A record's `source` names where the row came from, and whoever uses this product is one origin with one spelling. |
 | `registrarparity_test.go` | H2 | A registry that claims to be complete must be. |
+| `relayentrypoints_test.go` | H2 | _(no doc comment)_ |
 | `remediationnotbuyeractivity_test.go` | H2 | Remediation work must never read as buyer engagement. |
 | `reportasof_test.go` | H2 | A report's answer is labelled with the instant it was computed at. |
 | `requiredbodyids_test.go` | H3 | Every contract request body that declares a required id must be accounted for. |

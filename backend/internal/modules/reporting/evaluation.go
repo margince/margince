@@ -5,10 +5,7 @@ package reporting
 
 import (
 	"context"
-	"crypto/sha256"
 	"crypto/subtle"
-	"encoding/hex"
-	"encoding/json"
 	"strconv"
 	"strings"
 	"time"
@@ -27,12 +24,17 @@ func (s *Service) Catalog(ctx context.Context) (crmcontracts.ReportingCatalog, e
 	if err := auth.Require(ctx, "report_definition", principal.ActionRead); err != nil {
 		return crmcontracts.ReportingCatalog{}, err
 	}
-	out, err := s.evaluator.Catalog(ctx)
-	canSchedule := auth.Allows(ctx, "report_schedule", principal.ActionCreate) || auth.Allows(ctx, "report_schedule", principal.ActionUpdate)
-	if err != nil || !canSchedule {
-		return out, err
-	}
-	err = s.store.db.Tx(ctx, func(tx pgx.Tx) error {
+	var out crmcontracts.ReportingCatalog
+	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = s.evaluator.Catalog(ctx, s.statusCopy(ctx, tx).Lang())
+		if err != nil {
+			return err
+		}
+		canSchedule := auth.Allows(ctx, "report_schedule", principal.ActionCreate) || auth.Allows(ctx, "report_schedule", principal.ActionUpdate)
+		if !canSchedule {
+			return nil
+		}
 		ready, err := scheduleReady(ctx, tx)
 		out.ScheduleReady = &ready
 		return err
@@ -70,11 +72,6 @@ func (s *Service) evaluateAt(ctx context.Context, tx pgx.Tx, selection crmcontra
 	if selection.Blocks == nil {
 		selection.Blocks = []crmcontracts.ReportingBlockKind{}
 	}
-	// A selection with no charts serialises the same whichever door built it,
-	// so the evaluation key does not depend on nil versus empty.
-	if selection.Blocks == nil {
-		selection.Blocks = []crmcontracts.ReportingBlockKind{}
-	}
 	if err := s.validateSelection(ctx, selection); err != nil {
 		return Evaluation{}, err
 	}
@@ -85,13 +82,8 @@ func (s *Service) evaluateAt(ctx context.Context, tx pgx.Tx, selection crmcontra
 	if err := s.applyTargets(ctx, tx, &out.Result); err != nil {
 		return Evaluation{}, err
 	}
-	raw, err := json.Marshal(out)
-	if err != nil {
-		return Evaluation{}, err
-	}
-	digest := sha256.Sum256(raw)
-	out.Result.EvaluationKey = hex.EncodeToString(digest[:])
-	return out, nil
+	out.Result.EvaluationKey, err = evaluationKey(out)
+	return out, err
 }
 
 // EvaluateReport pins the requested definition revision before evaluation.

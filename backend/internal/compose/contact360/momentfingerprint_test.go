@@ -28,8 +28,8 @@ func TestAContactPromiseMovedToTodayComesBackFromASetAside(t *testing.T) {
 	moved := task
 	moved.DueAt = &today
 
-	before := openPromiseFrom(context.Background(), now, task)
-	after := openPromiseFrom(context.Background(), now, moved)
+	before := momentCopyFor("en").openPromiseFrom(context.Background(), now, task)
+	after := momentCopyFor("en").openPromiseFrom(context.Background(), now, moved)
 	if before.EvidenceFingerprint == after.EvidenceFingerprint {
 		t.Error("a task moved from next month to today keeps its fingerprint, so it stays set aside")
 	}

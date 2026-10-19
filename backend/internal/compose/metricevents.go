@@ -17,7 +17,7 @@ import (
 
 func readReportingQualified(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, framework crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
 	if !reportingHasQualification(frame, framework) {
-		return nil, reportingGap("not_configured", "Choose qualifying stages in Reporting setup"), nil
+		return nil, reportingGap("not_configured", reporting.ExplanationCopy(frame).Say(reportingCoverageWords.Qualification)), nil
 	}
 	// Revisions apply prospectively; an explicit reversal voids its event,
 	// whereas an ordinary regression leaves the first qualifying entry intact.
@@ -38,7 +38,7 @@ func reportingGap(status crmcontracts.ReportingStatus, reason string) crmcontrac
 
 func readReportingAccepted(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
 	if frame.PipelineId != nil {
-		return nil, reportingGap("unsupported", "Acceptance credit has no historical pipeline dimension; choose all pipelines"), nil
+		return nil, reportingGap("unsupported", reporting.ExplanationCopy(frame).Say(reportingCoverageWords.AcceptancePipeline)), nil
 	}
 	var b reportingBindings
 	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), "credit.submitter_id_at_change", b.arg, unownedIsExcluded)

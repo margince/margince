@@ -10,8 +10,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-// A note, a booked meeting and a canceled one are on the timeline but are no
-// contact. A deal holding only those must not be told that nothing is logged.
+const noContactYet = "No contact has taken place on this deal yet"
+
+// A note or an unheld meeting does not prove that contact took place.
 func TestADealWithNoContactIsNotToldNothingWasLogged(t *testing.T) {
 	canceled := crmcontracts.ActivityMeetingStatusCanceled
 	called := act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -2))

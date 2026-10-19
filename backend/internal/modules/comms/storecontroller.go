@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -41,14 +40,16 @@ type StageControllerInput struct {
 	TemplateVersion int
 	// Subject and Body are the RENDERED template. Body carries the link
 	// placeholder when PayloadRef is set; the plaintext link is never here.
-	Subject string
-	Body    string
+	Subject  string
+	Body     string
+	HTMLBody string
 	// MessageID is the RFC822 id this send will claim.
 	MessageID string
 	// PayloadRef and PayloadExpiresAt reference the one-time link material in
 	// the key vault, and say when it stops being worth sending.
 	PayloadRef       string
 	PayloadExpiresAt *time.Time
+	DueAt            *time.Time
 	// LinkID is the confirm_token this message carries, when it carries one.
 	LinkID ids.UUID
 }
@@ -72,8 +73,8 @@ type ControllerTemplates interface {
 //     message that was supposed to carry a link and does not is a dead end for
 //     the contact who receives it, and one that carries two is a bug nobody sees
 //     until it ships;
-//   - HTML, because the operator relay is text-only and pretending otherwise
-//     would silently drop the markup.
+//
+// Both alternatives must carry the same personal-link shape.
 func (s *Store) StageControllerTx(ctx context.Context, tx pgx.Tx, in StageControllerInput, templates ControllerTemplates) (ids.UUID, error) {
 	if in.Recipient == "" {
 		return ids.UUID{}, ErrNoAddressee
@@ -91,6 +92,13 @@ func (s *Store) StageControllerTx(ctx context.Context, tx pgx.Tx, in StageContro
 	if err := checkPlaceholder(in); err != nil {
 		return ids.UUID{}, err
 	}
+	if in.HTMLBody != "" {
+		alternative := in
+		alternative.Body = in.HTMLBody
+		if err := checkPlaceholder(alternative); err != nil {
+			return ids.UUID{}, err
+		}
+	}
 	recipients, err := marshalList([]string{in.Recipient})
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("comms: encoding the controller recipient: %w", err)
@@ -104,23 +112,17 @@ func (s *Store) StageControllerTx(ctx context.Context, tx pgx.Tx, in StageContro
 		return ids.UUID{}, fmt.Errorf("comms: encoding the attachment snapshot: %w", err)
 	}
 	id := ids.NewV7()
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO comms_outbound
-		  (id, activity_id, provider, message_id, recipients, cc, bcc,
-		   subject, body, references_chain, status, created_at, attachments,
-		   sender_kind, template_key, template_version, payload_ref, payload_expires_at, link_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $6,
-		        $7, $8, $6, 'pending', $9, $10,
-		        'controller', $11, $12, NULLIF($13,''), $14, $15)`,
-		id, in.ActivityID, ProviderOperatorRelay, in.MessageID, recipients, empty,
-		in.Subject, in.Body, s.now().UTC(), files,
-		in.TemplateKey, in.TemplateVersion, in.PayloadRef, in.PayloadExpiresAt,
-		nullableID(in.LinkID)); err != nil {
+	args := []any{id, in.ActivityID, ProviderOperatorRelay, in.MessageID, recipients, empty, empty, in.Subject, in.Body, in.HTMLBody, empty, "pending", s.now().UTC(), files, "controller", in.TemplateKey, in.TemplateVersion, controllerPayloadRef(in.PayloadRef), in.PayloadExpiresAt, nullableID(in.LinkID), in.DueAt}
+	query := `INSERT INTO comms_outbound
+ (id,activity_id,provider,message_id,recipients,cc,bcc,subject,body,html_body,references_chain,status,created_at,attachments,sender_kind,template_key,template_version,payload_ref,payload_expires_at,link_id,delivery_due_at)
+ VALUES (` + storekit.Placeholders(args) + `)`
+	if _, err := tx.Exec(ctx, query, args...); err != nil {
 		if storekit.IsUniqueViolation(err) {
 			return ids.UUID{}, ErrDuplicateMessage
 		}
 		return ids.UUID{}, fmt.Errorf("comms: staging the controller delivery: %w", err)
 	}
+
 	return id, nil
 }
 
@@ -266,3 +268,10 @@ var ErrTemplateNotRegistered = errors.New("comms: the controller template is not
 var ErrTemplateShape = errors.New("comms: the rendered template does not match its link material")
 
 func placeholderCount(body string) int { return strings.Count(body, LinkPlaceholder) }
+
+func controllerPayloadRef(ref string) *string {
+	if ref == "" {
+		return nil
+	}
+	return &ref
+}

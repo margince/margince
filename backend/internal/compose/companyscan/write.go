@@ -28,9 +28,11 @@ import (
 	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
+	"github.com/margince/margince/backend/internal/compose/receiptcopy"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -159,7 +161,7 @@ func Read(
 		return nil, crmcontracts.WrittenByDeterministic, nil
 	}
 	resp, err := ai.Ask(ctx, lane, ScanRequest(in, lang), func(text string) error {
-		_, refused, parseErr := ParseFindings(text, companyID, in)
+		_, refused, parseErr := ParseFindings(text, companyID, in, lang)
 		if parseErr != nil {
 			return parseErr
 		}
@@ -174,7 +176,7 @@ func Read(
 	if err != nil {
 		return nil, crmcontracts.WrittenByDeterministic, &LaneError{Cause: err}
 	}
-	kept, _, err := ParseFindings(resp.Text, companyID, in)
+	kept, _, err := ParseFindings(resp.Text, companyID, in, lang)
 	if err != nil {
 		return nil, crmcontracts.WrittenByDeterministic, &LaneError{Cause: err}
 	}
@@ -200,7 +202,7 @@ type rawFinding struct {
 // reply, or one with no findings key, is an error: the model did not answer
 // the question.
 func ParseFindings(
-	reply string, companyID ids.CompanyID, in Input,
+	reply string, companyID ids.CompanyID, in Input, lang string,
 ) (kept []crmcontracts.Company360Suggestion, refused []string, err error) {
 	var parsed struct {
 		Findings *[]rawFinding `json:"findings"`
@@ -216,7 +218,7 @@ func ParseFindings(
 		if len(kept) == maxFindings {
 			break
 		}
-		suggestion, why := ground(raw, companyID, in)
+		suggestion, why := ground(raw, companyID, in, langcopy.For(lang))
 		if why != "" {
 			refused = append(refused, fmt.Sprintf("finding %d: %s", i+1, why))
 			continue
@@ -231,7 +233,7 @@ func ParseFindings(
 }
 
 // ground turns one raw finding into a suggestion, or says why it cannot.
-func ground(raw rawFinding, companyID ids.CompanyID, in Input) (crmcontracts.Company360Suggestion, string) {
+func ground(raw rawFinding, companyID ids.CompanyID, in Input, said langcopy.Spoken) (crmcontracts.Company360Suggestion, string) {
 	kind, ok := readKind(raw.Kind)
 	if !ok {
 		return crmcontracts.Company360Suggestion{}, fmt.Sprintf("kind %q is not one the scan raises", clamp(raw.Kind))
@@ -263,7 +265,7 @@ func ground(raw rawFinding, companyID ids.CompanyID, in Input) (crmcontracts.Com
 		Name:       nonEmpty(message.Subject),
 		Quote:      &quote,
 		At:         &message.At,
-		Origin:     new(origin(message)),
+		Origin:     new(receiptcopy.Origin(said, message.Kind, message.Direction)),
 	}}
 	by := crmcontracts.WrittenByModel
 	out := crmcontracts.Company360Suggestion{
@@ -299,25 +301,6 @@ func readKind(name string) (crmcontracts.Company360SuggestionKind, bool) {
 		}
 	}
 	return "", false
-}
-
-// origin says where a quote came from in the reader's terms: the channel,
-// and who spoke. Server-authored like the rules' own, so the receipt under a
-// model's finding and the one under a rule's row use one voice.
-func origin(message MessageIn) string {
-	channel := map[string]string{
-		"email": "Email", "message": "Message", "call": "Call", "meeting": "Meeting",
-	}[message.Kind]
-	if channel == "" {
-		channel = "Exchange"
-	}
-	switch message.Direction {
-	case string(crmcontracts.ActivityDirectionOutbound):
-		return channel + " you sent"
-	case string(crmcontracts.ActivityDirectionInbound):
-		return channel + " they sent"
-	}
-	return channel
 }
 
 // The quote's bounds, as the prompt states them. A quote under the floor is

@@ -20,6 +20,7 @@ import { formatDateTime, formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { deferralDetail } from "../../lib/deferral-detail";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { factsKey } from "./companyfactspanel";
@@ -155,6 +156,12 @@ const SITE_READ_STOP_LABELS: Record<
  * than for what it stopped short of.
  */
 function statusLabelOf(report: SiteReadReport): MessageKey {
+  if (report.status === "deferred") {
+    if (report.deferral_reason === "provider")
+      return "deepread.statusProviderWait";
+    if (report.deferral_reason === "budget") return "deepread.statusBudgetWait";
+  }
+
   if (report.status !== "partial" || !report.stopped_reason) {
     return SITE_READ_STATUS_LABELS[report.status];
   }
@@ -171,7 +178,7 @@ function SiteReadDeferral({ report }: Readonly<{ report: SiteReadReport }>) {
   }
   return (
     <p className="t-caption companydeepread-note">
-      {report.status_detail}
+      {deferralDetail(t, report)}
       {report.next_attempt_at && (
         <>
           {" "}

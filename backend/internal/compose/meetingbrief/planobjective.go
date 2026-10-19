@@ -19,32 +19,20 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 )
 
-// The reminders. Fixed copy keyed to the meeting kind rather than read from
-// records, which is why the contract keeps `caveat` out of the cited sentence:
-// it is the product's advice, not a claim about this account.
-const (
-	caveatRelationship = "Do not force a commercial agenda onto an informal meeting. Ask permission first, then earn the next step."
-	caveatDiscovery    = "Do not pitch. The meeting is worth more as questions than as answers."
-	caveatCommercial   = "Do not concede on price before the value is agreed."
-	caveatDelivery     = "Do not reopen scope that is already agreed; name what changed and what it costs."
-	caveatUnknown      = "Do not assume what this meeting is for. Ask, then plan the rest of the hour."
-	caveatDemo         = "Do not tour the product. Show the two things they asked about and stop."
-)
-
-func caveatFor(typ MeetingType) string {
+func (said briefCopy) caveatFor(typ MeetingType) string {
 	switch typ.Value {
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRelationship:
-		return caveatRelationship
+		return said.Say(objectiveWords.CaveatRelationship)
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFirstDiscovery, crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFollowupDiscovery:
-		return caveatDiscovery
+		return said.Say(objectiveWords.CaveatDiscovery)
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeCommercial, crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDecision:
-		return caveatCommercial
+		return said.Say(objectiveWords.CaveatCommercial)
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDelivery, crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRenewalRisk:
-		return caveatDelivery
+		return said.Say(objectiveWords.CaveatDelivery)
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDemo:
-		return caveatDemo
+		return said.Say(objectiveWords.CaveatDemo)
 	default:
-		return caveatUnknown
+		return said.Say(objectiveWords.CaveatUnknown)
 	}
 }
 
@@ -56,11 +44,11 @@ func caveatFor(typ MeetingType) string {
 // implies, cited to the meeting itself — the record that carries the filing the
 // claim would have come from.
 func objectiveFor(in Input, typ MeetingType, ranked *rankedClaims) *Objective {
-	caveat := caveatFor(typ)
+	caveat := briefCopyFor(in.Language).caveatFor(typ)
 	if ask, ok := ranked.take(openOfKind(kindCommitmentOurs, kindOpenQuestion, kindDecision)); ok {
 		return &Objective{
 			Sentence: Sentence{
-				Text:     objectiveLine(ask, typ, in.Now),
+				Text:     briefCopyFor(in.Language).objectiveLine(ask, typ, in.Now),
 				Nature:   natureRecommendation,
 				Evidence: []Evidence{{EntityType: citeActivity, EntityID: ask.SourceID}},
 			},
@@ -83,43 +71,44 @@ func objectiveFor(in Input, typ MeetingType, ranked *rankedClaims) *Objective {
 
 // objectiveLine turns the sharpest claim into an outcome, softened where the
 // room is not the place to press it.
-func objectiveLine(ask ClaimIn, typ MeetingType, now time.Time) string {
+func (said briefCopy) objectiveLine(ask ClaimIn, typ MeetingType, now time.Time) string {
 	if typ.Value == crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRelationship {
 		return fmt.Sprintf(
-			"Confirm whether %s is still a priority, and leave with one dated next step on it: %s",
+			said.Say(objectiveWords.Priority),
 			ask.ContactName, ask.Body)
 	}
 	if deadline.Passed(ask.DueAt, now) {
 		return fmt.Sprintf(
-			"Close out what we owe %s, overdue since %s, and agree the next step: %s",
-			ask.ContactName, ask.DueAt.UTC().Format("2 Jan"), ask.Body)
+			said.Say(objectiveWords.Overdue),
+			ask.ContactName, ask.DueAt.UTC().Format(time.DateOnly), ask.Body)
 	}
-	return fmt.Sprintf("Leave with %s's answer on: %s", ask.ContactName, ask.Body)
+	return fmt.Sprintf(said.Say(objectiveWords.Answer), ask.ContactName, ask.Body)
 }
 
 func objectiveByType(typ MeetingType, in Input) string {
+	said := briefCopyFor(in.Language)
 	switch typ.Value {
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown:
-		return "Establish what this meeting is for before planning the rest of the hour."
+		return said.Say(objectiveWords.Unknown)
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFirstDiscovery:
-		return "Learn what prompted this conversation and who else decides, and earn a second meeting."
+		return said.Say(objectiveWords.Discovery)
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRelationship:
-		return "Keep the relationship warm and find out what has changed since you last spoke."
+		return said.Say(objectiveWords.Relationship)
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDelivery:
 		if in.Project != nil {
-			return projectGoalLine(*in.Project)
+			return said.projectGoalLine(*in.Project)
 		}
-		return "Agree what is done, what is next, and who owns it."
+		return said.Say(objectiveWords.Delivery)
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeCommercial:
-		return "Agree the shape of the commercial terms, or name what is blocking them."
+		return said.Say(objectiveWords.Commercial)
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDecision:
-		return "Get the decision, or the date and the name of whoever makes it."
+		return said.Say(objectiveWords.Decision)
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRenewalRisk:
-		return "Understand what went wrong, and agree one thing that changes before the renewal."
+		return said.Say(objectiveWords.Renewal)
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDemo:
-		return "Show the two things they said they needed, and agree what happens after."
+		return said.Say(objectiveWords.Demo)
 	default:
-		return "Agree a dated next step before the meeting ends."
+		return said.Say(objectiveWords.Next)
 	}
 }
 
@@ -130,19 +119,20 @@ func objectiveByType(typ MeetingType, in Input) string {
 // there is nothing real to name, it opens by asking, which is the honest move
 // and also the right one.
 func openingFor(in Input, typ MeetingType) *Sentence {
+	said := briefCopyFor(in.Language)
 	if len(in.PriorMeetings) > 0 {
 		prior := in.PriorMeetings[0]
 		return &Sentence{
 			Text: fmt.Sprintf(
-				"Open on what was agreed at %q on %s, and ask what has moved since.",
-				prior.Subject, prior.StartsAt.UTC().Format("2 Jan")),
+				said.Say(objectiveWords.Prior),
+				prior.Subject, prior.StartsAt.UTC().Format(time.DateOnly)),
 			Nature:   natureRecommendation,
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: prior.ID}},
 		}
 	}
-	text := "Open by asking what prompted the meeting and what would make the hour worth their time."
+	text := said.Say(objectiveWords.Opening)
 	if typ.Value != crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown && in.LastTouchAt != nil {
-		text = "Open on what has changed since you last spoke, before proposing anything."
+		text = said.Say(objectiveWords.Changed)
 	}
 	return &Sentence{
 		Text:     text,
@@ -158,14 +148,15 @@ func openingFor(in Input, typ MeetingType) *Sentence {
 // unanswered objection and a promise we broke need opposite openings — one
 // needs answering, the other needs owning.
 func topRiskFor(in Input, ranked *rankedClaims) *Risk {
+	said := briefCopyFor(in.Language)
 	claim, ok := ranked.take(func(candidate ClaimIn) bool {
-		_, isRisk := riskLine(candidate, in.Now)
+		_, isRisk := said.riskLine(candidate, in.Now)
 		return isRisk
 	})
 	if !ok {
 		return nil
 	}
-	text, _ := riskLine(claim, in.Now)
+	text, _ := said.riskLine(claim, in.Now)
 	return &Risk{
 		Text: Sentence{
 			Text:     text,
@@ -177,19 +168,20 @@ func topRiskFor(in Input, ranked *rankedClaims) *Risk {
 }
 
 func responseFor(claim ClaimIn, in Input) Response {
+	said := briefCopyFor(in.Language)
 	if claim.Kind == kindObjection {
 		return Response{
 			Say: fmt.Sprintf(
-				"Acknowledge it in their words before answering: %q is still open.", claim.Body),
-			Show:  "The record that answers it, or the contact who can.",
-			Avoid: "Re-arguing a point they have already made twice.",
+				said.Say(objectiveWords.Acknowledge), claim.Body),
+			Show:  said.Say(objectiveWords.ShowAnswer),
+			Avoid: said.Say(objectiveWords.AvoidArgument),
 		}
 	}
 	return Response{
 		Say: fmt.Sprintf(
-			"Own the delay plainly and name a date: we owe %s on %q.",
+			said.Say(objectiveWords.OwnDelay),
 			claim.ContactName, claim.Body),
-		Show:  "What is actually ready, and what the remaining step is.",
-		Avoid: "Promising a date nobody on our side has agreed to.",
+		Show:  said.Say(objectiveWords.ShowReady),
+		Avoid: said.Say(objectiveWords.AvoidDate),
 	}
 }

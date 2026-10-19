@@ -784,7 +784,7 @@ The 43 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## team_weekly_review
 
-27 columns · primary key `(id)` · referenced by 4 foreign keys
+28 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -813,6 +813,7 @@ The 43 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `reps_counted` | `integer`, default `0` | yes |  |
 | `reps_unread` | `integer`, default `0` | yes | Members whose week could not be read at all. |
 | `summary` | `text` |  | A short paragraph composed from the frozen figures by fixed rules, never by a model. |
+| `summary_language` | `text` |  |  |
 | `team_id` | `uuid` | yes |  |
 | `team_name` | `text` | yes | What the team was called that week. |
 

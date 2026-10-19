@@ -68,7 +68,7 @@ var Name = settings.Define[string](
 		}
 		return nil
 	},
-).AsInstallationIdentity()
+).AsInstallationIdentity().MachineryApplied()
 
 // Timezone is the IANA reporting-period zone every period boundary is
 // computed in. Distinct from a user's own timezone (app_user.timezone), which

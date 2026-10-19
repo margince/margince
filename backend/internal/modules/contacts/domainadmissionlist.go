@@ -27,12 +27,14 @@ import (
 type BlockedDomain struct {
 	// ID is the disposition row, which the audit trail names. Not on the wire:
 	// the domain is what an operator identifies a decision by.
-	ID        ids.UUID
-	Domain    string
-	Admission string
-	Reason    string
-	Source    string
-	DecidedAt time.Time
+	ID         ids.UUID
+	Domain     string
+	Admission  string
+	Reason     string
+	ReasonCode string
+	SenderKind string
+	Source     string
+	DecidedAt  time.Time
 	// CompanyID and CompanyName are set together by withVisibleCompanyTx, and
 	// only for a company the caller may read.
 	CompanyID   *ids.CompanyID
@@ -109,7 +111,7 @@ const domainStanding = `
 	CASE WHEN d.pending_reason IS NOT NULL THEN d.pending_reason
 	     ELSE COALESCE(d.admission_source, '') END,
 	COALESCE(d.admission_at, d.updated_at),
-	d.company_id, c.display_name`
+	d.company_id, c.display_name, ` + domainReasonCodeColumns
 
 // domainPendingReason turns a withholding reason into the sentence a reader
 // gets told, for each reason the machine has for leaving a question open.
@@ -219,7 +221,7 @@ func (s *Store) ListDomainAdmissions(ctx context.Context, limit int) ([]BlockedD
 			var d BlockedDomain
 			var company standingCompany
 			if err := rows.Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt,
-				&company.id, &company.name); err != nil {
+				&company.id, &company.name, &d.ReasonCode, &d.SenderKind); err != nil {
 				rows.Close()
 				return fmt.Errorf("contacts: reading a domain admission: %w", err)
 			}

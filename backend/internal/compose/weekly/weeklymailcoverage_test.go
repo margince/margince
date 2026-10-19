@@ -68,14 +68,14 @@ func TestAWeekBeforeEverySourceSaysSoAndPrintsNoZero(t *testing.T) {
 			t.Errorf("the message does not say %q:\n%s", want, body)
 		}
 	}
-	for _, label := range []string{"Tasks delivered:", "Won · Lost · Moved:", "Carried over:"} {
+	for _, label := range []string{"Due tasks completed:", "Won · Lost · Moved:", "Carried over:"} {
 		if row := rowOf(t, body, label); !strings.HasSuffix(row, "Not recorded · Recorded from 2026-06-15") {
 			t.Errorf("the %q row prints a figure its source never measured: %q", label, row)
 		}
 	}
-	// Proposals and the morning queue carry no coverage, so their counts stand.
-	if !strings.Contains(body, "4 yes · 2 no") {
-		t.Errorf("the message dropped a figure that has no coverage to qualify it:\n%s", body)
+	// Internal proposal counters do not become customer results.
+	if strings.Contains(body, "4 yes · 2 no") {
+		t.Errorf("the message exposed internal approval counters:\n%s", body)
 	}
 }
 
@@ -104,7 +104,7 @@ func TestAPartialWeekKeepsItsCountAndSaysWhenCountingBegan(t *testing.T) {
 	if row := rowOf(t, body, "Won · Lost · Moved:"); !strings.HasSuffix(row, "1 · 1 · 3 · Partial week: counted from 2026-06-15") {
 		t.Errorf("the partial deals figure is not qualified with its start: %q", row)
 	}
-	if row := rowOf(t, body, "Tasks delivered:"); !strings.HasSuffix(row, " 7 of 9") {
+	if row := rowOf(t, body, "Due tasks completed:"); !strings.HasSuffix(row, " 7 of 9") {
 		t.Errorf("a fully recorded figure gained a qualifier: %q", row)
 	}
 }
@@ -189,7 +189,7 @@ func TestAnUnknownZoneDatesInUTCAndSaysSo(t *testing.T) {
 	review := coveredFixture(everyFamilyNotRecorded(firstRecord))
 	review.NumericSummary.Timezone = "Not/AZone"
 
-	if row := rowOf(t, MailBody(review, "", english), "Tasks delivered:"); !strings.HasSuffix(row, "Recorded from 2026-06-14 UTC") {
+	if row := rowOf(t, MailBody(review, "", english), "Due tasks completed:"); !strings.HasSuffix(row, "Recorded from 2026-06-14 UTC") {
 		t.Errorf("an unknown zone did not fall back to a labelled UTC date: %q", row)
 	}
 }

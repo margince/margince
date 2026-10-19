@@ -45,7 +45,7 @@ type figureStarts struct {
 
 // figureCoverageOf states the record families' coverage of [start, end) for
 // the owners' records this reader may see. Commitments are the caller's to add.
-func figureCoverageOf(
+func (said teamCopy) figureCoverageOf(
 	ctx context.Context, tx pgx.Tx, owners []ids.UUID, start, end time.Time,
 ) (*crmcontracts.WeeklyFigureCoverageSet, error) {
 	since, err := readFigureStarts(ctx, tx, owners)
@@ -53,12 +53,12 @@ func figureCoverageOf(
 		return nil, err
 	}
 	set := &crmcontracts.WeeklyFigureCoverageSet{
-		Deals:    figureCoverage(since.deals, start, end, "deal"),
-		Tasks:    figureCoverage(since.tasks, start, end, "task"),
-		Meetings: figureCoverage(since.meetings, start, end, "meeting"),
+		Deals:    said.figureCoverage(since.deals, start, end, "deal"),
+		Tasks:    said.figureCoverage(since.tasks, start, end, "task"),
+		Meetings: said.figureCoverage(since.meetings, start, end, "meeting"),
 	}
 	if since.leadsRead {
-		set.Leads = figureCoverage(since.leads, start, end, "inbound lead")
+		set.Leads = said.figureCoverage(since.leads, start, end, "inbound lead")
 	}
 	return set, nil
 }
@@ -69,7 +69,8 @@ func measureRepCoverage(
 	ctx context.Context, tx pgx.Tx, summary *crmcontracts.WeeklyNumericSummary,
 	userID ids.UUID, start, end time.Time, planned bool,
 ) error {
-	set, err := figureCoverageOf(ctx, tx, []ids.UUID{userID}, start, end)
+	said := teamCopyFor(string(identity.BaseLanguageForRecord(ctx, tx)))
+	set, err := said.figureCoverageOf(ctx, tx, []ids.UUID{userID}, start, end)
 	if err != nil {
 		return err
 	}
@@ -78,7 +79,7 @@ func measureRepCoverage(
 		return err
 	}
 	if planned && readable {
-		if set.Commitments, err = planCoverage(ctx, tx, userID, start, end); err != nil {
+		if set.Commitments, err = said.planCoverage(ctx, tx, userID, start, end); err != nil {
 			return err
 		}
 	}
@@ -97,7 +98,7 @@ func mayReadPlans(ctx context.Context) (bool, error) {
 }
 
 // planCoverage dates a rep's commitments from their first plan week.
-func planCoverage(
+func (said teamCopy) planCoverage(
 	ctx context.Context, tx pgx.Tx, owner ids.UUID, start, end time.Time,
 ) (*crmcontracts.WeeklyFigureCoverage, error) {
 	zone, err := identity.TimezoneOf(ctx, tx)
@@ -112,7 +113,7 @@ func planCoverage(
 		       AT TIME ZONE $%d`, arg(owner), arg(zone)), args...).Scan(&since); err != nil {
 		return nil, fmt.Errorf("weekly: reading when the plan began: %w", err)
 	}
-	return figureCoverage(since, start, end, planNoun), nil
+	return said.figureCoverage(since, start, end, planNoun), nil
 }
 
 // memberPlans folds the commitments statements of the member weeks a team
@@ -136,29 +137,32 @@ func (m *memberPlans) add(plans *crmcontracts.WeeklyFigureCoverage) {
 
 // coverage states the team's commitments only when every counted member week
 // stated its own: one silent week makes the summed figure unmeasured.
-func (m memberPlans) coverage(start, end time.Time) *crmcontracts.WeeklyFigureCoverage {
+func (m memberPlans) coverage(start, end time.Time, said teamCopy) *crmcontracts.WeeklyFigureCoverage {
 	if m.counted == 0 || m.stated < m.counted {
 		return nil
 	}
-	return figureCoverage(m.since, start, end, planNoun)
+	return said.figureCoverage(m.since, start, end, planNoun)
 }
 
 // figureCoverage judges one source's first record against the week. A record
 // at the week's first instant measures all of it, so that is recorded, not
 // partial.
-func figureCoverage(since *time.Time, start, end time.Time, noun string) *crmcontracts.WeeklyFigureCoverage {
+func (said teamCopy) figureCoverage(since *time.Time, start, end time.Time, noun string) *crmcontracts.WeeklyFigureCoverage {
 	var status crmcontracts.WeeklyFigureCoverageStatus
 	var reason string
+	if phrase, ok := coverageNouns[noun]; ok {
+		noun = said.Say(phrase)
+	}
 	switch {
 	case since == nil:
 		status = crmcontracts.WeeklyFigureCoverageStatusNotRecorded
-		reason = fmt.Sprintf("No %s was recorded in this scope, so this figure is not a measurement.", noun)
+		reason = fmt.Sprintf(said.Say(coverageWords.None), noun)
 	case !since.Before(end):
 		status = crmcontracts.WeeklyFigureCoverageStatusNotRecorded
-		reason = fmt.Sprintf("The first %s in this scope was recorded after this week ended, so this figure is not a measurement.", noun)
+		reason = fmt.Sprintf(said.Say(coverageWords.After), noun)
 	case since.After(start):
 		status = crmcontracts.WeeklyFigureCoverageStatusPartial
-		reason = fmt.Sprintf("The first %s in this scope was recorded during this week. Only what happened from then on is counted.", noun)
+		reason = fmt.Sprintf(said.Say(coverageWords.During), noun)
 	default:
 		return &crmcontracts.WeeklyFigureCoverage{Status: crmcontracts.WeeklyFigureCoverageStatusRecorded, RecordedSince: since}
 	}

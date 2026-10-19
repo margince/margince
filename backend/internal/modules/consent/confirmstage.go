@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -84,6 +83,10 @@ func (s *Store) stageConfirmMail(
 	}
 	rendered, category, err := RenderControllerTemplate(
 		templateForLinkKind(in.kind), in.expiresAt, s.mailLanguage(ctx, tx))
+	if err != nil {
+		return ids.UUID{}, err
+	}
+	rendered, err = s.controllerView(ctx, tx, rendered, category)
 	if err != nil {
 		return ids.UUID{}, err
 	}

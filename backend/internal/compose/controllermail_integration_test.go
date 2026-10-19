@@ -21,16 +21,25 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"mime"
+	"mime/multipart"
+	"net/mail"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
+	"github.com/margince/margince/backend/internal/shared/testsmtp"
 )
 
 // sealingVault stands where compose's keyvault-backed one stands. It keeps the
@@ -230,7 +239,7 @@ const ackJurisdiction jurisdiction.Code = "qz"
 func TestAOnePurposeUnsubscribeIsAcknowledgedThroughTheRealEngine(t *testing.T) {
 	l := setupConfirmLane(t)
 	messagingrules.Register(messagingrules.Rules{
-		Jurisdiction: ackJurisdiction, Version: 1, OptOutAcknowledgement: true,
+		Jurisdiction: ackJurisdiction, Version: 1, OptOutAcknowledgement: true, OptOutAcknowledgementWithin: 24 * time.Hour,
 	})
 	store := l.store.WithInstallationCountry(consent.InstallationCountryFunc(
 		func(context.Context, pgx.Tx) (jurisdiction.Code, error) { return ackJurisdiction, nil }))
@@ -258,5 +267,129 @@ func TestAOnePurposeUnsubscribeIsAcknowledgedThroughTheRealEngine(t *testing.T) 
 	}
 	if n := l.e.WsCount(t, `SELECT count(*) FROM river_job`); n != 1 {
 		t.Errorf("%d dispatch jobs, want 1", n)
+	}
+	var dueAt *time.Time
+	var expiry *time.Time
+	if err := l.e.Pool.QueryRow(l.ctx, `SELECT delivery_due_at,payload_expires_at FROM comms_outbound WHERE template_key='optout_acknowledgement'`).Scan(&dueAt, &expiry); err != nil {
+		t.Fatal(err)
+	}
+	if dueAt == nil || expiry != nil {
+		t.Fatal("receipt deadline and link expiry were conflated")
+	}
+	now := clocktest.Now(t)
+	count, err := comms.NewStore(InstallationDB(l.e.Pool), func() time.Time { return now }, nil).OverdueControllerReceipts(sendWorkerScope(l.ctx), dueAt.Add(time.Second))
+	if err != nil || count != 1 {
+		t.Fatalf("overdue receipt was invisible: %d %v", count, err)
+	}
+}
+
+func TestControllerAlternativesAreStagedWithoutPersonalMaterial(t *testing.T) {
+	lane := setupConfirmLane(t)
+	if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact)); err != nil {
+		t.Fatal(err)
+	}
+	var text, markup string
+	if err := lane.e.Pool.QueryRow(lane.ctx, "SELECT body,html_body FROM comms_outbound WHERE sender_kind='controller'").Scan(&text, &markup); err != nil {
+		t.Fatal(err)
+	}
+	for _, body := range []string{text, markup} {
+		if !strings.Contains(body, "{{confirmation-link}}") || strings.Contains(body, lane.vault.sealed) {
+			t.Fatal("staging lost the placeholder or exposed personal material")
+		}
+	}
+}
+
+func (v *sealingVault) Get(context.Context, string) (string, error) { return v.sealed, nil }
+
+func TestControllerStagingReachesReceivedAlternativesAndRetiresItsLink(t *testing.T) {
+	lane := setupConfirmLane(t)
+	if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact)); err != nil {
+		t.Fatal(err)
+	}
+	link := lane.vault.sealed
+	var deliveryID ids.UUID
+	var messageID string
+	if err := lane.e.Pool.QueryRow(lane.ctx, `SELECT id,message_id FROM comms_outbound WHERE sender_kind='controller'`).Scan(&deliveryID, &messageID); err != nil {
+		t.Fatal(err)
+	}
+	relay := testsmtp.Start(t, false)
+	host, port := relay.Address(t)
+	dispatcher := newSendDispatcher(lane.e.Pool, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, nil, nil, nil).
+		WithControllerRelay(ControllerRelayFor(mailer.SMTP{Host: host, Port: port, FromAddress: "privacy@example.test"}), lane.vault)
+	outcome, _, err := dispatcher.DispatchWithWait(sendWorkerScope(lane.ctx), deliveryID)
+	if err != nil || outcome != comms.OutcomeSent {
+		t.Fatalf("controller dispatch: %s %v", outcome, err)
+	}
+	received, err := mail.ReadMessage(strings.NewReader(relay.Received()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if received.Header.Get("Message-ID") != "<"+messageID+">" {
+		t.Fatal("received identity changed")
+	}
+	kind, params, err := mime.ParseMediaType(received.Header.Get("Content-Type"))
+	if err != nil || kind != "multipart/alternative" {
+		t.Fatalf("received content: %s %v", kind, err)
+	}
+	parts := multipart.NewReader(received.Body, params["boundary"])
+	count := 0
+	for {
+		part, err := parts.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, err := io.ReadAll(part)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(body), link) || strings.Contains(string(body), "{{confirmation-link}}") {
+			t.Fatal("received alternative lost its action")
+		}
+		count++
+	}
+	if count != 2 || lane.vault.sealed != "" {
+		t.Fatalf("received %d alternatives; sealed link remains %v", count, lane.vault.sealed != "")
+	}
+}
+
+func TestControllerHTMLCannotChangeAfterStagingAuthorization(t *testing.T) {
+	lane := setupConfirmLane(t)
+	if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact)); err != nil {
+		t.Fatal(err)
+	}
+	var id ids.UUID
+	if err := lane.e.Pool.QueryRow(lane.ctx, `UPDATE comms_outbound SET html_body=html_body||'<p>Changed instruction</p>' WHERE sender_kind='controller' RETURNING id`).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	relay := &countingMailer{}
+	dispatcher := newSendDispatcher(lane.e.Pool, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, nil, nil, nil).
+		WithControllerRelay(ControllerRelayFor(relay), lane.vault)
+	outcome, _, err := dispatcher.DispatchWithWait(sendWorkerScope(lane.ctx), id)
+	if err != nil || outcome != comms.OutcomeParked || relay.count() != 0 {
+		t.Fatalf("changed markup reached transmission: %s %v %d", outcome, err, relay.count())
+	}
+}
+
+func TestAReceiptPreparationSQLFailureCannotRollBackTheWithdrawal(t *testing.T) {
+	lane := setupConfirmLane(t)
+	const country jurisdiction.Code = "qh"
+	messagingrules.Register(messagingrules.Rules{Jurisdiction: country, Version: 1, OptOutAcknowledgement: true})
+	store := lane.store.WithInstallationCountry(consent.InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) { return country, nil })).
+		WithMailLanguage(consent.MailLanguageFunc(func(ctx context.Context, tx pgx.Tx) (string, error) {
+			_, err := tx.Exec(ctx, `SELECT 1/0`)
+			return "", err
+		}))
+	if _, err := lane.e.Pool.Exec(lane.ctx, `INSERT INTO consent_purpose(key,label,class) VALUES('receipt_test','Receipt test','marketing')`); err != nil {
+		t.Fatal(err)
+	}
+	withdrawn, err := store.PublicWithdrawAll(lane.ctx, ids.From[ids.ContactKind](lane.contact), []string{"receipt_test"})
+	if err != nil || len(withdrawn) != 1 {
+		t.Fatalf("receipt error lost the refusal: %v %v", withdrawn, err)
+	}
+	if count := lane.e.WsCount(t, `SELECT count(*) FROM comms_outbound`); count != 0 {
+		t.Fatalf("failed preparation staged %d receipts", count)
 	}
 }

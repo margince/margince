@@ -347,3 +347,52 @@ it("shows the server's refusal of a removal beside the control", async () => {
   expect(await screen.findByText("Wide logo not removed")).toBeTruthy();
   expect(await screen.findByText(/met a concurrent write/)).toBeTruthy();
 });
+
+it("tells the admin to outline the text when an SVG draws its words as text", async () => {
+  const user = userEvent.setup();
+  refuseUploads({
+    type: "about:blank",
+    title: "Unprocessable Entity",
+    status: 422,
+    code: "svg_text_not_outlined",
+    detail: "the SVG draws its words as text, which this server cannot render",
+  });
+  mark(WITHOUT_MARK);
+
+  await user.upload(
+    slot("Wide logo").getByLabelText("Wide logo"),
+    new File(["<svg/>"], "acme.svg", { type: "image/svg+xml" }),
+  );
+
+  const alert = await screen.findByRole("alert");
+  expect(
+    within(alert).getByText(
+      "This SVG holds its words as text, which cannot be drawn. Convert the text to outlines in your design tool, or upload a PNG.",
+    ),
+  ).toBeTruthy();
+  expect(within(alert).queryByText(/cannot render/)).toBeNull();
+});
+
+it("tells the admin to export a PNG when an SVG has parts that cannot be drawn", async () => {
+  const user = userEvent.setup();
+  refuseUploads({
+    type: "about:blank",
+    title: "Unprocessable Entity",
+    status: 422,
+    code: "svg_not_drawable",
+    detail: "the SVG has parts this server cannot draw",
+  });
+  mark(WITHOUT_MARK);
+
+  await user.upload(
+    slot("Wide logo").getByLabelText("Wide logo"),
+    new File(["<svg/>"], "acme.svg", { type: "image/svg+xml" }),
+  );
+
+  const alert = await screen.findByRole("alert");
+  expect(
+    within(alert).getByText(
+      "This SVG has parts that cannot be drawn here, or draws nothing. Export the logo as a PNG from your design tool.",
+    ),
+  ).toBeTruthy();
+});

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { candidateVersion } from "../testing/voice-candidate";
 import { ActiveVoiceInsights } from "./voice-versions";
 
 // The banner asks the owner to accept or reject a voice that will write their
@@ -15,60 +16,6 @@ import { ActiveVoiceInsights } from "./voice-versions";
 // was impossible.
 
 type VoiceProfileVersion = components["schemas"]["VoiceProfileVersion"];
-
-function candidateVersion(
-  reviewReasons: readonly string[],
-): VoiceProfileVersion {
-  return {
-    id: "v-1",
-    profile_id: "p-1",
-    profile_version: 1,
-    status: "candidate",
-    voice_profile_md: "# Voice DNA",
-    profile_json: {
-      inference: {
-        identity_summary: "Direct, concrete, few adjectives.",
-        thinking_pattern: "State the ask, then the reason, then the deadline.",
-        signature_moves: [{ quote: "Passt das so?", source_id: "s1" }],
-        avoid: ["corporate filler"],
-      },
-      sample_drafts: [{ scenario: "Follow-up", draft: "Moin Stefan, kurz..." }],
-      guidance: { next_best: "Add more sent mail." },
-    },
-    stats_json: { corpus_words: 1200, source_count: 3 },
-    source_hash: "h",
-    source_count: 3,
-    reason: "manual",
-    predecessor_version: null,
-    activation_policy_version: "2",
-    model_provider: "routed",
-    model_name: "claude-haiku-4.5",
-    builder_version: "voicebuilder/1",
-    source: "build",
-    captured_by: "human:x",
-    evaluation: {
-      held_out_prompts: 5,
-      repeats_per_prompt: 3,
-      active_median_voice_score: null,
-      candidate_median_voice_score: 0.56,
-      anti_ai_hard_failures: 0,
-      structured_output_valid: false,
-      corpus_citations_valid: true,
-      identity_word_jaccard: 1,
-      signature_set_jaccard: 1,
-      removed_avoid_rules: 0,
-      removed_register_rules: 0,
-      classification: "material",
-      passed: false,
-    },
-    review_reasons: [...reviewReasons],
-    version: 1,
-    created_at: "2026-08-30T03:42:00Z",
-    updated_at: "2026-08-30T03:42:00Z",
-    archived_at: null,
-    activated_at: null,
-  };
-}
 
 function stub(version: VoiceProfileVersion) {
   vi.stubGlobal(
@@ -86,14 +33,14 @@ function stub(version: VoiceProfileVersion) {
   );
 }
 
-function view(ui: ReactNode) {
+function view(ui: ReactNode, locale: "en" | "de" | "vi" = "en") {
   return render(
     <QueryClientProvider
       client={
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
+      <LocaleProvider initial={locale}>{ui}</LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -104,6 +51,110 @@ afterEach(() => {
 });
 
 describe("reviewing a candidate voice", () => {
+  it("formats typed scores for German readers and retains incomplete reasons", async () => {
+    const version = candidateVersion([
+      "Stored similarity",
+      "Missing score",
+      "Recorded new reason",
+    ]);
+    version.evaluation.review_reason_details = [
+      {
+        code: "identity_shift",
+        text: "Stored similarity",
+        values: { score: 0.56 },
+      },
+      { code: "low_score", text: "Missing score", values: { floor: 0.6 } },
+      { code: "malformed", text: "Different reason", values: {} },
+    ];
+    stub(version);
+    view(
+      <ActiveVoiceInsights
+        profileId="p-1"
+        canEdit
+        onChanged={() => undefined}
+      />,
+      "de",
+    );
+    expect(await screen.findByText(/Ähnlichkeit 0,56/)).toBeTruthy();
+    expect(screen.getByText("Missing score")).toBeTruthy();
+    expect(screen.getByText("Recorded new reason")).toBeTruthy();
+  });
+
+  it("renders typed reasons independently of their stored language", async () => {
+    const raw = "Der Median der Stilbewertung liegt unter dem Mindestwert.";
+    const version = candidateVersion([raw, "Unknown recorded reason"]);
+    version.evaluation.review_reason_details = [
+      { code: "low_score", text: raw, values: { score: 0.56, floor: 0.6 } },
+      { code: "future_reason", text: "Unknown recorded reason", values: {} },
+    ];
+    stub(version);
+    view(
+      <ActiveVoiceInsights
+        profileId="p-1"
+        canEdit
+        onChanged={() => undefined}
+      />,
+    );
+    expect(
+      await screen.findByText(/scored 0.56 against your writing/),
+    ).toBeTruthy();
+    expect(screen.queryByText(raw)).toBeNull();
+    expect(screen.getByText("Unknown recorded reason")).toBeTruthy();
+  });
+
+  it("explains changed inputs and all removed writing rules", async () => {
+    const reasons = ["Changed corpus", "Changed active", "Removed rules"];
+    const version = candidateVersion(reasons);
+    version.evaluation.review_reason_details = [
+      { code: "corpus_changed", text: reasons[0], values: {} },
+      { code: "active_changed", text: reasons[1], values: {} },
+      {
+        code: "rules_removed",
+        text: reasons[2],
+        values: { avoid: 2, register: 3 },
+      },
+    ];
+    stub(version);
+    view(
+      <ActiveVoiceInsights
+        profileId="p-1"
+        canEdit
+        onChanged={() => undefined}
+      />,
+    );
+    expect(
+      await screen.findByText(/writing samples changed during this build/),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/active voice changed during this evaluation/),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        /wording and register dropped since your previous version: 5/,
+      ),
+    ).toBeTruthy();
+  });
+
+  it.each(["future_reason", "low_score", "missing"])(
+    "retains stored wording for unsupported metadata: %s",
+    async (code) => {
+      const reason = "median voice score 0.56 is below the 0.60 floor";
+      const version = candidateVersion([reason]);
+      version.evaluation.review_reason_details =
+        code === "missing" ? [] : [{ code, text: reason, values: {} }];
+      stub(version);
+      view(
+        <ActiveVoiceInsights
+          profileId="p-1"
+          canEdit
+          onChanged={() => undefined}
+        />,
+      );
+      expect(await screen.findByText(reason)).toBeTruthy();
+      expect(screen.queryByText(/scored 0.56 against your writing/)).toBeNull();
+    },
+  );
+
   it("shows the voice itself, so the decision is about something visible", async () => {
     stub(candidateVersion([]));
     view(

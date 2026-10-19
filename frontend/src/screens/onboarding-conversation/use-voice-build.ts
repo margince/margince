@@ -3,6 +3,8 @@ import type { Dispatch } from "react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useT } from "../../i18n";
+import { deferralDetail } from "../../lib/deferral-detail";
 import { unwrap } from "../../lib/problem";
 import { pickBuiltVersion } from "../onboarding";
 import { ensureProfileId } from "../voice-profile";
@@ -50,6 +52,7 @@ type UseVoiceBuildArgs = Readonly<{
 }>;
 
 export function useVoiceBuild({ dispatch, machine }: UseVoiceBuildArgs) {
+  const t = useT();
   const [profileId, setProfileId] = useState<string | null>(null);
   const [buildId, setBuildId] = useState<string | null>(null);
   const prevSnapshot = useRef<VoiceBuildSnapshot | null>(null);
@@ -130,10 +133,10 @@ export function useVoiceBuild({ dispatch, machine }: UseVoiceBuildArgs) {
         type: "BUILD_TERMINAL",
         buildId: next.id,
         status: terminal,
-        detail: next.status_detail,
+        detail: deferralDetail(t, next),
       });
     }
-  }, [poll.data, queue, dispatch]);
+  }, [poll.data, queue, dispatch, t]);
 
   // A persistently failing poll must not strand the act in vo.building:
   // isError flips only after react-query exhausted its retries (a transient

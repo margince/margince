@@ -141,5 +141,5 @@ func (s *Service) suggestionInputsFor(
 	// The dismissal path reads the whole account: it answers "which suggestion
 	// is this", not "what should this page advise", so there is no project to
 	// narrow to.
-	return gatherSuggestionInputs(ctx, tx, companyID, now, facts, heading, base, AssembleOptions{})
+	return gatherSuggestionInputs(ctx, tx, companyID, now, facts, heading, base, AssembleOptions{}, identity.BaseLanguageForRecord(ctx, tx))
 }

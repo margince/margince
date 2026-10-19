@@ -45,6 +45,9 @@ const HELD_REASON_LABEL: Record<string, MessageKey> = {
   missed_window: "sched.held.missedWindow",
   timer_exhausted: "sched.held.timerExhausted",
   send_refused: "sched.held.sendRefused",
+  passport_revoked: "sched.held.passportRevoked",
+  followup_settled: "sched.held.followupSettled",
+  meeting_canceled: "sched.held.meetingCanceled",
 };
 
 // Which statuses the server will still let a rep move or withdraw. It mirrors

@@ -5,6 +5,7 @@ package dealstatus
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -57,11 +58,11 @@ func bestSeat(seats []Seat) (Seat, bool) {
 //
 // The role is never dropped. "Annabelle Malherbe" tells a reader who; "the
 // champion" tells them why it is that one, and a card that has both says both.
-func seatWords(seat Seat) string {
+func (said statusCopy) seatWords(seat Seat) string {
 	if seat.Name == "" {
-		return "the " + roleWord(seat.Role)
+		return fmt.Sprintf(said.Say(statusWords.SeatRole), said.roleWord(seat.Role))
 	}
-	return seat.Name + ", the " + roleWord(seat.Role)
+	return fmt.Sprintf(said.Say(statusWords.SeatNamed), seat.Name, said.roleWord(seat.Role))
 }
 
 // SeatReader answers who sits on a deal.
