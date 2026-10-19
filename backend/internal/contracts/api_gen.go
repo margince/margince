@@ -32746,6 +32746,9 @@ type ContactEmailInputEmailType string
 type ContactEmployer struct {
 	CompanyId   openapi_types.UUID `json:"company_id"`
 	CompanyName string             `json:"company_name"`
+
+	// LogoUrl The same `getCompanyLogo` path `Company.logo_url` carries for this account. The key is ABSENT when the company wears no logo; a client draws the company's monogram then.
+	LogoUrl *string `json:"logo_url,omitempty"`
 }
 
 // ContactEngagement Where one contact stands with us, over the same 90-day window the relationship

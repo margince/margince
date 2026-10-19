@@ -74,9 +74,10 @@ export function ownerColumn<Row extends OwnedRecord>(
     key: "owner",
     header: t("list.owner"),
     cell: (row) => (
-      <OwnerName ownerId={row.owner_id} unowned={t("list.unowned")} />
+      <OwnerName ownerId={row.owner_id} unowned={t("list.unowned")} face />
     ),
     sort: "owner_id",
+    holds: "colleague",
   };
 }
 
@@ -89,6 +90,7 @@ export function createdColumn<Row extends OwnedRecord>(
   return {
     key: "created",
     header: t("list.created"),
+    holds: "date",
     cell: (row) => (
       <span>
         {row.created_at
@@ -134,6 +136,7 @@ export function lastActivityColumn<Row extends OwnedRecord>(
   return {
     key: "lastActivity",
     header: t("list.lastActivity"),
+    holds: "date",
     cell: lastActivityCell<Row>(locale, recordZone),
     sort: "last_activity_at",
   };

@@ -9487,6 +9487,10 @@ components:
       properties:
         company_id: {type: string, format: uuid}
         company_name: {type: string}
+        logo_url:
+          type: string
+          description: >-
+            The same `getCompanyLogo` path `Company.logo_url` carries for this account. The key is ABSENT when the company wears no logo; a client draws the company's monogram then.
     CreateContactRequest:
       type: object
       required: [full_name, source]

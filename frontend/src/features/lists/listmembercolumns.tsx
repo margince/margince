@@ -95,11 +95,13 @@ function useChosenColumns(): ListColumn<MemberRow>[] {
     {
       key: "added_by",
       header: t("lists.members.addedBy"),
+      holds: "colleague",
       cell: (row) => row.listing?.added_by_name ?? "—",
     },
     {
       key: "added_at",
       header: t("lists.members.addedOn"),
+      holds: "date",
       cell: (row) =>
         row.listing?.created_at
           ? formatDate(row.listing.created_at, locale, viewerZone())

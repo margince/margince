@@ -17,6 +17,7 @@ import {
   useListQuery,
 } from "../../components/listquery";
 import { Badge } from "../../design-system/atoms";
+import { Avatar } from "../../design-system/avatar";
 import { useToast } from "../../design-system/toast";
 import { normalizeProfileUrl } from "../../format/profileurl";
 import { useLocale, useT } from "../../i18n";
@@ -296,11 +297,18 @@ function ContactsList() {
                 // for whom had no way to reach the company without opening a
                 // contact first. The name comes with the row, so this resolves
                 // nothing.
-                <EntityRef
-                  kind="company"
-                  id={contact.employer.company_id}
-                  name={contact.employer.company_name}
-                />
+                <span className="avatar-row">
+                  <Avatar
+                    identity={contact.employer.company_id}
+                    name={contact.employer.company_name}
+                    src={contact.employer.logo_url}
+                  />
+                  <EntityRef
+                    kind="company"
+                    id={contact.employer.company_id}
+                    name={contact.employer.company_name}
+                  />
+                </span>
               ) : null,
           },
           tagsColumn<Contact>(t),

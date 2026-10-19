@@ -25782,6 +25782,8 @@ export interface components {
             /** Format: uuid */
             company_id: string;
             company_name: string;
+            /** @description The same `getCompanyLogo` path `Company.logo_url` carries for this account. The key is ABSENT when the company wears no logo; a client draws the company's monogram then. */
+            logo_url?: string;
         };
         CreateContactRequest: {
             full_name: string;

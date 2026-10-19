@@ -165,6 +165,7 @@ export function dealColumns(
     {
       key: "close",
       header: t("deals.close"),
+      holds: "date",
       sort: "expected_close_date",
       cell: (deal) =>
         deal.expected_close_date
