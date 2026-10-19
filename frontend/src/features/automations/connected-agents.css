@@ -1,6 +1,12 @@
-/* The connect guide inside the Connected MCP clients card; the rows above it
-   are settings-agents.css's. `pre-wrap` keeps the two-line Codex recipe two
+/* A command-line tool's recipe. `pre-wrap` keeps a multi-line recipe on its
    lines, and `break-all` stops a long base URL from widening the card. */
+.agents-guide {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
 .agents-guide-command {
   white-space: pre-wrap;
   word-break: break-all;

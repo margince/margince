@@ -75,7 +75,7 @@ describe("SettingsScreen page layout", () => {
     for (const label of [
       "Account",
       "Writing voice",
-      "Agents",
+      "AI access",
       "Connections",
       "Members",
       "Fields",
@@ -98,7 +98,7 @@ describe("SettingsScreen page layout", () => {
   it("renders only the active page's cards — the passport is off the Account page", async () => {
     render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
-    // Scout lives on Agents; the default Account page must not render it.
+    // Scout lives on AI access; the default Account page must not render it.
     expect(screen.queryByText("Scout")).toBeNull();
   });
 

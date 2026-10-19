@@ -26,7 +26,7 @@ function RevokeHarness() {
 }
 
 const meta: Meta<typeof RevokeHarness> = {
-  title: "Settings/You/Agents/Ending a credential",
+  title: "Settings/You/AI access/Ending a credential",
   component: RevokeHarness,
   render: () => {
     installFetchStub({

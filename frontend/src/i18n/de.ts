@@ -5580,9 +5580,9 @@ export const de = {
   "role.ops": "Ops",
   "inlineChoice.change": "{field} ändern",
   "rbac.masked": "Verborgener Wert",
-  "settings.passports": "Agenten-Passports",
+  "settings.passports": "Passports",
   "settings.passportsSub":
-    "Ein Passport ist dein persönliches Zugriffstoken. Was ihn nutzt, handelt als du, mit den Berechtigungen, die du auswählst, und nie darüber hinaus. Jede Anfrage prüft deine Berechtigungen erneut.",
+    "Ein Passport ist dein persönlicher Zugang für Skripte und eigenen Code. Was ihn nutzt, handelt als du, mit den Berechtigungen, die du auswählst, und nie darüber hinaus. Um Margince in einem KI-Tool zu nutzen, verbinde das Tool stattdessen oben.",
   "passport.scope.read": "Datensätze lesen",
   "passport.scope.draft": "Nachrichten entwerfen",
   "passport.scope.write": "Datensätze ändern",
@@ -5592,7 +5592,7 @@ export const de = {
   "passport.noneOption": "Kein Passport",
   "settings.passportUseAi": "In deinem KI-Werkzeug",
   "settings.passportUseAiDetail":
-    "Installiere den Margince-Skill in Claude, Codex oder Gemini und gib ihm dann deinen Passport. Der Skill sagt der KI, wie sie in Margince für dich arbeitet.",
+    "Installiere den Margince-Skill in Claude Code, Codex oder Antigravity und gib ihm dann deinen Passport. Der Skill sagt der KI, wie sie in Margince für dich arbeitet.",
   "settings.skillDownload": "Skill herunterladen",
   "settings.skillDownloadFailed": "Skill nicht heruntergeladen",
   "settings.passportUseCode": "In deinem eigenen Code",
@@ -5607,7 +5607,7 @@ export const de = {
   "settings.snippetFoot": "Setze zuerst {variable} in deiner Shell.",
   "settings.passportsYours": "Deine Passports",
   "settings.passportsMcpHint":
-    "Ein MCP-Client erhält beim Verbinden eigene Zugangsdaten und braucht daher keinen Passport. Der MCP-Client steht unter „Verbundene MCP-Clients“.",
+    "Ein KI-Tool, das du verbindest, erhält eine eigene Anmeldung und braucht daher keinen Passport. Es steht unter „Deine Verbindungen“.",
   "settings.passportCreated":
     "Passport erstellt. Kopiere den Passport jetzt, da er nur einmal angezeigt wird.",
   "settings.tokenCopy": "Passport kopieren",
@@ -5813,10 +5813,10 @@ export const de = {
   "agent.tip.recap": "Öffne den Agentenbereich für die heutige Aktivität.",
   "agent.tip.edge": "Der Bildschirmrand leuchtet, während der Agent arbeitet.",
 
-  "agents.connected": "Verbundene MCP-Clients",
+  "agents.connected": "Deine Verbindungen",
   "agents.connectedSub":
-    "MCP-Clients mit eigenen Zugangsdaten, beschränkt auf den Zugriff, den du freigegeben hast.",
-  "agents.noneConnected": "Noch keine MCP-Clients verbunden.",
+    "Jedes KI-Tool, das du verbunden hast, und was es tun darf.",
+  "agents.noneConnected": "Noch kein KI-Tool verbunden.",
   "agents.connectedOn": "Verbunden am {date}",
   "agents.disconnect": "Trennen",
   "agents.disconnectOpen": "Trennen",
@@ -5828,19 +5828,109 @@ export const de = {
   "agents.renewsBy": "Wird bis {date} erneuert",
   "agents.revokeGrantOpen": "Verbindung beenden",
   "agents.revokeGrantNamed": "Verbindung zu {client} beenden",
-  "agents.colClient": "Client",
+  "agents.colClient": "KI-Tool",
   "agents.colConnected": "Verbunden",
   "agents.disconnectConfirm":
     "Damit endet die gesamte Verbindung, nicht nur ein Satz Zugangsdaten. Der Agent verliert den Zugriff beim nächsten Aufruf und kann ihn nicht erneuern. Für eine neue Verbindung muss der Zugriff erneut freigegeben werden.",
-  "agents.connectHow": "MCP-Client verbinden",
-  "agents.connectSteps":
-    "Führe einen dieser Befehle aus. Der Client registriert sich selbst und kehrt hierher zurück, damit du seinen Zugriff wählen kannst.",
   "agents.connectAntigravityPath":
     "Antigravity hat keinen Befehl zum Hinzufügen. Füge den Block in ~/.gemini/config/mcp_config.json ein.",
   "agents.connectorOff":
-    "Der MCP-Connector ist für diese Installation deaktiviert.",
+    "KI-Tools können sich noch nicht mit Margince verbinden.",
   "agents.connectorOffDetail":
-    "Kein Agent kann sich verbinden, bis Admins oder Operations den Connector aktivieren. Passports funktionieren weiterhin als REST-Zugangsdaten.",
+    "Admins oder Operations können das einschalten. Bis dahin funktionieren Passports weiterhin für Skripte.",
+  "aiAccess.connect.title": "Verbinde dein KI-Tool",
+  "aiAccess.connect.sub":
+    "Dauert etwa eine Minute. Du meldest dich einmal an, danach bleibt die Verbindung bestehen.",
+  "aiAccess.connect.toolQuestion": "Welche KI nutzt du?",
+  "aiAccess.connect.planQuestion": "Wer bezahlt sie?",
+  "aiAccess.plan.company": "Mein Unternehmen",
+  "aiAccess.plan.own": "Privat",
+  "aiAccess.connect.adminFirst": "Zuerst deine Admins.",
+  "aiAccess.connect.adminSend":
+    "Schick ihnen die Anleitung mit den Schritten und deiner Margince-Adresse.",
+  "aiAccess.connect.download": "Anleitung für Admins herunterladen",
+  "aiAccess.connect.address": "Margince-Adresse",
+  "aiAccess.connect.copyAddress": "Adresse kopieren",
+  "aiAccess.connect.copied": "Kopiert",
+  "aiAccess.connect.copyRemedy":
+    "Markiere die Adresse und kopiere sie von Hand.",
+  "aiAccess.connect.help": "Hilfe von {vendor}",
+  "aiAccess.connect.helpAdmin": "Hilfe von {vendor} für deine Admins",
+  "aiAccess.connect.devHint":
+    "Nutzt du ein Kommandozeilen-Tool oder eigenen Code? Siehe Für Entwickler unten.",
+  "aiAccess.step.allow":
+    "Margince öffnet sich. Melde dich an und wähle „Allow“. Fertig.",
+  "aiAccess.claude.openConnectors":
+    "Öffne in Claude „Customize“ und dann „Connectors“.",
+  "aiAccess.claude.addCustom":
+    "Wähle „Add custom connector“ und füge diese Adresse ein:",
+  "aiAccess.claude.connect": "Suche Margince und wähle „Connect“.",
+  "aiAccess.claude.freeNote":
+    "Im Free-Tarif erlaubt Claude einen eigenen Connector.",
+  "aiAccess.claude.adminLine":
+    "Wer euer Claude-Team verwaltet, fügt Margince einmal für alle hinzu.",
+  "aiAccess.claude.admin1":
+    "Öffne in Claude „Organization settings“ und dann „Connectors“.",
+  "aiAccess.claude.admin2": "Wähle „Add“, dann „Custom“, dann „Web“.",
+  "aiAccess.claude.admin3":
+    "Nenne ihn Margince und füge die Margince-Adresse von oben ein.",
+  "aiAccess.claude.admin4":
+    "Wähle „Add“. Danach verbinden sich alle im Team und melden sich selbst an.",
+  "aiAccess.chatgpt.adminLine":
+    "Deine ChatGPT-Admins fügen Margince einmal für dein Unternehmen hinzu.",
+  "aiAccess.chatgpt.admin1":
+    "Schalte in den ChatGPT-Admin-Einstellungen „Developer mode“ ein.",
+  "aiAccess.chatgpt.admin2":
+    "Lege eine App namens Margince mit der Margince-Adresse von oben an und wähle OAuth für die Anmeldung.",
+  "aiAccess.chatgpt.admin3":
+    "Veröffentliche die App, damit alle in deinem Unternehmen sie einschalten können.",
+  "aiAccess.chatgpt.turnOn":
+    "Öffne in einem Chat das Menü + und schalte Margince ein.",
+  "aiAccess.chatgpt.developerMode":
+    "Öffne in ChatGPT „Settings“ und dann „Apps & Connectors“ und schalte „Developer mode“ ein.",
+  "aiAccess.chatgpt.create": "Wähle „Create“ und füge diese Adresse ein:",
+  "aiAccess.chatgpt.ownNote":
+    "Mit Plus und Pro kann ChatGPT in Margince nachsehen, aber nichts ändern.",
+  "aiAccess.copilot.adminLine":
+    "Jemand in deinem Unternehmen fügt Margince einmal zu einem Copilot-Agenten hinzu.",
+  "aiAccess.copilot.admin1":
+    "Öffne in Copilot Studio den Agenten, dann „Tools“, „Add a tool“, „New tool“ und „Model Context Protocol“.",
+  "aiAccess.copilot.admin2":
+    "Nenne ihn Margince und füge die Margince-Adresse von oben ein.",
+  "aiAccess.copilot.admin3":
+    "Wähle bei der Authentifizierung „OAuth 2.0“, dann „Dynamic discovery“, und wähle „Create“.",
+  "aiAccess.copilot.admin4":
+    "Wähle „Add to agent“ und veröffentliche den Agenten dann in Microsoft 365 Copilot und Teams.",
+  "aiAccess.copilot.admin5":
+    "Die Datenrichtlinien deines Unternehmens für Connectors gelten auch für Margince.",
+  "aiAccess.copilot.openAgent":
+    "Öffne Copilot in Teams oder Microsoft 365 und wähle den Agenten mit Margince.",
+  "aiAccess.copilot.ask": "Frag ihn nach einem deiner Deals.",
+  "aiAccess.copilot.allow":
+    "Wenn er fragt, melde dich bei Margince an und wähle „Allow“. Fertig.",
+  "aiAccess.copilot.ownUnavailable":
+    "Copilot außerhalb der Arbeit kann sich nicht mit anderen Apps verbinden. Nutze Copilot über die Arbeit oder eine andere KI aus dieser Liste.",
+  "aiAccess.gemini.companyUnavailable":
+    "Gemini über Arbeit oder Schule kann sich noch nicht mit Margince verbinden.",
+  "aiAccess.gemini.openApps":
+    "Öffne auf gemini.google.com „Settings“ und dann „Connected Apps“.",
+  "aiAccess.gemini.addApp":
+    "Wähle „Add a custom app“ und füge diese Adresse ein:",
+  "aiAccess.gemini.ownNote": "Vorerst nur in den USA und auf Englisch.",
+  "aiAccess.guide.title": "Margince in {tool} einrichten",
+  "aiAccess.guide.addressHead": "Deine Margince-Adresse",
+  "aiAccess.guide.adminHead": "Was du tust",
+  "aiAccess.guide.teamHead": "Was dein Team danach tut",
+  "aiAccess.guide.officialHead": "Offizielle Anleitung",
+  "aiAccess.guide.checked": "Diese Schritte wurden am {date} geprüft.",
+  "aiAccess.dev.title": "Für Entwickler",
+  "aiAccess.dev.sub":
+    "Kommandozeilen-Tools, Passports für Skripte und eigenen Code, die Tool-Liste und Autonomie-Einstellungen.",
+  "aiAccess.cli.title": "Kommandozeilen-Tools",
+  "aiAccess.cli.sub":
+    "Einmal verbinden, dann im Browser anmelden. Kein Passport nötig.",
+  "aiAccess.cli.then": "Führe dann {command} aus.",
+  "aiAccess.cli.docs": "{tool}-Doku",
   "settings.token": "Zugangsdaten",
   "settings.autonomy": "Autonomiestufen",
   "settings.autonomySub": "Was sofort läuft und was auf Freigabe wartet.",
@@ -9209,7 +9299,7 @@ export const de = {
   "settings.page.voice.sub":
     "Die Formulierungen, die Entwürfe verwenden, wenn sie in deinem Namen schreiben.",
   "settings.page.agents.sub":
-    "Was ein Agent unbeaufsichtigt tun darf und welche Clients deine Zugangsdaten halten.",
+    "Nutze Margince aus dem KI-Assistenten, den du schon verwendest. Er arbeitet als du und sieht und ändert nur, was du darfst.",
   "settings.page.notifications.sub":
     "Welche Benachrichtigungstypen dich wie erreichen, dazu Morgenbericht und Wochenrückblick per E-Mail.",
   "settings.page.connections.sub":
@@ -9316,7 +9406,7 @@ export const de = {
   "settings.group.governance": "Governance",
   "settings.tab.account": "Nutzerkonto",
   "settings.tab.voice": "Schreibstil",
-  "settings.tab.agents": "Agenten",
+  "settings.tab.agents": "KI-Zugang",
   "settings.tab.notifications": "Benachrichtigungen",
   "settings.tab.connections": "Verbindungen",
   "settings.tab.extensions": "Erweiterungen",

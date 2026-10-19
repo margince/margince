@@ -53,7 +53,7 @@ const passports = () =>
 // IT-1 governed tool console: two tools of differing tier/egress, plus a
 // read-only passport so the play() below can show the send_email row struck
 // (its "send" scope isn't in the selected passport's grant). Both live on the
-// personal "Your agents" entry, which no grant gates.
+// personal "AI access" entry, which no grant gates.
 //
 // `title` and `description` are REQUIRED on AgentTool and the row draws both, so
 // a fixture without them captured a console the product cannot serve: one tool
@@ -205,53 +205,62 @@ export const AccountSignatureDialog: Story = {
   },
 };
 
-// The contact's own agent authority, and the one page the founder reads for
-// whether the four cards on it space alike: the passports minted, the clients
-// holding one (with the connect guide open, because nothing is connected), the
-// governed tools those credentials reach, and the autonomy tiers they run under.
-const agentsTabRoutes = {
+// The reader's AI access: the connect picker first, then the tools already
+// connected, with every developer card behind "For developers".
+const aiAccessRoutes = {
   "GET /me": me(),
   "GET /passports": passports,
   "GET /agent-tools": tools,
   "GET /.well-known/oauth-protected-resource": connectorOn,
 };
 
-export const AgentsTab: Story = {
-  render: tab("agents", agentsTabRoutes),
+async function openDevelopers(canvasElement: HTMLElement) {
+  await userEvent.click(
+    await within(canvasElement).findByText("For developers"),
+  );
+}
+
+export const AiAccess: Story = {
+  render: tab("agents", aiAccessRoutes),
 };
 
-// Dark, because the whole page is now hairlines between rows and chips against a
-// card ground — both derived values that move with the theme, and the interval
-// between two cards is only legible if the rule between two rows is.
-export const AgentsTabDark: Story = {
+export const AiAccessDark: Story = {
   globals: { theme: "dark" },
-  render: tab("agents", agentsTabRoutes),
+  render: tab("agents", aiAccessRoutes),
 };
 
-// At 390px. The code example wraps inside the card instead of widening it.
-export const AgentsTabPhone: Story = {
-  name: "Your agents — phone",
+// At 390px the two questions wrap and the steps stay one column.
+export const AiAccessPhone: Story = {
+  name: "AI access — phone",
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: tab("agents", agentsTabRoutes),
+  render: tab("agents", aiAccessRoutes),
 };
 
-// The connector switched off: the guide has no commands to print, so its one row
-// says so and says what still works. It is the state a default install is in, and
-// it used to render as a bold line and a paragraph flush against the disclosure.
-export const AgentsConnectorOff: Story = {
-  name: "Your agents — MCP connector off",
+// Every developer card, open: commands, passports, tools and autonomy.
+export const AiAccessDevelopersOpen: Story = {
+  name: "AI access — for developers open",
+  render: tab("agents", aiAccessRoutes),
+  play: async ({ canvasElement }) => openDevelopers(canvasElement),
+};
+
+// The connector switched off: the picker and the command-line card both say so
+// and say what still works. It is the state a default install is in.
+export const AiAccessConnectorOff: Story = {
+  name: "AI access — connector off",
   render: tab("agents", {
-    ...agentsTabRoutes,
+    ...aiAccessRoutes,
     "GET /.well-known/oauth-protected-resource": connectorOff,
   }),
+  play: async ({ canvasElement }) => openDevelopers(canvasElement),
 };
 
 // The row's menu opens the revoke confirm, left open here so the guarded
 // state is what the render gate captures.
 export const PassportRevokeConfirm: Story = {
-  render: tab("agents", agentsTabRoutes),
+  render: tab("agents", aiAccessRoutes),
   play: async ({ canvasElement }) => {
+    await openDevelopers(canvasElement);
     const canvas = within(canvasElement);
     await userEvent.click(
       await canvas.findByRole("button", { name: "Actions for Scout" }),
@@ -267,8 +276,9 @@ export const PassportRevokeConfirm: Story = {
 // token is then shown once.
 export const PassportMintDialog: Story = {
   name: "Mint a passport",
-  render: tab("agents", agentsTabRoutes),
+  render: tab("agents", aiAccessRoutes),
   play: async ({ canvasElement }) => {
+    await openDevelopers(canvasElement);
     const canvas = within(canvasElement);
     await userEvent.click(
       await canvas.findByRole("button", { name: "New passport" }),
@@ -279,7 +289,7 @@ export const PassportMintDialog: Story = {
 // After the mint: the passport once, with its own copy control, and the ways to
 // use it under it. The example keeps the variable, never the new value.
 const mintedRoutes = {
-  ...agentsTabRoutes,
+  ...aiAccessRoutes,
   "POST /passports": () =>
     jsonResponse({
       id: "pp-new",
@@ -297,6 +307,7 @@ const mintPassport = async ({
 }: {
   canvasElement: HTMLElement;
 }) => {
+  await openDevelopers(canvasElement);
   const canvas = within(canvasElement);
   await userEvent.click(
     await canvas.findByRole("button", { name: "New passport" }),
@@ -327,8 +338,9 @@ export const PassportMintedDark: Story = {
 export const PassportMintDialogDark: Story = {
   name: "Mint a passport — dark",
   globals: { theme: "dark" },
-  render: tab("agents", agentsTabRoutes),
+  render: tab("agents", aiAccessRoutes),
   play: async ({ canvasElement }) => {
+    await openDevelopers(canvasElement);
     const canvas = within(canvasElement);
     await userEvent.click(
       await canvas.findByRole("button", { name: "New passport" }),
@@ -338,13 +350,14 @@ export const PassportMintDialogDark: Story = {
 
 // The tool groups unfiltered, then scoped to the read-only "Scout" passport: the
 // send_email row is struck, because "send" is not in that grant.
-const toolConsoleRoutes = agentsTabRoutes;
+const toolConsoleRoutes = aiAccessRoutes;
 
 const selectScoutPassport = async ({
   canvasElement,
 }: {
   canvasElement: HTMLElement;
 }) => {
+  await openDevelopers(canvasElement);
   const canvas = within(canvasElement);
   // The listbox is portalled to the body, outside this story's canvas, so the
   // pick goes through the shared helper rather than a canvas-scoped query.

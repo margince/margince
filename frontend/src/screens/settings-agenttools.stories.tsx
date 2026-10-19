@@ -71,7 +71,7 @@ function story(passports: readonly Record<string, unknown>[] = []) {
 }
 
 const meta: Meta<typeof AgentToolsCard> = {
-  title: "Settings/You/Agents/Agent tools",
+  title: "Settings/You/AI access/Agent tools",
   component: AgentToolsCard,
 };
 export default meta;

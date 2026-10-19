@@ -18,8 +18,6 @@ import { AgentConnectionsCard } from "../features/automations/agent-token-settin
 import { AgentAllowancesCard } from "../features/automations/agentallowances";
 import { AgentUsageByUserCard } from "../features/automations/agentusage";
 import { AutomationsAdmin } from "../features/automations/automations";
-import { AutonomySettingsCard } from "../features/automations/autonomy-settings";
-import { ConnectedAgentsCard } from "../features/automations/connected-agents";
 import { ExtensionAccessCard } from "../features/automations/extension-access";
 import { ExtensionUnitsCard } from "../features/automations/extension-units";
 import { OAuthAppCard } from "../features/automations/oauth-app";
@@ -71,15 +69,13 @@ import { NotificationSettingsCard } from "./notification-settings";
 import { FxRatesCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
 import { RolesSettings } from "./roles-settings";
+import { AiAccessTab } from "./settings.aiaccess";
 import { JurisdictionCard } from "./settings.jurisdiction";
 import { PipelinesCard } from "./settings.pipelines";
 import { PrivacyLanes } from "./settings.privacy";
 import { StageAutomationCard } from "./settings.stageautomation";
 import { SystemHealthPage } from "./settings.systemhealth";
-import { AgentToolsCard } from "./settings-agenttools";
 import { AuditLogCard } from "./settings-audit";
-import { AutonomyTiersCard } from "./settings-autonomytiers";
-import { PassportCard } from "./settings-passports";
 import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
 import { VoiceDnaCard } from "./voice-dna";
@@ -131,7 +127,7 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
     case "voice":
       return <VoiceDnaCard />;
     case "agents":
-      return <AgentsTab />;
+      return <AiAccessTab />;
     case "notifications":
       return (
         <>
@@ -459,36 +455,6 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
         {tabContent(active.id, route)}
       </div>
     </div>
-  );
-}
-
-// This contact's own agent authority: what an agent may do unattended, the
-// credentials they have minted, the clients holding one, and the governed tools
-// those credentials reach. Every seat gets it, ungated — a connection's
-// authority comes from the human's own consent, so an admin-only surface here
-// would mean only admins could connect a client.
-function AgentsTab() {
-  return (
-    <>
-      {/* The passports FIRST, because minting one is why a reader opens this
-          page. The autonomy table used to stand above them: three locked,
-          purely informational rows — nothing on it can be changed — sitting
-          between the reader and the only control here. It is reference for the
-          tiers the tools below are governed by, so it now reads after them. */}
-      <PassportCard />
-      {/* Directly after the passports, because it is the second half of one
-          story: mint a passport for unattended use, or consent to a client
-          that connects with its own fresh credential instead. */}
-      <ConnectedAgentsCard />
-      <AgentToolsCard />
-      <AutonomyTiersCard />
-      {/* Which kinds of proposal stop asking this reader. It sat on Account,
-          under the identity, because it is a statement about them rather than
-          about the company — but every other thing on this page is also
-          theirs alone, and this is the page about agents deciding without them.
-          Directly under the tier reference it is written in terms of. */}
-      <AutonomySettingsCard />
-    </>
   );
 }
 

@@ -1,0 +1,110 @@
+/* The picker under "Connect your AI tool": two questions, then one path. */
+.aiconnect {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.aiconnect-question {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.aiconnect-question-label {
+  margin: 0;
+  font-weight: var(--fontWeightMedium);
+}
+
+.aiconnect-path {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgWell);
+}
+
+.aiconnect-admin {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+  background: var(--bgElevated);
+}
+
+.aiconnect-admin-text {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.aiconnect-admin-text p {
+  margin: 0;
+}
+
+/* Each step leads with its number in a filled circle, as the mockup draws. */
+.aiconnect-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: aiconnect-step;
+}
+
+.aiconnect-step {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  counter-increment: aiconnect-step;
+}
+
+.aiconnect-step::before {
+  content: counter(aiconnect-step);
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--accent);
+  color: var(--textOnAccent);
+  font-weight: var(--fontWeightMedium);
+}
+
+/* Lines under the steps start where the step text starts. */
+.aiconnect-indent {
+  margin: 0;
+  margin-inline-start: calc(1.75rem + var(--space-3));
+}
+
+.aiconnect-step-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.aiconnect-address {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.aiconnect-address > .code-block {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.aiconnect-devhint {
+  margin: 0;
+}

@@ -5463,9 +5463,9 @@ export const vi = {
   "role.ops": "Vận hành",
   "inlineChoice.change": "Đổi {field}",
   "rbac.masked": "Giá trị đã che",
-  "settings.passports": "Passport của agent",
+  "settings.passports": "Passport",
   "settings.passportsSub":
-    "Passport là token truy cập cá nhân. Bất kỳ thứ gì dùng passport đều hành động với tư cách của bạn, trong phạm vi các quyền đã chọn và không bao giờ vượt quá. Mỗi yêu cầu đều kiểm tra lại quyền của bạn.",
+    "Passport là thông tin xác thực cá nhân cho script và mã của riêng bạn. Bất kỳ thứ gì dùng passport đều hành động với tư cách của bạn, trong phạm vi các quyền đã chọn và không bao giờ vượt quá. Để dùng Margince trong công cụ AI, hãy kết nối công cụ ở phía trên.",
   "passport.scope.read": "Đọc hồ sơ",
   "passport.scope.draft": "Soạn nháp tin nhắn",
   "passport.scope.write": "Sửa hồ sơ",
@@ -5475,7 +5475,7 @@ export const vi = {
   "passport.noneOption": "Không dùng passport",
   "settings.passportUseAi": "Trong công cụ AI",
   "settings.passportUseAiDetail":
-    "Cài skill Margince vào Claude, Codex hoặc Gemini, rồi cung cấp passport cho công cụ đó. Skill hướng dẫn AI cách làm việc thay bạn trong Margince.",
+    "Cài skill Margince vào Claude Code, Codex hoặc Antigravity, rồi cung cấp passport cho công cụ đó. Skill hướng dẫn AI cách làm việc thay bạn trong Margince.",
   "settings.skillDownload": "Tải xuống skill",
   "settings.skillDownloadFailed": "Không thể tải xuống skill",
   "settings.passportUseCode": "Trong mã nguồn riêng",
@@ -5489,7 +5489,7 @@ export const vi = {
   "settings.snippetFoot": "Trước tiên, thiết lập {variable} trong shell.",
   "settings.passportsYours": "Passport của bạn",
   "settings.passportsMcpHint":
-    "Ứng dụng khách MCP nhận thông tin xác thực riêng khi kết nối nên không cần passport. Ứng dụng này nằm trong mục Ứng dụng khách MCP đã kết nối.",
+    "Công cụ AI bạn kết nối có đăng nhập riêng nên không cần passport. Công cụ này nằm trong mục Kết nối của bạn.",
   "settings.passportCreated":
     "Đã tạo passport. Passport chỉ hiển thị một lần, vì vậy hãy sao chép ngay.",
   "settings.tokenCopy": "Sao chép passport",
@@ -5676,10 +5676,10 @@ export const vi = {
   "agent.tip.recap": "Mở bảng trợ lý AI để xem hoạt động hôm nay.",
   "agent.tip.edge": "Viền màn hình sáng lên khi trợ lý AI làm việc.",
 
-  "agents.connected": "Ứng dụng khách MCP đã kết nối",
+  "agents.connected": "Kết nối của bạn",
   "agents.connectedSub":
-    "Ứng dụng khách MCP có thông tin xác thực riêng, giới hạn trong quyền truy cập đã duyệt.",
-  "agents.noneConnected": "Chưa có ứng dụng khách MCP nào kết nối.",
+    "Mỗi công cụ AI bạn đã kết nối và những gì bạn cho phép công cụ đó làm.",
+  "agents.noneConnected": "Chưa kết nối công cụ AI nào.",
   "agents.connectedOn": "Đã kết nối {date}",
   "agents.disconnect": "Ngắt kết nối",
   "agents.disconnectOpen": "Ngắt kết nối",
@@ -5691,18 +5691,104 @@ export const vi = {
   "agents.renewsBy": "Gia hạn trước {date}",
   "agents.revokeGrantOpen": "Kết thúc kết nối",
   "agents.revokeGrantNamed": "Kết thúc kết nối với {client}",
-  "agents.colClient": "Ứng dụng khách",
+  "agents.colClient": "Công cụ AI",
   "agents.colConnected": "Kết nối",
   "agents.disconnectConfirm":
     "Thao tác này kết thúc cả kết nối chứ không chỉ một thông tin xác thực. Agent sẽ mất quyền truy cập ở lần gọi tiếp theo và không thể gia hạn. Để kết nối lại, cần duyệt lại quyền truy cập.",
-  "agents.connectHow": "Kết nối ứng dụng khách MCP",
-  "agents.connectSteps":
-    "Chạy một trong các lệnh sau. Ứng dụng khách tự đăng ký rồi quay lại đây để bạn chọn quyền truy cập cho ứng dụng này.",
   "agents.connectAntigravityPath":
     "Antigravity không có lệnh add. Thêm khối đó vào ~/.gemini/config/mcp_config.json.",
-  "agents.connectorOff": "Trình kết nối MCP đang tắt trên bản cài đặt này.",
+  "agents.connectorOff": "Công cụ AI chưa thể kết nối với Margince.",
   "agents.connectorOffDetail":
-    "Không agent nào có thể kết nối cho đến khi quản trị viên hoặc thành viên Vận hành bật trình kết nối. Passport vẫn dùng được làm thông tin xác thực REST.",
+    "Quản trị viên hoặc thành viên Vận hành có thể bật tính năng này. Trong lúc chờ, passport vẫn dùng được cho script.",
+  "aiAccess.connect.title": "Kết nối công cụ AI của bạn",
+  "aiAccess.connect.sub":
+    "Mất khoảng một phút. Bạn đăng nhập một lần và kết nối được giữ nguyên.",
+  "aiAccess.connect.toolQuestion": "Bạn dùng AI nào?",
+  "aiAccess.connect.planQuestion": "Ai trả tiền cho công cụ này?",
+  "aiAccess.plan.company": "Công ty tôi",
+  "aiAccess.plan.own": "Tự tôi",
+  "aiAccess.connect.adminFirst": "Trước hết, quản trị viên của bạn.",
+  "aiAccess.connect.adminSend":
+    "Gửi cho họ hướng dẫn thiết lập. Hướng dẫn có các bước và địa chỉ Margince của bạn.",
+  "aiAccess.connect.download": "Tải hướng dẫn cho quản trị viên",
+  "aiAccess.connect.address": "Địa chỉ Margince",
+  "aiAccess.connect.copyAddress": "Sao chép địa chỉ",
+  "aiAccess.connect.copied": "Đã sao chép",
+  "aiAccess.connect.copyRemedy": "Chọn địa chỉ và sao chép thủ công.",
+  "aiAccess.connect.help": "Trợ giúp từ {vendor}",
+  "aiAccess.connect.helpAdmin": "Trợ giúp từ {vendor} cho quản trị viên",
+  "aiAccess.connect.devHint":
+    "Bạn dùng công cụ dòng lệnh hoặc mã của riêng bạn? Xem Dành cho nhà phát triển bên dưới.",
+  "aiAccess.step.allow": "Margince mở ra. Đăng nhập và chọn “Allow”. Xong.",
+  "aiAccess.claude.openConnectors":
+    "Trong Claude, mở “Customize”, rồi “Connectors”.",
+  "aiAccess.claude.addCustom":
+    "Chọn “Add custom connector” và dán địa chỉ này:",
+  "aiAccess.claude.connect": "Tìm Margince và chọn “Connect”.",
+  "aiAccess.claude.freeNote":
+    "Ở gói Free, Claude chỉ cho phép một trình kết nối tùy chỉnh.",
+  "aiAccess.claude.adminLine":
+    "Chủ sở hữu Claude của bạn thêm Margince một lần cho cả nhóm.",
+  "aiAccess.claude.admin1":
+    "Trong Claude, mở “Organization settings”, rồi “Connectors”.",
+  "aiAccess.claude.admin2": "Chọn “Add”, rồi “Custom”, rồi “Web”.",
+  "aiAccess.claude.admin3":
+    "Đặt tên là Margince và dán địa chỉ Margince ở trên.",
+  "aiAccess.claude.admin4":
+    "Chọn “Add”. Sau đó từng thành viên tự kết nối và tự đăng nhập.",
+  "aiAccess.chatgpt.adminLine":
+    "Quản trị viên ChatGPT của bạn thêm Margince một lần cho cả công ty.",
+  "aiAccess.chatgpt.admin1":
+    "Trong phần cài đặt quản trị ChatGPT, bật “Developer mode”.",
+  "aiAccess.chatgpt.admin2":
+    "Tạo một ứng dụng tên Margince với địa chỉ Margince ở trên và chọn OAuth để đăng nhập.",
+  "aiAccess.chatgpt.admin3": "Xuất bản ứng dụng để cả công ty có thể bật.",
+  "aiAccess.chatgpt.turnOn":
+    "Trong một cuộc trò chuyện, mở menu + và bật Margince.",
+  "aiAccess.chatgpt.developerMode":
+    "Trong ChatGPT, mở “Settings”, rồi “Apps & Connectors”, và bật “Developer mode”.",
+  "aiAccess.chatgpt.create": "Chọn “Create” và dán địa chỉ này:",
+  "aiAccess.chatgpt.ownNote":
+    "Ở gói Plus và Pro, ChatGPT chỉ tra cứu được trong Margince, không thay đổi được.",
+  "aiAccess.copilot.adminLine":
+    "Một thành viên trong công ty thêm Margince vào một agent Copilot một lần.",
+  "aiAccess.copilot.admin1":
+    "Trong Copilot Studio, mở agent, rồi “Tools”, “Add a tool”, “New tool” và “Model Context Protocol”.",
+  "aiAccess.copilot.admin2":
+    "Đặt tên là Margince và dán địa chỉ Margince ở trên.",
+  "aiAccess.copilot.admin3":
+    "Ở phần xác thực, chọn “OAuth 2.0”, rồi “Dynamic discovery”, và chọn “Create”.",
+  "aiAccess.copilot.admin4":
+    "Chọn “Add to agent”, rồi xuất bản agent lên Microsoft 365 Copilot và Teams.",
+  "aiAccess.copilot.admin5":
+    "Chính sách dữ liệu của công ty cho trình kết nối cũng áp dụng với Margince.",
+  "aiAccess.copilot.openAgent":
+    "Mở Copilot trong Teams hoặc Microsoft 365 và chọn agent có Margince.",
+  "aiAccess.copilot.ask": "Hỏi agent về một giao dịch của bạn.",
+  "aiAccess.copilot.allow":
+    "Khi được hỏi, đăng nhập Margince và chọn “Allow”. Xong.",
+  "aiAccess.copilot.ownUnavailable":
+    "Copilot ngoài công việc không kết nối được với ứng dụng khác. Hãy dùng Copilot qua công ty, hoặc một AI khác trong danh sách này.",
+  "aiAccess.gemini.companyUnavailable":
+    "Gemini qua công ty hoặc trường học chưa kết nối được với Margince.",
+  "aiAccess.gemini.openApps":
+    "Trên gemini.google.com, mở “Settings”, rồi “Connected Apps”.",
+  "aiAccess.gemini.addApp": "Chọn “Add a custom app” và dán địa chỉ này:",
+  "aiAccess.gemini.ownNote": "Hiện chỉ có ở Mỹ, bằng tiếng Anh.",
+  "aiAccess.guide.title": "Thiết lập Margince trong {tool}",
+  "aiAccess.guide.addressHead": "Địa chỉ Margince của bạn",
+  "aiAccess.guide.adminHead": "Bạn cần làm gì",
+  "aiAccess.guide.teamHead": "Nhóm của bạn làm gì tiếp theo",
+  "aiAccess.guide.officialHead": "Hướng dẫn chính thức",
+  "aiAccess.guide.checked": "Các bước này được kiểm tra vào {date}.",
+  "aiAccess.dev.title": "Dành cho nhà phát triển",
+  "aiAccess.dev.sub":
+    "Công cụ dòng lệnh, passport cho script và mã của riêng bạn, danh sách công cụ và cài đặt tự chủ.",
+  "aiAccess.cli.title": "Công cụ dòng lệnh",
+  "aiAccess.cli.sub":
+    "Kết nối một lần, rồi đăng nhập trong trình duyệt. Không cần passport.",
+  "aiAccess.cli.then": "Sau đó chạy {command}.",
+  "aiAccess.cli.docs": "Tài liệu {tool}",
   "settings.token": "Thông tin xác thực",
   "settings.autonomy": "Cấp tự chủ",
   "settings.autonomySub": "Thao tác nào chạy ngay, thao tác nào chờ duyệt.",
@@ -8983,7 +9069,7 @@ export const vi = {
   "settings.page.voice.sub":
     "T\u1eeb ng\u1eef b\u1ea3n nh\u00e1p d\u00f9ng khi vi\u1ebft thay b\u1ea1n.",
   "settings.page.agents.sub":
-    "Trợ lý AI được tự làm gì khi không ai giám sát, và client nào đang giữ thông tin xác thực của bạn.",
+    "Dùng Margince từ trợ lý AI bạn đang dùng. Trợ lý làm việc với tư cách của bạn và chỉ xem, sửa được những gì bạn được phép.",
   "settings.page.notifications.sub":
     "Loại thông báo nào đến với bạn và theo cách nào, cùng bản tin sáng và tổng kết tuần qua email.",
   "settings.page.connections.sub":
@@ -9087,7 +9173,7 @@ export const vi = {
   "settings.group.governance": "Quản trị",
   "settings.tab.account": "Tài khoản",
   "settings.tab.voice": "Giọng văn",
-  "settings.tab.agents": "Trợ lý AI",
+  "settings.tab.agents": "Quyền truy cập AI",
   "settings.tab.notifications": "Thông báo",
   "settings.tab.connections": "Kết nối",
   "settings.tab.extensions": "Tiện ích mở rộng",

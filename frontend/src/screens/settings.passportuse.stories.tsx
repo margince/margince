@@ -9,7 +9,7 @@ import { MintedPassport, PassportUses } from "./settings.passportuse";
 const API_BASE = "https://crm.example.com/v1";
 
 const meta: Meta<typeof PassportUses> = {
-  title: "Settings/You/Agents/Passport uses",
+  title: "Settings/You/AI access/Passport uses",
   component: PassportUses,
 };
 export default meta;

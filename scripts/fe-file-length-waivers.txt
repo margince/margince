@@ -19,7 +19,7 @@
 1182 frontend/src/screens/onboarding-conversation/company-act.test.tsx
 1488 frontend/src/screens/onboarding-conversation/confirm-card.tsx
 1725 frontend/src/screens/onboarding-facts.test.tsx
-644 frontend/src/screens/settings.tsx
+610 frontend/src/screens/settings.tsx
 509 frontend/src/screens/documentextraction.tsx
 508 frontend/src/screens/onboarding-backread.tsx
 554 frontend/src/screens/project360.tsx
