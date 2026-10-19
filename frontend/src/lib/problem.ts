@@ -204,9 +204,9 @@ export function isConsentNotGranted(problem: unknown): boolean {
 // The HTTP status out of a thrown RFC-7807 body, or 0 when the failure carried
 // none (a dropped connection throws no problem document at all).
 export function problemStatus(err: unknown): number {
-  // `typeof null === "object"`, so the null check is not redundant: without it
-  // a ProblemError carrying a null body throws while deciding how to report a
-  // failure, turning a handled error into an unhandled one.
+  // `typeof null === "object"`, so the null check is needed. Without it, a
+  // ProblemError with a null body throws here and turns a handled error into
+  // an unhandled one.
   if (
     !(err instanceof ProblemError) ||
     typeof err.problem !== "object" ||
