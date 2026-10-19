@@ -227,8 +227,10 @@ export const vi = {
   "reporting.allPipelines": "Tất cả pipeline",
   "reporting.resultsThrough": "Kết quả tính đến {at}",
   "reporting.noSalesWon": "Chưa có doanh số đã chốt",
-  "reporting.openPipelineBasis_one": "Giao dịch đang mở: {count} · tính đến {at}",
-  "reporting.openPipelineBasis_other": "Giao dịch đang mở: {count} · tính đến {at}",
+  "reporting.openPipelineBasis_one":
+    "Giao dịch đang mở: {count} · tính đến {at}",
+  "reporting.openPipelineBasis_other":
+    "Giao dịch đang mở: {count} · tính đến {at}",
   "reporting.forecastLandingBasis": "Quý tài chính này, theo dự báo giao dịch",
   "reporting.this_month": "Tháng này",
   "reporting.last_month": "Tháng trước",

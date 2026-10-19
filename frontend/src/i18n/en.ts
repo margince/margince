@@ -215,7 +215,8 @@ export const en = {
   "reporting.noSalesWon": "No sales won",
   "reporting.openPipelineBasis_one": "Open deal: {count} · as of {at}",
   "reporting.openPipelineBasis_other": "Open deals: {count} · as of {at}",
-  "reporting.forecastLandingBasis": "This fiscal quarter, from the deal forecast",
+  "reporting.forecastLandingBasis":
+    "This fiscal quarter, from the deal forecast",
   "reporting.this_month": "This month",
   "reporting.last_month": "Last month",
   "reporting.last_week": "Last completed week",

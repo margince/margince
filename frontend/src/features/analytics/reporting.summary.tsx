@@ -166,9 +166,9 @@ function OutcomePeriod({
   );
 }
 
-// What a headline figure is about. Sales won covers the chosen period; open
-// pipeline is the state now, so it names a moment and a count, never the
-// period; the expected finish is always this fiscal quarter's.
+// What a headline figure is about. Sales won covers the chosen period. Open
+// pipeline is the state now, so it names a moment and a count. The forecast
+// landing is always this fiscal quarter's.
 function headlineBasis(
   evaluation: ReportingEvaluation,
   metric: ReportingEvaluation["metrics"][number],
