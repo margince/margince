@@ -16,9 +16,9 @@ const KEY_OWNERS = [
     invalidates: '["project", projectId, "360"]',
   },
   {
-    page: "src/screens/company360.tsx",
+    page: "src/features/companies/company360.tsx",
     key: '["company360", id]',
-    writers: ["src/screens/companyprojects.tsx"],
+    writers: ["src/features/companies/companyprojects.tsx"],
     invalidates: '["company360", companyId]',
   },
 ];

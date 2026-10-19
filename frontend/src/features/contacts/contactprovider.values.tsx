@@ -7,7 +7,7 @@ import { type Fact, FactList } from "../../design-system/factlist";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
-import { categoryNames } from "../../screens/provider-categories";
+import { categoryNames } from "../capture/provider-categories";
 import { useBoughtSource } from "./boughtmarks";
 import type { Profile } from "./contactprovider";
 

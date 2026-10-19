@@ -22,7 +22,7 @@ import { type Locale, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
-import { useUpdateInstallationSettings } from "../../screens/installation-settings";
+import { useUpdateInstallationSettings } from "../sign-in/installation-settings";
 import { useResetLine } from "./agentusage";
 
 type Allowances = components["schemas"]["AgentAllowanceSettings"];

@@ -33,7 +33,8 @@ func emptyParties() []crmcontracts.EmailParty {
 }
 
 type emailParties struct {
-	from, to, cc, bcc []crmcontracts.EmailParty
+	from, to, cc, bcc     []crmcontracts.EmailParty
+	organizers, attendees []crmcontracts.EmailParty
 }
 
 // readEmailParties reads the message's normalised recipients. They are stored
@@ -106,7 +107,7 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 		        WHERE e.contact_id = p.id AND e.archived_at IS NULL`+
 		contactaddress.ReachableOrder+` LIMIT 1) own_pe ON p.id IS NOT NULL
 		 WHERE ap.activity_id = $1
-		   AND ap.role IN ('from', 'to', 'cc', 'bcc')
+		   AND ap.role IN ('from', 'to', 'cc', 'bcc', 'organizer', 'attendee')
 		   AND NOT `+unstatedContactSQL("ap")+`
 		 ORDER BY CASE ap.role
 		            WHEN 'from' THEN 1 WHEN 'to' THEN 2 WHEN 'cc' THEN 3 ELSE 4
@@ -267,6 +268,10 @@ func collectEmailParties(rows pgx.Rows) (emailParties, error) {
 			out.cc = append(out.cc, party)
 		case roleBcc:
 			out.bcc = append(out.bcc, party)
+		case "organizer":
+			out.organizers = append(out.organizers, party)
+		case "attendee":
+			out.attendees = append(out.attendees, party)
 		}
 	}
 	if err := rows.Err(); err != nil {

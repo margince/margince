@@ -1,8 +1,8 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../testing/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { PipelinesCard } from "./settings.pipelines";
 import { jsonResponse, PIPELINE_ADMIN, render } from "./settings.testkit";
 
@@ -48,7 +48,10 @@ const RETIRED: Pipeline = {
 };
 
 // The catalog is state: a created pipeline is in the next read.
-function server(start: readonly Pipeline[]) {
+function server(
+  start: readonly Pipeline[],
+  me: Readonly<{ allow?: GrantSpec; seat?: "full" | "read" }> = {},
+) {
   let catalog = [...start];
   vi.stubGlobal(
     "fetch",
@@ -57,7 +60,9 @@ function server(start: readonly Pipeline[]) {
         input instanceof Request ? input : new Request(String(input));
       const path = new URL(request.url).pathname;
       if (path.endsWith("/v1/me")) {
-        return jsonResponse(meFixture({ allow: PIPELINE_ADMIN }));
+        return jsonResponse(
+          meFixture({ allow: me.allow ?? PIPELINE_ADMIN, seat: me.seat }),
+        );
       }
       if (path.endsWith("/v1/pipelines") && request.method === "POST") {
         const body = await request.json();
@@ -114,5 +119,74 @@ describe("PipelinesCard: the second pipeline", () => {
     await createFromHead("All pipelines");
     await screen.findByRole("heading", { name: "Partnerships" });
     expect(document.activeElement?.textContent).toMatch(/New pipeline/);
+  });
+});
+
+// A refused button is disabled and points at its reason, which a reader sees.
+function expectRefused(button: HTMLElement, reason: string) {
+  expect((button as HTMLButtonElement).disabled).toBe(true);
+  const describedBy = button.getAttribute("aria-describedby") ?? "";
+  expect(document.getElementById(describedBy)?.textContent).toBe(reason);
+}
+
+const TWO_PIPELINES = [
+  SALES,
+  { ...SALES, id: "pl-2", name: "Enterprise", is_default: false },
+];
+
+describe("PipelinesCard: a refusal that lands mid-edit", () => {
+  it("closes the New pipeline dialog when the create grant is withdrawn", async () => {
+    const user = userEvent.setup();
+    server(TWO_PIPELINES);
+    const { client } = render(<PipelinesCard />);
+    await user.click(
+      await screen.findByRole("button", { name: "New pipeline" }),
+    );
+    expect(screen.getByLabelText(/Name/)).toBeTruthy();
+    act(() => {
+      client.setQueryData(
+        ["me"],
+        meFixture({ allow: { pipeline: ["read", "update"] } }),
+      );
+    });
+    await waitFor(() => expect(screen.queryByLabelText(/Name/)).toBeNull());
+    expectRefused(
+      screen.getByRole("button", { name: /New pipeline/ }),
+      "Your role cannot create pipelines. Ask an admin.",
+    );
+  });
+
+  it("closes the New stage dialog when the update grant is withdrawn", async () => {
+    const user = userEvent.setup();
+    server(TWO_PIPELINES);
+    const { client } = render(<PipelinesCard />);
+    await user.click(await screen.findByTestId("new-stage-pl"));
+    expect(screen.getByLabelText(/Name/)).toBeTruthy();
+    act(() => {
+      client.setQueryData(
+        ["me"],
+        meFixture({ allow: { pipeline: ["read", "create"] } }),
+      );
+    });
+    await waitFor(() => expect(screen.queryByLabelText(/Name/)).toBeNull());
+    expectRefused(
+      screen.getByTestId("new-stage-pl"),
+      "Your role cannot add stages. Ask an admin.",
+    );
+  });
+});
+
+describe("PipelinesCard: a read seat", () => {
+  // The role grants both verbs and the seat is what refuses. So the sentence
+  // must send the reader to a seat upgrade rather than a role change.
+  it("refuses the create verbs for the seat, not the role", async () => {
+    server(TWO_PIPELINES, { seat: "read" });
+    render(<PipelinesCard />);
+    const seat = "Your seat is read-only. Ask an admin for a full seat.";
+    expectRefused(
+      await screen.findByRole("button", { name: /New pipeline/ }),
+      seat,
+    );
+    expectRefused(screen.getByTestId("new-stage-pl"), seat);
   });
 });

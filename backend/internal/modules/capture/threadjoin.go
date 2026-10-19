@@ -29,11 +29,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// ThreadJoiner is the set of seams the join runs on. activities owns the
-// activity table and the reply links, and compose owns the merge across every
-// module that keys a row on a thread; capture imports neither, so compose
-// injects all four — the way IdentityResolver travels.
+// ThreadJoiner connects capture to the activity owner and the cross-module thread merge.
 type ThreadJoiner struct {
+	// SentBySeat proves which neighbours this seat sent before a mailbox echo exists.
+	SentBySeat func(ctx context.Context, tx pgx.Tx, seat ids.UUID, candidates []ids.ActivityID) ([]ids.ActivityID, error)
 	// RecordReferences stores the ids one email says it answers.
 	RecordReferences func(ctx context.Context, tx pgx.Tx, id ids.ActivityID, referenced []string) error
 	// Neighbours answers the live messages a reply links to this one, in
@@ -70,8 +69,7 @@ func (s *Sink) WithThreadJoin(j ThreadJoiner) *Sink {
 // from steering the join:
 //
 //   - The seat must hold THIS message (its own import row), and a link counts
-//     only toward a neighbour the seat also holds. Holding both ends is what a
-//     real reply in this mailbox looks like.
+//     only toward a neighbour the seat also holds or is proved to have sent.
 //   - A row this capture just minted got its key from its own header. That key
 //     is merged as a thread only when no other message carries it yet;
 //     otherwise the row stays under it, as every row did before thread
@@ -173,7 +171,14 @@ func (s *Sink) keysToMerge(
 	if !live {
 		return nil, nil
 	}
-	keys, err := heldNeighbourKeysTx(ctx, tx, seat, neighbours)
+	var sent []ids.ActivityID
+	if s.threadJoin.SentBySeat != nil {
+		sent, err = s.threadJoin.SentBySeat(ctx, tx, seat, neighbours)
+		if err != nil {
+			return nil, err
+		}
+	}
+	keys, err := heldNeighbourKeysTx(ctx, tx, seat, neighbours, sent)
 	if err != nil {
 		return nil, err
 	}
@@ -215,19 +220,21 @@ func ownThreadKeyTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (key stri
 }
 
 // heldNeighbourKeysTx answers the distinct thread keys of the neighbours this
-// seat also holds, sorted.
+// seat holds or is proved to have sent, sorted.
 func heldNeighbourKeysTx(
-	ctx context.Context, tx pgx.Tx, seat ids.UUID, neighbours []ids.ActivityID,
+	ctx context.Context, tx pgx.Tx, seat ids.UUID, neighbours, sent []ids.ActivityID,
 ) ([]string, error) {
-	rows, err := tx.Query(ctx, `
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	query := fmt.Sprintf(`
 		SELECT DISTINCT a.thread_key
 		  FROM activity a
 		 WHERE a.thread_key IS NOT NULL AND a.thread_key <> ''
 		   AND a.archived_at IS NULL
-		   AND a.id = ANY($2::uuid[])
-		   AND EXISTS (SELECT 1 FROM capture_import ci
-		                WHERE ci.activity_id = a.id AND ci.user_id = $1)`,
-		seat, neighbours)
+		   AND a.id = ANY($%d::uuid[])
+		   AND (a.id = ANY($%d::uuid[]) OR EXISTS (SELECT 1 FROM capture_import ci
+		                WHERE ci.activity_id = a.id AND ci.user_id = $%d))`, arg(neighbours), arg(sent), arg(seat))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the threads a reply links: %w", err)
 	}

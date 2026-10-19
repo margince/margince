@@ -8,7 +8,7 @@ import { useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
-import { useUpdateInstallationSettings } from "../../screens/installation-settings";
+import { useUpdateInstallationSettings } from "../sign-in/installation-settings";
 
 // The bound the API refuses past, mirrored so a value out of range is refused
 // in the box before the request. Keyed by the wire property, which is how

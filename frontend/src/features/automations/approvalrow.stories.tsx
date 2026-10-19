@@ -67,6 +67,13 @@ function Row({
     // this surface could read — so the grants here are the ones the DECISIONS
     // land on rather than a grant for the row itself.
     "GET /me": meRoute({ deal: ["read", "update"] }),
+    "GET /users/names": () =>
+      jsonResponse({
+        data: [
+          { id: "original", display_name: "Theo" },
+          { id: "assignee", display_name: "Mira" },
+        ],
+      }),
     "GET /agent-tools": () =>
       jsonResponse({
         data: [{ name: "send_email", tier: "confirm" }],
@@ -143,6 +150,63 @@ export const AlreadyDecided: Story = {
           409,
         )
       }
+    />
+  ),
+};
+
+export const ReassignedCommitment: Story = {
+  render: () => (
+    <Row
+      subject={approval({
+        kind: "commitment_task",
+        requested_decider_id: "assignee",
+        summary: "Send revised pricing",
+        proposed_change: {
+          summary: "Send revised pricing",
+          party: "Theo",
+          promiser_seat_id: "original",
+          seat_id: "assignee",
+          due_date: "2026-10-23",
+        },
+      })}
+    />
+  ),
+};
+
+export const InactivePromiser: Story = {
+  render: () => (
+    <Row
+      subject={approval({
+        kind: "commitment_task",
+        summary: "Send revised pricing",
+        proposed_change: {
+          summary: "Send revised pricing",
+          party: "Theo",
+          promiser_seat_id: "original",
+          due_date: "2026-10-23",
+        },
+      })}
+    />
+  ),
+};
+
+export const InactivePromiserDark: Story = {
+  ...InactivePromiser,
+  globals: { theme: "dark" },
+};
+
+export const UnresolvedPromiser: Story = {
+  render: () => (
+    <Row
+      subject={approval({
+        kind: "commitment_task",
+        summary: "Confirm the delivery date",
+        proposed_change: {
+          summary: "Confirm the delivery date",
+          party: "Mira",
+          promiser_unresolved: true,
+        },
+      })}
     />
   ),
 };

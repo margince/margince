@@ -8,13 +8,13 @@ import { Field, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { QueryGate } from "../../design-system/querystates";
+import { useUpdateInstallationSettings } from "../../features/sign-in/installation-settings";
+import { useCurrencyNote } from "../../features/sign-in/installation-settings.currency";
 import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemFieldErrorsOf } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
-import { useUpdateInstallationSettings } from "../installation-settings";
-import { useCurrencyNote } from "../installation-settings.currency";
 import type {
   ConversationEvent,
   ConversationState,

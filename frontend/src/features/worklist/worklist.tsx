@@ -5,7 +5,7 @@ import { viewerZone } from "../../format/timezone";
 import { useT } from "../../i18n";
 import { useOpenEmail } from "../../lib/openemail";
 import { problemCodeOf } from "../../lib/problem";
-import { OpenEmailDrawer } from "../../screens/openemaildrawer";
+import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { useWorklistAddress } from "./worklist.address";
 import { WORKLIST_FILTER_PARAM } from "./worklist.header";
 import {

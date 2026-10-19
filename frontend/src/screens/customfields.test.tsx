@@ -13,8 +13,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
-import { LocaleProvider, translate } from "../i18n";
+import { catalogs, LocaleProvider, translate } from "../i18n";
 import { en } from "../i18n/en";
+import { LOCALES } from "../i18n/locale";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { CustomFieldsAdmin, FieldBuilder } from "./customfields";
 import { AuditRail, FieldTable } from "./customfields.table";
@@ -646,10 +647,28 @@ describe("CustomFieldsAdmin", () => {
     );
     const retire = calls.find((call) => call.url.includes("/retire"));
     expect(retire?.url).toContain("/custom-fields/d1/retire");
-    await waitFor(() =>
-      expect(screen.getByText(/archived/)).toBeInTheDocument(),
-    );
+    // Retirement is terminal: no route restores a field, so the toast must not
+    // promise one.
+    const toast = await screen.findByText(/archived/);
+    expect(toast.textContent).not.toMatch(/restore/i);
   });
+
+  // No route restores a retired field. Neither the dialog that asks nor the
+  // toast that answers may promise one, in any language the product ships.
+  it.each(LOCALES)(
+    "says in %s that archiving is permanent, before and after",
+    (locale) => {
+      const catalog = catalogs[locale];
+      for (const key of ["cf.retire.body", "cf.archived"] as const) {
+        expect(catalog[key], `${locale} ${key}`).not.toMatch(
+          /restore|wiederherstell|khôi phục/i,
+        );
+      }
+      // The dialog says it before the action, in the toast's own words.
+      const permanence = catalog["cf.archived"].split(". ").pop() ?? "";
+      expect(catalog["cf.retire.body"], locale).toContain(permanence);
+    },
+  );
 
   it("names the Live Lists that filter on a field before it is archived, and only counts the rest", async () => {
     const calls: Recorded[] = [];

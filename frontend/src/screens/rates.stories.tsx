@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { ModelPricesCard } from "../features/ai/ai-price-sync";
 import { meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../testing/story-utils";
-import { ModelPricesCard } from "./ai-price-sync";
 import { FxRatesCard } from "./rates";
 
 // READ before create. Both cards gate on `useCan(<object>, "read")` and skip

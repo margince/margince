@@ -15,12 +15,9 @@ import { formatTimeRange } from "../../format/meetingtime";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
-import { InvitationBadge } from "../../screens/booking-meeting-parts";
-import {
-  PROVIDER_VIDEO_APP,
-  VIDEO_APP_NAME,
-} from "../../screens/booking-video";
-import { useMeetingInvitation } from "../../screens/meeting-invitation-query";
+import { InvitationBadge } from "../booking/booking-meeting-parts";
+import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "../booking/booking-video";
+import { useMeetingInvitation } from "../booking/meeting-invitation-query";
 
 type Activity = components["schemas"]["Activity"];
 type Invitation = components["schemas"]["MeetingInvitation"];

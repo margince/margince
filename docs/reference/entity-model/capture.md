@@ -346,7 +346,7 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_import
 
-9 columns · primary key `(id)` · referenced by 0 foreign keys
+10 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -355,6 +355,7 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `imported_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `posture_at_import` | `text` |  | One of `shared`, `classified`, `held`. |
 | `provider_received_at` | `timestamp with time zone` |  |  |
+| `source_occurred_at` | `timestamp with time zone` |  |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `verdict_reason` | `text` |  |  |
 | `verdict_reasons` | `text[]` |  |  |

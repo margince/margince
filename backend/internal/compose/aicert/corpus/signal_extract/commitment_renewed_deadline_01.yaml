@@ -1,0 +1,33 @@
+name: an_old_promise_renewed_with_a_current_deadline
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/codex
+commitment_band: firm
+fixture:
+  - direction: outbound
+    subject: 'Pricing tiers'
+    sent: '2026-05-01'
+    body: |
+      I will send the enterprise pricing.
+  - direction: outbound
+    subject: 'Re: Pricing tiers'
+    sent: '2026-09-09'
+    body: |
+      I still owe you that enterprise pricing. I will send it by Friday.
+expect:
+  outcome: accepted
+  answer:
+    - kind: commitment_made
+      message: 1
+      restated_message: 2
+      due_date: '2026-09-11'
+  rubric: >
+    This is the same enterprise pricing obligation, renewed in message 2.
+    Keep the original promise identity on message 1, cite and quote the renewed
+    promise in message 2, and resolve Friday from September 9 rather than May 1.
+    Report one promise, with a September 11 deadline.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

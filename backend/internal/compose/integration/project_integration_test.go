@@ -500,7 +500,7 @@ func TestRelinkReplacesOnlyTheLinksTheCallerCanSee(t *testing.T) {
 	// One activity linked to the other rep's private account and to a contact
 	// the attacker owns. The contact link is how they reach the activity at all.
 	act, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "note", Source: "manual",
+		Kind: "note", Subject: new("Linked note"), Source: "manual",
 		Links: []activities.ActivityLinkInput{
 			{EntityType: "company", EntityID: theirs},
 			{EntityType: "contact", EntityID: contact},
@@ -578,7 +578,7 @@ func TestMovingAnActivityBetweenProjectsReplacesTheLinkItCannotSee(t *testing.T)
 	contact := e.SeedContact(t, "Reachable Contact", &e.Rep3)
 
 	act, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "note", Source: "manual",
+		Kind: "note", Subject: new("Linked note"), Source: "manual",
 		Links: []activities.ActivityLinkInput{
 			{EntityType: "project", EntityID: theirs.ID.UUID},
 			{EntityType: "contact", EntityID: contact},
@@ -639,7 +639,7 @@ func TestTheTimelineFilterKnowsEveryLinkTargetTheWriteAccepts(t *testing.T) {
 	contact := e.SeedContact(t, "Findable Contact", nil)
 
 	act, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "note", Source: "manual",
+		Kind: "note", Subject: new("Linked note"), Source: "manual",
 		Links: []activities.ActivityLinkInput{
 			{EntityType: "project", EntityID: project.ID.UUID},
 			{EntityType: "contact", EntityID: contact},

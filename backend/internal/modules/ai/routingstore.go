@@ -345,13 +345,13 @@ func (cfg RoutingConfig) settle() (stored, served RoutingConfig, err error) {
 // thinking level onto the same lane of next when next declares none and binds
 // the same provider and model. A value next declares always wins.
 //
-// A write that omits them — a client that predates the contract's `routing` or
-// `thinking_level` field, or a settings seed — would otherwise reset how the
-// lane's model is served. The routing editor applies the same rule from its
-// side (rebind in frontend/src/screens/ai-routing-fields.tsx). Keyed on the
-// model because a preference or a level is refused on a model that predates
-// it, and carried onto another it would fail the lane with nothing in the form
-// able to lift it.
+// A write that omits them would otherwise reset how the lane's model is served.
+// Such a write comes from a settings seed, or from a client older than the
+// `routing` or `thinking_level` field. The rebind in
+// frontend/src/features/ai/ai-routing-fields.tsx applies the same rule from the
+// routing editor's side. The pins are keyed on the model: a model older than a
+// preference or a level refuses it. Carried onto another model, it would fail
+// the lane with nothing in the form able to lift it.
 //
 // Both documents are read lifted, so the pins — the provider's — are never
 // carried onto a lane, and the host is the provider's rather than part of the

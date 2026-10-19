@@ -15,7 +15,7 @@ import { Field } from "./atoms";
 import { RecordPicker, type RecordPickerCandidate } from "./recordpicker";
 
 // RecordPicker is the extracted debounced search→candidate-list→pick pattern
-// that used to live duplicated inline in MergeAction (screens/merge.tsx) and
+// that used to live duplicated inline in MergeAction (features/import/merge.tsx) and
 // AddRelationshipAction (screens/relationships.tsx). These specs pin the
 // behaviour those two call sites already relied on: the 250ms debounce, an
 // empty term clearing the list instead of searching, an inline (not thrown)

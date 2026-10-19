@@ -221,8 +221,10 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// RecordConversationClaim), so the first two entries below now state the
 	// gates it actually takes rather than the ones it owed. The third is still
 	// a promise: nothing writes task_activity_id.
-	"conversation_claim.contact_id":         "gated: RecordConversationClaim opens with auth.RequireHuman + auth.Require(contact, update), then auth.EnsureWritableLive on the contact inside the write's own transaction — a claim may only be recorded against a contact the caller could already change",
-	"conversation_claim.source_activity_id": "gated: the same writer takes auth.EnsureActivityContentVisibleLive on the cited activity in that transaction, so a claim can never quote a message the caller may not open — and LIVE rather than merely visible, because a claim must not outlive its evidence",
+	"conversation_claim.contact_id":                    "gated: RecordConversationClaim opens with auth.RequireHuman + auth.Require(contact, update), then auth.EnsureWritableLive on the contact inside the write's own transaction — a claim may only be recorded against a contact the caller could already change",
+	"activity_commitment_admission.renewed_by":         "gated: commitment admission locks and checks the renewing message with EnsureActivityContentVisibleLive before recording its identity; reads apply CommitmentEvidenceClause",
+	"activity_commitment_admission.source_activity_id": "gated: RecordCommitmentAdmissionTx requires activity update and EnsureActivityContentVisibleLive in the same transaction; reads are attached only to visible source content",
+	"conversation_claim.source_activity_id":            "gated: the same writer takes auth.EnsureActivityContentVisibleLive on the cited activity in that transaction, so a claim can never quote a message the caller may not open — and LIVE rather than merely visible, because a claim must not outlive its evidence",
 	// Held by backend/gates/pendingwriter_test.go, which fails when a column
 	// classified PENDING WRITER gains one — the entry becoming false is
 	// otherwise silent, and five of the seven this file once carried went

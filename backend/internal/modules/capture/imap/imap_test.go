@@ -9,6 +9,7 @@ import (
 	"net"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/emersion/go-imap/v2/imapclient"
 
@@ -235,7 +236,7 @@ func TestCaptureAccountsForOutcomes(t *testing.T) {
 	// A normal inbound message lands and tallies the counterparty.
 	st := newState()
 	sink := &fakeSink{}
-	if err := c.capture(context.Background(), inboundFixture(), sink, st); err != nil {
+	if err := c.capture(context.Background(), inboundFixture(), sink, st, time.Time{}); err != nil {
 		t.Fatalf("capture: %v", err)
 	}
 	if st.stats.Captured != 1 || st.stats.Skipped != 0 || len(st.contacts) != 1 {
@@ -244,7 +245,7 @@ func TestCaptureAccountsForOutcomes(t *testing.T) {
 
 	// A Sink ErrSkip is a deliberate drop, counted as skipped, never fatal.
 	st = newState()
-	if err := c.capture(context.Background(), inboundFixture(), &fakeSink{skip: true}, st); err != nil {
+	if err := c.capture(context.Background(), inboundFixture(), &fakeSink{skip: true}, st, time.Time{}); err != nil {
 		t.Fatalf("ErrSkip must not surface as an error: %v", err)
 	}
 	if st.stats.Captured != 0 || st.stats.Skipped != 1 {
@@ -254,7 +255,7 @@ func TestCaptureAccountsForOutcomes(t *testing.T) {
 	// An unparseable body is dropped without touching the Sink.
 	st = newState()
 	unusable := &fakeSink{}
-	if err := c.capture(context.Background(), []byte("not a message"), unusable, st); err != nil {
+	if err := c.capture(context.Background(), []byte("not a message"), unusable, st, time.Time{}); err != nil {
 		t.Fatalf("unparseable must not error: %v", err)
 	}
 	if st.stats.Skipped != 1 || unusable.calls != 0 {
@@ -264,7 +265,7 @@ func TestCaptureAccountsForOutcomes(t *testing.T) {
 	// A real write fault propagates (Sync uses it to stop the pull).
 	st = newState()
 	wantErr := errors.New("db down")
-	if err := c.capture(context.Background(), inboundFixture(), &fakeSink{err: wantErr}, st); !errors.Is(err, wantErr) {
+	if err := c.capture(context.Background(), inboundFixture(), &fakeSink{err: wantErr}, st, time.Time{}); !errors.Is(err, wantErr) {
 		t.Fatalf("write fault should propagate, got %v", err)
 	}
 }

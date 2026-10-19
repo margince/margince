@@ -3,12 +3,14 @@
 
 import { lazy, Suspense, useState } from "react";
 import { AuthSplash } from "../app/bootsplash";
+import { ForcedPasswordChangeScreen } from "../features/sign-in/forcedpassword";
 import { AuthProbeError, type AuthProbeKind } from "../lib/session";
-import { ForcedPasswordChangeScreen } from "./forcedpassword";
 
 // Split off: the setup carries the QR encoder, which the sign-in surface must not download.
 const ForcedMfaScreen = lazy(() =>
-  import("./forcedmfa").then((m) => ({ default: m.ForcedMfaScreen })),
+  import("../features/sign-in/forcedmfa").then((m) => ({
+    default: m.ForcedMfaScreen,
+  })),
 );
 
 type ConfinedKind = Extract<

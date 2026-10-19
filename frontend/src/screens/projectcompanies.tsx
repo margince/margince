@@ -17,9 +17,9 @@ import {
   type ProjectLinksAdapter,
 } from "../design-system/projectlinks";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
+import { COMPANY_ROLES, roleKey } from "../features/companies/companyprojects";
 import { useT } from "../i18n";
 import { unwrap } from "../lib/problem";
-import { COMPANY_ROLES, roleKey } from "./companyprojects";
 
 type ProjectCompany = components["schemas"]["ProjectCompany"];
 

@@ -31,6 +31,7 @@ import {
   type EditableField,
   humanizeKind,
 } from "./approvalkind";
+import { useApprovalNames } from "./approvalresponsibility";
 import type { Approval } from "./approvals.queries";
 import "./approvalrow.css";
 import { QueryGate } from "../../design-system/querystates";
@@ -184,11 +185,14 @@ function ApprovalDetailBody({
 }>) {
   const t = useT();
   const change = (approval.proposed_change ?? {}) as Record<string, unknown>;
+  const approvalNames = useApprovalNames([approval]);
   const display = resolveDisplay(
     approval.kind,
     change,
     t,
     stagedDayFormatter(locale, zone),
+    approvalNames,
+    approval.requested_decider_id,
   );
   const named = display.filter((entry) => entry.value !== null);
   // The raw payload is shown ONCE, and where it goes says what it is. A kind

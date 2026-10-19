@@ -7,10 +7,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { LinkedInImportCard } from "../features/import/linkedin-import";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
 import { installFetchStub, jsonResponse } from "../testing/story-utils";
-import { LinkedInImportCard } from "./linkedin-import";
 
 // The member's own control over whether colleagues see their reach. On by
 // default, so the control has to show the on state to someone who has never

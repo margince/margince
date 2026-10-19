@@ -15,22 +15,25 @@ import {
   usePaletteHotkey,
 } from "./app/palette";
 import { Shell, useRoute } from "./app/shell";
-import { useLocale } from "./i18n";
-import { RecordZoneProvider, useConfiguredRecordZone } from "./lib/recordzone";
-import { SPA_RELEASE } from "./lib/release";
-import { navigateReplacing, type Screen } from "./lib/router";
-import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
 import {
   type AuthNotice,
   AuthScreen,
   AvailabilityScreen,
   RESET_ROUTE,
-} from "./screens/auth";
+} from "./features/sign-in/auth";
+import { useInstallationDescribed } from "./features/sign-in/installationcompany";
+import {
+  fetchSetupStatus,
+  SetupClaimScreen,
+} from "./features/sign-in/setupclaim";
+import { useLocale } from "./i18n";
+import { RecordZoneProvider, useConfiguredRecordZone } from "./lib/recordzone";
+import { SPA_RELEASE } from "./lib/release";
+import { navigateReplacing, type Screen } from "./lib/router";
+import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
 import { ConfinedAccountScreen, useProbeAnswer } from "./screens/confinement";
-import { useInstallationDescribed } from "./screens/installationcompany";
 import { useJourneyProgress } from "./screens/onboarding-journey";
 import { ReleaseSkewScreen, useSkewedApiRelease } from "./screens/releaseskew";
-import { fetchSetupStatus, SetupClaimScreen } from "./screens/setupclaim";
 import { WriteToHost } from "./screens/writetohost";
 
 // The anonymous public surfaces render without a session — their slug in the

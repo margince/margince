@@ -118,7 +118,9 @@ it("draws no panel of its own when a section already names it", async () => {
   expect(await screen.findByText(/No one is assigned yet/)).toBeTruthy();
   // The company rail is one pane of headed slices and names this one itself;
   // a second heading and a titled region inside it would be a card in a card.
-  expect(screen.queryByRole("heading", { name: "Responsible" })).toBeNull();
+  expect(
+    screen.queryByRole("heading", { name: "Responsibilities" }),
+  ).toBeNull();
   expect(screen.queryByRole("region")).toBeNull();
   // The verb still stands: the shape changed, not what a writer may do.
   expect(screen.getByRole("button", { name: "Assign" })).toBeTruthy();

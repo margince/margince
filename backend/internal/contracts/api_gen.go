@@ -10626,6 +10626,7 @@ func (e ImportProblemKind) Valid() bool {
 
 // Defines values for ImportReasonCode.
 const (
+	ImportReasonCodeActivityEmpty                ImportReasonCode = "activity_empty"
 	ImportReasonCodeActivityHeld                 ImportReasonCode = "activity_held"
 	ImportReasonCodeActivityLinkAmbiguous        ImportReasonCode = "activity_link_ambiguous"
 	ImportReasonCodeActivityLinkAmbiguousDropped ImportReasonCode = "activity_link_ambiguous_dropped"
@@ -10742,6 +10743,8 @@ const (
 // Valid indicates whether the value is a known member of the ImportReasonCode enum.
 func (e ImportReasonCode) Valid() bool {
 	switch e {
+	case ImportReasonCodeActivityEmpty:
+		return true
 	case ImportReasonCodeActivityHeld:
 		return true
 	case ImportReasonCodeActivityLinkAmbiguous:
@@ -23241,6 +23244,9 @@ type Activity struct {
 	// ColleagueIds The colleagues recorded as taking part: the one who logged a call or meeting, the ones named as attending, and the seats capture stamped on a captured one, never a blind copy. Filled wherever one activity is answered whole (its read, its update); a list leaves it out. Withheld with the content, so it is absent whenever `content_state` is `withheld`.
 	ColleagueIds *[]openapi_types.UUID `json:"colleague_ids,omitempty"`
 
+	// CommitmentAdmissions Decisions about promises read from this source, included on list and detail reads when its content is visible.
+	CommitmentAdmissions *[]CommitmentAdmission `json:"commitment_admissions,omitempty"`
+
 	// ContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
 	ContentState *ActivityContentState `json:"content_state,omitempty"`
 	CreatedAt    time.Time             `json:"created_at"`
@@ -23471,7 +23477,7 @@ type AddDealRoomDocumentRequest struct {
 type Address struct {
 	City *string `json:"city,omitempty"`
 
-	// Country ISO-3166 alpha-2.
+	// Country ISO-3166 alpha-2. A contact or company write (and a CSV import cell) that changes the country to a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`; a code is stored upper-case. A country stored before this rule is kept as it is when a save carries it back unchanged.
 	Country              *string                `json:"country,omitempty"`
 	Line1                *string                `json:"line1,omitempty"`
 	Line2                *string                `json:"line2,omitempty"`
@@ -25530,10 +25536,13 @@ type Approval struct {
 	ProposedBy string `json:"proposed_by"`
 
 	// ProposedChange The staged diff/payload that will execute on approve.
-	ProposedChange   *map[string]interface{} `json:"proposed_change,omitempty"`
-	ResultEntityId   *openapi_types.UUID     `json:"result_entity_id,omitempty"`
-	ResultEntityType *string                 `json:"result_entity_type,omitempty"`
-	Status           ApprovalStatus          `json:"status"`
+	ProposedChange *map[string]interface{} `json:"proposed_change,omitempty"`
+
+	// RequestedDeciderId The member explicitly asked to decide, independent of who has permission to approve.
+	RequestedDeciderId *openapi_types.UUID `json:"requested_decider_id,omitempty"`
+	ResultEntityId     *openapi_types.UUID `json:"result_entity_id,omitempty"`
+	ResultEntityType   *string             `json:"result_entity_type,omitempty"`
+	Status             ApprovalStatus      `json:"status"`
 
 	// Summary One-line description of the proposed change.
 	Summary        *string             `json:"summary,omitempty"`
@@ -26585,6 +26594,9 @@ type AttentionItem struct {
 	// The band travels rather than the raw score, because a number between 0 and 100
 	// invites a client to draw a precision the §4 arithmetic does not claim.
 	Relationship *AttentionRelationshipFacts `json:"relationship,omitempty"`
+
+	// RequestedDeciderId The member explicitly asked to decide, independent of who has permission to approve.
+	RequestedDeciderId *openapi_types.UUID `json:"requested_decider_id,omitempty"`
 
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
 	Source AttentionItemSource `json:"source"`
@@ -29105,6 +29117,24 @@ type CommissionSummaryRow struct {
 
 	// Status accrued → approved → paid, with void as the exit at any point.
 	Status CommissionStatus `json:"status"`
+}
+
+// CommitmentAdmission A recorded decision about whether a promise creates current work. Re-reading replaces this decision without changing human-owned work.
+type CommitmentAdmission struct {
+	CurrentWork bool                 `json:"current_work"`
+	EvaluatedAt time.Time            `json:"evaluated_at"`
+	EvidenceIds []openapi_types.UUID `json:"evidence_ids"`
+	Locator     string               `json:"locator"`
+	Outcome     string               `json:"outcome"`
+
+	// RenewedAt The renewing message's source time when the decision was recorded.
+	RenewedAt *time.Time `json:"renewed_at,omitempty"`
+
+	// RenewedBy The later message that explicitly renewed this promise.
+	RenewedBy   *openapi_types.UUID `json:"renewed_by,omitempty"`
+	RuleVersion string              `json:"rule_version"`
+	SourceQuote string              `json:"source_quote"`
+	Summary     string              `json:"summary"`
 }
 
 // CommunicationContext What kind of communication a message is — the closed vocabulary the engine resolves
@@ -48713,7 +48743,7 @@ type UpdateDataSubjectRequest struct {
 	// AssigneeId null hands the request back to the unassigned pool.
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 
-	// Resolution null clears the answer, which a fulfilled or rejected request refuses with 422: a closed request keeps its answer.
+	// Resolution A closed (fulfilled or rejected) request keeps its answer: null, or text other than the stored answer, is refused with 422. An open request takes any draft.
 	Resolution *string                         `json:"resolution,omitempty"`
 	Status     *UpdateDataSubjectRequestStatus `json:"status,omitempty"`
 }
@@ -58929,9 +58959,9 @@ type GetWorklistParams struct {
 	// message has no assignee, so its owner is the owner of the record it is filed
 	// under — deal, then lead, then contact, then company, first owner found. A
 	// thread no owned record attributes to anybody is the customer nobody is looking
-	// at, which is exactly what this queue is opened to find. Such a message stays
-	// reachable from `mine` as well, on the ground that an unowned customer writing
-	// in is everybody's until somebody takes them.
+	// at, which is exactly what this queue is opened to find. Unassigned work stays
+	// in this queue until somebody takes responsibility for it. `mine` requires
+	// a verified personal assignment or an explicitly requested decision.
 	//
 	// WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
 	// going quiet, meetings and duplicate pairs are read under the caller's row

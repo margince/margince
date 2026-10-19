@@ -12,7 +12,7 @@ import { unwrap } from "../../lib/problem";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { navigate } from "../../lib/router";
 import { ArchiveAction } from "../../screens/archive";
-import { MergeAction } from "../../screens/merge";
+import { MergeAction } from "../import/merge";
 
 // The contact header's merge and archive commands.
 

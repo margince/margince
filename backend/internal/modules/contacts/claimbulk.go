@@ -70,7 +70,7 @@ func (s *Store) LockClaimForBulkTx(ctx context.Context, tx pgx.Tx, id ids.UUID) 
 	if err := auth.EnsureVisibleLive(ctx, tx, "contact", contactID); err != nil {
 		return BulkClaim{}, err
 	}
-	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, activityID); err != nil {
+	if err := ensureClaimContentVisible(ctx, tx, id); err != nil {
 		return BulkClaim{}, err
 	}
 	if err := auth.RequireHuman(ctx); err != nil {
@@ -132,7 +132,7 @@ func VisibleClaims(ctx context.Context, tx pgx.Tx, named []ids.UUID) (map[ids.UU
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idsPos := arg(named)
-	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+	activityScope, err := claimContentClause(ctx, arg)
 	if err != nil {
 		return nil, err
 	}

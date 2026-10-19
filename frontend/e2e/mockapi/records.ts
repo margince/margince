@@ -6,7 +6,7 @@ import {
   briefManager,
   briefOmitted,
   briefWithPlan,
-} from "../../src/screens/meetingbrief/fixtures";
+} from "../../src/features/brief/meetingbrief/fixtures";
 import {
   anna,
   brandt,

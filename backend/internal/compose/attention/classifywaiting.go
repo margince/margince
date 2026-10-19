@@ -142,19 +142,8 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		// reader is offered: two of the three dispositions are keyed on the
 		// thread and a threadless row can perform neither.
 		threaded: waiting.Threaded,
-		// Who owes the reply, so the scope filters can judge this row the way
-		// they judge a deal-bearing one. A wait carries no deal on the wire, and
-		// without this it is a row the filters cannot place: a named owner's
-		// queue dropped every one of them.
-		owner: waiting.OwnerID,
-		// The same fact for the CLIENT — but NOT through ownerFrom, because a
-		// zero here does not mean what a zero means to the task and lead lanes.
-		// This lane qualifies a row through an ungated lookup and reads its
-		// owner through a gated one, so a customer whose owning record the
-		// reader may not open arrives with no owner id at all. Reporting that
-		// as `unassigned` would turn a withheld fact into a claim that nobody
-		// owes the reply, and the reader has no way to tell the two apart.
-		ownerRef: waitingOwner(waiting.OwnerID),
+		// An unreadable owner must not be described as unassigned.
+		ownerRef: waitingOwner(waiting.OwnerID, waiting.OwnerKnown),
 		// And WHO it is about, which the subject above may have given to a deal.
 		// The decay suppressor reads this rather than the subject, so a contact
 		// whose wait is filed under a deal is still recognised as answered.

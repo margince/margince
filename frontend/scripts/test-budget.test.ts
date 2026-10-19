@@ -34,8 +34,8 @@ import { budgetsIn, type TestBudget } from "./test-budget";
  * the one still under investigation.
  */
 const EXEMPT = new Set([
-  "src/screens/company-context.test.tsx::quotes the server when the start itself was refused",
-  "src/screens/company-context.test.tsx::keeps a failed status poll to the catalog sentence",
+  "src/features/companies/company-context.test.tsx::quotes the server when the start itself was refused",
+  "src/features/companies/company-context.test.tsx::keeps a failed status poll to the catalog sentence",
 ]);
 
 const all = globSync("{src,scripts}/**/*.test.ts?(x)").flatMap((file) =>

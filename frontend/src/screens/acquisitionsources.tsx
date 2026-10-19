@@ -11,6 +11,10 @@ import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { PanelNotices } from "../design-system/panelnotices";
 import { QueryStates } from "../design-system/querystates";
 import { Switch } from "../design-system/switch";
+import {
+  useVocabGrants,
+  vocabMenuColumn,
+} from "../features/leads/leadvocab.rows";
 import { formatNumber } from "../format/format";
 import {
   type PluralTranslator,
@@ -27,7 +31,6 @@ import {
   useCreateAcquisitionSource,
   useUpdateAcquisitionSource,
 } from "./acquisitionsources.queries";
-import { useVocabGrants, vocabMenuColumn } from "./leadvocab.rows";
 
 function sourceColumns({
   t,

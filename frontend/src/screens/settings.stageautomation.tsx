@@ -13,6 +13,7 @@ import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { type Fact, FactList } from "../design-system/factlist";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
+import { usePipelines } from "../features/deals/pipelines.queries";
 import {
   formatFinePercent,
   formatNumber,
@@ -23,7 +24,6 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { criterionKindLabel } from "./criterionkinds";
-import { usePipelines } from "./pipelines.queries";
 import { StageRulesCard } from "./settings.stagerules";
 import "./settings.stageautomation.css";
 

@@ -248,6 +248,9 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	if err := attachLinks(ctx, tx, activities); err != nil {
 		return nil, storekit.Page{}, err
 	}
+	if err := WithCommitmentAdmissions(ctx, tx, activities); err != nil {
+		return nil, storekit.Page{}, err
+	}
 	if activities == nil {
 		activities = []crmcontracts.Activity{}
 	}
@@ -319,6 +322,9 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 		return crmcontracts.Activity{}, err
 	}
 	if err := attachColleagues(ctx, tx, &one[0]); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	if err := WithCommitmentAdmissions(ctx, tx, one); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	return one[0], nil

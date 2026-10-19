@@ -8,17 +8,19 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // worklistAgeOutDays is how long past its due date an open task stays on the
-// Worklist. Past it the task is history rather than today's work, and a queue
+// Worklist. Past it an unadopted task is history rather than today's work, and a queue
 // that keeps every missed date forever is one nobody can finish. The task itself
 // is untouched: still open and still on its record.
 const worklistAgeOutDays = 30
 
 // worklistAgeOutClause keeps a row unless it is a task due more than
-// worklistAgeOutDays before asOf. A row still pinned in effect by the user that
+// worklistAgeOutDays before asOf. A human reopening keeps the task current.
+// A row still pinned in effect by the user that
 // pinner names stays regardless, because a pin is someone keeping it on purpose.
 //
 // pinner is a SQL expression, not a value: the reader's own placeholder for the
@@ -26,6 +28,10 @@ const worklistAgeOutDays = 30
 func worklistAgeOutClause(asOf time.Time, pinner string, arg func(any) int) string {
 	floor := arg(asOf.AddDate(0, 0, -worklistAgeOutDays))
 	return sprintf(`(a.kind <> 'task' OR a.due_at IS NULL OR a.due_at >= $%d
+		OR EXISTS (SELECT 1 FROM audit_log adoption WHERE adoption.entity_type = 'activity'
+            AND adoption.entity_id = a.id AND adoption.actor_type = 'human'
+            AND adoption.before->>'is_done' = 'true' AND adoption.after->>'is_done' = 'false'
+ AND `+storekit.AuditNotFromAnImport("adoption")+`)
 		OR (%s, a.id::text) IN (SELECT reader_id, row_id FROM %s wp WHERE wp.source = $%d))`,
 		floor, pinner, effectivePinsSQL(arg), arg(string(crmcontracts.WorklistItemSourceTask)))
 }

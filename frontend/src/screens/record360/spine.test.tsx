@@ -4,9 +4,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { components } from "../../api/schema";
+import { company360 } from "../../features/companies/company.fixtures";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { company360 } from "../company.fixtures";
 import { RecordSpine } from "./spine";
 
 // The thread's one rule: it may only draw what the payload supports. Every
