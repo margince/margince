@@ -751,10 +751,8 @@ func TestAProjectCreatedWithoutAnOwnerBelongsToItsCreator(t *testing.T) {
 	}
 }
 
-// Naming the owner of a new project is an assignment, judged like handing an
-// existing project on. A Team Lead may create one for a teammate. A rep whose
-// scope is their own work may neither create one for a colleague nor reassign
-// one to them.
+// The owner named at create is an assignment, so the row scope that bounds
+// reassignment must bound it too.
 func TestAProjectMayBeCreatedForAColleagueTheCreatorMayAssignTo(t *testing.T) {
 	e := Setup(t)
 	company := companyIDOf(e.SeedCompany(t, "BAER Pharma", &e.Rep1))
@@ -768,17 +766,17 @@ func TestAProjectMayBeCreatedForAColleagueTheCreatorMayAssignTo(t *testing.T) {
 			RowScope: scope,
 		})
 	}
-	lead := projectSeat(e.Rep2, principal.RowScopeTeam)
+	teamScoped := projectSeat(e.Rep2, principal.RowScopeTeam)
 	rep := projectSeat(e.Rep1, principal.RowScopeOwn)
 	colleague := ids.From[ids.UserKind](e.Rep2)
 	teammate := ids.From[ids.UserKind](e.Rep1)
 
-	t.Run("a Team Lead creates a project owned by a teammate", func(t *testing.T) {
-		p, err := e.Projects.CreateProject(lead, projects.CreateProjectInput{
+	t.Run("a team-scoped creator creates a project owned by a teammate", func(t *testing.T) {
+		p, err := e.Projects.CreateProject(teamScoped, projects.CreateProjectInput{
 			Name: "Rollout for a teammate", CompanyID: company, Source: "manual", OwnerID: &teammate,
 		})
 		if err != nil {
-			t.Fatalf("a Team Lead creating a project owned by a teammate → %v, want it created", err)
+			t.Fatalf("a team-scoped creator naming a teammate as owner → %v, want it created", err)
 		}
 		if p.OwnerId == nil || ids.UUID(*p.OwnerId) != e.Rep1 {
 			t.Fatalf("owner = %v, want the named teammate %s", p.OwnerId, e.Rep1)
