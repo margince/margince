@@ -22,10 +22,13 @@
 package mailwire
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"mime"
+	"mime/quotedprintable"
 	"net/mail"
 	"strings"
 
@@ -84,26 +87,17 @@ func Build(from string, msg connector.EmailMessage) string {
 		writeHeader(&b, "List-Unsubscribe-Post", msg.ListUnsubscribePost)
 	}
 	writeHeader(&b, "MIME-Version", "1.0")
-	writeBody(&b, msg)
+	writeBody(&b, msg, false)
 	return b.String()
 }
 
-// writeBody renders the content headers and the body itself.
-//
-// A plain-text-only message keeps the single-part shape it has always had:
-// wrapping one part in a multipart envelope buys nothing and costs every reader
-// a boundary to parse.
-//
-// With markup it becomes multipart/alternative, PLAIN PART FIRST. The order is
-// the contract, not a preference — RFC 2046 §5.1.4 puts the least-faithful
-// alternative first and a client renders the LAST part it understands, so a
-// reversed order shows the plain text to everybody.
-func writeBody(b *strings.Builder, msg connector.EmailMessage) {
+// A text-only message stays single-part. Multipart alternatives keep plain text first (RFC 2046).
+func writeBody(b *strings.Builder, msg connector.EmailMessage, smtp bool) {
 	if len(msg.Files) > 0 {
-		writeMixed(b, msg)
+		writeMixed(b, msg, smtp)
 		return
 	}
-	writeText(b, msg)
+	writeText(b, msg, smtp)
 }
 
 // writeMixed renders a message carrying files: multipart/mixed whose FIRST part
@@ -113,13 +107,13 @@ func writeBody(b *strings.Builder, msg connector.EmailMessage) {
 // The nesting is the standard one and the order is not arbitrary: a client
 // shows the first part as the body and offers the rest, so a message whose
 // files came first would open on an attachment.
-func writeMixed(b *strings.Builder, msg connector.EmailMessage) {
+func writeMixed(b *strings.Builder, msg connector.EmailMessage, smtp bool) {
 	boundary := safeBoundary(msg) + "_mixed"
 	writeHeader(b, "Content-Type", `multipart/mixed; boundary="`+boundary+`"`)
 	b.WriteString("\r\n")
 
 	b.WriteString("--" + boundary + "\r\n")
-	writeText(b, msg)
+	writeText(b, msg, smtp)
 	b.WriteString("\r\n")
 
 	for _, file := range msg.Files {
@@ -179,10 +173,10 @@ func wrapBase64(encoded string) string {
 
 // writeText renders the message itself — one text part, or the alternative
 // pair when it carries markup.
-func writeText(b *strings.Builder, msg connector.EmailMessage) {
+func writeText(b *strings.Builder, msg connector.EmailMessage, smtp bool) {
 	if msg.HTMLBody == "" {
 		writeHeader(b, "Content-Type", `text/plain; charset="utf-8"`)
-		writeHeader(b, "Content-Transfer-Encoding", transferEncoding)
+		writeHeader(b, "Content-Transfer-Encoding", encodingFor(smtp))
 		b.WriteString("\r\n")
 		b.WriteString(canonicalCRLF(msg.Body))
 		return
@@ -190,22 +184,22 @@ func writeText(b *strings.Builder, msg connector.EmailMessage) {
 	boundary := safeBoundary(msg)
 	writeHeader(b, "Content-Type", `multipart/alternative; boundary="`+boundary+`"`)
 	b.WriteString("\r\n")
-	writePart(b, boundary, `text/plain; charset="utf-8"`, msg.Body)
+	writePart(b, boundary, `text/plain; charset="utf-8"`, msg.Body, smtp)
 	if len(msg.Inline) == 0 {
-		writePart(b, boundary, `text/html; charset="utf-8"`, msg.HTMLBody)
+		writePart(b, boundary, `text/html; charset="utf-8"`, msg.HTMLBody, smtp)
 	} else {
 		b.WriteString("--" + boundary + "\r\n")
-		writeRelated(b, boundary+"_related", msg)
+		writeRelated(b, boundary+"_related", msg, smtp)
 	}
 	b.WriteString("--" + boundary + "--\r\n")
 }
 
 // writeRelated renders the markup with the images it shows by content id, as
 // multipart/related: the markup first, then each image as an inline part.
-func writeRelated(b *strings.Builder, boundary string, msg connector.EmailMessage) {
+func writeRelated(b *strings.Builder, boundary string, msg connector.EmailMessage, smtp bool) {
 	writeHeader(b, "Content-Type", `multipart/related; boundary="`+boundary+`"`)
 	b.WriteString("\r\n")
-	writePart(b, boundary, `text/html; charset="utf-8"`, msg.HTMLBody)
+	writePart(b, boundary, `text/html; charset="utf-8"`, msg.HTMLBody, smtp)
 	for _, image := range msg.Inline {
 		b.WriteString("--" + boundary + "\r\n")
 		writeHeader(b, "Content-Type", image.ContentType)
@@ -219,10 +213,10 @@ func writeRelated(b *strings.Builder, boundary string, msg connector.EmailMessag
 }
 
 // writePart writes one MIME part: its boundary, its type, and its content.
-func writePart(b *strings.Builder, boundary, contentType, content string) {
+func writePart(b *strings.Builder, boundary, contentType, content string, smtp bool) {
 	b.WriteString("--" + boundary + "\r\n")
 	writeHeader(b, "Content-Type", contentType)
-	writeHeader(b, "Content-Transfer-Encoding", transferEncoding)
+	writeHeader(b, "Content-Transfer-Encoding", encodingFor(smtp))
 	b.WriteString("\r\n")
 	b.WriteString(canonicalCRLF(content))
 	b.WriteString("\r\n")
@@ -339,4 +333,41 @@ func writeHeader(b *strings.Builder, name, value string) {
 	b.WriteString(": ")
 	b.WriteString(clean)
 	b.WriteString("\r\n")
+}
+
+func encodeSMTP(text string) (string, error) {
+	var encoded bytes.Buffer
+	writer := quotedprintable.NewWriter(&encoded)
+	if _, err := writer.Write([]byte(canonicalCRLF(text))); err != nil {
+		return "", fmt.Errorf("encoding message text: %w", err)
+	}
+	if err := writer.Close(); err != nil {
+		return "", fmt.Errorf("finishing message text: %w", err)
+	}
+	return encoded.String(), nil
+}
+
+// SMTPBody shares MIME nesting with mailbox submissions, using SMTP-safe encoding.
+func SMTPBody(message connector.EmailMessage) (string, error) {
+	var err error
+	message.Body, err = encodeSMTP(message.Body)
+	if err != nil {
+		return "", err
+	}
+	if message.HTMLBody != "" {
+		message.HTMLBody, err = encodeSMTP(message.HTMLBody)
+		if err != nil {
+			return "", err
+		}
+	}
+	var body strings.Builder
+	writeBody(&body, message, true)
+	return body.String(), nil
+}
+
+func encodingFor(smtp bool) string {
+	if smtp {
+		return "quoted-printable"
+	}
+	return transferEncoding
 }

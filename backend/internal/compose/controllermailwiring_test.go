@@ -38,3 +38,12 @@ func TestTheControllerRelaySendsUnderTheDeliveryRowsMessageID(t *testing.T) {
 		t.Fatalf("relay sent under message id %q, want the delivery row's", sent)
 	}
 }
+
+func TestControllerMarkupCannotFallBackToAnUnidentifiedPlainSend(t *testing.T) {
+	var sent string
+	relay := ControllerRelayFor(identifiedRecorder{messageID: &sent})
+	err := relay.SendControllerMail(context.Background(), comms.ControllerMessage{To: "reader@example.test", Subject: "Confirm", TextBody: "Body", HTMLBody: "<p>Body</p>", MessageID: "one@example.test"})
+	if err == nil || sent != "" {
+		t.Fatal("an unsupported relay silently discarded staged markup")
+	}
+}

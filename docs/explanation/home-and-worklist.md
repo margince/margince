@@ -155,10 +155,10 @@ rules are on [customer-requests.md](customer-requests.md).
 
 ## The weekly job
 
-`weekly_review_generate` ticks every 6 hours (`backend/api/jobs.yaml`). The Monday it aims at is the installation's local Monday. A tick that crosses `reviewHour` (6) in every time zone is what makes one
-cadence correct everywhere. `reviewWindowOpen` in `weeklyenrichjobs.go` is closed only on Monday before that
-hour. A later tick in the same week, up to Sunday, catches up a member the last tick missed. Once the next
-Monday comes, the candidate query asks about the new week only.
+`weekly_review_generate` ticks hourly (`backend/api/jobs.yaml`) so it can reach personal delivery
+windows. Reviews keep the installation's last closed reporting week. Later working days allow
+catch-up within that week; once the next reporting week opens, the candidate query asks about the
+newly closed week. Existing review and mail claims keep repeated ticks from sending a second copy.
 
 `measureWorkspace` in `weeklyjobs.go` measures every due member first, each under their own authority.
 Model text and mail come after, because a stalled relay must not cost a member the review itself. One

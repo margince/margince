@@ -44,6 +44,13 @@ is here: [authorization.md](../explanation/authorization.md).)
 - `NewGate(authority).Admit(ctx, spec, resolve)`: the gate that admits an agent (scope ∧ tier ∧ seat), checked again live.
 - **Use it when:** a store reads or writes a table with owners, or admits an agent or MCP call.
 
+### `platform/emailview` and `platform/mailwire`: email format
+
+`emailview` renders escaped product content in the user’s language as HTML and plain text. It reads no records
+and sends no mail. Controller wording stays with consent; customer mail stays with its send owner.
+`mailwire` builds MIME parts and attachments for mailbox connectors and SMTP. SMTP uses
+`quoted-printable`; mailbox sends keep their existing body bytes and envelope handling.
+
 ### `platform/events`: the bus side of the write path
 Outbox relay, a reader for each consumer group, and dedupe. It never starts an event. (More:
 [write-backbone.md](../explanation/write-backbone.md).)

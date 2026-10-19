@@ -1034,14 +1034,19 @@ public.app_user.app_user_greeting_name_length CHECK (((greeting_name IS NULL) OR
 public.app_user.app_user_locale_shipped CHECK ((locale = ANY (ARRAY['en'::text, 'de'::text, 'vi'::text])))
 public.app_user.app_user_morning_brief_delivery_check CHECK (((morning_brief_delivery IS NULL) OR (morning_brief_delivery = ANY (ARRAY['none'::text, 'email'::text]))))
 public.app_user.app_user_pkey PRIMARY KEY (id)
+public.app_user.app_user_routine_delivery_time_check CHECK ((routine_delivery_time ~ '^(working|([01][0-9]|2[0-3]):00)$'::text))
+public.app_user.app_user_routine_mail_scope_check CHECK ((routine_mail_scope = ANY (ARRAY['personal'::text, 'team'::text, 'combined'::text])))
+public.app_user.app_user_routine_mail_team_id_fkey FOREIGN KEY (routine_mail_team_id) REFERENCES team(id) ON DELETE SET NULL
 public.app_user.app_user_seat_type_check CHECK ((seat_type = ANY (ARRAY['read'::text, 'full'::text])))
 public.app_user.app_user_status_check CHECK ((status = ANY (ARRAY['invited'::text, 'active'::text, 'suspended'::text, 'deactivated'::text])))
 public.app_user.app_user_weekly_delivery_check CHECK (((weekly_delivery IS NULL) OR (weekly_delivery = ANY (ARRAY['none'::text, 'email'::text]))))
+public.app_user.app_user_weekly_delivery_day_check CHECK (((weekly_delivery_day >= 1) AND (weekly_delivery_day <= 7)))
 public.app_user.app_user_work_days_are_weekdays CHECK (((work_days IS NULL) OR (((cardinality(work_days) >= 1) AND (cardinality(work_days) <= 7)) AND (work_days <@ ARRAY[(1)::smallint, (2)::smallint, (3)::smallint, (4)::smallint, (5)::smallint, (6)::smallint, (7)::smallint]))))
 public.app_user.app_user_work_end_minute_of_day CHECK (((work_end_minute IS NULL) OR ((work_end_minute >= 1) AND (work_end_minute <= 1440))))
 public.app_user.app_user_work_range_is_a_range CHECK ((((work_start_minute IS NULL) = (work_end_minute IS NULL)) AND ((work_start_minute IS NULL) OR (work_start_minute < work_end_minute))))
 public.app_user.app_user_work_start_minute_of_day CHECK (((work_start_minute IS NULL) OR ((work_start_minute >= 0) AND (work_start_minute <= 1439))))
 public.app_user.archived_at timestamp with time zone gen=- def=-
+public.app_user.combine_routine_email boolean gen=- def=-
 public.app_user.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.app_user.delivery_hour_local integer gen=- def=-
 public.app_user.display_name text NOT NULL gen=- def=-
@@ -1060,12 +1065,16 @@ public.app_user.password_hash text gen=- def=-
 public.app_user.quiet_day_notice boolean gen=- def=-
 public.app_user.report_authority_user_change CREATE TRIGGER report_authority_user_change BEFORE UPDATE OF status, archived_at, seat_type, is_agent ON public.app_user FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()
 public.app_user.report_authority_user_delete CREATE TRIGGER report_authority_user_delete BEFORE DELETE ON public.app_user FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()
+public.app_user.routine_delivery_time text gen=- def=-
+public.app_user.routine_mail_scope text gen=- def=-
+public.app_user.routine_mail_team_id uuid gen=- def=-
 public.app_user.seat_type text NOT NULL gen=- def='full'::text
 public.app_user.status text NOT NULL gen=- def='active'::text
 public.app_user.timezone text gen=- def=-
 public.app_user.trg_app_user_updated CREATE TRIGGER trg_app_user_updated BEFORE UPDATE ON public.app_user FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.app_user.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.app_user.weekly_delivery text gen=- def=-
+public.app_user.weekly_delivery_day integer gen=- def=-
 public.app_user.work_days smallint[] gen=- def=-
 public.app_user.work_end_minute smallint gen=- def=-
 public.app_user.work_start_minute smallint gen=- def=-
@@ -2066,6 +2075,7 @@ public.comms_outbound.comms_outbound_template_is_controllers CHECK (((sender_kin
 public.comms_outbound.comms_outbound_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.comms_outbound.consent_purpose text gen=- def=-
 public.comms_outbound.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.comms_outbound.delivery_due_at timestamp with time zone gen=- def=-
 public.comms_outbound.execution_authority text NOT NULL gen=- def='supported'::text
 public.comms_outbound.from_name text gen=- def=-
 public.comms_outbound.html_body text gen=- def=-
@@ -2105,6 +2115,7 @@ public.comms_outbound_attachments_well_formed(files jsonb) secdef=false cfg=- ac
 
 public.comms_outbound_bounced_idx CREATE INDEX comms_outbound_bounced_idx ON public.comms_outbound USING btree (bounced_at DESC) WHERE (bounced_at IS NOT NULL)
 public.comms_outbound_controller_payload CREATE INDEX comms_outbound_controller_payload ON public.comms_outbound USING btree (payload_expires_at) WHERE (payload_ref IS NOT NULL)
+public.comms_outbound_due CREATE INDEX comms_outbound_due ON public.comms_outbound USING btree (delivery_due_at) WHERE ((delivery_due_at IS NOT NULL) AND (status <> 'sent'::text))
 public.comms_outbound_message_unique CREATE UNIQUE INDEX comms_outbound_message_unique ON public.comms_outbound USING btree (message_id)
 public.comms_outbound_one_delivery_per_instruction CREATE UNIQUE INDEX comms_outbound_one_delivery_per_instruction ON public.comms_outbound USING btree (instruction_id) WHERE (instruction_id IS NOT NULL)
 public.comms_outbound_pkey CREATE UNIQUE INDEX comms_outbound_pkey ON public.comms_outbound USING btree (id)

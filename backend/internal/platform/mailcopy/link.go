@@ -57,3 +57,13 @@ const (
 // that says nothing about the decision they were told was waiting, and nothing
 // on either side would fail.
 const WorklistFragment = "/#/worklist"
+
+// These destinations are shared by product mail and checked against the router.
+const (
+	PreferencesFragment   = "/#/settings/notifications"
+	DealRecordFragment    = "/#/deals/"
+	ContactRecordFragment = "/#/contacts/"
+	CompanyRecordFragment = "/#/companies/"
+	LeadRecordFragment    = "/#/leads/"
+	ProjectRecordFragment = "/#/projects/"
+)

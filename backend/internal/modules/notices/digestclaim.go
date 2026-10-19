@@ -33,10 +33,10 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
@@ -222,7 +222,31 @@ func (s *Store) DigestStillDue(ctx context.Context, user ids.UserID, w Window) (
 // to produce a second one, and nothing ever releases it.
 func (s *Store) ClaimDigestRun(ctx context.Context, user ids.UserID, day time.Time) (bool, error) {
 	var claimed bool
-	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		claimed, err = s.ClaimDigestRunTx(ctx, tx, user, day)
+		return err
+	})
+	return claimed, err
+}
+
+// ClaimDigestRunTx shares the original digest identity with a combined edition.
+func (s *Store) ClaimDigestRunTx(ctx context.Context, tx pgx.Tx, user ids.UserID, day time.Time) (bool, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return false, apperrors.ErrPermissionDenied
+	}
+	if actor.Type != principal.PrincipalSystem {
+		seat, err := actingSeat(ctx, "claiming a digest")
+		if err != nil {
+			return false, err
+		}
+		if seat != user.UUID {
+			return false, apperrors.ErrPermissionDenied
+		}
+	}
+	var claimed bool
+	claim := func() error {
 		tag, txErr := tx.Exec(ctx, `
 			INSERT INTO notification_digest_run (user_id, digest_date)
 			VALUES ($1, $2)
@@ -241,7 +265,8 @@ func (s *Store) ClaimDigestRun(ctx context.Context, user ids.UserID, day time.Ti
 			map[string]any{digestRunField: nil},
 			map[string]any{digestRunField: day.Format(time.DateOnly)})
 		return txErr
-	}); err != nil {
+	}
+	if err := claim(); err != nil {
 		return false, fmt.Errorf("notices: claiming the seat's morning digest: %w", err)
 	}
 	return claimed, nil

@@ -505,14 +505,11 @@ kinds:
     queue: default
     timeout: 10m
     opts_owner: caller
-    cadence: 6h
+    cadence: 1h
     reason: >-
-      Every six hours rather than weekly, for the same reason the brief ticks
-      hourly: the Monday it aims at is the installation's local one, and a tick
-      that crosses the review hour in every zone the setting can name is what
-      makes the schedule correct without a per-zone cron. The per-rep week
-      uniqueness collapses the extra ticks into one review, and the same
-      property backfills a Monday the worker was down for.
+      Hourly ticks reach each recipient's bounded personal delivery window.
+      The reporting week remains the installation's last closed week;
+      existing review and delivery claims prevent repeated generation or sending.
 
 
 
