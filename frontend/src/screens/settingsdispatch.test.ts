@@ -104,11 +104,11 @@ describe("the split lost no card", () => {
       .map((file) => readFileSync(join(here, file), "utf8"))
       .join("\n");
     // The WHOLE file, not just `tabContent`. Several pages dispatch to a tab
-    // function that renders their cards — `AiAccessTab`, `ConnectionsTab` — and
-    // those functions sit below `tabContent`, so a window ending at its closing
-    // brace reports a card missing the moment it moves into one. That is a
-    // scan that fails SHORT: it reads a smaller tree and reports a loss that
-    // did not happen, which is the same shape of wrong as missing a real one.
+    // function that renders their cards, such as `AiAccessTab`. Those functions
+    // sit below `tabContent`, so a window ending at its closing brace reports a
+    // card missing the moment it moves into one. That scan fails SHORT. It
+    // reads a smaller tree and reports a loss that did not happen, the same
+    // shape of wrong as missing a real one.
     return new Set(
       [...source.matchAll(/<([A-Z][A-Za-z]+)\b/g)].map((match) => match[1]),
     );

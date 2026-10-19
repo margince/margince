@@ -5,9 +5,9 @@ import type { Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 
 // How each AI tool reaches the hosted connector, one entry per tool and plan.
-// The picker, the admin guide and the skill README all read this module;
-// backend/gates/aiconnectreadme_test.go parses its literals, so keep each entry
-// on the `"tool-plan": {` / `help: "…",` lines it reads.
+// The picker and the admin guide read this module. A gate holds the skill README
+// to it (backend/gates/aiconnectreadme_test.go), so keep the shapes it parses:
+// `"tool-plan": {` and `help: "…",` or a `const X_HELP` it names.
 
 export const AI_TOOLS = ["claude", "chatgpt", "copilot", "gemini"] as const;
 export const AI_PLANS = ["company", "own"] as const;

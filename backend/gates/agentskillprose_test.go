@@ -24,8 +24,8 @@ import (
 
 func TestTheSkillBundleReadsLikeTheDocs(t *testing.T) {
 	t.Parallel()
-	// Both READMEs: with the connector on it leads with connecting a tool, off
-	// it sends the reader to a passport, and each branch is prose of its own.
+	// Both READMEs are prose of their own. With the connector on it leads with
+	// connecting a tool; off, it sends the reader to a passport.
 	for name, builder := range map[string]*agentbundle.Builder{
 		"connector off": {},
 		"connector on":  {MCPURL: "https://crm.example.test/mcp"},
