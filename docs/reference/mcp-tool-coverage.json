@@ -1958,7 +1958,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 1679,
+      "tokens": 1687,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -2023,7 +2023,7 @@
     },
     {
       "name": "read_reports",
-      "tokens": 1641,
+      "tokens": 1647,
       "agents": [],
       "required_by_cases": [
         "case49_who_can_introduce_us"

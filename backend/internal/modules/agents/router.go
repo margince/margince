@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"maps"
 	"slices"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -196,6 +197,11 @@ func routedSchema(routerName, field string, choices []string, own json.RawMessag
 			properties[name][schemaDescription] = scopedDescription(choicesTaking, properties[name][schemaDescription])
 		}
 	}
+	for name, arg := range properties {
+		if note := lowerCeilings(name, choices, targets); note != "" {
+			arg[schemaDescription] = noted(arg[schemaDescription], note)
+		}
+	}
 	out := map[string]json.RawMessage{}
 	for name, arg := range properties {
 		out[name] = mustMarshal(arg)
@@ -247,6 +253,43 @@ func scopedDescription(choicesTaking []string, description json.RawMessage) json
 		scoped += ": " + text
 	}
 	return mustMarshal(scoped)
+}
+
+// lowerCeilings names the choices whose own maximum for an argument is below
+// the loosest one the router advertises. Without it the schema promises a value
+// those choices refuse. It is empty when every bounded choice has the same maximum.
+func lowerCeilings(name string, choices []string, targets []mcp.ToolSpec) string {
+	ceilings := map[float64][]string{}
+	var widest float64
+	for i, target := range targets {
+		raw := readObjectSchema(target.Name, target.InputSchema).Properties[name][schemaMaximum]
+		var ceiling float64
+		if raw == nil || json.Unmarshal(raw, &ceiling) != nil {
+			continue
+		}
+		ceilings[ceiling] = append(ceilings[ceiling], choices[i])
+		widest = max(widest, ceiling)
+	}
+	var notes []string
+	for _, ceiling := range slices.Sorted(maps.Keys(ceilings)) {
+		if ceiling < widest {
+			notes = append(notes, fmt.Sprintf("at most %s for %s", strconv.FormatFloat(ceiling, 'f', -1, 64),
+				strings.Join(slices.Sorted(slices.Values(ceilings[ceiling])), ", ")))
+		}
+	}
+	return strings.Join(notes, "; ")
+}
+
+// noted appends a note to an argument's description, which may be absent.
+func noted(description json.RawMessage, note string) json.RawMessage {
+	var text string
+	if description != nil && json.Unmarshal(description, &text) != nil {
+		return description
+	}
+	if text = strings.TrimRight(text, "."); text != "" {
+		note = text + "; " + note
+	}
+	return mustMarshal(note)
 }
 
 // uniteArgument is one argument as two targets declare it, ignoring wording.

@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 37,
     "system_frame_tokens": 597,
-    "tokens": 21706,
+    "tokens": 21720,
     "median_tool_tokens": 474,
     "mean_tool_tokens": 586
   },
@@ -85,11 +85,11 @@
   "tool_cost": [
     {
       "name": "find_records",
-      "tokens": 1679
+      "tokens": 1687
     },
     {
       "name": "read_reports",
-      "tokens": 1641
+      "tokens": 1647
     },
     {
       "name": "change_activities",

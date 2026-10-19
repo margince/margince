@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 121.6 KB |
+| Tool catalog | 121.7 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 32034 |
+| Approx. wire tokens | 32048 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 24.6 KB | 20% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 31.5 KB | 25% | Yes, every step |
-| Input schemas | 56.8 KB | 46% | Yes, every step |
+| Input schemas | 56.9 KB | 46% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 7% | Partly |
-| **Description + input schema** | **88.3 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **88.4 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -73,7 +73,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1679 |
+| [`find_records`](#find_records) | Find records | yes |  | 1687 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 336 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
@@ -87,7 +87,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
 | [`read_record`](#read_record) | Read a record | yes |  | 307 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1641 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1647 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 989 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 488 |
@@ -3193,7 +3193,7 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
       "type": "object"
     },
     "limit": {
-      "description": "list, meaning, search only",
+      "description": "list, meaning, search only; at most 25 for meaning, search",
       "maximum": 50,
       "minimum": 1,
       "type": "integer"
@@ -5711,7 +5711,7 @@ search its evidence, and quote coverage with each number.
       "type": "string"
     },
     "limit": {
-      "description": "evidence, standard only: How many citations, counterexamples and abstentions to return, each.",
+      "description": "evidence, standard only: How many citations, counterexamples and abstentions to return, each; at most 25 for evidence",
       "maximum": 100,
       "minimum": 1,
       "type": "integer"
