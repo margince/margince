@@ -109,12 +109,12 @@ func TestSameNamedPromisersRequireDistinctQuotedAddresses(t *testing.T) {
 	}
 }
 
-func TestAddressAliasesDoNotInventSameNamedPeople(t *testing.T) {
+func TestAddressAliasesDoNotInventDistinctPromisers(t *testing.T) {
 	contact := ids.NewV7()
 	first := commitmentParty{Ref: "contact:" + contact.String(), Name: "Alex Lee", Contact: &contact, Address: "alex@example.test"}
 	alias := first
 	alias.Address = "alias@example.test"
 	if ambiguousCommitmentPromiser(first, []commitmentParty{first, alias}, "Alex Lee will send pricing") {
-		t.Fatal("one contact's addresses were treated as different people")
+		t.Fatal("one contact's addresses were treated as distinct promisers")
 	}
 }
