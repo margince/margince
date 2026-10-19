@@ -211,6 +211,7 @@ func landingToWire(in Landing) crmcontracts.ForecastLanding {
 		Measure:        crmcontracts.ForecastLandingMeasure(in.Measure),
 		WonMinor:       in.WonMinor,
 		RemainingMinor: in.RemainingMinor,
+		SystemMinor:    in.SystemMinor,
 	}
 	if in.Caveat != "" {
 		caveat := crmcontracts.ForecastLandingCaveat(in.Caveat)

@@ -37386,6 +37386,9 @@ type ForecastLanding struct {
 	// RemainingMinor The forward half. Zero for a manager call, which is a single authored TOTAL rather than a remainder — a call is not added to won_minor, and a reconciliation line drawing this must say the call instead of a split.
 	RemainingMinor int64 `json:"remaining_minor"`
 
+	// SystemMinor Beside a manager call only: what the deal records alone project, won plus commit evidence. The call replaces this figure, so a reader comparing the call with the records needs both. Absent for every other measure, whose amount_minor already is the records' projection.
+	SystemMinor *int64 `json:"system_minor,omitempty"`
+
 	// WonMinor The money already banked, the backward half of the sum.
 	WonMinor int64 `json:"won_minor"`
 }

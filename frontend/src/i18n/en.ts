@@ -11128,6 +11128,9 @@ export const en = {
   "forecast.landing": "Landing",
   "forecast.landingFrom": "Projected · {won} won + {remaining} to come",
   "forecast.landingFromCall": "From the call · {won} won so far",
+  "forecast.landingRecords": "From the deal records",
+  "forecast.landingRecordsDetail":
+    "Won plus committed, without the manager’s call",
   "forecast.landingCaveat": "Landing has a caveat",
   "forecast.landing.caveat.call_absent":
     "No call recorded for this period, so this shows commit evidence.",

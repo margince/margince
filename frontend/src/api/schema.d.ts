@@ -37029,6 +37029,11 @@ export interface components {
              */
             remaining_minor: number;
             /**
+             * Format: int64
+             * @description Beside a manager call only: what the deal records alone project, won plus commit evidence. The call replaces this figure, so a reader comparing the call with the records needs both. Absent for every other measure, whose amount_minor already is the records' projection.
+             */
+            system_minor?: number;
+            /**
              * @description Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
              * @enum {string}
              */

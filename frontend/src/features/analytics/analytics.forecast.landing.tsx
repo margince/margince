@@ -67,6 +67,16 @@ export function LandingCard({
         value={money(landing.amount_minor)}
         detail={detail}
       />
+      {/* Beside a call, what the records alone project. The call replaced it,
+          so the two are shown apart and never added. */}
+      {landing.system_minor != null && (
+        <StatCard
+          narrow="row"
+          label={t("forecast.landingRecords")}
+          value={money(landing.system_minor)}
+          detail={t("forecast.landingRecordsDetail")}
+        />
+      )}
       {/* Its OWN heading, not the card's: the caveat sat under a repeat of
           `forecast.landing` and read as a second copy of the figure's label
           rather than as a remark about it. */}

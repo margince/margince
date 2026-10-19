@@ -17726,6 +17726,11 @@ components:
           format: int64
           description: >-
             The forward half. Zero for a manager call, which is a single authored TOTAL rather than a remainder — a call is not added to won_minor, and a reconciliation line drawing this must say the call instead of a split.
+        system_minor:
+          type: integer
+          format: int64
+          description: >-
+            Beside a manager call only: what the deal records alone project, won plus commit evidence. The call replaces this figure, so a reader comparing the call with the records needs both. Absent for every other measure, whose amount_minor already is the records' projection.
         caveat:
           type: string
           enum: [call_absent, call_below_actual]

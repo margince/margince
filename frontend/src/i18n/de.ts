@@ -11091,6 +11091,9 @@ export const de = {
   "forecast.landingFrom":
     "Hochgerechnet · {won} gewonnen + {remaining} erwartet",
   "forecast.landingFromCall": "Aus der Einschätzung · bisher {won} gewonnen",
+  "forecast.landingRecords": "Aus den Deal-Daten",
+  "forecast.landingRecordsDetail":
+    "Gewonnen plus zugesagt, ohne die Einschätzung",
   "forecast.landingCaveat": "Das erwartete Ergebnis hat einen Vorbehalt",
   "forecast.landing.caveat.call_absent":
     "Angezeigt werden die Commit-Belege, da für diesen Zeitraum keine Einschätzung erfasst ist.",

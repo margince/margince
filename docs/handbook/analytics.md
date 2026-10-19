@@ -315,6 +315,7 @@ means is the **Projection basis** installation setting, and the card names it:
 - **Weighted**: every open deal at its stage probability.
 - **Manager’s call**: the recorded number *replaces* the projection rather
   than adding to what is already won.
+  **From the deal records** shows won plus commit evidence beside it, never added.
 
 No deal is counted in both parts.
 
