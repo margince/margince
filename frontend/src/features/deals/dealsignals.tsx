@@ -19,7 +19,7 @@ import type { components } from "../../api/schema";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import type { Signal, SignalTone } from "../../screens/record360";
+import type { Signal, SignalTone } from "../records/record360";
 import { useDealCoverage } from "./deal360/usedealcoverage";
 
 type DealCoverageRisk = components["schemas"]["DealCoverageRisk"];

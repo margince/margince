@@ -7,13 +7,13 @@ import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Row, Stack } from "../design-system/stack";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
+import { LogActivityForm } from "../features/records/logactivity";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { activityFollowUpsKey } from "../lib/activitykeys";
 import { useCanWrite } from "../lib/capability";
 import { problemCodeOf, unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
-import { LogActivityForm } from "./logactivity";
 
 export function ActivityFollowUps({
   sourceId,

@@ -17,7 +17,7 @@ import {
   FoundMove,
   fromCitations,
   type OpenReceipt,
-} from "../../screens/record360";
+} from "../records/record360";
 import type { Company360 } from "./company360";
 import {
   type DeferOf,

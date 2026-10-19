@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import type { TaskDraft } from "../features/records/activitybody";
 import {
   installFetchStub,
   meRoute,
   StoryProviders,
 } from "../testing/story-utils";
-import type { TaskDraft } from "./activitybody";
 import { FollowUpTaskFields } from "./followuptaskfields";
 
 const meta: Meta<typeof FollowUpTaskFields> = {

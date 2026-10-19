@@ -2,8 +2,8 @@ import { Badge } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import type { PickableProject } from "../design-system/projectpicker";
 import { AskSection } from "../features/companies/company360";
+import type { OpenReceipt } from "../features/records/record360";
 import { useT } from "../i18n";
-import type { OpenReceipt } from "./record360";
 
 /**
  * AssistantPanel is what you can ASK about this account.

@@ -3,7 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { taskWriteKeys } from "../../lib/activitykeys";
-import { SentenceList } from "../../screens/record360";
+import { SentenceList } from "../records/record360";
 import { TaskQuickActions, useTaskUpdate } from "../worklist/taskactions";
 import { CompanyScreen } from "./companies";
 import { NextSteps } from "./company360";

@@ -84,7 +84,7 @@
 1 react-hooks/refs src/features/lists/filterlistedit.tsx
 1 react-hooks/set-state-in-effect src/features/lists/filterslibrary.tsx
 1 react-hooks/refs src/features/lists/filterview.tsx
-1 react-hooks/set-state-in-effect src/screens/historyfields.tsx
+1 react-hooks/set-state-in-effect src/features/records/historyfields.tsx
 1 react-hooks/refs src/screens/knowledge.documents.tsx
 1 react-hooks/set-state-in-effect src/features/leads/leadfillfromcontact.tsx
 1 react-hooks/set-state-in-effect src/features/leads/leadraillinks.tsx
@@ -110,10 +110,10 @@
 1 react-hooks/refs src/screens/projecthealthmodal.tsx
 1 react-hooks/set-state-in-effect src/screens/projecthealthmodal.tsx
 1 react-hooks/set-state-in-effect src/screens/rate-manual.tsx
-1 react-hooks/set-state-in-effect src/screens/recordaccess.tsx
-1 react-hooks/refs src/screens/recordteamassign.tsx
-1 react-hooks/set-state-in-effect src/screens/recordteamassign.tsx
-1 react-hooks/set-state-in-effect src/screens/relationships.tsx
+1 react-hooks/set-state-in-effect src/features/records/recordaccess.tsx
+1 react-hooks/refs src/features/records/recordteamassign.tsx
+1 react-hooks/set-state-in-effect src/features/records/recordteamassign.tsx
+1 react-hooks/set-state-in-effect src/features/records/relationships.tsx
 3 react-hooks/refs src/features/lists/tagspanel.tsx
 1 react-hooks/set-state-in-effect src/features/ai/vertex-model-probe.ts
 1 react-hooks/refs src/screens/voice-samples.tsx

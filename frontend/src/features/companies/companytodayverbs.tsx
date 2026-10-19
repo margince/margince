@@ -17,9 +17,9 @@ import {
   basisAddsARecord,
   citationOpensRecord,
   MomentEvidence,
-} from "../../screens/record360";
+} from "../records/record360";
 import type { DeferOf } from "./companysetaside";
-import "../../screens/record360/record360.css";
+import "../records/record360/record360.css";
 
 type Company360 = components["schemas"]["Company360"];
 type Company360Contact = NonNullable<Company360["contacts"]>["data"][number];

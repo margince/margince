@@ -21,6 +21,7 @@ import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { listQueryParams } from "../../lib/tagfilter";
+import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import {
   createdColumn,
   lastActivityColumn,
@@ -28,8 +29,7 @@ import {
   ownerColumn,
   standardViews,
   tagsColumn,
-} from "../../screens/recordlist";
-import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
+} from "../records/recordlist";
 import type { Company } from "./companies";
 import {
   companyCreateFields,

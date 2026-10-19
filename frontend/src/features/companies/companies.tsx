@@ -7,7 +7,7 @@ import { RecordTabs } from "../../design-system/recordtabs";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { scrollPageToTop } from "../../lib/reveal";
-import { useAddressedTab } from "../../screens/recordtab";
+import { useAddressedTab } from "../records/recordtab";
 import { CompanyPage } from "./companies.page";
 import { useAcknowledgeCompanyView, useCompany360 } from "./company360";
 import { hasFinance } from "./companyfinance";

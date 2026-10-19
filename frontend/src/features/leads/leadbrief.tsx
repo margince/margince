@@ -26,7 +26,7 @@ import {
   type Grounding,
   type StandingTone,
   VerdictHead,
-} from "../../screens/record360";
+} from "../records/record360";
 import "../companies/company360.css";
 
 /**

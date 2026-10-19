@@ -20,7 +20,7 @@ import {
   type OpenReceipt,
   SentenceList,
   WrittenBy,
-} from "../../screens/record360";
+} from "../records/record360";
 import "./company360.css";
 
 type Question = components["schemas"]["CompanyQuestion"];

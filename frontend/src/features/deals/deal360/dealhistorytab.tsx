@@ -21,7 +21,7 @@ import { groupChronology } from "../../../design-system/timelinegroups";
 import { useLocale, useT } from "../../../i18n";
 import { invalidateRecord } from "../../../lib/recordwritekeys";
 import { useRecordZone } from "../../../lib/recordzone";
-import { RecordHistoryTab } from "../../../screens/history";
+import { RecordHistoryTab } from "../../records/history";
 import {
   ChronologyFilter,
   ChronologyFooter,
@@ -29,8 +29,8 @@ import {
   hasChronologyFooter,
   useChronologyFilter,
   useRecordChronology,
-} from "../../../screens/recordchronology";
-import { TimelineActions } from "../../../screens/timelineactions";
+} from "../../records/recordchronology";
+import { TimelineActions } from "../../records/timelineactions";
 
 type Deal = components["schemas"]["Deal"];
 

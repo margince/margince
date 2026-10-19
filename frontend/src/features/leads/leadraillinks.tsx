@@ -22,9 +22,9 @@ import { problemMessageOf } from "../../lib/problem";
 import { useProjectRecord } from "../../screens/projectrecord";
 import { PhaseBadge } from "../../screens/projects";
 import type { Project } from "../../screens/projects.form";
-import { searchProjectReferences } from "../../screens/recordreferences";
 import { SectionSummary } from "../companies/companyrailshared";
 import { TagsPanel } from "../lists/tagspanel";
+import { searchProjectReferences } from "../records/recordreferences";
 import { LeadFillFromContact } from "./leadfillfromcontact";
 import type { LeadWriter } from "./leads";
 

@@ -6,7 +6,7 @@ import { api } from "../../api/client";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useSetAside } from "../../screens/record360";
+import { useSetAside } from "../records/record360";
 
 // The account page's "Not now". Its advice rows and its moment are set aside
 // by fingerprint in one per-reader store, with the Undo every record page has.

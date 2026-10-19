@@ -11,7 +11,7 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { hasMoveControl, MoveButton } from "../../screens/movebutton";
+import { hasMoveControl, MoveButton } from "../records/movebutton";
 import {
   CallCard,
   EvidenceSources,
@@ -24,7 +24,7 @@ import {
   TodayPanel,
   useSetAside,
   WrittenBy,
-} from "../../screens/record360";
+} from "../records/record360";
 import { useDealSignals } from "./dealsignals";
 import "./dealstatus.css";
 

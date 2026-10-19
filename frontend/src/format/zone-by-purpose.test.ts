@@ -258,7 +258,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Same: the stubbed report result carries the installation zone the server sends, and the caption assertion is about that zone reaching the screen unchanged. Reading the runner's zone would make the assertion about the machine.",
   },
   {
-    file: "screens/recordconversations.test.tsx",
+    file: "features/records/recordconversations.test.tsx",
     why: "The component takes the zone as a required prop and these cases assert which GROUPS render and which badges they carry — no date rendering is asserted. The zone is the shape being satisfied, not a rendering under test.",
   },
   {
@@ -266,7 +266,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The gutter case asserts that a row's time is drawn in the RECORD's zone rather than the instant's — '14:22' for a 12:22Z instant — which needs a zone whose offset is not zero, and the component takes it as a required prop. The other cases pass UTC as the shape being satisfied and assert who wrote what, not a rendering of the clock.",
   },
   {
-    file: "screens/historyreversalrow.stories.tsx",
+    file: "features/records/historyreversalrow.stories.tsx",
     why: "The story hand-renders a member row and passes the formatter's required zone directly — a story has no installation read to take it from, and a zone read off the runner would draw a different date column on every machine the catalog builds on.",
   },
   {
@@ -274,23 +274,23 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The story hand-renders a RecordView around the details pane and passes the view's required zone; nothing in it renders a date, so the zone is the shape being satisfied, not a rendering under review.",
   },
   {
-    file: "screens/recordconversations.stories.tsx",
+    file: "features/records/recordconversations.stories.tsx",
     why: "The story passes the component's required zone prop directly — a story has no installation read to take it from, and a zone read off the runner would draw a different date column on every machine the catalog builds on.",
   },
   {
-    file: "screens/historyfielddiff.test.tsx",
+    file: "features/records/historyfielddiff.test.tsx",
     why: "The component under test takes a reading context whose zone is required, and these cases assert the CURRENCY scaling — no value here renders a date. The zone is the shape being satisfied, not a rendering being asserted.",
   },
   {
-    file: "screens/history.timeline.test.tsx",
+    file: "features/records/history.timeline.test.tsx",
     why: "The adapter under test takes a reading context whose zone is required, and none of these rows carries a timestamp for it to render — the zone is the SHAPE being satisfied, not a rendering being asserted, so it is pinned rather than read from a provider these unit calls do not have.",
   },
   {
-    file: "screens/recordchronology.test.tsx",
+    file: "features/records/recordchronology.test.tsx",
     why: "Same shape, one level up: the hook takes the reading context whole, and these cases assert which ROWS survive a narrowed read rather than how any date renders. A zone read off the runner would make the fixture differ by machine while proving nothing about the zone.",
   },
   {
-    file: "screens/historyvalues.test.ts",
+    file: "features/records/historyvalues.test.ts",
     why: "The zone IS the input under test: a stored timestamp is asserted to render at the RECORD's zone rather than at UTC, which needs a zone east of UTC to stand in. Read off the runner's own zone the suite would assert a different rendering on every machine.",
   },
   {
@@ -310,7 +310,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The timeline's from/to filter cuts a picked day at the INSTALLATION's boundaries; asserting that against the fallback would agree with itself whichever zone the code read, so the suite names a zone that is not the fallback.",
   },
   {
-    file: "screens/recordlist.test.tsx",
+    file: "features/records/recordlist.test.tsx",
     why: "createdColumn now takes the zone it renders dates in; this suite asserts what the column SORTS on, so it hands over a named zone to satisfy the signature and the zone itself carries none of the claim.",
   },
   {
@@ -454,7 +454,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Installation-settings fixture backing the leads screen's settings read.",
   },
   {
-    file: "screens/logactivity.test.tsx",
+    file: "features/records/logactivity.test.tsx",
     why: "Reads back the calendar day an entry files under — backdated or logged at the moment — which needs both a named zone to pretend to be in and a named zone to compare the filing against.",
   },
   {

@@ -4,7 +4,7 @@ import { ifMatch, requireVersion } from "../../api/version";
 import { useT } from "../../i18n";
 import { useRecordWriteRefusal } from "../../lib/capability";
 import { throwProblem, unwrap } from "../../lib/problem";
-import { useClaimRecord } from "../../screens/claimrecord";
+import { useClaimRecord } from "../records/claimrecord";
 import type { Lead, UpdateLeadRequest } from "./leads";
 
 /**

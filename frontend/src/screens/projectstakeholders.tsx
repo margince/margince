@@ -30,9 +30,9 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
+import { projectRoleLabel } from "../features/records/record360";
 import { useT } from "../i18n";
 import { problemMessageOf, unwrap } from "../lib/problem";
-import { projectRoleLabel } from "./record360";
 
 type SetProjectStakeholderRequest =
   components["schemas"]["SetProjectStakeholderRequest"];

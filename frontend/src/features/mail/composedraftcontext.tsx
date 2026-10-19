@@ -4,8 +4,8 @@ import { Button, Field, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
-import { Citations } from "../../screens/record360";
 import { useCompany360 } from "../companies/company360";
+import { Citations } from "../records/record360";
 import type { DraftUnavailable } from "./composedraftcall";
 
 // The account-started draft: choosing what a message is about before a model

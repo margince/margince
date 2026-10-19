@@ -17,8 +17,8 @@ import { useRecordZone } from "../../lib/recordzone";
 import {
   interactionIcon,
   useInteractionLabel,
-} from "../../screens/interactionchrome";
-import { SentenceList, WrittenBy } from "../../screens/record360";
+} from "../records/interactionchrome";
+import { SentenceList, WrittenBy } from "../records/record360";
 import {
   colleagueWords,
   directionSentence,

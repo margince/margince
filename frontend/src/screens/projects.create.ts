@@ -4,10 +4,10 @@
 import { api } from "../api/client";
 import type { CreateField } from "../components/create";
 import { useObjectCustomFields } from "../components/customfields.form";
+import { useOwnerPicker } from "../features/records/recordreferences";
 import { useT } from "../i18n";
 import { unwrap } from "../lib/problem";
 import { mapProjectCreate, type Project, projectFields } from "./projects.form";
-import { useOwnerPicker } from "./recordreferences";
 
 // The one create-project form both call sites open: the core fields, the
 // workspace's project custom fields, and the body the two become. The company

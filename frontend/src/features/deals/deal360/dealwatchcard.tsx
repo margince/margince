@@ -19,7 +19,7 @@ import { useLocale, useT } from "../../../i18n";
 import { DEAL_COMMITMENTS_KEY } from "../../../lib/activitykeys";
 import { unwrap } from "../../../lib/problem";
 import { useRecordZone } from "../../../lib/recordzone";
-import { DismissClaimButton } from "../../../screens/claimdismiss";
+import { DismissClaimButton } from "../../records/claimdismiss";
 import "./deal360.css";
 
 type DealCommitments = components["schemas"]["DealCommitments"];

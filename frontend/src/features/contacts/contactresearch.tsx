@@ -2,7 +2,7 @@ import type { components } from "../../api/schema";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
-import { RecordListsPanel } from "../../screens/recordlists";
+import { RecordListsPanel } from "../records/recordlists";
 import { omitted } from "./contact360";
 import { EnrichedFields } from "./contactcorrections";
 import { ContactProviderSection } from "./contactprovider";

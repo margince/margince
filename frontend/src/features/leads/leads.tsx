@@ -42,7 +42,7 @@ export type Lead = components["schemas"]["Lead"];
 export type UpdateLeadRequest = components["schemas"]["UpdateLeadRequest"];
 
 import { leadKey, leadWriteKeys } from "../../lib/leadkeys";
-import { useAddressedTab } from "../../screens/recordtab";
+import { useAddressedTab } from "../records/recordtab";
 import { WorklistReturnLink } from "../worklist/worklist.return";
 
 /**

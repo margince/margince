@@ -5,7 +5,7 @@ import type { components } from "../../api/schema";
 import { viewerZone } from "../../format/timezone";
 import { LocaleProvider, useLocale, useT } from "../../i18n";
 import { en } from "../../i18n/en";
-import { TodayPanel } from "../../screens/record360";
+import { TodayPanel } from "../records/record360";
 import { leadTodoRows } from "./leadtoday";
 
 // leadTodoRows split out of leads.tsx (leads.test.tsx is at its own line

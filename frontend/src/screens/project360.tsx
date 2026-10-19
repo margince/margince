@@ -24,6 +24,20 @@ import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { groupChronology } from "../design-system/timelinegroups";
 import { NewDealAction } from "../features/companies/companyactions";
 import { OpenEmailDrawer } from "../features/mail/openemaildrawer";
+import { ArchiveAction } from "../features/records/archive";
+import { CustomFieldsPanel } from "../features/records/customfields.card";
+import {
+  ChronologyFilter,
+  ChronologyFooter,
+  chronologyNotice,
+  useChronologyFilter,
+  useRecordChronology,
+} from "../features/records/recordchronology";
+import { RecordEmailVerb } from "../features/records/recordemail";
+import { useOwnerPicker } from "../features/records/recordreferences";
+import { RecordTeam } from "../features/records/recordteam";
+import { ShareAction } from "../features/records/share";
+import { TimelineActions } from "../features/records/timelineactions";
 import { useTaskUpdate } from "../features/worklist/taskactions";
 import { TaskDetailModal } from "../features/worklist/taskdetailmodal";
 import { useLocale, useT } from "../i18n";
@@ -33,8 +47,6 @@ import { useOpenEmail } from "../lib/openemail";
 import { unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { navigate } from "../lib/router";
-import { ArchiveAction } from "./archive";
-import { CustomFieldsPanel } from "./customfields.card";
 import { useProjectVerbRefusal } from "./project360.refusal";
 import { ProjectCompanies } from "./projectcompanies";
 import { ProjectIdentityFacts } from "./projectheaderfacts";
@@ -67,18 +79,6 @@ import {
   StakeholdersCard,
 } from "./projectsections";
 import { ProjectTabs } from "./projecttabs";
-import {
-  ChronologyFilter,
-  ChronologyFooter,
-  chronologyNotice,
-  useChronologyFilter,
-  useRecordChronology,
-} from "./recordchronology";
-import { RecordEmailVerb } from "./recordemail";
-import { useOwnerPicker } from "./recordreferences";
-import { RecordTeam } from "./recordteam";
-import { ShareAction } from "./share";
-import { TimelineActions } from "./timelineactions";
 import "./projects.css";
 
 // The project page: one composite read (GET /projects/{id}/360) drawn in the

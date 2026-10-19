@@ -17,10 +17,10 @@ import { useRecordZone } from "../../lib/recordzone";
 import { scrollPageToTop } from "../../lib/reveal";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
-import { TimelineThread } from "../../screens/record360";
 import { usePendingApprovals } from "../automations/approvals.queries";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { useLegalReviewAvailable } from "../privacy/legalreviews.queries";
+import { TimelineThread } from "../records/record360";
 import { WorklistReturnLink } from "../worklist/worklist.return";
 import {
   type ClosedDeal,

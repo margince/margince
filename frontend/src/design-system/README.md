@@ -384,7 +384,7 @@ role, light beside dark), `elevation.stories.tsx`, `spacing.stories.tsx`, `motio
 |---|---|---|---|
 | `Badge` | A label a reader reads and never presses: a 20px pill in `--fontBodySmall`, sentence case, no dot by default. `variant`: `soft` (default, a tint with a hairline of the same tone) or `primary` (solid fill, for a count or the one status a reader must not miss). `tone` comes from `BADGE_TONES`: `default`, `accent`, `info` (also work still running), `success`, `warning`, `danger`, `ai` (an agent proposed it; it always draws `Sparkles`, see [Indigo says a machine did it](#indigo-says-a-machine-did-it)), `discovery` (something new). `icon` leads the label; `live` puts a dot that pulses there instead. Long labels are cut short; `wrap` wraps them instead. A small title over a section is `Eyebrow`; a chip you can click is a control, not a badge. `badge-spelling.test.ts` fails a pill built by hand or a `.badge` with a new style | `atoms.tsx` | ✅ |
 | `TagPill` | One tag as its word with a tone dot, built on the neutral soft `Badge`: a tag's colour carries no meaning, so it goes on the dot. An archived tag drops its dot and shows its archived words | `tagpill.tsx` | ✅ |
-| `VisibilityBadge` / `VisibilityLine` | Who may read a thing, as one mark: an icon for the shape of the readers and a word, in six states: `team`, `workspace`, `participants`, `selected`, `private`, `withheld`. A message cut down to its record's reach says "Team"; a shared company or contact says "Shared". `private` reads "Private". Only `withheld` takes a tone. `opens` draws it as a `Popover` trigger (the access chip in the record header in `screens/recordaccess.tsx`). `VisibilityLine` puts the verb that changes the state beside it | `visibility.tsx` | ✅ |
+| `VisibilityBadge` / `VisibilityLine` | Who may read a thing, as one mark: an icon for the shape of the readers and a word, in six states: `team`, `workspace`, `participants`, `selected`, `private`, `withheld`. A message cut down to its record's reach says "Team"; a shared company or contact says "Shared". `private` reads "Private". Only `withheld` takes a tone. `opens` draws it as a `Popover` trigger (the access chip in the record header in `features/records/recordaccess.tsx`). `VisibilityLine` puts the verb that changes the state beside it | `visibility.tsx` | ✅ |
 | `RowTags` | A record row's tags as a strip of chips: two words then "+N", with the rest named in the title. It takes no input, stays on one line, and draws nothing for a row with no tags | `rowtags.tsx` | ✅ |
 | `RoleBadge` / `FieldGuard` | The role of a principal, and a withheld value that reads as withheld and not as missing | `rbac.tsx` | ✅ |
 
@@ -614,7 +614,7 @@ Where a screen uses it:
 `emptyNote` is the sentence a screen adds when it knows why its list is empty. It is drawn under the
 narrowed line as well as the bare one, because the common case is narrowed. An example is a "Mine"
 tab for a reader who owns nothing. The caller decides which empty list a note explains. `mineEmptyNote` in
-`screens/recordlist.tsx` is that sentence for the lists cut down to the owner. A caller whose note
+`features/records/recordlist.tsx` is that sentence for the lists cut down to the owner. A caller whose note
 would blame the data source for what the reader's own dial did passes none.
 
 ## Absent, disabled, or withheld: the cause decides

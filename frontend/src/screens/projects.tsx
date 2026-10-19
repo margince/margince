@@ -19,6 +19,10 @@ import { Heading } from "../design-system/heading";
 import { Chip } from "../design-system/readings";
 import { SaveViewAction, useSavedViewTabs } from "../features/lists/savedviews";
 import { useSavedViews } from "../features/lists/savedviews.queries";
+import {
+  lastActivityColumn,
+  ownerColumn,
+} from "../features/records/recordlist";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
@@ -30,7 +34,6 @@ import {
   type Project,
   type ProjectPhase,
 } from "./projects.form";
-import { lastActivityColumn, ownerColumn } from "./recordlist";
 import "./projects.css";
 
 // The projects list: every body of work the reader may see, newest activity

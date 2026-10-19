@@ -11,6 +11,7 @@ import {
   SurfaceState,
   sectionState,
 } from "../design-system/surfacestate";
+import { projectRoleLabel } from "../features/records/record360";
 import {
   formatBytes,
   formatDateAbbrev,
@@ -28,7 +29,6 @@ import {
   AddProjectStakeholder,
   RemoveProjectStakeholder,
 } from "./projectstakeholders";
-import { projectRoleLabel } from "./record360";
 
 // The project page's sections, each drawn from ONE composite read
 // (GET /projects/{id}/360). Every card below answers the same three questions

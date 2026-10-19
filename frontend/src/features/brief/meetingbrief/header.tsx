@@ -11,7 +11,7 @@
 import type { components } from "../../../api/schema";
 import { Avatar } from "../../../design-system/atoms";
 import { useT } from "../../../i18n";
-import { WrittenBy } from "../../../screens/record360";
+import { WrittenBy } from "../../records/record360";
 
 type MeetingBrief = components["schemas"]["MeetingBrief"];
 

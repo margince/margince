@@ -5,8 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
 import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
-import { TodayPanel } from "../../screens/record360/today";
 import { StoryProviders } from "../../testing/story-utils";
+import { TodayPanel } from "../records/record360/today";
 import { leadTodoRows } from "./leadtoday";
 
 // Recorded lead tasks, including an imported prospect with no planned work.

@@ -15,7 +15,7 @@
 # Format: <frozen-line-count> <path>
 969 frontend/src/screens/webhooks.tsx
 1086 frontend/src/features/onboarding/onboarding-conversation/connect-act.test.tsx
-1134 frontend/src/screens/record360/spine.test.tsx
+1134 frontend/src/features/records/record360/spine.test.tsx
 1182 frontend/src/features/onboarding/onboarding-conversation/company-act.test.tsx
 1488 frontend/src/features/onboarding/onboarding-conversation/confirm-card.tsx
 1725 frontend/src/features/onboarding/onboarding-facts.test.tsx
@@ -24,18 +24,18 @@
 508 frontend/src/features/onboarding/onboarding-backread.tsx
 554 frontend/src/screens/project360.tsx
 520 frontend/src/screens/adddocument.tsx
-513 frontend/src/screens/logactivity.tsx
+513 frontend/src/features/records/logactivity.tsx
 614 frontend/src/features/onboarding/onboarding-connect-panels.tsx
 615 frontend/src/screens/partners.tsx
-655 frontend/src/screens/record360/citations.tsx
+659 frontend/src/features/records/record360/citations.tsx
 530 frontend/src/screens/contractform.tsx
 774 frontend/src/features/onboarding/onboarding-conversation/connect-scene.tsx
 519 frontend/src/screens/voice-dna.tsx
-773 frontend/src/screens/record360/spine.tsx
-541 frontend/src/screens/relationships.tsx
+773 frontend/src/features/records/record360/spine.tsx
+541 frontend/src/features/records/relationships.tsx
 844 frontend/src/features/onboarding/onboarding-gate.tsx
 894 frontend/src/features/onboarding/onboarding-conversation/voice-scenes.tsx
 845 frontend/src/screens/settingscatalog.ts
-888 frontend/src/screens/share.tsx
+892 frontend/src/features/records/share.tsx
 
 # The build scripts, frozen when the gate learned to read them.

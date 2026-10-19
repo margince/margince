@@ -4,7 +4,7 @@
 import type { components } from "../../../api/schema";
 import { webUrl } from "../../../format/weburl";
 import type { MessageKey } from "../../../i18n/en";
-import { FACT_CATEGORY_ORDER } from "../../../screens/factview";
+import { FACT_CATEGORY_ORDER } from "../../records/factview";
 import type { ReviewRow } from "./company-review-state";
 
 // The citation and grouping arithmetic shared by the article and the sidebar:

@@ -7,11 +7,11 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
+import { searchByEntity } from "../features/records/relationshipcandidates";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { BillingContact, BillingContactRole } from "./billingcontacts";
 import type { BillingContactActions } from "./billingcontacts.queries";
-import { searchByEntity } from "./relationshipcandidates";
 import "../design-system/querystates.css";
 
 // The three capacities, in the order an invoice moves through them: it is

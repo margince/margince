@@ -3,7 +3,7 @@ import type { RecordContact } from "../../design-system/participants";
 import { groupChronology } from "../../design-system/timelinegroups";
 import { formatDayMonth, formatTimeOfDay } from "../../format/format";
 import type { Locale, useT } from "../../i18n";
-import type { useInteractionLabel } from "../../screens/interactionchrome";
+import type { useInteractionLabel } from "../records/interactionchrome";
 import type {
   Activity,
   Contact360,

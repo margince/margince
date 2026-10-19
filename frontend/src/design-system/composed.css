@@ -1534,7 +1534,7 @@
   outline-offset: -2px;
 }
 
-/* One responsibility row in the Responsible panel (screens/recordteam.tsx).
+/* One responsibility row in the Responsible panel (features/records/recordteam.tsx).
  *
  * The row is the reader's unit: a role label over the colleague or team that
  * holds it, with the verbs for that one responsibility stacked under the

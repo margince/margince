@@ -1,8 +1,8 @@
 import { TaskAssigneeField } from "../components/assigneepicker";
 import { Checkbox, Field, TextInput } from "../design-system/atoms";
+import type { TaskDraft } from "../features/records/activitybody";
+import { ActivityBodyField } from "../features/records/activitybodyfield";
 import { useT } from "../i18n";
-import type { TaskDraft } from "./activitybody";
-import { ActivityBodyField } from "./activitybodyfield";
 
 export function FollowUpTaskFields({
   value,

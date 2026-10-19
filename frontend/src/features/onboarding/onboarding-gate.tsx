@@ -22,7 +22,7 @@ import { formatAiRunCost } from "../../format/aicost";
 import { formatNumber } from "../../format/format";
 import { type Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { factFieldLabelKey } from "../../screens/factview";
+import { factFieldLabelKey } from "../records/factview";
 import { normalizeUrl, skipReasonText } from "./onboarding";
 import { CORE_LABELS } from "./onboarding-core-label";
 import "./onboarding-gate.css";

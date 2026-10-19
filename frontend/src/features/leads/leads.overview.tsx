@@ -8,8 +8,8 @@ import {
   RecordReading,
   TimelineThread,
   TodayPanel,
-} from "../../screens/record360";
-import { RecordListsPanel } from "../../screens/recordlists";
+} from "../records/record360";
+import { RecordListsPanel } from "../records/recordlists";
 import { LeadBrief } from "./leadbrief";
 import { MergedLeadPanel } from "./leadmerged";
 import { LeadReadings } from "./leadreadings";

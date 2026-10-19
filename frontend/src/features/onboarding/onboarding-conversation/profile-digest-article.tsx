@@ -7,7 +7,7 @@ import { useT } from "../../../i18n";
 import {
   factCategoryLabelKey,
   factFieldLabelKey,
-} from "../../../screens/factview";
+} from "../../records/factview";
 import type { CompanyFieldName } from "../onboarding";
 import type { ReviewRow } from "./company-review-state";
 import {

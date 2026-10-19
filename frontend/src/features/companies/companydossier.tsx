@@ -13,7 +13,7 @@ import {
   type OpenReceipt,
   SentenceList,
   WrittenBy,
-} from "../../screens/record360";
+} from "../records/record360";
 
 type Dossier = components["schemas"]["CompanyDossier"];
 type SectionKind = Dossier["sections"][number]["kind"];

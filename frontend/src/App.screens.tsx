@@ -240,7 +240,9 @@ export const SettingsScreen = lazy(
 
 const ShareScreen = lazy(
   routed(() =>
-    import("./screens/share").then((m) => ({ default: m.ShareScreen })),
+    import("./features/records/share").then((m) => ({
+      default: m.ShareScreen,
+    })),
   ),
 );
 

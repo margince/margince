@@ -15,6 +15,10 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { TIMELINE_KIND_LABEL } from "../design-system/timelineentry";
 import { isTranscriptActivity } from "../design-system/transcriptread";
 import {
+  mostSpecificFirst,
+  RecordLinks,
+} from "../features/records/recordlinks";
+import {
   TaskDetailDialog,
   useTaskUpdate,
 } from "../features/worklist/taskactions";
@@ -26,7 +30,6 @@ import { useActivity } from "../lib/activityread";
 import { useCanWrite } from "../lib/capability";
 import { problemCodeOf } from "../lib/problem";
 import { ActivityFollowUps } from "./activityfollowups";
-import { mostSpecificFirst, RecordLinks } from "./recordlinks";
 import "../design-system/emaildetail.css";
 
 type Activity = components["schemas"]["Activity"];

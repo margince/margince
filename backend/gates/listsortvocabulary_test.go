@@ -64,12 +64,10 @@ var listSurfaces = map[string]struct{ vocabulary, source string }{
 	"features/deals/offertemplates.tsx":     {"offerTemplateListFields", "internal/modules/deals/offer_template.go"},
 }
 
-const screenDir = "../frontend/src/screens/"
-
 // sharedColumnSource holds the column helpers several screens draw from. A sort
 // one of them offers is offered by every screen that calls it, so it is read
 // per screen rather than once.
-const sharedColumnSource = screenDir + "recordlist.tsx"
+const sharedColumnSource = "../frontend/src/features/records/recordlist.tsx"
 
 var (
 	// tsSortLiteral reads one `sort: "field"` off a column.

@@ -6,12 +6,8 @@ import { useRoster } from "../../components/entityref";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
-import {
-  type OpenReceipt,
-  RecordSpine,
-  WrittenBy,
-} from "../../screens/record360";
 import { useAccountScan } from "../capture/accountscan";
+import { type OpenReceipt, RecordSpine, WrittenBy } from "../records/record360";
 import { ThreadFold } from "./company/glance";
 import { recordNamesIn, StateStrip, type SuggestionAction } from "./company360";
 import { DeepReadPanel } from "./companydeepread";

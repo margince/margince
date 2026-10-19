@@ -8,7 +8,7 @@ import { Eyebrow } from "../../design-system/eyebrow";
 import { PanelBody } from "../../design-system/panel";
 import { Popover } from "../../design-system/popover";
 import { useT } from "../../i18n";
-import { CallCard, TodayPanel } from "../../screens/record360";
+import { CallCard, TodayPanel } from "../records/record360";
 import "./company360.css";
 import {
   type TodayDimension,

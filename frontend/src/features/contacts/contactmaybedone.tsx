@@ -6,7 +6,7 @@ import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { useSetAside } from "../../screens/record360";
+import { useSetAside } from "../records/record360";
 import { useClaimSettle, useTaskUpdate } from "../worklist/taskactions";
 import { useCompleteTask } from "../worklist/taskcomplete";
 

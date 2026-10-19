@@ -4,12 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { SignalStrip } from "../../screens/record360";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
+import { SignalStrip } from "../records/record360";
 import { useDealSignals } from "./dealsignals";
 
 type DealCoverage = components["schemas"]["DealCoverage"];

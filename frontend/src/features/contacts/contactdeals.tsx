@@ -11,7 +11,7 @@ import { throwProblem } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import "./contact360.css";
-import { AddRelationshipAction } from "../../screens/relationships";
+import { AddRelationshipAction } from "../records/relationships";
 import { readableRole } from "./contactcards";
 import { ContactDealRooms } from "./contactdealrooms";
 

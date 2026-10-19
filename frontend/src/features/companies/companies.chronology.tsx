@@ -14,18 +14,18 @@ import { groupChronology } from "../../design-system/timelinegroups";
 import { useLocale, useT } from "../../i18n";
 import { useOpenEmail } from "../../lib/openemail";
 import { useRecordZone } from "../../lib/recordzone";
-import type { OpenReceipt } from "../../screens/record360";
+import type { OpenReceipt } from "../records/record360";
 import {
   ChronologyFilter,
   ChronologyFooter,
   chronologyNotice,
   useRecordChronology,
-} from "../../screens/recordchronology";
+} from "../records/recordchronology";
 import {
   ConversationList,
   useChronologyCut,
-} from "../../screens/recordconversations";
-import { TimelineActions } from "../../screens/timelineactions";
+} from "../records/recordconversations";
+import { TimelineActions } from "../records/timelineactions";
 import type { Company, Company360View } from "./companies";
 import { recordNamesIn } from "./company360";
 import type { CitedRecord } from "./companyevidence";

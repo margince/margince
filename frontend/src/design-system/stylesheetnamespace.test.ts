@@ -43,7 +43,7 @@ const namespaces = [
     home: "features/automations/automations.datefield.css",
   },
   { prefix: "errorboundary-", home: "app/errorboundary.css" },
-  { prefix: "historyfields-", home: "screens/historyfields.css" },
+  { prefix: "historyfields-", home: "features/records/historyfields.css" },
   { prefix: "leadsignals-", home: "features/leads/leadsignals.css" },
   { prefix: "library-", home: "screens/library.css" },
   { prefix: "listquery-", home: "components/listquery.css" },
@@ -51,8 +51,11 @@ const namespaces = [
   { prefix: "offers-", home: "features/deals/offers.css" },
   { prefix: "partnercommissions-", home: "screens/partnercommissions.css" },
   { prefix: "querygate-", home: "design-system/querystates.css" },
-  { prefix: "relationshiprows-", home: "screens/relationshiprows.css" },
-  { prefix: "relationships-", home: "screens/relationships.css" },
+  {
+    prefix: "relationshiprows-",
+    home: "features/records/relationshiprows.css",
+  },
+  { prefix: "relationships-", home: "features/records/relationships.css" },
   {
     prefix: "repeatablerowsfield-",
     home: "components/repeatablerowsfield.css",

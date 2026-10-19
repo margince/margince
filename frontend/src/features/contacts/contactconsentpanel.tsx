@@ -6,9 +6,9 @@ import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { type Translator, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
-import { interactionIcon } from "../../screens/interactionchrome";
 import { useProviderLabel } from "../capture/channelproviders";
 import { ConfirmDetailsAction, ConsentSection } from "../privacy/consent";
+import { interactionIcon } from "../records/interactionchrome";
 import { consentWord } from "./contactreadings";
 
 type Contact360 = components["schemas"]["Contact360"];

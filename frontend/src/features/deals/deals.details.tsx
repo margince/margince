@@ -5,15 +5,12 @@ import { RecordFields, rawRecord } from "../../components/recordfields";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { useAcquisitionSources } from "../../screens/acquisitionsources.queries";
-import { RecordCustomFields } from "../../screens/recordcustomfields";
-import { saveRecordEdit } from "../../screens/recordedit";
-import { RecordListsPanel } from "../../screens/recordlists";
-import {
-  useOwnerPicker,
-  useRecordOwners,
-} from "../../screens/recordreferences";
-import { RecordTeam } from "../../screens/recordteam";
 import { TagsPanel } from "../lists/tagspanel";
+import { RecordCustomFields } from "../records/recordcustomfields";
+import { saveRecordEdit } from "../records/recordedit";
+import { RecordListsPanel } from "../records/recordlists";
+import { useOwnerPicker, useRecordOwners } from "../records/recordreferences";
+import { RecordTeam } from "../records/recordteam";
 import { DealEmailAside } from "./dealemail";
 import {
   NEW_PROJECT_OWNER,

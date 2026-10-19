@@ -27,7 +27,7 @@ import { formatDate, formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { problemCodeOf, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { mostSpecificFirst, RecordLinks } from "../../screens/recordlinks";
+import { mostSpecificFirst, RecordLinks } from "../records/recordlinks";
 import "./taskactions.css";
 import { ErrorLine } from "../../design-system/errorline";
 import { useActivity } from "../../lib/activityread";

@@ -9,7 +9,7 @@ import { daysPast } from "../../format/lateness";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { useMemberNames } from "../../lib/membernames";
 import { useRecordZone } from "../../lib/recordzone";
-import { MoveButton } from "../../screens/movebutton";
+import { MoveButton } from "../records/movebutton";
 import {
   basisAddsARecord,
   FoundMove,
@@ -18,9 +18,9 @@ import {
   TodayPanel,
   TodoRow,
   WithheldNotice,
-} from "../../screens/record360";
+} from "../records/record360";
 import { MayBeDoneVerbs, useMomentSetAside } from "./contactmaybedone";
-import "../../screens/record360/record360.css";
+import "../records/record360/record360.css";
 import { openContactTab } from "../worklist/worklist.return";
 
 // WHAT NEEDS A CONTACT TODAY, as the contact page assembles it: the move the

@@ -11,8 +11,8 @@ import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { navigate } from "../../lib/router";
-import { ArchiveAction } from "../../screens/archive";
 import { MergeAction } from "../import/merge";
+import { ArchiveAction } from "../records/archive";
 
 // The contact header's merge and archive commands.
 

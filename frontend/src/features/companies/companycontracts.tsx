@@ -30,7 +30,7 @@ import {
 } from "../../screens/contractlifecycle";
 import { ContractPaper } from "../../screens/contractpaperchip";
 import { ContractTerm, ContractTerms } from "../../screens/contractterms";
-import { CustomFieldsPanel } from "../../screens/customfields.card";
+import { CustomFieldsPanel } from "../records/customfields.card";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in

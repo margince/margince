@@ -5,7 +5,7 @@ import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { IdentityLine } from "../../design-system/identityline";
 import { useT } from "../../i18n";
-import { RecordAccess } from "../../screens/recordaccess";
+import { RecordAccess } from "../records/recordaccess";
 import { CompanyRelationshipBadges } from "./companyheader";
 import { CompanySubtitle } from "./companyheaderfacts";
 

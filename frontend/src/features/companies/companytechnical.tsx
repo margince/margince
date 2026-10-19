@@ -12,7 +12,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { derivedSource } from "../../screens/evidencesource";
+import { derivedSource } from "../records/evidencesource";
 import { factsKey } from "./companyfactspanel";
 
 type CompanyFact = components["schemas"]["CompanyFact"];

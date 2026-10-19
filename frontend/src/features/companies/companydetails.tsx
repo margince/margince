@@ -7,11 +7,11 @@ import { RecordFields, rawRecord } from "../../components/recordfields";
 import { FieldRow } from "../../design-system/fieldgrid";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
-import { saveRecordEdit } from "../../screens/recordedit";
+import { saveRecordEdit } from "../records/recordedit";
 import {
   searchCompanyReferences,
   useRecordOwners,
-} from "../../screens/recordreferences";
+} from "../records/recordreferences";
 import {
   ADDRESS_FIELDS,
   addressFrom,
