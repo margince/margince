@@ -4,11 +4,13 @@ import {
   cleanup,
   render as rtlRender,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ProductsAdmin } from "./products";
@@ -69,7 +71,7 @@ function productsStub({
 }: {
   allow: GrantSpec;
   seat?: "full" | "read";
-  onPost?: () => Response;
+  onPost?: (body: unknown) => Response;
   rows?: readonly object[];
 }) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -80,7 +82,8 @@ function productsStub({
       return jsonResponse(meFixture({ allow, seat }));
     }
     if (method === "POST" && onPost) {
-      return onPost();
+      const sent = input instanceof Request ? await input.text() : init?.body;
+      return onPost(typeof sent === "string" ? JSON.parse(sent) : null);
     }
     return jsonResponse({
       data: rows,
@@ -96,6 +99,49 @@ async function openRowMenu() {
   await userEvent.click(
     await screen.findByRole("button", { name: "Actions for Consulting Day" }),
   );
+}
+
+type User = ReturnType<typeof userEvent.setup>;
+
+// The labels a form's select offers, read by opening it and closing it again.
+async function offered(user: User, field: string) {
+  await user.click(await screen.findByRole("combobox", { name: field }));
+  const labels = within(screen.getByRole("listbox"))
+    .getAllByRole("option")
+    .map((option) => option.textContent);
+  await user.keyboard("{Escape}");
+  return labels;
+}
+
+async function pick(user: User, field: string, choice: string) {
+  await pickOption(
+    user,
+    await screen.findByRole("combobox", { name: field }),
+    choice,
+  );
+}
+
+function periodSelect() {
+  return screen.queryByRole("combobox", { name: "Billing period" });
+}
+
+async function fillRequired(user: User) {
+  await user.type(
+    await screen.findByRole("textbox", { name: /Name/ }),
+    "Consulting Day",
+  );
+  await user.type(
+    screen.getByRole("spinbutton", { name: /Unit price/ }),
+    "1500",
+  );
+}
+
+// Records each create body and answers with the product it would make.
+function capture(posted: unknown[]) {
+  return (body: unknown) => {
+    posted.push(body);
+    return jsonResponse(product, 201);
+  };
 }
 
 function newButton() {
@@ -287,32 +333,140 @@ describe("ProductsAdmin", () => {
     expect(old.getByText("Archived")).toBeTruthy();
   });
 
-  it("offers every billing choice in words on the New product form", async () => {
+  it("offers every billing choice in words, and a period only for a recurring price", async () => {
     vi.stubGlobal("fetch", productsStub({ allow: PRODUCT_MANAGER }));
+    const user = userEvent.setup();
     render(<ProductsAdmin />);
-    await userEvent.click(await screen.findByTestId("new-record"));
-    const offered = async (field: string) => {
-      await userEvent.click(
-        await screen.findByRole("combobox", { name: field }),
-      );
-      const labels = within(screen.getByRole("listbox"))
-        .getAllByRole("option")
-        .map((option) => option.textContent);
-      await userEvent.keyboard("{Escape}");
-      return labels;
-    };
-    expect(await offered("Billing")).toEqual([
+    await user.click(await screen.findByTestId("new-record"));
+    expect(await offered(user, "Billing")).toEqual([
       "Not specified",
       "One-time",
       "Recurring",
     ]);
-    expect(await offered("Billing period")).toEqual([
-      "Not specified",
+    // Nobody has said the price repeats, so there is no period to choose.
+    expect(periodSelect()).toBeNull();
+    await pick(user, "Billing", "One-time");
+    expect(periodSelect()).toBeNull();
+    await pick(user, "Billing", "Recurring");
+    expect(await offered(user, "Billing period")).toEqual([
       "Monthly",
       "Quarterly",
       "Every six months",
       "Yearly",
     ]);
+    await pick(user, "Billing", "One-time");
+    expect(periodSelect()).toBeNull();
+  });
+
+  it("sends a one-time product with no period, whatever was picked before", async () => {
+    const posted: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      productsStub({ allow: PRODUCT_MANAGER, onPost: capture(posted) }),
+    );
+    const user = userEvent.setup();
+    render(<ProductsAdmin />);
+    await user.click(await screen.findByTestId("new-record"));
+    await fillRequired(user);
+    await pick(user, "Billing", "Recurring");
+    await pick(user, "Billing period", "Quarterly");
+    await pick(user, "Billing", "One-time");
+    await user.click(screen.getByText("Create"));
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({
+      billing_model: "one_time",
+      billing_interval_months: null,
+    });
+  });
+
+  it("offers the units in words and sends the key of the one picked", async () => {
+    const posted: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      productsStub({ allow: PRODUCT_MANAGER, onPost: capture(posted) }),
+    );
+    const user = userEvent.setup();
+    render(<ProductsAdmin />);
+    await user.click(await screen.findByTestId("new-record"));
+    expect(await offered(user, "Unit")).toEqual([
+      "Piece",
+      "Hour",
+      "Day",
+      "Month",
+      "Flat fee",
+      "Other",
+    ]);
+    await fillRequired(user);
+    await pick(user, "Unit", "Flat fee");
+    await user.click(screen.getByText("Create"));
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({ unit: "flat_fee" });
+  });
+
+  it("sends a unit the list lacks as the words typed for it", async () => {
+    const posted: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      productsStub({ allow: PRODUCT_MANAGER, onPost: capture(posted) }),
+    );
+    const user = userEvent.setup();
+    render(<ProductsAdmin />);
+    await user.click(await screen.findByTestId("new-record"));
+    await fillRequired(user);
+    expect(screen.queryByRole("textbox", { name: /Other unit/ })).toBeNull();
+    await pick(user, "Unit", "Other");
+    await user.type(
+      await screen.findByRole("textbox", { name: /Other unit/ }),
+      " Seat ",
+    );
+    await user.click(screen.getByText("Create"));
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({ unit: "Seat" });
+  });
+
+  it("shows a stored key in the reader's language and typed text as typed", async () => {
+    vi.stubGlobal(
+      "fetch",
+      productsStub({
+        allow: PRODUCT_MANAGER,
+        rows: [
+          product,
+          { ...product, id: "p-2", name: "Seat", sku: null, unit: "Lizenz" },
+        ],
+      }),
+    );
+    render(<ProductsAdmin />);
+    const keyed = within(
+      await screen.findByRole("row", { name: /Consulting Day/ }),
+    );
+    expect(keyed.getByText("Day")).toBeTruthy();
+    const typed = within(await screen.findByRole("row", { name: /Seat/ }));
+    expect(typed.getByText("Lizenz")).toBeTruthy();
+  });
+
+  it("opens a typed unit for editing as Other with its text", async () => {
+    vi.stubGlobal(
+      "fetch",
+      productsStub({
+        allow: PRODUCT_MANAGER,
+        rows: [{ ...product, unit: "Lizenz" }],
+      }),
+    );
+    const user = userEvent.setup();
+    render(<ProductsAdmin />);
+    await user.click(
+      await screen.findByRole("button", { name: "Actions for Consulting Day" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Edit product" }),
+    );
+    expect(
+      (await screen.findByRole("combobox", { name: "Unit" })).textContent,
+    ).toContain("Other");
+    expect(screen.getByRole("textbox", { name: /Other unit/ })).toHaveProperty(
+      "value",
+      "Lizenz",
+    );
   });
 
   it("opens Edit and Archive from the row's menu", async () => {

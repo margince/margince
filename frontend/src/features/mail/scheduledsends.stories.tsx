@@ -9,6 +9,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ScheduledSendsScreen } from "./scheduledsends";
+import { SendRow } from "./scheduledsends.row";
 
 // The queue behind "send later": what a rep has written that has not gone out
 // yet, and the two things they can do about it.
@@ -163,4 +164,30 @@ export const FullQueueGerman: Story = {
       </StoryProviders>
     );
   },
+};
+
+export const ChangedContext: Story = {
+  render: () => (
+    <StoryProviders>
+      <SendRow
+        send={{ ...waiting, status: "held", held_reason: "followup_settled" }}
+        readerZone={readerZone}
+        movePending={false}
+        onMove={() => {}}
+        onWithdraw={() => {}}
+      />
+      <SendRow
+        send={{ ...waiting, status: "held", held_reason: "meeting_canceled" }}
+        readerZone={readerZone}
+        movePending={false}
+        onMove={() => {}}
+        onWithdraw={() => {}}
+      />
+    </StoryProviders>
+  ),
+};
+export const ChangedContextPhone: Story = {
+  ...ChangedContext,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

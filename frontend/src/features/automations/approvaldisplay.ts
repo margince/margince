@@ -392,6 +392,7 @@ export function resolveDisplay(
   formatDay: (value: string) => string,
   names: ReadonlyMap<string, string> = new Map(),
   requestedDecider?: string | null,
+  assigneeInactive = false,
 ): readonly ResolvedDisplayField[] {
   const resolved = displayFields(kind).map((entry) => ({
     field: entry.field,
@@ -404,12 +405,23 @@ export function resolveDisplay(
     ),
     lead: entry.lead,
   }));
+  if (kind === "commitment_task") {
+    const due = resolved.find((entry) => entry.field === "due_date");
+    if (due && due.value === null)
+      due.value = t("approval.commitment.noDueDay");
+    resolved.push({
+      field: "promise_status",
+      label: t("approval.commitment.promiseStatus"),
+      value: t("approval.commitment.notFulfilled"),
+      lead: undefined,
+    });
+  }
   const byField = new Map(resolved.map((entry) => [entry.field, entry]));
   const fields =
     kind === "commitment_task"
       ? [
           ...resolved.filter((entry) => entry.field !== "party"),
-          ...commitmentResponsibility(change, names, t),
+          ...commitmentResponsibility(change, names, t, assigneeInactive),
         ]
       : resolved;
   if (requestedDecider) {

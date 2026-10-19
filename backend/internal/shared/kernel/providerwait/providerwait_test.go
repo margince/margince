@@ -33,3 +33,30 @@ func TestNotClauseKeepsARowWithNoDetail(t *testing.T) {
 		t.Fatalf("NotClause = %q, which would drop a row whose status_detail is NULL", providerwait.NotClause)
 	}
 }
+
+func TestReasonKeepsTheStoredRetryDistinction(t *testing.T) {
+	deferred, other, provider := "budget_deferred", "internal", providerwait.Detail
+	for _, tc := range []struct {
+		status       string
+		code, detail *string
+		want         string
+	}{
+		{"deferred", &deferred, &provider, "provider"},
+		{"deferred", &deferred, nil, "budget"},
+		{"deferred", &deferred, &other, "budget"},
+		{"running", &deferred, &provider, ""},
+		{"deferred", &other, &provider, ""},
+		{"deferred", nil, &provider, ""},
+	} {
+		got := providerwait.Reason(tc.status, tc.code, tc.detail)
+		if tc.want == "" {
+			if got != nil {
+				t.Fatalf("non-deferral has reason %s", *got)
+			}
+			continue
+		}
+		if got == nil || *got != tc.want {
+			t.Fatalf("reason = %v, want %s", got, tc.want)
+		}
+	}
+}

@@ -250,6 +250,10 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "approval.commitment.unresolved",
     "approval.commitment.assignDecider",
 
+    // The sender category names a human role, not the contact record.
+    "history.field.admission_sender_kind",
+    // The sender is the author of a message, before any contact record exists.
+    "aiTask.name.capture_counterparty_verdict",
     // The colleagues a record is shared with are users, not the contact record.
     "recordAccess.contact.madePrivate",
     "recordAccess.contact.privateOfOwner",

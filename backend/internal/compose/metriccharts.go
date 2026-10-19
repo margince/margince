@@ -23,7 +23,7 @@ func reportingGroups(out *reporting.Evaluation, chart crmcontracts.ReportingChar
 	}
 	if !owners && frame.PipelineId == nil {
 		chart.Coverage.Status = "not_configured"
-		reason := "Choose one pipeline to compare stages"
+		reason := reporting.ExplanationCopy(frame).Say(reportingCoverageWords.ChoosePipeline)
 		chart.Coverage.Reason = &reason
 		return chart
 	}
@@ -34,7 +34,7 @@ func reportingGroups(out *reporting.Evaluation, chart crmcontracts.ReportingChar
 		if owners {
 			key, label = fact.OwnerID.String(), fact.OwnerLabel
 			if fact.OwnerID.IsZero() {
-				label = "Owner not recorded"
+				label = reporting.ExplanationCopy(frame).Say(reportingLabelWords.OwnerMissing)
 			}
 		}
 		groups[key] = append(groups[key], fact)

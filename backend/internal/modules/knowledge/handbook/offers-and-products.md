@@ -127,6 +127,12 @@ To add a product to the rate card in Margince, open **Settings → Products and 
 To change a price, use **Edit product** in its row's **…** menu; **Archive product** there stops using one. Without the right role the list reads "Read-only. Your role cannot change products."
 Also called: price list, price book, catalogue, SKU.
 
+**Unit** is a list: **Piece**, **Hour**, **Day**, **Month** or **Flat fee**. It is **Piece** if you change nothing. Each one shows in the reader's language. The same list sets the unit of an offer line.
+
+For any other unit, pick **Other** and type it in **Other unit**. Margince shows it as you typed it. A unit typed before the list existed, such as "Tag" or "hours", shows as the choice it names.
+
+**Billing period** shows only once **Billing** is **Recurring**, and then you must pick one.
+
 A product holds a name, a SKU if you want one, a description, a unit, a unit price and currency, and a default tax rate. It also holds its billing type: one-time or recurring, and for recurring, the period.
 
 You can leave product billing **unspecified**, which is not the same as one-time. Margince does not guess the type, so the product says "Not specified".

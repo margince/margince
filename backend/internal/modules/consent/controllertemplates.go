@@ -18,11 +18,12 @@ package consent
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-
+	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -56,10 +57,12 @@ const (
 
 // Rendered is one template resolved into the words that will be sent.
 type Rendered struct {
-	Key     string
-	Version int
-	Subject string
-	Body    string
+	Key      string
+	Version  int
+	Subject  string
+	Body     string
+	HTMLBody string
+	Language string
 }
 
 // ConfirmationSend is one confirmation message, ready to stage.
@@ -76,6 +79,7 @@ type ConfirmationSend struct {
 	LinkID    ids.UUID
 	LinkRef   string
 	ExpiresAt time.Time
+	DueAt     *time.Time
 	MessageID string
 	Rendered  Rendered
 }
@@ -197,6 +201,9 @@ func RenderControllerTemplate(key string, expiresAt time.Time, language string) 
 	if !ok {
 		return Rendered{}, "", fmt.Errorf("consent: %q is not a registered controller template", key)
 	}
+	if !mailcopy.Known(language) {
+		language = string(mailcopy.Fallback)
+	}
 	words := mailcopy.For(language)
 	var body strings.Builder
 	if t.linkless {
@@ -206,7 +213,7 @@ func RenderControllerTemplate(key string, expiresAt time.Time, language string) 
 		body.WriteString(t.intro(words) + "\n\n" + t.closing(words) + "\n")
 		return Rendered{
 			Key: key, Version: t.version, Subject: t.subject(words),
-			Body: body.String(),
+			Body: body.String(), Language: language,
 		}, t.category, nil
 	}
 	body.WriteString(t.intro(words) + "\n\n  " + linkPlaceholder + "\n\n" + words.ConfirmPersonal)
@@ -218,5 +225,20 @@ func RenderControllerTemplate(key string, expiresAt time.Time, language string) 
 		fmt.Fprintf(&body, words.ConfirmExpiry, expiresAt.Format(mailcopy.DateLayout))
 	}
 	body.WriteString("\n\n" + t.closing(words) + "\n")
-	return Rendered{Key: key, Version: t.version, Subject: t.subject(words), Body: body.String()}, t.category, nil
+	return Rendered{Key: key, Version: t.version, Subject: t.subject(words), Body: body.String(), Language: language}, t.category, nil
+}
+
+// ControllerTemplateKeys derives previews and fixture coverage from the registry.
+func ControllerTemplateKeys() []string {
+	keys := make([]string, 0, len(controllerTemplates))
+	for key := range controllerTemplates {
+		keys = append(keys, key)
+	}
+	slices.Sort(keys)
+	return keys
+}
+
+// RenderControllerPresentation frames the frozen words without changing their version.
+func RenderControllerPresentation(rendered Rendered, brand string) string {
+	return emailview.Render(emailview.Message{Title: rendered.Subject, Preheader: mailcopy.For(rendered.Language).Preview(rendered.Subject), Text: rendered.Body, Language: rendered.Language, Brand: brand, ActionPlaceholder: linkPlaceholder})
 }

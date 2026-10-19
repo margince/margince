@@ -58,7 +58,7 @@ func card() crmcontracts.ContactMoment {
 func TestWithholdBlocksBothWritingVerbsForAReaderWhoCannotLog(t *testing.T) {
 	moment := card()
 
-	Withhold(reader(principal.ObjectGrant{Read: true}), &moment)
+	Withhold(reader(principal.ObjectGrant{Read: true}), "en", &moment)
 
 	for _, action := range append([]crmcontracts.ContactMomentAction{moment.RecommendedAction},
 		(*moment.SecondaryActions)[0]) {
@@ -82,7 +82,7 @@ func TestWithholdBlocksBothWritingVerbsForAReaderWhoCannotLog(t *testing.T) {
 func TestWithholdLeavesAReadingVerbAlone(t *testing.T) {
 	moment := card()
 
-	Withhold(reader(principal.ObjectGrant{Read: true}), &moment)
+	Withhold(reader(principal.ObjectGrant{Read: true}), "en", &moment)
 
 	open := (*moment.SecondaryActions)[1]
 	if open.State != crmcontracts.ContactMomentActionStateAvailable {
@@ -93,7 +93,7 @@ func TestWithholdLeavesAReadingVerbAlone(t *testing.T) {
 func TestWithholdLeavesTheCardAloneForAReaderWhoMayLog(t *testing.T) {
 	moment := card()
 
-	Withhold(reader(principal.ObjectGrant{Read: true, Create: true}), &moment)
+	Withhold(reader(principal.ObjectGrant{Read: true, Create: true}), "en", &moment)
 
 	if moment.RecommendedAction.State != crmcontracts.ContactMomentActionStateAvailable {
 		t.Errorf("recommended state = %q, want available", moment.RecommendedAction.State)
@@ -115,7 +115,7 @@ func TestWithholdBlocksTheRecommendationOnACardWithNoSecondaries(t *testing.T) {
 		},
 	}
 
-	Withhold(reader(principal.ObjectGrant{Read: true}), &moment)
+	Withhold(reader(principal.ObjectGrant{Read: true}), "en", &moment)
 
 	if moment.RecommendedAction.State != crmcontracts.ContactMomentActionStateBlocked {
 		t.Errorf("recommended state = %q, want blocked", moment.RecommendedAction.State)
@@ -137,7 +137,7 @@ func TestWithholdLeavesAnAlreadyBlockedVerbSayingWhatItSaid(t *testing.T) {
 		},
 	}
 
-	Withhold(reader(principal.ObjectGrant{Read: true}), &moment)
+	Withhold(reader(principal.ObjectGrant{Read: true}), "en", &moment)
 
 	got := moment.RecommendedAction
 	if got.BlockedReason == nil {

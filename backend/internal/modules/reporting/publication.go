@@ -161,15 +161,15 @@ func (s *Service) completeClaim(ctx context.Context, tx pgx.Tx, claim executionC
 
 func (s *Service) failClaim(ctx context.Context, claim executionClaim, cause error) error {
 	status := "failed"
-	reason := "Report generation failed. Retry the run."
+	words := statusWords.Failed
 	var retry *time.Time
 	switch {
 	case errors.Is(cause, apperrors.ErrPermissionDenied), errors.Is(cause, apperrors.ErrNotFound):
 		status = reportingSuspended
-		reason = "The accountable owner can no longer generate this report. Review their access and schedule."
+		words = statusWords.Access
 	case errors.Is(cause, apperrors.ErrConflict):
 		status = "skipped"
-		reason = "The report or schedule changed before publication."
+		words = statusWords.Changed
 	case claim.Attempt-claim.RetryBase < 3:
 		status = reportingPending
 		delay := 5 * time.Minute
@@ -180,6 +180,7 @@ func (s *Service) failClaim(ctx context.Context, claim executionClaim, cause err
 		retry = &at
 	}
 	return s.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		reason := s.statusCopy(ctx, tx).Say(words)
 		before, err := executionState(ctx, tx, claim.ID)
 		if err != nil {
 			return err

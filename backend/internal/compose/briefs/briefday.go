@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 // LocalDayAt is the calendar date the given instant falls on in the
@@ -31,12 +32,9 @@ import (
 // about which morning a run belongs to, and the pair disagreeing is precisely
 // how a rep gets a run dated to a morning she has not lived yet.
 //
-// The installation zone, not the rep's: app_user.timezone is display-only and
-// InviteUser never writes it, so scheduling on it would give every invited
-// seat a UTC morning. installation.timezone is validated as a real IANA zone
-// at write time, which is what makes a date computed from it reproducible.
+// Reporting dates keep the installation clock; delivery uses personal working hours.
 func LocalDayAt(ctx context.Context, tx pgx.Tx, now time.Time) (day time.Time, local time.Time, err error) {
-	zone, err := identity.TimezoneOf(ctx, tx)
+	zone, err := settings.ApplyTx(ctx, tx, identity.Timezone)
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}

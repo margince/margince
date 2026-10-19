@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -57,21 +56,11 @@ func WithOperatorMail(m mailer.Mailer) Option {
 	}
 }
 
-// WithDealRoomInviteMail wires the operator relay into Deal Room invitations.
-//
-// It rides the SAME mailer as password reset: both are product-originated
-// transactional mail configured once, and a separate relay would let an
-// installation deliver one and silently not the other. The link base arrives
-// through WithPublicBaseURL, because a buyer link carries a live credential and
-// its origin must never come from a request Host.
-//
-// NOT WIRED BY ANY ROLE YET, deliberately: the link points at a buyer screen the
-// SPA does not serve, so a recipient would land on the not-found page having
-// spent their one credential. Until that screen exists the invite response hands
-// the raw credential to the seller, who passes it on.
+// WithDealRoomInviteMail shares the account relay and installation language.
+// The configured public origin keeps personal links independent of request headers.
 func WithDealRoomInviteMail(m mailer.Mailer) Option {
-	return func(s *Server, _ *pgxpool.Pool) {
-		s.dealroomsHandlers = s.WithInviteMailer(m)
+	return func(s *Server, pool *pgxpool.Pool) {
+		s.dealroomsHandlers = s.WithInviteMailer(m).WithMailLanguage(func(ctx context.Context) string { return string(identity.BaseLanguageForPrompt(ctx, pool)) })
 	}
 }
 

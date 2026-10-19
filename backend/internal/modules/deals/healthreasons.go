@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 )
 
 // HealthReason is one factor's number and the fact behind it.
@@ -30,16 +31,17 @@ type HealthReason struct {
 }
 
 // HealthReasons renders the four factors in the order they weigh.
-func HealthReasons(h DealHealth, now time.Time) []HealthReason {
+func HealthReasons(h DealHealth, now time.Time, language string) []HealthReason {
 	ev := h.Evidence
+	said := langcopy.For(language)
 	return []HealthReason{
-		{Key: "activity_recency", Value: h.Factors.ActivityRecency, Reason: recencyReason(ev.LastActivityAt, ev.Stalled, now)},
+		{Key: "activity_recency", Value: h.Factors.ActivityRecency, Reason: recencyReason(ev.LastActivityAt, ev.Stalled, now, said)},
 		{
 			Key: "stage_velocity", Value: h.Factors.StageVelocity,
-			Reason: fmt.Sprintf("%d days in this stage; won deals spent about %d.", int(ev.DaysInStage), int(ev.ExpectedDaysInStage)),
+			Reason: fmt.Sprintf(said.Say(healthWords.Stage), int(ev.DaysInStage), int(ev.ExpectedDaysInStage)),
 		},
-		{Key: "engagement", Value: h.Factors.Engagement, Reason: engagementReason(len(ev.EngagedStakeholderIDs))},
-		{Key: "commitments", Value: h.Factors.Commitments, Reason: commitmentsReason(len(ev.OverdueTaskIDs))},
+		{Key: "engagement", Value: h.Factors.Engagement, Reason: engagementReason(len(ev.EngagedStakeholderIDs), said)},
+		{Key: "commitments", Value: h.Factors.Commitments, Reason: commitmentsReason(len(ev.OverdueTaskIDs), said)},
 	}
 }
 
@@ -60,42 +62,42 @@ func HealthReasons(h DealHealth, now time.Time) []HealthReason {
 // (health.daysBetween). A number that measures how stale a deal is should move
 // continuously; a sentence a reader can check against a timestamp should not
 // move between cache writes.
-func recencyReason(last *time.Time, stalled bool, now time.Time) string {
+func recencyReason(last *time.Time, stalled bool, now time.Time, said langcopy.Spoken) string {
 	if last == nil {
-		return "No activity has been logged on this deal."
+		return said.Say(healthWords.NoActivity)
 	}
 	days := elapsed.Days(*last, now)
-	when := fmt.Sprintf("%d days ago", days)
+	when := fmt.Sprintf(said.Say(healthWords.DaysAgo), days)
 	switch {
 	case days <= 0:
-		when = "today"
+		when = said.Say(healthWords.Today)
 	case days == 1:
-		when = "yesterday"
+		when = said.Say(healthWords.Yesterday)
 	}
 	if stalled {
-		return fmt.Sprintf("Last activity %s — the deal counts as stalled.", when)
+		return fmt.Sprintf(said.Say(healthWords.Stalled), when)
 	}
-	return fmt.Sprintf("Last activity %s.", when)
+	return fmt.Sprintf(said.Say(healthWords.Active), when)
 }
 
-func engagementReason(engaged int) string {
+func engagementReason(engaged int, said langcopy.Spoken) string {
 	switch engaged {
 	case 0:
-		return "No stakeholder has been in two-way contact in the last 90 days."
+		return fmt.Sprintf(said.Say(healthWords.NoEngagement), healthEngagementWindowDays)
 	case 1:
-		return "One stakeholder in two-way contact in the last 90 days."
+		return fmt.Sprintf(said.Say(healthWords.OneEngagement), healthEngagementWindowDays)
 	default:
-		return fmt.Sprintf("%d stakeholders in two-way contact in the last 90 days.", engaged)
+		return fmt.Sprintf(said.Say(healthWords.ManyEngaged), engaged, healthEngagementWindowDays)
 	}
 }
 
-func commitmentsReason(overdue int) string {
+func commitmentsReason(overdue int, said langcopy.Spoken) string {
 	switch overdue {
 	case 0:
-		return "No overdue task on this deal."
+		return said.Say(healthWords.NoOverdue)
 	case 1:
-		return "One task is overdue."
+		return said.Say(healthWords.OneOverdue)
 	default:
-		return fmt.Sprintf("%d tasks are overdue.", overdue)
+		return fmt.Sprintf(said.Say(healthWords.ManyOverdue), overdue)
 	}
 }

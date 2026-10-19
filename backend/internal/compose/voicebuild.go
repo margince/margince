@@ -22,6 +22,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -116,6 +117,7 @@ func WithVoiceBuildEnqueue(inserter *jobs.Runner) Option {
 
 // voiceBuildWorker drives one claimed build to a terminal state.
 type voiceBuildWorker struct {
+	pool  *pgxpool.Pool
 	store *ai.VoiceStore
 	brain completer
 	log   *slog.Logger
@@ -123,7 +125,7 @@ type voiceBuildWorker struct {
 }
 
 func newVoiceBuildWorker(pool *pgxpool.Pool, brain completer, log *slog.Logger) *voiceBuildWorker {
-	return &voiceBuildWorker{store: ai.NewVoiceStore(InstallationDB(pool)), brain: brain, log: log, now: time.Now}
+	return &voiceBuildWorker{pool: pool, store: ai.NewVoiceStore(InstallationDB(pool)), brain: brain, log: log, now: time.Now}
 }
 
 // reclaimAfter leaves a grace beyond the work timeout before a replacement
@@ -185,32 +187,34 @@ func (w *voiceBuildWorker) Work(ctx context.Context, job *river.Job[VoiceBuildAr
 		}
 	}
 	claimedAt := claimTime(input)
+	said := voiceCopyFor(identity.BaseLanguageForPrompt(ctx, w.pool))
 	if w.brain == nil {
 		return jobs.FaultContext(ctx, w.fail(ctx, buildID, claimedAt, "model_unavailable",
-			"Voice building is unavailable until an AI provider is configured on the worker role."))
+			ai.VoiceBuildUnavailable(said.Lang())))
 	}
-	if err := w.run(ctx, buildID, input); err != nil {
-		if ai.IsDeferral(err) {
-			terminal, cancel := terminalCtx(ctx)
-			defer cancel()
-			if deferErr := w.store.DeferBuild(terminal, buildID, claimedAt,
-				voiceDeferralDetail(err),
-				w.deferralDeadline(err)); deferErr != nil {
-				return jobs.FaultContext(ctx, fmt.Errorf("voice_build %s: defer: %w", job.Args.BuildID, deferErr))
-			}
-			return nil
-		}
-		// The row carries only the safe detail; the OPERATOR needs the real
-		// cause or a repeated invalid_output is undiagnosable from any log. A
-		// request the provider refused is our own defect, so it is an error.
-		if errors.Is(err, model.ErrRequestRejected) {
-			w.log.ErrorContext(ctx, "voice build error", "build", buildID.String(), "err", err)
-		} else {
-			w.log.WarnContext(ctx, "voice build error", "build", buildID.String(), "err", err)
-		}
-		return jobs.FaultContext(ctx, w.fail(ctx, buildID, claimedAt, failureStatusCode(err), ai.SafeVoiceBuildFailure(err)))
+	err = w.run(ctx, buildID, input, said)
+	if err == nil {
+		return nil
 	}
-	return nil
+	if ai.IsDeferral(err) {
+		terminal, cancel := terminalCtx(ctx)
+		defer cancel()
+		if deferErr := w.store.DeferBuild(terminal, buildID, claimedAt,
+			voiceDeferralDetail(err),
+			w.deferralDeadline(err)); deferErr != nil {
+			return jobs.FaultContext(ctx, fmt.Errorf("voice_build %s: defer: %w", job.Args.BuildID, deferErr))
+		}
+		return nil
+	}
+	// The row carries only the safe detail; the OPERATOR needs the real
+	// cause or a repeated invalid_output is undiagnosable from any log. A
+	// request the provider refused is our own defect, so it is an error.
+	if errors.Is(err, model.ErrRequestRejected) {
+		w.log.ErrorContext(ctx, "voice build error", "build", buildID.String(), "err", err)
+	} else {
+		w.log.WarnContext(ctx, "voice build error", "build", buildID.String(), "err", err)
+	}
+	return jobs.FaultContext(ctx, w.fail(ctx, buildID, claimedAt, failureStatusCode(err), ai.SafeVoiceBuildFailure(err, said.Lang())))
 }
 
 // claimTime is the claim generation every terminal write fences on.
@@ -270,7 +274,7 @@ func (w *voiceBuildWorker) deferralDeadline(err error) time.Time {
 // precedent): a context minted before the model calls would carry a deadline
 // the run itself already spent, and the outcome could then never be
 // recorded — the build would sit "running" until reclaim, forever retrying.
-func (w *voiceBuildWorker) run(ctx context.Context, buildID ids.UUID, input ai.VoiceBuildInput) error {
+func (w *voiceBuildWorker) run(ctx context.Context, buildID ids.UUID, input ai.VoiceBuildInput, said voiceCopy) error {
 	heldOut, buildSamples := splitVoiceHeldOut(input.Samples, input.Build.SourceHash)
 	if err := w.store.SetBuildStage(ctx, buildID, "extract"); err != nil {
 		w.log.WarnContext(ctx, "voice build stage update failed", "build", buildID.String(), "err", err)
@@ -288,7 +292,7 @@ func (w *voiceBuildWorker) run(ctx context.Context, buildID ids.UUID, input ai.V
 	} else if ok {
 		predecessor = &active
 	}
-	evaluated, err := evaluateVoiceCandidate(ctx, w.brain, artifact, input.Personality, heldOut, predecessor)
+	evaluated, err := said.evaluateVoiceCandidate(ctx, w.brain, artifact, input.Personality, heldOut, predecessor)
 	if err != nil {
 		return err
 	}
@@ -315,6 +319,7 @@ func (w *voiceBuildWorker) run(ctx context.Context, buildID ids.UUID, input ai.V
 	terminal, cancel := terminalCtx(ctx)
 	defer cancel()
 	_, err = w.store.CompleteBuild(terminal, buildID, claimTime(input), ai.VoiceBuildOutcome{
+		Language:     said.Lang(),
 		Artifact:     artifact,
 		Evaluation:   evaluated.Evaluation,
 		SampleDrafts: evaluated.SampleDrafts,
@@ -328,7 +333,7 @@ func (w *voiceBuildWorker) run(ctx context.Context, buildID ids.UUID, input ai.V
 		Classification:       evaluated.Classification,
 		Action:               evaluated.Action,
 		StatusCode:           evaluated.StatusCode,
-		ReviewReasons:        evaluated.ReviewReasons,
+		Reasons:              evaluated.Reasons,
 		ModelProvider:        "routed",
 		ModelName:            modelNameOrUnrecorded(artifact.ModelName),
 	})

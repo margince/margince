@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -93,6 +92,18 @@ func (s *Store) FireScheduledSend(ctx context.Context, id ids.UUID, grace time.D
 		origin, in, err := claimed.replay()
 		if err != nil {
 			return err
+		}
+		reason, contextErr := changedScheduledContext(ctx, tx, in, claimed.CreatedAt)
+		if contextErr != nil {
+			if held, known := holdReasonFor(contextErr); known {
+				out.Held = held
+				return s.holdInTx(ctx, tx, id, held)
+			}
+			return contextErr
+		}
+		if reason != "" {
+			out.Held = reason
+			return s.holdInTx(ctx, tx, id, reason)
 		}
 		prepared, err := s.PrepareSend(ctx, origin, in, gate, stager)
 		if err != nil {
@@ -200,6 +211,7 @@ const UnobservedVersion int64 = -1
 
 // claimedSend is one scheduled row locked for firing.
 type claimedSend struct {
+	CreatedAt   time.Time
 	ScheduledAt time.Time
 	OriginKind  string
 	Anchor      *ids.UUID
@@ -261,7 +273,7 @@ func (c claimedSend) replay() (SendOrigin, SendEmailInput, error) {
 func (s *Store) claimForFire(ctx context.Context, tx pgx.Tx, id ids.UUID) (claimedSend, bool, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT scheduled_at, origin_kind, anchor_activity_id,
-		       origin_links, also_links, payload, payload_version, version
+		       origin_links, also_links, payload, payload_version, version, created_at
 		  FROM scheduled_send
 		 WHERE id = $1 AND status = 'scheduled'
 		 FOR UPDATE`, id)
@@ -279,7 +291,7 @@ func (s *Store) claimForFire(ctx context.Context, tx pgx.Tx, id ids.UUID) (claim
 	}
 	var c claimedSend
 	if err := rows.Scan(&c.ScheduledAt, &c.OriginKind, &c.Anchor,
-		&c.OriginLinks, &c.AlsoLinks, &c.Payload, &c.Version, &c.RowVersion); err != nil {
+		&c.OriginLinks, &c.AlsoLinks, &c.Payload, &c.Version, &c.RowVersion, &c.CreatedAt); err != nil {
 		return claimedSend{}, false, fmt.Errorf("scheduled send: claiming: %w", err)
 	}
 	return c, true, nil

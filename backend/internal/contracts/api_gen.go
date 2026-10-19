@@ -1243,6 +1243,114 @@ func (e AiRunSummaryCurrency) Valid() bool {
 	}
 }
 
+// Defines values for AiTask.
+const (
+	AiTaskAccountScan                   AiTask = "account_scan"
+	AiTaskAgentLoop                     AiTask = "agent_loop"
+	AiTaskBriefRanking                  AiTask = "brief_ranking"
+	AiTaskCaptureClassify               AiTask = "capture_classify"
+	AiTaskCaptureConfidentialityVerdict AiTask = "capture_confidentiality_verdict"
+	AiTaskCaptureCounterpartyVerdict    AiTask = "capture_counterparty_verdict"
+	AiTaskCertJudge                     AiTask = "cert_judge"
+	AiTaskColdStart                     AiTask = "cold_start"
+	AiTaskCorpusAsk                     AiTask = "corpus_ask"
+	AiTaskDealHealth                    AiTask = "deal_health"
+	AiTaskDocumentExtract               AiTask = "document_extract"
+	AiTaskDraftReply                    AiTask = "draft_reply"
+	AiTaskEnrich                        AiTask = "enrich"
+	AiTaskGrowthFit                     AiTask = "growth_fit"
+	AiTaskNlSearch                      AiTask = "nl_search"
+	AiTaskOfferDraft                    AiTask = "offer_draft"
+	AiTaskOwedVerdict                   AiTask = "owed_verdict"
+	AiTaskProposeRoles                  AiTask = "propose_roles"
+	AiTaskRateExtract                   AiTask = "rate_extract"
+	AiTaskRequestSettlement             AiTask = "request_settlement"
+	AiTaskSignalExtract                 AiTask = "signal_extract"
+	AiTaskSiteExtract                   AiTask = "site_extract"
+	AiTaskSiteFactExtract               AiTask = "site_fact_extract"
+	AiTaskSiteTriage                    AiTask = "site_triage"
+	AiTaskStageEvidenceExtract          AiTask = "stage_evidence_extract"
+	AiTaskSummarize                     AiTask = "summarize"
+	AiTaskTagSuggest                    AiTask = "tag_suggest"
+	AiTaskTranscript                    AiTask = "transcript"
+	AiTaskTranscriptPropose             AiTask = "transcript_propose"
+	AiTaskVoiceBuild                    AiTask = "voice_build"
+	AiTaskWeeklyLearnings               AiTask = "weekly_learnings"
+	AiTaskWeeklyReview                  AiTask = "weekly_review"
+)
+
+// Valid indicates whether the value is a known member of the AiTask enum.
+func (e AiTask) Valid() bool {
+	switch e {
+	case AiTaskAccountScan:
+		return true
+	case AiTaskAgentLoop:
+		return true
+	case AiTaskBriefRanking:
+		return true
+	case AiTaskCaptureClassify:
+		return true
+	case AiTaskCaptureConfidentialityVerdict:
+		return true
+	case AiTaskCaptureCounterpartyVerdict:
+		return true
+	case AiTaskCertJudge:
+		return true
+	case AiTaskColdStart:
+		return true
+	case AiTaskCorpusAsk:
+		return true
+	case AiTaskDealHealth:
+		return true
+	case AiTaskDocumentExtract:
+		return true
+	case AiTaskDraftReply:
+		return true
+	case AiTaskEnrich:
+		return true
+	case AiTaskGrowthFit:
+		return true
+	case AiTaskNlSearch:
+		return true
+	case AiTaskOfferDraft:
+		return true
+	case AiTaskOwedVerdict:
+		return true
+	case AiTaskProposeRoles:
+		return true
+	case AiTaskRateExtract:
+		return true
+	case AiTaskRequestSettlement:
+		return true
+	case AiTaskSignalExtract:
+		return true
+	case AiTaskSiteExtract:
+		return true
+	case AiTaskSiteFactExtract:
+		return true
+	case AiTaskSiteTriage:
+		return true
+	case AiTaskStageEvidenceExtract:
+		return true
+	case AiTaskSummarize:
+		return true
+	case AiTaskTagSuggest:
+		return true
+	case AiTaskTranscript:
+		return true
+	case AiTaskTranscriptPropose:
+		return true
+	case AiTaskVoiceBuild:
+		return true
+	case AiTaskWeeklyLearnings:
+		return true
+	case AiTaskWeeklyReview:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiTaskOverrideThinking.
 const (
 	AiTaskOverrideThinkingHigh    AiTaskOverrideThinking = "high"
@@ -3223,6 +3331,27 @@ func (e BriefDeliveryMorningBriefDelivery) Valid() bool {
 	case BriefDeliveryMorningBriefDeliveryEmail:
 		return true
 	case BriefDeliveryMorningBriefDeliveryNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BriefDeliveryRoutineMailScope.
+const (
+	BriefDeliveryRoutineMailScopeCombined BriefDeliveryRoutineMailScope = "combined"
+	BriefDeliveryRoutineMailScopePersonal BriefDeliveryRoutineMailScope = "personal"
+	BriefDeliveryRoutineMailScopeTeam     BriefDeliveryRoutineMailScope = "team"
+)
+
+// Valid indicates whether the value is a known member of the BriefDeliveryRoutineMailScope enum.
+func (e BriefDeliveryRoutineMailScope) Valid() bool {
+	switch e {
+	case BriefDeliveryRoutineMailScopeCombined:
+		return true
+	case BriefDeliveryRoutineMailScopePersonal:
+		return true
+	case BriefDeliveryRoutineMailScopeTeam:
 		return true
 	default:
 		return false
@@ -15550,7 +15679,10 @@ func (e ScheduledAgentName) Valid() bool {
 // Defines values for ScheduledSendHeldReason.
 const (
 	ScheduledSendHeldReasonConsentWithdrawn ScheduledSendHeldReason = "consent_withdrawn"
+	ScheduledSendHeldReasonFollowupSettled  ScheduledSendHeldReason = "followup_settled"
+	ScheduledSendHeldReasonMeetingCanceled  ScheduledSendHeldReason = "meeting_canceled"
 	ScheduledSendHeldReasonMissedWindow     ScheduledSendHeldReason = "missed_window"
+	ScheduledSendHeldReasonPassportRevoked  ScheduledSendHeldReason = "passport_revoked"
 	ScheduledSendHeldReasonSendRefused      ScheduledSendHeldReason = "send_refused"
 	ScheduledSendHeldReasonSenderInactive   ScheduledSendHeldReason = "sender_inactive"
 	ScheduledSendHeldReasonTimerExhausted   ScheduledSendHeldReason = "timer_exhausted"
@@ -15561,7 +15693,13 @@ func (e ScheduledSendHeldReason) Valid() bool {
 	switch e {
 	case ScheduledSendHeldReasonConsentWithdrawn:
 		return true
+	case ScheduledSendHeldReasonFollowupSettled:
+		return true
+	case ScheduledSendHeldReasonMeetingCanceled:
+		return true
 	case ScheduledSendHeldReasonMissedWindow:
+		return true
+	case ScheduledSendHeldReasonPassportRevoked:
 		return true
 	case ScheduledSendHeldReasonSendRefused:
 		return true
@@ -25020,6 +25158,9 @@ type AiStatus struct {
 	UnusedTiers          *[]string        `json:"unused_tiers,omitempty"`
 }
 
+// AiTask AI task key from the task catalog, used to localize its display name.
+type AiTask string
+
 // AiTaskFlow defines model for AiTaskFlow.
 type AiTaskFlow struct {
 	// Steps The decision model first, then each tier in ladder order.
@@ -25475,6 +25616,9 @@ type ApplyTagRequestEntityType string
 
 // Approval A staged 🟡 confirm-first action awaiting human decision.
 type Approval struct {
+	// AssigneeInactive For a pending commitment, whether its named task assignee cannot receive the task. True for invited, deactivated, archived, missing, or agent seats. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee.
+	AssigneeInactive *bool `json:"assignee_inactive,omitempty"`
+
 	// BundleId The act that staged this proposal together with its siblings: today, a website read's company facts and the leads it published. Null for a proposal staged on its own. It is a grouping id, not a foreign key: there is no
 	// bundle entity, and every member keeps its own diff hash, version pin, expiry and
 	// verdict (ADR-0036 — the staged row IS the authority object). Decide the whole set with
@@ -26434,6 +26578,9 @@ type AttentionItem struct {
 	// suggestion until later in the day. One word for both would make a client that
 	// handles `snooze` generically write the wrong endpoint.
 	Actions []AttentionItemActions `json:"actions"`
+
+	// AiTask AI task key from the task catalog, used to localize its display name.
+	AiTask *AiTask `json:"ai_task,omitempty"`
 
 	// AssigneeId Who holds this task, null when nobody has taken it. Sent by `task`.
 	//
@@ -27497,9 +27644,10 @@ type BoughtField struct {
 // BriefDelivery What one member wants delivered. Every field is optional in BOTH directions: absent
 // on a read means they have never chosen, absent on a write means leave it alone.
 type BriefDelivery struct {
-	// DeliveryHourLocal The local hour a delivery should not arrive before, in the installation's
-	// reporting timezone. Absent means the job's own hour, which is what every seat
-	// gets today.
+	// CombineRoutineEmail Combine eligible notices and current actions with the weekly message when it is ready, using one routine email per reporting day. Defaults to false; class opt-outs remain effective.
+	CombineRoutineEmail *bool `json:"combine_routine_email,omitempty"`
+
+	// DeliveryHourLocal Legacy morning-only hour floor in the installation reporting timezone. Kept unchanged until routine_delivery_time is explicitly chosen.
 	DeliveryHourLocal *int `json:"delivery_hour_local,omitempty"`
 
 	// MorningBriefDelivery Whether the morning brief arrives by mail. `none` is a CHOICE to receive
@@ -27511,13 +27659,28 @@ type BriefDelivery struct {
 	// and "tell me every morning either way" are different asks.
 	QuietDayNotice *bool `json:"quiet_day_notice,omitempty"`
 
+	// RoutineDeliveryTime Personal working-hours start, or a whole hour in the existing personal timezone. The three-hour window can cross midnight. Choosing working restores the default. Existing explicit morning-only hours remain effective until this field is chosen.
+	RoutineDeliveryTime *string `json:"routine_delivery_time,omitempty"`
+
+	// RoutineMailScope Optional chosen scope; team content is checked against live team-review authority at delivery.
+	RoutineMailScope *BriefDeliveryRoutineMailScope `json:"routine_mail_scope,omitempty"`
+
+	// RoutineMailTeamId The selected live team for team or combined scope. Personal scope ignores a retained selection.
+	RoutineMailTeamId *openapi_types.UUID `json:"routine_mail_team_id,omitempty"`
+
 	// WeeklyDelivery The same, for the weekly review.
 	WeeklyDelivery *BriefDeliveryWeeklyDelivery `json:"weekly_delivery,omitempty"`
+
+	// WeeklyDeliveryDay Earliest weekday, Monday 1 through Sunday 7. A non-working choice rolls to the next working weekday; later workdays allow catch-up.
+	WeeklyDeliveryDay *int `json:"weekly_delivery_day,omitempty"`
 }
 
 // BriefDeliveryMorningBriefDelivery Whether the morning brief arrives by mail. `none` is a CHOICE to receive
 // nothing; absent is not.
 type BriefDeliveryMorningBriefDelivery string
+
+// BriefDeliveryRoutineMailScope Optional chosen scope; team content is checked against live team-review authority at delivery.
+type BriefDeliveryRoutineMailScope string
 
 // BriefDeliveryWeeklyDelivery The same, for the weekly review.
 type BriefDeliveryWeeklyDelivery string
@@ -31326,12 +31489,15 @@ type CompanySiteRead struct {
 	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
 
 	// Comparisons Version-bound comparison against current confirmed company truth.
-	Comparisons  []CompanySiteReadComparison `json:"comparisons"`
-	Contacts     []CompanySiteReadContact    `json:"contacts"`
-	CreatedAt    time.Time                   `json:"created_at"`
-	DraftVersion int                         `json:"draft_version"`
-	Facts        []CompanySiteReadFact       `json:"facts"`
-	Id           openapi_types.UUID          `json:"id"`
+	Comparisons []CompanySiteReadComparison `json:"comparisons"`
+	Contacts    []CompanySiteReadContact    `json:"contacts"`
+	CreatedAt   time.Time                   `json:"created_at"`
+
+	// DeferralReason Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons.
+	DeferralReason *string               `json:"deferral_reason,omitempty"`
+	DraftVersion   int                   `json:"draft_version"`
+	Facts          []CompanySiteReadFact `json:"facts"`
+	Id             openapi_types.UUID    `json:"id"`
 
 	// LegalEntities Every legal entity the site's legal notice states, with the identity details printed alongside it. A group publishes several; the read does not guess which one the installation belongs to, so it offers them and the human chooses. Empty when the site names none.
 	LegalEntities *[]CompanySiteReadLegalEntity `json:"legal_entities,omitempty"`
@@ -34175,7 +34341,7 @@ type CreateProductRequest struct {
 	Sku            *string  `json:"sku,omitempty"`
 	Source         string   `json:"source"`
 
-	// Unit Defaults to 'unit'.
+	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`.
 	Unit                 *string                `json:"unit,omitempty"`
 	UnitPriceMinor       int64                  `json:"unit_price_minor"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -42034,10 +42200,12 @@ type OfferLineItemInput struct {
 	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 
 	// Quantity > 0, up to 3 decimal places.
-	Quantity       float64  `json:"quantity"`
-	TaxRate        *float64 `json:"tax_rate,omitempty"`
-	Unit           *string  `json:"unit,omitempty"`
-	UnitPriceMinor *int64   `json:"unit_price_minor,omitempty"`
+	Quantity float64  `json:"quantity"`
+	TaxRate  *float64 `json:"tax_rate,omitempty"`
+
+	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to the product's unit, else `piece`.
+	Unit           *string `json:"unit,omitempty"`
+	UnitPriceMinor *int64  `json:"unit_price_minor,omitempty"`
 }
 
 // OfferLineItemInputBillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
@@ -42871,7 +43039,7 @@ type Product struct {
 	Sku    *string `json:"sku,omitempty"`
 	Source string  `json:"source"`
 
-	// Unit 'unit' | 'hour' | 'day' | …; display only, free text.
+	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. A row written before the keys may hold a known spelling such as `Tag`, which a client shows as its key. Display only.
 	Unit string `json:"unit"`
 
 	// UnitPriceMinor Integer minor units (P11); no float money.
@@ -44997,10 +45165,13 @@ type ReportingContext struct {
 	PeriodKind            string               `json:"period_kind"`
 	PipelineId            *openapi_types.UUID  `json:"pipeline_id,omitempty"`
 	PopulationFingerprint string               `json:"population_fingerprint"`
-	Scope                 ReportingScope       `json:"scope"`
-	StateAt               time.Time            `json:"state_at"`
-	TargetInterval        *ReportingWindow     `json:"target_interval,omitempty"`
-	Timezone              string               `json:"timezone"`
+
+	// ProseLanguage Base language used for generated explanations. Absent on legacy readings, which use English.
+	ProseLanguage  *string          `json:"prose_language,omitempty"`
+	Scope          ReportingScope   `json:"scope"`
+	StateAt        time.Time        `json:"state_at"`
+	TargetInterval *ReportingWindow `json:"target_interval,omitempty"`
+	Timezone       string           `json:"timezone"`
 }
 
 // ReportingCoverage defines model for ReportingCoverage.
@@ -45901,6 +46072,9 @@ type ScheduledSend struct {
 	// `missed_window` — it came due while nothing was running and is now too late to be the
 	// message that was written. `timer_exhausted` — the job that wakes it ran out of
 	// attempts. `send_refused` — a gate refused for another reason at fire.
+	// `passport_revoked` — the agent credential was revoked.
+	// `followup_settled` — the recorded request was answered or completed after scheduling.
+	// `meeting_canceled` — the meeting named as follow-up evidence was canceled.
 	HeldReason *ScheduledSendHeldReason `json:"held_reason,omitempty"`
 	Id         openapi_types.UUID       `json:"id"`
 
@@ -45954,6 +46128,9 @@ type ScheduledSend struct {
 // `missed_window` — it came due while nothing was running and is now too late to be the
 // message that was written. `timer_exhausted` — the job that wakes it ran out of
 // attempts. `send_refused` — a gate refused for another reason at fire.
+// `passport_revoked` — the agent credential was revoked.
+// `followup_settled` — the recorded request was answered or completed after scheduling.
+// `meeting_canceled` — the meeting named as follow-up evidence was canceled.
 type ScheduledSendHeldReason string
 
 // ScheduledSendStatus `scheduled`: waiting; the rep may move or cancel it.
@@ -47145,6 +47322,9 @@ type SiteReadPageKind string
 type SiteReadReport struct {
 	CompanyId openapi_types.UUID `json:"company_id"`
 	CreatedAt time.Time          `json:"created_at"`
+
+	// DeferralReason Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons.
+	DeferralReason *string `json:"deferral_reason,omitempty"`
 
 	// FactCount Evidenced fields staged in the deepread proposal.
 	FactCount     *int           `json:"fact_count,omitempty"`
@@ -49620,17 +49800,20 @@ type VoiceBuild struct {
 	CandidateAction VoiceBuildCandidateAction `json:"candidate_action"`
 	CompletedAt     *time.Time                `json:"completed_at"`
 	CreatedAt       time.Time                 `json:"created_at"`
-	Id              openapi_types.UUID        `json:"id"`
-	NextAttemptAt   *time.Time                `json:"next_attempt_at"`
-	ProfileId       openapi_types.UUID        `json:"profile_id"`
-	Reason          VoiceBuildReason          `json:"reason"`
-	ResultVersion   *int                      `json:"result_version"`
-	SourceCount     int                       `json:"source_count"`
-	SourceHash      string                    `json:"source_hash"`
-	Stage           *VoiceBuildStage          `json:"stage"`
-	StartedAt       *time.Time                `json:"started_at"`
-	Status          VoiceBuildStatus          `json:"status"`
-	StatusCode      *VoiceBuildStatusCode     `json:"status_code"`
+
+	// DeferralReason Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons.
+	DeferralReason *string               `json:"deferral_reason,omitempty"`
+	Id             openapi_types.UUID    `json:"id"`
+	NextAttemptAt  *time.Time            `json:"next_attempt_at"`
+	ProfileId      openapi_types.UUID    `json:"profile_id"`
+	Reason         VoiceBuildReason      `json:"reason"`
+	ResultVersion  *int                  `json:"result_version"`
+	SourceCount    int                   `json:"source_count"`
+	SourceHash     string                `json:"source_hash"`
+	Stage          *VoiceBuildStage      `json:"stage"`
+	StartedAt      *time.Time            `json:"started_at"`
+	Status         VoiceBuildStatus      `json:"status"`
+	StatusCode     *VoiceBuildStatusCode `json:"status_code"`
 
 	// StatusDetail Safe operator guidance; never provider payload, prompt, SQL, or stack data.
 	StatusDetail *string   `json:"status_detail"`
@@ -49845,8 +50028,11 @@ type VoiceProfileEvaluation struct {
 	RemovedAvoidRules         int                                    `json:"removed_avoid_rules"`
 	RemovedRegisterRules      int                                    `json:"removed_register_rules"`
 	RepeatsPerPrompt          VoiceProfileEvaluationRepeatsPerPrompt `json:"repeats_per_prompt"`
-	SignatureSetJaccard       float32                                `json:"signature_set_jaccard"`
-	StructuredOutputValid     bool                                   `json:"structured_output_valid"`
+
+	// ReviewReasonDetails Typed explanations in the same order as review_reasons. Unknown codes use their recorded text.
+	ReviewReasonDetails   *[]VoiceReviewReason `json:"review_reason_details,omitempty"`
+	SignatureSetJaccard   float32              `json:"signature_set_jaccard"`
+	StructuredOutputValid bool                 `json:"structured_output_valid"`
 }
 
 // VoiceProfileEvaluationClassification defines model for VoiceProfileEvaluation.Classification.
@@ -49893,6 +50079,13 @@ type VoiceProfileVersionReason string
 
 // VoiceProfileVersionStatus defines model for VoiceProfileVersion.Status.
 type VoiceProfileVersionStatus string
+
+// VoiceReviewReason defines model for VoiceReviewReason.
+type VoiceReviewReason struct {
+	Code   string             `json:"code"`
+	Text   string             `json:"text"`
+	Values map[string]float64 `json:"values"`
+}
 
 // WebhookBodyContentType The Content-Type of a templated body; null means application/json.
 type WebhookBodyContentType string
@@ -51299,6 +51492,9 @@ type WorklistItem struct {
 
 	// Actions What this item offers, routed to the endpoint that owns the verb.
 	Actions []WorklistItemActions `json:"actions"`
+
+	// AiTask AI task key from the task catalog, used to localize its display name.
+	AiTask *AiTask `json:"ai_task,omitempty"`
 
 	// Band The heading this row sits under, as an OUTCOME rather than a priority number.
 	//

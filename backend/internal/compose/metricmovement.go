@@ -26,11 +26,11 @@ type reportingCapture struct {
 
 func (e metricEvaluator) movementChart(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, chart crmcontracts.ReportingChart) (crmcontracts.ReportingChart, []reporting.Fact, error) {
 	if !auth.Allows(ctx, objectForecast, principal.ActionRead) {
-		chart.Coverage = reportingGap("unsupported", "Forecast access is required for captured movement")
+		chart.Coverage = reportingGap("unsupported", reporting.ExplanationCopy(frame).Say(reportingCoverageWords.ForecastAccess))
 		return chart, nil, nil
 	}
 	if frame.CloseInterval == nil || frame.Scope.Kind == ScopeKindManagedTeams {
-		chart.Coverage = reportingGap("unsupported", "Choose a fixed population and fiscal-quarter close window for movement")
+		chart.Coverage = reportingGap("unsupported", reporting.ExplanationCopy(frame).Say(reportingCoverageWords.MovementScope))
 		return chart, nil, nil
 	}
 	status, err := e.forecast.CaptureStatusTx(ctx, tx, forecasting.Scope{Kind: string(frame.Scope.Kind), ID: (*ids.UUID)(frame.Scope.Id)}, (*ids.UUID)(frame.PipelineId))
@@ -49,7 +49,7 @@ func (e metricEvaluator) movementChart(ctx context.Context, tx pgx.Tx, frame crm
 	if len(captures) < 2 {
 		return chart, nil, nil
 	}
-	return e.capturedMovementChart(ctx, tx, captures, chart)
+	return e.capturedMovementChart(ctx, tx, frame, captures, chart)
 }
 
 func reportingMovementCaptures(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext) ([]reportingCapture, error) {
@@ -70,13 +70,13 @@ func reportingMovementCaptures(ctx context.Context, tx pgx.Tx, frame crmcontract
 	})
 }
 
-func movementAnchorFacts(contributions []forecasting.Contribution, contextID string, at time.Time) ([]reporting.Fact, error) {
+func movementAnchorFacts(frame crmcontracts.ReportingContext, contributions []forecasting.Contribution, contextID string, at time.Time) ([]reporting.Fact, error) {
 	facts := []reporting.Fact{}
 	for _, contribution := range contributions {
 		if !contribution.InOpen {
 			continue
 		}
-		fact, err := movementSourceFact(contribution, contextID, at)
+		fact, err := movementSourceFact(frame, contribution, contextID, at)
 		if err != nil {
 			return nil, err
 		}
@@ -90,7 +90,7 @@ func movementAnchorFacts(contributions []forecasting.Contribution, contextID str
 	return facts, nil
 }
 
-func movementSourceFact(contribution forecasting.Contribution, contextID string, at time.Time) (reporting.Fact, error) {
+func movementSourceFact(frame crmcontracts.ReportingContext, contribution forecasting.Contribution, contextID string, at time.Time) (reporting.Fact, error) {
 	source, err := ids.Parse(contribution.DealID)
 	if err != nil {
 		return reporting.Fact{}, err
@@ -103,11 +103,11 @@ func movementSourceFact(contribution forecasting.Contribution, contextID string,
 		}
 	}
 	fact := reporting.Fact{Metric: reportingOpenPipeline, ContextID: contextID, SourceType: string(recordTypeDeal), SourceID: source, OwnerID: owner}
-	fact.Row = crmcontracts.ReportingEvidenceRow{Key: contextID + ":" + contribution.DealID, Label: "Captured pipeline contribution", OccurredAt: &at, SourceType: &fact.SourceType, SourceId: ptrUUID(source), OwnerId: ptrUUID(owner)}
+	fact.Row = crmcontracts.ReportingEvidenceRow{Key: contextID + ":" + contribution.DealID, Label: reporting.ExplanationCopy(frame).Say(reportingLabelWords.PipelineContribution), OccurredAt: &at, SourceType: &fact.SourceType, SourceId: ptrUUID(source), OwnerId: ptrUUID(owner)}
 	return fact, nil
 }
 
-func movementDeltaFacts(deltas []forecasting.DealDelta, before, after []forecasting.Contribution, at time.Time) ([]reporting.Fact, error) {
+func movementDeltaFacts(frame crmcontracts.ReportingContext, deltas []forecasting.DealDelta, before, after []forecasting.Contribution, at time.Time) ([]reporting.Fact, error) {
 	sources := map[string]forecasting.Contribution{}
 	for _, source := range before {
 		sources[source.DealID] = source
@@ -117,7 +117,7 @@ func movementDeltaFacts(deltas []forecasting.DealDelta, before, after []forecast
 	}
 	facts := []reporting.Fact{}
 	for _, delta := range deltas {
-		fact, err := movementSourceFact(sources[delta.DealID], "movement_delta", at)
+		fact, err := movementSourceFact(frame, sources[delta.DealID], "movement_delta", at)
 		if err != nil {
 			return nil, err
 		}
@@ -130,7 +130,7 @@ func movementDeltaFacts(deltas []forecasting.DealDelta, before, after []forecast
 	return facts, nil
 }
 
-func projectMovement(chart crmcontracts.ReportingChart, movement forecasting.Movement, facts []reporting.Fact, opening, closing reportingCapture) (crmcontracts.ReportingChart, error) {
+func projectMovement(frame crmcontracts.ReportingContext, chart crmcontracts.ReportingChart, movement forecasting.Movement, facts []reporting.Fact, opening, closing reportingCapture) (crmcontracts.ReportingChart, error) {
 	for _, value := range []int64{movement.OpeningMinor, movement.ClosingMinor} {
 		if value > reportingExactInteger || value < -reportingExactInteger {
 			return chart, errors.New("captured movement exceeds exact reporting range")
@@ -142,7 +142,7 @@ func projectMovement(chart crmcontracts.ReportingChart, movement forecasting.Mov
 	chart.Coverage = crmcontracts.ReportingCoverage{Status: "ok"}
 	for _, fact := range facts {
 		if fact.Money == nil {
-			chart.Coverage = reportingGap(reportingPartial, "Some captured deals could not be valued; movement covers priced contributions only")
+			chart.Coverage = reportingGap(reportingPartial, reporting.ExplanationCopy(frame).Say(reportingForecastWords.MovementUnpriced))
 			break
 		}
 	}
@@ -164,7 +164,7 @@ func projectMovement(chart crmcontracts.ReportingChart, movement forecasting.Mov
 	return chart, nil
 }
 
-func (e metricEvaluator) capturedMovementChart(ctx context.Context, tx pgx.Tx, captures []reportingCapture, chart crmcontracts.ReportingChart) (crmcontracts.ReportingChart, []reporting.Fact, error) {
+func (e metricEvaluator) capturedMovementChart(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, captures []reportingCapture, chart crmcontracts.ReportingChart) (crmcontracts.ReportingChart, []reporting.Fact, error) {
 	closing, opening := captures[0], captures[1]
 	for _, candidate := range captures[1:] {
 		if !candidate.at.After(closing.at.AddDate(0, 0, -7)) {
@@ -180,11 +180,11 @@ func (e metricEvaluator) capturedMovementChart(ctx context.Context, tx pgx.Tx, c
 	if err != nil {
 		return chart, nil, err
 	}
-	facts, err := movementAnchorFacts(before.Contributions, "movement_opening", opening.at)
+	facts, err := movementAnchorFacts(frame, before.Contributions, "movement_opening", opening.at)
 	if err != nil {
 		return chart, nil, err
 	}
-	closingFacts, err := movementAnchorFacts(after.Contributions, "movement_closing", closing.at)
+	closingFacts, err := movementAnchorFacts(frame, after.Contributions, "movement_closing", closing.at)
 	if err != nil {
 		return chart, nil, err
 	}
@@ -194,7 +194,7 @@ func (e metricEvaluator) capturedMovementChart(ctx context.Context, tx pgx.Tx, c
 		return chart, nil, err
 	}
 	if withheld || before.Withheld || after.Withheld {
-		chart.Coverage = reportingGap(reportingUnavailable, "Some captured contributions are restricted")
+		chart.Coverage = reportingGap(reportingUnavailable, reporting.ExplanationCopy(frame).Say(reportingCoverageWords.RestrictedMovement))
 		chart.Coverage.Withheld = true
 		return chart, nil, nil
 	}
@@ -202,11 +202,11 @@ func (e metricEvaluator) capturedMovementChart(ctx context.Context, tx pgx.Tx, c
 	if err != nil {
 		return chart, nil, err
 	}
-	chart, err = projectMovement(chart, movement, facts, opening, closing)
+	chart, err = projectMovement(frame, chart, movement, facts, opening, closing)
 	if err != nil {
 		return chart, nil, err
 	}
-	deltas, err := movementDeltaFacts(movement.Deals, before.Contributions, after.Contributions, closing.at)
+	deltas, err := movementDeltaFacts(frame, movement.Deals, before.Contributions, after.Contributions, closing.at)
 	if err != nil {
 		return chart, nil, err
 	}

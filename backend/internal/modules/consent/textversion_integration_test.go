@@ -204,7 +204,7 @@ func TestPublishingTheCatalogTwiceIsANoOp(t *testing.T) {
 	if err := e.owner.QueryRow(context.Background(),
 		`SELECT count(*) FROM consent_text_version
 		  WHERE published_at IS NOT NULL
-		    AND key = ANY($1)`, controllerTemplateKeys()).Scan(&published); err != nil {
+		    AND key = ANY($1)`, publishedControllerKeys()).Scan(&published); err != nil {
 		t.Fatal(err)
 	}
 	// Two templates in three languages. Asked as "at least 2" this would pass a
@@ -271,9 +271,9 @@ func TestAPublishedVersionsScopeIsFrozenToo(t *testing.T) {
 	}
 }
 
-// controllerTemplateKeys names the catalog's own keys, so the count above asks
+// publishedControllerKeys names the catalog's own keys, so the count above asks
 // about the rows this publisher writes rather than about the table.
-func controllerTemplateKeys() []string {
+func publishedControllerKeys() []string {
 	keys := make([]string, 0, len(controllerTemplates))
 	for key := range controllerTemplates {
 		keys = append(keys, key)

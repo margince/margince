@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
 
 // The reading gets its own bounded pool for the deep-read reason: it is one
@@ -93,6 +94,7 @@ type transcriptProposeWorker struct {
 	// activities is the run record's three movements, named as the seam the
 	// engine already takes rather than the concrete store: the worker's whole
 	// relationship with the module is claim, read, finish.
+	language   baselanguage.Resolver
 	activities transcriptReadStore
 	proposer   *TranscriptProposer
 	log        *slog.Logger
@@ -134,7 +136,7 @@ func (w *transcriptProposeWorker) declineUnread(ctx context.Context, args Transc
 	return w.activities.FinishTranscriptRead(ctx, args.TranscriptReadID,
 		activities.TranscriptReadOutcome{
 			Status: activities.TranscriptReadFailed,
-			Detail: "this installation has no AI model configured for reading transcripts",
+			Detail: transcriptWords.NoModel.In(transcriptCopyFor(string(w.language.Resolve(ctx))).Lang()),
 		})
 }
 
@@ -143,6 +145,7 @@ func (w *transcriptProposeWorker) declineUnread(ctx context.Context, args Transc
 // rather than sitting queued behind a worker that cannot read it.
 func newTranscriptProposeWorker(pool *pgxpool.Pool, brain completer, log *slog.Logger) *transcriptProposeWorker {
 	worker := &transcriptProposeWorker{
+		language:   installationLanguage(pool),
 		activities: activities.NewStore(InstallationDB(pool)),
 		log:        log,
 	}

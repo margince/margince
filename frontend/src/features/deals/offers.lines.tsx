@@ -33,10 +33,11 @@ import {
   UnitPriceCell,
 } from "./offers.cells";
 import { searchProductCandidates } from "./products";
+import { isUnnamedOtherUnit, storedUnitOf, UnitPicker } from "./productunit";
 
 const EMPTY_NEW_LINE = {
   description: "",
-  unit: "",
+  unit: { choice: "", other: "" },
   quantity: "",
   unit_price_minor: 0,
   discount_pct: "",
@@ -64,6 +65,8 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   const [newLine, setNewLine] = useState<NewLineState>(EMPTY_NEW_LINE);
   const [billing, setBilling] = useState<LineBilling>(EMPTY_LINE_BILLING);
   const [priceTouched, setPriceTouched] = useState(false);
+  // Set by an Add that found "Other" with no unit typed; any unit change clears it.
+  const [unitRefused, setUnitRefused] = useState(false);
   const [product, setProduct] = useState<RecordPickerCandidate | null>(null);
 
   const applyOffer = (updated: Offer) => {
@@ -268,16 +271,20 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
               />
             )}
           </Field>
-          <Field label={t("offer.unit")}>
+          <Field
+            label={t("offer.unit")}
+            error={unitRefused ? t("product.unitOtherRequired") : undefined}
+          >
             {(control) => (
-              <TextInput
-                {...control}
-                data-testid="new-line-unit"
-                className="offers-line-unit"
+              <UnitPicker
+                id={control.id}
+                testId="new-line-unit"
+                blankLabel={t("offer.unitFromProduct")}
                 value={newLine.unit}
-                onChange={(event) =>
-                  setNewLine((prev) => ({ ...prev, unit: event.target.value }))
-                }
+                onChange={(unit) => {
+                  setUnitRefused(false);
+                  setNewLine((prev) => ({ ...prev, unit }));
+                }}
               />
             )}
           </Field>
@@ -336,11 +343,17 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
             data-testid="add-line"
             disabled={addMutation.isPending}
             className="offers-add-line"
-            onClick={() =>
+            onClick={() => {
+              if (isUnnamedOtherUnit(newLine.unit)) {
+                setUnitRefused(true);
+                return;
+              }
               addMutation.mutate({
                 product_id: product?.id ?? undefined,
                 description: newLine.description || undefined,
-                unit: newLine.unit || undefined,
+                unit:
+                  storedUnitOf(newLine.unit.choice, newLine.unit.other) ||
+                  undefined,
                 quantity: Number(newLine.quantity),
                 unit_price_minor: priceTouched
                   ? newLine.unit_price_minor
@@ -354,8 +367,8 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
                     ? undefined
                     : Number(newLine.tax_rate),
                 ...lineBillingBody(billing),
-              })
-            }
+              });
+            }}
           >
             {t("offer.addLine")}
           </Button>

@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture/calendarwire"
 	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
+	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -206,7 +207,7 @@ func (a *httpAPI) Save(ctx context.Context, token string, in connector.CalendarA
 	} else {
 		// Only a new event carries a body: Outlook keeps an online meeting's
 		// join details in it, and a reschedule that rewrote it would drop them.
-		event.Body = &scheduledBody{"text", in.Description}
+		event.Body = &scheduledBody{"text", emailview.MeetingDescription(in.Description)}
 		if in.VideoCall {
 			provider, err := a.meetingProvider(ctx, token, in.CalendarID)
 			if err != nil {

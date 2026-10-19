@@ -125,7 +125,7 @@ func (s *Service) claimExecution(ctx context.Context) (executionClaim, bool, err
 
 func (s *Service) exhaustClaim(ctx context.Context, tx pgx.Tx, claim executionClaim, before executionAudit) error {
 	var b bindings
-	reason := "Report generation stopped repeatedly before completing. Retry the run."
+	reason := s.statusCopy(ctx, tx).Say(statusWords.Exhausted)
 	if _, err := tx.Exec(ctx, "UPDATE report_execution SET status='failed',fence=fence+1,lease_until=NULL,reason="+b.add(reason)+" WHERE id="+b.add(claim.ID), b.values...); err != nil {
 		return err
 	}

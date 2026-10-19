@@ -122,13 +122,13 @@ func (s *Service) coachingProjected(ctx context.Context, seats []ids.UUID) (bool
 // justify: everything coaching says is a reading of what this reader is already
 // being told, so the thing it reads should be exactly that. A coaching layer
 // with its own source could say something the brief under it does not support.
-func coachingFor(plan Plan) *Coaching {
+func (said briefCopy) coachingFor(plan Plan) *Coaching {
 	coaching := &Coaching{
-		Focus:       coachingFocus(plan),
-		FailureMode: coachingFailureMode(plan),
-		ListenFor:   "A quantified consequence in their words, and who owns it today.",
-		WatchFor:    coachingWatchFor(plan),
-		InterveneIf: "A date, a price or a resource is promised that nobody on our side has agreed.",
+		Focus:       said.coachingFocus(plan),
+		FailureMode: said.coachingFailureMode(plan),
+		ListenFor:   said.Say(coachingWords.Listen),
+		WatchFor:    said.coachingWatchFor(plan),
+		InterveneIf: said.Say(coachingWords.Intervene),
 		Paths:       coachingPaths(plan),
 	}
 	return coaching
@@ -150,35 +150,35 @@ type CoachingPath struct {
 	Play  string
 }
 
-func coachingFocus(plan Plan) string {
+func (said briefCopy) coachingFocus(plan Plan) string {
 	if plan.Objective != nil {
-		return "Whether the rep leaves with the outcome the plan names, or settles for a pleasant conversation."
+		return said.Say(coachingWords.Outcome)
 	}
-	return "Whether the rep establishes what this meeting is for before spending it."
+	return said.Say(coachingWords.Purpose)
 }
 
 // coachingFailureMode names the likeliest way THIS meeting goes wrong, read off
 // what the plan already found.
-func coachingFailureMode(plan Plan) string {
+func (said briefCopy) coachingFailureMode(plan Plan) string {
 	switch {
 	case plan.TopRisk != nil:
-		return "Defending the history instead of owning it and naming a date."
+		return said.Say(coachingWords.History)
 	case len(plan.LikelyAsks) >= 2:
-		return "Answering the asks one by one and never getting to a question of their own."
+		return said.Say(coachingWords.Asks)
 	case plan.Type.Value == crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown:
-		return "Assuming what the meeting is for, and finding out at the end that it was not."
+		return said.Say(coachingWords.Assume)
 	case len(plan.Arc) == 0:
-		return "Filling the silence with product rather than asking what is actually going on."
+		return said.Say(coachingWords.Silence)
 	default:
-		return "Proving coverage too early, before the problem is agreed."
+		return said.Say(coachingWords.Coverage)
 	}
 }
 
-func coachingWatchFor(plan Plan) string {
+func (said briefCopy) coachingWatchFor(plan Plan) string {
 	if len(plan.Questions) > 0 {
-		return "The rep answering before asking. Count the questions they get to."
+		return said.Say(coachingWords.Questions)
 	}
-	return "A conversation with no question in it."
+	return said.Say(coachingWords.NoQuestions)
 }
 
 // coachingPaths are the branches a lead rehearses against. Taken from the

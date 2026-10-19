@@ -61,9 +61,9 @@ func weeklyFigureLines(line writeLine) {
 		"Deine Woche ab ",
 		"Tuần của bạn từ ")
 	line(func(c *Copy) *string { return &c.WeeklyTasksDelivered },
-		"Tasks delivered",
-		"Aufgaben erledigt",
-		"Việc cần làm đã hoàn tất")
+		"Due tasks completed",
+		"Fällige Aufgaben erledigt",
+		"Việc đến hạn đã hoàn tất")
 	line(func(c *Copy) *string { return &c.WeeklyOfDue },
 		"%d of %d",
 		"%d von %d",
@@ -144,14 +144,10 @@ func weeklyMovementLines(line writeLine) {
 // That is next week's plan and the archive behind it. The outcome words the
 // movement list is written in close it.
 func weeklyClosingLines(line writeLine) {
-	line(func(c *Copy) *string { return &c.WeeklyPlanAhead },
-		"This week’s commitments",
-		"Zusagen dieser Woche",
-		"Cam kết tuần này")
 	line(func(c *Copy) *string { return &c.WeeklyFullWeek },
-		"The full week, and the ones before it:",
-		"Die ganze Woche, und die davor:",
-		"Cả tuần, và những tuần trước:")
+		"Review the results and plan your next step",
+		"Ergebnisse ansehen und den nächsten Schritt planen",
+		"Xem kết quả và lên kế hoạch bước tiếp theo")
 	line(func(c *Copy) *string { return &c.WeeklyOutcomeWon },
 		"won",
 		"gewonnen",

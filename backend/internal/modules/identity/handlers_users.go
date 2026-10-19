@@ -13,6 +13,8 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -105,7 +107,7 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, teamMembershipRefusal(unknownRoleRefusal(companyNotDescribedRefusal(err))))
 		return
 	}
-	h.sendInvite(r, email.String(), rawToken)
+	h.sendInvite(r, email.String(), rawToken, actor)
 	h.writeUserByID(w, r, actor, userID, http.StatusCreated)
 }
 
@@ -370,16 +372,20 @@ func (h Handlers) writeUserByID(w http.ResponseWriter, r *http.Request, actor Id
 // sendInvite mails the single-use set-password link when a mailer is wired.
 // Delivery is best-effort — the member and token already committed, so a mail
 // failure is an operator incident (logged), never a failed invite.
-func (h Handlers) sendInvite(r *http.Request, email, rawToken string) {
+func (h Handlers) sendInvite(r *http.Request, email, rawToken string, inviter Identity) {
 	if !h.canSendPasswordLink() || rawToken == "" {
 		return
 	}
 	link := passwordLink(h.passwordLinkBaseURL, rawToken)
 	words := h.mailCopy(r.Context())
-	body := words.InviteIntro + "\n\n" +
+	intro := words.InviteIntro
+	if inviter.DisplayName != "" && inviter.WorkspaceName != "" {
+		intro = fmt.Sprintf(words.InviteBy, mailcopy.OneLine(inviter.DisplayName), mailcopy.OneLine(inviter.WorkspaceName))
+	}
+	body := intro + "\n\n" +
 		words.InviteAction + "\n\n  " + link + "\n\n" +
 		words.InviteIgnore
-	if err := h.resetMailer.Send(r.Context(), email, words.InviteSubject, body); err != nil {
+	if err := mailer.SendLocalized(r.Context(), h.resetMailer, email, words.InviteSubject, body, string(words.Language)); err != nil {
 		slog.Error("invite email failed", "err", err)
 	}
 }

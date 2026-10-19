@@ -15,12 +15,10 @@ package compose
 
 import (
 	"maps"
-	"reflect"
-	"regexp"
-	"slices"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -57,60 +55,15 @@ var approvalSummaryHoles = map[string][]string{
 	"nestedFields":                 {"%d"},
 }
 
-// formatVerb matches a verb with or without an explicit argument index, so an
-// index reads as a different verb and fails the comparison.
-var formatVerb = regexp.MustCompile(`%(\[\d+\])?[a-zA-Z]`)
-
-// summarySentences reads every string field off one set by name. Walking the
-// struct rather than listing it is what puts a new field under the census the
-// moment it exists.
-func summarySentences(said approvalSummaryCopy) map[string]string {
-	value := reflect.ValueOf(said)
-	sentences := map[string]string{}
-	for i := range value.NumField() {
-		// Exactly string: the set's own textlang.Lang is a string kind and no sentence.
-		if field := value.Field(i); field.Type() == reflect.TypeFor[string]() {
-			sentences[value.Type().Field(i).Name] = field.String()
-		}
-	}
-	return sentences
-}
-
 func TestEveryShippedLanguageWritesItsOwnApprovalSummaries(t *testing.T) {
-	english := summarySentences(approvalSummaryByLang[textlang.English])
-	for name := range english {
-		if _, known := approvalSummaryHoles[name]; !known {
-			t.Errorf("%s has no entry in approvalSummaryHoles, so nothing holds its call site to its holes", name)
-		}
-	}
-	for _, lang := range textlang.Shipped {
-		t.Run(string(lang), func(t *testing.T) {
-			set, ok := approvalSummaryByLang[lang]
-			if !ok {
-				t.Fatalf("the product ships %s and this table has not learned it", lang)
-			}
-			for name, got := range summarySentences(set) {
-				if got == "" {
-					t.Errorf("%s is empty — a blank summary reaches the decider as nothing at all", name)
-					continue
-				}
-				if verbs := formatVerb.FindAllString(got, -1); !slices.Equal(verbs, approvalSummaryHoles[name]) {
-					t.Errorf("%s carries the verbs %v, its call site passes %v: %q",
-						name, verbs, approvalSummaryHoles[name], got)
-				}
-				if lang != textlang.English && got == english[name] {
-					t.Errorf("%s is the English sentence verbatim; the entry exists and the reader still gets English", name)
-				}
-			}
-		})
-	}
+	langcopytest.CensusByLanguage(t, approvalSummaryByLang, approvalSummaryHoles, "acts", "lang")
 }
 
 // The German copy uses the plain hyphen only. A dash belongs to the English
 // sentences, which keep theirs byte for byte.
 func TestTheGermanApprovalSummariesCarryNoDash(t *testing.T) {
 	german := approvalSummaryByLang[textlang.German]
-	sentences := summarySentences(german)
+	sentences := langcopytest.Sentences(t, german, "acts", "lang")
 	for _, words := range []map[string]string{german.acts.verbs, german.acts.recordFrames, german.acts.operations} {
 		maps.Copy(sentences, words)
 	}

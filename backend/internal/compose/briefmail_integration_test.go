@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -28,24 +29,18 @@ import (
 // lane must survive without failing the assembly around it.
 var errRelayRefused = errors.New("the relay refused the envelope")
 
-// seedWorkFor puts one open deal on each named rep's plate, so their morning
-// has something in it.
-//
-// A run with an EMPTY queue is a quiet morning, and a quiet morning is
-// deliberately not mailed to anybody who did not ask to hear about it — so a
-// fixture without this seeds the case where nothing is sent, and every
-// assertion about sending passes vacuously. It did, on the first run of these
-// tests, and the two that then failed were the ones honest enough to say so.
-//
-// The reps share ONE pipeline because DealFixture seeds the installation's
-// pipeline defaults, which refuses a second run — so calling this helper twice
-// in a test fails with a bare "conflict" that names nothing. Take the owners
-// together instead.
+// Named tasks exercise live attention without relying on a model finding.
+// Owners share a pipeline because the fixture seeds unique default stages.
 func seedWorkFor(t *testing.T, e *integration.Env, owners ...ids.UUID) {
 	t.Helper()
 	pipeline, open, _ := integration.DealFixture(t, e)
 	for _, owner := range owners {
 		e.SeedDeal(t, "Globex Renewal", pipeline, open, &owner)
+		title := "Send the revised Globex quote"
+		assignee := ids.From[ids.UserKind](owner)
+		if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{Kind: "task", Subject: &title, AssigneeID: &assignee, Source: "manual"}); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
@@ -99,7 +94,7 @@ func TestTheMorningBriefIsMailedOncePerRepPerDay(t *testing.T) {
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
 	seedWorkFor(t, b.Env, b.Rep1)
-	morning := time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
+	morning := time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC)
 	b.now = morning
 
 	if err := b.run(t); err != nil {
@@ -136,7 +131,7 @@ func TestARepWhoAskedForNoMorningMailGetsNoneAndKeepsTheirAttempt(t *testing.T) 
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
 	seedWorkFor(t, b.Env, b.Rep1)
-	morning := time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
+	morning := time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC)
 	none := identity.DeliveryNone
 	for _, rep := range []ids.UUID{b.Rep1, b.Rep2, b.Rep3} {
 		setDelivery(t, rep, &none, nil)
@@ -163,7 +158,7 @@ func TestARepWhoAskedForNoMorningMailGetsNoneAndKeepsTheirAttempt(t *testing.T) 
 func TestAQuietMorningIsNotMailedUnlessTheRepAskedToHear(t *testing.T) {
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
-	morning := time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
+	morning := time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC)
 	// Nobody has chosen. "Send me my brief" is the installation's default and a
 	// rep who never chose gets it; "tell me even when there is nothing" is not,
 	// because mailing the whole company "nothing is waiting on you" every quiet
@@ -196,7 +191,7 @@ func TestARefusedRelaySpendsTheAttemptAndSaysWhy(t *testing.T) {
 	relay := &countingMailer{fail: errRelayRefused}
 	b := setupBriefJob(t).withMailer(relay)
 	seedWorkFor(t, b.Env, b.Rep1)
-	morning := time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
+	morning := time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC)
 	b.now = morning
 
 	// The assembly must not fail over a relay: the brief is on Home either way,
@@ -231,7 +226,7 @@ func TestADepartedSeatIsNotAFailedRead(t *testing.T) {
 	b := setupBriefJob(t).withMailer(relay)
 	pipeline, open, _ := integration.DealFixture(t, b.Env)
 	b.SeedDeal(t, "Globex Renewal", pipeline, open, &b.Rep1)
-	morning := time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
+	morning := time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC)
 	b.now = morning
 	if err := b.run(t); err != nil {
 		t.Fatalf("the overnight pass failed: %v", err)
@@ -363,7 +358,7 @@ func TestARepWithNoChosenHourIsMailedByTheAssemblingPass(t *testing.T) {
 	b := setupBriefJob(t).withMailer(relay)
 	seedWorkFor(t, b.Env, b.Rep1)
 
-	morning := time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
+	morning := time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC)
 	b.now = morning
 	if err := b.run(t); err != nil {
 		t.Fatalf("the overnight pass failed: %v", err)

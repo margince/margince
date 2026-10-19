@@ -33,39 +33,40 @@ func advanceFor(in Input, typ MeetingType) Advance {
 }
 
 func advanceLines(typ MeetingType, in Input) (string, string, string) {
-	who := "them"
+	said := briefCopyFor(in.Language)
+	who := said.Say(advanceWords.Them)
 	if len(in.Attendees) > 0 {
 		who = in.Attendees[0].FullName
 	}
 	switch typ.Value {
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRelationship, crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown:
-		return "A named next step with an owner and a date, even if the answer is 'not this quarter'.",
-			fmt.Sprintf("A working session booked with %s and whoever else has to be in it.", who),
-			"Agreement on what you will send, and who decides what happens with it."
+		return said.Say(advanceWords.RelationshipMinimum),
+			fmt.Sprintf(said.Say(advanceWords.RelationshipBest), who),
+			said.Say(advanceWords.RelationshipFallback)
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFirstDiscovery, crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFollowupDiscovery:
-		return "One quantified problem, and who owns it today.",
-			"The two outcomes that matter most, and a booked session to scope them.",
-			"A written summary they agree with, and the name of the colleague who has to approve it."
+		return said.Say(advanceWords.DiscoveryMinimum),
+			said.Say(advanceWords.DiscoveryBest),
+			said.Say(advanceWords.DiscoveryFallback)
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDemo:
-		return "Their reaction to the two things they said they needed.",
-			"Agreement that it fits, and a date to talk commercials.",
-			"The one objection that stopped it, in their own words."
+		return said.Say(advanceWords.DemoMinimum),
+			said.Say(advanceWords.DemoBest),
+			said.Say(advanceWords.DemoFallback)
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeCommercial:
-		return "The remaining gap between our number and theirs, stated.",
-			"Agreed terms and a signature date.",
-			"What has to be true for them to sign, and by when."
+		return said.Say(advanceWords.CommercialMinimum),
+			said.Say(advanceWords.CommercialBest),
+			said.Say(advanceWords.CommercialFallback)
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDecision:
-		return "The date the decision gets made, and who makes it.",
-			"The decision itself.",
-			"The one unresolved objection, and who has to answer it."
+		return said.Say(advanceWords.DecisionMinimum),
+			said.Say(advanceWords.DecisionBest),
+			said.Say(advanceWords.DecisionFallback)
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDelivery:
-		return "Agreement on what is done and what is next.",
-			"The next milestone dated, with an owner on each side.",
-			"A written list of what is blocked and who unblocks it."
+		return said.Say(advanceWords.DeliveryMinimum),
+			said.Say(advanceWords.DeliveryBest),
+			said.Say(advanceWords.DeliveryFallback)
 	default:
-		return "One thing that changes before the renewal date.",
-			"Agreement to renew, or the date that decision gets made.",
-			"What went wrong, in their words, and who else needs to hear it."
+		return said.Say(advanceWords.RenewalMinimum),
+			said.Say(advanceWords.RenewalBest),
+			said.Say(advanceWords.RenewalFallback)
 	}
 }
 
@@ -76,7 +77,7 @@ func advanceLines(typ MeetingType, in Input) (string, string, string) {
 // nine branches handles none of them.
 func scenariosFor(in Input, typ MeetingType) []Scenario {
 	cite := []Evidence{{EntityType: citeActivity, EntityID: in.ActivityID}}
-	branches := scenarioLines(typ)
+	branches := briefCopyFor(in.Language).scenarioLines(typ)
 	out := make([]Scenario, 0, len(branches))
 	for _, branch := range branches {
 		out = append(out, Scenario{Label: branch[0], Play: branch[1], Evidence: cite})
@@ -84,29 +85,29 @@ func scenariosFor(in Input, typ MeetingType) []Scenario {
 	return out
 }
 
-func scenarioLines(typ MeetingType) [][2]string {
+func (said briefCopy) scenarioLines(typ MeetingType) [][2]string {
 	switch typ.Value {
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRelationship, crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown:
 		return [][2]string{
-			{"It stays social", "Let it. Ask one 'what has changed' question and earn a separate working session."},
-			{"They raise the work", "Follow it: prioritise two outcomes, then propose a scoping session."},
-			{"They raise a complaint", "Hear it out fully before answering. Do not defend the internal history."},
+			{said.Say(advanceWords.Social), said.Say(advanceWords.SocialPlay)},
+			{said.Say(advanceWords.Work), said.Say(advanceWords.WorkPlay)},
+			{said.Say(advanceWords.Complaint), said.Say(advanceWords.ComplaintPlay)},
 		}
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeCommercial, crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDecision:
 		return [][2]string{
-			{"It becomes a price negotiation", "Anchor on the outcome agreed, not the list. Trade scope for price, never price alone."},
-			{"A new stakeholder appears", "Stop selling and qualify them: what do they need to believe, and what do they decide?"},
-			{"The decision slips", "Get the new date and the reason in the room, before it becomes an email."},
+			{said.Say(advanceWords.Price), said.Say(advanceWords.PricePlay)},
+			{said.Say(advanceWords.Stakeholder), said.Say(advanceWords.StakeholderPlay)},
+			{said.Say(advanceWords.Slip), said.Say(advanceWords.SlipPlay)},
 		}
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDelivery, crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRenewalRisk:
 		return [][2]string{
-			{"It becomes an escalation", "Take it seriously in the room. Name what you will fix and by when; commit to nothing else."},
-			{"They ask for more scope", "Welcome it and price it. Agreeing to it here is how a delivery goes red."},
+			{said.Say(advanceWords.Escalation), said.Say(advanceWords.EscalationPlay)},
+			{said.Say(advanceWords.Scope), said.Say(advanceWords.ScopePlay)},
 		}
 	default:
 		return [][2]string{
-			{"They want the demo early", "Show the two things they named, then return to what problem they were for."},
-			{"They will not name a problem", "Ask what happens today, step by step, and listen for where it costs them."},
+			{said.Say(advanceWords.EarlyDemo), said.Say(advanceWords.EarlyDemoPlay)},
+			{said.Say(advanceWords.NoProblem), said.Say(advanceWords.NoProblemPlay)},
 		}
 	}
 }

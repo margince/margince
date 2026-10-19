@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -224,6 +223,8 @@ const (
 	HeldMissedWindow    = "missed_window"
 	HeldTimerExhausted  = "timer_exhausted"
 	HeldSendRefused     = "send_refused"
+	HeldFollowupSettled = "followup_settled"
+	HeldMeetingCanceled = "meeting_canceled"
 )
 
 // InvalidScheduleError refuses a due moment the server will not accept. It maps

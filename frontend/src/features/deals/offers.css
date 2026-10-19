@@ -10,8 +10,9 @@
   width: 180px;
 }
 
+/* Wide enough for the longest unit name, "Pauschale". */
 .input.offers-line-unit {
-  width: 70px;
+  width: 120px;
 }
 
 .input.offers-line-quantity,
