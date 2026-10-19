@@ -105,19 +105,36 @@ func DecodeOrRefusal(w http.ResponseWriter, r *http.Request, into any) error {
 
 //craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
 func decodeRefusal(w http.ResponseWriter, r *http.Request, into any, owned func(string) bool, closed bool) error {
+	raw, err := readBody(w, r)
+	if err != nil {
+		return err
+	}
+	return decodeRaw(r, raw, into, owned, closed)
+}
+
+// readBody reads the capped body, answering the refusal a short or oversized
+// read owes.
+func readBody(w http.ResponseWriter, r *http.Request) (json.RawMessage, error) {
 	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxBodyBytes))
 	if err != nil {
 		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
-			return BodyTooLargeRefusal("request body exceeds the 1 MiB cap")
+			return nil, BodyTooLargeRefusal("request body exceeds the 1 MiB cap")
 		}
 		// A read that failed mid-body is a transport fact — timed-out sockets
 		// carry host and port — so the caller is told what to do about it and
 		// the operator's half stays in the log.
 		slog.WarnContext(r.Context(), "reading request body",
 			"method", r.Method, "path", loggedPath(r), "err", err)
-		return Validation("body", "malformed_json",
+		return nil, Validation("body", "malformed_json",
 			"the request body could not be read to the end; resend the request with a complete body")
 	}
+	return raw, nil
+}
+
+// decodeRaw decodes a body already read, by the rules Decode states.
+//
+//craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
+func decodeRaw(r *http.Request, raw json.RawMessage, into any, owned func(string) bool, closed bool) error {
 	// A field key that only case-folds onto a contract field (or is
 	// unknown) is refused rather than matched by encoding/json's
 	// case-insensitive fallback — the same gate the provider seam applies,

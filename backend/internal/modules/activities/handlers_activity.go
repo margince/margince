@@ -58,7 +58,7 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 
 func (h Handlers) LogActivity(w http.ResponseWriter, r *http.Request, _ crmcontracts.LogActivityParams) {
 	var req crmcontracts.CreateActivityRequest
-	if !httperr.Decode(w, r, &req) {
+	if !httperr.DecodeCustomFields(w, r, &req) {
 		return
 	}
 	// A declared importer — a HUMAN holding import_run:create — may stamp the

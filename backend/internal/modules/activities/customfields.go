@@ -115,8 +115,10 @@ func (s *Store) checkCustomPatch(ctx context.Context, in *UpdateActivityInput) e
 func refuseNonCustomKeys(extra map[string]any) error {
 	for _, key := range slices.Sorted(maps.Keys(extra)) {
 		if !strings.HasPrefix(key, customFieldPrefix) || key == customFieldPrefix {
-			return &CustomFieldError{Field: key, Code: codeUnknownField,
-				Message: "is not a field of an activity; a custom field is sent by its cf_ key"}
+			return &CustomFieldError{
+				Field: key, Code: codeUnknownField,
+				Message: "is not a field of an activity; a custom field is sent by its cf_ key",
+			}
 		}
 	}
 	return nil
@@ -133,15 +135,19 @@ func checkCustomValues(active []fieldcatalog.Column, values map[string]any) erro
 	for _, key := range slices.Sorted(maps.Keys(values)) {
 		column, ok := byName[key]
 		if !ok {
-			return &CustomFieldError{Field: key, Code: codeUnknownField,
-				Message: "names no active activity custom field"}
+			return &CustomFieldError{
+				Field: key, Code: codeUnknownField,
+				Message: "names no active activity custom field",
+			}
 		}
 		if values[key] == nil {
 			continue
 		}
 		if _, ok := storekit.SQLValue(column, values[key]); !ok {
-			return &CustomFieldError{Field: key, Code: codeInvalidValue,
-				Message: "takes a " + column.Type + " value"}
+			return &CustomFieldError{
+				Field: key, Code: codeInvalidValue,
+				Message: "takes a " + column.Type + " value",
+			}
 		}
 	}
 	return nil

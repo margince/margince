@@ -12,6 +12,7 @@ package integration
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -122,4 +123,41 @@ func TestAnActivityCreateRefusesWhatItCannotStore(t *testing.T) {
 		})
 	}
 	d.restStatus(t, "GET", "/v1/activities?cf_nobody_defined=x", nil, http.StatusUnprocessableEntity)
+}
+
+// The create body takes cf_ keys and stays closed to every other key. Its
+// refusals are a closed body's: the key by name, and the path as sent.
+// The tool door refuses a guessed link key before it runs, naming the item key.
+func TestAnActivityCreateStillNamesAMisspeltField(t *testing.T) {
+	d, column := activityFieldDoors(t)
+	for name, tc := range map[string]struct {
+		body AnyMap
+		want string
+	}{
+		"a misspelt core field": {AnyMap{"subjekt": "x"}, `unknown field "subjekt"`},
+		"a nested shape fault": {
+			AnyMap{"links": []AnyMap{{"entity_type": "contact", "entity_id": 5}}},
+			"`links.0.entity_id` must be",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			tc.body["kind"], tc.body["subject"], tc.body["source"], tc.body[column] = "note", "Refused", "manual", "on_site"
+			var problem struct {
+				Detail string `json:"detail"`
+			}
+			if err := json.Unmarshal(d.restStatus(t, "POST", "/v1/activities", tc.body, http.StatusUnprocessableEntity), &problem); err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(problem.Detail, tc.want) {
+				t.Errorf("detail = %q, want it to say %q", problem.Detail, tc.want)
+			}
+		})
+	}
+	refused := d.mcp.CallRefused(t, "log_activity", map[string]any{
+		"kind": "note", "subject": "Refused", column: "on_site",
+		"links": []map[string]any{{"company_id": "019fcb8a-1e77-72ad-a2ad-5bc1b335a8f9"}},
+	})
+	if want := "`links[0].entity_id` is required"; !strings.Contains(refused, want) {
+		t.Errorf("the tool refused a guessed link key with %q, want it to say %q", refused, want)
+	}
 }

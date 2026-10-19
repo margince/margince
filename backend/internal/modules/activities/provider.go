@@ -102,7 +102,7 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 		return datasource.EntityRef{}, err
 	}
 	var req crmcontracts.UpdateActivityRequest
-	if err := datasource.StrictDecode(raw, &req); err != nil {
+	if err := datasource.StrictCustomFieldDecode(raw, &req); err != nil {
 		return datasource.EntityRef{}, err
 	}
 	update := activityUpdateInput(req, in.IfVersion)
@@ -180,7 +180,7 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 		return datasource.EntityRef{}, err
 	}
 	var req crmcontracts.CreateActivityRequest
-	if err := datasource.StrictDecode(raw, &req); err != nil {
+	if err := datasource.StrictCustomFieldDecode(raw, &req); err != nil {
 		return datasource.EntityRef{}, err
 	}
 	req.Source = in.Source
