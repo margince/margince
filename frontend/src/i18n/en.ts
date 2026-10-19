@@ -2929,6 +2929,8 @@ export const en = {
   "activity.detail.none": "This activity",
   "activity.followUps": "Follow-up tasks",
   "activity.noFollowUps": "No follow-up tasks",
+  "activity.files.empty": "No files on this activity yet.",
+  "activity.files.title": "Files on {subject}",
   "activity.followUpOpen": "Open",
   "activity.detail.withheldReason": "Activity content is withheld",
   "activity.detail.when": "When",
@@ -4981,6 +4983,10 @@ export const en = {
   "log.transcriptUploadRejected": "Only a .txt file is accepted.",
   "log.transcriptUploadFailed":
     "File could not be read. Paste the text instead.",
+  "log.files": "Attach files",
+  "log.filesEmpty": "Drop files here, or click to choose them",
+  "log.fileUnattached":
+    "The activity is logged, but {filename} was not attached. {reason}",
   "log.dueAt": "Due date",
   "log.date": "Date",
   "log.dateHint": "The day it happened; for a later day, add a task.",

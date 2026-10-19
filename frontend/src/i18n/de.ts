@@ -2893,6 +2893,8 @@ export const de = {
   "activity.detail.none": "Diese Aktivität",
   "activity.followUps": "Folgeaufgaben",
   "activity.noFollowUps": "Keine Folgeaufgaben",
+  "activity.files.empty": "Noch keine Dateien an dieser Aktivität.",
+  "activity.files.title": "Dateien zu {subject}",
   "activity.followUpOpen": "Offen",
   "activity.detail.withheldReason": "Inhalt der Aktivität ist zurückgehalten",
   "activity.detail.when": "Wann",
@@ -4906,6 +4908,10 @@ export const de = {
   "log.transcriptUploadRejected": "Nur eine .txt-Datei ist zulässig.",
   "log.transcriptUploadFailed":
     "Die Datei konnte nicht gelesen werden. Füge stattdessen den Text ein.",
+  "log.files": "Dateien anhängen",
+  "log.filesEmpty": "Dateien hier ablegen oder zum Auswählen klicken",
+  "log.fileUnattached":
+    "Die Aktivität ist erfasst, aber {filename} wurde nicht angehängt. {reason}",
   "log.attendee": "Teilnehmende",
   "log.otherAttendees": "Weitere Teilnehmende",
   "log.removeAttendee": "{name} entfernen",

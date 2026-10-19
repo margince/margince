@@ -460,8 +460,8 @@ export function AddDocumentDialog({
  * that says nothing about the file just filed.
  */
 function staleAfterUpload(anchor: DocumentAnchor): readonly QueryKey[] {
-  if (anchor.record === "contact") {
-    return [["attachments", "contact", anchor.id]];
+  if (anchor.record === "contact" || anchor.record === "activity") {
+    return [["attachments", anchor.record, anchor.id]];
   }
   if (anchor.record === "deal") {
     return [

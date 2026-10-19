@@ -1,0 +1,13 @@
+/* The files sit as one wrapping row of cards, with the upload verb under them. */
+.activity-files {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.activity-files-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+}

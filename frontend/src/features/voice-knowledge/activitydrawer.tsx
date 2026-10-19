@@ -11,6 +11,7 @@ import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
 import { Markdown } from "../../design-system/markdown";
+import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { TIMELINE_KIND_LABEL } from "../../design-system/timelineentry";
 import { isTranscriptActivity } from "../../design-system/transcriptread";
@@ -21,6 +22,7 @@ import { useActivity } from "../../lib/activityread";
 import { useCanWrite } from "../../lib/capability";
 import { problemCodeOf } from "../../lib/problem";
 import { ActivityFollowUps } from "../../screens/activityfollowups";
+import { ActivityFiles } from "../records/activityfiles";
 import { mostSpecificFirst, RecordLinks } from "../records/recordlinks";
 import { TaskDetailDialog, useTaskUpdate } from "../worklist/taskactions";
 import { worklistKey } from "../worklist/worklist.queries";
@@ -195,6 +197,14 @@ function ActivityBody({
       {withheldOrBody(activity, t)}
       {activity.content_state !== "withheld" && (
         <>
+          <Panel title={t("files.title")}>
+            <PanelBody>
+              <ActivityFiles
+                activityId={activity.id}
+                archived={Boolean(activity.archived_at)}
+              />
+            </PanelBody>
+          </Panel>
           {["meeting", "call", "note"].includes(activity.kind) && (
             <ActivityFollowUps
               sourceId={activity.id}

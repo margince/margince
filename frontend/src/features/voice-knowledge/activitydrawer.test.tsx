@@ -70,3 +70,42 @@ it("labels archived evidence while keeping its permitted text", async () => {
   expect(await screen.findByText("Archived")).toBeTruthy();
   expect(screen.getByText("The buyer asked for a revised quote.")).toBeTruthy();
 });
+it("lists the activity's files and offers an upload while it is live", async () => {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "update"] }),
+    "GET /activities/source": () =>
+      jsonResponse({
+        id: "source",
+        kind: "meeting",
+        subject: "Kickoff",
+        occurred_at: "2026-07-01T09:00:00Z",
+        content_state: "available",
+        links: [],
+      }),
+    "GET /attachments": () =>
+      jsonResponse({
+        data: [
+          {
+            id: "att-price",
+            entity_type: "activity",
+            entity_id: "source",
+            filename: "price-list-2026.pdf",
+            created_at: "2026-07-01T09:00:00Z",
+          },
+        ],
+        page: { has_more: false, next_cursor: null },
+      }),
+  });
+  renderWithQueryClient(
+    <OpenActivityDrawer
+      activityId="source"
+      zone={viewerZone()}
+      onClose={() => {}}
+    />,
+  );
+  const link = await screen.findByRole("link", {
+    name: /price-list-2026\.pdf/,
+  });
+  expect(link.getAttribute("href")).toBe("/v1/attachments/att-price");
+  expect(screen.getByRole("button", { name: "Add document" })).toBeTruthy();
+});
