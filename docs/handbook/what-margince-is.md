@@ -226,7 +226,7 @@ The FAQ, the help or the handbook search is called **Ask your documents** in Mar
 
 A to-do list or a task inbox is called the **Worklist** in Margince. It is on **Home**.
 
-An API key or an access token for an AI agent is called a **passport** in Margince. You create one in Settings → **Agents**.
+An API key or an access token for an AI agent is called a **passport** in Margince. You create one in Settings → **AI access**, under **For developers**.
 
 A writing style or tone profile is called **Voice DNA** in Margince. You set it up in Settings → **Writing voice**.
 

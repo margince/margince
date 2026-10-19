@@ -13,7 +13,7 @@ Also called: preferences, admin settings, configuration, options.
 
 ### What settings pages are there?
 Margince Settings puts its pages in these groups:
-- **You**: Account, Meetings, Writing voice, Agents, Notifications, Connections, Capture activity.
+- **You**: Account, Meetings, Writing voice, AI access, Notifications, Connections, Capture activity.
 - **Company**: Company profile, Sign-in and apps.
 - **People**: Members, Teams, Roles and permissions, Seats and license.
 - **Sales**: Pipelines, Stage automation, Lead handling, Acquisition sources, Outcome reviews, Responsibility roles, Fields, Tags, Products and offers.
@@ -30,7 +30,7 @@ Your own things in Margince are under **You** in Settings.
 - Set when customers can book you: **Meetings**, in **Availability**.
 - Set up how your drafts sound: **Writing voice**.
 - Choose how each kind of notification reaches you, and whether the morning brief and weekly review come by email: **Notifications**.
-- Create or take back an API key for an AI agent: **Agents**.
+- Connect your AI tool, such as Claude or ChatGPT, or create an API key for a script: **AI access**.
 - Connect your mailbox or calendar, or import from LinkedIn: **Connections**.
 - Keep a sender out of capture, or see why an email did not come in: **Capture activity**.
 

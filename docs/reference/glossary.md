@@ -11,6 +11,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | AC | Acceptance criterion: a numbered screen check, as in `AC-<screen>-N`. |
 | AES | The Advanced Encryption Standard, used as AES-256-GCM to seal secrets. |
 | AI | Artificial intelligence: the language models Margince calls. |
+| Antigravity | Google's AI coding tool, which can connect to Margince. |
 | Apache | The Apache License 2.0, which each release becomes after two years. |
 | API | The HTTP interface the server offers, defined in `backend/api/crm.yaml`. |
 | backend | The Go server code under `backend/`. |

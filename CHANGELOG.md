@@ -126,6 +126,19 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Changed
 
+- **Settings → Agents is now Settings → AI access, and it starts with
+  connecting your AI tool.** The **Connect your AI tool** card asks **Which AI
+  do you use?** (Claude, ChatGPT, Microsoft Copilot or Gemini) and **Who pays
+  for it?** (**My company** or **Just me**), then shows the steps for that one
+  case. A company plan gets **Download guide for your admin**, a file with the
+  admin's steps and the Margince address; a plan you pay for yourself gets
+  **Copy address**. Copilot on a personal account and Gemini through work or
+  school cannot connect, and the card says so. **Your connections** lists each
+  connected tool. Command-line tools (Claude Code, Codex and Antigravity, in
+  place of Gemini CLI), **Passports**, the tool list, **Autonomy tiers** and
+  **Automatic changes** sit under **For developers**, closed until opened. The
+  page keeps its address, `#/settings/agents`.
+
 - **Some reads are for humans only.** These answer a signed-in human only,
   through the API or MCP: the installation, capture and integration settings,
   the morning digest, a backfill's progress, exchange rates, AI model prices,

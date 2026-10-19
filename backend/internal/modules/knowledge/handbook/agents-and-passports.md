@@ -15,48 +15,63 @@ There is one rule under everything here:
 
 ## Connecting and controlling agents
 
+### How do I connect my AI tool to Margince?
+To connect your AI tool to Margince, open **Settings → AI access** and answer the two questions on the **Connect your AI tool** card. Copilot on a personal account, and Gemini through work or school, cannot connect; the card says so.
+1. Open the account menu, choose **Settings**, then **AI access**.
+2. Under **Which AI do you use?**, choose **Claude**, **ChatGPT**, **Microsoft Copilot** or **Gemini**.
+3. Under **Who pays for it?**, choose **My company** or **Just me**.
+4. If the card says "First, your admin.", choose **Download guide for your admin** and send them the file.
+5. If the card shows your Margince address, choose **Copy address** and paste it where the steps say.
+6. Follow the numbered steps the card shows for that one case.
+7. When Margince opens, sign in and choose **Authorize** on **Authorize access**.
+That file holds the admin's steps and your Margince address. **Authorize access** ticks all five permissions; beside **Send messages** it says "sends messages as you, without asking first".
+Clear any the tool should not get. Authorizing creates the connection, listed under **Your connections**, so you need no passport.
+Also called: connect Claude, connect ChatGPT, Copilot, Gemini, AI assistant, connector, MCP.
+
 ### What is an agent passport?
 An agent passport in Margince is your personal access token: whatever uses it, an AI tool or your own code, acts as you. It carries your own seat, permissions and record visibility, cut down to the **Agent permissions** you tick.
-Those are **Read records**, **Draft messages**, **Change records**, **Send messages** and **Buy contact data**. An agent can never do more than you can. You create and revoke passports yourself in **Settings → Agents**.
+Those are **Read records**, **Draft messages**, **Change records**, **Send messages** and **Buy contact data**. An agent can never do more than you can. You create and revoke passports yourself in **Settings → AI access**, under **For developers**.
 Also called: API key, token, agent credential, access token.
 
 ### How do I give an agent access to Margince?
-To give a script or AI agent access to Margince, open **Settings → Agents** and choose **New passport** on the **Agent passports** card.
-1. Open the account menu, choose **Settings**, then **Agents**.
-2. Choose **New passport**.
-3. Fill **Agent name**.
-4. Under **Agent permissions**, tick at least one permission.
-5. Choose **Mint passport**.
-6. Choose **Copy passport** now: "Passport created. It is shown only once, so copy it now."
-7. Under **Next, use it**, choose **Download skill** for an AI tool, or **Copy example** for your own code.
-A passport lasts 30 days. For an MCP client, use **Connect MCP client** on the **Connected MCP clients** card instead.
-Also called: create an API key, connect ChatGPT or Claude, integrate an agent.
+To give a script or your own code access to Margince, open **Settings → AI access**, then **For developers**. Choose **New passport** on the **Passports** card.
+1. Open the account menu, choose **Settings**, then **AI access**.
+2. Open **For developers**.
+3. Choose **New passport**.
+4. Fill **Agent name**.
+5. Under **Agent permissions**, tick at least one permission.
+6. Choose **Mint passport**.
+7. Choose **Copy passport** now: "Passport created. It is shown only once, so copy it now."
+8. Under **Next, use it**, choose **Download skill** for an AI tool, or **Copy example** for your own code.
+A passport lasts 30 days. To use Margince in Claude, ChatGPT, Copilot or Gemini, [connect the tool](#how-do-i-connect-my-ai-tool-to-margince) instead.
+Also called: create an API key, script access, integrate an agent.
 
 ### How do I use a passport in my AI tool?
-To use a passport in an AI tool such as Claude, Codex or Gemini, download the Margince skill. Then save your passport where the tool can find it.
-1. Open **Settings → Agents**. On the **Agent passports** card, under **In your AI tool**, choose **Download skill**.
-2. Open `margince-skill.zip`. It holds one folder, `margince`.
-3. For Claude Code, move the folder to `~/.claude/skills/margince`. For Claude Desktop, add the zip file as a skill in the app's settings.
-4. For Codex or Gemini, follow the `README.md` in the folder. You move the folder, then add one line to your `AGENTS.md` or `GEMINI.md`.
-5. Before you start the AI tool, set `MARGINCE_PASSPORT` to your passport, the only place the tool reads it from. The `README.md` shows how, also from your Keychain or 1Password.
+To use a passport in an AI tool such as Claude Code, Codex or Antigravity, download the Margince skill. Then save your passport where the tool can find it.
+1. Open **Settings → AI access**, then **For developers**.
+2. On the **Passports** card, under **In your AI tool**, choose **Download skill**.
+3. Open `margince-skill.zip`. It holds one folder, `margince`.
+4. For Claude Code, move the folder to `~/.claude/skills/margince`. For Claude Desktop, add the zip file as a skill in the app's settings.
+5. For Codex or Antigravity, follow the `README.md` in the folder. You move the folder, then add one line to your `AGENTS.md` or `GEMINI.md`.
+6. Before you start the AI tool, set `MARGINCE_PASSPORT` to your passport, the only place the tool reads it from. The `README.md` shows how, also from your Keychain or 1Password.
 Never paste your passport into a chat with the AI tool. The skill tells the tool where to find it. No passport is in the download, so one download works for all your passports.
-Also called: Claude skill, add Margince to Claude, Codex, Gemini, AI tool setup.
+Also called: Claude skill, add Margince to Claude Code, Codex, Antigravity, AI tool setup.
 
 ### How do I call Margince from my own code?
 To call Margince from your own code, send your passport with each call.
-On the **Agent passports** card, under **In your own code**, choose **curl**, **Python** or **JavaScript**, then **Copy example**. It reads the passport from `MARGINCE_PASSPORT`, so set that first.
+On the **Passports** card in **For developers**, under **In your own code**, choose **curl**, **Python** or **JavaScript**, then **Copy example**. It reads the passport from `MARGINCE_PASSPORT`, so set that first.
 The `openapi.yaml` file in the skill lists every call a passport can make.
 Also called: REST API, API key, script, access token, integration.
 
-### How do I connect an MCP client such as Claude to Margince?
-To connect an agent that uses MCP, open **Settings → Agents**, go to **Connected MCP clients** and follow **Connect MCP client**. Run one of the commands shown, and the client signs itself up.
-Margince then shows **Authorize access**: "{client} will be able to act in Margince as you, with the access checked below." Clear the boxes for what it should not get, then choose **Authorize**, or **Deny access**.
-If the page says "The MCP connector is off for this installation.", an administrator or operations user must turn it on first.
-Also called: MCP server, Claude Desktop, AI assistant integration.
+### How do I connect a command-line tool to Margince?
+To connect a command-line tool such as Claude Code, Codex or Antigravity, open **Settings → AI access**, then **For developers**. The **Command-line tools** card shows what to run for each tool.
+Run it, then sign in in the browser and choose **Authorize** on **Authorize access**. You need no passport for this.
+If the page says "AI tools cannot connect to Margince yet.", an administrator or operations user must turn it on first.
+Also called: MCP client, MCP server, command line, AI assistant integration.
 
 ### How do I revoke an agent's access?
-To stop an agent, open **Settings → Agents**. For a passport, open the **…** menu on its row and choose **Revoke**: "The passport’s credential is invalidated immediately. The agent loses access on its next call."
-For an MCP client, open the **…** menu on its row under **Connected MCP clients** and choose **Disconnect**, which ends the whole connection. Turning off a user revokes all their passports at once.
+To stop an agent, open **Settings → AI access**. For a passport, open **For developers**, then the **…** menu on its row, and choose **Revoke**: "The passport’s credential is invalidated immediately. The agent loses access on its next call."
+For a connected AI tool, open the **…** menu on its row under **Your connections** and choose **Disconnect**, which ends the whole connection. Turning off a user revokes all their passports at once.
 Also called: kill switch, remove an agent, disconnect, delete an API key.
 
 ### How do I let Margince work overnight for me?
@@ -115,12 +130,10 @@ than all the others together.
 
 An installation that needs every agent send confirmed can set a floor on
 sending. A send then waits in Approvals like anything else. Whoever runs your
-installation sets this; there is no switch for it in Settings.
+installation sets this; there is no switch for it in Settings. If you need sends
+confirmed, ask them whether that floor is set. Ask; do not guess.
 
-If you need sends confirmed in your company, ask whoever runs your
-installation whether that floor is set. Ask; do not guess.
-
-The **Autonomy tiers** card in **Settings → Agents** states the same rule.
+The **Autonomy tiers** card in **Settings → AI access**, under **For developers**, states the same rule.
 It reads "Send email, book meetings, update a contact or deal: runs immediately if the
 agent has that permission. Granting the permission is the approval." and
 "Enrichment and tag merges: wait in Approvals."
@@ -263,11 +276,10 @@ original, wider request is not sent again.
 ## Passports: how an agent is connected
 
 A **passport** is the credential that ties one agent to one colleague. You
-create it yourself in **Settings → Agents**, and you can revoke it yourself.
-Revoking cuts off that one agent. The **Agent passports** card says: "A passport
-is your personal access token. Whatever uses it acts as you, with the
-permissions you tick, and never more. Every request checks your permissions
-again."
+create it yourself in **Settings → AI access**, under **For developers**, and you
+can revoke it yourself. Revoking cuts off that one agent. The **Passports** card
+says: "A passport is your personal credential for scripts and your own code.
+Whatever uses it acts as you, with the permissions you tick, and never more."
 
 A passport carries narrower permissions than the colleague has. Each one stands
 alone: ticking one never includes another. The app names them **Agent
@@ -351,25 +363,14 @@ running. Raise one, and a stopped agent can go on. Lower one, and an agent
 already past it is refused on its next call. A new window size waits for the
 next reset, so no agent starts over early; the card says when it starts.
 
-**Settings › Agent passports** shows, per passport and connected app, the
-allowance closest to running out; open a row to see all three. Revoked passports
-are hidden; the button under the list shows them. **AI usage › Agent usage by
-user** shows how much each user's agents used, never which passport or what it
-read. Administrators, Management and operations users see it.
+In **Settings → AI access**, each row under **Your connections** and **Passports**
+shows the allowance closest to running out. Open a row to see all three. Revoked passports are hidden; the button under the list shows them.
+**AI usage › Agent usage by user** shows how much each user's agents used, never
+which passport or what it read. Administrators, Management and operations users see it.
 
 Only whoever approved the connection can answer a request to widen it. An
 administrator cannot, and neither can the owner of the company. An agent's
 limit is that colleague's own authority.
-
-When an outside app asks to connect, you get an **Authorize access** screen. It
-says "{client} will be able to act in Margince as you, with the access checked
-below." It names the address the answer is sent back to, and lists the five
-permissions as boxes to tick. Beside **Send messages** it says "sends messages
-as you, without asking first".
-
-All boxes are ticked by default. You clear what it should not get before
-choosing **Authorize**, or you choose **Deny access**. There is nothing to set
-up first: authorizing creates the connection.
 
 ## Files and agents
 

@@ -51,8 +51,8 @@ checked there. See [connect-an-mcp-client.md](connect-an-mcp-client.md).
 
 ## Give the passport to an AI tool
 
-An AI tool such as Claude Code, Codex or Gemini CLI learns the API from the Margince skill. Download it
-from **Settings → Agents** (**Download skill**), or with your session:
+An AI tool such as Claude Code, Codex or Antigravity learns the API from the Margince skill. Download it
+from **Settings → AI access**, under **For developers** (**Download skill**), or with your session:
 
 ```sh
 curl http://localhost:8080/v1/agent-bundle \
@@ -61,7 +61,8 @@ curl http://localhost:8080/v1/agent-bundle \
 
 Only a session can download it; a passport is refused. The ZIP holds one folder, `margince/`, with four files:
 
-- `README.md`: how to save the passport and install the skill in each tool.
+- `README.md`: how to connect each AI tool without a passport, then how to save the passport and
+  install the skill in each tool.
 - `SKILL.md`: the rules the tool follows. The tool reads the passport from `MARGINCE_PASSPORT` only.
   You may keep the passport in the macOS Keychain or 1Password and set `MARGINCE_PASSPORT` from there,
   as `README.md` shows.
