@@ -238,9 +238,10 @@ function findingsIn(path: string, source: string): Finding[] {
  * fails by name and count rather than returning as an opaque timeout.
  */
 const PARSE_BUDGET_PER_FILE_MS = 40;
-// About a month of headroom at the growth measured on main when this was set —
-// roughly fifty source files a day, over a corpus of just past 2,000.
-const BUDGETED_CORPUS_FILES = 3_500;
+// About a month of headroom at the growth measured on main when this was set:
+// roughly fifty source files a day. The corpus stands at 3,501, which is what
+// the assertion below reports when the tree outgrows the premise again.
+const BUDGETED_CORPUS_FILES = 5_000;
 const SCAN_TIMEOUT_MS = BUDGETED_CORPUS_FILES * PARSE_BUDGET_PER_FILE_MS;
 
 describe("one plural rule", () => {
