@@ -198,7 +198,7 @@ confirmation.
 
 ## When something changed first
 
-The record may change while an approval waits. Stage the proposal again before
+The record may change while an approval waits. Ask for a current proposal before
 approving it so the decision uses the current record. You can still reject the
 old proposal.
 
