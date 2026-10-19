@@ -12525,7 +12525,7 @@ export const vi = {
     "{word}: khớp bất kỳ điều kiện nào. Nhấn để chuyển sang khớp tất cả.",
   "filters.group.all": "Tất cả các điều kiện này",
   "filters.group.any": "Bất kỳ điều kiện nào",
-  "filters.addGroupToGroup": "Thêm nhóm vào nhóm này",
+  "filters.addGroupToGroup": "Thêm nhóm con",
   "filters.group.match": "Điều kiện cần khớp",
   "filters.proposed": "Đề xuất",
   "filters.switch.title": "Chuyển sang {records}?",

@@ -705,7 +705,7 @@ describe("groups", () => {
     });
     // The group's own offer of a group, named apart from the root's.
     expect(
-      screen.getByRole("button", { name: "Add a group inside this group" }),
+      screen.getByRole("button", { name: "Add nested group" }),
     ).toBeTruthy();
   });
 
@@ -783,7 +783,7 @@ describe("groups", () => {
     // Every group holds two conditions. Depths 2 and 3 may still nest; depth 4
     // may not, or the tree is one the server refuses as filter_too_deep.
     expect(
-      screen.getAllByRole("button", { name: "Add a group inside this group" }),
+      screen.getAllByRole("button", { name: "Add nested group" }),
     ).toHaveLength(2);
     expect(screen.getByRole("button", { name: "Add a group" })).toBeTruthy();
   });

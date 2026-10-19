@@ -12848,7 +12848,7 @@ export const de = {
     "{word}: Eine davon muss zutreffen. Drücke, damit alle zutreffen müssen.",
   "filters.group.all": "Alle davon",
   "filters.group.any": "Mindestens eine davon",
-  "filters.addGroupToGroup": "Gruppe in dieser Gruppe hinzufügen",
+  "filters.addGroupToGroup": "Untergruppe hinzufügen",
   "filters.group.match": "Zu erfüllende Bedingungen",
   "filters.proposed": "Vorgeschlagen",
   "filters.switch.title": "Zu {records} wechseln?",

@@ -12872,7 +12872,7 @@ export const en = {
     "{word}: match any of these. Press to match all.",
   "filters.group.all": "All of these",
   "filters.group.any": "Any of these",
-  "filters.addGroupToGroup": "Add a group inside this group",
+  "filters.addGroupToGroup": "Add nested group",
   "filters.group.match": "Conditions to match",
   "filters.proposed": "Proposed",
   "filters.switch.title": "Switch to {records}?",

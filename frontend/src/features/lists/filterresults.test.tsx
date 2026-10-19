@@ -263,7 +263,22 @@ describe("a column that points at another record", () => {
       references: "company",
       custom: false,
     },
+    {
+      name: "project_id",
+      type: "id",
+      operators: ["eq"],
+      references: "project",
+      custom: false,
+    },
+    {
+      name: "owner_team_id",
+      type: "id",
+      operators: ["eq"],
+      references: "team",
+      custom: false,
+    },
   ];
+  const NAMED = DEAL_FIELDS.map((field) => field.name);
 
   function jsonResponse(body: unknown, status = 200) {
     return new Response(JSON.stringify(body), {
@@ -272,12 +287,24 @@ describe("a column that points at another record", () => {
     });
   }
 
-  // Names only u-1, s-1 and c-1. Every other id is one the workspace no longer
-  // holds, the way a removed seat or a deleted stage is.
-  function stubWorkspace() {
+  // Names only u-1, s-1, c-1, p-1 and t-1. Every other id is one the workspace
+  // no longer holds, the way a removed seat or a deleted stage is.
+  function stubWorkspace({ companiesFail = false } = {}) {
     const fetchMock = vi.fn(async (request: Request) => {
       const url = new URL(request.url);
       const path = url.pathname;
+      if (path.endsWith("/companies") && companiesFail) {
+        return jsonResponse({ title: "Server error" }, 500);
+      }
+      if (path.endsWith("/projects/p-1")) {
+        return jsonResponse({ id: "p-1", name: "Rollout" });
+      }
+      if (path.endsWith("/teams")) {
+        return jsonResponse({
+          data: [{ id: "t-1", name: "Field Sales" }],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
       if (path.endsWith("/companies")) {
         const asked = url.searchParams.getAll("id");
         return jsonResponse({
@@ -318,12 +345,12 @@ describe("a column that points at another record", () => {
             preview={{
               resource: "deal",
               match_count: rows.length,
-              columns: ["id", "name", "owner_id", "stage_id", "company_id"],
+              columns: ["id", "name", ...NAMED],
               rows: rows as FilterPreview["rows"],
               truncated: false,
             }}
             fields={DEAL_FIELDS}
-            named={["owner_id", "stage_id", "company_id"]}
+            named={NAMED}
             unit="deals"
             widthsKey="filter-preview-deals"
             pending={false}
@@ -393,5 +420,36 @@ describe("a column that points at another record", () => {
     expect(screen.queryByText("u-removed")).toBeNull();
     expect(screen.queryByText("s-removed")).toBeNull();
     expect(screen.queryByText("c-removed")).toBeNull();
+  });
+
+  it("names a project and a team, and says when either is gone", async () => {
+    stubWorkspace();
+    renderDeals([
+      { id: "d-1", name: "Live", project_id: "p-1", owner_team_id: "t-1" },
+      {
+        id: "d-2",
+        name: "Orphaned",
+        project_id: "p-removed",
+        owner_team_id: "t-removed",
+      },
+    ]);
+
+    expect(await screen.findByText("Rollout")).toBeTruthy();
+    expect(await screen.findByText("Field Sales")).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getAllByText(en["filters.resultRefGone"])).toHaveLength(2),
+    );
+    expect(screen.queryByText("p-removed")).toBeNull();
+    expect(screen.queryByText("t-removed")).toBeNull();
+  });
+
+  it("says a company's name did not load when the read fails", async () => {
+    // A failed read answered nothing about the company, so it may not claim
+    // the company is gone.
+    stubWorkspace({ companiesFail: true });
+    renderDeals([{ id: "d-1", name: "Brandt renewal", company_id: "c-1" }]);
+
+    expect(await screen.findByText(en["ref.nameLoadFailed"])).toBeTruthy();
+    expect(screen.queryByText(en["filters.resultRefGone"])).toBeNull();
   });
 });
