@@ -23,6 +23,10 @@ const noMailBaseline = "This is a calendar connection, which brings in no mail t
 
 // SetConnectorHistoryBaseline: PUT /connectors/{provider}/history-baseline.
 // The registry owns the scoping and the audit, and this is wire-only.
+
+// baselineDateField is the body key whose explicit null clears the baseline.
+const baselineDateField = "date"
+
 func (h connectorHandlers) SetConnectorHistoryBaseline(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
 	if h.registry == nil {
 		httperr.NotImplemented(w, r, "SetConnectorHistoryBaseline")
@@ -35,8 +39,8 @@ func (h connectorHandlers) SetConnectorHistoryBaseline(w http.ResponseWriter, r 
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if req.Date == nil && !slices.Contains(httperr.ClearedFields(r), "date") {
-		httperr.Write(w, r, &values.ParseError{Field: "date", Code: "date_required", Message: "send a date, or null to clear the baseline"})
+	if req.Date == nil && !slices.Contains(httperr.ClearedFields(r), baselineDateField) {
+		httperr.Write(w, r, &values.ParseError{Field: baselineDateField, Code: "date_required", Message: "send a date, or null to clear the baseline"})
 		return
 	}
 	var date *time.Time

@@ -10,7 +10,7 @@ ALTER TABLE capture_connection
     ADD CONSTRAINT capture_connection_history_baseline_check CHECK (
         (history_baseline_date IS NULL) = (history_baseline_tz IS NULL)
         AND (history_baseline_date IS NULL) = (history_baseline_set_by IS NULL)
-        AND (history_baseline_date IS NULL) = (history_baseline_set_at IS NULL));
+        AND (history_baseline_date IS NULL) = (history_baseline_set_at IS NULL)) NOT VALID;
 
 -- The mailboxes that delivered a message to this seat, as provider:generation.
 -- A rebind bumps the generation, so a new account never claims the old one's mail.
