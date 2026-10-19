@@ -28,38 +28,42 @@ func TestReportingFrameworkRejectsAmbiguousQualificationAndCaptureScopes(t *test
 	valid := crmcontracts.ReportingQualification{PipelineId: openapi_types.UUID(f.env.pipeline), StageIds: []openapi_types.UUID{openapi_types.UUID(f.env.stages[60])}}
 	cases := []struct {
 		name   string
+		field  string
 		change func(*crmcontracts.ReportingFrameworkInput)
-		want   error
 	}{
-		{"no reason", func(in *crmcontracts.ReportingFrameworkInput) { in.Reason = "" }, apperrors.ErrInvalidArgument},
-		{"unknown template", func(in *crmcontracts.ReportingFrameworkInput) { in.Template = "unknown" }, apperrors.ErrInvalidArgument},
-		{"empty stages", func(in *crmcontracts.ReportingFrameworkInput) {
+		{"no reason", "reason", func(in *crmcontracts.ReportingFrameworkInput) { in.Reason = "" }},
+		{"unknown template", "template", func(in *crmcontracts.ReportingFrameworkInput) { in.Template = "unknown" }},
+		{"too many captures", "capture_contexts", func(in *crmcontracts.ReportingFrameworkInput) {
+			in.CaptureContexts = make([]crmcontracts.ReportingCaptureContext, 21)
+		}},
+		{"empty stages", "qualification", func(in *crmcontracts.ReportingFrameworkInput) {
 			in.Qualification = []crmcontracts.ReportingQualification{{PipelineId: valid.PipelineId}}
-		}, apperrors.ErrInvalidArgument},
-		{"duplicate pipeline", func(in *crmcontracts.ReportingFrameworkInput) {
+		}},
+		{"duplicate pipeline", "qualification", func(in *crmcontracts.ReportingFrameworkInput) {
 			in.Qualification = []crmcontracts.ReportingQualification{valid, valid}
-		}, apperrors.ErrInvalidArgument},
-		{"duplicate stage", func(in *crmcontracts.ReportingFrameworkInput) {
+		}},
+		{"duplicate stage", "qualification", func(in *crmcontracts.ReportingFrameworkInput) {
 			in.Qualification = []crmcontracts.ReportingQualification{{PipelineId: valid.PipelineId, StageIds: []openapi_types.UUID{valid.StageIds[0], valid.StageIds[0]}}}
-		}, apperrors.ErrInvalidArgument},
-		{"missing stage", func(in *crmcontracts.ReportingFrameworkInput) {
-			in.Qualification = []crmcontracts.ReportingQualification{{PipelineId: valid.PipelineId, StageIds: []openapi_types.UUID{openapi_types.UUID(ids.NewV7())}}}
-		}, apperrors.ErrNotFound},
-		{"owner capture", func(in *crmcontracts.ReportingFrameworkInput) {
+		}},
+		{"owner capture", "capture_contexts", func(in *crmcontracts.ReportingFrameworkInput) {
 			in.CaptureContexts = []crmcontracts.ReportingCaptureContext{{Scope: crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(f.env.Rep1)}}}
-		}, apperrors.ErrInvalidArgument},
-		{"duplicate capture", func(in *crmcontracts.ReportingFrameworkInput) {
+		}},
+		{"duplicate capture", "capture_contexts", func(in *crmcontracts.ReportingFrameworkInput) {
 			in.CaptureContexts = []crmcontracts.ReportingCaptureContext{framework.Definition.CaptureContexts[0], framework.Definition.CaptureContexts[0]}
-		}, apperrors.ErrInvalidArgument},
+		}},
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
 			input := framework.Definition
 			test.change(&input)
-			if _, err := f.service.PublishFramework(f.human, framework.Version, input); !errors.Is(err, test.want) {
-				t.Fatalf("invalid framework: %v", err)
-			}
+			_, err := f.service.PublishFramework(f.human, framework.Version, input)
+			requireRefusedField(t, err, test.field)
 		})
+	}
+	missing := framework.Definition
+	missing.Qualification = []crmcontracts.ReportingQualification{{PipelineId: valid.PipelineId, StageIds: []openapi_types.UUID{openapi_types.UUID(ids.NewV7())}}}
+	if _, err := f.service.PublishFramework(f.human, framework.Version, missing); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("missing stage: %v", err)
 	}
 	current, err := f.service.GetFramework(f.human)
 	if err != nil || current.Version != framework.Version {
@@ -169,8 +173,8 @@ func TestReportingTargetsRejectAmbiguousPeriodsAndIdentityChanges(t *testing.T) 
 // names the field to fix, not a bare invalid argument.
 func requireRefusedField(t *testing.T, err error, field string) {
 	t.Helper()
-	var refused *httperr.DetailedError
-	if !errors.As(err, &refused) || refused.Status != http.StatusUnprocessableEntity || len(refused.Fields) != 1 || refused.Fields[0].Field != field {
-		t.Fatalf("want a 422 naming %q, got %v", field, err)
+	fault, ok := httperr.Classify(err)
+	if !ok || fault.Status != http.StatusUnprocessableEntity || len(fault.Fields) != 1 || fault.Fields[0].Field != field {
+		t.Fatalf("want a 422 naming %q, got %v (%+v)", field, err, fault)
 	}
 }

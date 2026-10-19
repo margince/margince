@@ -134,7 +134,7 @@ func (s *Service) ListReports(ctx context.Context, after *ids.UUID, limit int, s
 
 func (s *Service) validateReport(ctx context.Context, tx pgx.Tx, in *crmcontracts.ReportingReportInput) error {
 	if !values.HasVisibleText(in.Name) || utf8.RuneCountInString(in.Name) > 160 {
-		return invalid("name the report in at most 160 characters")
+		return refuse("name", "invalid", "name the report in at most 160 characters")
 	}
 	if err := s.validateRevision(ctx, tx, &in.Selection); err != nil {
 		return err
@@ -150,7 +150,7 @@ func (s *Service) validateRevision(ctx context.Context, tx pgx.Tx, selection *cr
 	}
 	scope, err := s.authority.Scope(ctx, tx, selection.Scope, false)
 	if err != nil {
-		return err
+		return refusedField("selection.scope", err)
 	}
 	selection.Scope = scope
 	if err := s.authority.Pipeline(ctx, tx, (*ids.UUID)(selection.PipelineId)); err != nil {
@@ -162,13 +162,13 @@ func (s *Service) validateRevision(ctx context.Context, tx pgx.Tx, selection *cr
 	}
 	interval, err := Interval(*selection, calendar, s.now())
 	if err != nil {
-		return err
+		return refusedField("selection.period", err)
 	}
 	if _, err := TargetWindow(interval, string(selection.TargetBasis), calendar); err != nil {
-		return err
+		return refusedField("selection.target_basis", err)
 	}
 	if selection.CloseWindow != "all_open" && selection.CloseWindow != reportingFiscalQuarter {
-		return invalid("choose the expected-close window")
+		return refuse("selection.close_window", "invalid", "choose the expected-close window")
 	}
 	return nil
 }
@@ -179,18 +179,18 @@ func (s *Service) validateSelection(ctx context.Context, selection crmcontracts.
 		return err
 	}
 	if len(selection.Metrics) == 0 || len(selection.Metrics) > 8 || len(selection.Blocks) > 20 {
-		return invalid("choose between one and eight supported metrics")
+		return refuse("selection.metrics", "out_of_range", "choose between one and eight supported metrics")
 	}
 	seen := map[crmcontracts.ReportingMetricID]bool{}
 	allowed := map[crmcontracts.ReportingBlockKind]bool{}
 	for _, id := range selection.Metrics {
 		if seen[id] {
-			return invalid("a metric may appear only once")
+			return refuse("selection.metrics", "duplicate", "a metric may appear only once")
 		}
 		seen[id] = true
 		index := slices.IndexFunc(catalog.Metrics, func(m crmcontracts.ReportingMetricDefinition) bool { return m.Id == id })
 		if index < 0 {
-			return invalid("a selected metric is unavailable")
+			return refuse("selection.metrics", "unsupported", "a selected metric is unavailable")
 		}
 		for _, block := range catalog.Metrics[index].Blocks {
 			allowed[block] = true
@@ -199,7 +199,7 @@ func (s *Service) validateSelection(ctx context.Context, selection crmcontracts.
 	blocks := map[crmcontracts.ReportingBlockKind]bool{}
 	for _, block := range selection.Blocks {
 		if !allowed[block] || blocks[block] {
-			return invalid("choose distinct charts belonging to the selected metrics")
+			return refuse("selection.blocks", "invalid", "choose distinct charts belonging to the selected metrics")
 		}
 		blocks[block] = true
 	}
@@ -349,22 +349,22 @@ func (s *Service) validateReportAudience(ctx context.Context, tx pgx.Tx, in *crm
 	switch in.Audience {
 	case "private":
 		if in.AudienceTeamId != nil {
-			return invalid("a private report has no audience team")
+			return refuse("audience_team_id", "not_allowed", "a private report has no audience team")
 		}
 	case reportingWorkspace:
 		if in.AudienceTeamId != nil {
-			return invalid("a company report has no audience team")
+			return refuse("audience_team_id", "not_allowed", "a company report has no audience team")
 		}
 		_, err := s.authority.Scope(ctx, tx, crmcontracts.ReportingScope{Kind: reportingWorkspace}, true)
 		return err
 	case reportingTeam:
 		if in.AudienceTeamId == nil {
-			return invalid("choose an audience team")
+			return refuse("audience_team_id", "required", "choose an audience team")
 		}
 		_, err := s.authority.Scope(ctx, tx, crmcontracts.ReportingScope{Kind: reportingTeam, Id: in.AudienceTeamId}, true)
 		return err
 	default:
-		return invalid("choose private, team or company availability")
+		return refuse("audience", "invalid", "choose private, team or company availability")
 	}
 	return nil
 }
