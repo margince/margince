@@ -5,7 +5,8 @@ import type { components } from "../../api/schema";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { RowOpen } from "../../design-system/rowopen";
 import { forReader } from "../../format/collate";
-import { type Locale, useLocale, useT } from "../../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { aiTaskLabel } from "../../lib/ai-task-label";
 import { tierLabel, tierRank } from "./ai-decision-labels";
 import { decisionFirstOrder } from "./ai-feature-order";
 import {
@@ -87,7 +88,7 @@ export function AiFeatureTable({
     render: (row) => (
       <RowOpen
         label={t(canManage ? "aiRouting.editNamed" : "aiRouting.openNamed", {
-          name: row.display_name,
+          name: aiTaskLabel(row.task, t, row.display_name),
         })}
         // The embeddings lane is not a task an admin tunes: it has no
         // ladder, thinking or timeout of its own.
@@ -100,7 +101,7 @@ export function AiFeatureTable({
     ),
   };
   // One table per tier, headed by the tier's name, so no column repeats it.
-  return byTier(rows, locale).map(({ tier, tasks }) => {
+  return byTier(rows, locale, t).map(({ tier, tasks }) => {
     const name = tierLabel(tier, t);
     return (
       <DataTable
@@ -121,6 +122,7 @@ export function AiFeatureTable({
 function byTier(
   rows: readonly Feature[],
   locale: Locale,
+  t: Translator,
 ): { tier: string; tasks: Feature[] }[] {
   const groups = new Map<string, Feature[]>();
   for (const row of rows) {
@@ -134,7 +136,11 @@ function byTier(
     .map(([tier, tasks]) => ({
       tier,
       tasks: tasks.sort((a, b) =>
-        forReader(a.display_name, b.display_name, locale),
+        forReader(
+          aiTaskLabel(a.task, t, a.display_name),
+          aiTaskLabel(b.task, t, b.display_name),
+          locale,
+        ),
       ),
     }));
 }
@@ -161,8 +167,9 @@ function TaskCell({
 }>) {
   const t = useT();
   const dot = taskDot(row, health, providers);
+  const name = aiTaskLabel(row.task, t, row.display_name);
   return (
-    <span className="ai-task-name" title={row.display_name}>
+    <span className="ai-task-name" title={name}>
       {/* Without the lane read an idle dot would claim "no calls"; a task
           known to be blocked still says so. */}
       {health || dot === "bad" ? (
@@ -174,7 +181,7 @@ function TaskCell({
         </span>
       ) : null}
       <TaskName
-        name={row.display_name}
+        name={name}
         summary={row.summary}
         details={
           <TaskDetails

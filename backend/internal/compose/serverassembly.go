@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/consent"
@@ -387,7 +386,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// The importer maps only core columns (see importTargets for why custom
 	// fields are not among them), so it needs no field catalog of its own.
 	s.importHandlers = importHandlers{db: InstallationDB(pool), uploadLimit: s.uploadLimits.CSVImport}
-	s.company360Svc = company360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), approvals.NewService(InstallationDB(pool)), time.Now)
+	s.company360Svc = company360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), newApprovalsService(InstallationDB(pool)), time.Now)
 	s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, nil, "", time.Now).
 		WithEmailSummaries(emailRows(pool))
 	s.companyBriefHandlers = companybrief.NewHandlers(s.companyBriefSvc)

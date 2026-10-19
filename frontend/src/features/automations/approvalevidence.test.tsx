@@ -1,0 +1,157 @@
+/** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, expect, it, vi } from "vitest";
+import type { DecisionApproval } from "../../design-system/decisioncard";
+import { formatDateTime } from "../../format/format";
+import { LocaleProvider, translate } from "../../i18n";
+import { RecordZoneProvider } from "../../lib/recordzone";
+import { ApprovalEvidence } from "./approvalevidence";
+
+const SOURCE = "22222222-2222-4222-8222-222222222222";
+const RECORD_ZONE = "Pacific/Auckland";
+const WHEN = "2026-09-01T09:00:00Z";
+const proposal: DecisionApproval = {
+  id: "ap1",
+  kind: "commitment_task",
+  status: "pending",
+  proposed_by: "agent:meeting",
+  created_at: WHEN,
+  summary: "Send the revised scope",
+  target_entity_type: "activity",
+  target_entity_id: SOURCE,
+};
+const source = {
+  id: SOURCE,
+  kind: "meeting",
+  subject: "Review meeting",
+  body: "Recorded words",
+  occurred_at: WHEN,
+  is_done: true,
+  source: "manual",
+  captured_by: "human:reviewer",
+  created_at: WHEN,
+  updated_at: WHEN,
+  links: [],
+  version: 1,
+};
+
+function show(
+  approval = proposal,
+  activity: typeof source & { content_state?: string } = source,
+  status = 200,
+) {
+  const fetcher = vi.fn(
+    async () =>
+      new Response(
+        JSON.stringify(
+          status === 200
+            ? activity
+            : { code: status === 403 ? "permission_denied" : "not_found" },
+        ),
+        {
+          status,
+          headers: { "content-type": "application/json" },
+        },
+      ),
+  );
+  vi.stubGlobal("fetch", fetcher);
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <RecordZoneProvider zone={RECORD_ZONE}>
+          <ApprovalEvidence approval={approval} />
+        </RecordZoneProvider>
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  return fetcher;
+}
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+it("names and dates the source before opening the existing activity reader", async () => {
+  show();
+  expect(await screen.findByText(/Review meeting/)).toHaveTextContent(
+    formatDateTime(WHEN, "en", RECORD_ZONE),
+  );
+  const user = userEvent.setup();
+  await user.click(
+    screen.getByRole("button", { name: translate("en", "tasks.openSource") }),
+  );
+  expect(await screen.findByRole("dialog")).toHaveTextContent("Recorded words");
+});
+
+it("opens a legacy source id without inventing a target", async () => {
+  const fetcher = show({
+    ...proposal,
+    target_entity_type: null,
+    target_entity_id: null,
+    proposed_change: { source_activity_id: SOURCE },
+  });
+  expect(await screen.findByText(/Review meeting/)).toBeInTheDocument();
+  expect(fetcher.mock.calls.length).toBeGreaterThan(0);
+});
+
+it("does not read a source for a different proposal kind", () => {
+  const fetcher = show({ ...proposal, kind: "advance_deal" });
+  expect(fetcher).not.toHaveBeenCalled();
+  expect(
+    screen.queryByText(translate("en", "stat.evidence")),
+  ).not.toBeInTheDocument();
+});
+
+it("withholds the source title and date when its content is withheld", async () => {
+  show(proposal, { ...source, content_state: "withheld" });
+  expect(
+    await screen.findByText(translate("en", "email.detail.withheldReason")),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(/Review meeting/)).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: translate("en", "tasks.openSource") }),
+  ).not.toBeInTheDocument();
+});
+
+it("keeps a missing source explicit without making a read", () => {
+  const fetcher = show({
+    ...proposal,
+    target_entity_type: null,
+    target_entity_id: null,
+  });
+  expect(
+    screen.getByText(translate("en", "stat.evidence")),
+  ).toBeInTheDocument();
+  expect(fetcher).not.toHaveBeenCalled();
+  expect(
+    screen.queryByRole("button", { name: translate("en", "tasks.openSource") }),
+  ).not.toBeInTheDocument();
+});
+
+it.each([403, 404])(
+  "describes an unavailable source without retry for %s",
+  async (status) => {
+    show(proposal, source, status);
+    expect(
+      await screen.findByText(translate("en", "email.detail.withheldReason")),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: translate("en", "common.retry") }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Review meeting/)).not.toBeInTheDocument();
+  },
+);
+
+it("renders a date without a trailing separator when the source has no subject", async () => {
+  show(proposal, { ...source, subject: "" });
+  expect(
+    await screen.findByText(formatDateTime(WHEN, "en", RECORD_ZONE)),
+  ).toHaveTextContent(formatDateTime(WHEN, "en", RECORD_ZONE));
+  expect(screen.queryByText(/ · $/)).not.toBeInTheDocument();
+});

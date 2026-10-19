@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
@@ -130,6 +131,16 @@ func pendingLine(a crmcontracts.Approval) (crmcontracts.MagicLine, bool) {
 	}
 	values := map[string]string{"kind": a.Kind}
 	sentence := sentenceForKind(a.Kind)
+	if summary, party := commitmentCaption(a); summary != "" {
+		sentence = "magic.action.approval_commitment_task_summary"
+		if party != "" {
+			sentence = "magic.action.approval_commitment_task_named"
+			if unresolved, ok := (*a.ProposedChange)["promiser_unresolved"].(bool); ok && unresolved {
+				sentence = "magic.action.approval_commitment_task_unverified"
+			}
+		}
+		values["summary"], values["party"] = summary, party
+	}
 	if a.TargetLabel == nil && sentence == approvalSentences[kindCaptureCounterparty] {
 		// Its sentence names who wrote; a proposal staged before it carried a
 		// name has none to give.
@@ -208,4 +219,16 @@ func machineProposer(proposedBy string) (crmcontracts.MagicActor, bool) {
 		}, true
 	}
 	return crmcontracts.MagicActor{}, false
+}
+
+func commitmentCaption(a crmcontracts.Approval) (string, string) {
+	if a.Kind != "commitment_task" || a.Summary == nil {
+		return "", ""
+	}
+	summary := approvals.SanitizeSummary(*a.Summary)
+	if a.ProposedChange == nil {
+		return summary, ""
+	}
+	party, _ := (*a.ProposedChange)["party"].(string)
+	return summary, approvals.SanitizeSummary(party)
 }

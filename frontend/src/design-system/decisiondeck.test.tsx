@@ -49,6 +49,8 @@ const LABELS: DecisionDeckLabels = {
   skipped: (count) => `${count} skipped`,
   commit: "Commit",
   commitNothingToSend: "Clear skipped",
+  acceptanceChanged:
+    "Some approvals changed and need another look. Their acceptances were not sent.",
   unstage: "Undo the last",
   clearedTitle: "The queue is clear.",
   cleared: (count) => `You decided ${count}.`,
@@ -372,9 +374,6 @@ describe("DecisionDeck — a bundle is one decision", () => {
 });
 
 describe("DecisionDeck — a card states only what its members agree on", () => {
-  // The chips as a caller draws them, one line per fact, and a fact the caller
-  // was not given simply has no line. Reading them back out of the DOM is what
-  // proves the deck hands over the AGREEMENT rather than the member it drew.
   const CHIPS = (
     _approval: DecisionApproval,
     shared: DecisionSharedFacts,
@@ -742,9 +741,6 @@ describe("DecisionDeck — the tray the frame is handed", () => {
     expect(screen.getByTestId("body")).not.toBeEmptyDOMElement();
   });
 
-  // WITH EVERY CARD STAGED the queue has nothing to draw — and must not draw
-  // the empty arm, which says nothing is waiting over the reader's own unsent
-  // verdicts. The tray is what says what is true, by counting them.
   it("draws no queue at all while every card is staged, and never says nothing is waiting", async () => {
     const user = userEvent.setup();
     render(framed({ items: [THREE[0]] }));
@@ -926,4 +922,77 @@ describe("DecisionDeck — a verdict that sends nothing", () => {
     // And the edit is never counted among the skips.
     expect(screen.queryByText(/2 skipped/)).toBeNull();
   });
+});
+
+it("uses the caller's effect label for a specific decision", () => {
+  render(
+    deck({ items: [single(1)], chips: () => ({ acceptLabel: "Create task" }) }),
+  );
+  expect(screen.getByRole("button", { name: "Create task" })).toBeEnabled();
+  expect(screen.queryByRole("button", { name: "Accept" })).toBeNull();
+});
+
+it.each(["single", "bundle"] as const)(
+  "refuses an unavailable %s assignment through buttons, keyboard and swipes",
+  async (kind) => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    const item: DecisionDeckItem =
+      kind === "single"
+        ? single(2)
+        : {
+            kind: "bundle",
+            id: "bundle",
+            bundleId: "bundle",
+            members: [approval(1), approval(2)],
+          };
+    render(
+      deck({
+        items: [item],
+        onCommit,
+        chips: (member) => ({
+          canAccept: member.id !== "id-2",
+          detail:
+            member.id === "id-2" ? (
+              <p>This assignee cannot receive tasks.</p>
+            ) : undefined,
+        }),
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Deck" }));
+    expect(
+      screen.queryByRole("button", { name: "Accept" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("This assignee cannot receive tasks."),
+    ).toBeInTheDocument();
+    const surface = liveSurface();
+    surface.focus();
+    await user.keyboard("{ArrowRight}");
+    fireEvent.pointerDown(surface, { pointerId: 1, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 220, clientY: 4 });
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: 220, clientY: 4 });
+    expect(screen.queryByText("1 staged")).not.toBeInTheDocument();
+    expect(onCommit).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    await user.click(screen.getByRole("button", { name: "Commit" }));
+    expect(onCommit).toHaveBeenCalledWith([{ id: item.id, verdict: "reject" }]);
+  },
+);
+
+it("returns a staged acceptance to review when the assignment becomes unavailable", async () => {
+  const user = userEvent.setup();
+  const onCommit = vi.fn();
+  const items = [single(1)];
+  const { rerender } = render(deck({ items, onCommit }));
+  await user.click(screen.getByRole("button", { name: "Accept" }));
+  rerender(deck({ items, onCommit, chips: () => ({ canAccept: false }) }));
+  await user.click(screen.getByRole("button", { name: "Commit" }));
+  expect(onCommit).not.toHaveBeenCalled();
+  expect(screen.getByText(LABELS.acceptanceChanged)).toBeInTheDocument();
+  expect(screen.queryByText("1 staged")).not.toBeInTheDocument();
+  expect(screen.getByText("Reply number 1.")).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Accept" }),
+  ).not.toBeInTheDocument();
 });

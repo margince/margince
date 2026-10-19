@@ -130,14 +130,19 @@ func checkLineFigures(line OfferLineInput) error {
 }
 
 // requireLineWords refuses a patch that blanks a line's description or unit,
-// which creating the line refuses too, and stores the trimmed words.
+// which creating the line refuses too. It stores the trimmed words, and a
+// known unit spelling as its key.
 func requireLineWords(in UpdateOfferLineInput) (UpdateOfferLineInput, error) {
 	var err error
 	if in.Description, err = trimmedWord("description", in.Description); err != nil {
 		return in, err
 	}
-	in.Unit, err = trimmedWord("unit", in.Unit)
-	return in, err
+	if in.Unit, err = trimmedWord("unit", in.Unit); err != nil || in.Unit == nil {
+		return in, err
+	}
+	unit := canonicalUnit(*in.Unit)
+	in.Unit = &unit
+	return in, nil
 }
 
 // trimmedWord answers a sent word trimmed, or refuses it when it is blank.

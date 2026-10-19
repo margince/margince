@@ -353,7 +353,7 @@ it("narrows the trace to the task the address names, and writes a new pick back"
   mount();
   const filter = await screen.findByRole("combobox", { name: "Task" });
   // No call for it yet, so the server's set lacks it; the select still says it.
-  expect(filter.textContent).toContain("account_scan");
+  expect(filter.textContent).toContain("Reading what an account needs");
   const asked = vi
     .mocked(fetch)
     .mock.calls.map(([input]) =>
@@ -362,7 +362,9 @@ it("narrows the trace to the task the address names, and writes a new pick back"
   expect(asked.some((url) => url.includes("task=account_scan"))).toBe(true);
 
   await user.click(filter);
-  await user.click(await screen.findByRole("option", { name: summary.task }));
+  await user.click(
+    await screen.findByRole("option", { name: "Message classification" }),
+  );
   expect(globalThis.location.hash).toBe(
     `#/settings/model-calls?task=${summary.task}`,
   );

@@ -22,6 +22,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `aiactivitycatalogparity_test.go` | H3 | The AI-activity contract names the work that can reach it and nothing else, and caps what the read caps. |
 | `aiegressdoc_test.go` | H2 | The egress page and the routing table say the same thing. |
 | `airoutingschema_test.go` | H3 | What the editor accepts, checked against what the parser accepts. |
+| `aitaskdisplayparity_test.go` | H3 | TestDisplayTaskKeysMatchTheTaskCatalog holds the API task identity and English UI names to the owning catalog. |
 | `aitaskparity_test.go` | H3 | Every ai\_task an emitter writes into the AI-activity projection must be a task the AI contract declares. |
 | `aitaskrunenum_test.go` | H3 | The ai\_task.state\_changed payload's closed vocabularies must equal the ai\_task\_run column CHECKs they are projected into. |
 | `analyticsrefusalkinds_test.go` | H2 | The contract's refusal kinds are the kinds the engine constructs, no more and no fewer. |
@@ -97,8 +98,10 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendrowtagcap_test.go` | H3 | The browser and the server must agree on how many tags one list row carries, or the chip strip's "+N" counts a number nobody has. |
 | `frontendschedulinglimits_test.go` | H3 | The Meetings settings screen stops a title or a location at the contract's length before the request is sent. |
 | `frontendsetupproviders_test.go` | H3 | Onboarding offers a first-time admin a provider and a model, and the server has to be able to price and serve whatever it offered. |
+| `frontendunitspellings_test.go` | H3 | The browser and the server must read a unit's spelling as the same key. |
 | `goversionpins_test.go` | H3 | One Go version, pinned in several places, and they have to agree. |
 | `grantrenewalcauses_test.go` | H1 | Every reason a standing grant needs renewing must reach the card that asks for it. |
+| `grouprolemapcap_test.go` | H3 | The ceiling on the group to role map is read in three places, and they have to be one number. |
 | `heldsendtwin_test.go` | H3 | The held-message reuse rule is written twice, and the two copies must agree. |
 | `humanonlyenforcement_test.go` | H1 | The declaration reaches the thing that enforces it. |
 | `idempotencymap_test.go` | H3 | The contract decides which operations promise Idempotency-Key retry safety, and internal/compose's hand-maintained replayableOperations map must list the same operations. |

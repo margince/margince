@@ -36,6 +36,9 @@ func (s *Service) ListWire(ctx context.Context, in ListInput) ([]crmcontracts.Ap
 	for _, a := range rows {
 		out = append(out, wire(a, now))
 	}
+	if err := s.readAssignmentStates(ctx, out); err != nil {
+		return nil, storekit.Page{}, err
+	}
 	return out, page, nil
 }
 
@@ -45,7 +48,11 @@ func (s *Service) GetWire(ctx context.Context, id ids.ApprovalID) (crmcontracts.
 	if err != nil {
 		return crmcontracts.Approval{}, err
 	}
-	return wire(a, s.now()), nil
+	out := []crmcontracts.Approval{wire(a, s.now())}
+	if err := s.readAssignmentStates(ctx, out); err != nil {
+		return crmcontracts.Approval{}, err
+	}
+	return out[0], nil
 }
 
 // DecideWire is Decide in the contract shape.

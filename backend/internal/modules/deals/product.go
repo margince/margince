@@ -216,7 +216,7 @@ func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*st
 		if err != nil {
 			return nil, err
 		}
-		p.Set("unit", current.Unit, unit)
+		p.Set("unit", current.Unit, canonicalUnit(unit))
 	}
 	if in.UnitPriceMinor != nil {
 		if err := checkPrice(*in.UnitPriceMinor); err != nil {
