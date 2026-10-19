@@ -21,7 +21,7 @@ afterEach(() => {
   window.location.hash = "";
 });
 
-function draw(deals: unknown[], allow: Record<string, string[]>) {
+function draw(deals: unknown[], allow: Parameters<typeof meRoute>[0]) {
   const asked = { deals: false };
   installFetchStub({
     "GET /me": meRoute(allow),
