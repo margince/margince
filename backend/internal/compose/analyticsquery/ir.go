@@ -384,15 +384,15 @@ func unknownField(entity Entity, name string, kind FieldKind) error {
 }
 
 // customFieldNotInReports refuses a custom field the vocabulary does not
-// carry. That happens when an admin took it out of reports or retired it, so
-// the refusal says how to repair the question. Every cf_ name gets it, so it
+// carry: a misspelled name, or one an admin took out of reports or retired.
+// The refusal names both repairs. Every cf_ name gets it, so it
 // confirms no field exists.
 func customFieldNotInReports(entity Entity, name string) error {
 	return &RefusalError{
 		Kind:    RefusalUnsupported,
 		Message: fmt.Sprintf("the custom field %s is not in reports on %s", httperr.QuoteCaller(name), entity.Name),
-		Suggest: "an admin turned it off under Settings, Fields, In reports, or retired it. " +
-			"Ask without it, or ask an admin to turn it on again",
+		Suggest: "check the field's name. If it is right, an admin may have turned the field off " +
+			"under Settings, Fields, In reports, or retired it. Ask without it, or ask an admin to turn it on again",
 	}
 }
 
