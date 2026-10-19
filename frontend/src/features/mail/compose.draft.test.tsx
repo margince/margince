@@ -296,7 +296,7 @@ describe("ComposeModal draft binding", () => {
         jsonResponse(voiceDraft("vd-a", "Re: Q3", "Draft A body.")),
       "POST /voice-profiles/vp-1/draft-rejections": () =>
         problemResponse(
-          { code: "internal_error", title: "Server Error", detail: "boom" },
+          { code: "internal", title: "Server Error", detail: "boom" },
           500,
         ),
       "POST /activities/act-1/send-email": () => jsonResponse(activity202, 202),
@@ -372,7 +372,7 @@ describe("ComposeModal draft binding", () => {
         jsonResponse(voiceDraft("vd-a", "Re: Q3", "Draft A body.")),
       "POST /voice-profiles/vp-1/draft-rejections": () =>
         problemResponse(
-          { code: "internal_error", title: "Server Error", detail: "boom" },
+          { code: "internal", title: "Server Error", detail: "boom" },
           500,
         ),
     });
@@ -395,7 +395,7 @@ describe("ComposeModal draft binding", () => {
     stubRoutes({
       "POST /activities/act-1/draft-email": () =>
         problemResponse(
-          { code: "internal_error", title: "Server Error", detail: "no model" },
+          { code: "internal", title: "Server Error", detail: "no model" },
           500,
         ),
     });

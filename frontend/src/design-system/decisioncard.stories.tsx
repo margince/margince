@@ -388,6 +388,56 @@ export const DeclaredFields: Story = {
   },
 };
 
+const COMMITMENT_SUMMARY = "Send the signed form by Friday";
+
+// A promise read out of mail. The summary shows once, though the payload leads
+// with the same sentence. The provenance `body` shows as its labelled original
+// text rather than as a draft, and the evidence names its source in words.
+export const CommitmentProposal: Story = {
+  args: {
+    ...Deck.args,
+    approval: approval({
+      kind: "commitment_task",
+      summary: COMMITMENT_SUMMARY,
+      target_label: "Contract renewal",
+      proposed_change: {
+        summary: COMMITMENT_SUMMARY,
+        party: "Lena Fischer",
+        body: 'Promiser: Lena Fischer. Commitment in the email "Contract renewal", sent 2026-08-20.',
+      },
+      evidence: [
+        {
+          evidence_snippet: "I will send the signed form by Friday",
+          source_type: "activity",
+        },
+      ],
+    }),
+    provenance: { kind: "agent", job: "signal-scan" },
+    confidence: undefined,
+    display: [
+      {
+        field: "summary",
+        label: "Step",
+        value: COMMITMENT_SUMMARY,
+        lead: true,
+      },
+      { field: "party", label: "Promised by", value: "Lena Fischer" },
+      {
+        field: "assignment",
+        label: "On approval",
+        value: "Creates a task assigned to the person who approves.",
+      },
+      { field: "due_date", label: "Due", value: "No day stated" },
+      {
+        field: "body",
+        label: "Original text",
+        value:
+          'Promiser: Lena Fischer. Commitment in the email "Contract renewal", sent 2026-08-20.',
+      },
+    ],
+  },
+};
+
 // The same proposal with no declaration: what every kind looked like before,
 // and what the raw-args kinds still honestly look like.
 export const UndeclaredFields: Story = {

@@ -19,8 +19,7 @@ describe("the project form offers no key field", () => {
   it("leaves the key out of both dialogs", () => {
     for (const mode of ["create", "edit"] as const) {
       const fields = projectFields(t, {
-        companies: [],
-        me: "u1",
+        owner: { owners: [], me: "u1" },
         currentOwner: null,
         mode,
       });
@@ -34,42 +33,24 @@ describe("projectFields", () => {
 
   it("asks for the company at birth and never on edit", () => {
     const create = projectFields(t, {
-      companies: [{ id: "o-1", display_name: "Brandt" }],
-      me: "u-me",
+      owner: { owners: [], me: "u-me" },
       currentOwner: null,
       mode: "create",
     });
     const edit = projectFields(t, {
-      companies: [],
-      me: "u-me",
+      owner: { owners: [], me: "u-me" },
       currentOwner: "u-other",
       mode: "edit",
     });
-    // No owner picker at birth: the server stamps the creator, and the only
-    // choices a create could offer would both resolve to them anyway.
     expect(create.map((field) => field.key)).toEqual([
       "name",
       "company_id",
+      "owner_id",
       "description",
       "target_end_date",
     ]);
     expect(edit.map((field) => field.key)).not.toContain("company_id");
     expect(edit.map((field) => field.key)).toContain("owner_id");
-  });
-
-  it("lets an edit keep an owner who is not the reader", () => {
-    const edit = projectFields(t, {
-      companies: [],
-      me: "u-me",
-      currentOwner: "u-other",
-      mode: "edit",
-    });
-    const owner = edit.find((field) => field.key === "owner_id");
-    expect(owner?.options?.map((option) => option.value)).toEqual([
-      "u-other",
-      "u-me",
-      "",
-    ]);
   });
 });
 

@@ -71,6 +71,8 @@ const LABELS: DecisionDeckLabels = {
   edited: (count: number) => `${count} being edited`,
   skipped: (count) => `${count} skipped`,
   commitNothingToSend: "Clear skipped",
+  acceptanceChanged:
+    "Some approvals changed and need another look. Their acceptances were not sent.",
   commit: "Send staged decisions",
   unstage: "Undo last",
   clearedTitle: "Deck clear",

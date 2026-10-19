@@ -23,7 +23,7 @@ To connect your AI tool to Margince, open **Settings → AI access** and answer 
 4. If the card says "First, your admin.", choose **Download guide for your admin** and send them the file. It holds their steps and your Margince address.
 5. If the card shows your Margince address, choose **Copy address** and paste it where the steps say.
 6. Follow the numbered steps the card shows for that one case.
-7. When Margince opens, sign in. **Authorize access** ticks all five permissions; beside **Send messages** it says "sends messages as you, without asking first". Clear any the tool should not get, then choose **Authorize**.
+7. When Margince opens, sign in. **Authorize access** ticks all five permissions; beside **Send messages** it says "sends messages as you, without asking first". Clear any permissions the tool should not get, then choose **Authorize**.
 To refuse, choose **Deny access**.
 Authorizing creates the connection, listed under **Your connections**, so you need no passport.
 Also called: connect Claude, connect ChatGPT, Copilot, Gemini, AI assistant, connector, MCP.

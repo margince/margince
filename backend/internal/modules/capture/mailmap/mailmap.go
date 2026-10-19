@@ -119,32 +119,32 @@ func (m Message) ThreadKey() string { return m.threadKey }
 // its direction relative to the mailbox owner.
 func Parse(raw []byte, owner string) (Message, error) {
 	reader, err := mail.CreateReader(bytes.NewReader(raw))
-	if err != nil {
+	if !usablePart(err) {
 		return Message{}, fmt.Errorf("mailmap: parsing message: %w", err)
 	}
 	header := reader.Header
 
 	messageID, _ := header.MessageID()
-	subject, _ := header.Subject()
+	subject := headerText(header, "Subject")
 	occurredAt, _ := header.Date()
 
-	fromList, _ := header.AddressList("From")
+	fromList, _ := addressList(header, "From")
 	groupOriginal, viaGroup := googleGroupSender(header)
 	if viaGroup {
 		fromList = groupOriginal
 	}
-	toList, _ := header.AddressList("To")
+	toList, _ := addressList(header, "To")
 	// A malformed Cc line yields no addresses rather than failing the message:
 	// the mail is already read off the wire, and losing the CCs is a smaller
 	// loss than dropping the correspondence.
-	ccList, _ := header.AddressList("Cc")
+	ccList, _ := addressList(header, "Cc")
 	// Bcc survives only on the sender's OWN copy — a recipient's copy never
 	// carries it. Where it does survive it is a real party to the message, and
 	// the internal-vs-external decision has to see it: a colleague who blind-
 	// copied a customer wrote to a customer. Where it does not survive, the
 	// message reads as one address short, which is the accepted loss named in
 	// ADR-0082 §3 and not something this parser can recover.
-	bccList, _ := header.AddressList("Bcc")
+	bccList, _ := addressList(header, "Bcc")
 	deliveredTo := TopDeliveredTo(header)
 	senderAuth := TopSenderAuthentication(header)
 	from := firstAddress(fromList)

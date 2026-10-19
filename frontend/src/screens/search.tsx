@@ -403,7 +403,7 @@ function SearchHit({
           an activity's body slice, which is a passage lifted out of a message
           and reads as one. Every other branch's excerpt is a structured
           identifier the record carries in a field: a project's key and company,
-          a product's sku. Quoting “KAR-9910” claims somebody wrote that
+          a lead's company, a product's sku. Quoting “KAR-9910” claims somebody wrote that
           sentence, and the marks are what a reader would have to type to search
           for it. */}
       {hit.snippet && (

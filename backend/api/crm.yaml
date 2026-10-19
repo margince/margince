@@ -16946,9 +16946,10 @@ paths:
         (PATCH). Governed by the `installation_settings` RBAC object.
 
         `base_currency_locked` reports whether the currency has stopped being changeable, and
-        `base_currency_locked_reason` says why, naming how many deals have already frozen a
-        conversion rate against it (ADR-0085 §7). A client renders the field read-only from
-        the flag rather than discovering the refusal by attempting a write.
+        `base_currency_lock` says why as facts: which reason holds it and how many records or
+        currency rates hold it (ADR-0085 §7). `base_currency_locked_reason` carries the same
+        facts as one English sentence for older clients. A client renders the field read-only
+        from the flag rather than discovering the refusal by attempting a write.
       responses:
         '200':
           description: The installation settings.
@@ -29913,7 +29914,7 @@ components:
           schema: { $ref: '#/components/schemas/Problem' }
           examples:
             rbac:
-              value: { type: 'https://errors.gradion.com/forbidden', title: Forbidden, status: 403, code: forbidden, detail: Your role does not permit this action. }
+              value: { type: 'https://errors.gradion.com/permission_denied', title: Forbidden, status: 403, code: permission_denied, detail: Your role does not permit this action. }
     PermissionDenied:
       description: 'RBAC object/action denial — the authenticated principal''s role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate).'
       content:
@@ -30491,8 +30492,12 @@ components:
         base_currency_locked_reason:
           type: string
           description: |
-            Why the currency is locked, naming what has already converted against it. Absent
-            when it is still changeable.
+            Why the currency is locked, naming what has already converted against it, as one
+            English sentence. Absent when it is still changeable. A client words the reason
+            from `base_currency_lock` instead, and reads this only from a server that does not
+            send that object.
+        base_currency_lock:
+          $ref: '#/components/schemas/BaseCurrencyLock'
         max_upload_bytes:
           type: integer
           format: int64
@@ -31438,6 +31443,33 @@ components:
             leaving the group — revocation stays a deliberate admin action — and an
             empty object means no group grants anything. It admits nobody who was not
             already invited.
+    BaseCurrencyLock:
+      type: object
+      additionalProperties: false
+      required: [reason, count]
+      description: >-
+        Why the base currency is locked, as facts a client words in its reader's language.
+        Present exactly when `base_currency_locked_reason` is (ADR-0085 §7).
+      properties:
+        reason:
+          type: string
+          enum: [rates_frozen, rate_sheet]
+          description: >-
+            `rates_frozen`: closed deals, sent offers, mirrored invoices, contracts or commission
+            entries have frozen a conversion rate against the base, and nothing undoes that.
+            `rate_sheet`: currency rates convert into the base; clearing them lifts the lock.
+        count:
+          type: integer
+          minimum: 1
+          description: >-
+            How many records froze a rate (`rates_frozen`), or how many currency rates convert
+            into the base (`rate_sheet`).
+        base_currency:
+          type: string
+          description: >-
+            The ISO-4217 code the currency rates convert into. Sent only with `rate_sheet`, and
+            absent there when the installation holds no stored base to name.
+
     SignInProvider:
       type: object
       additionalProperties: false
@@ -51956,6 +51988,33 @@ components:
             travels here.
 
     # ---- Audit ----
+    AuditAction:
+      type: string
+      description: |
+        The verb of one audit row, as both the audit log and a record's history
+        serve it. One list, so the two reads cannot name the same row two ways.
+      # Every mutation is attributable (P12). connector captures audit as actor_type=connector.
+      # audit_log is record-mutations-only: login and bulk export moved to system_log,
+      # so `login` is not here. `export` stays — the DSR contact export is entity-bound.
+      # capture skip is NOT here either — it is a system_log 'capture_skip' event.
+      # `restrict`/`pin` are the statutory-retention verbs (ADR-0114,
+      # ADR-0116, migration 0287): an erasure shielded a record under the
+      # floor instead of destroying it, and an administrator placed a record
+      # under the floor the derivation could not see. `resolve` was in the DDL
+      # since 0047 and missing here — a row a strict client could not decode.
+      # `invite`/`revoke` are the Deal Room access verbs: admitting an outside
+      # contact to a room and taking that access away. Neither reuses an
+      # existing verb — `create`/`archive` would describe the participant ROW
+      # rather than the access it carries, and the question an auditor asks
+      # months later is "who let them in, and who took it back".
+      # `publish`/`pause`/`resume`/`close` are the Deal Room lifecycle verbs.
+      # None reuses an existing one, because none means the same thing:
+      # `publish` puts editorial text in front of a party outside the company,
+      # `close` freezes content while access continues, and `pause`/`resume`
+      # suspend reads without touching a single credential. `hold`/`release`
+      # and `expire` are retention and scheduling verbs and would read as those.
+      enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke, delete, place_legal_hold, lift_legal_hold, request_legal_review, withdraw_legal_review]
+
     AuditLogEntry:
       type: object
       description: An append-only audit row. Mirrors the `audit_log` table.
@@ -51985,28 +52044,7 @@ components:
         on_behalf_of_name: { type: [string, 'null'], description: Resolved display name for on_behalf_of. }
         batch_id: { type: [string, 'null'], format: uuid, description: 'The bulk change that wrote this row; null for a change made on its own.' }
         action:
-          type: string
-          # Every mutation is attributable (P12). connector captures audit as actor_type=connector.
-          # audit_log is record-mutations-only: login and bulk export moved to system_log,
-          # so `login` is not here. `export` stays — the DSR contact export is entity-bound.
-          # capture skip is NOT here either — it is a system_log 'capture_skip' event.
-          # `restrict`/`pin` are the statutory-retention verbs (ADR-0114,
-          # ADR-0116, migration 0287): an erasure shielded a record under the
-          # floor instead of destroying it, and an administrator placed a record
-          # under the floor the derivation could not see. `resolve` was in the DDL
-          # since 0047 and missing here — a row a strict client could not decode.
-          # `invite`/`revoke` are the Deal Room access verbs: admitting an outside
-          # contact to a room and taking that access away. Neither reuses an
-          # existing verb — `create`/`archive` would describe the participant ROW
-          # rather than the access it carries, and the question an auditor asks
-          # months later is "who let them in, and who took it back".
-          # `publish`/`pause`/`resume`/`close` are the Deal Room lifecycle verbs.
-          # None reuses an existing one, because none means the same thing:
-          # `publish` puts editorial text in front of a party outside the company,
-          # `close` freezes content while access continues, and `pause`/`resume`
-          # suspend reads without touching a single credential. `hold`/`release`
-          # and `expire` are retention and scheduling verbs and would read as those.
-          enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke, delete, place_legal_hold, lift_legal_hold, request_legal_review, withdraw_legal_review]
+          $ref: '#/components/schemas/AuditAction'
         entity_type: { type: string }
         entity_id: { type: string, format: uuid, description: Every audit_log row names the record it mutated (NOT NULL since 0075). }
         entity_label:
@@ -52241,8 +52279,12 @@ components:
       description: |
         One rendered history line for a record mutation. `before`/`after` are
         masked to the viewer's readable fields — an absent key was hidden, not null.
-        `summary` is server-composed plain language; field-level detail lives in
-        before/after for the client to render.
+        `summary` is server-composed plain language in English. A client that
+        renders the line in its reader's language builds it from `action` and the
+        actor fields. It falls back to `summary` for an edge row, whose role
+        travels only in the sentence, and for an action or actor kind it does
+        not know.
+        Field-level detail lives in before/after for the client to render.
       required: [id, actor_type, actor_id, action, occurred_at, summary]
       properties:
         id: { type: string, format: uuid }
@@ -52260,7 +52302,17 @@ components:
             registered client to name), when the client row is gone, and for
             every write that was not delegated. A reader that has it should say
             "via {agent_client}" where it would otherwise say "via an agent".
-        action: { type: string }
+        action:
+          $ref: '#/components/schemas/AuditAction'
+        passport_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            The Agent Seat Passport the change was made under, as FieldHistoryEntry
+            carries it. A machine row with a passport and no `on_behalf_of` had a
+            human authority the row failed to record; one without a passport
+            never had one. With `on_behalf_of` set and no `on_behalf_of_name`,
+            the authority was recorded and the member no longer resolves.
         occurred_at: { type: string, format: date-time }
         authorization_rule: { type: [string, 'null'] }
         before: { type: [object, 'null'], additionalProperties: true }
@@ -52814,6 +52866,42 @@ components:
             the session, and the credential is the server's to mint, so a caller cannot
             answer for somebody else or point a grant at a credential they do not own.
       description: The rep's answer for one scheduled agent.
+    AiTask:
+      type: string
+      description: AI task key from the task catalog, used to localize its display name.
+      enum:
+        - account_scan
+        - agent_loop
+        - brief_ranking
+        - capture_classify
+        - capture_confidentiality_verdict
+        - capture_counterparty_verdict
+        - cert_judge
+        - cold_start
+        - corpus_ask
+        - deal_health
+        - document_extract
+        - draft_reply
+        - enrich
+        - growth_fit
+        - nl_search
+        - offer_draft
+        - owed_verdict
+        - propose_roles
+        - rate_extract
+        - request_settlement
+        - signal_extract
+        - site_extract
+        - site_fact_extract
+        - site_triage
+        - stage_evidence_extract
+        - summarize
+        - tag_suggest
+        - transcript
+        - transcript_propose
+        - voice_build
+        - weekly_learnings
+        - weekly_review
     AiActivityKind:
       type: string
       enum:
@@ -54207,6 +54295,14 @@ components:
       description: A staged 🟡 confirm-first action awaiting human decision.
       required: [id, kind, status, proposed_by, created_at]
       properties:
+        assignee_inactive:
+          type: boolean
+          readOnly: true
+          description: >-
+            For a pending commitment, whether its named task assignee cannot receive the task.
+            True for invited, deactivated, archived, missing, or agent seats.
+            Absent for an unassigned proposal.
+            This is current decision context, not a change to the staged assignee.
         requested_decider_id:
           type: string
           format: uuid
@@ -56344,7 +56440,7 @@ components:
         name: { type: string }
         sku: { type: [string, 'null'], description: Optional; unique per workspace while live. }
         description: { type: [string, 'null'] }
-        unit: { type: string, description: "'unit' | 'hour' | 'day' | …; display only, free text." }
+        unit: { type: string, description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. A row written before the keys may hold a known spelling such as `Tag`, which a client shows as its key. Display only." }
         unit_price_minor: { type: integer, format: int64, description: Integer minor units (P11); no float money. }
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
@@ -56374,7 +56470,7 @@ components:
         name: { type: string }
         sku: { type: [string, 'null'] }
         description: { type: [string, 'null'] }
-        unit: { type: [string, 'null'], description: Defaults to 'unit'. }
+        unit: { type: [string, 'null'], description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`." }
         unit_price_minor: { type: integer, format: int64, minimum: 0 }
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
@@ -57128,7 +57224,7 @@ components:
         position: { type: [integer, 'null'], minimum: 1, description: Defaults to the next free position. }
         product_id: { type: [string, 'null'], format: uuid }
         description: { type: [string, 'null'] }
-        unit: { type: [string, 'null'] }
+        unit: { type: [string, 'null'], description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to the product's unit, else `piece`." }
         quantity: { type: number, format: double, description: '> 0, up to 3 decimal places.' }
         unit_price_minor: { type: [integer, 'null'], format: int64, minimum: 0 }
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
@@ -59159,6 +59255,7 @@ components:
             be able to disagree: a rule's NAME is mutable and not unique, so an identity
             built from it would merge two rules that happen to share a name and split one
             that was renamed, while a reader shown `automation_run:01a0…` learns nothing.
+        ai_task: { $ref: '#/components/schemas/AiTask' }
         cause_label:
           type: string
           description: |
@@ -60643,6 +60740,7 @@ components:
             Which underlying CONDITION this row reports, so a surface can group repeated
             failures of one thing into one row. Opaque identity, never rendered and never
             parsed. Absent on a row that reports no shared condition.
+        ai_task: { $ref: '#/components/schemas/AiTask' }
         cause_label:
           type: string
           description: |

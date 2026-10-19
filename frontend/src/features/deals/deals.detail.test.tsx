@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { RecordShell } from "../../app/testing/recordshell.testkit";
 import { formatMoney } from "../../format/format";
+import { translate } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { DealScreen } from "./deals";
 import {
@@ -70,6 +71,7 @@ function stubDealBackend(
             id: "h1",
             actor_type: "human",
             actor_id: "u1",
+            actor_name: "Demo Admin",
             action: "update",
             occurred_at: "2026-07-13T10:00:00Z",
             summary: "Deal amount changed",
@@ -236,6 +238,44 @@ describe("DealScreen — edit, archive (A3)", () => {
     const body = patches[0].body as Record<string, unknown>;
     expect("partner_company_id" in body).toBe(false);
     expect("partner_attribution" in body).toBe(false);
+  });
+
+  // The partner companies' names come from one keyed read. When it fails, the
+  // partners are named by id instead, so the form still asks the question.
+  it("offers the partner picker when the partner names read fails", async () => {
+    const user = userEvent.setup();
+    const d = deal({ id: "x", version: 4, partner_company_id: null });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        if (url.pathname.endsWith("/partners")) {
+          return jsonResponse({
+            data: [{ company_id: "p9" }],
+            page: { next_cursor: null },
+          });
+        }
+        if (url.searchParams.get("relationship_type") === "partner") {
+          return jsonResponse({ title: "Boom" }, 500);
+        }
+        if (url.searchParams.getAll("id").includes("p9")) {
+          return jsonResponse({
+            data: [{ id: "p9", display_name: "Northgate Partners" }],
+            page: { next_cursor: null },
+          });
+        }
+        return stubBackend([d], { single: d })(request);
+      }),
+    );
+
+    render(<DealScreen id="x" />);
+    await user.click(
+      await screen.findByRole("button", { name: "Change via partner" }),
+    );
+    await user.click(screen.getByLabelText("via partner"));
+    expect(
+      await screen.findByRole("option", { name: "Northgate Partners" }),
+    ).toBeTruthy();
   });
 
   // Each fact is its own cell: adjacent spans in one text row run together
@@ -693,7 +733,7 @@ describe("DealScreen pending approvals", () => {
     status: "pending",
     summary: "Move Fleet retrofit to Proposal",
     proposed_change: { to_stage_id: "s2" },
-    proposed_by: "agent:capture",
+    proposed_by: "agent:overnight",
     target_entity_type: "deal",
     target_entity_id: "d1",
     created_at: "2026-07-01T08:00:00Z",
@@ -707,9 +747,9 @@ describe("DealScreen pending approvals", () => {
     // approval.kind.advance_deal: the key the inbox reads for the same kind.
     expect(await screen.findByText("Advance deal")).toBeTruthy();
     // trust.agentTag: an agent, named, rather than the doubled wire string.
-    expect(screen.getByText("Automated by capture")).toBeTruthy();
+    expect(screen.getByText("Automated by Overnight agent")).toBeTruthy();
     expect(screen.queryByText("advance_deal")).toBeNull();
-    expect(screen.queryByText("agent:capture")).toBeNull();
+    expect(screen.queryByText("agent:overnight")).toBeNull();
   });
 });
 
@@ -724,8 +764,8 @@ describe("DealScreen — History tab", () => {
     await userEvent.click(screen.getByRole("button", { name: /history/i }));
     await userEvent.click(screen.getByRole("button", { name: "Changes" }));
 
-    await waitFor(() =>
-      expect(screen.getByText("Deal amount changed")).toBeTruthy(),
+    await screen.findByText(
+      translate("en", "history.verb.update", { subject: "Demo Admin" }),
     );
   });
 });

@@ -58,12 +58,15 @@ type RecordHistoryFilter struct {
 // verbs' before/after payloads are served verbatim—workspace-operational
 // context behind the same record-read gate, never subject PII.
 type RecordHistoryEntry struct {
-	ID                ids.UUID
-	ActorType         string
-	ActorID           string
-	ActorName         *string
-	OnBehalfOf        *ids.UUID
-	OnBehalfOfName    *string
+	ID             ids.UUID
+	ActorType      string
+	ActorID        string
+	ActorName      *string
+	OnBehalfOf     *ids.UUID
+	OnBehalfOfName *string
+	// PassportID is what tells a machine row whose human authority went
+	// unrecorded from one that never had any, for a client composing the line.
+	PassportID        *ids.UUID
 	Action            string
 	OccurredAt        time.Time
 	AuthorizationRule *string
@@ -171,6 +174,7 @@ func recordHistoryEntry(row recordAuditRow, mask entityFieldMask) RecordHistoryE
 		ActorName:         row.actorDisplayName,
 		OnBehalfOf:        row.onBehalfOf,
 		OnBehalfOfName:    row.onBehalfOfName,
+		PassportID:        row.passportID,
 		Action:            row.action,
 		OccurredAt:        row.occurredAt,
 		AuthorizationRule: row.authorizationRule,

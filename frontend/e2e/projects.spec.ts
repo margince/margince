@@ -38,11 +38,9 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await page.getByRole("button", { name: "Neues Projekt" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox", { name: "Projektname" }).fill("Brandt ERP");
-  await choose(
-    page,
-    dialog.getByRole("combobox", { name: "Unternehmen" }),
-    "Brandt Automotive GmbH",
-  );
+  // The company is searched by name, not chosen from a preloaded list.
+  await dialog.getByRole("searchbox", { name: "Unternehmen" }).fill("Brandt");
+  await dialog.getByRole("button", { name: /Brandt Automotive GmbH/ }).click();
   await dialog.getByRole("button", { name: "Erstellen" }).click();
 
   // The create lands on the project's own page, born in Initiative with the

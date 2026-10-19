@@ -19,6 +19,10 @@ import {
   useCompany,
 } from "../sign-in/installationcompany";
 import { CompanyFactsCard } from "./companycontextfacts";
+import {
+  companyContextShown,
+  useCompanyContextCapabilities,
+} from "./companycontextreach";
 import { CompanyMark } from "./companymark";
 import "./company-context.css";
 import {
@@ -29,8 +33,6 @@ import { RefreshReview, refreshConfirmation } from "./company-context.refresh";
 import { CompanySourceCard } from "./company-context.source";
 
 export { ManualCompanySetup } from "./company-context.profile";
-
-type Capabilities = components["schemas"]["CompanyContextCapabilities"];
 
 type CompanyProfile = components["schemas"]["CompanyProfile"];
 
@@ -54,24 +56,6 @@ type RefreshChoice = Readonly<{
 // A NUL can appear in no key the server mints, so no key can ever split into
 // two — which a separator drawn from ordinary punctuation could not promise.
 const SELECTION_SEPARATOR = "\u0000";
-
-// The rollout answer every surface that gates on the flag shares — the card
-// here and the onboarding journey. Named so a caller can ask
-// the cache whether the answer has LANDED, which is a different question from
-// whether the request went out.
-export const companyContextCapabilitiesQueryKey = [
-  "company-context-capabilities",
-];
-
-export function useCompanyContextCapabilities(enabled = true) {
-  return useQuery({
-    queryKey: companyContextCapabilitiesQueryKey,
-    enabled,
-    queryFn: async (): Promise<Capabilities> => {
-      return unwrap(await api.GET("/company/context/capabilities"));
-    },
-  });
-}
 
 function profileInput(profile: CompanyProfile): CompanyInput {
   return {
@@ -347,11 +331,7 @@ export function CompanyContextCard() {
   // nothing: a surface that is none of this reader's work is not a fact being
   // withheld from them, and a card saying so on a tab they are entitled to
   // open would draw a permission boundary as a fault.
-  if (!isAdmin) {
-    return null;
-  }
-
-  if (capabilities.data && !capabilities.data.read_enabled) {
+  if (!companyContextShown(isAdmin, capabilities.data)) {
     return null;
   }
 

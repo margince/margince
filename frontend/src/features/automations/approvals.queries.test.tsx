@@ -131,7 +131,11 @@ describe("usePendingApprovals", () => {
       vi.fn(
         async () =>
           new Response(
-            JSON.stringify({ title: "Denied", status: 403, code: "forbidden" }),
+            JSON.stringify({
+              title: "Denied",
+              status: 403,
+              code: "permission_denied",
+            }),
             { status: 403, headers: { "Content-Type": "application/json" } },
           ),
       ),

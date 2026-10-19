@@ -38,9 +38,25 @@ const SETTINGS = {
   base_currency_locked: false,
 };
 
+const RATE_SHEET_LOCK = {
+  ...SETTINGS,
+  base_currency_locked: true,
+  base_currency_locked_reason:
+    "3 rate(s) in the sheet convert into EUR and cannot be restated against another base; clear the rate sheet first",
+  base_currency_lock: { reason: "rate_sheet", count: 3, base_currency: "EUR" },
+};
+const RATES_FROZEN_LOCK = {
+  ...SETTINGS,
+  base_currency_locked: true,
+  base_currency_locked_reason:
+    "1 record(s) — closed deals, sent offers, mirrored invoices, contracts and commission entries — have already frozen a conversion rate against it, so changing the base would re-mean every roll-up built on them",
+  base_currency_lock: { reason: "rates_frozen", count: 1 },
+};
+
 function story(
   settings: Record<string, unknown>,
   allow: Parameters<typeof meRoute>[0],
+  locale?: "de" | "vi",
 ) {
   return () => {
     installFetchStub({
@@ -48,7 +64,7 @@ function story(
       "GET /installation/settings": () => jsonResponse(settings),
     });
     return (
-      <StoryProviders>
+      <StoryProviders locale={locale}>
         <DateFormatsProvider>
           <InstallationSettingsCard />
         </DateFormatsProvider>
@@ -88,12 +104,28 @@ export const ProfileDialog: Story = {
   },
 };
 
-// The base currency stops being changeable the moment a deal freezes a rate
-// against it, which is a fact about the DATA rather than about the reader — so
-// the currency row carries the server's own reason and the field inside the
-// dialog is the only inert one.
 export const BaseCurrencyLocked: Story = {
-  render: story({ ...SETTINGS, base_currency_locked: true }, MANAGER),
+  render: story(RATE_SHEET_LOCK, MANAGER),
+};
+
+export const BaseCurrencyLockedByFrozenRates: Story = {
+  render: story(RATES_FROZEN_LOCK, MANAGER),
+};
+
+export const BaseCurrencyLockedGerman: Story = {
+  render: story(RATE_SHEET_LOCK, MANAGER, "de"),
+};
+
+export const BaseCurrencyLockedOlderServer: Story = {
+  render: story({ ...RATE_SHEET_LOCK, base_currency_lock: undefined }, MANAGER),
+};
+
+// The lock reason is the longest description on the card. On a phone it has to
+// wrap without pushing the value or the verb off the row.
+export const BaseCurrencyLockedPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story(RATE_SHEET_LOCK, MANAGER),
 };
 
 // A permission, not a lock. Every Edit verb is refused together and the reason
@@ -109,7 +141,7 @@ export const ReadOnly: Story = { render: story(SETTINGS, READER) };
 // primary Save in the dialog's action row.
 export const BaseCurrencyLockedDark: Story = {
   globals: { theme: "dark" },
-  render: story({ ...SETTINGS, base_currency_locked: true }, MANAGER),
+  render: story(RATE_SHEET_LOCK, MANAGER),
   play: async ({ canvasElement }) => {
     await openFrom(canvasElement, /edit base currency/i);
   },

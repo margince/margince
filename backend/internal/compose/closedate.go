@@ -163,7 +163,7 @@ func NewCloseDateCorrector(pool *pgxpool.Pool, log *slog.Logger) *deals.CloseDat
 	db := InstallationDB(pool)
 	owner := dealOwnerAuthority{db: db, users: identity.NewServiceFor(db)}
 	return deals.NewCloseDateCorrector(db,
-		closeDatePolicy{svc: approvals.NewService(db), owner: owner},
+		closeDatePolicy{svc: newApprovalsService(db), owner: owner},
 		quietReviewReader{db: db, owner: owner},
 		log, installseam.Deals()).WithBaseLanguage(installationLanguage(pool))
 }

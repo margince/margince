@@ -288,7 +288,10 @@ export const OnePanelRefused: Story = {
   render: brief({
     approvals: [...singles],
     pipeline: () =>
-      jsonResponse({ title: "Forbidden", code: "forbidden" }, 403),
+      jsonResponse(
+        { title: "Forbidden", status: 403, code: "permission_denied" },
+        403,
+      ),
   }),
 };
 

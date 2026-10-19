@@ -23,6 +23,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `aiconnectreadme_test.go` | H2 | Every connect path in aiconnect.ts has one skill README section that links the same vendor guide, and the README offers no path the page lacks. |
 | `aiegressdoc_test.go` | H2 | The egress page and the routing table say the same thing. |
 | `airoutingschema_test.go` | H3 | What the editor accepts, checked against what the parser accepts. |
+| `aitaskdisplayparity_test.go` | H3 | TestDisplayTaskKeysMatchTheTaskCatalog holds the API task identity and English UI names to the owning catalog. |
 | `aitaskparity_test.go` | H3 | Every ai\_task an emitter writes into the AI-activity projection must be a task the AI contract declares. |
 | `aitaskrunenum_test.go` | H3 | The ai\_task.state\_changed payload's closed vocabularies must equal the ai\_task\_run column CHECKs they are projected into. |
 | `analyticsrefusalkinds_test.go` | H2 | The contract's refusal kinds are the kinds the engine constructs, no more and no fewer. |
@@ -71,6 +72,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `forecastperiodparity_test.go` | H3 | Every period the contract offers must be a window the server can resolve. |
 | `forwardmeasureparity_test.go` | H3 | Every forward measure must be spelled the same on all three sides. |
 | `frontendacquisitionkinds_test.go` | H3 | The browser knows every way the server says a contact was obtained, and no other. |
+| `frontendagentlabels_test.go` | H2 | A provenance tag names the agent behind a proposal or a change by its words, never by its principal id. |
 | `frontendapprovalkinds_test.go` | H1 | Every kind a proposal can be staged under must have words a reader recognises, or the queue prints the wire enum at them. |
 | `frontendattentionsources_test.go` | H1 | Every source the Worklist can carry must have a body the decision lane knows how to draw, or the lane asks the wrong endpoint about it. |
 | `frontendaudiencereasons_test.go` | H3 | A held message says why it was held, or the reader cannot argue with the verdict. |
@@ -98,8 +100,10 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendrowtagcap_test.go` | H3 | The browser and the server must agree on how many tags one list row carries, or the chip strip's "+N" counts a number nobody has. |
 | `frontendschedulinglimits_test.go` | H3 | The Meetings settings screen stops a title or a location at the contract's length before the request is sent. |
 | `frontendsetupproviders_test.go` | H3 | Onboarding offers a first-time admin a provider and a model, and the server has to be able to price and serve whatever it offered. |
+| `frontendunitspellings_test.go` | H3 | The browser and the server must read a unit's spelling as the same key. |
 | `goversionpins_test.go` | H3 | One Go version, pinned in several places, and they have to agree. |
 | `grantrenewalcauses_test.go` | H1 | Every reason a standing grant needs renewing must reach the card that asks for it. |
+| `grouprolemapcap_test.go` | H3 | The ceiling on the group to role map is read in three places, and they have to be one number. |
 | `heldsendtwin_test.go` | H3 | The held-message reuse rule is written twice, and the two copies must agree. |
 | `humanonlyenforcement_test.go` | H1 | The declaration reaches the thing that enforces it. |
 | `idempotencymap_test.go` | H3 | The contract decides which operations promise Idempotency-Key retry safety, and internal/compose's hand-maintained replayableOperations map must list the same operations. |
@@ -123,6 +127,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `meetinghorizonparity_test.go` | H2 | How far into the diary a meeting still says a relationship is live, spelled twice in two modules that may not import each other, and held equal here. |
 | `mergedecidableauthority_test.go` | H2 | Who may settle a duplicate pair has one answer, and the card must ask the same thing the write asks. |
 | `minorunitscale_test.go` | H3 | A currency's minor-unit scale (100 for EUR, 1000 for KWD, 1 for VND) is one fact, and the table that holds it lives in shared/kernel/values. |
+| `mockproblemcodes_test.go` | H2 | Every Problem a frontend test, story or fixture answers carries a code the server can send. |
 | `modelreplyfence_test.go` | H3 | A markdown fence around a model's JSON is presentation, and no site may read it as a malformed answer. |
 | `modelroutes_test.go` | H3 | The SPA's table of routes that hold a model call open must be the contract's. |
 | `modulecatalogtables_test.go` | H2 | The module catalog's Owns-tables column is the ownership map. |

@@ -42,12 +42,16 @@ func (r *Retriever) Search(ctx context.Context, q retrieval.Query) (retrieval.Re
 	}
 	out := retrieval.Result{Hits: make([]retrieval.Hit, 0, len(hits)), SemanticRanking: semantic}
 	for _, hit := range hits {
+		excerpt := hit.Title
+		if snippetIsEvidence(hit.Type) {
+			excerpt = firstNonEmpty(hit.Snippet, hit.Title)
+		}
 		out.Hits = append(out.Hits, retrieval.Hit{
 			Ref:   datasource.EntityRef{Type: datasource.EntityType(hit.Type), ID: hit.ID},
 			Score: hit.Score,
 			Evidence: []retrieval.Evidence{{
 				Source:  hit.Type + ":" + hit.ID.String(),
-				Snippet: firstNonEmpty(hit.Snippet, hit.Title),
+				Snippet: excerpt,
 			}},
 		})
 	}

@@ -456,8 +456,8 @@
   /* THE SETTINGS MEASURE. A settings page is a column of decisions read top to
      bottom, and the row language puts the naming on the left and the answer on
      the right — at the page's own --pageColumn that pair is separated by half a
-     wide screen of nothing. 720 keeps a label and its answer in one glance and
-     holds a description to a readable line.
+     wide screen of nothing. 1024 keeps a label and its answer in one sweep of
+     the eye and still leaves a settings table room for its columns.
 
      A token rather than a number in one sheet, because TWO sheets read it: the
      stack takes it as its width (screens/settings.css) and the shell takes it
@@ -468,7 +468,7 @@
      Here rather than beside --pageColumn on `.app`, because the stack is also
      drawn outside the shell — a settings card's own story renders one — and a
      measure that resolved to nothing there would silently uncap it. */
-  --settingsColumn: 720px;
+  --settingsColumn: 1024px;
 
   /* THE OVERLAY MEASURES, one per `Modal` intent (modal.tsx). A box is its
      measure or the glass less its gutter, whichever is narrower. */

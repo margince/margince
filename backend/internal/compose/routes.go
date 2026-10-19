@@ -71,7 +71,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	// provider seam: agentGate's StageResolver reads exactly what the MCP
 	// registry's tools read.
 	provider := NewProvider(pool)
-	staging := approvalsAdapter{svc: approvals.NewService(InstallationDB(pool))}
+	staging := approvalsAdapter{svc: newApprovalsService(InstallationDB(pool))}
 	// Wrap order: the generated router applies the slice left-to-right
 	// around the handler, so the LAST entry is outermost — idempotency
 	// must sit outside the agent gate so a staged-approval refusal is

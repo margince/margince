@@ -238,6 +238,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The case is that a date-only period reads as the SAME days for every colleague, and proving it needs three named zones at once: the installation's, which the tile must follow, and a viewer's on either side of UTC. A zone taken off the runner would decide whether the bug can appear at all — east of UTC a viewer-zone read prints the right days by luck, so the assertion would pass over code that is wrong for half the world. The installation's zone is supplied through RecordZoneProvider, the seam the product itself reads.",
   },
   {
+    file: "features/automations/approvalevidence.test.tsx",
+    why: "The source date must use the configured record zone. The test supplies a named zone through RecordZoneProvider and checks the date against it, independent of the browser zone.",
+  },
+  {
     file: "features/brief/brief.weekly.test.tsx",
     why: "The case asserts that the weekly's 'written at' renders in the INSTALLATION's zone, so it provides one through RecordZoneProvider and formats its expectation against the same name. The alternative is naming FALLBACK_RECORD_ZONE, which the arm below forbids and rightly: the component reads that same constant, so the assertion would hold however wrong the zone decision was.",
   },

@@ -13,6 +13,7 @@ import { settingsSearch } from "./settingssearch";
 
 const t = (key: MessageKey) => translate("en", key);
 const de = (key: MessageKey) => translate("de", key);
+const vi = (key: MessageKey) => translate("vi", key);
 
 // Every page, as an admin holding everything sees them.
 //
@@ -156,5 +157,67 @@ describe("settingsSearch", () => {
   // A gate reading no pages would pass every claim above.
   it("has pages to search at all", () => {
     expect(ALL.length).toBeGreaterThan(20);
+  });
+});
+
+describe("settingsSearch over the settings a page draws", () => {
+  it.each([
+    ["data retention", "system-health", "operations.retention.label"],
+    ["date format", "company", "installationSettings.dateFormat"],
+    ["sync interval", "capture", "captureMailSync.interval.label"],
+    ["two-step", "account", "mfa.title"],
+  ] as const)("sends %p to %s and names the setting", (query, page, key) => {
+    const hit = settingsSearch(query, ALL, t).find(
+      (candidate) => candidate.page.id === page,
+    );
+    expect(hit?.section).toBe(t(key));
+  });
+
+  it.each([
+    ["de", de, "system-health", "operations.retention.label"],
+    ["vi", vi, "company", "installationSettings.timezone"],
+  ] as const)("finds a %s setting by its own label", (_, words, page, key) => {
+    const hit = settingsSearch(words(key), ALL, words).find(
+      (candidate) => candidate.page.id === page,
+    );
+    expect(hit?.section).toBe(words(key));
+  });
+
+  it.each([
+    ["Mui gio bao cao", "company"],
+    ["khoang dong bo", "capture"],
+  ] as const)(
+    "matches the Vietnamese %p typed without its marks",
+    (q, page) => {
+      expect(ids(q, ALL, vi)).toContain(page);
+    },
+  );
+
+  it("offers the company-context settings only where the card draws", () => {
+    const find = (seesCompanyContext: boolean) =>
+      settingsSearch("ideal customer", ALL, t, { seesCompanyContext }).map(
+        (hit) => hit.page.id,
+      );
+    expect(find(true)).toContain("company");
+    expect(find(false)).not.toContain("company");
+  });
+
+  // Automations is a page and a phrase on two others ("Automations that ran").
+  it("puts a page-name hit above a section hit", () => {
+    const hits = settingsSearch("automations", ALL, t);
+    expect(hits[0]?.page.id).toBe("automations");
+    expect(hits[0]?.section).toBeUndefined();
+    const sectionHits = hits.slice(1).map((hit) => hit.page.id);
+    expect(sectionHits).toEqual(
+      expect.arrayContaining(["notifications", "system-health"]),
+    );
+  });
+
+  it("names no setting when an alias already matched", () => {
+    const hit = settingsSearch("working hours", ALL, t).find(
+      (candidate) => candidate.page.id === "meetings",
+    );
+    expect(hit).toBeDefined();
+    expect(hit?.section).toBeUndefined();
   });
 });

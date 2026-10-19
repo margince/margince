@@ -27,6 +27,7 @@ import (
 )
 
 type Service struct {
+	assigneeCanHoldWork func(context.Context, pgx.Tx, ids.UserID) (bool, error)
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db *database.DB
 	// now is the service's clock: both expiry windows (staging TTL,

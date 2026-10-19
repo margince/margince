@@ -25,12 +25,7 @@ export function AiAccessTab() {
       <ConnectedAgentsCard />
       <Disclosure
         summary={
-          <span className="aiaccess-dev-summary">
-            <span className="aiaccess-dev-title">
-              {t("aiAccess.dev.title")}
-            </span>
-            <span className="t-caption">{t("aiAccess.dev.sub")}</span>
-          </span>
+          <span className="aiaccess-dev-title">{t("aiAccess.dev.title")}</span>
         }
       >
         <DeveloperTabs />
@@ -49,6 +44,7 @@ function DeveloperTabs() {
   const [tab, setTab] = useState<DeveloperTab>("passports");
   return (
     <div className="aiaccess-dev">
+      <p className="t-caption aiaccess-dev-sub">{t("aiAccess.dev.sub")}</p>
       <SegmentedControl
         label={t("aiAccess.dev.title")}
         options={DEVELOPER_TABS}
@@ -60,15 +56,19 @@ function DeveloperTabs() {
           rules: t("aiAccess.dev.tab.rules"),
         }}
       />
-      {tab === "passports" && <PassportCard />}
-      {tab === "agents" && <CodingAgentsCard />}
-      {tab === "rules" && (
-        <>
-          <AgentToolsCard />
-          <AutonomyTiersCard />
-          <AutonomySettingsCard />
-        </>
-      )}
+      {/* All three stay mounted, so a tab keeps its state and settings search
+          finds every card; only the chosen one shows. */}
+      <div hidden={tab !== "passports"}>
+        <PassportCard />
+      </div>
+      <div hidden={tab !== "agents"}>
+        <CodingAgentsCard />
+      </div>
+      <div hidden={tab !== "rules"} className="aiaccess-dev-rules">
+        <AgentToolsCard />
+        <AutonomyTiersCard />
+        <AutonomySettingsCard />
+      </div>
     </div>
   );
 }

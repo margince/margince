@@ -385,8 +385,7 @@ describe("ApprovalTray — a bundle says only what its members agree on", () => 
     expect(await screen.findByText("1 decision · 2 items")).toBeTruthy();
     // Neither agent's name — and not the unnamed tag either, which would still
     // claim one agent produced the whole act.
-    expect(screen.queryByText("Automated by deepread")).toBeNull();
-    expect(screen.queryByText("Automated by site-read")).toBeNull();
+    expect(screen.queryByText("Automated by Website reader")).toBeNull();
     expect(screen.queryByText("Automated by an agent")).toBeNull();
     // The KIND is every member's, so the chip that says what this act is stays:
     // the rule drops the fact that diverged, not the card's meta line.
@@ -397,13 +396,19 @@ describe("ApprovalTray — a bundle says only what its members agree on", () => 
   // case above, and every single-agent bundle would lose a true reading.
   it("keeps the tag where every member names the same agent", async () => {
     const queue = [
-      proposal("apy-1", "Lead: Anna Weber", { bundle_id: "bn-3" }),
-      proposal("apy-2", "Lead: Mira Osei", { bundle_id: "bn-3" }),
+      proposal("apy-1", "Lead: Anna Weber", {
+        bundle_id: "bn-3",
+        proposed_by: "agent:deal-scout",
+      }),
+      proposal("apy-2", "Lead: Mira Osei", {
+        bundle_id: "bn-3",
+        proposed_by: "agent:deal-scout",
+      }),
     ];
     stubApi({ "GET /approvals": () => pendingPage(queue, new Set<string>()) });
     render(<ApprovalTray />);
 
     expect(await screen.findByText("1 decision · 2 items")).toBeTruthy();
-    expect(screen.getByText("Automated by runner")).toBeTruthy();
+    expect(screen.getByText("Automated by Deal Scout")).toBeTruthy();
   });
 });

@@ -8,11 +8,18 @@ import { useAcquisitionSources } from "../../screens/acquisitionsources.queries"
 import { RecordCustomFields } from "../../screens/recordcustomfields";
 import { saveRecordEdit } from "../../screens/recordedit";
 import { RecordListsPanel } from "../../screens/recordlists";
-import { useRecordOwners } from "../../screens/recordreferences";
+import {
+  useOwnerPicker,
+  useRecordOwners,
+} from "../../screens/recordreferences";
 import { RecordTeam } from "../../screens/recordteam";
 import { TagsPanel } from "../lists/tagspanel";
 import { DealEmailAside } from "./dealemail";
-import { resolveDealProject, useProjectsOfCompany } from "./dealproject";
+import {
+  NEW_PROJECT_OWNER,
+  resolveDealProject,
+  useProjectsOfCompany,
+} from "./dealproject";
 import type { Deal } from "./deals";
 import {
   attributedPartner,
@@ -24,30 +31,19 @@ import { dealEditRecord, mapDealUpdate, stringValues } from "./deals.write";
 
 export function DealDetails({
   deal,
-  companies,
   meId,
 }: Readonly<{
   deal: Deal;
-  companies: { id: string; display_name: string }[];
   meId: string;
 }>) {
   const t = useT();
-  const partnerOptions = usePartnerOptions(companies);
+  const partnerOptions = usePartnerOptions([]);
   const acquisitionSources = useAcquisitionSources().data;
   const masked = deal.masked_fields ?? [];
-  const companyOnPage = companies.find(
-    (company) => company.id === deal.company_id,
-  );
-  const companyById = useEntityName(
-    "company",
-    companyOnPage ? null : deal.company_id,
-  );
+  const companyName = useEntityName("company", deal.company_id).name;
+  const partnerName = useEntityName("company", deal.partner_company_id).name;
   const currentCompany = deal.company_id
-    ? {
-        id: deal.company_id,
-        label:
-          companyOnPage?.display_name ?? companyById.name ?? deal.company_id,
-      }
+    ? { id: deal.company_id, label: companyName ?? deal.company_id }
     : undefined;
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const formCompany = formValues.company_id ?? deal.company_id ?? undefined;
@@ -56,6 +52,7 @@ export function DealDetails({
   const currentProject = deal.project_id
     ? { id: deal.project_id, label: projectById.name ?? deal.project_id }
     : undefined;
+  const projectOwner = useOwnerPicker(null);
   const seeded = { ...dealEditRecord(deal), original: deal };
   const canEdit = useCanWriteRecord("deal", deal) && !deal.archived_at;
   const owners = useRecordOwners(deal.owner_id);
@@ -93,7 +90,12 @@ export function DealDetails({
           },
           {
             label: t("create.relatedCompany"),
-            keys: ["company_id", "project_id", "new_project_name"],
+            keys: [
+              "company_id",
+              "project_id",
+              "new_project_name",
+              NEW_PROJECT_OWNER,
+            ],
           },
           {
             label: t("deal.partnerCompany"),
@@ -115,9 +117,8 @@ export function DealDetails({
         title={t("co.details.title")}
         fields={[
           ...dealEditFields(t, {
-            companies,
             partnerOptions,
-            attributedPartner: attributedPartner(deal, companies),
+            attributedPartner: attributedPartner(deal, partnerName),
             currentCompany,
             masked,
             me: meId,
@@ -137,6 +138,7 @@ export function DealDetails({
             currentProject:
               formCompany === deal.company_id ? currentProject : undefined,
             company: formCompany,
+            owner: projectOwner,
           }),
         ]}
         record={seeded}
@@ -191,11 +193,9 @@ function DealTagsSection({ deal }: Readonly<{ deal: Deal }>) {
 // ours owns it, then how the deal is filed and the mail card.
 export function DealContext({
   deal,
-  companies,
   meId,
 }: Readonly<{
   deal: Deal;
-  companies: { id: string; display_name: string }[];
   meId: string;
 }>) {
   // The same per-row answer the deal's other verbs read. An archived deal
@@ -207,7 +207,7 @@ export function DealContext({
       {/* What the deal is commercially, then who of ours is on it. The buyer's
           seats are not here: they live in the committee card in the column, with
           the verbs that change them. The rail holds no second copy of that list. */}
-      <DealDetails deal={deal} companies={companies} meId={meId} />
+      <DealDetails deal={deal} meId={meId} />
       <RecordTeam recordType="deal" recordId={deal.id} readOnly={!canWrite} />
       <DealTagsSection deal={deal} />
       <RecordListsPanel entityType="deal" entityId={deal.id} />

@@ -269,9 +269,7 @@ function SeatCard({
     >
       {suggested && (
         <p className="cp-seat-mark">
-          <ProvenanceTag
-            provenance={{ kind: "agent", agent: "propose_roles" }}
-          />{" "}
+          <ProvenanceTag provenance={{ kind: "agent", job: "propose_roles" }} />{" "}
           {t("co.contacts.board.readFromMessages")}
         </p>
       )}

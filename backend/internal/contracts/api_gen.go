@@ -1243,6 +1243,114 @@ func (e AiRunSummaryCurrency) Valid() bool {
 	}
 }
 
+// Defines values for AiTask.
+const (
+	AiTaskAccountScan                   AiTask = "account_scan"
+	AiTaskAgentLoop                     AiTask = "agent_loop"
+	AiTaskBriefRanking                  AiTask = "brief_ranking"
+	AiTaskCaptureClassify               AiTask = "capture_classify"
+	AiTaskCaptureConfidentialityVerdict AiTask = "capture_confidentiality_verdict"
+	AiTaskCaptureCounterpartyVerdict    AiTask = "capture_counterparty_verdict"
+	AiTaskCertJudge                     AiTask = "cert_judge"
+	AiTaskColdStart                     AiTask = "cold_start"
+	AiTaskCorpusAsk                     AiTask = "corpus_ask"
+	AiTaskDealHealth                    AiTask = "deal_health"
+	AiTaskDocumentExtract               AiTask = "document_extract"
+	AiTaskDraftReply                    AiTask = "draft_reply"
+	AiTaskEnrich                        AiTask = "enrich"
+	AiTaskGrowthFit                     AiTask = "growth_fit"
+	AiTaskNlSearch                      AiTask = "nl_search"
+	AiTaskOfferDraft                    AiTask = "offer_draft"
+	AiTaskOwedVerdict                   AiTask = "owed_verdict"
+	AiTaskProposeRoles                  AiTask = "propose_roles"
+	AiTaskRateExtract                   AiTask = "rate_extract"
+	AiTaskRequestSettlement             AiTask = "request_settlement"
+	AiTaskSignalExtract                 AiTask = "signal_extract"
+	AiTaskSiteExtract                   AiTask = "site_extract"
+	AiTaskSiteFactExtract               AiTask = "site_fact_extract"
+	AiTaskSiteTriage                    AiTask = "site_triage"
+	AiTaskStageEvidenceExtract          AiTask = "stage_evidence_extract"
+	AiTaskSummarize                     AiTask = "summarize"
+	AiTaskTagSuggest                    AiTask = "tag_suggest"
+	AiTaskTranscript                    AiTask = "transcript"
+	AiTaskTranscriptPropose             AiTask = "transcript_propose"
+	AiTaskVoiceBuild                    AiTask = "voice_build"
+	AiTaskWeeklyLearnings               AiTask = "weekly_learnings"
+	AiTaskWeeklyReview                  AiTask = "weekly_review"
+)
+
+// Valid indicates whether the value is a known member of the AiTask enum.
+func (e AiTask) Valid() bool {
+	switch e {
+	case AiTaskAccountScan:
+		return true
+	case AiTaskAgentLoop:
+		return true
+	case AiTaskBriefRanking:
+		return true
+	case AiTaskCaptureClassify:
+		return true
+	case AiTaskCaptureConfidentialityVerdict:
+		return true
+	case AiTaskCaptureCounterpartyVerdict:
+		return true
+	case AiTaskCertJudge:
+		return true
+	case AiTaskColdStart:
+		return true
+	case AiTaskCorpusAsk:
+		return true
+	case AiTaskDealHealth:
+		return true
+	case AiTaskDocumentExtract:
+		return true
+	case AiTaskDraftReply:
+		return true
+	case AiTaskEnrich:
+		return true
+	case AiTaskGrowthFit:
+		return true
+	case AiTaskNlSearch:
+		return true
+	case AiTaskOfferDraft:
+		return true
+	case AiTaskOwedVerdict:
+		return true
+	case AiTaskProposeRoles:
+		return true
+	case AiTaskRateExtract:
+		return true
+	case AiTaskRequestSettlement:
+		return true
+	case AiTaskSignalExtract:
+		return true
+	case AiTaskSiteExtract:
+		return true
+	case AiTaskSiteFactExtract:
+		return true
+	case AiTaskSiteTriage:
+		return true
+	case AiTaskStageEvidenceExtract:
+		return true
+	case AiTaskSummarize:
+		return true
+	case AiTaskTagSuggest:
+		return true
+	case AiTaskTranscript:
+		return true
+	case AiTaskTranscriptPropose:
+		return true
+	case AiTaskVoiceBuild:
+		return true
+	case AiTaskWeeklyLearnings:
+		return true
+	case AiTaskWeeklyReview:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiTaskOverrideThinking.
 const (
 	AiTaskOverrideThinkingHigh    AiTaskOverrideThinking = "high"
@@ -2431,6 +2539,168 @@ func (e AudienceMemberSubjectType) Valid() bool {
 	}
 }
 
+// Defines values for AuditAction.
+const (
+	AuditActionAccrue              AuditAction = "accrue"
+	AuditActionActivityRelink      AuditAction = "activity_relink"
+	AuditActionAdvancePhase        AuditAction = "advance_phase"
+	AuditActionAdvanceStage        AuditAction = "advance_stage"
+	AuditActionAnonymize           AuditAction = "anonymize"
+	AuditActionApprove             AuditAction = "approve"
+	AuditActionArchive             AuditAction = "archive"
+	AuditActionAssign              AuditAction = "assign"
+	AuditActionCancel              AuditAction = "cancel"
+	AuditActionClose               AuditAction = "close"
+	AuditActionConnect             AuditAction = "connect"
+	AuditActionConsentGrant        AuditAction = "consent_grant"
+	AuditActionConsentWithdraw     AuditAction = "consent_withdraw"
+	AuditActionCreate              AuditAction = "create"
+	AuditActionDelete              AuditAction = "delete"
+	AuditActionDemote              AuditAction = "demote"
+	AuditActionDisconnect          AuditAction = "disconnect"
+	AuditActionDisqualify          AuditAction = "disqualify"
+	AuditActionErase               AuditAction = "erase"
+	AuditActionExpire              AuditAction = "expire"
+	AuditActionExport              AuditAction = "export"
+	AuditActionHold                AuditAction = "hold"
+	AuditActionImport              AuditAction = "import"
+	AuditActionImportUndo          AuditAction = "import_undo"
+	AuditActionInvite              AuditAction = "invite"
+	AuditActionLiftLegalHold       AuditAction = "lift_legal_hold"
+	AuditActionMerge               AuditAction = "merge"
+	AuditActionPasswordLinkIssued  AuditAction = "password_link_issued"
+	AuditActionPause               AuditAction = "pause"
+	AuditActionPay                 AuditAction = "pay"
+	AuditActionPin                 AuditAction = "pin"
+	AuditActionPlaceLegalHold      AuditAction = "place_legal_hold"
+	AuditActionPromote             AuditAction = "promote"
+	AuditActionPublish             AuditAction = "publish"
+	AuditActionRecordShare         AuditAction = "record_share"
+	AuditActionRecordUnshare       AuditAction = "record_unshare"
+	AuditActionReject              AuditAction = "reject"
+	AuditActionRelease             AuditAction = "release"
+	AuditActionRequestLegalReview  AuditAction = "request_legal_review"
+	AuditActionReschedule          AuditAction = "reschedule"
+	AuditActionResetData           AuditAction = "reset_data"
+	AuditActionResolve             AuditAction = "resolve"
+	AuditActionRestore             AuditAction = "restore"
+	AuditActionRestrict            AuditAction = "restrict"
+	AuditActionResume              AuditAction = "resume"
+	AuditActionRevoke              AuditAction = "revoke"
+	AuditActionSchedule            AuditAction = "schedule"
+	AuditActionSendEmail           AuditAction = "send_email"
+	AuditActionUpdate              AuditAction = "update"
+	AuditActionWithdrawLegalReview AuditAction = "withdraw_legal_review"
+)
+
+// Valid indicates whether the value is a known member of the AuditAction enum.
+func (e AuditAction) Valid() bool {
+	switch e {
+	case AuditActionAccrue:
+		return true
+	case AuditActionActivityRelink:
+		return true
+	case AuditActionAdvancePhase:
+		return true
+	case AuditActionAdvanceStage:
+		return true
+	case AuditActionAnonymize:
+		return true
+	case AuditActionApprove:
+		return true
+	case AuditActionArchive:
+		return true
+	case AuditActionAssign:
+		return true
+	case AuditActionCancel:
+		return true
+	case AuditActionClose:
+		return true
+	case AuditActionConnect:
+		return true
+	case AuditActionConsentGrant:
+		return true
+	case AuditActionConsentWithdraw:
+		return true
+	case AuditActionCreate:
+		return true
+	case AuditActionDelete:
+		return true
+	case AuditActionDemote:
+		return true
+	case AuditActionDisconnect:
+		return true
+	case AuditActionDisqualify:
+		return true
+	case AuditActionErase:
+		return true
+	case AuditActionExpire:
+		return true
+	case AuditActionExport:
+		return true
+	case AuditActionHold:
+		return true
+	case AuditActionImport:
+		return true
+	case AuditActionImportUndo:
+		return true
+	case AuditActionInvite:
+		return true
+	case AuditActionLiftLegalHold:
+		return true
+	case AuditActionMerge:
+		return true
+	case AuditActionPasswordLinkIssued:
+		return true
+	case AuditActionPause:
+		return true
+	case AuditActionPay:
+		return true
+	case AuditActionPin:
+		return true
+	case AuditActionPlaceLegalHold:
+		return true
+	case AuditActionPromote:
+		return true
+	case AuditActionPublish:
+		return true
+	case AuditActionRecordShare:
+		return true
+	case AuditActionRecordUnshare:
+		return true
+	case AuditActionReject:
+		return true
+	case AuditActionRelease:
+		return true
+	case AuditActionRequestLegalReview:
+		return true
+	case AuditActionReschedule:
+		return true
+	case AuditActionResetData:
+		return true
+	case AuditActionResolve:
+		return true
+	case AuditActionRestore:
+		return true
+	case AuditActionRestrict:
+		return true
+	case AuditActionResume:
+		return true
+	case AuditActionRevoke:
+		return true
+	case AuditActionSchedule:
+		return true
+	case AuditActionSendEmail:
+		return true
+	case AuditActionUpdate:
+		return true
+	case AuditActionWithdrawLegalReview:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AuditHistoryEntryActorType.
 const (
 	AuditHistoryEntryActorTypeAgent     AuditHistoryEntryActorType = "agent"
@@ -2452,168 +2722,6 @@ func (e AuditHistoryEntryActorType) Valid() bool {
 	case AuditHistoryEntryActorTypeHuman:
 		return true
 	case AuditHistoryEntryActorTypeSystem:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AuditLogEntryAction.
-const (
-	AuditLogEntryActionAccrue              AuditLogEntryAction = "accrue"
-	AuditLogEntryActionActivityRelink      AuditLogEntryAction = "activity_relink"
-	AuditLogEntryActionAdvancePhase        AuditLogEntryAction = "advance_phase"
-	AuditLogEntryActionAdvanceStage        AuditLogEntryAction = "advance_stage"
-	AuditLogEntryActionAnonymize           AuditLogEntryAction = "anonymize"
-	AuditLogEntryActionApprove             AuditLogEntryAction = "approve"
-	AuditLogEntryActionArchive             AuditLogEntryAction = "archive"
-	AuditLogEntryActionAssign              AuditLogEntryAction = "assign"
-	AuditLogEntryActionCancel              AuditLogEntryAction = "cancel"
-	AuditLogEntryActionClose               AuditLogEntryAction = "close"
-	AuditLogEntryActionConnect             AuditLogEntryAction = "connect"
-	AuditLogEntryActionConsentGrant        AuditLogEntryAction = "consent_grant"
-	AuditLogEntryActionConsentWithdraw     AuditLogEntryAction = "consent_withdraw"
-	AuditLogEntryActionCreate              AuditLogEntryAction = "create"
-	AuditLogEntryActionDelete              AuditLogEntryAction = "delete"
-	AuditLogEntryActionDemote              AuditLogEntryAction = "demote"
-	AuditLogEntryActionDisconnect          AuditLogEntryAction = "disconnect"
-	AuditLogEntryActionDisqualify          AuditLogEntryAction = "disqualify"
-	AuditLogEntryActionErase               AuditLogEntryAction = "erase"
-	AuditLogEntryActionExpire              AuditLogEntryAction = "expire"
-	AuditLogEntryActionExport              AuditLogEntryAction = "export"
-	AuditLogEntryActionHold                AuditLogEntryAction = "hold"
-	AuditLogEntryActionImport              AuditLogEntryAction = "import"
-	AuditLogEntryActionImportUndo          AuditLogEntryAction = "import_undo"
-	AuditLogEntryActionInvite              AuditLogEntryAction = "invite"
-	AuditLogEntryActionLiftLegalHold       AuditLogEntryAction = "lift_legal_hold"
-	AuditLogEntryActionMerge               AuditLogEntryAction = "merge"
-	AuditLogEntryActionPasswordLinkIssued  AuditLogEntryAction = "password_link_issued"
-	AuditLogEntryActionPause               AuditLogEntryAction = "pause"
-	AuditLogEntryActionPay                 AuditLogEntryAction = "pay"
-	AuditLogEntryActionPin                 AuditLogEntryAction = "pin"
-	AuditLogEntryActionPlaceLegalHold      AuditLogEntryAction = "place_legal_hold"
-	AuditLogEntryActionPromote             AuditLogEntryAction = "promote"
-	AuditLogEntryActionPublish             AuditLogEntryAction = "publish"
-	AuditLogEntryActionRecordShare         AuditLogEntryAction = "record_share"
-	AuditLogEntryActionRecordUnshare       AuditLogEntryAction = "record_unshare"
-	AuditLogEntryActionReject              AuditLogEntryAction = "reject"
-	AuditLogEntryActionRelease             AuditLogEntryAction = "release"
-	AuditLogEntryActionRequestLegalReview  AuditLogEntryAction = "request_legal_review"
-	AuditLogEntryActionReschedule          AuditLogEntryAction = "reschedule"
-	AuditLogEntryActionResetData           AuditLogEntryAction = "reset_data"
-	AuditLogEntryActionResolve             AuditLogEntryAction = "resolve"
-	AuditLogEntryActionRestore             AuditLogEntryAction = "restore"
-	AuditLogEntryActionRestrict            AuditLogEntryAction = "restrict"
-	AuditLogEntryActionResume              AuditLogEntryAction = "resume"
-	AuditLogEntryActionRevoke              AuditLogEntryAction = "revoke"
-	AuditLogEntryActionSchedule            AuditLogEntryAction = "schedule"
-	AuditLogEntryActionSendEmail           AuditLogEntryAction = "send_email"
-	AuditLogEntryActionUpdate              AuditLogEntryAction = "update"
-	AuditLogEntryActionWithdrawLegalReview AuditLogEntryAction = "withdraw_legal_review"
-)
-
-// Valid indicates whether the value is a known member of the AuditLogEntryAction enum.
-func (e AuditLogEntryAction) Valid() bool {
-	switch e {
-	case AuditLogEntryActionAccrue:
-		return true
-	case AuditLogEntryActionActivityRelink:
-		return true
-	case AuditLogEntryActionAdvancePhase:
-		return true
-	case AuditLogEntryActionAdvanceStage:
-		return true
-	case AuditLogEntryActionAnonymize:
-		return true
-	case AuditLogEntryActionApprove:
-		return true
-	case AuditLogEntryActionArchive:
-		return true
-	case AuditLogEntryActionAssign:
-		return true
-	case AuditLogEntryActionCancel:
-		return true
-	case AuditLogEntryActionClose:
-		return true
-	case AuditLogEntryActionConnect:
-		return true
-	case AuditLogEntryActionConsentGrant:
-		return true
-	case AuditLogEntryActionConsentWithdraw:
-		return true
-	case AuditLogEntryActionCreate:
-		return true
-	case AuditLogEntryActionDelete:
-		return true
-	case AuditLogEntryActionDemote:
-		return true
-	case AuditLogEntryActionDisconnect:
-		return true
-	case AuditLogEntryActionDisqualify:
-		return true
-	case AuditLogEntryActionErase:
-		return true
-	case AuditLogEntryActionExpire:
-		return true
-	case AuditLogEntryActionExport:
-		return true
-	case AuditLogEntryActionHold:
-		return true
-	case AuditLogEntryActionImport:
-		return true
-	case AuditLogEntryActionImportUndo:
-		return true
-	case AuditLogEntryActionInvite:
-		return true
-	case AuditLogEntryActionLiftLegalHold:
-		return true
-	case AuditLogEntryActionMerge:
-		return true
-	case AuditLogEntryActionPasswordLinkIssued:
-		return true
-	case AuditLogEntryActionPause:
-		return true
-	case AuditLogEntryActionPay:
-		return true
-	case AuditLogEntryActionPin:
-		return true
-	case AuditLogEntryActionPlaceLegalHold:
-		return true
-	case AuditLogEntryActionPromote:
-		return true
-	case AuditLogEntryActionPublish:
-		return true
-	case AuditLogEntryActionRecordShare:
-		return true
-	case AuditLogEntryActionRecordUnshare:
-		return true
-	case AuditLogEntryActionReject:
-		return true
-	case AuditLogEntryActionRelease:
-		return true
-	case AuditLogEntryActionRequestLegalReview:
-		return true
-	case AuditLogEntryActionReschedule:
-		return true
-	case AuditLogEntryActionResetData:
-		return true
-	case AuditLogEntryActionResolve:
-		return true
-	case AuditLogEntryActionRestore:
-		return true
-	case AuditLogEntryActionRestrict:
-		return true
-	case AuditLogEntryActionResume:
-		return true
-	case AuditLogEntryActionRevoke:
-		return true
-	case AuditLogEntryActionSchedule:
-		return true
-	case AuditLogEntryActionSendEmail:
-		return true
-	case AuditLogEntryActionUpdate:
-		return true
-	case AuditLogEntryActionWithdrawLegalReview:
 		return true
 	default:
 		return false
@@ -3076,6 +3184,24 @@ func (e BackfillStatusWindow) Valid() bool {
 	case BackfillStatusWindowN6m:
 		return true
 	case BackfillStatusWindowN84m:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BaseCurrencyLockReason.
+const (
+	BaseCurrencyLockReasonRateSheet   BaseCurrencyLockReason = "rate_sheet"
+	BaseCurrencyLockReasonRatesFrozen BaseCurrencyLockReason = "rates_frozen"
+)
+
+// Valid indicates whether the value is a known member of the BaseCurrencyLockReason enum.
+func (e BaseCurrencyLockReason) Valid() bool {
+	switch e {
+	case BaseCurrencyLockReasonRateSheet:
+		return true
+	case BaseCurrencyLockReasonRatesFrozen:
 		return true
 	default:
 		return false
@@ -25050,6 +25176,9 @@ type AiStatus struct {
 	UnusedTiers          *[]string        `json:"unused_tiers,omitempty"`
 }
 
+// AiTask AI task key from the task catalog, used to localize its display name.
+type AiTask string
+
 // AiTaskFlow defines model for AiTaskFlow.
 type AiTaskFlow struct {
 	// Steps The decision model first, then each tier in ladder order.
@@ -25505,6 +25634,9 @@ type ApplyTagRequestEntityType string
 
 // Approval A staged 🟡 confirm-first action awaiting human decision.
 type Approval struct {
+	// AssigneeInactive For a pending commitment, whether its named task assignee cannot receive the task. True for invited, deactivated, archived, missing, or agent seats. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee.
+	AssigneeInactive *bool `json:"assignee_inactive,omitempty"`
+
 	// BundleId The act that staged this proposal together with its siblings: today, a website read's company facts and the leads it published. Null for a proposal staged on its own. It is a grouping id, not a foreign key: there is no
 	// bundle entity, and every member keeps its own diff hash, version pin, expiry and
 	// verdict (ADR-0036 — the staged row IS the authority object). Decide the whole set with
@@ -26465,6 +26597,9 @@ type AttentionItem struct {
 	// handles `snooze` generically write the wrong endpoint.
 	Actions []AttentionItemActions `json:"actions"`
 
+	// AiTask AI task key from the task catalog, used to localize its display name.
+	AiTask *AiTask `json:"ai_task,omitempty"`
+
 	// AssigneeId Who holds this task, null when nobody has taken it. Sent by `task`.
 	//
 	// The lane serves three scopes and only one is the reader's own queue: an
@@ -26808,13 +26943,23 @@ type AudienceMember struct {
 // AudienceMemberSubjectType defines model for AudienceMember.SubjectType.
 type AudienceMemberSubjectType string
 
+// AuditAction The verb of one audit row, as both the audit log and a record's history
+// serve it. One list, so the two reads cannot name the same row two ways.
+type AuditAction string
+
 // AuditHistoryEntry One rendered history line for a record mutation. `before`/`after` are
 // masked to the viewer's readable fields — an absent key was hidden, not null.
-// `summary` is server-composed plain language; field-level detail lives in
-// before/after for the client to render.
+// `summary` is server-composed plain language in English. A client that
+// renders the line in its reader's language builds it from `action` and the
+// actor fields. It falls back to `summary` for an edge row, whose role
+// travels only in the sentence, and for an action or actor kind it does
+// not know.
+// Field-level detail lives in before/after for the client to render.
 type AuditHistoryEntry struct {
-	Action  string `json:"action"`
-	ActorId string `json:"actor_id"`
+	// Action The verb of one audit row, as both the audit log and a record's history
+	// serve it. One list, so the two reads cannot name the same row two ways.
+	Action  AuditAction `json:"action"`
+	ActorId string      `json:"actor_id"`
 
 	// ActorName Resolved display name for a human actor_id; null for machine actors and for a member whose user row no longer resolves.
 	ActorName *string                    `json:"actor_name,omitempty"`
@@ -26858,7 +27003,14 @@ type AuditHistoryEntry struct {
 
 	// OnBehalfOfName Resolved display name for on_behalf_of.
 	OnBehalfOfName *string `json:"on_behalf_of_name,omitempty"`
-	Summary        string  `json:"summary"`
+
+	// PassportId The Agent Seat Passport the change was made under, as FieldHistoryEntry
+	// carries it. A machine row with a passport and no `on_behalf_of` had a
+	// human authority the row failed to record; one without a passport
+	// never had one. With `on_behalf_of` set and no `on_behalf_of_name`,
+	// the authority was recorded and the member no longer resolves.
+	PassportId *openapi_types.UUID `json:"passport_id,omitempty"`
+	Summary    string              `json:"summary"`
 
 	// UndidAuditLogId The history entry this one REVERSES, set on a row written by a restore and null on every other row. A reader pairs the two rather than showing a reversal as a fresh change. The opposite direction is deliberately NOT a field here: a row that HAS been reversed already says so through `undoable.reason = already_undone`, which is computed for the whole record rather than for one page, so a second field would be a second answer to a question already asked.
 	UndidAuditLogId *openapi_types.UUID `json:"undid_audit_log_id,omitempty"`
@@ -26889,7 +27041,9 @@ type AuditHistoryListResponse struct {
 
 // AuditLogEntry An append-only audit row. Mirrors the `audit_log` table.
 type AuditLogEntry struct {
-	Action AuditLogEntryAction `json:"action"`
+	// Action The verb of one audit row, as both the audit log and a record's history
+	// serve it. One list, so the two reads cannot name the same row two ways.
+	Action AuditAction `json:"action"`
 
 	// ActorId User uuid, agent id, connector name (e.g. connector:gmail), 'system', or a Deal Room participant (buyer:<participant uuid>) — an external human with no seat, who appears in no member directory.
 	ActorId string `json:"actor_id"`
@@ -26966,9 +27120,6 @@ type AuditLogEntry struct {
 	// PassportId Agent Seat Passport that authorized an agent action.
 	PassportId *openapi_types.UUID `json:"passport_id,omitempty"`
 }
-
-// AuditLogEntryAction defines model for AuditLogEntry.Action.
-type AuditLogEntryAction string
 
 // AuditLogEntryActorType defines model for AuditLogEntry.ActorType.
 type AuditLogEntryActorType string
@@ -27352,6 +27503,21 @@ type BackfillStatusState string
 
 // BackfillStatusWindow defines model for BackfillStatus.Window.
 type BackfillStatusWindow string
+
+// BaseCurrencyLock Why the base currency is locked, as facts a client words in its reader's language. Present exactly when `base_currency_locked_reason` is (ADR-0085 §7).
+type BaseCurrencyLock struct {
+	// BaseCurrency The ISO-4217 code the currency rates convert into. Sent only with `rate_sheet`, and absent there when the installation holds no stored base to name.
+	BaseCurrency *string `json:"base_currency,omitempty"`
+
+	// Count How many records froze a rate (`rates_frozen`), or how many currency rates convert into the base (`rate_sheet`).
+	Count int `json:"count"`
+
+	// Reason `rates_frozen`: closed deals, sent offers, mirrored invoices, contracts or commission entries have frozen a conversion rate against the base, and nothing undoes that. `rate_sheet`: currency rates convert into the base; clearing them lifts the lock.
+	Reason BaseCurrencyLockReason `json:"reason"`
+}
+
+// BaseCurrencyLockReason `rates_frozen`: closed deals, sent offers, mirrored invoices, contracts or commission entries have frozen a conversion rate against the base, and nothing undoes that. `rate_sheet`: currency rates convert into the base; clearing them lifts the lock.
+type BaseCurrencyLockReason string
 
 // BillingCompany One company a contact handles invoices for — the same edge read from the contact's end.
 type BillingCompany struct {
@@ -34224,7 +34390,7 @@ type CreateProductRequest struct {
 	Sku            *string  `json:"sku,omitempty"`
 	Source         string   `json:"source"`
 
-	// Unit Defaults to 'unit'.
+	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`.
 	Unit                 *string                `json:"unit,omitempty"`
 	UnitPriceMinor       int64                  `json:"unit_price_minor"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -38586,13 +38752,18 @@ type InstallationSettings struct {
 	// BaseCurrency ISO-4217 code every money roll-up converts to.
 	BaseCurrency string `json:"base_currency"`
 
+	// BaseCurrencyLock Why the base currency is locked, as facts a client words in its reader's language. Present exactly when `base_currency_locked_reason` is (ADR-0085 §7).
+	BaseCurrencyLock *BaseCurrencyLock `json:"base_currency_lock,omitempty"`
+
 	// BaseCurrencyLocked True once a conversion rate has been frozen against the base currency — by a closed
 	// deal, a sent offer, a mirrored invoice, a contract, a commission entry, or a loaded
 	// rate sheet — after which it can no longer be changed (ADR-0085 §7).
 	BaseCurrencyLocked bool `json:"base_currency_locked"`
 
-	// BaseCurrencyLockedReason Why the currency is locked, naming what has already converted against it. Absent
-	// when it is still changeable.
+	// BaseCurrencyLockedReason Why the currency is locked, naming what has already converted against it, as one
+	// English sentence. Absent when it is still changeable. A client words the reason
+	// from `base_currency_lock` instead, and reads this only from a server that does not
+	// send that object.
 	BaseCurrencyLockedReason *string `json:"base_currency_locked_reason,omitempty"`
 
 	// BaseLanguage The language AI writes in when what it writes is read by the whole team — claims,
@@ -42083,10 +42254,12 @@ type OfferLineItemInput struct {
 	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 
 	// Quantity > 0, up to 3 decimal places.
-	Quantity       float64  `json:"quantity"`
-	TaxRate        *float64 `json:"tax_rate,omitempty"`
-	Unit           *string  `json:"unit,omitempty"`
-	UnitPriceMinor *int64   `json:"unit_price_minor,omitempty"`
+	Quantity float64  `json:"quantity"`
+	TaxRate  *float64 `json:"tax_rate,omitempty"`
+
+	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to the product's unit, else `piece`.
+	Unit           *string `json:"unit,omitempty"`
+	UnitPriceMinor *int64  `json:"unit_price_minor,omitempty"`
 }
 
 // OfferLineItemInputBillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
@@ -42920,7 +43093,7 @@ type Product struct {
 	Sku    *string `json:"sku,omitempty"`
 	Source string  `json:"source"`
 
-	// Unit 'unit' | 'hour' | 'day' | …; display only, free text.
+	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. A row written before the keys may hold a known spelling such as `Tag`, which a client shows as its key. Display only.
 	Unit string `json:"unit"`
 
 	// UnitPriceMinor Integer minor units (P11); no float money.
@@ -51373,6 +51546,9 @@ type WorklistItem struct {
 
 	// Actions What this item offers, routed to the endpoint that owns the verb.
 	Actions []WorklistItemActions `json:"actions"`
+
+	// AiTask AI task key from the task catalog, used to localize its display name.
+	AiTask *AiTask `json:"ai_task,omitempty"`
 
 	// Band The heading this row sits under, as an OUTCOME rather than a priority number.
 	//

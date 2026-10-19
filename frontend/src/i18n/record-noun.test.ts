@@ -252,6 +252,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
 
     // The sender category names a human role, not the contact record.
     "history.field.admission_sender_kind",
+    // The sender is the author of a message, before any contact record exists.
+    "aiTask.name.capture_counterparty_verdict",
     // The colleagues a record is shared with are users, not the contact record.
     "recordAccess.contact.madePrivate",
     "recordAccess.contact.privateOfOwner",
@@ -311,6 +313,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "analytics.share.liveHelp",
     "audit.noHumanAuthority",
     "audit.unknownBuyer",
+    "history.subject.buyer",
+    "history.verb.invite",
+    "history.subject.unrecordedAuthority",
     "blockedDomains.reasonHint",
     "cf.col.addedBy",
     "common.permissionDenied",
@@ -472,6 +477,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "co.spine.andOthers",
     "coverage.risk.champion_left",
     "coverage.risk.coverage_gap",
+    "deal.newProjectOwner",
     "deal.ownerKeep",
     "deal360.buyer",
     "deals.totalsOwnerNotMeasurable",
@@ -502,10 +508,10 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "notice.acq.subjectInitiated",
     "notice.owner",
     "notice.ruleHint.art13",
+    "owner.rosterFailed",
     "privacy.assignee",
     "privacy.correctionNote",
     "privacy.correctionsSub",
-    "project.ownerKeep",
     "project.stakeholders.empty",
     "role.rep",
     "room.card.lastSeen",

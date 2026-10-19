@@ -190,10 +190,20 @@ export const NewDealFailed: Story = {
       submit={() =>
         jsonResponse(
           {
-            code: "amount_currency_pair",
-            title: "Amount and currency must travel together",
+            code: "validation_error",
+            title: "Unprocessable Entity",
             detail:
               "Amount and currency travel together or not at all on a deal.",
+            details: {
+              errors: [
+                {
+                  field: "currency",
+                  code: "amount_currency_pair",
+                  message:
+                    "currency comes with amount_minor or expected_arr_minor, and neither figure comes without it",
+                },
+              ],
+            },
           },
           422,
         )

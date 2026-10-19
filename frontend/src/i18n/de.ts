@@ -961,6 +961,33 @@ export const de = {
   "systemJob.technical_lookup": "Technische Abfrage für Unternehmen",
   "systemJob.vatcheck": "Prüfung der Umsatzsteuer-ID",
   "systemJob.weekly_review": "Wochenrückblick",
+  "agentJob.agent_task_retention": "Bereinigung von Agentenaufgaben",
+  "agentJob.attachment_extractor": "Anhangsanalyse",
+  "agentJob.auto_apply": "Automatische Freigabe",
+  "agentJob.capture_confidentiality_verdict": "Vertraulichkeitsprüfung",
+  "agentJob.capture_counterparty": "Neuer Kontakt aus E-Mail",
+  "agentJob.capture_counterparty_verdict": "Prüfung der Absendeadressen",
+  "agentJob.coldstart": "Erstansprache",
+  "agentJob.company_name_promotion": "Aktualisierung des Firmennamens",
+  "agentJob.deal_scout": "Deal Scout",
+  "agentJob.dealscout": "Deal Scout",
+  "agentJob.deepread": "Website-Analyse",
+  "agentJob.document_extractor": "Dokumentanalyse",
+  "agentJob.enrich": "Signaturerkennung",
+  "agentJob.idempotency_retention": "Bereinigung von Anfrageprotokollen",
+  "agentJob.knowledge_ingest": "Wissensimport",
+  "agentJob.lifecycle_change": "Aktualisierung des Lebenszyklus",
+  "agentJob.offer_drafting": "Angebotsentwurf",
+  "agentJob.overnight": "Nacht-Agent",
+  "agentJob.propose_roles": "Analyse des Einkaufsteams",
+  "agentJob.rate_refresh": "Aktualisierung der Wechselkurse",
+  "agentJob.scrape": "Website-Erfassung",
+  "agentJob.signal_scan": "E-Mail-Analyse",
+  "agentJob.site_read": "Website-Analyse",
+  "agentJob.tag_scout": "Tag-Vorschläge",
+  "agentJob.technical_lookup": "Unternehmensabfrage",
+  "agentJob.transcript_proposer": "Transkript-Analyse",
+  "agentJob.voice_builder": "Schreibstil-Analyse",
   "trust.connectorTag": "Über {connector}",
   "trust.stagedProposal": "Vorgeschlagener Wert",
   "trust.evidenceFrom": "Beleg aus {source}",
@@ -1043,6 +1070,82 @@ export const de = {
   "history.reversal.undoneBy": "Rückgängig gemacht von {undoer}",
   "history.reversal.unpaired": "Macht eine frühere Änderung rückgängig",
   "history.edge.marker": "Verknüpfung",
+  "history.subject.viaClient": "{name} (über {client})",
+  "history.subject.viaAgent": "{name} (über einen Agenten)",
+  "history.subject.viaConnector": "{name} (über einen Connector)",
+  "history.subject.unrecordedAuthority":
+    "Ein automatisierter Vorgang (keine menschliche Autorisierung erfasst)",
+  "history.subject.system": "Das System",
+  "history.subject.agent": "Ein Agent",
+  "history.subject.connector": "Ein Connector",
+  "history.subject.buyer": "Ein Gast im Deal Room",
+  "history.subject.buyerNamed": "{name} (im Deal Room)",
+  "history.verb.create": "{subject} hat den Datensatz erstellt",
+  "history.verb.update": "{subject} hat den Datensatz aktualisiert",
+  "history.verb.archive": "{subject} hat den Datensatz archiviert",
+  "history.verb.merge": "{subject} hat den Datensatz zusammengeführt",
+  "history.verb.promote": "{subject} hat den Datensatz hochgestuft",
+  "history.verb.demote": "{subject} hat den Datensatz herabgestuft",
+  "history.verb.disqualify": "{subject} hat den Datensatz disqualifiziert",
+  "history.verb.restore": "{subject} hat den Datensatz wiederhergestellt",
+  "history.verb.export": "{subject} hat den Datensatz exportiert",
+  "history.verb.erase": "{subject} hat den Datensatz endgültig gelöscht",
+  "history.verb.anonymize": "{subject} hat den Datensatz anonymisiert",
+  "history.verb.assign": "{subject} hat den Datensatz zugewiesen",
+  "history.verb.advanceStage":
+    "{subject} hat die Phase des Datensatzes gewechselt",
+  "history.verb.advancePhase":
+    "{subject} hat die Projektphase des Datensatzes gewechselt",
+  "history.verb.sendEmail": "{subject} hat eine E-Mail zum Datensatz gesendet",
+  "history.verb.consentGrant":
+    "{subject} hat die Einwilligung für den Datensatz erteilt",
+  "history.verb.consentWithdraw":
+    "{subject} hat die Einwilligung für den Datensatz widerrufen",
+  "history.verb.approve": "{subject} hat den Datensatz freigegeben",
+  "history.verb.reject": "{subject} hat den Datensatz abgelehnt",
+  "history.verb.recordShare": "{subject} hat den Datensatz geteilt",
+  "history.verb.recordUnshare":
+    "{subject} hat das Teilen des Datensatzes beendet",
+  "history.verb.activityRelink": "{subject} hat den Datensatz neu verknüpft",
+  "history.verb.import": "{subject} hat den Datensatz importiert",
+  "history.verb.importUndo":
+    "{subject} hat den Import des Datensatzes rückgängig gemacht",
+  "history.verb.resetData": "{subject} hat den Datensatz zurückgesetzt",
+  "history.verb.passwordLinkIssued":
+    "{subject} hat einen Passwort-Link für den Datensatz erstellt",
+  "history.verb.connect": "{subject} hat den Datensatz verbunden",
+  "history.verb.disconnect":
+    "{subject} hat die Verbindung des Datensatzes getrennt",
+  "history.verb.schedule": "{subject} hat den Datensatz geplant",
+  "history.verb.reschedule": "{subject} hat den Datensatz verschoben",
+  "history.verb.cancel": "{subject} hat den Datensatz abgebrochen",
+  "history.verb.release": "{subject} hat den Datensatz zum Senden übergeben",
+  "history.verb.hold": "{subject} hat den Datensatz zur Prüfung zurückgehalten",
+  "history.verb.expire":
+    "{subject} hat die Entscheidungsfrist für den Datensatz verstreichen lassen",
+  "history.verb.resolve": "{subject} hat den Datensatz erledigt",
+  "history.verb.restrict": "{subject} hat den Datensatz einbehalten",
+  "history.verb.pin":
+    "{subject} hat den Datensatz für die gesetzliche Aufbewahrung angeheftet",
+  "history.verb.accrue":
+    "{subject} hat eine Provision für den Datensatz verbucht",
+  "history.verb.pay": "{subject} hat den Datensatz bezahlt",
+  "history.verb.publish": "{subject} hat den Datensatz veröffentlicht",
+  "history.verb.pause": "{subject} hat den Datensatz pausiert",
+  "history.verb.resume": "{subject} hat den Datensatz fortgesetzt",
+  "history.verb.close": "{subject} hat den Datensatz geschlossen",
+  "history.verb.invite": "{subject} hat einen Gast zum Datensatz eingeladen",
+  "history.verb.revoke":
+    "{subject} hat den Zugriff für den Datensatz widerrufen",
+  "history.verb.delete": "{subject} hat den Datensatz gelöscht",
+  "history.verb.placeLegalHold":
+    "{subject} hat den Datensatz unter Legal Hold gestellt",
+  "history.verb.liftLegalHold":
+    "{subject} hat den Legal Hold für den Datensatz aufgehoben",
+  "history.verb.requestLegalReview":
+    "{subject} hat eine Rechtsprüfung für den Datensatz angefragt",
+  "history.verb.withdrawLegalReview":
+    "{subject} hat die Anfrage zur Rechtsprüfung für den Datensatz zurückgezogen",
   "history.field.commitment_evidence_unavailable":
     "Nachweis der Zusage nicht verfügbar",
   "history.field.address": "Adresse",
@@ -1196,6 +1299,7 @@ export const de = {
   "shell.beta": "Beta",
   "shell.searchEverything": "Suchen oder Margince fragen",
   "shell.breadcrumbAria": "Navigationspfad",
+  "shell.back": "Zurück",
   "shell.license.none": "Keine Lizenz",
   "shell.license.refused": "Lizenz abgelehnt",
   "shell.signOutAria": "Abmelden",
@@ -1602,6 +1706,8 @@ export const de = {
   "common.saving": "Wird gespeichert…",
   "common.loading": "Wird geladen…",
   "ref.nameLoadFailed": "Name wurde nicht geladen",
+  "owner.rosterFailed":
+    "Die Teammitglieder konnten nicht geladen werden. Lade die Seite neu, um eines zu wählen.",
   "ref.notInRoster":
     "Aktuell zugewiesen (nicht mehr in der Liste der Nutzenden)",
   "picker.noMatch": "Kein Treffer",
@@ -2487,6 +2593,7 @@ export const de = {
   "approval.commitment.assignDecider":
     "Erstellt eine Aufgabe für die Person, die zustimmt.",
   "approval.field.owner": "Verantwortlich",
+  "approval.field.sourceText": "Originaltext",
   "approval.field.to": "An",
   "approval.field.currency": "Währung",
   "approval.field.rate": "Neuer Kurs",
@@ -2851,6 +2958,7 @@ export const de = {
   "co.intro.writing": "Wird geschrieben…",
   "co.intro.fromTemplate":
     "Aus einer Vorlage geschrieben. In dieser Installation ist kein Modell eingerichtet.",
+  "co.intro.agent": "Antwortentwurf",
   "co.intro.subject": "Betreff",
   "co.intro.body": "Nachricht",
   "co.intro.basedOn": "Grundlage",
@@ -3928,6 +4036,7 @@ export const de = {
   "offer.position": "Position",
   "offer.description": "Beschreibung",
   "offer.unit": "Einheit",
+  "offer.unitFromProduct": "Wie im Produkt",
   "offer.quantity": "Menge",
   "offer.unitPrice": "Einzelpreis",
   "offer.discountPct": "Rabatt %",
@@ -3979,6 +4088,13 @@ export const de = {
   "decision.detail": "Details zur Freigabe",
   "decision.detailLoading": "Freigabe wird geladen…",
   "decision.detailTechnical": "Technische Details",
+  "decision.evidenceSource.activity": "Aktivität",
+  "decision.evidenceSource.deal": "Deal",
+  "decision.evidenceSource.signal": "Signal",
+  "decision.evidenceSource.relationship": "Beziehung",
+  "decision.evidenceSource.page": "Webseite",
+  "decision.evidenceSource.contract": "Vertrag",
+  "decision.evidenceSource.unknown": "Quelle",
   "decision.detailAsked": "Angefragt",
   "decision.detailDecided": "Entschieden",
   "decision.applied": "Übernommen",
@@ -4338,6 +4454,8 @@ export const de = {
   "brief.deck.skipped_other": "{count} übersprungen",
   "brief.deck.edited_one": "1 in Bearbeitung",
   "brief.deck.edited_other": "{count} in Bearbeitung",
+  "brief.deck.acceptanceChanged":
+    "Einige Vorschläge haben sich geändert und müssen erneut geprüft werden. Deine Freigaben wurden nicht gesendet.",
   "brief.deck.commitNothingToSend": "Übersprungene entfernen",
   "brief.deck.unstage": "Letzte rückgängig machen",
   "brief.deck.clearedTitle": "Stapel leer",
@@ -5887,7 +6005,7 @@ export const de = {
   "agents.disconnectConfirm":
     "Damit endet die gesamte Verbindung, nicht nur ein Satz Zugangsdaten. Der Agent verliert den Zugriff beim nächsten Aufruf und kann ihn nicht erneuern. Für eine neue Verbindung muss der Zugriff erneut freigegeben werden.",
   "agents.connectAntigravityPath":
-    "Antigravity hat keinen Befehl zum Hinzufügen. Füge den Block in ~/.gemini/config/mcp_config.json ein, öffne dann die Agent-Einstellungen, „Customizations“, und wähle „Authenticate“ neben margince.",
+    "Antigravity hat keinen Befehl zum Hinzufügen. Füge den Block unten in ~/.gemini/config/mcp_config.json ein, öffne dann die Agent-Einstellungen, „Customizations“, und wähle „Authenticate“ neben margince.",
   "agents.connectorOff":
     "KI-Tools können sich noch nicht mit Margince verbinden.",
   "agents.connectorOffDetail":
@@ -6843,7 +6961,7 @@ export const de = {
   "audit.action.import": "Importiert",
   "audit.action.importUndo": "Import rückgängig gemacht",
   "audit.action.resetData": "Daten zurückgesetzt",
-  "audit.action.passwordLinkIssued": "Passwort-Link gesendet",
+  "audit.action.passwordLinkIssued": "Passwort-Link erstellt",
   "audit.action.connect": "Verbunden",
   "audit.action.disconnect": "Getrennt",
   "audit.action.schedule": "Geplant",
@@ -10559,9 +10677,18 @@ export const de = {
   "product.archiveConfirm":
     "Dieses Produkt archivieren? Bestehende Angebotspositionen behalten ihren Snapshot.",
   "product.name": "Name",
-  "product.sku": "SKU",
+  "product.sku": "Artikelnummer",
   "product.description": "Beschreibung",
   "product.unit": "Einheit",
+  "product.unitPiece": "Stück",
+  "product.unitHour": "Stunde",
+  "product.unitDay": "Tag",
+  "product.unitMonth": "Monat",
+  "product.unitFlatFee": "Pauschale",
+  "product.unitOther": "Andere",
+  "product.unitOtherLabel": "Andere Einheit",
+  "product.unitOtherRequired":
+    "Gib die Einheit ein oder wähle eine aus der Liste.",
   "product.unitPrice": "Einzelpreis",
   "product.currency": "Währung",
   "product.taxRate": "Standardsteuersatz %",
@@ -10826,6 +10953,18 @@ export const de = {
     "ISO-4217-Code, in den alle Beträge für Gesamtsummen umgerechnet werden. Änderbar, bis der erste Betrag umgerechnet wurde.",
   "installationSettings.baseCurrencyLocked":
     "Gesperrt: Eine Änderung würde jede Gesamtsumme verändern, da Beträge bereits in diese Währung umgerechnet wurden.",
+  "installationSettings.baseCurrencyLock.ratesFrozen_one":
+    "Für {count} Eintrag ist bereits ein Wechselkurs zu dieser Währung festgeschrieben, daher ist sie nicht mehr änderbar.",
+  "installationSettings.baseCurrencyLock.ratesFrozen_other":
+    "Für {count} Einträge ist bereits jeweils ein Wechselkurs zu dieser Währung festgeschrieben, daher ist sie nicht mehr änderbar.",
+  "installationSettings.baseCurrencyLock.rateSheet_one":
+    "{count} Wechselkurs rechnet in {base} um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+  "installationSettings.baseCurrencyLock.rateSheet_other":
+    "{count} Wechselkurse rechnen in {base} um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+  "installationSettings.baseCurrencyLock.rateSheetUnnamed_one":
+    "{count} Wechselkurs rechnet in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+  "installationSettings.baseCurrencyLock.rateSheetUnnamed_other":
+    "{count} Wechselkurse rechnen in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
   "installationSettings.baseLanguage": "Basissprache",
   "installationSettings.baseLanguageHint":
     "Sprache, in der die KI schreibt, wenn das ganze Team den Text liest. Die Anzeigesprache ist davon getrennt, und Antworten nach außen folgen der Sprache des Threads.",
@@ -12948,8 +13087,8 @@ export const de = {
     "{word}: Eine davon muss zutreffen. Drücke, damit alle zutreffen müssen.",
   "filters.group.all": "Alle davon",
   "filters.group.any": "Mindestens eine davon",
-  "filters.rowsMore": "Mehr zu diesen Bedingungen",
-  "filters.groupMore": "Mehr zu dieser Gruppe",
+  "filters.addGroupToGroup": "Untergruppe hinzufügen",
+  "filters.group.match": "Zu erfüllende Bedingungen",
   "filters.proposed": "Vorgeschlagen",
   "filters.switch.title": "Zu {records} wechseln?",
   "filters.switch.body.contacts":
@@ -13379,6 +13518,7 @@ export const de = {
   "filters.loadingVocabulary": "Felder werden geladen…",
   "filters.noFields": "Keine filterbaren Felder f\u00fcr diesen Datensatztyp.",
   "filters.resultsTitle": "Passende Datens\u00e4tze",
+  "filters.resultRefGone": "Entfernt oder für dich nicht sichtbar",
   "filters.resultsCaption":
     "Erste Seite der Treffer, zum Prüfen des Filters. Nicht die vollständige Auswahl.",
   "filters.noMatches":
@@ -13515,9 +13655,7 @@ export const de = {
     "Jedes Projekt erhält ein Kürzel. Setze [{key}] in den Betreff einer E-Mail, um sie unter diesem Projekt abzulegen.",
   "project.company": "Unternehmen",
   "project.owner": "Verantwortlich",
-  "project.ownerKeep": "Aktuelle Verantwortung behalten",
-  "project.ownerMe": "Mir zuweisen",
-  "project.ownerUnassign": "Zuweisung aufheben",
+  "project.ownerMe": "Selbst",
   "project.assignOwner": "Einem Teammitglied zuweisen",
   "project.assignOwnerTitle": "Einem Teammitglied zuweisen",
   "project.assignOwnerSearch": "Teammitglieder suchen",
@@ -13609,6 +13747,7 @@ export const de = {
   "project.advance.reasonRequired":
     "Ein abgeschlossenes Projekt braucht eine Begründung.",
   "deal.project": "Projekt",
+  "deal.newProjectOwner": "Zuständig für das Projekt",
   "deal.projectNew": "Neues Projekt…",
   "deal.projectWithheld": "Projekt ausgeblendet",
   "deal.projectNeedsCompany":
@@ -14739,6 +14878,19 @@ export const de = {
     "Eine Lead-Umwandlung wartet auf deine Freigabe",
   "magic.action.approval_overnight":
     "Ein Vorschlag aus der Nacht wartet auf deine Freigabe",
+  "approval.commitment.proposalExpiresIn": "Vorschlag läuft in {countdown} ab",
+  "approval.commitment.noDueDay": "Kein Tag genannt",
+  "approval.commitment.promiseStatus": "Stand der Zusage",
+  "approval.commitment.notFulfilled":
+    "Das Erstellen der Aufgabe markiert die Zusage nicht als erfüllt.",
+  "approval.commitment.inactiveAssignment":
+    "Für {name} kann keine Aufgabe erstellt werden: Dieses Konto kann keine Aufgaben erhalten. Verwirf den Vorschlag und erstelle eine Aufgabe für ein aktives Teammitglied.",
+  "approval.commitment.createTask_other": "{count} Aufgaben erstellen",
+  "approval.commitment.createTask_one": "Aufgabe erstellen",
+  "magic.action.approval_commitment_task_named": "{party}: {summary}",
+  "magic.action.approval_commitment_task_summary": "{summary}",
+  "magic.action.approval_commitment_task_unverified":
+    "{party} (nicht bestätigt): {summary}",
   "magic.action.approval_commitment_task":
     "Eine Zusage aus einem Gespräch wartet auf deine Freigabe",
   "magic.action.approval_capture_counterparty":
@@ -15148,4 +15300,38 @@ export const de = {
   "legalReview.offerLineRecurring_other": "{cadence} über {count} Perioden",
   "legalReview.offerLineStaged": "Vorgeschlagen, noch nicht in der Summe",
   "legalReview.packBinding": "Weitere an die Käuferseite gesendete Angebote",
+  "aiTask.name.account_scan": "Analyse des Kundenbedarfs",
+  "aiTask.name.agent_loop": "Agentensteuerung",
+  "aiTask.name.brief_ranking": "Priorisierung der Morgenübersicht",
+  "aiTask.name.capture_classify": "Nachrichtenklassifizierung",
+  "aiTask.name.capture_confidentiality_verdict":
+    "Vertraulichkeitsprüfung des Gesprächs",
+  "aiTask.name.capture_counterparty_verdict": "Erstkontaktprüfung",
+  "aiTask.name.cert_judge": "Bewertung der Modellzertifizierung",
+  "aiTask.name.cold_start": "Auswertung der Einrichtung",
+  "aiTask.name.corpus_ask": "Fragen zum Dokumentenbestand",
+  "aiTask.name.deal_health": "Deal-Statusübersicht",
+  "aiTask.name.document_extract": "Dokumentenauswertung",
+  "aiTask.name.draft_reply": "Antwortentwurf",
+  "aiTask.name.enrich": "Ergänzung aus Signaturen",
+  "aiTask.name.growth_fit": "Bewertung der Unternehmenseignung",
+  "aiTask.name.nl_search": "Suche in natürlicher Sprache",
+  "aiTask.name.offer_draft": "Angebotsentwurf",
+  "aiTask.name.owed_verdict": "Prüfung unbeantworteter Nachrichten",
+  "aiTask.name.propose_roles": "Erkennung von Einkaufsrollen",
+  "aiTask.name.rate_extract": "Erfassung von Wechselkursen",
+  "aiTask.name.request_settlement": "Prüfung der Antwort auf das Anliegen",
+  "aiTask.name.signal_extract": "Erkennung von Gesprächssignalen",
+  "aiTask.name.site_extract": "Ausführliche Website-Auswertung",
+  "aiTask.name.site_fact_extract": "Erfassung von Website-Fakten",
+  "aiTask.name.site_triage": "Website-Prüfung",
+  "aiTask.name.stage_evidence_extract": "Erkennung von Phasenbelegen",
+  "aiTask.name.summarize": "Datensatzzusammenfassung",
+  "aiTask.name.tag_suggest": "Tag-Vorschläge",
+  "aiTask.name.transcript": "Transkriptauswertung",
+  "aiTask.name.transcript_propose": "Erkennung von Besprechungsaufgaben",
+  "aiTask.name.voice_build": "Erstellung der Voice DNA",
+  "aiTask.name.weekly_learnings": "Erkenntnisse der letzten Woche",
+  "aiTask.name.weekly_review": "Wöchentlicher Rückblick",
+  "aiTask.name.unknown": "KI-Aufgabe",
 } as const satisfies Record<MessageKey, string>;

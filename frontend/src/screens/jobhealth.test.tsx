@@ -415,7 +415,7 @@ describe("JobHealthCard", () => {
             title: "Internal Server Error",
             detail: "the job store could not be read",
             status: 500,
-            code: "internal_error",
+            code: "internal",
           },
           500,
         ),

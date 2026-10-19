@@ -160,9 +160,10 @@ it("states a failed estimate as the dialog's own refusal rather than as red text
       json(
         {
           title: "Service Unavailable",
-          detail: "the estimator could not be reached",
+          detail:
+            "this installation's schema changed while the connection serving this request was holding a plan made against the old one. Nothing in the request is wrong and nothing was written; send it again — the plan is rebuilt on the next attempt.",
           status: 503,
-          code: "unavailable",
+          code: "schema_changed",
         },
         503,
       ),
@@ -173,7 +174,9 @@ it("states a failed estimate as the dialog's own refusal rather than as red text
   // The server's own sentence, and it is what the dialog says ABOUT ITSELF —
   // the reason Confirm is refused — so it is spoken as an alert rather than
   // carried in a colour a reader may not perceive.
-  const refusal = await screen.findByText("the estimator could not be reached");
+  const refusal = await screen.findByText(
+    /schema changed while the connection/,
+  );
   expect(refusal.closest('[role="alert"]')).not.toBeNull();
   expect(
     await screen.findByRole("button", { name: "Start reindex" }),

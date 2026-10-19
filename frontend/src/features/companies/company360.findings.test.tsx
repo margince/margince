@@ -427,12 +427,12 @@ describe("company view — where the record came from", () => {
   // hand-typed entry (the one case that tells them nothing new) must not hide
   // the rest.
   it("names an agent that wrote the record", async () => {
-    stub(view(), 200, { ...company, captured_by: "agent:enricher" });
+    stub(view(), 200, { ...company, captured_by: "agent:enrich" });
     renderCompany();
     await screen.findByText("Brandt Automotive GmbH");
 
     await waitFor(() =>
-      expect(screen.getAllByText(/enricher/).length).toBeGreaterThan(0),
+      expect(screen.getAllByText(/Signature reader/).length).toBeGreaterThan(0),
     );
   });
 });

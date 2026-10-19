@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { LOCALES, translate } from "../../i18n";
+import { LOCALES, translate, translatePlural } from "../../i18n";
 import {
+  approvalAcceptLabel,
+  approvalExpiryLabel,
   approvalKindLabel,
   EDITABLE_FIELDS,
   humanizeKind,
@@ -99,3 +101,54 @@ describe("what a reader may change before accepting", () => {
 });
 
 // What a proposal SHOWS, which is the read-side half of EDITABLE_FIELDS above.
+
+describe("commitment decision wording", () => {
+  it.each(LOCALES)(
+    "distinguishes task creation and proposal expiry in %s",
+    (locale) => {
+      const tr = (
+        key: Parameters<typeof translate>[1],
+        params?: Record<string, string>,
+      ) => translate(locale, key, params);
+      const plural = (
+        base: Parameters<typeof translatePlural>[1],
+        count: number,
+        params?: Record<string, string>,
+      ) => translatePlural(locale, base, count, params);
+      expect(
+        approvalAcceptLabel(
+          "commitment_task",
+          plural,
+          "Generic approval",
+          locale,
+        ),
+      ).toBe(
+        translatePlural(locale, "approval.commitment.createTask", 1, {
+          count: "1",
+        }),
+      );
+      expect(
+        approvalAcceptLabel(
+          "commitment_task",
+          plural,
+          "Generic approval",
+          locale,
+          3,
+        ),
+      ).toBe(
+        translatePlural(locale, "approval.commitment.createTask", 3, {
+          count: "3",
+        }),
+      );
+      expect(approvalExpiryLabel("commitment_task", "2h", tr)).toBe(
+        tr("approval.commitment.proposalExpiresIn", { countdown: "2h" }),
+      );
+      expect(
+        approvalAcceptLabel(undefined, plural, "Generic approval", locale),
+      ).toBe("Generic approval");
+      expect(approvalExpiryLabel("send_email", "2h", tr)).toBe(
+        tr("decision.expiresIn", { countdown: "2h" }),
+      );
+    },
+  );
+});

@@ -29,7 +29,7 @@ import { rulesIn } from "../testing/css";
 //    than its page, and the head follows it there. The stack's measure
 //    (screens/settings.css) and the head's (app/shell.css) must be the SAME
 //    custom property, and that property must be spelled once in the tree —
-//    otherwise 720 exists twice and one of the two moves first.
+//    otherwise the measure exists twice and one of the two moves first.
 //
 // Derived from the sheets rather than restated here: the selectors are read out
 // of the CSS and the token's NAME is read off the stack, so renaming either

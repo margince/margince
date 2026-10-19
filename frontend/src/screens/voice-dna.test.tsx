@@ -538,14 +538,22 @@ describe("a build that fails", () => {
   it("shows the server's own cause when the server composed one", async () => {
     stubBuild(() =>
       jsonResponse(
-        { code: "budget_exhausted", detail: "The AI budget is spent." },
-        429,
+        {
+          code: "validation_error",
+          detail: "at least 800 eligible own-authored words are required",
+          details: { errors: [{ field: "corpus", code: "invalid" }] },
+        },
+        422,
       ),
     );
 
     await pressRebuild();
 
-    expect(await screen.findByText("The AI budget is spent.")).toBeTruthy();
+    expect(
+      await screen.findByText(
+        "at least 800 eligible own-authored words are required",
+      ),
+    ).toBeTruthy();
   });
 });
 

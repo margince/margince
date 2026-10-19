@@ -6,7 +6,7 @@ Margince settings open from the **account menu** at the top right. They are not 
 ### How do I open Settings?
 To open Settings in Margince, open the account menu at the top right of the screen and choose **Settings**.
 Settings opens on **Overview**, which lists every page you can open. The page list down the side is in groups: **You**, **Company**, **People**, **Sales**, **Data**, **AI** and **Governance**.
-To go right to one page, press ⌘K (Ctrl+K) and type its name. Or type into **Search settings** at the top of the settings list.
+To go right to one page, press ⌘K (Ctrl+K) and type its name, or the name of a setting on it. Or type into **Search settings** at the top of the settings list. When the page was found by one of its settings, **Search settings** shows that setting under the page name.
 
 Settings is not in the side list on the left.
 Also called: preferences, admin settings, configuration, options.

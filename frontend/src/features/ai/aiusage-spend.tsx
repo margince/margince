@@ -7,6 +7,7 @@ import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { formatDayMonth, formatMoney, formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { aiTaskLabel } from "../../lib/ai-task-label";
 import { tierLabel, tierRank } from "./ai-decision-labels";
 import { TaskName } from "./ai-task-name";
 
@@ -201,13 +202,18 @@ function taskColumn(t: Translator): DataTableColumn<SpendRow> {
     render: (row) =>
       row.subrow ? (
         <span className="aiusage-subrow">
-          <span className="sr-only">{row.name}: </span>
+          <span className="sr-only">
+            {aiTaskLabel(row.task, t, row.name)}:{" "}
+          </span>
           {tierLabel(row.tier ?? "", t)}
         </span>
       ) : (
         <span className="aiusage-task">
           <CellStack>
-            <TaskName name={row.name} summary={row.summary} />
+            <TaskName
+              name={aiTaskLabel(row.task, t, row.name)}
+              summary={row.summary}
+            />
             {row.tier !== undefined && (
               <span className="t-caption">{tierLabel(row.tier, t)}</span>
             )}

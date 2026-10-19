@@ -104,7 +104,7 @@ function stubApi(): Sent[] {
       if (key === "POST /auth/reset-password") {
         return new Response(null, { status: 204 });
       }
-      return jsonResponse({ code: "unavailable" }, 503);
+      return jsonResponse({ code: "service_unavailable" }, 503);
     }),
   );
   return sent;
@@ -308,5 +308,9 @@ it("leaves an ordinary address alone", async () => {
   // render that beat it.
   await screen.findByRole("alert");
   expect(globalThis.location.hash).toBe("#/deals/01J9ZK");
-  expect(replaceState).not.toHaveBeenCalled();
+  // The history-depth stamp writes the entry's state and never its address,
+  // so only a call that names a URL would be a rewrite.
+  expect(
+    replaceState.mock.calls.filter((call) => call[2] !== undefined),
+  ).toEqual([]);
 });

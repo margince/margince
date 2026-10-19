@@ -261,17 +261,17 @@ You create a project while you are still selling, not after you win.
 To create a project in Margince, open **Projects** in the sidebar and choose **New project**.
 1. Enter the **Project name** (required).
 2. Pick the **Company** (required): the client the work is for.
-3. You may add a **Description** and a **Target end date**.
-4. Fill any custom fields, then choose **Create**.
-You become the project's owner; reassign it later with **More actions** → **Assign to a colleague**. Margince creates the project key from the name.
-Read-only seats cannot create projects.
+3. Pick the **Owner**. You are picked first; you may pick a colleague instead.
+4. You may add a **Description** and a **Target end date**.
+5. Fill any custom fields, then choose **Create**.
+The owner must be "an active colleague you may assign work to", the same rule as **Assign to a colleague**. Margince creates the project key from the name. Read-only seats cannot create projects.
 Also called: start a new project for a client, new engagement.
 
 ### Can I create a project from a company page or a deal?
-To create a project from a company page in Margince, open its **Deals and projects** tab and choose **New project** in the **Projects** panel. Enter a **Project name** and choose **Create**.
+To create a project from a company page in Margince, open its **Deals and projects** tab and choose **New project** in the **Projects** panel. Enter a **Project name**, pick the **Owner** and choose **Create**.
 The project is created on that company. An archived company has no **New project**.
 
-You can also start one while creating a deal. On **Deals** → **New deal**, choose the **Company**, then under **Project** pick **New project…** and enter a **Project name**.
+You can also start one while creating a deal. On **Deals** → **New deal**, choose the **Company**, then under **Project** pick **New project…**. Enter a **Project name** and pick the **Project owner**.
 The project is created on the deal's company.
 Also called: add a project to a client.
 
@@ -292,7 +292,7 @@ Also called: update a project, change the project's end date.
 
 ### How do I change a project's owner?
 To reassign a project in Margince, open it and choose **More actions** → **Assign to a colleague**. Search under **Search colleagues**, pick one and choose **Assign**. It confirms "Assigned to {name}".
-**Edit project** also has **Owner**, with **Keep current owner**, **Me** and **Unassign**. A project cannot be claimed, so one with no owner can only be changed by a role that edits every project.
+**Edit project** also has **Owner**, which lists every active colleague. A project cannot be claimed, so one with no owner can only be changed by a role that edits every project.
 Also called: hand over a project, change project lead, transfer a project.
 
 ### How do I add or remove a company on a project?
