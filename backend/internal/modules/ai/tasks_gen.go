@@ -182,7 +182,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "76684a39763666c42948b2d86f3464f2b2d0d6faaf80f455d0d8294952e5c69c"
+const TaskContractHash = "b0bd173a77aa47861b34c3946e43506c1f1b541a6616fcaf351bc07c957aad80"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -247,7 +247,7 @@ var taskLadders = map[Task][]Tier{
 	TaskProposeRoles:                  {TierCheapCloud, TierPremium},
 	TaskRateExtract:                   {TierPremium, TierCheapCloud},
 	TaskRequestSettlement:             {TierLocalSmall, TierCheapCloud},
-	TaskSignalExtract:                 {TierCheapCloud, TierPremium},
+	TaskSignalExtract:                 {TierPremium},
 	TaskSiteExtract:                   {TierPremium},
 	TaskSiteFactExtract:               {TierCheapCloud, TierPremium},
 	TaskSiteTriage:                    {TierCheapCloud, TierPremium},

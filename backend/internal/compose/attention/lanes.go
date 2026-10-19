@@ -24,7 +24,7 @@ import (
 // reader with forty decisions is told forty, then shown the nine worth a sitting.
 type Approvals interface {
 	ListWire(ctx context.Context, in ApprovalQuery) ([]crmcontracts.Approval, error)
-	CountPending(ctx context.Context) (int, error)
+	CountPending(ctx context.Context, in ApprovalQuery) (int, error)
 }
 
 // MachineSender answers whether an address belongs to a sending system rather
@@ -49,8 +49,11 @@ type StagedFacts struct {
 // the engine's own input on purpose: the feed reads one page of one status and
 // takes no part in choosing scope, which stays the engine's to decide.
 type ApprovalQuery struct {
-	Status string
-	Limit  int
+	RequestedForReader bool
+	RequestedForOwners []ids.UUID
+	OnlyUnassigned     bool
+	Status             string
+	Limit              int
 }
 
 // Duplicates is the dedupe queue, read through the contacts module. Every method
@@ -462,39 +465,4 @@ type UnreadNotice struct {
 	TargetType string
 	TargetID   ids.UUID
 	CreatedAt  time.Time
-}
-
-// Introductions is the asks waiting on THIS reader to answer — a colleague
-// wanting them to open a door.
-//
-// Per-user like Notices, and for the same reason: the ask names one colleague,
-// so there is no wider tier for it to widen to. The `team` and `all` scopes
-// reach shared record-bearing work, not the question of whose favour somebody
-// else asked for.
-//
-// Without this lane an ask reached its colleague only if they happened to open
-// that contact's Network tab, so one nobody went looking for expired unanswered
-// — which reads to the requester exactly like a refusal.
-type Introductions interface {
-	Pending(ctx context.Context, limit int) ([]PendingIntroduction, error)
-}
-
-// PendingIntroduction is one colleague's ask, as the queue draws it.
-//
-// It names the CONTACT the introduction would be to, which is what the
-// colleague is deciding about. No display name travels: resolving one is a read
-// of that contact's record, and fillSubjectLabels already makes it under the
-// reader's own grants (labels.go). A name carried here would be a second,
-// ungated answer to the question that pass exists to ask.
-type PendingIntroduction struct {
-	ID        ids.UUID
-	ContactID ids.UUID
-	// Reason is the requester's own sentence for why the ask is worth making,
-	// written by them at the time. Never composed here: this queue puts no
-	// words in a colleague's mouth.
-	Reason      string
-	RequestedAt time.Time
-	// DueAt is when the ask lapses. It is what this lane orders by, so the one
-	// about to expire is the one a reader sees first.
-	DueAt time.Time
 }

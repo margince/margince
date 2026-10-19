@@ -199,19 +199,11 @@ func admitRecordHistoryRead(ctx context.Context, f RecordHistoryFilter) error {
 	return auth.Require(ctx, f.EntityType, principal.ActionRead)
 }
 
-// ListRecordHistory reads one record's whole-mutation timeline — every
-// audit verb, one line per row — inside a single workspace tx. The gate
-// stack is ListFieldHistory's, verbatim: a human session, object-level
-// read on the entity type, and the row-scope visibility check (out of
-// scope reads as not-found, indistinguishable from not-there).
-//
-// Unlike field-history there is no action allowlist: a merge or export
-// line IS the point of this view. Payload honesty is inherited instead —
-// scrub tombstones and retention rows carry operational tallies on
-// audit_log.evidence, which this read never selects; other meta verbs
-// (merge, promote, export, record_share, enrich, coldstart) serve
-// operational context verbatim from before/after, workspace-operational
-// data behind the same record-read gate, never subject PII.
+// ListRecordHistory reads one record's whole-mutation timeline, one line per
+// audit row, inside a single workspace tx. The gate stack is ListFieldHistory's.
+// There is no action allowlist, because a merge or export line belongs here.
+// The images are served as written, masked by top-level key. A writer must
+// put a column value at the top level, or the mask misses it.
 func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilter) (RecordHistoryPage, error) {
 	if err := admitRecordHistoryRead(ctx, f); err != nil {
 		return RecordHistoryPage{}, err
@@ -240,7 +232,7 @@ func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilt
 		if f.EntityType == entityTypeActivity {
 			visErr = auth.EnsureActivityContentVisible(ctx, tx, f.EntityID)
 		} else {
-			visErr = auth.EnsureVisible(ctx, tx, f.EntityType, f.EntityID)
+			visErr = auth.EnsureVisibleExisting(ctx, tx, f.EntityType, f.EntityID)
 		}
 		if visErr != nil {
 			return visErr

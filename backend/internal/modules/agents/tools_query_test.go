@@ -276,6 +276,26 @@ func TestARowThatCannotBeReadBackIsDroppedAndSaidSo(t *testing.T) {
 	}
 }
 
+// A plan can select an activity on content the caller may no longer read. The
+// row goes as an unreadable one does, the same verdict the search tools reach.
+func TestAnActivityWithheldAtReadBackIsDroppedAndSaidSo(t *testing.T) {
+	withheld := ids.NewV7()
+	activity := activityWithContent("withheld")
+	activity.Ref.ID = withheld
+	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{withheld: activity}}
+
+	result := handleQuery(t, provider, QueryAnswer{
+		Refs: []QueryRef{{Type: "activity", ID: withheld}}, Coverage: CoverageCompleteExact, Limit: 25,
+	})
+
+	if len(result.Rows) != 0 {
+		t.Fatalf("served %d rows, want the withheld activity dropped", len(result.Rows))
+	}
+	if result.Coverage != CoveragePartialDegraded || !hasNote(result.Notes, CodeRowUnreadable) {
+		t.Errorf("coverage %q, notes %+v: want the drop reported", result.Coverage, result.Notes)
+	}
+}
+
 // A failure to REACH a verdict is not a verdict. Reporting an unreachable
 // database as a partial answer would describe an infrastructure fault as a
 // property of the caller's data, and the caller would act on the rows that did

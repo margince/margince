@@ -155,6 +155,88 @@ func TestAClosedRequestKeepsItsAnswer(t *testing.T) {
 	}
 }
 
+func TestAClosedRequestRefusesAnotherAnswerAndAcceptsItsOwn(t *testing.T) {
+	e := setupDSR(t)
+	request := e.mustCreate(t, dsrKindAccess, "rewrite@dsr.test")
+	if w := e.patchDSR(t, request.ID, `{"status":"rejected","resolution":"first answer"}`); w.Code != http.StatusOK {
+		t.Fatalf("rejecting → %d: %s", w.Code, w.Body)
+	}
+
+	w := e.patchDSR(t, request.ID, `{"resolution":"another answer"}`)
+	if w.Code != http.StatusUnprocessableEntity || validationField(t, w.Body.Bytes()) != fieldResolution {
+		t.Fatalf("a new answer on a rejected request → %d %s, want 422 naming resolution", w.Code, w.Body)
+	}
+	if after := e.read(t, request.ID); after.Resolution == nil || *after.Resolution != "first answer" {
+		t.Fatalf("a refused patch left the answer %v, want %q", after.Resolution, "first answer")
+	}
+	if w := e.patchDSR(t, request.ID, `{"resolution":"first answer"}`); w.Code != http.StatusOK {
+		t.Fatalf("resending the stored answer → %d: %s", w.Code, w.Body)
+	}
+}
+
+func TestARepeatedErasureFulfilmentIsAccepted(t *testing.T) {
+	e := setupDSR(t)
+	request := e.mustCreate(t, dsrKindErasure, ids.NewV7().String())
+	erase := func(context.Context, ids.UUID, string) error { return nil }
+	in := UpdateDSRInput{Status: new("fulfilled"), Resolution: new("erased on request")}
+
+	for attempt := 1; attempt <= 2; attempt++ {
+		if _, err := e.store.FulfilErasure(e.ctx, request.ID, in, erase); err != nil {
+			t.Fatalf("fulfilment attempt %d: %v", attempt, err)
+		}
+	}
+	if after := e.read(t, request.ID); after.Resolution == nil || *after.Resolution != erasedResolution {
+		t.Fatalf("the erased request holds %v, want %q", after.Resolution, erasedResolution)
+	}
+	if claims := e.auditedResolutionClaims(t, request.ID); len(claims) != 2 || claims[0] != "true" || claims[1] != "false" {
+		t.Fatalf("the update rows claim the answer changed as %v, want [true false]: the repeat changed nothing", claims)
+	}
+}
+
+// auditedResolutionClaims lists, oldest first, what each update row of the
+// request says about its answer.
+func (e *dsrEnv) auditedResolutionClaims(t *testing.T, id ids.UUID) []any {
+	t.Helper()
+	var claims []any
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(e.ctx, `
+			SELECT after->'resolution' FROM audit_log
+			 WHERE entity_type = 'data_subject_request' AND entity_id = $1 AND action = 'update'
+			 ORDER BY occurred_at, id`, id)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var claim []byte
+			if err := rows.Scan(&claim); err != nil {
+				return err
+			}
+			claims = append(claims, string(claim))
+		}
+		return rows.Err()
+	}); err != nil {
+		t.Fatalf("reading the audit rows: %v", err)
+	}
+	return claims
+}
+
+func TestAnAnswerIsAuditedAsChangedOnlyWhenItChanged(t *testing.T) {
+	e := setupDSR(t)
+	request := e.mustCreate(t, dsrKindAccess, "audit-claim@dsr.test")
+	if w := e.patchDSR(t, request.ID, `{"status":"fulfilled","resolution":"package sent"}`); w.Code != http.StatusOK {
+		t.Fatalf("fulfilling → %d: %s", w.Code, w.Body)
+	}
+	if w := e.patchDSR(t, request.ID, `{"resolution":"package sent"}`); w.Code != http.StatusOK {
+		t.Fatalf("resending the stored answer → %d: %s", w.Code, w.Body)
+	}
+
+	claims := e.auditedResolutionClaims(t, request.ID)
+	if len(claims) != 2 || claims[0] != "true" || claims[1] != "false" {
+		t.Fatalf("the update rows claim the answer changed as %v, want [true false]", claims)
+	}
+}
+
 func TestClosingCannotBlankADraftAnswer(t *testing.T) {
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindAccess, "draft-close@dsr.test")

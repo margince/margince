@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestClearingAnAnswerIsRefusedWhereTheRequestEndsClosed(t *testing.T) {
+func TestChangingAnAnswerIsRefusedWhereTheRequestEndsClosed(t *testing.T) {
 	answer := "package sent"
 	cases := []struct {
 		name    string
@@ -29,6 +29,9 @@ func TestClearingAnAnswerIsRefusedWhereTheRequestEndsClosed(t *testing.T) {
 			UpdateDSRInput{Status: new("rejected"), ClearResolution: true},
 			true,
 		},
+		{"a fulfilled request refuses another answer", dsrRow{Status: "fulfilled", Resolution: &answer}, UpdateDSRInput{Resolution: new("rewritten")}, true},
+		{"a fulfilled request takes its own answer again", dsrRow{Status: "fulfilled", Resolution: &answer}, UpdateDSRInput{Resolution: new(answer)}, false},
+		{"an open request rewrites its draft", dsrRow{Status: "open", Resolution: &answer}, UpdateDSRInput{Resolution: new("redrafted")}, false},
 		{
 			"handing a closed request back is no answer change",
 			dsrRow{Status: "fulfilled", Resolution: &answer},
@@ -46,6 +49,23 @@ func TestClearingAnAnswerIsRefusedWhereTheRequestEndsClosed(t *testing.T) {
 				t.Errorf("refused on %q, want %q", verr.Field, fieldResolution)
 			}
 		})
+	}
+}
+
+func TestAReplayedErasureIsNotARewrite(t *testing.T) {
+	erased := erasedResolution
+	closed := dsrRow{Status: "fulfilled", Resolution: &erased}
+	replay := UpdateDSRInput{Status: new("fulfilled"), Resolution: new("sent the export")}
+
+	if verr := validateDSRUpdate(closed, withoutReplayedAnswer(closed, replay)); verr != nil {
+		t.Errorf("a repeated erasure fulfilment was refused: %v", verr)
+	}
+	if verr := validateDSRUpdate(closed, replay); verr == nil {
+		t.Error("a plain patch put prose over the erased answer")
+	}
+	open := dsrRow{Status: "in_progress", Resolution: &erased}
+	if got := withoutReplayedAnswer(open, replay); got.Resolution == nil {
+		t.Error("an open request lost the answer it was being closed with")
 	}
 }
 

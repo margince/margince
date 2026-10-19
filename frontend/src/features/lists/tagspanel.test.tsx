@@ -17,13 +17,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { en } from "../../i18n/en";
-import { CompanyTagsSection } from "../../screens/companyrailtags";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { CompanyTagsSection } from "../companies/companyrailtags";
 import { ContactTagsSection } from "../contacts/contactrail";
 import { TagsPanel } from "./tagspanel";
 

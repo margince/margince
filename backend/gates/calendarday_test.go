@@ -46,7 +46,7 @@ const calendarDayOwner = "internal/platform/database/storekit"
 // would be wrong. Ratified by name so a NEW truncation fails loudly while these
 // stay described where the next reader sees them, not in a PR they will not open.
 var deferred = gatekit.Waive(map[string]string{
-	"internal/modules/finance/offline.go":           "the offline ledger's demonstration anchor: a fixed instant reduced to a stable date ORIGIN for reproducible synthetic invoices, never a business calendar day to localise. UTC is the whole point — a moving or zoned anchor would rewrite every generated row.",
+	"../extensions/finance-demo/ledger.go":          "the demo accounting source's anchor: the connection's creation instant reduced to a stable date ORIGIN for reproducible demonstration invoices, never a business calendar day to localise. The unit sits outside the core and cannot reach storekit.WorkspaceDay.",
 	"internal/modules/ai/ratewrite.go":              "the ai_model_rate sheet's effective-day guard and cutoff, the fx_rate sibling. It is an operator-set business day and belongs in the installation zone, but RateStore carries no installation handle to resolve one; giving it the seam deals.Store has is its own change.",
 	"internal/modules/ai/pricing.go":                "normalises the seed price sheet's effective date, the same ai_model_rate day as ratewrite.go. It moves in lockstep with that seam, not before it.",
 	"internal/modules/contacts/rollupclock.go":      "the open-pipeline rollup's FX as-of day, deliberately UTC today so two readers of one account agree on a rate. A workspace zone meets that goal too and is the right answer, but the pure clock helper must first be threaded a zone.",

@@ -193,17 +193,33 @@ func TestTheDigestCountsOnlyTheDuplicatesItsReaderCouldOpen(t *testing.T) {
 // This is the disclosure the seam closes: before it, the digest counted every
 // pending approval in the workspace and wrote that number into every payload,
 // so a reader holding no deal grant was told how many deal decisions exist.
-func TestTheDigestCountsOnlyTheProposalsItsReaderCouldDecide(t *testing.T) {
+func TestTheDigestCountsOnlyDecisionsRequestedFromItsReader(t *testing.T) {
 	b := setupBackfillWire(t)
-	b.stageCloseDateProposal(t, b.seedDecidableDeal(t))
-	now := time.Now().UTC()
-
+	deal := b.seedDecidableDeal(t)
+	b.stageCloseDateProposal(t, deal)
+	now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
+	if pending := b.buildWith(t, decidesDeals{}, now); pending != 0 {
+		t.Fatalf("an unassigned decision became %d personal decisions", pending)
+	}
+	stager := principal.SystemActing(b.env.Admin(), "digest-review")
+	actor, ok := principal.Actor(stager)
+	if !ok {
+		t.Fatal("stager has no principal")
+	}
+	actor.OnBehalfOf = b.env.Rep1
+	stager = principal.WithActor(stager, actor)
+	if _, err := approvals.NewService(b.env.DB()).Stage(stager, approvals.StageInput{
+		Kind:           deals.FollowUpReconcileKind,
+		ProposedChange: []byte(`{"deal_id":"` + deal.String() + `","subject":"Send the pricing"}`),
+		DiffHash:       "personal-follow-up", TargetType: "deal", TargetID: deal, Summary: "Send the pricing",
+	}); err != nil {
+		t.Fatal(err)
+	}
 	if pending := b.buildWith(t, decidesNothing{}, now); pending != 0 {
-		t.Errorf("a reader who cannot decide a deal proposal was told %d are waiting, want 0", pending)
+		t.Fatalf("a reader without the target grant saw %d pending decisions", pending)
 	}
 	if pending := b.buildWith(t, decidesDeals{}, now); pending != 1 {
-		t.Errorf("a reader who CAN decide it was told %d are waiting, want 1 — "+
-			"a count that hides from everyone proves nothing about scope", pending)
+		t.Fatalf("the requested reader saw %d pending decisions, want one", pending)
 	}
 }
 

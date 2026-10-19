@@ -15,13 +15,11 @@ import {
 import { INTL_LOCALE } from "./format";
 
 // A rendered number, date or amount is written in SOME locale, and the only
-// question is whose. This product's answer is the reader's own — `INTL_LOCALE`
-// maps the three codes the app knows onto the BCP-47 tags Intl wants, and A100
-// pins unconfigured English to en-GB rather than en-US, so a date reads
-// 21/08/2026 and not 8/21/2026. A call site that reaches a formatter any other
-// way has quietly answered the question differently, and this is the gate that
-// holds the negative half: outside `format.ts`, a locale reaches a formatter
-// through `INTL_LOCALE` or it does not reach one at all.
+// question is whose. This product's answer is the reader's own: `INTL_LOCALE`
+// maps the app's three codes onto the BCP-47 tags Intl wants. Unconfigured
+// English is en-GB, not en-US (A100), so a date reads 21/08/2026, not 8/21/2026. A call site reaching a formatter another way
+// gives a different answer. This gate holds the negative half: everywhere, a
+// locale reaches a formatter through `INTL_LOCALE` or not at all.
 //
 // Two ways it was being answered differently before this gate existed, and
 // NEITHER is visible in a screen's rendered output on the machine that wrote
@@ -89,11 +87,19 @@ const srcRoot = join(here, "..");
 const frontendRoot = resolve(srcRoot, "..");
 const extensionsDir = resolve(frontendRoot, "..", "extensions");
 
-// The one home for the rule: the module the mapping lives in, and so the one
-// module allowed to reach a formatter without going through it. The FILE, not
-// the directory it sits in — see `sourceFiles` for why that distinction is the
-// whole difference between a narrow exception and a blind spot.
-const formatModule = join(here, "format.ts");
+// The module that declares the mapping, found by its declaration. format.ts
+// re-exports it, so an import names either module.
+const mappingModules = new Set([
+  "format",
+  ...readdirSync(here)
+    .filter((file) => /^[a-z]+\.ts$/.test(file))
+    .filter((file) =>
+      readFileSync(join(here, file), "utf8").includes(
+        "export const INTL_LOCALE",
+      ),
+    )
+    .map((file) => file.replace(/\.ts$/, "")),
+]);
 const collateModule = join(here, "collate.ts");
 const thisGate = fileURLToPath(import.meta.url);
 
@@ -182,10 +188,10 @@ function localeMethods(): Map<string, number> {
  * a walk is the worst place for a second answer, because the narrower one reads
  * a smaller tree and reports the same word for it: PASS.
  *
- * THREE files are excluded, named rather than the directory they sit in.
- * `format.ts` owns the mapping and `collate.ts` owns the two orderings — a
- * reader's collation and the stable one — for the same reason: they are where
- * the decision is made once so no screen makes it again. This gate spells out
+ * TWO files are excluded, named rather than the directory they sit in.
+ * `collate.ts` owns the two orderings (a reader's collation and the stable
+ * one): it is where that decision is made once, so no screen makes it again.
+ * The formatters themselves are swept, and pass by reading the mapping. This gate spells out
  * the very shapes it hunts for, and a sweep that read it would vouch for
  * itself. The DIRECTORY is not
  * the unit, and excluding it was this gate's own first hole: `format/` holds
@@ -195,10 +201,7 @@ function localeMethods(): Map<string, number> {
  */
 function sourceFiles(): string[] {
   return [...filesUnder(srcRoot), ...extensionFrontendFiles(extensionsDir)]
-    .filter(
-      (path) =>
-        path !== formatModule && path !== collateModule && path !== thisGate,
-    )
+    .filter((path) => path !== collateModule && path !== thisGate)
     .sort();
 }
 
@@ -227,16 +230,12 @@ function importsTheMapping(parsed: ts.SourceFile): boolean {
     ) {
       return false;
     }
-    // The module by its NAME, however the specifier spells the way to it. This
-    // used to require the path to end `/format/format`, which is what a caller
-    // outside this directory writes — and it silently failed the first SIBLING
-    // to own a locale rule, `format/plural.ts`, whose honest import is
-    // `./format`. The gate's answer was "this file does not use the mapping"
-    // about a file whose every line does, which is the shape of hard-coded
-    // subject this whole gate is written against. The pair — a module named
-    // `format` AND a named `INTL_LOCALE` binding out of it — is what makes this
-    // precise, since nothing else in the tree exports that name.
-    if (statement.moduleSpecifier.text.split("/").pop() !== "format") {
+    // The module by its name, however the specifier spells the way to it, so a
+    // sibling's `./format` counts as a caller's `../format/format` does. The
+    // pair (a mapping module and a named `INTL_LOCALE` binding out of it) is
+    // precise, since no other module exports that name.
+    const target = statement.moduleSpecifier.text.split("/").pop() ?? "";
+    if (!mappingModules.has(target)) {
       return false;
     }
     const bindings = statement.importClause?.namedBindings;
@@ -496,6 +495,10 @@ function findingsIn(
 // writable — the one thing the mapping cannot stand in for, since a suite whose
 // expected output moved with the reader's browser would assert nothing.
 const pinnedLocales: { file: string; why: string }[] = [
+  {
+    file: "format/format.dates.ts",
+    why: "assertIanaZone builds a formatter only to make Intl reject an unknown zone, and hourInZone reads an hour back as a number. Neither output is shown, so the pinned tag fixes the parsing and not the wording.",
+  },
   {
     file: "format/calendarday.ts",
     why: "Both sites format in en-CA to COMPUTE, never to render: en-CA yields ISO-8601 YYYY-MM-DD, which is what makes the string comparable and parseable back into parts. A reader's locale here would be a defect — the bucketing would read 'yesterday' because an ICU format changed under it.",

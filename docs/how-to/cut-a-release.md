@@ -11,10 +11,11 @@ In the same change, update the `Parameters` block of `LICENSE` and nothing else 
 2. Add the version name to the **Licensed Work** line, for example `Licensed Work: Margince CRM v1.3.0`.
 
 Leave every line after the `Parameters` block alone. What each value must be, and why, is in
-[license-release-rule.md](../reference/license-release-rule.md). No check catches a missed update
-yet, so the tag goes out with whatever the file says.
+[license-release-rule.md](../reference/license-release-rule.md). `release-tag.yml` refuses a tag
+whose `LICENSE` does not carry both values, so tag on the day the Change Date counts from.
 
-Then tag a commit that is on `main`:
+Then tag a commit that is on `main`, with `git tag -a`. A tag without `-a` records no date, and the
+lane refuses it:
 
 ```sh
 git tag -a v0.0.1 -m "Zalo OA inbound, desktop build info"

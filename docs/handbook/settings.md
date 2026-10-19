@@ -144,7 +144,7 @@ The Members, Teams, Roles and permissions, and Seats and license pages sit in th
 
 The Integrations page in Settings (group **Data**) shows what the installation is connected to, as against what one colleague connected.
 
-**Contact data** is a licensed provider of contact data, with its budget and a policy for how often it refreshes the data. **Webhooks** send a signed message to another system when events you picked happen. You can look at each one sent and send it again. How to set one up, such as a message to a chat channel when a deal is won: [Sending events to other tools](sending-events-to-other-tools.md).
+**Contact data** is a licensed provider of contact data, with its budget and a policy for how often it refreshes the data. **Accounting source** connects the system your invoices come from and links its customers to companies; see [Contracts and invoices](contracts-and-invoices.md#how-do-i-connect-my-accounting-system). **Webhooks** send a signed message to another system when events you picked happen. You can look at each one sent and send it again. How to set one up, such as a message to a chat channel when a deal is won: [Sending events to other tools](sending-events-to-other-tools.md).
 
 ## Extensions
 
@@ -181,8 +181,10 @@ The Sales group in Settings has one page per subject. There are the fields a rec
   sources, which record how a record came into Margince, are separate.
 - **Outcome reviews**: questions a seller answers when a deal is won or lost.
   There is one set for won and one for lost.
-- **Responsibility roles**: what a colleague or team can answer for on a
-  company, deal or project. A role gives no access to the record. When you
+- **Responsibility roles**: what a colleague or team looks after on a
+  company, deal or project. A role gives no access to the record; the owner
+  keeps the responsibility for it. Each role is marked **Built-in** when it comes with
+  Margince, or **Custom** when someone added it. When you
   create one, you choose what it applies to and who can hold it. You turn a role
   off with its switch instead of deleting it, so a record that carried it still
   reads well.

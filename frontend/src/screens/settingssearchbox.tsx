@@ -3,10 +3,10 @@
 
 import { Search } from "lucide-react";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
+import { useCompanyContextShown } from "../features/companies/companycontextreach";
 import { useT } from "../i18n";
 import { isImeCommit } from "../lib/imecommit";
 import { navigate } from "../lib/router";
-import { useCompanyContextShown } from "./companycontextreach";
 import type { SettingsPage } from "./settingscatalog";
 import { PAGE_ICONS } from "./settingsnavicons";
 import { settingsHref } from "./settingsrouting";

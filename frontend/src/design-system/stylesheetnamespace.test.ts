@@ -28,11 +28,14 @@ const sheets = appStylesheets(frontendRoot).map((file) => ({
 }));
 
 const namespaces = [
-  { prefix: "askai-", home: "screens/ai.css" },
-  { prefix: "auth-", home: "screens/auth.css" },
-  { prefix: "book-", home: "screens/book.css" },
+  { prefix: "askai-", home: "features/ai/ai.css" },
+  { prefix: "auth-", home: "features/sign-in/auth.css" },
+  { prefix: "book-", home: "features/booking/book.css" },
   { prefix: "clientsurface-", home: "screens/client.css" },
-  { prefix: "companydeepread-", home: "screens/companydeepread.css" },
+  {
+    prefix: "companydeepread-",
+    home: "features/companies/companydeepread.css",
+  },
   { prefix: "corrections-", home: "features/contacts/contactcorrections.css" },
   { prefix: "create-", home: "components/create.css" },
   {
@@ -41,11 +44,11 @@ const namespaces = [
   },
   { prefix: "errorboundary-", home: "app/errorboundary.css" },
   { prefix: "historyfields-", home: "screens/historyfields.css" },
-  { prefix: "leadsignals-", home: "screens/leadsignals.css" },
+  { prefix: "leadsignals-", home: "features/leads/leadsignals.css" },
   { prefix: "library-", home: "screens/library.css" },
   { prefix: "listquery-", home: "components/listquery.css" },
   { prefix: "oauthconsent-", home: "features/automations/oauthconsent.css" },
-  { prefix: "offers-", home: "screens/offers.css" },
+  { prefix: "offers-", home: "features/deals/offers.css" },
   { prefix: "partnercommissions-", home: "screens/partnercommissions.css" },
   { prefix: "querygate-", home: "design-system/querystates.css" },
   { prefix: "relationshiprows-", home: "screens/relationshiprows.css" },
@@ -54,7 +57,7 @@ const namespaces = [
     prefix: "repeatablerowsfield-",
     home: "components/repeatablerowsfield.css",
   },
-  { prefix: "scheduledsends-", home: "screens/scheduledsends.css" },
+  { prefix: "scheduledsends-", home: "features/mail/scheduledsends.css" },
   { prefix: "storyhost-", home: "mcp-apps/story-hosts.css" },
   { prefix: "transcript-", home: "design-system/transcriptread.css" },
 ];

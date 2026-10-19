@@ -216,15 +216,12 @@ func (s *Service) recordFailedChange(ctx context.Context, wsID ids.WorkspaceID, 
 		if err != nil {
 			return err
 		}
-		now := s.now()
-		next := state.fail(now)
-		if _, err := tx.Exec(ctx,
-			`UPDATE app_user SET failed_login_count = $2, locked_until = $3 WHERE id = $1`,
-			userID, next.FailedCount, next.LockedUntil); err != nil {
+		lockedNow, err := s.countFailure(ctx, tx, userID, state)
+		if err != nil {
 			return err
 		}
 		detail := "wrong current password"
-		if next.locked(now) && !state.locked(now) {
+		if lockedNow {
 			// §27: the lock transition is its own audited fact, not a footnote
 			// on the attempt that caused it.
 			detail = "wrong current password; the account is now locked"

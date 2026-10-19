@@ -1,5 +1,5 @@
-export { searchCompanyTargets as searchCompanyReferences } from "./companyform";
-export { searchProjects as searchProjectReferences } from "./companyprojects";
+export { searchCompanyTargets as searchCompanyReferences } from "../features/companies/companyform";
+export { searchProjects as searchProjectReferences } from "../features/companies/companyprojects";
 
 import { rosterOwnerName, useRoster } from "../components/entityref";
 import { useT } from "../i18n";

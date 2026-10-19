@@ -20,13 +20,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
+// A withheld promise remains history without appearing as current work.
+const currentCommitmentAdmission = `(c.corrected_at IS NOT NULL OR NOT EXISTS (SELECT 1 FROM activity_commitment_admission d
+ WHERE d.source_activity_id = c.source_activity_id AND d.locator = c.evidence_fingerprint AND NOT d.current_work))`
+
 // ourPromiseNotYetATask is an open promise of ours that no task holds yet.
 //
 // Every reader that counts promises beside the open tasks uses it, because a
 // promise the dispatch turned into a task is that task from then on: counting
 // the claim as well would show one promise twice. Readers of one record's
 // claims keep the task-backed ones, so the quote and the task stay reachable.
-const ourPromiseNotYetATask = ourPromiseWithNoTask + ` AND c.status = 'open'`
+const ourPromiseNotYetATask = ourPromiseWithNoTask + ` AND c.status = 'open' AND ` + currentCommitmentAdmission
 
 // ourPromiseWithNoTask is ourPromiseNotYetATask whatever its status: the
 // claims a Worklist promise row names, open or settled since.
@@ -112,6 +116,9 @@ func recordClaimInTx(
 		fingerprint, in.Source, by).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		existing, err := filedClaim(ctx, tx, in, fingerprint)
+		if err == nil && in.Renewal {
+			existing, err = renewClaimDeadline(ctx, tx, in, existing, by)
+		}
 		return existing, false, err
 	}
 	if err != nil {
@@ -168,12 +175,15 @@ func filedClaim(
 		       needs_review, corrected_at, task_activity_id
 		  FROM conversation_claim
 		 WHERE contact_id = $1 AND source_activity_id = $2 AND evidence_fingerprint = $3
-		   AND archived_at IS NULL`,
+		   AND archived_at IS NULL FOR UPDATE`,
 		in.ContactID, in.ActivityID, fingerprint).Scan(&id, &claim.Kind, &claim.Body,
 		&activityID, &claim.SourceQuote, &claim.Status, &claim.DueAt,
 		&claim.NeedsReview, &claim.CorrectedAt, &taskID)
 	if err != nil {
 		return crmcontracts.ConversationClaim{}, fmt.Errorf("read the claim already filed for this evidence: %w", err)
+	}
+	if err := ensureClaimContentVisible(ctx, tx, id); err != nil {
+		return crmcontracts.ConversationClaim{}, err
 	}
 	claim.Id = openapi_types.UUID(id)
 	claim.SourceActivityId = openapi_types.UUID(activityID)

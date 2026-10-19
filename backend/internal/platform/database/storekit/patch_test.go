@@ -245,3 +245,43 @@ func TestSetDateKeepsAnAbsentDateAbsent(t *testing.T) {
 		t.Errorf("a date that was absent recorded %#v as its before, want a null", got)
 	}
 }
+
+// A stamp on a column the caller also staged corrects the value the audit
+// images show, and keeps the caller's before image.
+func TestSetStampOnAStagedColumnCorrectsTheImageItAlreadyShows(t *testing.T) {
+	p := NewPatch()
+	p.Set("score_computed", 40, 88)
+	p.SetStamp("score_computed", 55)
+
+	if got := p.After()["score_computed"]; got != 55 {
+		t.Fatalf("after image = %v, want the stamped 55", got)
+	}
+	if got := p.Before()["score_computed"]; got != 40 {
+		t.Fatalf("before image = %v, want the caller's 40", got)
+	}
+	if len(p.sets) != 1 || len(p.args) != 1 {
+		t.Fatalf("one column must render one assignment, got %v with %v", p.sets, p.args)
+	}
+}
+
+// A stamp is bound and rendered like an edit but stays out of the audit images,
+// and staging it twice still renders one assignment.
+func TestSetStampRidesTheUpdateWithoutEnteringTheAuditImages(t *testing.T) {
+	p := NewPatch()
+	p.Set("display_name", "old", "new")
+	p.SetStamp("name_source", "domain")
+	p.SetStamp("name_source", "human")
+
+	if got := strings.Join(p.sets, ", "); got != "display_name = $1, name_source = $2" {
+		t.Fatalf("assignments = %q, want display_name and one name_source", got)
+	}
+	if want := []any{"new", "human"}; !reflect.DeepEqual(p.args, want) {
+		t.Fatalf("args = %v, want %v", p.args, want)
+	}
+	if _, audited := p.After()["name_source"]; audited {
+		t.Fatal("a stamp must not appear in the after image")
+	}
+	if _, audited := p.Before()["name_source"]; audited {
+		t.Fatal("a stamp must not appear in the before image")
+	}
+}

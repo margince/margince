@@ -154,7 +154,7 @@ export const SETTINGS_SECTIONS = {
     "consumerMail.baselineTitle",
     "consumerMail.baselineSearchLabel",
   ],
-  integrations: ["provider.title", "webhooks.title"],
+  integrations: ["provider.title", "financeSource.title", "webhooks.title"],
   knowledge: ["knowledge.title"],
   import: [
     "import.hub.title",

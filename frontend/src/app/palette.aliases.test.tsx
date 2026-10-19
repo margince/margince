@@ -6,10 +6,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
+import { companyContextCapabilitiesQueryKey } from "../features/companies/companycontextreach";
 import { LocaleProvider, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { RbacAction } from "../lib/accessgrants";
-import { companyContextCapabilitiesQueryKey } from "../screens/companycontextreach";
 import {
   type CapabilityExpression,
   SETTINGS_PAGES,
@@ -96,7 +96,9 @@ function everyCatalogGrant(): GrantSpec {
 }
 
 async function adminCommands(): Promise<readonly Command[]> {
-  const client = new QueryClient();
+  const client = new QueryClient({
+    defaultOptions: { queries: { staleTime: Infinity } },
+  });
   client.setQueryData(["me"], {
     ...meFixture({ roles: ["admin"], allow: everyCatalogGrant() }),
     data_reset_available: true,

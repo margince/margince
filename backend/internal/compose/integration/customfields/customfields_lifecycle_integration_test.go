@@ -14,6 +14,7 @@ package customfields
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -57,6 +58,70 @@ func TestCustomFieldRename_LabelOnly_ColumnIdentityStable(t *testing.T) {
 		`SELECT count(*) FROM audit_log WHERE entity_type = 'custom_field' AND entity_id = $1 AND action = 'update'`,
 		ids.UUID(created.Id)); n != 1 {
 		t.Fatalf("exactly the one successful rename may audit, got %d", n)
+	}
+}
+
+func TestCustomFieldRename_ToALabelAnotherFieldHolds_IsRefusedAsAConflict(t *testing.T) {
+	e := integration.Setup(t)
+	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
+	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
+
+	held, err := svc.Create(ctx, dateSpec("Renewal date"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := svc.Create(ctx, dateSpec("Signed date"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, label := range []string{"Renewal date", "  renewal DATE ", "Renewal-date", "Renewal date\t"} {
+		if _, err := svc.Rename(ctx, ids.UUID(other.Id), label, nil); !errors.Is(err, apperrors.ErrConflict) {
+			t.Fatalf("renaming onto %q must answer conflict, got %v", label, err)
+		}
+	}
+	if _, err := svc.Rename(ctx, ids.UUID(held.Id), "Renewal date", nil); err != nil {
+		t.Fatalf("a field may keep the label it already holds: %v", err)
+	}
+	if n := e.WsCount(t,
+		`SELECT count(*) FROM audit_log WHERE entity_type = 'custom_field' AND entity_id = $1 AND action = 'update'`,
+		ids.UUID(other.Id)); n != 0 {
+		t.Fatalf("a refused rename must not audit, got %d", n)
+	}
+}
+
+func TestCustomFieldCreate_OntoALabelARenameGaveAnotherField_IsRefused(t *testing.T) {
+	e := integration.Setup(t)
+	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
+	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
+
+	first, err := svc.Create(ctx, dateSpec("Foo"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Rename(ctx, ids.UUID(first.Id), "Bar", nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Create(ctx, dateSpec("Bar")); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("creating a second %q after a rename gave the first one that label: err = %v, want conflict", "Bar", err)
+	}
+
+	// The renamed field still holds the key its first label derived. A new label
+	// deriving that key collides, and the sentence must say so plainly.
+	_, err = svc.Create(ctx, dateSpec("foo"))
+	if !errors.Is(err, apperrors.ErrConflict) || !strings.Contains(err.Error(), `key "foo"`) || !strings.Contains(err.Error(), `"Bar"`) {
+		t.Fatalf("a label reusing a renamed field's key: err = %v, want a conflict naming the key and the field that holds it", err)
+	}
+	_, err = svc.Rename(ctx, ids.UUID(first.Id), "Renewal date", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := svc.Create(ctx, dateSpec("Signed date"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Rename(ctx, ids.UUID(other.Id), "Foo", nil); !errors.Is(err, apperrors.ErrConflict) || !strings.Contains(err.Error(), "key") {
+		t.Fatalf("renaming onto a slug the first field still holds: err = %v, want a conflict naming the key", err)
 	}
 }
 

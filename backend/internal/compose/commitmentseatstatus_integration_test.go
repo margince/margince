@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -53,6 +54,27 @@ func TestAMailedPromiseByAColleagueWhoCannotHoldWorkIsProposed(t *testing.T) {
 				t.Errorf("%d commitment proposals staged, want one: a promise nobody can be "+
 					"given is still owed, and dropping it loses what the customer was told", n)
 			}
+			if n := e.WsCount(t, `SELECT count(*) FROM approval
+              WHERE kind = 'commitment_task'
+                AND proposed_change->>'promiser_seat_id' = $1
+                AND NOT (proposed_change ? 'seat_id')
+                AND on_behalf_of IS NULL`, e.Rep2.String()); n != 1 {
+				t.Fatal("inactive promiser attribution was lost or became an assigned decision")
+			}
+
+			approval, err := ids.Parse(e.WsScalar(t, `SELECT id::text FROM approval WHERE kind = 'commitment_task'`))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := approvalsServiceWithEffects(e.Pool).Decide(e.Admin(), ids.From[ids.ApprovalKind](approval), true, nil); err != nil {
+				t.Fatal(err)
+			}
+			if got := e.WsScalar(t, `SELECT assignee_id::text FROM activity WHERE kind = 'task'`); got != e.AdminUser.String() {
+				t.Fatalf("accepted reassignment belongs to %s, want the decider", got)
+			}
+			if got := e.WsScalar(t, `SELECT proposed_change->>'promiser_seat_id' FROM approval WHERE id = $1`, approval); got != e.Rep2.String() {
+				t.Fatal("acceptance replaced the original promiser")
+			}
 		})
 	}
 }
@@ -84,29 +106,20 @@ func seedMailedPromise(t *testing.T, status string) (*integration.Env, string) {
 	ines := e.SeedContact(t, "Ines Huber", &e.Rep1)
 	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
 		VALUES ('employment', $1, $2, 'manual', 'human:x')`, ines, company)
+	message := captureSeatPromise(t, e, ines, "thread-seat@buyer.example", seatStatusPromise, time.Now().Add(-48*time.Hour))
 	if status != "active" {
 		e.WsExec(t, `UPDATE app_user SET status = $2 WHERE id = $1`, e.Rep2, status)
 	}
-	sent := time.Now().Add(-48 * time.Hour).UTC().Format(time.RFC3339Nano)
-	message := integration.SeedIDRow(t, integration.OwnerConn(t), `INSERT INTO activity
-		(id, kind, direction, subject, body, thread_key, occurred_at, created_at, source, captured_by)
-		VALUES ($1, 'email', 'outbound', 'Pricing', 'Hi Ines, `+seatStatusPromise+`', 'thread-seat',
-		        '`+sent+`', '`+sent+`', 'gmail', 'connector:gmail')`)
-	integration.LinkActivity(t, integration.OwnerConn(t), message, "contact", ines)
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, user_id, contact_id, role)
-		VALUES ($1, $2, NULL, 'from')`, message, e.Rep2)
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, user_id, contact_id, role)
-		VALUES ($1, NULL, $2, 'to')`, message, ines)
-	return e, mailedCommitmentReply(t, message, taskWorthyConfidence)
+	return e, mailedCommitmentReply(t, message, e.Rep2, taskWorthyConfidence)
 }
 
 // mailedCommitmentReply is the one event the model is arranged to return.
-func mailedCommitmentReply(t *testing.T, message ids.UUID, confidence float64) string {
+func mailedCommitmentReply(t *testing.T, message, promiser ids.UUID, confidence float64) string {
 	t.Helper()
 	reply, err := json.Marshal(map[string]any{"events": []map[string]any{{
 		"kind": "commitment_made", "message_id": message.String(),
 		"summary": "Send the revised pricing", "quote": seatStatusPromise,
-		"due_date": "", "confidence": confidence,
+		"due_date": "", "confidence": confidence, "promiser_ref": "seat:" + promiser.String(),
 	}}})
 	if err != nil {
 		t.Fatalf("building the model reply: %v", err)
@@ -373,6 +386,7 @@ func TestAPromiseNamingAnAgentSeatIsProposed(t *testing.T) {
 // whoever sent the mail.
 func TestAPrivatePromiseNamingNobodyStillReachesItsOwner(t *testing.T) {
 	e, reply := seedMailedPromise(t, "active")
+	reply = mailedReplyWithoutPromiser(t, reply)
 	// No colleague on the line: the sender participant goes, so nothing names a seat.
 	e.WsExec(t, `DELETE FROM activity_participant WHERE role = 'from' AND user_id IS NOT NULL`)
 	e.WsExec(t, `UPDATE contact SET visibility = 'owner', owner_id = $1
@@ -390,4 +404,46 @@ func TestAPrivatePromiseNamingNobodyStillReachesItsOwner(t *testing.T) {
 		t.Errorf("the proposal names %q, want the conversation's owner %s: a promise with no "+
 			"sender still belongs to the one colleague who may read the thread", named, e.Rep2)
 	}
+}
+
+func captureSeatPromise(t *testing.T, e *integration.Env, contact ids.UUID, key, body string, sent time.Time) ids.UUID {
+	t.Helper()
+	buyer := "ines@buyer.example"
+	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](contact), contacts.UpdateContactInput{Emails: []contacts.ContactEmailInput{{Email: buyer, EmailType: "work", IsPrimary: true}}}); err != nil {
+		t.Fatal(err)
+	}
+	address := seatAddress(t, e, e.Rep2)
+	raw := strings.Join([]string{"From: " + address, "To: " + buyer, "Subject: Pricing", "Date: " + sent.Format(time.RFC1123Z), "Message-ID: <" + key + ">", "Content-Type: text/plain; charset=utf-8", "", "Hi Ines, " + body}, "\r\n")
+	captureThreadMail(t, e, e.Rep2, []byte(raw))
+	message, err := ids.Parse(e.WsScalar(t, `SELECT activity_id::text FROM activity_identity WHERE identity_kind='mail' AND identity_key=$1`, key))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms)
+	actor, ok := principal.Actor(reader)
+	if !ok {
+		t.Fatal("fixture has no acting colleague")
+	}
+	actor.SeatType = principal.SeatFull
+	reader = principal.WithActor(reader, actor)
+	if _, err := NewThreadAudienceSetter(e.Pool).Decide(reader, key, true); err != nil {
+		t.Fatal(err)
+	}
+	return message
+}
+
+func mailedReplyWithoutPromiser(t *testing.T, reply string) string {
+	t.Helper()
+	var payload extractPayload
+	if err := json.Unmarshal([]byte(reply), &payload); err != nil {
+		t.Fatal(err)
+	}
+	for i := range *payload.Events {
+		(*payload.Events)[i].PromiserRef = ""
+	}
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(raw)
 }

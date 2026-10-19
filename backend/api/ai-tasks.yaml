@@ -190,7 +190,7 @@ tasks:
   signal_extract:
     display_name: "Signal extraction"
     summary: "Picks out important events from a finished thread, such as a contract ending or a new opportunity."
-    ladder: [cheap_cloud, premium]
+    ladder: [premium]
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped

@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import { allowance, status } from "../features/ai/ai-admin.testkit";
 import { defaultAgentAllowances } from "../features/automations/agentallowances.fixtures";
+import { bookingProfile } from "../features/booking/book.testkit";
+import { formatFixture } from "../features/import/import.fixtures";
 import { CORE_OBJECTS } from "../format/rbacobjects";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { jsonResponse, type RouteMap } from "../testing/story-utils";
-import { allowance, status } from "./ai-admin.testkit";
-import { bookingProfile } from "./book.testkit";
-import { formatFixture } from "./import.fixtures";
 import { defaultOperations } from "./operationsettings.fixtures";
 import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 
@@ -136,6 +136,8 @@ export const UNUSED_INSTALLATION_ROUTES: RouteMap = {
     jsonResponse({ items: [] } satisfies Schemas["KnowledgeCorpusList"]),
   "GET /imports/format": () => jsonResponse(formatFixture),
   "GET /extensions": () => jsonResponse({ extensions: [] }),
+  "GET /finance/source": () =>
+    jsonResponse({ available: [] } satisfies Schemas["FinanceSourceState"]),
   "GET /installation/jurisdiction": () => jsonResponse(NO_JURISDICTION),
   "GET /installation/settings": () => jsonResponse(INSTALLATION_SETTINGS),
   "GET /scheduling/profile": () => jsonResponse(bookingProfile),

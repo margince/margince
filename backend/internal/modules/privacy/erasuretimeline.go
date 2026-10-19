@@ -88,7 +88,7 @@ func lockSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 	return err
 }
 
-func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, channelKeys []string, floor FloorPolicy) ([]ids.UUID, error) {
+func (e *Eraser) redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, channelKeys []string, floor FloorPolicy, reason string) ([]ids.UUID, error) {
 	floorCurrent, floorCarried := floor.sqlArgs()
 	// Redact the subject's own timeline rows, the unlinked mail about them — in
 	// both directions, captured and sent (unlinkedSubjectMail) — and the
@@ -145,16 +145,6 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 	if err != nil {
 		return nil, err
 	}
-	// The redacted rows' field-level provenance goes with the fields it
-	// annotated — origin metadata must not outlive the erased text. A
-	// floor-shielded correspondence row is excluded here too: its provenance
-	// stays with the evidence it annotates.
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM field_provenance
-		WHERE object_type = 'activity' AND object_id IN (`+subjectOnlyDestroyable+`)`,
-		contactID, floorCurrent, floorCarried); err != nil {
-		return nil, err
-	}
 	// And how the reply verdict came to be what it was. DELETED rather than
 	// nulled, the way ai_feedback is: a history of judgements about somebody
 	// nobody may now assert anything about has nothing left to record. The
@@ -176,6 +166,9 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 	// And what we concluded our own replies did about what they asked, which is
 	// the same kind of claim over the same emptied words.
 	if err := deleteRequestSettlementsFor(ctx, tx, contactID, emails); err != nil {
+		return nil, err
+	}
+	if err := e.eraseCommitmentDerivatives(ctx, tx, redacted, erasureAct{collateralReason: reason, cause: causeContactErasure, approvalWithdrawal: ErasedSourceWithdrawal}); err != nil {
 		return nil, err
 	}
 	// And what was read out of those conversations as promised, asked or
@@ -464,6 +457,30 @@ func deleteRequestSettlementsFor[ID ids.UUID | ids.ContactID](ctx context.Contex
 		   OR request_activity_id IN (`+unlinkedSubjectMail+`)`,
 		contactID, emails); err != nil {
 		return fmt.Errorf("privacy: clearing the subject's request settlements: %w", err)
+	}
+	return nil
+}
+
+func redactCommitmentAdmissionsFor[ID ids.UUID | ids.ContactID](ctx context.Context, tx pgx.Tx, contactID ID, emails []string) error {
+	rows, err := tx.Query(ctx, subjectOnlyActivities+` UNION `+unlinkedSubjectMail, contactID, emails)
+	if err != nil {
+		return fmt.Errorf("privacy: finding commitment evidence to erase: %w", err)
+	}
+	sources, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return err
+	}
+	work, err := lockCommitmentDerivatives(ctx, tx, sources)
+	if err != nil {
+		return err
+	}
+	for _, item := range work {
+		if err := eraseCommitmentClaims(ctx, tx, item); err != nil {
+			return err
+		}
+		if err := redactCommitmentDecision(ctx, tx, item, false); err != nil {
+			return err
+		}
 	}
 	return nil
 }

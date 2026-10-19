@@ -202,29 +202,45 @@ ensure_activity demo-gf-task "$(jq -n --arg o "$company_id" '{
 }')"
 
 # ---- the accounting source -------------------------------------------------
-# Written to the database, and this is the ONE thing here that is: there is no
-# endpoint to connect an accounting source yet. What it connects is the offline
-# generator, so the INVOICES are not written here — the real sync produces
-# them, at the real write shape, and a hand-inserted ledger would drift from
-# the writer the moment the mirror changes.
+# Written to the database, and this is the ONE thing here that is: connecting a
+# source through the API asks an administrator's session, which this script
+# does not hold. What it connects is the finance-demo unit, so the INVOICES are
+# not written here — the real sync produces them, at the real write shape.
 echo "== the accounting source =="
-conn_id="$(psql_one "SELECT id FROM finance_connection WHERE archived_at IS NULL AND status <> 'disconnected' LIMIT 1")"
+live="$(psql_one "SELECT id || ' ' || provider FROM finance_connection WHERE archived_at IS NULL AND status <> 'disconnected' LIMIT 1")"
+conn_id="${live%% *}"
+# The demo links name finance-demo's customers, which no other source holds.
+if [[ -n "$live" && "${live#* }" != "offline_demo" ]]; then
+  echo "  FAIL: the connected accounting source is ${live#* }, not offline_demo; disconnect it to seed demo links" >&2
+  exit 1
+fi
 if [[ -z "$conn_id" ]]; then
   conn_id="$(psql_one "INSERT INTO finance_connection
       (provider, status, credential_ref, source, captured_by)
-    VALUES ('offline_demo', 'active', 'offline://demo', 'system', 'system:seed')
+    VALUES ('offline_demo', 'active', 'extension:offline_demo', 'system', 'system:seed')
     RETURNING id")"
-  echo "  OK: connected the offline demo source"
+  echo "  OK: connected the finance-demo source"
 else
   echo "  OK: an accounting source is already connected"
 fi
 
 if [[ -z "$(psql_one "SELECT 1 FROM finance_customer_link WHERE company_id = '$company_id' AND archived_at IS NULL")" ]]; then
-  psql_one "INSERT INTO finance_customer_link
+  # The first entry of the finance-demo directory no other company holds.
+  linked="$(psql_one "INSERT INTO finance_customer_link
       (connection_id, company_id, external_customer_id,
        sync_hash, source, captured_by)
-    VALUES ('$conn_id', '$company_id', 'GLAZED-FROG', 'seed', 'system', 'system:seed')" >/dev/null
-  echo "  OK: matched $COMPANY to a customer in the source"
+    SELECT '$conn_id', '$company_id', 'DEMO-' || lpad(g::text, 4, '0'), 'seed', 'system', 'system:seed'
+      FROM generate_series(1, 50) g
+     WHERE NOT EXISTS (SELECT 1 FROM finance_customer_link l
+                        WHERE l.connection_id = '$conn_id' AND l.archived_at IS NULL
+                          AND l.external_customer_id = 'DEMO-' || lpad(g::text, 4, '0'))
+     ORDER BY g LIMIT 1
+    RETURNING external_customer_id")"
+  if [[ -z "$linked" ]]; then
+    echo "  FAIL: every finance-demo customer is already matched to another company" >&2
+    exit 1
+  fi
+  echo "  OK: matched $COMPANY to customer $linked in the source"
 else
   echo "  OK: $COMPANY is already matched"
 fi

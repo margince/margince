@@ -99,7 +99,7 @@ func moveClaimStatus(ctx context.Context, tx pgx.Tx, claimID ids.UUID, from, to 
 	// must not go on settling promises read out of it, and the 204-vs-409
 	// answer would report the claim's current status to somebody who may no
 	// longer read what it rests on.
-	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, activityID); err != nil {
+	if err := ensureClaimContentVisible(ctx, tx, claimID); err != nil {
 		return err
 	}
 	if current == to {

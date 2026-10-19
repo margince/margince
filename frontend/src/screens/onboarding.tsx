@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { ManualCompanySetup } from "../features/companies/company-context";
+import { useCompanyContextCapabilities } from "../features/companies/companycontextreach";
 import { throwProblem, unwrap } from "../lib/problem";
-import { ManualCompanySetup } from "./company-context";
-import { useCompanyContextCapabilities } from "./companycontextreach";
 import { OnboardingConversationScreen } from "./onboarding-conversation/index";
 import "./onboarding.css";
 import type { MessageKey } from "../i18n/en";

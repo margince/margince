@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "94220e0e175b6a8c296e7239331199bd345f4108b85c360223293c722b6c1225"
+const JobContractHash = "1f749f3a0889597a8f7316fd47f5ae48f11b9e41507d3031a801d5424cb19de2"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -391,12 +391,21 @@ var specs = map[string]Spec{
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 30 * time.Second},
 	},
+	"finance_sync": {
+		Kind:      "finance_sync",
+		GoType:    "FinanceSyncArgs",
+		Role:      Worker,
+		Queue:     "accounting_read",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Args:      []ArgField{{Name: "Workspace"}},
+	},
 	"finance_sync_sweep": {
 		Kind:      "finance_sync_sweep",
 		GoType:    "FinanceSyncSweepArgs",
 		Role:      Worker,
 		Fleet:     true,
-		Queue:     "default",
+		Queue:     "accounting_read",
 		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 6 * time.Hour},
@@ -688,7 +697,7 @@ var specs = map[string]Spec{
 		GoType:      "PrivacyRetentionArgs",
 		Role:        Worker,
 		Queue:       "privacy_retention",
-		Timeout:     TimeoutPolicy{Fixed: 26300 * time.Second, DerivedFrom: "privacyRetentionPassTimeout"},
+		Timeout:     TimeoutPolicy{Fixed: 28300 * time.Second, DerivedFrom: "privacyRetentionPassTimeout"},
 		MaxAttempts: 3,
 		OptsOwner:   OptsArgs,
 		Cadence:     Cadence{Setting: "installation.retention_sweep_interval_seconds"},
@@ -954,6 +963,7 @@ var specs = map[string]Spec{
 // which this package has no business knowing — and this table is what the
 // census holds that construction to, in both directions.
 var queues = map[string]int{
+	"accounting_read":   2,
 	"agent_scheduler":   2,
 	"ai_capture":        2,
 	"capture_part_slim": 1,

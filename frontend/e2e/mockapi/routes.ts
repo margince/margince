@@ -5,7 +5,7 @@ import {
   reportingStoryCatalog,
   reportingStoryEvaluation,
   reportingStoryFramework,
-} from "../../src/screens/reporting.fixtures";
+} from "../../src/features/analytics/reporting.fixtures";
 import * as ai from "./ai";
 import * as booking from "./booking";
 import * as capture from "./capture";
@@ -65,6 +65,19 @@ export const routes: readonly MockRoute[] = [
     method: "GET",
     path: "/installation/settings",
     handle: reply(session.installationSettings),
+  },
+  // An installation with the demo source composed in and nothing connected.
+  {
+    method: "GET",
+    path: "/finance/source",
+    handle: reply({
+      available: [
+        {
+          provider: "offline_demo",
+          description: "Made-up invoices for a demo.",
+        },
+      ],
+    }),
   },
   // The anonymous reads the signed-out surface makes, by design.
   { path: "/embeddings/reindex/status", handle: session.reindexStatus },

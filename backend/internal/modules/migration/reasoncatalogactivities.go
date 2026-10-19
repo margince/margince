@@ -22,6 +22,7 @@ const (
 
 // Reason codes for activity rows, each with its reasons text in the catalog below.
 const (
+	ReasonActivityEmpty                ReasonCode = "activity_empty"
 	ReasonActivityTypeUnnamed          ReasonCode = "activity_type_unnamed"
 	ReasonActivityTypeUnknown          ReasonCode = "activity_type_unknown"
 	ReasonMessageNotImportable         ReasonCode = "message_not_importable"
@@ -59,6 +60,11 @@ func withActivityReasons(catalog map[ReasonCode]reasonEntry) map[ReasonCode]reas
 }
 
 var activityReasons = map[ReasonCode]reasonEntry{
+	ReasonActivityEmpty: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "A note or a call needs a subject or a body. Fill one of them in this row.",
+		textlang.German:     "Eine Notiz oder ein Anruf braucht einen Betreff oder einen Text. Fülle in dieser Zeile einen von beiden aus.",
+		textlang.Vietnamese: "Ghi chú hoặc cuộc gọi cần có tiêu đề hoặc nội dung. Điền tiêu đề hoặc nội dung vào hàng này.",
+	}},
 	ReasonActivityTypeUnnamed: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "Name the activity’s type: note, call, meeting or email.",
 		textlang.German:     "Nenne den Typ der Aktivität: note, call, meeting oder email.",

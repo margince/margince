@@ -251,7 +251,7 @@ func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 
 // dispatchedByTheContactPage is the set of destination surfaces the contact page
 // actually opens: the `switch` in runContactMomentAction, in
-// frontend/src/features/contacts/contactpage.tsx.
+// frontend/src/features/contacts/contactpage.drawers.tsx.
 //
 // The contract admits more surfaces than the page handles, and the ones it does
 // not handle fall to a `default` that deliberately does nothing rather than

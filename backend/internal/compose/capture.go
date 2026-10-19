@@ -235,8 +235,8 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 	// The offline demo connector, registered unconditionally and INERT until a
 	// capture_connection names it — which only the demo seeder and
 	// scripts/seed-dev.sql do. It reaches no network and holds no credential,
-	// so there is nothing to configure and nothing to gate on; the finance
-	// mirror's offline_demo provider is registered on the same terms.
+	// so there is nothing to configure and nothing to gate on. The finance-demo
+	// unit's accounting source is inert on the same terms.
 	r.Register(offlinedemo.New(offlineDemoDirectory{pool: pool}))
 	// The QC-only test_mailbox connector — unlike offline_demo, it is NOT
 	// registered unconditionally: it can both capture AND send, so a stray

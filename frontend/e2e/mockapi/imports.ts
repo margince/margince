@@ -4,12 +4,12 @@
 import {
   formatFixture,
   recentRunsFixture,
-} from "../../src/screens/import.fixtures";
+} from "../../src/features/import/import.fixtures";
 import type {
   ImportProfile,
   ImportReport,
   ImportRun,
-} from "../../src/screens/importtypes";
+} from "../../src/features/import/importtypes";
 import { type Handler, type MockRoute, page, reply } from "./server";
 
 // The import screens' calls: the hub's list, and one CSV taken from upload to

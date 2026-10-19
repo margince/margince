@@ -10,13 +10,13 @@ package gates
 // The routing form offers the adapters and profiles the server accepts, and no
 // others.
 //
-// `PROVIDERS` in `frontend/src/screens/ai-routing-fields.tsx` is a declared
-// mirror of the provider registry's chat adapters, `DECISION_PROVIDERS` one of
-// its decision adapters, and `PROFILES` in `frontend/src/screens/ai-routing.tsx`
-// one of `ai.DeclaredProfiles()`, each compared in both directions: a name the
-// form offers that the server refuses is a save rejected over a choice the
-// reader picked from our own list, and one the server accepts that the form
-// omits cannot be chosen from Settings.
+// `PROVIDERS` in `frontend/src/features/ai/ai-routing-fields.tsx` mirrors the
+// provider registry's chat adapters, and `DECISION_PROVIDERS` its decision
+// adapters. `PROFILES` in `frontend/src/features/ai/ai-routing.tsx` mirrors
+// `ai.DeclaredProfiles()`. Each is compared in both directions. A name the form
+// offers that the server refuses is a save rejected over a choice the reader
+// picked from our own list. One the server accepts that the form omits cannot
+// be chosen from Settings.
 
 import (
 	"os"
@@ -28,8 +28,8 @@ import (
 )
 
 const (
-	routingFieldsFile = "../frontend/src/screens/ai-routing-fields.tsx"
-	routingFormFile   = "../frontend/src/screens/ai-routing.tsx"
+	routingFieldsFile = "../frontend/src/features/ai/ai-routing-fields.tsx"
+	routingFormFile   = "../frontend/src/features/ai/ai-routing.tsx"
 )
 
 var quotedName = regexp.MustCompile(`"([^"]+)"`)

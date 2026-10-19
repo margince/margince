@@ -10,8 +10,8 @@ import {
 } from "react";
 import { Card } from "../design-system/atoms";
 import { usePrefersReducedMotion } from "../design-system/motion";
+import { Wordmark } from "../features/sign-in/auth";
 import { useT } from "../i18n";
-import { Wordmark } from "./auth";
 import "./onboarding-build-scene.css";
 
 /**

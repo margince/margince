@@ -153,17 +153,39 @@ func (p *Patch) setQuoted(column string, oldVal, newVal any) {
 //
 //craft:ignore naked-any same column-value contract as Set
 func (p *Patch) recordAssignment(column, sqlName string, oldVal, newVal any) {
-	if i, seen := p.slotBySQLName[sqlName]; seen {
-		p.args[i] = newVal
-		p.sets[i] = fmt.Sprintf("%s = $%d", sqlName, i+1)
-		p.after[column] = newVal
-		return
+	if p.bind(sqlName, newVal) {
+		p.before[column] = oldVal
 	}
-	p.args = append(p.args, newVal)
+	p.after[column] = newVal
+}
+
+// bind puts val in the assignment for sqlName. A staged column keeps its slot
+// and takes the new value. It reports whether this was the first assignment.
+//
+//craft:ignore naked-any same column-value contract as Set
+func (p *Patch) bind(sqlName string, val any) bool {
+	if i, seen := p.slotBySQLName[sqlName]; seen {
+		p.args[i] = val
+		p.sets[i] = fmt.Sprintf("%s = $%d", sqlName, i+1)
+		return false
+	}
+	p.args = append(p.args, val)
 	p.slotBySQLName[sqlName] = len(p.args) - 1
 	p.sets = append(p.sets, fmt.Sprintf("%s = $%d", sqlName, len(p.args)))
-	p.before[column] = oldVal
-	p.after[column] = newVal
+	return true
+}
+
+// SetStamp stages a column the write derives from the edit, such as the
+// provenance of a typed name. It rides the same UPDATE, so the version moves
+// once. A stamp stays out of the audit images. If the caller staged the column
+// too, the stamp corrects the value the images show.
+//
+//craft:ignore naked-any same column-value contract as Set
+func (p *Patch) SetStamp(column string, val any) {
+	p.bind(column, val)
+	if _, audited := p.after[column]; audited {
+		p.after[column] = val
+	}
 }
 
 func (p *Patch) Empty() bool { return len(p.sets) == 0 }

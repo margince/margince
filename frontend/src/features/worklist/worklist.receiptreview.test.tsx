@@ -4,14 +4,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { formatDayMonth, formatTimeOfDay } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
-import { BriefChanges } from "../../screens/brief.changes";
-import {
-  jsonResponse,
-  render,
-  stubApi,
-  writes,
-} from "../../screens/brief.testkit";
 import { meFixture } from "../../testing/mefixture";
+import { BriefChanges } from "../brief/brief.changes";
+import { jsonResponse, render, stubApi, writes } from "../brief/brief.testkit";
 import { ReceiptReview } from "./worklist.receiptreview";
 import { automaticStageReceipt } from "./worklist.receiptreview.fixtures";
 

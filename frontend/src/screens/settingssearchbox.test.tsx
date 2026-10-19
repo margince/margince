@@ -6,10 +6,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { companyContextCapabilitiesQueryKey } from "../features/companies/companycontextreach";
 import { LocaleProvider } from "../i18n";
 import * as router from "../lib/router";
 import { meFixture } from "../testing/mefixture";
-import { companyContextCapabilitiesQueryKey } from "./companycontextreach";
 import { SETTINGS_PAGES, type SettingsPage } from "./settingscatalog";
 import { COMPANY_CONTEXT_ON } from "./settingspages.fixtures";
 import { SettingsSearchBox } from "./settingssearchbox";
@@ -26,7 +26,9 @@ function mount(
   pages: readonly SettingsPage[] = SETTINGS_PAGES,
   roles: string[] = [],
 ) {
-  const client = new QueryClient();
+  const client = new QueryClient({
+    defaultOptions: { queries: { staleTime: Infinity } },
+  });
   client.setQueryData(["me"], meFixture({ roles }));
   client.setQueryData(companyContextCapabilitiesQueryKey, COMPANY_CONTEXT_ON);
   return render(

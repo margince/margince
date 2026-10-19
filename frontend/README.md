@@ -67,11 +67,11 @@ only because that file has no `email:` block. The switch draws the link and wire
 
 The request form behind the link is the real one. So to send it to an installation with no mailer
 gets a `501 not_implemented` back, and shows it as the failure note of the form. The confirmation,
-the deep-link form and the refusal of a spent token are checked in `src/screens/auth.test.tsx`
+the deep-link form and the refusal of a spent token are checked in `src/features/sign-in/auth.test.tsx`
 instead, because no one can reach them here.
 
 When a switch is not set, it reads `undefined` and nothing changes. `src/app/ui-preview.test.ts` and
-the `federated sign-in` cases in `src/screens/auth.test.tsx` pin both positions of both switches.
+the `federated sign-in` cases in `src/features/sign-in/auth.test.tsx` pin both positions of both switches.
 The `e2e` lane builds without any of them, so `offers no identity provider that does not work` still
 measures the real default.
 

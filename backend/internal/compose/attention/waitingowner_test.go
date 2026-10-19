@@ -54,21 +54,24 @@ func TestAWaitOnAColleaguesRecordIsNotTheReaders(t *testing.T) {
 	}
 }
 
-// A wait no record attributes to anybody stays in EVERY reader's mine.
-//
-// It is the one case where two readers seeing one row is the right answer: an
-// unowned customer writing in has nobody looking at them, and a rule that
-// dropped the row from every personal queue would leave them waiting forever
-// while the page reported a clear day.
-func TestAWaitNobodyOwnsStaysInEveryReadersQueue(t *testing.T) {
+// Unowned work is reachable through its explicit queue, never every reader's personal queue.
+func TestAWaitNobodyOwnsIsNotPersonalWork(t *testing.T) {
 	t.Parallel()
-
 	unowned := classifyWaiting(WaitingCustomer{}, readInstant)
-	if !ownedByReader(unowned, reader()) {
-		t.Fatal("an unowned customer was dropped from the reader's queue, so nobody sees them")
+	for _, actor := range []principal.Principal{reader(), {Type: principal.PrincipalHuman, UserID: theColleague}} {
+		if ownedByReader(unowned, actor) {
+			t.Fatal("unowned work was claimed as personal responsibility")
+		}
 	}
-	other := principal.Principal{Type: principal.PrincipalHuman, UserID: theColleague}
-	if !ownedByReader(unowned, other) {
-		t.Fatal("an unowned customer reached one reader but not another")
+}
+
+func TestAReadableUnassignedWaitIsDistinctFromAWithheldOwner(t *testing.T) {
+	visible := classifyWaiting(WaitingCustomer{OwnerKnown: true}, readInstant)
+	withheld := classifyWaiting(WaitingCustomer{}, readInstant)
+	if visible.ownerRef.kind != ownerNobody || withheld.ownerRef.kind != ownerUnreadable {
+		t.Fatal("unassigned responsibility was confused with inaccessible ownership")
+	}
+	if ownedByReader(visible, reader()) {
+		t.Fatal("unassigned work became personal")
 	}
 }

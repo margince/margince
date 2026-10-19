@@ -19,7 +19,7 @@
 
 import { Sparkles } from "lucide-react";
 import { useT } from "../../i18n";
-import "../company360.css";
+import "../../features/companies/company360.css";
 
 /** BriefTitle is the head's title, over whichever record it reads. */
 export function BriefTitle({ name }: Readonly<{ name?: string }>) {

@@ -71,17 +71,17 @@ func ensureParentReadable(ctx context.Context, tx pgx.Tx, rt crmcontracts.Assign
 		if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 			return err
 		}
-		return auth.EnsureVisible(ctx, tx, "company", id)
+		return auth.EnsureVisibleExisting(ctx, tx, "company", id)
 	case crmcontracts.AssignmentRecordTypeDeal:
 		if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 			return err
 		}
-		return auth.EnsureVisible(ctx, tx, "deal", id)
+		return auth.EnsureVisibleExisting(ctx, tx, "deal", id)
 	case crmcontracts.AssignmentRecordTypeProject:
 		if err := auth.Require(ctx, "project", principal.ActionRead); err != nil {
 			return err
 		}
-		return auth.EnsureVisible(ctx, tx, "project", id)
+		return auth.EnsureVisibleExisting(ctx, tx, "project", id)
 	}
 	return unknownRecordType()
 }

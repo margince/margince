@@ -28,7 +28,7 @@ import { useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { problemCodeOf } from "../../lib/problem";
-import { useDedupeDisposition } from "../../screens/dedupe.queries";
+import { useDedupeDisposition } from "../import/dedupe.queries";
 // The review's own sheet: the two columns, the recessed cards and the trailing
 // line of verbs. It travels with the component because two hosts draw it.
 import "./worklist.pair.css";
@@ -104,7 +104,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
           const message =
             code === "permission_denied"
               ? "worklist.pair.refused"
-              : code === "conflict"
+              : code === "already_disposed"
                 ? "worklist.pair.alreadySettled"
                 : "worklist.pair.failed";
           // The two REASONED refusals stay until the reader dismisses them;
@@ -118,7 +118,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
           // is the only one of the three that means it.
           toast.show(t(message), {
             tone: "danger",
-            sticky: code === "permission_denied" || code === "conflict",
+            sticky: code === "permission_denied" || code === "already_disposed",
           });
         },
       },

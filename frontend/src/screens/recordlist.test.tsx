@@ -16,8 +16,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 // views. A fourth owner-scoped list joins this array, not the copy-paste.
 const RECORD_LISTS = [
   "features/contacts/contacts.tsx",
-  "screens/companies.tsx",
-  "screens/leads.list.tsx",
+  "features/companies/companies.list.tsx",
+  "features/leads/leads.list.tsx",
 ];
 
 describe("one record list, three record types", () => {

@@ -25,15 +25,19 @@ import {
   useAudienceCandidates,
 } from "../features/lists/audiencemembers";
 import { useMessageAudience } from "../features/lists/audienceservice";
-import { useT } from "../i18n";
-import { entityTimelineKeys } from "../lib/activitykeys";
-import { problemMessageOf } from "../lib/problem";
-import { navigate } from "../lib/router";
 // Reply and Relink stay in compose.tsx for now: they are the composer's own
 // verbs, and moving them too would make a behaviour-preserving extraction into
 // a much larger diff. What moved here is the cluster and the two audience
 // controls, which are about reading a message rather than writing one.
-import { ChannelReplyAction, type RelinkKind, RelinkModal } from "./compose";
+import {
+  ChannelReplyAction,
+  type RelinkKind,
+  RelinkModal,
+} from "../features/mail/compose";
+import { useT } from "../i18n";
+import { entityTimelineKeys } from "../lib/activitykeys";
+import { problemMessageOf } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { ProjectFilingAction } from "./projectfiling";
 
 type Activity = components["schemas"]["Activity"];

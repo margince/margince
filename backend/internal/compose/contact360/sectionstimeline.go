@@ -287,6 +287,9 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err := activities.WithEmailRowFacts(ctx, tx, out); err != nil {
 		return nil, false, err
 	}
+	if err := activities.WithCommitmentAdmissions(ctx, tx, out); err != nil {
+		return nil, false, err
+	}
 	return out, hasMore, nil
 }
 

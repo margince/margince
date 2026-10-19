@@ -5,9 +5,9 @@
 import { composeStories } from "@storybook/react-vite";
 import { render, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { companyContextShown } from "../features/companies/companycontextreach";
 import { translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { companyContextShown } from "./companycontextreach";
 import * as stories from "./settings.stories";
 import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
 import { COMPANY_CONTEXT_OFF } from "./settingspages.fixtures";
