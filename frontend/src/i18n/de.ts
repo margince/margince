@@ -180,9 +180,9 @@ export const de = {
   "reporting.revisionState.draft": "Entwurf",
   "reporting.revisionState.published": "veröffentlicht",
   "reporting.revisionState.earlier": "früher",
-  "reporting.restoreRevision": "Revision {revision} wiederherstellen",
+  "reporting.restoreRevision": "Version {revision} wiederherstellen",
   "reporting.restoreBlocked":
-    "Vor dem Wiederherstellen einer früheren Revision den Entwurf veröffentlichen oder verwerfen.",
+    "Vor dem Wiederherstellen einer früheren Version den Entwurf veröffentlichen oder verwerfen.",
   "reporting.moveUp": "Nach oben",
   "reporting.moveDown": "Nach unten",
   "reporting.exportCsv": "CSV exportieren",

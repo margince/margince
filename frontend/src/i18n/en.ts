@@ -174,9 +174,9 @@ export const en = {
   "reporting.revisionState.draft": "draft",
   "reporting.revisionState.published": "published",
   "reporting.revisionState.earlier": "earlier",
-  "reporting.restoreRevision": "Restore revision {revision}",
+  "reporting.restoreRevision": "Restore version {revision}",
   "reporting.restoreBlocked":
-    "Publish or discard the draft before you restore an earlier revision.",
+    "Publish or discard the draft before you restore an earlier version.",
   "reporting.moveUp": "Move up",
   "reporting.moveDown": "Move down",
   "reporting.exportCsv": "Export CSV",

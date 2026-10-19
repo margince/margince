@@ -133,11 +133,11 @@ it("restores an earlier revision from the version list", async () => {
   renderReport();
   await user.click(await screen.findByText("History and schedules"));
   await user.click(
-    await screen.findByRole("button", { name: "Restore revision 2" }),
+    await screen.findByRole("button", { name: "Restore version 2" }),
   );
   await waitFor(() => expect(restore).toHaveBeenCalledOnce());
   expect(
-    screen.queryByRole("button", { name: "Restore revision 3" }),
+    screen.queryByRole("button", { name: "Restore version 3" }),
   ).toBeNull();
 });
 

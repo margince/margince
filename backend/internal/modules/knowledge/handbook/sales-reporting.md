@@ -48,7 +48,7 @@ Choose **Save report**, name it and choose **Visible to**. Use **Customize repor
 
 To change a shared report without readers seeing it half done, choose **Save as draft** in **Edit report**. Readers keep the published report. Use **Preview draft** to see it, then **Publish draft** or **Discard draft**. While a draft is open, edits go into it.
 
-Under **History and schedules**, **Versions** lists who saved each revision and when. **Restore revision** publishes an earlier revision again as the newest one. Snapshots and schedules keep the revision they were made from. Only someone who may edit the report sees drafts and versions.
+Under **History and schedules**, **Versions** lists who saved each version and when. **Restore version** publishes an earlier version again as the newest one. Snapshots and schedules keep the version they were made from. Only someone who may edit the report sees drafts and versions.
 
 To read a report, a user needs access to the report and access to the numbers under it. A shared report does not give access to records.
 
