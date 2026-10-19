@@ -46,6 +46,7 @@ import {
 import { ActivityBodyField } from "./activitybodyfield";
 import "./logactivity.css";
 import { FollowUpTaskFields } from "../../screens/followuptaskfields";
+import { useActivityCustomFields } from "./logactivity.custom";
 import {
   attachLoggedFiles,
   LogActivityFilesField,
@@ -53,7 +54,6 @@ import {
   TranscriptUploadField,
   useReportUnattached,
 } from "./logactivityfiles";
-import { useActivityCustomFields } from "./logactivity.custom";
 import { MeetingAttendeeFields } from "./meetingattendees";
 
 const EMPTY_DRAFT: ActivityDraft = {
