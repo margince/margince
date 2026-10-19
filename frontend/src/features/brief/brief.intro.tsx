@@ -87,7 +87,13 @@ function IntroCurtain({
   const t = useT();
   const { locale } = useLocale();
   const digest = useMorningDigest();
-  const meetings = meetingsReading(day, calendarDay(day)).meetings;
+  // A calendar that is not connected or not readable counts nothing, so its
+  // zero is left out rather than shown as a measured day.
+  const calendar = calendarDay(day);
+  const meetings =
+    calendar.state === "not_connected" || calendar.state === "unreadable"
+      ? null
+      : meetingsReading(day, calendar).meetings;
   const emails = digest.data?.capture.messages_synced;
   const figures = [
     { label: t("brief.intro.waiting"), value: day.summary.total },

@@ -91,6 +91,12 @@ it("puts a queued row in hand when it is pressed, and says where it stands", asy
     ),
   ).toEqual([rows[2].title]);
   expect(screen.getByText("3 of 3")).toBeTruthy();
+  // The pressed button is gone, so focus lands on the card it brought in hand.
+  expect(
+    document.activeElement?.contains(
+      container.querySelector(".brief-triage-lead"),
+    ),
+  ).toBe(true);
   // The row in hand leaves the list; the rows still waiting keep their ranks.
   expect(
     inQueue(container).queryByRole("button", { name: /Call buyer 2/ }),

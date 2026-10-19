@@ -165,18 +165,17 @@
   font-size: inherit;
 }
 
-/* The line a pressed chip opens under the sentence: the words it was read
-   from, on the AI rule, because the sentence that quotes them is the agent's
-   reading. */
+/* The line a pressed chip opens under the sentence: what it was read from.
+   Neutral, because the sentence is composed here and no agent wrote it. */
 .glance-quote {
   margin: 0;
   padding-inline-start: var(--space-3);
-  border-inline-start: 2px solid var(--aiMed);
+  border-inline-start: 2px solid var(--borderStrong);
   color: var(--textSecondary);
   max-width: 62ch;
 }
 .glance-quote-from {
-  color: var(--aiText);
+  color: var(--textPrimary);
   font-weight: var(--fontWeightMedium);
 }
 .glance-briefed {

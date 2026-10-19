@@ -6,6 +6,7 @@
 // — its head, its states, its foot — is brief.feed.tsx; this is what stands
 // in its body.
 
+import { useRef } from "react";
 import { Avatar, Badge, Button, Card } from "../../design-system/atoms";
 import { Disclosure } from "../../design-system/disclosure";
 import { Eyebrow } from "../../design-system/eyebrow";
@@ -60,6 +61,15 @@ export function Triage({
   const { locale } = useLocale();
   const zone = viewerZone();
   const recordZone = useRecordZone();
+  // A press removes the pressed button from the list. Focus follows it onto
+  // the card it brought in hand; a first render takes no focus.
+  const pressed = useRef(false);
+  const takeFocus = (frame: HTMLDivElement | null) => {
+    if (frame && pressed.current) {
+      pressed.current = false;
+      frame.focus();
+    }
+  };
   // A meeting earns the door too. Its subject is the ACTIVITY rather than a
   // contact, so `hasPane` answers no for it — and the row would stand with
   // three verbs and no way through to the meeting they are about.
@@ -104,43 +114,50 @@ export function Triage({
     <div className="brief-triage">
       {/* Keyed by the row, so pressing another one in the list mounts a new
           card and replays its arrival. The press is answered on the card. */}
-      <Card as="article" className="brief-triage-lead" key={identity(lead)}>
-        <div className="brief-triage-lead-head">
-          {/* Why it is here, as its label: the strongest reason the ranking
+      <div
+        ref={takeFocus}
+        tabIndex={-1}
+        className="brief-triage-frame"
+        key={identity(lead)}
+      >
+        <Card as="article" className="brief-triage-lead">
+          <div className="brief-triage-lead-head">
+            {/* Why it is here, as its label: the strongest reason the ranking
               weighed, in the warning tone on a row the day put first; the
               kind of work where the ranking gave none. */}
-          <Badge tone={lead.band === "now" ? "warning" : undefined}>
-            {label}
-          </Badge>
-          {when && <span className="t-caption">{when}</span>}
-          <Eyebrow className="t-num brief-triage-position">
-            {t("brief.focus.position", {
-              at: formatNumber(at + 1, locale),
-              count: formatNumber(rows.length, locale),
-            })}
-          </Eyebrow>
-        </div>
-        <AboutLine item={lead} />
-        <WorklistRow
-          // Personal ordering is the queue's, not the focus projection's.
-          allowPin={false}
-          item={lead}
-          position={at + 1}
-          owner=""
-          onOpenEmail={onOpenEmail}
-          onReview={() =>
-            navigate(
-              { screen: "worklist" },
-              new Map([["filter", lead.category]]),
-            )
-          }
-          context={details}
-          // The card around this row says whose it is, why it is here and
-          // where it stands in the day. Each is said once, in its own place.
-          framed
-        />
-        <WhyFirst item={lead} />
-      </Card>
+            <Badge tone={lead.band === "now" ? "warning" : undefined}>
+              {label}
+            </Badge>
+            {when && <span className="t-caption">{when}</span>}
+            <Eyebrow className="t-num brief-triage-position">
+              {t("brief.focus.position", {
+                at: formatNumber(at + 1, locale),
+                count: formatNumber(rows.length, locale),
+              })}
+            </Eyebrow>
+          </div>
+          <AboutLine item={lead} />
+          <WorklistRow
+            // Personal ordering is the queue's, not the focus projection's.
+            allowPin={false}
+            item={lead}
+            position={at + 1}
+            owner=""
+            onOpenEmail={onOpenEmail}
+            onReview={() =>
+              navigate(
+                { screen: "worklist" },
+                new Map([["filter", lead.category]]),
+              )
+            }
+            context={details}
+            // The card around this row says whose it is, why it is here and
+            // where it stands in the day. Each is said once, in its own place.
+            framed
+          />
+          <WhyFirst item={lead} />
+        </Card>
+      </div>
       {rows.length > 1 && (
         <div className="brief-triage-queue">
           <Eyebrow as="h3" className="brief-triage-queue-head">
@@ -155,7 +172,10 @@ export function Triage({
                   <QueueEntry
                     item={item}
                     rank={index + 1}
-                    onChoose={() => onChoose(item)}
+                    onChoose={() => {
+                      pressed.current = true;
+                      onChoose(item);
+                    }}
                   />
                 </li>
               ),

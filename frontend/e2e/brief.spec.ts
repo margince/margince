@@ -192,6 +192,12 @@ test.describe("the Brief — page shape", () => {
     );
     await expect(page.locator(`.brief-rail ${STRIP}`)).toHaveCount(1);
     await expect(page.locator(`.brief-main ${FOCUS}`)).toHaveCount(1);
+    const main = await page.locator(".brief-main").boundingBox();
+    const rail = await page.locator(".brief-rail").boundingBox();
+    if (!main || !rail) {
+      throw new Error("the desktop Brief columns have no measurable boxes");
+    }
+    expect(rail.x).toBeGreaterThanOrEqual(main.x + main.width);
   });
 
   test("orders the greeting above the date above the sentence", async ({

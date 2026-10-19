@@ -25,10 +25,10 @@
   border-color: var(--borderStrong);
   box-shadow: none;
 }
-/* Pressed says the quote under the sentence is this chip's, in the AI edge:
-   what it shows is what the brief was read from. */
+/* Pressed says the line under the sentence is this chip's. A neutral edge,
+   because the chip names a record and no agent wrote the sentence. */
 .record-chip[aria-pressed="true"] {
-  border-color: var(--aiMed);
+  border-color: var(--textPrimary);
   box-shadow: none;
 }
 .record-chip:focus-visible {

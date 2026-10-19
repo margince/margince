@@ -4183,7 +4183,7 @@ export const de = {
   "brief.first.why": "Warum zuerst?",
   "brief.intro.waiting": "Wartet auf dich",
   "brief.intro.meetings": "Termine heute",
-  "brief.intro.emails": "E-Mails seit gestern gelesen",
+  "brief.intro.emails": "Synchronisierte E-Mails",
   "brief.intro.skip": "Beliebige Taste drücken oder klicken, um fortzufahren",
   "brief.order.withheld":
     "In dieser Reihenfolge nicht berücksichtigt: {factors}",

@@ -4221,7 +4221,7 @@ export const en = {
   "brief.first.why": "Why first?",
   "brief.intro.waiting": "Waiting on you",
   "brief.intro.meetings": "Meetings today",
-  "brief.intro.emails": "Emails read since yesterday",
+  "brief.intro.emails": "Emails synced",
   "brief.intro.skip": "Press any key or click to continue",
   // What the ORDER could not weigh, as against what scored low. A fragment
   // like the source lines it sits with, and it names no cause: the run says

@@ -69,6 +69,17 @@
  * up off the stack. `--dur-move` because it is something arriving rather than
  * a control changing in place, and nothing moves at all for a reader who
  * asked for less motion. */
+/* The frame a queue press focuses; the ring shows only for the keyboard. */
+.brief-triage-frame {
+  border-radius: var(--r-md);
+}
+.brief-triage-frame:focus {
+  outline: none;
+}
+.brief-triage-frame:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
 @media (prefers-reduced-motion: no-preference) {
   .brief-triage-lead {
     animation: brief-card-off-the-stack var(--dur-move) var(--ease-out);
