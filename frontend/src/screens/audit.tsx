@@ -158,8 +158,8 @@ const MACHINE_QUALIFIER: Partial<
 // never be equal.
 export const HUMAN_ACTOR_PREFIX = "human:";
 
-// actorAttribution decides who a row is attributed to. Unlike the server's
-// summary, it names a buyer and never shows a member's id.
+// actorAttribution decides who a row is attributed to. A buyer is named; a
+// member's id is never the label.
 //
 // The contact comes first and the machine second (PD-002). An agent's own
 // identifier is never the label: attribution exists so somebody can be asked

@@ -1065,7 +1065,7 @@ export const vi = {
   "history.verb.pause": "{subject} đã tạm dừng hồ sơ",
   "history.verb.resume": "{subject} đã tiếp tục hồ sơ",
   "history.verb.close": "{subject} đã đóng hồ sơ",
-  "history.verb.invite": "{subject} đã mời hồ sơ",
+  "history.verb.invite": "{subject} đã mời một người tham gia vào hồ sơ",
   "history.verb.revoke": "{subject} đã thu hồi quyền truy cập của hồ sơ",
   "history.verb.delete": "{subject} đã xóa hồ sơ",
   "history.verb.placeLegalHold": "{subject} đã đặt lưu trữ pháp lý cho hồ sơ",

@@ -26747,9 +26747,10 @@ type AuditHistoryEntry struct {
 	OnBehalfOfName *string `json:"on_behalf_of_name,omitempty"`
 
 	// PassportId The Agent Seat Passport the change was made under, as FieldHistoryEntry
-	// carries it. A machine row with a passport and no `on_behalf_of_name`
-	// had a human authority the row failed to record; one without a
-	// passport never had one.
+	// carries it. A machine row with a passport and no `on_behalf_of` had a
+	// human authority the row failed to record; one without a passport
+	// never had one. With `on_behalf_of` set and no `on_behalf_of_name`,
+	// the authority was recorded and the member no longer resolves.
 	PassportId *openapi_types.UUID `json:"passport_id,omitempty"`
 	Summary    string              `json:"summary"`
 

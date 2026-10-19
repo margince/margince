@@ -11,7 +11,7 @@ type AuditAction = components["schemas"]["AuditAction"];
 
 // Each key holds the whole sentence around `{subject}`, because word order is
 // the language's: German puts the participle last, Vietnamese the object last.
-const HISTORY_VERB = {
+export const HISTORY_VERB = {
   create: "history.verb.create",
   update: "history.verb.update",
   archive: "history.verb.archive",

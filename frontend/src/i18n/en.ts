@@ -1065,7 +1065,7 @@ export const en = {
   "history.verb.pause": "{subject} paused the record",
   "history.verb.resume": "{subject} resumed the record",
   "history.verb.close": "{subject} closed the record",
-  "history.verb.invite": "{subject} invited the record",
+  "history.verb.invite": "{subject} invited a participant to the record",
   "history.verb.revoke": "{subject} revoked access for the record",
   "history.verb.delete": "{subject} deleted the record",
   "history.verb.placeLegalHold": "{subject} put the record under legal hold",

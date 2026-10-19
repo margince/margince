@@ -8,6 +8,7 @@ import { de } from "../i18n/de";
 import { en, type MessageKey } from "../i18n/en";
 import { vi } from "../i18n/vi";
 import {
+  HISTORY_VERB,
   type HistoryLineFacts,
   historyLine,
   historySubject,
@@ -208,18 +209,53 @@ describe("historyLine", () => {
     }
   }
 
-  it("reads differently in each language for the same change", () => {
-    const row: AuditHistoryEntry = {
-      ...base,
-      actor_type: "agent",
-      on_behalf_of_name: "Ada Authority",
-      agent_client: "Claude",
-      action: "archive",
-    };
-    const lines = LOCALES.map((locale) =>
+  it.each<[Locale, Partial<AuditHistoryEntry>, string]>([
+    [
+      "en",
+      {
+        actor_type: "agent",
+        actor_id: "agent:p1",
+        passport_id: PASSPORT,
+        on_behalf_of: "u-ada",
+        on_behalf_of_name: "Ada Authority",
+        action: "update",
+      },
+      "Ada Authority, via an agent, updated the record",
+    ],
+    [
+      "de",
+      {
+        actor_type: "agent",
+        actor_id: "agent:p1",
+        passport_id: PASSPORT,
+        action: "archive",
+      },
+      "Ein automatisierter Vorgang (keine menschliche Autorisierung erfasst) hat den Datensatz archiviert",
+    ],
+    [
+      "vi",
+      {
+        actor_type: "buyer",
+        actor_id: "buyer:b1",
+        actor_name: "Bea Buyer",
+        action: "update",
+      },
+      "Bea Buyer (trong Deal Room) đã cập nhật hồ sơ",
+    ],
+  ])("writes the %s line out in full", (locale, entry, sentence) => {
+    const row: AuditHistoryEntry = { ...base, ...entry };
+    expect(
       historyLine(row, (key, params) => translate(locale, key, params)),
-    );
-    expect(new Set(lines).size).toBe(LOCALES.length);
+    ).toBe(sentence);
+  });
+
+  it("gives every verb exactly one subject and no other placeholder", () => {
+    for (const locale of LOCALES) {
+      for (const key of Object.values(HISTORY_VERB)) {
+        const placeholders = CATALOGS[locale][key].match(/\{\w+\}/g);
+        expect(placeholders, `${locale} ${key}`).toEqual(["{subject}"]);
+      }
+    }
   });
 
   it("keeps the server's sentence for a link change", () => {

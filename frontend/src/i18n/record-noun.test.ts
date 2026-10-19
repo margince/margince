@@ -235,6 +235,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.tooMany",
     "sendPermission.reason.unconfirmed",
     "sendPermission.reason.withdrawn",
+    // The human a Deal Room invitation lets in, not the record it is about.
+    "history.verb.invite",
   ],
   vi: [
     // The colleagues a record is shared with are users, not the contact record.
@@ -297,6 +299,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "audit.noHumanAuthority",
     "audit.unknownBuyer",
     "history.subject.buyer",
+    "history.verb.invite",
     "history.subject.unrecordedAuthority",
     "blockedDomains.reasonHint",
     "cf.col.addedBy",
