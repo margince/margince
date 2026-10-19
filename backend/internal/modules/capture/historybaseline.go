@@ -17,7 +17,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -126,53 +125,4 @@ func historyBaselineImage(provider string, b *HistoryBaseline) map[string]any {
 		image["history_baseline_tz"] = b.Timezone
 	}
 	return image
-}
-
-// HistoryBaselineExcludesTx answers whether a seat's baseline withholds the
-// automatic suggestions of one captured message dated at.
-//
-// Only connections proven to have delivered it to this seat count: the import
-// row's providers, and captured_by when it names this seat. With none, the
-// baseline does not apply. With several, every one must exclude the message.
-func HistoryBaselineExcludesTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, seat ids.UUID, at time.Time) (bool, error) {
-	rows, err := tx.Query(ctx, `
-		WITH delivered AS (
-			SELECT DISTINCT d.provider
-			  FROM capture_import ci
-			  JOIN activity a ON a.id = ci.activity_id AND a.restricted_at IS NULL
-			 CROSS JOIN LATERAL unnest(ci.providers || CASE
-			       WHEN a.captured_by = 'connector:' || split_part(a.captured_by, ':', 2) || ':' || ci.user_id::text
-			       THEN ARRAY[split_part(a.captured_by, ':', 2)] ELSE '{}'::text[] END) AS d(provider)
-			 WHERE ci.activity_id = $1 AND ci.user_id = $2)
-		SELECT c.history_baseline_date, c.history_baseline_tz
-		  FROM delivered d
-		  LEFT JOIN capture_connection c ON c.user_id = $2 AND c.provider = d.provider`, activityID, seat)
-	if err != nil {
-		return false, fmt.Errorf("capture: reading the history baselines of %s: %w", activityID, err)
-	}
-	baselines, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (*HistoryBaseline, error) {
-		var c historyBaselineColumns
-		err := row.Scan(&c.date, &c.timezone)
-		return c.baseline(), err
-	})
-	if err != nil {
-		return false, fmt.Errorf("capture: reading the history baselines of %s: %w", activityID, err)
-	}
-	return allExclude(baselines, at)
-}
-
-func allExclude(baselines []*HistoryBaseline, at time.Time) (bool, error) {
-	if len(baselines) == 0 {
-		return false, nil
-	}
-	for _, b := range baselines {
-		if b == nil {
-			return false, nil
-		}
-		excluded, err := b.Excludes(at)
-		if err != nil || !excluded {
-			return false, err
-		}
-	}
-	return true, nil
 }

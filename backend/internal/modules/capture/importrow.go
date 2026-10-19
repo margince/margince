@@ -46,7 +46,7 @@ func recordImportTx(
 		// does not exist.
 		return nil
 	}
-	// providers comes from the authenticated principal; (seat, provider) is one connection.
+	// delivered_by names this seat's connection and the generation of its bound account.
 	// provider_received_at is the provider's own arrival time in THIS seat's
 	// mailbox (connector.NormalizedRecord.ProviderReceivedAt), NULL when the
 	// transport stated none or stated one outside the storable range. It is
@@ -61,22 +61,19 @@ func recordImportTx(
 	}
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
-	var providers []string
-	if provider != "" {
-		providers = []string{provider}
-	}
 	query := fmt.Sprintf(`
 		INSERT INTO capture_import (activity_id, user_id, posture_at_import, verdict_status, verdict_reason, verdict_reasons,
-		                            provider_received_at, source_occurred_at, providers)
-		VALUES ($%d, $%d, NULLIF($%d, ''), NULLIF($%d, ''), NULLIF($%d, ''), $%d, $%d, $%d, coalesce($%d::text[], '{}'))
+		                            provider_received_at, source_occurred_at, delivered_by)
+		VALUES ($%[1]d, $%[2]d, NULLIF($%[3]d, ''), NULLIF($%[4]d, ''), NULLIF($%[5]d, ''), $%[6]d, $%[7]d, $%[8]d,
+		        ARRAY(SELECT c.provider || ':' || c.generation FROM capture_connection c WHERE c.user_id = $%[2]d AND c.provider = $%[9]d))
 		ON CONFLICT (activity_id, user_id) DO UPDATE SET
 		 provider_received_at = coalesce(capture_import.provider_received_at, EXCLUDED.provider_received_at),
 		 source_occurred_at = coalesce(capture_import.source_occurred_at, EXCLUDED.source_occurred_at),
-		 providers = ARRAY(SELECT DISTINCT unnest(capture_import.providers || EXCLUDED.providers) ORDER BY 1)
+		 delivered_by = ARRAY(SELECT DISTINCT unnest(capture_import.delivered_by || EXCLUDED.delivered_by) ORDER BY 1)
 		WHERE (capture_import.provider_received_at IS NULL AND EXCLUDED.provider_received_at IS NOT NULL)
 		   OR (capture_import.source_occurred_at IS NULL AND EXCLUDED.source_occurred_at IS NOT NULL)
-		   OR NOT (EXCLUDED.providers <@ capture_import.providers)`,
-		arg(activityID), arg(ownerUserID), arg(birth.posture), arg(birth.verdictStatus), arg(birth.reason), arg(birth.reasons), arg(received), arg(occurred), arg(providers))
+		   OR NOT (EXCLUDED.delivered_by <@ capture_import.delivered_by)`,
+		arg(activityID), arg(ownerUserID), arg(birth.posture), arg(birth.verdictStatus), arg(birth.reason), arg(birth.reasons), arg(received), arg(occurred), arg(provider))
 	if _, err := tx.Exec(ctx, query, args...); err != nil {
 		return fmt.Errorf("capture: recording the import of %s: %w", activityID, err)
 	}

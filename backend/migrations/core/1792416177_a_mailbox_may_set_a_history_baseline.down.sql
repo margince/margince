@@ -1,6 +1,6 @@
 SET LOCAL lock_timeout = '5s';
 
-ALTER TABLE capture_import DROP COLUMN IF EXISTS providers;
+ALTER TABLE capture_import DROP COLUMN IF EXISTS delivered_by;
 
 ALTER TABLE capture_connection
     DROP CONSTRAINT IF EXISTS capture_connection_history_baseline_check,

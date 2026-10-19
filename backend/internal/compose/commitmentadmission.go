@@ -60,12 +60,15 @@ func (d *CommitmentDispatcher) admission(ctx context.Context, tx pgx.Tx, c Commi
 	if reason != activities.CommitmentCurrent || !evidence.CapturedMail {
 		return reason, nil
 	}
-	return mailboxBaselineAdmission(ctx, tx, c, sourceID, evidence.OccurredAt)
+	return mailboxBaselineAdmission(ctx, tx, c, sourceID, evidence.RawCaptureID)
 }
 
 // mailboxBaselineAdmission withholds current mail work when the mailbox of the
 // seat it would go to set a later history baseline. Another seat's baseline never applies.
-func mailboxBaselineAdmission(ctx context.Context, tx pgx.Tx, c Commitment, sourceID ids.UUID, occurredAt time.Time) (activities.CommitmentAdmissionReason, error) {
+//
+// The date is the one that seat's own copy stated. Another seat's copy may carry
+// an earlier Date header, so the shared occurrence time is not used.
+func mailboxBaselineAdmission(ctx context.Context, tx pgx.Tx, c Commitment, sourceID ids.UUID, rawID *ids.UUID) (activities.CommitmentAdmissionReason, error) {
 	holder := c.Seat
 	if holder == nil {
 		holder = c.PrivateTo
@@ -73,7 +76,23 @@ func mailboxBaselineAdmission(ctx context.Context, tx pgx.Tx, c Commitment, sour
 	if holder == nil {
 		return activities.CommitmentCurrent, nil
 	}
-	excluded, err := capture.HistoryBaselineExcludesTx(ctx, tx, ids.From[ids.ActivityKind](sourceID), *holder, occurredAt)
+	seen, err := capture.SeatHistoryBaselinesTx(ctx, tx, ids.From[ids.ActivityKind](sourceID), *holder)
+	if err != nil {
+		return "", err
+	}
+	var sentAt time.Time
+	switch {
+	case seen.SourceAt != nil:
+		sentAt = *seen.SourceAt
+	case seen.FirstCapture:
+		if sentAt, err = commitmentOriginalTime(ctx, tx, rawID); err != nil {
+			return "", err
+		}
+	}
+	if sentAt.IsZero() {
+		return activities.CommitmentCurrent, nil
+	}
+	excluded, err := seen.Excludes(sentAt)
 	if err != nil || !excluded {
 		return activities.CommitmentCurrent, err
 	}

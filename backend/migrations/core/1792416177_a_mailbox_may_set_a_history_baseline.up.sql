@@ -12,7 +12,7 @@ ALTER TABLE capture_connection
         AND (history_baseline_date IS NULL) = (history_baseline_set_by IS NULL)
         AND (history_baseline_date IS NULL) = (history_baseline_set_at IS NULL));
 
--- The connectors that delivered a message to this seat, so a per-mailbox
--- setting applies only to mail that mailbox brought in.
+-- The mailboxes that delivered a message to this seat, as provider:generation.
+-- A rebind bumps the generation, so a new account never claims the old one's mail.
 ALTER TABLE capture_import
-    ADD COLUMN providers text[] NOT NULL DEFAULT '{}';
+    ADD COLUMN delivered_by text[] NOT NULL DEFAULT '{}';
