@@ -18663,6 +18663,11 @@ components:
       description: A staged confirm-first action awaiting human decision.
       required: [id, kind, status, proposed_by, created_at]
       properties:
+        requested_decider_id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: The member explicitly asked to decide, independent of who has permission to approve.
         id: {type: string, format: uuid}
         kind: {type: string, description: 'Examples: coldstart | send_email | advance_deal | promote_lead | overnight | deal_follow_up | commitment_task.'}
         status: {type: string, enum: [pending, approved, rejected, expired]}

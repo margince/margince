@@ -13,7 +13,7 @@ fixture:
 expect:
   outcome: accepted
   answer:
-    - {line: 1, promiser: ines}
+    - {line: 1, promiser: ines, due_date: "2026-03-06"}
   rubric: >
     Ines made the payment promise; Mira reports it. Use the verified contact
     reference for Ines and cite line 1. The speaker and organizer must not inherit

@@ -72,6 +72,8 @@ var sourceAnswersForTheActorOnly = map[crmcontracts.WorklistItemSource]bool{
 	"batch": false,
 }
 
+// Push responsibility before the inbox page bound; narrowToScope still covers other
+// producers and folded rows. Team membership mirrors rowsForRoster, including unassigned work.
 func (s *Service) approvalQuery(depth int) ApprovalQuery {
 	query := ApprovalQuery{Status: "pending", Limit: depth}
 	switch s.taskScope {
@@ -87,4 +89,26 @@ func (s *Service) approvalQuery(depth int) ApprovalQuery {
 		}
 	}
 	return query
+}
+
+// forOwner isolates the named owner's scope from concurrent requests.
+func (s *Service) forOwner(owner ids.UUID) *Service {
+	narrowed := *s
+	narrowed.taskScope = TasksOwnedBy
+	narrowed.taskOwner = owner
+	return &narrowed
+}
+
+// forReader copies the shared service so one request cannot change another's scope.
+func (s *Service) forReader() *Service {
+	narrowed := *s
+	narrowed.taskScope = TasksMine
+	return &narrowed
+}
+
+// forUnowned isolates the unassigned scope from concurrent requests.
+func (s *Service) forUnowned() *Service {
+	narrowed := *s
+	narrowed.taskScope = TasksUnassigned
+	return &narrowed
 }

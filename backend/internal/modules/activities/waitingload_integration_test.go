@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -344,7 +345,8 @@ func TestAnUnreadableWaitingOwnerIsNotReportedAsUnassigned(t *testing.T) {
 	actor.Permissions.RowScope = principal.RowScopeOwn
 	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, user_id, address) VALUES ($1, $2, 'to', $3, 'rep@example.test')`, ids.NewV7(), activity, e.rep)
 	ctx = principal.WithActor(ctx, actor)
-	rows, err := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).WaitingReplies(ctx, time.Now())
+	e.exec(t, `UPDATE contact SET owner_id=$2 WHERE id=$1`, visible, e.rep)
+	rows, err := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).WaitingReplies(ctx, clocktest.Now(t))
 	if err != nil {
 		t.Fatal(err)
 	}

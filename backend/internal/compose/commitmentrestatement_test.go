@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -86,20 +85,38 @@ func TestRenewalCertificationRejectsMissingEvidenceAndTheOldDeadline(t *testing.
 func TestRestatementRequiresTheVerifiedPromiserAndRecipient(t *testing.T) {
 	seat, other, buyer := ids.NewV7(), ids.NewV7(), ids.New[ids.ContactKind]()
 	ours := Commitment{Seat: &seat, PromisedTo: &buyer}
-	if !samePromiser(ours, activities.MessageParties{SenderSeats: []ids.UUID{seat}, RecipientContacts: []ids.UUID{buyer.UUID}}) {
+	sender := commitmentParty{Ref: "seat:" + seat.String(), Role: "from"}
+	recipient := commitmentParty{Ref: "contact:" + buyer.String(), Role: "to"}
+	stranger := commitmentParty{Ref: "seat:" + other.String(), Role: "from"}
+	if !samePromiser(ours, []commitmentParty{sender, recipient}) || !samePromiser(ours, []commitmentParty{sender, sender, recipient}) {
 		t.Fatal("the same sender and recipient lost their promise")
 	}
-	for _, parties := range []activities.MessageParties{
-		{SenderSeats: []ids.UUID{other}, RecipientContacts: []ids.UUID{buyer.UUID}},
-		{SenderSeats: []ids.UUID{seat, other}, RecipientContacts: []ids.UUID{buyer.UUID}},
-		{SenderSeats: []ids.UUID{seat}, RecipientContacts: []ids.UUID{other}},
+	for _, parties := range [][]commitmentParty{
+		{stranger, recipient},
+		{sender, stranger, recipient},
+		{sender},
+		{sender, {Ref: recipient.Ref, Role: "cc"}},
 	} {
 		if samePromiser(ours, parties) {
 			t.Fatal("another or ambiguous party renewed the promise")
 		}
 	}
 	theirs := Commitment{Theirs: &buyer}
-	if !samePromiser(theirs, activities.MessageParties{SenderContacts: []ids.UUID{buyer.UUID}}) || samePromiser(theirs, activities.MessageParties{SenderContacts: []ids.UUID{other}}) {
+	recipient.Role = "from"
+	if !samePromiser(theirs, []commitmentParty{recipient}) || samePromiser(theirs, []commitmentParty{stranger}) {
 		t.Fatal("customer identity was inferred from message direction alone")
+	}
+}
+
+func TestReportedRenewalKeepsTheAttributedParticipantRatherThanTheSender(t *testing.T) {
+	seat, customer := ids.NewV7(), ids.New[ids.ContactKind]()
+	sender := commitmentParty{Ref: "seat:" + seat.String(), Role: "from"}
+	recipient := commitmentParty{Ref: "contact:" + customer.String(), Role: "to"}
+	c := Commitment{Theirs: &customer, NeedsConfirmation: true, parties: []commitmentParty{sender, recipient}}
+	if !samePromiser(c, []commitmentParty{sender, recipient}) {
+		t.Fatal("an attributed report lost its customer because the reporter sent it")
+	}
+	if samePromiser(c, []commitmentParty{sender}) {
+		t.Fatal("a report was renewed without its attributed customer")
 	}
 }

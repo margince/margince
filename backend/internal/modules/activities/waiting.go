@@ -475,5 +475,8 @@ func scanWaitingReply(record pgx.Row) (WaitingReply, error) {
 		&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
 		&row.Engaged, &row.OwnerID, &row.OwnerKnown, &row.Threaded, &row.ThreadKey, &row.ChannelProvider,
 		&row.MeetingBookedAt)
+	if !row.OwnerKnown {
+		row.OwnerID = ids.Nil
+	}
 	return row, err
 }

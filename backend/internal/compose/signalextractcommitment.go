@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // extractKindCommitment is the event kind that goes to the commitment rule.
@@ -183,7 +184,7 @@ func (x *SignalExtractor) emailCommitment(
 	}
 	verified := verifiedCommitmentParties(parties)
 	kind, party := attributeCommitment(&c, event.PromiserRef, verified)
-	c.NeedsConfirmation = message.Direction != "outbound" || !commitmentPartyHasRole(verified, event.PromiserRef, "from")
+	c.NeedsConfirmation = message.Direction != connector.DirectionOutbound || !commitmentPartyHasRole(verified, event.PromiserRef, commitmentSenderRole)
 	c.Body = fmt.Sprintf("Promiser: %s. Commitment in the email %q, sent %s.", c.Party, message.Subject, message.At.Format(time.DateOnly))
 	c.Span = span
 	c.Locator = commitmentLocator(cited, kind, party, span)

@@ -362,12 +362,7 @@ func TestCanaryStampingPreservesAReferencedIdentityWithAliases(t *testing.T) {
 		if err := json.Unmarshal(raw, &value); err != nil {
 			return false
 		}
-		for _, alias := range value.Aliases {
-			if alias == "buyer" {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(value.Aliases, "buyer")
 	}
 	stamped, prose, err := plantCanary(fixture, accepts, nil)
 	if err != nil {

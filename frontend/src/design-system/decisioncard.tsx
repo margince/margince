@@ -209,7 +209,7 @@ export function DecisionCard({
             draft={payload.draft}
             diffs={payload.diffs}
             lead={
-              payload.lead === named || payload.lead === approval.summary
+              [named, approval.summary].includes(payload.lead)
                 ? null
                 : payload.lead
             }

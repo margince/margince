@@ -16305,9 +16305,9 @@ paths:
             message has no assignee, so its owner is the owner of the record it is filed
             under — deal, then lead, then contact, then company, first owner found. A
             thread no owned record attributes to anybody is the customer nobody is looking
-            at, which is exactly what this queue is opened to find. Such a message stays
-            reachable from `mine` as well, on the ground that an unowned customer writing
-            in is everybody's until somebody takes them.
+            at, which is exactly what this queue is opened to find. Unassigned work stays
+            in this queue until somebody takes responsibility for it. `mine` requires
+            a verified personal assignment or an explicitly requested decision.
 
             WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
             going quiet, meetings and duplicate pairs are read under the caller's row

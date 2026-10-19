@@ -97,6 +97,7 @@ type Commitment struct {
 	// Locator identifies the promise across readings; see commitmentLocator.
 	Locator string
 	Span    string
+	parties []commitmentParty
 	// Body says where the task came from, in words a rep can go and check.
 	Body            string
 	Evidence        approvals.Evidence
@@ -179,11 +180,19 @@ func (d *CommitmentDispatcher) routeCommitment(ctx context.Context, tx pgx.Tx, c
 	if reason == activities.CommitmentSourceUnavailable {
 		return CommitmentOutcome(reason), ids.UUID{}, nil
 	}
-	offered, err := d.offeredBefore(ctx, tx, c)
-	if err != nil || offered {
-		return CommitmentRemembered, ids.UUID{}, err
+	if reason == activities.CommitmentCurrent {
+		offered, err := d.offeredBefore(ctx, tx, c)
+		if err != nil || offered {
+			return CommitmentRemembered, ids.UUID{}, err
+		}
 	}
 	if c.Theirs == nil {
+		if c.Seat == nil {
+			written, err := d.resolvedWorkBefore(filing, tx, c)
+			if err != nil || written {
+				return CommitmentRemembered, ids.UUID{}, err
+			}
+		}
 		written, err := d.tasks.CommitmentTaskWritten(filing, tx, c.Locator)
 		if err != nil {
 			return CommitmentRemembered, ids.UUID{}, err
@@ -304,11 +313,21 @@ func (d *CommitmentDispatcher) offeredBefore(ctx context.Context, tx pgx.Tx, c C
 		if !held.Pending() && !held.Rejected() && !held.Approved() {
 			continue
 		}
+		if c.Theirs != nil && held.Rejected() {
+			continue
+		}
 		var offer CommitmentTaskProposal
 		if err := json.Unmarshal(held.Change, &offer); err != nil {
 			return false, fmt.Errorf("compose: unmarshal a commitment proposal: %w", err)
 		}
-		if (offer.Locator == c.Locator && !held.Approved()) || resolvedPriorPromise(c, offer) {
+		if offer.Locator == c.Locator {
+			if !held.Approved() {
+				return true, nil
+			}
+			written, err := d.tasks.CommitmentTaskWritten(ctx, tx, c.Locator)
+			return !written, err
+		}
+		if samePromiseBeforeAttributionChanged(c, offer) {
 			return true, nil
 		}
 	}

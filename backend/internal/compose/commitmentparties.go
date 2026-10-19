@@ -18,6 +18,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+const commitmentSenderRole = "from"
+
 type commitmentParty struct {
 	Ref, Role, Name, Address string
 	Seat, Contact            *ids.UUID
@@ -29,7 +31,7 @@ func verifiedCommitmentParties(parties activities.MessageParties) []commitmentPa
 		role    string
 		parties []crmcontracts.EmailParty
 	}{
-		{"from", parties.From},
+		{commitmentSenderRole, parties.From},
 		{"to", parties.To},
 		{"cc", parties.Cc},
 		{"organizer", parties.Organizers},
@@ -47,8 +49,6 @@ func verifiedCommitmentParties(parties activities.MessageParties) []commitmentPa
 			case party.ContactId != nil:
 				contact := ids.UUID(*party.ContactId)
 				candidate.Contact, candidate.Ref = &contact, "contact:"+contact.String()
-			default:
-				continue
 			}
 			out = append(out, candidate)
 		}
@@ -94,6 +94,9 @@ func soleCommitmentCounterparty(parties []commitmentParty) (ids.UUID, bool) {
 }
 
 func (x *SignalExtractor) readCommitmentParties(ctx context.Context, thread *settledThread) error {
+	if len(thread.Messages) == 0 {
+		return nil
+	}
 	reader := extractorContext(ctx, signalScanActor)
 	return database.WithWorkspaceTx(reader, x.pool, func(tx pgx.Tx) error {
 		for i := range thread.Messages {
@@ -122,6 +125,7 @@ func (p *TranscriptProposer) readCommitmentParties(ctx context.Context, activity
 }
 
 func attributeCommitment(c *Commitment, ref string, parties []commitmentParty) (string, string) {
+	c.parties = parties
 	promiser, found := referencedPromiser(ref, parties)
 	if found && ambiguousCommitmentPromiser(promiser, parties, c.Quote) {
 		c.Party, found = promiser.Name, false

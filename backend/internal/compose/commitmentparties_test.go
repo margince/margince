@@ -14,7 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestCommitmentReferencesKeepSameNamedPeopleDistinct(t *testing.T) {
+func TestCommitmentReferencesKeepSameNamedParticipantsDistinct(t *testing.T) {
 	seat, contact := openapi_types.UUID(ids.NewV7()), openapi_types.UUID(ids.NewV7())
 	name := "Alex"
 	parties := verifiedCommitmentParties(activities.MessageParties{
@@ -74,5 +74,47 @@ func TestAQuotedAddressCannotBePartOfAnotherAddress(t *testing.T) {
 	}
 	if !quotedCommitmentAddress("<MIRA@example.test>: send pricing", "mira@example.test") {
 		t.Fatal("the exact quoted address was lost")
+	}
+}
+
+func TestSameNamedPromisersRequireDistinctQuotedAddresses(t *testing.T) {
+	seat, contact := openapi_types.UUID(ids.NewV7()), openapi_types.UUID(ids.NewV7())
+	name, alternate := "Alex Lee", " alex lee "
+	for _, linked := range []bool{false, true} {
+		other := crmcontracts.EmailParty{DisplayName: &alternate, Address: "external@example.test"}
+		if linked {
+			other.ContactId = &contact
+		}
+		parties := verifiedCommitmentParties(activities.MessageParties{Attendees: []crmcontracts.EmailParty{
+			{UserId: &seat, DisplayName: &name, Address: "seat@example.test"}, other,
+		}})
+		if len(parties) != 2 {
+			t.Fatal("an unlinked namesake disappeared from the evidence")
+		}
+		for _, party := range parties {
+			if party.Ref == "" {
+				continue
+			}
+			c := Commitment{Quote: "Alex Lee agreed to send pricing."}
+			_, key := attributeCommitment(&c, party.Ref, parties)
+			if c.Seat != nil || c.Theirs != nil || key == party.Ref {
+				t.Fatalf("an ambiguous name selected a participant: %+v", c)
+			}
+			c = Commitment{Quote: party.Address + " agreed to send pricing."}
+			_, key = attributeCommitment(&c, party.Ref, parties)
+			if key != party.Ref {
+				t.Fatal("a distinguishing quoted address was discarded")
+			}
+		}
+	}
+}
+
+func TestAddressAliasesDoNotInventSameNamedPeople(t *testing.T) {
+	contact := ids.NewV7()
+	first := commitmentParty{Ref: "contact:" + contact.String(), Name: "Alex Lee", Contact: &contact, Address: "alex@example.test"}
+	alias := first
+	alias.Address = "alias@example.test"
+	if ambiguousCommitmentPromiser(first, []commitmentParty{first, alias}, "Alex Lee will send pricing") {
+		t.Fatal("one contact's addresses were treated as different people")
 	}
 }

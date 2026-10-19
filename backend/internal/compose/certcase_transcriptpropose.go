@@ -48,6 +48,7 @@ type transcriptProposeFixture []string
 type transcriptProposeExpectation struct {
 	Promiser string `json:"promiser,omitempty"`
 	Line     int    `json:"line"`
+	DueDate  string `json:"due_date"`
 }
 
 // transcriptProposeCases serves the one site that reads next steps out of a
@@ -153,15 +154,7 @@ func refuseUnreachableSteps(want []transcriptProposeExpectation, lineCount int) 
 	return nil
 }
 
-// transcriptProposeCase is one transcript ready to be read, closed over the
-// lines that were asked about and the next steps the scenario expects.
-// certTranscriptMeetingDay is the day every graded transcript is read as having
-// happened on.
-//
-// PINNED for the reason the language is: a prompt carrying today's date would
-// make every morning's request a different one, and a score is only comparable
-// against a fixed request. No corpus scenario states a deadline yet, so nothing
-// grades what this resolves to — it is here so the request stays still.
+// A fixed meeting day makes relative deadline grades comparable across runs.
 const certTranscriptMeetingDay = "2026-03-04"
 
 type transcriptProposeCase struct {
@@ -245,9 +238,9 @@ func (c *transcriptProposeCase) AnswerConfidence(trace aitasks.Trace) (low, high
 // commitment. Only line numbers are named in the detail — the transcript's own
 // words are a speaker's, and they have no business being echoed into a record.
 func (c *transcriptProposeCase) disagreements(payload transcriptPayload) []string {
-	wanted := make(map[string]bool, len(c.expected))
+	wanted := make(map[string]string, len(c.expected))
 	for _, step := range c.expected {
-		wanted[fmt.Sprintf("%d:%s", step.Line, step.Promiser)] = true
+		wanted[fmt.Sprintf("%d:%s", step.Line, step.Promiser)] = step.DueDate
 	}
 	answered := map[string]bool{}
 	var out []string
@@ -255,7 +248,7 @@ func (c *transcriptProposeCase) disagreements(payload transcriptPayload) []strin
 		matched := false
 		for _, line := range step.SourceLines {
 			key := fmt.Sprintf("%d:%s", line, c.promiserKeys[step.PromiserRef])
-			if wanted[key] {
+			if due, exists := wanted[key]; exists && step.DueDate == due {
 				answered[key] = true
 				matched = true
 			}

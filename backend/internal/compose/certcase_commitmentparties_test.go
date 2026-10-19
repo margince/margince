@@ -76,3 +76,16 @@ func TestTranscriptCertificationRejectsAValidButWrongPromiser(t *testing.T) {
 		}
 	}
 }
+
+func TestTranscriptCertificationGradesDatesExactly(t *testing.T) {
+	for _, wanted := range []string{"", "2026-03-06", "2026-03-11"} {
+		for _, answer := range []string{"", "2026-03-06", "2026-03-11"} {
+			c := transcriptProposeCase{lines: []string{"Mira: I will send pricing."}, expected: []transcriptProposeExpectation{{Line: 1, DueDate: wanted}}}
+			trace := aitasks.Trace{Output: fmt.Sprintf(`{"proposals":[{"summary":"Send pricing","owner":"Mira","promiser_ref":"","due_date":%q,"source_lines":[1],"confidence":0.95}]}`, answer)}
+			got := c.Evaluate(trace)
+			if (got.Result == aitasks.OutcomeAccepted) != (answer == wanted) {
+				t.Fatalf("wanted date %q, answer %q: %+v", wanted, answer, got)
+			}
+		}
+	}
+}

@@ -58,8 +58,8 @@ func TestAWaitOnAColleaguesRecordIsNotTheReaders(t *testing.T) {
 func TestAWaitNobodyOwnsIsNotPersonalWork(t *testing.T) {
 	t.Parallel()
 	unowned := classifyWaiting(WaitingCustomer{}, readInstant)
-	for _, person := range []principal.Principal{reader(), {Type: principal.PrincipalHuman, UserID: theColleague}} {
-		if ownedByReader(unowned, person) {
+	for _, actor := range []principal.Principal{reader(), {Type: principal.PrincipalHuman, UserID: theColleague}} {
+		if ownedByReader(unowned, actor) {
 			t.Fatal("unowned work was claimed as personal responsibility")
 		}
 	}

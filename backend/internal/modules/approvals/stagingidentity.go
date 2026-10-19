@@ -302,6 +302,7 @@ func (o Offer) Pending() bool { return o.Status == statusPending }
 // Rejected reports whether a human turned the offer down.
 func (o Offer) Rejected() bool { return o.Status == approvalStatusRejected }
 
+// Approved reports whether a human accepted the offer.
 func (o Offer) Approved() bool { return o.Status == approvalStatusApproved }
 
 // OffersForTx reads the offers of this kind against this target, LOCKED, for

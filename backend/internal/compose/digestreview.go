@@ -23,10 +23,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/margince/margince/backend/internal/compose/attention"
-
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"

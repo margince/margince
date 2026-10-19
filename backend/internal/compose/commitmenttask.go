@@ -232,7 +232,7 @@ func sourcePrivateToNow(ctx context.Context, tx pgx.Tx, source ids.UUID, staged 
 	}
 	if !offered {
 		return nil, fmt.Errorf("compose: the conversation this commitment was read from changed since, "+
-			"and who may read it is no longer known — dismiss this card and let the next reading propose it again: %w",
+			"and who may read it is no longer known — review conversation access before retrying: %w",
 			apperrors.ErrConflict)
 	}
 	if staged != nil || owner.IsZero() {

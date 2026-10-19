@@ -1,4 +1,4 @@
-name: same_named_promiser_unresolved
+name: mail_same_named_promiser_unresolved
 task: signal_extract
 site: thread_events
 source: hand_authored
@@ -7,5 +7,5 @@ fixture: [{"direction": "outbound", "subject": "Next steps", "sent": "2026-09-07
 expect:
   outcome: accepted
   answer: [{"kind": "commitment_made", "message": 1, "promiser": ""}]
-  rubric: "Identify the promiser from the quoted clause. The expected reference is empty because the named person is ambiguous. Direction and CC membership alone do not assign a promise."
+  rubric: "Identify the promiser from the quoted clause. The expected reference is empty because the named participant is ambiguous. Direction and CC membership alone do not assign a promise."
   bands: {certified_min: 70, degraded_min: 50, floor: 40}

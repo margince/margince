@@ -4,12 +4,14 @@
 package compose
 
 import (
+	"errors"
 	"fmt"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 type certCommitmentParty struct {
@@ -25,7 +27,7 @@ func prepareCommitmentParties(input []certCommitmentParty, identities map[string
 	references := map[string]string{}
 	for _, party := range input {
 		if party.Key == "" {
-			return nil, nil, fmt.Errorf("a participant has no fixture key")
+			return nil, nil, errors.New("a participant has no fixture key")
 		}
 		identityKey := party.Kind + ":" + party.Key
 		id, found := identities[identityKey]
@@ -38,7 +40,7 @@ func prepareCommitmentParties(input []certCommitmentParty, identities map[string
 		switch party.Kind {
 		case "seat":
 			wire.UserId = &wireID
-		case "contact":
+		case string(recordTypeContact):
 			wire.ContactId = &wireID
 		default:
 			return nil, nil, fmt.Errorf("participant %q has unknown kind %q", party.Key, party.Kind)
@@ -49,7 +51,7 @@ func prepareCommitmentParties(input []certCommitmentParty, identities map[string
 		}
 		references[party.Key] = reference
 		switch party.Role {
-		case "from":
+		case commitmentSenderRole:
 			verified.From = append(verified.From, wire)
 		case "to":
 			verified.To = append(verified.To, wire)

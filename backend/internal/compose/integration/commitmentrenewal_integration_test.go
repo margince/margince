@@ -48,7 +48,7 @@ func TestARenewedOldPromiseUsesItsCurrentDeadlineWithoutDuplicatingWork(t *testi
 			party(t, renewed, "from", &e.Rep1, nil)
 			party(t, renewed, "to", nil, &buyer)
 			reply, err := json.Marshal(map[string]any{"events": []map[string]any{{
-				"kind": "commitment_made", "message_id": original.String(), "quote": originalQuote,
+				"kind": "commitment_made", "promiser_ref": "seat:" + e.Rep1.String(), "message_id": original.String(), "quote": originalQuote,
 				"restated_message_id": renewed.String(), "restated_quote": renewedQuote,
 				"summary": "Send enterprise pricing", "due_date": "2026-06-05", "confidence": 0.95,
 			}}})
@@ -81,7 +81,7 @@ func TestRenewalUpdatesAutomaticWorkAndKeepsHumanWork(t *testing.T) {
 			original := captureCommitmentMessage(t, e, buyer, "renew-existing", "Pricing", quote, "outbound", extractClock.AddDate(0, 0, -5))
 			party(t, original, "from", &e.Rep1, nil)
 			party(t, original, "to", nil, &buyer)
-			extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, original, quote, "2026-05-29")})
+			extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, original, "seat:"+e.Rep1.String(), quote, "2026-05-29")})
 			taskID := ids.MustParse(e.WsScalar(t, `SELECT id::text FROM activity WHERE kind='task'`))
 			store := activities.NewStore(e.DB())
 			if state == "edited" || state == "completed" {
@@ -105,7 +105,7 @@ func TestRenewalUpdatesAutomaticWorkAndKeepsHumanWork(t *testing.T) {
 			party(t, renewed, "from", &e.Rep1, nil)
 			party(t, renewed, "to", nil, &buyer)
 			reply, err := json.Marshal(map[string]any{"events": []map[string]any{{
-				"kind": "commitment_made", "message_id": original.String(), "quote": quote,
+				"kind": "commitment_made", "promiser_ref": "seat:" + e.Rep1.String(), "message_id": original.String(), "quote": quote,
 				"restated_message_id": renewed.String(), "restated_quote": renewedQuote,
 				"summary": "Send pricing", "due_date": "2026-06-05", "confidence": 0.95,
 			}}})
@@ -147,7 +147,7 @@ func TestCustomerRenewalUpdatesTheExistingHistoricalClaimDeadline(t *testing.T) 
 	quote := "I will send our requirements."
 	original := captureCommitmentMessage(t, e, buyer, "customer-renewal", "Requirements", quote, "inbound", extractClock.AddDate(0, 0, -45))
 	party(t, original, "from", nil, &buyer)
-	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, original, quote, "")})
+	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, original, "contact:"+buyer.String(), quote, "")})
 	if got := e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission WHERE source_activity_id=$1 AND NOT current_work`, original); got != 1 {
 		t.Fatal("the original undated promise was not kept as history")
 	}
@@ -155,7 +155,7 @@ func TestCustomerRenewalUpdatesTheExistingHistoricalClaimDeadline(t *testing.T) 
 	renewed := captureCommitmentMessage(t, e, buyer, "customer-renewal", "Re: Requirements", renewedQuote, "inbound", extractClock.Add(-24*time.Hour))
 	party(t, renewed, "from", nil, &buyer)
 	reply, err := json.Marshal(map[string]any{"events": []map[string]any{{
-		"kind": "commitment_made", "message_id": original.String(), "quote": quote,
+		"kind": "commitment_made", "promiser_ref": "contact:" + buyer.String(), "message_id": original.String(), "quote": quote,
 		"restated_message_id": renewed.String(), "restated_quote": renewedQuote,
 		"summary": "Send requirements", "due_date": "2026-06-05", "confidence": 0.95,
 	}}})
@@ -189,10 +189,15 @@ func TestUnverifiedRenewalRemainsDueForAnotherReading(t *testing.T) {
 	renewed := captureCommitmentMessage(t, e, buyer, "unverified-renewal", "Re: Pricing", renewedQuote, "outbound", extractClock.Add(-24*time.Hour))
 	party(t, renewed, "from", &e.Rep2, nil)
 	party(t, renewed, "to", nil, &buyer)
+	opportunityQuote := "We need a new customer portal this quarter."
+	opportunity := captureCommitmentMessage(t, e, buyer, "unverified-renewal", "Portal", opportunityQuote, "inbound", extractClock.Add(-12*time.Hour))
 	reply, err := json.Marshal(map[string]any{"events": []map[string]any{{
-		"kind": "commitment_made", "message_id": original.String(), "quote": quote,
+		"kind": "commitment_made", "promiser_ref": "seat:" + e.Rep1.String(), "message_id": original.String(), "quote": quote,
 		"restated_message_id": renewed.String(), "restated_quote": renewedQuote,
 		"summary": "Send pricing", "due_date": "2026-06-05", "confidence": 0.95,
+	}, {
+		"kind": "new_opportunity", "message_id": opportunity.String(), "quote": opportunityQuote,
+		"summary": "Customer portal project", "confidence": 0.95,
 	}}})
 	if err != nil {
 		t.Fatal(err)
@@ -201,7 +206,10 @@ func TestUnverifiedRenewalRemainsDueForAnotherReading(t *testing.T) {
 	if got := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind='task'`); got != 0 {
 		t.Fatal("an unverified renewal created work")
 	}
-	brain := &scriptedBrain{reply: commitmentReply(t, original, quote, "")}
+	if got := e.WsCount(t, `SELECT count(*) FROM signal WHERE kind='new_opportunity'`); got != 1 {
+		t.Fatal("an unverifiable renewal discarded the independent opportunity")
+	}
+	brain := &scriptedBrain{reply: commitmentReply(t, original, "seat:"+e.Rep1.String(), quote, "")}
 	extractPass(t, e, brain)
 	if got := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind='task' AND source_activity_id=$1`, original); got != 1 {
 		t.Fatal("rejecting a renewal permanently lost the original promise")
@@ -225,7 +233,7 @@ func TestRefusedClaimRenewalRollsBackTheTaskAndItsTrace(t *testing.T) {
 		party(t, message, "from", &e.Rep1, nil)
 		party(t, message, "to", nil, &buyer)
 		reply, err := json.Marshal(map[string]any{"events": []map[string]any{{
-			"kind": "commitment_made", "message_id": original.String(), "quote": quote,
+			"kind": "commitment_made", "promiser_ref": "seat:" + e.Rep1.String(), "message_id": original.String(), "quote": quote,
 			"restated_message_id": message.String(), "restated_quote": body,
 			"summary": "Send pricing", "due_date": due, "confidence": 0.95,
 		}}})
@@ -256,5 +264,50 @@ func TestRefusedClaimRenewalRollsBackTheTaskAndItsTrace(t *testing.T) {
 	}
 	if got := e.WsScalar(t, `SELECT to_char(due_at,'YYYY-MM-DD') FROM conversation_claim WHERE source_activity_id=$1`, original); got != "2026-06-05" {
 		t.Fatalf("claim deadline changed to %s", got)
+	}
+}
+
+func TestLegacySignalWithUnverifiedRenewalSettlesOnce(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	buyer := employeeOf(t, e, company, "Pat Buyer")
+	quote := "I will send pricing."
+	original := captureCommitmentMessage(t, e, buyer, "legacy-refused-renewal", "Pricing", quote, "outbound", extractClock.Add(-48*time.Hour))
+	party(t, original, "from", &e.Rep1, nil)
+	party(t, original, "to", nil, &buyer)
+	renewedQuote := "I will send pricing tomorrow."
+	renewed := captureCommitmentMessage(t, e, buyer, "legacy-refused-renewal", "Re: Pricing", renewedQuote, "outbound", extractClock.Add(-24*time.Hour))
+	party(t, renewed, "from", &e.Rep2, nil)
+	party(t, renewed, "to", nil, &buyer)
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := signals.RecordDerived(e.Admin(), tx, signals.DerivedSignal{
+			Kind: "commitment_made", CompanyID: company, Summary: "Pricing promised.",
+			Severity: "info", Fingerprint: "legacy-" + original.String(),
+			Evidence: []signals.DerivedEvidence{{Snippet: quote, ActivityID: original}},
+		}, extractClock.Add(-48*time.Hour))
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	reply, err := json.Marshal(map[string]any{"events": []map[string]any{{
+		"kind": "commitment_made", "promiser_ref": "seat:" + e.Rep1.String(), "message_id": original.String(), "quote": quote,
+		"restated_message_id": renewed.String(), "restated_quote": renewedQuote,
+		"summary": "Send pricing", "due_date": "2026-06-05", "confidence": 0.95,
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	brain := &scriptedBrain{reply: string(reply)}
+	if pass := extractPassStats(t, e, brain); pass.Converted != 1 {
+		t.Fatalf("converted %d legacy signals, want one", pass.Converted)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM signal WHERE kind='commitment_made' AND status='open'`); got != 0 {
+		t.Fatal("the refused legacy renewal remained open")
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind='task'`); got != 0 {
+		t.Fatal("an unverified renewal created work")
+	}
+	if pass := extractPassStats(t, e, brain); pass.Converted != 0 {
+		t.Fatal("a settled legacy signal was converted again")
 	}
 }
