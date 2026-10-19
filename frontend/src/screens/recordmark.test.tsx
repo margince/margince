@@ -123,7 +123,8 @@ describe("a record's mark", () => {
       },
     );
     render(<CompanyScreen id={company.id} />);
-    await screen.findByRole("link", { name: danaCarded.full_name });
+    // The overview names the contact in more than one section.
+    await screen.findAllByRole("link", { name: danaCarded.full_name });
     expect(meshBeside(danaCarded.full_name, ".record-card")).toBe(
       meshKeyedOn(dana.contact_id),
     );

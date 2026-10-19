@@ -12736,11 +12736,15 @@ export const de = {
     "Der Beziehungsbericht konnte nicht geladen werden.",
 
   "contact.rings.conversation": "Gespräch",
-  "contact.rings.conversation.caption_one": "{name} schrieb {part} von {count} Nachricht",
-  "contact.rings.conversation.caption_other": "{name} schrieb {part} von {count} Nachrichten",
+  "contact.rings.conversation.caption_one":
+    "{name} schrieb {part} von {count} Nachricht",
+  "contact.rings.conversation.caption_other":
+    "{name} schrieb {part} von {count} Nachrichten",
   "contact.rings.reach": "Reichweite",
-  "contact.rings.reach.caption_one": "{part} von {count} Teammitglied in Kontakt",
-  "contact.rings.reach.caption_other": "{part} von {count} Teammitgliedern in Kontakt",
+  "contact.rings.reach.caption_one":
+    "{part} von {count} Teammitglied in Kontakt",
+  "contact.rings.reach.caption_other":
+    "{part} von {count} Teammitgliedern in Kontakt",
   "contact.rings.promises": "Zusagen",
   "contact.rings.promises.caption_one": "{part} von {count} Zusage gehalten",
   "contact.rings.promises.caption_other": "{part} von {count} Zusagen gehalten",

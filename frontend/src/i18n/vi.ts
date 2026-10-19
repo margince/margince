@@ -12407,11 +12407,14 @@ export const vi = {
   "contact.overview.briefFailed": "Không thể tải tóm tắt quan hệ.",
 
   "contact.rings.conversation": "Trao đổi",
-  "contact.rings.conversation.caption_one": "{name} đã gửi {part}/{count} tin nhắn",
-  "contact.rings.conversation.caption_other": "{name} đã gửi {part}/{count} tin nhắn",
+  "contact.rings.conversation.caption_one":
+    "{name} đã gửi {part}/{count} tin nhắn",
+  "contact.rings.conversation.caption_other":
+    "{name} đã gửi {part}/{count} tin nhắn",
   "contact.rings.reach": "Tiếp cận",
   "contact.rings.reach.caption_one": "{part}/{count} đồng nghiệp đang liên lạc",
-  "contact.rings.reach.caption_other": "{part}/{count} đồng nghiệp đang liên lạc",
+  "contact.rings.reach.caption_other":
+    "{part}/{count} đồng nghiệp đang liên lạc",
   "contact.rings.promises": "Cam kết",
   "contact.rings.promises.caption_one": "Đã giữ {part}/{count} cam kết",
   "contact.rings.promises.caption_other": "Đã giữ {part}/{count} cam kết",

@@ -12732,8 +12732,10 @@ export const en = {
   "contact.overview.briefFailed": "The relationship brief could not be loaded.",
 
   "contact.rings.conversation": "Conversation",
-  "contact.rings.conversation.caption_one": "{name} sent {part} of {count} message",
-  "contact.rings.conversation.caption_other": "{name} sent {part} of {count} messages",
+  "contact.rings.conversation.caption_one":
+    "{name} sent {part} of {count} message",
+  "contact.rings.conversation.caption_other":
+    "{name} sent {part} of {count} messages",
   "contact.rings.reach": "Reach",
   "contact.rings.reach.caption_one": "{part} of {count} colleague in touch",
   "contact.rings.reach.caption_other": "{part} of {count} colleagues in touch",
