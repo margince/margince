@@ -103,9 +103,9 @@ func analyticsCustomFieldsOf(entity analyticsquery.Entity) *[]crmcontracts.Analy
 }
 
 // describeCustomFields names each custom dimension for a model, which has no
-// other way to learn what an installation's cf_ column means. Labels and
-// choices are typed by an administrator, so each is JSON-quoted: a comma or a
-// line break inside one cannot read as a second choice or a new line.
+// other way to learn what an installation's cf_ column means. An administrator
+// typed the labels and choices, so each is JSON-quoted. A comma or a line break
+// inside one then cannot read as a second choice or a new line.
 func describeCustomFields(out *strings.Builder, entity analyticsquery.Entity) {
 	header := false
 	for _, name := range entity.FieldNames(analyticsquery.KindDimension) {
@@ -132,11 +132,11 @@ func writeCustomMeaning(sum hash.Hash, field analyticsquery.Field) {
 	if field.Label == "" {
 		return
 	}
-	sum.Write([]byte(jsonText([]any{field.Label, field.Options})))
+	sum.Write([]byte(jsonText(field.Label) + jsonText(field.Options)))
 }
 
 // jsonText is v as JSON. A string or a slice of strings always encodes.
-func jsonText(v any) string {
+func jsonText[T string | []string](v T) string {
 	text, err := json.Marshal(v)
 	if err != nil {
 		return ""

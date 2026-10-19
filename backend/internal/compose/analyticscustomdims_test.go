@@ -18,8 +18,7 @@ func territorySpec(options ...string) reportSpec {
 }
 
 // A choice an administrator typed with a comma or a line break stays one
-// quoted value, so it cannot read as two choices or as a new line of the
-// document a model follows.
+// quoted value. It cannot read as two choices, or as a new line a model follows.
 func TestAnAdminTypedChoiceCannotBreakOutOfTheVocabularyDocument(t *testing.T) {
 	ctx := seatWith("deal")
 	schema := analyticsSchemaFrom(ctx, map[string]reportSpec{
