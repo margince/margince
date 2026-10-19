@@ -12,8 +12,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
-	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 func recipientMailCopy(ctx context.Context, pool *pgxpool.Pool) mailcopy.Copy {
@@ -37,7 +37,7 @@ func roomInviteIdentity(ctx context.Context, pool *pgxpool.Pool) (string, string
 	var company string
 	err = InstallationDB(pool).Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		company, err = settings.ApplyTx(ctx, tx, identity.Name)
+		company, err = config.StoredApplyTx(ctx, tx, loadedConfig(), identity.Name)
 		return err
 	})
 	return name, company, err

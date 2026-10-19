@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -374,9 +373,7 @@ func TestProductionControllerStagingPreviews(t *testing.T) {
 	for _, language := range []string{"en", "de", "vi"} {
 		lane := setupConfirmLane(t)
 		lane.store.WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf))
-		if err := settings.Set(lane.e.Admin(), NewSettingsStore(lane.e.Pool), identity.BaseLanguage, language); err != nil {
-			t.Fatal(err)
-		}
+		integration.SetBaseLanguage(lane.e.Admin(), t, lane.e.Pool, language)
 		if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact)); err != nil {
 			t.Fatal(err)
 		}

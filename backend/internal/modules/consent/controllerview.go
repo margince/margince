@@ -10,8 +10,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -20,7 +20,7 @@ func (s *Store) controllerView(ctx context.Context, tx pgx.Tx, rendered Rendered
 	if err != nil {
 		return Rendered{}, err
 	}
-	identity, err := settings.ApplyTx(ctx, tx, ControllerIdentity)
+	identity, err := config.StoredApplyTx(ctx, tx, config.Bound(), ControllerIdentity)
 	if err != nil {
 		return Rendered{}, err
 	}
