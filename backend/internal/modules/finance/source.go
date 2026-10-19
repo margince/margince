@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -95,7 +96,8 @@ func (s *Store) Connect(ctx context.Context, provider string) (crmcontracts.Fina
 	conn := SourceConnection{ID: id.String(), ConnectedAt: s.now().UTC()}
 	reader, known := s.open(provider, conn)
 	if !known {
-		return crmcontracts.FinanceSourceState{}, fmt.Errorf("%w: no accounting source %q is installed", apperrors.ErrInvalidArgument, provider)
+		return crmcontracts.FinanceSourceState{}, httperr.Validation("provider", "unsupported",
+			fmt.Sprintf("no accounting source %q is installed", provider))
 	}
 	// Asked before any row exists, so a source that cannot be read leaves
 	// nothing behind for the sweep to fail on every six hours.

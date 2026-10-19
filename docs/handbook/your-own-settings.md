@@ -2,7 +2,7 @@
 # Your own settings
 
 Your own settings in Margince are the pages under **You** in Settings:
-**Account**, **Meetings**, **Writing voice**, **Agents**, **Notifications**,
+**Account**, **Meetings**, **Writing voice**, **AI access**, **Notifications**,
 **Connections** and **Capture activity**. Everything here changes your own seat and nobody else's.
 Two pages, Connections and Capture activity, also carry one card each that holds
 for the whole company.
@@ -11,7 +11,7 @@ For everything else, see [Settings](settings.md).
 
 ### How do I open my own settings?
 To open your own settings in Margince, open the account menu at the top right and choose **Settings**, then pick a page under **You**.
-The pages are **Account** (name, password, signature, language, appearance), **Meetings** (bookable hours, calendars and booking choices), **Writing voice**, **Agents**, **Notifications**, **Connections** and **Capture activity**.
+The pages are **Account** (name, password, signature, language, appearance), **Meetings** (bookable hours, calendars and booking choices), **Writing voice**, **AI access**, **Notifications**, **Connections** and **Capture activity**.
 You can also press ⌘K (Ctrl+K) and type the page name, or a word such as "password", "language", "theme" or "mailbox".
 Also called: my profile, my account, preferences, user settings.
 
@@ -220,23 +220,22 @@ Under that share, the file counts as plain text and is taken whole. So an email
 with a line that opens with a heading and a colon, such as "Frage: …", is not
 asked about.
 
-## Agents
+## AI access
 
-The Agents page in Settings is where you make and take back **passports**: the
-keys that let an AI agent work as you. Every member can open this page.
+The AI access page in Settings is where you connect your AI tool, such as
+Claude or ChatGPT, to Margince. Under **For developers** you also make and take
+back **passports**: the keys that let a script or your own code work as you.
+Every member can open this page.
+
+To connect your AI tool, see [How do I connect my AI tool to Margince?](agents-and-passports.md#how-do-i-connect-my-ai-tool-to-margince).
 
 ### How do I create an agent passport?
-To create an agent passport in Margince, open Settings → **Agents** and choose **New passport** in the **Agent passports** card.
-1. Enter an **Agent name**.
-2. Under **Agent permissions**, tick at least one: **Read records**, **Draft messages**, **Change records**, **Send messages**, **Buy contact data**.
-3. Choose **Mint passport**.
-4. Choose **Copy passport**, then **Download skill** for an AI tool, or **Copy example** for your own code.
-
-An agent can never do more than you can: every request checks your own permissions again.
+To create an agent passport, open Settings → **AI access**, then **For developers**, and see [How do I give an agent access to Margince?](agents-and-passports.md#how-do-i-give-an-agent-access-to-margince).
 Also called: API key, access token, connect an AI agent.
 
-You also see the list of actions agents may use, and the **Connected MCP clients**
-card, on the Agents page. Taking an agent off ends the whole connection, not one key. The
+**Your connections** lists each AI tool you connected. Under **For developers**,
+the **Agent rules** tab shows the list of actions agents may use. Choosing **Disconnect** on a
+connection ends the whole connection, not one key. The
 agent loses access on its next call and cannot get it back. Connecting it again
 means approving access again.
 

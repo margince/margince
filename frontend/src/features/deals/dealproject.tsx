@@ -18,6 +18,10 @@ import { dealRecordKeys } from "../../lib/activitykeys";
 import { ENTITY } from "../../lib/entity";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { navigate, routeHash } from "../../lib/router";
+import {
+  type ProjectOwnerPicker,
+  projectOwnerField,
+} from "../../screens/projectownerfield";
 import type { Project } from "../../screens/projects.form";
 
 // Where a deal meets its project: the picker on the deal form (with the
@@ -32,6 +36,9 @@ type Deal = components["schemas"]["Deal"];
  * is the "no project" answer.
  */
 export const NEW_PROJECT = "__new_project__";
+
+/** The deal form's key for the owner of the project it starts. */
+export const NEW_PROJECT_OWNER = "new_project_owner_id";
 
 /**
  * The live projects of ONE company, asked of the server, and NOTHING when there
@@ -100,7 +107,12 @@ export function dealProjectFields(
   // refuses (deal_project_same_company, 422), so the picker holds nothing until the
   // answer for the company on screen arrives.
   narrowedFor?: string,
+  // Who the new project's owner may be; absent, the server makes the reader
+  // its owner.
+  owner?: ProjectOwnerPicker,
 ): CreateField[] {
+  const startsProject = (values: Record<string, string>) =>
+    values.project_id === NEW_PROJECT;
   return [
     {
       key: "project_id",
@@ -148,8 +160,16 @@ export function dealProjectFields(
       key: "new_project_name",
       label: "project.name",
       required: true,
-      showWhen: (values) => values.project_id === NEW_PROJECT,
+      showWhen: startsProject,
     },
+    ...(owner
+      ? projectOwnerField(t, owner, {
+          key: NEW_PROJECT_OWNER,
+          label: "deal.newProjectOwner",
+          currentOwner: null,
+          mode: "create",
+        }).map((field) => ({ ...field, showWhen: startsProject }))
+      : []),
   ];
 }
 
@@ -177,6 +197,7 @@ export async function resolveDealProject(
       body: {
         name: values.new_project_name?.trim() ?? "",
         company_id: companyId,
+        owner_id: values[NEW_PROJECT_OWNER]?.trim() || null,
         source: "manual",
       },
     }),

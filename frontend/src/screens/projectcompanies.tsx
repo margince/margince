@@ -11,14 +11,22 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Badge } from "../design-system/atoms";
+import { Badge, Button, OverflowMenu } from "../design-system/atoms";
+import { CompanyCard } from "../design-system/companycard";
 import {
+  type LinkedProject,
   ProjectLinks,
   type ProjectLinksAdapter,
 } from "../design-system/projectlinks";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { COMPANY_ROLES, roleKey } from "../features/companies/companyprojects";
-import { useT } from "../i18n";
+import {
+  CompanyMark,
+  employerFacts,
+  hasEmployerFacts,
+  useEmployerSummary,
+} from "../features/contacts/contactemployersummary";
+import { useLocale, useT } from "../i18n";
 import { unwrap } from "../lib/problem";
 
 type ProjectCompany = components["schemas"]["ProjectCompany"];
@@ -74,7 +82,7 @@ export function ProjectCompanies({
   // A company's row on a project is shaped like a project's row on a company:
   // the same three slots, with the ROLE standing where a phase would. That is
   // what makes one component serve both — each row says what this record is to
-  // the other one.
+  // the other one. The card draws it the way a contact's employers are drawn.
   const adapter: ProjectLinksAdapter = {
     linked: (companies ?? []).map((company) => ({
       project_id: company.company_id,
@@ -83,6 +91,9 @@ export function ProjectCompanies({
       href: `#/companies/${company.company_id}`,
     })),
     readOnly,
+    card: (company, onDetach) => (
+      <ProjectCompanyCard company={company} onDetach={onDetach} />
+    ),
     allowsMany: true,
     search: searchCompanies,
     // The same three roles the company page offers, from the other side: one
@@ -107,6 +118,48 @@ export function ProjectCompanies({
         detachConfirm: t("projectCompanies.detachConfirm"),
         search: t("projectCompanies.searchLabel"),
       }}
+    />
+  );
+}
+
+function ProjectCompanyCard({
+  company,
+  onDetach,
+}: Readonly<{ company: LinkedProject; onDetach: (() => void) | undefined }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const summary = useEmployerSummary(company.project_id).data;
+  return (
+    <CompanyCard
+      logo={
+        <CompanyMark
+          companyId={company.project_id}
+          name={company.name}
+          logoUrl={summary?.logo_url}
+        />
+      }
+      title={<a href={company.href}>{company.name}</a>}
+      badges={company.phase}
+      facts={
+        summary && hasEmployerFacts(summary)
+          ? employerFacts(summary, t, locale)
+          : null
+      }
+      actions={
+        onDetach && (
+          <OverflowMenu label={t("record.moreActions")}>
+            <Button
+              variant="danger"
+              onClick={onDetach}
+              // Five identical "Detach" items cannot say which company each
+              // one takes off.
+              aria-label={t("projectLinks.detachNamed", { name: company.name })}
+            >
+              {t("projectLinks.detach")}
+            </Button>
+          </OverflowMenu>
+        )
+      }
     />
   );
 }

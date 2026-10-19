@@ -129,11 +129,17 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, cre
 	if err != nil {
 		return crmcontracts.CustomField{}, err
 	}
-	row := tx.QueryRow(ctx, `INSERT INTO custom_field (object, slug, label, type, column_name, currency, options, created_by)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		 RETURNING `+catalogColumns,
-		spec.Object, slug, spec.Label, spec.Type, column, currency, optionsArg, creator)
-	out, err := scanCustomField(row)
+	out, err := insertCatalogRow(ctx, tx, []catalogBinding{
+		{fieldObject, spec.Object},
+		{fieldSlug, slug},
+		{fieldLabel, spec.Label},
+		{fieldType, spec.Type},
+		{fieldColumn, column},
+		{fieldCurrency, currency},
+		{fieldOptions, optionsArg},
+		{fieldShow, spec.ShowInCreate == nil || *spec.ShowInCreate},
+		{"created_by", creator},
+	})
 	if storekit.IsUniqueViolation(err) {
 		// The (object, slug/column_name) unique index fired: a duplicate
 		// that raced past the pre-check. The failed INSERT rolls the whole
@@ -146,8 +152,9 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, cre
 	}
 
 	after := map[string]any{
-		fieldObject: string(out.Object), "slug": out.Slug, fieldLabel: out.Label,
-		fieldType: string(out.Type), "column_name": column, fieldStatus: string(out.Status),
+		fieldObject: string(out.Object), fieldSlug: out.Slug, fieldLabel: out.Label,
+		fieldType: string(out.Type), fieldColumn: column, fieldStatus: string(out.Status),
+		fieldShow: out.ShowInCreate,
 	}
 	if out.Currency != nil {
 		after[fieldCurrency] = *out.Currency
@@ -165,6 +172,25 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, cre
 		return crmcontracts.CustomField{}, fmt.Errorf("customfields: audit write: %w", err)
 	}
 	return out, nil
+}
+
+// catalogBinding is one column of the catalog INSERT and its value. The column
+// list, the placeholders and the arguments all derive from one list of them.
+type catalogBinding struct {
+	column string
+	value  any
+}
+
+// insertCatalogRow writes one custom_field row and reads it back in the
+// catalogColumns shape. Every column is a compile-time literal of this package.
+func insertCatalogRow(ctx context.Context, tx pgx.Tx, bindings []catalogBinding) (crmcontracts.CustomField, error) {
+	columns := make([]string, len(bindings))
+	args := make([]any, len(bindings))
+	for i, b := range bindings {
+		columns[i], args[i] = b.column, b.value
+	}
+	return scanCustomField(tx.QueryRow(ctx, storekit.SQLf(`INSERT INTO custom_field (%s) VALUES (%s) RETURNING %s`,
+		strings.Join(columns, ", "), storekit.Placeholders(args), catalogColumns), args...))
 }
 
 // serializeSchemaChange is the shared arming step of both DDL paths

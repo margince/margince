@@ -27,11 +27,11 @@ func googleGroupSender(header mail.Header) ([]*mail.Address, bool) {
 	if strings.TrimSpace(header.Get("X-Google-Group-Id")) == "" {
 		return nil, false
 	}
-	from, err := header.AddressList("From")
+	from, err := addressList(header, "From")
 	if err != nil || len(from) != 1 || !groupNamesItself(from[0].Address, header.Get("List-ID")) {
 		return nil, false
 	}
-	original, err := header.AddressList("X-Original-From")
+	original, err := addressList(header, "X-Original-From")
 	if err != nil || len(original) == 0 || strings.TrimSpace(original[0].Address) == "" {
 		return nil, false
 	}

@@ -231,11 +231,11 @@ type Server struct {
 	// worker and for an api that composed no views — see mcpappviews.go.
 	appViews *apps.Provider
 
-	// mcpAllowedOrigin is the scheme+host the connector's Origin guard
-	// admits and its 401 challenge points at — derived by WithMCPResource
-	// from the configured --public-base-url, never from a request header a
-	// caller controls.
-	mcpAllowedOrigin string
+	// mcpResource is the connector URL the discovery document names, and
+	// mcpAllowedOrigin its scheme+host, which the Origin guard admits and the 401
+	// challenge points at. WithMCPResource sets both from --public-base-url,
+	// never from a request header a caller controls.
+	mcpResource, mcpAllowedOrigin string
 
 	// metricsToken gates /metrics, injected by WithMetricsToken from the
 	// deployment's --metrics-token. Empty — the default — configures no

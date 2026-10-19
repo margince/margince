@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
@@ -212,7 +211,7 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 	// no digest, so a source reading a database it does not have would fail on
 	// a path that never counts anything.
 	if pool != nil {
-		r = r.WithDigestReview(newDigestReviewSource(pool, approvals.NewService(db)))
+		r = r.WithDigestReview(newDigestReviewSource(pool, newApprovalsService(db)))
 	}
 	// The standing IMAP connector needs no deployment config — credentials
 	// are per-connection, vault-sealed — so every capture-capable role
@@ -289,7 +288,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// composes a sink gets the same one — the worker runs mail capture and
 		// never sees the api's options.
 		WithFileKeeper(capturedFileKeeper{store: activities.NewStore(InstallationDB(pool)).WithBlobstore(cfg.Blob)}).
-		WithStager(mergeStager{svc: approvals.NewService(InstallationDB(pool))}).
+		WithStager(mergeStager{svc: newApprovalsService(InstallationDB(pool))}).
 		WithBaseLanguage(installationLanguage(pool)).
 		// The ADR-0063 auto-create pipeline: every captured mail ensures
 		// its counterparty exists, through the contacts module's ONE dedupe

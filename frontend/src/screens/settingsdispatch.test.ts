@@ -46,7 +46,7 @@ const CARDS_THE_REGISTER_REACHED = [
   "AccountSettings",
   "AutonomySettingsCard",
   "VoiceDnaCard",
-  "AgentsTab",
+  "AiAccessTab",
   "InstallationSettingsCard",
   "FxRatesCard",
   "CompanyContextCard",
@@ -104,11 +104,11 @@ describe("the split lost no card", () => {
       .map((file) => readFileSync(join(here, file), "utf8"))
       .join("\n");
     // The WHOLE file, not just `tabContent`. Several pages dispatch to a tab
-    // function that renders their cards — `AgentsTab`, `ConnectionsTab` — and
-    // those functions sit below `tabContent`, so a window ending at its closing
-    // brace reports a card missing the moment it moves into one. That is a
-    // scan that fails SHORT: it reads a smaller tree and reports a loss that
-    // did not happen, which is the same shape of wrong as missing a real one.
+    // function that renders their cards, such as `AiAccessTab`. Those functions
+    // sit below `tabContent`, so a window ending at its closing brace reports a
+    // card missing the moment it moves into one. That scan fails SHORT. It
+    // reads a smaller tree and reports a loss that did not happen, the same
+    // shape of wrong as missing a real one.
     return new Set(
       [...source.matchAll(/<([A-Z][A-Za-z]+)\b/g)].map((match) => match[1]),
     );
@@ -130,12 +130,13 @@ describe("the split lost no card", () => {
   it("dispatches the moved cards to the pages they moved to", () => {
     const source = readFileSync(join(here, "settings.tsx"), "utf8");
     /** One tab function's body, for a page whose case dispatches to one. */
-    function bodyOf(fn: string): string {
-      const start = source.indexOf(`function ${fn}()`);
+    function bodyOf(fn: string, file = "settings.tsx"): string {
+      const text = readFileSync(join(here, file), "utf8");
+      const start = text.indexOf(`function ${fn}()`);
       if (start < 0) {
-        throw new Error(`settings.tsx has no ${fn}`);
+        throw new Error(`${file} has no ${fn}`);
       }
-      return source.slice(start, source.indexOf("\n}\n", start));
+      return text.slice(start, text.indexOf("\n}\n", start));
     }
     function cardsOn(page: string): string {
       const start = source.indexOf(`case "${page}":`);
@@ -155,7 +156,14 @@ describe("the split lost no card", () => {
     // function and the cards are inside it — asserting on the case alone would
     // be satisfied by the card being nowhere at all.
     expect(cardsOn("account")).not.toContain("<AutonomySettingsCard />");
-    expect(bodyOf("AgentsTab")).toContain("<AutonomySettingsCard />");
+    expect(cardsOn("agents")).toContain("<AiAccessTab />");
+    const aiAccess = [
+      bodyOf("AiAccessTab", "settings.aiaccess.tsx"),
+      bodyOf("DeveloperTabs", "settings.aiaccess.tsx"),
+    ].join("\n");
+    expect(aiAccess).toContain("<AutonomySettingsCard />");
+    expect(aiAccess).toContain("<ConnectAiToolCard />");
+    expect(aiAccess).toContain("<PassportCard />");
     // The same for the card that left Connections, which is also a tab
     // function: gone from the tab, not merely gone from the case line.
     expect(bodyOf("ConnectionsTab")).not.toContain("<MailSharingCard />");

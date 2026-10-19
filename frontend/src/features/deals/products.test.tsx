@@ -207,8 +207,8 @@ describe("ProductsAdmin", () => {
           jsonResponse(
             {
               title: "conflict",
-              detail: "sku already in use",
-              code: "duplicate_sku",
+              detail: "sku already in use by a live product: conflict",
+              code: "conflict",
             },
             409,
           ),
@@ -225,7 +225,9 @@ describe("ProductsAdmin", () => {
       "1500",
     );
     await userEvent.click(screen.getByText("Create"));
-    expect(await screen.findByText("sku already in use")).toBeTruthy();
+    expect(
+      await screen.findByText("sku already in use by a live product: conflict"),
+    ).toBeTruthy();
   });
 
   it("gives a read-only seat the rows, the posture line and no write affordance", async () => {

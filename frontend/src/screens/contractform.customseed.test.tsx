@@ -32,6 +32,7 @@ function field(slug: string, label: string): CustomField {
     type: "number",
     status: "active",
     column_name: `cf_${slug}`,
+    show_in_create: true,
     created_by: "human:u-1",
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",

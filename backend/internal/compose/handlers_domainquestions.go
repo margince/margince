@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type domainQuestionHandlers struct {
@@ -44,6 +45,12 @@ type domainQuestionHandlers struct {
 func (h domainQuestionHandlers) KeepDomainQuestion(w http.ResponseWriter, r *http.Request, domain string) {
 	// Human-only (x-agent-access): capture posture, not record data.
 	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	// Taken before the question is read. Otherwise the refusal would depend on
+	// whether the domain is open, and tell a seat without the grant which are.
+	if err := auth.Require(r.Context(), "company", principal.ActionUpdate); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

@@ -201,20 +201,12 @@ export const ConnectorFlippedToOr: Story = {
   },
 };
 
-/** Two conditions, then More › Add a group. */
+/** Two conditions, then Add a group. */
 async function addGroup(user: User, canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
   await addCity(user, canvas, "Berlin");
   await addCity(user, canvas, "Hamburg");
-  await user.click(
-    canvas.getByRole("button", { name: "More for these conditions" }),
-  );
-  // The menu's items are portalled to the body, outside the story's root.
-  await user.click(
-    await within(canvasElement.ownerDocument.body).findByRole("button", {
-      name: "Add a group",
-    }),
-  );
+  await user.click(canvas.getByRole("button", { name: "Add a group" }));
 }
 
 export const WithAGroup: Story = {

@@ -3,7 +3,12 @@
 
 import type { components } from "../api/schema";
 import type { CreateField } from "../components/create";
+import { searchCompanyTargets } from "../features/companies/companyform";
 import type { MessageKey } from "../i18n/en";
+import {
+  type ProjectOwnerPicker,
+  projectOwnerField,
+} from "./projectownerfield";
 
 // The project form's vocabulary and transport, with no React in it: what the
 // create and edit dialogs ask, and
@@ -35,8 +40,6 @@ export function isProjectPhase(value: string): value is ProjectPhase {
   return (PROJECT_PHASES as readonly string[]).includes(value);
 }
 
-export type ProjectCompanyOption = { id: string; display_name: string };
-
 /**
  * The fields both dialogs share. The company is the one difference: a project
  * names its company at birth and the update body carries no
@@ -46,27 +49,11 @@ export type ProjectCompanyOption = { id: string; display_name: string };
 export function projectFields(
   t: (key: MessageKey) => string,
   opts: Readonly<{
-    companies: readonly ProjectCompanyOption[];
-    // The company this project already names, so an edit form whose
-    // pickable page does not reach it still shows the one it has.
-    currentCompany?: { id: string; label: string };
-    me: string;
+    owner: ProjectOwnerPicker;
     currentOwner: string | null;
     mode: "create" | "edit";
   }>,
 ): CreateField[] {
-  const companyOptions = opts.companies.map((company) => ({
-    value: company.id,
-    label: company.display_name,
-  }));
-  const current = opts.currentCompany;
-  const ownerOptions = [
-    ...(opts.currentOwner && opts.currentOwner !== opts.me
-      ? [{ value: opts.currentOwner, label: t("project.ownerKeep") }]
-      : []),
-    { value: opts.me, label: t("project.ownerMe") },
-    { value: "", label: t("project.ownerUnassign") },
-  ];
   return [
     { key: "name", label: "project.name", required: true },
     ...(opts.mode === "create"
@@ -74,34 +61,18 @@ export function projectFields(
           {
             key: "company_id",
             label: "project.company" as const,
-            type: "select" as const,
             required: true,
-            options:
-              current &&
-              !companyOptions.some((option) => option.value === current.id)
-                ? [
-                    { value: current.id, label: current.label },
-                    ...companyOptions,
-                  ]
-                : companyOptions,
+            // Searched, because a workspace holds more companies than any
+            // page a form could load up front.
+            searchTargets: searchCompanyTargets,
           },
         ]
       : []),
-    // Owner is an edit-only field. On create the server stamps the creator
-    // (an unowned project would be nobody's to change, so the write gate
-    // could never attach it to a deal), and the only choices a create could
-    // offer — "Me" and "Unassign" — would both resolve to the creator, a
-    // choice that is no choice. Reassigning and unassigning stay on edit.
-    ...(opts.mode === "edit"
-      ? [
-          {
-            key: "owner_id",
-            label: "project.owner" as const,
-            type: "select" as const,
-            options: ownerOptions,
-          },
-        ]
-      : []),
+    ...projectOwnerField(t, opts.owner, {
+      key: "owner_id",
+      currentOwner: opts.currentOwner,
+      mode: opts.mode,
+    }),
     { key: "description", label: "project.description", type: "textarea" },
     { key: "target_end_date", label: "project.targetEnd", type: "date" },
   ];

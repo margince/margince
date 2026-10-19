@@ -2,7 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { foldForMatch, forReader, stable } from "./collate";
+import {
+  foldForMatch,
+  foldForSearch,
+  forReader,
+  holdsEveryWord,
+  searchWords,
+  stable,
+} from "./collate";
 
 // The two orderings exist because neither one is right everywhere, so what is
 // asserted here is the DIFFERENCE between them. A test that only checked each
@@ -79,5 +86,24 @@ describe("foldForMatch folds the same way on every machine", () => {
 
   it("still folds the accented letters a search has to see through", () => {
     expect(foldForMatch("MÜLLER")).toBe("müller");
+  });
+});
+
+describe("foldForSearch reads through what a keyboard leaves out", () => {
+  it("drops diacritics and case", () => {
+    expect(foldForSearch("Zurücksetzen")).toBe("zurucksetzen");
+    expect(foldForSearch("Múi giờ báo cáo")).toBe("mui gio bao cao");
+  });
+
+  it("reads the Vietnamese đ, which has no decomposition, as d", () => {
+    expect(foldForSearch("Khoảng đồng bộ")).toBe("khoang dong bo");
+    expect(foldForSearch("ĐỒNG BỘ")).toBe("dong bo");
+  });
+
+  it("matches when every word lands in some field", () => {
+    const words = searchWords("dong  bo  khoang");
+    expect(words).toEqual(["dong", "bo", "khoang"]);
+    expect(holdsEveryWord(words, ["Khoảng", "đồng bộ (giây)"])).toBe(true);
+    expect(holdsEveryWord(words, ["Khoảng"])).toBe(false);
   });
 });

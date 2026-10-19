@@ -415,20 +415,24 @@ describe("PassportCard — using a passport", () => {
     vi.stubGlobal("fetch", mintBackend());
     render("agents");
     expect(
-      await screen.findByText(/a passport is your personal access token/i),
+      await screen.findByText(
+        /a passport is your personal API key for scripts/i,
+      ),
     ).toBeTruthy();
-    expect(screen.getByText("In your AI tool")).toBeTruthy();
+    expect(screen.getByText("In a script or another AI tool")).toBeTruthy();
     expect(await screen.findByText("In your own code")).toBeTruthy();
     expect(
       screen.getByRole("heading", { name: "Your passports" }),
     ).toBeTruthy();
-    expect(screen.getByText(/listed under Connected MCP clients/)).toBeTruthy();
+    expect(screen.getByText(/listed under Your connections/)).toBeTruthy();
   });
 
   it("shows no code row until the server states the API address", async () => {
     vi.stubGlobal("fetch", mintBackend({ listHangs: true }));
     render("agents");
-    expect(await screen.findByText("In your AI tool")).toBeTruthy();
+    expect(
+      await screen.findByText("In a script or another AI tool"),
+    ).toBeTruthy();
     expect(screen.queryByText("In your own code")).toBeNull();
   });
 
@@ -660,7 +664,7 @@ describe("PassportCard: this window", () => {
       name: "Show 1 revoked passport",
     });
     const card = screen
-      .getByRole("heading", { name: "Agent passports" })
+      .getByRole("heading", { name: "Passports" })
       .closest("section");
     if (!card?.contains(toggle)) {
       throw new Error("the toggle is not inside the passports card");

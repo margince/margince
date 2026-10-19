@@ -3322,6 +3322,7 @@ public.custom_field.id uuid NOT NULL gen=- def=uuidv7()
 public.custom_field.label text NOT NULL gen=- def=-
 public.custom_field.object text NOT NULL gen=- def=-
 public.custom_field.options jsonb gen=- def=-
+public.custom_field.show_in_create boolean NOT NULL gen=- def=true
 public.custom_field.slug text NOT NULL gen=- def=-
 public.custom_field.status text NOT NULL gen=- def='active'::text
 public.custom_field.trg_custom_field_updated CREATE TRIGGER trg_custom_field_updated BEFORE UPDATE ON public.custom_field FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()

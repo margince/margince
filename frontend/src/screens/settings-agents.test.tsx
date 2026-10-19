@@ -4,8 +4,9 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
-import { SettingsScreen, settingsAddress } from "./settings";
 import { jsonResponse, render } from "./settings.testkit";
+import { AgentToolsCard } from "./settings-agenttools";
+import { PassportCard } from "./settings-passports";
 
 // The Agents entry: the governed tool inventory an MCP client is shown, and the
 // passports that scope it. Minting one has a file of its own
@@ -121,7 +122,7 @@ function agentToolsBackend() {
 describe("AgentToolsCard", () => {
   it("shows the egress badge only on the tool that reaches outside the workspace", async () => {
     vi.stubGlobal("fetch", agentToolsBackend());
-    render(<SettingsScreen route={settingsAddress("agents")} />);
+    render(<AgentToolsCard />);
 
     const sendRow = await screen.findByTestId("tool-send_email");
     const searchRow = screen.getByTestId("tool-search_records");
@@ -135,7 +136,7 @@ describe("AgentToolsCard", () => {
   it("names each tool by its title and the text an agent selects it by, with its key once opened", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", agentToolsBackend());
-    render(<SettingsScreen route={settingsAddress("agents")} />);
+    render(<AgentToolsCard />);
 
     const sendRow = await screen.findByTestId("tool-send_email");
     expect(within(sendRow).getByText("Send email")).toBeTruthy();
@@ -156,7 +157,7 @@ describe("AgentToolsCard", () => {
   // and once per group rather than on every row.
   it("groups the tools under the permission each one needs", async () => {
     vi.stubGlobal("fetch", agentToolsBackend());
-    render(<SettingsScreen route={settingsAddress("agents")} />);
+    render(<AgentToolsCard />);
 
     const sendRow = await screen.findByTestId("tool-send_email");
     const sendGroup = sendRow.closest("details");
@@ -177,7 +178,7 @@ describe("AgentToolsCard", () => {
   it("opens a tool's full description from its row and from its chevron", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", agentToolsBackend());
-    render(<SettingsScreen route={settingsAddress("agents")} />);
+    render(<AgentToolsCard />);
 
     const sendRow = await screen.findByTestId("tool-send_email");
     const chevron = within(sendRow).getByRole("button", {
@@ -200,7 +201,7 @@ describe("AgentToolsCard", () => {
   it("searches titles, keys and descriptions, and says when nothing matches", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", agentToolsBackend());
-    render(<SettingsScreen route={settingsAddress("agents")} />);
+    render(<AgentToolsCard />);
     const search = await screen.findByRole("searchbox", {
       name: "Search tools",
     });
@@ -305,7 +306,7 @@ describe("AgentToolsCard passport scoping", () => {
   it("excludes a revoked passport from the selector", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", agentToolsWithPassportsBackend());
-    render(<SettingsScreen route={settingsAddress("agents")} />);
+    render(<AgentToolsCard />);
     await screen.findByTestId("tool-list_pipelines");
 
     // The options only exist while the popup is open — the control renders no
@@ -321,7 +322,7 @@ describe("AgentToolsCard passport scoping", () => {
   it("keeps a scope-free tool reachable once a passport is selected", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", agentToolsWithPassportsBackend());
-    render(<SettingsScreen route={settingsAddress("agents")} />);
+    render(<AgentToolsCard />);
     const freeRow = await screen.findByTestId("tool-list_pipelines");
 
     const select = screen.getByLabelText("All passports");
@@ -339,7 +340,7 @@ describe("AgentToolsCard passport scoping", () => {
   it("says an unreachable tool's scope is not granted, under its name", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", agentToolsWithPassportsBackend());
-    render(<SettingsScreen route={settingsAddress("agents")} />);
+    render(<AgentToolsCard />);
     const scopedRow = await screen.findByTestId("tool-send_email");
 
     await pickOption(
@@ -413,7 +414,7 @@ describe("AgentToolsCard passport scoping", () => {
         });
       }),
     );
-    render(<SettingsScreen route={settingsAddress("agents")} />);
+    render(<AgentToolsCard />);
     await screen.findByTestId("tool-list_pipelines");
 
     expect(screen.queryByLabelText("All passports")).toBeNull();
@@ -495,7 +496,12 @@ describe("PassportCard revoke", () => {
   it("stops scoping the tool table to a passport revoked while it was selected", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", revocablePassportsBackend());
-    render(<SettingsScreen route={settingsAddress("agents")} />);
+    render(
+      <>
+        <PassportCard />
+        <AgentToolsCard />
+      </>,
+    );
     const scopedRow = await screen.findByTestId("tool-send_email");
 
     const select = screen.getByLabelText("All passports");
@@ -523,7 +529,12 @@ describe("PassportCard revoke", () => {
       "fetch",
       revocablePassportsBackend((id) => deleted.push(id)),
     );
-    render(<SettingsScreen route={settingsAddress("agents")} />);
+    render(
+      <>
+        <PassportCard />
+        <AgentToolsCard />
+      </>,
+    );
 
     const dialog = await openRevoke(user, "Scout");
     expect(deleted).toEqual([]);
@@ -541,7 +552,12 @@ describe("PassportCard revoke", () => {
 
   it("offers no verb on a passport already revoked", async () => {
     vi.stubGlobal("fetch", passportsBackend({}));
-    render(<SettingsScreen route={settingsAddress("agents")} />);
+    render(
+      <>
+        <PassportCard />
+        <AgentToolsCard />
+      </>,
+    );
     await screen.findByRole("button", { name: "Actions for Scout" });
     expect(
       screen.queryByRole("button", { name: "Actions for Retired" }),
@@ -555,7 +571,12 @@ describe("PassportCard revoke", () => {
       "fetch",
       passportsBackend({ onDelete: (id) => deleted.push(id) }),
     );
-    render(<SettingsScreen route={settingsAddress("agents")} />);
+    render(
+      <>
+        <PassportCard />
+        <AgentToolsCard />
+      </>,
+    );
 
     const dialog = await openRevoke(user, "Scout");
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));

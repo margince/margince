@@ -66,7 +66,7 @@ function story(passports: readonly Record<string, unknown>[]) {
 }
 
 const meta: Meta<typeof PassportCard> = {
-  title: "Settings/You/Agents/Agent passports",
+  title: "Settings/You/AI access/Passports",
   component: PassportCard,
 };
 export default meta;

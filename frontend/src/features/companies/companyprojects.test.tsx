@@ -121,6 +121,7 @@ const PROJECT_CODE: components["schemas"]["CustomField"] = {
   type: "text",
   status: "active",
   column_name: "cf_cost_centre",
+  show_in_create: true,
   created_by: "human:u-1",
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",

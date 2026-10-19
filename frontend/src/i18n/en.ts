@@ -938,6 +938,33 @@ export const en = {
   "systemJob.technical_lookup": "Company technical lookup",
   "systemJob.vatcheck": "VAT number check",
   "systemJob.weekly_review": "Weekly review",
+  "agentJob.agent_task_retention": "Agent task cleanup",
+  "agentJob.attachment_extractor": "Attachment reader",
+  "agentJob.auto_apply": "Automatic approval",
+  "agentJob.capture_confidentiality_verdict": "Confidentiality check",
+  "agentJob.capture_counterparty": "New contact from mail",
+  "agentJob.capture_counterparty_verdict": "Mail sender check",
+  "agentJob.coldstart": "First approach",
+  "agentJob.company_name_promotion": "Company name update",
+  "agentJob.deal_scout": "Deal Scout",
+  "agentJob.dealscout": "Deal Scout",
+  "agentJob.deepread": "Website reader",
+  "agentJob.document_extractor": "Document reader",
+  "agentJob.enrich": "Signature reader",
+  "agentJob.idempotency_retention": "Request record cleanup",
+  "agentJob.knowledge_ingest": "Knowledge import",
+  "agentJob.lifecycle_change": "Lifecycle update",
+  "agentJob.offer_drafting": "Offer drafting",
+  "agentJob.overnight": "Overnight agent",
+  "agentJob.propose_roles": "Buying team reader",
+  "agentJob.rate_refresh": "Exchange rate update",
+  "agentJob.scrape": "Website capture",
+  "agentJob.signal_scan": "Mail reader",
+  "agentJob.site_read": "Website reader",
+  "agentJob.tag_scout": "Tag suggestions",
+  "agentJob.technical_lookup": "Company lookup",
+  "agentJob.transcript_proposer": "Meeting transcript reader",
+  "agentJob.voice_builder": "Writing style builder",
   "trust.connectorTag": "Via {connector}",
   "trust.stagedProposal": "Proposed value",
   "trust.evidenceFrom": "Evidence from {source}",
@@ -1014,6 +1041,70 @@ export const en = {
   "history.reversal.undoneBy": "Undone by {undoer}",
   "history.reversal.unpaired": "Undoes an earlier change",
   "history.edge.marker": "Link",
+  "history.subject.viaClient": "{name}, via {client},",
+  "history.subject.viaAgent": "{name}, via an agent,",
+  "history.subject.viaConnector": "{name}, via a connector,",
+  "history.subject.unrecordedAuthority":
+    "A machine (no human authority recorded)",
+  "history.subject.system": "System",
+  "history.subject.agent": "Agent",
+  "history.subject.connector": "Connector",
+  "history.subject.buyer": "A Deal Room participant",
+  "history.subject.buyerNamed": "{name}, in the Deal Room,",
+  "history.verb.create": "{subject} created the record",
+  "history.verb.update": "{subject} updated the record",
+  "history.verb.archive": "{subject} archived the record",
+  "history.verb.merge": "{subject} merged the record",
+  "history.verb.promote": "{subject} promoted the record",
+  "history.verb.demote": "{subject} demoted the record",
+  "history.verb.disqualify": "{subject} disqualified the record",
+  "history.verb.restore": "{subject} restored the record",
+  "history.verb.export": "{subject} exported the record",
+  "history.verb.erase": "{subject} erased the record",
+  "history.verb.anonymize": "{subject} anonymized the record",
+  "history.verb.assign": "{subject} assigned the record",
+  "history.verb.advanceStage": "{subject} advanced the stage of the record",
+  "history.verb.advancePhase": "{subject} advanced the phase of the record",
+  "history.verb.sendEmail": "{subject} sent an email for the record",
+  "history.verb.consentGrant": "{subject} granted consent for the record",
+  "history.verb.consentWithdraw": "{subject} withdrew consent for the record",
+  "history.verb.approve": "{subject} approved the record",
+  "history.verb.reject": "{subject} rejected the record",
+  "history.verb.recordShare": "{subject} shared the record",
+  "history.verb.recordUnshare": "{subject} unshared the record",
+  "history.verb.activityRelink": "{subject} relinked the record",
+  "history.verb.import": "{subject} imported the record",
+  "history.verb.importUndo": "{subject} undid the import of the record",
+  "history.verb.resetData": "{subject} reset the record",
+  "history.verb.passwordLinkIssued":
+    "{subject} issued a set-password link for the record",
+  "history.verb.connect": "{subject} connected the record",
+  "history.verb.disconnect": "{subject} disconnected the record",
+  "history.verb.schedule": "{subject} scheduled the record",
+  "history.verb.reschedule": "{subject} rescheduled the record",
+  "history.verb.cancel": "{subject} canceled the record",
+  "history.verb.release": "{subject} released the record for sending",
+  "history.verb.hold": "{subject} held the record for review",
+  "history.verb.expire":
+    "{subject} let the decision window close on the record",
+  "history.verb.resolve": "{subject} resolved the record",
+  "history.verb.restrict": "{subject} withheld the record",
+  "history.verb.pin": "{subject} pinned the record for statutory retention",
+  "history.verb.accrue": "{subject} accrued commission on the record",
+  "history.verb.pay": "{subject} paid the record",
+  "history.verb.publish": "{subject} published the record",
+  "history.verb.pause": "{subject} paused the record",
+  "history.verb.resume": "{subject} resumed the record",
+  "history.verb.close": "{subject} closed the record",
+  "history.verb.invite": "{subject} invited a participant to the record",
+  "history.verb.revoke": "{subject} revoked access for the record",
+  "history.verb.delete": "{subject} deleted the record",
+  "history.verb.placeLegalHold": "{subject} put the record under legal hold",
+  "history.verb.liftLegalHold": "{subject} released the record from legal hold",
+  "history.verb.requestLegalReview":
+    "{subject} asked legal to review the record",
+  "history.verb.withdrawLegalReview":
+    "{subject} withdrew the legal review request for the record",
   "history.field.commitment_evidence_unavailable":
     "Commitment evidence unavailable",
   "history.field.address": "Address",
@@ -1609,6 +1700,7 @@ export const en = {
   // never becomes a link, because a name that did not load cannot be trusted as
   // a destination.
   "ref.nameLoadFailed": "Name did not load",
+  "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
   "ref.notInRoster": "Currently assigned (no longer in the user list)",
 
   // A record search that ANSWERED and found nothing. Distinct from a search
@@ -2540,6 +2632,7 @@ export const en = {
   "approval.commitment.assignDecider":
     "Creates a task assigned to the person who approves.",
   "approval.field.owner": "Owner",
+  "approval.field.sourceText": "Original text",
   "approval.field.to": "To",
   "approval.field.currency": "Currency",
   "approval.field.rate": "New rate",
@@ -2904,6 +2997,7 @@ export const en = {
   "co.intro.writing": "Writing…",
   "co.intro.fromTemplate":
     "Written from a template. This installation has no model configured.",
+  "co.intro.agent": "Reply drafting",
   "co.intro.subject": "Subject",
   "co.intro.body": "Message",
   "co.intro.basedOn": "Based on",
@@ -4019,6 +4113,13 @@ export const en = {
   "decision.detail": "Approval detail",
   "decision.detailLoading": "Loading approval…",
   "decision.detailTechnical": "Technical details",
+  "decision.evidenceSource.activity": "Activity",
+  "decision.evidenceSource.deal": "Deal",
+  "decision.evidenceSource.signal": "Signal",
+  "decision.evidenceSource.relationship": "Relationship",
+  "decision.evidenceSource.page": "Web page",
+  "decision.evidenceSource.contract": "Contract",
+  "decision.evidenceSource.unknown": "Source",
   "decision.detailAsked": "Asked",
   "decision.detailDecided": "Decided",
   // The confirmation after an approval, and the way back to the change it
@@ -4423,6 +4524,8 @@ export const en = {
   // The same control where NOTHING in the tray will be sent. It still commits —
   // that is what moves the skips out of the deck and opens an edit on its own
   // form — so it says what pressing it does rather than offering a send.
+  "brief.deck.acceptanceChanged":
+    "Some approvals changed and need another look. Their acceptances were not sent.",
   "brief.deck.commitNothingToSend": "Clear skipped",
   "brief.deck.unstage": "Undo last",
   "brief.deck.clearedTitle": "Deck clear",
@@ -5709,9 +5812,9 @@ export const en = {
   "role.ops": "Ops",
   "inlineChoice.change": "Change {field}",
   "rbac.masked": "Masked value",
-  "settings.passports": "Agent passports",
+  "settings.passports": "Passports",
   "settings.passportsSub":
-    "A passport is your personal access token. Whatever uses it acts as you, with the permissions you tick, and never more. Every request checks your permissions again.",
+    "A passport is your personal API key for scripts and your own code. Whatever uses it acts as you, with the permissions you tick, and never more. To use Margince in an AI tool, connect the tool above instead.",
   // What each passport scope admits, in words. The wire carries `read`/`draft`/
   // `write`/`send`/`enrich`; a human granting them is choosing what an agent may
   // do on their behalf, and the protocol token alone does not say — "write" and
@@ -5723,9 +5826,9 @@ export const en = {
   "passport.scope.enrich": "Buy contact data",
   "passport.select": "Passport",
   "passport.noneOption": "No passport",
-  "settings.passportUseAi": "In your AI tool",
+  "settings.passportUseAi": "In a script or another AI tool",
   "settings.passportUseAiDetail":
-    "Install the Margince skill in Claude, Codex or Gemini, then give it your passport. The skill tells the AI how to work in Margince for you.",
+    "Install the Margince skill in a tool that cannot sign in by itself, then give it your passport. Claude Code, Codex and Antigravity sign in without one, under Coding agents.",
   "settings.skillDownload": "Download skill",
   "settings.skillDownloadFailed": "Skill not downloaded",
   "settings.passportUseCode": "In your own code",
@@ -5739,7 +5842,7 @@ export const en = {
   "settings.snippetFoot": "Set {variable} in your shell first.",
   "settings.passportsYours": "Your passports",
   "settings.passportsMcpHint":
-    "An MCP client gets its own credential when you connect it, so it does not need a passport. It is listed under Connected MCP clients.",
+    "An AI tool you connect gets its own sign-in, so it does not need a passport. It is listed under Your connections.",
   "settings.passportCreated":
     "Passport created. It is shown only once, so copy it now.",
   "settings.tokenCopy": "Copy passport",
@@ -5997,10 +6100,10 @@ export const en = {
   "agent.tip.recap": "Open the agent panel for today’s activity.",
   "agent.tip.edge": "The screen edge lights up while the agent works.",
 
-  "agents.connected": "Connected MCP clients",
+  "agents.connected": "Your connections",
   "agents.connectedSub":
-    "MCP clients with their own credential, limited to the access you approved.",
-  "agents.noneConnected": "No MCP clients connected yet.",
+    "Each AI tool you connected, and what you allowed it to do.",
+  "agents.noneConnected": "No AI tool connected yet.",
   "agents.connectedOn": "Connected {date}",
   "agents.disconnect": "Disconnect",
   "agents.disconnectOpen": "Disconnect",
@@ -6012,18 +6115,109 @@ export const en = {
   "agents.renewsBy": "Renews by {date}",
   "agents.revokeGrantOpen": "End connection",
   "agents.revokeGrantNamed": "End connection to {client}",
-  "agents.colClient": "Client",
+  "agents.colClient": "AI tool",
   "agents.colConnected": "Connected",
   "agents.disconnectConfirm":
     "This ends the whole connection, not one credential. The agent loses access on its next call and cannot renew. Reconnecting requires approving access again.",
-  "agents.connectHow": "Connect MCP client",
-  "agents.connectSteps":
-    "Run one of these commands. The client registers itself and returns here so you can choose its access.",
   "agents.connectAntigravityPath":
-    "Antigravity has no add command. Put that block in ~/.gemini/config/mcp_config.json.",
-  "agents.connectorOff": "The MCP connector is off for this installation.",
+    "Antigravity has no add command. Put the block below in ~/.gemini/config/mcp_config.json, then open its agent settings, “Customizations”, and choose “Authenticate” next to margince.",
+  "agents.connectorOff": "AI tools cannot connect to Margince yet.",
   "agents.connectorOffDetail":
-    "No agent can connect until an administrator or operations user enables it. Passports still work as REST credentials.",
+    "An administrator or operations user can turn this on. Until then, passports still work for scripts.",
+  "aiAccess.connect.title": "Connect your AI tool",
+  "aiAccess.connect.sub":
+    "Takes about a minute. You sign in once, and it stays connected.",
+  "aiAccess.connect.toolQuestion": "Which AI do you use?",
+  "aiAccess.connect.planQuestion": "Whose plan is it?",
+  "aiAccess.plan.company": "My company’s",
+  "aiAccess.plan.own": "My own",
+  "aiAccess.connect.adminFirst": "First, your admin.",
+  "aiAccess.connect.adminSend":
+    "Send them the setup guide. It holds the steps and your Margince address.",
+  "aiAccess.connect.download": "Download guide for your admin",
+  "aiAccess.connect.address": "Margince address",
+  "aiAccess.connect.copyAddress": "Copy address",
+  "aiAccess.connect.copied": "Copied",
+  "aiAccess.connect.copyRemedy": "Select the address and copy it by hand.",
+  "aiAccess.connect.help": "Help from {vendor}",
+  "aiAccess.connect.helpAdmin": "Help from {vendor} for your admin",
+  "aiAccess.connect.devHint":
+    "Using a command-line tool or your own code? See For developers below.",
+  "aiAccess.step.allow": "Margince opens. Sign in and choose Authorize. Done.",
+  "aiAccess.claude.openConnectors":
+    "In Claude, open “Customize”, then “Connectors”.",
+  "aiAccess.claude.addCustom":
+    "Choose “+ Add”, then “Add custom connector”, and paste this address:",
+  "aiAccess.claude.connect": "Find Margince and choose “Connect”.",
+  "aiAccess.claude.freeNote":
+    "On the Free plan, Claude allows one custom connector.",
+  "aiAccess.claude.adminLine":
+    "Your Claude owner adds Margince once for the whole team.",
+  "aiAccess.claude.admin1":
+    "In Claude, open the admin settings, then “Connectors”.",
+  "aiAccess.claude.admin2": "Choose “Add”, then “Custom”, then “Web”.",
+  "aiAccess.claude.admin3":
+    "Name it Margince and paste the Margince address above.",
+  "aiAccess.claude.admin4":
+    "Choose “Add”. Then everyone on the team connects and signs in as themselves.",
+  "aiAccess.chatgpt.adminLine":
+    "Your ChatGPT admin adds Margince once for your company.",
+  "aiAccess.chatgpt.admin1":
+    "In ChatGPT, open “Plugins”, choose “+”, then “Add custom MCP server”.",
+  "aiAccess.chatgpt.admin2":
+    "Name it Margince, paste the Margince address above, choose OAuth, and choose “Create as a plugin”.",
+  "aiAccess.chatgpt.admin3":
+    "In the ChatGPT admin settings, open “Apps”, then “Drafts”, and choose “Publish”.",
+  "aiAccess.chatgpt.turnOn": "In a chat, type @ and pick Margince.",
+  "aiAccess.chatgpt.developerMode": "In ChatGPT, open “Plugins”.",
+  "aiAccess.chatgpt.create":
+    "Choose “+”, then “Add custom MCP server”, name it Margince and paste this address:",
+  "aiAccess.chatgpt.ownFinish":
+    "Choose “Create as a plugin”. Margince opens. Sign in and choose Authorize. Done.",
+  "aiAccess.chatgpt.ownNote":
+    "On a plan you pay for yourself this needs Pro, and ChatGPT can look things up in Margince but not change them.",
+  "aiAccess.copilot.adminLine":
+    "Someone at your company adds Margince to a Copilot agent once.",
+  "aiAccess.copilot.admin1":
+    "In Copilot Studio, open the agent, then “Tools”, “Add a tool”, “New tool” and “Model Context Protocol”.",
+  "aiAccess.copilot.admin2":
+    "Name it Margince, describe it as your CRM, and paste the Margince address above.",
+  "aiAccess.copilot.admin3":
+    "Under authentication choose “OAuth 2.0”, then “Dynamic discovery”, then choose “Create” and “Next”.",
+  "aiAccess.copilot.admin4":
+    "Choose “Create a new connection”, then “Add to agent”, and publish the agent to Microsoft 365 Copilot and Teams.",
+  "aiAccess.copilot.admin5":
+    "Your company’s data policies for connectors also apply to Margince.",
+  "aiAccess.copilot.openAgent":
+    "Open Copilot in Teams or Microsoft 365 and choose the agent with Margince.",
+  "aiAccess.copilot.ask": "Ask it about one of your deals.",
+  "aiAccess.copilot.allow":
+    "When it asks, sign in to Margince and choose Authorize. Done.",
+  "aiAccess.copilot.ownUnavailable":
+    "Copilot outside work cannot connect to other apps. Use Copilot through work, or another AI on this list.",
+  "aiAccess.gemini.companyUnavailable":
+    "Gemini through work or school cannot connect to Margince yet.",
+  "aiAccess.gemini.openApps":
+    "On gemini.google.com, open “Settings”, then “Connected Apps”.",
+  "aiAccess.gemini.addApp": "Choose “Add a custom app” and paste this address:",
+  "aiAccess.gemini.ownNote": "For now only in the US, in English, on the web.",
+  "aiAccess.guide.title": "Set up Margince in {tool}",
+  "aiAccess.guide.addressHead": "Your Margince address",
+  "aiAccess.guide.adminHead": "What you do",
+  "aiAccess.guide.teamHead": "What your team does next",
+  "aiAccess.guide.officialHead": "Official guide",
+  "aiAccess.guide.checked": "These steps were checked on {date}.",
+  "aiAccess.dev.title": "For developers",
+  "aiAccess.dev.sub":
+    "API keys for your own code, coding agents, and what agents may do without you.",
+  "aiAccess.dev.tab.passports": "API keys",
+  "aiAccess.dev.tab.agents": "Coding agents",
+  "aiAccess.dev.tab.rules": "Agent rules",
+  "aiAccess.cli.title": "Coding agents",
+  "aiAccess.cli.sub":
+    "Connect once, then sign in in the browser. No passport needed.",
+  "aiAccess.cli.then": "Then run {command}.",
+  "aiAccess.cli.docs": "{tool} docs",
   "settings.token": "Credential",
   "settings.autonomy": "Autonomy tiers",
   "settings.autonomySub": "What runs immediately and what waits for approval.",
@@ -6864,7 +7058,7 @@ export const en = {
   "audit.action.import": "Imported",
   "audit.action.importUndo": "Import undone",
   "audit.action.resetData": "Data reset",
-  "audit.action.passwordLinkIssued": "Password link sent",
+  "audit.action.passwordLinkIssued": "Password link issued",
   "audit.action.connect": "Connected",
   "audit.action.disconnect": "Disconnected",
   "audit.action.schedule": "Scheduled",
@@ -9333,6 +9527,14 @@ export const en = {
     "“{label}” archived. It is hidden from new records and kept in audit and history. Archiving cannot be undone.",
   "cf.renamePrompt": "New label",
   "cf.renamed": "Renamed to “{label}”",
+  "cf.showInCreate": "In create forms",
+  "cf.showInCreateHint":
+    "Off keeps the field on the record page only, where it stays editable.",
+  "cf.col.inCreate": "In create forms",
+  "cf.showInCreateFor": "Show “{label}” in create forms",
+  "cf.shownInCreate": "“{label}” shown in create forms",
+  "cf.hiddenFromCreate":
+    "“{label}” hidden from create forms, still on the record page",
   "cf.audit.title": "Recent field changes",
   "audit.kind.customField": "Custom field",
   "cf.audit.empty": "No custom field changes yet.",
@@ -9381,7 +9583,7 @@ export const en = {
   "settings.page.account.sub": "How you appear and sign in.",
   "settings.page.voice.sub": "The wording drafts use when they write as you.",
   "settings.page.agents.sub":
-    "What an agent may do unattended, and which clients hold your credentials.",
+    "Use Margince from the AI assistant you already use. It works as you, and can only see and change what you can.",
   "settings.page.notifications.sub":
     "Which notices reach you and how, plus the Morning brief and Weekly review by email.",
   "settings.page.connections.sub":
@@ -9483,7 +9685,7 @@ export const en = {
   "settings.group.governance": "Governance",
   "settings.tab.account": "Account",
   "settings.tab.voice": "Writing voice",
-  "settings.tab.agents": "Agents",
+  "settings.tab.agents": "AI access",
   "settings.tab.notifications": "Notifications",
   "settings.tab.connections": "Connections",
   "settings.tab.extensions": "Extensions",
@@ -10806,6 +11008,18 @@ export const en = {
     "ISO 4217 code that all amounts convert to for roll-ups. Can be changed until the first amount is converted.",
   "installationSettings.baseCurrencyLocked":
     "Locked: amounts are already converted to this currency, so changing it would alter every roll-up.",
+  "installationSettings.baseCurrencyLock.ratesFrozen_one":
+    "{count} record has frozen a conversion rate against this currency, so it cannot change.",
+  "installationSettings.baseCurrencyLock.ratesFrozen_other":
+    "{count} records have frozen a conversion rate against this currency, so it cannot change.",
+  "installationSettings.baseCurrencyLock.rateSheet_one":
+    "{count} currency rate converts into {base}. Clear the currency rates first to change the base currency.",
+  "installationSettings.baseCurrencyLock.rateSheet_other":
+    "{count} currency rates convert into {base}. Clear the currency rates first to change the base currency.",
+  "installationSettings.baseCurrencyLock.rateSheetUnnamed_one":
+    "{count} currency rate converts into a base currency that is not on record. Clear the currency rates first to change the base currency.",
+  "installationSettings.baseCurrencyLock.rateSheetUnnamed_other":
+    "{count} currency rates convert into a base currency that is not on record. Clear the currency rates first to change the base currency.",
   "installationSettings.baseLanguage": "Base language",
   "installationSettings.baseLanguageHint":
     "Language AI writes in when the whole team reads the text. Display language is separate, and customer replies follow the language of the thread.",
@@ -12149,7 +12363,7 @@ export const en = {
   "consent.scopeNote.enrich":
     "spends enrichment credits; each purchase still asks you first",
   "consent.ceiling":
-    "Never more than your own permissions. You can disconnect at any time in Settings under Agents.",
+    "Never more than your own permissions. You can disconnect at any time in Settings under AI access.",
   "consent.pickOne": "Pick at least one, or deny.",
   "consent.offline":
     "It stays connected and renews access without asking again until you revoke it.",
@@ -12888,8 +13102,8 @@ export const en = {
     "{word}: match any of these. Press to match all.",
   "filters.group.all": "All of these",
   "filters.group.any": "Any of these",
-  "filters.rowsMore": "More for these conditions",
-  "filters.groupMore": "More for this group",
+  "filters.addGroupToGroup": "Add nested group",
+  "filters.group.match": "Conditions to match",
   "filters.proposed": "Proposed",
   "filters.switch.title": "Switch to {records}?",
   "filters.switch.body.contacts":
@@ -13315,6 +13529,7 @@ export const en = {
   "filters.loadingVocabulary": "Loading fields…",
   "filters.noFields": "No filterable fields for this record type.",
   "filters.resultsTitle": "Matching records",
+  "filters.resultRefGone": "Removed, or hidden from you",
   "filters.resultsCaption":
     "First page of matches, for checking the filter. Not the full selection.",
   "filters.noMatches":
@@ -13462,9 +13677,7 @@ export const en = {
     "Each project gets a short key. Put [{key}] in an email subject to file the mail under this project.",
   "project.company": "Company",
   "project.owner": "Owner",
-  "project.ownerKeep": "Keep current owner",
   "project.ownerMe": "Me",
-  "project.ownerUnassign": "Unassign",
   "project.assignOwner": "Assign to a colleague",
   "project.assignOwnerTitle": "Assign to a colleague",
   "project.assignOwnerSearch": "Search colleagues",
@@ -13553,6 +13766,7 @@ export const en = {
   "project.advance.reason": "Reason",
   "project.advance.reasonRequired": "A closed project needs a reason.",
   "deal.project": "Project",
+  "deal.newProjectOwner": "Project owner",
   "deal.projectNew": "New project…",
   "deal.projectWithheld": "Project withheld",
   "deal.projectNeedsCompany":
@@ -14673,6 +14887,19 @@ export const en = {
     "Promoting a lead is waiting for your word",
   "magic.action.approval_overnight":
     "An overnight proposal is waiting for your word",
+  "approval.commitment.proposalExpiresIn": "Proposal expires in {countdown}",
+  "approval.commitment.noDueDay": "No day stated",
+  "approval.commitment.promiseStatus": "Commitment status",
+  "approval.commitment.notFulfilled":
+    "Creating the task does not mark the commitment as fulfilled.",
+  "approval.commitment.inactiveAssignment":
+    "Cannot create a task for {name}: this account cannot receive tasks. Dismiss this proposal and create a task for an active colleague.",
+  "approval.commitment.createTask_other": "Create {count} tasks",
+  "approval.commitment.createTask_one": "Create task",
+  "magic.action.approval_commitment_task_named": "{party}: {summary}",
+  "magic.action.approval_commitment_task_summary": "{summary}",
+  "magic.action.approval_commitment_task_unverified":
+    "{party} (unverified): {summary}",
   "magic.action.approval_commitment_task":
     "A commitment from a conversation is waiting for your word",
   "magic.action.approval_capture_counterparty":
@@ -15064,6 +15291,40 @@ export const en = {
   "legalReview.offerLineRecurring_other": "{cadence} for {count} periods",
   "legalReview.offerLineStaged": "Proposed, not yet in the total",
   "legalReview.packBinding": "Other offers sent to the buyer",
+  "aiTask.name.account_scan": "Reading what an account needs",
+  "aiTask.name.agent_loop": "Agent reasoning loop",
+  "aiTask.name.brief_ranking": "Morning brief ranking",
+  "aiTask.name.capture_classify": "Message classification",
+  "aiTask.name.capture_confidentiality_verdict": "Thread confidentiality check",
+  "aiTask.name.capture_counterparty_verdict": "First-time sender check",
+  "aiTask.name.cert_judge": "Certification judging",
+  "aiTask.name.cold_start": "Onboarding read",
+  "aiTask.name.corpus_ask": "Document corpus question",
+  "aiTask.name.deal_health": "Deal status card",
+  "aiTask.name.document_extract": "Document extraction",
+  "aiTask.name.draft_reply": "Reply drafting",
+  "aiTask.name.enrich": "Signature enrichment",
+  "aiTask.name.growth_fit": "Company fit assessment",
+  "aiTask.name.nl_search": "Natural-language search",
+  "aiTask.name.offer_draft": "Offer drafting",
+  "aiTask.name.owed_verdict": "Unanswered-message triage",
+  "aiTask.name.propose_roles": "Buying-role reading",
+  "aiTask.name.rate_extract": "Exchange rate extraction",
+  "aiTask.name.request_settlement":
+    "Checking whether the reply answered the request",
+  "aiTask.name.signal_extract": "Signal extraction",
+  "aiTask.name.site_extract": "Website research",
+  "aiTask.name.site_fact_extract": "Website fact extraction",
+  "aiTask.name.site_triage": "Website triage",
+  "aiTask.name.stage_evidence_extract": "Stage evidence extraction",
+  "aiTask.name.summarize": "Record summary",
+  "aiTask.name.tag_suggest": "Tag suggestions",
+  "aiTask.name.transcript": "Transcript reading",
+  "aiTask.name.transcript_propose": "Meeting follow-up extraction",
+  "aiTask.name.voice_build": "Voice DNA build",
+  "aiTask.name.weekly_learnings": "What last week taught",
+  "aiTask.name.weekly_review": "Weekly review narrative",
+  "aiTask.name.unknown": "AI task",
 } as const;
 
 export type MessageKey = keyof typeof en;

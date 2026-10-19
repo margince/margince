@@ -76,6 +76,7 @@ func WithDealRoomInviteMail(m mailer.Mailer) Option {
 func WithMCPResource(resource string) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.authHandlers = s.WithMCPResource(resource)
+		s.mcpResource = resource
 		s.mcpAllowedOrigin = httpserver.ConfiguredOrigin(resource)
 	}
 }

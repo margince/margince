@@ -615,7 +615,7 @@ function mergedEntryBackend(opts: {
 // its own grant, and the personal one has to open for a seat no grant would have
 // admitted.
 describe("SettingsScreen restructured pages", () => {
-  it("opens Agents for a read-only seat, passports and all", async () => {
+  it("opens AI access for a read-only seat, passports and all", async () => {
     vi.stubGlobal(
       "fetch",
       mergedEntryBackend({ roles: ["rep"], seat: "read" }),
@@ -624,7 +624,7 @@ describe("SettingsScreen restructured pages", () => {
     await waitFor(() =>
       expect(
         screen
-          .getByRole("link", { name: "Agents" })
+          .getByRole("link", { name: "AI access" })
           .getAttribute("aria-current"),
       ).toBe("page"),
     );
@@ -632,15 +632,40 @@ describe("SettingsScreen restructured pages", () => {
     // and lists one opens for a seat holding no company grant and no writing
     // licence at all — gating it behind the company group would have meant only
     // admins could mint one.
+    const developers = await screen.findByText("For developers");
+    const user = userEvent.setup();
+    await user.click(developers);
     expect(
-      await screen.findByRole("heading", { name: "Agent passports" }),
+      await screen.findByRole("heading", { name: "Passports" }),
     ).toBeTruthy();
     expect(screen.getByText("Scout")).toBeTruthy();
-    // And the autonomy table the passports sit under, which came off the
-    // company's AI entry with them.
+    // And the autonomy table, one tab over under Agent rules.
+    await user.click(screen.getByRole("button", { name: "Agent rules" }));
     expect(
       screen.getByRole("heading", { name: "Autonomy tiers" }),
     ).toBeTruthy();
+  });
+
+  it("leads AI access with connecting a tool, and keeps passports behind For developers", async () => {
+    vi.stubGlobal("fetch", mergedEntryBackend({ roles: ["rep"] }));
+    renderSettings("agents");
+    const headings = await screen.findAllByRole("heading", { level: 2 });
+    expect(headings[0].textContent).toBe("Connect your AI tool");
+    const developers = screen.getByText("For developers").closest("details");
+    if (!(developers instanceof HTMLDetailsElement)) {
+      throw new Error("For developers is not a disclosure");
+    }
+    expect(developers.open).toBe(false);
+    expect(developers.textContent).toContain("Passports");
+    await userEvent.setup().click(screen.getByText("For developers"));
+    expect(developers.open).toBe(true);
+    // API keys open first: the passports, not the coding agents.
+    expect(
+      screen
+        .getByRole("button", { name: "API keys" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(screen.queryByRole("heading", { name: "Coding agents" })).toBeNull();
   });
 
   it("renders the consent registry on Privacy, and the trail on its own page", async () => {

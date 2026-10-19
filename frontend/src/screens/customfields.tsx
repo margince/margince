@@ -1,19 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { X } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import {
-  Badge,
-  Button,
-  Disclosure,
-  EmptyState,
-  Field,
-  Modal,
-  SegmentedControl,
-  TextInput,
-} from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
+import { Button, Disclosure, EmptyState, Modal } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { KeyCode } from "../design-system/keyedname";
 import { NameDialog } from "../design-system/namedialog";
@@ -22,23 +11,18 @@ import { QueryStates } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
-import { AutonomyDot } from "../design-system/trust";
 import { useT } from "../i18n";
 import { useCan, useCanWrite } from "../lib/capability";
 import {
-  apiKey,
   CF_OBJECTS,
-  CF_TYPES,
   type CfObject,
-  type CfType,
   columnName,
-  ddlPreview,
-  looksStructural,
   slug,
 } from "../lib/customfields.logic";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
-import { objectLabels, typeLabels } from "./customfields.labels";
+import { FieldBuilder, type NewFieldDraft } from "./customfields.builder";
+import { objectLabels } from "./customfields.labels";
 import { RetireFieldConfirm } from "./customfields.retire";
 import {
   AuditRail,
@@ -48,203 +32,6 @@ import {
   STAGED_ID,
 } from "./customfields.table";
 import "./customfields.css";
-
-// The add-field builder (AC-custom-fields-3..5/8): a governed form that turns a
-// human's plain label into one typed scalar column on an existing object. The
-// immutable cf_-prefixed API key and the pending DDL are shown before Confirm so
-// the schema change is legible, a structural-sounding label is refused up front,
-// and the 🟡 gate states that Confirm writes a live column + an audit row. This
-// is NOT the Accept/Edit/Dismiss triad — it is a `warning` Callout,
-// which is what the surface saying something about itself already looks like
-// everywhere else.
-
-export type NewFieldDraft = {
-  object: CfObject;
-  label: string;
-  type: CfType;
-  currency: string;
-  options: string[];
-};
-
-export function FieldBuilder({
-  object,
-  pending,
-  onSubmit,
-  onCancel,
-}: Readonly<{
-  object: CfObject;
-  pending: boolean;
-  onSubmit: (draft: NewFieldDraft) => void;
-  // Leaving the form without adding a field. The builder lives in a dialog, so
-  // its secondary verb is what closes that dialog rather than what empties the
-  // inputs: a form that is discarded on close has nothing to reset to.
-  onCancel: () => void;
-}>) {
-  const toast = useToast();
-  const t = useT();
-  const [label, setLabel] = useState("");
-  const [type, setType] = useState<CfType>("text");
-  const [currency, setCurrency] = useState("EUR");
-  const [options, setOptions] = useState<string[]>([""]);
-  const structural = looksStructural(label);
-  // A picklist with no non-blank option is not a picklist, and a currency field
-  // needs a well-formed 3-letter ISO-4217 code — Confirm stays disabled until
-  // the type-specific shape is valid, not just the label.
-  const typeShapeValid =
-    ((type !== "picklist" && type !== "multiselect") ||
-      options.some((opt) => opt.trim().length > 0)) &&
-    (type !== "currency" || /^[A-Za-z]{3}$/.test(currency.trim()));
-  const canConfirm =
-    !pending && label.trim().length > 0 && !structural && typeShapeValid;
-
-  const setOptionAt = (idx: number, value: string) => {
-    setOptions((current) => current.map((opt, i) => (i === idx ? value : opt)));
-  };
-
-  const removeOption = (idx: number) => {
-    // A picklist without an option is not a picklist — the last row is a floor,
-    // not a delete target, so the intent is surfaced as a toast, not swallowed.
-    if (options.length <= 1) {
-      // `danger`: this is a refusal, and the completion dot the default tone
-      // draws said the opposite of what the sentence says.
-      toast.show(t("cf.lastOptionBlocked"), { tone: "danger" });
-      return;
-    }
-    setOptions((current) => current.filter((_, i) => i !== idx));
-  };
-
-  const confirm = () => {
-    if (!canConfirm) {
-      return;
-    }
-    onSubmit({ object, label: label.trim(), type, currency, options });
-  };
-
-  return (
-    <>
-      <div className="form-stack">
-        <div className="cf-builder-head">
-          <p className="cf-hint">{t("cf.builder.intro")}</p>
-          <Badge>{t("cf.builder.noCode")}</Badge>
-        </div>
-
-        <div className="cf-grid">
-          <Field label={t("cf.label")}>
-            {(control) => (
-              <TextInput
-                {...control}
-                value={label}
-                onChange={(event) => setLabel(event.target.value)}
-              />
-            )}
-          </Field>
-          <Field label={t("cf.apiKey")} hint={t("cf.apiKeyHint")}>
-            {(control) => (
-              <TextInput
-                {...control}
-                value={apiKey(object, label)}
-                disabled
-                readOnly
-              />
-            )}
-          </Field>
-        </div>
-
-        <div className="field">
-          <span className="t-label">{t("cf.typeLabel")}</span>
-          <SegmentedControl
-            label={t("cf.typeLabel")}
-            options={CF_TYPES}
-            value={type}
-            onChange={setType}
-            labels={typeLabels(t)}
-          />
-        </div>
-
-        {type === "currency" && (
-          <Field label={t("cf.currencyCode")} hint={t("cf.currencyHint")}>
-            {(control) => (
-              <TextInput
-                {...control}
-                value={currency}
-                maxLength={3}
-                onChange={(event) =>
-                  setCurrency(event.target.value.toUpperCase())
-                }
-              />
-            )}
-          </Field>
-        )}
-
-        {(type === "picklist" || type === "multiselect") && (
-          <div className="field">
-            <span className="t-label">{t("cf.options")}</span>
-            <div className="cf-options">
-              {options.map((option, idx) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: option rows are positional, not identity-keyed
-                <div className="cf-option-row" key={idx}>
-                  <TextInput
-                    aria-label={t("cf.optionPlaceholder")}
-                    placeholder={t("cf.optionPlaceholder")}
-                    value={option}
-                    onChange={(event) => setOptionAt(idx, event.target.value)}
-                  />
-                  <Button
-                    iconOnly
-                    aria-label={t("cf.removeOption")}
-                    onClick={() => removeOption(idx)}
-                  >
-                    <X aria-hidden="true" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-            <Button onClick={() => setOptions((current) => [...current, ""])}>
-              {t("cf.addOption")}
-            </Button>
-          </div>
-        )}
-
-        {structural && (
-          <Callout tone="danger" kind="standing" title={t("cf.refuse.title")}>
-            <p>{t("cf.refuse.body")}</p>
-            <p>{t("cf.refuse.route")}</p>
-          </Callout>
-        )}
-
-        {/* `warning`: confirmed unread, the column lands on every record. */}
-        <Callout
-          tone="warning"
-          kind="standing"
-          title={
-            <>
-              <AutonomyDot tier="confirm" /> {t("cf.gate.title")}
-            </>
-          }
-        >
-          <p>{t("cf.gate.body", { object: t(`cf.obj.${object}`) })}</p>
-          <code className="cf-ddl t-caption">
-            {ddlPreview(object, label, type, currency)}
-          </code>
-        </Callout>
-      </div>
-
-      {/* Cancel first, then the verb that writes — the order every dialog in
-          this tree uses, so the destructive-looking half is never where the
-          reader's hand expects the safe one. Reset went with the disclosure
-          this form used to live in: closing the dialog discards the draft, so
-          a control that empties the inputs in place has nothing left to do. */}
-      <div className="actions">
-        <Button variant="ghost" onClick={onCancel}>
-          {t("deals.cancel")}
-        </Button>
-        <Button variant="primary" disabled={!canConfirm} onClick={confirm}>
-          {t("cf.confirm")}
-        </Button>
-      </div>
-    </>
-  );
-}
 
 type CustomFieldList = components["schemas"]["CustomFieldListResponse"];
 
@@ -260,6 +47,7 @@ function createBody(
     label: draft.label,
     type: draft.type,
     source: "manual",
+    show_in_create: draft.showInCreate,
     ...(draft.type === "currency" ? { currency: draft.currency } : {}),
     ...(draft.type === "picklist" || draft.type === "multiselect"
       ? { options: cleanOptions(draft.options) }
@@ -302,6 +90,7 @@ function stagedField(draft: NewFieldDraft, createdBy: string): CustomField {
       draft.type === "picklist" || draft.type === "multiselect"
         ? cleanOptions(draft.options)
         : null,
+    show_in_create: draft.showInCreate,
     created_by: createdBy,
     created_at: now,
     updated_at: now,
@@ -430,6 +219,46 @@ export function CustomFieldsAdmin() {
     },
   });
 
+  // The variable carries the field, so a flip that lands before React re-arms
+  // the mutation still writes the row the reader pressed. The saved row goes
+  // straight into the list of the field's own object. A refetch keyed by the
+  // object picked now could miss it, and the next flip would send a stale
+  // version.
+  const showInCreate = useMutation({
+    mutationFn: async (input: { field: CustomField; show: boolean }) => {
+      return unwrap(
+        await api.PATCH("/custom-fields/{id}", {
+          params: {
+            path: { id: input.field.id },
+            header: input.field.version
+              ? { "If-Match": String(input.field.version) }
+              : undefined,
+          },
+          body: { show_in_create: input.show },
+        }),
+      );
+    },
+    onSuccess: (saved, input) => {
+      queryClient.setQueryData<CustomFieldList>(
+        ["custom-fields", input.field.object],
+        (old) =>
+          old && {
+            ...old,
+            data: old.data.map((one) => (one.id === saved.id ? saved : one)),
+          },
+      );
+      queryClient.invalidateQueries({ queryKey: ["cf-audit"] });
+      toast.show(
+        t(input.show ? "cf.shownInCreate" : "cf.hiddenFromCreate", {
+          label: input.field.label,
+        }),
+      );
+    },
+    onError: (error) => {
+      toast.show(problemMessageOf(error, t), { tone: "danger" });
+    },
+  });
+
   const startRename = (field: CustomField) => {
     rename.reset();
     setRenaming(field);
@@ -506,6 +335,12 @@ export function CustomFieldsAdmin() {
           meUserId={meUserId}
           onRename={startRename}
           onArchive={setRetiring}
+          onShowInCreate={(field, show) => showInCreate.mutate({ field, show })}
+          savingShowInCreate={
+            showInCreate.isPending
+              ? showInCreate.variables?.field.id
+              : undefined
+          }
         />
       )}
       <PanelBody>

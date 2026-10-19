@@ -76,7 +76,7 @@ it("keeps unknown roles and additional current jobs on the Employers panel", asy
     </StoryProviders>,
   );
   const uncertain = (await screen.findByText("Uncertain Employer")).closest(
-    ".pe-employment",
+    ".company-card",
   );
   expect(await screen.findByText("Second Employer")).toBeTruthy();
   expect(uncertain).not.toBeNull();

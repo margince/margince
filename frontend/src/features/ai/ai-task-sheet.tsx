@@ -23,6 +23,7 @@ import { Select } from "../../design-system/select";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { aiTaskLabel } from "../../lib/ai-task-label";
 import { problemCodeOf, throwProblem, unwrap } from "../../lib/problem";
 import {
   useCallStats,
@@ -154,7 +155,7 @@ export function TaskSheet({
     <Modal open onClose={onClose} labelledBy={titleId} intent="drawer-reading">
       <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2 modal-title">
-          {route.display_name}
+          {aiTaskLabel(route.task, t, route.display_name)}
         </Heading>
         <p className="t-caption">
           {[

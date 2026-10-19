@@ -434,6 +434,54 @@ func TestARoutedArgumentCarriesTheLoosestBound(t *testing.T) {
 	}
 }
 
+// The loosest bound would promise a value a tighter action refuses, so the
+// description names the actions that stop lower.
+func TestARoutedBoundNamesTheActionsThatStopLower(t *testing.T) {
+	r := NewRegistry(nil, nil)
+	r.Register(shapedTarget("fake_a", `{"limit":{"type":"integer","maximum":50},"size":{"type":"integer","description":"One page."}}`))
+	r.Register(shapedTarget("fake_b", `{"limit":{"type":"integer","maximum":25},"size":{"type":"integer","description":"One page."}}`))
+	r.Register(shapedTarget("fake_c", `{"limit":{"type":"integer","maximum":25},"size":{"type":"integer"}}`))
+	r.Register(fakeRouter{name: "fake_abc", targets: map[string]string{"a": "fake_a", "b": "fake_b", "c": "fake_c"}})
+	spec, _ := r.Spec("fake_abc")
+	var schema struct {
+		Properties map[string]struct {
+			Description string `json:"description"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+		t.Fatal(err)
+	}
+	if got := schema.Properties["limit"].Description; got != "at most 25 for b, c." {
+		t.Errorf("limit = %q, want the actions that stop at 25 named", got)
+	}
+	if got := schema.Properties["size"].Description; got != "One page." {
+		t.Errorf("size = %q, want no note: no target bounds it", got)
+	}
+}
+
+// An action that sets no bound takes any value. Every bounded action is then
+// the tighter one and is named, at either end of the range.
+func TestARoutedBoundNamesEveryBoundedActionWhenOneIsUnbounded(t *testing.T) {
+	r := NewRegistry(nil, nil)
+	r.Register(shapedTarget("fake_a", `{"n":{"type":"integer","minimum":1,"maximum":50}}`))
+	r.Register(shapedTarget("fake_b", `{"n":{"type":"integer","minimum":5,"maximum":25}}`))
+	r.Register(shapedTarget("fake_c", `{"n":{"type":"integer"}}`))
+	r.Register(fakeRouter{name: "fake_abc", targets: map[string]string{"a": "fake_a", "b": "fake_b", "c": "fake_c"}})
+	spec, _ := r.Spec("fake_abc")
+	var schema struct {
+		Properties map[string]struct {
+			Description string `json:"description"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+		t.Fatal(err)
+	}
+	want := "at most 25 for b; at most 50 for a; at least 5 for b; at least 1 for a."
+	if got := schema.Properties["n"].Description; got != want {
+		t.Errorf("n = %q, want %q", got, want)
+	}
+}
+
 func TestRegisterRefusesARouterThatRestatesOrConflicts(t *testing.T) {
 	for why, tc := range map[string]struct{ a, b, own string }{
 		"two shapes for one argument":  {`{"x":{"type":"integer"}}`, `{"x":{"type":"string"}}`, ``},

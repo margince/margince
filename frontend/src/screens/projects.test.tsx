@@ -13,16 +13,17 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { pickOption } from "../design-system/select-testing";
 import { jsonResponse } from "../features/companies/company.fixtures";
 import { LocaleProvider } from "../i18n";
 import { ProjectsScreen } from "./projects";
-import { project } from "./projects.fixtures";
+import { COMPANY, project } from "./projects.fixtures";
 import { projectsBackend } from "./projects.testing";
 
 // The projects list: rows from GET /projects, the phase dial sent to the
 // server, the instructional first-run plate, and the create dialog's own
 // refusal of a key the contract would refuse.
+
+const FAR_COMPANY = { ...COMPANY, id: "o-77", display_name: "Wendt Logistik" };
 
 afterEach(() => {
   cleanup();
@@ -241,6 +242,14 @@ describe("ProjectsScreen", () => {
           posted = JSON.parse(await request.text());
           return jsonResponse(project({ id: "pr-new" }), 201);
         }
+        // The company sits past any first page: only a search reaches it.
+        const read = new URL(url);
+        if (read.pathname === "/v1/companies" && read.searchParams.get("q")) {
+          return jsonResponse({
+            data: read.searchParams.get("q") === "Wendt" ? [FAR_COMPANY] : [],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
         return null;
       },
     });
@@ -252,17 +261,19 @@ describe("ProjectsScreen", () => {
     // matcher a caller can get wrong, so the server mints it from the name.
     expect(screen.queryByLabelText("Key")).toBeNull();
 
-    await pickOption(
-      user,
-      screen.getByLabelText("Company *"),
-      "Brandt Automotive",
+    await user.type(screen.getByLabelText("Company *"), "Wendt");
+    await user.click(
+      await screen.findByRole("button", { name: /Wendt Logistik/ }),
     );
+    // The pick is named by the candidate it came from, not by its bare id.
+    expect(screen.getByText("Wendt Logistik")).toBeTruthy();
+    expect(screen.queryByText(FAR_COMPANY.id)).toBeNull();
     await user.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() => expect(posted).toBeTruthy());
     expect(posted).toEqual({
       name: "CRM rollout",
-      company_id: "o-1",
+      company_id: FAR_COMPANY.id,
       owner_id: null,
       description: null,
       target_end_date: null,

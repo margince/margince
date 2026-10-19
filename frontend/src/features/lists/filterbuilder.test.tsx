@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -629,20 +629,13 @@ describe("the join between conditions", () => {
 });
 
 describe("groups", () => {
-  it("offers a group only from two conditions, and seeds it with one", async () => {
+  it("offers a group beside the first condition, and seeds it with one", async () => {
     resetIDsForTest();
     const user = userEvent.setup();
     render(
       <Harness start={newGroup("and", [newLeaf("owner_id", "eq", "u1")])} />,
     );
-    expect(
-      screen.queryByRole("button", { name: "More for these conditions" }),
-    ).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Add condition" }));
-    await user.click(
-      screen.getByRole("button", { name: "More for these conditions" }),
-    );
     await user.click(screen.getByRole("button", { name: "Add a group" }));
 
     // The opposite join, holding a condition: an empty group would stop the
@@ -650,14 +643,46 @@ describe("groups", () => {
     expect(wire()).toEqual({
       and: [
         { field: "owner_id", op: "eq", value: "u1" },
-        { field: "owner_id", op: "eq", value: "" },
         { or: [{ field: "owner_id", op: "eq", value: "" }] },
       ],
     });
     expect(screen.getByRole("group", { name: "Any of these" })).toBeTruthy();
   });
 
-  it("grows a nested group from its own foot and its own menu", async () => {
+  it("offers no group in a filter with no condition yet", () => {
+    resetIDsForTest();
+    render(<Harness start={newGroup("and", [])} />);
+
+    expect(screen.getByRole("button", { name: "Add condition" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Add a group" })).toBeNull();
+  });
+
+  it("switches a one-condition group between all and any from its head", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    render(
+      <Harness
+        start={newGroup("and", [
+          newLeaf("owner_id", "eq", "u1"),
+          newGroup("or", [newLeaf("full_name", "contains", "ann")]),
+        ])}
+      />,
+    );
+
+    // One condition has no connector word between rows, so the head is the
+    // only place this group's join can be seen and changed.
+    const head = screen.getByRole("group", { name: "Conditions to match" });
+    await user.click(
+      within(head).getByRole("button", { name: "All of these" }),
+    );
+
+    expect(wire().and[1]).toEqual({
+      and: [{ field: "full_name", op: "contains", value: "ann" }],
+    });
+    expect(screen.getByRole("group", { name: "All of these" })).toBeTruthy();
+  });
+
+  it("grows a nested group from its own foot", async () => {
     resetIDsForTest();
     const user = userEvent.setup();
     render(
@@ -678,9 +703,9 @@ describe("groups", () => {
         { field: "owner_id", op: "eq", value: "" },
       ],
     });
-    // The group's own menu, named apart from the root's.
+    // The group's own offer of a group, named apart from the root's.
     expect(
-      screen.getByRole("button", { name: "More for this group" }),
+      screen.getByRole("button", { name: "Add nested group" }),
     ).toBeTruthy();
   });
 
@@ -758,11 +783,9 @@ describe("groups", () => {
     // Every group holds two conditions. Depths 2 and 3 may still nest; depth 4
     // may not, or the tree is one the server refuses as filter_too_deep.
     expect(
-      screen.getAllByRole("button", { name: "More for this group" }),
+      screen.getAllByRole("button", { name: "Add nested group" }),
     ).toHaveLength(2);
-    expect(
-      screen.getByRole("button", { name: "More for these conditions" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Add a group" })).toBeTruthy();
   });
 });
 

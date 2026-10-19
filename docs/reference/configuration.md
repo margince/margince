@@ -159,7 +159,7 @@ stack. Both the api and the worker refuse to boot on a value they cannot use. A 
 refuses at send time. Settings → Connections shows the value set and whether it last
 answered.
 
-The Margince skill (`GET /v1/agent-bundle`) and the code example on the **Agent passports** card name
+The Margince skill (`GET /v1/agent-bundle`) and the code example on the **Passports** card name
 the address a passport calls. `GET /v1/passports` returns it as `api_base_url`. It is `--api-base-url`,
 else `--public-base-url`, else the scheme and host the request came in on, with `/v1` added.
 `agentAPIOrigin.baseFor` in `backend/internal/compose/agentbundletransport.go` holds the rule.

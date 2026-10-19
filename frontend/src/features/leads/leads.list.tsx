@@ -159,7 +159,7 @@ function LeadsWorkbench({
   // Bulk selection, by lead id; cleared after any bulk run, since the rows
   // and their versions have moved.
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
-  const cf = useObjectCustomFields("lead");
+  const cf = useObjectCustomFields("lead", "create");
   const state = useListQuery<Lead>({
     key: "leads",
     initialSort: "",

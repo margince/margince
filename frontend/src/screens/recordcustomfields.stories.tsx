@@ -16,6 +16,7 @@ export const customFieldFixture: components["schemas"]["CustomField"] = {
   type: "text",
   status: "active",
   column_name: "cf_tier",
+  show_in_create: true,
   created_by: "u1",
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",

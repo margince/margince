@@ -17,7 +17,8 @@ import { catalogs, LocaleProvider, translate } from "../i18n";
 import { en } from "../i18n/en";
 import { LOCALES } from "../i18n/locale";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
-import { CustomFieldsAdmin, FieldBuilder } from "./customfields";
+import { CustomFieldsAdmin } from "./customfields";
+import { FieldBuilder } from "./customfields.builder";
 import { AuditRail, FieldTable } from "./customfields.table";
 
 afterEach(cleanup);
@@ -141,6 +142,18 @@ describe("FieldBuilder", () => {
     );
   });
 
+  it("submits a field kept off create forms when the reader unticks it", async () => {
+    const { onSubmit } = builder();
+    await userEvent.type(screen.getByLabelText(/Label/i), "Previous owner");
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: en["cf.showInCreate"] }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Add field" }));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ label: "Previous owner", showInCreate: false }),
+    );
+  });
+
   it("leaves through Cancel without submitting a draft", async () => {
     const { onCancel, onSubmit } = builder();
     await userEvent.type(screen.getByLabelText(/Label/i), "Renewal date");
@@ -172,6 +185,7 @@ const field = (over: Partial<CustomField> = {}): CustomField => ({
   type: "date",
   status: "active",
   column_name: "cf_renewal_date",
+  show_in_create: true,
   created_by: "u1",
   created_at: "2026-06-22T14:09:00Z",
   updated_at: "2026-06-22T14:09:00Z",
@@ -205,6 +219,7 @@ describe("FieldTable", () => {
         meUserId="u1"
         onRename={() => {}}
         onArchive={() => {}}
+        onShowInCreate={() => {}}
       />,
     );
     expect(screen.getByText("Renewal date")).toBeInTheDocument();
@@ -222,6 +237,7 @@ describe("FieldTable", () => {
         meUserId="u1"
         onRename={() => {}}
         onArchive={() => {}}
+        onShowInCreate={() => {}}
       />,
     );
     const menu = await openFieldMenu("Renewal date");
@@ -242,6 +258,7 @@ describe("FieldTable", () => {
         meUserId="u1"
         onRename={() => {}}
         onArchive={() => {}}
+        onShowInCreate={() => {}}
       />,
     );
     expect(
@@ -259,6 +276,7 @@ describe("FieldTable", () => {
         meUserId="u1"
         onRename={() => {}}
         onArchive={() => {}}
+        onShowInCreate={() => {}}
       />,
     );
     expect(screen.getByText(en["cf.retired"])).toBeInTheDocument();
@@ -480,6 +498,7 @@ describe("CustomFieldsAdmin", () => {
       label: "Deal size",
       type: "number",
       source: "manual",
+      show_in_create: true,
     });
     await waitFor(() =>
       expect(screen.getByText(/Deal size” added/)).toBeInTheDocument(),
@@ -734,6 +753,93 @@ describe("CustomFieldsAdmin", () => {
     const patch = calls.find((call) => call.method === "PATCH");
     expect(patch?.url).toContain("/custom-fields/d1");
     expect(patch?.body).toMatchObject({ label: "Contract end date" });
+  });
+});
+
+describe("the create-form setting on the field table", () => {
+  it("turns a field off for create forms from its row switch", async () => {
+    const calls: Recorded[] = [];
+    vi.stubGlobal(
+      "fetch",
+      customFieldsBackend(
+        [field({ id: "d1", label: "Renewal date" })],
+        [],
+        calls,
+      ),
+    );
+    renderAdmin();
+    const toggle = await screen.findByRole("switch", {
+      name: "Show “Renewal date” in create forms",
+    });
+    expect(toggle).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(toggle);
+    await waitFor(() =>
+      expect(calls.some((call) => call.method === "PATCH")).toBe(true),
+    );
+    const patch = calls.find((call) => call.method === "PATCH");
+    expect(patch?.url).toContain("/custom-fields/d1");
+    expect(patch?.body).toEqual({ show_in_create: false });
+    expect(
+      await screen.findByText(/hidden from create forms/),
+    ).toBeInTheDocument();
+  });
+
+  // The list read after the first write never answers. So the second flip
+  // carries the right version only if the saved row went into the cache.
+  it("sends each flip the version the previous one saved", async () => {
+    const calls: Recorded[] = [];
+    const deal = [field({ id: "d1", version: 3, show_in_create: true })];
+    const backend = customFieldsBackend(deal, [], calls);
+    const sent: { ifMatch: string | null; body: unknown }[] = [];
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      if (!(input instanceof Request)) return backend(input);
+      if (input.method === "PATCH") {
+        const body = (await input.json()) as Partial<CustomField>;
+        sent.push({ ifMatch: input.headers.get("If-Match"), body });
+        deal[0] = { ...deal[0], ...body, version: (deal[0].version ?? 0) + 1 };
+        return jsonResponse(deal[0]);
+      }
+      if (sent.length > 0 && input.url.includes("/custom-fields?")) {
+        return new Promise<Response>(() => {});
+      }
+      return backend(input);
+    });
+    renderAdmin();
+    const name = "Show “Renewal date” in create forms";
+    await userEvent.click(await screen.findByRole("switch", { name }));
+    await waitFor(() =>
+      expect(screen.getByRole("switch", { name })).toHaveAttribute(
+        "aria-checked",
+        "false",
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("switch", { name })).not.toHaveAttribute(
+        "aria-busy",
+      ),
+    );
+    await userEvent.click(screen.getByRole("switch", { name }));
+    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent).toEqual([
+      { ifMatch: "3", body: { show_in_create: false } },
+      { ifMatch: "4", body: { show_in_create: true } },
+    ]);
+  });
+
+  it("states the setting without a switch to a reader who may not change it", () => {
+    wrap(
+      <FieldTable
+        object="deal"
+        fields={[field({ show_in_create: false })]}
+        canEdit={false}
+        meUserId="u1"
+        onRename={() => {}}
+        onArchive={() => {}}
+        onShowInCreate={() => {}}
+      />,
+    );
+    expect(screen.queryByRole("switch")).toBeNull();
+    expect(screen.getByText(en["field.no"])).toBeInTheDocument();
   });
 });
 

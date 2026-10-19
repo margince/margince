@@ -6,7 +6,7 @@ import { StoryProviders } from "../testing/story-utils";
 import { AutonomyTiersCard } from "./settings-autonomytiers";
 
 const meta: Meta<typeof AutonomyTiersCard> = {
-  title: "Settings/You/Agents/Autonomy tiers",
+  title: "Settings/You/AI access/Autonomy tiers",
   component: AutonomyTiersCard,
   render: () => (
     <StoryProviders>

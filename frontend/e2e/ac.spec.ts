@@ -1153,10 +1153,11 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
 test("AC-settings: the passport list is metadata-only and strikes revoked rows", async ({
   page,
 }) => {
-  // Agent passports are a credential the COLLEAGUE holds, so they live on the
-  // "Your agents" entry beside autonomy and the tool catalog — not on the
-  // company's AI page, which is spend, model prices and automations.
+  // Passports are a credential the COLLEAGUE holds, so they live on AI access,
+  // behind "For developers": a reader connecting an AI tool never meets one.
   await page.goto("/#/settings/agents");
+  await expect(page.getByText("Marcus' Claude", { exact: true })).toBeHidden();
+  await page.getByText(de["aiAccess.dev.title"], { exact: true }).click();
   await expect(page.getByText("Marcus' Claude", { exact: true })).toBeVisible();
   // A revoked passport can do nothing more, so it waits behind a toggle.
   await expect(page.getByText("Alter Runner")).toHaveCount(0);
@@ -2943,11 +2944,8 @@ test.describe("filters and views", () => {
     ]);
     await page.keyboard.press("Escape");
 
-    // And nesting: from two conditions, More offers a group of the other join,
-    // arriving with a condition in it — what mixing AND with OR needs.
-    await page
-      .getByRole("button", { name: de["filters.rowsMore"], exact: true })
-      .click();
+    // Nesting: "Add a group" adds a group of the other join with one condition
+    // in it. That is how a filter mixes "and" with "or".
     await page
       .getByRole("button", { name: de["filters.addGroup"], exact: true })
       .click();

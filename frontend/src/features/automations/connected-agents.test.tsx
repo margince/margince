@@ -127,7 +127,7 @@ function backend(opts: {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
     // openapi-fetch hands the whole call over as a Request; the plain fetch
-    // the connect guide makes passes a string and an init instead.
+    // the connector discovery makes passes a string and an init instead.
     const method =
       input instanceof Request ? input.method : (init?.method ?? "GET");
     if (url.includes("/.well-known/oauth-protected-resource")) {
@@ -285,82 +285,12 @@ describe("ConnectedAgentsCard", () => {
     expect(screen.queryByText(MINTED.label)).toBeNull();
   });
 
-  it("says no agent is connected rather than showing a bare empty state", async () => {
+  it("says no AI tool is connected rather than showing a bare empty state", async () => {
     vi.stubGlobal("fetch", backend({ passports: [MINTED] }));
     render(<ConnectedAgentsCard />);
     await waitFor(() =>
-      expect(screen.getByText("No MCP clients connected yet.")).toBeTruthy(),
+      expect(screen.getByText("No AI tool connected yet.")).toBeTruthy(),
     );
-  });
-
-  // The guide is reference rather than a decision, so it reads last and closed
-  // — EXCEPT in the one state where it is the point of the card. Nobody has
-  // connected, so nothing else on the card can be acted on, and a reader who
-  // has to open a disclosure to find the only thing to do has been given a
-  // puzzle instead of an instruction.
-  it("opens the connect guide by itself while no agent is connected", async () => {
-    vi.stubGlobal("fetch", backend({ passports: [] }));
-    render(<ConnectedAgentsCard />);
-    await waitFor(() =>
-      expect(screen.getByText("No MCP clients connected yet.")).toBeTruthy(),
-    );
-    const guide = screen.getByText("Connect MCP client").closest("details");
-    if (!(guide instanceof HTMLDetailsElement)) {
-      throw new Error("the connect guide is not a disclosure");
-    }
-    expect(guide.open).toBe(true);
-  });
-
-  // And leaves it closed once there is something else to read: four commands
-  // nobody runs twice are a footnote to a card whose subject is the clients
-  // already connected.
-  it("leaves the connect guide closed once an agent is connected", async () => {
-    vi.stubGlobal("fetch", backend({}));
-    render(<ConnectedAgentsCard />);
-    await waitFor(() => expect(screen.getByText("Claude Code")).toBeTruthy());
-    const guide = screen.getByText("Connect MCP client").closest("details");
-    if (!(guide instanceof HTMLDetailsElement)) {
-      throw new Error("the connect guide is not a disclosure");
-    }
-    expect(guide.open).toBe(false);
-  });
-
-  it("offers a connect command per client, built from the URL the server advertises", async () => {
-    vi.stubGlobal("fetch", backend({ passports: [] }));
-    render(<ConnectedAgentsCard />);
-    await waitFor(() =>
-      expect(
-        screen.getByText(
-          "claude mcp add --transport http margince https://crm.acme.test/mcp",
-        ),
-      ).toBeTruthy(),
-    );
-    expect(
-      screen.getByText(
-        /codex mcp add margince --url https:\/\/crm\.acme\.test/,
-      ),
-    ).toBeTruthy();
-    expect(
-      screen.getByText(
-        "gemini mcp add --transport http margince https://crm.acme.test/mcp",
-      ),
-    ).toBeTruthy();
-    // Antigravity rejects the `url`/`httpUrl` spellings, so the guide must
-    // carry `serverUrl` — a wrong key here is a config that silently no-ops.
-    expect(
-      screen.getByText(/"serverUrl": "https:\/\/crm\.acme\.test\/mcp"/),
-    ).toBeTruthy();
-  });
-
-  it("says the connector is off instead of printing commands that cannot work", async () => {
-    vi.stubGlobal("fetch", backend({ passports: [], connectorEnabled: false }));
-    render(<ConnectedAgentsCard />);
-    await waitFor(() =>
-      expect(
-        screen.getByText("The MCP connector is off for this installation."),
-      ).toBeTruthy(),
-    );
-    expect(screen.queryByText(/claude mcp add/)).toBeNull();
   });
 
   // A credential that ran out ends the connection just as surely as a revoke,
@@ -468,7 +398,7 @@ describe("ConnectedAgentsCard", () => {
     // The DELETE firing is not the claim — the row leaving the list is. Without
     // this the test passes on a refetch that never happens.
     await waitFor(() =>
-      expect(screen.getByText("No MCP clients connected yet.")).toBeTruthy(),
+      expect(screen.getByText("No AI tool connected yet.")).toBeTruthy(),
     );
     expect(document.querySelector('[data-testid^="connection-"]')).toBeNull();
   });
@@ -493,7 +423,7 @@ describe("ConnectedAgentsCard", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText("No MCP clients connected yet.")).toBeTruthy(),
+      expect(screen.getByText("No AI tool connected yet.")).toBeTruthy(),
     );
     expect(opener.isConnected).toBe(false);
     // The region that held the row, which now reads back what is left — the
@@ -503,11 +433,11 @@ describe("ConnectedAgentsCard", () => {
       throw new Error("focus left the document entirely after the disconnect");
     }
     expect(landed).not.toBe(document.body);
-    expect(landed.textContent).toContain("No MCP clients connected yet.");
+    expect(landed.textContent).toContain("No AI tool connected yet.");
   });
 });
 
-describe("the two passport cards on Your agents", () => {
+describe("the two passport cards on AI access", () => {
   it("keeps a connection out of the passports a human may lend", async () => {
     vi.stubGlobal("fetch", backend({}));
     render(<SettingsScreen route={settingsAddress("agents")} />);

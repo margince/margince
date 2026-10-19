@@ -33,7 +33,7 @@ func bundleRequest(path string, actor principal.Principal) *http.Request {
 }
 
 func TestTheSkillBundleIsRefusedToAnAgent(t *testing.T) {
-	h := newAgentBundleHandlers(agentAPIOrigin{public: "https://crm.example.test"}, slog.New(slog.DiscardHandler))
+	h := newAgentBundleHandlers(agentAPIOrigin{public: "https://crm.example.test"}, "", slog.New(slog.DiscardHandler))
 	w := httptest.NewRecorder()
 	h.DownloadAgentSkillBundle(w, bundleRequest("/v1/agent-bundle", principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:probe", UserID: ids.NewV7(), SeatType: principal.SeatFull,
@@ -44,7 +44,7 @@ func TestTheSkillBundleIsRefusedToAnAgent(t *testing.T) {
 }
 
 func TestTheSkillBundleIsAZipNamingTheAPIBase(t *testing.T) {
-	h := newAgentBundleHandlers(agentAPIOrigin{public: "https://crm.example.test/"}, slog.New(slog.DiscardHandler))
+	h := newAgentBundleHandlers(agentAPIOrigin{public: "https://crm.example.test/"}, "", slog.New(slog.DiscardHandler))
 	w := httptest.NewRecorder()
 	h.DownloadAgentSkillBundle(w, bundleRequest("/v1/agent-bundle", principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:ada", UserID: ids.NewV7(), SeatType: principal.SeatFull,
@@ -64,7 +64,7 @@ func TestTheSkillBundleIsAZipNamingTheAPIBase(t *testing.T) {
 }
 
 func TestTheOpenAPIDocumentIsJSONNamingTheAPIBase(t *testing.T) {
-	h := newAgentBundleHandlers(agentAPIOrigin{public: "https://crm.example.test/"}, slog.New(slog.DiscardHandler))
+	h := newAgentBundleHandlers(agentAPIOrigin{public: "https://crm.example.test/"}, "", slog.New(slog.DiscardHandler))
 	w := httptest.NewRecorder()
 	h.GetAgentOpenAPIDocument(w, bundleRequest("/v1/openapi.json", principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:probe", UserID: ids.NewV7(), SeatType: principal.SeatFull,
@@ -132,28 +132,33 @@ func mustTrustedProxies(t *testing.T, raw string) httpserver.TrustedProxies {
 // bundledSpec returns the openapi.yaml of a bundle.
 func bundledSpec(t *testing.T, archive []byte) string {
 	t.Helper()
+	return bundledFile(t, archive, "openapi.yaml")
+}
+
+func bundledFile(t *testing.T, archive []byte, name string) string {
+	t.Helper()
 	reader, err := zip.NewReader(bytes.NewReader(archive), int64(len(archive)))
 	if err != nil {
 		t.Fatalf("not a ZIP: %v", err)
 	}
 	for _, f := range reader.File {
-		if f.Name != agentbundle.Folder+"/openapi.yaml" {
+		if f.Name != agentbundle.Folder+"/"+name {
 			continue
 		}
 		rc, err := f.Open()
 		if err != nil {
-			t.Fatalf("opening openapi.yaml: %v", err)
+			t.Fatalf("opening %s: %v", name, err)
 		}
 		body, err := io.ReadAll(rc)
 		if err != nil {
-			t.Fatalf("reading openapi.yaml: %v", err)
+			t.Fatalf("reading %s: %v", name, err)
 		}
 		if err := rc.Close(); err != nil {
-			t.Fatalf("closing openapi.yaml: %v", err)
+			t.Fatalf("closing %s: %v", name, err)
 		}
 		return string(body)
 	}
-	t.Fatal("the bundle has no openapi.yaml")
+	t.Fatalf("the bundle has no %s", name)
 	return ""
 }
 
@@ -287,4 +292,34 @@ func sortedIDs(set map[string]bool) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+func TestTheSkillReadmeNamesTheConnectorOnlyWhileItIsOn(t *testing.T) {
+	const resource = "https://crm.example.test/mcp"
+	for _, tc := range []struct {
+		name    string
+		enabled bool
+		want    string
+	}{
+		{"on", true, resource},
+		{"off", false, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := &Server{mcpConnectorEnabled: tc.enabled, mcpResource: resource}
+			if got := srv.connectorURL(); got != tc.want {
+				t.Fatalf("connectorURL() = %q, want %q", got, tc.want)
+			}
+			h := newAgentBundleHandlers(agentAPIOrigin{public: "https://crm.example.test"}, srv.connectorURL(), slog.New(slog.DiscardHandler))
+			w := httptest.NewRecorder()
+			h.DownloadAgentSkillBundle(w, bundleRequest("/v1/agent-bundle", principal.Principal{
+				Type: principal.PrincipalHuman, ID: "human:ada", UserID: ids.NewV7(), SeatType: principal.SeatFull,
+			}))
+			if w.Code != http.StatusOK {
+				t.Fatalf("status = %d, want 200", w.Code)
+			}
+			if names := strings.Contains(bundledFile(t, w.Body.Bytes(), "README.md"), resource); names != tc.enabled {
+				t.Errorf("README names %s: %v, want %v", resource, names, tc.enabled)
+			}
+		})
+	}
 }

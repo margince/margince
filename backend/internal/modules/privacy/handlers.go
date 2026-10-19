@@ -140,7 +140,7 @@ func auditEntryToWire(e AuditEntry) (crmcontracts.AuditLogEntry, error) {
 		ActorName:         e.ActorName,
 		OnBehalfOfName:    e.OnBehalfOfName,
 		AgentClient:       e.AgentClient,
-		Action:            crmcontracts.AuditLogEntryAction(e.Action),
+		Action:            crmcontracts.AuditAction(e.Action),
 		EntityType:        e.EntityType,
 		EntityLabel:       e.EntityLabel,
 		AuthorizationRule: e.AuthorizationRule,

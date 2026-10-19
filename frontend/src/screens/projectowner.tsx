@@ -18,12 +18,9 @@ import { useT } from "../i18n";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import type { Project } from "./projects.form";
 
-// Hands a project directly to a named colleague. The Owner select beside
-// this (projects.form.ts) only ever offers keep-current/Me/Unassign; naming
-// anyone else has no path from the project's own screen otherwise. The
-// server already takes any workspace member in `owner_id` (updateProject is
-// its own bulk transfer's "per-project twin"), so this is transport the
-// contract already supports.
+// Hands a project directly to a named colleague in one pick, without opening
+// the edit form. Both write `owner_id` through updateProject, so the server
+// asks the same assignee question of either.
 //
 // Picking IS the act, as on an assignee picker: the write is one pick away
 // from being walked back, so a confirm step would only add a press.

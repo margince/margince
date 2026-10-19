@@ -4,13 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { en } from "../../i18n/en";
 import type { FilterPreview, VocabularyField } from "../../lib/filterdata";
-import { StoryProviders } from "../../testing/story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { FilterResults } from "./filterresults";
 
-// FilterResults takes everything as props — the preview response, the vocabulary
-// it heads its columns from — so it needs no fetch and no query client of its
-// own. StoryProviders is here for the locale, which every string on it reads
-// through.
+// Only a column that points at another record fetches, to name it.
 //
 // The three stories are the three things a reader can be looking at: rows behind
 // a count, a filter that selected nothing, and the recount that has not answered
@@ -132,5 +133,80 @@ export const FirstPageOfMany: Story = {
     total: 214,
     perPage: 25,
     onPerPage: () => {},
+  },
+};
+
+const DEAL_FIELDS: readonly VocabularyField[] = [
+  {
+    name: "owner_id",
+    type: "id",
+    operators: ["eq"],
+    references: "app_user",
+    custom: false,
+  },
+  {
+    name: "stage_id",
+    type: "id",
+    operators: ["eq"],
+    references: "stage",
+    custom: false,
+  },
+  {
+    name: "company_id",
+    type: "id",
+    operators: ["eq"],
+    references: "company",
+    custom: false,
+  },
+];
+
+const DEAL_ROWS = [
+  {
+    id: "d-1",
+    name: "Brandt renewal",
+    owner_id: "u-1",
+    stage_id: "s-1",
+    company_id: "c-1",
+  },
+  {
+    // Ids the workspace no longer holds: a removed seat, a deleted stage and
+    // company. They read as gone, never as a raw id.
+    id: "d-2",
+    name: "Orphaned deal",
+    owner_id: "u-removed",
+    stage_id: "s-removed",
+    company_id: "c-removed",
+  },
+] satisfies FilterPreview["rows"];
+
+export const ReferencesByName: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /users/names": () =>
+        jsonResponse({ data: [{ id: "u-1", display_name: "Priya Shah" }] }),
+      "GET /stages": () =>
+        jsonResponse({ data: [{ id: "s-1", name: "Qualified" }] }),
+      "GET /companies": () =>
+        jsonResponse({
+          data: [{ id: "c-1", display_name: "Brandt GmbH" }],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    return (
+      <FilterResults
+        preview={{
+          resource: "deal",
+          match_count: DEAL_ROWS.length,
+          columns: ["id", "name", "owner_id", "stage_id", "company_id"],
+          rows: DEAL_ROWS,
+          truncated: false,
+        }}
+        fields={DEAL_FIELDS}
+        named={["owner_id", "stage_id", "company_id"]}
+        unit="deals"
+        widthsKey="story-filter-preview-deals"
+        pending={false}
+      />
+    );
   },
 };

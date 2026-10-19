@@ -81,7 +81,7 @@ func (f *Fetcher) FetchFingerprint(ctx context.Context, rawURL string) (Fingerpr
 	if final == nil {
 		final = parsed
 	}
-	return fingerprintOf(got.header, string(got.body), final), nil
+	return fingerprintOf(got.header, got.text(), final), nil
 }
 
 // fingerprintOf reads one fetched response for what it declares about its own

@@ -447,11 +447,10 @@ function GroundedField({
         <EvidenceMark
           value={shown}
           source={{
-            // The agent's NAME, not its principal id: the tag says "Automated
-            // by <this>", and a prefix carried in here read as "Automated by
-            // agent:document-extractor". Parsing an id is provenanceOf's job,
-            // and this value never went through it.
-            provenance: { kind: "agent", agent: "document-extractor" },
+            // The agent's job name without the `agent:` prefix, which the tag
+            // reads through the catalogue. This value never went through
+            // provenanceOf, so it carries no prefix to strip.
+            provenance: { kind: "agent", job: "document-extractor" },
             confidence: CONFIDENCE[field.confidence],
             snippet: field.source_quote,
             at: null,

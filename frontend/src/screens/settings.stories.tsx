@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { pickOption } from "../design-system/select-testing";
+import { readingsDay } from "../features/brief/brief.fixtures";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
@@ -13,6 +14,13 @@ import {
 } from "../testing/story-utils";
 import { SettingsScreen, settingsAddress } from "./settings";
 import { PipelinesCard } from "./settings.pipelines";
+import type { SettingsPageId } from "./settingscatalog";
+import {
+  COMPANY_CONTEXT_OFF,
+  EVERY_GRANT,
+  NOTIFICATION_ROUTES,
+  UNUSED_INSTALLATION_ROUTES,
+} from "./settingspages.fixtures";
 
 // The settings entries and the cards each one carries. Every story installs the
 // fetch stub those cards read through, so the render is deterministic and
@@ -53,7 +61,7 @@ const passports = () =>
 // IT-1 governed tool console: two tools of differing tier/egress, plus a
 // read-only passport so the play() below can show the send_email row struck
 // (its "send" scope isn't in the selected passport's grant). Both live on the
-// personal "Your agents" entry, which no grant gates.
+// personal "AI access" entry, which no grant gates.
 //
 // `title` and `description` are REQUIRED on AgentTool and the row draws both, so
 // a fixture without them captured a console the product cannot serve: one tool
@@ -108,6 +116,14 @@ const connectorOff = () =>
 // The zone comes from the identity fixture rather than being typed again here.
 // A story that named one would be a second author of the reader's clock, and
 // `format/timezone.ts` is the module that owns naming zones.
+// The shell around every tab reads the worklist, and its queue, summary and
+// caveat lists are all required by the contract. An unrouted read falls to the
+// generic empty page, which carries none of them, so the page fails in a way
+// no server could produce.
+const SHELL: RouteMap = {
+  "GET /worklist": () => jsonResponse(readingsDay({}, [])),
+};
+
 const WORKING_HOURS: RouteMap = {
   "GET /me/working-hours": () =>
     jsonResponse({
@@ -125,7 +141,7 @@ function tab(tabId: string, routes: RouteMap) {
   return () => {
     // The story's own routes last, so a story about this card can still say
     // something different from the default.
-    installFetchStub({ ...WORKING_HOURS, ...routes });
+    installFetchStub({ ...SHELL, ...WORKING_HOURS, ...routes });
     return (
       <StoryProviders>
         <SettingsScreen route={settingsAddress(tabId)} />
@@ -170,21 +186,7 @@ export const AccountPreferences: Story = {
 
 // The notices by kind, then the two email summaries, as one page.
 export const NotificationsTab: Story = {
-  render: tab("notifications", {
-    "GET /me": me(),
-    "GET /me/notification-preferences": () =>
-      jsonResponse({
-        items: [
-          { class: "approval_pending", delivery: "email", chosen: false },
-          { class: "automation", delivery: "in_app", chosen: false },
-          { class: "lead_sla", delivery: "in_app", chosen: false },
-          { class: "capture", delivery: "in_app", chosen: false },
-          { class: "system", delivery: "in_app", chosen: false },
-          { class: "coach", delivery: "in_app", chosen: false },
-        ],
-      }),
-    "GET /me/brief-delivery": () => jsonResponse({}),
-  }),
+  render: tab("notifications", { "GET /me": me(), ...NOTIFICATION_ROUTES }),
 };
 
 // The sign-off's editor. A textarea committed with a Save button is the settings
@@ -205,53 +207,79 @@ export const AccountSignatureDialog: Story = {
   },
 };
 
-// The contact's own agent authority, and the one page the founder reads for
-// whether the four cards on it space alike: the passports minted, the clients
-// holding one (with the connect guide open, because nothing is connected), the
-// governed tools those credentials reach, and the autonomy tiers they run under.
-const agentsTabRoutes = {
+// The reader's AI access: the connect picker first, then the tools already
+// connected, with every developer card behind "For developers".
+const aiAccessRoutes = {
   "GET /me": me(),
   "GET /passports": passports,
   "GET /agent-tools": tools,
   "GET /.well-known/oauth-protected-resource": connectorOn,
 };
 
-export const AgentsTab: Story = {
-  render: tab("agents", agentsTabRoutes),
+async function openDevelopers(canvasElement: HTMLElement, tab?: string) {
+  const canvas = within(canvasElement);
+  await userEvent.click(await canvas.findByText("For developers"));
+  if (tab !== undefined) {
+    await userEvent.click(await canvas.findByRole("button", { name: tab }));
+  }
+}
+
+export const AiAccess: Story = {
+  render: tab("agents", aiAccessRoutes),
 };
 
-// Dark, because the whole page is now hairlines between rows and chips against a
-// card ground — both derived values that move with the theme, and the interval
-// between two cards is only legible if the rule between two rows is.
-export const AgentsTabDark: Story = {
+export const AiAccessDark: Story = {
   globals: { theme: "dark" },
-  render: tab("agents", agentsTabRoutes),
+  render: tab("agents", aiAccessRoutes),
 };
 
-// At 390px. The code example wraps inside the card instead of widening it.
-export const AgentsTabPhone: Story = {
-  name: "Your agents — phone",
+// At 390px the two questions wrap and the steps stay one column.
+export const AiAccessPhone: Story = {
+  name: "AI access — phone",
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: tab("agents", agentsTabRoutes),
+  render: tab("agents", aiAccessRoutes),
 };
 
-// The connector switched off: the guide has no commands to print, so its one row
-// says so and says what still works. It is the state a default install is in, and
-// it used to render as a bold line and a paragraph flush against the disclosure.
-export const AgentsConnectorOff: Story = {
-  name: "Your agents — MCP connector off",
+// For developers open on its first tab, API keys.
+export const AiAccessDevelopersOpen: Story = {
+  name: "AI access — for developers open",
+  render: tab("agents", aiAccessRoutes),
+  play: async ({ canvasElement }) => openDevelopers(canvasElement),
+};
+
+export const AiAccessCodingAgents: Story = {
+  name: "AI access — coding agents",
+  render: tab("agents", aiAccessRoutes),
+  play: async ({ canvasElement }) =>
+    openDevelopers(canvasElement, "Coding agents"),
+};
+
+export const AiAccessAgentRules: Story = {
+  name: "AI access — agent rules",
+  render: tab("agents", aiAccessRoutes),
+  play: async ({ canvasElement }) =>
+    openDevelopers(canvasElement, "Agent rules"),
+};
+
+// The connector switched off: the picker and the coding-agents card both say so
+// and say what still works. It is the state a default install is in.
+export const AiAccessConnectorOff: Story = {
+  name: "AI access — connector off",
   render: tab("agents", {
-    ...agentsTabRoutes,
+    ...aiAccessRoutes,
     "GET /.well-known/oauth-protected-resource": connectorOff,
   }),
+  play: async ({ canvasElement }) =>
+    openDevelopers(canvasElement, "Coding agents"),
 };
 
 // The row's menu opens the revoke confirm, left open here so the guarded
 // state is what the render gate captures.
 export const PassportRevokeConfirm: Story = {
-  render: tab("agents", agentsTabRoutes),
+  render: tab("agents", aiAccessRoutes),
   play: async ({ canvasElement }) => {
+    await openDevelopers(canvasElement);
     const canvas = within(canvasElement);
     await userEvent.click(
       await canvas.findByRole("button", { name: "Actions for Scout" }),
@@ -267,8 +295,9 @@ export const PassportRevokeConfirm: Story = {
 // token is then shown once.
 export const PassportMintDialog: Story = {
   name: "Mint a passport",
-  render: tab("agents", agentsTabRoutes),
+  render: tab("agents", aiAccessRoutes),
   play: async ({ canvasElement }) => {
+    await openDevelopers(canvasElement);
     const canvas = within(canvasElement);
     await userEvent.click(
       await canvas.findByRole("button", { name: "New passport" }),
@@ -279,7 +308,7 @@ export const PassportMintDialog: Story = {
 // After the mint: the passport once, with its own copy control, and the ways to
 // use it under it. The example keeps the variable, never the new value.
 const mintedRoutes = {
-  ...agentsTabRoutes,
+  ...aiAccessRoutes,
   "POST /passports": () =>
     jsonResponse({
       id: "pp-new",
@@ -297,6 +326,7 @@ const mintPassport = async ({
 }: {
   canvasElement: HTMLElement;
 }) => {
+  await openDevelopers(canvasElement);
   const canvas = within(canvasElement);
   await userEvent.click(
     await canvas.findByRole("button", { name: "New passport" }),
@@ -327,8 +357,9 @@ export const PassportMintedDark: Story = {
 export const PassportMintDialogDark: Story = {
   name: "Mint a passport — dark",
   globals: { theme: "dark" },
-  render: tab("agents", agentsTabRoutes),
+  render: tab("agents", aiAccessRoutes),
   play: async ({ canvasElement }) => {
+    await openDevelopers(canvasElement);
     const canvas = within(canvasElement);
     await userEvent.click(
       await canvas.findByRole("button", { name: "New passport" }),
@@ -338,13 +369,14 @@ export const PassportMintDialogDark: Story = {
 
 // The tool groups unfiltered, then scoped to the read-only "Scout" passport: the
 // send_email row is struck, because "send" is not in that grant.
-const toolConsoleRoutes = agentsTabRoutes;
+const toolConsoleRoutes = aiAccessRoutes;
 
 const selectScoutPassport = async ({
   canvasElement,
 }: {
   canvasElement: HTMLElement;
 }) => {
+  await openDevelopers(canvasElement, "Agent rules");
   const canvas = within(canvasElement);
   // The listbox is portalled to the body, outside this story's canvas, so the
   // pick goes through the shared helper rather than a canvas-scoped query.
@@ -566,4 +598,71 @@ export const PipelinesAdminPhone: Story = {
 export const PipelinesAdminDark: Story = {
   globals: { theme: "dark" },
   render: pipelinesCard({ pipeline: ["read", "create", "update"] }),
+};
+
+// Every catalog page whole, for an admin holding every grant, over an unused
+// installation. `settingssections.test.tsx` pins search's sections to these.
+const everyGrantMe = () =>
+  jsonResponse({
+    ...meFixture({ roles: ["admin"], allow: EVERY_GRANT }),
+    data_reset_available: true,
+  });
+
+function catalogPage(page: SettingsPageId): Story {
+  return {
+    parameters: { settingsPage: page },
+    render: tab(page, {
+      "GET /me": everyGrantMe,
+      ...UNUSED_INSTALLATION_ROUTES,
+    }),
+  };
+}
+
+export const AccountPage: Story = catalogPage("account");
+export const MeetingsPage: Story = catalogPage("meetings");
+export const VoicePage: Story = catalogPage("voice");
+export const AgentsPage: Story = catalogPage("agents");
+export const NotificationsPage: Story = catalogPage("notifications");
+export const ConnectionsPage: Story = catalogPage("connections");
+export const CaptureActivityPage: Story = catalogPage("capture-activity");
+export const CompanyPage: Story = catalogPage("company");
+export const AuthenticationPage: Story = catalogPage("authentication");
+export const MembersPage: Story = catalogPage("members");
+export const TeamsPage: Story = catalogPage("teams");
+export const RolesPage: Story = catalogPage("roles");
+export const SeatsPage: Story = catalogPage("seats");
+export const PipelinesPage: Story = catalogPage("pipelines");
+export const StageautomationPage: Story = catalogPage("stageautomation");
+export const LeadsPage: Story = catalogPage("leads");
+export const AcquisitionPage: Story = catalogPage("acquisition");
+export const ReviewtemplatesPage: Story = catalogPage("reviewtemplates");
+export const RecordrolesPage: Story = catalogPage("recordroles");
+export const FieldsPage: Story = catalogPage("fields");
+export const TagsPage: Story = catalogPage("tags");
+export const ProductsPage: Story = catalogPage("products");
+export const CapturePage: Story = catalogPage("capture");
+export const IntegrationsPage: Story = catalogPage("integrations");
+export const KnowledgePage: Story = catalogPage("knowledge");
+export const ImportPage: Story = catalogPage("import");
+export const UsagePage: Story = catalogPage("usage");
+export const ModelsPage: Story = catalogPage("models");
+export const ModelCallsPage: Story = catalogPage("model-calls");
+export const AutomationsPage: Story = catalogPage("automations");
+export const PrivacyPage: Story = catalogPage("privacy");
+export const JurisdictionPage: Story = catalogPage("jurisdiction");
+export const AuditPage: Story = catalogPage("audit");
+export const SystemHealthPage: Story = catalogPage("system-health");
+export const ExtensionsPage: Story = catalogPage("extensions");
+export const ResetPage: Story = catalogPage("reset");
+
+// Company profile while the rollout keeps the company context unread: the card
+// draws nothing, and search offers none of its names.
+export const CompanyPageContextOff: Story = {
+  parameters: { companyContext: "off" },
+  render: tab("company", {
+    "GET /me": everyGrantMe,
+    ...UNUSED_INSTALLATION_ROUTES,
+    "GET /company/context/capabilities": () =>
+      jsonResponse(COMPANY_CONTEXT_OFF),
+  }),
 };

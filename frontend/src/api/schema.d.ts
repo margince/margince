@@ -11326,9 +11326,10 @@ export interface paths {
          *     (PATCH). Governed by the `installation_settings` RBAC object.
          *
          *     `base_currency_locked` reports whether the currency has stopped being changeable, and
-         *     `base_currency_locked_reason` says why, naming how many deals have already frozen a
-         *     conversion rate against it (ADR-0085 §7). A client renders the field read-only from
-         *     the flag rather than discovering the refusal by attempting a write.
+         *     `base_currency_lock` says why as facts: which reason holds it and how many records or
+         *     currency rates hold it (ADR-0085 §7). `base_currency_locked_reason` carries the same
+         *     facts as one English sentence for older clients. A client renders the field read-only
+         *     from the flag rather than discovering the refusal by attempting a write.
          */
         get: operations["getInstallationSettings"];
         put?: never;
@@ -13883,14 +13884,15 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Rename a custom field's display label (not a schema change).
-         * @description CUSTOM-FIELDS-WIRE-3. Audited catalog `label` update only; `column_name` never
-         *     moves — the physical column identity is stable across rename. Merge-PATCH:
-         *     `column_name`, `object`, and `type` are absent from the request schema entirely.
-         *     A retired field refuses rename with a 409 `conflict` — retirement is terminal,
-         *     so its label is frozen. A label another field of the same object already holds (by its
-         *     text, or by the slug it would derive) answers 409 `conflict`, on rename and on create
-         *     alike; the sentence says which of the two collided.
+         * Rename a custom field or change whether create dialogs offer it (not a schema change).
+         * @description CUSTOM-FIELDS-WIRE-3. Audited catalog update of `label`, `show_in_create`, or both;
+         *     `column_name` never moves — the physical column identity is stable across rename.
+         *     Merge-PATCH: `column_name`, `object`, and `type` are absent from the request schema
+         *     entirely, and a body with neither setting is refused with a 422. A retired field
+         *     refuses the update with a 409 `conflict` — retirement is terminal, so its settings
+         *     are frozen. A label another field of the same object already holds (by its text, or
+         *     by the slug it would derive) answers 409 `conflict`, on rename and on create alike;
+         *     the sentence says which of the two collided.
          */
         patch: operations["renameCustomField"];
         trace?: never;
@@ -20736,10 +20738,13 @@ export interface components {
              */
             base_currency_locked: boolean;
             /**
-             * @description Why the currency is locked, naming what has already converted against it. Absent
-             *     when it is still changeable.
+             * @description Why the currency is locked, naming what has already converted against it, as one
+             *     English sentence. Absent when it is still changeable. A client words the reason
+             *     from `base_currency_lock` instead, and reads this only from a server that does not
+             *     send that object.
              */
             base_currency_locked_reason?: string;
+            base_currency_lock?: components["schemas"]["BaseCurrencyLock"];
             /**
              * Format: int64
              * @description The largest upload request this installation accepts, in bytes — set by whoever
@@ -21430,6 +21435,18 @@ export interface components {
             oidc_group_role_map: {
                 [key: string]: string;
             };
+        };
+        /** @description Why the base currency is locked, as facts a client words in its reader's language. Present exactly when `base_currency_locked_reason` is (ADR-0085 §7). */
+        BaseCurrencyLock: {
+            /**
+             * @description `rates_frozen`: closed deals, sent offers, mirrored invoices, contracts or commission entries have frozen a conversion rate against the base, and nothing undoes that. `rate_sheet`: currency rates convert into the base; clearing them lifts the lock.
+             * @enum {string}
+             */
+            reason: "rates_frozen" | "rate_sheet";
+            /** @description How many records froze a rate (`rates_frozen`), or how many currency rates convert into the base (`rate_sheet`). */
+            count: number;
+            /** @description The ISO-4217 code the currency rates convert into. Sent only with `rate_sheet`, and absent there when the installation holds no stored base to name. */
+            base_currency?: string;
         };
         /** @description One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen. */
         SignInProvider: {
@@ -37953,6 +37970,12 @@ export interface components {
             /** @description The job layer's vetted operator sentence. A failure whose stored text did not come from that closed vocabulary reports a fixed substitute instead — the raw cause never travels here. */
             reason: string;
         };
+        /**
+         * @description The verb of one audit row, as both the audit log and a record's history
+         *     serve it. One list, so the two reads cannot name the same row two ways.
+         * @enum {string}
+         */
+        AuditAction: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke" | "delete" | "place_legal_hold" | "lift_legal_hold" | "request_legal_review" | "withdraw_legal_review";
         /** @description An append-only audit row. Mirrors the `audit_log` table. */
         AuditLogEntry: {
             /** Format: uuid */
@@ -37994,8 +38017,7 @@ export interface components {
              * @description The bulk change that wrote this row; null for a change made on its own.
              */
             batch_id?: string | null;
-            /** @enum {string} */
-            action: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke" | "delete" | "place_legal_hold" | "lift_legal_hold" | "request_legal_review" | "withdraw_legal_review";
+            action: components["schemas"]["AuditAction"];
             entity_type: string;
             /**
              * Format: uuid
@@ -38128,7 +38150,7 @@ export interface components {
              * @enum {string}
              */
             object: "contact" | "company" | "deal" | "lead" | "project" | "contract";
-            /** @description Display label; the only thing a rename updates. */
+            /** @description Display label; a rename changes it, and never the slug or column_name. */
             label: string;
             /** @description Admin-facing key the column_name derives from. */
             slug: string;
@@ -38148,6 +38170,8 @@ export interface components {
             currency?: string | null;
             /** @description Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise. */
             options?: string[] | null;
+            /** @description Whether the field is offered in the create dialog of its object. Off keeps it out of create dialogs only: the record page still shows the field and edits its value. */
+            show_in_create: boolean;
             /** Format: uuid */
             created_by: string;
             /** Format: date-time */
@@ -38195,10 +38219,16 @@ export interface components {
             currency?: string | null;
             options?: string[] | null;
             source: string;
+            /**
+             * @description Whether the field is offered in create dialogs. Omitted means true. An import that keeps provenance from a previous system creates its field with this off.
+             * @default true
+             */
+            show_in_create: boolean;
         };
-        /** @description Merge-PATCH; `label` only — `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). */
+        /** @description Merge-PATCH of the two settings a live field may change: `label` and `show_in_create`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). */
         RenameCustomFieldRequest: {
             label?: string;
+            show_in_create?: boolean;
         };
         /** @description CUSTOM-FIELDS-PARAM-5. Replaces the picklist's full allowed-option set (ordered); at least one option is required — an empty array is rejected (422). */
         UpdateCustomFieldOptionsRequest: {
@@ -38207,8 +38237,12 @@ export interface components {
         /**
          * @description One rendered history line for a record mutation. `before`/`after` are
          *     masked to the viewer's readable fields — an absent key was hidden, not null.
-         *     `summary` is server-composed plain language; field-level detail lives in
-         *     before/after for the client to render.
+         *     `summary` is server-composed plain language in English. A client that
+         *     renders the line in its reader's language builds it from `action` and the
+         *     actor fields. It falls back to `summary` for an edge row, whose role
+         *     travels only in the sentence, and for an action or actor kind it does
+         *     not know.
+         *     Field-level detail lives in before/after for the client to render.
          */
         AuditHistoryEntry: {
             /** Format: uuid */
@@ -38234,7 +38268,16 @@ export interface components {
              *     "via {agent_client}" where it would otherwise say "via an agent".
              */
             agent_client?: string | null;
-            action: string;
+            action: components["schemas"]["AuditAction"];
+            /**
+             * Format: uuid
+             * @description The Agent Seat Passport the change was made under, as FieldHistoryEntry
+             *     carries it. A machine row with a passport and no `on_behalf_of` had a
+             *     human authority the row failed to record; one without a passport
+             *     never had one. With `on_behalf_of` set and no `on_behalf_of_name`,
+             *     the authority was recorded and the member no longer resolves.
+             */
+            passport_id?: string | null;
             /** Format: date-time */
             occurred_at: string;
             authorization_rule?: string | null;
@@ -38589,6 +38632,11 @@ export interface components {
              */
             granted: boolean;
         };
+        /**
+         * @description AI task key from the task catalog, used to localize its display name.
+         * @enum {string}
+         */
+        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "request_settlement" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
         /**
          * @description What kind of AI work an occurrence is. Every AI task this build can run reports here,
          *     because a task that reports nothing is AI work the product performed and then denied.
@@ -39763,6 +39811,8 @@ export interface components {
         };
         /** @description A staged 🟡 confirm-first action awaiting human decision. */
         Approval: {
+            /** @description For a pending commitment, whether its named task assignee cannot receive the task. True for invited, deactivated, archived, missing, or agent seats. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee. */
+            readonly assignee_inactive?: boolean;
             /**
              * Format: uuid
              * @description The member explicitly asked to decide, independent of who has permission to approve.
@@ -44326,6 +44376,7 @@ export interface components {
              *     that was renamed, while a reader shown `automation_run:01a0…` learns nothing.
              */
             cause_ref?: string;
+            ai_task?: components["schemas"]["AiTask"];
             /**
              * @description What `cause_ref` identifies, in words — the automation's name, the mailbox that
              *     stopped.
@@ -45744,6 +45795,7 @@ export interface components {
              *     parsed. Absent on a row that reports no shared condition.
              */
             cause_ref?: string;
+            ai_task?: components["schemas"]["AiTask"];
             /**
              * @description What `cause_ref` identifies, in words — the automation's name, the mailbox that
              *     stopped. This is the half a reader sees; the identity beside it is not drawable.

@@ -3,9 +3,9 @@
 
 package customfields
 
-// Rename and Retire — the two catalog-only lifecycle mutations. Neither
+// Update and Retire are the two catalog-only lifecycle mutations. Neither
 // runs DDL, so both stay on the workspace-bound app pool inside
-// database.WithWorkspaceTx; only Create and SetOptions need the schema
+// database.WithWorkspaceTx. Only Create and SetOptions need the schema
 // pool's one-transaction owner-ALTER shape (create.go, options.go).
 
 import (
@@ -25,25 +25,25 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// lockedField is the FOR UPDATE snapshot Rename/Retire/SetOptions decide
-// from: the lock is taken BEFORE any decision read, so the snapshot
+// lockedField is the FOR UPDATE snapshot that Update, Retire and SetOptions
+// decide from. The lock is taken before any decision read, so the snapshot
 // cannot go stale under a concurrent writer.
 type lockedField struct {
-	Object     string
-	ColumnName string
-	Type       string
-	Status     string
-	Label      string
-	OptionsRaw []byte
-	Version    int64
+	Object       string
+	ColumnName   string
+	Type         string
+	Status       string
+	Label        string
+	OptionsRaw   []byte
+	ShowInCreate bool
+	Version      int64
 }
 
-// mutable is the status gate on the two catalog mutations a retired
-// field no longer accepts — rename (Rename, after lockField) and the
-// options edit (lockPicklistField): retirement is terminal, so label and
-// options are frozen while the row stays fetchable and a repeat retire
-// stays a no-op (which is why the gate is not inside lockField itself —
-// Retire needs the retired row to answer it unchanged).
+// mutable is the status gate on the two catalog mutations a retired field no
+// longer accepts: the settings update (Update) and the options edit
+// (lockPicklistField). Retirement is terminal, so the settings and options are
+// frozen while the row stays fetchable. The gate is not inside lockField
+// because Retire needs the retired row to answer a repeat retire unchanged.
 func (f lockedField) mutable() error {
 	if f.Status == statusRetired {
 		return ErrFieldRetired
@@ -58,9 +58,9 @@ func (f lockedField) mutable() error {
 func lockField(ctx context.Context, tx pgx.Tx, id ids.UUID) (lockedField, error) {
 	var f lockedField
 	err := tx.QueryRow(ctx,
-		`SELECT object, column_name, type, status, label, options, version
+		`SELECT object, column_name, type, status, label, options, show_in_create, version
 		   FROM custom_field WHERE id = $1 FOR UPDATE`,
-		id).Scan(&f.Object, &f.ColumnName, &f.Type, &f.Status, &f.Label, &f.OptionsRaw, &f.Version)
+		id).Scan(&f.Object, &f.ColumnName, &f.Type, &f.Status, &f.Label, &f.OptionsRaw, &f.ShowInCreate, &f.Version)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return lockedField{}, apperrors.ErrNotFound
 	}
@@ -81,18 +81,38 @@ func readField(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontracts.Custom
 	return out, nil
 }
 
-// Rename updates the catalog label ONLY (CUSTOM-FIELDS-WIRE-3): slug,
-// column_name, object and type never move — the physical column identity
-// is stable across rename. A retired field refuses rename (ErrFieldRetired,
-// 409): retirement is terminal. If-Match is the contract's optional CAS: a
-// stale version answers ErrVersionSkew; without one the held row lock
+// FieldPatch is the merge-PATCH of the two settings a live field may change.
+// A nil member is left as it is.
+type FieldPatch struct {
+	Label        *string
+	ShowInCreate *bool
+}
+
+// validate refuses a patch that changes nothing or blanks the label. An empty
+// patch answers the same label-required refusal a rename always gave, so a
+// client that only ever renames sees no new error.
+func (p FieldPatch) validate() error {
+	if p.ShowInCreate == nil && p.Label == nil {
+		return &ValidationError{Errors: []FieldError{{Field: fieldLabel, Code: codeRequired}}}
+	}
+	if p.Label != nil && strings.TrimSpace(*p.Label) == "" {
+		return &ValidationError{Errors: []FieldError{{Field: fieldLabel, Code: codeRequired}}}
+	}
+	return nil
+}
+
+// Update changes the catalog label, the create-dialog setting, or both
+// (CUSTOM-FIELDS-WIRE-3). Slug, column_name, object and type never move, so
+// the physical column identity is stable across rename. A retired field
+// refuses (ErrFieldRetired, 409). If-Match is the contract's optional CAS: a
+// stale version answers ErrVersionSkew, and without one the held row lock
 // still serializes concurrent writers.
-func (s *Service) Rename(ctx context.Context, id ids.UUID, label string, ifVersion *int64) (crmcontracts.CustomField, error) {
+func (s *Service) Update(ctx context.Context, id ids.UUID, patch FieldPatch, ifVersion *int64) (crmcontracts.CustomField, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.CustomField{}, err
 	}
-	if strings.TrimSpace(label) == "" {
-		return crmcontracts.CustomField{}, &ValidationError{Errors: []FieldError{{Field: fieldLabel, Code: codeRequired}}}
+	if err := patch.validate(); err != nil {
+		return crmcontracts.CustomField{}, err
 	}
 
 	var out crmcontracts.CustomField
@@ -107,21 +127,28 @@ func (s *Service) Rename(ctx context.Context, id ids.UUID, label string, ifVersi
 		if ifVersion != nil && *ifVersion != f.Version {
 			return apperrors.ErrVersionSkew
 		}
-		if err := serializeSchemaChange(ctx, tx, f.Object); err != nil {
-			return err
+		label, show := f.Label, f.ShowInCreate
+		if patch.Label != nil {
+			label = *patch.Label
+			if err := serializeSchemaChange(ctx, tx, f.Object); err != nil {
+				return err
+			}
+			if err := refuseTakenLabel(ctx, tx, f.Object, id, label); err != nil {
+				return err
+			}
 		}
-		if err := refuseTakenLabel(ctx, tx, f.Object, id, label); err != nil {
-			return err
+		if patch.ShowInCreate != nil {
+			show = *patch.ShowInCreate
 		}
 		if _, err := tx.Exec(ctx,
-			`UPDATE custom_field SET label = $1 WHERE id = $2`, label, id); err != nil {
-			return fmt.Errorf("customfields: updating label: %w", err)
+			`UPDATE custom_field SET label = $1, show_in_create = $2 WHERE id = $3`, label, show, id); err != nil {
+			return fmt.Errorf("customfields: updating settings: %w", err)
 		}
 		if out, err = readField(ctx, tx, id); err != nil {
 			return err
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", rbacObject, id,
-			map[string]any{fieldLabel: f.Label}, map[string]any{fieldLabel: label}); err != nil {
+		before, after := patch.auditDiff(f, label, show)
+		if _, err := storekit.Audit(ctx, tx, "update", rbacObject, id, before, after); err != nil {
 			return fmt.Errorf("customfields: audit write: %w", err)
 		}
 		return nil
@@ -130,6 +157,19 @@ func (s *Service) Rename(ctx context.Context, id ids.UUID, label string, ifVersi
 		return crmcontracts.CustomField{}, err
 	}
 	return out, nil
+}
+
+// auditDiff names only the settings the patch carried, so the trail of a
+// rename does not claim the create-dialog setting moved, and the other way.
+func (p FieldPatch) auditDiff(f lockedField, label string, show bool) (before, after map[string]any) {
+	before, after = map[string]any{}, map[string]any{}
+	if p.Label != nil {
+		before[fieldLabel], after[fieldLabel] = f.Label, label
+	}
+	if p.ShowInCreate != nil {
+		before[fieldShow], after[fieldShow] = f.ShowInCreate, show
+	}
+	return before, after
 }
 
 // Retire flips status to retired (CUSTOM-FIELDS-WIRE-4/AC-13): the field

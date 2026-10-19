@@ -52,7 +52,7 @@ An agent action in Margince is approved by the colleague the agent acts for, or 
 Also called: approver, who signs off, permission to approve.
 
 ### How do I stop Margince making automatic changes?
-To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → Agents**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval.
+To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI access**, then **For developers**, then **Agent rules**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval.
 Also called: autopilot, auto-apply, stop the AI editing my records.
 
 ### Can I undo what the AI changed?
@@ -124,7 +124,8 @@ decided: **Close dates**, **Company names** and **Lifecycle stages**. They land
 under **Handled for you** on the Worklist rather than as an approval.
 
 This is set per seat, and it is **on by default**. The switches
-are at **Settings → Agents**, under **Automatic changes**, which says: "Each switch
+are at **Settings → AI access**, on the **Agent rules** tab under **For developers**. The **Automatic
+changes** card says: "Each switch
 lets one kind of change run without your review. It applies to your work, not
 the whole team."
 

@@ -115,7 +115,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// After the option loop, because the two bases and the trusted proxies
 	// arrive by options in any order.
 	agentOrigin := agentAPIOrigin{api: srv.apiBaseURL, public: srv.send.PublicBaseURL, proxies: srv.trustedProxies}
-	srv.agentBundleHandlers = newAgentBundleHandlers(agentOrigin, log)
+	srv.agentBundleHandlers = newAgentBundleHandlers(agentOrigin, srv.connectorURL(), log)
 	srv.authHandlers = srv.WithAgentAPIBase(agentOrigin.baseFor)
 	// The meter pointer WithAgentVolume rebound, so the list reads the counters
 	// the gate charges.

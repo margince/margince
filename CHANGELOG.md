@@ -12,6 +12,14 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Added
 
+- A custom field can stay out of create forms. Each custom field has a
+  **In create forms** setting, on by default, so every existing field
+  keeps showing. Turned off, the field leaves the dialogs that create a record
+  and stays on the record page, where it can still be edited. Settings →
+  **Fields** shows and changes it, and the custom-field API takes
+  `show_in_create` on create and update, so an import can create a field that
+  only keeps a value from a previous system.
+
 - **MCP tools match the API.** An MCP tool takes every
   filter, sort and option its REST route takes. `read_view` reads a route's
   views, such as a company's 360 or a deal's status. `change_record_parts`
@@ -125,6 +133,20 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
   written and always read zero. The column stays; the wire field is gone.
 
 ### Changed
+
+- **Settings → Agents is now Settings → AI access, and it starts with
+  connecting your AI tool.** The **Connect your AI tool** card asks **Which AI
+  do you use?** (Claude, ChatGPT, Microsoft Copilot or Gemini) and **Whose plan
+  is it?** (**My company’s** or **My own**), then shows the steps for that one
+  case. A company plan gets **Download guide for your admin**, a file with the
+  admin's steps and the Margince address; your own plan gets **Copy address**.
+  Copilot outside work and Gemini through work or
+  school cannot connect, and the card says so. **Your connections** lists each
+  connected tool. **For developers**, closed until opened, holds three tabs:
+  **API keys** (passports), **Coding agents** (Claude Code, Codex and
+  Antigravity, in place of Gemini CLI) and **Agent rules** (the tool list,
+  **Autonomy tiers** and **Automatic changes**). The
+  page keeps its address, `#/settings/agents`.
 
 - **Some reads are for humans only.** These answer a signed-in human only,
   through the API or MCP: the installation, capture and integration settings,

@@ -8042,7 +8042,7 @@ components:
           schema: {$ref: '#/components/schemas/Problem'}
           examples:
             rbac:
-              value: {type: 'https://errors.gradion.com/forbidden', title: Forbidden, status: 403, code: forbidden, detail: Your role does not permit this action.}
+              value: {type: 'https://errors.gradion.com/permission_denied', title: Forbidden, status: 403, code: permission_denied, detail: Your role does not permit this action.}
     PermissionDenied:
       description: 'RBAC object/action denial — the authenticated principal''s role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (gate).'
       content:
@@ -18093,14 +18093,14 @@ components:
         and filtering while the column and its values are preserved. Deliberately carries no
         `source`/`captured_by` — the catalog row itself has no such columns; provenance
         on create lives in the audit row.
-      required: [id, object, label, slug, type, status, column_name, created_by, created_at, updated_at]
+      required: [id, object, label, slug, type, status, column_name, show_in_create, created_by, created_at, updated_at]
       properties:
         id: {type: string, format: uuid}
         object:
           type: string
           enum: [contact, company, deal, lead, project, contract]
           description: The existing core object this field is added to.
-        label: {type: string, description: Display label; the only thing a rename updates.}
+        label: {type: string, description: 'Display label; a rename changes it, and never the slug or column_name.'}
         slug: {type: string, description: Admin-facing key the column_name derives from.}
         type:
           type: string
@@ -18123,6 +18123,10 @@ components:
           type: [array, 'null']
           items: {type: string}
           description: Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise.
+        show_in_create:
+          type: boolean
+          description: >-
+            Whether the field is offered in the create dialog of its object. Off keeps it out of create dialogs only: the record page still shows the field and edits its value.
         created_by: {type: string, format: uuid}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
@@ -18670,6 +18674,11 @@ components:
       description: A staged confirm-first action awaiting human decision.
       required: [id, kind, status, proposed_by, created_at]
       properties:
+        assignee_inactive:
+          type: boolean
+          readOnly: true
+          description: >-
+            For a pending commitment, whether its named task assignee cannot receive the task. True for invited, deactivated, archived, missing, or agent seats. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee.
         requested_decider_id:
           type: string
           format: uuid

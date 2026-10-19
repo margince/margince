@@ -35,7 +35,6 @@ import { useOpenEmail } from "../lib/openemail";
 import { unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { navigate } from "../lib/router";
-import { useMe } from "../lib/session";
 import { ArchiveAction } from "./archive";
 import { CustomFieldsPanel } from "./customfields.card";
 import { useProjectVerbRefusal } from "./project360.refusal";
@@ -52,7 +51,7 @@ import {
   PROJECT_DEALS_ANCHOR,
   RollupsStrip,
 } from "./projectreadings";
-import { PhaseBadge, ProjectKeyChip, useCompanyOptions } from "./projects";
+import { PhaseBadge, ProjectKeyChip } from "./projects";
 import {
   mapProjectUpdate,
   type Project,
@@ -78,6 +77,7 @@ import {
   useRecordChronology,
 } from "./recordchronology";
 import { RecordEmailVerb } from "./recordemail";
+import { useOwnerPicker } from "./recordreferences";
 import { RecordTeam } from "./recordteam";
 import { ShareAction } from "./share";
 import { TimelineActions } from "./timelineactions";
@@ -351,8 +351,7 @@ function ProjectActions({
   cf: ObjectCustomFields;
 }>) {
   const t = useT();
-  const me = useMe();
-  const companies = useCompanyOptions();
+  const owner = useOwnerPicker(project.owner_id);
   return (
     <>
       {/* A project's mail is a NEW conversation with somebody on the account
@@ -376,8 +375,7 @@ function ProjectActions({
           savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
           fields={[
             ...projectFields(t, {
-              companies,
-              me: me.data?.user.id ?? "",
+              owner,
               currentOwner: project.owner_id ?? null,
               mode: "edit",
             }),

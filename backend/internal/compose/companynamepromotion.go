@@ -134,7 +134,7 @@ func NewCompanyNamePromoter(pool *pgxpool.Pool, log *slog.Logger) *CompanyNamePr
 	return &CompanyNamePromoter{
 		pool:      pool,
 		store:     contacts.NewStore(InstallationDB(pool)),
-		approvals: approvals.NewService(InstallationDB(pool)),
+		approvals: newApprovalsService(InstallationDB(pool)),
 		feedback:  ai.NewFeedbackStore(InstallationDB(pool)),
 		log:       log,
 	}

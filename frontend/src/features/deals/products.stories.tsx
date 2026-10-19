@@ -143,8 +143,14 @@ export const NewProductBilling: Story = {
   play: async ({ canvasElement }) => {
     await pressHeadVerb(canvasElement, "New product");
     const form = within(await within(document.body).findByRole("dialog"));
+    // A cadence only exists beside a recurring price: the form shows no
+    // period for a one-off, which is a question with no answer.
+    await userEvent.click(form.getByRole("combobox", { name: /^Billing/ }));
     await userEvent.click(
-      form.getByRole("combobox", { name: /^Billing period/ }),
+      await within(document.body).findByRole("option", { name: "Recurring" }),
+    );
+    await userEvent.click(
+      await form.findByRole("combobox", { name: /^Billing period/ }),
     );
     await within(document.body).findByRole("option", { name: "Quarterly" });
   },

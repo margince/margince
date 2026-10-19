@@ -96,7 +96,11 @@ function routes(answer: Answer = "view") {
         return new Promise<Response>(() => undefined);
       }
       if (answer === "failed") {
-        return problem(503, "unavailable", "The server is not answering.");
+        return problem(
+          503,
+          "service_unavailable",
+          "The server is not answering.",
+        );
       }
       return answer === "gone"
         ? problem(404, "not_found", "Not found.")
@@ -108,7 +112,7 @@ function routes(answer: Answer = "view") {
         : jsonResponse({ ...VIEW, version: 4 }),
     "GET /filters/vocabulary": () =>
       answer === "fieldsFailed"
-        ? problem(503, "unavailable", "The server is not answering.")
+        ? problem(503, "service_unavailable", "The server is not answering.")
         : jsonResponse(VOCABULARY),
     "POST /filters/preview": () =>
       answer === "readSeat"

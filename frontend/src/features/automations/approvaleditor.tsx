@@ -15,11 +15,12 @@ import {
   type ISODate,
   isISODate,
 } from "../../design-system/dateinput";
+import { DecisionEvidence } from "../../design-system/decisioncard.content";
+import { withoutRepeatedLead } from "../../design-system/decisioncard.payload";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
-import { EvidenceChip } from "../../design-system/trust";
 import { isRealCalendarDay } from "../../format/calendarday";
 import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
@@ -74,34 +75,6 @@ export function editableStrings(
   return Object.entries(change)
     .filter((entry): entry is [string, string] => typeof entry[1] === "string")
     .map(([field]) => ({ field, as: "text" }) as const);
-}
-
-// The per-claim evidence chips, shared by the row and the detail modal (was
-// duplicated verbatim in both). A snippet-less evidence item is dropped.
-//
-// `source_lines` rides along with the snippet rather than being dropped: a
-// proposal read out of a transcript is only checkable if the reader can find
-// the exchange it came from, and a quoted sentence with no address is a claim
-// they have to take on trust.
-function EvidenceList({
-  evidence,
-}: Readonly<{ evidence: Approval["evidence"] }>) {
-  return (
-    <>
-      {evidence?.map((item) =>
-        item.evidence_snippet ? (
-          <EvidenceChip
-            key={`${item.source_id}-${item.evidence_snippet.slice(0, 12)}`}
-            evidence={{
-              snippet: item.evidence_snippet,
-              source: item.source_type ?? "",
-              lines: item.source_lines,
-            }}
-          />
-        ) : null,
-      )}
-    </>
-  );
 }
 
 /**
@@ -193,8 +166,11 @@ function ApprovalDetailBody({
     stagedDayFormatter(locale, zone),
     approvalNames,
     approval.requested_decider_id,
+    approval.assignee_inactive,
   );
-  const named = display.filter((entry) => entry.value !== null);
+  const named = withoutRepeatedLead(display, approval.summary).filter(
+    (entry) => entry.value !== null,
+  );
   // The raw payload is shown ONCE, and where it goes says what it is. A kind
   // that named its fields has already told the reader what the proposal says,
   // so the keys behind that are reference material; a kind that named none has
@@ -215,7 +191,7 @@ function ApprovalDetailBody({
       {askedOn(approval, locale, zone, t).map(([label, value]) => (
         <FieldLine key={label} name={label} value={value} />
       ))}
-      <EvidenceList evidence={approval.evidence} />
+      <DecisionEvidence evidence={approval.evidence} collapsed={false} />
       {named.length > 0 && (
         <Disclosure summary={t("decision.detailTechnical")}>
           <div className="form-stack">{rawPayload}</div>
@@ -362,6 +338,8 @@ function isoOrBlank(staged: string | undefined): ISODate | "" {
  * it does not know what this installation lets a contact change.
  */
 export function StagedEditor({
+  disabled,
+  acceptLabel,
   fields,
   draft,
   onChange,
@@ -369,6 +347,8 @@ export function StagedEditor({
   onApprove,
   onCancel,
 }: Readonly<{
+  disabled?: boolean;
+  acceptLabel?: string;
   fields: readonly EditableField[];
   draft: Record<string, string>;
   onChange: (field: string, value: string) => void;
@@ -434,8 +414,13 @@ export function StagedEditor({
           /* The edited approve is the same write as the plain one and was the
              one path with no gate at all, so a second press sent a second
              verdict. */
-          <Button variant="primary" pending={pending} onClick={onApprove}>
-            {t("decision.approveEdited")}
+          <Button
+            variant="primary"
+            pending={pending}
+            disabled={disabled}
+            onClick={onApprove}
+          >
+            {acceptLabel ?? t("decision.approveEdited")}
           </Button>
         }
       >

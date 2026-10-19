@@ -340,14 +340,14 @@ Custom fields in Margince are fields your company adds to the ones every Marginc
 ### How do I add a custom field?
 To add a custom field in Margince, open Settings → **Fields**, pick the **Object**, and choose **New field**.
 1. Choose the **Object**: Deal, Company, Contact, Lead, Project or Contract.
-2. Choose **New field**, enter a **Label** and pick a **Type**. A picklist needs its choices, and a currency field needs its currency.
+2. Choose **New field**, enter a **Label** and pick a **Type**. A picklist needs its choices, and a currency field needs its currency. Untick **In create forms** to keep the field out of the dialog that creates a record.
 3. Confirm with **Add field**.
-The new field then shows in that record's create and edit forms. Without the right to change fields you see **Read-only settings** at the top of the page. More on fields is in [Settings](settings.md).
-Also called: custom property, extra column, new attribute.
+The new field then shows on the record page, and in the create form unless you unticked it. Without the right to change fields you see **Read-only settings** at the top of the page. More on fields is in [Settings](settings.md).
+Also called: custom property, extra column, new attribute, hide a field on new records.
 
 **Activities cannot hold a custom field.**
 
-Renaming a field changes its label and keeps your reports working.
+Renaming a field changes its label and keeps your reports working. To take a field out of create forms later, turn off its switch under **In create forms**. The record page still shows it, and you can edit it there.
 
 ## Tags
 

@@ -119,6 +119,30 @@ it.each(["company", "contact", "deal", "lead"] as const)(
   },
 );
 
+it("shows and edits a field the create dialogs leave out", async () => {
+  const user = userEvent.setup();
+  const sent = catalog([
+    {
+      ...wiki,
+      label: "Previous owner",
+      column_name: "cf_previous_owner",
+      show_in_create: false,
+    },
+  ]);
+  renderDetails("contact", { cf_previous_owner: "Ada Lovelace" });
+  const change = await screen.findByRole("button", {
+    name: "Change Previous owner",
+  });
+  expect(change.textContent).toBe("Ada Lovelace");
+  await user.click(change);
+  const input = screen.getByRole("textbox", { name: "Previous owner" });
+  await user.clear(input);
+  await user.type(input, "Grace Hopper{Enter}");
+  await waitFor(() =>
+    expect(sent).toEqual([{ cf_previous_owner: "Grace Hopper" }]),
+  );
+});
+
 it("reads and edits a zero-decimal currency in whole units", async () => {
   const user = userEvent.setup();
   const sent = catalog([{ ...budget, currency: "JPY" }]);

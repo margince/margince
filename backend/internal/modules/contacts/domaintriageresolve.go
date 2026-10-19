@@ -125,7 +125,7 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 		return ResolveDomainTriageResult{}, err
 	}
 	if !known {
-		return ResolveDomainTriageResult{}, fmt.Errorf("contacts: %s has no open disposition to resolve", in.Domain)
+		return ResolveDomainTriageResult{}, fmt.Errorf("%w: no open question about %s", apperrors.ErrNotFound, in.Domain)
 	}
 	if prior.Settled() {
 		// Already answered. A worker that resolved this and then died before

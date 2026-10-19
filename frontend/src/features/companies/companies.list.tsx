@@ -77,7 +77,7 @@ export function CompaniesScreen() {
   const pageName = usePageName("companies");
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  const cf = useObjectCustomFields("company");
+  const cf = useObjectCustomFields("company", "create");
   const state = useListQuery<Company>({
     key: "companies",
     initialSort: "-created_at",

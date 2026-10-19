@@ -633,7 +633,7 @@ describe("which employer is the current one", () => {
 
   function employerOrder(): string[] {
     return Array.from(
-      section("Companies").querySelectorAll(".pe-employment-company"),
+      section("Companies").querySelectorAll(".company-card-name"),
     ).map((node) => node.textContent ?? "");
   }
 

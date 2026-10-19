@@ -116,7 +116,7 @@ export function ContractForm({
   // read is in flight and if it never answers, and undefined stays undefined:
   // guessing a unit is the failure this whole pairing exists to prevent.
   const baseCurrency = useInstallationSettings().data?.base_currency;
-  const cf = useObjectCustomFields("contract");
+  const cf = useObjectCustomFields("contract", contract ? "record" : "create");
   // What the custom fields held when this form opened, raw. The patch is a
   // DIFF against it rather than a snapshot of the whole slice: no cf_ column
   // is clearable, so sending every untouched empty field would be sending a

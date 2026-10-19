@@ -1,21 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import {
   Badge,
   Button,
-  Disclosure,
   EmptyState,
   OverflowMenu,
 } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { ScopeChips, scopeChipLabel } from "../../design-system/passportselect";
-import { QueryGate, QueryStates } from "../../design-system/querystates";
-import { SettingList, SettingRow } from "../../design-system/settingrow";
+import { QueryStates } from "../../design-system/querystates";
 import { formatDate } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
@@ -34,135 +31,6 @@ type PassportSummary = components["schemas"]["PassportSummary"];
 type Connection = PassportSummary & {
   connection: NonNullable<PassportSummary["connection"]>;
 };
-
-// The MCP URL as the SERVER states it, read from the RFC 9728 document the
-// connector serves. It is `--public-base-url` + /mcp, the value clients are
-// required to match exactly, so a guide built from it is the command that
-// actually works — the SPA's own origin would only coincide with it.
-//
-// A 404 is not a failure here: the connector is off for this installation
-// (`mcp.connector_enabled`), and the whole route group is absent. That is worth
-// saying plainly instead of printing four commands that cannot connect.
-type ConnectorState =
-  | { readonly enabled: true; readonly url: string }
-  | { readonly enabled: false };
-
-async function fetchConnectorState(): Promise<ConnectorState> {
-  const response = await fetch("/.well-known/oauth-protected-resource", {
-    headers: { accept: "application/json" },
-  });
-  if (response.status === 404) {
-    return { enabled: false };
-  }
-  if (!response.ok) {
-    throw new Error(`discovery answered ${response.status}`);
-  }
-  const document: unknown = await response.json();
-  const resource =
-    typeof document === "object" &&
-    document !== null &&
-    "resource" in document &&
-    typeof document.resource === "string"
-      ? document.resource
-      : "";
-  if (resource === "") {
-    throw new Error("the discovery document names no resource");
-  }
-  return { enabled: true, url: resource };
-}
-
-// One command per client, because "point your agent at the URL" is exactly the
-// instruction contacts cannot act on. All four reach the same place: the client
-// registers itself, and the consent screen asks which of the five scopes to
-// grant.
-//
-// Antigravity is the odd one out only in shape — it has no add command, so its
-// step is the config file its docs name. The OAuth handshake is identical. That
-// caveat is a statement about ONE client, so it travels with that client as its
-// row's `note` rather than as a loose paragraph under all four, where it read as
-// a footnote to the whole guide.
-const CONNECT_GUIDES: readonly Readonly<{
-  id: string;
-  name: string;
-  command: (url: string) => string;
-  note?: MessageKey;
-}>[] = [
-  {
-    id: "claude",
-    name: "Claude Code",
-    command: (url: string) => `claude mcp add --transport http margince ${url}`,
-  },
-  {
-    id: "codex",
-    name: "Codex",
-    command: (url: string) =>
-      `codex mcp add margince --url ${url}\ncodex mcp login margince`,
-  },
-  {
-    id: "gemini",
-    name: "Gemini CLI",
-    command: (url: string) => `gemini mcp add --transport http margince ${url}`,
-  },
-  {
-    id: "antigravity",
-    name: "Antigravity",
-    // ~/.gemini/config/mcp_config.json — `serverUrl` specifically: Antigravity
-    // rejects the `url`/`httpUrl` spellings its siblings accept.
-    command: (url: string) =>
-      `{ "mcpServers": { "margince": { "serverUrl": "${url}" } } }`,
-    note: "agents.connectAntigravityPath",
-  },
-];
-
-// Reference rather than a decision, so it reads last and closed. One client is
-// one stacked row: a 60-character command in a right-hand column is unreadable.
-function ConnectGuide() {
-  const t = useT();
-  const state = useQuery({
-    queryKey: ["mcp-connector-state"],
-    queryFn: fetchConnectorState,
-  });
-  return (
-    <QueryGate query={state} pendingLabel={t("agents.connected")}>
-      {(connector) =>
-        connector.enabled ? (
-          <>
-            <PanelIntro>{t("agents.connectSteps")}</PanelIntro>
-            <SettingList>
-              {CONNECT_GUIDES.map((guide) => (
-                <SettingRow
-                  key={guide.id}
-                  layout="stack"
-                  // A product's own name, never translated — the same reason the
-                  // command is not: both are typed exactly as they are shown.
-                  label={guide.name}
-                  description={guide.note && t(guide.note)}
-                  control={
-                    <code className="agents-guide-command">
-                      {guide.command(connector.url)}
-                    </code>
-                  }
-                />
-              ))}
-            </SettingList>
-          </>
-        ) : (
-          // Nothing to do and nothing to set: the disclosure's one row states the
-          // fact and what still holds despite it. A row rather than two loose
-          // paragraphs, so the sentence a reader who opened this arrives at sits
-          // on the same beat as the rows they came from.
-          <SettingList>
-            <SettingRow
-              label={t("agents.connectorOff")}
-              description={t("agents.connectorOffDetail")}
-              control={null}
-            />
-          </SettingList>
-        )
-      }
-    </QueryGate>
-  );
-}
 
 // A connection ends when revoked, or when its credential runs out and its grant
 // cannot renew. A renewable one past its expiry is only between credentials.
@@ -479,16 +347,6 @@ export function ConnectedAgentsCard() {
           onEnd={disconnect.ask}
         />
       )}
-      <PanelBody>
-        {/* Open by itself only once the read has answered with nothing, so a
-            reader with a connection never sees it flash open. */}
-        <Disclosure
-          summary={t("agents.connectHow")}
-          open={list.isSuccess && connections.length === 0 ? true : undefined}
-        >
-          <ConnectGuide />
-        </Disclosure>
-      </PanelBody>
       {disconnect.confirm}
     </Panel>
   );

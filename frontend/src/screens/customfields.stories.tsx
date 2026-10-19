@@ -10,7 +10,8 @@ import {
   meRoute,
   StoryProviders,
 } from "../testing/story-utils";
-import { CustomFieldsAdmin, FieldBuilder } from "./customfields";
+import { CustomFieldsAdmin } from "./customfields";
+import { FieldBuilder } from "./customfields.builder";
 
 // The custom-fields admin sub-components rendered with direct props so the
 // fe-uat render lane exercises them without a network round-trip. FieldBuilder
@@ -36,6 +37,7 @@ const field = (over: Partial<CustomField> = {}): CustomField => ({
   type: "date",
   status: "active",
   column_name: "cf_renewal_date",
+  show_in_create: true,
   created_by: "u1",
   created_at: "2026-06-22T14:09:00Z",
   updated_at: "2026-06-22T14:09:00Z",

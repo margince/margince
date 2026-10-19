@@ -118,6 +118,9 @@ type FieldSpec struct {
 	Currency *string
 	Options  []string
 	Source   string
+	// ShowInCreate nil means the catalog default (true), so a spec written
+	// before the setting existed keeps creating fields the create dialogs offer.
+	ShowInCreate *bool
 }
 
 // FieldError is one field-level validation failure, matching the contract's
@@ -140,6 +143,9 @@ const (
 	fieldOptions  = "options"
 	fieldSource   = "source"
 	fieldStatus   = "status"
+	fieldShow     = "show_in_create"
+	fieldSlug     = "slug"
+	fieldColumn   = "column_name"
 	codeRequired  = "required"
 
 	// codeInvalidCharacters flags a picklist option carrying a NUL byte or

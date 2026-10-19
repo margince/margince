@@ -100,6 +100,7 @@ func base(
 		// label is what the group says. Forwarding only the first is how the
 		// client came to interpolate an identity into a sentence.
 		CauseLabel: item.CauseLabel,
+		AiTask:     item.AiTask,
 		Connection: item.Connection,
 		Subject:    item.Subject,
 		// Carried so the worklist's duty dialog shows what the deadline rests on.

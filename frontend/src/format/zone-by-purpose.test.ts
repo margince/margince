@@ -150,6 +150,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Weekday names are generated from fixed Monday-through-Sunday UTC instants; these are locale labels, not event or record dates.",
   },
   {
+    file: "features/automations/connect-ai-tool.test.tsx",
+    why: "The admin guide dates a calendar day; a viewer at UTC+14 is where a day handled as an instant would print the next one.",
+  },
+  {
     file: "features/booking/book.testkit.ts",
     why: "The booking API fixture supplies the host’s effective working-hours timezone independently of the viewer’s zone, so the form can show the actual calendar policy.",
   },
@@ -232,6 +236,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "features/brief/brief.readings.test.tsx",
     why: "The case is that a date-only period reads as the SAME days for every colleague, and proving it needs three named zones at once: the installation's, which the tile must follow, and a viewer's on either side of UTC. A zone taken off the runner would decide whether the bug can appear at all — east of UTC a viewer-zone read prints the right days by luck, so the assertion would pass over code that is wrong for half the world. The installation's zone is supplied through RecordZoneProvider, the seam the product itself reads.",
+  },
+  {
+    file: "features/automations/approvalevidence.test.tsx",
+    why: "The source date must use the configured record zone. The test supplies a named zone through RecordZoneProvider and checks the date against it, independent of the browser zone.",
   },
   {
     file: "features/brief/brief.weekly.test.tsx",

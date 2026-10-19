@@ -14,9 +14,11 @@ describe("reading a problem body", () => {
   });
 
   it("reads the details object, and nothing that is not one", () => {
-    expect(problemDetails({ code: "x", details: { a: 1 } })).toEqual({ a: 1 });
-    expect(problemDetails({ code: "x", details: [1] })).toBeNull();
-    expect(problemDetails({ code: "x" })).toBeNull();
+    expect(problemDetails({ code: "conflict", details: { a: 1 } })).toEqual({
+      a: 1,
+    });
+    expect(problemDetails({ code: "conflict", details: [1] })).toBeNull();
+    expect(problemDetails({ code: "conflict" })).toBeNull();
     expect(problemDetails("<html>502</html>")).toBeNull();
   });
 

@@ -441,122 +441,12 @@
   display: block;
 }
 
-/* Employers: the same name-over-proof anatomy as `.pe-colleague`, ruled
-   between entries the way `.pe-rail-row` rules between readings — a list
-   of edges, not a single fact, so it needs the same separator the rail's
-   other lists already use. The row is also the hover/focus scope for its
-   own overflow menu below. */
-/* The connection on the left, its verbs at the far right — the trigger sits at
-   the row's end because its menu opens back towards the record it belongs to.
-   Anchored under the company name instead, the menu would open away from the page
-   and off the edge of the column. */
-/* One employer is one card, and the whole card opens the company: the name
-   is the link, and its hit area is stretched over the card (the ::after
-   below), so a reader who presses the logo or the counts lands on the same
-   page as one who presses the name. The row's own controls (the role's
-   inline edit, the verbs) sit above the stretched link so they keep their
-   own press. */
-.pe-employment {
-  position: relative;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: start;
-  gap: var(--space-2) var(--space-3);
-  padding: var(--padCard);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  background: var(--bgElevated);
-}
-.pe-employment:hover {
-  background: var(--bgHover);
-}
-.pe-employment + .pe-employment {
-  margin-top: var(--space-2);
-}
-.pe-employment-company > .pe-meta-link::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-}
-.pe-employment-role,
-.pe-employment-actions,
-.pe-employment-company > .evmark {
-  position: relative;
-  z-index: 1;
-}
-
-/* The employer's mark, sized by this wrapper rather than by CompanyLogo
-   itself: "the caller owns the slot's dimensions" is that component's own
-   rule (design-system/companylogo.css). Empty and unrendered for a second
-   row naming the same company (`showCompany` false): the grid still gets
-   this column so every row's name and role line up under one another
-   whether or not that row carries a mark. */
-.pe-employment-logo {
-  width: 32px;
-  height: 32px;
-}
-
-/* `.company-logo`'s own rule is that its caller owns the slot's dimensions
-   (design-system/companylogo.css); it does not size itself, so without this
-   the mark and its monogram fallback collapse to their own content box
-   rather than filling the 32px this wrapper reserves, and a resolved logo's
-   absolutely-positioned image sizes against a zero-height box and never
-   paints at all. The same pairing `.company-logo-preview .company-logo`
-   uses for its own sized slot. */
-.pe-employment-logo .company-logo {
-  width: 100%;
-  height: 100%;
-}
-
-.pe-employment-company {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-.pe-employment-company > .pe-meta-link {
-  text-align: start;
-}
-
-/* Contacts and open deals, under the company name: a fact about the
-   employer rather than about this edge, so it sits above the role rather
-   than beside it. */
-.pe-employment-facts {
-  display: block;
-}
-
 /* The role sits under the company name, on its own line — it is the ONE thing
-   in this row that is a control (InlineText), so it gets its own line
+   in an employer card that is a control (InlineText), so it gets its own line
    rather than fighting the company name and its badge for space. */
 .pe-employment-role {
   display: block;
   margin-top: var(--space-1);
-}
-
-/* The row's own verbs, folded behind an overflow trigger — this row already
-   holds a focusable inline-edit control, so a rarely-used "mark as ended" or
-   "remove" sitting in plain view beside it competes for attention the role
-   edit deserves more. Hidden until the row is hovered or something inside it
-   (the role field, the trigger itself) has focus — the same reveal
-   company360.css's `.co-task-verbs` uses for its own row verbs. */
-.pe-employment-body {
-  display: block;
-  min-width: 0;
-}
-
-.pe-employment-actions {
-  opacity: 0;
-}
-.pe-employment:hover .pe-employment-actions,
-.pe-employment:focus-within .pe-employment-actions {
-  opacity: 1;
-}
-/* A coarse pointer has no hover to reveal the trigger with, and nothing else
-   on the row asks for keyboard focus first — so it stays on. */
-@media (hover: none) {
-  .pe-employment-actions {
-    opacity: 1;
-  }
 }
 
 /* Signals: a coloured dot the row's tone comes from, then the finding. */
@@ -1044,10 +934,10 @@
   }
 }
 
-/* One deal on the Deals tab, in the employer card's own family (`.pe-employment`
-   above): a bordered plate rather than a bare row, because this card now
-   carries more than a title and a stage: the money, the stage, the close
-   date and the company, fetched per card. */
+/* One deal on the Deals tab, in the employer card's own family
+   (`.company-card`): a bordered plate rather than a bare row, because this
+   card now carries more than a title and a stage: the money, the stage, the
+   close date and the company, fetched per card. */
 .pe-deal-card {
   position: relative;
   display: flex;
@@ -1070,7 +960,7 @@
   font-weight: var(--fontWeightMedium);
 }
 
-/* The stretched-link pattern `.pe-employment` already uses: the title's own
+/* The stretched-link pattern `.company-card` already uses: the title's own
    link grows to cover the whole card, so the seat and the figures beside it
    are reachable from anywhere on the plate rather than from one line of text. */
 .pe-deal-card-title > .pe-meta-link::after {

@@ -212,18 +212,18 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
         });
       }
       if (url.includes("/leads/assign-bulk")) {
-        return new Response(
-          JSON.stringify({
-            title: "Unprocessable",
+        return jsonResponse(
+          {
+            title: "Unprocessable Entity",
             status: 422,
-            code: "owner_not_assignable",
+            code: "validation_error",
             detail:
               "the owner must be an active colleague you may assign work to",
-          }),
-          {
-            status: 422,
-            headers: { "content-type": "application/problem+json" },
+            details: {
+              errors: [{ field: "owner_id", code: "owner_not_assignable" }],
+            },
           },
+          422,
         );
       }
       return jsonResponse({

@@ -36,6 +36,10 @@ func TestAHumanDownloadsTheSkillAndAPassportIsRefusedIt(t *testing.T) {
 	if spec := zipFile(t, body, "margince/openapi.yaml"); !strings.Contains(spec, "url: "+want+"\n") {
 		t.Errorf("openapi.yaml does not name %s as its server", want)
 	}
+	// The harness leaves the connector off, so the README names no address for it.
+	if readme := zipFile(t, body, "margince/README.md"); strings.Contains(readme, "/mcp") {
+		t.Error("README.md names a connector address while the connector is off")
+	}
 	status, header, body = getRaw(t, e, "/v1/passports", nil)
 	if status != http.StatusOK {
 		t.Fatalf("GET /v1/passports → %d", status)
@@ -148,4 +152,22 @@ func zipFile(t *testing.T, archive []byte, name string) string {
 		t.Fatalf("closing %s: %v", name, err)
 	}
 	return string(body)
+}
+
+func TestTheSkillReadmeLeadsWithTheConnectorAddressWhileItIsOn(t *testing.T) {
+	var resource string
+	e := apptest.SetupAppWithOriginOptions(t, func(origin string) []compose.Option {
+		resource = origin + "/mcp"
+		return []compose.Option{compose.WithMCPConnector(), compose.WithMCPResource(resource)}
+	})
+	e.BootstrapWorkspace(t)
+
+	status, _, body := getRaw(t, e, "/v1/agent-bundle", nil)
+	if status != http.StatusOK {
+		t.Fatalf("human GET /v1/agent-bundle → %d, want 200", status)
+	}
+	readme := zipFile(t, body, "margince/README.md")
+	if !strings.Contains(readme, "claude mcp add --transport http margince "+resource) {
+		t.Errorf("README.md does not lead the reader to the connector at %s", resource)
+	}
 }

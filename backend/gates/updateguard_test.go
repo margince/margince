@@ -258,7 +258,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// Writes that run UNDER a lock taken by their caller (or a lock the
 	// function's own helper mints) — the guard exists, one frame up.
 	"internal/modules/approvals:applyEditedPayload": "runs only inside decideInTx, after its FOR UPDATE lock on the approval row",
-	"internal/modules/customfields:Rename":          "runs under the catalog row lock minted by lockField (FOR UPDATE before every decision read), with the If-Match version checked under that lock",
+	"internal/modules/customfields:Update":          "runs under the catalog row lock minted by lockField (FOR UPDATE before every decision read), with the If-Match version checked under that lock",
 	"internal/modules/customfields:Retire":          "runs under the catalog row lock minted by lockField (FOR UPDATE before every decision read); the flip is an absolute idempotent transition besides",
 	"internal/modules/customfields:setOptionsInTx":  "runs under the catalog row lock minted by lockPicklistField (FOR UPDATE before every decision read), plus the per-table advisory lock serializeSchemaChange mints",
 	"internal/modules/deals:UpdateOfferLineItem":    "runs under the parent offer's row lock taken by visibleOfferLocked, which serializes every line edit",

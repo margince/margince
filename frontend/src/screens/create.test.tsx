@@ -800,6 +800,7 @@ describe("the record dialog's shape", () => {
     type: "text",
     status: "active",
     column_name: `cf_${slug}`,
+    show_in_create: true,
     created_by: "u1",
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
@@ -825,6 +826,24 @@ describe("the record dialog's shape", () => {
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByLabelText("tier")).toBeTruthy();
     expect(dialog.className).toContain("modal-drawer");
+  });
+
+  it("leaves out a custom field kept off create forms", async () => {
+    const user = userEvent.setup();
+    stubApi({
+      "GET /custom-fields": () =>
+        jsonResponse({
+          data: [
+            customField("tier"),
+            { ...customField("previous_owner"), show_in_create: false },
+          ],
+        }),
+    });
+    render(<CompaniesScreen />);
+    await user.click(await screen.findByText(en["create.company"]));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByLabelText("tier")).toBeTruthy();
+    expect(within(dialog).queryByLabelText("previous_owner")).toBeNull();
   });
 
   it("opens with the core fields when the custom-field read fails", async () => {
