@@ -10,28 +10,16 @@
   "totals": {
     "tools": 37,
     "resources": 9,
-<<<<<<< HEAD
-    "tool_catalog_bytes": 124607,
+    "tool_catalog_bytes": 125180,
     "resource_catalog_bytes": 3588,
-    "approx_wire_tokens_total": 32048,
-=======
-    "tool_catalog_bytes": 125122,
-    "resource_catalog_bytes": 3588,
-    "approx_wire_tokens_total": 32177,
->>>>>>> c4cfee4b6 (fix(worklist): keep follow-up tasks connected to their source)
+    "approx_wire_tokens_total": 32192,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 32245,
-<<<<<<< HEAD
-      "input_schema_bytes": 58261,
+      "input_schema_bytes": 58834,
       "output_schema_bytes": 25189,
-      "description_plus_input_schema_bytes": 90506
-=======
-      "input_schema_bytes": 58776,
-      "output_schema_bytes": 25189,
-      "description_plus_input_schema_bytes": 91021
->>>>>>> c4cfee4b6 (fix(worklist): keep follow-up tasks connected to their source)
+      "description_plus_input_schema_bytes": 91079
     }
   },
   "tools": {
