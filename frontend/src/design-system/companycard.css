@@ -1,0 +1,88 @@
+/* One company is one card, and the whole card opens the company: the name is
+   the link, and its hit area is stretched over the card (the ::after below),
+   so a reader who presses the logo or the counts lands on the same page as
+   one who presses the name. The card's own controls (a role's inline edit, the
+   verbs) sit above the stretched link so they keep their own press. */
+.company-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--padCard);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+}
+.company-card:hover {
+  background: var(--bgHover);
+}
+.company-card + .company-card {
+  margin-top: var(--space-2);
+}
+.company-card-name > :is(a, button)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.company-card-name > :is(a, button) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accentText);
+  cursor: pointer;
+  text-align: start;
+}
+.company-card-name > :is(a, button):hover {
+  text-decoration: underline;
+}
+.company-card-body > :not(.company-card-name, .company-card-facts),
+.company-card-actions,
+.company-card-name > :not(:first-child) {
+  position: relative;
+  z-index: 1;
+}
+
+/* Sized by this wrapper rather than by CompanyLogo, whose caller owns the
+   slot's dimensions. The column stays when empty so every card's name lines
+   up under the others'. */
+.company-card-logo {
+  width: 32px;
+  height: 32px;
+}
+.company-card-logo .company-logo {
+  width: 100%;
+  height: 100%;
+}
+
+.company-card-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.company-card-body {
+  display: block;
+  min-width: 0;
+}
+.company-card-facts {
+  display: block;
+}
+
+/* The verbs wait behind hover or focus so a rarely-used one does not compete
+   with the card's own controls. A coarse pointer has no hover, so it stays on. */
+.company-card-actions {
+  opacity: 0;
+}
+.company-card:hover .company-card-actions,
+.company-card:focus-within .company-card-actions {
+  opacity: 1;
+}
+@media (hover: none) {
+  .company-card-actions {
+    opacity: 1;
+  }
+}

@@ -13,7 +13,7 @@
 // the verbs, the empty state, the confirm, the pending and refused states — is
 // here, so every record page says it the same way.
 
-import { type ReactNode, useRef, useState } from "react";
+import { Fragment, type ReactNode, useRef, useState } from "react";
 
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -98,6 +98,14 @@ export type ProjectLinksAdapter = Readonly<{
   // callback: the create form, its fields and its write are the page's, and a
   // callback would leave this section owning a button with no form behind it.
   create?: ReactNode;
+  // Draw each linked record as the caller's own card instead of the plain row,
+  // for a link whose target is a record worth a mark and facts of its own (a
+  // company). `onDetach` is absent when this row's link cannot be removed from
+  // here, so the card shows no verb.
+  card?: (
+    linked: LinkedProject,
+    onDetach: (() => void) | undefined,
+  ) => ReactNode;
 }>;
 
 export function ProjectLinks({
@@ -197,31 +205,7 @@ export function ProjectLinks({
         )}
       </PanelBody>
     ) : (
-      adapter.linked.map((project) => (
-        <PanelRow key={project.project_id}>
-          <div className="pl-row">
-            <a href={project.href ?? `#/projects/${project.project_id}`}>
-              {project.name}
-            </a>
-            {project.key && <span>{project.key}</span>}
-            {project.phase}
-            {adapter.detach && !adapter.readOnly && (
-              <Button
-                variant="ghost"
-                onClick={() => setDetaching(project)}
-                // Every row's verb reads the same to the eye and must not to
-                // a screen reader: a button list of five "Detach" entries
-                // cannot say which record each one takes off.
-                aria-label={t("projectLinks.detachNamed", {
-                  name: project.name,
-                })}
-              >
-                {t("projectLinks.detach")}
-              </Button>
-            )}
-          </div>
-        </PanelRow>
-      ))
+      <LinkedRows adapter={adapter} onDetach={setDetaching} />
     );
   const dialogs = (
     <>
@@ -276,6 +260,57 @@ export function ProjectLinks({
       </Panel>
     </div>
   );
+}
+
+// One row per linked record, as the caller's card when it supplies one and as
+// the plain row otherwise. A row draws its detach verb only when the adapter
+// offers one and the record is writable.
+function LinkedRows({
+  adapter,
+  onDetach: detach,
+}: Readonly<{
+  adapter: ProjectLinksAdapter;
+  onDetach: (project: LinkedProject) => void;
+}>) {
+  const t = useT();
+  const onDetach = adapter.detach && !adapter.readOnly ? detach : undefined;
+  if (adapter.card) {
+    return (
+      <PanelBody>
+        {adapter.linked.map((project) => (
+          <Fragment key={project.project_id}>
+            {adapter.card?.(
+              project,
+              onDetach ? () => onDetach(project) : undefined,
+            )}
+          </Fragment>
+        ))}
+      </PanelBody>
+    );
+  }
+  return adapter.linked.map((project) => (
+    <PanelRow key={project.project_id}>
+      <div className="pl-row">
+        <a href={project.href ?? `#/projects/${project.project_id}`}>
+          {project.name}
+        </a>
+        {project.key && <span>{project.key}</span>}
+        {project.phase}
+        {onDetach && (
+          <Button
+            variant="ghost"
+            onClick={() => onDetach(project)}
+            // Every row's verb reads the same to the eye and must not to
+            // a screen reader: a button list of five "Detach" entries
+            // cannot say which record each one takes off.
+            aria-label={t("projectLinks.detachNamed", { name: project.name })}
+          >
+            {t("projectLinks.detach")}
+          </Button>
+        )}
+      </div>
+    </PanelRow>
+  ));
 }
 
 // The pick dialog, lifted out of the section: it carries a role, a search and a
