@@ -6,6 +6,7 @@ import { useState } from "react";
 import { DateFormatsProvider } from "../../app/dateformats";
 import { defaultOperations } from "../../screens/operationsettings.fixtures";
 import { StoryProviders } from "../../testing/story-utils";
+import { REPORTING_FIXTURE_ZONE } from "../analytics/reporting.fixtures";
 import { defaultAgentAllowances } from "../automations/agentallowances.fixtures";
 import type { InstallationSettings } from "./installation-settings";
 import { InstallationProfileDialog } from "./installation-settings.profile";
@@ -21,7 +22,7 @@ const SETTINGS: InstallationSettings = {
   operations: defaultOperations,
   agent_allowances: defaultAgentAllowances,
   forecast_forward_measure: "commit_evidence",
-  timezone: "Europe/Berlin",
+  timezone: REPORTING_FIXTURE_ZONE,
   base_currency: "EUR",
   date_format: "dmy",
   time_format: "24h",
