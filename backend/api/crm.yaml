@@ -21792,8 +21792,6 @@ paths:
         - name: team_ids
           in: query
           required: false
-          explode: false
-          style: form
           schema:
             type: array
             maxItems: 20

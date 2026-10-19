@@ -156,6 +156,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `providercategoryallowlist_test.go` | H2 | The allow-list of provider-defined containers lives in two places (the CHECK on capture\_exclusion and the Go the writer consults), and the two must agree. |
 | `providername_test.go` | H2 | The rule a registered name must satisfy is the contract's, on both surfaces that have one. |
 | `publicevents_test.go` | H3 | The outbound-webhook surface has three moving parts that must stay in lock-step, and nothing in the build forces them to. |
+| `queryparamexplode_test.go` | H2 | Every query parameter in crm.yaml is encoded the way the frontend client sends it. |
 | `rbacvocabulary_test.go` | H3 | The RBAC vocabulary is declared in the contract and restated in Go, and the two must not drift. |
 | `regionalformats_test.go` | H3 | The store validates through the generated read enum. |
 | `reopenconditionparity_test.go` | H3 | What a snooze may wait for is spelled in four places, and all four must agree. |

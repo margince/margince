@@ -111352,7 +111352,7 @@ func (siw *ServerInterfaceWrapper) PreviewAccess(w http.ResponseWriter, r *http.
 
 	// ------------- Optional query parameter "team_ids" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", false, false, "team_ids", r.URL.Query(), &params.TeamIds, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "team_ids", r.URL.Query(), &params.TeamIds, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {
