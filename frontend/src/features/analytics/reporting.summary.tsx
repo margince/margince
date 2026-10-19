@@ -190,8 +190,8 @@ function headlineBasis(
   return reportingPeriodLabel(context.interval, context.timezone, locale);
 }
 
-// The forecast landing is a projection rather than a sum of records, so its
-// evidence is the Forecast section, where its parts open their own deals.
+// The forecast landing is a projection, not a sum of records. Its evidence is
+// the Forecast section, where each part opens its own deals.
 function headlineOpen(
   metric: ReportingEvaluation["metrics"][number],
   onEvidence: (reference: ReportingEvidenceRef) => void,
