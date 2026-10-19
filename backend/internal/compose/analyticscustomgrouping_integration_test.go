@@ -23,8 +23,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// A deal with no territory is a group of its own, after the named ones, and
-// the groups add up to every deal: none is counted twice or dropped.
+// A deal with no territory is a group of its own, after the named ones. The
+// groups add up to every deal: none is counted twice or dropped.
 func TestGroupingByACustomFieldCountsEveryDealOnce(t *testing.T) {
 	e := integration.Setup(t)
 	fixture := territoryDeals(t, e)
@@ -62,8 +62,8 @@ func TestGroupingByACustomFieldCountsEveryDealOnce(t *testing.T) {
 	}
 }
 
-// Once a field leaves reports, every door that asks a question names it in one
-// refusal: a direct run, the analytics tool, and a saved question asked again.
+// Once a field leaves reports, every door that asks a question gives one
+// refusal. The doors are a direct run, the analytics tool and a saved question.
 func TestEveryDoorRefusesAFieldThatLeftReportsTheSameWay(t *testing.T) {
 	e := integration.Setup(t)
 	catalog, field := territoryField(t, e)

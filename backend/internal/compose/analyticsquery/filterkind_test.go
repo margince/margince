@@ -101,8 +101,8 @@ func TestAnUnknownFilterNameSuggestsEveryFilterableField(t *testing.T) {
 	}
 }
 
-// A custom field the vocabulary lacks was taken out of reports or retired, so
-// the refusal says how to repair the question, as a grouping and as a filter.
+// A custom field the vocabulary lacks was taken out of reports or retired. The
+// refusal says how to repair the question, as a grouping and as a filter.
 func TestACustomFieldOutsideReportsIsRefusedWithItsRepair(t *testing.T) {
 	t.Parallel()
 	for name, q := range map[string]Query{
