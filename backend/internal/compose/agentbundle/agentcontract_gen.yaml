@@ -17102,6 +17102,12 @@ components:
         archived_at:
           type: string
           format: date-time
+        draft_revision:
+          type: integer
+          format: int64
+          description: |-
+            The unpublished draft revision, shown only to an editor of the report. Absent when there
+            is no draft. Evaluate it with `revision` to preview it.
     ReportingTargetInput:
       type: object
       additionalProperties: false

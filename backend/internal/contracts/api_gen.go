@@ -15181,6 +15181,27 @@ func (e ReportingReportInputAudience) Valid() bool {
 	}
 }
 
+// Defines values for ReportingReportRevisionState.
+const (
+	ReportingReportRevisionStateDraft     ReportingReportRevisionState = "draft"
+	ReportingReportRevisionStateEarlier   ReportingReportRevisionState = "earlier"
+	ReportingReportRevisionStatePublished ReportingReportRevisionState = "published"
+)
+
+// Valid indicates whether the value is a known member of the ReportingReportRevisionState enum.
+func (e ReportingReportRevisionState) Valid() bool {
+	switch e {
+	case ReportingReportRevisionStateDraft:
+		return true
+	case ReportingReportRevisionStateEarlier:
+		return true
+	case ReportingReportRevisionStatePublished:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReportingScheduleInputFrequency.
 const (
 	ReportingScheduleInputFrequencyMonthly ReportingScheduleInputFrequency = "monthly"
@@ -45780,8 +45801,12 @@ type ReportingReport struct {
 	Cadence *string `json:"cadence,omitempty"`
 
 	// CanManage Whether the current human may manage this report, before individual object-action grants.
-	CanManage           *bool              `json:"can_manage,omitempty"`
-	CreatedAt           time.Time          `json:"created_at"`
+	CanManage *bool     `json:"can_manage,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// DraftRevision The unpublished draft revision, shown only to an editor of the report. Absent when there
+	// is no draft. Evaluate it with `revision` to preview it.
+	DraftRevision       *int64             `json:"draft_revision,omitempty"`
 	EditionCount        *int               `json:"edition_count,omitempty"`
 	Id                  openapi_types.UUID `json:"id"`
 	LastStatus          *string            `json:"last_status,omitempty"`
@@ -45798,6 +45823,11 @@ type ReportingReport struct {
 // ReportingReportAudience defines model for ReportingReport.Audience.
 type ReportingReportAudience string
 
+// ReportingReportDraftInput defines model for ReportingReportDraftInput.
+type ReportingReportDraftInput struct {
+	Selection ReportingSelection `json:"selection"`
+}
+
 // ReportingReportInput defines model for ReportingReportInput.
 type ReportingReportInput struct {
 	Audience       ReportingReportInputAudience `json:"audience"`
@@ -45813,6 +45843,24 @@ type ReportingReportInputAudience string
 type ReportingReportList struct {
 	Data       []ReportingReport `json:"data"`
 	NextCursor *string           `json:"next_cursor,omitempty"`
+}
+
+// ReportingReportRevision defines model for ReportingReportRevision.
+type ReportingReportRevision struct {
+	CreatedAt time.Time          `json:"created_at"`
+	CreatedBy openapi_types.UUID `json:"created_by"`
+	Revision  int64              `json:"revision"`
+
+	// State The draft, the revision readers see, or one published before it.
+	State ReportingReportRevisionState `json:"state"`
+}
+
+// ReportingReportRevisionState The draft, the revision readers see, or one published before it.
+type ReportingReportRevisionState string
+
+// ReportingReportRevisionList defines model for ReportingReportRevisionList.
+type ReportingReportRevisionList struct {
+	Data []ReportingReportRevision `json:"data"`
 }
 
 // ReportingSchedule defines model for ReportingSchedule.
@@ -53722,6 +53770,21 @@ type UpdateReportingReportParams struct {
 	IfMatch string `json:"If-Match"`
 }
 
+// DiscardReportingReportDraftParams defines parameters for DiscardReportingReportDraft.
+type DiscardReportingReportDraftParams struct {
+	IfMatch string `json:"If-Match"`
+}
+
+// SaveReportingReportDraftParams defines parameters for SaveReportingReportDraft.
+type SaveReportingReportDraftParams struct {
+	IfMatch string `json:"If-Match"`
+}
+
+// PublishReportingReportDraftParams defines parameters for PublishReportingReportDraft.
+type PublishReportingReportDraftParams struct {
+	IfMatch string `json:"If-Match"`
+}
+
 // ListReportingEditionsParams defines parameters for ListReportingEditions.
 type ListReportingEditionsParams struct {
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
@@ -53742,6 +53805,11 @@ type EvaluateReportingReportParams struct {
 type ListReportingExecutionsParams struct {
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// RestoreReportingReportRevisionParams defines parameters for RestoreReportingReportRevision.
+type RestoreReportingReportRevisionParams struct {
+	IfMatch string `json:"If-Match"`
 }
 
 // UpdateReportingScheduleParams defines parameters for UpdateReportingSchedule.
@@ -59906,6 +59974,9 @@ type RenderAnalyticsReportJSONRequestBody = ReportDocument
 
 // UpdateReportingReportJSONRequestBody defines body for UpdateReportingReport for application/json ContentType.
 type UpdateReportingReportJSONRequestBody = ReportingReportInput
+
+// SaveReportingReportDraftJSONRequestBody defines body for SaveReportingReportDraft for application/json ContentType.
+type SaveReportingReportDraftJSONRequestBody = ReportingReportDraftInput
 
 // CreateReportingScheduleJSONRequestBody defines body for CreateReportingSchedule for application/json ContentType.
 type CreateReportingScheduleJSONRequestBody = ReportingScheduleInput
@@ -72294,6 +72365,15 @@ type ServerInterface interface {
 	// Update reporting report
 	// (PATCH /analytics/reports/{id})
 	UpdateReportingReport(w http.ResponseWriter, r *http.Request, id Id, params UpdateReportingReportParams)
+	// Discard a reporting report draft
+	// (DELETE /analytics/reports/{id}/draft)
+	DiscardReportingReportDraft(w http.ResponseWriter, r *http.Request, id Id, params DiscardReportingReportDraftParams)
+	// Save a reporting report draft
+	// (PUT /analytics/reports/{id}/draft)
+	SaveReportingReportDraft(w http.ResponseWriter, r *http.Request, id Id, params SaveReportingReportDraftParams)
+	// Publish a reporting report draft
+	// (POST /analytics/reports/{id}/draft/publish)
+	PublishReportingReportDraft(w http.ResponseWriter, r *http.Request, id Id, params PublishReportingReportDraftParams)
 	// List reporting editions
 	// (GET /analytics/reports/{id}/editions)
 	ListReportingEditions(w http.ResponseWriter, r *http.Request, id Id, params ListReportingEditionsParams)
@@ -72306,6 +72386,12 @@ type ServerInterface interface {
 	// List reporting executions
 	// (GET /analytics/reports/{id}/executions)
 	ListReportingExecutions(w http.ResponseWriter, r *http.Request, id Id, params ListReportingExecutionsParams)
+	// List reporting report revisions
+	// (GET /analytics/reports/{id}/revisions)
+	ListReportingReportRevisions(w http.ResponseWriter, r *http.Request, id Id)
+	// Restore a reporting report revision
+	// (POST /analytics/reports/{id}/revisions/{revision}/restore)
+	RestoreReportingReportRevision(w http.ResponseWriter, r *http.Request, id Id, revision int64, params RestoreReportingReportRevisionParams)
 	// List reporting schedules
 	// (GET /analytics/reports/{id}/schedules)
 	ListReportingSchedules(w http.ResponseWriter, r *http.Request, id Id)
@@ -75162,6 +75248,24 @@ func (_ Unimplemented) UpdateReportingReport(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Discard a reporting report draft
+// (DELETE /analytics/reports/{id}/draft)
+func (_ Unimplemented) DiscardReportingReportDraft(w http.ResponseWriter, r *http.Request, id Id, params DiscardReportingReportDraftParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Save a reporting report draft
+// (PUT /analytics/reports/{id}/draft)
+func (_ Unimplemented) SaveReportingReportDraft(w http.ResponseWriter, r *http.Request, id Id, params SaveReportingReportDraftParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Publish a reporting report draft
+// (POST /analytics/reports/{id}/draft/publish)
+func (_ Unimplemented) PublishReportingReportDraft(w http.ResponseWriter, r *http.Request, id Id, params PublishReportingReportDraftParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List reporting editions
 // (GET /analytics/reports/{id}/editions)
 func (_ Unimplemented) ListReportingEditions(w http.ResponseWriter, r *http.Request, id Id, params ListReportingEditionsParams) {
@@ -75183,6 +75287,18 @@ func (_ Unimplemented) EvaluateReportingReport(w http.ResponseWriter, r *http.Re
 // List reporting executions
 // (GET /analytics/reports/{id}/executions)
 func (_ Unimplemented) ListReportingExecutions(w http.ResponseWriter, r *http.Request, id Id, params ListReportingExecutionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List reporting report revisions
+// (GET /analytics/reports/{id}/revisions)
+func (_ Unimplemented) ListReportingReportRevisions(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Restore a reporting report revision
+// (POST /analytics/reports/{id}/revisions/{revision}/restore)
+func (_ Unimplemented) RestoreReportingReportRevision(w http.ResponseWriter, r *http.Request, id Id, revision int64, params RestoreReportingReportRevisionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -84009,6 +84125,186 @@ func (siw *ServerInterfaceWrapper) UpdateReportingReport(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// DiscardReportingReportDraft operation middleware
+func (siw *ServerInterfaceWrapper) DiscardReportingReportDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DiscardReportingReportDraftParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DiscardReportingReportDraft(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveReportingReportDraft operation middleware
+func (siw *ServerInterfaceWrapper) SaveReportingReportDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SaveReportingReportDraftParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveReportingReportDraft(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PublishReportingReportDraft operation middleware
+func (siw *ServerInterfaceWrapper) PublishReportingReportDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PublishReportingReportDraftParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PublishReportingReportDraft(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListReportingEditions operation middleware
 func (siw *ServerInterfaceWrapper) ListReportingEditions(w http.ResponseWriter, r *http.Request) {
 
@@ -84236,6 +84532,107 @@ func (siw *ServerInterfaceWrapper) ListReportingExecutions(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListReportingExecutions(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListReportingReportRevisions operation middleware
+func (siw *ServerInterfaceWrapper) ListReportingReportRevisions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReportingReportRevisions(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreReportingReportRevision operation middleware
+func (siw *ServerInterfaceWrapper) RestoreReportingReportRevision(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "revision" -------------
+	var revision int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "revision", chi.URLParam(r, "revision"), &revision, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "revision", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RestoreReportingReportRevisionParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreReportingReportRevision(w, r, id, revision, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -116188,6 +116585,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/analytics/reports/{id}", wrapper.UpdateReportingReport)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/analytics/reports/{id}/draft", wrapper.DiscardReportingReportDraft)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/analytics/reports/{id}/draft", wrapper.SaveReportingReportDraft)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/reports/{id}/draft/publish", wrapper.PublishReportingReportDraft)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/reports/{id}/editions", wrapper.ListReportingEditions)
 	})
 	r.Group(func(r chi.Router) {
@@ -116198,6 +116604,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/reports/{id}/executions", wrapper.ListReportingExecutions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/reports/{id}/revisions", wrapper.ListReportingReportRevisions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/reports/{id}/revisions/{revision}/restore", wrapper.RestoreReportingReportRevision)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/reports/{id}/schedules", wrapper.ListReportingSchedules)

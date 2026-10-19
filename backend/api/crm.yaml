@@ -12397,6 +12397,175 @@ paths:
       x-agent-access: human-only
       security:
       - cookieAuth: []
+  /analytics/reports/{id}/draft:
+    parameters: *id016
+    put:
+      tags:
+      - Reports
+      operationId: saveReportingReportDraft
+      summary: Save a reporting report draft
+      description: Saves the next revision as a draft that only the report's editors see. Readers keep the published revision. A second save replaces the draft.
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingReport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: If-Match
+        in: header
+        required: true
+        schema: { type: string }
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportingReportDraftInput'
+    delete:
+      tags:
+      - Reports
+      operationId: discardReportingReportDraft
+      summary: Discard a reporting report draft
+      description: Removes the draft. The published revision is unchanged.
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingReport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: If-Match
+        in: header
+        required: true
+        schema: { type: string }
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+  /analytics/reports/{id}/draft/publish:
+    parameters: *id016
+    post:
+      tags:
+      - Reports
+      operationId: publishReportingReportDraft
+      summary: Publish a reporting report draft
+      description: Makes the draft the revision every reader sees. Editions and schedules keep the revision they were made from.
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingReport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: If-Match
+        in: header
+        required: true
+        schema: { type: string }
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+  /analytics/reports/{id}/revisions:
+    parameters: *id016
+    get:
+      tags:
+      - Reports
+      operationId: listReportingReportRevisions
+      summary: List reporting report revisions
+      description: Every revision of the report, newest first, with who saved it and when. Only an editor of the report may list them.
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingReportRevisionList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+  /analytics/reports/{id}/revisions/{revision}/restore:
+    parameters:
+    - $ref: '#/components/parameters/Id'
+    - name: revision
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    post:
+      tags:
+      - Reports
+      operationId: restoreReportingReportRevision
+      summary: Restore a reporting report revision
+      description: Publishes a copy of an earlier revision as the newest one. Earlier revisions, editions and schedules are not rewritten. Refused while a draft is open.
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingReport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: If-Match
+        in: header
+        required: true
+        schema: { type: string }
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
   /analytics/reports/{id}/evaluation:
     parameters: *id016
     get:
@@ -49277,6 +49446,39 @@ components:
           format: int64
         created_at: *id001
         archived_at: *id001
+        draft_revision:
+          type: integer
+          format: int64
+          description: |
+            The unpublished draft revision, shown only to an editor of the report. Absent when there
+            is no draft. Evaluate it with `revision` to preview it.
+    ReportingReportDraftInput:
+      type: object
+      additionalProperties: false
+      required: [selection]
+      properties:
+        selection:
+          $ref: '#/components/schemas/ReportingSelection'
+    ReportingReportRevision:
+      type: object
+      additionalProperties: false
+      required: [revision, state, created_at, created_by]
+      properties:
+        revision: { type: integer, format: int64 }
+        state:
+          type: string
+          enum: [draft, published, earlier]
+          description: The draft, the revision readers see, or one published before it.
+        created_at: *id001
+        created_by: *id002
+    ReportingReportRevisionList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ReportingReportRevision' }
     ReportingTargetInput:
       type: object
       additionalProperties: false
