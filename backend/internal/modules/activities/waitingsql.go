@@ -183,6 +183,12 @@ var waitingRepliesSQL = `
 	         (array_agg(ownerCompany.owner_id ORDER BY ownerCompany.id::text)
 	          FILTER (WHERE ownerCompany.owner_id IS NOT NULL))[1],
 	         '00000000-0000-0000-0000-000000000000'::uuid),
+	       bool_or(ownerDeal.id IS NOT NULL OR ownerLead.id IS NOT NULL
+	         OR (ownerContact.id IS NOT NULL AND ownerContact.archived_at IS NULL)
+	         OR ownerCompany.id IS NOT NULL)
+	       AND count(DISTINCT wl.id) FILTER (WHERE wl.entity_type IN ('deal','lead','contact','company'))
+	         = (SELECT count(*) FROM activity_link allOwnerLinks WHERE allOwnerLinks.activity_id=a.id
+	             AND allOwnerLinks.entity_type IN ('deal','lead','contact','company')),
 	       -- Whether this message belongs to a conversation at all.
 	       --
 	       -- Two of the three things a rep may do with a waiting row are keyed

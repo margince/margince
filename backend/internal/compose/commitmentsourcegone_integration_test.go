@@ -23,7 +23,7 @@ func TestCommitmentWhoseSourceIsArchivedDuringReadingCreatesNothing(t *testing.T
 	e.WsExec(t, `INSERT INTO relationship (kind,contact_id,company_id,source,captured_by) VALUES ('employment',$1,$2,'manual','human:x')`, contact, company)
 	now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
 	message := captureSeatPromise(t, e, contact, "archived-during-read@buyer.example", seatStatusPromise, now.Add(-48*time.Hour))
-	brain := erasingBrain{reply: mailedCommitmentReply(t, message, 0.95), erase: func() {
+	brain := erasingBrain{reply: mailedCommitmentReply(t, message, e.Rep2, 0.95), erase: func() {
 		if _, err := e.Activities.ArchiveActivity(e.Admin(), ids.From[ids.ActivityKind](message), nil); err != nil {
 			t.Fatal(err)
 		}

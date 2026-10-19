@@ -34,7 +34,7 @@ internal/compose/bulkworklist_integration_test.go 3
 internal/compose/canceledmeetingclocks_integration_test.go 1
 internal/compose/canceledmeetingfolds_integration_test.go 6
 internal/compose/capturedigestprojects_integration_test.go 2
-internal/compose/capturedigestreview_integration_test.go 3
+internal/compose/capturedigestreview_integration_test.go 2
 internal/compose/captureenrich_integration_test.go 1
 internal/compose/captureenrichtrigger_test.go 3
 internal/compose/capturehealth_integration_test.go 4

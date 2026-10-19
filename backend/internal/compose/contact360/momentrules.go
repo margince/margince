@@ -20,6 +20,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/nextstep"
 	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -48,7 +49,7 @@ func withheld(page *crmcontracts.Contact360, sections ...crmcontracts.Contact360
 
 // missingNextStepMoment: there is an open deal and nothing scheduled with the
 // contact who sits on it. The gap is the finding.
-func missingNextStepMoment(_ context.Context, _ time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
+func (said momentCopy) missingNextStepMoment(_ context.Context, _ time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
 	// "Nothing is scheduled" is only true if this reader could see the schedule.
 	if withheld(page, crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedNextMeeting,
 		crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedNextSteps,
@@ -71,14 +72,14 @@ func missingNextStepMoment(_ context.Context, _ time.Time, page *crmcontracts.Co
 	deal := *page.Commercial.Deal
 	evidence := []crmcontracts.ContactMomentEvidence{{
 		Type:  crmcontracts.ContactMomentEvidenceTypeRelationshipChange,
-		Label: fmt.Sprintf("%s has no next step with them", deal.Title),
+		Label: fmt.Sprintf(said.Say(momentWords.MissingEvidence), deal.Title),
 	}}
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:missing_next_step",
 		Rule:                crmcontracts.ContactMomentRuleMissingNextStep,
 		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
-		Headline:            "No next step on the open deal",
+		Headline:            said.Say(momentWords.MissingHeadline),
 		// The seat this contact actually holds, named — not "the contact whose
 		// seat decides it", which the record does not say. The rung fires on
 		// ANY recorded stakeholder role, and the vocabulary distinguishes the
@@ -89,14 +90,14 @@ func missingNextStepMoment(_ context.Context, _ time.Time, page *crmcontracts.Co
 		// The rung is not narrowed to the deciding roles instead, because a
 		// deal with no next step is worth saying whoever the seat belongs to —
 		// what was wrong was the sentence, not the trigger.
-		WhyNow: fmt.Sprintf("The deal is open and nothing is scheduled with them. They're %s on it.",
-			recordedSeat(page.Commercial.Role)),
+		WhyNow: fmt.Sprintf(said.Say(momentWords.MissingWhy),
+			said.recordedSeat(page.Commercial.Role)),
 		Confidence:        crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:          evidence,
-		RecommendedAction: bookMeeting(),
+		RecommendedAction: said.bookMeeting(),
 		SecondaryActions: &[]crmcontracts.ContactMomentAction{{
 			Kind:        crmcontracts.ContactMomentActionKindOpenRecord,
-			Label:       "Open the deal",
+			Label:       said.Say(momentWords.OpenDeal),
 			State:       crmcontracts.ContactMomentActionStateAvailable,
 			Destination: dealRecord(deal.DealId),
 		}},
@@ -135,7 +136,7 @@ func humanFiledTasks(page *crmcontracts.Contact360) int {
 // and because saying it too eagerly on a record whose activity section was
 // simply withheld would be a lie. Both inputs must be READ and empty, not
 // absent.
-func thinRelationshipMoment(_ context.Context, _ time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
+func (said momentCopy) thinRelationshipMoment(_ context.Context, _ time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
 	if page.Activities == nil || page.Network == nil {
 		// A section the caller may not read contributes no moment. Absent is
 		// not the same as empty, and only one of them is a fact about the
@@ -151,11 +152,11 @@ func thinRelationshipMoment(_ context.Context, _ time.Time, page *crmcontracts.C
 		Rule:                crmcontracts.ContactMomentRuleThinRelationship,
 		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
-		Headline:            "No interactions recorded",
-		WhyNow:              "No interactions or colleagues found in the records you can see.",
+		Headline:            said.Say(momentWords.Thin),
+		WhyNow:              said.Say(momentWords.ThinWhy),
 		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:            evidence,
-		RecommendedAction:   logInteraction(),
+		RecommendedAction:   said.logInteraction(),
 	}, true
 }
 
@@ -174,10 +175,10 @@ func dealRecord(dealID openapi_types.UUID) *crmcontracts.ContactMomentDestinatio
 	}
 }
 
-func bookMeeting() crmcontracts.ContactMomentAction {
+func (said momentCopy) bookMeeting() crmcontracts.ContactMomentAction {
 	return crmcontracts.ContactMomentAction{
 		Kind:  crmcontracts.ContactMomentActionKindScheduleMeeting,
-		Label: "Book a meeting", State: crmcontracts.ContactMomentActionStateAvailable, Destination: &crmcontracts.ContactMomentDestination{Surface: "booking"},
+		Label: said.Say(momentWords.Book), State: crmcontracts.ContactMomentActionStateAvailable, Destination: &crmcontracts.ContactMomentDestination{Surface: "booking"},
 	}
 }
 
@@ -187,14 +188,14 @@ func bookMeeting() crmcontracts.ContactMomentAction {
 // The fallback is honest rather than silent: the claim is true either way, and
 // pretending there is a row to open when the reader would land on nothing is
 // worse than saying the message is older than this page shows.
-func inboundEvidence(page *crmcontracts.Contact360, inbound time.Time) crmcontracts.ContactMomentEvidence {
-	return directionEvidence(page, inbound, "Their last message")
+func (said momentCopy) inboundEvidence(page *crmcontracts.Contact360, inbound time.Time) crmcontracts.ContactMomentEvidence {
+	return directionEvidence(page, inbound, said.Say(momentWords.TheirMessage))
 }
 
 // outboundEvidence is the same lookup for the message WE sent.
-func outboundEvidence(page *crmcontracts.Contact360, outbound time.Time) []crmcontracts.ContactMomentEvidence {
+func (said momentCopy) outboundEvidence(page *crmcontracts.Contact360, outbound time.Time) []crmcontracts.ContactMomentEvidence {
 	return []crmcontracts.ContactMomentEvidence{
-		directionEvidence(page, outbound, "Your last message"),
+		directionEvidence(page, outbound, said.Say(momentWords.YourMessage)),
 	}
 }
 
@@ -254,9 +255,9 @@ func fingerprintOf(evidence []crmcontracts.ContactMomentEvidence) string {
 // The fallback is the load-bearing half: a stakeholder edge may carry no role
 // at all, and a sentence that named one anyway would be inventing the fact the
 // rung exists to report.
-func recordedSeat(role *string) string {
+func (said momentCopy) recordedSeat(role *string) string {
 	if role == nil || strings.TrimSpace(*role) == "" {
-		return "a stakeholder"
+		return said.Say(momentWords.Stakeholder)
 	}
-	return "the recorded " + strings.ReplaceAll(*role, "_", " ")
+	return fmt.Sprintf(said.Say(momentWords.RecordedRole), strings.ReplaceAll(dealrole.Word(*role, string(said.Lang())), "_", " "))
 }

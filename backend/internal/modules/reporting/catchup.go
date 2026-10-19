@@ -55,8 +55,13 @@ func (s *Service) materializeSchedule(ctx context.Context, tx pgx.Tx, schedule c
 	if err != nil {
 		return 0, err
 	}
+	said := s.statusCopy(ctx, tx)
 	if calendar.Timezone != schedule.Timezone {
-		return 0, s.suspendSchedule(ctx, tx, schedule, "Reporting timezone changed; review and save the schedule")
+		return 0, s.suspendSchedule(ctx, tx, schedule, said.Say(statusWords.Timezone))
+	}
+	zone, err := location(calendar)
+	if err != nil {
+		return 0, err
 	}
 	periods, err := catchUp(schedule, s.now())
 	if err != nil {
@@ -80,7 +85,11 @@ func (s *Service) materializeSchedule(ctx context.Context, tx pgx.Tx, schedule c
 		intent := executionIntent{Report: report, Revision: schedule.Definition.ReportRevision, Owner: ids.UUID(schedule.OwnerId), Due: due, Interval: interval, ScheduleID: (*ids.UUID)(&schedule.Id), ScheduleVersion: &version, Key: fmt.Sprintf("schedule:%s:%d:%s", schedule.Id, version, due.UTC().Format(time.RFC3339Nano)), Hash: fmt.Sprint(version)}
 		if i == 0 && periods.Skipped > 0 {
 			intent.Status = "skipped"
-			intent.Reason = fmt.Sprintf("Skipped %d overdue periods from %s through %s; newest 12 retained", periods.Skipped, schedule.NextDueAt.Format(time.RFC3339), periods.LastSkipped.Format(time.RFC3339))
+			words := statusWords.SkippedMany
+			if periods.Skipped == 1 {
+				words = statusWords.SkippedOne
+			}
+			intent.Reason = fmt.Sprintf(said.Say(words), periods.Skipped, schedule.NextDueAt.In(zone).Format(time.RFC3339), periods.LastSkipped.In(zone).Format(time.RFC3339), len(periods.Recent))
 		}
 		if _, err := s.insertExecution(ctx, tx, intent); err != nil {
 			return 0, err

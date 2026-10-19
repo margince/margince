@@ -2,6 +2,7 @@ import { useState } from "react";
 import { TextInput } from "../../design-system/atoms";
 import { MoneyInput } from "../../design-system/moneyinput";
 import type { OfferLineItem, UpdateOfferLineItemRequest } from "./offers";
+import { storedUnitOf, UnitPicker, unitChoiceOf } from "./productunit";
 
 export function DescriptionCell({
   line,
@@ -33,16 +34,18 @@ export function UnitCell({
   line: OfferLineItem;
   onSave: (patch: UpdateOfferLineItemRequest) => void;
 }>) {
-  const [value, setValue] = useState(line.unit);
+  const [value, setValue] = useState(() => unitChoiceOf(line.unit));
   return (
-    <TextInput
-      data-testid={`line-unit-${line.id}`}
-      className="offers-line-unit"
+    <UnitPicker
+      testId={`line-unit-${line.id}`}
       value={value}
-      onChange={(event) => setValue(event.target.value)}
-      onBlur={() => {
-        if (value !== line.unit) {
-          onSave({ unit: value });
+      onChange={(next, settled) => {
+        setValue(next);
+        // An "Other" with nothing typed yet names no unit, and the server
+        // refuses a blank one.
+        const unit = storedUnitOf(next.choice, next.other);
+        if (settled && unit !== "" && unit !== line.unit) {
+          onSave({ unit });
         }
       }}
     />

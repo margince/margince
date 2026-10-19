@@ -197,9 +197,10 @@ export const PreviewDialogEstimateUnavailable: Story = {
         jsonResponse(
           {
             title: "Service Unavailable",
-            detail: "the estimator could not be reached",
+            detail:
+              "this installation's schema changed while the connection serving this request was holding a plan made against the old one. Nothing in the request is wrong and nothing was written; send it again — the plan is rebuilt on the next attempt.",
             status: 503,
-            code: "unavailable",
+            code: "schema_changed",
           },
           503,
         ),
@@ -216,7 +217,7 @@ export const PreviewDialogEstimateUnavailable: Story = {
       await canvas.findByRole("button", { name: "Review and reindex" }),
     );
     // `screen`, not the canvas: ConfirmModal portals to document.body.
-    await screen.findByText("the estimator could not be reached");
+    await screen.findByText(/schema changed while the connection/);
   },
 };
 

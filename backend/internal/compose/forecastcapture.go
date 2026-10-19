@@ -14,7 +14,9 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 func (w *forecastSnapshotSweepWorker) freeze(ctx context.Context, ws ids.UUID) error {
@@ -34,6 +36,7 @@ func (w *forecastSnapshotSweepWorker) freeze(ctx context.Context, ws ids.UUID) e
 	sort.SliceStable(contexts, func(i, j int) bool {
 		return attempts[reportingCaptureKey(contexts[i])].Before(attempts[reportingCaptureKey(contexts[j])])
 	})
+	language := textlang.Lang(identity.BaseLanguageForPrompt(ctx, w.pool))
 	failures := []error{frameworkErr}
 	seen := map[string]bool{}
 	for _, capture := range contexts {
@@ -51,7 +54,7 @@ func (w *forecastSnapshotSweepWorker) freeze(ctx context.Context, ws ids.UUID) e
 		captureCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 		err := w.freezeContext(captureCtx, capture)
 		cancel()
-		statusErr := store.RecordCaptureStatus(ctx, forecasting.Scope{Kind: string(capture.Scope.Kind), ID: (*ids.UUID)(capture.Scope.Id)}, (*ids.UUID)(capture.PipelineId), w.now(), err == nil || alreadyFrozenToday(err))
+		statusErr := store.RecordCaptureStatus(ctx, forecasting.Scope{Kind: string(capture.Scope.Kind), ID: (*ids.UUID)(capture.Scope.Id)}, (*ids.UUID)(capture.PipelineId), w.now(), err == nil || alreadyFrozenToday(err), language)
 		if statusErr != nil {
 			return errors.Join(err, statusErr)
 		}

@@ -147,7 +147,7 @@ export function IntroRequestModal({
                 provenance={
                   rewritten
                     ? { kind: "human", self: true }
-                    : { kind: "agent", agent: "draft_reply" }
+                    : { kind: "agent", agent: t("co.intro.agent") }
                 }
               />
               {written.generated_by === "deterministic" && !rewritten && (

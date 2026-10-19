@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -137,7 +138,7 @@ func (h Handlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 		body := words.ResetIntro + "\n\n" +
 			words.ResetAction + "\n\n  " + link + "\n\n" +
 			words.ResetIgnore
-		if err := h.resetMailer.Send(workCtx, email.String(), words.ResetSubject, body); err != nil {
+		if err := mailer.SendLocalized(workCtx, h.resetMailer, email.String(), words.ResetSubject, body, string(words.Language)); err != nil {
 			slog.Error("password-reset email failed", "err", err)
 		}
 	}()

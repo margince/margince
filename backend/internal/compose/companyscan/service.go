@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -125,7 +126,8 @@ func (s *Service) Get(ctx context.Context, companyID ids.CompanyID) (crmcontract
 		// The fingerprint is computed only for a settled read the page will
 		// hold on to: a poll of a live read wants the state, not a second
 		// assembly of the account per three seconds.
-		_, fingerprint, err := s.assemble(ctx, companyID)
+		language := identity.BaseLanguageForPrompt(ctx, s.pool)
+		_, fingerprint, err := s.assemble(ctx, companyID, language)
 		if err != nil {
 			return crmcontracts.CompanyScan{}, err
 		}
@@ -145,7 +147,8 @@ func (s *Service) Ensure(ctx context.Context, companyID ids.CompanyID, force boo
 	}
 	// The composite read is the gate: an account this reader may not open
 	// refuses here, before any row is consulted.
-	_, fingerprint, err := s.assemble(ctx, companyID)
+	language := identity.BaseLanguageForPrompt(ctx, s.pool)
+	_, fingerprint, err := s.assemble(ctx, companyID, language)
 	if err != nil {
 		return crmcontracts.CompanyScan{}, err
 	}
@@ -159,7 +162,7 @@ func (s *Service) Ensure(ctx context.Context, companyID ids.CompanyID, force boo
 	case serveStale:
 		return s.wire(ctx, companyID, stored, true)
 	}
-	queued, err := s.queue(ctx, userID, companyID)
+	queued, err := s.queue(ctx, userID, companyID, language)
 	if err != nil {
 		return crmcontracts.CompanyScan{}, err
 	}
@@ -211,7 +214,8 @@ func decide(stored *row, fingerprint string, now time.Time, force bool) decision
 // left polling a read nothing will pick up. A row the write left as it
 // stands — a read a worker claimed between the decision and this — is served
 // as it now stands, with nothing queued behind it.
-func (s *Service) queue(ctx context.Context, userID ids.UserID, companyID ids.CompanyID) (*row, error) {
+func (s *Service) queue(ctx context.Context, userID ids.UserID, companyID ids.CompanyID, language string) (*row, error) {
+	said := langcopy.For(language)
 	var out *row
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		queued, rearmed, err := queue(ctx, tx, userID, companyID)
@@ -222,7 +226,7 @@ func (s *Service) queue(ctx context.Context, userID ids.UserID, companyID ids.Co
 		if s.enqueue == nil {
 			return settle(ctx, tx, queued.ID, nil, outcome{
 				Status: StatusDegraded, GeneratedBy: crmcontracts.WrittenByDeterministic,
-				DegradeReason: "No worker runs account scans here, so only the rule-based advice is shown.",
+				DegradeReason: said.Say(scanWords.NoWorker),
 			})
 		}
 		return s.enqueue(ctx, tx, Queued{ScanID: queued.ID, CompanyID: companyID, ViewerID: userID})
@@ -247,14 +251,15 @@ func (s *Service) Run(ctx context.Context, scanID ids.UUID, companyID ids.Compan
 		return err
 	}
 	h := claimed.claim()
-	in, fingerprint, err := s.assemble(ctx, companyID)
+	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
+	said := langcopy.For(lang)
+	in, fingerprint, err := s.assemble(ctx, companyID, lang)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
-			return s.fail(ctx, h, "The account could not be opened for this reader, so it was not read.")
+			return s.fail(ctx, h, said.Say(scanWords.Denied))
 		}
-		return s.fail(ctx, h, "The account could not be read. Try again later.")
+		return s.fail(ctx, h, said.Say(scanWords.Failed))
 	}
-	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
 	// The account being scanned, so an erasure that reaches this company
 	// reaches the payloads of the call that read it — the messages quoted in
 	// the request are that account's correspondence.
@@ -286,14 +291,14 @@ func (s *Service) Run(ctx context.Context, scanID ids.UUID, companyID ids.Compan
 		// The reader sees the floor and why; the cause is for whoever runs
 		// the lane, and the log is where they look.
 		s.log.Warn("account scan: the lane did not answer usably", "scan_id", claimed.ID, "err", lane.Cause)
-		out.Status, out.DegradeReason = StatusDegraded, "The model's answer didn't match the records, so only the rule-based advice is shown."
+		out.Status, out.DegradeReason = StatusDegraded, said.Say(scanWords.Invalid)
 	case err != nil:
 		// The row is claimed: left running it would be served as a read in
 		// flight for as long as it sat there. It closes with the reason the
 		// reader can act on, and the cause goes back to the carrier.
-		return errors.Join(err, s.fail(ctx, h, "The account could not be read. Try again later."))
+		return errors.Join(err, s.fail(ctx, h, said.Say(scanWords.Failed)))
 	case s.lane == nil:
-		out.Status, out.DegradeReason = StatusDegraded, "No model is configured here, so only the rule-based advice is shown."
+		out.Status, out.DegradeReason = StatusDegraded, said.Say(scanWords.NoModel)
 	}
 	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		return settle(ctx, tx, h.ID, &h.ClaimedAt, out)
@@ -322,7 +327,7 @@ func (s *Service) RaisesForCaller(ctx context.Context, tx pgx.Tx, companyID ids.
 
 // assemble reads the input as the caller: the composite read, then the
 // message words, and the fingerprint over both.
-func (s *Service) assemble(ctx context.Context, companyID ids.CompanyID) (Input, string, error) {
+func (s *Service) assemble(ctx context.Context, companyID ids.CompanyID, language string) (Input, string, error) {
 	view, err := s.view.AssembleScoped(ctx, companyID, company360.AssembleOptions{})
 	if err != nil {
 		return Input{}, "", err
@@ -341,8 +346,7 @@ func (s *Service) assemble(ctx context.Context, companyID ids.CompanyID) (Input,
 	if err != nil {
 		return Input{}, "", err
 	}
-	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
-	fingerprint, err := Fingerprint(in, s.routingVersion(), lang)
+	fingerprint, err := Fingerprint(in, s.routingVersion(), language)
 	if err != nil {
 		return Input{}, "", err
 	}

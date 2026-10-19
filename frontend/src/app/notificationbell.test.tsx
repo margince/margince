@@ -127,7 +127,7 @@ function refusingBackend(which: "read-all" | "one") {
             type: "about:blank",
             title: "Internal Server Error",
             status: 500,
-            code: "internal_error",
+            code: "internal",
             detail: "the notice store is unavailable",
           },
           500,

@@ -42,7 +42,10 @@ function act(locked: boolean, locale?: "de") {
           ...settings,
           base_currency_locked: locked,
           ...(locked
-            ? { base_currency_locked_reason: "3 deals have frozen EUR" }
+            ? {
+                base_currency_locked_reason: "3 record(s) have frozen EUR",
+                base_currency_lock: { reason: "rates_frozen", count: 3 },
+              }
             : {}),
         }),
     });

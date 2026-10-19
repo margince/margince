@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -157,7 +158,7 @@ func (s *Service) validateReport(ctx context.Context, tx pgx.Tx, in *crmcontract
 }
 
 func (s *Service) validateSelection(ctx context.Context, selection crmcontracts.ReportingSelection) error {
-	catalog, err := s.evaluator.Catalog(ctx)
+	catalog, err := s.evaluator.Catalog(ctx, textlang.English)
 	if err != nil {
 		return err
 	}

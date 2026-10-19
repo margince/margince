@@ -475,11 +475,11 @@ it("the task table says decision model first, and why another feature skips it",
 
   // The row names the model that answers; the decision model in front of it
   // is in the task's details, with its provider.
-  const decisionRow = screen.getByText("Classify correspondence").closest("tr");
+  const decisionRow = screen.getByText("Message classification").closest("tr");
   expect(decisionRow?.querySelector("td:nth-child(3)")?.textContent).toBe(
     "Google Geminiexample-model",
   );
-  const first = await openTaskDetails(user, "Classify correspondence");
+  const first = await openTaskDetails(user, "Message classification");
   expect(first).toHaveTextContent(
     "Decision model firstJev-compatiblejev-classify",
   );

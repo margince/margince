@@ -760,10 +760,20 @@ describe("the conversational voice act", () => {
       preview: documentPreview,
       ingests: [{ stats: documentStats, summary: summaryOf(820) }],
       buildStartRefusal: {
-        status: 429,
+        status: 422,
         body: {
-          code: "budget_exhausted",
-          detail: "This month's model budget is spent. It resets on the 1st.",
+          code: "validation_error",
+          detail: "at least 800 eligible own-authored words are required",
+          details: {
+            errors: [
+              {
+                field: "corpus",
+                code: "invalid",
+                message:
+                  "at least 800 eligible own-authored words are required",
+              },
+            ],
+          },
         },
       },
     });
@@ -776,7 +786,7 @@ describe("the conversational voice act", () => {
 
     expect(
       await screen.findByText(
-        "This month's model budget is spent. It resets on the 1st.",
+        "at least 800 eligible own-authored words are required",
       ),
     ).toBeTruthy();
   });

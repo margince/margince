@@ -19,7 +19,7 @@ import { AutonomyDot } from "../../design-system/trust";
 import { formatCountdown, useNow } from "../../format/now";
 import { viewerZone } from "../../format/timezone";
 import type { Locale, Translator } from "../../i18n";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
 import { recordRoute } from "../../lib/entity";
 import {
@@ -40,7 +40,14 @@ import {
   editableStrings,
   StagedEditor,
 } from "./approvaleditor";
-import { approvalKindLabel, decisionSkewKey } from "./approvalkind";
+import { ApprovalEvidence } from "./approvalevidence";
+import {
+  approvalAcceptLabel,
+  approvalExpiryLabel,
+  approvalKindLabel,
+  decisionSkewKey,
+} from "./approvalkind";
+import { approvalAcceptable, useApprovalNames } from "./approvalresponsibility";
 import type { Approval } from "./approvals.queries";
 import { stagedSendOf } from "./approvalsend";
 import "./approvalrow.css";
@@ -123,12 +130,14 @@ function rowLabels(t: Translator): DecisionCardLabels {
 
 // The status chip's words. Spelled per surface like every other label bag here:
 // what a countdown or a verdict is CALLED belongs to the screen showing it.
-function statusLabels(t: Translator, locale: Locale): DecisionStatusLabels {
+function statusLabels(
+  t: Translator,
+  locale: Locale,
+  kind: string,
+): DecisionStatusLabels {
   return {
     expiresIn: (msRemaining) =>
-      t("decision.expiresIn", {
-        countdown: formatCountdown(msRemaining, t, locale),
-      }),
+      approvalExpiryLabel(kind, formatCountdown(msRemaining, t, locale), t),
     approved: t("decision.status.approved"),
     rejected: t("decision.status.rejected"),
     expired: t("decision.status.expired"),
@@ -153,6 +162,7 @@ export function ApprovalRow({
   extraInvalidateKeys?: readonly QueryKey[];
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const viewerId = useViewerId();
   const queryClient = useQueryClient();
@@ -255,8 +265,9 @@ export function ApprovalRow({
     },
     onError: (error) => {
       const problem = error instanceof ProblemError ? error.problem : null;
-      if (problem && isAlreadyDecided(problem)) {
-        onAlreadyDecided?.();
+      const alreadyDecided = problem && isAlreadyDecided(problem);
+      if (alreadyDecided) onAlreadyDecided?.();
+      if (alreadyDecided || approval.kind === "commitment_task") {
         queryClient.invalidateQueries({ queryKey: ["approvals", "pending"] });
         // Somebody else decided it while this row was open, so the single
         // read is stale for the same reason and in the same way.
@@ -266,12 +277,16 @@ export function ApprovalRow({
   });
 
   const change = approval.proposed_change ?? {};
+  const approvalNames = useApprovalNames([approval]);
   const strings = editableStrings(approval.kind, change);
   const display = resolveDisplay(
     approval.kind,
     change,
     t,
     stagedDayFormatter(locale, viewerZone()),
+    approvalNames,
+    approval.requested_decider_id,
+    approval.assignee_inactive,
   );
 
   const problem =
@@ -298,6 +313,7 @@ export function ApprovalRow({
   };
 
   const approveEdited = () => {
+    if (!approvalAcceptable(approval)) return;
     decide.mutate({
       verdict: "approve",
       editedPayload: { ...change, ...draft },
@@ -317,15 +333,21 @@ export function ApprovalRow({
       layout="row"
       className="approval-row"
       display={display}
+      detail={<ApprovalEvidence approval={approval} />}
       now={now}
       labels={{
         ...rowLabels(t),
-        accept: t(
-          approval.kind === "send_email" ||
-            approval.kind === "held_draft" ||
-            approval.kind === "scheduled_send_held"
-            ? "brief.approval.email"
-            : "brief.approval.approve",
+        accept: approvalAcceptLabel(
+          approval.kind,
+          plural,
+          t(
+            ["send_email", "held_draft", "scheduled_send_held"].includes(
+              approval.kind,
+            )
+              ? "brief.approval.email"
+              : "brief.approval.approve",
+          ),
+          locale,
         ),
       }}
       decided={decided}
@@ -344,7 +366,7 @@ export function ApprovalRow({
             approval={approval}
             decided={!!decided}
             now={now}
-            labels={statusLabels(t, locale)}
+            labels={statusLabels(t, locale, approval.kind)}
           />
         </>
       }
@@ -361,6 +383,13 @@ export function ApprovalRow({
       editor={
         editing ? (
           <StagedEditor
+            disabled={!approvalAcceptable(approval)}
+            acceptLabel={approvalAcceptLabel(
+              approval.kind,
+              plural,
+              t("decision.approveEdited"),
+              locale,
+            )}
             fields={strings}
             draft={draft}
             onChange={(field, value) =>
@@ -372,7 +401,11 @@ export function ApprovalRow({
           />
         ) : undefined
       }
-      onAccept={() => decide.mutate({ verdict: "approve" })}
+      onAccept={
+        approvalAcceptable(approval)
+          ? () => decide.mutate({ verdict: "approve" })
+          : undefined
+      }
       // Offered only where the kind has something a reader may change. Disabled
       // with Reject while a verdict is out, and for a sharper reason than
       // symmetry: it opens an editor whose own Cancel is disabled while the

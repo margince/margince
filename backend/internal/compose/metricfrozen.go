@@ -60,7 +60,7 @@ func (metricEvaluator) ProjectFrozen(before crmcontracts.ReportingEvaluation, fa
 			projected.Value = nil
 			projected.Numerator = nil
 			projected.Denominator = nil
-			projected.Coverage = reportingGap(reportingUnavailable, "Some historical evidence is restricted; this reading cannot be compared")
+			projected.Coverage = reportingGap(reportingUnavailable, reporting.ExplanationCopy(before.Context).Say(reportingWords.RestrictedHistory))
 			projected.Coverage.Withheld = true
 		}
 		out.Result.Metrics = append(out.Result.Metrics, projected)

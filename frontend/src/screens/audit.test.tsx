@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { ActorTag, AuditEntryLine, humanizeToken } from "./audit";
 
 afterEach(() => {
@@ -270,6 +271,26 @@ describe("ActorTag", () => {
       />,
     );
     expect(screen.getByText("System")).toBeTruthy();
+  });
+
+  // A passport was presented and nobody resolved behind it: a gap that
+  // "System" would hide, even when an on-behalf-of name came with it.
+  it("reports the missing authority for a system row that carries a passport", () => {
+    wrap(
+      <ActorTag
+        entry={entry({
+          actor_type: "system",
+          actor_id: "system",
+          passport_id: "01a01740-c9c2-736d-a0b6-d3e3dcb13999",
+          on_behalf_of: "u-ada",
+          on_behalf_of_name: "Ada Authority",
+        })}
+        meUserId={ME}
+      />,
+    );
+    expect(screen.getByText(en["audit.noHumanAuthority"])).toBeTruthy();
+    expect(screen.queryByText("Ada Authority")).toBeNull();
+    expect(screen.queryByText(en["audit.system"])).toBeNull();
   });
 });
 

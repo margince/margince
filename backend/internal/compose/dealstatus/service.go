@@ -355,7 +355,7 @@ func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) 
 		return facts{}, fmt.Errorf("deal status: reading the deal's timeline: %w", err)
 	}
 	f.timeline = timeline
-	requestKind := "email"
+	requestKind := string(crmcontracts.ActivityKindEmail)
 	requests, _, err := s.activities.ListActivities(ctx, activities.ListActivitiesInput{
 		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &limit,
 		RequestReviewAsOf: &f.now, Kind: &requestKind,

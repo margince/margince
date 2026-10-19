@@ -11,7 +11,12 @@ import {
   meRoute,
   StoryProviders,
 } from "../testing/story-utils";
-import { VoiceChangeLog, VoiceHistory } from "./voice-versions";
+import { candidateVersion } from "../testing/voice-candidate";
+import {
+  ActiveVoiceInsights,
+  VoiceChangeLog,
+  VoiceHistory,
+} from "./voice-versions";
 
 // Every build this profile has had, and what each one changed. A `candidate`
 // is a finished build waiting for a human to accept or reject it — the state
@@ -151,4 +156,40 @@ export const OnlyActive: Story = {
 // not. The rows stay and the verbs go.
 export const ReadOnly: Story = {
   render: story([CANDIDATE, ACTIVE, SUPERSEDED], false),
+};
+
+export const TypedCandidateReasons: Story = {
+  render: () => {
+    const candidate = candidateVersion([
+      "Recorded score explanation",
+      "Recorded sample explanation",
+    ]);
+    candidate.evaluation.review_reason_details = [
+      {
+        code: "low_score",
+        text: candidate.review_reasons[0] ?? "",
+        values: { score: 0.56, floor: 0.6 },
+      },
+      {
+        code: "corpus_changed",
+        text: candidate.review_reasons[1] ?? "",
+        values: {},
+      },
+    ];
+    stub([candidate], []);
+    return (
+      <StoryProviders>
+        <ActiveVoiceInsights
+          profileId="vp-1"
+          canEdit
+          onChanged={() => undefined}
+        />
+      </StoryProviders>
+    );
+  },
+};
+
+export const TypedCandidateReasonsDark: Story = {
+  ...TypedCandidateReasons,
+  globals: { theme: "dark" },
 };

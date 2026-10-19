@@ -57,7 +57,7 @@ export async function createLead(
     if (existing) {
       throw new ProblemError(
         {
-          code: "duplicate_lead",
+          code: "duplicate_lead", // problem-code:client found by a search before the create
           detail: t("lead.duplicateFound"),
           details: { existing_id: existing.id },
         },

@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
@@ -50,7 +51,7 @@ func reportingHistoryCoverage(ctx context.Context, tx pgx.Tx, frame crmcontracts
 	}
 	if incomplete {
 		withheld := coverage.Withheld
-		coverage = reportingGap(reportingPartial, "Some source history predates reliable attribution. Only known contributions are shown; this period is not a complete comparison baseline.")
+		coverage = reportingGap(reportingPartial, reporting.ExplanationCopy(frame).Say(reportingCoverageWords.LegacyHistory))
 		coverage.Withheld = withheld
 	}
 	return coverage, nil
@@ -109,7 +110,7 @@ func qualificationCoverage(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 		}
 		if known == nil || reportingEarliest(frame).Before(*known) {
 			coverage.Status = reportingPartial
-			reason := "Qualification tracking began after part of this period. Only transitions recorded under a configured stage framework are included."
+			reason := reporting.ExplanationCopy(frame).Say(reportingCoverageWords.QualificationHistory)
 			coverage.Reason = &reason
 			return coverage, true, nil
 		}

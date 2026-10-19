@@ -54,9 +54,6 @@ const (
 	ActionNone             = "none"
 )
 
-// untitledMeeting names a meeting that has no subject of its own.
-const untitledMeeting = "meeting"
-
 // meetingHorizon bounds how far ahead a booked meeting still counts as the
 // next move. Past it, the meeting is a plan rather than a thing to prepare.
 const meetingHorizon = 14 * 24 * time.Hour
@@ -65,6 +62,14 @@ const meetingHorizon = 14 * 24 * time.Hour
 // Closing a deal ends pipeline advice, not meetings, tasks or customer requests.
 func decideMove(f facts) crmcontracts.DealStatusCardMove {
 	mv := nextMove(f)
+	if f.lang != "" && f.lang != "en" {
+		// Existing dismissal digests include generated English task subjects.
+		// Keep that identity while the same rules render the requested language.
+		canonical := f
+		canonical.lang = "en"
+		mv.Fingerprint = decideMove(canonical).Fingerprint
+		return mv
+	}
 	if mv.Fingerprint != nil {
 		return mv
 	}
@@ -73,16 +78,17 @@ func decideMove(f facts) crmcontracts.DealStatusCardMove {
 
 // nextMove is the rules' choice, in order.
 func nextMove(f facts) crmcontracts.DealStatusCardMove {
+	said := statusCopyFor(f.lang)
 	if meeting, ok := upcomingMeeting(f); ok {
 		activityID := openapi_types.UUID(meeting.ID)
 		subject := meeting.Subject
 		if subject == "" {
-			subject = untitledMeeting
+			subject = said.Say(statusWords.Meeting)
 		}
 		return move(ActionOpenMeetingBrief,
-			fmt.Sprintf("A meeting is booked %s — read the brief before it.", until(f.now, meeting.StartsAt)),
+			fmt.Sprintf(said.Say(statusWords.Prepare), said.until(f.now, meeting.StartsAt)),
 			map[string]any{argActivityID: activityID},
-			crmcontracts.DealNextBestActionEvidence{ActivityId: &activityID, Text: "Booked: " + subject})
+			crmcontracts.DealNextBestActionEvidence{ActivityId: &activityID, Text: fmt.Sprintf(said.Say(statusWords.Booked), subject)})
 	}
 	// A follow-up owed after a meeting outranks open work. The open task is
 	// often this card's own generic step, and the buyer waits on the mail.
@@ -94,29 +100,29 @@ func nextMove(f facts) crmcontracts.DealStatusCardMove {
 	if len(f.openTasks) > 0 {
 		task := f.openTasks[0]
 		activityID := openapi_types.UUID(task.ID)
-		return move(ActionOpenTask, "Complete the existing task: "+task.Subject, map[string]any{argActivityID: activityID},
+		return move(ActionOpenTask, fmt.Sprintf(said.Say(statusWords.Complete), task.Subject), map[string]any{argActivityID: activityID},
 			crmcontracts.DealNextBestActionEvidence{ActivityId: &activityID, Text: task.Subject})
 	}
 	if request, ok := unansweredInbound(f); ok {
 		if request.EmailSummary != nil && request.EmailSummary.RequestHasReminder != nil && *request.EmailSummary.RequestHasReminder {
-			return move(ActionDraftEmail, "This request already has a reminder. The reply still needs to be handled.", map[string]any{argActivityID: request.Id},
-				evidenceOf(request, "Request: "+subjectOf(request)))
+			return move(ActionDraftEmail, said.Say(statusWords.Reminder), map[string]any{argActivityID: request.Id},
+				evidenceOf(request, fmt.Sprintf(said.Say(statusWords.Request), said.subjectOf(request))))
 		}
-		reason := "Review and take responsibility for the reply still owed: " + subjectOf(request)
+		reason := fmt.Sprintf(said.Say(statusWords.OwnReply), said.subjectOf(request))
 		if request.EmailSummary == nil || request.EmailSummary.Move != crmcontracts.EmailSummaryMoveNeedsReply {
-			reason = "Review whether this conversation needs a follow-up: " + subjectOf(request)
+			reason = fmt.Sprintf(said.Say(statusWords.ReviewReply), said.subjectOf(request))
 		}
 		//nolint:goconst // "source" is the record's provenance KEY, and the Go census
 		// (backend/gates/recordsourcespelling_test.go) reads that key as a string literal
 		// at each site — a shared constant here would be a key the census cannot see.
 		return move(ActionCreateTask, reason,
-			map[string]any{"subject": subjectOf(request), "request_activity_id": request.Id, "source": provenance.RecordSourceManual},
-			evidenceOf(request, "Request: "+subjectOf(request)))
+			map[string]any{"subject": said.subjectOf(request), "request_activity_id": request.Id, "source": provenance.RecordSourceManual},
+			evidenceOf(request, fmt.Sprintf(said.Say(statusWords.Request), said.subjectOf(request))))
 	}
 	if f.deal.Status != crmcontracts.DealStatusOpen {
 		return crmcontracts.DealStatusCardMove{
 			Action:   ActionNone,
-			Reason:   fmt.Sprintf("This deal is %s — there is no next step to take.", f.deal.Status),
+			Reason:   fmt.Sprintf(said.Say(statusWords.Closed), said.dealStatus(string(f.deal.Status))),
 			Evidence: []crmcontracts.DealNextBestActionEvidence{},
 		}
 	}
@@ -136,16 +142,17 @@ func nextMove(f facts) crmcontracts.DealStatusCardMove {
 // farMeetingMove is what to say about a meeting nobody needs to prepare for
 // yet: it exists, it is the next step, and there is nothing owed before it.
 func farMeetingMove(f facts) crmcontracts.DealStatusCardMove {
+	said := statusCopyFor(f.lang)
 	meeting := *f.nextMeeting
 	subject := meeting.Subject
 	if subject == "" {
-		subject = untitledMeeting
+		subject = said.Say(statusWords.Meeting)
 	}
 	activityID := openapi_types.UUID(meeting.ID)
 	return move(ActionOpenMeetingBrief,
-		fmt.Sprintf("A meeting is booked %s — nothing is owed before it.", until(f.now, meeting.StartsAt)),
+		fmt.Sprintf(said.Say(statusWords.FarMeeting), said.until(f.now, meeting.StartsAt)),
 		map[string]any{argActivityID: activityID},
-		crmcontracts.DealNextBestActionEvidence{ActivityId: &activityID, Text: "Booked: " + subject})
+		crmcontracts.DealNextBestActionEvidence{ActivityId: &activityID, Text: fmt.Sprintf(said.Say(statusWords.Booked), subject)})
 }
 
 // quietDealMove is the deal nobody has arranged anything on: open, contacted,
@@ -158,6 +165,7 @@ func farMeetingMove(f facts) crmcontracts.DealStatusCardMove {
 // said about the same deal, and the two disagreeing on one morning is what sent
 // this work here: kernel/nextstep is now the one predicate both ask.
 func quietDealMove(f facts) crmcontracts.DealStatusCardMove {
+	said := statusCopyFor(f.lang)
 	missing := nextstep.Missing(nextstep.Facts{
 		DealOpen:       true,
 		MeetingBooked:  f.nextMeeting != nil,
@@ -170,7 +178,7 @@ func quietDealMove(f facts) crmcontracts.DealStatusCardMove {
 		// exactly right when the records name nobody.
 		return move(ActionCreateTask, nextStepReason(f),
 			map[string]any{
-				"subject": "Agree the next step on " + f.deal.Name,
+				"subject": fmt.Sprintf(said.Say(statusWords.Agree), f.deal.Name),
 				argLinks:  []map[string]any{{argEntityType: linkDeal, argEntityID: f.deal.Id}},
 				"source":  provenance.RecordSourceManual,
 			},
@@ -184,6 +192,7 @@ func quietDealMove(f facts) crmcontracts.DealStatusCardMove {
 // button that said it books a meeting and did something else would be worse
 // than one that files a task saying so.
 func meetingRequest(f facts, seat Seat) crmcontracts.DealStatusCardMove {
+	said := statusCopyFor(f.lang)
 	links := []map[string]any{{argEntityType: linkDeal, argEntityID: f.deal.Id}}
 	// The contact is linked only where this reader may file against them.
 	// Reading a contact and adding to their record are different grants, and a
@@ -208,10 +217,10 @@ func meetingRequest(f facts, seat Seat) crmcontracts.DealStatusCardMove {
 		seat.Name = ""
 	}
 	return move(ActionCreateTask,
-		fmt.Sprintf("The last contact was %s and nothing is booked. Book a meeting with %s.",
-			sinceLastContact(f), seatWords(seat)),
+		fmt.Sprintf(said.Say(statusWords.Book),
+			sinceLastContact(f), said.seatWords(seat)),
 		map[string]any{
-			"subject": meetingSubject(seat, f.deal),
+			"subject": said.meetingSubject(seat, f.deal),
 			argLinks:  links,
 			"source":  provenance.RecordSourceManual,
 		},
@@ -221,11 +230,11 @@ func meetingRequest(f facts, seat Seat) crmcontracts.DealStatusCardMove {
 // meetingSubject is what the filed task will be called, in the words the reader
 // would have typed: a contact where the card may name one, the role where it
 // may not — and then the deal, so the task still says what it is about.
-func meetingSubject(seat Seat, deal crmcontracts.Deal) string {
+func (said statusCopy) meetingSubject(seat Seat, deal crmcontracts.Deal) string {
 	if seat.Name != "" {
-		return "Book a meeting with " + seat.Name
+		return fmt.Sprintf(said.Say(statusWords.BookNamed), seat.Name)
 	}
-	return fmt.Sprintf("Book a meeting with the %s on %s", roleWord(seat.Role), deal.Name)
+	return fmt.Sprintf(said.Say(statusWords.BookRole), said.roleWord(seat.Role), deal.Name)
 }
 
 // sinceLastContact spells how long the deal has been quiet, or says plainly
@@ -233,11 +242,12 @@ func meetingSubject(seat Seat, deal crmcontracts.Deal) string {
 // opening move's business, so this arm is reached only where the timeline is
 // readable and empty.
 func sinceLastContact(f facts) string {
+	said := statusCopyFor(f.lang)
 	last, ok := lastContact(f)
 	if !ok {
-		return "never"
+		return said.Say(statusWords.Never)
 	}
-	return since(f.now, last.OccurredAt)
+	return said.since(f.now, last.OccurredAt)
 }
 
 // The stakeholder roles this file reasons about. They are the wire values
@@ -250,8 +260,8 @@ func sinceLastContact(f facts) string {
 const (
 	roleChampion      = dealrole.Champion
 	roleEconomicBuyer = dealrole.EconomicBuyer
-	roleDecisionMaker = "decision_maker"
-	roleInfluencer    = "influencer"
+	roleDecisionMaker = dealrole.LegacyDecisionMaker
+	roleInfluencer    = dealrole.Influencer
 )
 
 // openingRoles is who to write to first, best answer first. A champion will
@@ -276,6 +286,7 @@ var openingRoles = []string{roleChampion, roleEconomicBuyer, roleDecisionMaker, 
 // reason to write to somebody, and picking arbitrarily would put a stranger's
 // name in an instruction.
 func firstOutreach(f facts) (crmcontracts.DealStatusCardMove, bool) {
+	said := statusCopyFor(f.lang)
 	if _, contacted := lastContact(f); contacted {
 		return crmcontracts.DealStatusCardMove{}, false
 	}
@@ -285,7 +296,7 @@ func firstOutreach(f facts) (crmcontracts.DealStatusCardMove, bool) {
 	}
 	// The stakeholder lives only in the reason, so the digest names them: "open
 	// with Alice" set aside must not hide "open with Bob".
-	opening := move(ActionDraftEmail, openingReason(seat, len(f.seats)), nil)
+	opening := move(ActionDraftEmail, said.openingReason(seat, len(f.seats)), nil)
 	return stamped(opening, owedwork.Mark{Kind: "seat", ID: seat.Role + ":" + seat.ContactID.String()}), true
 }
 
@@ -294,33 +305,19 @@ func firstOutreach(f facts) (crmcontracts.DealStatusCardMove, bool) {
 // It carries the seat COUNT because that is the fact a reader checks the
 // advice against: "four contacts are named and none has been contacted" is
 // checkable against the page, where "reach out" is not.
-func openingReason(seat Seat, seats int) string {
+func (said statusCopy) openingReason(seat Seat, seats int) string {
 	if seats == 1 {
-		return fmt.Sprintf("Nobody has been contacted yet. Open with %s.", seatWords(seat))
+		return fmt.Sprintf(said.Say(statusWords.OpeningOne), said.seatWords(seat))
 	}
-	return fmt.Sprintf("%d contacts are named on this deal and none has been contacted. Open with %s.",
-		seats, seatWords(seat))
-}
-
-// roleWords is the wire value on the left, the words a sentence uses on the
-// right. Two of them read the same and are still two different things: the key
-// is what compose/network stores, the value is English prose, and a rename on
-// either side must not silently move the other.
-var roleWords = map[string]string{
-	roleChampion:      "champion",
-	roleEconomicBuyer: "economic buyer",
-	roleDecisionMaker: "decision-maker",
-	roleInfluencer:    "influencer",
+	return fmt.Sprintf(said.Say(statusWords.OpeningMany),
+		seats, said.seatWords(seat))
 }
 
 // roleWord is a stakeholder role as a sentence says it. An unknown role is
 // returned as it is stored rather than dropped: the card would otherwise write
 // "Open with Maria Schmidt, the ." for a role added after this build.
-func roleWord(role string) string {
-	if word, known := roleWords[role]; known {
-		return word
-	}
-	return role
+func (said statusCopy) roleWord(role string) string {
+	return dealrole.Word(role, string(said.Lang()))
 }
 
 func move(action, reason string, args map[string]any, evidence ...crmcontracts.DealNextBestActionEvidence) crmcontracts.DealStatusCardMove {
@@ -385,26 +382,23 @@ func lastContact(f facts) (crmcontracts.Activity, bool) {
 	return crmcontracts.Activity{}, false
 }
 
-// noContactYet is the claim an absent last contact supports. A note, a booked
-// meeting and a canceled one sit on the timeline without being contact, so
-// "nothing logged" would be false.
-const noContactYet = "No contact has taken place on this deal yet"
-
 func nextStepReason(f facts) string {
+	said := statusCopyFor(f.lang)
 	last, ok := lastContact(f)
 	if !ok {
-		return noContactYet + " — agree the next step."
+		return said.Say(statusWords.NoContactNext)
 	}
-	return fmt.Sprintf("The last contact was %s and nothing is booked — agree the next step.",
-		since(f.now, last.OccurredAt))
+	return fmt.Sprintf(said.Say(statusWords.QuietNext),
+		said.since(f.now, last.OccurredAt))
 }
 
 func lastContactEvidence(f facts) []crmcontracts.DealNextBestActionEvidence {
+	said := statusCopyFor(f.lang)
 	last, ok := lastContact(f)
 	if !ok {
 		return nil
 	}
-	return []crmcontracts.DealNextBestActionEvidence{evidenceOf(last, "Last contact: "+subjectOf(last))}
+	return []crmcontracts.DealNextBestActionEvidence{evidenceOf(last, fmt.Sprintf(said.Say(statusWords.LastEvidence), said.subjectOf(last)))}
 }
 
 // evidenceOf points the card at one record. A ZERO timestamp answers nil
@@ -427,26 +421,41 @@ func evidenceOf(a crmcontracts.Activity, text string) crmcontracts.DealNextBestA
 
 // subjectOf names a row for a reader. A withheld row is named by its kind:
 // the reader may know contact happened without reading what was said.
-func subjectOf(a crmcontracts.Activity) string {
+func (said statusCopy) subjectOf(a crmcontracts.Activity) string {
 	if withheld(a) || a.Subject == nil || *a.Subject == "" {
-		return string(a.Kind)
+		switch a.Kind {
+		case crmcontracts.ActivityKindCall:
+			return said.Say(statusWords.Call)
+		case crmcontracts.ActivityKindEmail:
+			return said.Say(statusWords.Email)
+		case crmcontracts.ActivityKindMeeting:
+			return said.Say(statusWords.Meeting)
+		case crmcontracts.ActivityKindMessage:
+			return said.Say(statusWords.Message)
+		case crmcontracts.ActivityKindNote:
+			return said.Say(statusWords.Note)
+		case crmcontracts.ActivityKindTask:
+			return said.Say(statusWords.Task)
+		default:
+			return string(a.Kind)
+		}
 	}
 	return *a.Subject
 }
 
-func since(now, then time.Time) string {
-	return spell(calendarDaysBetween(then, now))
+func (said statusCopy) since(now, then time.Time) string {
+	return said.spell(calendarDaysBetween(then, now))
 }
 
-func until(now, then time.Time) string {
+func (said statusCopy) until(now, then time.Time) string {
 	days := calendarDaysBetween(now, then)
 	switch days {
 	case 0:
-		return "today"
+		return said.Say(statusWords.Today)
 	case 1:
-		return "tomorrow"
+		return said.Say(statusWords.Tomorrow)
 	default:
-		return fmt.Sprintf("in %d days", days)
+		return fmt.Sprintf(said.Say(statusWords.InDays), days)
 	}
 }
 
@@ -460,13 +469,13 @@ func calendarDaysBetween(from, to time.Time) int {
 	return elapsed.Days(from, to)
 }
 
-func spell(days int) string {
+func (said statusCopy) spell(days int) string {
 	switch {
 	case days <= 0:
-		return "today"
+		return said.Say(statusWords.Today)
 	case days == 1:
-		return "yesterday"
+		return said.Say(statusWords.Yesterday)
 	default:
-		return fmt.Sprintf("%d days ago", days)
+		return fmt.Sprintf(said.Say(statusWords.DaysAgo), days)
 	}
 }

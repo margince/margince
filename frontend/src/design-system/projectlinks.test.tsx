@@ -116,8 +116,9 @@ describe("ProjectLinks", () => {
       // of production and proving nothing about it.
       attach: async () => {
         throw new ProblemError({
-          code: "project_link_conflict",
-          detail: "this company still has 2 deal(s) on the project",
+          status: 404,
+          code: "not_found",
+          detail: "not found",
         });
       },
     });
@@ -131,9 +132,7 @@ describe("ProjectLinks", () => {
 
     // The refusal is the one moment the reader most needs to see what they
     // asked for, so the dialog stays.
-    expect(
-      await screen.findByText(/still has 2 deal\(s\) on the project/),
-    ).toBeTruthy();
+    expect(await screen.findByText("not found")).toBeTruthy();
     expect(
       screen.getByRole("searchbox", { name: /Search projects/ }),
     ).toBeTruthy();

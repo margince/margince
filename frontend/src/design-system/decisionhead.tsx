@@ -7,6 +7,7 @@ import {
   draftOf,
   type PayloadField,
   restFields,
+  withoutRepeatedLead,
 } from "./decisioncard.payload";
 import type { DecisionApproval } from "./decisionstatus";
 import {
@@ -90,10 +91,23 @@ type PayloadReading = Readonly<{
 export function readPayload(
   approval: DecisionApproval,
   layout: "deck" | "row",
-  display: readonly DecisionDisplay[],
+  declared: readonly DecisionDisplay[],
 ): PayloadReading {
   const change = approval.proposed_change ?? {};
-  const draft = draftOf(change);
+  // A field the kind declares is drawn as declared. The draft reading must not
+  // take it again as a drafted message.
+  const owned = new Set(declared.map((entry) => entry.field));
+  const read = draftOf(change);
+  const draft = {
+    subject: owned.has("subject") ? null : read.subject,
+    body: owned.has("body") ? null : read.body,
+  };
+  // The headline and the summary are already on the card; a lead that only
+  // repeats either is not drawn again.
+  const display = withoutRepeatedLead(
+    withoutRepeatedLead(declared, approval.summary),
+    cardName(approval, draft),
+  );
   const diffs = diffsOf(change);
   // The lead survives both layouts: the one sentence explaining why a decision
   // is in front of somebody is the thing a row is most missing.
@@ -103,10 +117,12 @@ export function readPayload(
   // keys made a queue unreadable, which is why it stays for an undeclared kind.
   // A declared list is at most four short labelled rows. Suppressing them cost
   // the reader what they were asked about. The Worklist shows one decision at a
-  // time, and its close-date card showed the reason with no proposed date.
+  // time, and its close-date card showed the reason with no proposed date. The
+  // full declaration decides it, so dropping a repeated lead keeps a kind
+  // declared rather than turning it raw.
   const rest =
-    layout === "deck" || display.length > 0
-      ? restFields(change, draft, diffs, display)
+    layout === "deck" || declared.length > 0
+      ? restFields(change, draft, diffs, declared)
       : [];
   return {
     draft,

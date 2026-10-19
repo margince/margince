@@ -46,7 +46,11 @@ describe("the contact page on an archived row", () => {
     ).toBeTruthy();
     expect(screen.getByText(en["record.archived"])).toBeTruthy();
     const reason = screen.getByText(en["contact.rail.archivedReadOnly"]);
-    expect(await screen.findByText(archiveEntry.summary)).toBeTruthy();
+    const archivedBy = en["history.verb.archive"].replace(
+      "{subject}",
+      archiveEntry.actor_name ?? archiveEntry.actor_id,
+    );
+    expect(await screen.findByText(archivedBy)).toBeTruthy();
     expect(
       screen.getByRole("button", { name: en["history.undo.action"] }),
     ).toBeTruthy();
@@ -105,7 +109,7 @@ describe("the contact page on an archived row", () => {
   it("says the contact could not be opened when the row read fails", async () => {
     const routes = archivedContactRoutes();
     routes["GET /contacts/p-1"] = () =>
-      jsonResponse({ status: 500, code: "internal_error" }, 500);
+      jsonResponse({ status: 500, code: "internal" }, 500);
     mount(routes);
 
     expect(await screen.findByText(en["contact.page.notOpened"])).toBeTruthy();

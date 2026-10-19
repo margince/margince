@@ -29,6 +29,7 @@ type InviteInput struct {
 // IssuedInvitation is a participant and the credential just minted for them.
 // The raw credential exists here and in the delivered mail, nowhere else.
 type IssuedInvitation struct {
+	RoomTitle   string
 	Participant crmcontracts.DealRoomParticipant
 	Credential  string
 	ExpiresAt   time.Time
@@ -123,7 +124,7 @@ func inviteTx(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, in InviteIn
 	if err != nil {
 		return IssuedInvitation{}, err
 	}
-	return IssuedInvitation{Participant: participant, Credential: raw, ExpiresAt: expiresAt}, nil
+	return IssuedInvitation{Participant: participant, Credential: raw, ExpiresAt: expiresAt, RoomTitle: room.Title}, nil
 }
 
 // ResendInvitation issues a fresh credential and retires the previous one.
@@ -181,7 +182,7 @@ func (s *Store) ResendInvitation(ctx context.Context, roomID ids.DealRoomID, par
 		if err != nil {
 			return err
 		}
-		out = IssuedInvitation{Participant: participant, Credential: raw, ExpiresAt: expiresAt}
+		out = IssuedInvitation{Participant: participant, Credential: raw, ExpiresAt: expiresAt, RoomTitle: room.Title}
 		return nil
 	})
 	return out, err

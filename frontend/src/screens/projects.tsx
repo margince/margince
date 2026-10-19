@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
 import { Hash } from "lucide-react";
 import { api } from "../api/client";
 import { usePageName } from "../app/pagemeta";
@@ -29,7 +28,6 @@ import {
   PHASE_LABEL,
   PROJECT_PHASES,
   type Project,
-  type ProjectCompanyOption,
   type ProjectPhase,
 } from "./projects.form";
 import { lastActivityColumn, ownerColumn } from "./recordlist";
@@ -108,33 +106,13 @@ export function ProjectKeyChip({
 }
 
 /**
- * The companies a project may be created on. The first page of the company
- * list, which is the same read the deal form makes for the same picker.
- */
-export function useCompanyOptions(): ProjectCompanyOption[] {
-  const companies = useQuery({
-    queryKey: ["companies"],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/companies", {
-          params: { query: { limit: 50 } },
-        }),
-      );
-    },
-  });
-  return companies.data?.data ?? [];
-}
-
-/**
  * The create affordance, shared by the list's header and its first-run plate.
  * One element rather than two renderings, so the dialog behind both is the
  * same dialog with the same fields.
  */
-function NewProjectAction({
-  companies,
-}: Readonly<{ companies: ProjectCompanyOption[] }>) {
+function NewProjectAction() {
   const t = useT();
-  const form = useProjectCreateForm({ options: companies });
+  const form = useProjectCreateForm();
   return (
     <CreateAction
       label={t("project.new")}
@@ -155,7 +133,6 @@ export function ProjectsScreen() {
   const pageName = usePageName("projects");
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  const companies = useCompanyOptions();
   const views = useSavedViews("projects");
   const savedViews = useSavedViewTabs("projects");
   const ownerChips = useOwnerChips();
@@ -168,9 +145,7 @@ export function ProjectsScreen() {
   // mounts its own copy of this verb, and a button pressed in the table's
   // header a moment before the plate replaces it would open a dialog the
   // swap throws away.
-  const createAction = !state.isPending && (
-    <NewProjectAction companies={companies} />
-  );
+  const createAction = !state.isPending && <NewProjectAction />;
   // The first-run plate: nothing exists yet, and nothing is narrowing the
   // list. A filtered-empty list is the table's own case — it already knows to
   // offer the way back — and a list that is empty because a reader typed a

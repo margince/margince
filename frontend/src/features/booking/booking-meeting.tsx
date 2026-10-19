@@ -15,8 +15,9 @@ import { QueryGate } from "../../design-system/querystates";
 import { formatDayFull, formatTimeRange } from "../../format/meetingtime";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
+import { backStaysInApp } from "../../lib/historydepth";
 import { problemCodeOf, throwProblem } from "../../lib/problem";
-import { backStaysInApp, navigate } from "../../lib/router";
+import { navigate } from "../../lib/router";
 import { ContactMeetingBrief } from "../brief/meetingbrief/drawer";
 import { BookingFooter } from "./booking-common";
 import {

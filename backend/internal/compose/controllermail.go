@@ -25,12 +25,13 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -79,6 +80,16 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		return ids.UUID{}, errors.New("compose: staging a controller delivery outside workspace context")
 	}
 	subject, body := in.Rendered.Subject, in.Rendered.Body
+	if in.Rendered.Language != "" || in.Rendered.HTMLBody != "" {
+		brand, err := settings.ApplyTx(ctx, tx, identity.Name)
+		if err != nil {
+			return ids.UUID{}, err
+		}
+		in.Rendered.HTMLBody = consent.RenderControllerPresentation(in.Rendered, brand)
+		if brand != "" {
+			body = brand + "\n\n" + body
+		}
+	}
 	outbound := string(crmcontracts.ActivityDirectionOutbound)
 	activity, _, err := q.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
 		Kind:      string(crmcontracts.ActivityKindEmail),
@@ -101,9 +112,11 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		TemplateVersion:  in.Rendered.Version,
 		Subject:          subject,
 		Body:             body,
+		HTMLBody:         in.Rendered.HTMLBody,
 		MessageID:        in.MessageID,
 		PayloadRef:       in.LinkRef,
-		PayloadExpiresAt: &in.ExpiresAt,
+		PayloadExpiresAt: controllerExpiry(in.ExpiresAt),
+		DueAt:            in.DueAt,
 		LinkID:           in.LinkID,
 	}, q.templates)
 	if err != nil {
@@ -123,6 +136,7 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		Context:    in.Category,
 		Subject:    subject,
 		Body:       body,
+		HTMLBody:   in.Rendered.HTMLBody,
 	})
 	if err != nil {
 		return ids.UUID{}, err
@@ -149,4 +163,11 @@ func controllerMailSubject(in consent.ConfirmationSend) activities.ActivityLinkI
 	return activities.ActivityLinkInput{
 		EntityType: string(crmcontracts.ActivityLinkEntityTypeContact), EntityID: in.ContactID.UUID,
 	}
+}
+
+func controllerExpiry(expiry time.Time) *time.Time {
+	if expiry.IsZero() {
+		return nil
+	}
+	return &expiry
 }

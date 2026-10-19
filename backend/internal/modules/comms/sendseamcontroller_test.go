@@ -296,3 +296,20 @@ func TestBothLanesAreAskedTheSameQuestion(t *testing.T) {
 		}
 	}
 }
+
+func TestOneSealedLinkPopulatesBothAlternativesWithoutChangingTheRow(t *testing.T) {
+	vault := &fakeVault{secret: "https://example.test/#/confirm/a?x=1&y=2"}
+	dispatcher := Dispatcher{payloads: vault}
+	delivery := controllerDelivery()
+	delivery.HTMLBody = `<a href="` + LinkPlaceholder + `">Check data</a>`
+	bodies, err := dispatcher.substituteLink(context.Background(), delivery)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if vault.gets != 1 || !strings.Contains(bodies.text, "&y=2") || !strings.Contains(bodies.html, "&amp;y=2") {
+		t.Fatalf("alternatives did not share one safely escaped link: %+v", bodies)
+	}
+	if !strings.Contains(delivery.HTMLBody, LinkPlaceholder) {
+		t.Fatal("dispatch modified persisted markup")
+	}
+}

@@ -12,7 +12,7 @@ import (
 )
 
 func TestTranscriptReadReportsEveryKindOfResult(t *testing.T) {
-	detail := transcriptReadDetail(4, transcriptStaging{tasks: 1, watched: 1, proposals: []ids.UUID{ids.NewV7()}, withheld: map[CommitmentOutcome]int{CommitmentOutcome(activities.CommitmentHistorical): 1, CommitmentOutcome(activities.CommitmentSourceUnknown): 1}})
+	detail := transcriptCopyFor("en").transcriptReadDetail(4, transcriptStaging{tasks: 1, watched: 1, proposals: []ids.UUID{ids.NewV7()}, withheld: map[CommitmentOutcome]int{CommitmentOutcome(activities.CommitmentHistorical): 1, CommitmentOutcome(activities.CommitmentSourceUnknown): 1}})
 	for _, want := range []string{"1 task", "1 commitment", "1 proposal", "1 commitment: kept as history", "1 commitment: needs a verified source date"} {
 		if !strings.Contains(detail, want) {
 			t.Errorf("detail %q omits %q", detail, want)
@@ -26,7 +26,7 @@ func TestTranscriptReviewReasonsNameTheActualMissingEvidence(t *testing.T) {
 		activities.CommitmentMeetingCancelled:  "canceled meeting",
 		activities.CommitmentContextUnassessed: "later conversation evidence",
 	} {
-		if got := transcriptWithheldReason(CommitmentOutcome(reason)); !strings.Contains(got, want) {
+		if got := transcriptCopyFor("en").transcriptWithheldReason(CommitmentOutcome(reason)); !strings.Contains(got, want) {
 			t.Errorf("%s rendered %q, want %q", reason, got, want)
 		}
 	}

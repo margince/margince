@@ -31,12 +31,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/platform/mailer"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -108,6 +110,7 @@ func notificationMailOpts() *river.InsertOpts {
 
 // notificationMailWorker mails one claimed notice.
 type notificationMailWorker struct {
+	now     func() time.Time
 	pool    *pgxpool.Pool
 	db      *database.DB
 	notices *notices.Store
@@ -219,6 +222,22 @@ func (w *notificationMailWorker) deliver(ctx context.Context, attempt notices.Em
 		return
 	}
 
+	seatCtx, live, scopeErr := seatContext(ctx, identity.NewService(w.pool), noticeWorkspace(ctx), attempt.Recipient.UUID)
+	if scopeErr != nil {
+		w.recordMailFailure(ctx, attempt.Notice.ID, "recipient authority could not be read")
+		return
+	}
+	if !live {
+		return
+	}
+	attempt, current, readErr := w.refreshApprovalNotice(seatCtx, attempt)
+	if readErr != nil {
+		w.recordMailFailure(ctx, attempt.Notice.ID, "approval could not be read")
+		return
+	}
+	if !current {
+		return
+	}
 	// The installation's own language, not the reader's. A colleague reads
 	// their Worklist in it and then this line about the same card, so an
 	// English message to a German installation is the product changing language
@@ -232,9 +251,9 @@ func (w *notificationMailWorker) deliver(ctx context.Context, attempt notices.Em
 	// holding a River worker.
 	bounded, cancel := context.WithTimeout(ctx, notificationMailBudget)
 	defer cancel()
-	if err := w.mail.Mailer.Send(bounded, address,
+	if err := mailer.SendLocalized(bounded, w.mail.Mailer, address,
 		notificationMailSubject(attempt.Notice, words),
-		notificationMailBody(attempt.Notice, w.mail.PublicBaseURL, words)); err != nil {
+		notificationMailBody(attempt.Notice, notificationBase(attempt, w.mail.PublicBaseURL), words)+approvalMailLink(attempt, w.mail.PublicBaseURL, words)+routineFooter(w.mail.PublicBaseURL, words), string(words.Language)); err != nil {
 		// LOGGED AND RECORDED, never retried. The attempt is spent; what is
 		// left to do is make the absence answerable.
 		w.log.WarnContext(ctx, "the notice was attempted and did not go out",
@@ -325,4 +344,58 @@ func notificationMailBody(notice notices.Notice, base string, words mailcopy.Cop
 	}
 	mailcopy.Link(&b, base, mailcopy.WorklistFragment, words.NotificationOpen)
 	return b.String()
+}
+
+func noticeWorkspace(ctx context.Context) ids.UUID {
+	workspace, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return ids.Nil
+	}
+	return workspace
+}
+
+func approvalMailLink(attempt notices.EmailAttempt, base string, words mailcopy.Copy) string {
+	if attempt.ApprovalID == nil {
+		return ""
+	}
+	var body strings.Builder
+	mailcopy.Link(&body, base, mailcopy.BriefMorningFragment+"?approval="+attempt.ApprovalID.String(), words.NotificationOpen)
+	return body.String()
+}
+
+func notificationBase(attempt notices.EmailAttempt, base string) string {
+	if attempt.ApprovalID != nil {
+		return ""
+	}
+	return base
+}
+
+func (w *notificationMailWorker) refreshApprovalNotice(ctx context.Context, attempt notices.EmailAttempt) (notices.EmailAttempt, bool, error) {
+	if attempt.ApprovalID == nil {
+		if attempt.Notice.Kind == "approval_pending" {
+			return attempt, false, errors.New("approval notice has no decision reference")
+		}
+		return attempt, true, nil
+	}
+	approval, err := approvals.NewService(w.db).Get(ctx, *attempt.ApprovalID)
+	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+		return attempt, false, nil
+	}
+	if err != nil {
+		return attempt, false, err
+	}
+	clock := w.now
+	if clock == nil {
+		clock = time.Now
+	}
+	if !approval.PendingAt(clock()) {
+		return attempt, false, nil
+	}
+	if approval.Summary != nil && *approval.Summary != "" {
+		attempt.Notice.Subject = *approval.Summary
+	}
+	if approval.TargetLabel != nil {
+		attempt.Notice.Body = mailcopy.OneLine(*approval.TargetLabel)
+	}
+	return attempt, true, nil
 }

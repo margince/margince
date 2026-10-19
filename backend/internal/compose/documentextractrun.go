@@ -28,6 +28,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/pdftext"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -79,6 +80,7 @@ var documentTextMIMEs = []string{
 
 // DocumentExtractor reads an attached document for the deal facts it states.
 type DocumentExtractor struct {
+	said  documentCopy
 	pool  *pgxpool.Pool
 	brain documentCompleter
 	pdf   *pdftext.Reader
@@ -133,6 +135,12 @@ type documentReadStore interface {
 // not be used closes the run and returns nil, because retrying would ask the
 // same question of the same document and get the same answer.
 func (d *DocumentExtractor) Read(ctx context.Context, store documentReadStore, readID, attachmentID ids.UUID) error {
+	reader := *d
+	reader.said = documentCopyFor(identity.BaseLanguageForPrompt(ctx, d.pool))
+	return reader.readAttachment(ctx, store, readID, attachmentID)
+}
+
+func (d *DocumentExtractor) readAttachment(ctx context.Context, store documentReadStore, readID, attachmentID ids.UUID) error {
 	claim, err := store.BeginExtractionRead(ctx, readID, activities.ExtractionReadLease)
 	if err != nil {
 		return err
@@ -145,7 +153,7 @@ func (d *DocumentExtractor) Read(ctx context.Context, store documentReadStore, r
 
 	src, detail, err := d.sourceFor(ctx, store, attachmentID)
 	if err != nil {
-		if terminal, msg := unreadableDocument(err); terminal {
+		if terminal, msg := d.unreadableDocument(err); terminal {
 			return d.fail(ctx, store, readID, claimedAt, msg)
 		}
 		// Anything else — the database unreachable, the object store down — is
@@ -167,13 +175,13 @@ func (d *DocumentExtractor) Read(ctx context.Context, store documentReadStore, r
 		if errors.Is(err, errRefusedDocument) {
 			d.log.WarnContext(ctx, "document reading refused",
 				"attachment_extraction_id", readID, "attachment_id", attachmentID, "reason", err)
-			return d.fail(ctx, store, readID, claimedAt, refusedReadingDetail(err))
+			return d.fail(ctx, store, readID, claimedAt, d.refusedReadingDetail(err))
 		}
 		return d.retryable(ctx, store, readID, claimedAt, err)
 	}
 	return store.FinishExtractionRead(ctx, readID, activities.ExtractionReadOutcome{
 		Status:    activities.ExtractionReadDone,
-		Detail:    emptyReadingDetail(fields),
+		Detail:    d.emptyReadingDetail(fields),
 		Fields:    fields,
 		ClaimedAt: claimedAt,
 	})
@@ -213,13 +221,13 @@ func (d *DocumentExtractor) retryable(
 // documents state none of the four — but an empty panel that does not explain
 // itself reads as a broken feature, which is the one thing this whole shape
 // exists to prevent.
-func emptyReadingDetail(fields []extraction.ExtractedField) string {
+func (d *DocumentExtractor) emptyReadingDetail(fields []extraction.ExtractedField) string {
 	for _, f := range fields {
 		if !f.Omitted {
 			return ""
 		}
 	}
-	return "this document states none of the deal fields clearly enough to offer one"
+	return documentWords.NoFields.In(d.said.Lang())
 }
 
 // sourceFor decides which lane this document takes, and reads it.
@@ -264,7 +272,7 @@ func (d *DocumentExtractor) sourceFor(
 	}
 	if len(bytes) > maxDocumentBytes {
 		return documentSource{}, fmt.Sprintf(
-			"this document is larger than the %d MB one reading carries; a reading of part of it could not say which part it saw",
+			documentWords.Bytes.In(d.said.Lang()),
 			maxDocumentBytes>>20,
 		), nil
 	}
@@ -298,10 +306,10 @@ func (d *DocumentExtractor) laneFor(
 		return d.extractedSource(ctx, meta, bytes)
 	}
 	if mime == "" {
-		return documentSource{}, "this document declares no content type, so nothing can say how to read it"
+		return documentSource{}, documentWords.NoType.In(d.said.Lang())
 	}
 	return documentSource{}, fmt.Sprintf(
-		"this installation's model cannot read a %s document; a file whose text can be read directly, or a model bound to carry documents, would be read",
+		documentWords.UnsupportedType.In(d.said.Lang()),
 		mime,
 	)
 }
@@ -323,9 +331,9 @@ func (d *DocumentExtractor) extractedSource(
 		// product has no engine that invents one. Named as the specific thing it
 		// is, because "cannot read a PDF" would send an operator to their model
 		// config when the answer is a different copy of the document.
-		return documentSource{}, "this PDF holds no text, which is what a scanned or photographed document looks like; a PDF exported from the system that produced it can be read"
+		return documentSource{}, documentWords.PDFNoText.In(d.said.Lang())
 	case err != nil:
-		return documentSource{}, "this PDF could not be opened to read its text"
+		return documentSource{}, documentWords.PDFUnreadable.In(d.said.Lang())
 	}
 	// Held to the SAME bound the text lane holds, by the same words. Extract
 	// answers one rune past the budget precisely so this can tell a document
@@ -337,7 +345,7 @@ func (d *DocumentExtractor) extractedSource(
 		// runes; a byte count in the sentence would tell a rep a German
 		// document was half again as long as it is.
 		return documentSource{}, fmt.Sprintf(
-			"this document is %d characters, and one reading addresses at most %d",
+			documentWords.Chars.In(d.said.Lang()),
 			chars, maxDocumentTextChars,
 		)
 	}
@@ -366,12 +374,12 @@ func mediaTypeOf(contentType string) string {
 func (d *DocumentExtractor) textSource(meta crmcontracts.Attachment, raw []byte) (documentSource, string) {
 	text := strings.TrimSpace(string(raw))
 	if text == "" {
-		return documentSource{}, "this document carries no text to read"
+		return documentSource{}, documentWords.Empty.In(d.said.Lang())
 	}
 	if utf8.RuneCountInString(text) > maxDocumentTextChars {
 		return documentSource{}, fmt.Sprintf(
-			"this document is %d characters, and one reading addresses at most %d",
-			len(text), maxDocumentTextChars,
+			documentWords.Chars.In(d.said.Lang()),
+			utf8.RuneCountInString(text), maxDocumentTextChars,
 		)
 	}
 	return documentSource{Text: text, Filename: meta.Filename, Parent: attachmentParent(meta)}, ""
@@ -398,12 +406,11 @@ func attachmentParent(meta crmcontracts.Attachment) ids.Ref {
 // it was stored as is the opposite — every model reads them the same way, so
 // "can be read again" invites a rep to spend the same call twice and reach the
 // same place. The file has to change.
-func refusedReadingDetail(err error) string {
+func (d *DocumentExtractor) refusedReadingDetail(err error) string {
 	if errors.Is(err, model.ErrAttachmentMislabelled) {
-		return "this document's bytes are not the type it was uploaded as, so no model can read it; " +
-			"upload it again as the file it actually is"
+		return documentWords.Mislabelled.In(d.said.Lang())
 	}
-	return "the model's reading of this document could not be used; the document is unchanged and can be read again"
+	return documentWords.Refused.In(d.said.Lang())
 }
 
 // ask puts one document to the model and returns what it may act on.
@@ -459,12 +466,12 @@ func (d *DocumentExtractor) ask(ctx context.Context, src documentSource) ([]extr
 // put a driver string ("failed to connect to host=…") in front of a rep on the
 // one field this feature exists to make readable, and would settle a transient
 // blip as a permanent verdict.
-func unreadableDocument(err error) (terminal bool, detail string) {
+func (d *DocumentExtractor) unreadableDocument(err error) (terminal bool, detail string) {
 	if errors.Is(err, apperrors.ErrNotFound) {
-		return true, "this document is no longer available to read"
+		return true, documentWords.Missing.In(d.said.Lang())
 	}
 	if errors.Is(err, activities.ErrBlobstoreUnconfigured) {
-		return true, "this installation stores no document bytes, so there is nothing to read"
+		return true, documentWords.NoStorage.In(d.said.Lang())
 	}
 	return false, ""
 }

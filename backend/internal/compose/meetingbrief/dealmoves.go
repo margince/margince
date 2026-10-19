@@ -41,8 +41,9 @@ import (
 // The brief only ever renders these in date order, so the reader is the text
 // plus what to cite; nothing downstream needs the parts back.
 type DealMoveIn struct {
-	At   time.Time
-	Text string
+	At        time.Time
+	Text      string
+	orderText string
 	// DealID is what the sentence cites: these moves are facts about the deal,
 	// and the deal page is where a reader goes to see them.
 	DealID string
@@ -60,7 +61,7 @@ const dealMovesCap = 5
 // readDealMoves gathers the deal's own movements strictly after `since` and not
 // after `now`. A future-dated row has not happened yet, exactly as the claim
 // filter says.
-func (s *Service) readDealMoves(
+func (said briefCopy) readDealMoves(
 	ctx context.Context, tx pgx.Tx, dealID ids.UUID, since, now time.Time,
 ) ([]DealMoveIn, bool, error) {
 	if dealID == (ids.UUID{}) {
@@ -84,15 +85,15 @@ func (s *Service) readDealMoves(
 		// broken read behind a silence that looks deliberate.
 		return nil, false, err
 	}
-	moves, err := readStageMoves(ctx, tx, dealID, since, now)
+	moves, err := said.readStageMoves(ctx, tx, dealID, since, now)
 	if err != nil {
 		return nil, false, err
 	}
-	offers, err := readOfferMoves(ctx, tx, dealID, since, now)
+	offers, err := said.readOfferMoves(ctx, tx, dealID, since, now)
 	if err != nil {
 		return nil, false, err
 	}
-	room, roomHidden, err := readRoomMoves(ctx, tx, dealID, since, now)
+	room, roomHidden, err := said.readRoomMoves(ctx, tx, dealID, since, now)
 	if err != nil {
 		return nil, false, err
 	}
@@ -109,7 +110,7 @@ func (s *Service) readDealMoves(
 // readStageMoves reads where the deal went. The stage NAME is read through the
 // join rather than restated, so a renamed stage reads correctly in an old
 // brief.
-func readStageMoves(
+func (said briefCopy) readStageMoves(
 	ctx context.Context, tx pgx.Tx, dealID ids.UUID, since, now time.Time,
 ) ([]DealMoveIn, error) {
 	rows, err := tx.Query(ctx, `
@@ -130,11 +131,7 @@ func readStageMoves(
 		if err := rows.Scan(&at, &from, &to); err != nil {
 			return nil, fmt.Errorf("scan a stage move: %w", err)
 		}
-		text := fmt.Sprintf("Since then the deal moved to %s.", to)
-		if from != "" {
-			text = fmt.Sprintf("Since then the deal moved from %s to %s.", from, to)
-		}
-		out = append(out, DealMoveIn{At: at, Text: text, DealID: dealID.String()})
+		out = append(out, said.wordedMove(at, dealID, func(words briefCopy) string { return words.stageMoveLine(from, to) }))
 	}
 	return out, rowsErr(rows, "the deal's stage moves")
 }
@@ -142,7 +139,7 @@ func readStageMoves(
 // readOfferMoves reads what was quoted. The revision number is the fact a rep
 // needs — "they are looking at revision 3" — and the status says whether it
 // actually went out.
-func readOfferMoves(
+func (said briefCopy) readOfferMoves(
 	ctx context.Context, tx pgx.Tx, dealID ids.UUID, since, now time.Time,
 ) ([]DealMoveIn, error) {
 	rows, err := tx.Query(ctx, `
@@ -163,11 +160,7 @@ func readOfferMoves(
 		if err := rows.Scan(&at, &number, &revision, &status); err != nil {
 			return nil, fmt.Errorf("scan an offer: %w", err)
 		}
-		out = append(out, DealMoveIn{
-			At:     at,
-			Text:   fmt.Sprintf("Since then offer %s revision %d was %s.", number, revision, status),
-			DealID: dealID.String(),
-		})
+		out = append(out, said.wordedMove(at, dealID, func(words briefCopy) string { return words.offerMoveLine(number, revision, status) }))
 	}
 	return out, rowsErr(rows, "the deal's offers")
 }
@@ -178,7 +171,7 @@ func readOfferMoves(
 // not: a rep without that grant gets a brief with no room line rather than a
 // refusal, but a silent one would read exactly like a deal whose buyer has done
 // nothing. The bool is that admission, and the brief renders it.
-func readRoomMoves(
+func (said briefCopy) readRoomMoves(
 	ctx context.Context, tx pgx.Tx, dealID ids.UUID, since, now time.Time,
 ) ([]DealMoveIn, bool, error) {
 	if err := auth.Require(ctx, "deal_room", principal.ActionRead); err != nil {
@@ -210,28 +203,16 @@ func readRoomMoves(
 		if err := rows.Scan(&at, &who); err != nil {
 			return nil, false, fmt.Errorf("scan a deal room act: %w", err)
 		}
-		out = append(out, DealMoveIn{At: at, Text: roomMoveLine(who), DealID: dealID.String()})
+		out = append(out, said.wordedMove(at, dealID, func(words briefCopy) string { return words.roomMoveLine(who) }))
 	}
 	return out, false, rowsErr(rows, "the deal room's activity")
-}
-
-// roomMoveLine words one comment of the buyer's. An unnamed participant reads
-// as "the buyer" rather than as an empty name.
-func roomMoveLine(who string) string {
-	if who == "" {
-		who = "the buyer"
-	}
-	return fmt.Sprintf("Since then %s commented in the Deal Room.", who)
 }
 
 // newestFirst orders the merged moves and cuts them to the section's share.
 // Each read is already capped, so this bounds the UNION of three reads rather
 // than any one of them.
 func newestFirst(moves []DealMoveIn) []DealMoveIn {
-	// Tied timestamps break on the text, so two reads of one unchanged deal
-	// render the same order. Without it a stage move and an offer stamped in
-	// the same transaction could swap places between requests, and one of them
-	// could fall in and out of the top five.
+	// Canonical text keeps tied events in the same order across languages.
 	for i := 1; i < len(moves); i++ {
 		for j := i; j > 0 && laterThan(moves[j], moves[j-1]); j-- {
 			moves[j], moves[j-1] = moves[j-1], moves[j]
@@ -243,11 +224,10 @@ func newestFirst(moves []DealMoveIn) []DealMoveIn {
 	return moves
 }
 
-// laterThan orders two moves: newest first, and on a tie by text so the order
-// is the same on every read.
+// laterThan orders by timestamp and then the language-independent text key.
 func laterThan(a, b DealMoveIn) bool {
 	if a.At.Equal(b.At) {
-		return a.Text > b.Text
+		return a.sortText() > b.sortText()
 	}
 	return a.At.After(b.At)
 }
@@ -261,15 +241,16 @@ func rowsErr(rows pgx.Rows, what string) error {
 	return nil
 }
 
-// ReadDealMovesForTest exposes the three reads to the integration lane.
-//
-// They are unexported methods on Service, which the lane cannot build without
-// the whole assembly around it; what has to be checked is narrower and lower —
-// that every column these statements name exists. A test that rebuilt the SQL
-// would check its own copy, and a copy stays green through the change that
-// breaks the original.
+// ReadDealMovesForTest exposes the SQL reader and its authorization gates.
 func ReadDealMovesForTest(
-	ctx context.Context, tx pgx.Tx, dealID ids.UUID, since, now time.Time,
+	ctx context.Context, tx pgx.Tx, dealID ids.UUID, since, now time.Time, language string,
 ) ([]DealMoveIn, bool, error) {
-	return (&Service{}).readDealMoves(ctx, tx, dealID, since, now)
+	return briefCopyFor(language).readDealMoves(ctx, tx, dealID, since, now)
+}
+
+func (move DealMoveIn) sortText() string {
+	if move.orderText != "" {
+		return move.orderText
+	}
+	return move.Text
 }

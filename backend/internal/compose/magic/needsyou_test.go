@@ -11,6 +11,7 @@ package magic
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -378,5 +379,48 @@ func TestAContactProposalNamesWhoWroteWhenItCan(t *testing.T) {
 	}
 	if lines[1].Summary.Key != genericApprovalSentence {
 		t.Errorf("a proposal with no name reads %q, want the generic sentence", lines[1].Summary.Key)
+	}
+}
+
+func TestCommitmentLinesNameThePromiseFromTheSavedSummary(t *testing.T) {
+	for _, summary := range []string{"Send the revised scope", "Confirm the launch date"} {
+		approval := stagedApproval("commitment_task")
+		approval.Summary = &summary
+		if err := json.Unmarshal([]byte(`{"party":"  Alex\u202e\nBeck ","summary":"Untrusted payload summary"}`), &approval.ProposedChange); err != nil {
+			t.Fatal(err)
+		}
+		lines := decisionsWaiting(t, approval)
+		if len(lines) != 1 || lines[0].Summary.Key != "magic.action.approval_commitment_task_named" {
+			t.Fatalf("commitment line = %+v", lines)
+		}
+		values := lines[0].Summary.Values
+		if values == nil || (*values)["summary"] != summary || (*values)["party"] != "Alex Beck" {
+			t.Fatalf("commitment values = %v", values)
+		}
+	}
+}
+
+func TestLegacyCommitmentWithNoPromiserKeepsItsSummary(t *testing.T) {
+	approval := stagedApproval("commitment_task")
+	summary := "Send the revised scope"
+	approval.Summary = &summary
+	if err := json.Unmarshal([]byte(`{"party":"\u202e "}`), &approval.ProposedChange); err != nil {
+		t.Fatal(err)
+	}
+	lines := decisionsWaiting(t, approval)
+	if len(lines) != 1 || lines[0].Summary.Key != "magic.action.approval_commitment_task_summary" {
+		t.Fatalf("legacy commitment line = %+v", lines)
+	}
+}
+
+func TestCommitmentLinesDoNotAssertAnUnverifiedPromiser(t *testing.T) {
+	approval := stagedApproval("commitment_task")
+	approval.Summary = new("Send the revised scope")
+	if err := json.Unmarshal([]byte(`{"party":"Alex Beck","promiser_unresolved":true}`), &approval.ProposedChange); err != nil {
+		t.Fatal(err)
+	}
+	lines := decisionsWaiting(t, approval)
+	if len(lines) != 1 || lines[0].Summary.Key != "magic.action.approval_commitment_task_unverified" {
+		t.Fatalf("unverified commitment line = %+v", lines)
 	}
 }

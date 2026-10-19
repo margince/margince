@@ -228,7 +228,7 @@ func (f *Fetcher) fetchDoc(ctx context.Context, rawURL, accept string) (body, me
 	if final == nil {
 		final = parsed
 	}
-	return string(got.body), parseMediaType(got.contentType), final, nil
+	return got.text(), parseMediaType(got.contentType), final, nil
 }
 
 // FetchAsset retrieves one binary asset a page declared — a logo, an icon, an
@@ -271,7 +271,7 @@ func (f *Fetcher) FetchAsset(ctx context.Context, rawURL string) ([]byte, string
 // robots and sitemap lookups pass "" — they never negotiate markdown.
 func (f *Fetcher) getRaw(ctx context.Context, rawURL, accept string) (string, int, string, error) {
 	got, err := f.getBytes(ctx, rawURL, accept, maxFetchBytes)
-	return string(got.body), got.status, got.contentType, err
+	return got.text(), got.status, got.contentType, err
 }
 
 // fetched is one completed GET: the body, the status, the declared media type,
@@ -288,6 +288,9 @@ type fetched struct {
 	// the page to see headers the first fetch already received would spend a
 	// second request on a site that owes us nothing.
 	header http.Header
+	// capped reports that the body filled the read limit, so the server may
+	// have sent more and the last character may be cut short.
+	capped bool
 }
 
 // getBytes is the shared capped GET. limit bounds the body read; a body over
@@ -317,7 +320,7 @@ func (f *Fetcher) getBytes(ctx context.Context, rawURL, accept string, limit int
 	return fetched{
 		body: body, status: resp.StatusCode,
 		contentType: resp.Header.Get("Content-Type"), finalURL: resp.Request.URL,
-		header: resp.Header,
+		header: resp.Header, capped: int64(len(body)) >= limit,
 	}, nil
 }
 

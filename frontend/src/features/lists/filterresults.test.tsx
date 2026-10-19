@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import type { FilterPreview, VocabularyField } from "../../lib/filterdata";
 import { FilterResults, previewColumnNames } from "./filterresults";
 
@@ -113,8 +115,14 @@ function preview(rows: readonly Record<string, unknown>[]): FilterPreview {
   };
 }
 
+// The table reads the companies its rows name, so it needs a query client
+// even when no column is a reference.
 function wrapper({ children }: { children: ReactNode }) {
-  return <LocaleProvider>{children}</LocaleProvider>;
+  return (
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider>{children}</LocaleProvider>
+    </QueryClientProvider>
+  );
 }
 
 function results(rows: readonly Record<string, unknown>[]) {
@@ -229,5 +237,219 @@ describe("a first page of many", () => {
     );
 
     expect(asked).toEqual([50]);
+  });
+});
+
+describe("a column that points at another record", () => {
+  const DEAL_FIELDS: VocabularyField[] = [
+    {
+      name: "owner_id",
+      type: "id",
+      operators: ["eq"],
+      references: "app_user",
+      custom: false,
+    },
+    {
+      name: "stage_id",
+      type: "id",
+      operators: ["eq"],
+      references: "stage",
+      custom: false,
+    },
+    {
+      name: "company_id",
+      type: "id",
+      operators: ["eq"],
+      references: "company",
+      custom: false,
+    },
+    {
+      name: "project_id",
+      type: "id",
+      operators: ["eq"],
+      references: "project",
+      custom: false,
+    },
+    {
+      name: "owner_team_id",
+      type: "id",
+      operators: ["eq"],
+      references: "team",
+      custom: false,
+    },
+  ];
+  const NAMED = DEAL_FIELDS.map((field) => field.name);
+
+  function jsonResponse(body: unknown, status = 200) {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // Names only u-1, s-1, c-1, p-1 and t-1. Every other id is one the workspace
+  // no longer holds, the way a removed seat or a deleted stage is.
+  function stubWorkspace({ companiesFail = false } = {}) {
+    const fetchMock = vi.fn(async (request: Request) => {
+      const url = new URL(request.url);
+      const path = url.pathname;
+      if (path.endsWith("/companies") && companiesFail) {
+        return jsonResponse({ title: "Server error" }, 500);
+      }
+      if (path.endsWith("/projects/p-1")) {
+        return jsonResponse({ id: "p-1", name: "Rollout" });
+      }
+      if (path.endsWith("/teams")) {
+        return jsonResponse({
+          data: [{ id: "t-1", name: "Field Sales" }],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      if (path.endsWith("/companies")) {
+        const asked = url.searchParams.getAll("id");
+        return jsonResponse({
+          data: asked.includes("c-1")
+            ? [{ id: "c-1", display_name: "Brandt GmbH" }]
+            : [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      if (path.endsWith("/users/names")) {
+        return jsonResponse({
+          data: [{ id: "u-1", display_name: "Priya Shah" }],
+        });
+      }
+      if (path.endsWith("/stages")) {
+        return jsonResponse({ data: [{ id: "s-1", name: "Qualified" }] });
+      }
+      return jsonResponse({}, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  function pathsAsked(fetchMock: ReturnType<typeof stubWorkspace>) {
+    return fetchMock.mock.calls.map(
+      ([request]) => new URL(request.url).pathname,
+    );
+  }
+
+  function renderDeals(rows: readonly Record<string, unknown>[]) {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    return render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <FilterResults
+            preview={{
+              resource: "deal",
+              match_count: rows.length,
+              columns: ["id", "name", ...NAMED],
+              rows: rows as FilterPreview["rows"],
+              truncated: false,
+            }}
+            fields={DEAL_FIELDS}
+            named={NAMED}
+            unit="deals"
+            widthsKey="filter-preview-deals"
+            pending={false}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+  }
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("names the owner, the stage and the company instead of their ids", async () => {
+    stubWorkspace();
+    renderDeals([
+      {
+        id: "d-1",
+        name: "Brandt renewal",
+        owner_id: "u-1",
+        stage_id: "s-1",
+        company_id: "c-1",
+      },
+    ]);
+
+    expect(await screen.findByText("Priya Shah")).toBeTruthy();
+    expect(await screen.findByText("Qualified")).toBeTruthy();
+    expect(await screen.findByText("Brandt GmbH")).toBeTruthy();
+    expect(screen.queryByText("u-1")).toBeNull();
+    expect(screen.queryByText("s-1")).toBeNull();
+    expect(screen.queryByText("c-1")).toBeNull();
+  });
+
+  it("reads every company on the page in one request", async () => {
+    const fetchMock = stubWorkspace();
+    renderDeals(
+      ["c-1", "c-2", "c-3", "c-1"].map((company, index) => ({
+        id: `d-${index}`,
+        name: `Deal ${index}`,
+        owner_id: "u-1",
+        stage_id: "s-1",
+        company_id: company,
+      })),
+    );
+
+    expect(await screen.findAllByText("Brandt GmbH")).toHaveLength(2);
+    const companyReads = pathsAsked(fetchMock).filter((path) =>
+      path.includes("/companies"),
+    );
+    expect(companyReads).toHaveLength(1);
+    expect(companyReads[0]).toMatch(/\/companies$/);
+  });
+
+  it("says a reference is gone rather than printing an id nobody can read", async () => {
+    stubWorkspace();
+    renderDeals([
+      {
+        id: "d-2",
+        name: "Orphaned deal",
+        owner_id: "u-removed",
+        stage_id: "s-removed",
+        company_id: "c-removed",
+      },
+    ]);
+
+    await waitFor(() =>
+      expect(screen.getAllByText(en["filters.resultRefGone"])).toHaveLength(3),
+    );
+    expect(screen.queryByText("u-removed")).toBeNull();
+    expect(screen.queryByText("s-removed")).toBeNull();
+    expect(screen.queryByText("c-removed")).toBeNull();
+  });
+
+  it("names a project and a team, and says when either is gone", async () => {
+    stubWorkspace();
+    renderDeals([
+      { id: "d-1", name: "Live", project_id: "p-1", owner_team_id: "t-1" },
+      {
+        id: "d-2",
+        name: "Orphaned",
+        project_id: "p-removed",
+        owner_team_id: "t-removed",
+      },
+    ]);
+
+    expect(await screen.findByText("Rollout")).toBeTruthy();
+    expect(await screen.findByText("Field Sales")).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getAllByText(en["filters.resultRefGone"])).toHaveLength(2),
+    );
+    expect(screen.queryByText("p-removed")).toBeNull();
+    expect(screen.queryByText("t-removed")).toBeNull();
+  });
+
+  it("says a company's name did not load when the read fails", async () => {
+    // A failed read answered nothing about the company, so it may not claim
+    // the company is gone.
+    stubWorkspace({ companiesFail: true });
+    renderDeals([{ id: "d-1", name: "Brandt renewal", company_id: "c-1" }]);
+
+    expect(await screen.findByText(en["ref.nameLoadFailed"])).toBeTruthy();
+    expect(screen.queryByText(en["filters.resultRefGone"])).toBeNull();
   });
 });
