@@ -71,15 +71,19 @@ function useRevisionAction(report: ReportingReport) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: async (action: DraftAction) => {
-      const params = { path: { id: report.id }, ...ifMatch(report.version) };
+      const path = { id: report.id };
       switch (action.kind) {
         case "publish":
           return unwrap(
-            await api.POST("/analytics/reports/{id}/draft/publish", { params }),
+            await api.POST("/analytics/reports/{id}/draft/publish", {
+              params: { path, ...ifMatch(report.version) },
+            }),
           );
         case "discard":
           return unwrap(
-            await api.DELETE("/analytics/reports/{id}/draft", { params }),
+            await api.DELETE("/analytics/reports/{id}/draft", {
+              params: { path, ...ifMatch(report.version) },
+            }),
           );
         case "restore":
           return unwrap(
@@ -87,8 +91,8 @@ function useRevisionAction(report: ReportingReport) {
               "/analytics/reports/{id}/revisions/{revision}/restore",
               {
                 params: {
-                  ...params,
-                  path: { id: report.id, revision: action.revision },
+                  path: { ...path, revision: action.revision },
+                  ...ifMatch(report.version),
                 },
               },
             ),
