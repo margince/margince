@@ -229,14 +229,16 @@ export const vi = {
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "Tất cả pipeline",
   "reporting.resultsThrough": "Kết quả tính đến {at}",
-  "reporting.writtenNoneWon": "Chưa chốt được doanh số nào trong {period}.",
-  "reporting.writtenWon": "Đã chốt {amount} trong {period}.",
-  "reporting.writtenWonTarget":
-    "Đã chốt {amount} trong {period}, đạt {percent}% mục tiêu {target}.",
+  "reporting.writtenNoneWon": "Chưa chốt doanh số nào trong {period}.",
+  "reporting.writtenWon": "Đã chốt trong {period}: {amount}.",
+  "reporting.writtenTarget":
+    "Mục tiêu cho {targetPeriod}: {target}, đã đạt {percent}% với {actual}.",
   "reporting.writtenLanding":
-    "Theo dự báo deal, quý tài chính này dự kiến kết thúc ở mức {amount}.",
-  "reporting.writtenOpen_one": "Đang mở {amount} trong {count} deal.",
-  "reporting.writtenOpen_other": "Đang mở {amount} trong {count} deal.",
+    "Dự báo cuối quý tài chính, tính đến {date}: {amount}.",
+  "reporting.writtenOpen_one":
+    "Đang mở ngày {date}: {amount} trong {count} deal.",
+  "reporting.writtenOpen_other":
+    "Đang mở ngày {date}: {amount} trong {count} deal.",
   "reporting.noSalesWon": "Chưa có doanh số đã chốt",
   "reporting.openPipelineAsOf": "Tính đến {at}",
   "reporting.openPipelineBasis_one": "Deal đang mở: {count} · tính đến {at}",

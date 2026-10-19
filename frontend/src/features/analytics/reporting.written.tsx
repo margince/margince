@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { formatNumber } from "../../format/format";
+import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import {
   type ReportingEvaluation,
@@ -31,10 +31,16 @@ export function writtenSummary(
   evaluation: ReportingEvaluation,
   words: Words,
 ): string[] {
-  const metric = (id: Metric["id"]) =>
-    evaluation.metrics.find((candidate) => candidate.id === id);
+  const metric = (id: Metric["id"]) => {
+    const found = evaluation.metrics.find((candidate) => candidate.id === id);
+    // A figure part of which the reader may not see would be stated as the
+    // whole, so it is left out.
+    return found?.coverage.withheld ? undefined : found;
+  };
+  const won = metric("bookings_won");
   return [
-    wonSentence(evaluation, metric("bookings_won"), words),
+    wonSentence(evaluation, won, words),
+    targetSentence(evaluation, won, words),
     landingSentence(evaluation, metric("forecast_landing"), words),
     openSentence(evaluation, metric("open_pipeline"), words),
   ].filter((sentence): sentence is string => sentence !== null);
@@ -52,6 +58,13 @@ function amount(
     evaluation.context.currency,
     words.locale,
   );
+}
+
+// The day a state figure was read. A saved edition reads it on its capture
+// day, so the sentence says which day rather than calling it current.
+function stateDay(evaluation: ReportingEvaluation, words: Words): string {
+  const { context } = evaluation;
+  return formatDateAbbrev(context.state_at, words.locale, context.timezone);
 }
 
 function wonSentence(
@@ -74,19 +87,41 @@ function wonSentence(
   if (won.coverage.status !== "ok" || won.value == null) {
     return null;
   }
-  const target = won.target;
-  const actual = won.target_actual;
-  if (target != null && target > 0 && actual != null) {
-    return words.t("reporting.writtenWonTarget", {
-      amount: amount(evaluation, won, won.value, words),
-      period,
-      target: amount(evaluation, won, target, words),
-      percent: formatNumber(Math.round((actual / target) * 100), words.locale),
-    });
-  }
   return words.t("reporting.writtenWon", {
     amount: amount(evaluation, won, won.value, words),
     period,
+  });
+}
+
+// The target has its own period and its own actual, which can differ from
+// the period the page shows, so it is a sentence of its own.
+function targetSentence(
+  evaluation: ReportingEvaluation,
+  won: Metric | undefined,
+  words: Words,
+): string | null {
+  const { context } = evaluation;
+  const target = won?.target;
+  const actual = won?.target_actual;
+  if (
+    !won ||
+    won.coverage.status !== "ok" ||
+    target == null ||
+    target <= 0 ||
+    actual == null ||
+    !context.target_interval
+  ) {
+    return null;
+  }
+  return words.t("reporting.writtenTarget", {
+    targetPeriod: reportingPeriodLabel(
+      context.target_interval,
+      context.timezone,
+      words.locale,
+    ),
+    target: amount(evaluation, won, target, words),
+    actual: amount(evaluation, won, actual, words),
+    percent: formatNumber(Math.round((actual / target) * 100), words.locale),
   });
 }
 
@@ -99,6 +134,7 @@ function landingSentence(
     return null;
   }
   return words.t("reporting.writtenLanding", {
+    date: stateDay(evaluation, words),
     amount: amount(evaluation, landing, landing.value, words),
   });
 }
@@ -118,6 +154,7 @@ function openSentence(
     return null;
   }
   return words.plural("reporting.writtenOpen", count, {
+    date: stateDay(evaluation, words),
     amount: amount(evaluation, open, open.value, words),
     count: formatNumber(count, words.locale),
   });

@@ -221,15 +221,14 @@ export const de = {
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "Alle Pipelines",
   "reporting.resultsThrough": "Ergebnisse bis {at}",
-  "reporting.writtenNoneWon":
-    "Im Zeitraum {period} wurde kein Umsatz gewonnen.",
-  "reporting.writtenWon": "Im Zeitraum {period} wurden {amount} gewonnen.",
-  "reporting.writtenWonTarget":
-    "Im Zeitraum {period} wurden {amount} gewonnen, {percent} % des Ziels von {target}.",
+  "reporting.writtenNoneWon": "Kein Umsatz gewonnen im Zeitraum {period}.",
+  "reporting.writtenWon": "Gewonnen im Zeitraum {period}: {amount}.",
+  "reporting.writtenTarget":
+    "Ziel für {targetPeriod}: {target}, zu {percent} % erreicht mit {actual}.",
   "reporting.writtenLanding":
-    "Laut Deal-Prognose endet dieses Geschäftsquartal bei {amount}.",
-  "reporting.writtenOpen_one": "{amount} sind in {count} Deal offen.",
-  "reporting.writtenOpen_other": "{amount} sind in {count} Deals offen.",
+    "Prognose für das Ende des Geschäftsquartals, Stand {date}: {amount}.",
+  "reporting.writtenOpen_one": "Offen am {date}: {amount} in {count} Deal.",
+  "reporting.writtenOpen_other": "Offen am {date}: {amount} in {count} Deals.",
   "reporting.noSalesWon": "Keine gewonnenen Abschlüsse",
   "reporting.openPipelineAsOf": "Stand {at}",
   "reporting.openPipelineBasis_one": "Offener Deal: {count} · Stand {at}",

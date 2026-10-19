@@ -15,25 +15,53 @@ const english: Words = {
 type Evaluation = typeof reportingStoryEvaluation;
 type Metric = Evaluation["metrics"][number];
 
+const context: Evaluation["context"] = {
+  ...reportingStoryEvaluation.context,
+  interval: {
+    start_at: "2026-10-12T00:00:00Z",
+    end_at: "2026-10-19T00:00:00Z",
+  },
+  target_interval: {
+    start_at: "2026-10-01T00:00:00Z",
+    end_at: "2026-11-01T00:00:00Z",
+  },
+  state_at: "2026-09-30T10:00:00Z",
+};
+
 function withMetrics(metrics: Metric[]): Evaluation {
-  return { ...reportingStoryEvaluation, metrics };
+  return { ...reportingStoryEvaluation, context, metrics };
 }
 
+// A week's sales against a month's target: the two actuals differ.
 const won: Metric = {
   id: "bookings_won",
   version: "2",
   unit: "EUR",
-  value: 42_000_000,
-  target: 80_000_000,
-  target_actual: 42_000_000,
+  value: 30_000,
+  target: 100_000,
+  target_actual: 50_000,
   coverage: { status: "ok", withheld: false },
   evidence: { metric: "bookings_won", context_id: "interval" },
 };
 
-it("writes the won, forecast and open sentences from the figures it was given", () => {
+const open: Metric = {
+  id: "open_pipeline",
+  version: "1",
+  unit: "EUR",
+  value: 120_000_000,
+  coverage: { status: "ok", withheld: false, eligible_count: 34 },
+  evidence: { metric: "open_pipeline", context_id: "state" },
+};
+
+it("states the period's sales and the target's own actual separately", () => {
+  const [sales, target] = writtenSummary(withMetrics([won]), english);
+  expect(sales).toMatch(/^Won in .+: €300\.$/);
+  expect(target).toMatch(/^Target for .+: €1,000, 50% reached with €500\.$/);
+});
+
+it("dates the forecast and the open pipeline to the day they were read", () => {
   const sentences = writtenSummary(
     withMetrics([
-      won,
       {
         id: "forecast_landing",
         version: "1",
@@ -42,37 +70,33 @@ it("writes the won, forecast and open sentences from the figures it was given", 
         coverage: { status: "ok", withheld: false },
         evidence: { metric: "forecast_landing", context_id: "state" },
       },
-      {
-        id: "open_pipeline",
-        version: "1",
-        unit: "EUR",
-        value: 120_000_000,
-        coverage: { status: "ok", withheld: false, eligible_count: 34 },
-        evidence: { metric: "open_pipeline", context_id: "state" },
-      },
+      open,
     ]),
     english,
   );
-  expect(sentences).toHaveLength(3);
-  expect(sentences[0]).toMatch(/^You won .+ in .+, 53% of the .+ target\.$/);
-  expect(sentences[1]).toMatch(
-    /^The deal forecast expects this fiscal quarter to end at .+\.$/,
-  );
-  expect(sentences[2]).toMatch(/ is open across 34 deals\.$/);
+  expect(sentences).toEqual([
+    expect.stringMatching(
+      /^Forecast for the end of the fiscal quarter, as of 30 Sept? 2026: .+\.$/,
+    ),
+    expect.stringMatching(/^Open on 30 Sept? 2026: .+ in 34 deals\.$/),
+  ]);
 });
 
-it("leaves out a figure that was not measured rather than guessing it", () => {
+it("leaves out a figure that was not measured or that is partly hidden", () => {
   const sentences = writtenSummary(
     withMetrics([
       { ...won, coverage: { status: "failed", withheld: false } },
-      {
-        id: "open_pipeline",
-        version: "1",
-        unit: "EUR",
-        value: 120_000_000,
-        coverage: { status: "ok", withheld: false },
-        evidence: { metric: "open_pipeline", context_id: "state" },
-      },
+      { ...open, coverage: { ...open.coverage, withheld: true } },
+    ]),
+    english,
+  );
+  expect(sentences).toEqual([]);
+});
+
+it("does not say nothing was won when the wins are hidden", () => {
+  const sentences = writtenSummary(
+    withMetrics([
+      { ...won, value: 0, coverage: { status: "no_data", withheld: true } },
     ]),
     english,
   );
@@ -82,10 +106,14 @@ it("leaves out a figure that was not measured rather than guessing it", () => {
 it("says no sales were won when the period has none", () => {
   const sentences = writtenSummary(
     withMetrics([
-      { ...won, value: 0, coverage: { status: "no_data", withheld: false } },
+      {
+        ...won,
+        value: 0,
+        target: undefined,
+        coverage: { status: "no_data", withheld: false },
+      },
     ]),
     english,
   );
-  expect(sentences).toHaveLength(1);
-  expect(sentences[0]).toMatch(/^No sales were won in .+\.$/);
+  expect(sentences).toEqual([expect.stringMatching(/^No sales won in .+\.$/)]);
 });
