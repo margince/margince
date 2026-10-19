@@ -34,7 +34,7 @@ a period you set and write down.
 
 ## Backups and erasure
 
-A backup taken before an erasure still holds the erased person's data. Two things keep a restore from bringing it
+A backup taken before an erasure still holds the erased contact's data. Two things keep a restore from bringing it
 back:
 
 - The worker job `suppression_journal_export` copies the suppression list (a hash of each erased address, never the
