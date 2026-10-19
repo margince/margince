@@ -6,9 +6,9 @@ package contacts
 // The size_band column is a closed enum; employee_range is the page's own
 // phrasing ("25 to 50", "about 120 contacts", "140+"). A phrase lands in a
 // band when one band holds the headcount it states. A floor ("140+", "over
-// 500") lands in the band holding its lower bound: a size filter finds the
-// company in the smallest honest band, and finds nothing if the column stays
-// empty. A ceiling ("up to 50") and a range across bands still refuse.
+// 500") lands in the band holding its lower bound. That band is the smallest
+// one the page supports, and an empty column matches no size filter at all.
+// A ceiling ("up to 50") and a range across bands still refuse.
 
 import (
 	"context"
@@ -64,7 +64,7 @@ var (
 
 // sizeBandFromEmployeeRange maps a stated headcount phrase onto the
 // size_band enum, reporting false whenever the phrasing does not land in
-// exactly one band.
+// one single band.
 func sizeBandFromEmployeeRange(text string) (string, bool) {
 	trimmed := strings.TrimSpace(text)
 	for _, band := range sizeBands {
@@ -111,7 +111,7 @@ func sizeBandFromEmployeeRange(text string) (string, bool) {
 
 // bandHoldingRange places a stated range when both ends share one band. Sites
 // print band edges on round numbers ("50-200", "200-500"), one below the
-// enum's own floors, so a range that starts on a band's ceiling is read as
+// enum's own floors. So a range that starts on a band's ceiling is read as
 // the band above it.
 func bandHoldingRange(lo, hi int) (string, bool) {
 	if lo > hi {

@@ -217,8 +217,8 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 }
 
 // A home page that names the company's own industry and an open-ended
-// headcount fills both empty columns, each stamped as the agent's work, so the
-// record page shows them as AI-derived and a colleague can revert them.
+// headcount fills both empty columns. Each is stamped as the agent's work, so
+// the record page shows it as AI-derived and a colleague can revert it.
 func TestDeepReadFillsTheCompanysOwnIndustryAndSizeFromItsHomePage(t *testing.T) {
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
@@ -275,7 +275,7 @@ func TestDeepReadFillsTheCompanysOwnIndustryAndSizeFromItsHomePage(t *testing.T)
 	}
 }
 
-// The read fills the industry only where it is empty: a value a colleague set
+// The read fills the industry only where it is empty. A value a colleague set
 // stays, and the read's finding is kept as evidence beside it.
 func TestDeepReadNeverOverwritesAnIndustryAColleagueSet(t *testing.T) {
 	e := integration.Setup(t)

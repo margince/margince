@@ -90,7 +90,7 @@ func TestSizeBandFromEmployeeRangeMapsOnlyUnambiguousPhrasings(t *testing.T) {
 	}
 }
 
-// A worded floor places the company exactly as "500+" does: in the band of its
+// A worded floor places the company as "500+" does: in the band of its
 // lower bound. "over" starts one above the number, "at least" on it.
 func TestAWordedFloorLandsInTheBandOfItsLowerBound(t *testing.T) {
 	for _, tc := range []struct {
