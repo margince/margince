@@ -33,7 +33,10 @@ func eraseApprovalNoticesMatching(ctx context.Context, tx pgx.Tx, reason, cause,
 	}
 	rows, err = tx.Query(ctx, `UPDATE notice
  SET subject = 'Proposal removed', body = '', origin = NULL, email_error = NULL, retracted_at = coalesce(retracted_at, now())
- WHERE dedupe_key = ANY(@keys) RETURNING id`, pgx.StrictNamedArgs{"keys": keys})
+ WHERE dedupe_key = ANY(@keys)
+   AND (subject IS DISTINCT FROM 'Proposal removed' OR body <> '' OR origin IS NOT NULL
+        OR email_error IS NOT NULL OR retracted_at IS NULL)
+ RETURNING id`, pgx.StrictNamedArgs{"keys": keys})
 	if err != nil {
 		return fmt.Errorf("privacy: erasing copied approval notices: %w", err)
 	}

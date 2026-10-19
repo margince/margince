@@ -107,11 +107,40 @@ func TestNoticeReconciliationDoesNotRestoreErasedProposalEvidence(t *testing.T) 
 		t.Fatalf("notice history count=%d, want 1", len(page.Items))
 	}
 	for _, notice := range page.Items {
+		if count := a.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'notice' AND entity_id = @id AND action = 'erase'`, pgx.StrictNamedArgs{"id": notice.ID}); count != 1 {
+			t.Fatalf("notice has %d erase tombstones, want 1", count)
+		}
 		if notice.Subject == quotedTranscriptLine || notice.Body != "" {
 			t.Fatalf("erased text survives in notice history: %+v", notice)
 		}
 	}
 	if got := countQuoting(t, a.e, quotedTranscriptLine); got != 0 {
 		t.Fatalf("reconciliation restored evidence to %d proposals", got)
+	}
+}
+
+func TestRepeatedSubjectErasureRecordsEachNoticeOnce(t *testing.T) {
+	a := newApprovalNotifyEnv(t)
+	a.grantRole(t, a.e.AdminUser)
+	a.e.WsExec(t, `UPDATE role SET permissions = jsonb_set(permissions, '{objects,contact}', '{"read":true,"update":true}'::jsonb) WHERE key = @key`, pgx.StrictNamedArgs{"key": "notifydecider-" + a.e.AdminUser.String()})
+	subject := a.e.SeedContact(t, "Dana Buyer", &a.e.AdminUser)
+	_, staged := a.stage(a.proposerCtx(ids.Nil), t, approvals.StageInput{
+		Kind: "update_record", TargetType: "contact", TargetID: subject,
+		ProposedChange: json.RawMessage(`{"record_type":"contact","id":"` + subject.String() + `","fields":{"title":"Buyer"}}`),
+		DiffHash:       "contact-title", Summary: "Update contact title",
+	})
+	a.deliver(t, staged)
+	assertReconciledHomeNotices(t, a, 1)
+	for range 2 {
+		if err := privacy.NewEraser(a.db).EraseContact(a.e.Admin(), subject, "Subject requested erasure"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	page, err := notices.NewStore(a.db).ListFor(a.e.Admin(), 10, "")
+	if err != nil || len(page.Items) != 1 {
+		t.Fatalf("history=%+v, %v", page, err)
+	}
+	if count := a.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'notice' AND entity_id = @id AND action = 'erase'`, pgx.StrictNamedArgs{"id": page.Items[0].ID}); count != 1 {
+		t.Fatalf("notice has %d erase tombstones, want 1", count)
 	}
 }

@@ -55,7 +55,7 @@ func newApprovalNoticeReconcileWorker(pool *pgxpool.Pool) *approvalNoticeReconci
 	store := notices.NewStore(db)
 	return &approvalNoticeReconcileWorker{
 		db: db, identity: ident,
-		approvals: newApprovalsService(db), notices: store, retract: NewApprovalNoticeRetract(pool, store, ident, slog.Default()),
+		approvals: NewApprovalsService(db), notices: store, retract: NewApprovalNoticeRetract(pool, store, ident, slog.Default()),
 	}
 }
 
