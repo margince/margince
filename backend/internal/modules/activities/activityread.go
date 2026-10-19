@@ -34,18 +34,15 @@ func (s *Store) GetActivity(ctx context.Context, id ids.ActivityID, archived sto
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	active, err := s.customColumns(ctx)
-	if err != nil {
-		return crmcontracts.Activity{}, err
-	}
 	var out crmcontracts.Activity
-	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
-		if out, err = readActivity(ctx, tx, id, archived); err != nil {
-			return err
-		}
-		return withCustomValuesOf(ctx, tx, active, &out)
+	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		out, err = readActivity(ctx, tx, id, archived)
+		return err
 	})
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	return out, s.attachCustomValues(ctx, &out)
 }
 
 // activitySortFields is what a caller may order the timeline by: the four
@@ -145,7 +142,7 @@ func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]c
 	var activities []crmcontracts.Activity
 	var page storekit.Page
 	var err error
-	if in.customColumns, err = s.customColumns(ctx); err != nil {
+	if in.Columns, err = s.ActiveActivityColumns(ctx); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
@@ -266,7 +263,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	if err := WithCommitmentAdmissions(ctx, tx, activities); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	if err := withCustomValues(ctx, tx, in.customColumns, activities); err != nil {
+	if err := withCustomValues(ctx, tx, in.Columns.cols, pageOf(activities)); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	if activities == nil {
@@ -456,7 +453,7 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 	var total int
 	var err error
 	if len(in.CustomFilters) > 0 {
-		if in.customColumns, err = s.customColumns(ctx); err != nil {
+		if in.Columns, err = s.ActiveActivityColumns(ctx); err != nil {
 			return 0, err
 		}
 	}

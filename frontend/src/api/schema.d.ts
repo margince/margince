@@ -33194,6 +33194,7 @@ export interface components {
             /** @description The users and teams admitted besides the participants. Read only when `audience` is `selected`; replaces the previous set. */
             members?: components["schemas"]["AudienceMember"][];
         };
+        /** @description A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. */
         UpdateActivityRequest: {
             subject?: string | null;
             body?: string | null;
@@ -33227,6 +33228,8 @@ export interface components {
              * @enum {string|null}
              */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
+        } & {
+            [key: string]: unknown;
         };
         ActivityListResponse: {
             data: components["schemas"]["Activity"][];

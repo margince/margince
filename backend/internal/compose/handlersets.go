@@ -171,7 +171,7 @@ func (s *Server) wireProject360(pool *pgxpool.Pool) {
 		s.contactsStore,
 		contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()).
 			WithFieldCatalog(customfields.NewService(pool, nil)),
-		activities.NewStore(InstallationDB(pool)),
+		activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)),
 		time.Now,
 	)
 	s.project360Handlers = project360.NewHandlers(svc)

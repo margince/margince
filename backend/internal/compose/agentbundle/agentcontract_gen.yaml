@@ -14942,6 +14942,9 @@ components:
             `field_not_valid_for_kind` fault on the field otherwise — the same refusal create
             gives, held against the kind the row already carries rather than one the
             patch names, because a patch cannot change a kind.
+      additionalProperties: true
+      description: >-
+        A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`.
     ActivityListResponse:
       type: object
       required: [data, page]

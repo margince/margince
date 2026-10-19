@@ -48975,7 +48975,7 @@ type UpdateAcquisitionSourceRequest struct {
 	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
-// UpdateActivityRequest defines model for UpdateActivityRequest.
+// UpdateActivityRequest A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`.
 type UpdateActivityRequest struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	Body       *string             `json:"body,omitempty"`
@@ -49001,8 +49001,9 @@ type UpdateActivityRequest struct {
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
 
 	// RemindAt Task only. Set/clear the reminder; PATCH target for B-E16.2/.3. The reminder scan (B-E16.6) fires on this.
-	RemindAt *time.Time `json:"remind_at,omitempty"`
-	Subject  *string    `json:"subject,omitempty"`
+	RemindAt             *time.Time             `json:"remind_at,omitempty"`
+	Subject              *string                `json:"subject,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
 // UpdateActivityRequestMeetingStatus How the meeting went, set AFTER it happened. Meeting only, and 422 with a
@@ -69323,6 +69324,179 @@ func (a RenewContractRequest) MarshalJSON() ([]byte, error) {
 		object["value_minor"], err = json.Marshal(a.ValueMinor)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'value_minor': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for UpdateActivityRequest. Returns the specified
+// element and whether it was found
+func (a UpdateActivityRequest) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for UpdateActivityRequest
+func (a *UpdateActivityRequest) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for UpdateActivityRequest to handle AdditionalProperties
+func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["assignee_id"]; found {
+		err = json.Unmarshal(raw, &a.AssigneeId)
+		if err != nil {
+			return fmt.Errorf("error reading 'assignee_id': %w", err)
+		}
+		delete(object, "assignee_id")
+	}
+
+	if raw, found := object["body"]; found {
+		err = json.Unmarshal(raw, &a.Body)
+		if err != nil {
+			return fmt.Errorf("error reading 'body': %w", err)
+		}
+		delete(object, "body")
+	}
+
+	if raw, found := object["due_at"]; found {
+		err = json.Unmarshal(raw, &a.DueAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_at': %w", err)
+		}
+		delete(object, "due_at")
+	}
+
+	if raw, found := object["is_done"]; found {
+		err = json.Unmarshal(raw, &a.IsDone)
+		if err != nil {
+			return fmt.Errorf("error reading 'is_done': %w", err)
+		}
+		delete(object, "is_done")
+	}
+
+	if raw, found := object["meeting_status"]; found {
+		err = json.Unmarshal(raw, &a.MeetingStatus)
+		if err != nil {
+			return fmt.Errorf("error reading 'meeting_status': %w", err)
+		}
+		delete(object, "meeting_status")
+	}
+
+	if raw, found := object["occurred_at"]; found {
+		err = json.Unmarshal(raw, &a.OccurredAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'occurred_at': %w", err)
+		}
+		delete(object, "occurred_at")
+	}
+
+	if raw, found := object["remind_at"]; found {
+		err = json.Unmarshal(raw, &a.RemindAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'remind_at': %w", err)
+		}
+		delete(object, "remind_at")
+	}
+
+	if raw, found := object["subject"]; found {
+		err = json.Unmarshal(raw, &a.Subject)
+		if err != nil {
+			return fmt.Errorf("error reading 'subject': %w", err)
+		}
+		delete(object, "subject")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for UpdateActivityRequest to handle AdditionalProperties
+func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.AssigneeId != nil {
+		object["assignee_id"], err = json.Marshal(a.AssigneeId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'assignee_id': %w", err)
+		}
+	}
+
+	if a.Body != nil {
+		object["body"], err = json.Marshal(a.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'body': %w", err)
+		}
+	}
+
+	if a.DueAt != nil {
+		object["due_at"], err = json.Marshal(a.DueAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.IsDone != nil {
+		object["is_done"], err = json.Marshal(a.IsDone)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'is_done': %w", err)
+		}
+	}
+
+	if a.MeetingStatus != nil {
+		object["meeting_status"], err = json.Marshal(a.MeetingStatus)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'meeting_status': %w", err)
+		}
+	}
+
+	if a.OccurredAt != nil {
+		object["occurred_at"], err = json.Marshal(a.OccurredAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'occurred_at': %w", err)
+		}
+	}
+
+	if a.RemindAt != nil {
+		object["remind_at"], err = json.Marshal(a.RemindAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'remind_at': %w", err)
+		}
+	}
+
+	if a.Subject != nil {
+		object["subject"], err = json.Marshal(a.Subject)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'subject': %w", err)
 		}
 	}
 

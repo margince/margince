@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 type UpdateActivityInput struct {
@@ -48,6 +49,10 @@ type UpdateActivityInput struct {
 	// honest thing to hold it against.
 	MeetingStatus *string
 	IfVersion     *int64
+	// CustomFields are the patch's cf_ values; a null clears one. customColumns
+	// are the active fields they are checked and written against.
+	CustomFields  map[string]any
+	customColumns []fieldcatalog.Column
 }
 
 func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in UpdateActivityInput) (crmcontracts.Activity, error) {
@@ -56,19 +61,19 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 	}
 	at := s.now()
 	in.recordedAt = &at
-	active, err := s.customColumns(ctx)
-	if err != nil {
+	if err := s.checkCustomPatch(ctx, &in); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	var out crmcontracts.Activity
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		if out, err = updateActivityInTx(ctx, tx, id, in); err != nil {
-			return err
-		}
-		return withCustomValuesOf(ctx, tx, active, &out)
+		out, err = updateActivityInTx(ctx, tx, id, in)
+		return err
 	})
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	return out, s.attachCustomValues(ctx, &out)
 }
 
 // updateActivityInTx is UpdateActivity's transactional body, shared with the
@@ -87,6 +92,9 @@ func updateActivityInTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, in UpdateActivityInput,
 ) (crmcontracts.Activity, error) {
 	current, held, err := admitActivityPatch(ctx, tx, id, &in)
+	if err == nil {
+		err = withCustomValuesOf(ctx, tx, in.customColumns, &current)
+	}
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -126,11 +134,12 @@ func updateActivityInTx(
 		  done_at = CASE
 		    WHEN $%[8]d IS TRUE AND NOT is_done THEN now()
 		    WHEN $%[8]d IS FALSE THEN NULL
-		    ELSE done_at END
+		    ELSE done_at END%[14]s
 		WHERE id = $%[1]d`,
 		row, arg(in.Subject), arg(in.Body), arg(in.OccurredAt), arg(in.DueAt),
 		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
-		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id"))),
+		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id")),
+		customAssignments(in.customColumns, in.CustomFields, arg)),
 		args...); err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -138,6 +147,9 @@ func updateActivityInTx(
 	// and a transcript body is renormalized on the way in, so the row is the
 	// only place that says what this write actually stored.
 	out, err := readActivity(ctx, tx, id, storekit.LiveOnly)
+	if err == nil {
+		err = withCustomValuesOf(ctx, tx, in.customColumns, &out)
+	}
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -152,7 +164,8 @@ func updateActivityInTx(
 	}); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	before, after := storekit.ChangedColumns(activityColumnImage(current), activityColumnImage(out))
+	before, after := storekit.ChangedColumns(customFieldImage(activityColumnImage(current), current, in.customColumns),
+		customFieldImage(activityColumnImage(out), out, in.customColumns))
 	auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "activity", id.UUID, before, after)
 	if err != nil {
 		return crmcontracts.Activity{}, err
@@ -171,7 +184,7 @@ func updateActivityInTx(
 func (in UpdateActivityInput) changesNothing(current crmcontracts.Activity) bool {
 	return in.Subject == nil && in.Body == nil && in.OccurredAt == nil && in.DurationSeconds == nil &&
 		in.DueAt == nil && in.RemindAt == nil && in.AssigneeID == nil && in.IsDone == nil &&
-		in.MeetingStatus == nil && !in.clearsAValue(current)
+		in.MeetingStatus == nil && !in.clearsAValue(current) && !in.changesCustom(current)
 }
 
 // clearsAValue is true when a null names a field that currently holds one.
@@ -351,7 +364,10 @@ func (s *Store) ArchiveActivity(
 		out, err = archiveActivityInTx(ctx, tx, id, ifVersion, collectArchiveOptions(opts))
 		return err
 	})
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	return out, s.attachCustomValues(ctx, &out)
 }
 
 // ArchiveActivityTx is ArchiveActivity inside a caller-opened transaction, for

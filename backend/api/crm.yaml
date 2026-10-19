@@ -45606,6 +45606,12 @@ components:
             an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
             `remind_at` and `assignee_id`, where `null` removes the value. Recording the
             wrong outcome is fixed by sending the right one.
+      additionalProperties: true
+      description: >-
+        A sparse patch. The workspace's active activity custom fields travel as extra
+        top-level `cf_` keys, and an explicit `null` clears one. A key that is not
+        `cf_`-prefixed, names no active activity field, or carries a value of the wrong
+        shape for its field returns `422`.
 
     ActivityListResponse:
       type: object

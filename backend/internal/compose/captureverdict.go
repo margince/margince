@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -104,7 +105,7 @@ func NewCounterpartyVerdictEngine(
 		pool:       pool,
 		pending:    capture.NewPendingStore(InstallationDB(pool)),
 		contacts:   newCounterpartyStore(pool),
-		activities: activities.NewStore(InstallationDB(pool)),
+		activities: activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)),
 		approvals:  NewApprovalsService(InstallationDB(pool)),
 		eraser:     privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision).WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))),
 		brain:      brain,

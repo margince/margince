@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
@@ -117,7 +116,7 @@ type Store struct {
 	clock func() time.Time
 	// catalog answers the activity custom fields; nil reads and writes core
 	// columns only (WithFieldCatalog).
-	catalog fieldcatalog.Reader
+	catalog FieldCatalog
 }
 
 // NewStore opens this module's store on a handle already bound to the

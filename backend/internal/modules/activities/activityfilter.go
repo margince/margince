@@ -117,7 +117,7 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 		return nil, "", nil, nil, err
 	}
 	where = append(where, activityRowClauses(in, arg)...)
-	custom, err := storekit.CustomFilterClauses(in.customColumns, in.CustomFilters, arg)
+	custom, err := storekit.CustomFilterClauses(in.Columns.cols, in.CustomFilters, arg)
 	if err != nil {
 		return nil, "", nil, nil, err
 	}

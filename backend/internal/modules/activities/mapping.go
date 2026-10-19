@@ -201,6 +201,7 @@ func activityUpdateInput(req crmcontracts.UpdateActivityRequest, ifVersion *int6
 		// mismatch with the same MeetingStatusKindError create raises.
 		MeetingStatus: meetingStatusArg(req.MeetingStatus),
 		IfVersion:     ifVersion,
+		CustomFields:  req.AdditionalProperties,
 	}
 }
 

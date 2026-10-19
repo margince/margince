@@ -137,6 +137,7 @@ type LogActivityInput struct {
 	// customColumns are the active fields they are checked and written against.
 	CustomFields  map[string]any
 	customColumns []fieldcatalog.Column
+	customChecked bool
 	// Origin says who caused this row to exist, and the recency clocks in the
 	// schema read it: the two system origins are excluded from every
 	// last_activity_at, because neither the system asking about a silent deal
@@ -181,7 +182,10 @@ func (s *Store) LogActivity(ctx context.Context, in LogActivityInput) (crmcontra
 		out, created, err = s.logActivityAndReadTranscript(ctx, tx, in)
 		return err
 	})
-	return out, created, err
+	if err != nil {
+		return out, created, err
+	}
+	return out, created, s.attachCustomValues(ctx, &out)
 }
 
 // LogActivityTx is LogActivity's transaction-accepting variant (the C5
@@ -198,7 +202,13 @@ func (s *Store) LogActivityTx(ctx context.Context, tx pgx.Tx, in LogActivityInpu
 	if err := s.withCustomColumns(ctx, &in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	return s.logActivityAndReadTranscript(ctx, tx, in)
+	// The columns this call already read, never a second read: the caller holds
+	// its transaction, and the catalog would open another connection under it.
+	out, created, err := s.logActivityAndReadTranscript(ctx, tx, in)
+	if err == nil {
+		err = withCustomValuesOf(ctx, tx, in.customColumns, &out)
+	}
+	return out, created, err
 }
 
 // logActivityAndReadTranscript is the ONE place the write and the reading are
@@ -371,10 +381,10 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		return crmcontracts.Activity{}, false, err
 	}
 	out, err := readActivity(ctx, tx, id, storekit.LiveOnly)
-	if err == nil {
-		err = withCustomValuesOf(ctx, tx, in.customColumns, &out)
+	if err != nil {
+		return crmcontracts.Activity{}, false, err
 	}
-	return out, err == nil, err
+	return out, true, nil
 }
 
 // writeActivitySatellites writes the rows that ride with a new activity and

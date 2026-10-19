@@ -3,9 +3,8 @@
 
 package activities
 
-// An activity's custom-field values. The catalog names the cf_* columns. A
-// logged activity's values are checked before the insert, and one batched read
-// hands them back on a page of rows.
+// An activity's custom-field values on the way in: the catalog seam, and the
+// checks a logged or patched value passes before it is written.
 
 import (
 	"context"
@@ -13,11 +12,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/jackc/pgx/v5"
-
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -44,9 +39,16 @@ func (e *CustomFieldError) FieldFault() (field, code, message string) {
 	return e.Field, e.Code, e.Message
 }
 
+// FieldCatalog is the custom-field seam. Reads and writes use the active
+// columns; an erase empties every column, retired ones included.
+type FieldCatalog interface {
+	fieldcatalog.Reader
+	fieldcatalog.FilterableReader
+}
+
 // WithFieldCatalog wires the custom-field seam. Without it the store reads and
-// writes core columns only, and a create that names a cf_ key is refused.
-func (s *Store) WithFieldCatalog(catalog fieldcatalog.Reader) *Store {
+// writes core columns only, and a write that names a cf_ key is refused.
+func (s *Store) WithFieldCatalog(catalog FieldCatalog) *Store {
 	clone := *s
 	clone.catalog = catalog
 	return &clone
@@ -54,13 +56,13 @@ func (s *Store) WithFieldCatalog(catalog fieldcatalog.Reader) *Store {
 
 // WithFieldCatalog wires the custom-field seam into the provider's store, so
 // the tool surface carries cf_ values the way the HTTP door does.
-func (p *Provider) WithFieldCatalog(catalog fieldcatalog.Reader) *Provider {
+func (p *Provider) WithFieldCatalog(catalog FieldCatalog) *Provider {
 	p.store = p.store.WithFieldCatalog(catalog)
 	return p
 }
 
 // WithFieldCatalog wires the custom-field seam into the handlers' store.
-func (h Handlers) WithFieldCatalog(catalog fieldcatalog.Reader) Handlers {
+func (h Handlers) WithFieldCatalog(catalog FieldCatalog) Handlers {
 	h.store = h.store.WithFieldCatalog(catalog)
 	return h
 }
@@ -75,10 +77,30 @@ func (s *Store) customColumns(ctx context.Context) ([]fieldcatalog.Column, error
 }
 
 // withCustomColumns reads the catalog for a create that names a custom field,
-// and checks the values against it. Every automatic writer names none and skips both.
+// and checks the values against it. An automatic writer names none and skips both.
+//
+// A request the store already checked keeps its columns. Accepting an email
+// request logs the task inside the transaction, where a second read must not run.
 func (s *Store) withCustomColumns(ctx context.Context, in *LogActivityInput) error {
+	if len(in.CustomFields) == 0 || in.customChecked {
+		return nil
+	}
+	var err error
+	if in.customColumns, err = s.customColumns(ctx); err != nil {
+		return err
+	}
+	in.customChecked = true
+	return checkCustomValues(in.customColumns, in.CustomFields)
+}
+
+// checkCustomPatch reads the catalog for a patch that names a custom field and
+// checks its keys and values, before the transaction opens.
+func (s *Store) checkCustomPatch(ctx context.Context, in *UpdateActivityInput) error {
 	if len(in.CustomFields) == 0 {
 		return nil
+	}
+	if err := refuseNonCustomKeys(in.CustomFields); err != nil {
+		return err
 	}
 	var err error
 	if in.customColumns, err = s.customColumns(ctx); err != nil {
@@ -87,7 +109,7 @@ func (s *Store) withCustomColumns(ctx context.Context, in *LogActivityInput) err
 	return checkCustomValues(in.customColumns, in.CustomFields)
 }
 
-// refuseNonCustomKeys holds the create wire closed apart from cf_ keys. The
+// refuseNonCustomKeys holds a write wire closed apart from cf_ keys. The
 // contract's catch-all would otherwise turn a misspelt core field into a value
 // nothing writes.
 func refuseNonCustomKeys(extra map[string]any) error {
@@ -100,8 +122,9 @@ func refuseNonCustomKeys(extra map[string]any) error {
 	return nil
 }
 
-// checkCustomValues refuses a value the insert would otherwise drop: a key no
-// active field names, or a shape its column cannot hold. A null sets nothing.
+// checkCustomValues refuses a value the write would otherwise drop: a key no
+// active field names, or a shape its column cannot hold. A null sets nothing on
+// a create and clears the value on a patch.
 func checkCustomValues(active []fieldcatalog.Column, values map[string]any) error {
 	byName := make(map[string]fieldcatalog.Column, len(active))
 	for _, c := range active {
@@ -121,52 +144,5 @@ func checkCustomValues(active []fieldcatalog.Column, values map[string]any) erro
 				Message: "takes a " + column.Type + " value"}
 		}
 	}
-	return nil
-}
-
-// withCustomValues fills a page of rows with their custom-field values in one
-// query. A withheld or held row gets none: the values are content, like its subject.
-func withCustomValues(ctx context.Context, tx pgx.Tx, active []fieldcatalog.Column, page []crmcontracts.Activity) error {
-	if len(active) == 0 || len(page) == 0 {
-		return nil
-	}
-	readable := make([]ids.UUID, 0, len(page))
-	at := make(map[ids.UUID]int, len(page))
-	for i, a := range page {
-		if a.ContentState != nil && *a.ContentState == crmcontracts.ActivityContentStateWithheld {
-			continue
-		}
-		readable = append(readable, ids.UUID(a.Id))
-		at[ids.UUID(a.Id)] = i
-	}
-	if len(readable) == 0 {
-		return nil
-	}
-	rows, err := tx.Query(ctx,
-		`SELECT id`+storekit.SelectSuffix(active)+` FROM activity WHERE id = ANY($1) AND restricted_at IS NULL`, readable)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var id ids.UUID
-		dests := storekit.ScanDests(active)
-		if err := rows.Scan(append([]any{&id}, dests...)...); err != nil {
-			return err
-		}
-		if values := storekit.ExtractValues(active, dests); len(values) > 0 {
-			page[at[id]].AdditionalProperties = values
-		}
-	}
-	return rows.Err()
-}
-
-// withCustomValuesOf is withCustomValues for a single record.
-func withCustomValuesOf(ctx context.Context, tx pgx.Tx, active []fieldcatalog.Column, a *crmcontracts.Activity) error {
-	one := []crmcontracts.Activity{*a}
-	if err := withCustomValues(ctx, tx, active, one); err != nil {
-		return err
-	}
-	*a = one[0]
 	return nil
 }

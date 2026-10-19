@@ -97,6 +97,15 @@ func TestAnActivityCustomFieldIsWrittenReadAndFilteredOverBothDoors(t *testing.T
 	if all := d.activityIDsWhere(t, ""); !all[restID] || !all[toolID] {
 		t.Errorf("the unfiltered list lost one of the two activities: %v", all)
 	}
+
+	patched := decodeActivity(t, d.restStatus(t, "PATCH", "/v1/activities/"+restID, AnyMap{column: "remote"}, http.StatusOK))
+	if patched[column] != "remote" {
+		t.Errorf("the patch answer carries %v under %s, want remote", patched[column], column)
+	}
+	if onSite := d.activityIDsWhere(t, column+"=on_site"); onSite[restID] {
+		t.Errorf("the patched meeting still filters as on_site: %v", onSite)
+	}
+	d.restStatus(t, "PATCH", "/v1/activities/"+restID, AnyMap{"subjcet": "typo"}, http.StatusUnprocessableEntity)
 }
 
 func TestAnActivityCreateRefusesWhatItCannotStore(t *testing.T) {

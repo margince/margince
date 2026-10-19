@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // ListActivitiesInput narrows a timeline read: the page, the kind, the
@@ -206,8 +205,8 @@ type ListActivitiesInput struct {
 	// CustomFilters are the request's cf_ equality filters. They read content, so
 	// a row whose content the caller may not read drops out.
 	CustomFilters map[string]string
-	// customColumns are the active custom fields the filters are checked against
-	// and the page is filled from. Set by the store, which reads the catalog
-	// before its transaction opens.
-	customColumns []fieldcatalog.Column
+	// Columns are the active custom fields the filters are checked against and
+	// the page is filled from. The store sets them; a composite page reads them
+	// with ActiveActivityColumns before its transaction opens. Zero fills nothing.
+	Columns CustomColumns
 }
