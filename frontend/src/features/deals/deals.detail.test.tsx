@@ -693,7 +693,7 @@ describe("DealScreen pending approvals", () => {
     status: "pending",
     summary: "Move Fleet retrofit to Proposal",
     proposed_change: { to_stage_id: "s2" },
-    proposed_by: "agent:capture",
+    proposed_by: "agent:overnight",
     target_entity_type: "deal",
     target_entity_id: "d1",
     created_at: "2026-07-01T08:00:00Z",
@@ -707,9 +707,9 @@ describe("DealScreen pending approvals", () => {
     // approval.kind.advance_deal: the key the inbox reads for the same kind.
     expect(await screen.findByText("Advance deal")).toBeTruthy();
     // trust.agentTag: an agent, named, rather than the doubled wire string.
-    expect(screen.getByText("Automated by capture")).toBeTruthy();
+    expect(screen.getByText("Automated by Overnight agent")).toBeTruthy();
     expect(screen.queryByText("advance_deal")).toBeNull();
-    expect(screen.queryByText("agent:capture")).toBeNull();
+    expect(screen.queryByText("agent:overnight")).toBeNull();
   });
 });
 

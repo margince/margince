@@ -187,7 +187,7 @@ describe("RecordHistory", () => {
       vi.fn(async () =>
         jsonResponse({
           data: [
-            { ...writtenByPassport, actor_id: "sdr" },
+            { ...writtenByPassport, actor_id: "signal-scan" },
             { ...sweptBySystem, actor_id: "system" },
           ],
           page: { next_cursor: null },
@@ -195,7 +195,7 @@ describe("RecordHistory", () => {
       ),
     );
     render(<RecordHistory kind="deal" id="d1" />);
-    expect(await screen.findByText("Automated by sdr")).toBeTruthy();
+    expect(await screen.findByText("Automated by Mail reader")).toBeTruthy();
     expect(screen.getByText("System task")).toBeTruthy();
   });
 

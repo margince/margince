@@ -298,6 +298,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // only the plural headings differ because English pluralises.
   "search.kind.deal",
   "search.kind.lead",
+  // The same loanword, naming the record an approval's evidence came from.
+  "decision.evidenceSource.deal",
   // The lead rail's own deal card title, the same singular loanword as
   // search.kind.deal above it.
   "lead.rail.deal.title",

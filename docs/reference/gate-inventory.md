@@ -71,6 +71,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `forecastperiodparity_test.go` | H3 | Every period the contract offers must be a window the server can resolve. |
 | `forwardmeasureparity_test.go` | H3 | Every forward measure must be spelled the same on all three sides. |
 | `frontendacquisitionkinds_test.go` | H3 | The browser knows every way the server says a contact was obtained, and no other. |
+| `frontendagentlabels_test.go` | H2 | A provenance tag names the agent behind a proposal or a change by its words, never by its principal id. |
 | `frontendapprovalkinds_test.go` | H1 | Every kind a proposal can be staged under must have words a reader recognises, or the queue prints the wire enum at them. |
 | `frontendattentionsources_test.go` | H1 | Every source the Worklist can carry must have a body the decision lane knows how to draw, or the lane asks the wrong endpoint about it. |
 | `frontendaudiencereasons_test.go` | H3 | A held message says why it was held, or the reader cannot argue with the verdict. |
