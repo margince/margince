@@ -94,7 +94,7 @@ type ApprovalNotify struct {
 func NewApprovalNotify(pool *pgxpool.Pool, db *database.DB, mail noticeMailQueue) *ApprovalNotify {
 	return &ApprovalNotify{
 		db:        db,
-		approvals: approvals.NewService(db),
+		approvals: newApprovalsService(db),
 		notices:   notices.NewStore(db),
 		identity:  identity.NewService(pool),
 		mail:      mail,

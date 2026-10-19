@@ -18670,6 +18670,11 @@ components:
       description: A staged confirm-first action awaiting human decision.
       required: [id, kind, status, proposed_by, created_at]
       properties:
+        assignee_inactive:
+          type: boolean
+          readOnly: true
+          description: >-
+            For a pending commitment, whether its named task assignee cannot receive the task. True for invited, deactivated, archived, missing, or agent seats. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee.
         requested_decider_id:
           type: string
           format: uuid

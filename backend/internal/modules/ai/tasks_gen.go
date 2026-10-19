@@ -97,9 +97,9 @@ var taskDisplayNames = map[Task]string{
 	TaskOwedVerdict:                   "Unanswered-message triage",
 	TaskProposeRoles:                  "Buying-role reading",
 	TaskRateExtract:                   "Exchange rate extraction",
-	TaskRequestSettlement:             "Did our reply settle it",
+	TaskRequestSettlement:             "Checking whether the reply answered the request",
 	TaskSignalExtract:                 "Signal extraction",
-	TaskSiteExtract:                   "Website deep read",
+	TaskSiteExtract:                   "Website research",
 	TaskSiteFactExtract:               "Website fact extraction",
 	TaskSiteTriage:                    "Website triage",
 	TaskStageEvidenceExtract:          "Stage evidence extraction",
@@ -182,7 +182,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "b0bd173a77aa47861b34c3946e43506c1f1b541a6616fcaf351bc07c957aad80"
+const TaskContractHash = "58f27b751f23090f07d642df6d1a4b503453391bd077283d907c2a26dcdcf97c"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed

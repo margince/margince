@@ -52814,6 +52814,42 @@ components:
             the session, and the credential is the server's to mint, so a caller cannot
             answer for somebody else or point a grant at a credential they do not own.
       description: The rep's answer for one scheduled agent.
+    AiTask:
+      type: string
+      description: AI task key from the task catalog, used to localize its display name.
+      enum:
+        - account_scan
+        - agent_loop
+        - brief_ranking
+        - capture_classify
+        - capture_confidentiality_verdict
+        - capture_counterparty_verdict
+        - cert_judge
+        - cold_start
+        - corpus_ask
+        - deal_health
+        - document_extract
+        - draft_reply
+        - enrich
+        - growth_fit
+        - nl_search
+        - offer_draft
+        - owed_verdict
+        - propose_roles
+        - rate_extract
+        - request_settlement
+        - signal_extract
+        - site_extract
+        - site_fact_extract
+        - site_triage
+        - stage_evidence_extract
+        - summarize
+        - tag_suggest
+        - transcript
+        - transcript_propose
+        - voice_build
+        - weekly_learnings
+        - weekly_review
     AiActivityKind:
       type: string
       enum:
@@ -54207,6 +54243,14 @@ components:
       description: A staged 🟡 confirm-first action awaiting human decision.
       required: [id, kind, status, proposed_by, created_at]
       properties:
+        assignee_inactive:
+          type: boolean
+          readOnly: true
+          description: >-
+            For a pending commitment, whether its named task assignee cannot receive the task.
+            True for invited, deactivated, archived, missing, or agent seats.
+            Absent for an unassigned proposal.
+            This is current decision context, not a change to the staged assignee.
         requested_decider_id:
           type: string
           format: uuid
@@ -59159,6 +59203,7 @@ components:
             be able to disagree: a rule's NAME is mutable and not unique, so an identity
             built from it would merge two rules that happen to share a name and split one
             that was renamed, while a reader shown `automation_run:01a0…` learns nothing.
+        ai_task: { $ref: '#/components/schemas/AiTask' }
         cause_label:
           type: string
           description: |
@@ -60643,6 +60688,7 @@ components:
             Which underlying CONDITION this row reports, so a surface can group repeated
             failures of one thing into one row. Opaque identity, never rendered and never
             parsed. Absent on a row that reports no shared condition.
+        ai_task: { $ref: '#/components/schemas/AiTask' }
         cause_label:
           type: string
           description: |

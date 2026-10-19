@@ -12,6 +12,7 @@ import { useNow } from "../../format/now";
 import { formatRelativeTime } from "../../format/relativetime";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { aiTaskLabel } from "../../lib/ai-task-label";
 import {
   callCodeName,
   callCodeTone,
@@ -117,7 +118,7 @@ function callColumns(
       fold: "title",
       render: (call) => (
         <KeyedName
-          name={call.task_display_name ?? call.task}
+          name={aiTaskLabel(call.task, t, call.task_display_name)}
           code={call.task}
         />
       ),
@@ -200,7 +201,7 @@ export function CallTable({
         header: t("aicalls.col.detail"),
         toggleLabel: (call) =>
           t("aicalls.expandCall", {
-            task: call.task_display_name ?? call.task,
+            task: aiTaskLabel(call.task, t, call.task_display_name),
             when: formatDateTime(call.occurred_at, locale, zone),
           }),
         render: (call) => (

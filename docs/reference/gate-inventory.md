@@ -22,6 +22,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `aiactivitycatalogparity_test.go` | H3 | The AI-activity contract names the work that can reach it and nothing else, and caps what the read caps. |
 | `aiegressdoc_test.go` | H2 | The egress page and the routing table say the same thing. |
 | `airoutingschema_test.go` | H3 | What the editor accepts, checked against what the parser accepts. |
+| `aitaskdisplayparity_test.go` | H3 | TestDisplayTaskKeysMatchTheTaskCatalog holds the API task identity and English UI names to the owning catalog. |
 | `aitaskparity_test.go` | H3 | Every ai\_task an emitter writes into the AI-activity projection must be a task the AI contract declares. |
 | `aitaskrunenum_test.go` | H3 | The ai\_task.state\_changed payload's closed vocabularies must equal the ai\_task\_run column CHECKs they are projected into. |
 | `analyticsrefusalkinds_test.go` | H2 | The contract's refusal kinds are the kinds the engine constructs, no more and no fewer. |

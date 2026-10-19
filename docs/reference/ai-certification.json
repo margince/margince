@@ -527,7 +527,7 @@
         },
         {
           "task": "request_settlement",
-          "label": "Did our reply settle it",
+          "label": "Checking whether the reply answered the request",
           "tier": "local_small",
           "model": {
             "provider": "openai_compatible",
@@ -572,7 +572,7 @@
         },
         {
           "task": "site_extract",
-          "label": "Website deep read",
+          "label": "Website research",
           "tier": "premium",
           "model": {
             "provider": "openai_compatible",
@@ -1380,7 +1380,7 @@
         },
         {
           "task": "request_settlement",
-          "label": "Did our reply settle it",
+          "label": "Checking whether the reply answered the request",
           "tier": "local_small",
           "model": {
             "provider": "gemini",
@@ -1426,7 +1426,7 @@
         },
         {
           "task": "site_extract",
-          "label": "Website deep read",
+          "label": "Website research",
           "tier": "premium",
           "model": {
             "provider": "gemini",
@@ -2422,7 +2422,7 @@
         },
         {
           "task": "request_settlement",
-          "label": "Did our reply settle it",
+          "label": "Checking whether the reply answered the request",
           "tier": "local_small",
           "model": {
             "provider": "gemini_vertex",
@@ -2478,7 +2478,7 @@
         },
         {
           "task": "site_extract",
-          "label": "Website deep read",
+          "label": "Website research",
           "tier": "premium",
           "model": {
             "provider": "gemini_vertex",
@@ -3368,7 +3368,7 @@
         },
         {
           "task": "request_settlement",
-          "label": "Did our reply settle it",
+          "label": "Checking whether the reply answered the request",
           "tier": "local_small",
           "model": {
             "provider": "ollama",
@@ -3413,7 +3413,7 @@
         },
         {
           "task": "site_extract",
-          "label": "Website deep read",
+          "label": "Website research",
           "tier": "premium",
           "model": {
             "provider": "ollama",
@@ -4206,7 +4206,7 @@
         },
         {
           "task": "request_settlement",
-          "label": "Did our reply settle it",
+          "label": "Checking whether the reply answered the request",
           "tier": "local_small",
           "model": {
             "provider": "openai_compatible",
@@ -4251,7 +4251,7 @@
         },
         {
           "task": "site_extract",
-          "label": "Website deep read",
+          "label": "Website research",
           "tier": "premium",
           "model": {
             "provider": "openai_compatible",
@@ -5044,7 +5044,7 @@
         },
         {
           "task": "request_settlement",
-          "label": "Did our reply settle it",
+          "label": "Checking whether the reply answered the request",
           "tier": "local_small",
           "model": {
             "provider": "openai_compatible",
@@ -5089,7 +5089,7 @@
         },
         {
           "task": "site_extract",
-          "label": "Website deep read",
+          "label": "Website research",
           "tier": "premium",
           "model": {
             "provider": "openai_compatible",
@@ -5882,7 +5882,7 @@
         },
         {
           "task": "request_settlement",
-          "label": "Did our reply settle it",
+          "label": "Checking whether the reply answered the request",
           "tier": "local_small",
           "model": {
             "provider": "openai_compatible",
@@ -5927,7 +5927,7 @@
         },
         {
           "task": "site_extract",
-          "label": "Website deep read",
+          "label": "Website research",
           "tier": "premium",
           "model": {
             "provider": "openai_compatible",
@@ -6720,7 +6720,7 @@
         },
         {
           "task": "request_settlement",
-          "label": "Did our reply settle it",
+          "label": "Checking whether the reply answered the request",
           "tier": "local_small",
           "model": {
             "provider": "vllm",
@@ -6765,7 +6765,7 @@
         },
         {
           "task": "site_extract",
-          "label": "Website deep read",
+          "label": "Website research",
           "tier": "premium",
           "model": {
             "provider": "vllm",

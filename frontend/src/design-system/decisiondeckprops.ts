@@ -42,6 +42,9 @@ export type StagedDecision = Readonly<{
  * signed-in reader's own id, and the locale the countdown is spelled in.
  */
 export type DecisionDeckChips = Readonly<{
+  acceptLabel?: string;
+  canAccept?: boolean;
+  detail?: ReactNode;
   meta?: ReactNode;
   aside?: ReactNode;
   provenance?: Provenance;
@@ -89,6 +92,7 @@ export type DecisionDeckLabels = Readonly<{
   edited: (count: number) => string;
   commit: string;
   commitNothingToSend: string;
+  acceptanceChanged: string;
   unstage: string;
   /** The earned moment: the queue is clear, this many were decided, at this time. */
   clearedTitle: string;
