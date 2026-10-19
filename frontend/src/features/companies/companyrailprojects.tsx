@@ -20,8 +20,8 @@ import {
   sectionAnswered,
 } from "./companyrailshared";
 import "./companyrailprojects.css";
-import { PhaseBadge } from "../../screens/projects";
-import type { ProjectPhase } from "../../screens/projects.form";
+import { PhaseBadge } from "../projects/projects";
+import type { ProjectPhase } from "../projects/projects.form";
 
 // The account's own projects at a glance. Beside DealsSection under "Active
 // deals" in the rail: the account's work in flight is both its open deals and

@@ -19,8 +19,8 @@ import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
-import { PhaseBadge } from "../../screens/projects";
-import type { ProjectPhase } from "../../screens/projects.form";
+import { PhaseBadge } from "../projects/projects";
+import type { ProjectPhase } from "../projects/projects.form";
 import { NewProjectAction } from "./companyactions";
 
 type Company360 = components["schemas"]["Company360"];

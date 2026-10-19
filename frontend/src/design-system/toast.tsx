@@ -22,10 +22,10 @@ import "./toast.css";
  * The transient confirmation — "that worked" — and the one place it is spelled.
  *
  * It was a HOOK before this, so every screen minted its own state and rendered
- * its own region, and all three things that go wrong when a global surface is
- * held locally went wrong. `screens/commissiondecide.tsx` called the hook and
- * rendered no region, so every approve/pay/void confirmation was written into a
- * `useState` nobody read. `features/deals/deals.tsx` had to carry a comment explaining
+ * its own region. All three things that go wrong when a global surface is held
+ * locally went wrong. `features/projects/commissiondecide.tsx` called the
+ * hook and rendered no region. So every approve/pay/void confirmation was
+ * written into a `useState` nobody read. `features/deals/deals.tsx` had to carry a comment explaining
  * that the instance belongs to the CALLER, because a hook minting its own shows
  * its messages to nobody. And the region being a SIBLING of the page's cards
  * forced two layout rules to be written around a fixed box that takes no space

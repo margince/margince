@@ -1573,7 +1573,7 @@
   margin-inline-start: auto;
 }
 
-/* The Delivery health panel (screens/projecthealth.tsx).
+/* The Delivery health panel (features/projects/projecthealth.tsx).
  *
  * Its rows are labelled pairs like .firmo's, but the panel had no sheet of its
  * own, so the state badge, the date and the note ran together into one string:

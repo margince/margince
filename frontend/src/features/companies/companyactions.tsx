@@ -7,8 +7,8 @@ import { toMinorUnits } from "../../format/minorunits";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
-import { useProjectCreateForm } from "../../screens/projects.create";
 import { currencyBeside } from "../deals/dealcurrency";
+import { useProjectCreateForm } from "../projects/projects.create";
 
 // What a rep can START from the company page.
 //

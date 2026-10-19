@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { ContractForm } from "../../screens/contractform";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { ContractForm } from "../projects/contractform";
 import { CompanyContractsCard } from "./companycontracts";
 
 // The agreements on an account, and the form that records one.

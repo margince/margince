@@ -21,7 +21,6 @@ import { useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
 import { problemMessageOf } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { ProjectFilingAction } from "../../screens/projectfiling";
 import {
   AUDIENCE_CHOICES,
   AUDIENCE_HINT,
@@ -39,6 +38,7 @@ import {
   type RelinkKind,
   RelinkModal,
 } from "../mail/compose";
+import { ProjectFilingAction } from "../projects/projectfiling";
 
 type Activity = components["schemas"]["Activity"];
 type ActivityAudience = components["schemas"]["ActivityAudience"];

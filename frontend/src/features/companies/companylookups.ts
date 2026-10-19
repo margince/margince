@@ -3,7 +3,7 @@ import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useRecordZone } from "../../lib/recordzone";
-import { useFinanceSummary } from "../../screens/financesummary";
+import { useFinanceSummary } from "../projects/financesummary";
 import type { Grounding } from "../records/record360";
 
 // A leaf for the small lookup tables the company page and its rail both need

@@ -100,7 +100,7 @@ export const LeadsScreen = lazy(
 
 export const ProjectScreen = lazy(
   routed(() =>
-    import("./screens/project360").then((m) => ({
+    import("./features/projects/project360").then((m) => ({
       default: m.ProjectScreen,
     })),
   ),
@@ -108,7 +108,7 @@ export const ProjectScreen = lazy(
 
 export const ProjectsScreen = lazy(
   routed(() =>
-    import("./screens/projects").then((m) => ({
+    import("./features/projects/projects").then((m) => ({
       default: m.ProjectsScreen,
     })),
   ),
@@ -146,7 +146,9 @@ export const CompanyScreen = lazy(
 
 export const PartnersScreen = lazy(
   routed(() =>
-    import("./screens/partners").then((m) => ({ default: m.PartnersScreen })),
+    import("./features/projects/partners").then((m) => ({
+      default: m.PartnersScreen,
+    })),
   ),
 );
 

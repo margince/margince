@@ -206,7 +206,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Proves a date-only provisional close keeps its day east and west of UTC.",
   },
   {
-    file: "screens/projectheaderfacts.test.tsx",
+    file: "features/projects/projectheaderfacts.test.tsx",
     why: "The head's target-end cell prints a date and the count of mornings to it, and the case is that the two name the SAME day — which needs a record zone far enough east of UTC that they would not. It is supplied through RecordZoneProvider, the seam the product itself reads; the other cases pass UTC so the count in the assertion is the one a reader on that day sees.",
   },
   {
@@ -406,11 +406,11 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Proves the record/viewer split on one row, which only works by naming both zones and a boundary-straddling instant.",
   },
   {
-    file: "screens/contractform.currency.test.tsx",
+    file: "features/projects/contractform.currency.test.tsx",
     why: "Installation-settings fixture: the company timezone the contract form reads back.",
   },
   {
-    file: "screens/contractform.customseed.test.tsx",
+    file: "features/projects/contractform.customseed.test.tsx",
     why: "The same installation-settings fixture, behind the contract form's custom-field seeding cases.",
   },
   {

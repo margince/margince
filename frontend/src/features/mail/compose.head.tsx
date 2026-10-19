@@ -7,8 +7,8 @@ import {
 import type { TokenSuggestion } from "../../design-system/tokeninput";
 import { INTL_LOCALE } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useProjectRecord } from "../../screens/projectrecord";
 import type { Transport } from "../contacts/contacttransports";
+import { useProjectRecord } from "../projects/projectrecord";
 import type { VoiceProfile } from "./compose";
 import { StaleThreadNotice } from "./compose.notices";
 import { useThreadProject } from "./composeanchor";
