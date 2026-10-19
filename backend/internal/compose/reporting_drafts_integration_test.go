@@ -232,8 +232,8 @@ func TestPublishingADraftChecksItUnderThePublisher(t *testing.T) {
 	}
 }
 
-// Replacing a draft records the charts it held and the ones it now holds, so
-// the audit says what changed in a draft nobody else could see.
+// Replacing a draft records the charts it held and the ones it now holds. The
+// audit then says what changed in a draft nobody else could see.
 func TestReplacingADraftAuditsTheChartsItHeldAndHolds(t *testing.T) {
 	f := reportWithReader(t)
 	id := ids.UUID(f.report.Id)
