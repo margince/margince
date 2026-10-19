@@ -170,8 +170,12 @@ The **No category** tile appears only when a deal falls in it. A tile with
 nothing in it says **"No deals"**, never an empty mark.
 
 **Open deals per company**: company, currency, open deals, value without
-weighting. These rows stay in their own currency and are grouped by company
-*and* currency. So two currencies on one company are two rows.
+weighting, and share of open pipeline. These rows stay in their own currency
+and are grouped by company *and* currency. So two currencies on one company are
+two rows.
+
+The share is of the open pipeline in the same currency. It is shown only when
+the list holds every row, because a list cut short has no true total.
 
 Where not every deal carries an amount, a note says so:
 "{priced} of {total} priced".

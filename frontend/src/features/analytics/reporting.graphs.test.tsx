@@ -484,3 +484,30 @@ it("keeps the accepted-opportunities series when only the meetings reading faile
   );
   expect(screen.getAllByText(/Week 1/).length).toBeGreaterThan(0);
 });
+
+it("shows how many deals make each stage's value", () => {
+  installFetchStub(reportingStoryRoutes());
+  const evaluation = {
+    ...reportingStoryEvaluation,
+    charts: reportingStoryEvaluation.charts
+      .filter((chart) => chart.kind === "stage_distribution")
+      .map((chart) => ({
+        ...chart,
+        points: chart.points.map((point, index) => ({
+          ...point,
+          observations: index === 0 ? 1 : 7,
+        })),
+      })),
+  } satisfies typeof reportingStoryEvaluation;
+  render(
+    <StoryProviders>
+      <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  expect(
+    screen.getByRole("button", { name: /Discovery: .+ · 1 deal$/ }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: /Proposal: .+ · 7 deals$/ }),
+  ).toBeInTheDocument();
+});
