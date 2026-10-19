@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// A preview cell that holds an id pointing at another record, named the way the
-// rest of the product names that record: a colleague by id, a team off the
-// roster walk, companies in one batch for the whole page, a project off its own
-// read, and workspace configuration off the filter builder's own option lists.
-// The id itself is never the label, because a reader checking a filter cannot
-// act on a UUID.
+// A preview cell whose value is the id of another record, shown by name. Each
+// kind of record is named by the read the rest of the product uses for it. The
+// id is never the label, because a reader cannot act on a UUID.
 
 import type { CompanyMarksByID } from "../../components/companymarks";
 import {
@@ -93,8 +90,8 @@ function CompanyCell({
   );
 }
 
-// `/projects` takes no id filter, so a project is named by its own read; the
-// query is keyed by id, so a page naming one project many times reads it once.
+// `/projects` takes no id filter, so each project is named by its own read.
+// The query is keyed by id, so a project named on many rows is read once.
 function ProjectCell({ id }: CellProps) {
   const t = useT();
   const { name, reading } = useEntityName("project", id);

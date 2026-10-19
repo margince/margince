@@ -40,15 +40,10 @@ export type CompanyNaming = Readonly<{
 /**
  * The company marks the board draws, for every company its cards name.
  *
- * The create form's picker reads ONE capped page of companies, and the
- * board took its marks from exactly that page — so a deal whose company fell
- * outside it drew a card with no company row at all, which a reader reads as a
- * deal nobody has linked. The set that has to be resolvable is the set the
- * loaded deals actually name, so the ids that page did not cover are read by
- * id in batches (`useCompanyMarksByID`).
- *
- * A withheld company is never among them — the wire sends no id to read — so
- * this cannot turn a mask into a name.
+ * The create form's picker reads one capped page of companies. A company
+ * outside that page would leave its card with no company row, so the ids the
+ * page did not cover are read by id (`useCompanyMarksByID`). A withheld company
+ * sends no id, so this cannot turn a mask into a name.
  */
 export function useCompanyMarks(
   deals: Deal[],

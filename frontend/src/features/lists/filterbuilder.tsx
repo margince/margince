@@ -11,11 +11,9 @@
 // field, no operator, and no value type of its own — which is why a clause it
 // builds cannot be one the engine refuses as unknown.
 //
-// A group's join is drawn as the word between its conditions, and a nested
-// group also carries it as a switch in its head, because a group that holds
-// one condition has no word to click. "Add a group" sits beside "Add
-// condition" from the first condition on, so grouping is visible before a
-// reader goes looking for it.
+// A group's join is the word between its conditions. A nested group also
+// shows it as a switch in its head, because one condition has no word between
+// rows. "Add a group" sits beside "Add condition" from the first condition on.
 
 import { Fragment } from "react";
 import { Button, SegmentedControl } from "../../design-system/atoms";

@@ -11,9 +11,7 @@ import {
 } from "../../testing/story-utils";
 import { FilterResults } from "./filterresults";
 
-// FilterResults takes the preview response and the vocabulary as props. Only a
-// column that points at another record fetches, to name it; StoryProviders
-// gives those reads their query client and every string its locale.
+// Only a column that points at another record fetches, to name it.
 //
 // The three stories are the three things a reader can be looking at: rows behind
 // a count, a filter that selected nothing, and the recount that has not answered

@@ -157,9 +157,8 @@ export function FilterResults({
     return {
       key: name,
       header: headerFor(name, fields, t),
-      // The identity column is fixed: it is what makes a row recognisable, so
-      // the picker may not hide it and the phone layout promotes it to the
-      // card's heading.
+      // The identity column is fixed, because it makes a row recognisable. The
+      // picker may not hide it, and a phone shows it as the card's heading.
       fixed: index === 0,
       cell: (row) => {
         const value = row[name];

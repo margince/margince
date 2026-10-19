@@ -6,9 +6,8 @@ import { api } from "../api/client";
 import { stable } from "../format/collate";
 import { unwrap } from "../lib/problem";
 
-// Many companies named by id at once, a hundred to a request, for a surface
-// that draws a page of rows each naming a company: one read per company made
-// a cold page wait on dozens of requests before its rows had names.
+// Names many companies by id, a hundred to a request. One read per company
+// made a page of rows wait on dozens of requests before it showed names.
 
 /** A company's display name and the mark drawn beside it. */
 export type CompanyMark = { name: string; logoUrl?: string | null };
@@ -16,10 +15,9 @@ export type CompanyMark = { name: string; logoUrl?: string | null };
 /**
  * What the batched read knows about each id asked for.
  *
- * `unreadable` is a read that FAILED (a 403, a 5xx, a dropped connection),
- * which is not the same fact as an id missing from `marks` after the read
- * answered: that one is archived past recovery or hidden by row scope.
- * `pending` is an id whose read has not answered yet.
+ * `unreadable` holds ids whose read failed (a 403, a 5xx, a lost connection).
+ * An id missing from `marks` after the read answered is a different fact: row
+ * scope hides it. `pending` holds ids whose read has not answered yet.
  */
 export type CompanyMarksByID = Readonly<{
   marks: ReadonlyMap<string, CompanyMark>;
