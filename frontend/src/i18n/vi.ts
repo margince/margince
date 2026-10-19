@@ -14,6 +14,10 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "aiWait.provider":
+    "Nhà cung cấp AI hiện không khả dụng. Công việc sẽ tự động tiếp tục khi nhà cung cấp hoạt động trở lại.",
+  "aiWait.budget":
+    "Ngân sách AI đã đạt giới hạn. Công việc sẽ tự động tiếp tục khi có ngân sách.",
   "reporting.latestSnapshot": "Ảnh chụp mới nhất",
   "reporting.contextDetails": "Chi tiết báo cáo",
   "reporting.targetRemaining": "Còn {amount}",
@@ -1015,6 +1019,8 @@ export const vi = {
     "Bằng chứng cam kết không còn khả dụng",
   "history.field.address": "Địa chỉ",
   "history.field.admission": "Kiểm tra đầu vào tên miền",
+  "history.field.admission_reason_code": "Loại lý do tiếp nhận",
+  "history.field.admission_sender_kind": "Loại người gửi",
   "history.field.admission_reason": "Lý do kiểm tra đầu vào",
   "history.field.admission_source": "Nguồn kiểm tra đầu vào",
   "history.field.amount_minor": "Giá trị",
@@ -4146,7 +4152,7 @@ export const vi = {
   "brief.weekly.pickWeek": "Mở tuần khác",
   "brief.weekly.none":
     "Chưa có bản tổng kết tuần. Bản đầu tiên sẽ có vào thứ Hai sau tuần đầy đủ đầu tiên.",
-  "brief.weekly.tasksDelivered": "Việc cần làm đã hoàn tất",
+  "brief.weekly.tasksDelivered": "Việc đến hạn đã hoàn tất",
   "brief.weekly.ofDue": "{done} trên {due}",
   "brief.weekly.dealsWon": "Thắng",
   "brief.weekly.dealsLost": "Thua",
@@ -4272,7 +4278,9 @@ export const vi = {
   "deepread.starting": "Đang bắt đầu…",
   "deepread.unavailable": "Máy chủ này chưa cấu hình tìm hiểu trang web.",
   "deepread.statusQueued": "Đang chờ xử lý",
-  "deepread.statusDeferred": "Đang chờ hạn mức AI",
+  "deepread.statusDeferred": "Đang chờ tiếp tục",
+  "deepread.statusBudgetWait": "Đang chờ ngân sách AI",
+  "deepread.statusProviderWait": "Đang chờ nhà cung cấp AI",
   "deepread.statusRunning": "Đang đọc trang web…",
   "deepread.statusDone": "Xong",
   "deepread.statusPartial": "Đã dừng sớm",
@@ -5438,13 +5446,44 @@ export const vi = {
   "settings.signatureEdit": "Sửa chữ ký",
   "settings.signatureNone": "Chưa có lời kết",
   "settings.signatureCancel": "Hủy",
+  "delivery.loadFailed": "Không thể tải lựa chọn email. Tải lại để thử lại.",
   "delivery.morningLabel": "Bản tin sáng",
   "delivery.morningHelp":
     "Gửi thêm bản tin trong ngày qua email. Bản tin luôn hiển thị trên Trang chủ.",
   "delivery.weeklyLabel": "Tổng kết tuần",
-  "delivery.weeklyHelp": "Gửi thêm bản tổng kết thứ Hai qua email.",
+  "delivery.weeklyHelp":
+    "Gửi tuần báo cáo đã kết thúc vào ngày làm việc bạn chọn.",
   "delivery.byEmail": "Qua email",
   "delivery.none": "Không qua email",
+  "delivery.hourLabel": "Giờ gửi email định kỳ",
+  "delivery.scheduleHelp":
+    "Chọn giờ cá nhân để dùng ngày làm việc và múi giờ của bạn, trong cửa sổ gửi ba giờ. Lịch trước đây giữ nguyên cho đến khi bạn đổi.",
+  "delivery.legacyTime": "Lịch buổi sáng trước đây (múi giờ báo cáo):",
+  "delivery.workingStart": "Bắt đầu giờ làm việc",
+  "delivery.weekdayLabel": "Ngày tổng kết tuần",
+  "delivery.weekdayHelp":
+    "Nếu ngày đã chọn là ngày nghỉ, dùng ngày làm việc kế tiếp. Tuần báo cáo giữ nguyên; có thể gửi bù vào ngày làm việc sau.",
+  "delivery.quietLabel": "Buổi sáng ít việc",
+  "delivery.onlyUseful": "Chỉ khi có nội dung hữu ích",
+  "delivery.quietAlso": "Cũng gửi bản tóm tắt trạng thái vào buổi sáng ít việc",
+  "delivery.combineLabel": "Gộp email định kỳ",
+  "delivery.combineHelp":
+    "Một email định kỳ mỗi ngày báo cáo gộp kết quả tuần, việc hiện tại và các nhóm thông báo bạn chọn khi có. Phê duyệt tức thì vẫn riêng.",
+  "delivery.separate": "Email định kỳ riêng biệt",
+  "delivery.combined": "Gộp nội dung có sẵn",
+  "delivery.scopeLabel": "Phạm vi email định kỳ",
+  "delivery.scope.personal": "Việc của tôi",
+  "delivery.scope.team": "Nhóm đã chọn",
+  "delivery.scope.combined": "Việc của tôi và nhóm đã chọn",
+  "delivery.teamHelp":
+    "Chọn nhóm trước khi bật chế độ xem. Quyền truy cập được kiểm tra lại khi gửi.",
+  "delivery.weekday1": "Thứ Hai",
+  "delivery.weekday2": "Thứ Ba",
+  "delivery.weekday3": "Thứ Tư",
+  "delivery.weekday4": "Thứ Năm",
+  "delivery.weekday5": "Thứ Sáu",
+  "delivery.weekday6": "Thứ Bảy",
+  "delivery.weekday7": "Chủ Nhật",
   "delivery.panelTitle": "Bản tóm tắt qua email",
   "settings.appearance": "Giao di\u1ec7n",
   "settings.appearanceHelp":
@@ -9642,6 +9681,20 @@ export const vi = {
   "voice.candidate.concernsLabel": "Vì sao phiên bản này cần xem lại",
   "voice.candidate.applyHint":
     "Nếu bản này đúng văn phong của bạn, hãy dùng. Nếu không, giữ giọng văn hiện tại và thêm văn mẫu; bản dựng tiếp theo sẽ học từ đó.",
+  "voice.candidate.reason.uncomparable":
+    "Không thể so sánh hồ sơ giọng văn trước đó. Hãy kiểm tra phiên bản này trước khi thay thế.",
+  "voice.candidate.reason.identity":
+    "Từ vựng đặc trưng đã thay đổi (độ tương đồng {score}). Hãy kiểm tra xem giọng văn có còn phù hợp không.",
+  "voice.candidate.reason.signature":
+    "Cách diễn đạt đặc trưng đã thay đổi (độ tương đồng {score}). Hãy kiểm tra các bản nháp mẫu.",
+  "voice.candidate.reason.regression":
+    "Phiên bản này đạt {score}; phiên bản đang dùng đạt {active}. Hãy kiểm tra trước khi thay thế giọng văn hiện tại.",
+  "voice.candidate.reason.smallCorpus":
+    "Chưa đủ mẫu để đánh giá riêng. Hãy thêm nguồn để có thể chấm điểm.",
+  "voice.candidate.reason.corpusChanged":
+    "Các mẫu văn bản đã thay đổi trong quá trình tạo. Hãy kiểm tra phiên bản trước khi sử dụng.",
+  "voice.candidate.reason.activeChanged":
+    "Giọng văn đang dùng đã thay đổi trong quá trình đánh giá. Hãy kiểm tra phiên bản trước khi sử dụng.",
   "voice.candidate.reason.malformed":
     "Bước chấm điểm không thể đọc một số bản nháp mẫu, nên điểm số dựa trên ít mẫu hơn thường lệ.",
   "voice.candidate.reason.lowScore":
@@ -9649,7 +9702,7 @@ export const vi = {
   "voice.candidate.reason.hardFailures":
     "Cụm từ giọng này cần tránh nhưng vẫn xuất hiện trong bản nháp mẫu: {n}.",
   "voice.candidate.reason.rulesRemoved":
-    "Số quy tắc về điều cần tránh đã bị bỏ so với phiên bản trước: {n}.",
+    "Số quy tắc về cách diễn đạt và văn phong đã bị bỏ so với phiên bản trước: {n}.",
   "voice.candidate.apply": "Dùng phiên bản này",
   "voice.candidate.reject": "Giữ giọng văn hiện tại",
   "voice.history.label": "Phiên bản và học hỏi",
@@ -10083,6 +10136,10 @@ export const vi = {
   "settings.companyMarkUnsupported":
     "Hãy dùng tệp PNG, JPEG, GIF, WebP, ICO hoặc SVG.",
   "settings.companyMarkTooLarge": "Hãy dùng tệp nhỏ hơn.",
+  "settings.companyMarkSvgNotDrawable":
+    "Tệp SVG này có phần không thể hiển thị ở đây, hoặc không hiển thị gì. Xuất logo dưới dạng tệp PNG từ công cụ thiết kế.",
+  "settings.companyMarkSvgText":
+    "Tệp SVG này chứa chữ chưa chuyển thành đường nét nên không thể hiển thị. Chuyển chữ thành đường nét (outline) trong công cụ thiết kế, hoặc tải lên tệp PNG.",
   "settings.companyMarkAddWide": "Thêm logo rộng",
   "settings.companyMarkReplaceWide": "Thay logo rộng",
   "settings.companyMarkRemoveWide": "Gỡ logo rộng",
@@ -11129,7 +11186,9 @@ export const vi = {
   "ownDomains.addFailed": "Không thể thêm tên miền",
   "ownDomains.remove": "Gỡ {domain}",
   "ownDomains.candidateNote":
-    "Thấy trên một hộp thư đã kết nối. Chưa xác nhận nên chưa chặn việc thu thập.",
+    "Thấy trên một hộp thư đã kết nối. Thư giữa các đồng nghiệp trên tên miền này vẫn được lưu cho đến khi bạn xác nhận.",
+  "ownDomains.confirm": "Xác nhận",
+  "ownDomains.confirmLabel": "Xác nhận {domain}",
 
   "financeSource.title": "Nguồn kế toán",
   "financeSource.sub":
@@ -12320,6 +12379,9 @@ export const vi = {
   "today.scan.readDeals_other": "{count} deal",
   "today.scan.stale":
     "Công ty đã có thay đổi kể từ đó. Margince sẽ phân tích lại trong vòng một giờ.",
+  "today.scan.providerResumes":
+    "Phân tích sẽ thử lại {when}. Đang chờ nhà cung cấp AI.",
+  "today.scan.scheduledResumes": "Phân tích tiếp tục {when}.",
   "today.scan.resumes":
     "Đang tạm dừng vì đã chạm ngân sách AI. Sẽ tiếp tục phân tích {when}.",
   "provider.readOnly":
@@ -12974,6 +13036,12 @@ export const vi = {
     "Đã qua giờ gửi trong lúc hệ thống không chạy, và giờ đã quá muộn để gửi. Đổi giờ gửi hoặc thu hồi tin nhắn.",
   "sched.held.timerExhausted":
     "Tác vụ gửi đã hết lượt thử. Đổi giờ gửi để thử lại.",
+  "sched.held.passportRevoked":
+    "Quyền của tác nhân đã bị thu hồi. Hãy xem lại thư trước khi chọn tài khoản gửi khác.",
+  "sched.held.followupSettled":
+    "Yêu cầu đã được trả lời hoặc hoàn thành sau khi lên lịch. Hãy xem còn cần thư theo dõi này không.",
+  "sched.held.meetingCanceled":
+    "Cuộc họp đã bị hủy sau khi lên lịch. Hãy xem lại thư trước khi gửi.",
   "sched.held.sendRefused":
     "Một bước kiểm tra đã chặn tin nhắn này khi đến giờ gửi. Không có gì được gửi.",
   "sched.inZone": "theo giờ {zone}",

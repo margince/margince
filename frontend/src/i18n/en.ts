@@ -3,6 +3,10 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "aiWait.provider":
+    "The AI provider is unavailable. This work resumes automatically when it recovers.",
+  "aiWait.budget":
+    "The AI budget has reached its limit. This work resumes automatically when budget is available.",
   "reporting.latestSnapshot": "Latest snapshot",
   "reporting.contextDetails": "Reporting details",
   "reporting.targetRemaining": "{amount} remaining",
@@ -1014,6 +1018,8 @@ export const en = {
     "Commitment evidence unavailable",
   "history.field.address": "Address",
   "history.field.admission": "Domain intake check",
+  "history.field.admission_reason_code": "Intake reason category",
+  "history.field.admission_sender_kind": "Sender category",
   "history.field.admission_reason": "Intake check reason",
   "history.field.admission_source": "Intake check source",
   "history.field.amount_minor": "Value",
@@ -4284,7 +4290,7 @@ export const en = {
   "brief.weekly.pickWeek": "Open another week",
   "brief.weekly.none":
     "No weekly review yet. The first one is created on the Monday after your first full week.",
-  "brief.weekly.tasksDelivered": "Tasks delivered",
+  "brief.weekly.tasksDelivered": "Due tasks completed",
   "brief.weekly.ofDue": "{done} of {due}",
   "brief.weekly.dealsWon": "Won",
   "brief.weekly.dealsLost": "Lost",
@@ -4442,7 +4448,9 @@ export const en = {
   "deepread.starting": "Starting…",
   "deepread.unavailable": "Website research is not configured on this server.",
   "deepread.statusQueued": "Queued",
-  "deepread.statusDeferred": "Waiting for AI budget",
+  "deepread.statusDeferred": "Waiting to resume",
+  "deepread.statusBudgetWait": "Waiting for AI budget",
+  "deepread.statusProviderWait": "Waiting for AI provider",
   "deepread.statusRunning": "Reading website…",
   "deepread.statusDone": "Done",
   "deepread.statusPartial": "Stopped early",
@@ -5628,13 +5636,45 @@ export const en = {
   "settings.signatureNone": "No sign-off set",
   "settings.signatureCancel": "Cancel",
   // One line under the readings strip, naming what the day could not read.
+  "delivery.loadFailed":
+    "Email choices could not be loaded. Reload to try again.",
   "delivery.morningLabel": "Morning brief",
   "delivery.morningHelp":
     "Also sends the day’s brief by email. It always appears on Home.",
   "delivery.weeklyLabel": "Weekly review",
-  "delivery.weeklyHelp": "Also sends Monday’s review by email.",
+  "delivery.weeklyHelp":
+    "Sends the last closed reporting week on your chosen working day.",
   "delivery.byEmail": "By email",
   "delivery.none": "Not by email",
+  "delivery.hourLabel": "Routine email time",
+  "delivery.scheduleHelp":
+    "Choose a personal time to use your working days and timezone, with a three-hour delivery window. Your previous schedule stays until you change it.",
+  "delivery.legacyTime": "Previous morning schedule (reporting timezone):",
+  "delivery.workingStart": "Start of my working hours",
+  "delivery.weekdayLabel": "Weekly review day",
+  "delivery.weekdayHelp":
+    "Uses the next working day if your chosen day is off. The reporting week stays fixed; later working days allow catch-up.",
+  "delivery.quietLabel": "Quiet mornings",
+  "delivery.onlyUseful": "Only when there is useful content",
+  "delivery.quietAlso": "Also send a status summary on quiet mornings",
+  "delivery.combineLabel": "Combine routine emails",
+  "delivery.combineHelp":
+    "One routine email per reporting day combines weekly results, current actions and your chosen digest classes when available. Immediate approvals stay separate.",
+  "delivery.separate": "Separate routine emails",
+  "delivery.combined": "Combine available content",
+  "delivery.scopeLabel": "Routine email scope",
+  "delivery.scope.personal": "My work",
+  "delivery.scope.team": "Selected team",
+  "delivery.scope.combined": "My work and selected team",
+  "delivery.teamHelp":
+    "Choose a team before enabling its view. Access is checked again when mail is sent.",
+  "delivery.weekday1": "Monday",
+  "delivery.weekday2": "Tuesday",
+  "delivery.weekday3": "Wednesday",
+  "delivery.weekday4": "Thursday",
+  "delivery.weekday5": "Friday",
+  "delivery.weekday6": "Saturday",
+  "delivery.weekday7": "Sunday",
   "delivery.panelTitle": "Email summaries",
   "settings.appearance": "Appearance",
   "settings.appearanceHelp":
@@ -9976,6 +10016,20 @@ export const en = {
   "voice.candidate.concernsLabel": "Why this version needs review",
   "voice.candidate.applyHint":
     "If it reads like you, use it. If not, keep your current voice and add more writing samples; the next build learns from them.",
+  "voice.candidate.reason.uncomparable":
+    "The previous voice profile could not be compared. Review this version before replacing it.",
+  "voice.candidate.reason.identity":
+    "Your characteristic vocabulary changed (similarity {score}). Review whether it still sounds like you.",
+  "voice.candidate.reason.signature":
+    "Your characteristic phrasing changed (similarity {score}). Review the sample drafts.",
+  "voice.candidate.reason.regression":
+    "This version scored {score}; your active version scored {active}. Review it before replacing your current voice.",
+  "voice.candidate.reason.smallCorpus":
+    "There are too few samples for a separate evaluation. Add more sources to enable scoring.",
+  "voice.candidate.reason.corpusChanged":
+    "Your writing samples changed during this build. Review the version before using it.",
+  "voice.candidate.reason.activeChanged":
+    "Your active voice changed during this evaluation. Review the version before using it.",
   "voice.candidate.reason.malformed":
     "The scoring check could not read some sample drafts, so the score is based on fewer samples than usual.",
   "voice.candidate.reason.lowScore":
@@ -9983,7 +10037,7 @@ export const en = {
   "voice.candidate.reason.hardFailures":
     "Phrases this voice should avoid that appeared in the sample drafts: {n}.",
   "voice.candidate.reason.rulesRemoved":
-    "Rules about what to avoid dropped since your previous version: {n}.",
+    "Rules about wording and register dropped since your previous version: {n}.",
   "voice.candidate.apply": "Use this version",
   "voice.candidate.reject": "Keep current voice",
   "voice.history.label": "Versions and learning",
@@ -10415,6 +10469,10 @@ export const en = {
   "settings.companyMarkUnsupported":
     "Use a PNG, JPEG, GIF, WebP, ICO or SVG file.",
   "settings.companyMarkTooLarge": "Use a smaller file.",
+  "settings.companyMarkSvgNotDrawable":
+    "This SVG has parts that cannot be drawn here, or draws nothing. Export the logo as a PNG from your design tool.",
+  "settings.companyMarkSvgText":
+    "This SVG holds its words as text, which cannot be drawn. Convert the text to outlines in your design tool, or upload a PNG.",
   "settings.companyMarkAddWide": "Add wide logo",
   "settings.companyMarkReplaceWide": "Replace wide logo",
   "settings.companyMarkRemoveWide": "Remove wide logo",
@@ -11454,7 +11512,9 @@ export const en = {
   "ownDomains.addFailed": "Domain not added",
   "ownDomains.remove": "Remove {domain}",
   "ownDomains.candidateNote":
-    "Seen on a connected mailbox. Not confirmed, so it does not stop capture.",
+    "Seen on a connected mailbox. Mail between colleagues on this domain is still stored until you confirm it.",
+  "ownDomains.confirm": "Confirm",
+  "ownDomains.confirmLabel": "Confirm {domain}",
 
   "financeSource.title": "Accounting source",
   "financeSource.sub":
@@ -12652,6 +12712,9 @@ export const en = {
   "today.scan.readDeals_other": "{count} deals",
   "today.scan.stale":
     "The company has changed since. It is analyzed again within the hour.",
+  "today.scan.providerResumes":
+    "Analysis retries {when}. Waiting for the AI provider.",
+  "today.scan.scheduledResumes": "Analysis resumes {when}.",
   "today.scan.resumes": "Analysis resumes {when}. Paused by the AI budget.",
   "provider.title": "Contact data",
   "provider.readOnly":
@@ -13319,6 +13382,12 @@ export const en = {
     "Its send time passed while the system was not running, and it is now too late to send. Reschedule or withdraw it.",
   "sched.held.timerExhausted":
     "The send job ran out of attempts. Reschedule it to retry.",
+  "sched.held.passportRevoked":
+    "The agent credential was revoked. Review the message before choosing another sender.",
+  "sched.held.followupSettled":
+    "The request was answered or completed after scheduling. Review whether this follow-up is still needed.",
+  "sched.held.meetingCanceled":
+    "The meeting was canceled after scheduling. Review this message before sending it.",
   "sched.held.sendRefused":
     "A check blocked this message when it was due. Nothing was sent.",
   "sched.inZone": "in {zone}",

@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -41,8 +42,9 @@ import (
 // transaction and GUC plumbing every workspace transaction pays once —
 // what is under test is how the section reads scale, not BEGIN.
 type countingTracer struct {
-	mu    sync.Mutex
-	count int
+	mu            sync.Mutex
+	count         int
+	languageReads int
 }
 
 func (t *countingTracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
@@ -54,6 +56,11 @@ func (t *countingTracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data 
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.count++
+	for _, arg := range data.Args {
+		if key, ok := arg.(string); ok && key == identity.BaseLanguage.Key() {
+			t.languageReads++
+		}
+	}
 	return ctx
 }
 
@@ -126,7 +133,11 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	}
 	// Every timeline page reads commitment admission evidence in one batch.
 	// The equality above also holds this cost flat as the account grows.
-	const budget = 51
+	// Shared prose adds one language read, reused by every section.
+	const budget = 52
+	if tracer.languageReads != 2 {
+		t.Errorf("two assemblies read base language %d times, want once each", tracer.languageReads)
+	}
 	if smallCost > budget {
 		t.Errorf("one 360 issued %d queries, budget is %d", smallCost, budget)
 	}

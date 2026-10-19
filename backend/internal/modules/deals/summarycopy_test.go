@@ -5,12 +5,11 @@ package deals
 
 import (
 	"context"
-	"reflect"
-	"slices"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -125,66 +124,8 @@ var summaryVerbs = map[string][]string{
 	"protectedRecently":     nil,
 }
 
-// summarySentences reads every field of one set by reflection, so the census
-// walks the struct itself rather than a list that could fall behind it.
-func summarySentences(said summaryCopy) map[string]string {
-	value := reflect.ValueOf(said)
-	sentences := map[string]string{}
-	for i := range value.NumField() {
-		sentences[value.Type().Field(i).Name] = value.Field(i).String()
-	}
-	return sentences
-}
-
-// verbsIn answers a sentence's formatting verbs in order. Go's verbs are
-// positional, so a translation that swaps %q and %s prints the date where the
-// deal's name belongs.
-func verbsIn(sentence string) []string {
-	var verbs []string
-	for i := 0; i+1 < len(sentence); i++ {
-		if sentence[i] == '%' {
-			verbs = append(verbs, sentence[i:i+2])
-			i++
-		}
-	}
-	return verbs
-}
-
-// Every shipped language writes every sentence in its own words, with the
-// English sentence's formatting verbs in the English order.
 func TestEveryShippedLanguageWritesItsOwnDealSentences(t *testing.T) {
-	english := summarySentences(summaryByLang[textlang.English])
-	for name := range english {
-		if _, held := summaryVerbs[name]; !held {
-			t.Errorf("%s is a field of summaryCopy with no row in summaryVerbs, so nothing holds its verbs", name)
-		}
-	}
-	for name := range summaryVerbs {
-		if _, exists := english[name]; !exists {
-			t.Errorf("summaryVerbs holds %s, which summaryCopy no longer has", name)
-		}
-	}
-	for _, lang := range textlang.Shipped {
-		t.Run(string(lang), func(t *testing.T) {
-			said, ok := summaryByLang[lang]
-			if !ok {
-				t.Fatalf("the product ships %s and this table has not learned it", lang)
-			}
-			for name, got := range summarySentences(said) {
-				if got == "" {
-					t.Errorf("%s is empty, and a blank sentence reaches the record as nothing at all", name)
-					continue
-				}
-				if verbs := verbsIn(got); !slices.Equal(verbs, summaryVerbs[name]) {
-					t.Errorf("%s carries verbs %v, its call site passes %v in that order: %q",
-						name, verbs, summaryVerbs[name], got)
-				}
-				if lang != textlang.English && got == english[name] {
-					t.Errorf("%s is the English sentence verbatim; the entry exists and the reader still gets English", name)
-				}
-			}
-		})
-	}
+	langcopytest.CensusByLanguage(t, summaryByLang, summaryVerbs)
 }
 
 // A decision's reason renders in whichever language the writer resolved, and

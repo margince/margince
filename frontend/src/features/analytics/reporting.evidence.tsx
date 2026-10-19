@@ -13,6 +13,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { Stack } from "../../design-system/stack";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { isVersionSkewOf, throwProblem, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import {
@@ -23,8 +24,17 @@ import {
   reportingPeriodLabel,
   reportingQuery,
 } from "./reporting.model";
+import { movementLabel } from "./reporting.movement";
 import { useReportingPages } from "./reporting.pagination";
 import { reloadReportingFigures } from "./reporting.queries";
+
+const metricDateHeading: Partial<
+  Record<ReportingEvidenceRef["metric"], MessageKey>
+> = {
+  bookings_won: "reporting.closedOn",
+  meetings_held: "reporting.meetingOn",
+  accepted_opportunities: "reporting.acceptedOn",
+};
 
 export function ReportingEvidenceDrawer({
   evaluation,
@@ -88,13 +98,7 @@ export function ReportingEvidenceDrawer({
       )
     : t("reporting.currentPipeline");
   const dateHeading = t(
-    reference.metric === "bookings_won"
-      ? "reporting.closedOn"
-      : reference.metric === "meetings_held"
-        ? "reporting.meetingOn"
-        : reference.metric === "accepted_opportunities"
-          ? "reporting.acceptedOn"
-          : "reporting.period",
+    metricDateHeading[reference.metric] ?? "reporting.period",
   );
   return (
     <Modal
@@ -117,7 +121,9 @@ export function ReportingEvidenceDrawer({
         </Heading>
         <p className="t-caption">
           {evaluation.context.scope.label}
-          {point?.label ? ` · ${point.label}` : ""}
+          {point?.label
+            ? ` · ${reference.context_id === "movement_delta" ? movementLabel(point.key, point.label, t) : point.label}`
+            : ""}
         </p>
         <p className="t-caption">
           {interval
@@ -288,7 +294,13 @@ function evidenceSelection(
   const chart = evaluation.charts.find(
     (candidate) =>
       candidate.metric === reference.metric &&
-      candidate.context_id === reference.context_id,
+      (candidate.context_id === reference.context_id ||
+        candidate.points.some(
+          (point) =>
+            point.evidence?.context_id === reference.context_id &&
+            point.evidence.group_key === reference.group_key &&
+            point.evidence.through === reference.through,
+        )),
   );
   const point =
     reference.group_key || reference.through

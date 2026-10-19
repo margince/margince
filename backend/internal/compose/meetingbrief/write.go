@@ -16,7 +16,6 @@ import (
 	"sync"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 // writtenBrief is what the two writers produced, and which writer produced it.
@@ -41,7 +40,7 @@ func (s *Service) write(ctx context.Context, in Input) writtenBrief {
 	// to DO about them, so the promise the goal names is also the promise the
 	// objective aims at. Sharing one set would have the plan silently skip
 	// whatever the sections had already used.
-	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
+	lang := string(briefCopyFor(in.Language).Lang())
 	floor := DeterministicPlan(in, rankClaims(in))
 	var (
 		out  writtenBrief

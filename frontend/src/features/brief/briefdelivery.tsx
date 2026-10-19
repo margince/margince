@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { PendingBody } from "../../design-system/atoms";
 import { describedByIds } from "../../design-system/describedby";
 import { Panel } from "../../design-system/panel";
 import { PanelNotices } from "../../design-system/panelnotices";
@@ -14,6 +15,7 @@ import { Select } from "../../design-system/select";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
+import { RoutineDeliveryRows } from "./routinedelivery";
 
 type BriefDelivery = components["schemas"]["BriefDelivery"];
 
@@ -75,6 +77,15 @@ function BriefDeliveryRows() {
     label: t(choice === "email" ? "delivery.byEmail" : "delivery.none"),
   }));
 
+  if (settings.isPending)
+    return <PendingBody label={t("delivery.panelTitle")} />;
+  if (settings.isError)
+    return (
+      <PanelNotices
+        refused={{ title: t("delivery.loadFailed"), error: settings.error }}
+      />
+    );
+
   return (
     <>
       <SettingList bleed="settings">
@@ -85,6 +96,7 @@ function BriefDeliveryRows() {
           control={(control) => (
             <Select
               {...control}
+              disabled={save.isPending}
               aria-describedby={describedBy(
                 control["aria-describedby"],
                 "morning_brief_delivery",
@@ -110,6 +122,7 @@ function BriefDeliveryRows() {
           control={(control) => (
             <Select
               {...control}
+              disabled={save.isPending}
               aria-describedby={describedBy(
                 control["aria-describedby"],
                 "weekly_delivery",
@@ -125,6 +138,16 @@ function BriefDeliveryRows() {
               options={options}
             />
           )}
+        />
+        <RoutineDeliveryRows
+          settings={settings.data}
+          disabled={save.isPending}
+          refusalFor={(field) =>
+            save.isError && save.variables?.[field] !== undefined
+              ? refusalId
+              : undefined
+          }
+          save={(patch) => save.mutate(patch)}
         />
       </SettingList>
       <PanelNotices

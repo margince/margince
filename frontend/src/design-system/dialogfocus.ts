@@ -178,6 +178,15 @@ export function coveredByDialog(element: Element | null): boolean {
   return top !== undefined && !top.contains(element);
 }
 
+/** As `coveredByDialog`, with the top dialog's opened panels as part of it. */
+export function coveredByLayer(element: Element | null): boolean {
+  const top = liveDialogs().at(-1) ?? null;
+  return (
+    coveredByDialog(element) &&
+    !panelsOpenedFrom(top).some((panel) => panel.contains(element))
+  );
+}
+
 /** The layer a panel portalled out of `anchorRef` joins, so it opens above its
  * dialog: that dialog's overlay, or the body. `joinLayer` also fills the ref. */
 export function useDialogLayer<T extends HTMLElement>(

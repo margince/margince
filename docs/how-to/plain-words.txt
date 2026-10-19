@@ -1078,7 +1078,6 @@ send
 sent
 sentence
 separate
-sequence
 series
 serious
 serve

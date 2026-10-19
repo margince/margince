@@ -47,9 +47,13 @@ func meetingBriefService(e *Env) *meetingbrief.Service {
 // meetingBriefServiceWithoutTeammates is the same service with no membership
 // seam — the composition a deployment that never wired coaching gets.
 func meetingBriefServiceWithoutTeammates(e *Env) *meetingbrief.Service {
+	return meetingBriefServiceAt(e, roomFixedNow)
+}
+
+func meetingBriefServiceAt(e *Env, now time.Time) *meetingbrief.Service {
 	view := contact360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects, consent.NewStore(e.DB()),
-		comms.NewStore(e.DB(), time.Now, activities.NewStore(e.DB())), ai.NewFeedbackStore(e.DB()), func() time.Time { return roomFixedNow })
-	return meetingbrief.NewService(e.Pool, view, e.Contacts, func() time.Time { return roomFixedNow })
+		comms.NewStore(e.DB(), time.Now, activities.NewStore(e.DB())), ai.NewFeedbackStore(e.DB()), func() time.Time { return now })
+	return meetingbrief.NewService(e.Pool, view, e.Contacts, func() time.Time { return now })
 }
 
 // identityTeammates is the membership reader, in the shape the brief takes.

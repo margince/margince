@@ -20,6 +20,7 @@ import (
 
 // Input is the room, the deal, what was promised, and what recently happened.
 type Input struct {
+	Language   string `json:"-"`
 	ActivityID string
 	Subject    string
 	StartsAt   time.Time

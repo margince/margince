@@ -15,6 +15,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -160,51 +162,62 @@ func TestTheArcReadsPastTheNewestPage(t *testing.T) {
 // and the brief must SAY that something was kept out — a thin arc nobody
 // explains reads exactly like a quiet account.
 func TestTheArcNamesNoConversationTheCallerMayNotRead(t *testing.T) {
-	e := Setup(t)
-	owner := OwnerConn(t)
-	attendee := e.SeedContact(t, "Ana Roth", &e.Rep1)
-
-	secret := seedMail(t, owner, attendee, roomFixedNow.AddDate(0, -1, 0),
-		"Private negotiation", "The number we will not go below is in here.", "inbound")
-	if _, err := owner.Exec(context.Background(),
-		`UPDATE activity SET audience = 'participants' WHERE id = $1`, secret); err != nil {
-		t.Fatalf("narrowing the activity: %v", err)
-	}
-	seedMail(t, owner, attendee, roomFixedNow.AddDate(0, -1, 0).Add(time.Hour),
-		"Ordinary thread", "Nothing sensitive.", "inbound")
-
-	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, created_at, source, captured_by)
-		VALUES ($1, 'meeting', 'Review', $2, $2, 'manual', 'human:x')`, roomTomorrow)
-	LinkActivity(t, owner, meeting, "contact", attendee)
-	seatInRoom(t, owner, e.WS, meeting, attendee)
-
-	// Rep2 shares no seat on the narrowed conversation.
-	ctx := e.As(e.Rep2, nil, roomPerms)
-	brief, err := meetingBriefService(e).Get(ctx, meeting)
-	if err != nil {
-		t.Fatalf("reading the brief: %v", err)
-	}
-	if brief.Plan == nil {
-		t.Fatal("no plan")
-	}
-	for _, moment := range brief.Plan.CompanyArc {
-		if strings.Contains(moment.Title, "Private negotiation") {
-			t.Errorf("a narrowed conversation named itself in the arc: %q", moment.Title)
-		}
-		for _, evidence := range moment.Summary.Evidence {
-			if ids.UUID(evidence.EntityId) == secret {
-				t.Error("the arc cites a conversation this caller may not read")
+	for _, tc := range []struct{ language, prefix string }{{"en", "1 conversation"}, {"de", "Du darfst ein Gespräch"}, {"vi", "Bạn không có quyền đọc một cuộc trao đổi"}} {
+		t.Run(tc.language, func(t *testing.T) {
+			e := Setup(t)
+			store := settings.New(e.Pool, settings.NewRegistry(identity.BaseLanguage))
+			if err := settings.Set(e.Admin(), store, identity.BaseLanguage, tc.language); err != nil {
+				t.Fatal(err)
 			}
-		}
-	}
-	named := false
-	for _, omission := range valueOf(brief.Omitted) {
-		if omission.Source == "activity_history" {
-			named = true
-		}
-	}
-	if !named {
-		t.Error("a conversation was withheld and the brief did not say so")
+			owner := OwnerConn(t)
+			attendee := e.SeedContact(t, "Ana Roth", &e.Rep1)
+
+			secret := seedMail(t, owner, attendee, roomFixedNow.AddDate(0, -1, 0),
+				"Private negotiation", "The number we will not go below is in here.", "inbound")
+			if _, err := owner.Exec(context.Background(),
+				`UPDATE activity SET audience = 'participants' WHERE id = $1`, secret); err != nil {
+				t.Fatalf("narrowing the activity: %v", err)
+			}
+			seedMail(t, owner, attendee, roomFixedNow.AddDate(0, -1, 0).Add(time.Hour),
+				"Ordinary thread", "Nothing sensitive.", "inbound")
+
+			meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, created_at, source, captured_by)
+		VALUES ($1, 'meeting', 'Review', $2, $2, 'manual', 'human:x')`, roomTomorrow)
+			LinkActivity(t, owner, meeting, "contact", attendee)
+			seatInRoom(t, owner, e.WS, meeting, attendee)
+
+			// Rep2 shares no seat on the narrowed conversation.
+			ctx := e.As(e.Rep2, nil, roomPerms)
+			brief, err := meetingBriefService(e).Get(ctx, meeting)
+			if err != nil {
+				t.Fatalf("reading the brief: %v", err)
+			}
+			if brief.Plan == nil {
+				t.Fatal("no plan")
+			}
+			for _, moment := range brief.Plan.CompanyArc {
+				if strings.Contains(moment.Title, "Private negotiation") {
+					t.Errorf("a narrowed conversation named itself in the arc: %q", moment.Title)
+				}
+				for _, evidence := range moment.Summary.Evidence {
+					if ids.UUID(evidence.EntityId) == secret {
+						t.Error("the arc cites a conversation this caller may not read")
+					}
+				}
+			}
+			named := false
+			for _, omission := range valueOf(brief.Omitted) {
+				if omission.Source == "activity_history" {
+					named = true
+					if !strings.HasPrefix(omission.Reason, tc.prefix) {
+						t.Fatalf("%s omission: %s", tc.language, omission.Reason)
+					}
+				}
+			}
+			if !named {
+				t.Error("a conversation was withheld and the brief did not say so")
+			}
+		})
 	}
 }
 

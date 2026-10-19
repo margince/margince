@@ -1,11 +1,5 @@
 import { Menu, X } from "lucide-react";
-import {
-  type KeyboardEvent,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Avatar } from "../design-system/atoms";
 import { CompanyLogo } from "../design-system/companylogo";
 import { Heading } from "../design-system/heading";
@@ -19,6 +13,7 @@ import { AgentRail } from "./agentrail";
 import { BetaBadge } from "./betabadge";
 import { currentClaim, MOBILE_PRIMARY, NAV, type NavSection } from "./nav";
 import { NavLevelView, useNavLevel } from "./navlevel";
+import { useNavTip } from "./navtip";
 import { usePopoverDismiss } from "./popover";
 import type { ShellCounts } from "./shell";
 
@@ -171,24 +166,19 @@ export function WorkspaceRail({
   section,
 }: Readonly<RailProps & { section?: NavSection }>) {
   const t = useT();
+  const nav = useRef<HTMLElement>(null);
   // Collapsed items are icon-only, so the label needs a WCAG 1.4.13 tooltip.
   // It appears on keyboard focus as well as hover. It stays visible while the
   // pointer is on it (it renders inside the hovered wrapper). Escape dismisses
   // it without moving focus. The tooltip is never the accessible name:
   // aria-label carries that in both states.
-  const [tip, setTip] = useState<string | null>(null);
+  const navTip = useNavTip(collapsed, nav);
   // At phone width the same markup is a bottom bar; More expands it into a
   // sheet carrying every destination. One nav element keeps one navigation
   // landmark and no second item list to keep in sync.
   const [sheetOpen, setSheetOpen] = useState(false);
   const phone = usePhoneViewport();
-  const nav = useRef<HTMLElement>(null);
   const more = useRef<HTMLButtonElement>(null);
-  const dismissTip = useCallback((event: KeyboardEvent) => {
-    if (event.key === "Escape") {
-      setTip(null);
-    }
-  }, []);
 
   // The sheet is a popover over the page. It dismisses like every other one in
   // the chrome: Escape from anywhere, or any click outside it. That makes
@@ -296,7 +286,6 @@ export function WorkspaceRail({
         ref={nav}
         className={railClasses({ collapsed, sheetOpen, leveled })}
         aria-label={t("shell.railAria")}
-        onKeyDown={dismissTip}
       >
         <div className="railhead">
           <BrandBlock narrow={collapsed && !sheetOpen} />
@@ -309,7 +298,7 @@ export function WorkspaceRail({
           level={level.shown}
           parent={level.parent}
           counts={counts}
-          state={{ collapsed, tip, onTip: setTip }}
+          state={navTip}
           onSelect={level.onSelect}
           onWalkUp={level.onWalkUp}
           // At phone width the agent stands in the middle of the bar, not at

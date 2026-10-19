@@ -5,6 +5,10 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de = {
+  "aiWait.provider":
+    "Der KI-Anbieter ist nicht erreichbar. Die Arbeit wird automatisch fortgesetzt, sobald er wieder verfügbar ist.",
+  "aiWait.budget":
+    "Das KI-Budget ist ausgeschöpft. Die Arbeit wird automatisch fortgesetzt, sobald wieder Budget verfügbar ist.",
   "reporting.latestSnapshot": "Letzter Snapshot",
   "reporting.contextDetails": "Berichtsdetails",
   "reporting.targetRemaining": "{amount} fehlen zum Ziel",
@@ -1043,6 +1047,8 @@ export const de = {
     "Nachweis der Zusage nicht verfügbar",
   "history.field.address": "Adresse",
   "history.field.admission": "Eingangsprüfung der Domain",
+  "history.field.admission_reason_code": "Kategorie des Aufnahmegrunds",
+  "history.field.admission_sender_kind": "Absenderkategorie",
   "history.field.admission_reason": "Grund der Eingangsprüfung",
   "history.field.admission_source": "Quelle der Eingangsprüfung",
   "history.field.amount_minor": "Wert",
@@ -4228,7 +4234,7 @@ export const de = {
   "brief.weekly.pickWeek": "Andere Woche öffnen",
   "brief.weekly.none":
     "Noch kein Wochenrückblick. Der erste wird am Montag nach deiner ersten vollen Woche erstellt.",
-  "brief.weekly.tasksDelivered": "Aufgaben erledigt",
+  "brief.weekly.tasksDelivered": "Fällige Aufgaben erledigt",
   "brief.weekly.ofDue": "{done} von {due}",
   "brief.weekly.dealsWon": "Gewonnen",
   "brief.weekly.dealsLost": "Verloren",
@@ -4355,7 +4361,9 @@ export const de = {
   "deepread.unavailable":
     "Die Website-Recherche ist auf diesem Server nicht eingerichtet.",
   "deepread.statusQueued": "Geplant",
-  "deepread.statusDeferred": "Wartet auf KI-Kontingent",
+  "deepread.statusDeferred": "Wartet auf Fortsetzung",
+  "deepread.statusBudgetWait": "Wartet auf KI-Budget",
+  "deepread.statusProviderWait": "Wartet auf KI-Anbieter",
   "deepread.statusRunning": "Website wird analysiert…",
   "deepread.statusDone": "Fertig",
   "deepread.statusPartial": "Vorzeitig beendet",
@@ -5555,14 +5563,45 @@ export const de = {
   "settings.signatureEdit": "Signatur bearbeiten",
   "settings.signatureNone": "Keine Grußformel festgelegt",
   "settings.signatureCancel": "Abbrechen",
+  "delivery.loadFailed":
+    "Die E-Mail-Einstellungen konnten nicht geladen werden. Lade die Seite erneut.",
   "delivery.morningLabel": "Morgenbericht",
   "delivery.morningHelp":
     "Sendet den täglichen Morgenbericht der Home-Seite zusätzlich per E-Mail.",
   "delivery.weeklyLabel": "Wochenrückblick",
   "delivery.weeklyHelp":
-    "Sendet den Wochenrückblick vom Montag zusätzlich per E-Mail.",
+    "Sendet die letzte abgeschlossene Berichtswoche an deinem gewählten Arbeitstag.",
   "delivery.byEmail": "Per E-Mail",
   "delivery.none": "Nicht per E-Mail",
+  "delivery.hourLabel": "Uhrzeit für Zusammenfassungen",
+  "delivery.scheduleHelp":
+    "Eine persönliche Uhrzeit nutzt deine Arbeitstage und Zeitzone mit einem Versandfenster von drei Stunden. Der bisherige Plan bleibt bis zu deiner Änderung.",
+  "delivery.legacyTime": "Bisheriger Morgenplan (Berichtszeitzone):",
+  "delivery.workingStart": "Beginn meiner Arbeitszeit",
+  "delivery.weekdayLabel": "Tag des Wochenrückblicks",
+  "delivery.weekdayHelp":
+    "Ein freier Tag wird auf den nächsten Arbeitstag verschoben. Die Berichtswoche bleibt fest; spätere Arbeitstage erlauben eine Nachholung.",
+  "delivery.quietLabel": "Ruhige Morgen",
+  "delivery.onlyUseful": "Nur mit nützlichem Inhalt",
+  "delivery.quietAlso": "Auch eine Statusübersicht an ruhigen Morgen",
+  "delivery.combineLabel": "Routine-E-Mails zusammenfassen",
+  "delivery.combineHelp":
+    "Eine Zusammenfassung pro Berichtstag verbindet verfügbare Wochenergebnisse, aktuelle Aufgaben und gewählte Sammel-Kategorien. Sofortige Freigaben bleiben separat.",
+  "delivery.separate": "Separate Routine-E-Mails",
+  "delivery.combined": "Verfügbare Inhalte zusammenfassen",
+  "delivery.scopeLabel": "Umfang der Zusammenfassungen",
+  "delivery.scope.personal": "Meine Arbeit",
+  "delivery.scope.team": "Gewähltes Team",
+  "delivery.scope.combined": "Meine Arbeit und gewähltes Team",
+  "delivery.teamHelp":
+    "Wähle ein Team, bevor du seine Ansicht aktivierst. Der Zugriff wird beim Versand erneut geprüft.",
+  "delivery.weekday1": "Montag",
+  "delivery.weekday2": "Dienstag",
+  "delivery.weekday3": "Mittwoch",
+  "delivery.weekday4": "Donnerstag",
+  "delivery.weekday5": "Freitag",
+  "delivery.weekday6": "Samstag",
+  "delivery.weekday7": "Sonntag",
   "delivery.panelTitle": "Zusammenfassungen per E-Mail",
   "settings.appearance": "Darstellung",
   "settings.appearanceHelp":
@@ -9890,6 +9929,20 @@ export const de = {
   "voice.candidate.concernsLabel": "Warum diese Version eine Prüfung braucht",
   "voice.candidate.applyHint":
     "Wenn diese Version nach dir klingt, verwende sie. Wenn nicht, behalte deinen aktuellen Schreibstil und füge weitere Schreibproben hinzu. Der nächste Aufbau lernt aus diesen Schreibproben.",
+  "voice.candidate.reason.uncomparable":
+    "Das vorherige Stimmprofil konnte nicht verglichen werden. Prüfe diese Version, bevor du es ersetzt.",
+  "voice.candidate.reason.identity":
+    "Dein typisches Vokabular hat sich verändert (Ähnlichkeit {score}). Prüfe, ob es noch nach dir klingt.",
+  "voice.candidate.reason.signature":
+    "Deine typischen Formulierungen haben sich verändert (Ähnlichkeit {score}). Prüfe die Beispielentwürfe.",
+  "voice.candidate.reason.regression":
+    "Diese Version erreichte {score}, deine aktive Version {active}. Prüfe sie, bevor du dein aktuelles Stimmprofil ersetzt.",
+  "voice.candidate.reason.smallCorpus":
+    "Für eine getrennte Bewertung gibt es zu wenige Beispiele. Füge weitere Quellen hinzu, um eine Bewertung zu ermöglichen.",
+  "voice.candidate.reason.corpusChanged":
+    "Deine Textbeispiele haben sich während der Erstellung geändert. Prüfe die Version, bevor du sie verwendest.",
+  "voice.candidate.reason.activeChanged":
+    "Dein aktives Stimmprofil hat sich während der Bewertung geändert. Prüfe die Version, bevor du sie verwendest.",
   "voice.candidate.reason.malformed":
     "Die Bewertung beruht auf weniger Beispielen als üblich, da einige Beispielentwürfe nicht gelesen werden konnten.",
   "voice.candidate.reason.lowScore":
@@ -9897,7 +9950,7 @@ export const de = {
   "voice.candidate.reason.hardFailures":
     "Formulierungen, die dieser Schreibstil vermeiden soll und die in den Beispielentwürfen vorkamen: {n}.",
   "voice.candidate.reason.rulesRemoved":
-    "Seit deiner vorherigen Version weggefallene Regeln darüber, was zu vermeiden ist: {n}.",
+    "Seit deiner vorherigen Version weggefallene Regeln zu Formulierungen und Sprachregister: {n}.",
   "voice.candidate.apply": "Diese Version verwenden",
   "voice.candidate.reject": "Aktuellen Schreibstil behalten",
   "voice.history.label": "Versionen und Lernen",
@@ -10338,6 +10391,10 @@ export const de = {
   "settings.companyMarkUnsupported":
     "Nimm eine PNG-, JPEG-, GIF-, WebP-, ICO- oder SVG-Datei.",
   "settings.companyMarkTooLarge": "Nimm eine kleinere Datei.",
+  "settings.companyMarkSvgNotDrawable":
+    "Diese SVG-Datei enthält Teile, die sich hier nicht darstellen lassen, oder sie zeigt nichts. Exportiere das Logo in deinem Grafikprogramm als PNG-Datei.",
+  "settings.companyMarkSvgText":
+    "Diese SVG-Datei enthält Text, der sich nicht darstellen lässt. Wandle den Text in deinem Grafikprogramm in Pfade um, oder lade eine PNG-Datei hoch.",
   "settings.companyMarkAddWide": "Breites Logo hinzufügen",
   "settings.companyMarkReplaceWide": "Breites Logo ersetzen",
   "settings.companyMarkRemoveWide": "Breites Logo entfernen",
@@ -11404,7 +11461,9 @@ export const de = {
   "ownDomains.addFailed": "Domain nicht hinzugefügt",
   "ownDomains.remove": "{domain} entfernen",
   "ownDomains.candidateNote":
-    "In einem verbundenen Postfach gesehen. Die Domain stoppt die Erfassung nicht, da sie nicht bestätigt ist.",
+    "In einem verbundenen Postfach gesehen. Nachrichten zwischen Teammitgliedern auf dieser Domain werden gespeichert, bis du die Domain bestätigst.",
+  "ownDomains.confirm": "Bestätigen",
+  "ownDomains.confirmLabel": "{domain} bestätigen",
 
   "financeSource.title": "Buchhaltungsquelle",
   "financeSource.sub":
@@ -12638,6 +12697,9 @@ export const de = {
   "today.scan.readDeals_other": "{count} Deals",
   "today.scan.stale":
     "Das Unternehmen hat sich seitdem geändert. Das Unternehmen wird innerhalb einer Stunde erneut analysiert.",
+  "today.scan.providerResumes":
+    "Die Analyse wird {when} erneut versucht. Der KI-Anbieter ist derzeit nicht verfügbar.",
+  "today.scan.scheduledResumes": "Die Analyse wird {when} fortgesetzt.",
   "today.scan.resumes":
     "Die Analyse wird am {when} fortgesetzt. Das KI-Kontingent hat die Analyse pausiert.",
   "provider.readOnly":
@@ -13291,6 +13353,12 @@ export const de = {
     "Der Sendezeitpunkt ist verstrichen, während das System nicht lief, und für den Versand ist es jetzt zu spät. Plane die Nachricht neu oder ziehe sie zurück.",
   "sched.held.timerExhausted":
     "Der Sendeauftrag hat keine Versuche mehr. Plane die Nachricht neu, um es erneut zu versuchen.",
+  "sched.held.passportRevoked":
+    "Die Agenten-Berechtigung wurde widerrufen. Prüfe die Nachricht vor einem neuen Versand.",
+  "sched.held.followupSettled":
+    "Die Anfrage wurde nach der Planung beantwortet oder erledigt. Prüfe, ob diese Nachfrage noch nötig ist.",
+  "sched.held.meetingCanceled":
+    "Der Termin wurde nach der Planung abgesagt. Prüfe diese Nachricht vor dem Versand.",
   "sched.held.sendRefused":
     "Eine Prüfung hat die Nachricht bei Fälligkeit blockiert. Es wurde nichts gesendet.",
   "sched.inZone": "in {zone}",

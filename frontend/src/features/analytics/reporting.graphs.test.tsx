@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { installFetchStub, StoryProviders } from "../../testing/story-utils";
 import { ReportingCharts, wideCharts } from "./reporting.charts";
+import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingForecastGraphs } from "./reporting.forecast";
 import { forecastEvaluation, sdrEvaluation } from "./reporting.scenarios";
 import {
@@ -377,4 +378,41 @@ it("spans a half-width chart across its row when no chart can share it", () => {
     (chart) => chart.kind !== "pipeline_movement",
   );
   expect(wideCharts(halves)).toEqual([false, false, true]);
+});
+
+it("keeps the movement label readable in its evidence drawer", async () => {
+  const reference = {
+    metric: "open_pipeline",
+    context_id: "movement_delta",
+    group_key: "reopened_or_archived",
+  } as const;
+  const evaluation = {
+    ...forecastEvaluation,
+    charts: forecastEvaluation.charts
+      .filter((chart) => chart.kind === "pipeline_movement")
+      .map((chart) => ({
+        ...chart,
+        points: [
+          {
+            key: "reopened_or_archived",
+            label: "reopened_or_archived",
+            value: 100,
+            status: "ok",
+            evidence: reference,
+          },
+        ],
+      })),
+  } satisfies typeof forecastEvaluation;
+  installFetchStub(reportingStoryRoutes(evaluation));
+  render(
+    <StoryProviders>
+      <ReportingEvidenceDrawer
+        evaluation={evaluation}
+        reference={reference}
+        onClose={() => {}}
+      />
+    </StoryProviders>,
+  );
+  expect(await screen.findByText(/Reopened or archived/)).toBeInTheDocument();
+  expect(screen.queryByText(/reopened_or_archived/)).not.toBeInTheDocument();
 });

@@ -84,5 +84,5 @@ func (s *Service) raisesMoment(
 // promiseFingerprint is the evidence fingerprint the card for this promise
 // carries, read off the drawn card rather than derived a second time.
 func promiseFingerprint(now time.Time, item owedwork.Item) string {
-	return promiseCard(now, item, false).EvidenceFingerprint
+	return momentCopyFor("en").promiseCard(now, item, false).EvidenceFingerprint
 }

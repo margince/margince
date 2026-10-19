@@ -13,6 +13,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -23,7 +24,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -193,33 +196,58 @@ func TestAnArchiveAlreadyUndoneStaysUndoneAfterALaterArchive(t *testing.T) {
 // A lead the router promoted is undone by demoting it: the lead is live again
 // and the contact the promotion created is archived with it.
 func TestUndoingAMachinePromotionDemotesTheLead(t *testing.T) {
-	e := integration.Setup(t)
-	name, email := "Lena Lead", "lena@prospect.test"
-	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "import", FullName: &name, Email: &email})
-	if err != nil {
-		t.Fatal(err)
-	}
-	leadID := ids.UUID(lead.Id)
-	contact, _, err := e.Contacts.PromoteLead(machineCtx(e), ids.From[ids.LeadKind](leadID), contacts.PromoteLeadInput{Trigger: "inbound_reply"})
-	if err != nil {
-		t.Fatalf("the machine promoting the lead: %v", err)
-	}
-	promoteID := latestAuditRowID(t, e, entityTypeLead, leadID, actionPromote)
+	for _, tc := range []struct{ language, reason string }{
+		{"en", "Undone from the record's history."},
+		{"de", "Über den Verlauf des Datensatzes rückgängig gemacht."},
+		{"vi", "Đã hoàn tác từ lịch sử bản ghi."},
+	} {
+		t.Run(tc.language, func(t *testing.T) {
+			e := integration.Setup(t)
+			config := settings.New(e.Pool, settings.NewRegistry(identity.BaseLanguage))
+			if err := settings.Set(e.Admin(), config, identity.BaseLanguage, tc.language); err != nil {
+				t.Fatal(err)
+			}
+			name, email := "Lena Lead", "lena@prospect.test"
+			lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "import", FullName: &name, Email: &email})
+			if err != nil {
+				t.Fatal(err)
+			}
+			leadID := ids.UUID(lead.Id)
+			contact, _, err := e.Contacts.PromoteLead(machineCtx(e), ids.From[ids.LeadKind](leadID), contacts.PromoteLeadInput{Trigger: "inbound_reply"})
+			if err != nil {
+				t.Fatalf("the machine promoting the lead: %v", err)
+			}
+			promoteID := latestAuditRowID(t, e, entityTypeLead, leadID, actionPromote)
 
-	if answer := advisoryAnswer(e.Admin(), t, e, entityTypeLead, leadID, promoteID); !answer.Undoable {
-		t.Fatalf("the promotion reads %+v, want undoable", answer)
-	}
-	if err := undoEntry(t, e, entityTypeLead, leadID, promoteID); err != nil {
-		t.Fatalf("undoing the promotion: %v", err)
-	}
-	if isArchived(t, e, entityTypeLead, leadID) {
-		t.Error("the demoted lead is still archived")
-	}
-	if !isArchived(t, e, "contact", ids.UUID(contact.Id)) {
-		t.Error("the contact the promotion created is still live after the demotion")
-	}
-	if answer := advisoryAnswer(e.Admin(), t, e, entityTypeLead, leadID, promoteID); answer.Reason != string(ReasonAlreadyUndone) {
-		t.Errorf("the undone promotion reads %+v, want %q", answer, ReasonAlreadyUndone)
+			if answer := advisoryAnswer(e.Admin(), t, e, entityTypeLead, leadID, promoteID); !answer.Undoable {
+				t.Fatalf("the promotion reads %+v, want undoable", answer)
+			}
+			if err := undoEntry(t, e, entityTypeLead, leadID, promoteID); err != nil {
+				t.Fatalf("undoing the promotion: %v", err)
+			}
+			if isArchived(t, e, entityTypeLead, leadID) {
+				t.Error("the demoted lead is still archived")
+			}
+			if !isArchived(t, e, "contact", ids.UUID(contact.Id)) {
+				t.Error("the contact the promotion created is still live after the demotion")
+			}
+			if answer := advisoryAnswer(e.Admin(), t, e, entityTypeLead, leadID, promoteID); answer.Reason != string(ReasonAlreadyUndone) {
+				t.Errorf("the undone promotion reads %+v, want %q", answer, ReasonAlreadyUndone)
+			}
+			if err := settings.Set(e.Admin(), config, identity.BaseLanguage, "en"); err != nil {
+				t.Fatal(err)
+			}
+			row := auditRowOf(t, e, latestAuditRowID(t, e, entityTypeLead, leadID, "demote"))
+			var after struct {
+				Reason string `json:"reason"`
+			}
+			if err := json.Unmarshal(row.After, &after); err != nil {
+				t.Fatal(err)
+			}
+			if after.Reason != tc.reason {
+				t.Fatalf("undo reason = %q, want %q", after.Reason, tc.reason)
+			}
+		})
 	}
 }
 

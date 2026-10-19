@@ -117,18 +117,9 @@ A deal label that reads as a sentence or an instruction rather than a name: writ
 Never advise, never congratulate, never scold, and never grade the week: no "highlight", "strong finish", "productive" or "successfully". State it.
 `
 
-// quietWeekRule is added ONLY to a week whose counts are all zero.
-//
-// It used to be part of the standing prompt, which handed the model "A quiet
-// week — nothing closed and nothing slipped" as a ready sentence on every
-// week, including one that closed three deals for EUR 12,500. The greeting
-// above it said so and the metric beside it said so, and the prose said
-// nothing had happened.
-//
-// An exemplar is the most quotable line in a prompt. Offering it where it
-// cannot be true is asking for it back.
+// Counts alone cannot establish source coverage or forecast stability.
 const quietWeekRule = `
-Say when a week was quiet. "A quiet week — nothing closed and nothing slipped" is a true and useful sentence, and inventing significance to fill the space is the one failure that costs the reader their trust in every other week.
+Describe only the recorded counts. Zero counts do not prove that nothing happened, that a forecast is safe, or that nothing slipped. Do not make quiet-week or no-slippage claims.
 `
 
 // happenedRule is its opposite, for a week that did something. It names the
@@ -142,7 +133,7 @@ THIS WEEK WAS NOT QUIET: the counts below are not all zero. Never write that the
 // happenedWithoutDealsRule is the week that did something while no deal moved,
 // where "no deal moved" is true and forbidding it would forbid the truth.
 const happenedWithoutDealsRule = `
-THIS WEEK WAS NOT QUIET: the counts below are not all zero. Never write that the week was quiet or that nothing happened — the reader is looking at the numbers that say otherwise, in the same panel. No deal moved, closed or slipped, and saying so is true; lead with what did happen.
+THIS WEEK WAS NOT QUIET: the counts below are not all zero. Never write that the week was quiet or that nothing happened — the reader is looking at the numbers that say otherwise, in the same panel. No deal changed stage or closed in these recorded counts; do not infer forecast or close-date slippage from this; lead with what did happen.
 `
 
 // systemFor names THIS call's data boundary; see promptfence.Fence.Rule.
@@ -282,6 +273,11 @@ var dealClaims = []string{
 // product that does not know what happened.
 func refuseContradiction(sentence string, in Input) error {
 	folded := strings.ToLower(sentence)
+	for _, claim := range []string{"nothing slipped", "no slippage", "pipeline is safe", "nichts verschoben", "không có gì bị trượt"} {
+		if strings.Contains(folded, claim) {
+			return errors.New("weekly narrative: unsupported forecast claim")
+		}
+	}
 	if !in.Counts.quiet() {
 		for _, claim := range wholeWeekClaims {
 			if strings.Contains(folded, claim) {

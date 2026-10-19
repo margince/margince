@@ -28,34 +28,6 @@ func nonEmpty(v string) *string {
 	return &v
 }
 
-// Where a citation's words came from, in the reader's terms. Server-authored
-// like the reason and the title above them, so the three voices on a row
-// agree; the client labels the chip with the record's kind and prints the
-// date in the reader's calendar, and this says only what neither of those can.
-const (
-	originStalledDeal   = "Open deal, last worked"
-	originOpenDeal      = "Open deal"
-	originContractEnded = "Read from their correspondence"
-)
-
-// sentOrigin names the channel we spoke on. The rule fires on an OUTBOUND
-// exchange only, so "you" is always right; the channel is what makes
-// "Email you sent" a claim a reader can check against their own sent folder.
-func sentOrigin(kind string) string {
-	switch crmcontracts.ActivityKind(kind) {
-	case crmcontracts.ActivityKindEmail:
-		return "Email you sent"
-	case crmcontracts.ActivityKindMessage:
-		return "Message you sent"
-	case crmcontracts.ActivityKindCall:
-		return "Call you made"
-	case crmcontracts.ActivityKindMeeting:
-		return "Meeting you held"
-	default:
-		return "Sent by you"
-	}
-}
-
 // fingerprint identifies a suggestion by what it fired ON, not by what kind
 // it is.
 //

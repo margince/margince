@@ -317,7 +317,7 @@ Microsoft will not make a subscription until the URL sends back a `validationTok
 first with a POST. That handshake runs **after** the token check, so the endpoint sends a value back only to a
 caller that already holds the token.
 
-Sending submits the whole RFC822 message to `/me/sendMail`. The shared wire builder (`capture/mailwire`)
+Sending submits the whole RFC822 message to `/me/sendMail`. The shared wire builder (`platform/mailwire`)
 that the Gmail send uses renders it. So both agree on what a `multipart/alternative` puts first, and where
 `base64` breaks its lines.
 
@@ -483,7 +483,7 @@ The pipeline is live; these were left out of scope:
 | Gmail connector (OAuth, history sync, Pub/Sub watch, backfill) | `internal/modules/capture/gmail/` |
 | IMAP connector (standing sync on a UID watermark; `netguard` SSRF guard) | `internal/modules/capture/imap/` |
 | Graph connector (OAuth, delta sync, backfill, send) | `internal/modules/capture/graph/` |
-| The shared outbound RFC822 renderer both mail senders use | `internal/modules/capture/mailwire/` |
+| The shared outbound RFC822 renderer both mail senders use | `internal/platform/mailwire/` |
 | Google Calendar connector (OAuth, syncToken) | `internal/modules/capture/gcal/` |
 | Microsoft 365 calendar connector (OAuth, calendarView delta) | `internal/modules/capture/graphcal/` |
 | The shared meeting rules both calendars build on | `internal/modules/capture/meetingmap/` |

@@ -384,3 +384,17 @@ When nothing is held back, it says: "Nothing is hidden. Every waiting customer r
 
 You can also add a note to a teammate's Worklist with **Add note** ("A short note that appears in
 their Worklist.").
+
+### What is in the morning email?
+
+It names your next customer actions and their context from Home, even without an AI summary, and says when sources are missing.
+
+Under Settings → Notifications, choose email, your working hours or a whole hour, and whether to combine your daily digest.
+Mail follows your working days and local clock, with a three-hour window that can end on the next day.
+A missed window leaves the work on Home. If choices cannot be read, the email waits.
+
+A weekly day you do not work moves to the next working day. Results keep the company's reporting week. Older chosen morning hours use the company clock until you choose a personal time or turn combining on.
+Combining includes only content you enabled. Turning morning email off also keeps morning actions out of combined weekly mail.
+
+Account, privacy and immediate decision mail follow their own rules. Choose a team only when you may read its review. Access is checked again before sending.
+If access is lost, personal work remains with a note about the missing team view. Turning email off keeps work on Home.

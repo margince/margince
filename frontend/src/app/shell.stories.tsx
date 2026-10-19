@@ -36,7 +36,8 @@ import {
 } from "../testing/story-utils";
 import type { NavSection } from "./nav";
 import { CommandPalette, useBuiltinCommands } from "./palette";
-import { PageTitle, Shell, WorkspaceRail } from "./shell";
+import { PageTitle, Shell } from "./shell";
+import { WorkspaceRail } from "./shellrail";
 import { TopBar } from "./topbar";
 // The settings stack's own sheet. A screen sheet loads with its screen, and the
 // settings frame below stands the stack under the shell WITHOUT that screen —

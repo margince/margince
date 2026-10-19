@@ -12,6 +12,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // Fact retains contribution provenance so frozen values can be safely projected later.
@@ -42,7 +43,7 @@ type Evaluation struct {
 // Evaluator shares calculations across transport and publication boundaries.
 type Evaluator interface {
 	ProjectFrozen(crmcontracts.ReportingEvaluation, []Fact) (crmcontracts.ReportingEvaluation, error)
-	Catalog(context.Context) (crmcontracts.ReportingCatalog, error)
+	Catalog(context.Context, textlang.Lang) (crmcontracts.ReportingCatalog, error)
 	Evaluate(context.Context, pgx.Tx, crmcontracts.ReportingSelection, crmcontracts.ReportingFramework, time.Time) (Evaluation, error)
 }
 
@@ -69,6 +70,7 @@ type CalendarSource func(context.Context, pgx.Tx) (Calendar, error)
 
 // Service coordinates saved reporting over injected calculation and authority seams.
 type Service struct {
+	language  func(context.Context, pgx.Tx) textlang.Lang
 	store     *store
 	evaluator Evaluator
 	authority Authority

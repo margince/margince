@@ -22,7 +22,7 @@ func TestARepWhoAskedForHelpIsRaisedFirst(t *testing.T) {
 		MeetingsHeld: 2, MeetingsWithNextStep: 0,
 	}
 
-	kind, label := focusFor(counts, 1, &DealBlock{ForecastDown: 1})
+	kind, label := teamCopyFor("en").focusFor(counts, 1, &DealBlock{ForecastDown: 1})
 
 	if kind != FocusHelpRequested {
 		t.Errorf("focus = %q, want %q — walking past a request to raise a metric "+
@@ -64,7 +64,7 @@ var focusRules = []struct {
 func TestEveryWeekProducesAFocus(t *testing.T) {
 	for _, tc := range focusRules {
 		t.Run(tc.name, func(t *testing.T) {
-			patterns := patternsFor(tc.counts, tc.help, tc.deals)
+			patterns := teamCopyFor("en").patternsFor(tc.counts, tc.help, tc.deals)
 			if len(patterns) != 1 {
 				t.Fatalf("the case fired %d rules, want only its own: %v", len(patterns), patterns)
 			}
@@ -83,7 +83,7 @@ func TestEveryWeekProducesAFocus(t *testing.T) {
 // kept. It is the second route to strong_week and so cannot sit in focusRules,
 // which carries one case per kind because the agenda's order is read off it.
 func TestKeepingEveryCommitmentIsAStrongWeek(t *testing.T) {
-	kind, label := focusFor(Counts{CommitmentsDue: 3, CommitmentsKept: 3}, 0, nil)
+	kind, label := teamCopyFor("en").focusFor(Counts{CommitmentsDue: 3, CommitmentsKept: 3}, 0, nil)
 	if kind != FocusStrongWeek {
 		t.Errorf("focus = %q, want %q — a rep who kept all three has something to copy", kind, FocusStrongWeek)
 	}
@@ -95,7 +95,7 @@ func TestKeepingEveryCommitmentIsAStrongWeek(t *testing.T) {
 // The label states a stored figure and nothing else, so it cannot say something
 // the snapshot does not hold.
 func TestTheFocusLabelNamesTheFiguresItRestsOn(t *testing.T) {
-	_, label := focusFor(Counts{CommitmentsDue: 5, CommitmentsKept: 2}, 0, nil)
+	_, label := teamCopyFor("en").focusFor(Counts{CommitmentsDue: 5, CommitmentsKept: 2}, 0, nil)
 
 	if label != "Kept 2 of 5 commitments" {
 		t.Errorf("label = %q, want the two stored figures", label)
@@ -105,11 +105,14 @@ func TestTheFocusLabelNamesTheFiguresItRestsOn(t *testing.T) {
 // One is one, and two are two. A label reading "1 leads" is a small thing that
 // makes a page look machine-written.
 func TestOneReadsAsOne(t *testing.T) {
-	if got := plural(1, "lead"); got != "1 lead" {
-		t.Errorf("plural(1) = %q, want %q", got, "1 lead")
-	}
-	if got := plural(3, "lead"); got != "3 leads" {
-		t.Errorf("plural(3) = %q, want %q", got, "3 leads")
+	for _, tc := range []struct {
+		count int
+		want  string
+	}{{1, "1 lead went past the response target"}, {3, "3 leads went past the response target"}} {
+		_, got := teamCopyFor("en").focusFor(Counts{LeadsBreached: tc.count}, 0, nil)
+		if got != tc.want {
+			t.Errorf("%d leads: %q, want %q", tc.count, got, tc.want)
+		}
 	}
 }
 
@@ -148,14 +151,14 @@ func TestATeamWeekWithoutAForecastSendsNoOutlook(t *testing.T) {
 }
 
 func TestActivityWithoutACoachingSignalDoesNotMeanAQuietWeek(t *testing.T) {
-	kind, label := focusFor(Counts{DealsMoved: 12, LeadsRouted: 8, LeadsAnsweredInTarget: 8}, 0, nil)
+	kind, label := teamCopyFor("en").focusFor(Counts{DealsMoved: 12, LeadsRouted: 8, LeadsAnsweredInTarget: 8}, 0, nil)
 	if kind != FocusQuietWeek || label != "No priority indicated by the recorded metrics" {
 		t.Fatalf("unsupported productivity verdict: %s / %s", kind, label)
 	}
 }
 
 func TestRecordedSuccessOutranksMissingMeetingDocumentation(t *testing.T) {
-	kind, _ := focusFor(Counts{DealsWon: 1, MeetingsHeld: 5}, 0, nil)
+	kind, _ := teamCopyFor("en").focusFor(Counts{DealsWon: 1, MeetingsHeld: 5}, 0, nil)
 	if kind != FocusStrongWeek {
 		t.Fatalf("won deal overshadowed by recording gaps: %s", kind)
 	}

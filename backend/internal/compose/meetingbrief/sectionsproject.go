@@ -20,7 +20,7 @@ import (
 // projectHeaderLine names the engagement and where it stands. The key rides
 // along when the project has one, because that is the string a reader sees in
 // subject lines all day and recognises faster than the name.
-func projectHeaderLine(project ProjectIn) string {
+func (said briefCopy) projectHeaderLine(project ProjectIn) string {
 	parts := []string{project.Name}
 	if project.Key != "" {
 		parts[0] = fmt.Sprintf("%s (%s)", project.Name, project.Key)
@@ -29,38 +29,39 @@ func projectHeaderLine(project ProjectIn) string {
 		parts = append(parts, project.Phase)
 	}
 	if project.TargetEndDate != nil {
-		parts = append(parts, "target "+project.TargetEndDate.Format("2 Jan 2006"))
+		parts = append(parts, fmt.Sprintf(said.Say(headerWords.Target), project.TargetEndDate.Format(time.DateOnly)))
 	}
 	return strings.Join(parts, " · ") + "."
 }
 
 func meetingLine(in Input) string {
+	said := briefCopyFor(in.Language)
 	subject := in.Subject
 	if subject == "" {
-		subject = "Meeting"
+		subject = said.Say(headerWords.Meeting)
 	}
-	when := in.StartsAt.Format("Mon 2 Jan 15:04 MST")
+	when := in.StartsAt.Format("2006-01-02 15:04 MST")
 	if in.Company == "" {
 		return fmt.Sprintf("%s, %s.", subject, when)
 	}
-	return fmt.Sprintf("%s with %s, %s.", subject, in.Company, when)
+	return fmt.Sprintf(said.Say(headerWords.With), subject, in.Company, when)
 }
 
 // projectGoalLine states where the engagement stands and what it is running
 // at. The target date is named only when the record carries one — a deadline
 // nobody set is the invented context the grounding rule forbids.
-func projectGoalLine(project ProjectIn) string {
+func (said briefCopy) projectGoalLine(project ProjectIn) string {
 	if project.TargetEndDate == nil {
-		return fmt.Sprintf("Move %s on from %s.", project.Name, phaseOrUnnamed(project.Phase))
+		return fmt.Sprintf(said.Say(headerWords.Move), project.Name, said.phaseOrUnnamed(project.Phase))
 	}
-	return fmt.Sprintf("Move %s on from %s, against a target of %s.",
-		project.Name, phaseOrUnnamed(project.Phase),
-		project.TargetEndDate.Format("2 Jan 2006"))
+	return fmt.Sprintf(said.Say(headerWords.MoveTarget),
+		project.Name, said.phaseOrUnnamed(project.Phase),
+		project.TargetEndDate.Format(time.DateOnly))
 }
 
-func phaseOrUnnamed(phase string) string {
+func (said briefCopy) phaseOrUnnamed(phase string) string {
 	if phase == "" {
-		return "its current phase"
+		return said.Say(headerWords.Phase)
 	}
 	return phase
 }
@@ -71,18 +72,18 @@ func phaseOrUnnamed(phase string) string {
 // is placing it against today, and a date makes them do the arithmetic. The
 // subject rides along because "three weeks ago" alone does not tell them which
 // conversation they are being reminded of.
-func priorMeetingLine(prior PriorMeetingIn, now time.Time) string {
+func (said briefCopy) priorMeetingLine(prior PriorMeetingIn, now time.Time) string {
 	subject := prior.Subject
 	if subject == "" {
-		subject = "A meeting"
+		subject = said.Say(touchWords.Meeting)
 	}
 	days := elapsed.Days(prior.StartsAt, now)
 	switch {
 	case days <= 0:
-		return fmt.Sprintf("You met earlier today: %s.", subject)
+		return fmt.Sprintf(said.Say(touchWords.MetToday), subject)
 	case days == 1:
-		return fmt.Sprintf("You met yesterday: %s.", subject)
+		return fmt.Sprintf(said.Say(touchWords.MetYesterday), subject)
 	default:
-		return fmt.Sprintf("You met %d days ago: %s.", days, subject)
+		return fmt.Sprintf(said.Say(touchWords.MetDays), days, subject)
 	}
 }

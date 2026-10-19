@@ -131,7 +131,7 @@ func TestAnOverduePromiseIsTheGoalOnceAndTheNextOneIsARisk(t *testing.T) {
 	})
 	sections := Deterministic(in)
 	goal := sectionOf(t, sections, crmcontracts.MeetingBriefSectionKindGoal)
-	if len(goal.Sentences) != 1 || !strings.Contains(goal.Sentences[0].Text, "overdue since 8 Aug: send the security pack") {
+	if len(goal.Sentences) != 1 || !strings.Contains(goal.Sentences[0].Text, "overdue since 2026-08-08: send the security pack") {
 		t.Fatalf("goal = %+v, want the older overdue promise, dated", goal.Sentences)
 	}
 	risks := sectionOf(t, sections, crmcontracts.MeetingBriefSectionKindRisks)
