@@ -4,8 +4,12 @@
 package storekit_test
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
@@ -112,5 +116,31 @@ func TestStartOfNextDayIsExactWhereMidnightDoesNotExist(t *testing.T) {
 	// It is the FIRST such instant: a minute earlier is still the 7th.
 	if before := start.Add(-time.Minute).In(havana); before.Day() != 7 {
 		t.Fatalf("a minute before start fell on day %d, want the 7th", before.Day())
+	}
+}
+
+// TodayIn answers the date in the zone the caller's seam names. A zone that
+// cannot be read or resolved is an error, never UTC.
+func TestTodayInAnswersTheDateInTheZoneTheSeamNames(t *testing.T) {
+	zone := func(name string, err error) func(context.Context, pgx.Tx) (string, error) {
+		return func(context.Context, pgx.Tx) (string, error) { return name, err }
+	}
+	// 12:00Z is already the next morning in a +14 zone.
+	instant := time.Date(2026, 7, 31, 12, 0, 0, 0, time.UTC)
+
+	day, err := storekit.TodayIn(context.Background(), nil, zone("Pacific/Kiritimati", nil), instant)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC); !day.Equal(want) {
+		t.Fatalf("today = %v, want %v", day, want)
+	}
+
+	if _, err := storekit.TodayIn(context.Background(), nil, zone("Mars/Olympus", nil), instant); err == nil {
+		t.Fatal("an unresolvable zone answered a day")
+	}
+	unreadable := errors.New("settings unavailable")
+	if _, err := storekit.TodayIn(context.Background(), nil, zone("", unreadable), instant); !errors.Is(err, unreadable) {
+		t.Fatalf("err = %v, want the seam's own error wrapped", err)
 	}
 }

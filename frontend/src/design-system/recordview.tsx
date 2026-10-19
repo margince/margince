@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ArrowLeft } from "lucide-react";
-import type { ReactNode } from "react";
+import { ArrowLeft, Lock } from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { useT } from "../i18n";
 import { Avatar } from "./atoms";
 import { Heading } from "./heading";
 import { PageZones, type PageZonesShape } from "./pagezones";
+import { createPortalSlot, SlotFill } from "./portalslot";
 import { GroupedTimelineList, TimelineList } from "./timeline";
 import type { TimelineEntry, TimelineGroup } from "./timelineentry";
 import { useTruncationTooltip } from "./tooltip";
@@ -48,6 +49,7 @@ function RecordHead({
   wide,
   compact = false,
   identity,
+  markShape,
 }: Readonly<{
   name: string;
   avatarSrc?: string | null;
@@ -71,6 +73,7 @@ function RecordHead({
   // rung, for a page whose head shares the fold with the work below it.
   compact?: boolean;
   identity: string;
+  markShape?: "round" | "tile";
 }>) {
   const nameTip = useTruncationTooltip<HTMLHeadingElement>(name);
   return (
@@ -93,6 +96,7 @@ function RecordHead({
         identity={identity}
         src={avatarSrc}
         size={headMarkSize(wide, compact)}
+        shape={markShape}
       />
       <div className="record-id">
         {/* The record page's name, and the one badge that belongs on ITS
@@ -109,7 +113,7 @@ function RecordHead({
               one line and truncated rather than allowed to grow the header;
               the tooltip is what carries the whole of it, and appears only
               when there was more name than row. */}
-          <Heading size="xlarge" ref={nameTip.ref} {...nameTip.trigger}>
+          <Heading size="xxlarge" ref={nameTip.ref} {...nameTip.trigger}>
             {name}
             {nameTip.tip}
           </Heading>
@@ -143,6 +147,29 @@ function RecordHead({
   );
 }
 
+/** Where a record says why its verbs are refused (`RecordRefusal`). */
+const RecordAccessSlot = createPortalSlot();
+
+/**
+ * RecordRefusal is one sentence saying why a record's verbs are refused, kept
+ * by `id` so each refused verb names it as its description. It stands in the
+ * access note at the foot of the fields column, where a reader looks for what
+ * they may do with the record, and in the head's verb row while that column
+ * is folded.
+ */
+export function RecordRefusal({
+  id,
+  children,
+}: Readonly<{ id: string; children: ReactNode }>) {
+  return (
+    <SlotFill slot={RecordAccessSlot} className="record-refusal">
+      <p className="t-caption" id={id}>
+        {children}
+      </p>
+    </SlotFill>
+  );
+}
+
 /** The way back to where the reader opened a record from, drawn over its head. */
 export function RecordBack({
   href,
@@ -169,6 +196,7 @@ export function RecordView({
   actions,
   controls,
   identity,
+  markShape,
   actionsInline,
   scale = "record",
   standing,
@@ -220,6 +248,8 @@ export function RecordView({
   // The record's own id, which keys its mark: the same key every list row and
   // card drawing this record passes, so the header wears the same mesh.
   identity: string;
+  // The mark's shape: a tile for a company or a deal, round for a contact.
+  markShape?: "round" | "tile";
   // Puts `actions` on the SAME row as the identity block, right-aligned,
   // instead of the default full-width row underneath the header (or the
   // stacked column `controls` produces). An explicit opt-in: every other
@@ -292,6 +322,7 @@ export function RecordView({
   children?: ReactNode;
 }>) {
   const t = useT();
+  const [accessNote, setAccessNote] = useState<HTMLElement | null>(null);
   // The grid follows which slots are actually filled, because a three-column
   // template with an empty column does not collapse: it reserves the space and
   // leaves the story narrower than the rail beside it.
@@ -324,6 +355,7 @@ export function RecordView({
       wide={headerWide}
       compact={scale === "compact"}
       identity={identity}
+      markShape={markShape}
     />
   );
   // The strip sits directly under the identity on EVERY record, band or not: a
@@ -350,47 +382,57 @@ export function RecordView({
     />
   );
   return (
-    /* The record's own blocks arrive in order: head, then actions, then the
-       strip, then the band, then the zones, rather than the whole record
-       fading in as one plate. It is an `.arrive-stack` and therefore not
-       itself an arriving block (design-system/enter.css), which is what keeps
-       the two fades from multiplying. */
-    <div className="arrive-stack">
-      {back}
-      {head}
-      {actionsAt === "below" && <div className="record-actions">{actions}</div>}
-      {strip}
-      {frame}
-      <PageZones
-        shape={shape}
-        className={zonesClassName(shape)}
-        rail={rail}
-        railLabel={railLabel ?? t("record.profile")}
-        railClassName="record-rail"
-        /* An `.arrive-stack`: the work column's blocks arrive one after the
-           next, and, because a tab's panel is a fresh element while the strip
-           above it is not, switching tabs fades the new panel in without
-           touching the strip. That is the whole tab-panel transition; no
-           wrapper, no state, and nothing to keep in step with the strip. */
-        mainClassName="arrive-stack"
-        main={
-          <>
-            {children}
-            {story}
-          </>
-        }
-        aside={aside}
-        asideOpen={asideOpen}
-        asideLabel={asideLabel ?? t("record.context")}
-        asideClassName="record-aside"
-      />
-    </div>
+    /* The record is ONE SHEET, its head, tabs and the open tab's work, with
+       its fields beside it on the page ground rather than on the sheet: the
+       sheet is what the record says, the column what it is filed as. Its
+       blocks arrive in order (head, strip, band, then the tab's work), and
+       the sheet is an `.arrive-stack` rather than one plate fading in. */
+    <RecordAccessSlot.Provider value={accessNote}>
+      <div className="arrive-stack">
+        {back}
+        <PageZones
+          shape={shape}
+          className={zonesClassName(shape)}
+          rail={rail}
+          railLabel={railLabel ?? t("record.profile")}
+          railClassName="record-rail"
+          /* A tab's panel is a fresh element while the strip above it is not,
+           so switching tabs fades the new panel in without touching the
+           strip. That is the whole tab-panel transition. */
+          mainClassName="record-sheet arrive-stack"
+          main={
+            <>
+              {head}
+              {actionsAt === "below" && (
+                <div className="record-actions">{actions}</div>
+              )}
+              {strip}
+              {frame}
+              {children}
+              {story}
+            </>
+          }
+          aside={
+            aside && (
+              <>
+                {aside}
+                {/* Empty, and then not drawn, until a refusal fills it. */}
+                <div className="record-access">
+                  <Lock aria-hidden="true" />
+                  <div className="record-access-lines" ref={setAccessNote} />
+                </div>
+              </>
+            )
+          }
+          asideOpen={asideOpen}
+          asideLabel={asideLabel ?? t("record.context")}
+          asideClassName="record-aside"
+        />
+      </div>
+    </RecordAccessSlot.Provider>
   );
 }
 
-// The record's story, under whatever the open tab drew. It owns the break
-// above it because the work column owns no interval: the deal's and the
-// project's bodies met the chronology's heading at the border.
 function RecordStory({
   timeline,
   timelineGroups,
@@ -455,7 +497,7 @@ function RecordStory({
 // rung, the compact head one under, and the narrow head keeps the list's.
 function headMarkSize(wide: boolean, compact: boolean): "md" | "lg" | "xl" {
   if (compact) {
-    return "lg";
+    return "xl";
   }
   return wide ? "xl" : "md";
 }

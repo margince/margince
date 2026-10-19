@@ -208,6 +208,7 @@ export function DealOverviewPane({
   refusedReasonId,
   pulse,
   spine,
+  path,
   coverage,
   onOpenEmail,
 }: Readonly<{
@@ -236,6 +237,8 @@ export function DealOverviewPane({
   pulse: ReactNode | undefined;
   // The deal's story as a thread, drawn under the call inside the reading.
   spine: ReactNode;
+  // Where the deal stands on its pipeline, inside the reading.
+  path?: ReactNode;
   // Who is on the deal, for the reading's reference pair beside the offers.
   coverage: ReturnType<typeof useDealCoverage>;
   // Opens a cited message in the page's own email drawer; see `Citations`.
@@ -243,10 +246,7 @@ export function DealOverviewPane({
 }>) {
   return (
     // The same stack every record's overview reads down, with its rhythm.
-    <div className="record-stack">
-      {/* The four-tile strip and the stage stepper live in the cockpit band
-          above the tabs (deals.detail.tsx), so a reader finds them on every
-          tab rather than one scroll into this one. */}
+    <div className="record-stack record-sections">
       {/* A won deal with no project, on a company with one open project, is
           offered that project once. Nothing else here asks. */}
       <StartDeliveryPrompt deal={deal} />
@@ -259,6 +259,7 @@ export function DealOverviewPane({
           dealName={deal.name}
           pulse={pulse}
           spine={spine}
+          path={path}
           onOpenEmail={onOpenEmail}
         />
         <DealApprovals approvals={dealApprovals} decide={onDecide} />

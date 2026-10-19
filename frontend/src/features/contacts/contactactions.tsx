@@ -12,6 +12,7 @@ import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { EmailVerb } from "../../screens/recordemail";
 import { ShareAction } from "../../screens/share";
+import { RecordRefusal } from "../../design-system/recordview";
 import { AddToShortlistAction } from "../lists/addtoshortlist";
 import { openContactTab } from "../worklist/worklist.return";
 import { ImportActivitiesAction } from "./contactimportaction";
@@ -136,9 +137,9 @@ export function ContactActions({
           to it: two groups of verbs, not one toolbar. */}
       <span className="record-actions-sep" aria-hidden="true" />
       {logRefused === logRefusedId && (
-        <p className="t-caption" id={logRefusedId}>
+        <RecordRefusal id={logRefusedId}>
           {t("record.logActivityRefused")}
-        </p>
+        </RecordRefusal>
       )}
       {/* A CRM a rep cannot write a meeting into is a CRM that only reads.
           This is the standing way in; the moment card offers the same form

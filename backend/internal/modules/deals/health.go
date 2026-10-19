@@ -85,8 +85,12 @@ type DealHealthEvidence struct {
 
 	// StageVelocity: where the deal sits and how its pace compares.
 	CurrentStageID      ids.StageID
+	StageEnteredAt      time.Time
 	DaysInStage         float64
 	ExpectedDaysInStage float64
+	// UsualDaysInStage is the measured won-deal median ExpectedDaysInStage
+	// came from; nil when the fallback stood in for it.
+	UsualDaysInStage *float64
 
 	// EngagedStakeholderIDs are the contact ids counted by the
 	// engagement factor (two-way contact inside the window).
@@ -136,14 +140,10 @@ type dealHealthInputs struct {
 // healthFromInputs is the pure §10.5 fold: same inputs + clock, same
 // score, no I/O.
 func healthFromInputs(in dealHealthInputs, now time.Time) DealHealth {
+	usual := usualStageDays(in.medianWonStageDays)
 	expected := stageVelocityFallbackDays
-	// A median under a day (instant stage hops — an import, a demo seed, a
-	// deal closed the day it was opened) is not an expectation anyone holds:
-	// measured against it every live deal reads as crawling and the pace
-	// factor is zero for all of them. The fallback is the honest expectation
-	// in that degenerate history, exactly as for a non-positive one.
-	if in.medianWonStageDays != nil && *in.medianWonStageDays >= 1 {
-		expected = *in.medianWonStageDays
+	if usual != nil {
+		expected = *usual
 	}
 	age := daysBetween(in.stageEnteredAt, now)
 
@@ -173,14 +173,28 @@ func healthFromInputs(in dealHealthInputs, now time.Time) DealHealth {
 		Evidence: DealHealthEvidence{
 			MostRecentActivityID:  in.mostRecentActivityID,
 			CurrentStageID:        in.stageID,
+			StageEnteredAt:        in.stageEnteredAt,
 			DaysInStage:           age,
 			ExpectedDaysInStage:   expected,
+			UsualDaysInStage:      usual,
 			EngagedStakeholderIDs: in.engagedStakeholderIDs,
 			OverdueTaskIDs:        in.overdueTaskIDs,
 			Stalled:               stalled,
 			LastActivityAt:        in.lastActivityAt,
 		},
 	}
+}
+
+// usualStageDays is the won-deal median as a usable expectation, or nil
+// when the stage-velocity factor must fall back. A median under a day comes
+// from instant stage hops: an import, a demo seed, a deal closed the day it
+// was opened. Against it every live deal reads as crawling, so it counts as
+// no measurement, like a missing one.
+func usualStageDays(median *float64) *float64 {
+	if median == nil || *median < 1 {
+		return nil
+	}
+	return median
 }
 
 // recencyScore is the §10.5 recency band over last_activity_at: an

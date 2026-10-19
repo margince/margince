@@ -14,8 +14,12 @@ package integration
 // must hold on its own.
 
 import (
+	"context"
 	"net/http"
 	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
@@ -121,6 +125,60 @@ func TestTheDealStatusCardCitesItsRecordsAndHidesADealTheCallerCannotSee(t *test
 	if status := e.Call(t, "GET", "/v1/deals/01a00000-0000-7000-8000-000000000000/status", nil, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("status of an unknown deal = %d, want 404", status)
 	}
+}
+
+// The card states when the deal entered its stage and the stage's usual stay,
+// and reads both on every request. Moving the entry two days back changes no
+// fact the cached card is keyed on. A value copied into the cache would still
+// name the old instant.
+func TestTheDealStatusCardReadsTheStageClockOnEveryRequest(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	stages := apptest.DiscoverSeededPipeline(t, e)
+	dealID := apptest.CreateOpenDeal(t, e, stages)
+
+	first := readStatus(t, e, dealID)
+	if usual, present := first["stage_usual_days"]; !present || usual != nil {
+		t.Fatalf("stage_usual_days = %v (present %v), want null with no won history", usual, present)
+	}
+	if got, want := stageEnteredAt(t, first), latestStageEntry(t, e, dealID); !got.Equal(want) {
+		t.Fatalf("stage_entered_at = %v, want the deal's stage entry %v", got, want)
+	}
+
+	moved := latestStageEntry(t, e, dealID).Add(-48 * time.Hour)
+	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE deal_stage_history SET changed_at = $2 WHERE deal_id = $1`, dealID, moved)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if got := stageEnteredAt(t, readStatus(t, e, dealID)); !got.Equal(moved) {
+		t.Fatalf("after the entry moved, stage_entered_at = %v, want %v", got, moved)
+	}
+}
+
+func stageEnteredAt(t *testing.T, card AnyMap) time.Time {
+	t.Helper()
+	raw, _ := card["stage_entered_at"].(string)
+	at, err := time.Parse(time.RFC3339Nano, raw)
+	if err != nil {
+		t.Fatalf("stage_entered_at %q is not a date-time: %v", raw, err)
+	}
+	return at
+}
+
+// latestStageEntry is the deal's latest stage-history entry, read off the row.
+func latestStageEntry(t *testing.T, e *apptest.AppEnv, dealID string) time.Time {
+	t.Helper()
+	var at time.Time
+	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT max(changed_at) FROM deal_stage_history WHERE deal_id = $1`, dealID).Scan(&at)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return at
 }
 
 func readStatus(t *testing.T, e *apptest.AppEnv, dealID string) AnyMap {

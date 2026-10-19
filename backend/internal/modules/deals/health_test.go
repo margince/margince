@@ -206,3 +206,29 @@ func TestVelocityFallsBackWithoutEnoughWonHistory(t *testing.T) {
 		t.Fatalf("a sub-day median must fall back, got expected days %f velocity %f", got.Evidence.ExpectedDaysInStage, got.Factors.StageVelocity)
 	}
 }
+
+// The evidence states the stage clock the factor read: when the deal entered
+// its stage, and the usual stay only when one was measured. The fallback the
+// factor compares against is never reported as a measurement.
+func TestStageClockEvidenceReportsOnlyAMeasuredUsualStay(t *testing.T) {
+	in := healthyInputs()
+	got := healthFromInputs(in, healthFixedNow())
+	if !got.Evidence.StageEnteredAt.Equal(in.stageEnteredAt) {
+		t.Fatalf("stage entered at = %v, want %v", got.Evidence.StageEnteredAt, in.stageEnteredAt)
+	}
+	if got.Evidence.UsualDaysInStage == nil || *got.Evidence.UsualDaysInStage != 14 {
+		t.Fatalf("usual days = %v, want the measured 14", got.Evidence.UsualDaysInStage)
+	}
+
+	subDay := 0.5
+	for name, median := range map[string]*float64{"below the history floor": nil, "a sub-day median": &subDay} {
+		in.medianWonStageDays = median
+		got := healthFromInputs(in, healthFixedNow())
+		if got.Evidence.UsualDaysInStage != nil {
+			t.Errorf("%s: usual days = %v, want none", name, *got.Evidence.UsualDaysInStage)
+		}
+		if got.Evidence.ExpectedDaysInStage != stageVelocityFallbackDays {
+			t.Errorf("%s: expected days = %f, want the fallback", name, got.Evidence.ExpectedDaysInStage)
+		}
+	}
+}

@@ -26803,6 +26803,12 @@ export interface components {
              *     Absent under the same sample floor the median observes: a shape drawn from one invoice would state a payment habit the number beside it refuses to.
              */
             payment_behaviour?: number[];
+            /**
+             * @description Net invoiced per calendar month (the `net_invoiced` fold: issued minus credited, in the installation's base currency) for the twelve months ending with the current one, oldest first. "Current" is today's date in the installation's timezone. A credit note reduces the month of the invoice it credits, as it does in `net_invoiced`.
+             *     Always twelve entries when present: a month with nothing invoiced is there with a zero amount and a zero count, so a chart never has to tell a quiet month from a missing one.
+             *     Absent when the other figures are absent (no connection, unmapped, the first sync still running, or no invoices mirrored), and absent under the same FIN-AC-6 refusal: one invoice in the twelve months without a conversion rate withholds the whole series rather than one bar.
+             */
+            invoiced_by_month?: components["schemas"]["FinanceInvoicedMonth"][];
             /** @description The five most recent invoices (FIN-LIM-4); `truncated` says whether there are more. */
             recent_invoices?: components["schemas"]["FinanceInvoice"][];
             /** @description True when the account has more invoices than `recent_invoices` carries. */
@@ -26855,6 +26861,20 @@ export interface components {
             open_minor: number;
             /** @description Days between the due date and settlement, or between the due date and today while it is still open. Absent when the invoice carries no due date — lateness against no deadline is not a reading. */
             days_late?: number | null;
+        };
+        /** @description One calendar month of a customer's net invoiced amount, in the installation's base currency. */
+        FinanceInvoicedMonth: {
+            /** @description The calendar month, as `YYYY-MM`. */
+            month: string;
+            /**
+             * Format: int64
+             * @description Issued minus credited for the invoices issued in the month, in minor units of `currency`. Zero for a month with nothing issued; negative only when credits against the month's invoices exceed them.
+             */
+            amount_minor: number;
+            /** @description The installation's base currency, the same label `net_invoiced` carries. */
+            currency: string;
+            /** @description How many invoices were issued in the month. Credit notes are not counted. */
+            count: number;
         };
         /** @description The per-user "I have seen this record" baseline, after an acknowledgment. */
         RecordViewAck: {
@@ -27136,7 +27156,7 @@ export interface components {
             name: string;
             /**
              * @description Always `open` in the 360's `deals.data` — closed deals are reported by
-             *     `won_lifetime` and `lost_count`, not listed. The full vocabulary is declared
+             *     `won_lifetime`, `won_count` and `lost_count`, not listed. The full vocabulary is declared
              *     because this is the deal's own status field, not a filter echo.
              * @enum {string}
              */
@@ -27177,12 +27197,14 @@ export interface components {
             /** @description Present on the company record page, which decorates the row from the account's own tasks and captured commitments. The contact page carries the same project row without it — the question "why does this need a contact" is asked of an account, not of a contact. */
             attention?: components["schemas"]["Company360WorkAttention"];
         };
-        /** @description The account's open deals plus the two lifetime figures the header needs. */
+        /** @description The account's open deals plus the lifetime figures the header needs. */
         Company360Deals: {
             data: components["schemas"]["Company360Deal"][];
             page: components["schemas"]["PageInfo"];
             /** @description Every won deal on this account, converted at each deal's frozen close-time rate. Never a live re-conversion. */
             won_lifetime: components["schemas"]["Money"];
+            /** @description How many won deals this account has, over the same deals `won_lifetime` sums. A deal whose amount is masked from the reader still counts here, as it does in `lost_count`: the count is about the deal's existence, not its size. */
+            won_count: number;
             lost_count: number;
         };
         /** @description One open task on the account, ordered overdue → due → undated. */
@@ -29006,6 +29028,30 @@ export interface components {
              *     and the two must not have to agree for the reply to be reachable.
              */
             reply_to?: string | null;
+            /**
+             * Format: date-time
+             * @description When the deal last entered its current stage: the latest stage-history
+             *     entry into it, or the deal's creation when it has never moved. The same
+             *     instant the health score's stage-velocity factor counts from.
+             *
+             *     Read fresh on every request, never from the cached card, so the time in
+             *     stage a client derives from it is current.
+             */
+            stage_entered_at: string;
+            /**
+             * Format: double
+             * @description How many days won deals of this pipeline usually spend in this stage: the
+             *     median of their completed stays in it. The same measurement the health
+             *     score's stage-velocity factor compares against.
+             *
+             *     Null when there is no measurement to report: fewer than ten won deals
+             *     carry a completed stay in this stage, or their median is under a day.
+             *     The health score then compares against a fixed default, and that
+             *     default is never sent here as if it had been measured.
+             *
+             *     Read fresh on every request, like `stage_entered_at`.
+             */
+            stage_usual_days: number | null;
             /** Format: date-time */
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];

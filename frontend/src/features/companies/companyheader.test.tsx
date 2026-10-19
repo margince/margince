@@ -735,7 +735,8 @@ describe("the lifecycle control beside the name", () => {
 });
 
 // The name's own line carries the name and its stage only; what the account
-// is and the way in lead the marks row under it.
+// is stands in the facts line under it, and the marks row says only what the
+// account is to us and who may read it.
 describe("the header's two lines", () => {
   const withSite: Company = { ...COMPANY, industry: "Automotive" };
 
@@ -752,7 +753,7 @@ describe("the header's two lines", () => {
     expect(container.querySelector(".record-sub-inline")).toBeNull();
   });
 
-  it("reads what the account is on the marks row", () => {
+  it("leaves what the account is to the facts line, not the marks row", () => {
     stub([]);
     const { container } = render(
       <QueryClientProvider client={new QueryClient()}>
@@ -761,8 +762,6 @@ describe("the header's two lines", () => {
         </LocaleProvider>
       </QueryClientProvider>,
     );
-    expect(container.querySelector(".record-sub-inline")?.textContent).toBe(
-      "Automotive",
-    );
+    expect(container.textContent).not.toContain("Automotive");
   });
 });

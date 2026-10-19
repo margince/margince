@@ -56,6 +56,11 @@
   width: 72px;
   height: 72px;
 }
+/* The record page's own mark for a company or a deal: the pane's corner on a
+   square, in the house corner rather than the round chip's circle. */
+.avatar-tile {
+  border-radius: var(--r-lg);
+}
 
 /* An avatar beside its label on one line — a list cell, a search hit, a node
    row. The label keeps the baseline it had before the mark joined it. */

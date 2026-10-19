@@ -10,6 +10,7 @@ import { useUrlParams } from "../../lib/urlstate";
 import { LogActivityAction } from "../../screens/logactivity";
 import { RecordEmailVerb } from "../../screens/recordemail";
 import { ShareAction } from "../../screens/share";
+import { RecordRefusal } from "../../design-system/recordview";
 import { AddToShortlistAction } from "../lists/addtoshortlist";
 import { promoteEligible } from "./leadpresentation";
 import type { Lead } from "./leads";
@@ -123,7 +124,9 @@ export function LeadActions({
           to it: two groups of verbs, not one toolbar. */}
       <span className="record-actions-sep" aria-hidden="true" />
       {!archived && logGrantKnown && !canLog && (
-        <p id={logRefusedId}>{t("record.logActivityRefused")}</p>
+        <RecordRefusal id={logRefusedId}>
+          {t("record.logActivityRefused")}
+        </RecordRefusal>
       )}
       {/* A CRM a rep cannot write a meeting into is a CRM that only reads.
           This is the standing way in, the same pair contactactions.tsx and

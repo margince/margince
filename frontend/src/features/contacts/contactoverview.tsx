@@ -49,7 +49,7 @@ export function ContactOverview({
   // The 360 leads, then what needs a contact today, then what was promised:
   // the record's standing is what every row under it is read against.
   return (
-    <div className="record-stack">
+    <div className="record-stack record-sections">
       <div id={BRIEF_ANCHOR} className="pe-brief-anchor">
         <ContactBriefCard
           brief={brief}

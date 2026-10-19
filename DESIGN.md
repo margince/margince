@@ -133,7 +133,7 @@ Sources for this section:
 1. **A lit ground, and one pane per zone**. The page is light green paper, lit from two corners.
 
    An emerald glow sits behind the sidebar, and an indigo one at the top of the far edge. A record
-   is one white sheet on it, with a hairline edge and a 20px corner, and each zone of the record is a
+   is one white sheet on it, with a hairline edge and a 20px corner. Each zone of the record is a
    section of that sheet: a title, a rule and rows, with no box of its own. A page that is not a
    record gives each zone its own pane in the same shape. Dark is the same room with the lights
    down.
@@ -244,15 +244,17 @@ then `[data-theme="dark"]`.
   the page. The solid fill is for a count and the one state a reader must not miss.
 - **The record's lead is the second soft gradient**. On the record's sheet the 360 is the one section
   that keeps a surface. It has a hairline, a 20px corner and no shadow, and a wash of the call's own
-  tone comes in from the top-left corner. The verdict is the one word on the page larger than the
-  record's name (`--fontVerdict`). The sentence under it is set in the display face at reading size.
-  The readings it rests on stand to its right as up to three soft rings (`Rings`). A call not
-  reached yet keeps the heading rung in secondary ink.
+  tone comes in from the top-left corner.
+- **The verdict is the largest word**, larger than the record's name (`--fontVerdict`). The
+  sentence under it is set in the display face at reading size. The readings it rests on stand to its
+  right as up to three soft rings (`Rings`). A call not reached yet keeps the heading rung in
+  secondary ink.
 - **A monogram is the one other soft gradient**. Most records never get a logo. So the first letters of a
   contact or company sit on a quiet mesh of two close hues, keyed on the record's id. The mesh is
   never indigo, never danger red, and never moves.
 - **Every chip is round**, a company's included. A reader tells records apart by their names, and the mesh is
-  what makes it easy to find. A logo takes the place of the mesh in full: it waits on the neutral card ground and
+  what makes it easy to find. The one tile is a company's or a deal's own mark at the head of its
+  record page. A logo takes the place of the mesh in full: it waits on the neutral card ground and
   never on a gradient.
 
 ## 4. Type
@@ -760,8 +762,8 @@ covers.
 The gap stop takes 1.5× the width, because on this axis the width is the waiting. Its date row is the
 day count at 26px 600 in amber in the display face. It is the one count on the spine outside the body
 face, because it is read as a word ("12 days") and set against nothing. Its rule is dashed amber, and
-it has no dot, because nothing happened. On the record's lead the gap is also a soft amber field the
-width of its column, so a reader finds the silence before reading a date.
+it has no dot, because nothing happened. On the record's lead the gap is also a soft amber field. A
+reader finds the silence there before reading a date.
 
 **Today is a marker**: a 2px × 15px black bar on the rail, with "Today" on an ink pill and the date
 under it. Its column is only as wide as its label. Right of it, the rule turns dotted grey and the
@@ -932,8 +934,8 @@ where motion is *spent*:
 
 - Does not put a pane inside a pane. A zone is one pane, or one section of the record's sheet;
   inside it a title, a hairline and rows.
-- Does not cast a shadow of its own, a glow or a gradient (the mesh of a monogram and the wash of the
-  record's lead, section 3, are the two gradients). The resting layer is `--shadow-rest`, from the token, and never from a rule that spells
+- Does not cast a shadow of its own, a glow or a gradient. The two gradients are the mesh of a
+  monogram and the wash of the record's lead (section 3). The resting layer is `--shadow-rest`, from the token, and never from a rule that spells
   its own. The two corner glows on the ground are the only other light, and the only tinted thing
   inside a pane is the agent's row.
 - Does not say a fact twice. One home per fact; the rest are links to it.

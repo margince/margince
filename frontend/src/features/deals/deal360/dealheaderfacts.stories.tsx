@@ -26,11 +26,6 @@ export default meta;
 
 type Story = StoryObj;
 
-const STAGES = [
-  { id: "st-1", name: "Qualified" },
-  { id: "st-2", name: "Proposal" },
-];
-
 export const Facts: Story = {
   render: () => {
     // The roster the owner name resolves through — the same read every
@@ -65,7 +60,6 @@ export const Facts: Story = {
             source: "csv import",
             captured_by: "human:u-1",
           }}
-          stages={STAGES}
           locale="en"
         />
       </StoryProviders>
@@ -99,7 +93,6 @@ export const FactsWithheldAndUnassigned: Story = {
             source: "csv import",
             captured_by: "human:u-1",
           }}
-          stages={STAGES}
           locale="en"
         />
       </StoryProviders>

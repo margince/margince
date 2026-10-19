@@ -516,7 +516,10 @@ describe("RecordView's chrome", () => {
       first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING,
     );
 
-  it("draws the tab strip above the band, and the band above the columns", () => {
+  // The strip and the band head the record's sheet, the work column, and the
+  // open tab's work follows them: the fields column beside the sheet takes no
+  // part in that order.
+  it("draws the tab strip above the band, and the band above the tab's work", () => {
     render(
       <RecordView
         identity="r-1"
@@ -524,18 +527,20 @@ describe("RecordView's chrome", () => {
         zone="UTC"
         tabs={<Button>Overview</Button>}
         band={<p>Kick-off pending</p>}
-      />,
+      >
+        <p>The open tab</p>
+      </RecordView>,
     );
 
+    const sheet = chrome(".page-zones-main.record-sheet");
     const tabs = chrome("[data-testid='record-tabs']");
     const band = chrome(".record-band");
-    // The work column, which every shape of `PageZones` draws; the grid class
-    // itself is absent on a record that has neither rail nor aside.
-    const zones = chrome(".page-zones-main");
+    const work = screen.getByText("The open tab");
+    expect(sheet.contains(tabs) && sheet.contains(band)).toBe(true);
     expect(precedes(tabs, band), "the band is drawn above the strip").toBe(
       true,
     );
-    expect(precedes(band, zones), "the band is drawn below the columns").toBe(
+    expect(precedes(band, work), "the band is drawn below the work").toBe(
       true,
     );
   });
@@ -547,14 +552,16 @@ describe("RecordView's chrome", () => {
         name="Fleet retrofit"
         zone="UTC"
         tabs={<Button>Overview</Button>}
-      />,
+      >
+        <p>The open tab</p>
+      </RecordView>,
     );
 
     expect(document.querySelector(".record-band")).toBeNull();
     expect(
       precedes(
         chrome("[data-testid='record-tabs']"),
-        chrome(".page-zones-main"),
+        screen.getByText("The open tab"),
       ),
     ).toBe(true);
   });

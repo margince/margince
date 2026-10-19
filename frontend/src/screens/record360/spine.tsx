@@ -136,6 +136,9 @@ export type SpineCommercial = {
 type Stop = {
   key: string;
   tone: "past" | "gap" | "ahead" | "overdue" | "now";
+  // The instant the stop stands at, which places it on the thread's time
+  // scale. Absent for a stop with no one date (the folded earlier history).
+  at?: string;
   when: string;
   title: ReactNode;
   detail?: ReactNode;
@@ -189,11 +192,10 @@ export function RecordSpine({
   if (stops.length === 0) {
     return null;
   }
-  // The gap takes half again the width of the stops either side of it. It is
-  // the one stop with no record behind it, and on a horizontal axis the WIDTH
-  // is the waiting — a silence drawn the same width as the meeting before it
-  // says the two took the same amount of time.
-  const columns = stops.map(todayColumn).join(" ");
+  // Each stop is as wide as the time it covers (stopColumn): on a horizontal
+  // axis the WIDTH is the waiting, so a silence drawn as wide as the meeting
+  // before it would say the two took the same amount of time.
+  const columns = stops.map(stopColumn).join(" ");
   return (
     <PanelBody className="co-spine">
       {/* The axis runs ACROSS, not down: a reader takes the account's shape —
@@ -240,11 +242,12 @@ export function RecordSpine({
 // does with more history than fits; crushing the stops is what it may not do.
 const STOP_FLOOR = "6.5rem";
 
-// How much of the axis a stop takes. The gap takes half again the stops either
-// side of it — on a horizontal axis the width IS the waiting — and today's
-// marker takes only its own label, because it is a line and not a span of
-// time.
-function todayColumn(stop: Stop): string {
+// How much of the axis a stop takes: the days until the next dated stop, so
+// the thread runs on ONE time scale and its rule to the right of a dot is the
+// time that stop covers. A conversation a day before the next is narrow, and
+// a fortnight's silence is wide, because the width is the waiting. Today's
+// marker takes only its label's width, because it is a line and not a span.
+function stopColumn(stop: Stop, index: number, stops: readonly Stop[]): string {
   if (stop.tone === "now") {
     // Its label's width and not a share of the axis. `auto` reads the stop's
     // MINIMUM contribution, which every stop declares as zero so a long
@@ -253,9 +256,19 @@ function todayColumn(stop: Stop): string {
     // whose whole reading is what falls either side of it.
     return "max-content";
   }
-  return stop.tone === "gap"
-    ? `minmax(${STOP_FLOOR}, 1.5fr)`
-    : `minmax(${STOP_FLOOR}, 1fr)`;
+  return `minmax(${STOP_FLOOR}, ${daysCovered(stop, stops.slice(index + 1))}fr)`;
+}
+
+// The calendar days from a stop to the next one that carries a date, at
+// least one: a stop with no date, or none after it, takes a day's share and
+// stands on its floor.
+function daysCovered(stop: Stop, after: readonly Stop[]): number {
+  const next = after.find((one) => one.at !== undefined);
+  if (!stop.at || !next?.at) {
+    return 1;
+  }
+  const days = calendarDaysBetween(new Date(stop.at), new Date(next.at));
+  return Math.max(days, 1);
 }
 
 type Ctx = {
@@ -317,6 +330,7 @@ function withToday(stops: readonly Stop[], ctx: Ctx): Stop[] {
   const marker: Stop = {
     key: "today",
     tone: "now",
+    at: ctx.asOf,
     // No date on the axis's own date row: the marker is not a moment the
     // record reached, it is where the reader is standing. Its word and its
     // date sit under the line instead, out of the row the record's own dates
@@ -359,6 +373,7 @@ function silence(view: SpineSource, ctx: Ctx): Stop | undefined {
   return {
     key: "silence",
     tone: "gap",
+    at: since,
     when: translatePlural(ctx.locale, "co.spine.days", days, {
       count: formatNumber(days, ctx.locale),
     }),
@@ -385,6 +400,7 @@ function aheadStops(view: SpineSource, ctx: Ctx): Stop[] {
     stops.push({
       key: `step-${step.activity_id}`,
       tone: step.overdue ? "overdue" : "ahead",
+      at: step.due_at,
       when: on(step.due_at, ctx),
       title: step.subject,
       detail: step.overdue ? ctx.t("co.spine.overdue") : undefined,
@@ -395,6 +411,7 @@ function aheadStops(view: SpineSource, ctx: Ctx): Stop[] {
     stops.push({
       key: "close",
       tone: "ahead",
+      at: close,
       when: on(close, ctx),
       title: ctx.t("co.spine.expectedClose"),
     });
@@ -465,6 +482,7 @@ function pastStops(view: SpineSource, ctx: Ctx): Stop[] {
           {
             key: "spoke",
             tone: "past",
+            at,
             when: on(at, ctx),
             title: ctx.t("co.spine.lastSpoke"),
           },
@@ -513,6 +531,7 @@ function unnamedLastWord(
   return {
     key: "spoke",
     tone: "past",
+    at: spoke,
     when: on(spoke, ctx),
     title: ctx.t("co.spine.lastSpoke"),
   };
@@ -584,6 +603,7 @@ function pastStop(conversation: Exchange, newest: boolean, ctx: Ctx): Stop {
   return {
     key: `said-${conversation.key}`,
     tone: "past",
+    at: conversation.at,
     when: on(conversation.at, ctx),
     title: newest ? ctx.t("co.spine.lastSpoke") : subject,
     // The newest stop's title is the label the gap below counts from, so its

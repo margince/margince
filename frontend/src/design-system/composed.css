@@ -602,19 +602,16 @@
      are the same four whatever the record is called. */
   min-width: 0;
 }
-/* One line, cut with an ellipsis. A name long enough to wrap would push the
-   record's standing, its verbs and the whole page below it down the screen,
-   and the reader came for the record rather than for its full legal name —
-   which the Details rail spells out in a place that does wrap. Shrinkable
+/* The record's name wraps, balanced over its lines, rather than being cut:
+   it is the page's title, and a legal name cut to "Brandt Automotive G…" is
+   the one thing on the page a reader cannot finish reading. Shrinkable
    (min-width: 0) but not grown: at its natural width a short name keeps the
    standing badge beside it on the same row. */
 .record-head h1 {
   font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
   min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  text-wrap: balance;
 }
 /* The compact head's second register: a caption line on the name's own row
    (the role and the company), the pills under it, and the facts strip as a
@@ -640,14 +637,26 @@
   border-top: 1px solid var(--borderSubtle);
 }
 
-/* The record as one sheet: head, strip and columns on one raised surface
-   with a hairline round it, so the record reads as a document on the page
-   ground rather than as loose cards on it. */
+/* The record as one sheet: head, strip and the open tab's work on one raised
+   surface with a hairline round it, so the record reads as a document on the
+   page ground rather than as loose cards on it. Its fields stand beside it,
+   off the sheet (recordview.tsx). */
 .record-sheet {
+  --sheetInset: var(--space-8);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-lg);
-  padding: var(--space-5) var(--space-6);
+  padding: var(--space-6) var(--sheetInset) var(--space-8);
+}
+/* The sheet and the fields column stand a wide gutter apart: the column is
+   unboxed, so the air between them is the only edge it has. Its track is
+   the measure of a label and a short value, not of a card. */
+.page-zones.record-zones {
+  --asideOpenW: 280px;
+  column-gap: var(--space-12);
+}
+.page-zones.record-zones[data-aside="closed"] > .page-zones-main {
+  margin-inline-end: calc(-1 * var(--space-12));
 }
 
 /* The strip stays in reach as the record scrolls: stuck to the top of the
@@ -670,8 +679,8 @@
      The intervals under and around it are padding INSIDE the stuck block
      rather than the margin the strip carries elsewhere: a margin is
      transparent, and the cards scrolled through it. */
-  margin-inline: calc(-1 * var(--space-6));
-  padding: 0 var(--space-6);
+  margin-inline: calc(-1 * var(--sheetInset));
+  padding: 0 var(--sheetInset);
   /* The same step the work column keeps between its cards, so the first card
      stands off the strip exactly as the second stands off the first. */
   margin-bottom: var(--space-6);
@@ -683,17 +692,9 @@
   margin-block-end: 0;
 }
 /* Two sections side by side on the sheet stand a gutter apart wide enough for
-   both bleeds (panel.css, `.record-sheet .panel`) with air left between them.
-   Folded, the work column takes that gutter back, as it takes the plain one
-   back off the sheet (pagezones.css). */
+   both bleeds (panel.css, `.record-sheet .panel`) with air left between them. */
 .record-sheet {
   --sheetGutter: calc(2 * var(--padPanel) + var(--space-4));
-}
-.record-sheet .page-zones {
-  column-gap: var(--sheetGutter);
-}
-.record-sheet .page-zones[data-aside="closed"] > .page-zones-main {
-  margin-inline-end: calc(-1 * var(--sheetGutter));
 }
 
 /* The head's facts strip: caption over value, cells laid along the row and
@@ -717,6 +718,46 @@
 }
 .record-fact dd {
   margin: 0;
+}
+/* In a record's head the facts are ONE LINE under the name, each a value with
+   a dot between: a reader takes what the record is in one read rather than a
+   strip of captions. A value that does not say what it is on its own
+   ("Way in: Dana Buyer") prints its label (`Fact named`); every other label
+   is kept for a screen reader only. */
+.record-head .record-facts {
+  justify-content: flex-start;
+  gap: var(--space-1) 0;
+  color: var(--textSecondary);
+}
+.record-head .record-fact {
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+.record-head .record-fact + .record-fact::before {
+  content: "·";
+  margin-inline: var(--space-2);
+  color: var(--textSecondary);
+}
+/* In the fields column they are rows like every other field there: the
+   label at the field grid's own measure, the value beside it. */
+.record-aside .record-facts {
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.record-aside .record-fact {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: baseline;
+}
+.record-head .record-fact:not(.record-fact-named) > dt {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* A hairline between two groups of verbs: reaching the record, and recording
@@ -770,6 +811,10 @@
    row and not to each button — the ellipsis and the panel switch sit among the
    account's other verbs and are one more of the same. */
 .record-actions :is(.btn, .overflow-menu > .btn) {
+  /* Pills: a record's verbs are the head's one row of controls, and the round
+     end sets them apart from the square fields and cards under them. */
+  border-radius: var(--r-full);
+  corner-shape: round;
   min-block-size: var(--controlHeight);
 }
 .record-actions :is(.btn-icon, .overflow-menu > .btn-icon) {
@@ -836,7 +881,36 @@
    group's basis is its verbs — while `flex-basis: 100%` still resolves against
    the laid-out group, so the sentence takes the verbs' width and wraps within
    it, which is what a sentence is for. */
-.record-actions > .t-caption {
+/* The record's access note, at the foot of the fields column: why the
+   reader's verbs on this record are refused, said once, beside a lock. It is
+   not drawn until a refusal fills it (recordview.tsx, `RecordRefusal`). */
+.record-access {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-block-start: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-md);
+  background: var(--bgInset);
+  color: var(--textSecondary);
+}
+.record-access:not(:has(.record-access-lines > *)) {
+  display: none;
+}
+.record-access > svg {
+  flex: none;
+  inline-size: var(--controlIcon);
+  block-size: var(--controlIcon);
+}
+.record-access-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.record-access-lines .t-caption {
+  margin: 0;
+}
+.record-actions > :is(.t-caption, .record-refusal) {
   flex-basis: 100%;
   contain: inline-size;
   order: 1;
@@ -1006,6 +1080,11 @@
   gap: var(--space-6);
   min-width: 0;
 }
+/* An overview of sections (panel.css, `.record-sections`) is spaced by its
+   sections' own padding and the hairline between them, not by a gap. */
+.record-stack.record-sections {
+  gap: 0;
+}
 
 /* The break between the record's bodies and its story, at the same step the
    stack above puts between two bodies — the chronology is one more of them.
@@ -1031,9 +1110,9 @@
 /* The record page's zones — the grid itself is `PageZones` (pagezones.css),
    which the record page composes rather than owns: the ratios and the two folds
    are a page shape, not a record's. `.record-zones` is what the record adds ON
-   TOP of that grid, and today that is exactly one thing — the phone bottom
-   clearance in the 720px block above, so the sticky action bar cannot cover the
-   last row of the timeline. */
+   TOP of that grid: the gutter and the fields track beside the sheet, and the
+   phone bottom clearance in the 720px block above, so the sticky action bar
+   cannot cover the last row of the timeline. */
 
 /* The dials above the chronology: the cuts, then the narrowing. Its own
    interval, and the one that separates the block from the heading over it and

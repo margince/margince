@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { ReactNode } from "react";
 import "./rings.css";
 
 /** How a ring's fill reads: the standing tones a record's 360 already uses. */
@@ -81,5 +82,38 @@ export function Rings({
         );
       })}
     </svg>
+  );
+}
+
+/** One ring with the words for it: what it measures and what it counted. */
+export type LabelledRing = Ring & { label: ReactNode; caption: ReactNode };
+
+/**
+ * RingsLegend is the figure with its legend beside it: each ring's name, led
+ * by its tone's dot, and the count it was read from under it, in the figure's
+ * order. `label` names the figure for a screen reader.
+ */
+export function RingsLegend({
+  rings,
+  label,
+}: Readonly<{ rings: readonly LabelledRing[]; label: string }>) {
+  if (rings.length === 0) {
+    return null;
+  }
+  return (
+    <div className="rings-with-legend">
+      <Rings rings={rings} label={label} />
+      <dl className="rings-legend">
+        {rings.map((ring) => (
+          <div key={ring.key}>
+            <dt>
+              <RingDot tone={ring.tone} />
+              {ring.label}
+            </dt>
+            <dd className="t-caption">{ring.caption}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   );
 }

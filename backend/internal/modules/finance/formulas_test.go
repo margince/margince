@@ -462,3 +462,58 @@ func TestOneDayLateIsLate(t *testing.T) {
 			oneLate.OnTimeRate)
 	}
 }
+
+// The monthly series is twelve calendar months ending with today's, oldest
+// first and across a year boundary, with a quiet month as a zero. Each month is
+// FIN-FORM-1 over its own dates. A credit reduces the month of the invoice it
+// credits, a draft counts nowhere, and an invoice dated after today is a forecast.
+func TestNetInvoicedByMonthCoversTwelveCalendarMonthsEndingToday(t *testing.T) {
+	today := on(t, "2026-01-15")
+	months, ok := NetInvoicedByMonth([]Invoice{
+		{Status: "paid", IssuedOn: on(t, "2025-01-31"), NetMinorBase: 999900},
+		{Status: "paid", IssuedOn: on(t, "2025-02-01"), NetMinorBase: 100000},
+		{Status: "paid", IssuedOn: on(t, "2025-12-31"), NetMinorBase: 500000, CreditedMinorBase: 100000},
+		{Status: "credited", IssuedOn: on(t, "2026-01-02"), NetMinorBase: 100000, CreditsInvoice: true},
+		{Status: "draft", IssuedOn: on(t, "2026-01-03"), NetMinorBase: 999900},
+		{Status: "open", IssuedOn: on(t, "2026-01-15"), NetMinorBase: 200000},
+		{Status: "open", IssuedOn: on(t, "2026-01-16"), NetMinorBase: 999900},
+	}, today)
+	if !ok {
+		t.Fatal("the series was refused, but every invoice carries a rate")
+	}
+	if len(months) != InvoicedMonths {
+		t.Fatalf("%d months, want %d", len(months), InvoicedMonths)
+	}
+	want := map[string][2]int64{"2025-02": {100000, 1}, "2025-12": {400000, 1}, "2026-01": {200000, 1}}
+	for i, m := range months {
+		label := m.Month.Format("2006-01")
+		if wantFirst := on(t, "2025-02-01").AddDate(0, i, 0); !m.Month.Equal(wantFirst) {
+			t.Fatalf("month %d is %s, want %s", i, label, wantFirst.Format("2006-01"))
+		}
+		got := [2]int64{m.AmountMinorBase, int64(m.Records)}
+		if got != want[label] {
+			t.Errorf("%s = %d over %d invoices, want %d over %d", label, got[0], got[1], want[label][0], want[label][1])
+		}
+	}
+}
+
+// One invoice in the window without a conversion rate withholds the whole
+// series (FIN-AC-6). With that month missing, it would read as a quiet month.
+func TestNetInvoicedByMonthRefusesTheWholeSeriesOverOneUnconvertibleInvoice(t *testing.T) {
+	today := on(t, "2026-08-09")
+	_, ok := NetInvoicedByMonth([]Invoice{
+		{Status: "paid", IssuedOn: on(t, "2026-06-01"), NetMinorBase: 100000},
+		{Status: "paid", IssuedOn: on(t, "2026-03-01"), NetMinorBase: 100000, RateMissing: true},
+	}, today)
+	if ok {
+		t.Fatal("a series with an unconvertible invoice in it was reported")
+	}
+
+	// Outside the twelve months, the same row refuses nothing.
+	months, ok := NetInvoicedByMonth([]Invoice{
+		{Status: "paid", IssuedOn: on(t, "2025-07-31"), NetMinorBase: 100000, RateMissing: true},
+	}, today)
+	if !ok || len(months) != InvoicedMonths {
+		t.Fatalf("an unconvertible invoice before the window refused the series (ok=%v, %d months)", ok, len(months))
+	}
+}

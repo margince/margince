@@ -125,6 +125,7 @@ describe("CompanyRail", () => {
           page: emptyPage,
           won_lifetime: { amount_minor: 0, currency: null },
           lost_count: 0,
+          won_count: 0,
         },
       }),
     });
@@ -195,6 +196,7 @@ describe("CompanyRail", () => {
           page: emptyPage,
           won_lifetime: { amount_minor: 0, currency: null },
           lost_count: 0,
+          won_count: 0,
         },
       }),
     });
@@ -253,6 +255,7 @@ describe("CompanyRail", () => {
           page: emptyPage,
           won_lifetime: { amount_minor: 0, currency: null },
           lost_count: 0,
+          won_count: 0,
         },
       }),
     });
@@ -343,6 +346,7 @@ describe("CompanyRail", () => {
           page: emptyPage,
           won_lifetime: { amount_minor: 0, currency: null },
           lost_count: 0,
+          won_count: 0,
         },
       }),
     });
@@ -382,6 +386,7 @@ describe("CompanyRail", () => {
           page: emptyPage,
           won_lifetime: { amount_minor: 0, currency: null },
           lost_count: 0,
+          won_count: 0,
         },
       }),
     });
@@ -408,6 +413,7 @@ describe("CompanyRail", () => {
           page: emptyPage,
           won_lifetime: { amount_minor: 0, currency: null },
           lost_count: 0,
+          won_count: 0,
         },
       }),
       onTab: spy,
@@ -458,6 +464,7 @@ describe("CompanyRail", () => {
           page: emptyPage,
           won_lifetime: { amount_minor: 250_000, currency: "EUR" },
           lost_count: 1,
+          won_count: 0,
         },
       }),
     });
@@ -526,6 +533,7 @@ describe("CompanyRail", () => {
           page: { has_more: true, next_cursor: "c" },
           won_lifetime: { amount_minor: 0, currency: null },
           lost_count: 0,
+          won_count: 0,
         },
       }),
     });

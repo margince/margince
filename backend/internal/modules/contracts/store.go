@@ -148,15 +148,7 @@ func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 // hours away. The clock is injected so a date-boundary test stays deterministic;
 // the zone is read inside the caller's tx.
 func (s *Store) today(ctx context.Context, tx pgx.Tx) (time.Time, error) {
-	tzName, err := s.timezone(ctx, tx)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("resolve the installation's timezone: %w", err)
-	}
-	loc, err := storekit.LoadZone(tzName)
-	if err != nil {
-		return time.Time{}, err
-	}
-	return storekit.WorkspaceDay(s.clock(), loc), nil
+	return storekit.TodayIn(ctx, tx, s.timezone, s.clock())
 }
 
 // contractColumns is the select list every read shares, in the order

@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { CreateField } from "../../components/create";
 import { useEntityName } from "../../components/entityref";
 import { RecordFields, rawRecord } from "../../components/recordfields";
+import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { useAcquisitionSources } from "../../screens/acquisitionsources.queries";
@@ -14,6 +15,7 @@ import {
 } from "../../screens/recordreferences";
 import { RecordTeam } from "../../screens/recordteam";
 import { TagsPanel } from "../lists/tagspanel";
+import { DealOriginFacts } from "./deal360/dealheaderfacts";
 import { DealEmailAside } from "./dealemail";
 import {
   NEW_PROJECT_OWNER,
@@ -202,12 +204,20 @@ export function DealContext({
   // takes no new responsibilities, and neither does one this seat may read
   // but not write.
   const canWrite = useCanWriteRecord("deal", deal) && !deal.archived_at;
+  const t = useT();
   return (
     <>
       {/* What the deal is commercially, then who of ours is on it. The buyer's
           seats are not here: they live in the committee card in the column, with
           the verbs that change them. The rail holds no second copy of that list. */}
       <DealDetails deal={deal} meId={meId} />
+      {/* How the deal reached Margince: a fact about the record, filed with
+          its fields rather than in the line under its name. */}
+      <Panel title={t("record.origin")}>
+        <PanelBody>
+          <DealOriginFacts deal={deal} />
+        </PanelBody>
+      </Panel>
       <RecordTeam recordType="deal" recordId={deal.id} readOnly={!canWrite} />
       <DealTagsSection deal={deal} />
       <RecordListsPanel entityType="deal" entityId={deal.id} />

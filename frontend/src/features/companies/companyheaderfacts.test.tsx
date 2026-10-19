@@ -5,7 +5,10 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import { CompanyIdentityFacts, CompanySubtitle } from "./companyheaderfacts";
+import {
+  CompanyIdentityFacts,
+  CompanyOriginFacts,
+} from "./companyheaderfacts";
 
 // Who wrote the record, beside when it was written, and the rest of the facts
 // strip CompanyIdentityLine used to draw as one running sentence. The tag has
@@ -84,8 +87,8 @@ function renderInApp(ui: ReactNode) {
   );
 }
 
-function renderFacts() {
-  renderInApp(<CompanyIdentityFacts company={COMPANY} />);
+function renderOrigin() {
+  renderInApp(<CompanyOriginFacts company={COMPANY} />);
 }
 
 // The tag is one badge carrying "Typed by" and the name as sibling text
@@ -109,7 +112,7 @@ describe("who wrote this record", () => {
       { id: "u-author", display_name: "Sofia Meier" },
       { id: "u-owner", display_name: "Mira Voss" },
     ]);
-    renderFacts();
+    renderOrigin();
 
     await waitFor(() => expect(provenanceText()).toBe("Typed by Sofia Meier"));
     expect(screen.queryByText("Typed by a person")).toBeNull();
@@ -117,7 +120,7 @@ describe("who wrote this record", () => {
 
   it("names the hand that typed it, not a uuid, when the roster cannot resolve them", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
-    renderFacts();
+    renderOrigin();
 
     expect(await screen.findByText("Typed by a person")).toBeTruthy();
     // The id must not reach the page in any form, neither whole nor
@@ -127,46 +130,25 @@ describe("who wrote this record", () => {
   });
 });
 
-// The strip re-houses what CompanyIdentityLine drew as one sentence, as named
-// cells, each found by the eyebrow label a reader scans the row by.
-describe("the facts strip", () => {
-  it("names every cell by its eyebrow label", async () => {
+// Every fact keeps its label, printed or for a screen reader only, so the
+// line under the name says what each value is.
+describe("the facts line", () => {
+  it("labels what the account is and who holds it", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
-    renderFacts();
+    renderInApp(<CompanyIdentityFacts company={COMPANY} />);
 
-    for (const label of ["Domain", "Industry", "Size", "Owner", "Created"]) {
+    for (const label of ["Domain", "Industry", "Size", "Owner"]) {
       expect(await screen.findByText(label)).toBeTruthy();
     }
     await waitFor(() => expect(screen.getByText("Mira Voss")).toBeTruthy());
-    expect(screen.getByText("brandt.example")).toBeTruthy();
-  });
-});
-
-// What the account is and the one way in every reader already knows, leading
-// the marks row under the name.
-describe("CompanySubtitle", () => {
-  it("draws nothing for an account with neither an industry nor a website", () => {
-    const { container } = renderInApp(
-      <CompanySubtitle
-        company={{
-          ...COMPANY,
-          industry: undefined,
-          domains: [],
-          website_url: undefined,
-        }}
-      />,
-    );
-    expect(container.querySelector(".record-sub-inline")).toBeNull();
-  });
-
-  it("joins industry and domain on one inline line", () => {
-    const { container } = renderInApp(<CompanySubtitle company={COMPANY} />);
-
-    // Industry and the domain link sit as siblings on one line, so the line's
-    // own text (rather than either half alone) is what a reader scans.
-    const line = container.querySelector(".record-sub-inline");
-    expect(line?.textContent).toBe("Automotive · brandt.example");
     expect(screen.getByText("brandt.example").tagName).toBe("A");
+    expect(screen.queryByText("Created")).toBeNull();
+  });
+
+  it("leaves when the row was written to the origin facts", () => {
+    stub([]);
+    renderOrigin();
+    expect(screen.getByText("Created")).toBeTruthy();
   });
 });
 
@@ -181,7 +163,7 @@ describe("a record imported from somewhere else", () => {
   it("names who wrote it there, not the seat that ran the import", async () => {
     stub([{ id: "u-author", display_name: "Sofia Meier" }]);
     renderInApp(
-      <CompanyIdentityFacts
+      <CompanyOriginFacts
         company={{
           ...COMPANY,
           author: { display_name: "Mutaz Suleiman", via: "HubSpot" },
@@ -206,7 +188,7 @@ describe("a company an import wrote", () => {
   it("an imported company is labelled imported, not typed by you", async () => {
     stub([{ id: "u-reader", display_name: "The Reader" }]);
     renderInApp(
-      <CompanyIdentityFacts
+      <CompanyOriginFacts
         company={{
           ...COMPANY,
           captured_by: "human:u-reader",

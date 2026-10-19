@@ -7,7 +7,6 @@ import { EmailReference } from "../../design-system/emailreference";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { Popover } from "../../design-system/popover";
 import {
-  formatDate,
   formatDayMonth,
   formatNumber,
   relativeDays,
@@ -28,6 +27,7 @@ import {
   trendSentence,
   trendWord,
 } from "./contactrail";
+import { ContactRings } from "./contactrings";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactBrief = components["schemas"]["ContactBrief"];
@@ -93,22 +93,16 @@ export function ContactBriefCard({
       // per thing a machine did rather than once per card.
       tone="ai"
       className="record-hero"
-      title={t("contact.brief.title")}
-      titleAction={
-        written ? (
-          <>
-            {/* When before who: the head ends on the claim, the way the queue
-                above it ends on its badge, so the two indigo heads close the
-                same way. */}
-            <span className="t-caption">
-              {t("contact.brief.updatedAt", {
-                when: formatDate(brief.generated_at, locale, recordZone),
-              })}
-            </span>
-            <WrittenBy by={brief.generated_by} />
-          </>
-        ) : undefined
+      // A dateline over the call once it is written: what this is, and as
+      // of when. The head ends on who wrote it.
+      title={
+        written
+          ? t("record.howItStands", {
+              when: formatDayMonth(brief.generated_at, locale, recordZone),
+            })
+          : t("contact.brief.title")
       }
+      titleAction={written ? <WrittenBy by={brief.generated_by} /> : undefined}
     >
       <PanelBody>
         {loading && (
@@ -124,23 +118,41 @@ export function ContactBriefCard({
         )}
         {written && (
           <>
-            {/* Judgement first: what the brief ADDS to the cards above it is
-                what the agent makes of them. The sources are drawn below BY
-                TRANSPORT rather than as citation chips, because a chip cannot
-                know whether a cited conversation was mail or a chat message,
-                and this card's reader has been told wrong before. */}
-            <SentenceList
-              sentences={brief.sentences}
-              leadWithJudgement
-              citations="none"
-            />
+            {/* The call first, then the judgement under it, and beside both
+                the shares the relationship is read from. The sources are
+                drawn below BY TRANSPORT rather than as citation chips,
+                because a chip cannot know whether a cited conversation was
+                mail or a chat message, and this card's reader has been told
+                wrong before. */}
+            <div className="pe-brief-lead">
+              <div className="pe-brief-call">
+                <BriefReadings
+                  view={view}
+                  onOpenEmail={onOpenEmail}
+                  part="verdict"
+                />
+                <SentenceList
+                  sentences={brief.sentences}
+                  leadWithJudgement
+                  citations="none"
+                />
+              </div>
+              <ContactRings
+                view={view}
+                firstName={view.contact.full_name.split(" ")[0] ?? ""}
+              />
+            </div>
             {/* The relationship's four readings under the sentence they
                 qualify: which way it runs, who on our side carries it, what
                 is on the table and what is owed. Inside the brief rather
                 than as a row of tiles under it, because each is one fact the
                 sentence above already rests on, and four cards for four
                 words gave each the weight of a section. */}
-            <BriefReadings view={view} onOpenEmail={onOpenEmail} />
+            <BriefReadings
+              view={view}
+              onOpenEmail={onOpenEmail}
+              part="readings"
+            />
             <div className="pe-chiprow">
               <span className="t-caption">{t("contact.brief.sources")}</span>
               {/* One source per distinct record, not per citation: several
@@ -273,9 +285,13 @@ function briefCells(
 function BriefReadings({
   view,
   onOpenEmail,
+  part,
 }: Readonly<{
   view: Contact360;
   onOpenEmail?: (activityId: string) => void;
+  // The verdict alone, which leads the brief, or the four readings it adds up
+  // from, which stand under the judgement.
+  part: "verdict" | "readings";
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -287,7 +303,7 @@ function BriefReadings({
     omitted,
     newestInbound(view),
     onOpenEmail,
-  );
+  ).filter((cell) => (cell.key === "overall") === (part === "verdict"));
   return (
     <dl className="pe-brief-readings">
       {cells.map((cell) => (

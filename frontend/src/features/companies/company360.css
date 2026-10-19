@@ -93,6 +93,17 @@
 .record-sheet .co-reading-pair {
   column-gap: var(--sheetGutter);
 }
+/* Among an overview's sections the reading is a run of sections like the
+   rest: spaced by their own padding and rules, and the pair stacked, since a
+   section's title column leaves half a measure too little for its rows. */
+.record-sections.co-overview-stack,
+.record-sections .co-reading {
+  gap: 0;
+}
+.record-sections .co-reading-pair {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
 /* What this account is worth to us. The panel is one reading in five parts —
    the verdict, the dimensions under it, the two sides of the argument, the
    labelled answers, the attribution — and a hairline between consecutive
@@ -1941,34 +1952,15 @@
   align-self: center;
 }
 
-/* As the sheet's lead the call and its rings stand side by side: the verdict
-   on the left where the eye starts, the readings it rests on to its right,
-   and the thread and everything after them across the whole card. Stacked
-   once the work column cannot give each half a readable measure. */
-.record-sheet .record-hero:has(> .co-360-dims) {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-.record-sheet .record-hero:has(> .co-360-dims) > * {
-  grid-column: 1 / -1;
-}
-.record-sheet .record-hero > .panel-body:has(> .r360-verdict) {
-  grid-column: 1;
-}
-.record-sheet .record-hero > .co-360-dims {
-  grid-column: 2;
-  align-self: center;
-}
+/* In the lead, the company's readings stand as one column beside the rings. */
 .record-sheet .record-hero .co-360-readings {
   grid-template-columns: minmax(0, 1fr);
   min-inline-size: 11rem;
 }
-@container work (max-width: 48rem) {
-  .record-sheet .record-hero:has(> .co-360-dims) {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .record-sheet .record-hero > .panel-body:has(> .r360-verdict),
-  .record-sheet .record-hero > .co-360-dims {
-    grid-column: 1 / -1;
-  }
+.co-360-reading-why {
+  display: block;
+  margin-block-start: 2px; /* ds:ignore a caption under its reading, tighter than the scale's first rung */
+  font-weight: var(--fontWeightRegular);
+  color: var(--textSecondary);
+  max-inline-size: 30ch;
 }

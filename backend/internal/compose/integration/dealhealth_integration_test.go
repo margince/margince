@@ -204,3 +204,82 @@ func TestStalledDealReadsAtRisk(t *testing.T) {
 		t.Fatalf("stalled+silent deal → health %.3f (at_risk=%v), want < 0.35 and at_risk", got.Health, got.AtRisk)
 	}
 }
+
+// seedWonStay closes a fresh deal as won through the real move. It then pins
+// the deal's stay in the open stage to start at enteredAt and last stay.
+func seedWonStay(t *testing.T, e *Env, owner *pgx.Conn, pipeline ids.PipelineID, open, won ids.StageID,
+	enteredAt time.Time, stay time.Duration,
+) {
+	t.Helper()
+	d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+		Name: "Won Before", PipelineID: pipeline, StageID: open, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dealID := ids.From[ids.DealKind](ids.UUID(d.Id))
+	if _, err := e.Deals.AdvanceDeal(e.Admin(), dealID, deals.AdvanceDealInput{
+		ToStageID: won, WonWithoutContractReason: WonByImport(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := owner.Exec(context.Background(), `
+		UPDATE deal_stage_history
+		   SET changed_at = CASE WHEN to_stage_id = $2 THEN $3::timestamptz ELSE $4::timestamptz END
+		 WHERE deal_id = $1`, dealID, open, enteredAt, enteredAt.Add(stay)); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// The usual stay in a stage is the median of won deals' completed stays in it,
+// reported only from the tenth such deal on. Below that the factor compares
+// against the fallback, and the evidence reports no usual stay at all.
+func TestTheUsualStayInAStageIsReportedOnlyFromTheWonHistoryFloor(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	pipeline, open, won := DealFixture(t, e)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
+
+	subject, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+		Name: "Still Open", PipelineID: pipeline, StageID: open, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	subjectID := ids.From[ids.DealKind](ids.UUID(subject.Id))
+	entered := healthClock.AddDate(0, 0, -2)
+	if _, err := owner.Exec(context.Background(),
+		`UPDATE deal_stage_history SET changed_at = $2 WHERE deal_id = $1`, subjectID, entered); err != nil {
+		t.Fatal(err)
+	}
+
+	// Nine stays of two and four days alternately: a median of three, one deal
+	// short of the floor.
+	start := healthClock.AddDate(0, -3, 0)
+	day := 24 * time.Hour
+	for i := range 9 {
+		seedWonStay(t, e, owner, pipeline, open, won, start.AddDate(0, 0, i), time.Duration(2+2*(i%2))*day)
+	}
+	below, err := e.Deals.DealHealth(ctx, subjectID, healthClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !below.Evidence.StageEnteredAt.Equal(entered) {
+		t.Fatalf("stage entered at = %v, want the pinned entry %v", below.Evidence.StageEnteredAt, entered)
+	}
+	if below.Evidence.UsualDaysInStage != nil {
+		t.Fatalf("nine won deals reported a usual stay of %f days, want none below the floor", *below.Evidence.UsualDaysInStage)
+	}
+
+	seedWonStay(t, e, owner, pipeline, open, won, start.AddDate(0, 0, 9), 4*day)
+	at, err := e.Deals.DealHealth(ctx, subjectID, healthClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if at.Evidence.UsualDaysInStage == nil || math.Abs(*at.Evidence.UsualDaysInStage-3) > 1e-9 {
+		t.Fatalf("usual stay = %v, want the median of five 2-day and five 4-day stays, 3", at.Evidence.UsualDaysInStage)
+	}
+	if at.Evidence.ExpectedDaysInStage != *at.Evidence.UsualDaysInStage {
+		t.Fatalf("the factor compared against %f days, not the usual stay it reports", at.Evidence.ExpectedDaysInStage)
+	}
+}

@@ -38,6 +38,7 @@ export function DealCockpit({
   advanceRefused,
   refusedReasonId,
   onAdvance,
+  inStage,
 }: Readonly<{
   deal: Deal;
   stages: readonly Stage[];
@@ -45,6 +46,7 @@ export function DealCockpit({
   advanceRefused: boolean;
   refusedReasonId?: string;
   onAdvance: (toStage: Stage) => void;
+  inStage?: { enteredAt: string; usualDays: number | null };
 }>) {
   const t = useT();
   return (
@@ -62,6 +64,7 @@ export function DealCockpit({
             advanceRefused={advanceRefused}
             refusedReasonId={refusedReasonId}
             onAdvance={onAdvance}
+            inStage={inStage}
           />
         </div>
       </div>

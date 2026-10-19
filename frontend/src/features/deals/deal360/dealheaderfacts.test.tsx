@@ -11,7 +11,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../../i18n";
 import { en } from "../../../i18n/en";
-import { DealIdentityFacts, DealSubtitle } from "./dealheaderfacts";
+import {
+  DealIdentityFacts,
+  DealOriginFacts,
+  DealSubtitle,
+} from "./dealheaderfacts";
 
 // The facts a rep checks first, on the record's head: value, stage, owner —
 // the same three questions DealIdentityLine's dot-joined sentence answered,
@@ -53,29 +57,11 @@ function show(node: React.ReactNode) {
   );
 }
 
-const stages = [
-  { id: "st-1", name: "Qualified" },
-  { id: "st-2", name: "Proposal" },
-];
-
 describe("the facts strip says what a deal is worth, where it is, and whose it is", () => {
-  it("names the stage rather than showing its id", () => {
-    show(
-      <DealIdentityFacts
-        deal={{ amount_minor: 6_400_000, currency: "EUR", stage_id: "st-1" }}
-        stages={stages}
-        locale="en"
-      />,
-    );
-    expect(screen.getByText("Qualified")).toBeInTheDocument();
-    expect(screen.queryByText("st-1")).not.toBeInTheDocument();
-  });
-
   it("says a deal is unassigned rather than leaving the owner blank", () => {
     show(
       <DealIdentityFacts
         deal={{ amount_minor: 1000, currency: "EUR", stage_id: "st-1" }}
-        stages={stages}
         locale="en"
       />,
     );
@@ -96,7 +82,6 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
           stage_id: "st-1",
           masked_fields: ["amount_minor"],
         }}
-        stages={stages}
         locale="en"
       />,
     );
@@ -118,7 +103,6 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
           status: "won",
           won_without_contract_reason: "purchase_order",
         }}
-        stages={stages}
         locale="en"
       />,
     );
@@ -141,7 +125,6 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
           won_without_contract_reason: "other",
           won_without_contract_detail: "Renewed on a handshake at the fair",
         }}
-        stages={stages}
         locale="en"
       />,
     );
@@ -171,13 +154,11 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
           won_without_contract_reason: "other",
           won_without_contract_detail: long,
         }}
-        stages={stages}
         locale="en"
       />,
     );
     expect(screen.getByText(long)).toBeInTheDocument();
     expect(screen.getByText(long)).toHaveClass("deal-close-detail");
-    expect(screen.getByText("Qualified")).toBeInTheDocument();
   });
 
   // The bound is on WIDTH, never on content — asserted against the
@@ -219,7 +200,6 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
           status: "lost",
           lost_reason: "Budget frozen until next year",
         }}
-        stages={stages}
         locale="en"
       />,
     );
@@ -239,7 +219,6 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
           status: "open",
           lost_reason: "stale",
         }}
-        stages={stages}
         locale="en"
       />,
     );
@@ -257,7 +236,6 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
           stage_id: "st-1",
           status: "won",
         }}
-        stages={stages}
         locale="en"
       />,
     );
@@ -272,34 +250,15 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
     }
   });
 
-  it("never prints a stage id the pipeline cannot name", () => {
-    // The case a null stage_id CANNOT test: an id that is present and does not
-    // resolve. A deal read before its pipeline finishes loading has stages
-    // empty, which reaches the fallback with a real uuid in hand, and printing
-    // it puts a machine identifier where a reader expects "Qualified".
-    const foreign = "01a02be8-c8d5-7d9b-bb60-a5e1ad68533c";
-    show(
-      <DealIdentityFacts
-        deal={{ amount_minor: 1000, currency: "EUR", stage_id: foreign }}
-        stages={stages}
-        locale="en"
-      />,
-    );
-    expect(screen.getByText("—")).toBeInTheDocument();
-    expect(screen.queryByText(foreign)).not.toBeInTheDocument();
-  });
-
   it("names how the record reached Margince, behind the provenance tag", async () => {
     show(
-      <DealIdentityFacts
+      <DealOriginFacts
         deal={{
           amount_minor: 1000,
           currency: "EUR",
           stage_id: "st-1",
           source: "csv import",
         }}
-        stages={stages}
-        locale="en"
       />,
     );
     await userEvent.setup().click(screen.getByRole("button"));
@@ -312,7 +271,7 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
   // one that knows, and the tag has to prefer it.
   it("names who wrote an imported deal there, not the seat that ran the import", () => {
     show(
-      <DealIdentityFacts
+      <DealOriginFacts
         deal={{
           amount_minor: 1000,
           currency: "EUR",
@@ -321,8 +280,6 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
           captured_by: "human:u-importer",
           author: { display_name: "Mutaz Suleiman", via: "HubSpot" },
         }}
-        stages={stages}
-        locale="en"
       />,
     );
     expect(
@@ -341,7 +298,6 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
           partner_company_id: "p1",
           partner_attribution: "influenced",
         }}
-        stages={stages}
         locale="en"
       />,
     );
@@ -381,7 +337,6 @@ describe("the close date says how much it is worth believing", () => {
           expected_close_date: "2099-09-30",
           close_date_provisional: true,
         }}
-        stages={stages}
         locale="en"
       />,
     );
@@ -397,7 +352,6 @@ describe("the close date says how much it is worth believing", () => {
           expected_close_date: "2099-09-30",
           close_date_provisional: false,
         }}
-        stages={stages}
         locale="en"
       />,
     );
@@ -412,7 +366,6 @@ describe("the close date says how much it is worth believing", () => {
     show(
       <DealIdentityFacts
         deal={{ expected_close_date: "2026-08-23" }}
-        stages={stages}
         locale="en"
       />,
     );
@@ -426,7 +379,6 @@ describe("the close date says how much it is worth believing", () => {
       const { unmount } = show(
         <DealIdentityFacts
           deal={{ expected_close_date: "2026-08-23", status }}
-          stages={stages}
           locale="en"
         />,
       );
@@ -439,7 +391,7 @@ describe("the close date says how much it is worth believing", () => {
   // The cell stays where a date is missing: when a deal lands is a question
   // the reader came with, and a cell that disappears answers it with silence.
   it("keeps the cell and says so when nobody has set a date", () => {
-    show(<DealIdentityFacts deal={{}} stages={stages} locale="en" />);
+    show(<DealIdentityFacts deal={{}} locale="en" />);
     expect(screen.getByText(en["deal.strip.close.none"])).toBeInTheDocument();
   });
 });
@@ -447,7 +399,7 @@ describe("the close date says how much it is worth believing", () => {
 describe("a deal an import wrote", () => {
   const imported = (importedFrom: string | null) =>
     show(
-      <DealIdentityFacts
+      <DealOriginFacts
         deal={{
           amount_minor: 1000,
           currency: "EUR",
@@ -456,8 +408,6 @@ describe("a deal an import wrote", () => {
           source: "manual",
           imported_from: importedFrom,
         }}
-        stages={stages}
-        locale="en"
       />,
     );
 

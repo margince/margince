@@ -34,6 +34,7 @@ import { ShareAction } from "../../../screens/share";
 import { useDealCoverage } from "./usedealcoverage";
 import { useDealRecipientAddress } from "./usedealrecipient";
 import "./deal360.css";
+import { RecordRefusal } from "../../../design-system/recordview";
 import { AddToShortlistAction } from "../../lists/addtoshortlist";
 import { RequestLegalReviewAction } from "./deallegaltab";
 
@@ -191,7 +192,9 @@ export function DealActions({
   return (
     <>
       {!refusedByArchive && logGrantKnown && !canLog && (
-        <p id={logRefusedId}>{t("record.logActivityRefused")}</p>
+        <RecordRefusal id={logRefusedId}>
+          {t("record.logActivityRefused")}
+        </RecordRefusal>
       )}
       {/* Mail first, then the hairline, then what the reader records about
           this deal: the same two groups, in the same order, that the contact,

@@ -80,6 +80,13 @@ function DimensionChip({ dimension }: Readonly<{ dimension: TodayDimension }>) {
             </>
           ) : null}
         </Popover>
+        {/* What the rating rests on, in the rule's own words, under it: the
+            caption that makes a ring's arc a reading rather than a shape. */}
+        {dimension.because ? (
+          <span className="co-360-reading-why t-caption">
+            {dimension.because}
+          </span>
+        ) : null}
       </dd>
     </div>
   );
@@ -143,7 +150,7 @@ export function Company360Call({
       scale={scale}
       footer={footer}
     >
-      <PanelBody className="co-360-dims">
+      <PanelBody className="co-360-dims r360-rings">
         <Rings
           label={reading.dimensions
             .map((dimension) => `${dimension.label}: ${dimension.reading}`)

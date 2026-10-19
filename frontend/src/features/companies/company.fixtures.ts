@@ -79,6 +79,7 @@ export const company360: Company360 = {
     ...emptySection,
     won_lifetime: { amount_minor: 0, currency: "EUR" },
     lost_count: 0,
+    won_count: 0,
   },
   activities: emptySection,
   next_steps: emptySection,

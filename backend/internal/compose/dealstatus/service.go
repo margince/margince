@@ -213,65 +213,25 @@ func (s *Service) cardAndTimeline(
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, nil, err
 	}
-	mv := decideMove(f)
-	in := project(f, mv)
-	fingerprint, err := Fingerprint(in, userID.UUID, s.routingVersion, f.now, f.lang)
+	card, err := s.currentCard(ctx, userID, dealID, f, policy)
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, nil, err
 	}
-	verdict := s.decideFromCache(ctx, userID, dealID, fingerprint, policy.refresh, f.now)
-	if verdict.serve {
-		return verdict.card, append(f.timeline, f.requests...), nil
-	}
-	card, laneFailed := s.write(ctx, f, mv, in, verdict.askModel && !policy.factsOnly)
-	if laneFailed {
-		// The lane was wired and did not answer: a timeout, a budget, an
-		// unparseable reply. The reader gets the floor, which is a working
-		// card — but storing it under the CURRENT fingerprint would make one
-		// transient outage permanent, because a matching fingerprint is served
-		// without ever asking again. The card would stand until some unrelated
-		// fact moved.
-		return card, append(f.timeline, f.requests...), nil
-	}
-	if err := s.save(ctx, userID, dealID, stored{
-		Fingerprint: fingerprint,
-		GeneratedAt: card.GeneratedAt,
-		GeneratedBy: card.GeneratedBy,
-		Card:        card,
-	}); err != nil {
-		return crmcontracts.DealStatusCard{}, nil, err
-	}
+	// Stamped after the cache, on every path: the stage entry and the usual
+	// stay can both move without moving the fingerprint the cache is keyed on.
+	stampStageClock(&card, f.health)
 	return card, append(f.timeline, f.requests...), nil
 }
 
-// cacheVerdict says what to do with the stored card.
-type cacheVerdict struct {
-	// card is served as-is when serve is true: the facts have not moved.
-	card  crmcontracts.DealStatusCard
-	serve bool
-	// askModel is false when the facts moved but a model call is inside the
-	// floor. The card is still rewritten — deterministically — so the reader
-	// sees the change rather than the world as it was.
-	askModel bool
-}
-
-// decideFromCache reads the stored card and says whether it still stands.
-func (s *Service) decideFromCache(
-	ctx context.Context, userID ids.UserID, dealID ids.DealID, fingerprint string, refresh bool, now time.Time,
-) cacheVerdict {
-	if refresh {
-		return cacheVerdict{askModel: true}
+// stampStageClock copies the deal's stage entry and its stage's usual stay
+// from the health read, so the card and the stage-velocity factor state one
+// measurement. A nil usual stay is sent as null, never as the fallback.
+func stampStageClock(card *crmcontracts.DealStatusCard, health *deals.DealHealth) {
+	if health == nil {
+		return
 	}
-	cached, found, err := s.cached(ctx, userID, dealID)
-	if err != nil || !found {
-		// A cache that cannot be read is a miss, never a failed request: the
-		// card is derived content and writing it again is the whole fallback.
-		return cacheVerdict{askModel: true}
-	}
-	if cached.Fingerprint == fingerprint {
-		return cacheVerdict{card: cached.Card, serve: true}
-	}
-	return cacheVerdict{askModel: now.Sub(cached.GeneratedAt) >= modelCallFloor}
+	card.StageEnteredAt = health.Evidence.StageEnteredAt
+	card.StageUsualDays = health.Evidence.UsualDaysInStage
 }
 
 // write asks the lane for the card's words and falls back to the floor. A

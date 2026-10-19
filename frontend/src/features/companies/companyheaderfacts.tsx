@@ -19,46 +19,16 @@ import {
   displayHost,
 } from "./companyheader";
 
-// The account's name-line subtitle and its facts strip: what CompanyIdentityLine
-// used to draw as one running sentence, in the contact record page's own
-// shapes, an inline subtitle beside the name, and named cells under it.
+// The account's facts: the one line under its name (what it is, who holds it,
+// the way in), and its origin (when its row was written and by whom), which
+// stands in the fields column beside the record.
 
 type Company = components["schemas"]["Company"];
 type Company360 = components["schemas"]["Company360"];
 
 /**
- * CompanySubtitle is what the account is and the one way in every reader
- * already knows, leading the marks row under the name (CompanyMarks). The
- * name's own line holds the lifecycle control alone. Nothing is drawn for an
- * account with neither, so the row does not open on an empty gap.
- */
-export function CompanySubtitle({
-  company,
-}: Readonly<{ company: Company }>): ReactNode {
-  const website = companyWebsite(company);
-  if (!company.industry && !website) {
-    return null;
-  }
-  return (
-    <div className="record-sub record-sub-inline">
-      {company.industry}
-      {website && (
-        <>
-          {company.industry ? " · " : ""}
-          <a className="co-meta-link" href={website}>
-            {displayHost(website)}
-          </a>
-        </>
-      )}
-    </div>
-  );
-}
-
-/**
- * CompanyIdentityFacts is the head's facts strip: the way in, who holds the
- * account, and when its own row was written and by whom. Re-houses what
- * CompanyIdentityLine drew as one sentence, as the same named cells every
- * other record page's facts strip carries (RecordFacts).
+ * CompanyIdentityFacts is the head's facts line: what the account is, who
+ * holds it and the way in.
  */
 export function CompanyIdentityFacts({
   company,
@@ -66,28 +36,14 @@ export function CompanyIdentityFacts({
   loading,
 }: Readonly<{
   company: Company;
-  // The 360 the page already holds. Absent while it loads, and the strength
-  // reading absent again once it lands, for a company nobody has a way in on.
+  // The composite read, and whether it is still in flight. The way-in fact
+  // reads from it, so it waits for the read rather than guessing.
   view?: Company360;
   loading?: boolean;
 }>): ReactNode {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
-  const viewerId = useViewerId();
-  const provenance = provenanceOf(
-    company.captured_by,
-    viewerId,
-    company.author,
-    company.source,
-    company.imported_from,
-  );
-  // Named by id, the same read every author/owner tag resolves through,
-  // asked for only when the provenance names a human at all.
-  const authorName = useMemberName(
-    provenance.kind === "human" ? provenance.userId : undefined,
-  );
   const website = companyWebsite(company);
   const wayIn = loading ? undefined : view?.strength;
   return (
@@ -110,11 +66,11 @@ export function CompanyIdentityFacts({
       {/* The owner control, not a read of the owner: on an unowned account it
           is the claim door, and a label here left that account with no way to
           become anybody's. */}
-      <Fact label={t("co.pulse.owner")}>
+      <Fact label={t("co.pulse.owner")} named>
         <CompanyOwnerControl company={company} hideLabel />
       </Fact>
       {wayIn?.contributor_contact_id && (
-        <Fact label={t("co.pulse.strongestLead")}>
+        <Fact label={t("co.pulse.strongestLead")} named>
           {/* No space before the tail: it opens with its own comma, so the
               name and the clause read as one sentence. */}
           <EntityRef kind="contact" id={wayIn.contributor_contact_id} />
@@ -123,6 +79,34 @@ export function CompanyIdentityFacts({
           })}
         </Fact>
       )}
+    </RecordFacts>
+  );
+}
+
+/**
+ * CompanyOriginFacts is when the account's row was written and by whom: a
+ * fact about the record rather than about the account, so it stands with the
+ * fields beside the record and not in the line under its name.
+ */
+export function CompanyOriginFacts({
+  company,
+}: Readonly<{ company: Company }>): ReactNode {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
+  const viewerId = useViewerId();
+  const provenance = provenanceOf(
+    company.captured_by,
+    viewerId,
+    company.author,
+    company.source,
+    company.imported_from,
+  );
+  const authorName = useMemberName(
+    provenance.kind === "human" ? provenance.userId : undefined,
+  );
+  return (
+    <RecordFacts>
       <Fact label={t("list.created")}>
         {formatDateAbbrev(company.created_at, locale, zone)}
       </Fact>

@@ -20,10 +20,11 @@
 // question about a different record, and the day they grow a verdict they take
 // this one rather than a second shaped like it.
 
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Sparkles } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { Badge, Button } from "../../design-system/atoms";
 import { PanelBody } from "../../design-system/panel";
+import { Popover } from "../../design-system/popover";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import "./record360.css";
@@ -200,6 +201,45 @@ export function Proof({
         </div>
       ) : null}
     </>
+  );
+}
+
+/**
+ * SourcesPill is the working behind a record's call as one pill in the head of
+ * its 360: who reached the call and how many readings it rests on, opening
+ * them as a list over the card. In the head rather than under the verdict, so
+ * the claim and its receipts are read together before the call itself, and
+ * the verdict keeps its line to itself.
+ */
+export function SourcesPill({
+  items,
+}: Readonly<{ items: readonly Grounding[] }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  if (items.length === 0) {
+    return null;
+  }
+  const sources = `${formatNumber(items.length, locale)} ${plural("record.restsOn.source", items.length)}`;
+  return (
+    <Popover
+      variant="aiQuiet"
+      label={
+        <>
+          <Sparkles aria-hidden="true" />
+          {t("record.sourcesPill", { sources })}
+        </>
+      }
+    >
+      <ul className="r360-sources-list">
+        {items.map((item) => (
+          <li key={item.key}>
+            <p className="r360-rests-quote">{item.quote}</p>
+            <p className="r360-rests-from t-caption">{item.from}</p>
+          </li>
+        ))}
+      </ul>
+    </Popover>
   );
 }
 

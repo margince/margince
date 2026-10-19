@@ -3,7 +3,7 @@
 
 import type { components } from "../../api/schema";
 import { useRoster } from "../../components/entityref";
-import { formatDate } from "../../format/format";
+import { formatDayMonth } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import {
@@ -119,24 +119,18 @@ export function CompanyReading({
       <Company360Call
         reading={reading}
         name={company.display_name}
-        title={t("company.brief.title")}
-        titleAction={
-          view && (
-            <>
-              {/* Intl throws on an unparseable date, and a server one release
-                  out of step answers without `as_of`. */}
-              {!Number.isNaN(Date.parse(view.as_of)) && (
-                <span className="t-caption">
-                  {t("contact.brief.updatedAt", {
-                    when: formatDate(view.as_of, locale, recordZone),
-                  })}
-                </span>
-              )}
-              {/* Composed from the account's own records, not model prose. */}
-              <WrittenBy by="deterministic" />
-            </>
-          )
+        // A dateline over the call: what this is, and as of when. Intl throws
+        // on an unparseable date, and a server one release out of step
+        // answers without `as_of`, so the date waits for one it can read.
+        title={
+          view && !Number.isNaN(Date.parse(view.as_of))
+            ? t("record.howItStands", {
+                when: formatDayMonth(view.as_of, locale, recordZone),
+              })
+            : t("company.brief.title")
         }
+        // Composed from the account's own records, not model prose.
+        titleAction={view && <WrittenBy by="deterministic" />}
         scale="compact"
         footer={sinceLastVisitFooter(view)}
       >

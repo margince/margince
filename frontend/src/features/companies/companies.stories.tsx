@@ -146,6 +146,7 @@ const company360 = {
     page: emptyPage,
     won_lifetime: { amount_minor: 12_000_000, currency: "EUR" },
     lost_count: 1,
+    won_count: 3,
   },
   strength: {
     score: 71,

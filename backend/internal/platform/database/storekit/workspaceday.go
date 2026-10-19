@@ -4,8 +4,11 @@
 package storekit
 
 import (
+	"context"
 	"fmt"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // LoadZone resolves an IANA zone name to a *time.Location, wrapping the failure
@@ -43,6 +46,23 @@ func LoadZone(name string) (*time.Location, error) {
 func WorkspaceDay(t time.Time, loc *time.Location) time.Time {
 	local := t.In(loc)
 	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC)
+}
+
+// TodayIn is the calendar day now falls on in the zone zoneOf answers inside
+// the caller's transaction. Every store whose "today" is the installation's
+// reads, loads and applies the zone here.
+func TodayIn(
+	ctx context.Context, tx pgx.Tx, zoneOf func(context.Context, pgx.Tx) (string, error), now time.Time,
+) (time.Time, error) {
+	name, err := zoneOf(ctx, tx)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("resolve the installation's timezone: %w", err)
+	}
+	loc, err := LoadZone(name)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return WorkspaceDay(now, loc), nil
 }
 
 // AsDate reduces a value to the calendar date it ALREADY names — its UTC

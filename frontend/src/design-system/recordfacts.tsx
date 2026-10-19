@@ -25,10 +25,17 @@ export function RecordFacts({ children }: Readonly<{ children: ReactNode }>) {
  */
 export function Fact({
   label,
+  named,
   children,
-}: Readonly<{ label: string; children: ReactNode }>) {
+}: Readonly<{
+  label: string;
+  // Prints the label beside the value in a record head's one-line form, for a
+  // value that does not say what it is on its own.
+  named?: boolean;
+  children: ReactNode;
+}>) {
   return (
-    <div className="record-fact">
+    <div className={named ? "record-fact record-fact-named" : "record-fact"}>
       <dt>
         <Eyebrow>{label}</Eyebrow>
       </dt>

@@ -24,6 +24,7 @@ import { RecordCustomFields } from "../../screens/recordcustomfields";
 import { RecordTeam } from "../../screens/recordteam";
 import { CounterpartyHoldRow } from "../privacy/counterparty-hold";
 import { CompanyReachCard } from "./company-reach";
+import { CompanyOriginFacts } from "./companyheaderfacts";
 import { CompanyDetails } from "./companydetails";
 import { DealsSection } from "./companyraildeals";
 import { CompanyProfileDetails } from "./companyraildetails";
@@ -120,6 +121,15 @@ export function CompanyRail({
         <>
           <CompanyDetails company={resolved} />
           <RecordCustomFields kind="company" record={resolved} />
+          {/* When the row was written and by whom: a fact about the record,
+              filed with its fields rather than in the line under its name. */}
+          <Panel title={t("record.origin")}>
+            <PanelBody>
+              {/* The record row the head reads, before the 360's copy of it:
+                  the two may carry different provenance mid-refresh. */}
+              <CompanyOriginFacts company={company ?? resolved} />
+            </PanelBody>
+          </Panel>
         </>
       )}
       <Panel>

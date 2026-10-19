@@ -62,6 +62,7 @@ export function view(overrides: Record<string, unknown> = {}): Company360 {
       page: emptyPage,
       won_lifetime: { amount_minor: 0, currency: null },
       lost_count: 0,
+      won_count: 0,
     },
     projects: [],
     projects_page: emptyPage,

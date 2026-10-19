@@ -65,7 +65,7 @@ export function CompanyOverviewStack(props: CompanyOverviewProps) {
   const { company, view, onOpenRecord, onOpenReceipt, onOpenEmail } = props;
   const records = recordNamesIn(view);
   return (
-    <div className="co-overview-stack">
+    <div className="co-overview-stack record-sections">
       {!company.archived_at && <CompanyReading {...props} />}
       {/* The account in prose, beside the reading of it. The 360 answers what
           to do. This answers what the account is, in sentences with their

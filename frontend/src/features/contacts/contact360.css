@@ -997,3 +997,27 @@
   align-items: center;
   gap: var(--space-2);
 }
+
+/* The brief's lead: the call and the judgement under it on the left, the
+   shares it is read from on the right, stacked once the column cannot give
+   both a readable measure. */
+.pe-brief-lead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-4) var(--space-8);
+  align-items: center;
+}
+@container work (max-width: 48rem) {
+  .pe-brief-lead {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.pe-brief-call {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.pe-brief-call .pe-brief-readings {
+  margin: 0;
+}

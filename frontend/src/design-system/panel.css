@@ -537,12 +537,26 @@
   backdrop-filter: none;
   margin-inline: calc(-1 * var(--padPanel));
 }
-/* Beside the work the details column clips to its track (pagezones.css), so a
- * bleed there is cut off with the labels in it. Its sections keep the inset. */
-@media (min-width: 1201px) {
-  .record-sheet .page-zones-aside-column .panel {
-    margin-inline: 0;
-  }
+/* The FIELDS COLUMN beside the sheet is unboxed too, and quieter still: what
+ * the record is filed as, read by label. A group's title takes the secondary
+ * ink, with no band and no rule. It keeps the pane's inset rather than
+ * bleeding, because the column clips to its track (pagezones.css) and a bleed
+ * there cut its labels off. */
+.record-aside .panel {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.record-aside .panel > .panel-head {
+  min-height: 0;
+  padding-block: 0 var(--space-1);
+  border-bottom: 0;
+  background: none;
+}
+.record-aside .panel > .panel-head .panel-title {
+  color: var(--textSecondary);
 }
 /* A section has no band to tint, so a tone keeps only its title's ink and the
  * machine's section keeps its provenance badge: indigo on the title as well
@@ -585,7 +599,7 @@
  * is read off the standing it holds, so a page sets no tone on it by hand. */
 .record-sheet .panel.record-hero {
   --heroWash: var(--aiLight);
-  margin-inline: 0;
+  margin-inline: calc(-1 * var(--space-3));
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-lg);
   background:
@@ -613,4 +627,71 @@
  * says where the lead begins, and a rule would cut the verdict from its name. */
 .record-sheet .record-hero > .panel-head {
   border-bottom-color: transparent;
+}
+/* Its title is a dateline in the secondary ink: "How it stands · 13 Aug"
+ * names the reading and when it was made, and the verdict is the headline. */
+.record-sheet .record-hero > .panel-head .panel-title {
+  color: var(--textSecondary);
+}
+
+/* THE OVERVIEW'S SECTIONS read as a document: each section's title in a
+ * column of its own on the left, its rows on the right, and one hairline
+ * across the whole sheet between two sections. A reader runs down the titles
+ * to find a section and across to read it. The title column holds the head's
+ * verbs and counts under the title, so the rows keep the full measure.
+ *
+ * The head spans every row the body has, so the body's bands stack in the
+ * second column whatever their number; empty implicit rows take no height. */
+.record-sections .panel:not(.record-hero) {
+  position: relative;
+  display: grid;
+  grid-template-columns:
+    calc(9.375rem + var(--padPanel) + var(--space-2))
+    minmax(0, 1fr);
+  padding-block: var(--space-6) var(--space-3);
+  overflow: visible;
+}
+.record-sections .panel:not(.record-hero) > * {
+  grid-column: 2;
+}
+.record-sections .panel:not(.record-hero) > .panel-head {
+  grid-column: 1;
+  grid-row: 1 / span 40;
+  flex-direction: column;
+  align-items: flex-start;
+  align-self: start;
+  gap: var(--space-1);
+  min-height: 0;
+  padding-block: 0;
+  border-bottom: 0;
+}
+.record-sections .panel:not(.record-hero) > .panel-head + * {
+  padding-block-start: 0;
+}
+.record-sections .panel:not(.record-hero)::before {
+  content: "";
+  position: absolute;
+  inset: 0 calc(var(--padPanel) - var(--sheetInset)) auto;
+  height: 1px;
+  background: var(--borderSubtle);
+}
+.record-sections .record-hero + .panel::before,
+.record-sections > .panel:first-child::before {
+  content: none;
+}
+/* Narrow, the title goes back over its rows, with its verbs at the far end. */
+@container work (max-width: 40rem) {
+  .record-sections .panel:not(.record-hero) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .record-sections .panel:not(.record-hero) > .panel-head {
+    grid-column: 1;
+    grid-row: auto;
+    flex-direction: row;
+    align-items: baseline;
+    padding-block-end: var(--space-2);
+  }
+  .record-sections .panel:not(.record-hero) > * {
+    grid-column: 1;
+  }
 }
