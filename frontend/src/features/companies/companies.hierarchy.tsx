@@ -8,6 +8,7 @@ import { formatDateTime, formatMoney, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
+import "./company360.css";
 
 type CompanyHierarchyRollup = components["schemas"]["CompanyHierarchyRollup"];
 

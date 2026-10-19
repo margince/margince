@@ -7,6 +7,8 @@ import { RecordTabs } from "../../design-system/recordtabs";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { scrollPageToTop } from "../../lib/reveal";
+import { useAddressedTab } from "../../screens/recordtab";
+import { CompanyPage } from "./companies.page";
 import { useAcknowledgeCompanyView, useCompany360 } from "./company360";
 import { hasFinance } from "./companyfinance";
 import {
@@ -22,20 +24,6 @@ import {
   REFUSED_WHEN_ARCHIVED,
   useShownCompanyTab,
 } from "./companytab";
-// The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
-// are defined in company360.css. Imported HERE rather than left to the caller:
-// it works today only because the company record page pulls that stylesheet in
-// for its own sake, so this file renders unstyled anywhere else.
-import "./company360.css";
-import { useAddressedTab } from "../../screens/recordtab";
-
-// Companies list + company 360 (B-EP09.10a/b). Firmographics render
-// evidence-or-omit: a field with no stored value is absent, never guessed.
-// Search/filter/sort/pagination (P-14), the rich create modal (P-15), the
-// If-Match edit form (P-1), and the dedupe view-existing link (P-16) are
-// wired in here the same way as contacts (contacts.tsx) — the enrich flow,
-// firmographics card, and timeline stay exactly as they were.
-import { CompanyPage } from "./companies.page";
 
 export { CompaniesScreen } from "./companies.list";
 export { offerResearchOnOverview } from "./companies.overview";
