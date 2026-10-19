@@ -3,6 +3,7 @@ import { type ReactNode, useId, useState } from "react";
 import { api } from "../../api/client";
 import { useIdempotencyKey } from "../../api/idempotencykey";
 import { TaskAssigneeField } from "../../components/assigneepicker";
+import { LogActivityEntries } from "../../components/extensionentries";
 import {
   Button,
   Checkbox,
@@ -36,6 +37,7 @@ import { worklistKey } from "../worklist/worklist.queries";
 import {
   type ActivityDraft,
   activityRequestBody,
+  isActivityKind,
   KINDS_WITH_A_CONTACT,
   type MeetingAttendees,
   NO_ATTENDEES,
@@ -63,15 +65,6 @@ type OpeningKind = "note" | "task" | "call";
 // The record zone keeps the entered day aligned with the stored deadline.
 function todayDay(_kind: ActivityDraft["kind"], recordZone: string): string {
   return calendarDay(new Date(), recordZone);
-}
-
-function isKind(value: string): value is ActivityDraft["kind"] {
-  return (
-    value === "note" ||
-    value === "task" ||
-    value === "call" ||
-    value === "meeting"
-  );
 }
 
 function freshDraft(
@@ -235,7 +228,7 @@ export function LogActivityForm({
                 // to the ordinary kind rather than a refusal.
                 onChange={(value) =>
                   setField({
-                    kind: isKind(value) ? value : "note",
+                    kind: isActivityKind(value) ? value : "note",
                   })
                 }
               />
@@ -360,6 +353,11 @@ export function LogActivityForm({
           )}
         </Field>
       )}
+      <LogActivityEntries
+        onlyTasks={onlyTasks}
+        entityType={entityType}
+        entityId={entityId}
+      />
       <ErrorLine error={log.error} />
       {actions}
     </form>

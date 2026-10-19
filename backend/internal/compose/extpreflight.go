@@ -93,3 +93,41 @@ func preflightChannels(e extension.Extension, claimed map[string]extension.Name)
 	}
 	return nil
 }
+
+// preflightEntries validates one unit's entries through the published
+// Entry.Validate the generator runs, and refuses two entries that open one
+// view from one slot.
+func preflightEntries(e extension.Extension) error {
+	seen := make(map[string]bool, len(e.Entries))
+	for _, entry := range e.Entries {
+		if err := entry.Validate(e.Name); err != nil {
+			return fmt.Errorf("compose: extension %q: %w", e.Name, err)
+		}
+		key := string(entry.Slot) + "\x00" + entry.Target
+		if seen[key] {
+			return fmt.Errorf("compose: extension %q declares two entries in slot %q with target %q", e.Name, entry.Slot, entry.Target)
+		}
+		seen[key] = true
+	}
+	return nil
+}
+
+// preflightEntryObjects refuses an entry whose object none of its unit's
+// operations gates on. No grant of such an object lets a reader use the unit.
+func preflightEntryObjects(exts []extension.Extension, verbs []extension.Verb) error {
+	gated := map[extension.Name]map[string]bool{}
+	for _, v := range verbs {
+		if gated[v.Unit] == nil {
+			gated[v.Unit] = map[string]bool{}
+		}
+		gated[v.Unit][v.RbacObject] = true
+	}
+	for _, e := range exts {
+		for _, entry := range e.Entries {
+			if !gated[e.Name][entry.Object] {
+				return fmt.Errorf("compose: extension %q: its entry in slot %q is gated on %q, which none of the unit's operations gates on", e.Name, entry.Slot, entry.Object)
+			}
+		}
+	}
+	return nil
+}

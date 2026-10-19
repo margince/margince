@@ -4,6 +4,7 @@
 import { CalendarPlus, CheckSquare, FileText } from "lucide-react";
 import { useId, useRef } from "react";
 import type { components } from "../../api/schema";
+import { ExtensionEntries } from "../../components/extensionentries";
 import { Button } from "../../design-system/atoms";
 import { ListPopover } from "../../design-system/listpopover";
 import { useT } from "../../i18n";
@@ -121,6 +122,10 @@ export function CompanyHeaderActions({
           {t("scheduling.bookRefused")}
         </p>
       )}
+      <ExtensionEntries
+        slot="record_header.company"
+        record={{ type: "company", id: company.id }}
+      />
       {drawer && (
         <LogActivityAction
           entityType="company"

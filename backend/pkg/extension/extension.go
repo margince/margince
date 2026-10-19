@@ -410,6 +410,10 @@ type Extension struct {
 	// declare costs the unit's own wording and never a classification the failure
 	// would have had anyway. The cause goes to the log in every case.
 	FailureClasses []FailureClass
+
+	// Entries are the unit's ways into its own screen from core screens: the
+	// Log activity form and the contact, company and deal headers. See Entry.
+	Entries []Entry
 }
 
 // MigrationsDir is the one spelling of the subdirectory a unit's

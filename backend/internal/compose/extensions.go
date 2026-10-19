@@ -36,6 +36,9 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	if err := validateVerbSet(verbs); err != nil {
 		return err
 	}
+	if err := preflightEntryObjects(exts, verbs); err != nil {
+		return err
+	}
 	// Do every fallible step before applying anything, so the whole
 	// reconciliation stays validate-then-apply: adapting the handler-bearing
 	// tools to the core seam can (in principle — preflightTools already
@@ -266,6 +269,9 @@ func validateExtensionSet(exts []extension.Extension) error {
 			return err
 		}
 		if err := reserveInboundMounts(e, inboundMounts); err != nil {
+			return err
+		}
+		if err := preflightEntries(e); err != nil {
 			return err
 		}
 	}

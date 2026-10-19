@@ -19,7 +19,8 @@ key declaration and a transport that replies leave on, and it ships a screen. Co
 
 A unit can ship a frontend too. `extensions/<name>/frontend/` is a pnpm package whose
 default export the web app mounts at `#/ext/<name>`. A unit that ships no screen still gets a route and a
-plain card about it, on its own.
+plain card about it, on its own. A unit with a screen can also put a button that opens it on a contact, company or deal page, or in
+the Log activity form; see [Offer an entry on a core screen](#offer-an-entry-on-a-core-screen).
 
 Extension paths have an entry in [CODEOWNERS](../../CODEOWNERS). That covers the units, the `backend/pkg/**`
 seam, the `composition` stub and its generator. So a pull request that touches them asks the tier owner for a
@@ -532,6 +533,57 @@ keys and the core's in the same way. Give **every** language the installation sh
 or the generator refuses. A reader of the missing one would get an empty screen. Keys outside your space are
 refused too: a unit does not write over core text.
 
+## Offer an entry on a core screen
+
+A unit with a screen can ask for a button on a core screen that opens it. Declare one `extension.Entry` per place:
+
+```go
+Entries: []extension.Entry{{
+	Slot:   extension.SlotContactHeader,
+	Label:  "extVisitLog.open",
+	Icon:   extension.IconClipboardList,
+	Target: "report",
+	Object: "ext_visit_log_report",
+}},
+```
+
+`Slot` names the place. The list is `extension.EntrySlots()` in `backend/pkg/extension/entry.go`:
+
+| Slot | Where the button shows |
+|---|---|
+| `extension.SlotLogActivity` (`log_activity`) | The Log activity form, under the fields. A form opened as Add task leaves it out. |
+| `extension.SlotContactHeader` (`record_header.contact`) | The verb row of a contact page, after Add task |
+| `extension.SlotCompanyHeader` (`record_header.company`) | The verb row of a company page, after the booking verb |
+| `extension.SlotDealHeader` (`record_header.deal`) | The verb row of a deal page, after Add task |
+
+The core draws every entry as the same plain button, with the glyph first and then the label. The unit supplies
+these fields and nothing more:
+
+- **`Label`** is a key from your own `frontend/i18n/<locale>.json`. `make gen` refuses a key outside your
+  `ext<CamelUnit>.` space, or one that is missing from any of `en`, `de` and `vi`.
+- **`Icon`** is one of the `extension.EntryIcons()` glyphs: `IconClipboardList`, `IconFileText`, `IconMapPin`,
+  `IconCamera`, `IconCheckSquare`, `IconMessageSquare`, `IconPlug`. Each is a Lucide drawing.
+- **`Target`** is one path segment under your screen, or empty for the screen itself.
+- **`Object`** is one of your RBAC objects. The button shows only to a reader whose role grants `read` on it.
+  `make gen` and the start both refuse an object that none of your operations gates on.
+
+Two entries in one slot must open different targets.
+
+A press opens `#/ext/<name>/<Target>?record_type=<type>&record_id=<id>`. The type is `contact`, `company` or `deal`
+on a record page. In the Log activity form it is the record the form was opened on. Read both with
+`useEntryContext()` from `@margince/frontend/app` and prefill your form:
+
+```tsx
+const { view, record } = useEntryContext();
+// view is "report"; record is { type: "contact", id: "…" }, or null
+```
+
+`record` is null when your screen was opened some other way, so the screen must work without it. The query is
+something a reader can type, so check that the record exists and that the reader may see it, as for any other id.
+
+The registry the SPA reads is generated from the enabled set, so removing the unit removes its entries. Nothing in
+the core names a unit. `extensions/openchannel` declares a contact header entry.
+
 ## Own scheduled jobs
 
 Declare **two kinds** in `api/jobs.yaml`. One is a `dispatcher` on a clock that fans out over every workspace.
@@ -776,8 +828,8 @@ the gates:
    A unit that is only a country pack asks for none, so its list is empty.
 
    The manifest also records what the unit **reaches**. That is its `secrets`, its `subscriptions`, its
-   `ingress` (with the keys the source stands behind), its `channels` (with `supplies_transport`) and its
-   `finance_sources`.
+   `ingress` (with the keys the source stands behind), its `channels` (with `supplies_transport`), its
+   `finance_sources` and its `entries`.
 
    Commit the manifest with the unit. The drift gate fails one that is old or edited by hand. The manifest is
    read from the AST of your `New()`. The returned `extension.Extension` value, and every field it reads,

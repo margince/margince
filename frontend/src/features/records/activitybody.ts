@@ -14,6 +14,16 @@ import type { EntityKind } from "../../lib/entity";
 // the draft lives in logactivity.tsx; this is the projection alone, so a test
 // can pin the body the server sees without mounting a component.
 
+/** Whether a value the kind picker handed back is a kind the draft holds. */
+export function isActivityKind(value: string): value is ActivityDraft["kind"] {
+  return (
+    value === "note" ||
+    value === "task" ||
+    value === "call" ||
+    value === "meeting"
+  );
+}
+
 export type ActivityDraft = {
   kind: "note" | "task" | "meeting" | "call";
   subject: string;
