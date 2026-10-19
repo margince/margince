@@ -139,9 +139,27 @@ export const FirstPageOfMany: Story = {
 };
 
 const DEAL_FIELDS: readonly VocabularyField[] = [
-  { name: "owner_id", type: "id", operators: ["eq"], references: "app_user", custom: false },
-  { name: "stage_id", type: "id", operators: ["eq"], references: "stage", custom: false },
-  { name: "company_id", type: "id", operators: ["eq"], references: "company", custom: false },
+  {
+    name: "owner_id",
+    type: "id",
+    operators: ["eq"],
+    references: "app_user",
+    custom: false,
+  },
+  {
+    name: "stage_id",
+    type: "id",
+    operators: ["eq"],
+    references: "stage",
+    custom: false,
+  },
+  {
+    name: "company_id",
+    type: "id",
+    operators: ["eq"],
+    references: "company",
+    custom: false,
+  },
 ];
 
 const DEAL_ROWS = [
