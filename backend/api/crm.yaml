@@ -80,7 +80,7 @@ openapi: 3.1.0
 info:
   title: Margince API
   version: 1.0.0-draft
-  summary: AI-native, open-source CRM core — contacts, companies, deals, pipelines, activities, leads, plus the agent/AI surface.
+  summary: AI-native, source-available CRM core — contacts, companies, deals, pipelines, activities, leads, plus the agent/AI surface.
   description: |
     The V1 core CRM contract. Derived from `spec/data-model.md` (the canonical
     Postgres schema), `spec/features/01-core-objects.md` (endpoint acceptance
