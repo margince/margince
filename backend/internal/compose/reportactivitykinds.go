@@ -12,7 +12,7 @@ import (
 // reportableActivityKinds are the only activity kinds a report counts. Mail
 // and messages are most of the activity table and grow with every connected
 // mailbox. Counting them needs its own pre-aggregated design.
-var reportableActivityKinds = []string{"meeting", "task"}
+var reportableActivityKinds = []string{activityKindMeeting, activityKindTask}
 
 // activityKindBound is the predicate every activity population carries. The
 // kinds are the literals above, never a caller's value.
