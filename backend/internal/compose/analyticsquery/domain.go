@@ -11,7 +11,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
-// ValueDomain is every value a filter on one field may name, because the
+// ValueDomain lists the values a filter on one field may name, because the
 // population holds no row with any other. A filter outside it is refused: an
 // answer of zero would read as a measured fact about rows that were never
 // counted.
@@ -22,6 +22,8 @@ type ValueDomain struct {
 }
 
 // Admits refuses a value outside the domain. The zero domain admits anything.
+//
+//craft:ignore naked-any filter values are the decoded JSON plan, schemaless by design
 func (d ValueDomain) Admits(field string, value any) error {
 	if len(d.Values) == 0 {
 		return nil

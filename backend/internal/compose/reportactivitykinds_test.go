@@ -77,7 +77,7 @@ func kindBoundFor(sql, alias string) bool {
 		bound = true
 	}
 	for _, m := range in.FindAllStringSubmatch(sql, -1) {
-		for _, kind := range strings.Split(m[1], ",") {
+		for kind := range strings.SplitSeq(m[1], ",") {
 			if !slices.Contains(reportableActivityKinds, strings.Trim(strings.TrimSpace(kind), "'")) {
 				return false
 			}
@@ -102,8 +102,8 @@ func TestEveryActivityReadInsideAReportExpressionIsBounded(t *testing.T) {
 }
 
 // TestEveryMetricReaderOverActivityIsBounded reads the source of every reader
-// the metric catalog registers, so a new metric over activity is in the census
-// the moment it is registered.
+// the metric catalog registers. A new metric over activity joins the census
+// when it is registered.
 func TestEveryMetricReaderOverActivityIsBounded(t *testing.T) {
 	bodies := composeFuncLiterals(t)
 	for _, metric := range reportingMetrics {
@@ -121,8 +121,8 @@ func TestEveryMetricReaderOverActivityIsBounded(t *testing.T) {
 	}
 }
 
-// TestNoDoorReadsTheBasePredicateAroundTheBound holds populationWhere as the
-// only reader of baseWhere, so no door can skip the activity bound.
+// TestNoDoorReadsTheBasePredicateAroundTheBound fails when code outside
+// populationWhere reads baseWhere, so no door can skip the activity bound.
 func TestNoDoorReadsTheBasePredicateAroundTheBound(t *testing.T) {
 	for _, file := range parsedComposeSources(t) {
 		for _, decl := range file.syntax.Decls {

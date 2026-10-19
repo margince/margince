@@ -11,8 +11,7 @@ import (
 
 // reportableActivityKinds are the only activity kinds a report counts. Mail
 // and messages are most of the activity table and grow with every connected
-// mailbox, so a count over them scans the largest data in the installation;
-// counting them needs its own pre-aggregated design, not a dashboard query.
+// mailbox. Counting them needs its own pre-aggregated design.
 var reportableActivityKinds = []string{"meeting", "task"}
 
 // activityKindBound is the predicate every activity population carries. The

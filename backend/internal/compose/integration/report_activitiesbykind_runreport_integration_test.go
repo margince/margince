@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -61,13 +62,13 @@ func TestActivitiesByKindDoesNotCrashForATeamScopedReader(t *testing.T) {
 	}
 }
 
-// Mail is most of the activity table, so no report counts it: the default
-// population leaves it out, and a filter that names it is refused rather
-// than answered with a zero that reads like a measurement.
+// Mail is most of the activity table, so no report counts it. The default
+// population leaves it out. A filter that names it is refused, because a zero
+// would read like a measurement.
 func TestActivitiesByKindCountsMeetingsAndTasksAndRefusesEmail(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
-	when := time.Now().UTC().Add(-time.Hour)
+	when := clocktest.Now(t).Add(-time.Hour)
 	fileActivity(admin, t, e, "meeting", when, nil)
 	fileActivity(admin, t, e, "task", when, nil)
 	for _, uncounted := range []string{"email", "call", "note"} {
