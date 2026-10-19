@@ -41,7 +41,7 @@ const recentBases = 4
 // the most recent few.
 type Builder struct {
 	// MCPURL is the connector address the README leads with; empty, it tells
-	// the reader to use a passport. Set before the first Build.
+	// the reader to use a passport.
 	MCPURL string
 	mu     sync.Mutex
 	recent []built // newest last

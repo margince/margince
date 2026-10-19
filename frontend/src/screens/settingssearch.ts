@@ -46,6 +46,13 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
   ],
   voice: ["writing style", "tone", "drafts"],
   agents: [
+    "agents",
+    "ai",
+    "claude",
+    "chatgpt",
+    "copilot",
+    "gemini",
+    "connector",
     "passport",
     "token",
     "api",

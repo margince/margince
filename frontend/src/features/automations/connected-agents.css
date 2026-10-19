@@ -1,17 +1,3 @@
-/* A command-line tool's recipe. `pre-wrap` keeps a multi-line recipe on its
-   lines, and `break-all` stops a long base URL from widening the card. */
-.agents-guide {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
-}
-
-.agents-guide-command {
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
 /* The empty line keeps a focus target around it, so it reads as the bare
    sentence `.panel-body > .empty` draws rather than as a plate. */
 .agents-empty > .empty {

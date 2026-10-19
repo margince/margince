@@ -5,11 +5,10 @@
 
 package gates
 
-// The AI access page and the skill README both tell a reader how to connect an
-// AI tool. The page reads its paths from aiconnect.ts; the README is written by
-// hand. Every path the page offers has one README section linking the same
-// vendor guide. The README offers no path the page lacks. Step wording is left
-// to review, because the page is translated.
+// Every connect path in aiconnect.ts has one skill README section that links
+// the same vendor guide, and the README offers no path the page lacks. The page
+// reads its paths from that module; the README is written by hand. Step wording
+// is left to review, because the page is translated.
 
 import (
 	"regexp"

@@ -145,6 +145,20 @@ describe("admin guide", () => {
     expect(team).toEqual(["1. ", "2. "]);
   });
 
+  it("keeps an admin note out of the numbered steps", () => {
+    const path = CONNECT_PATHS["copilot-company"];
+    const guide = adminGuide({
+      tool: "copilot",
+      path,
+      mcpUrl: URL_FROM_SERVER,
+      t: translatorFor("en"),
+      checkedOn: "19 Oct 2026",
+    });
+    const note = en(path.admin?.note ?? "aiAccess.copilot.admin5");
+    expect(guide.markdown).toContain(`\n\n${note}\n\n`);
+    expect(guide.markdown).not.toMatch(/^\d+\. Your company’s data policies/m);
+  });
+
   it("writes the guide in the reader's language", () => {
     const guide = adminGuide({
       tool: "copilot",

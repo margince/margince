@@ -30,7 +30,11 @@ export type ConnectPath = Readonly<{
   // The vendor page explains the admin's half, not the reader's.
   helpForAdmin: boolean;
   unavailable?: MessageKey;
-  admin?: Readonly<{ line: MessageKey; steps: readonly MessageKey[] }>;
+  admin?: Readonly<{
+    line: MessageKey;
+    steps: readonly MessageKey[];
+    note?: MessageKey;
+  }>;
   steps: readonly MessageKey[];
   // The address goes after this many steps; absent where nobody pastes it.
   pasteAfter?: number;
@@ -113,8 +117,8 @@ export const CONNECT_PATHS: Readonly<Record<ConnectPathId, ConnectPath>> = {
         "aiAccess.copilot.admin2",
         "aiAccess.copilot.admin3",
         "aiAccess.copilot.admin4",
-        "aiAccess.copilot.admin5",
       ],
+      note: "aiAccess.copilot.admin5",
     },
     steps: [
       "aiAccess.copilot.openAgent",
@@ -125,7 +129,7 @@ export const CONNECT_PATHS: Readonly<Record<ConnectPathId, ConnectPath>> = {
   "copilot-own": {
     vendor: "Microsoft",
     help: MICROSOFT_HELP,
-    helpForAdmin: true,
+    helpForAdmin: false,
     unavailable: "aiAccess.copilot.ownUnavailable",
     steps: [],
   },
@@ -215,6 +219,7 @@ export function adminGuide(
     `\`\`\`\n${mcpUrl}\n\`\`\``,
     `## ${t("aiAccess.guide.adminHead")}`,
     numbered(path.admin.steps),
+    ...(path.admin.note === undefined ? [] : [t(path.admin.note)]),
     `## ${t("aiAccess.guide.teamHead")}`,
     numbered(path.steps),
     `## ${t("aiAccess.guide.officialHead")}`,

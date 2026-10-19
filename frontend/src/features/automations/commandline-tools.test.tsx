@@ -76,6 +76,12 @@ describe("CommandLineToolsCard", () => {
     ).toBe("https://antigravity.google/docs/mcp");
   });
 
+  it("shows a failed discovery as an error with a retry, not an empty card", async () => {
+    renderCard(500);
+    expect(await screen.findByRole("button", { name: "Retry" })).toBeTruthy();
+    expect(screen.queryByText(/claude mcp add/)).toBeNull();
+  });
+
   it("says the connector is off instead of printing commands that cannot work", async () => {
     renderCard(404);
     await waitFor(() =>

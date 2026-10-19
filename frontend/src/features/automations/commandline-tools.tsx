@@ -8,7 +8,7 @@ import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
 import { CLI_PATHS } from "./aiconnect";
 import { useConnectorState } from "./connector-state";
-import "./connected-agents.css";
+import "./commandline-tools.css";
 
 // One stacked row per tool: a 60-character command in a right-hand column is
 // unreadable.

@@ -227,18 +227,10 @@ Claude or ChatGPT, to Margince. Under **For developers** you also make and take
 back **passports**: the keys that let a script or your own code work as you.
 Every member can open this page.
 
-To connect your AI tool, answer the two questions on the **Connect your AI tool**
-card, then follow its steps. See [How do I connect my AI tool to
-Margince?](agents-and-passports.md#how-do-i-connect-my-ai-tool-to-margince)
+To connect your AI tool, see [How do I connect my AI tool to Margince?](agents-and-passports.md#how-do-i-connect-my-ai-tool-to-margince).
 
 ### How do I create an agent passport?
-To create an agent passport in Margince, open Settings → **AI access**, then **For developers**. Choose **New passport** in the **Passports** card.
-1. Enter an **Agent name**.
-2. Under **Agent permissions**, tick at least one: **Read records**, **Draft messages**, **Change records**, **Send messages**, **Buy contact data**.
-3. Choose **Mint passport**.
-4. Choose **Copy passport**, then **Download skill** for an AI tool, or **Copy example** for your own code.
-
-An agent can never do more than you can: every request checks your own permissions again.
+To create an agent passport, open Settings → **AI access**, then **For developers**, and see [How do I give an agent access to Margince?](agents-and-passports.md#how-do-i-give-an-agent-access-to-margince).
 Also called: API key, access token, connect an AI agent.
 
 **Your connections** lists each AI tool you connected. Under **For developers**

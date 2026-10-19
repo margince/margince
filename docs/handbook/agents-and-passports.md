@@ -16,16 +16,16 @@ There is one rule under everything here:
 ## Connecting and controlling agents
 
 ### How do I connect my AI tool to Margince?
-To connect your AI tool to Margince, open **Settings → AI access** and answer the two questions on the **Connect your AI tool** card. Copilot on a personal account, and Gemini through work or school, cannot connect; the card says so.
+To connect your AI tool to Margince, open **Settings → AI access** and answer the two questions on the **Connect your AI tool** card. Copilot on a personal account, and Gemini through work or school, cannot connect; the card says so. If the card says AI tools "cannot connect to Margince yet", an administrator or operations user must turn it on first.
 1. Open the account menu, choose **Settings**, then **AI access**.
 2. Under **Which AI do you use?**, choose **Claude**, **ChatGPT**, **Microsoft Copilot** or **Gemini**.
 3. Under **Who pays for it?**, choose **My company** or **Just me**.
-4. If the card says "First, your admin.", choose **Download guide for your admin** and send them the file.
+4. If the card says "First, your admin.", choose **Download guide for your admin** and send them the file. It holds their steps and your Margince address.
 5. If the card shows your Margince address, choose **Copy address** and paste it where the steps say.
 6. Follow the numbered steps the card shows for that one case.
-7. When Margince opens, sign in and choose **Authorize** on **Authorize access**.
-That file holds the admin's steps and your Margince address. **Authorize access** ticks all five permissions; beside **Send messages** it says "sends messages as you, without asking first".
-Clear any the tool should not get. Authorizing creates the connection, listed under **Your connections**, so you need no passport.
+7. When Margince opens, sign in. **Authorize access** ticks all five permissions; beside **Send messages** it says "sends messages as you, without asking first". Clear any the tool should not get, then choose **Authorize**.
+To refuse, choose **Deny access**.
+Authorizing creates the connection, listed under **Your connections**, so you need no passport.
 Also called: connect Claude, connect ChatGPT, Copilot, Gemini, AI assistant, connector, MCP.
 
 ### What is an agent passport?
@@ -64,9 +64,9 @@ The `openapi.yaml` file in the skill lists every call a passport can make.
 Also called: REST API, API key, script, access token, integration.
 
 ### How do I connect a command-line tool to Margince?
-To connect a command-line tool such as Claude Code, Codex or Antigravity, open **Settings → AI access**, then **For developers**. The **Command-line tools** card shows what to run for each tool.
-Run it, then sign in in the browser and choose **Authorize** on **Authorize access**. You need no passport for this.
-If the page says "AI tools cannot connect to Margince yet.", an administrator or operations user must turn it on first.
+To connect a command-line tool such as Claude Code, Codex or Antigravity, open **Settings → AI access**, then **For developers**, and find the **Command-line tools** card.
+Do what the card shows for your tool: run the command, or for Antigravity add the block to the file it names. Then sign in in the browser and choose **Authorize** on **Authorize access**. You need no passport for this.
+If the page says AI tools "cannot connect to Margince yet", an administrator or operations user must turn it on first.
 Also called: MCP client, MCP server, command line, AI assistant integration.
 
 ### How do I revoke an agent's access?

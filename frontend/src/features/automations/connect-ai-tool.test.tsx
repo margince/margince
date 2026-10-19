@@ -15,10 +15,19 @@ import { ConnectAiToolCard } from "./connect-ai-tool";
 
 const MCP_URL = "https://crm.acme.test/mcp";
 
+// user-event and the clipboard cases replace navigator.clipboard; each case
+// starts from the browser's own.
+const realClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  if (realClipboard) {
+    Object.defineProperty(navigator, "clipboard", realClipboard);
+  } else {
+    Reflect.deleteProperty(navigator, "clipboard");
+  }
 });
 
 function discovery(status: number) {
@@ -132,6 +141,20 @@ describe("ConnectAiToolCard", () => {
     expect(type).toMatch(/^text\/markdown/);
     expect(String(markdown)).toContain(MCP_URL);
     expect(String(markdown)).toContain("Find Margince and choose “Connect”.");
+  });
+
+  it("dates the guide on the day the steps were checked, in every zone", async () => {
+    const real = Intl.DateTimeFormat().resolvedOptions();
+    vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
+      ...real,
+      timeZone: "Pacific/Kiritimati",
+    });
+    const save = vi
+      .spyOn(download, "downloadBytes")
+      .mockImplementation(() => undefined);
+    renderCard();
+    await choose("Download guide for your admin");
+    expect(String(save.mock.calls[0][0])).toMatch(/checked on 19\D10\D2026/);
   });
 
   it("copies the address, and says how to copy it by hand when the clipboard is missing", async () => {

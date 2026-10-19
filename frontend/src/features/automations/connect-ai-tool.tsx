@@ -180,11 +180,7 @@ function AdminRow({
       path,
       mcpUrl,
       t,
-      checkedOn: formatDate(
-        `${STEPS_CHECKED_ON}T12:00:00Z`,
-        locale,
-        viewerZone(),
-      ),
+      checkedOn: formatDate(STEPS_CHECKED_ON, locale, viewerZone()),
     });
     downloadBytes(
       guide.markdown,
