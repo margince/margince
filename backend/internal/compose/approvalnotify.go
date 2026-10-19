@@ -217,10 +217,6 @@ func (a *ApprovalNotify) announceToSeat(
 	if err != nil || !live {
 		return err
 	}
-	decidable, err := a.approvals.PendingDecidableBy(seatCtx, approvalID)
-	if err != nil || !decidable {
-		return err
-	}
 	// CreateTx rather than Create, so the line and the message asking for it
 	// commit together: a job staged beside a notice that rolled back names a
 	// row the sender will never find, and a notice written without the job it
@@ -229,6 +225,10 @@ func (a *ApprovalNotify) announceToSeat(
 	// line itself is written whatever they chose, because their centre keeps it
 	// either way.
 	return a.db.Tx(ctx, func(tx pgx.Tx) error {
+		decidable, err := a.approvals.PendingDecidableInTx(seatCtx, tx, approvalID)
+		if err != nil || !decidable {
+			return err
+		}
 		noticeID, err := a.notices.CreateTx(ctx, tx, approvalNoticeFor(seat, approvalID, staged))
 		if err != nil {
 			return err

@@ -56,6 +56,7 @@ const (
 // What this list buys is that the divergence is now WRITTEN DOWN, per table,
 // and that a NEW one fails. #2205 carries the rulings.
 var clearedOnlyByTheEraser = gatekit.Waive(map[string]string{
+	"notice":                      "Copies of approval summaries remain when anonymization retains the source approvals. This follows the existing approval gap recorded under #2205; erasure clears both in one transaction.",
 	"erasure_suppression":         "THE difference the two acts are meant to have. An erased subject's identifiers are hashed onto the suppression list so a later capture cannot re-create them; an anonymized subject may lawfully return, so writing one would refuse a contact the product is allowed to know again.",
 	"activity_retention_evidence": "records WHY the statutory correspondence floor held a row back from an erasure. The anonymize applies no floor, so it holds nothing back and has nothing to record — an absence produced by the floor difference, not data surviving.",
 	"activity":                    "the subject's own words in an activity's content survive an anonymize; the eraser redacts them under the statutory correspondence floor. Anonymize applies no floor at all, so it is not that it keeps less — it never asked.",

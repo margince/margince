@@ -882,6 +882,7 @@ export const vi = {
   "systemJob.ai_price_sync": "Cập nhật giá mô hình",
   "systemJob.alias_discovery": "Tìm địa chỉ email",
   "systemJob.approval_expiry": "Hết hạn phê duyệt",
+  "systemJob.approval_notice_reconcile": "Dọn thông báo phê duyệt đang chờ",
   "systemJob.approval_notice_retract": "Thu hồi thông báo phê duyệt",
   "systemJob.approval_notify": "Thông báo phê duyệt",
   "systemJob.assign_owner_release": "Gỡ phân công người chịu trách nhiệm",

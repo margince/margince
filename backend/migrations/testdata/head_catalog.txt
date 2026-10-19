@@ -5457,7 +5457,9 @@ public.notice.retracted_at timestamp with time zone gen=- def=-
 public.notice.subject text NOT NULL gen=- def=-
 public.notice.target_id uuid gen=- def=-
 public.notice.target_type text gen=- def=-
+public.notice_dedupe_key CREATE INDEX notice_dedupe_key ON public.notice USING btree (dedupe_key) WHERE (dedupe_key IS NOT NULL)
 public.notice_history CREATE INDEX notice_history ON public.notice USING btree (recipient_user_id, created_at DESC, id DESC)
+public.notice_outstanding_kind_id CREATE INDEX notice_outstanding_kind_id ON public.notice USING btree (kind, id) WHERE (retracted_at IS NULL)
 public.notice_pkey CREATE UNIQUE INDEX notice_pkey ON public.notice USING btree (id)
 public.notice_unread CREATE INDEX notice_unread ON public.notice USING btree (recipient_user_id, created_at DESC) WHERE (read_at IS NULL)
 public.notification_digest_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

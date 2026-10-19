@@ -906,6 +906,7 @@ export const de = {
   "systemJob.ai_price_sync": "Aktualisierung der Modellpreise",
   "systemJob.alias_discovery": "Erkennung von E-Mail-Adressen",
   "systemJob.approval_expiry": "Ablauf von Freigaben",
+  "systemJob.approval_notice_reconcile": "Bereinigung offener Freigabehinweise",
   "systemJob.approval_notice_retract": "Rücknahme von Freigabehinweisen",
   "systemJob.approval_notify": "Freigabebenachrichtigung",
   "systemJob.assign_owner_release": "Freigabe der Verantwortung",
