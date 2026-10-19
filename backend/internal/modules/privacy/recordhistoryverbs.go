@@ -39,7 +39,7 @@ var recordHistoryVerbs = map[string]string{ // #nosec G101 -- audit verbs and th
 	"advance_stage": "advanced the stage of",
 	"advance_phase": "advanced the phase of",
 	// Deal Room access, not "created"/"archived": the access is the fact, and
-	// an invitation goes to a contact rather than to the record.
+	// an invitation goes to a buyer rather than to the record.
 	"invite": "invited a participant to",
 	"revoke": "revoked access for",
 	// The Deal Room lifecycle. "closed" rather than "ended", because closing a

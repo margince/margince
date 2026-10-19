@@ -1107,8 +1107,7 @@ export const de = {
   "history.verb.pause": "{subject} hat den Datensatz pausiert",
   "history.verb.resume": "{subject} hat den Datensatz fortgesetzt",
   "history.verb.close": "{subject} hat den Datensatz geschlossen",
-  "history.verb.invite":
-    "{subject} hat eine teilnehmende Person zum Datensatz eingeladen",
+  "history.verb.invite": "{subject} hat einen Gast zum Datensatz eingeladen",
   "history.verb.revoke":
     "{subject} hat den Zugriff für den Datensatz widerrufen",
   "history.verb.delete": "{subject} hat den Datensatz gelöscht",
