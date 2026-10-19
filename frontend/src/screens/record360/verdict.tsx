@@ -178,16 +178,16 @@ export function Proof({
         aria-controls={panelId}
       >
         <Caret aria-hidden="true" />
-        {label}
+        {/* Counted, the count and its unit word are the whole label, so the
+            noun is said once and the figure still says what it counts. */}
         {count ? (
           <span>
             <span className="t-num">{formatNumber(items.length, locale)}</span>{" "}
-            {/* The unit as a word, not a bare figure. "What this rests on 2"
-                asks the reader to guess what was counted; the count is only
-                worth putting on a shut block if it says what it counts. */}
             {plural("record.restsOn.source", items.length)}
           </span>
-        ) : null}
+        ) : (
+          label
+        )}
       </Button>
       {open ? (
         <div className="r360-rests" id={panelId}>

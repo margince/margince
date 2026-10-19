@@ -198,6 +198,19 @@
 .pe-brief-reading dd.pe-brief-reading-verdict {
   font: var(--fontHeadingSmall);
 }
+/* As the sheet's lead the verdict takes the row to itself at the verdict rung,
+   and the readings it was read from line up under it. */
+.record-sheet .record-hero .pe-brief-reading:has(> .pe-brief-reading-verdict) {
+  grid-column: 1 / -1;
+}
+.record-sheet .record-hero .pe-brief-reading dd.pe-brief-reading-verdict {
+  font: var(--fontVerdict);
+}
+@media (min-width: 721px) {
+  .record-sheet .record-hero .pe-brief-readings {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
 .pe-brief-reading dd.pe-brief-reading-success {
   color: var(--successText);
 }

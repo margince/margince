@@ -503,3 +503,127 @@ export const CompanyArchived: Story = {
     );
   },
 };
+
+// An account in conversation that has gone quiet: the 360 rated, a thread of
+// three conversations, twelve days without a reply and a walkthrough booked.
+// The shape the record's lead is designed around, where the overview stories
+// above carry an account too new to rate.
+const thread = (
+  id: string,
+  kind: "email" | "meeting",
+  direction: "inbound" | "outbound",
+  subject: string,
+  occurredAt: string,
+  threadKey: string,
+) => ({
+  id,
+  kind,
+  direction,
+  subject,
+  occurred_at: occurredAt,
+  thread_key: threadKey,
+  links: [],
+  is_done: true,
+  source: "manual",
+  captured_by: "human:u1",
+  created_at: occurredAt,
+  updated_at: occurredAt,
+});
+
+const goneQuiet360 = {
+  ...company360,
+  last_inbound_at: "2026-07-01T09:00:00Z",
+  last_outbound_at: "2026-07-03T09:00:00Z",
+  health: {
+    relationship: {
+      rating: "good",
+      reason: "In touch, but one contact carries the whole account.",
+      reason_code: "single_threaded",
+    },
+    commercial: {
+      rating: "at_risk",
+      reason: "All 1 open deals have stalled.",
+      reason_code: "deals_all_stalled",
+      reason_params: { count: 1 },
+    },
+    days_since_last_inbound: 12,
+    reply_balance: 0.25,
+    active_contacts: 1,
+    single_threaded: true,
+  },
+  activities: {
+    data: [
+      thread(
+        "m-6",
+        "email",
+        "outbound",
+        "Revised retrofit timeline",
+        "2026-07-03T09:00:00Z",
+        "t-timeline",
+      ),
+      thread(
+        "m-5",
+        "email",
+        "inbound",
+        "Retrofit review next week?",
+        "2026-07-01T09:00:00Z",
+        "t-timeline",
+      ),
+      thread(
+        "m-4",
+        "meeting",
+        "outbound",
+        "Depot walkthrough",
+        "2026-06-18T09:00:00Z",
+        "t-depot",
+      ),
+      thread(
+        "m-3",
+        "email",
+        "inbound",
+        "Re: Depot walkthrough",
+        "2026-06-12T09:00:00Z",
+        "t-depot",
+      ),
+      thread(
+        "m-2",
+        "email",
+        "outbound",
+        "Fleet retrofit proposal",
+        "2026-05-28T09:00:00Z",
+        "t-proposal",
+      ),
+    ],
+    page: emptyPage,
+  },
+  next_steps: {
+    data: [
+      {
+        activity_id: "s-1",
+        subject: "Fleet retrofit walkthrough",
+        due_at: "2026-07-20T09:00:00Z",
+        overdue: false,
+        linked_deal_id: "d-1",
+      },
+    ],
+    page: emptyPage,
+  },
+};
+
+export const CompanyOverviewGoneQuiet: Story = {
+  render: () => {
+    globalThis.location.hash = "#/companies/o-1";
+    installFetchStub({
+      "GET /me": meRoute({ company: ["read", "update"] }),
+      ...overviewRoutes,
+      "GET /companies/o-1/360": () => jsonResponse(goneQuiet360),
+      "GET /companies/o-1/profile-fields": () => jsonResponse({ data: [] }),
+      "GET /companies/o-1/facts": () => jsonResponse({ data: [] }),
+    });
+    return (
+      <StoryProviders>
+        <CompanyScreen id="o-1" />
+      </StoryProviders>
+    );
+  },
+};

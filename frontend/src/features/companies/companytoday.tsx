@@ -7,9 +7,11 @@ import { EmptyState, Skeleton } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { PanelBody } from "../../design-system/panel";
 import { Popover } from "../../design-system/popover";
+import { RingDot, Rings } from "../../design-system/rings";
 import { useT } from "../../i18n";
 import { CallCard, TodayPanel } from "../../screens/record360";
 import "./company360.css";
+import { HEALTH_RANK } from "./companylookups";
 import {
   type TodayDimension,
   type TodayReading,
@@ -43,7 +45,10 @@ function DimensionChip({ dimension }: Readonly<{ dimension: TodayDimension }>) {
   const t = useT();
   return (
     <div className="co-360-reading">
-      <dt className="t-caption">{dimension.label}</dt>
+      <dt className="t-caption">
+        <RingDot tone={dimension.tone} />
+        {dimension.label}
+      </dt>
       <dd
         className={
           dimension.tone ? `co-360-reading-${dimension.tone}` : undefined
@@ -139,6 +144,17 @@ export function Company360Call({
       footer={footer}
     >
       <PanelBody className="co-360-dims">
+        <Rings
+          label={reading.dimensions
+            .map((dimension) => `${dimension.label}: ${dimension.reading}`)
+            .join(", ")}
+          rings={reading.dimensions.map((dimension) => ({
+            key: dimension.key,
+            value: dimension.step ?? 0,
+            max: HEALTH_RANK.length,
+            tone: dimension.tone,
+          }))}
+        />
         <dl className="co-360-readings">
           {reading.dimensions.map((dimension) => (
             <DimensionChip key={dimension.key} dimension={dimension} />

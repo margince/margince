@@ -92,6 +92,7 @@ export function ContactBriefCard({
       // suggested row on its own byline, so "a machine did this" is said once
       // per thing a machine did rather than once per card.
       tone="ai"
+      className="record-hero"
       title={t("contact.brief.title")}
       titleAction={
         written ? (

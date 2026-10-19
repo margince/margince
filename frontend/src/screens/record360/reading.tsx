@@ -94,6 +94,7 @@ export function CallCard({
   return (
     <Panel
       tone="ai"
+      className="record-hero"
       title={title ?? <BriefTitle name={name} />}
       titleAction={title ? titleAction : undefined}
       footer={footer}

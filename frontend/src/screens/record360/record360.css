@@ -256,3 +256,31 @@
   align-items: center;
   gap: var(--space-1);
 }
+
+/* As the sheet's lead the call is a headline: the word at the verdict rung,
+   the sentence under it at reading size, and the working under both. One
+   column at every width, so the word never shares its line with a control. */
+.record-sheet .record-hero .r360-verdict {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  justify-items: start;
+}
+.record-sheet .record-hero .r360-standing {
+  font: var(--fontVerdict);
+}
+.record-sheet .record-hero .r360-because {
+  font: var(--fontVerdictBecause);
+  color: var(--textPrimary);
+  max-width: 60ch;
+}
+.record-sheet .record-hero .r360-rests-toggle {
+  grid-column: 1;
+  margin-top: var(--space-2);
+}
+/* A call not reached yet is a fact about the reading, not a verdict on the
+   record: it keeps the heading rung and the secondary ink, so an account
+   nobody has assessed does not shout its blank across the page. */
+.record-sheet .record-hero .r360-standing-unknown {
+  font: var(--fontHeadingLarge);
+  color: var(--textSecondary);
+}

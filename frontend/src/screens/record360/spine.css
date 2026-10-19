@@ -244,3 +244,28 @@
 .co-spine-now-word {
   color: var(--textPrimary);
 }
+
+/* On the sheet's lead the silence is a PLACE on the axis rather than a dashed
+   stretch of it: a soft amber field the width the waiting took, with how long
+   in the display face. It is the one stop with no record behind it, and the
+   field is what lets a reader find it before reading a date. */
+.record-hero .co-spine-gap {
+  background: color-mix(in srgb, var(--warningBg) 70%, transparent);
+  border-radius: var(--r-md);
+  padding-inline: var(--space-3);
+  padding-block-end: var(--space-2);
+}
+.record-hero .co-spine-gap .co-spine-when {
+  font: var(--fontHeadingSmall);
+}
+/* Today as a marker a reader stands on: the word set on an ink pill, the
+   date under it. */
+.record-hero .co-spine-now-word {
+  align-self: flex-start;
+  padding: 2px var(--space-2); /* ds:ignore a pill's own inset, tighter than the scale's first rung */
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--textPrimary);
+  color: var(--bgElevated);
+  font: var(--fontHeadingXXSmall);
+}

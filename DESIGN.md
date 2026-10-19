@@ -242,7 +242,13 @@ then `[data-theme="dark"]`.
   with a dashed `--aiLine` edge until a human accepts it. Nothing else is indigo.
 - **States are soft badges first**. A column of states is a column of soft badges, one weight down
   the page. The solid fill is for a count and the one state a reader must not miss.
-- **A monogram is the one soft gradient**. Most records never get a logo. So the first letters of a
+- **The record's lead is the second soft gradient**. On the record's sheet the 360 is the one section
+  that keeps a surface. It has a hairline, a 20px corner and no shadow, and a wash of the call's own
+  tone comes in from the top-left corner. The verdict is the one word on the page larger than the
+  record's name (`--fontVerdict`). The sentence under it is set in the display face at reading size.
+  The readings it rests on stand to its right as up to three soft rings (`Rings`). A call not
+  reached yet keeps the heading rung in secondary ink.
+- **A monogram is the one other soft gradient**. Most records never get a logo. So the first letters of a
   contact or company sit on a quiet mesh of two close hues, keyed on the record's id. The mesh is
   never indigo, never danger red, and never moves.
 - **Every chip is round**, a company's included. A reader tells records apart by their names, and the mesh is
@@ -326,8 +332,8 @@ target for that new build. The shipped sheet may not match it.
     field's floor comes up to meet the pointer.
   - A popover, menu or drawer takes `--shadow-pop` instead.
 
-  Nothing at rest glows, the monogram mesh is the only gradient, and nothing stacks a shadow under a
-  shadow.
+  Nothing at rest glows, the monogram mesh and the record lead's wash are the only gradients, and
+  nothing stacks a shadow under a shadow.
 - **No pane inside a pane**. A zone is one pane, or one section of the record's sheet; the things in
   it are a title, a rule and rows. The only closed shapes inside it are the agent's tinted row and a
   staged row's dashed edge. On the sheet a section's title takes no tinted band: a tone keeps the
@@ -754,10 +760,11 @@ covers.
 The gap stop takes 1.5× the width, because on this axis the width is the waiting. Its date row is the
 day count at 26px 600 in amber in the display face. It is the one count on the spine outside the body
 face, because it is read as a word ("12 days") and set against nothing. Its rule is dashed amber, and
-it has no dot, because nothing happened.
+it has no dot, because nothing happened. On the record's lead the gap is also a soft amber field the
+width of its column, so a reader finds the silence before reading a date.
 
-**Today is a marker**: a 2px × 15px black bar on the rail, with TODAY in 10.5px upper case and the
-date under it. Its column is only as wide as its label. Right of it, the rule turns dotted grey and the
+**Today is a marker**: a 2px × 15px black bar on the rail, with "Today" on an ink pill and the date
+under it. Its column is only as wide as its label. Right of it, the rule turns dotted grey and the
 dots turn hollow with an accent ring. These stops have not happened yet.
 
 A solid rule to a date nobody has reached would draw a day that has not come like one that has. An event dated today (the 14:00 call) is
@@ -925,8 +932,8 @@ where motion is *spent*:
 
 - Does not put a pane inside a pane. A zone is one pane, or one section of the record's sheet;
   inside it a title, a hairline and rows.
-- Does not cast a shadow of its own, a glow or a gradient (the mesh of a monogram, section 3, is the
-  one gradient). The resting layer is `--shadow-rest`, from the token, and never from a rule that spells
+- Does not cast a shadow of its own, a glow or a gradient (the mesh of a monogram and the wash of the
+  record's lead, section 3, are the two gradients). The resting layer is `--shadow-rest`, from the token, and never from a rule that spells
   its own. The two corner glows on the ground are the only other light, and the only tinted thing
   inside a pane is the agent's row.
 - Does not say a fact twice. One home per fact; the rest are links to it.

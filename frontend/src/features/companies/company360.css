@@ -1488,7 +1488,14 @@
 /* The three rated dimensions under the verdict, as a row of readings the
    card's own body separates from the word above it. */
 .co-360-dims {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-6);
   padding-top: var(--space-3);
+}
+.co-360-dims > .co-360-readings {
+  flex: 1;
 }
 /* And no seam over them, which is the other half of the same point: the
    panel's rule between two bodies divides one section of a card from the next,
@@ -1932,4 +1939,36 @@
    records put there; a button on that baseline sits visibly low. */
 .co-name-control {
   align-self: center;
+}
+
+/* As the sheet's lead the call and its rings stand side by side: the verdict
+   on the left where the eye starts, the readings it rests on to its right,
+   and the thread and everything after them across the whole card. Stacked
+   once the work column cannot give each half a readable measure. */
+.record-sheet .record-hero:has(> .co-360-dims) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.record-sheet .record-hero:has(> .co-360-dims) > * {
+  grid-column: 1 / -1;
+}
+.record-sheet .record-hero > .panel-body:has(> .r360-verdict) {
+  grid-column: 1;
+}
+.record-sheet .record-hero > .co-360-dims {
+  grid-column: 2;
+  align-self: center;
+}
+.record-sheet .record-hero .co-360-readings {
+  grid-template-columns: minmax(0, 1fr);
+  min-inline-size: 11rem;
+}
+@container work (max-width: 48rem) {
+  .record-sheet .record-hero:has(> .co-360-dims) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .record-sheet .record-hero > .panel-body:has(> .r360-verdict),
+  .record-sheet .record-hero > .co-360-dims {
+    grid-column: 1 / -1;
+  }
 }

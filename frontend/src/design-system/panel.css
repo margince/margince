@@ -577,3 +577,40 @@
 .record-sheet .panel-ai > .panel-head .panel-title {
   color: var(--textPrimary);
 }
+
+/* THE LEAD of the sheet is the one section that keeps a surface: the record's
+ * 360, the reading the page exists to give. A hairline and a wash of the
+ * call's own tone, lit from the corner the eye starts at, and no shadow: it
+ * sits in the sheet's plane and is told apart by its ground alone. The tone
+ * is read off the standing it holds, so a page sets no tone on it by hand. */
+.record-sheet .panel.record-hero {
+  --heroWash: var(--aiLight);
+  margin-inline: 0;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(
+      120% 140% at 0% 0%,
+      color-mix(in srgb, var(--heroWash) 85%, transparent),
+      transparent 60%
+    ),
+    var(--bgElevated);
+}
+.record-sheet .record-hero:has(.r360-standing-calm, .pe-brief-reading-success) {
+  --heroWash: var(--successBg);
+}
+.record-sheet .record-hero:has(.r360-standing-accent) {
+  --heroWash: var(--accentLight);
+}
+.record-sheet .record-hero:has(.r360-standing-warning) {
+  --heroWash: var(--warningBg);
+}
+.record-sheet
+  .record-hero:has(.r360-standing-danger, .pe-brief-reading-danger) {
+  --heroWash: var(--dangerBg);
+}
+/* The lead's head names it and needs no rule under it: the surface already
+ * says where the lead begins, and a rule would cut the verdict from its name. */
+.record-sheet .record-hero > .panel-head {
+  border-bottom-color: transparent;
+}

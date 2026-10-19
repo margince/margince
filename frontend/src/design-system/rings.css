@@ -1,0 +1,43 @@
+/* Rings — the figure. Softened tones: the rings sit beside the verdict and
+   must not out-shout it, so each fill is its tone mixed into the ground, and
+   the track is the same tone at a fifth of that. */
+.rings {
+  inline-size: 7.875rem;
+  block-size: 7.875rem;
+  flex: none;
+}
+.rings-ring,
+.rings-dot {
+  --ringTone: var(--borderStrong);
+}
+/* The legend's mark: the ring's own tone, so the reading and its arc are read
+   as one. */
+.rings-dot {
+  display: inline-block;
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  margin-inline-end: var(--space-2);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--ringTone);
+}
+.rings-calm {
+  --ringTone: color-mix(in srgb, var(--success) 60%, var(--bgElevated));
+}
+.rings-warning {
+  --ringTone: color-mix(in srgb, var(--warning) 70%, var(--bgElevated));
+}
+.rings-danger {
+  --ringTone: color-mix(in srgb, var(--danger) 60%, var(--bgElevated));
+}
+.rings-track,
+.rings-arc {
+  fill: none;
+}
+.rings-track {
+  stroke: color-mix(in srgb, var(--ringTone) 22%, transparent);
+}
+.rings-arc {
+  stroke: var(--ringTone);
+  stroke-linecap: round;
+}

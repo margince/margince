@@ -11,7 +11,7 @@ import {
   hasOpenCommitments,
 } from "./contactcards";
 import { ContactMemory } from "./contactmemory";
-import { ContactToday, hasContactWork } from "./contacttoday";
+import { ContactToday } from "./contacttoday";
 
 type Contact360 = components["schemas"]["Contact360"];
 
@@ -46,31 +46,10 @@ export function ContactOverview({
     setParams(next);
   };
   const commitments = hasOpenCommitments(view);
-  // Where the day's work stands, never WHETHER it stands: it leads the stack
-  // when it carries work and follows the brief when its answer is that
-  // nothing does. Open commitments have a card of their own and do not move
-  // it — a record whose only open item is one still asks the panel's question
-  // and still gets its answer.
-  const work = hasContactWork(view);
-  const today = (
-    <ContactToday
-      moment={view.moment}
-      view={view}
-      onAction={onAction}
-      onOpenEmail={onOpenEmail}
-      onOpenTasks={openQueue}
-    />
-  );
+  // The 360 leads, then what needs a contact today, then what was promised:
+  // the record's standing is what every row under it is read against.
   return (
     <div className="record-stack">
-      {work && today}
-      {commitments && (
-        <ContactCommitmentsCard
-          view={view}
-          firstName={view.contact.full_name.split(" ")[0] ?? ""}
-          includeTasks={false}
-        />
-      )}
       <div id={BRIEF_ANCHOR} className="pe-brief-anchor">
         <ContactBriefCard
           brief={brief}
@@ -81,7 +60,20 @@ export function ContactOverview({
           onOpenEmail={onOpenEmail}
         />
       </div>
-      {!work && today}
+      <ContactToday
+        moment={view.moment}
+        view={view}
+        onAction={onAction}
+        onOpenEmail={onOpenEmail}
+        onOpenTasks={openQueue}
+      />
+      {commitments && (
+        <ContactCommitmentsCard
+          view={view}
+          firstName={view.contact.full_name.split(" ")[0] ?? ""}
+          includeTasks={false}
+        />
+      )}
       <ContactOverviewCoverage view={view} />
       <ContactMemory view={view} onOpenEmail={onOpenEmail} hideEmpty />
       {hasCommercial(view) && <ContactCommercialCard view={view} />}

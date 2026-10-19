@@ -38,13 +38,6 @@ type ContactMoment = components["schemas"]["ContactMoment"];
 type ContactMomentAction = components["schemas"]["ContactMomentAction"];
 type Activity = components["schemas"]["Activity"];
 
-export function hasContactWork(view: Contact360): boolean {
-  return (
-    actionableMoment(view.moment) ||
-    (view.next_steps?.data.some((task) => !task.is_done) ?? false)
-  );
-}
-
 function actionableMoment(moment: ContactMoment | undefined): boolean {
   return Boolean(
     moment &&
