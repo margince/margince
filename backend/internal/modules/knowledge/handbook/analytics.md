@@ -43,7 +43,7 @@ It also shows a **Needs your attention** list when forecast checks, unpriced dea
 
 The list names up to five open forecast checks for the records you picked. Each shows the deal, what the check found, the owner and the money in question. High checks come first, then the largest amounts. **Review** opens the forecast review. When there are more checks, one line counts them all.
 
-The **Reports** section lists saved reports and starts a custom report with **New custom report**. Above them, **Prepared reports** offers ready reports to **Preview**, **Save a copy** of, or **Open** where they already live. A seat that cannot read saved reports gets a **Custom reports** tab instead. A custom report on deals can also group and filter by a deal field an admin turned on under **In reports** in Settings → **Fields**.
+The **Reports** section lists saved reports and starts a custom report with **New custom report**. Above them, **Prepared reports** offers ready reports to **Preview**, **Save a copy** of, or **Open** where they already live. A seat that cannot read saved reports gets a **Custom reports** tab instead. A custom report on deals can also group and filter by a deal field an admin turned on under **In reports** in Settings → **Fields**. If an admin turns the field off or retires it, a saved report that uses it says so instead of showing numbers. Ask again without the field, or ask an admin to turn it back on.
 
 The **My outcomes** section shows your own open deals and meetings, for a rep only.
 The **Data coverage** section shows which sources the nightly check could read, for a seat allowed to see it. The **Delivery** section holds the project reports. Also called: reports, dashboards.

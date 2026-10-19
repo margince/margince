@@ -26,9 +26,24 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// territory is a Deal picklist and the deal writer that fills it.
+type territory struct {
+	catalog  *customfields.Service
+	field    crmcontracts.CustomField
+	deals    *deals.Store
+	pipeline ids.PipelineID
+	open     ids.StageID
+}
+
 // territoryField creates a Deal picklist through the real catalog writer and
 // seeds deals carrying its values through the real deal writer.
 func territoryField(t *testing.T, e *integration.Env) (*customfields.Service, crmcontracts.CustomField) {
+	t.Helper()
+	fixture := territoryDeals(t, e)
+	return fixture.catalog, fixture.field
+}
+
+func territoryDeals(t *testing.T, e *integration.Env) territory {
 	t.Helper()
 	catalog := customfields.NewService(e.Pool, integration.SchemaPool(t))
 	admin := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
@@ -49,7 +64,7 @@ func territoryField(t *testing.T, e *integration.Env) (*customfields.Service, cr
 			t.Fatalf("seed deal %d: %v", i, err)
 		}
 	}
-	return catalog, field
+	return territory{catalog: catalog, field: field, deals: store, pipeline: pipeline, open: open}
 }
 
 func optIn(t *testing.T, e *integration.Env, catalog *customfields.Service, field crmcontracts.CustomField) {

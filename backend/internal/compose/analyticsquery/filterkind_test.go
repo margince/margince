@@ -100,3 +100,22 @@ func TestAnUnknownFilterNameSuggestsEveryFilterableField(t *testing.T) {
 		}
 	}
 }
+
+// A custom field the vocabulary lacks was taken out of reports or retired, so
+// the refusal says how to repair the question, as a grouping and as a filter.
+func TestACustomFieldOutsideReportsIsRefusedWithItsRepair(t *testing.T) {
+	t.Parallel()
+	for name, q := range map[string]Query{
+		"group":  {Entity: "deals", GroupBy: []string{"cf_territory"}, Measures: []Measure{{Fn: CountAll}}},
+		"filter": {Entity: "deals", Measures: []Measure{{Fn: CountAll}}, Filters: []Filter{{Field: "cf_territory", Op: OpEq, Value: "EMEA"}}},
+	} {
+		_, err := Compile(q, stalledSchema(), noScope)
+		refusal, ok := errors.AsType[*RefusalError](err)
+		if !ok {
+			t.Fatalf("%s: err = %v, want a RefusalError", name, err)
+		}
+		if !strings.Contains(refusal.Message, "not in reports") || !strings.Contains(refusal.Suggest, "In reports") {
+			t.Errorf("%s: refused with %q / %q, which names no repair", name, refusal.Message, refusal.Suggest)
+		}
+	}
+}
