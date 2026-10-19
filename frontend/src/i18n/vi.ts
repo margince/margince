@@ -171,6 +171,26 @@ export const vi = {
   "brief.weekly.numericPartial":
     "Một số bằng chứng nguồn không khả dụng. Số liệu chỉ gồm các hồ sơ có quyền xem và đã định giá.",
   "reporting.edit": "Sửa báo cáo",
+  "reporting.saveDraft": "Lưu bản nháp",
+  "reporting.draftEditNote":
+    "Thao tác này lưu các biểu đồ thành bản nháp. Để đổi tên hoặc phạm vi xem, hãy công bố hoặc bỏ bản nháp trước.",
+  "reporting.draftOpen": "Bản nháp {revision} chưa được công bố",
+  "reporting.draftHidden":
+    "Ai đọc báo cáo vẫn thấy bản đã công bố. Hãy xem trước bản nháp rồi mới công bố.",
+  "reporting.draftPreviewing":
+    "Bạn đang xem bản nháp. Ai đọc báo cáo vẫn thấy bản đã công bố.",
+  "reporting.previewDraft": "Xem trước bản nháp",
+  "reporting.showPublished": "Hiện bản đã công bố",
+  "reporting.publishDraft": "Công bố bản nháp",
+  "reporting.discardDraft": "Bỏ bản nháp",
+  "reporting.versions": "Các phiên bản",
+  "reporting.savedBy": "Lưu bởi",
+  "reporting.revisionState.draft": "bản nháp",
+  "reporting.revisionState.published": "đã công bố",
+  "reporting.revisionState.earlier": "trước đây",
+  "reporting.restoreRevision": "Khôi phục phiên bản {revision}",
+  "reporting.restoreBlocked":
+    "Hãy công bố hoặc bỏ bản nháp trước khi khôi phục một phiên bản trước.",
   "reporting.moveUp": "Chuyển lên",
   "reporting.moveDown": "Chuyển xuống",
   "reporting.exportCsv": "Xuất CSV",

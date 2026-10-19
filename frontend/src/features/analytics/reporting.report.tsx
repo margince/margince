@@ -30,6 +30,12 @@ import {
 import { useReportDetailQueries } from "./reporting.queries";
 import { SaveReportingDialog } from "./reporting.save";
 import { ReportingScheduleDialog } from "./reporting.schedule";
+import {
+  draftRevision,
+  ReportDraftBar,
+  ReportVersions,
+  useReportRevisions,
+} from "./reporting.versions";
 
 export function ReportingReportDetail({
   reportId,
@@ -44,6 +50,7 @@ export function ReportingReportDetail({
   const [archiving, setArchiving] = useState(false);
   const [comparing, setComparing] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [previewDraft, setPreviewDraft] = useState(false);
   const [capturePending, setCapturePending] = useState<boolean | undefined>(
     undefined,
   );
@@ -55,10 +62,19 @@ export function ReportingReportDetail({
   const canReadSchedules = useCan("report_schedule", "read");
   const canReadEditions = useCan("report_edition", "read");
   const canSchedule = useCanWrite("report_schedule", "create");
+  const [draftShown, setDraftShown] = useState<number | undefined>();
   const { report, live, edition, editions, schedules } = useReportDetailQueries(
     reportId,
     editionId,
     { editions: canReadEditions, schedules: canReadSchedules },
+    draftShown,
+  );
+  const draftOpen = report.data?.draft_revision;
+  const shownDraft = previewDraft ? draftOpen : undefined;
+  if (shownDraft !== draftShown) setDraftShown(shownDraft);
+  const revisions = useReportRevisions(
+    reportId,
+    report.data?.can_manage === true && canEdit,
   );
   const write = useMutation({
     mutationFn: async (action: ReportAction) => {
@@ -248,6 +264,13 @@ export function ReportingReportDetail({
             <ErrorLine error={write.error} />
           </ConfirmModal>
           <ErrorLine error={write.error} />
+          {canEditReport && !editionId && (
+            <ReportDraftBar
+              report={report}
+              previewing={previewDraft}
+              onPreview={setPreviewDraft}
+            />
+          )}
           {capturePending && (
             <p role="status">{t("reporting.capturePending")}</p>
           )}
@@ -395,6 +418,7 @@ export function ReportingReportDetail({
                 </PanelBody>
               </Panel>
             )}
+            {canEditReport && <ReportVersions report={report} />}
             {canReadEditions && (
               <Panel title={t("reporting.executions")}>
                 <PanelBody>
@@ -412,7 +436,10 @@ export function ReportingReportDetail({
           {editing && (
             <SaveReportingDialog
               report={report}
-              selection={report.selection}
+              selection={
+                draftRevision(revisions.data?.data)?.selection ??
+                report.selection
+              }
               onClose={() => setEditing(false)}
               onSaved={() => setEditing(false)}
             />

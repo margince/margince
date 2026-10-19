@@ -25,6 +25,7 @@ import {
   type ReportingReport,
   type ReportingSelection,
 } from "./reporting.model";
+import { reportRevisionsKey } from "./reporting.versions";
 
 export function SaveReportingDialog({
   selection: initialSelection,
@@ -78,10 +79,20 @@ export function SaveReportingDialog({
     mutationFn: async ({
       body,
       existing,
+      asDraft,
     }: {
       body: components["schemas"]["ReportingReportInput"];
       existing?: { id: string; version: number };
+      asDraft?: boolean;
     }) => {
+      if (existing && asDraft) {
+        return unwrap(
+          await api.PUT("/analytics/reports/{id}/draft", {
+            params: { path: { id: existing.id }, ...ifMatch(existing.version) },
+            body: { selection: body.selection },
+          }),
+        );
+      }
       const response = existing
         ? await api.PATCH("/analytics/reports/{id}", {
             params: {
@@ -102,31 +113,45 @@ export function SaveReportingDialog({
       await queryClient.invalidateQueries({
         queryKey: ["reporting-live", report.id],
       });
+      await queryClient.invalidateQueries({
+        queryKey: reportRevisionsKey(report.id),
+      });
       onSaved(report);
     },
   });
+  // An open draft takes every edit until it is published or discarded, so a
+  // direct save is not offered beside it.
+  const draftOpen = report?.draft_revision !== undefined;
+  const save = (asDraft: boolean) =>
+    write.mutate({
+      existing: report ? { id: report.id, version: report.version } : undefined,
+      asDraft,
+      body: {
+        name,
+        audience,
+        audience_team_id: audience === "team" ? selection.scope.id : undefined,
+        selection: { ...selection, metrics, blocks: selectedBlocks },
+      },
+    });
+  const incomplete =
+    write.isPending ||
+    !name.trim() ||
+    metrics.length === 0 ||
+    (selection.period === "custom" &&
+      (!selection.interval ||
+        selection.interval.start_at >= selection.interval.end_at));
   return (
     <Modal open onClose={onClose} labelledBy={title} intent="form">
       <Heading size="large" id={title} className="t-h2 modal-title">
         {t(report ? "reporting.edit" : "reporting.save")}
       </Heading>
+      {draftOpen && <p className="t-caption">{t("reporting.draftEditNote")}</p>}
       <form
         id={formId}
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
-          write.mutate({
-            existing: report
-              ? { id: report.id, version: report.version }
-              : undefined,
-            body: {
-              name,
-              audience,
-              audience_team_id:
-                audience === "team" ? selection.scope.id : undefined,
-              selection: { ...selection, metrics, blocks: selectedBlocks },
-            },
-          });
+          save(draftOpen);
         }}
       >
         <Field label={t("reporting.name")} required>
@@ -263,19 +288,17 @@ export function SaveReportingDialog({
         <Button variant="ghost" onClick={onClose}>
           {t("reporting.cancel")}
         </Button>
-        <Button
-          type="submit"
-          form={formId}
-          disabled={
-            write.isPending ||
-            !name.trim() ||
-            metrics.length === 0 ||
-            (selection.period === "custom" &&
-              (!selection.interval ||
-                selection.interval.start_at >= selection.interval.end_at))
-          }
-        >
-          {t("reporting.save")}
+        {report && !draftOpen && (
+          <Button
+            variant="ghost"
+            disabled={incomplete}
+            onClick={() => save(true)}
+          >
+            {t("reporting.saveDraft")}
+          </Button>
+        )}
+        <Button type="submit" form={formId} disabled={incomplete}>
+          {t(draftOpen ? "reporting.saveDraft" : "reporting.save")}
         </Button>
       </div>
     </Modal>
