@@ -4912,6 +4912,8 @@ export const de = {
   "log.filesEmpty": "Dateien hier ablegen oder zum Auswählen klicken",
   "log.fileUnattached":
     "Die Aktivität ist erfasst, aber {filename} wurde nicht angehängt. {reason}",
+  "log.fileUncertain":
+    "Die Aktivität ist erfasst, aber der Upload von {filename} wurde nicht abgeschlossen. Prüfe die Dateien der Aktivität, bevor du die Datei erneut hinzufügst.",
   "log.attendee": "Teilnehmende",
   "log.otherAttendees": "Weitere Teilnehmende",
   "log.removeAttendee": "{name} entfernen",

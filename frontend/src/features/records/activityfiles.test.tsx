@@ -1,9 +1,17 @@
 /** @vitest-environment happy-dom */
 
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { renderWithQueryClient } from "../../testing/queryrender";
 import { jsonResponse } from "../../testing/story-utils";
@@ -49,6 +57,8 @@ function stubApi(
   grants: GrantSpec = {
     activity: ["read", "update"],
   },
+  uploadAnswer: () => Response = () =>
+    jsonResponse({ ...PRICE_LIST, id: "att-new" }, 201),
 ): Call[] {
   const calls: Call[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -65,9 +75,7 @@ function stubApi(
         page: { has_more: false, next_cursor: null },
       });
     }
-    if (key === "POST /attachments") {
-      return jsonResponse({ ...PRICE_LIST, id: "att-new" }, 201);
-    }
+    if (key === "POST /attachments") return uploadAnswer();
     return jsonResponse({ data: [], page: { next_cursor: null } });
   }) as typeof fetch;
   return calls;
@@ -75,6 +83,19 @@ function stubApi(
 
 const listReads = (calls: Call[]) =>
   calls.filter((call) => call.key === "GET /attachments");
+
+async function uploadThroughDialog(user: ReturnType<typeof userEvent.setup>) {
+  const add = await screen.findByRole("button", { name: "Add document" });
+  await waitFor(() => expect(add.hasAttribute("disabled")).toBe(false));
+  await user.click(add);
+  const dialog = await screen.findByRole("dialog");
+  await user.upload(
+    within(dialog).getByLabelText("File"),
+    new File(["prices"], "price-list-2026.pdf", { type: "application/pdf" }),
+  );
+  await user.click(within(dialog).getByRole("button", { name: "Upload" }));
+  return dialog;
+}
 
 describe("ActivityFiles", () => {
   it("lists the activity's own files, each linking to its bytes", async () => {
@@ -101,19 +122,59 @@ describe("ActivityFiles", () => {
     const calls = stubApi([]);
     const user = userEvent.setup();
     renderWithQueryClient(<ActivityFiles activityId="act-kickoff" />);
-    const add = await screen.findByRole("button", { name: "Add document" });
-    await waitFor(() => expect(add.hasAttribute("disabled")).toBe(false));
-    await user.click(add);
-    const dialog = await screen.findByRole("dialog");
-    await user.upload(
-      within(dialog).getByLabelText("File"),
-      new File(["prices"], "price-list-2026.pdf", { type: "application/pdf" }),
-    );
-    await user.click(within(dialog).getByRole("button", { name: "Upload" }));
+    await uploadThroughDialog(user);
     await waitFor(() => expect(listReads(calls)).toHaveLength(2));
     const upload = calls.find((call) => call.key === "POST /attachments");
     expect(upload?.form?.get("entity_type")).toBe("activity");
     expect(upload?.form?.get("entity_id")).toBe("act-kickoff");
+  });
+
+  it("refreshes every file list that shows the activity's files", async () => {
+    stubApi([]);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <ActivityFiles activityId="act-kickoff" />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    await uploadThroughDialog(user);
+    await waitFor(() =>
+      expect(invalidate.mock.calls.map(([filter]) => filter?.queryKey)).toEqual(
+        [
+          ["attachments", "activity", "act-kickoff"],
+          ["deal-documents"],
+          ["deal-attachments"],
+          ["companyDocuments"],
+        ],
+      ),
+    );
+  });
+
+  it("shows the refusal when the activity is not this rep's to change", async () => {
+    // The activity read carries no per-row writable flag, so the server's
+    // refusal is what reaches a rep holding the grant but not the row.
+    const calls = stubApi([], undefined, () =>
+      jsonResponse(
+        {
+          type: "urn:margince:problem:permission_denied",
+          status: 403,
+          code: "permission_denied",
+          title: "Forbidden",
+        },
+        403,
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithQueryClient(<ActivityFiles activityId="act-kickoff" />);
+    const dialog = await uploadThroughDialog(user);
+    expect(await within(dialog).findByText("Upload failed")).toBeTruthy();
+    expect(listReads(calls)).toHaveLength(1);
   });
 
   it("says why a seat that may not change activities cannot upload", async () => {

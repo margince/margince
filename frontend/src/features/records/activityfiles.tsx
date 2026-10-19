@@ -15,6 +15,7 @@ import {
 } from "../../design-system/surfacestate";
 import { formatBytes } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { activityFilesKey } from "../../lib/activitykeys";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
@@ -28,11 +29,6 @@ import "./activityfiles.css";
 type Activity = components["schemas"]["Activity"];
 
 const PAGE_LIMIT = 20;
-
-/** The query key of one activity's file list; the upload dialog refreshes it. */
-export function activityFilesKey(activityId: string) {
-  return ["attachments", "activity", activityId] as const;
-}
 
 /**
  * ActivityFiles lists the activity's files, each one opening as a FileChip

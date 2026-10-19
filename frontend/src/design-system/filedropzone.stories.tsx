@@ -50,6 +50,22 @@ export const Chosen: Story = {
   ),
 };
 
+/** Disabled while the form's write is out: no click, no drop, no hover state. */
+export const Disabled: Story = {
+  render: () => (
+    <FileDropzone
+      label="Document"
+      emptyLabel="Drop a file here, or click to choose one"
+      onPick={() => {}}
+      disabled
+    />
+  ),
+};
+export const DisabledDark: Story = {
+  ...Disabled,
+  globals: { theme: "dark" },
+};
+
 /** Holding a file over the zone. The state is driven rather than posed: `over`
  * is the component's own, and a prop that forced it would be API existing only
  * for this story. It needs to be SEEN because the jsdom test can only prove the

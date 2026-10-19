@@ -23,7 +23,7 @@
 509 frontend/src/features/voice-knowledge/documentextraction.tsx
 508 frontend/src/features/onboarding/onboarding-backread.tsx
 554 frontend/src/features/projects/project360.tsx
-520 frontend/src/features/voice-knowledge/adddocument.tsx
+517 frontend/src/features/voice-knowledge/adddocument.tsx
 614 frontend/src/features/onboarding/onboarding-connect-panels.tsx
 615 frontend/src/features/projects/partners.tsx
 659 frontend/src/features/records/record360/citations.tsx

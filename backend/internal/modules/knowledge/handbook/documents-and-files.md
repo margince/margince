@@ -42,7 +42,7 @@ To attach a file to a meeting, call or note in Margince, add it while you log th
 2. Choose **Log**. The files are uploaded once the activity is logged.
 If a file is refused, a message names it and says why. The others are still attached.
 
-To add a file later, press **Files** on the activity in the record's History, then **Add document**. The activity panel that opens from search or the worklist lists the same files under **Files**. The size limit and the file kinds are the same as for any document. Whoever may read the activity may open its files.
+If an upload does not finish, Margince checks the activity's files first, so no message asks you to add a file that is already there. To add a file later, press **Files** on the activity in the record's History, then **Add document**. The activity panel that opens from search or the worklist lists the same files under **Files**. The size limit and the file kinds are the same as for any document. Whoever may read the activity may open its files.
 Also called: attach a document to a meeting, add a file to a call, meeting attachments.
 
 ### What is the maximum file size for an upload?

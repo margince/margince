@@ -23,6 +23,7 @@ import { Select } from "../../design-system/select";
 import { calendarDay } from "../../format/calendarday";
 import { useT } from "../../i18n";
 import {
+  activityFileStaleKeys,
   activityFollowUpsKey,
   loggedActivityKeys,
   TASK_QUEUE_KEY,
@@ -46,6 +47,7 @@ import { FollowUpTaskFields } from "../../screens/followuptaskfields";
 import {
   attachLoggedFiles,
   LogActivityFilesField,
+  type PickedFile,
   TranscriptUploadField,
   useReportUnattached,
 } from "./logactivityfiles";
@@ -120,7 +122,7 @@ export function LogActivityForm({
       setDraft((current) => ({ ...current, kind: askedKind }));
     }
   }
-  const [files, setFiles] = useState<readonly File[]>([]);
+  const [files, setFiles] = useState<readonly PickedFile[]>([]);
   // Who was in the room, asked for the kinds that are with a contact (see
   // KINDS_WITH_A_CONTACT). Only a company page cannot send one without a name.
   const [attendees, setAttendees] = useState<MeetingAttendees>(NO_ATTENDEES);
@@ -157,10 +159,11 @@ export function LogActivityForm({
         t,
       );
       // After the create: a file needs the activity's id as its parent.
-      return attachLoggedFiles(created.id, input.files);
+      const unattached = await attachLoggedFiles(created.id, input.files);
+      return { id: created.id, unattached };
     },
-    onSuccess: (unattached, input) => {
-      reportUnattached(unattached);
+    onSuccess: (logged, input) => {
+      reportUnattached(logged.unattached);
       const keys =
         entityType && entityId
           ? loggedActivityKeys(
@@ -175,6 +178,8 @@ export function LogActivityForm({
       if (input.draft.sourceActivityId)
         keys.push(activityFollowUpsKey(input.draft.sourceActivityId));
       keys.push(worklistKey);
+      if (input.files.length > 0)
+        keys.push(...activityFileStaleKeys(logged.id));
       for (const queryKey of keys) queryClient.invalidateQueries({ queryKey });
       setDraft(freshDraft(input.zone, onlyTasks ? "task" : undefined));
       setAttendees(NO_ATTENDEES);
@@ -223,7 +228,7 @@ export function LogActivityForm({
           zone: recordZone,
           attendees,
           idempotencyKey,
-          files,
+          files: files.map((held) => held.file),
         });
       })}
     >

@@ -4987,6 +4987,8 @@ export const en = {
   "log.filesEmpty": "Drop files here, or click to choose them",
   "log.fileUnattached":
     "The activity is logged, but {filename} was not attached. {reason}",
+  "log.fileUncertain":
+    "The activity is logged, but the upload of {filename} did not finish. Check the activity’s files before you add it again.",
   "log.dueAt": "Due date",
   "log.date": "Date",
   "log.dateHint": "The day it happened; for a later day, add a task.",

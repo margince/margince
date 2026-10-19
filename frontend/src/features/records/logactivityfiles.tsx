@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
+import { api } from "../../api/client";
 import { Field, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { FileDropzone } from "../../design-system/filedropzone";
@@ -14,15 +15,88 @@ import {
   uploadAttachment,
 } from "../../lib/attachmentupload";
 import { useCanWrite } from "../../lib/capability";
-import { problemMessageOf } from "../../lib/problem";
+import { ProblemError, problemMessageOf, unwrap } from "../../lib/problem";
 import { formatUploadLimit, useMaxUploadBytes } from "../../lib/uploadlimit";
 
 // The file fields of the Log activity form. A transcript is read into the body.
 // Attached files wait in the form until the server has created the activity,
 // because an attachment needs a parent id.
 
-/** One file the server did not take, and the error it answered with. */
-export type UnattachedFile = Readonly<{ filename: string; error: unknown }>;
+/**
+ * One file that is not on the activity. `uncertain` marks an upload that got
+ * no answer and that a re-read of the activity could not settle either way.
+ */
+export type UnattachedFile = Readonly<{
+  filename: string;
+  error: unknown;
+  uncertain: boolean;
+}>;
+
+/** A file picked in the form. The id tells apart two files with the same name. */
+export type PickedFile = Readonly<{ id: string; file: File }>;
+
+let lastPick = 0;
+function picked(file: File): PickedFile {
+  lastPick += 1;
+  return { id: `pick-${lastPick}`, file };
+}
+
+// Only a 4xx answer proves nothing was stored. Any other failure may have
+// come after the server committed the file.
+function refusedByServer(error: unknown): boolean {
+  if (!(error instanceof ProblemError)) return false;
+  const { problem } = error;
+  const status =
+    typeof problem === "object" && problem !== null && "status" in problem
+      ? problem.status
+      : undefined;
+  return typeof status === "number" && status >= 400 && status < 500;
+}
+
+async function sha256Hex(file: File): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    await file.arrayBuffer(),
+  );
+  return Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+}
+
+// The upload endpoint takes no Idempotency-Key, so a retry could store a second
+// copy. An unanswered upload is checked against the activity's stored files
+// instead, by checksum: the server may rename a file it stores.
+async function settleUnanswered(
+  activityId: string,
+  unanswered: readonly Readonly<{ file: File; error: unknown }>[],
+): Promise<UnattachedFile[]> {
+  const unsettled = unanswered.map(({ file, error }) => ({
+    filename: file.name,
+    error,
+    uncertain: true,
+  }));
+  try {
+    const stored = unwrap(
+      await api.GET("/attachments", {
+        params: {
+          query: { entity_type: "activity", entity_id: activityId, limit: 200 },
+        },
+      }),
+    );
+    // A cut list cannot prove a file is missing.
+    if (stored.page.has_more) return unsettled;
+    const checksums = new Set(stored.data.map((file) => file.checksum));
+    const missing: UnattachedFile[] = [];
+    for (const { file, error } of unanswered) {
+      if (!checksums.has(await sha256Hex(file))) {
+        missing.push({ filename: file.name, error, uncertain: false });
+      }
+    }
+    return missing;
+  } catch {
+    return unsettled;
+  }
+}
 
 /**
  * attachLoggedFiles uploads each file against the new activity, one after the
@@ -33,7 +107,8 @@ export async function attachLoggedFiles(
   activityId: string,
   files: readonly File[],
 ): Promise<UnattachedFile[]> {
-  const unattached: UnattachedFile[] = [];
+  const refused: UnattachedFile[] = [];
+  const unanswered: { file: File; error: unknown }[] = [];
   for (const file of files) {
     try {
       await uploadAttachment(
@@ -41,10 +116,15 @@ export async function attachLoggedFiles(
         file,
       );
     } catch (error) {
-      unattached.push({ filename: file.name, error });
+      if (refusedByServer(error)) {
+        refused.push({ filename: file.name, error, uncertain: false });
+      } else {
+        unanswered.push({ file, error });
+      }
     }
   }
-  return unattached;
+  if (unanswered.length === 0) return refused;
+  return [...refused, ...(await settleUnanswered(activityId, unanswered))];
 }
 
 /**
@@ -57,10 +137,12 @@ export function useReportUnattached() {
   return (unattached: readonly UnattachedFile[]) => {
     for (const file of unattached) {
       toast.show(
-        t("log.fileUnattached", {
-          filename: file.filename,
-          reason: problemMessageOf(file.error, t),
-        }),
+        file.uncertain
+          ? t("log.fileUncertain", { filename: file.filename })
+          : t("log.fileUnattached", {
+              filename: file.filename,
+              reason: problemMessageOf(file.error, t),
+            }),
         { tone: "danger", sticky: true },
       );
     }
@@ -109,38 +191,26 @@ export function TranscriptUploadField({
   );
 }
 
-// Two picks of the same file are one file.
-function fileKey(file: File): string {
-  return `${file.name}:${file.size}:${file.lastModified}`;
-}
+type FilesUpdate = (current: readonly PickedFile[]) => readonly PickedFile[];
 
-type FilesUpdate = (current: readonly File[]) => readonly File[];
+type FieldProps = Readonly<{
+  files: readonly PickedFile[];
+  // An updater, because several files can arrive from one drop.
+  onChange: (update: FilesUpdate) => void;
+  // While the log is out: a file picked then would miss the request.
+  disabled?: boolean;
+}>;
 
 /**
  * LogActivityFilesField picks the files to attach. Drawn only for a seat that
  * may change activities, since the upload asks for that grant.
  */
-export function LogActivityFilesField(
-  props: Readonly<{
-    files: readonly File[];
-    // An updater, because several files can arrive from one drop.
-    onChange: (update: FilesUpdate) => void;
-    disabled?: boolean;
-  }>,
-) {
+export function LogActivityFilesField(props: FieldProps) {
   const permitted = useCanWrite("activity", "update");
   return permitted ? <FilesPicker {...props} /> : null;
 }
 
-function FilesPicker({
-  files,
-  onChange,
-  disabled,
-}: Readonly<{
-  files: readonly File[];
-  onChange: (update: FilesUpdate) => void;
-  disabled?: boolean;
-}>) {
+function FilesPicker({ files, onChange, disabled }: FieldProps) {
   const t = useT();
   const { locale } = useLocale();
   const maxBytes = useMaxUploadBytes();
@@ -154,11 +224,7 @@ function FilesPicker({
       return;
     }
     setRefused(null);
-    onChange((current) =>
-      current.some((held) => fileKey(held) === fileKey(file))
-        ? current
-        : [...current, file],
-    );
+    onChange((current) => [...current, picked(file)]);
   };
   return (
     <div className="form-stack">
@@ -169,14 +235,15 @@ function FilesPicker({
         }
         emptyLabel={t("log.filesEmpty")}
         multiple
-        files={files}
+        files={files.map((held) => held.file)}
         onPick={pick}
         accept={ACCEPTED_ATTACHMENT_ATTR}
+        disabled={disabled}
       />
       {files.length > 0 && (
         <TokenList
-          items={files.map((file) => ({
-            id: fileKey(file),
+          items={files.map(({ id, file }) => ({
+            id,
             label: `${file.name} · ${formatBytes(file.size, locale)}`,
           }))}
           removeLabel={(item) =>
@@ -184,9 +251,7 @@ function FilesPicker({
           }
           disabled={disabled}
           onRemove={(id) =>
-            onChange((current) =>
-              current.filter((file) => fileKey(file) !== id),
-            )
+            onChange((current) => current.filter((held) => held.id !== id))
           }
         />
       )}
