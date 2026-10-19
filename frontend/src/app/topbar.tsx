@@ -200,7 +200,7 @@ export function TopBar({
         {belowList(route) && (
           <IconAction
             label={t("shell.back")}
-            icon={<ArrowLeft size={17} />}
+            icon={<ArrowLeft />}
             onClick={() => leaveRecord(route)}
           />
         )}
