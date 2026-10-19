@@ -17,6 +17,7 @@ import { Select } from "../../design-system/select";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
+import { ANALYTICS_SCHEMA_KEY } from "../../lib/analyticskeys";
 import { useCan, useCanWrite } from "../../lib/capability";
 import {
   CF_OBJECTS,
@@ -163,6 +164,7 @@ export function CustomFieldsAdmin() {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["custom-fields", object] });
     queryClient.invalidateQueries({ queryKey: ["cf-audit"] });
+    queryClient.invalidateQueries({ queryKey: ANALYTICS_SCHEMA_KEY });
   };
 
   const create = useMutation({
@@ -260,6 +262,7 @@ export function CustomFieldsAdmin() {
           },
       );
       queryClient.invalidateQueries({ queryKey: ["cf-audit"] });
+      queryClient.invalidateQueries({ queryKey: ANALYTICS_SCHEMA_KEY });
       toast.show(
         t(SETTING_TOAST[input.setting][input.on ? "on" : "off"], {
           label: input.field.label,

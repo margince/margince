@@ -15,6 +15,7 @@ import { Stack } from "../../design-system/stack";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatMoneyOrAbsent } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { ANALYTICS_SCHEMA_KEY } from "../../lib/analyticskeys";
 import { unwrap } from "../../lib/problem";
 import { routeHash, useRoute } from "../../lib/router";
 import { openAnalyticsSection, openSavedQuestion } from "./analytics.address";
@@ -59,7 +60,7 @@ async function askQuestion(query: AnalyticsQuery) {
 
 function useAnalyticsSchema() {
   return useQuery({
-    queryKey: ["analytics-schema"],
+    queryKey: ANALYTICS_SCHEMA_KEY,
     queryFn: async () => {
       return unwrap(await api.GET("/analytics/schema", {}));
     },
