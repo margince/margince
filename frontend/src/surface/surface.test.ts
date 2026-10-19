@@ -97,6 +97,9 @@ describe("the published frontend surface", () => {
       "formatNumber",
       "useCan",
       "useCanWrite",
+      // useEntryContext: a unit screen opened from a core entry reads the
+      // record it was opened on, so it can fill in its form.
+      "useEntryContext",
       "useLocale",
       "useT",
     ]);
