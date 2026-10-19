@@ -2464,6 +2464,7 @@ export const vi = {
   "co.brief.cite.activity": "hoạt động",
   "co.brief.cite.contact": "liên hệ",
   "co.brief.cite.company": "công ty",
+  "co.brief.cite.lead": "lead",
   "co.brief.cite.fact": "dữ kiện",
   "co.brief.cite.profile_field": "trường hồ sơ",
   // Several sources of one kind that have no screen to open collapse into one
@@ -2472,6 +2473,7 @@ export const vi = {
   "co.brief.cite.activity.many": "{count} hoạt động",
   "co.brief.cite.contact.many": "{count} liên hệ",
   "co.brief.cite.company.many": "{count} công ty",
+  "co.brief.cite.lead.many": "{count} lead",
   "co.brief.cite.fact.many": "{count} dữ kiện",
   "co.brief.cite.profile_field.many": "{count} trường hồ sơ",
   "approval.kind.advance_deal": "Đẩy deal tiến lên",

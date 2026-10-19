@@ -222,6 +222,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "cf.obj.deal",
   "cf.obj.lead",
   "co.brief.cite.deal",
+  "co.brief.cite.lead",
   // The borrowed noun in the singular, which English and Vietnamese spell alike;
   // the plural arms differ because English pluralises.
   "today.scan.readDeals_one",

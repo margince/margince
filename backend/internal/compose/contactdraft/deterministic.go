@@ -192,12 +192,11 @@ func dealLine(deal *DealIn) string {
 // A claim is cited by its SOURCE activity, not by its own id: the claim row has
 // no page, and a chip has to open something.
 func deterministicReasons(in Input) []Reason {
-	reasons := []Reason{{
-		Kind:       crmcontracts.AccountDraftReasonKindRecipient,
-		Label:      in.Recipient.Name,
-		EntityType: citeContact,
-		EntityID:   in.Recipient.ID,
-	}}
+	recipient := Reason{Kind: crmcontracts.AccountDraftReasonKindRecipient, Label: in.Recipient.Name}
+	if cited := in.Recipient.citedAs(); cited != "" {
+		recipient.EntityType, recipient.EntityID = cited, in.Recipient.ID
+	}
+	reasons := []Reason{recipient}
 	claim, hasClaim := leadClaim(in)
 	if hasClaim {
 		reasons = append(reasons, Reason{

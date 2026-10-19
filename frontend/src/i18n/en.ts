@@ -2562,6 +2562,7 @@ export const en = {
   "co.brief.cite.activity": "activity",
   "co.brief.cite.contact": "contact",
   "co.brief.cite.company": "company",
+  "co.brief.cite.lead": "lead",
   "co.brief.cite.fact": "fact",
   "co.brief.cite.profile_field": "profile field",
   // Several sources of one kind that have no screen to open collapse into one
@@ -2570,6 +2571,7 @@ export const en = {
   "co.brief.cite.activity.many": "{count} activities",
   "co.brief.cite.contact.many": "{count} contacts",
   "co.brief.cite.company.many": "{count} companies",
+  "co.brief.cite.lead.many": "{count} leads",
   "co.brief.cite.fact.many": "{count} facts",
   "co.brief.cite.profile_field.many": "{count} profile fields",
   "approval.kind.advance_deal": "Advance deal",

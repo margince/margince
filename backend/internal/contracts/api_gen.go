@@ -4820,6 +4820,7 @@ const (
 	CompanyBriefEvidenceEntityTypeContact      CompanyBriefEvidenceEntityType = "contact"
 	CompanyBriefEvidenceEntityTypeDeal         CompanyBriefEvidenceEntityType = "deal"
 	CompanyBriefEvidenceEntityTypeFact         CompanyBriefEvidenceEntityType = "fact"
+	CompanyBriefEvidenceEntityTypeLead         CompanyBriefEvidenceEntityType = "lead"
 	CompanyBriefEvidenceEntityTypeProfileField CompanyBriefEvidenceEntityType = "profile_field"
 )
 
@@ -4835,6 +4836,8 @@ func (e CompanyBriefEvidenceEntityType) Valid() bool {
 	case CompanyBriefEvidenceEntityTypeDeal:
 		return true
 	case CompanyBriefEvidenceEntityTypeFact:
+		return true
+	case CompanyBriefEvidenceEntityTypeLead:
 		return true
 	case CompanyBriefEvidenceEntityTypeProfileField:
 		return true

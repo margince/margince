@@ -9906,7 +9906,7 @@ components:
       description: One record a brief sentence was written from.
       required: [entity_type, entity_id]
       properties:
-        entity_type: {type: string, enum: [deal, activity, contact, company, fact, profile_field]}
+        entity_type: {type: string, enum: [deal, activity, contact, company, lead, fact, profile_field]}
         entity_id: {type: string, format: uuid}
         name:
           type: string

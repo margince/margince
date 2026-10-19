@@ -26652,7 +26652,7 @@ export interface components {
         /** @description One record a brief sentence was written from. */
         CompanyBriefEvidence: {
             /** @enum {string} */
-            entity_type: "deal" | "activity" | "contact" | "company" | "fact" | "profile_field";
+            entity_type: "deal" | "activity" | "contact" | "company" | "lead" | "fact" | "profile_field";
             /** Format: uuid */
             entity_id: string;
             /**

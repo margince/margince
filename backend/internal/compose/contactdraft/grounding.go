@@ -9,10 +9,9 @@ import (
 )
 
 // Grounding names every record this input was folded from: what a kept draft
-// must re-prove its reader still sees. The caller names the recipient's type,
-// because a lead's draft folds into this same input.
-func (in Input) Grounding(recipient datasource.EntityType) ([]datasource.EntityRef, error) {
-	named := []draftcore.Ground{{Type: recipient, ID: in.Recipient.ID}}
+// must re-prove its reader still sees.
+func (in Input) Grounding() ([]datasource.EntityRef, error) {
+	named := []draftcore.Ground{{Type: in.Recipient.Kind, ID: in.Recipient.ID}}
 	if in.Deal != nil {
 		named = append(named, draftcore.Ground{Type: datasource.EntityDeal, ID: in.Deal.ID})
 	}
