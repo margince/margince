@@ -73,7 +73,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1687 |
+| [`find_records`](#find_records) | Find records | yes |  | 1688 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 336 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
@@ -3193,7 +3193,7 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
       "type": "object"
     },
     "limit": {
-      "description": "list, meaning, search only; at most 25 for meaning, search",
+      "description": "list, meaning, search only; at most 25 for meaning, search.",
       "maximum": 50,
       "minimum": 1,
       "type": "integer"
@@ -5711,7 +5711,7 @@ search its evidence, and quote coverage with each number.
       "type": "string"
     },
     "limit": {
-      "description": "evidence, standard only: How many citations, counterexamples and abstentions to return, each; at most 25 for evidence",
+      "description": "evidence, standard only: How many citations, counterexamples and abstentions to return, each; at most 25 for evidence.",
       "maximum": 100,
       "minimum": 1,
       "type": "integer"

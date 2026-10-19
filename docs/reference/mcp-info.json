@@ -10,16 +10,16 @@
   "totals": {
     "tools": 37,
     "resources": 9,
-    "tool_catalog_bytes": 124605,
+    "tool_catalog_bytes": 124607,
     "resource_catalog_bytes": 3588,
     "approx_wire_tokens_total": 32048,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 32245,
-      "input_schema_bytes": 58259,
+      "input_schema_bytes": 58261,
       "output_schema_bytes": 25189,
-      "description_plus_input_schema_bytes": 90504
+      "description_plus_input_schema_bytes": 90506
     }
   },
   "tools": {
@@ -2773,7 +2773,7 @@
               "type": "object"
             },
             "limit": {
-              "description": "list, meaning, search only; at most 25 for meaning, search",
+              "description": "list, meaning, search only; at most 25 for meaning, search.",
               "maximum": 50,
               "minimum": 1,
               "type": "integer"
@@ -5165,7 +5165,7 @@
               "type": "string"
             },
             "limit": {
-              "description": "evidence, standard only: How many citations, counterexamples and abstentions to return, each; at most 25 for evidence",
+              "description": "evidence, standard only: How many citations, counterexamples and abstentions to return, each; at most 25 for evidence.",
               "maximum": 100,
               "minimum": 1,
               "type": "integer"
