@@ -5730,7 +5730,7 @@ export const vi = {
   "aiAccess.claude.adminLine":
     "Chủ sở hữu Claude của bạn thêm Margince một lần cho cả nhóm.",
   "aiAccess.claude.admin1":
-    "Trong Claude, mở “Organization settings”, rồi “Connectors”.",
+    "Trong Claude, mở phần cài đặt quản trị, rồi “Connectors”.",
   "aiAccess.claude.admin2": "Chọn “Add”, rồi “Custom”, rồi “Web”.",
   "aiAccess.claude.admin3":
     "Đặt tên là Margince và dán địa chỉ Margince ở trên.",

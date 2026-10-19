@@ -59,8 +59,19 @@ type agentBundleHandlers struct {
 	log     *slog.Logger
 }
 
-func newAgentBundleHandlers(origin agentAPIOrigin, log *slog.Logger) agentBundleHandlers {
-	return agentBundleHandlers{origin: origin, builder: &agentbundle.Builder{}, log: log}
+// newAgentBundleHandlers takes mcpURL empty when the connector is off, so the
+// README then sends its reader to a passport instead.
+func newAgentBundleHandlers(origin agentAPIOrigin, mcpURL string, log *slog.Logger) agentBundleHandlers {
+	return agentBundleHandlers{origin: origin, builder: &agentbundle.Builder{MCPURL: mcpURL}, log: log}
+}
+
+// connectorURL is the address AI tools connect to, or "" while the connector
+// group is not mounted and the address would answer 404.
+func (s *Server) connectorURL() string {
+	if !s.mcpConnectorEnabled {
+		return ""
+	}
+	return s.mcpResource
 }
 
 // DownloadAgentSkillBundle answers the skill ZIP. It is human-only here as well

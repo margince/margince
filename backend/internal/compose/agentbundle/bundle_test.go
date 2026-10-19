@@ -23,7 +23,12 @@ const testBase = "https://crm.test.example/v1"
 // unzip builds the bundle for testBase and returns its files by name.
 func unzip(t *testing.T) map[string]string {
 	t.Helper()
-	archive, err := (&Builder{}).Build(testBase)
+	return unzipFrom(t, &Builder{})
+}
+
+func unzipFrom(t *testing.T, builder *Builder) map[string]string {
+	t.Helper()
+	archive, err := builder.Build(testBase)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -362,5 +367,34 @@ func TestABuilderAnswersARepeatedBaseFromItsCacheAndKeepsOnlyTheRecentFew(t *tes
 		if entry.base == testBase {
 			t.Error("the oldest base is still kept after more than recentBases newer ones")
 		}
+	}
+}
+
+func TestTheReadmeLeadsWithConnectingATool(t *testing.T) {
+	const mcpURL = "https://crm.test.example/mcp"
+	readme := unzipFrom(t, &Builder{MCPURL: mcpURL})["margince/README.md"]
+	connect := strings.Index(readme, "## Connect your AI tool")
+	scripts := strings.Index(readme, "## Scripts and your own code")
+	if connect < 0 || scripts < 0 || connect > scripts {
+		t.Fatalf("README puts connecting a tool at %d and scripts at %d; connecting must come first", connect, scripts)
+	}
+	if !strings.Contains(readme[connect:scripts], "claude mcp add --transport http margince "+mcpURL) {
+		t.Error("README does not give the connector address in the command-line steps")
+	}
+	if strings.Contains(readme, "does not accept AI tool connections") {
+		t.Error("README says the connector is off while it names its address")
+	}
+}
+
+func TestTheReadmeSendsTheReaderToAPassportWhenTheConnectorIsOff(t *testing.T) {
+	readme := unzip(t)["margince/README.md"]
+	if !strings.Contains(readme, "does not accept AI tool connections yet") {
+		t.Error("README does not say AI tools cannot connect while the connector is off")
+	}
+	if strings.Contains(readme, "/mcp") {
+		t.Error("README names a connector address the installation does not serve")
+	}
+	if !strings.Contains(readme, "## Scripts and your own code") {
+		t.Error("README drops the passport section")
 	}
 }

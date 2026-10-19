@@ -5995,7 +5995,7 @@ export const en = {
   "aiAccess.claude.adminLine":
     "Your Claude owner adds Margince once for the whole team.",
   "aiAccess.claude.admin1":
-    "In Claude, open “Organization settings”, then “Connectors”.",
+    "In Claude, open the admin settings, then “Connectors”.",
   "aiAccess.claude.admin2": "Choose “Add”, then “Custom”, then “Web”.",
   "aiAccess.claude.admin3":
     "Name it Margince and paste the Margince address above.",

@@ -5870,7 +5870,7 @@ export const de = {
   "aiAccess.claude.adminLine":
     "Wer euer Claude-Team verwaltet, fügt Margince einmal für alle hinzu.",
   "aiAccess.claude.admin1":
-    "Öffne in Claude „Organization settings“ und dann „Connectors“.",
+    "Öffne in Claude die Admin-Einstellungen und dann „Connectors“.",
   "aiAccess.claude.admin2": "Wähle „Add“, dann „Custom“, dann „Web“.",
   "aiAccess.claude.admin3":
     "Nenne ihn Margince und füge die Margince-Adresse von oben ein.",

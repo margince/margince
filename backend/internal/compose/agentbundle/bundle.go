@@ -40,6 +40,9 @@ const recentBases = 4
 // Builder builds the ZIP and the JSON contract for an API base URL and keeps
 // the most recent few.
 type Builder struct {
+	// MCPURL is the connector address the README leads with; empty, it tells
+	// the reader to use a passport. Set before the first Build.
+	MCPURL string
 	mu     sync.Mutex
 	recent []built // newest last
 }
@@ -78,7 +81,7 @@ func (b *Builder) forBase(apiBase string) (built, error) {
 	if err != nil {
 		return built{}, err
 	}
-	archive, err := build(apiBase, specYAML)
+	archive, err := build(guideData{BaseURL: apiBase, MCPURL: b.MCPURL}, specYAML)
 	if err != nil {
 		return built{}, err
 	}
@@ -94,7 +97,13 @@ func (b *Builder) forBase(apiBase string) (built, error) {
 	return entry, nil
 }
 
-func build(apiBase string, spec []byte) ([]byte, error) {
+// guideData is what README.md.tmpl and SKILL.md.tmpl may name.
+type guideData struct {
+	BaseURL string
+	MCPURL  string
+}
+
+func build(data guideData, spec []byte) ([]byte, error) {
 	files := []struct {
 		name string
 		body []byte
@@ -103,7 +112,7 @@ func build(apiBase string, spec []byte) ([]byte, error) {
 	}
 	for i, file := range files[:2] {
 		var rendered bytes.Buffer
-		if err := guideTemplates.ExecuteTemplate(&rendered, file.name+".tmpl", struct{ BaseURL string }{apiBase}); err != nil {
+		if err := guideTemplates.ExecuteTemplate(&rendered, file.name+".tmpl", data); err != nil {
 			return nil, fmt.Errorf("agentbundle: rendering %s: %w", file.name, err)
 		}
 		files[i].body = rendered.Bytes()

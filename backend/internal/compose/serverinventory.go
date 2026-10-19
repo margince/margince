@@ -231,6 +231,10 @@ type Server struct {
 	// worker and for an api that composed no views — see mcpappviews.go.
 	appViews *apps.Provider
 
+	// mcpResource is the connector URL the discovery document names, which the
+	// skill README hands to AI tools when the connector is on.
+	mcpResource string
+
 	// mcpAllowedOrigin is the scheme+host the connector's Origin guard
 	// admits and its 401 challenge points at — derived by WithMCPResource
 	// from the configured --public-base-url, never from a request header a

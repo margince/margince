@@ -1,8 +1,140 @@
 # Margince skill
 
-This folder lets an AI tool work in Margince as you. The tool calls the Margince API at
-`{{.BaseURL}}` with your agent passport, and can do what you can do there with the
-permissions you ticked on that passport, and nothing more.
+Margince works from your AI tool in two ways. You can connect the tool to Margince and sign in
+once, with no passport to copy or renew. Or you can give a script or your own code an agent
+passport and this skill. Either way the tool works as you, and can do only what you can do.
+
+## Connect your AI tool
+{{if .MCPURL}}
+This is the address an AI tool connects to:
+
+```text
+{{.MCPURL}}
+```
+
+The steps below match **Settings → AI access** in Margince. Each tool also has its own guide,
+linked under its steps.
+
+<!-- connect: claude-company -->
+### Claude, through your company
+
+Your Claude owner adds Margince once for the whole team:
+
+1. In Claude, open the admin settings, then "Connectors".
+2. Choose "Add", then "Custom", then "Web".
+3. Name it Margince and paste the address above.
+4. Choose "Add". Then everyone on the team connects and signs in as themselves.
+
+Then everyone on the team:
+
+1. In Claude, opens "Customize", then "Connectors".
+2. Finds Margince and chooses "Connect".
+3. Signs in to Margince and chooses "Allow".
+
+Claude's guide: https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp
+
+<!-- connect: claude-own -->
+### Claude, on a plan you pay for
+
+1. In Claude, open "Customize", then "Connectors".
+2. Choose "Add custom connector" and paste the address above.
+3. Margince opens. Sign in and choose "Allow".
+
+On the Free plan, Claude allows one custom connector.
+
+Claude's guide: https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp
+
+<!-- connect: chatgpt-company -->
+### ChatGPT, through your company
+
+Your ChatGPT admin adds Margince once for your company:
+
+1. In the ChatGPT admin settings, turn on "Developer mode".
+2. Create an app named Margince with the address above, and choose OAuth for sign-in.
+3. Publish the app so everyone in your company can turn it on.
+
+Then everyone, in a chat, opens the + menu, turns on Margince, signs in to Margince and
+chooses "Allow".
+
+OpenAI's guide: https://help.openai.com/en/articles/12584461-developer-mode-apps-and-full-mcp-connectors-in-chatgpt-beta
+
+<!-- connect: chatgpt-own -->
+### ChatGPT, on a plan you pay for
+
+1. In ChatGPT, open "Settings", then "Apps & Connectors", and turn on "Developer mode".
+2. Choose "Create" and paste the address above.
+3. Margince opens. Sign in and choose "Allow".
+
+On Plus and Pro, ChatGPT can look things up in Margince but not change them.
+
+OpenAI's guide: https://help.openai.com/en/articles/12584461-developer-mode-apps-and-full-mcp-connectors-in-chatgpt-beta
+
+<!-- connect: copilot-company -->
+### Microsoft Copilot, through your company
+
+Someone at your company adds Margince to a Copilot agent once:
+
+1. In Copilot Studio, open the agent, then "Tools", "Add a tool", "New tool" and
+   "Model Context Protocol".
+2. Name it Margince and paste the address above.
+3. Under authentication choose "OAuth 2.0", then "Dynamic discovery", and choose "Create".
+4. Choose "Add to agent", then publish the agent to Microsoft 365 Copilot and Teams.
+
+Your company's data policies for connectors also apply to Margince. Then everyone opens
+Copilot in Teams or Microsoft 365, chooses the agent with Margince, and signs in to Margince
+when it asks.
+
+Microsoft's guide: https://learn.microsoft.com/en-us/microsoft-copilot-studio/mcp-add-existing-server-to-agent
+
+<!-- connect: copilot-own -->
+### Microsoft Copilot, on a personal account
+
+Copilot outside work cannot connect to other apps. Use Copilot through work, or another tool
+on this page.
+
+Microsoft's guide: https://learn.microsoft.com/en-us/microsoft-copilot-studio/mcp-add-existing-server-to-agent
+
+<!-- connect: gemini-company -->
+### Gemini, through work or school
+
+Gemini through work or school cannot connect to Margince yet.
+
+Google's guide: https://support.google.com/g/answer/17106276
+
+<!-- connect: gemini-own -->
+### Gemini, on a personal Google account
+
+1. On gemini.google.com, open "Settings", then "Connected Apps".
+2. Choose "Add a custom app" and paste the address above.
+3. Margince opens. Sign in and choose "Allow".
+
+For now this works only in the US, in English.
+
+Google's guide: https://support.google.com/gemini/answer/17209137
+
+### Command-line tools
+
+Run the command, then sign in in the browser. No passport is needed.
+
+<!-- connect: claude-code -->
+- **Claude Code.** Run `claude mcp add --transport http margince {{.MCPURL}}`, then `/mcp`
+  inside Claude Code. Guide: https://code.claude.com/docs/en/mcp
+<!-- connect: codex -->
+- **Codex.** Run `codex mcp add margince --url {{.MCPURL}}`, then
+  `codex mcp login margince`. Guide: https://learn.chatgpt.com/docs/extend/mcp?surface=cli
+<!-- connect: antigravity -->
+- **Antigravity.** Add `{ "mcpServers": { "margince": { "serverUrl": "{{.MCPURL}}" } } }` to
+  `~/.gemini/config/mcp_config.json`, then sign in from its agent settings. Guide:
+  https://antigravity.google/docs/mcp
+{{else}}
+This Margince does not accept AI tool connections yet. Ask your admin to turn them on. Until
+then, use a passport as the next section says.
+{{end}}
+## Scripts and your own code
+
+The rest of this page is for a script, your own code, or an AI tool you give this skill to.
+The tool calls the Margince API at `{{.BaseURL}}` with your agent passport, and can do what you
+can do there with the permissions you ticked on that passport, and nothing more.
 
 The folder holds four files:
 
@@ -14,11 +146,11 @@ The folder holds four files:
 No passport is in this folder. You save it apart, so one download serves every
 passport you make.
 
-## Save your passport
+### Save your passport
 
-Create a passport in Margince under **Settings → Agents**, and copy it. It is shown once.
-Never type it on a command line, where your shell history keeps it. Save it in one
-of these places, under the name `MARGINCE_PASSPORT`:
+Create a passport in Margince under **Settings → AI access**, in **For developers**, and copy
+it. It is shown once. Never type it on a command line, where your shell history keeps it. Save
+it in one of these places, under the name `MARGINCE_PASSPORT`:
 
 - **macOS Keychain.** Run the command below. It asks for the passport and keeps it in
   your login keychain.
@@ -45,7 +177,7 @@ export MARGINCE_PASSPORT="$(security find-generic-password -s MARGINCE_PASSPORT 
 
 From 1Password: `export MARGINCE_PASSPORT="$(op read '<item reference>')"`.
 
-## Install the skill
+### Install the skill
 
 Unzip `margince-skill.zip`. It holds one folder, `margince`.
 
@@ -55,10 +187,9 @@ Unzip `margince-skill.zip`. It holds one folder, `margince`.
 - **Codex.** Move the folder where you keep such files, for example `~/margince`, and
   add this line to your `AGENTS.md`: "To work in Margince, read `~/margince/SKILL.md`
   first."
-- **Gemini CLI and Antigravity.** Move the folder the same way, and add the same line to
-  your `GEMINI.md`.
+- **Antigravity.** Move the folder the same way, and add the same line to your `GEMINI.md`.
 
-## Try it
+### Try it
 
 With the passport in `MARGINCE_PASSPORT`, this lists one company you can see:
 
@@ -66,8 +197,9 @@ With the passport in `MARGINCE_PASSPORT`, this lists one company you can see:
 curl '{{.BaseURL}}/companies?limit=1' -H "Authorization: Bearer $MARGINCE_PASSPORT"
 ```
 
-## When a passport ends
+### When a passport ends
 
 A passport made in Settings lasts 30 days. To stop an agent sooner, choose **Revoke** on
-the passport in **Settings → Agents**. It loses access on its next call. Then make a new
-passport and save it under the same name. The skill does not change.
+the passport in **Settings → AI access**, under **For developers**. It loses access on its
+next call. Then make a new passport and save it under the same name. The skill does not
+change.
