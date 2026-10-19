@@ -38,6 +38,8 @@ import {
   type AnalyticsEntity,
   type AnalyticsQuery,
   analyticsFieldLabel,
+  type CustomLabels,
+  customLabels,
   entityLabel,
   filterAmountCurrency,
   measureLabel,
@@ -239,6 +241,7 @@ function AskQuestion({
                       answer={ask.data}
                       baseCurrency={baseCurrency}
                       source={{ kind: "query", query: asked }}
+                      fieldLabels={customLabels(vocabulary.entities)}
                     />
                   )}
                 </PanelBody>
@@ -307,6 +310,9 @@ function SavedQuestion({
       );
     },
   });
+  // A run asked before a field was renamed reads under today's name; a field
+  // no longer reportable falls back to its column name.
+  const fieldLabels = customLabels(useAnalyticsSchema().data?.entities ?? []);
   const link = `${globalThis.location.origin}${globalThis.location.pathname}${routeHash(
     { screen: "analytics", id: "questions", id2: runId },
   )}`;
@@ -349,6 +355,7 @@ function SavedQuestion({
           <PanelIntro>{t("analytics.q.readerAccess")}</PanelIntro>
           <QuestionSummary
             query={saved.query}
+            fieldLabels={fieldLabels}
             baseCurrency={baseCurrency}
             population={population}
             askedBy={<EntityRef kind="user" id={saved.asked_by} />}
@@ -363,6 +370,7 @@ function SavedQuestion({
             answer={saved.answer}
             baseCurrency={baseCurrency}
             source={{ kind: "run", runId }}
+            fieldLabels={fieldLabels}
           />
         </PanelBody>
       </Panel>
@@ -373,11 +381,13 @@ function SavedQuestion({
 /** The question a saved run asks, read back as facts rather than controls. */
 function QuestionSummary({
   query,
+  fieldLabels,
   baseCurrency,
   population,
   askedBy,
 }: Readonly<{
   query: AnalyticsQuery;
+  fieldLabels: CustomLabels;
   baseCurrency: string | null;
   population: string | null;
   askedBy: ReactNode;
@@ -414,13 +424,15 @@ function QuestionSummary({
       term: t("analytics.q.groupBy"),
       value:
         (query.group_by ?? [])
-          .map((field) => analyticsFieldLabel(t, field))
+          .map((field) => analyticsFieldLabel(t, field, fieldLabels))
           .join(", ") || none,
     },
     {
       key: "measures",
       term: t("analytics.q.measures"),
-      value: query.measures.map((m) => measureLabel(t, m)).join(", "),
+      value: query.measures
+        .map((m) => measureLabel(t, m, fieldLabels))
+        .join(", "),
     },
     {
       key: "filters",
@@ -429,7 +441,7 @@ function QuestionSummary({
         filters
           .map((f) =>
             [
-              analyticsFieldLabel(t, f.field),
+              analyticsFieldLabel(t, f.field, fieldLabels),
               opLabel(t, f.op),
               takesValue(f.op) ? filterValueText(f) : "",
             ]

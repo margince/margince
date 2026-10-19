@@ -9345,6 +9345,11 @@ export const vi = {
   "cf.shownInCreate": "Đã hiện “{label}” trong biểu mẫu tạo mới",
   "cf.hiddenFromCreate":
     "Đã ẩn “{label}” khỏi biểu mẫu tạo mới, vẫn còn trên trang bản ghi",
+  "cf.col.inReports": "Trong báo cáo",
+  "cf.reportableFor": "Dùng “{label}” trong báo cáo",
+  "cf.addedToReports":
+    "Đã thêm “{label}” vào báo cáo; ai đọc báo cáo cũng thấy tên và các lựa chọn của trường",
+  "cf.removedFromReports": "Đã gỡ “{label}” khỏi báo cáo",
   "cf.audit.title": "Thay đổi trường gần đây",
   "audit.kind.customField": "Trường tùy chỉnh",
   "cf.audit.empty": "Chưa có thay đổi nào về trường tùy chỉnh.",

@@ -36,6 +36,7 @@ type lockedField struct {
 	Label        string
 	OptionsRaw   []byte
 	ShowInCreate bool
+	Reportable   bool
 	Version      int64
 }
 
@@ -58,9 +59,9 @@ func (f lockedField) mutable() error {
 func lockField(ctx context.Context, tx pgx.Tx, id ids.UUID) (lockedField, error) {
 	var f lockedField
 	err := tx.QueryRow(ctx,
-		`SELECT object, column_name, type, status, label, options, show_in_create, version
+		`SELECT object, column_name, type, status, label, options, show_in_create, reportable, version
 		   FROM custom_field WHERE id = $1 FOR UPDATE`,
-		id).Scan(&f.Object, &f.ColumnName, &f.Type, &f.Status, &f.Label, &f.OptionsRaw, &f.ShowInCreate, &f.Version)
+		id).Scan(&f.Object, &f.ColumnName, &f.Type, &f.Status, &f.Label, &f.OptionsRaw, &f.ShowInCreate, &f.Reportable, &f.Version)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return lockedField{}, apperrors.ErrNotFound
 	}
@@ -86,13 +87,14 @@ func readField(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontracts.Custom
 type FieldPatch struct {
 	Label        *string
 	ShowInCreate *bool
+	Reportable   *bool
 }
 
 // validate refuses a patch that changes nothing or blanks the label. An empty
 // patch answers the same label-required refusal a rename always gave, so a
 // client that only ever renames sees no new error.
 func (p FieldPatch) validate() error {
-	if p.ShowInCreate == nil && p.Label == nil {
+	if p.ShowInCreate == nil && p.Label == nil && p.Reportable == nil {
 		return &ValidationError{Errors: []FieldError{{Field: fieldLabel, Code: codeRequired}}}
 	}
 	if p.Label != nil && strings.TrimSpace(*p.Label) == "" {
@@ -127,7 +129,7 @@ func (s *Service) Update(ctx context.Context, id ids.UUID, patch FieldPatch, ifV
 		if ifVersion != nil && *ifVersion != f.Version {
 			return apperrors.ErrVersionSkew
 		}
-		label, show := f.Label, f.ShowInCreate
+		label, show, reportable := f.Label, f.ShowInCreate, f.Reportable
 		if patch.Label != nil {
 			label = *patch.Label
 			if err := serializeSchemaChange(ctx, tx, f.Object); err != nil {
@@ -140,14 +142,21 @@ func (s *Service) Update(ctx context.Context, id ids.UUID, patch FieldPatch, ifV
 		if patch.ShowInCreate != nil {
 			show = *patch.ShowInCreate
 		}
+		if patch.Reportable != nil {
+			if *patch.Reportable && !reportableType(f.Type) {
+				return &ValidationError{Errors: []FieldError{{Field: fieldReport, Code: codeUnsupportedType}}}
+			}
+			reportable = *patch.Reportable
+		}
 		if _, err := tx.Exec(ctx,
-			`UPDATE custom_field SET label = $1, show_in_create = $2 WHERE id = $3`, label, show, id); err != nil {
+			`UPDATE custom_field SET label = $1, show_in_create = $2, reportable = $3 WHERE id = $4`,
+			label, show, reportable, id); err != nil {
 			return fmt.Errorf("customfields: updating settings: %w", err)
 		}
 		if out, err = readField(ctx, tx, id); err != nil {
 			return err
 		}
-		before, after := patch.auditDiff(f, label, show)
+		before, after := patch.auditDiff(f, label, show, reportable)
 		if _, err := storekit.Audit(ctx, tx, "update", rbacObject, id, before, after); err != nil {
 			return fmt.Errorf("customfields: audit write: %w", err)
 		}
@@ -161,7 +170,7 @@ func (s *Service) Update(ctx context.Context, id ids.UUID, patch FieldPatch, ifV
 
 // auditDiff names only the settings the patch carried, so the trail of a
 // rename does not claim the create-dialog setting moved, and the other way.
-func (p FieldPatch) auditDiff(f lockedField, label string, show bool) (before, after map[string]any) {
+func (p FieldPatch) auditDiff(f lockedField, label string, show, reportable bool) (before, after map[string]any) {
 	before, after = map[string]any{}, map[string]any{}
 	if p.Label != nil {
 		before[fieldLabel], after[fieldLabel] = f.Label, label
@@ -169,7 +178,17 @@ func (p FieldPatch) auditDiff(f lockedField, label string, show bool) (before, a
 	if p.ShowInCreate != nil {
 		before[fieldShow], after[fieldShow] = f.ShowInCreate, show
 	}
+	if p.Reportable != nil {
+		before[fieldReport], after[fieldReport] = f.Reportable, reportable
+	}
 	return before, after
+}
+
+// reportableType is the kinds of field a report can group by. One value per
+// record keeps a grouped total from counting a record twice, which rules out
+// a multiselect; free text and numbers are not categories.
+func reportableType(typ string) bool {
+	return typ == TypePicklist || typ == TypeBoolean
 }
 
 // Retire flips status to retired (CUSTOM-FIELDS-WIRE-4/AC-13): the field

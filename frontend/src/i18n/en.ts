@@ -9672,6 +9672,11 @@ export const en = {
   "cf.shownInCreate": "“{label}” shown in create forms",
   "cf.hiddenFromCreate":
     "“{label}” hidden from create forms, still on the record page",
+  "cf.col.inReports": "In reports",
+  "cf.reportableFor": "Use “{label}” in reports",
+  "cf.addedToReports":
+    "“{label}” added to reports; every report reader sees its name and choices",
+  "cf.removedFromReports": "“{label}” removed from reports",
   "cf.audit.title": "Recent field changes",
   "audit.kind.customField": "Custom field",
   "cf.audit.empty": "No custom field changes yet.",

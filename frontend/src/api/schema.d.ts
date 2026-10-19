@@ -37446,6 +37446,28 @@ export interface components {
             group_by: string[];
             /** @description The fields this population can be aggregated over. */
             measures: string[];
+            /**
+             * @description The installation's own fields among `group_by`, with the label and choices an
+             *     administrator gave them. A field an administrator opted into reporting shows here, and
+             *     only such a field: its label and choices are published to every reader of the population.
+             */
+            custom_fields?: components["schemas"]["AnalyticsCustomField"][];
+        };
+        AnalyticsCustomField: {
+            /** @description The field as `group_by` and a filter name it. */
+            name: string;
+            /** @description The name an administrator gave the field. */
+            label: string;
+            /**
+             * @description The value shape. A picklist holds one of `options`; a boolean holds yes or no.
+             * @enum {string}
+             */
+            type: "picklist" | "boolean";
+            /**
+             * @description The choices a picklist offers today, empty for a boolean. A record may still hold a
+             *     choice an administrator has since removed.
+             */
+            options: string[];
         };
         /** @description One question, in the vocabulary the schema returned. */
         AnalyticsQuery: {
@@ -38399,6 +38421,8 @@ export interface components {
             options?: string[] | null;
             /** @description Whether the field is offered in the create dialog of its object. Off keeps it out of create dialogs only: the record page still shows the field and edits its value. */
             show_in_create: boolean;
+            /** @description Whether reports may group and filter by this field. Off by default, and only a picklist or boolean field can be on: one value per record keeps a grouped total from counting a record twice. On publishes the field's label and choices to every reader of the reports over its object. */
+            reportable: boolean;
             /** Format: uuid */
             created_by: string;
             /** Format: date-time */
@@ -38452,10 +38476,11 @@ export interface components {
              */
             show_in_create: boolean;
         };
-        /** @description Merge-PATCH of the two settings a live field may change: `label` and `show_in_create`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). */
+        /** @description Merge-PATCH of the settings a live field may change: `label`, `show_in_create` and `reportable`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. */
         RenameCustomFieldRequest: {
             label?: string;
             show_in_create?: boolean;
+            reportable?: boolean;
         };
         /** @description CUSTOM-FIELDS-PARAM-5. Replaces the picklist's full allowed-option set (ordered); at least one option is required — an empty array is rejected (422). */
         UpdateCustomFieldOptionsRequest: {

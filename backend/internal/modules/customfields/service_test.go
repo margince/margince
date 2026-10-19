@@ -103,9 +103,18 @@ func TestUpdate_EmptyPatchRefused(t *testing.T) {
 func TestUpdateAuditNamesOnlyTheSettingsThePatchCarried(t *testing.T) {
 	hide := false
 	f := lockedField{Label: "Old owner", ShowInCreate: true}
-	before, after := FieldPatch{ShowInCreate: &hide}.auditDiff(f, f.Label, hide)
+	before, after := FieldPatch{ShowInCreate: &hide}.auditDiff(f, f.Label, hide, f.Reportable)
 	if len(before) != 1 || before[fieldShow] != true || len(after) != 1 || after[fieldShow] != false {
 		t.Fatalf("a show_in_create patch must audit only that setting, got before=%v after=%v", before, after)
+	}
+}
+
+func TestUpdateAuditNamesTheReportingSettingAlone(t *testing.T) {
+	on := true
+	f := lockedField{Label: "Territory", ShowInCreate: true}
+	before, after := FieldPatch{Reportable: &on}.auditDiff(f, f.Label, f.ShowInCreate, on)
+	if len(before) != 1 || before[fieldReport] != false || len(after) != 1 || after[fieldReport] != true {
+		t.Fatalf("a reportable patch must audit only that setting, got before=%v after=%v", before, after)
 	}
 }
 

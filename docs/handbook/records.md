@@ -347,7 +347,7 @@ Also called: custom property, extra column, new attribute, hide a field on new r
 
 **A custom field on activities** is offered on every call, meeting, note and task you log, and cannot be kept to one kind. You fill it in **Log activity** and read it when you open the activity. The activity's edit form does not change it, and a colleague who may not read the activity does not see it.
 
-Renaming a field changes its label and keeps your reports working. To take a field out of create forms later, turn off its switch under **In create forms**. The record page still shows it, and you can edit it there.
+Renaming a field changes its label and keeps your reports working. To take a field out of create forms later, turn off its switch under **In create forms**. The record page still shows it, and you can edit it there. A deal picklist or yes/no field has a switch under **In reports**. Turn it on to group and filter deal reports by that field. Everyone who reads deal reports then sees the field's name and choices.
 
 ## Tags
 

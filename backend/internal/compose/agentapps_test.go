@@ -116,7 +116,7 @@ func everyDeclaredView() map[string]string { return apps.DeclaredViews() }
 // automatically rather than being a list somebody has to remember.
 func composedResources(t *testing.T) mcp.ResourceProvider {
 	t.Helper()
-	return composeResources(mcpResourceProviders(nil, nil, primedViews(t, everyDeclaredView()))...)
+	return composeResources(mcpResourceProviders(nil, nil, nil, primedViews(t, everyDeclaredView()))...)
 }
 
 // readerCtx is an agent holding `read`, which is the scope a view requires. The
@@ -305,7 +305,7 @@ func TestTheProductionProvidersClaimDisjointURIs(t *testing.T) {
 	// Derived from the transport's own list, so the NEXT provider is measured the
 	// commit it is wired rather than the commit somebody remembers this test.
 	wired := mcpResourceProviders(
-		agents.NewCapabilitiesResource(NewRegistry(nil, SendPath{})), nil, primedViews(t, everyDeclaredView()))
+		agents.NewCapabilitiesResource(NewRegistry(nil, SendPath{})), nil, nil, primedViews(t, everyDeclaredView()))
 	if len(wired) != 7 {
 		t.Fatalf("the transport composes %d resource providers; this gate knows how to reason about "+
 			"capabilities, the query vocabulary, the write vocabulary, the report vocabulary, the "+

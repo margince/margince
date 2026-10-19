@@ -37,6 +37,13 @@ type Field struct {
 	Shape ColumnShape
 	// Domain bounds the values a filter on this field may name.
 	Domain ValueDomain
+	// Label names a field the installation defined, where no built-in name
+	// exists to translate. Empty for every built-in field.
+	Label string
+	// Options are the choices a builder offers for a field with a closed set
+	// of values. Offered, not enforced: a record may still hold a choice an
+	// administrator has since removed.
+	Options []string
 }
 
 // ColumnShape is what a column holds — named for the COLUMN because the

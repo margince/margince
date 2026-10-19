@@ -98,6 +98,15 @@ type FilterableReader interface {
 	FilterableColumns(ctx context.Context, object string) ([]Column, error)
 }
 
+// ReportableColumn is a column an administrator opted into reporting, with
+// the label reports show it under. Opting in publishes the label and options to
+// every reader of reports over the field's object, so a consumer may pass both
+// to anyone who may read that object, without `custom_field:read`.
+type ReportableColumn struct {
+	Column
+	Label string
+}
+
 // Target is what a custom field may be ATTACHED to.
 //
 // Its own vocabulary rather than datasource.EntityType, which it resembles.

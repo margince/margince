@@ -3,10 +3,11 @@
 
 import { describe, expect, it } from "vitest";
 import { translate } from "../../i18n";
-import { ENTITIES, QUERY } from "./analytics.questions.testkit";
+import { CUSTOM_DEALS, ENTITIES, QUERY } from "./analytics.questions.testkit";
 import {
   analyticsFieldLabel,
   columnLabel,
+  customLabels,
   explainGroup,
   fieldsForFn,
   fnsFor,
@@ -23,6 +24,37 @@ const t = (
   key: Parameters<typeof translate>[1],
   params?: Record<string, string>,
 ) => translate("en", key, params);
+
+describe("the installation's own fields", () => {
+  const labels = customLabels([CUSTOM_DEALS]);
+
+  it("reads under the label an administrator gave them", () => {
+    expect(analyticsFieldLabel(t, "cf_territory", labels)).toBe("Territory");
+    expect(
+      columnLabel(
+        t,
+        { ...QUERY, group_by: ["cf_territory"] },
+        "cf_territory",
+        labels,
+      ),
+    ).toBe("Territory");
+  });
+
+  it("falls back to the column name once the label is gone", () => {
+    expect(analyticsFieldLabel(t, "cf_territory")).toBe("cf_territory");
+  });
+
+  it("keeps a built-in field's own name", () => {
+    expect(analyticsFieldLabel(t, "status", labels)).toBe(
+      analyticsFieldLabel(t, "status"),
+    );
+  });
+
+  it("takes a yes-or-no field as a boolean and a picklist as text", () => {
+    expect(valueShape(CUSTOM_DEALS, "cf_strategic")).toBe("boolean");
+    expect(valueShape(CUSTOM_DEALS, "cf_territory")).toBe("text");
+  });
+});
 
 describe("which field an aggregate accepts", () => {
   it("gives count no field at all", () => {

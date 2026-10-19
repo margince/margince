@@ -36,6 +36,28 @@ type AuditLogEntry = components["schemas"]["AuditLogEntry"];
 // field id is a UUID, so this never collides with one.
 export const STAGED_ID = "staged";
 
+/** A per-field switch the settings table offers, by its wire name. */
+export type FieldSetting = "show_in_create" | "reportable";
+
+/** The field and switch being written, while a write is in flight. */
+export type SavingSetting = Readonly<{
+  field: string | undefined;
+  setting: FieldSetting | undefined;
+}>;
+
+export const SETTING_TOAST = {
+  show_in_create: { on: "cf.shownInCreate", off: "cf.hiddenFromCreate" },
+  reportable: { on: "cf.addedToReports", off: "cf.removedFromReports" },
+} as const;
+
+// Analytics groups deals alone by the installation's own fields, and only by a
+// field with a closed set of values; the server refuses the rest.
+function reportableField(object: CfObject, field: CustomField): boolean {
+  return (
+    object === "deal" && (field.type === "picklist" || field.type === "boolean")
+  );
+}
+
 // Decorative: every use is aria-hidden, and the Type column names the type.
 const TYPE_ICON: Record<CfType, LucideIcon> = {
   text: Type,
@@ -56,8 +78,8 @@ export function FieldTable({
   meUserId,
   onRename,
   onArchive,
-  onShowInCreate,
-  savingShowInCreate,
+  onSetting,
+  saving,
 }: Readonly<{
   object: CfObject;
   fields: CustomField[];
@@ -68,9 +90,8 @@ export function FieldTable({
   meUserId?: string;
   onRename: (field: CustomField) => void;
   onArchive: (field: CustomField) => void;
-  onShowInCreate: (field: CustomField, show: boolean) => void;
-  // The id of the field whose create-dialog setting is being written.
-  savingShowInCreate?: string;
+  onSetting: (field: CustomField, setting: FieldSetting, on: boolean) => void;
+  saving?: SavingSetting;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -99,14 +120,35 @@ export function FieldTable({
       key: "inCreate",
       header: t("cf.col.inCreate"),
       render: (field) => (
-        <ShowInCreateCell
+        <SettingCell
           field={field}
           canEdit={canEdit}
-          pending={savingShowInCreate === field.id}
-          onChange={(show) => onShowInCreate(field, show)}
+          on={field.show_in_create !== false}
+          label={t("cf.showInCreateFor", { label: field.label })}
+          pending={isSaving(saving, field, "show_in_create")}
+          onChange={(on) => onSetting(field, "show_in_create", on)}
         />
       ),
     },
+    ...(object === "deal"
+      ? [
+          {
+            key: "inReports",
+            header: t("cf.col.inReports"),
+            render: (field: CustomField) =>
+              reportableField(object, field) ? (
+                <SettingCell
+                  field={field}
+                  canEdit={canEdit}
+                  on={field.reportable}
+                  label={t("cf.reportableFor", { label: field.label })}
+                  pending={isSaving(saving, field, "reportable")}
+                  onChange={(on) => onSetting(field, "reportable", on)}
+                />
+              ) : null,
+          },
+        ]
+      : []),
     {
       key: "addedBy",
       header: t("cf.col.addedBy"),
@@ -173,30 +215,42 @@ function FieldName({ field }: Readonly<{ field: CustomField }>) {
   );
 }
 
+function isSaving(
+  saving: SavingSetting | undefined,
+  field: CustomField,
+  setting: FieldSetting,
+): boolean {
+  return saving?.field === field.id && saving.setting === setting;
+}
+
 // A switch where the reader may flip it, and the plain answer where they may
 // not. A staged row has no id yet, and a retired field's settings are frozen.
-// `!== false` reads a server older than the setting as on, which it was.
-function ShowInCreateCell({
+// The create-form setting reads `!== false`, so a server older than the
+// setting reads as on, which it was.
+function SettingCell({
   field,
   canEdit,
+  on,
+  label,
   pending,
   onChange,
 }: Readonly<{
   field: CustomField;
   canEdit: boolean;
+  on: boolean;
+  label: string;
   pending: boolean;
-  onChange: (show: boolean) => void;
+  onChange: (on: boolean) => void;
 }>) {
   const t = useT();
-  const shown = field.show_in_create !== false;
   if (!canEdit || field.id === STAGED_ID || field.status === "retired") {
-    return <span>{shown ? t("field.yes") : t("field.no")}</span>;
+    return <span>{on ? t("field.yes") : t("field.no")}</span>;
   }
   return (
     <Switch
-      label={t("cf.showInCreateFor", { label: field.label })}
+      label={label}
       labelHidden
-      checked={shown}
+      checked={on}
       pending={pending}
       onChange={onChange}
     />

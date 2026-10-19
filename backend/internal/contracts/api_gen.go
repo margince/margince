@@ -1423,6 +1423,24 @@ func (e AiUsageBudgetBand) Valid() bool {
 	}
 }
 
+// Defines values for AnalyticsCustomFieldType.
+const (
+	AnalyticsCustomFieldTypeBoolean  AnalyticsCustomFieldType = "boolean"
+	AnalyticsCustomFieldTypePicklist AnalyticsCustomFieldType = "picklist"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsCustomFieldType enum.
+func (e AnalyticsCustomFieldType) Valid() bool {
+	switch e {
+	case AnalyticsCustomFieldTypeBoolean:
+		return true
+	case AnalyticsCustomFieldTypePicklist:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AnalyticsFilterOp.
 const (
 	AnalyticsFilterOpAnalyticsOpEq        AnalyticsFilterOp = "eq"
@@ -25517,8 +25535,32 @@ type AnalyticsContext struct {
 	Timezone string `json:"timezone"`
 }
 
+// AnalyticsCustomField defines model for AnalyticsCustomField.
+type AnalyticsCustomField struct {
+	// Label The name an administrator gave the field.
+	Label string `json:"label"`
+
+	// Name The field as `group_by` and a filter name it.
+	Name string `json:"name"`
+
+	// Options The choices a picklist offers today, empty for a boolean. A record may still hold a
+	// choice an administrator has since removed.
+	Options []string `json:"options"`
+
+	// Type The value shape. A picklist holds one of `options`; a boolean holds yes or no.
+	Type AnalyticsCustomFieldType `json:"type"`
+}
+
+// AnalyticsCustomFieldType The value shape. A picklist holds one of `options`; a boolean holds yes or no.
+type AnalyticsCustomFieldType string
+
 // AnalyticsEntity defines model for AnalyticsEntity.
 type AnalyticsEntity struct {
+	// CustomFields The installation's own fields among `group_by`, with the label and choices an
+	// administrator gave them. A field an administrator opted into reporting shows here, and
+	// only such a field: its label and choices are published to every reader of the population.
+	CustomFields *[]AnalyticsCustomField `json:"custom_fields,omitempty"`
+
 	// GroupBy The fields this population can be grouped by.
 	GroupBy []string `json:"group_by"`
 
@@ -34994,6 +35036,9 @@ type CustomField struct {
 
 	// Options Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise.
 	Options *[]string `json:"options,omitempty"`
+
+	// Reportable Whether reports may group and filter by this field. Off by default, and only a picklist or boolean field can be on: one value per record keeps a grouped total from counting a record twice. On publishes the field's label and choices to every reader of the reports over its object.
+	Reportable bool `json:"reportable"`
 
 	// ShowInCreate Whether the field is offered in the create dialog of its object. Off keeps it out of create dialogs only: the record page still shows the field and edits its value.
 	ShowInCreate bool `json:"show_in_create"`
@@ -45136,9 +45181,10 @@ type RemovalUndo struct {
 	AuditId openapi_types.UUID `json:"audit_id"`
 }
 
-// RenameCustomFieldRequest Merge-PATCH of the two settings a live field may change: `label` and `show_in_create`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent).
+// RenameCustomFieldRequest Merge-PATCH of the settings a live field may change: `label`, `show_in_create` and `reportable`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused.
 type RenameCustomFieldRequest struct {
 	Label        *string `json:"label,omitempty"`
+	Reportable   *bool   `json:"reportable,omitempty"`
 	ShowInCreate *bool   `json:"show_in_create,omitempty"`
 }
 

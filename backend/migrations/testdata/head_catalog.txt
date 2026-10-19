@@ -3322,6 +3322,7 @@ public.custom_field.custom_field_created_by_fkey FOREIGN KEY (created_by) REFERE
 public.custom_field.custom_field_currency_check CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$'::text)))
 public.custom_field.custom_field_object_check CHECK ((object = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'contract'::text])))
 public.custom_field.custom_field_pkey PRIMARY KEY (id)
+public.custom_field.custom_field_reportable_type_check CHECK (((NOT reportable) OR (type = ANY (ARRAY['picklist'::text, 'boolean'::text]))))
 public.custom_field.custom_field_status_check CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text])))
 public.custom_field.custom_field_type_check CHECK ((type = ANY (ARRAY['text'::text, 'number'::text, 'date'::text, 'currency'::text, 'picklist'::text, 'multiselect'::text, 'boolean'::text])))
 public.custom_field.custom_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -3329,6 +3330,7 @@ public.custom_field.id uuid NOT NULL gen=- def=uuidv7()
 public.custom_field.label text NOT NULL gen=- def=-
 public.custom_field.object text NOT NULL gen=- def=-
 public.custom_field.options jsonb gen=- def=-
+public.custom_field.reportable boolean NOT NULL gen=- def=false
 public.custom_field.show_in_create boolean NOT NULL gen=- def=true
 public.custom_field.slug text NOT NULL gen=- def=-
 public.custom_field.status text NOT NULL gen=- def='active'::text

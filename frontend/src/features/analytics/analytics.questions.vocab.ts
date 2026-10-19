@@ -20,6 +20,7 @@ export type AnalyticsQuery = components["schemas"]["AnalyticsQuery"];
 export type AnalyticsAnswer = components["schemas"]["AnalyticsAnswer"];
 export type AnalyticsEntity = components["schemas"]["AnalyticsEntity"];
 type AnalyticsMeasure = components["schemas"]["AnalyticsMeasure"];
+type CustomField = components["schemas"]["AnalyticsCustomField"];
 type AnalyticsFilter = components["schemas"]["AnalyticsFilter"];
 export type MeasureFn = AnalyticsMeasure["fn"];
 export type QuestionOp = AnalyticsFilter["op"];
@@ -143,8 +144,39 @@ export function entityLabel(t: Translate, name: string): string {
   return isEntityName(name) ? t(ENTITY_LABEL_KEY[name]) : name;
 }
 
-/** A field's name on screen, or its wire name when the catalog has none. */
-export function analyticsFieldLabel(t: Translate, name: string): string {
+/** The names an administrator gave the installation's own fields, by field. */
+export type CustomLabels = ReadonlyMap<string, string>;
+
+export function customLabels(
+  entities: readonly AnalyticsEntity[],
+): CustomLabels {
+  return new Map(
+    entities.flatMap((entity) =>
+      (entity.custom_fields ?? []).map((field) => [field.name, field.label]),
+    ),
+  );
+}
+
+export function customFieldOf(
+  entity: AnalyticsEntity,
+  name: string,
+): CustomField | undefined {
+  return entity.custom_fields?.find((field) => field.name === name);
+}
+
+/**
+ * A field's name on screen: the administrator's label for the installation's
+ * own field, the catalog's for a built-in one, or else its wire name.
+ */
+export function analyticsFieldLabel(
+  t: Translate,
+  name: string,
+  custom?: CustomLabels,
+): string {
+  const own = custom?.get(name);
+  if (own) {
+    return own;
+  }
   const key = `analytics.field.${name}`;
   return isMessageKey(key) ? t(key) : name;
 }
@@ -200,7 +232,10 @@ export function valueShape(entity: AnalyticsEntity, field: string): ValueShape {
   if (entity.measures.includes(field) || NUMBER_DIMENSIONS.has(field)) {
     return "number";
   }
-  return BOOLEAN_DIMENSIONS.has(field) ? "boolean" : "text";
+  const boolean =
+    BOOLEAN_DIMENSIONS.has(field) ||
+    customFieldOf(entity, field)?.type === "boolean";
+  return boolean ? "boolean" : "text";
 }
 
 // The record type an id field points at, in the Filters vocabulary, so a value
@@ -236,13 +271,17 @@ export function measureOfColumn(
 }
 
 /** A measure's name on screen: the aggregate, and the field it reads. */
-export function measureLabel(t: Translate, measure: AnalyticsMeasure): string {
+export function measureLabel(
+  t: Translate,
+  measure: AnalyticsMeasure,
+  custom?: CustomLabels,
+): string {
   if (!measure.field) {
     return fnLabel(t, measure.fn);
   }
   return t("analytics.q.measureOf", {
     fn: fnLabel(t, measure.fn),
-    field: analyticsFieldLabel(t, measure.field),
+    field: analyticsFieldLabel(t, measure.field, custom),
   });
 }
 
@@ -250,9 +289,12 @@ export function columnLabel(
   t: Translate,
   query: AnalyticsQuery,
   column: string,
+  custom?: CustomLabels,
 ): string {
   const measure = measureOfColumn(query, column);
-  return measure ? measureLabel(t, measure) : analyticsFieldLabel(t, column);
+  return measure
+    ? measureLabel(t, measure, custom)
+    : analyticsFieldLabel(t, column, custom);
 }
 
 export function isMoneyField(field: string): boolean {

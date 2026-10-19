@@ -145,6 +145,7 @@ const (
 	fieldSource   = "source"
 	fieldStatus   = "status"
 	fieldShow     = "show_in_create"
+	fieldReport   = "reportable"
 	fieldSlug     = "slug"
 	fieldColumn   = "column_name"
 	codeRequired  = "required"
