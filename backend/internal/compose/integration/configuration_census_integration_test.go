@@ -102,6 +102,7 @@ var unsurfaced = []string{"consent.authorization_modes", "deals.stage_autopilot_
 //
 // gatekit:fixture boot values a test environment sets, not reasons
 var censusValues = map[string]string{
+	"ai.routing":                             "{}",
 	"installation.name":                      "Census GmbH",
 	"installation.country":                   "zk",
 	"identity.enabled_oidc_providers":        "google",
