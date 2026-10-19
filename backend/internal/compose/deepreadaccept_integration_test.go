@@ -218,7 +218,7 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 
 // A home page that names the company's own industry and an open-ended
 // headcount fills both empty columns, each stamped as the agent's work, so the
-// record page shows them as AI-derived and a person can revert them.
+// record page shows them as AI-derived and a colleague can revert them.
 func TestDeepReadFillsTheCompanysOwnIndustryAndSizeFromItsHomePage(t *testing.T) {
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
@@ -275,9 +275,9 @@ func TestDeepReadFillsTheCompanysOwnIndustryAndSizeFromItsHomePage(t *testing.T)
 	}
 }
 
-// The read fills the industry only where it is empty: a value a person set
+// The read fills the industry only where it is empty: a value a colleague set
 // stays, and the read's finding is kept as evidence beside it.
-func TestDeepReadNeverOverwritesAnIndustryAPersonSet(t *testing.T) {
+func TestDeepReadNeverOverwritesAnIndustryAColleagueSet(t *testing.T) {
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "Logistics")
 	if err := contacts.NewStore(e.DB()).ApplyDeepRead(e.As(e.Rep1, nil, integration.AdminPerms), contacts.DeepReadProposal{
@@ -302,7 +302,7 @@ func TestDeepReadNeverOverwritesAnIndustryAPersonSet(t *testing.T) {
 		t.Fatal(err)
 	}
 	if industry != "Logistics" {
-		t.Fatalf("industry = %q, want the person's value kept", industry)
+		t.Fatalf("industry = %q, want the colleague's value kept", industry)
 	}
 	if evidence != "Industrial automation software" {
 		t.Fatalf("industry evidence = %q, want the read's finding kept beside the column", evidence)
