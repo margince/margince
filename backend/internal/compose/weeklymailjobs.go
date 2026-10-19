@@ -9,6 +9,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -24,14 +25,14 @@ type weeklyMailCandidate struct {
 	review   weekly.Review
 	settings identity.Delivery
 	words    mailcopy.Copy
-	body     string
+	body     emailview.Message
 }
 
 type weeklySubmission struct {
 	attempt  weekly.MailAttempt
 	combined routineClaim
 	part     morningDigest
-	body     string
+	body     emailview.Message
 }
 
 func (w *weeklyGenerateWorker) mailWeekly(ctx context.Context, reviewID ids.UUID, now time.Time) {
@@ -66,9 +67,10 @@ func (w *weeklyGenerateWorker) mailWeekly(ctx context.Context, reviewID ids.UUID
 		}
 		return
 	}
+	submission.body.AppendContent(routineFooterContent(w.mail.PublicBaseURL, candidate.words))
 	bounded, cancel := context.WithTimeout(ctx, mailBudget)
 	defer cancel()
-	if err := mailer.SendLocalized(bounded, w.mail.Mailer, submission.attempt.Email, weekly.MailSubject(candidate.review, candidate.words), submission.body, string(candidate.words.Language)); err != nil {
+	if err := mailer.SendProduct(bounded, w.mail.Mailer, submission.attempt.Email, weeklyMailSubject(candidate), submission.body); err != nil {
 		w.log.WarnContext(ctx, "weekly relay submission failed", "review", reviewID, "cause", err)
 		if routineCombines(candidate.settings) {
 			recordRoutineFailure(ctx, w.pool, submission.combined, submission.part, "relay submission failed", w.log)
@@ -95,17 +97,17 @@ func (w *weeklyGenerateWorker) prepareWeeklyMail(ctx context.Context, reviewID i
 	if err != nil || review.ID != reviewID {
 		return out, false
 	}
-	if !weekly.MailUseful(review) && settings.ScopeChoice() == identity.RoutinePersonal {
-		return out, false
-	}
 	pending, err := w.engine.MailPending(ctx, reviewID)
 	if err != nil || !pending {
 		return out, false
 	}
-	words := mailcopy.For(identity.BaseLanguageForPrompt(ctx, w.pool))
+	words := recipientMailCopy(ctx, w.pool)
 	body, err := w.weeklyMessage(ctx, review, settings, now, words)
 	if err != nil {
 		w.log.WarnContext(ctx, "weekly content unavailable", "cause", err)
+		return out, false
+	}
+	if len(body.Blocks) == 0 {
 		return out, false
 	}
 	return weeklyMailCandidate{review: review, settings: settings, words: words, body: body}, true
@@ -156,7 +158,7 @@ func (w *weeklyGenerateWorker) claimWeeklyMail(ctx context.Context, candidate we
 	}
 	out.attempt, out.combined, out.part = claim.week, claim, part
 	if claim.digest {
-		out.body += "\n\n" + digestMessage(part.lines, w.mail.PublicBaseURL, candidate.words)
+		out.body.AppendContent(digestContent(part.lines, w.mail.PublicBaseURL, candidate.words))
 	}
 	return out, true, nil
 }
@@ -176,4 +178,11 @@ func (w *weeklyGenerateWorker) optedOutOfWeekly(ctx context.Context) bool {
 		return true
 	}
 	return settings.Weekly != nil && *settings.Weekly == identity.DeliveryNone
+}
+
+func weeklyMailSubject(candidate weeklyMailCandidate) string {
+	if candidate.settings.ScopeChoice() == identity.RoutineTeam || !weekly.MailUseful(candidate.review) {
+		return candidate.body.Title
+	}
+	return weekly.MailSubject(candidate.review, candidate.words)
 }

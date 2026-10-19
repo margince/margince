@@ -9,6 +9,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -24,7 +25,7 @@ type morningMailCandidate struct {
 	run      briefs.BriefRun
 	settings identity.Delivery
 	words    mailcopy.Copy
-	body     string
+	body     emailview.Message
 	digest   morningDigest
 }
 
@@ -50,9 +51,9 @@ func (w *briefGenerateWorker) mailMorning(ctx context.Context, observed briefs.B
 	}
 	body := candidate.body
 	if combined.digest {
-		body += "\n\n" + digestMessage(candidate.digest.lines, w.mail.PublicBaseURL, candidate.words)
+		body.AppendContent(digestContent(candidate.digest.lines, w.mail.PublicBaseURL, candidate.words))
 	}
-	body += routineFooter(w.mail.PublicBaseURL, candidate.words)
+	body.AppendContent(routineFooterContent(w.mail.PublicBaseURL, candidate.words))
 	if attempt.Email == "" {
 		if routineCombines(candidate.settings) {
 			recordRoutineFailure(ctx, w.pool, combined, candidate.digest, "the seat has no email address", w.log)
@@ -71,7 +72,7 @@ func (w *briefGenerateWorker) mailMorning(ctx context.Context, observed briefs.B
 	}
 	bounded, cancel := context.WithTimeout(ctx, briefMailBudget)
 	defer cancel()
-	if err := mailer.SendLocalized(bounded, w.mail.Mailer, attempt.Email, briefs.MailSubject(candidate.run, candidate.words), body, string(candidate.words.Language)); err != nil {
+	if err := mailer.SendProduct(bounded, w.mail.Mailer, attempt.Email, morningMailSubject(candidate), body); err != nil {
 		w.log.WarnContext(ctx, "morning relay submission failed", "run", candidate.run.ID, "cause", err)
 		if routineCombines(candidate.settings) {
 			recordRoutineFailure(ctx, w.pool, combined, candidate.digest, "relay submission failed", w.log)
@@ -102,8 +103,8 @@ func (w *briefGenerateWorker) prepareMorningMail(ctx context.Context, now time.T
 		return out, false, err
 	}
 	run.LocalDay = window.Day
-	words := mailcopy.For(identity.BaseLanguageForPrompt(ctx, w.pool))
-	body, useful, err := w.morningMessage(ctx, run, now, words)
+	words := recipientMailCopy(ctx, w.pool)
+	body, useful, err := w.morningMessage(ctx, now, words, false)
 	if err != nil {
 		return out, false, err
 	}
@@ -111,7 +112,10 @@ func (w *briefGenerateWorker) prepareMorningMail(ctx context.Context, now time.T
 	if err != nil {
 		return out, false, err
 	}
-	if !morningEditionWanted(settings, body, useful, part.lines.total) {
+	if body.Title == "" && part.lines.total > 0 {
+		body = (emailview.Content{}).Message(briefs.MailSubject(briefs.BriefRun{LocalDay: now.In(window.Day.Location())}, words), string(words.Language), words.DigestPreview)
+	}
+	if !morningEditionWanted(settings, body.Text, useful, part.lines.total) {
 		return out, false, nil
 	}
 	return morningMailCandidate{run: run, settings: settings, words: words, body: body, digest: part}, true, nil
@@ -143,3 +147,5 @@ func morningEditionWanted(settings identity.Delivery, body string, useful bool, 
 	}
 	return settings.QuietDay != nil && *settings.QuietDay
 }
+
+func morningMailSubject(candidate morningMailCandidate) string { return candidate.body.Title }

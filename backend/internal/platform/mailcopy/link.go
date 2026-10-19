@@ -3,31 +3,10 @@
 
 package mailcopy
 
-import "strings"
-
-// Link is the closing line every message ends with: a label, and the address it
-// names on its own indented line.
-//
-// ONE writer for both senders. The morning and the weekly each had their own
-// copy of the same four-part shape — blank line, label, two spaces, address —
-// differing only in which label they reached for, which is two answers to one
-// question and the thing this package exists to prevent.
-//
-// A blank base omits the whole line rather than writing a label over nothing.
-// An installation that has not been told its own public origin cannot produce a
-// working link, and a label followed by an empty indent reads as a link that
-// failed to render.
-//
-// FRAGMENT, NOT PATH. The app is a hash-routed single page, so the address of a
-// view lives after the '#'. Both mails linked to the bare origin before this,
-// which meant a rep opening the WEEKLY message landed on the morning — the
-// message is about a week the page it opened was not showing.
-func Link(b *strings.Builder, base, fragment, label string) {
-	if base == "" {
-		return
-	}
-	b.WriteString("\n" + label + "\n  " + strings.TrimSuffix(base, "/") + fragment + "\n")
-}
+import (
+	"net/url"
+	"strings"
+)
 
 // The Brief's two addresses, as a message must spell them.
 //
@@ -67,3 +46,45 @@ const (
 	LeadRecordFragment    = "/#/leads/"
 	ProjectRecordFragment = "/#/projects/"
 )
+
+// RecordFragment is shared by item and digest links to authorized record pages.
+func RecordFragment(kind, id string) string {
+	switch kind {
+	case "approval":
+		return BriefMorningFragment + "?approval=" + id
+	case "deal":
+		return DealRecordFragment + id
+	case "contact":
+		return ContactRecordFragment + id
+	case "company":
+		return CompanyRecordFragment + id
+	case "lead":
+		return LeadRecordFragment + id
+	case "project":
+		return ProjectRecordFragment + id
+	}
+	return ""
+}
+
+// Destination builds the same configured-origin route for text and semantic actions.
+func Destination(base, fragment string) string {
+	if base == "" {
+		return ""
+	}
+	return strings.TrimSuffix(base, "/") + fragment
+}
+
+// TeamFragment retains the selected team and reporting week when opening the app.
+func TeamFragment(team, week string) string {
+	params := url.Values{"scope": {"team"}, "team": {team}}
+	if week != "" {
+		params.Set("view", "weekly")
+		params.Set("week", week)
+	}
+	return BriefMorningFragment + "?" + params.Encode()
+}
+
+// WeeklyFragment keeps an older report linked to its own frozen week.
+func WeeklyFragment(week string) string {
+	return BriefWeeklyFragment + "&week=" + url.QueryEscape(week)
+}

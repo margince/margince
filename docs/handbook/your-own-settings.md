@@ -21,6 +21,16 @@ To change your notifications in Margince, open Settings → **Notifications**.
 2. Under **Email summaries**, set **Morning brief** and **Weekly review** to **By email** or **Not by email**.
 
 Every notice also stays in the notification center under the bell, whatever you pick. **Nudges from colleagues** cannot be turned off. The brief and the review always appear on **Home**, and what you still need to do waits on your Worklist there.
+
+Morning and weekly emails use your saved account language. Without a saved
+language, they use the company language. Password links use the account
+language too; invitations for a new account use the company language.
+
+Weekly emails show recorded results and name open due tasks separately.
+An empty week with no work to follow up means no email is sent. A team email opens
+the selected team and week. If part of the report could not be read, the email
+says so rather than counting missing information as zero.
+
 Also called: email notifications, turn off emails, alerts, daily digest.
 
 ## Account

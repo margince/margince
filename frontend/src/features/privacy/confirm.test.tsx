@@ -220,3 +220,35 @@ describe("a confirm page names the seeded purposes in the reader's language", ()
     ).not.toBeInTheDocument();
   });
 });
+
+it("lets contact details be corrected without choosing marketing", async () => {
+  const user = userEvent.setup({ delay: null });
+  const submitted: unknown[] = [];
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    const request = input instanceof Request ? input : new Request(input, init);
+    if (request.method === "GET") return jsonResponse(RECORD);
+    submitted.push(await request.json());
+    return jsonResponse({
+      corrections_staged: 1,
+      marketing_recorded: false,
+      erasure_requested: false,
+      rights_cases: [],
+    });
+  });
+  render(<ConfirmDetailsScreen token="correction-only" />);
+  const name = await screen.findByDisplayValue("Anna Müller");
+  await user.clear(name);
+  await user.type(name, "Anna Meyer");
+  expect(
+    screen.getByText(
+      "This choice is optional. You can correct your details without subscribing.",
+    ),
+  ).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Confirm" }));
+  expect(submitted).toHaveLength(1);
+  expect(submitted[0]).not.toHaveProperty("marketing_choice");
+  expect(submitted[0]).not.toHaveProperty("marketing_wording");
+  expect(submitted[0]).toHaveProperty("corrections", [
+    { field: "full_name", value: "Anna Meyer" },
+  ]);
+});

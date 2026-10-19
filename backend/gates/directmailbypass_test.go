@@ -384,8 +384,8 @@ func relayCall(name string, arity int) bool {
 		return arity == 4
 	case "SendIdentified":
 		return arity == 5
-	case "SendLocalized":
-		return arity == 6
+	case "SendProduct":
+		return arity == 5
 	case "SendAlternative":
 		return arity == 6
 	default:

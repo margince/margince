@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -306,18 +305,11 @@ func (w *notificationDigestWorker) deliver(
 		return
 	}
 
-	// The installation's own language, not the reader's. A colleague reads their
-	// Worklist in it and then this summary of the same queue, so an English
-	// message to a German installation is the product changing language on its
-	// way out of the browser. BaseLanguageForPrompt answers English on any
-	// failure and logs it, which is the right trade here too: a morning in the
-	// wrong language beats no morning, and the claim is already spent.
-	words := mailcopy.For(identity.BaseLanguageForPrompt(sysCtx, w.pool))
+	words := recipientMailCopy(seatCtx, w.pool)
+
 	bounded, cancel := context.WithTimeout(sysCtx, notificationDigestBudget)
 	defer cancel()
-	if err := mailer.SendLocalized(bounded, w.mail.Mailer, address,
-		digestSubject(lines, words),
-		digestMessage(lines, w.mail.PublicBaseURL, words)+routineFooter(w.mail.PublicBaseURL, words), string(words.Language)); err != nil {
+	if err := mailer.SendProduct(bounded, w.mail.Mailer, address, digestSubject(lines, words), digestMail(lines, w.mail.PublicBaseURL, words)); err != nil {
 		// LOGGED AND RECORDED, never retried. SMTP returns no receipt, so a
 		// second attempt could not tell a refused message from a delivered one.
 		w.log.WarnContext(sysCtx, "the morning digest was attempted and did not go out",
@@ -362,10 +354,10 @@ func (w *notificationDigestWorker) combinedDigestFor(seatCtx context.Context, se
 		recordRoutineFailure(seatCtx, w.pool, claim, part, "delivery choices changed or could not be rechecked", w.log)
 		return nil
 	}
-	words := mailcopy.For(identity.BaseLanguageForPrompt(seatCtx, w.pool))
+	words := recipientMailCopy(seatCtx, w.pool)
 	bounded, cancel := context.WithTimeout(seatCtx, notificationDigestBudget)
 	defer cancel()
-	if err := mailer.SendLocalized(bounded, w.mail.Mailer, address, digestSubject(lines, words), digestMessage(lines, w.mail.PublicBaseURL, words)+routineFooter(w.mail.PublicBaseURL, words), string(words.Language)); err != nil {
+	if err := mailer.SendProduct(bounded, w.mail.Mailer, address, digestSubject(lines, words), digestMail(lines, w.mail.PublicBaseURL, words)); err != nil {
 		recordRoutineFailure(seatCtx, w.pool, claim, part, "relay submission failed", w.log)
 	}
 	return nil

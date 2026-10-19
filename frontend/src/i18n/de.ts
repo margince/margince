@@ -644,8 +644,10 @@ export const de = {
     "Erfasste CRM-Arbeit dieser abgeschlossenen Woche. Fehlende Datensätze belegen keine Inaktivität.",
   "brief.weekly.notRecorded": "Nicht erfasst",
   "brief.weekly.recordedFrom": "Erfasst ab {date}",
-  "brief.weekly.noRecords": "Keine Datensätze aus dieser Quelle",
-  "brief.weekly.partialFrom": "Teilwoche: gezählt ab {date}",
+  "brief.weekly.noRecords":
+    "Für diesen Teil der Auswertung liegen keine Angaben vor",
+  "brief.weekly.partialFrom":
+    "Die Auswertung umfasst nur den Zeitraum ab {date}",
   "brief.weekly.partialValue": "{value} (teilweise)",
   "brief.week.beforeHistory":
     "Für diese Woche gibt es keine Zahlen, da sie vor den ersten Datensätzen liegt.",
@@ -4352,9 +4354,9 @@ export const de = {
     "Noch kein Wochenrückblick. Der erste wird am Montag nach deiner ersten vollen Woche erstellt.",
   "brief.weekly.tasksDelivered": "Fällige Aufgaben erledigt",
   "brief.weekly.ofDue": "{done} von {due}",
-  "brief.weekly.dealsWon": "Gewonnen",
-  "brief.weekly.dealsLost": "Verloren",
-  "brief.weekly.dealsMoved": "Bewegt",
+  "brief.weekly.dealsWon": "Gewonnene Deals",
+  "brief.weekly.dealsLost": "Verlorene Deals",
+  "brief.weekly.dealsMoved": "Deals mit Phasenwechsel",
   "brief.weekly.decided": "Entschiedene Vorschläge",
   "brief.weekly.acceptedRejected":
     "{accepted} angenommen · {rejected} abgelehnt",
@@ -4367,8 +4369,8 @@ export const de = {
   "brief.weekly.planCommitmentsKept": "Eingehaltene Zusagen",
   "brief.weekly.meetingsHeld": "Termine mit Follow-up",
   "brief.weekly.ofMeetings": "{withStep} von {held}",
-  "brief.weekly.carriedOver": "Übertragen",
-  "brief.weekly.outcome.moved": "bewegt",
+  "brief.weekly.carriedOver": "Zum Wochenende offen",
+  "brief.weekly.outcome.moved": "Verkaufsphase geändert",
   "brief.weekly.outcome.won": "gewonnen",
   "brief.weekly.outcome.lost": "verloren",
   "brief.act": "Erledigt",
@@ -9162,6 +9164,8 @@ export const de = {
   "confirm.field.phone": "Telefon",
   "confirm.field.company": "Unternehmen",
   "confirm.field.none": "Nicht erfasst",
+  "confirm.marketing.optional":
+    "Die Auswahl ist freiwillig. Sie können Ihre Kontaktdaten korrigieren, ohne Neuigkeiten zu abonnieren.",
   "confirm.marketing.title": "Gelegentlich Neuigkeiten erhalten?",
   "confirm.marketing.ask":
     "Sie erhalten von Zeit zu Zeit Neuigkeiten, etwa einmal im Monat. Ihre Entscheidung wird respektiert.",

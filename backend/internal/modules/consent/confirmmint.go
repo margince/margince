@@ -146,6 +146,7 @@ func (s *Store) issueLinkTx(
 		// its mail is a link nobody was ever sent, and a mail staged without its
 		// token is a link that resolves to nothing.
 		deliveryID, err := s.stageConfirmMail(ctx, tx, confirmMailInput{
+			purposeID:  purposeID,
 			contactID:  contactID,
 			recipient:  deliveredTo,
 			kind:       kind,

@@ -5,11 +5,11 @@ package identity
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -27,7 +27,7 @@ func validateDeliveryTeam(ctx context.Context, tx pgx.Tx, d Delivery) error {
 	case auth.ReachesEveryTeam:
 		var exists bool
 		args := []any{*d.TeamID}
-		if err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM team WHERE id = "+fmt.Sprintf("$%d", len(args))+" AND archived_at IS NULL)", args...).Scan(&exists); err != nil {
+		if err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM team WHERE id = "+storekit.Placeholders(args)+" AND archived_at IS NULL)", args...).Scan(&exists); err != nil {
 			return err
 		}
 		if !exists {
@@ -57,4 +57,20 @@ func (s *Service) DeliveryTeam(ctx context.Context, d Delivery) ([]TeamMember, b
 		return nil, false, apperrors.ErrNotFound
 	}
 	return s.MembersOfTeam(ctx, *d.TeamID)
+}
+
+// DeliveryTeamName names only a team the caller may currently review.
+func (s *Service) DeliveryTeamName(ctx context.Context, d Delivery) (string, error) {
+	var name string
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := validateDeliveryTeam(ctx, tx, d); err != nil {
+			return err
+		}
+		if d.TeamID == nil {
+			return apperrors.ErrNotFound
+		}
+		args := []any{*d.TeamID}
+		return tx.QueryRow(ctx, "SELECT name FROM team WHERE id = "+storekit.Placeholders(args)+" AND archived_at IS NULL", args...).Scan(&name)
+	})
+	return name, err
 }

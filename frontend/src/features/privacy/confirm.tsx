@@ -116,33 +116,31 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
   }, [record, edits]);
 
   const submit = useMutation({
-    // THE RECORD PAGE'S OWN SUBMIT, and only that.
-    //
-    // A consent link never reaches here — SubscriptionConfirm owns its own
-    // mutation. This one used to serve both, which is what let a subscription
-    // post the record page's marketing sentence as its consent evidence.
-    mutationFn: async () => {
+    mutationFn: async (choice: {
+      corrections: typeof corrections;
+      erasure: boolean;
+      marketing: typeof marketing;
+      token: string;
+      wording: string;
+    }) => {
       const body = {
-        corrections,
-        request_erasure: erasure,
-        ...(marketing
-          ? { marketing_choice: marketing, marketing_wording: marketingWording }
+        corrections: choice.corrections,
+        request_erasure: choice.erasure,
+        ...(choice.marketing
+          ? {
+              marketing_choice: choice.marketing,
+              marketing_wording: choice.wording,
+            }
           : {}),
       };
       const { data, error, response } = await api.POST(
         "/public/confirm/{token}",
         {
-          params: { path: { token } },
+          params: { path: { token: choice.token } },
           body,
         },
       );
-      // GATED ON THE STATUS, NOT ON `error`.
-      //
-      // openapi-fetch returns `{error: undefined}` for a non-2xx whose body is
-      // empty — a 502 from a proxy, a 500 that wrote no problem document. A
-      // guard that only asks whether `error` is truthy therefore reads those as
-      // success, and this page's success state tells somebody their consent
-      // was recorded when the request never reached the writer.
+      // A failed response may have no problem body. Status still decides success.
       if (!response.ok) {
         if (response.status === 404) {
           throw new LinkInvalidError();
@@ -252,6 +250,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
         <Heading size="large" className="t-h3">
           {t("confirm.marketing.title")}
         </Heading>
+        <p className="t-body">{t("confirm.marketing.optional")}</p>
         <p className="t-body">{marketingWording}</p>
         <div className="confirm-choices">
           <Button
@@ -302,7 +301,15 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
         <Button
           variant="primary"
           disabled={submit.isPending}
-          onClick={() => submit.mutate()}
+          onClick={() =>
+            submit.mutate({
+              corrections,
+              erasure,
+              marketing,
+              token,
+              wording: marketingWording,
+            })
+          }
         >
           {t("confirm.submit")}
         </Button>

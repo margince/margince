@@ -642,7 +642,7 @@ describe("figures whose source had not started", () => {
       .closest(".stat-card");
     expect(won?.querySelector(".stat-card-detail")?.textContent).toMatch(
       new RegExp(
-        `^${en["teamweekly.card.wonBasis"].replace("{lost}", "1")} · Partial week: counted from `,
+        `^${en["teamweekly.card.wonBasis"].replace("{lost}", "1")} · Figures cover the period from `,
       ),
     );
   });

@@ -43,6 +43,9 @@ var mailLabelPairs = []struct {
 	key   string
 	field func(mailcopy.Copy) string
 }{
+	{"prefs.purpose.business_correspondence", func(c mailcopy.Copy) string { return c.BusinessPurpose }},
+	{"prefs.purpose.marketing_email", func(c mailcopy.Copy) string { return c.MarketingPurpose }},
+	{"prefs.purpose.transactional", func(c mailcopy.Copy) string { return c.TransactionalPurpose }},
 	{"brief.weekly.tasksDelivered", func(c mailcopy.Copy) string { return c.WeeklyTasksDelivered }},
 	// The count template, with the panel's {done}/{due} placeholders read as
 	// the %d pair the mail formats with: the ORDER is the localised part, and

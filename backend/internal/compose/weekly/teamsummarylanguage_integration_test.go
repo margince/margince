@@ -18,7 +18,7 @@ import (
 )
 
 func TestTeamSummaryKeepsItsWriteLanguageOnReplayAndRead(t *testing.T) {
-	for _, tc := range []struct{ language, prefix, pattern string }{{"en", "1 of 1 members counted; 0 deals won and 0 lost.", "No priority indicated by the recorded metrics"}, {"de", "Erfasste Teammitglieder: 1 von 1; 0 Deals gewonnen und 0 verloren.", "Die erfassten Kennzahlen zeigen keine Priorität an"}, {"vi", "Đã tính 1 trên 1 thành viên; thắng 0 giao dịch và thua 0.", "Các chỉ số đã ghi nhận không cho thấy ưu tiên nào"}} {
+	for _, tc := range []struct{ language, prefix, pattern string }{{"en", "1 of 1 members counted; 0 deals won and 0 lost.", "No priority indicated by the recorded metrics"}, {"de", "Erfasste Teammitglieder: 1 von 1; 0 Deals gewonnen und 0 verloren.", "Die erfassten Kennzahlen zeigen keine Priorität an"}, {"vi", "Đã tính 1 trên 1 thành viên; chốt 0 deal và thua 0.", "Các chỉ số đã ghi nhận không cho thấy ưu tiên nào"}} {
 		t.Run(tc.language, func(t *testing.T) {
 			e := setupWeekly(t)
 			e.engine.WithForecast(&stubForecast{coverage: []Coverage{{PeriodKind: "month", Basis: "manager_call", BaseCurrency: "EUR", CoverageBp: 6400, ReplanRecommended: true}}})

@@ -13,7 +13,7 @@ import (
 )
 
 // PresentationVersion pins queued markup independently of published wording.
-const PresentationVersion = 1
+const PresentationVersion = 2
 
 // These mirror the light design tokens; the token gate checks their source.
 const (
@@ -31,6 +31,7 @@ const (
 
 // Message holds approved words. Text remains the readable fallback verbatim.
 type Message struct {
+	Blocks            []Block
 	Title             string
 	Text              string
 	Brand             string
@@ -55,17 +56,23 @@ func Render(message Message) string {
 	}
 
 	var body strings.Builder
-	for paragraph := range strings.SplitSeq(strings.ReplaceAll(message.Text, "\r\n", "\n"), "\n\n") {
-		if strings.TrimSpace(paragraph) == "" {
-			continue
+	if len(message.Blocks) > 0 {
+		for _, block := range message.Blocks {
+			body.WriteString(renderBlock(block, message.ActionPlaceholder))
 		}
-		if isSection(paragraph, message.Sections) {
-			body.WriteString(`<h2 style="font-size:19px;line-height:1.4;margin:28px 0 12px">` + html.EscapeString(strings.TrimSpace(paragraph)) + `</h2>`)
-		} else {
-			body.WriteString(renderParagraph(paragraph, message.Title, message.ActionPlaceholder))
+	} else {
+		for paragraph := range strings.SplitSeq(strings.ReplaceAll(message.Text, "\r\n", "\n"), "\n\n") {
+			if strings.TrimSpace(paragraph) == "" {
+				continue
+			}
+			if isSection(paragraph, message.Sections) {
+				body.WriteString(`<h2 style="font-size:19px;line-height:1.4;margin:28px 0 12px">` + html.EscapeString(strings.TrimSpace(paragraph)) + `</h2>`)
+			} else {
+				body.WriteString(renderParagraph(paragraph, message.Title, message.ActionPlaceholder))
+			}
 		}
 	}
-	return `<!doctype html><html lang="` + html.EscapeString(language) + `"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><style>@media(prefers-color-scheme:dark){body,.ground{background:` + DarkPaper + `!important;color:` + DarkInk + `!important}.card{background:` + DarkSurface + `!important;color:` + DarkInk + `!important}a{color:` + DarkAccent + `!important}.facts th,.facts td{border-color:` + DarkBorder + `!important}}</style></head><body data-email-version="` + strconv.Itoa(PresentationVersion) + `" style="margin:0;background:` + Paper + `;color:` + Ink + `;font-family:Arial,Helvetica,sans-serif"><div style="display:none;max-height:0;overflow:hidden" aria-hidden="true">` + html.EscapeString(message.Preheader) + `</div><table role="presentation" class="ground" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:24px 12px"><!--[if mso]><table role="presentation" width="600" cellspacing="0" cellpadding="0"><tr><td><![endif]--><table role="presentation" class="card" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:` + Surface + `;border-top:4px solid ` + Accent + `;border-radius:8px"><tr><td style="padding:28px 24px"><div style="font-size:14px;font-weight:bold;letter-spacing:1px;margin-bottom:24px">` + html.EscapeString(brand) + `</div><h1 style="font-size:24px;line-height:1.3;margin:0 0 24px">` + html.EscapeString(message.Title) + `</h1><div style="font-size:16px;line-height:1.65;overflow-wrap:anywhere">` + body.String() + `</div></td></tr></table><!--[if mso]></td></tr></table><![endif]--></td></tr></table></body></html>`
+	return `<!doctype html><html lang="` + html.EscapeString(language) + `"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><style>@media(max-width:480px){.facts th,.facts td{display:block!important;width:auto!important}.facts th{padding:10px 0 0!important;border-bottom:0!important}.facts td{padding:0 0 12px!important}}@media(prefers-color-scheme:dark){body,.ground{background:` + DarkPaper + `!important;color:` + DarkInk + `!important}.card{background:` + DarkSurface + `!important;color:` + DarkInk + `!important}a{color:` + DarkAccent + `!important}.facts th,.facts td{border-color:` + DarkBorder + `!important}}</style></head><body data-email-version="` + strconv.Itoa(PresentationVersion) + `" style="margin:0;background:` + Paper + `;color:` + Ink + `;font-family:Arial,Helvetica,sans-serif;overflow-wrap:anywhere;word-wrap:break-word"><div style="display:none;max-height:0;overflow:hidden" aria-hidden="true">` + html.EscapeString(message.Preheader) + `</div><table role="presentation" class="ground" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:24px 12px"><!--[if mso]><table role="presentation" width="600" cellspacing="0" cellpadding="0"><tr><td><![endif]--><table role="presentation" class="card" width="100%" cellspacing="0" cellpadding="0" style="table-layout:fixed;max-width:600px;background:` + Surface + `;border-top:4px solid ` + Accent + `;border-radius:8px"><tr><td style="padding:28px 24px"><div style="font-size:14px;font-weight:bold;letter-spacing:1px;margin-bottom:24px">` + html.EscapeString(brand) + `</div><h1 style="overflow-wrap:anywhere;font-size:24px;line-height:1.3;margin:0 0 24px">` + html.EscapeString(message.Title) + `</h1><div style="font-size:16px;line-height:1.65;overflow-wrap:anywhere">` + body.String() + `</div></td></tr></table><!--[if mso]></td></tr></table><![endif]--></td></tr></table></body></html>`
 }
 
 func renderParagraph(text, actionLabel, placeholder string) string {
@@ -119,15 +126,15 @@ func factRows(lines []string) (string, bool) {
 	if len(lines) < 2 {
 		return "", false
 	}
-	var rows strings.Builder
+	facts := make([]Fact, 0, len(lines))
 	for _, line := range lines {
 		label, value, found := strings.Cut(line, ":")
 		if !found || strings.TrimSpace(value) == "" || !strings.ContainsFunc(label, unicode.IsLetter) {
 			return "", false
 		}
-		rows.WriteString(`<tr><th scope="row" align="left" style="padding:10px 16px 10px 0;font-weight:600;vertical-align:top;border-bottom:1px solid ` + Border + `">` + html.EscapeString(strings.TrimSpace(label)) + `</th><td style="padding:10px 0;vertical-align:top;border-bottom:1px solid ` + Border + `">` + html.EscapeString(strings.TrimSpace(value)) + `</td></tr>`)
+		facts = append(facts, Fact{Label: strings.TrimSpace(label), Value: strings.TrimSpace(value)})
 	}
-	return `<table class="facts" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 24px">` + rows.String() + `</table>`, true
+	return renderFacts(facts), true
 }
 
 func previewText(message Message) string {
