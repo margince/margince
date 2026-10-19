@@ -17,11 +17,12 @@ import { formatNumber } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { routeHash } from "../../lib/router";
 import { hashWithParams } from "../../lib/urlstate";
-import { completenessText, pillCount } from "./worklist.copy";
+import { completenessText, pillCount } from "./worklist.completeness";
 import { OwnerPicker } from "./worklist.manager";
 import type {
   Worklist,
   WorklistFilter,
+  WorklistItem,
   WorklistScope,
 } from "./worklist.queries";
 import "./worklist.css";
@@ -221,8 +222,8 @@ export function WorklistHeader({
   onOwner,
 }: Readonly<{
   day: Worklist;
-  // How many rows are on screen, which grows as the reader pages.
-  loaded: number;
+  // The cards on screen, which grow as the reader pages.
+  loaded: readonly WorklistItem[];
   scope: WorklistScope;
   filter: WorklistFilter;
   owner: string;

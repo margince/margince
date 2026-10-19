@@ -13539,14 +13539,18 @@ export const vi = {
     "{urgent} khẩn · {due} đến hạn · {lower} thường lệ · tổng {total}",
   "worklist.summary.wholeDay": "Cả ngày: {sentence}",
   "worklist.summary.split": "{today} hôm nay · {review} cần xem lại",
-  "worklist.completeness": "Hiển thị {shown} trên {considered}",
+  "worklist.completeness": "Hiển thị {shown} trên {considered} việc",
+  "worklist.completeness.floor_one": "Hiển thị {shown} việc",
+  "worklist.completeness.floor_other": "Hiển thị {shown} việc",
+  "worklist.completeness.cards_one": "{cards} thẻ trên màn hình",
+  "worklist.completeness.cards_other": "{cards} thẻ trên màn hình",
+  "worklist.completeness.bounded":
+    "Đã chạm giới hạn đọc ở {kinds}. Phần còn lại sẽ hiện khi bạn xử lý xong các việc này",
+  "worklist.completeness.unread_one": "{count} nguồn chưa tải được",
+  "worklist.completeness.unread_other": "{count} nguồn chưa tải được",
   "worklist.review.partial":
     "Hiển thị {loaded} trên {total}. Tải thêm ở bên dưới để xem phần còn lại.",
   "worklist.review.partialDone": "Hiển thị {loaded} trên {total}.",
-  "worklist.completeness.bounded_one":
-    "Hiển thị {shown} · {sources} nguồn còn thêm việc",
-  "worklist.completeness.bounded_other":
-    "Hiển thị {shown} · {sources} nguồn còn thêm việc",
   "worklist.clear": "Không có việc nào đang chờ bạn.",
   "worklist.clearFor": "Không có việc nào đang chờ {name}.",
   "worklist.clearOfTasksToday":

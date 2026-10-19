@@ -334,15 +334,15 @@ opened the list. Refresh to add them."
 The page is still right, only not complete. The Refresh button appears only when something came in.
 
 ### How complete is this?
-The Worklist footer says how complete the list is, in one of two ways:
+The Worklist footer, and the **To review** panel, count items, not cards: "8 possible duplicates"
+is one card and 8 items.
 
-- **"{shown} of {considered} shown"**: a plain share.
-- **"{shown} shown · {sources} sources have more"**: a source stopped at its reading limit.
+- **"{shown} of {considered} items shown"**: a share, plus "{cards} cards on screen" for a group.
+- **"Read limit reached for {kinds}"**, such as "Approvals (200+)": no share, because nobody knows
+  the total. **Load more** does not reach the rest; it comes in as you clear what is shown.
+- **"{count} sources did not load"**: the list may not be complete, even after the last page.
 
-The second shows no share, because nobody knows the total.
-
-If Margince could not read a source at all, a box headed
-**Worklist incomplete** names it above the list. The empty list then reads
+A box headed **Worklist incomplete** names a source that did not load. The empty list then reads
 **"No items in the sources that loaded."** instead of "Nothing is waiting on you."
 
 ### Handled for you

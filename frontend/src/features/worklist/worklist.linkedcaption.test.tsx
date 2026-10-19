@@ -43,7 +43,7 @@ function draw(filter: WorklistFilter, onFilter = () => {}) {
     <LocaleProvider initial="en">
       <WorklistHeader
         day={day()}
-        loaded={0}
+        loaded={[]}
         scope="mine"
         filter={filter}
         owner=""

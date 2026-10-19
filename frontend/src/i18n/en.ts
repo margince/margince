@@ -13878,14 +13878,18 @@ export const en = {
     "{urgent} urgent · {due} due · {lower} routine · {total} total",
   "worklist.summary.wholeDay": "Whole day: {sentence}",
   "worklist.summary.split": "{today} today · {review} to review",
-  "worklist.completeness": "{shown} of {considered} shown",
+  "worklist.completeness": "{shown} of {considered} items shown",
+  "worklist.completeness.floor_one": "{shown} item shown",
+  "worklist.completeness.floor_other": "{shown} items shown",
+  "worklist.completeness.cards_one": "{cards} card on screen",
+  "worklist.completeness.cards_other": "{cards} cards on screen",
+  "worklist.completeness.bounded":
+    "Read limit reached for {kinds}. The rest appears as you clear these",
+  "worklist.completeness.unread_one": "{count} source did not load",
+  "worklist.completeness.unread_other": "{count} sources did not load",
   "worklist.review.partial":
     "{loaded} of {total} shown. Load more below to see the rest.",
   "worklist.review.partialDone": "{loaded} of {total} shown.",
-  "worklist.completeness.bounded_one":
-    "{shown} shown · {sources} source has more",
-  "worklist.completeness.bounded_other":
-    "{shown} shown · {sources} sources have more",
   "worklist.clear": "Nothing is waiting on you.",
   "worklist.clearFor": "Nothing is waiting on {name}.",
   "worklist.clearOfTasksToday":

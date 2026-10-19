@@ -13877,14 +13877,18 @@ export const de = {
     "{urgent} dringend · {due} fällig · {lower} Routine · {total} gesamt",
   "worklist.summary.wholeDay": "Ganzer Tag: {sentence}",
   "worklist.summary.split": "{today} heute · {review} zu prüfen",
-  "worklist.completeness": "{shown} von {considered} angezeigt",
+  "worklist.completeness": "{shown} von {considered} Einträgen angezeigt",
+  "worklist.completeness.floor_one": "{shown} Eintrag angezeigt",
+  "worklist.completeness.floor_other": "{shown} Einträge angezeigt",
+  "worklist.completeness.cards_one": "{cards} Karte sichtbar",
+  "worklist.completeness.cards_other": "{cards} Karten sichtbar",
+  "worklist.completeness.bounded":
+    "Leselimit erreicht bei {kinds}. Der Rest erscheint, sobald du diese erledigst",
+  "worklist.completeness.unread_one": "{count} Quelle nicht geladen",
+  "worklist.completeness.unread_other": "{count} Quellen nicht geladen",
   "worklist.review.partial":
     "{loaded} von {total} angezeigt. Lade unten mehr, um den Rest zu sehen.",
   "worklist.review.partialDone": "{loaded} von {total} angezeigt.",
-  "worklist.completeness.bounded_one":
-    "{shown} angezeigt · {sources} Quelle hat mehr",
-  "worklist.completeness.bounded_other":
-    "{shown} angezeigt · {sources} Quellen haben mehr",
   "worklist.clear": "Nichts wartet auf dich.",
   "worklist.clearFor": "Nichts wartet auf {name}.",
   "worklist.clearOfTasksToday":

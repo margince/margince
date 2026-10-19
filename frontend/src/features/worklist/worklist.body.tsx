@@ -5,6 +5,7 @@ import { PageZones } from "../../design-system/pagezones";
 import { Panel } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { useMemberNames } from "../../lib/membernames";
+import { represented } from "../../lib/worklistunits";
 import {
   bandSections,
   canReportEmptyBands,
@@ -105,9 +106,10 @@ export function WorklistBody({
   // derived here from `source` or `category` would drift from those figures.
   const today = sellerWork(queue);
   const review = reviewWork(queue);
-  // How much review work the day holds that this panel has not loaded.
+  // How much review work the day holds that this panel has not loaded, in
+  // items: `buckets.review` counts a folded group as its members.
   const reviewMissing = reviewShortfall(
-    review.length,
+    represented(review).items,
     day.summary.buckets?.review,
   );
   const selection = useWorklistPicks(queue, `${scope}/${filter}/${owner}`);
@@ -148,7 +150,7 @@ export function WorklistBody({
         <div className="worklist-lanes">
           <WorklistHeader
             day={day}
-            loaded={queue.length}
+            loaded={queue}
             scope={scope}
             filter={filter}
             owner={owner}

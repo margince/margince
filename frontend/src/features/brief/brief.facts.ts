@@ -4,6 +4,7 @@
 import { formatDateAbbrev } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import type { Locale } from "../../i18n";
+import { represented } from "../../lib/worklistunits";
 import {
   loadedQueue,
   type Worklist,
@@ -26,9 +27,8 @@ export function briefDay(
         (count) => count.category === entry.category && count.more_available,
       ),
     ),
-    shown: queue
-      .filter((item) => item.category === entry.category)
-      .reduce((total, item) => total + (item.batch?.count ?? 1), 0),
+    shown: represented(queue.filter((item) => item.category === entry.category))
+      .items,
   }));
   const unavailable = new Map(
     pages

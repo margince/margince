@@ -44848,6 +44848,31 @@ export interface components {
          *     does, widened: a source the caller may not read is named as `withheld`, and one
          *     that failed to answer is named as `failed`. Both keep the summary from claiming a
          *     clear day it did not actually see.
+         *
+         *     **Units.** A card is one row of `queue`. An item is one piece of underlying work.
+         *     A folded group (`batch`) is one card that stands for `batch.count` items, so eight
+         *     duplicate pairs drawn as one card are one card and eight items. Every figure below
+         *     names its unit; a client compares only figures of the same unit.
+         *
+         *     | Figure | Unit | Counted over | Exact or floor |
+         *     |---|---|---|---|
+         *     | `summary.*` | items | every candidate this read weighed, before the fold, the filter and the page cut | exact over the sources read |
+         *     | `summary.buckets.*` | items | the same candidates, frozen at the walk's first page | exact over the sources read |
+         *     | `counts[].considered`, `reach[].considered` | items | every candidate weighed, before the fold and the filter | floor when `more_available` |
+         *     | `counts[].shown`, `reach[].shown` | items | the cards on THIS page, each group counted as its members | exact |
+         *     | `batch.count` | items | the members of one card | floor when `batch.at_least` |
+         *     | `bands[].shown` | cards | the rows of this page under one heading | exact |
+         *     | `focus.total` | cards | eligible focus cards before the six-card cut; a group counts once | exact |
+         *     | `focus.urgent_remaining` | items | urgent items no focus card names | exact |
+         *     | `walk.new_available`, `walk.changed_since_snapshot` | items | arrivals since the walk froze, and frozen items that left | exact |
+         *
+         *     A client that has loaded several pages sums items over its loaded cards (one per
+         *     card, or `batch.count` for a group) and compares that sum with `considered`. Comparing
+         *     a count of loaded cards with `considered` mixes the two units. A source listed in
+         *     `sources_unavailable`, or a figure flagged `more_available`, means the page cannot
+         *     claim it holds everything, even after `next_cursor` is gone. Items past a source's
+         *     read limit are not reachable through `next_cursor`. They join a later read as the
+         *     items in front of them are handled.
          */
         Worklist: {
             /**
@@ -45032,7 +45057,7 @@ export interface components {
             source: "approval" | "dedupe_candidate" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
             /** @description How many candidates from this source were read and ranked. */
             considered: number;
-            /** @description How many of them the queue is carrying after folding, filtering and the page cut. */
+            /** @description How many of them the queue is carrying after folding, filtering and the page cut. A folded group counts as its members, so this is in items, not cards. */
             shown: number;
             /**
              * @description True when this source answers for the ACTING USER only, whatever `scope` was
