@@ -5757,9 +5757,9 @@ export const vi = {
   "aiAccess.connect.sub":
     "Mất khoảng một phút. Bạn đăng nhập một lần và kết nối được giữ nguyên.",
   "aiAccess.connect.toolQuestion": "Bạn dùng AI nào?",
-  "aiAccess.connect.planQuestion": "Ai trả tiền cho công cụ này?",
-  "aiAccess.plan.company": "Công ty tôi",
-  "aiAccess.plan.own": "Tự tôi",
+  "aiAccess.connect.planQuestion": "Gói này của ai?",
+  "aiAccess.plan.company": "Của công ty tôi",
+  "aiAccess.plan.own": "Của riêng tôi",
   "aiAccess.connect.adminFirst": "Trước hết, quản trị viên của bạn.",
   "aiAccess.connect.adminSend":
     "Gửi cho họ hướng dẫn thiết lập. Hướng dẫn có các bước và địa chỉ Margince của bạn.",

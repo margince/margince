@@ -5896,9 +5896,9 @@ export const de = {
   "aiAccess.connect.sub":
     "Dauert etwa eine Minute. Du meldest dich einmal an, danach bleibt die Verbindung bestehen.",
   "aiAccess.connect.toolQuestion": "Welche KI nutzt du?",
-  "aiAccess.connect.planQuestion": "Wer bezahlt sie?",
-  "aiAccess.plan.company": "Mein Unternehmen",
-  "aiAccess.plan.own": "Privat",
+  "aiAccess.connect.planQuestion": "Wessen Tarif ist es?",
+  "aiAccess.plan.company": "Der meines Unternehmens",
+  "aiAccess.plan.own": "Mein eigener",
   "aiAccess.connect.adminFirst": "Zuerst deine Admins.",
   "aiAccess.connect.adminSend":
     "Schick ihnen die Anleitung mit den Schritten und deiner Margince-Adresse.",

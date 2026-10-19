@@ -80,7 +80,7 @@ describe("ConnectAiToolCard", () => {
     ).toBe("true");
     expect(
       screen
-        .getByRole("button", { name: "My company" })
+        .getByRole("button", { name: "My company’s" })
         .getAttribute("aria-pressed"),
     ).toBe("true");
     expect(
@@ -100,7 +100,7 @@ describe("ConnectAiToolCard", () => {
 
   it("shows the address inside the step that asks the reader to paste it", async () => {
     renderCard();
-    await choose("Only me");
+    await choose("My own");
     const address = screen.getByRole("textbox", { name: "Margince address" });
     expect(address.textContent).toBe(MCP_URL);
     const items = within(pathBox()).getAllByRole("listitem");
@@ -112,14 +112,14 @@ describe("ConnectAiToolCard", () => {
 
   it("says a path cannot connect instead of giving steps, and gives them back", async () => {
     renderCard();
-    await choose("Microsoft Copilot", "Only me");
+    await choose("Microsoft Copilot", "My own");
     expect(
       screen.getByText(/Copilot outside work cannot connect to other apps/),
     ).toBeTruthy();
     expect(steps()).toEqual([]);
     expect(screen.queryByRole("button", { name: /Download guide/ })).toBeNull();
     expect(screen.queryByRole("link", { name: /Help from/ })).toBeNull();
-    await choose("My company");
+    await choose("My company’s");
     expect(steps()).toHaveLength(3);
     for (const group of screen.getAllByRole("group")) {
       expect(
@@ -161,7 +161,7 @@ describe("ConnectAiToolCard", () => {
   it("copies the address, and says how to copy it by hand when the clipboard is missing", async () => {
     const writeText = vi.fn(async () => undefined);
     renderCard();
-    const user = await choose("Gemini", "Only me");
+    const user = await choose("Gemini", "My own");
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText },
@@ -185,7 +185,7 @@ describe("ConnectAiToolCard", () => {
 
   it("links to the vendor's own guide, and names the admin where the guide is theirs", async () => {
     renderCard();
-    await choose("Gemini", "Only me");
+    await choose("Gemini", "My own");
     const help = screen.getByRole("link", { name: /Help from Google/ });
     expect(help.getAttribute("href")).toBe(
       "https://support.google.com/gemini/answer/17209137",
@@ -193,7 +193,7 @@ describe("ConnectAiToolCard", () => {
     expect(
       screen.getByText("For now only in the US, in English, on the web."),
     ).toBeTruthy();
-    await choose("Microsoft Copilot", "My company");
+    await choose("Microsoft Copilot", "My company’s");
     expect(
       screen.getByRole("link", { name: /Help from Microsoft for your admin/ }),
     ).toBeTruthy();

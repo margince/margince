@@ -19,7 +19,7 @@ There is one rule under everything here:
 To connect your AI tool to Margince, open **Settings → AI access** and answer the two questions on the **Connect your AI tool** card. Copilot on a personal account, and Gemini through work or school, cannot connect; the card says so. If the card says AI tools "cannot connect to Margince yet", an administrator or operations user must turn it on first.
 1. Open the account menu, choose **Settings**, then **AI access**.
 2. Under **Which AI do you use?**, choose **Claude**, **ChatGPT**, **Microsoft Copilot** or **Gemini**.
-3. Under **Who pays for it?**, choose **My company** or **Only me**.
+3. Under **Whose plan is it?**, choose **My company’s** or **My own**.
 4. If the card says "First, your admin.", choose **Download guide for your admin** and send them the file. It holds their steps and your Margince address.
 5. If the card shows your Margince address, choose **Copy address** and paste it where the steps say.
 6. Follow the numbered steps the card shows for that one case.

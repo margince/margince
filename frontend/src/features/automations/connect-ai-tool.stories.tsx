@@ -48,12 +48,12 @@ export const CompanyPlan: Story = { render: story() };
 // A plan the reader pays for: the address sits inside the step that asks for it.
 export const OwnPlanWithAddress: Story = {
   render: story(),
-  play: choosing("Only me"),
+  play: choosing("My own"),
 };
 
 export const Unavailable: Story = {
   render: story(),
-  play: choosing("Microsoft Copilot", "Only me"),
+  play: choosing("Microsoft Copilot", "My own"),
 };
 
 export const ConnectorOff: Story = { render: story(false) };
@@ -61,12 +61,12 @@ export const ConnectorOff: Story = { render: story(false) };
 export const OwnPlanDark: Story = {
   globals: { theme: "dark" },
   render: story(),
-  play: choosing("Gemini", "Only me"),
+  play: choosing("Gemini", "My own"),
 };
 
 export const Phone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: story(),
-  play: choosing("ChatGPT", "Only me"),
+  play: choosing("ChatGPT", "My own"),
 };
