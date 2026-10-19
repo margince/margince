@@ -16628,6 +16628,10 @@ components:
         - metric_reading
     ReportingStatus:
       type: string
+      description: |-
+        `failed` means the database could not calculate this figure on this
+        read. The other figures in the same evaluation are unaffected, and a
+        later read may succeed.
       enum:
         - ok
         - no_data
@@ -16636,6 +16640,7 @@ components:
         - partial
         - unsupported
         - unavailable
+        - failed
     ReportingScope:
       type: object
       additionalProperties: false

@@ -132,6 +132,7 @@ export const en = {
   "reporting.back": "Previous page",
   "reporting.status.insufficient_sample": "Too few observations",
   "reporting.status.unavailable": "Unavailable",
+  "reporting.status.failed": "Could not be calculated",
   "reporting.status.unsupported": "Not supported",
   "reporting.status.not_configured": "Setup needed",
   "reporting.status.no_data": "No matching records",

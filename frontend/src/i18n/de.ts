@@ -138,6 +138,7 @@ export const de = {
   "reporting.back": "Vorherige Seite",
   "reporting.status.insufficient_sample": "Zu wenige Beobachtungen",
   "reporting.status.unavailable": "Nicht verfügbar",
+  "reporting.status.failed": "Konnte nicht berechnet werden",
   "reporting.status.unsupported": "Nicht unterstützt",
   "reporting.status.not_configured": "Einrichtung erforderlich",
   "reporting.status.no_data": "Keine passenden Datensätze",

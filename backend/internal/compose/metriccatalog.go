@@ -71,11 +71,7 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 		if err := auth.Require(ctx, spec.object, principal.ActionRead); err != nil {
 			return out, err
 		}
-		facts, coverage, err := spec.read(ctx, tx, frame, framework, e)
-		if err != nil {
-			return out, err
-		}
-		coverage, err = reportingHistoryCoverage(ctx, tx, frame, spec.definition.Id, coverage)
+		facts, coverage, err := e.readIsolated(ctx, tx, spec, frame, framework)
 		if err != nil {
 			return out, err
 		}

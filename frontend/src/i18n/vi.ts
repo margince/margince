@@ -146,6 +146,7 @@ export const vi = {
   "reporting.back": "Trang trước",
   "reporting.status.insufficient_sample": "Quá ít quan sát",
   "reporting.status.unavailable": "Không khả dụng",
+  "reporting.status.failed": "Không thể tính toán",
   "reporting.status.unsupported": "Không hỗ trợ",
   "reporting.status.not_configured": "Cần thiết lập",
   "reporting.status.no_data": "Không có hồ sơ phù hợp",

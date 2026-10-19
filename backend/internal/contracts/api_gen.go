@@ -15261,6 +15261,7 @@ func (e ReportingSelectionTargetBasis) Valid() bool {
 
 // Defines values for ReportingStatus.
 const (
+	ReportingStatusFailed             ReportingStatus = "failed"
 	ReportingStatusInsufficientSample ReportingStatus = "insufficient_sample"
 	ReportingStatusNoData             ReportingStatus = "no_data"
 	ReportingStatusNotConfigured      ReportingStatus = "not_configured"
@@ -15273,6 +15274,8 @@ const (
 // Valid indicates whether the value is a known member of the ReportingStatus enum.
 func (e ReportingStatus) Valid() bool {
 	switch e {
+	case ReportingStatusFailed:
+		return true
 	case ReportingStatusInsufficientSample:
 		return true
 	case ReportingStatusNoData:
@@ -45480,11 +45483,15 @@ type ReportingContext struct {
 
 // ReportingCoverage defines model for ReportingCoverage.
 type ReportingCoverage struct {
-	EligibleCount *int64          `json:"eligible_count,omitempty"`
-	PricedCount   *int64          `json:"priced_count,omitempty"`
-	Reason        *string         `json:"reason,omitempty"`
-	Status        ReportingStatus `json:"status"`
-	Withheld      bool            `json:"withheld"`
+	EligibleCount *int64  `json:"eligible_count,omitempty"`
+	PricedCount   *int64  `json:"priced_count,omitempty"`
+	Reason        *string `json:"reason,omitempty"`
+
+	// Status `failed` means the database could not calculate this figure on this
+	// read. The other figures in the same evaluation are unaffected, and a
+	// later read may succeed.
+	Status   ReportingStatus `json:"status"`
+	Withheld bool            `json:"withheld"`
 }
 
 // ReportingDelta defines model for ReportingDelta.
@@ -45643,10 +45650,14 @@ type ReportingPoint struct {
 	Key          string                `json:"key"`
 	Label        string                `json:"label"`
 	Observations *int64                `json:"observations,omitempty"`
-	Status       ReportingStatus       `json:"status"`
-	Target       *float64              `json:"target,omitempty"`
-	Upper        *float64              `json:"upper,omitempty"`
-	Value        *float64              `json:"value"`
+
+	// Status `failed` means the database could not calculate this figure on this
+	// read. The other figures in the same evaluation are unaffected, and a
+	// later read may succeed.
+	Status ReportingStatus `json:"status"`
+	Target *float64        `json:"target,omitempty"`
+	Upper  *float64        `json:"upper,omitempty"`
+	Value  *float64        `json:"value"`
 }
 
 // ReportingQualification defines model for ReportingQualification.
@@ -45761,7 +45772,9 @@ type ReportingSelectionPeriod string
 // ReportingSelectionTargetBasis defines model for ReportingSelection.TargetBasis.
 type ReportingSelectionTargetBasis string
 
-// ReportingStatus defines model for ReportingStatus.
+// ReportingStatus `failed` means the database could not calculate this figure on this
+// read. The other figures in the same evaluation are unaffected, and a
+// later read may succeed.
 type ReportingStatus string
 
 // ReportingTarget defines model for ReportingTarget.
