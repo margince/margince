@@ -241,10 +241,10 @@ export const de = {
     "Offene Deals nach Phase, wie lange sie dort liegen, und was sich bewegt hat.",
   "reporting.prepared.ownerTitle": "Ergebnisse je Verantwortlichem",
   "reporting.prepared.ownerPurpose":
-    "Gewonnener Umsatz und Abschlussquote dieses Quartals je Verantwortlichem, mit Zielen, wo gesetzt.",
+    "Gewonnener Umsatz dieses Quartals je Verantwortlichem, mit Zielen, wo gesetzt, und der Abschlussquote des Teams.",
   "reporting.prepared.qualificationTitle": "Qualifizierung",
   "reporting.prepared.qualificationPurpose":
-    "Diesen Monat qualifizierte Pipeline und angenommene Übergaben.",
+    "Diesen Monat qualifizierte Pipeline, zugeordnet dem Verantwortlichen zum Zeitpunkt der Qualifizierung.",
   "reporting.prepared.personalTitle": "Eigene Ergebnisse",
   "reporting.prepared.personalPurpose":
     "Deine offenen Deals und Termine, unter Meine Ergebnisse.",

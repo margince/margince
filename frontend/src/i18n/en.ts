@@ -235,10 +235,10 @@ export const en = {
     "Open deals by stage, how long they have sat there, and what moved.",
   "reporting.prepared.ownerTitle": "Sales results by owner",
   "reporting.prepared.ownerPurpose":
-    "This quarter’s sales won and win rate per salesperson, against targets where set.",
+    "This quarter’s sales won per salesperson against targets where set, with the team’s win rate.",
   "reporting.prepared.qualificationTitle": "Qualification review",
   "reporting.prepared.qualificationPurpose":
-    "Pipeline qualified this month and handoffs accepted.",
+    "Pipeline qualified this month, credited to the owner when each deal qualified.",
   "reporting.prepared.personalTitle": "Personal outcomes",
   "reporting.prepared.personalPurpose":
     "Your own open deals and meetings, in My outcomes.",

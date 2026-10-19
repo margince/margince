@@ -30,7 +30,8 @@ type ReportingSelection = components["schemas"]["ReportingSelection"];
 // asked of the reader's own record scope and their own metric grants.
 export function PreparedReports({
   scope,
-}: Readonly<{ scope: ReportingSelection["scope"] }>) {
+  ownLens,
+}: Readonly<{ scope: ReportingSelection["scope"]; ownLens: boolean }>) {
   const t = useT();
   const catalog = useQuery({
     queryKey: ["reporting-catalog"],
@@ -38,33 +39,52 @@ export function PreparedReports({
   });
   const pipelines = useReportingPipelines();
   const [open, setOpen] = useState<string | null>(null);
-  const pipelineId = pipelines.data?.data.find(
-    (pipeline) => pipeline.is_default,
-  )?.id;
+
   return (
     <Panel title={t("reporting.prepared.title")}>
       <PanelBody>
         <QueryGate query={catalog} pendingLabel={t("reporting.prepared.title")}>
           {(metrics) => (
-            <>
-              {PREPARED_REPORTS.map((report) => (
-                <PreparedRow
-                  key={report.id}
-                  report={report}
-                  selection={
-                    report.kind === "question"
-                      ? preparedSelection(report, metrics, scope, pipelineId)
-                      : null
-                  }
-                  previewing={open === report.id}
-                  onPreview={() =>
-                    setOpen((current) =>
-                      current === report.id ? null : report.id,
-                    )
-                  }
-                />
-              ))}
-            </>
+            // The default pipeline is part of a saved copy's question, so
+            // nothing is offered before it is known.
+            <QueryGate
+              query={pipelines}
+              pendingLabel={t("reporting.prepared.title")}
+            >
+              {(loaded) => (
+                <>
+                  {PREPARED_REPORTS.filter(
+                    (report) =>
+                      report.kind === "question" ||
+                      !report.ownLensOnly ||
+                      ownLens,
+                  ).map((report) => (
+                    <PreparedRow
+                      key={report.id}
+                      report={report}
+                      selection={
+                        report.kind === "question"
+                          ? preparedSelection(
+                              report,
+                              metrics,
+                              scope,
+                              loaded.data.find(
+                                (pipeline) => pipeline.is_default,
+                              )?.id,
+                            )
+                          : null
+                      }
+                      previewing={open === report.id}
+                      onPreview={() =>
+                        setOpen((current) =>
+                          current === report.id ? null : report.id,
+                        )
+                      }
+                    />
+                  ))}
+                </>
+              )}
+            </QueryGate>
           )}
         </QueryGate>
       </PanelBody>

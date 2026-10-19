@@ -28,6 +28,9 @@ export type PreparedReport =
       purpose: MessageKey;
       kind: "section";
       section: Section;
+      // Shown only to a reader whose own lens is their own records, the one
+      // reader that section exists for.
+      ownLensOnly?: boolean;
     }>;
 
 export const PREPARED_REPORTS: readonly PreparedReport[] = [
@@ -64,7 +67,7 @@ export const PREPARED_REPORTS: readonly PreparedReport[] = [
     purpose: "reporting.prepared.qualificationPurpose",
     kind: "question",
     period: "this_month",
-    metrics: ["qualified_pipeline_created", "accepted_opportunities"],
+    metrics: ["qualified_pipeline_created"],
     blocks: ["owner_attainment", "target_progress"],
   },
   {
@@ -73,6 +76,7 @@ export const PREPARED_REPORTS: readonly PreparedReport[] = [
     purpose: "reporting.prepared.personalPurpose",
     kind: "section",
     section: "outcomes",
+    ownLensOnly: true,
   },
   {
     id: "account-opportunities",
@@ -90,9 +94,17 @@ export const PREPARED_REPORTS: readonly PreparedReport[] = [
   },
 ];
 
+// The charts that read one pipeline's stages and so need one named.
+const STAGE_BLOCKS: readonly BlockKind[] = [
+  "stage_distribution",
+  "stage_age",
+  "pipeline_movement",
+];
+
 // A prepared question as this reader may ask it: only the metrics their
-// catalog offers, and only the charts those metrics draw. Null when none of
-// its metrics is theirs to read.
+// catalog offers, and only the charts those metrics draw. A pipeline is named
+// only where a stage chart needs one, because some metrics refuse a pipeline.
+// Null when none of its metrics is theirs to read.
 export function preparedSelection(
   report: Extract<PreparedReport, { kind: "question" }>,
   catalog: components["schemas"]["ReportingCatalog"],
@@ -105,15 +117,18 @@ export function preparedSelection(
   if (offered.length === 0) {
     return null;
   }
+  const blocks = report.blocks.filter((block) =>
+    offered.some((metric) => metric.blocks.includes(block)),
+  );
   return {
     scope,
-    pipeline_id: pipelineId,
+    pipeline_id: blocks.some((block) => STAGE_BLOCKS.includes(block))
+      ? pipelineId
+      : undefined,
     period: report.period,
     target_basis: report.period === "this_quarter" ? "fiscal_quarter" : "month",
     close_window: "fiscal_quarter",
     metrics: offered.map((metric) => metric.id),
-    blocks: report.blocks.filter((block) =>
-      offered.some((metric) => metric.blocks.includes(block)),
-    ),
+    blocks,
   };
 }

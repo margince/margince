@@ -251,10 +251,10 @@ export const vi = {
     "Deal đang mở theo giai đoạn, đã nằm ở đó bao lâu, và những gì đã thay đổi.",
   "reporting.prepared.ownerTitle": "Kết quả theo thành viên chịu trách nhiệm",
   "reporting.prepared.ownerPurpose":
-    "Doanh số đã chốt và tỷ lệ thắng quý này của từng thành viên, so với mục tiêu nếu có.",
+    "Doanh số đã chốt quý này của từng thành viên so với mục tiêu nếu có, kèm tỷ lệ thắng của cả nhóm.",
   "reporting.prepared.qualificationTitle": "Đánh giá đủ điều kiện",
   "reporting.prepared.qualificationPurpose":
-    "Pipeline đủ điều kiện tháng này và bàn giao đã chấp nhận.",
+    "Pipeline đủ điều kiện tháng này, ghi nhận cho thành viên chịu trách nhiệm lúc deal đủ điều kiện.",
   "reporting.prepared.personalTitle": "Kết quả cá nhân",
   "reporting.prepared.personalPurpose":
     "Deal đang mở và cuộc họp của bạn, trong Kết quả của tôi.",

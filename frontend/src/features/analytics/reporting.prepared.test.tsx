@@ -44,7 +44,11 @@ it("asks a prepared question only in the metrics and charts the reader may read"
   for (const block of selection?.blocks ?? []) {
     expect(onlyWon.metrics[0]?.blocks).toContain(block);
   }
-  expect(selection?.pipeline_id).toBe("p-1");
+  expect(selection?.pipeline_id).toBeUndefined();
+  expect(
+    preparedSelection(weekly, reportingStoryCatalog, reportingStoryScope, "p-1")
+      ?.pipeline_id,
+  ).toBe("p-1");
   expect(
     preparedSelection(
       weekly,
@@ -55,7 +59,7 @@ it("asks a prepared question only in the metrics and charts the reader may read"
   ).toBeNull();
 });
 
-function draw() {
+function draw(ownLens = false) {
   const asked: string[] = [];
   installFetchStub(reportingStoryRoutes());
   const stub = globalThis.fetch;
@@ -65,7 +69,7 @@ function draw() {
   }) as typeof fetch;
   render(
     <StoryProviders>
-      <PreparedReports scope={reportingStoryScope} />
+      <PreparedReports scope={reportingStoryScope} ownLens={ownLens} />
     </StoryProviders>,
   );
   return asked;
@@ -96,4 +100,27 @@ it("opens the section that already holds a prepared report", async () => {
     .setup()
     .click(within(row).getByRole("button", { name: "Open" }));
   expect(window.location.hash).toMatch(/^#\/analytics\/delivery/);
+});
+
+it("names a pipeline only for a question with stage charts", () => {
+  const qualification = PREPARED_REPORTS.find(
+    (report) => report.id === "qualification-review",
+  );
+  if (qualification?.kind !== "question") throw new Error("a question");
+  const selection = preparedSelection(
+    qualification,
+    reportingStoryCatalog,
+    reportingStoryScope,
+    "p-1",
+  );
+  expect(selection?.pipeline_id).toBeUndefined();
+});
+
+it("offers personal outcomes only to a reader whose lens is their own records", async () => {
+  draw(false);
+  await screen.findByText("Delivery review");
+  expect(screen.queryByText("Personal outcomes")).toBeNull();
+  cleanup();
+  draw(true);
+  expect(await screen.findByText("Personal outcomes")).toBeInTheDocument();
 });

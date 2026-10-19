@@ -20,7 +20,8 @@ import { ReportingReportDetail } from "./reporting.report";
 
 export function ReportingLibrary({
   scope,
-}: Readonly<{ scope?: AnalyticsScope }>) {
+  ownLens = false,
+}: Readonly<{ scope?: AnalyticsScope; ownLens?: boolean }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -63,6 +64,7 @@ export function ReportingLibrary({
             id: scope.id ?? undefined,
             label: scope.label,
           }}
+          ownLens={ownLens}
         />
       )}
       <Panel
