@@ -80,11 +80,11 @@ func TestCustomFieldRename_ToALabelAnotherFieldHolds_IsRefusedAsAConflict(t *tes
 	}
 
 	for _, label := range []string{"Renewal date", "  renewal DATE ", "Renewal-date", "Renewal date\t"} {
-		if _, err := svc.Rename(ctx, ids.UUID(other.Id), label, nil); !errors.Is(err, apperrors.ErrConflict) {
+		if _, err := svc.Update(ctx, ids.UUID(other.Id), renameTo(label), nil); !errors.Is(err, apperrors.ErrConflict) {
 			t.Fatalf("renaming onto %q must answer conflict, got %v", label, err)
 		}
 	}
-	if _, err := svc.Rename(ctx, ids.UUID(held.Id), "Renewal date", nil); err != nil {
+	if _, err := svc.Update(ctx, ids.UUID(held.Id), renameTo("Renewal date"), nil); err != nil {
 		t.Fatalf("a field may keep the label it already holds: %v", err)
 	}
 	if n := e.WsCount(t,
@@ -103,7 +103,7 @@ func TestCustomFieldCreate_OntoALabelARenameGaveAnotherField_IsRefused(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.Rename(ctx, ids.UUID(first.Id), "Bar", nil); err != nil {
+	if _, err := svc.Update(ctx, ids.UUID(first.Id), renameTo("Bar"), nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := svc.Create(ctx, dateSpec("Bar")); !errors.Is(err, apperrors.ErrConflict) {
@@ -116,7 +116,7 @@ func TestCustomFieldCreate_OntoALabelARenameGaveAnotherField_IsRefused(t *testin
 	if !errors.Is(err, apperrors.ErrConflict) || !strings.Contains(err.Error(), `key "foo"`) || !strings.Contains(err.Error(), `"Bar"`) {
 		t.Fatalf("a label reusing a renamed field's key: err = %v, want a conflict naming the key and the field that holds it", err)
 	}
-	_, err = svc.Rename(ctx, ids.UUID(first.Id), "Renewal date", nil)
+	_, err = svc.Update(ctx, ids.UUID(first.Id), renameTo("Renewal date"), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +124,7 @@ func TestCustomFieldCreate_OntoALabelARenameGaveAnotherField_IsRefused(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.Rename(ctx, ids.UUID(other.Id), "Foo", nil); !errors.Is(err, apperrors.ErrConflict) || !strings.Contains(err.Error(), "key") {
+	if _, err := svc.Update(ctx, ids.UUID(other.Id), renameTo("Foo"), nil); !errors.Is(err, apperrors.ErrConflict) || !strings.Contains(err.Error(), "key") {
 		t.Fatalf("renaming onto a slug the first field still holds: err = %v, want a conflict naming the key", err)
 	}
 }
