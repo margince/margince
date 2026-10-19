@@ -93,8 +93,8 @@ function wonSentence(
   });
 }
 
-// The target has its own period and its own actual, which can differ from
-// the period the page shows, so it is a sentence of its own.
+// The target has its own period and its own actual. Both can differ from the
+// period the page shows, so the target is a sentence of its own.
 function targetSentence(
   evaluation: ReportingEvaluation,
   won: Metric | undefined,
