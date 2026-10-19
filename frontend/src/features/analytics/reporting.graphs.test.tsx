@@ -485,7 +485,7 @@ it("keeps the accepted-opportunities series when only the meetings reading faile
   expect(screen.getAllByText(/Week 1/).length).toBeGreaterThan(0);
 });
 
-it("shows how many deals make each stage's value", () => {
+it("shows how many priced deals make each stage's value", () => {
   installFetchStub(reportingStoryRoutes());
   const evaluation = {
     ...reportingStoryEvaluation,
@@ -505,9 +505,9 @@ it("shows how many deals make each stage's value", () => {
     </StoryProviders>,
   );
   expect(
-    screen.getByRole("button", { name: /Discovery: .+ · 1 deal$/ }),
+    screen.getByRole("button", { name: /Discovery: .+ · 1 priced deal$/ }),
   ).toBeInTheDocument();
   expect(
-    screen.getByRole("button", { name: /Proposal: .+ · 7 deals$/ }),
+    screen.getByRole("button", { name: /Proposal: .+ · 7 priced deals$/ }),
   ).toBeInTheDocument();
 });

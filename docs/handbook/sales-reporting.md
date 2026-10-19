@@ -18,7 +18,7 @@ Every chart can also be read as numbers. Select a mark, with a click or the keys
 ## What does each graph mean?
 
 - **Sales won:** won value added up over time, and the time span before it when the two can be compared. It also shows a target for the full time span. The target is for the whole time span; it does not ask for the same amount each day.
-- **Pipeline stages:** open value of today for each stage in order, all measured the same way, with the number of deals in each stage.
+- **Pipeline stages:** open value of today for each stage in order, all measured the same way, with the number of priced deals in each stage.
 - **Sales by salesperson:** real result and target for the same target time span. A missing target and a zero
   target are two different states; a missing target does not mean low results.
 - **Stage age:** the middle age and the age that 75% of open deals stay under, for open deals of today. Small groups

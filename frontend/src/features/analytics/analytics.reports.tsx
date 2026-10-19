@@ -133,6 +133,7 @@ function ReportBody({
     rows: ReportRow[];
     base_currency?: string | null;
     timezone?: string | null;
+    excluded_by_permission?: number | null;
   };
   complete: boolean;
   stages: readonly Stage[];
@@ -146,7 +147,12 @@ function ReportBody({
       );
     case "open-deals-per-company":
       return (
-        <CompanyTable rows={run.rows} complete={complete} locale={locale} />
+        <CompanyTable
+          rows={run.rows}
+          complete={complete}
+          withheld={run.excluded_by_permission ?? 0}
+          locale={locale}
+        />
       );
     case "pipeline-current":
       return (

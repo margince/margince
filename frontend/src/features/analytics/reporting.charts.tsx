@@ -15,15 +15,9 @@ import {
   formatNumber,
   MONEY_ABSENT,
 } from "../../format/format";
-import {
-  type Locale,
-  type PluralTranslator,
-  type Translator,
-  useLocale,
-  usePlural,
-  useT,
-} from "../../i18n";
+import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { ChartContext } from "./reporting.chartcontext";
+import { withDealCount } from "./reporting.dealcount";
 import { MetricsTable } from "./reporting.metricstable";
 import {
   blockLabel,
@@ -488,20 +482,4 @@ function chartTitle(
   )
     return metricLabel(chart.metric, t);
   return blockLabel(chart.kind, t);
-}
-
-// A stage's value beside how many deals make it, so one large bet and many
-// small deals read differently at the same total.
-function withDealCount(
-  amount: string,
-  deals: number | undefined,
-  plural: PluralTranslator,
-  locale: Locale,
-): string {
-  return deals == null
-    ? amount
-    : plural("reporting.stageAmountDeals", deals, {
-        amount,
-        count: formatNumber(deals, locale),
-      });
 }

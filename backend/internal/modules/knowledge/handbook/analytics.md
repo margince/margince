@@ -175,7 +175,8 @@ and are grouped by company *and* currency. So two currencies on one company are
 two rows.
 
 The share is of the open pipeline in the same currency. It is shown only when
-the list holds every row, because a list cut short has no true total.
+the list holds every row and no deal is hidden from you. If not, there is no
+true total to take it from.
 
 Where not every deal carries an amount, a note says so:
 "{priced} of {total} priced".

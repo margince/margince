@@ -73,14 +73,25 @@ export function CompanyTable({
   rows,
   complete,
   locale,
-}: Readonly<{ rows: ReportRow[]; complete: boolean; locale: Locale }>) {
+  withheld = 0,
+}: Readonly<{
+  rows: ReportRow[];
+  complete: boolean;
+  locale: Locale;
+  // Deals the reader may not see, left out of every row. Their value is part
+  // of the whole too, so a share stated without them would overstate.
+  withheld?: number;
+}>) {
   const t = useT();
   const single = singleCurrencyKeys(rows.map(companyKey));
   // One scale per currency: the sums are native, and a euro bar against a
   // dong one compares numbers with no common unit.
   const scaleOf = currencyScales(rows);
-  // A capped answer is missing rows, so its sum is not the whole.
-  const totalOf = complete ? currencyTotals(rows) : new Map<string, number>();
+  // A capped or withheld answer is missing value, so its sum is not the whole.
+  const totalOf =
+    complete && withheld === 0
+      ? currencyTotals(rows)
+      : new Map<string, number>();
   return (
     <DataTable
       label={t("analytics.reportOpenByCompany")}

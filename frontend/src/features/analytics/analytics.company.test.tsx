@@ -26,7 +26,7 @@ const rows = [
   },
 ];
 
-function draw(complete: boolean) {
+function draw(complete: boolean, withheld = 0) {
   installFetchStub({
     "GET /companies/o-1": () =>
       jsonResponse({ id: "o-1", display_name: "Bär" }),
@@ -35,7 +35,12 @@ function draw(complete: boolean) {
   });
   render(
     <StoryProviders>
-      <CompanyTable rows={rows} complete={complete} locale="en" />
+      <CompanyTable
+        rows={rows}
+        complete={complete}
+        withheld={withheld}
+        locale="en"
+      />
     </StoryProviders>,
   );
 }
@@ -63,5 +68,10 @@ it("states each company's share of the open pipeline in its own currency", () =>
 
 it("states no share for a capped answer, which is missing part of the whole", () => {
   draw(false);
+  expect(shareColumn()).toEqual(["—", "—", "—"]);
+});
+
+it("states no share when the reader may not see some deals, whose value is part of the whole", () => {
+  draw(true, 2);
   expect(shareColumn()).toEqual(["—", "—", "—"]);
 });
