@@ -5,6 +5,10 @@
 
 package gates
 
+// Every slot pkg/extension accepts is mounted on a core screen, read from the
+// screens themselves. A slot the list names and no screen mounts is an entry
+// that passes every check and never shows.
+
 import (
 	"fmt"
 	"io/fs"
