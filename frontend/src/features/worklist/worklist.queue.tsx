@@ -2,7 +2,7 @@ import { Panel } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { pickFor, type WorklistPicks } from "./worklist.bulkdone";
-import { reviewFilter } from "./worklist.destinations";
+import { type ReviewShortfall, reviewFilter } from "./worklist.destinations";
 import { hasPane } from "./worklist.pane";
 import type { WorklistFilter, WorklistItem } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
@@ -136,7 +136,7 @@ export function ReviewPanel({
   rows,
 }: Readonly<{
   items: readonly WorklistItem[];
-  shortfall: { loaded: number; total: number } | null;
+  shortfall: ReviewShortfall | null;
   more: boolean;
   rows: RowContext;
 }>) {
@@ -161,15 +161,21 @@ export function ReviewPanel({
       // panel does not hold. Once the walk is over the gap is still true, but
       // there is no control left to point at.
       footer={
-        shortfall
-          ? t(
-              more ? "worklist.review.partial" : "worklist.review.partialDone",
-              {
-                loaded: formatNumber(shortfall.loaded, locale),
-                total: formatNumber(shortfall.total, locale),
-              },
-            )
-          : undefined
+        shortfall?.floor
+          ? t("worklist.review.floor", {
+              loaded: formatNumber(shortfall.loaded, locale),
+            })
+          : shortfall
+            ? t(
+                more
+                  ? "worklist.review.partial"
+                  : "worklist.review.partialDone",
+                {
+                  loaded: formatNumber(shortfall.loaded, locale),
+                  total: formatNumber(shortfall.total, locale),
+                },
+              )
+            : undefined
       }
     >
       <QueueRows items={items} {...rows} />

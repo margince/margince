@@ -69,10 +69,22 @@ export function reviewWork(
  * completeness line above the queue, deliberately — one page should not have
  * two different ways of admitting it is showing part of something.
  */
+export type ReviewShortfall = Readonly<{
+  loaded: number;
+  total: number;
+  /** A loaded group was cut at its read limit, so no total is known. */
+  floor: boolean;
+}>;
+
 export function reviewShortfall(
   loaded: number,
   total: number | undefined,
-): { loaded: number; total: number } | null {
+  floor = false,
+): ReviewShortfall | null {
+  // A floor is never complete, whatever the day's total says.
+  if (floor) {
+    return { loaded, total: total ?? loaded, floor: true };
+  }
   // An older server sends no partition. Saying nothing is right: a figure
   // invented here would be a claim about a day this client cannot count.
   if (total === undefined) {
@@ -85,7 +97,7 @@ export function reviewShortfall(
   if (loaded >= total) {
     return null;
   }
-  return { loaded, total };
+  return { loaded, total, floor: false };
 }
 
 // Which narrowing actually CONTAINS this group's members.

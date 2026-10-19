@@ -108,9 +108,11 @@ export function WorklistBody({
   const review = reviewWork(queue);
   // How much review work the day holds that this panel has not loaded, in
   // items: `buckets.review` counts a folded group as its members.
+  const reviewItems = represented(review);
   const reviewMissing = reviewShortfall(
-    represented(review).items,
+    reviewItems.items,
     day.summary.buckets?.review,
+    reviewItems.floor,
   );
   const selection = useWorklistPicks(queue, `${scope}/${filter}/${owner}`);
 

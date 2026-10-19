@@ -13551,6 +13551,8 @@ export const vi = {
   "worklist.review.partial":
     "Hiển thị {loaded} trên {total}. Tải thêm ở bên dưới để xem phần còn lại.",
   "worklist.review.partialDone": "Hiển thị {loaded} trên {total}.",
+  "worklist.review.floor":
+    "Hiển thị {loaded}+. Đã chạm giới hạn đọc; phần còn lại sẽ hiện khi bạn xử lý xong các việc này.",
   "worklist.clear": "Không có việc nào đang chờ bạn.",
   "worklist.clearFor": "Không có việc nào đang chờ {name}.",
   "worklist.clearOfTasksToday":

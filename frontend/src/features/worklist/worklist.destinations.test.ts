@@ -55,7 +55,11 @@ describe("splitting the day by destination", () => {
 
 describe("saying how much review work is not on screen", () => {
   it("reports the shortfall when the day holds more than the panel", () => {
-    expect(reviewShortfall(2, 7)).toEqual({ loaded: 2, total: 7 });
+    expect(reviewShortfall(2, 7)).toEqual({
+      loaded: 2,
+      total: 7,
+      floor: false,
+    });
   });
 
   it("says nothing once the panel holds the whole day", () => {
@@ -69,6 +73,14 @@ describe("saying how much review work is not on screen", () => {
     // against the rows this walk has served — so a loaded count above the
     // total is not a shortfall. Drawing "5 of 3" reads as a broken product.
     expect(reviewShortfall(5, 3)).toBeNull();
+  });
+
+  it("never calls a group cut at its read limit complete", () => {
+    expect(reviewShortfall(200, 200, true)).toEqual({
+      loaded: 200,
+      total: 200,
+      floor: true,
+    });
   });
 
   it("says nothing when the server sends no partition", () => {

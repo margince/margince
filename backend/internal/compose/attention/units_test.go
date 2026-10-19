@@ -36,57 +36,86 @@ func consideredOf(counts []crmcontracts.WorklistCount) int {
 	return total
 }
 
-func aDayOfTasksAndPairs(tasks, pairs int) crmcontracts.Attention {
+// aWalkDay is tasks ahead of eight duplicate pairs, with three tag suggestions
+// ranked behind the folded group so it is never the walk's last card.
+func aWalkDay(tasks int) crmcontracts.Attention {
 	day := aDayOfTasks(tasks)
-	day.NeedsYou = aDayOfAlikeDecisions(pairs).NeedsYou
+	day.NeedsYou = aDayOfAlikeDecisions(8).NeedsYou
+	for i := range 3 {
+		day.NeedsYou = append(day.NeedsYou, item(fmt.Sprintf("tag-%d", i), "tag_suggestion"))
+	}
 	return day
 }
 
-// Eight duplicate pairs fold into one card behind ten tasks, walked three cards
-// a page. One pair is resolved and one task arrives after page one.
+// checkDecisionUnits fails a page whose decisions figure is not the items its
+// decision cards stand for.
+func checkDecisionUnits(t *testing.T, page crmcontracts.Worklist) {
+	t.Helper()
+	cards := []crmcontracts.WorklistItem{}
+	for _, card := range page.Queue {
+		if card.Category == "decisions" {
+			cards = append(cards, card)
+		}
+	}
+	if len(cards) == 0 {
+		return
+	}
+	if shown := countFor(t, page, "decisions").Shown; shown != itemsOn(cards) {
+		t.Errorf("the page counts %d decision items over cards standing for %d", shown, itemsOn(cards))
+	}
+}
+
+// Eight pairs fold into one card, walked three cards a page: the group first,
+// last on page one, last on page two, and mid-page. Work is resolved and one
+// task arrives after page one.
 func TestFoldedPairsReconcileWithTheDayAcrossAWalk(t *testing.T) {
 	t.Parallel()
+	for _, ahead := range []int{0, 2, 5, 10} {
+		t.Run(fmt.Sprintf("%d tasks ahead", ahead), func(t *testing.T) {
+			t.Parallel()
+			reconcileAWalk(t, ahead)
+		})
+	}
+}
+
+func reconcileAWalk(t *testing.T, ahead int) {
 	svc := (&Service{now: func() time.Time { return rankInstant }}).WithWalks(&walkStore{})
-
-	first := walkFrom(t, svc, aDayOfTasksAndPairs(10, 8), 3, worklistCursor{})
+	first := walkFrom(t, svc, aWalkDay(ahead), 3, worklistCursor{})
 	started := consideredOf(first.Counts)
-	if started != 18 || first.Summary.Total != 18 {
-		t.Fatalf("the day weighed %d items (summary %d), want 18: ten tasks and eight pairs",
-			started, first.Summary.Total)
+	if want := ahead + 11; started != want || first.Summary.Total != want {
+		t.Fatalf("the day weighed %d items (summary %d), want %d", started, first.Summary.Total, want)
 	}
-	if first.NextCursor == nil {
-		t.Fatal("eleven cards paged three at a time minted no cursor")
+	// The last tag suggestion is resolved before it is served. A pair is too,
+	// where the group is not already on page one.
+	moved := aWalkDay(ahead)
+	moved.NeedsYou = moved.NeedsYou[:len(moved.NeedsYou)-1]
+	if ahead >= 3 {
+		moved.NeedsYou = moved.NeedsYou[1:]
 	}
-
-	moved := aDayOfTasksAndPairs(10, 8)
-	moved.NeedsYou = moved.NeedsYou[1:]
 	moved.Planned = append(moved.Planned, item("task-arrived", "task", withDue(rankInstant)))
 
-	served, groups, last := itemsOn(first.Queue), 0, first
-	cursor := decodedCursor(t, *first.NextCursor)
-	for range 10 {
-		page := walkFrom(t, svc, moved, 3, cursor)
+	served, seen, last := 0, map[string]int{}, first
+	for page := first; ; {
+		checkDecisionUnits(t, page)
 		served += itemsOn(page.Queue)
 		for _, card := range page.Queue {
-			if card.Id == "task-arrived" {
-				t.Fatal("work that arrived mid-walk was served on the walk")
-			}
-			if card.Batch != nil {
-				groups++
-				if shown := countFor(t, page, "decisions").Shown; shown != card.Batch.Count {
-					t.Errorf("the page counts %d decision items under a card standing for %d", shown, card.Batch.Count)
-				}
-			}
+			seen[card.Id]++
 		}
 		last = page
-		if page.NextCursor == nil {
+		// A walk that re-serves cards would never end, so the loop is capped.
+		if page.NextCursor == nil || len(seen) > 40 {
 			break
 		}
-		cursor = decodedCursor(t, *page.NextCursor)
+		page = walkFrom(t, svc, moved, 3, decodedCursor(t, *page.NextCursor))
 	}
 
-	if groups != 1 {
-		t.Errorf("the folded pairs were served as %d cards over the walk, want one", groups)
+	for id, times := range seen {
+		if times != 1 {
+			t.Errorf("card %q was served %d times on one walk", id, times)
+		}
+	}
+	if seen["task-arrived"] > 0 {
+		t.Error("work that arrived mid-walk was served on the walk")
 	}
 	if last.Walk == nil {
 		t.Fatal("the last page carried no walk, so the departure cannot be reconciled")
@@ -95,8 +124,8 @@ func TestFoldedPairsReconcileWithTheDayAcrossAWalk(t *testing.T) {
 		t.Errorf("served %d items and %d left, which does not reconcile with the %d the walk started with",
 			served, gone, started)
 	}
-	if last.Walk.NewAvailable == nil || *last.Walk.NewAvailable < 1 {
-		t.Error("the arrived task is neither served nor reported as waiting for a refresh")
+	if arrived := last.Walk.NewAvailable; arrived == nil || *arrived != 1 {
+		t.Errorf("one task arrived and the walk reports %v new items", arrived)
 	}
 }
 

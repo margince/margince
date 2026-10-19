@@ -320,6 +320,28 @@ describe("the line compares items with items", () => {
   const t = ((key: string, vars?: Record<string, string>) =>
     translate("en", key as never, vars)) as never;
 
+  it("gives the review panel no exact fraction over a group cut at its limit", async () => {
+    const page = day([
+      {
+        category: "decisions",
+        considered: 230,
+        shown: 200,
+        more_available: true,
+      },
+    ]);
+    page.queue = [pairs(200, true)];
+    page.summary.buckets = { urgent: 0, due_today: 0, planned: 0, review: 230 };
+    stub(page);
+    renderWorklist();
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/^200\+ shown\. Read limit reached/),
+      ).toBeTruthy();
+    });
+    expect(screen.queryByText(/200 of 230/)).toBeNull();
+  });
+
   it("calls eight pairs on one card complete, on the line and in review", async () => {
     const page = day([
       { category: "decisions", considered: 8, shown: 8, more_available: false },

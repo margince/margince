@@ -52781,8 +52781,9 @@ type WorklistWalk struct {
 	// `sources_unavailable` is where that is said.
 	ChangedSinceSnapshot int `json:"changed_since_snapshot"`
 
-	// NewAvailable How much work has arrived since this walk started, and is deliberately not in
-	// it.
+	// NewAvailable How many items have arrived since this walk started, and are deliberately not in
+	// it. A folded group counts only its members the walk did not freeze, so an unchanged
+	// group adds nothing.
 	//
 	// Absent on a first page, where the question has no meaning — the walk was just
 	// assembled, so nothing can have arrived behind it yet. A client draws this as

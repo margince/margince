@@ -13890,6 +13890,8 @@ export const en = {
   "worklist.review.partial":
     "{loaded} of {total} shown. Load more below to see the rest.",
   "worklist.review.partialDone": "{loaded} of {total} shown.",
+  "worklist.review.floor":
+    "{loaded}+ shown. Read limit reached; the rest appears as you clear these.",
   "worklist.clear": "Nothing is waiting on you.",
   "worklist.clearFor": "Nothing is waiting on {name}.",
   "worklist.clearOfTasksToday":

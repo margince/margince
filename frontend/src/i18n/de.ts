@@ -13889,6 +13889,8 @@ export const de = {
   "worklist.review.partial":
     "{loaded} von {total} angezeigt. Lade unten mehr, um den Rest zu sehen.",
   "worklist.review.partialDone": "{loaded} von {total} angezeigt.",
+  "worklist.review.floor":
+    "{loaded}+ angezeigt. Leselimit erreicht; der Rest erscheint, sobald du diese erledigst.",
   "worklist.clear": "Nichts wartet auf dich.",
   "worklist.clearFor": "Nichts wartet auf {name}.",
   "worklist.clearOfTasksToday":
