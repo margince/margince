@@ -135,11 +135,14 @@ func writeCustomMeaning(sum hash.Hash, field analyticsquery.Field) {
 	sum.Write([]byte(jsonText(field.Label) + jsonText(field.Options)))
 }
 
-// jsonText is v as JSON. A string or a slice of strings always encodes.
+// jsonText is v as JSON, with < > & left as typed, since a model reads it and
+// no browser does. A string or a slice of strings always encodes.
 func jsonText[T string | []string](v T) string {
-	text, err := json.Marshal(v)
-	if err != nil {
+	var out strings.Builder
+	enc := json.NewEncoder(&out)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v); err != nil {
 		return ""
 	}
-	return string(text)
+	return strings.TrimSuffix(out.String(), "\n")
 }

@@ -9592,7 +9592,7 @@ export const de = {
   "cf.col.inReports": "In Berichten",
   "cf.reportableFor": "„{label}“ in Berichten nutzen",
   "cf.addedToReports":
-    "„{label}“ in Berichten nutzbar; wer Berichte liest, sieht Namen und Auswahl",
+    "„{label}“ in Berichten nutzbar. Wer Berichte liest, sieht seine Bezeichnung und Auswahlwerte.",
   "cf.removedFromReports": "„{label}“ aus Berichten entfernt",
   "cf.audit.title": "Letzte Feldänderungen",
   "audit.kind.customField": "Eigenes Feld",

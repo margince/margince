@@ -9675,7 +9675,7 @@ export const en = {
   "cf.col.inReports": "In reports",
   "cf.reportableFor": "Use “{label}” in reports",
   "cf.addedToReports":
-    "“{label}” added to reports; every report reader sees its name and choices",
+    "“{label}” added to reports. Everyone who reads reports sees its label and choices.",
   "cf.removedFromReports": "“{label}” removed from reports",
   "cf.audit.title": "Recent field changes",
   "audit.kind.customField": "Custom field",

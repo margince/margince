@@ -343,7 +343,10 @@ function customFieldsBackend(
     if (url.includes("/custom-fields") && method === "PATCH") {
       const body = await readBody();
       calls.push({ method, url, body });
-      return jsonResponse(field({ label: String(body.label) }));
+      // The saved row: the field the URL names, with the patch applied.
+      const id = new URL(url).pathname.split("/").pop();
+      const saved = [...dealFields, ...companyFields].find((f) => f.id === id);
+      return jsonResponse({ ...(saved ?? field()), ...body });
     }
     if (url.includes("/custom-fields") && method === "POST") {
       const body = await readBody();
@@ -874,6 +877,11 @@ describe("the reporting setting on the field table", () => {
     const patch = calls.find((call) => call.method === "PATCH");
     expect(patch?.body).toEqual({ reportable: true });
     expect(await screen.findByText(/added to reports/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("switch", { name: "Use “Territory” in reports" }),
+      ).toHaveAttribute("aria-checked", "true"),
+    );
   });
 
   it("offers no switch for a field reports cannot group by", () => {

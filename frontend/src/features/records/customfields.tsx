@@ -350,13 +350,8 @@ export function CustomFieldsAdmin() {
           onSetting={(field, name, on) =>
             setting.mutate({ field, setting: name, on })
           }
-          saving={
-            setting.isPending
-              ? {
-                  field: setting.variables?.field.id,
-                  setting: setting.variables?.setting,
-                }
-              : undefined
+          savingField={
+            setting.isPending ? setting.variables?.field.id : undefined
           }
         />
       )}

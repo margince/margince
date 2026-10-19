@@ -9348,7 +9348,7 @@ export const vi = {
   "cf.col.inReports": "Trong báo cáo",
   "cf.reportableFor": "Dùng “{label}” trong báo cáo",
   "cf.addedToReports":
-    "Đã thêm “{label}” vào báo cáo; ai đọc báo cáo cũng thấy tên và các lựa chọn của trường",
+    "Đã thêm “{label}” vào báo cáo. Ai đọc báo cáo cũng thấy tên và các lựa chọn của trường.",
   "cf.removedFromReports": "Đã gỡ “{label}” khỏi báo cáo",
   "cf.audit.title": "Thay đổi trường gần đây",
   "audit.kind.customField": "Trường tùy chỉnh",

@@ -39,12 +39,6 @@ export const STAGED_ID = "staged";
 /** A per-field switch the settings table offers, by its wire name. */
 export type FieldSetting = "show_in_create" | "reportable";
 
-/** The field and switch being written, while a write is in flight. */
-export type SavingSetting = Readonly<{
-  field: string | undefined;
-  setting: FieldSetting | undefined;
-}>;
-
 export const SETTING_TOAST = {
   show_in_create: { on: "cf.shownInCreate", off: "cf.hiddenFromCreate" },
   reportable: { on: "cf.addedToReports", off: "cf.removedFromReports" },
@@ -79,7 +73,7 @@ export function FieldTable({
   onRename,
   onArchive,
   onSetting,
-  saving,
+  savingField,
 }: Readonly<{
   object: CfObject;
   fields: CustomField[];
@@ -91,7 +85,9 @@ export function FieldTable({
   onRename: (field: CustomField) => void;
   onArchive: (field: CustomField) => void;
   onSetting: (field: CustomField, setting: FieldSetting, on: boolean) => void;
-  saving?: SavingSetting;
+  // The id of the field whose settings are being written; both its switches
+  // wait, so a second flip cannot send a version the first one moved.
+  savingField?: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -125,7 +121,7 @@ export function FieldTable({
           canEdit={canEdit}
           on={field.show_in_create !== false}
           label={t("cf.showInCreateFor", { label: field.label })}
-          pending={isSaving(saving, field, "show_in_create")}
+          pending={savingField === field.id}
           onChange={(on) => onSetting(field, "show_in_create", on)}
         />
       ),
@@ -142,7 +138,7 @@ export function FieldTable({
                   canEdit={canEdit}
                   on={field.reportable}
                   label={t("cf.reportableFor", { label: field.label })}
-                  pending={isSaving(saving, field, "reportable")}
+                  pending={savingField === field.id}
                   onChange={(on) => onSetting(field, "reportable", on)}
                 />
               ) : null,
@@ -213,14 +209,6 @@ function FieldName({ field }: Readonly<{ field: CustomField }>) {
       {field.status === "retired" && <Badge>{t("cf.retired")}</Badge>}
     </span>
   );
-}
-
-function isSaving(
-  saving: SavingSetting | undefined,
-  field: CustomField,
-  setting: FieldSetting,
-): boolean {
-  return saving?.field === field.id && saving.setting === setting;
 }
 
 // A switch where the reader may flip it, and the plain answer where they may
