@@ -120,7 +120,7 @@ already exists:
 | `Jobs` | Scheduled work: a job that runs on a fixed schedule and starts one worker run per tenant |
 | `Secrets` | The secret keys the unit will use, by name and scope. It is a request; it grants nothing |
 | `Migrations` | The SQL schema layer the unit owns, built into the binary instead of read from the tree |
-| `Entries` | Buttons on core screens that open the unit's screen. The unit names a slot, a label key, a glyph and an RBAC object, and the core draws and places the button |
+| `Entries` | Buttons on core screens that open the unit's screen. The unit names a slot, a label key, an icon and an RBAC object, and the core draws and places the button |
 
 `Channels` and `Ingress` are separate fields, and neither one means the other. A unit may capture from a
 provider it cannot send on, and the channel declaration says which.

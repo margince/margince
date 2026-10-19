@@ -19,8 +19,9 @@ key declaration and a transport that replies leave on, and it ships a screen. Co
 
 A unit can ship a frontend too. `extensions/<name>/frontend/` is a pnpm package whose
 default export the web app mounts at `#/ext/<name>`. A unit that ships no screen still gets a route and a
-plain card about it, on its own. A unit with a screen can also put a button that opens it on a contact, company or deal page, or in
-the Log activity form; see [Offer an entry on a core screen](#offer-an-entry-on-a-core-screen).
+plain card about it, on its own. A unit with a screen can also put a button on a core screen
+that opens it. See
+[Offer an entry on a core screen](#offer-an-entry-on-a-core-screen).
 
 Extension paths have an entry in [CODEOWNERS](../../CODEOWNERS). That covers the units, the `backend/pkg/**`
 seam, the `composition` stub and its generator. So a pull request that touches them asks the tier owner for a
@@ -556,14 +557,14 @@ Entries: []extension.Entry{{
 | `extension.SlotCompanyHeader` (`record_header.company`) | The verb row of a company page, after the booking verb |
 | `extension.SlotDealHeader` (`record_header.deal`) | The verb row of a deal page, after Add task |
 
-The core draws every entry as the same plain button, with the glyph first and then the label. The unit supplies
+The core draws every entry as the same plain button, with the icon first and then the label. The unit supplies
 these fields and nothing more:
 
 - **`Label`** is a key from your own `frontend/i18n/<locale>.json`. `make gen` refuses a key outside your
   `ext<CamelUnit>.` space, or one that is missing from any of `en`, `de` and `vi`.
-- **`Icon`** is one of the `extension.EntryIcons()` glyphs: `IconClipboardList`, `IconFileText`, `IconMapPin`,
-  `IconCamera`, `IconCheckSquare`, `IconMessageSquare`, `IconPlug`. Each is a Lucide drawing.
-- **`Target`** is one path segment under your screen, or empty for the screen itself.
+- **`Icon`** is one of the `extension.EntryIcons()` icons: `IconClipboardList`, `IconFileText`, `IconMapPin`,
+  `IconCamera`, `IconCheckSquare`, `IconMessageSquare`, `IconPlug`.
+- **`Target`** is one part of the path under your screen, or empty for the screen itself.
 - **`Object`** is one of your RBAC objects. The button shows only to a reader whose role grants `read` on it.
   `make gen` and the start both refuse an object that none of your operations gates on.
 
@@ -571,15 +572,15 @@ Two entries in one slot must open different targets.
 
 A press opens `#/ext/<name>/<Target>?record_type=<type>&record_id=<id>`. The type is `contact`, `company` or `deal`
 on a record page. In the Log activity form it is the record the form was opened on. Read both with
-`useEntryContext()` from `@margince/frontend/app` and prefill your form:
+`useEntryContext()` from `@margince/frontend/app` and fill in your form:
 
 ```tsx
 const { view, record } = useEntryContext();
 // view is "report"; record is { type: "contact", id: "…" }, or null
 ```
 
-`record` is null when your screen was opened some other way, so the screen must work without it. The query is
-something a reader can type, so check that the record exists and that the reader may see it, as for any other id.
+`record` is null when your screen was opened some other way, so the screen must work without it. A reader can type the query by hand. So check that the record exists, and that the reader may
+see it, as for any other id.
 
 The registry the SPA reads is generated from the enabled set, so removing the unit removes its entries. Nothing in
 the core names a unit. `extensions/openchannel` declares a contact header entry.

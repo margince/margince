@@ -43,6 +43,21 @@ func TestTheFrontendEntrySlotsMatchTheGoOnes(t *testing.T) {
 	compareSets(t, "entry slot", inGo, inTS)
 }
 
+// The list above is a type; a slot shows only where a screen mounts it. So the
+// mounted set is read from every `<ExtensionEntries` element under src/.
+func TestEverySlotGoAcceptsIsMountedOnAScreen(t *testing.T) {
+	t.Parallel()
+	mounted, err := mountedEntrySlots("../frontend/src")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var inGo []string
+	for _, slot := range extension.EntrySlots() {
+		inGo = append(inGo, string(slot))
+	}
+	compareSets(t, "mounted entry slot", inGo, mounted)
+}
+
 func TestTheFrontendEntryIconsMatchTheGoOnes(t *testing.T) {
 	t.Parallel()
 	literal := tsLiteral(t, frontendEntryIcons, "export const ENTRY_ICONS: Readonly<Record<string, LucideIcon>> = {", "};")

@@ -49,7 +49,11 @@ func TestEntriesDeriveIntoTheManifestSorted(t *testing.T) {
 	if !strings.Contains(s, `"slot": "record_header.contact"`) || !strings.Contains(s, `"target": "report"`) {
 		t.Fatalf("the manifest misses the declared entry:\n%s", s)
 	}
-	if strings.Index(s, "log_activity") > strings.Index(s, "record_header.contact") {
+	logAt, contactAt := strings.Index(s, `"slot": "log_activity"`), strings.Index(s, `"slot": "record_header.contact"`)
+	if logAt < 0 || contactAt < 0 {
+		t.Fatalf("the manifest misses one of the two entries:\n%s", s)
+	}
+	if logAt > contactAt {
 		t.Errorf("entries are not sorted by slot:\n%s", s)
 	}
 }
