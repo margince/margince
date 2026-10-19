@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import type { SectionState } from "../../design-system/surfacestate";
-import { ProblemError, unwrap } from "../../lib/problem";
+import { problemStatus, unwrap } from "../../lib/problem";
 
 // The paper filed against ONE agreement, read the same way by the two surfaces
 // that show it: the contract form's signed-document field and the contract row
@@ -165,24 +165,4 @@ export function paperState(
     return "partial";
   }
   return (paper?.documents.length ?? 0) === 0 ? "empty" : "ready";
-}
-
-// The HTTP status out of a thrown RFC-7807 body, or 0 when the failure carried
-// none (a dropped connection throws no problem document at all).
-function problemStatus(err: unknown): number {
-  // `typeof null === "object"`, so the null check is not redundant: without it
-  // a ProblemError carrying a null body throws while deciding how to report a
-  // failure, turning a handled error into an unhandled one.
-  if (
-    !(err instanceof ProblemError) ||
-    typeof err.problem !== "object" ||
-    err.problem === null
-  ) {
-    return 0;
-  }
-  if (!("status" in err.problem)) {
-    return 0;
-  }
-  const { status } = err.problem;
-  return typeof status === "number" ? status : 0;
 }

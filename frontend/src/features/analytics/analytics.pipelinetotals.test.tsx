@@ -185,3 +185,19 @@ it("keeps the pipeline cards for a deal reader whose context read is refused", a
   ).toBeUndefined();
   expect(screen.queryByRole("combobox", { name: "Record scope" })).toBeNull();
 });
+
+it("shows a failed context read instead of totals for a scope the link did not ask for", async () => {
+  const bodies: { key: string; body: Record<string, unknown> }[] = [];
+  vi.stubGlobal(
+    "fetch",
+    reportsStub({
+      onRun: (key, body) => bodies.push({ key, body }),
+      contextStatus: 500,
+    }),
+  );
+  window.location.hash = "#/analytics/pipeline?scope=team:t-north";
+  render(<AnalyticsScreen />);
+
+  expect(await screen.findByRole("alert", {}, { timeout: 5000 })).toBeTruthy();
+  expect(bodies.some((sent) => sent.key === "pipeline-current")).toBe(false);
+});
