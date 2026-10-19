@@ -96,9 +96,7 @@ func TestAModelThatCitesTheLeadAsAContactLosesThatReason(t *testing.T) {
 	if draft.GeneratedBy != crmcontracts.WrittenByModel {
 		t.Fatalf("generated_by = %s, so the model's answer was not read", draft.GeneratedBy)
 	}
-	for _, reason := range draft.Reasoning {
-		if ref := reason.EvidenceRef; ref != nil && ref.EntityType == crmcontracts.CompanyBriefEvidenceEntityTypeContact {
-			t.Errorf("the lead's id survived labelled as a contact: %+v", reason)
-		}
+	if len(draft.Reasoning) != 0 {
+		t.Errorf("the miscited recipient reason survived: %+v", draft.Reasoning)
 	}
 }
