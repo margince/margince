@@ -127,3 +127,24 @@ export const HeaderTriggers: Story = {
     await waitFor(() => expect(heading).toBeVisible());
   },
 };
+
+export const WithFollowUp: Story = {
+  ...Default,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("checkbox", { name: en["log.addFollowUp"] }),
+    );
+    await userEvent.type(
+      canvas.getByRole("textbox", { name: en["log.followUpSubject"] }),
+      "Send revised quote",
+    );
+    await expect(
+      canvas.getByRole("textbox", { name: en["log.followUpSubject"] }),
+    ).toBeVisible();
+  },
+};
+export const WithFollowUpDark: Story = {
+  ...WithFollowUp,
+  globals: { theme: "dark" },
+};

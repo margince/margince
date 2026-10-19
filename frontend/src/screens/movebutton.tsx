@@ -25,10 +25,8 @@ import { ErrorLine } from "../design-system/errorline";
 import { ContactMeetingBrief } from "../features/brief/meetingbrief";
 import { ComposeModal } from "../features/mail/compose";
 import { OpenEmailDrawer } from "../features/mail/openemaildrawer";
-import {
-  TaskDetailModal,
-  useTaskUpdate,
-} from "../features/worklist/taskactions";
+import { useTaskUpdate } from "../features/worklist/taskactions";
+import { TaskDetailModal } from "../features/worklist/taskdetailmodal";
 import { useT } from "../i18n";
 import { useCan } from "../lib/capability";
 import { useOpenEmail } from "../lib/openemail";

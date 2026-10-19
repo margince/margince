@@ -189,6 +189,11 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 			return nil, storekit.Page{}, err
 		}
 	}
+	if in.SourceActivityID != nil {
+		if _, err := readActivityContent(ctx, tx, *in.SourceActivityID, storekit.IncludeArchived); err != nil {
+			return nil, storekit.Page{}, err
+		}
+	}
 	limit := storekit.ClampLimit(in.Limit)
 	where, content, sorted, args, err := listActivitiesFilter(ctx, in)
 	if err != nil {

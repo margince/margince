@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -29,7 +30,12 @@ func proposalReadable(ctx context.Context, tx pgx.Tx, p principal.Principal, a r
 		if item.SourceType == nil || *item.SourceType != "activity" {
 			continue
 		}
-		visible, err := targetVisible(ctx, tx, item.SourceType, item.SourceID)
+		readable, err := objectReadable(ctx, objectActivity)
+		if err != nil || !readable || item.SourceID == nil {
+			return false, err
+		}
+		// Archived evidence remains readable; only the action target must be live.
+		visible, err := probeAnswer(auth.EnsureActivityContentVisible(ctx, tx, *item.SourceID))
 		if err != nil || !visible {
 			return false, err
 		}

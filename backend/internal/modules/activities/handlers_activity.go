@@ -15,16 +15,17 @@ import (
 
 func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params crmcontracts.ListActivitiesParams) {
 	in := ListActivitiesInput{
-		Cursor:          params.Cursor,
-		Limit:           params.Limit,
-		Sort:            params.Sort,
-		Query:           params.Q,
-		ThreadKey:       params.ThreadKey,
-		IncludeArchived: params.IncludeArchived != nil && *params.IncludeArchived,
-		AssigneeID:      idArg[ids.UserKind](params.AssigneeId),
-		WithinProjectID: idArg[ids.ProjectKind](params.ProjectId),
-		OccurredAfter:   params.OccurredAfter,
-		OccurredBefore:  params.OccurredBefore,
+		Cursor:           params.Cursor,
+		Limit:            params.Limit,
+		Sort:             params.Sort,
+		Query:            params.Q,
+		ThreadKey:        params.ThreadKey,
+		SourceActivityID: idArg[ids.ActivityKind](params.SourceActivityId),
+		IncludeArchived:  params.IncludeArchived != nil && *params.IncludeArchived,
+		AssigneeID:       idArg[ids.UserKind](params.AssigneeId),
+		WithinProjectID:  idArg[ids.ProjectKind](params.ProjectId),
+		OccurredAfter:    params.OccurredAfter,
+		OccurredBefore:   params.OccurredBefore,
 	}
 	if params.Kind != nil {
 		k := string(*params.Kind)
@@ -75,6 +76,9 @@ func (h Handlers) LogActivity(w http.ResponseWriter, r *http.Request, _ crmcontr
 	// A caller who NAMES an invited colleague as a new task's assignee is
 	// allowed to; automatic writers never pass through here.
 	in.invitedAssignee = req.AssigneeId != nil
+	if in.FollowUpTask != nil {
+		in.FollowUpTask.invitedAssignee = req.FollowUpTask.AssigneeId != nil
+	}
 
 	activity, created, err := h.store.LogActivity(r.Context(), in)
 	if err != nil {

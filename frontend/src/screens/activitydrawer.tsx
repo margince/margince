@@ -14,9 +14,18 @@ import { Markdown } from "../design-system/markdown";
 import { SurfaceState } from "../design-system/surfacestate";
 import { TIMELINE_KIND_LABEL } from "../design-system/timelineentry";
 import { isTranscriptActivity } from "../design-system/transcriptread";
+import {
+  TaskDetailDialog,
+  useTaskUpdate,
+} from "../features/worklist/taskactions";
+import { worklistKey } from "../features/worklist/worklist.queries";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { activityFollowUpsKey, TASK_QUEUE_KEY } from "../lib/activitykeys";
 import { useActivity } from "../lib/activityread";
+import { useCanWrite } from "../lib/capability";
+import { problemCodeOf } from "../lib/problem";
+import { ActivityFollowUps } from "./activityfollowups";
 import { mostSpecificFirst, RecordLinks } from "./recordlinks";
 import "../design-system/emaildetail.css";
 
@@ -84,12 +93,9 @@ function ActivityDetail({
   // Read while closing too, so the panel keeps its words as it animates out.
   const read = useActivity(activityId, given === undefined);
   const activity = given ?? read.data;
-  const withheld = activity?.content_state === "withheld";
-  const title = !activity
-    ? t("activity.detail.none")
-    : withheld
-      ? t("timeline.withheld")
-      : activity.subject?.trim() || t(TIMELINE_KIND_LABEL[activity.kind]);
+  const unavailable = ["not_found", "permission_denied"].includes(
+    problemCodeOf(read.error) ?? "",
+  );
   return (
     <Modal
       open={open}
@@ -98,9 +104,10 @@ function ActivityDetail({
       intent="drawer-reading"
     >
       <DrawerHead>
+        {activity?.archived_at && <Badge>{t("record.archived")}</Badge>}
         {activity && <Eyebrow>{t(TIMELINE_KIND_LABEL[activity.kind])}</Eyebrow>}
         <Heading size="large" id={titleId} className="t-h2 modal-title">
-          {title}
+          {activityTitle(activity, t)}
         </Heading>
       </DrawerHead>
       <DrawerBody>
@@ -108,10 +115,16 @@ function ActivityDetail({
           <ActivityBody activity={activity} zone={zone} />
         ) : (
           <SurfaceState
-            state={read.isError ? "failed" : "loading"}
+            state={
+              unavailable ? "withheld" : read.isError ? "failed" : "loading"
+            }
             emptyLabel={t("activity.detail.none")}
             loadingLabel={t("activity.detail.loading")}
-            detail={{ onRetry: () => void read.refetch() }}
+            detail={
+              unavailable
+                ? { withheldReason: t("activity.detail.withheldReason") }
+                : { onRetry: () => void read.refetch() }
+            }
           >
             {null}
           </SurfaceState>
@@ -127,6 +140,13 @@ function ActivityBody({
 }: Readonly<{ activity: Activity; zone: string }>) {
   const t = useT();
   const { locale } = useLocale();
+  const [opened, setOpened] = useState<string | null>(null);
+  const canUpdate = useCanWrite("activity", "update");
+  const update = useTaskUpdate([
+    worklistKey,
+    TASK_QUEUE_KEY,
+    activityFollowUpsKey(activity.id),
+  ]);
   const links = mostSpecificFirst(activity.links ?? []);
   const attended = ATTENDED_KINDS.has(activity.kind);
   const attendees = attended
@@ -176,6 +196,26 @@ function ActivityBody({
         )}
       </div>
       {withheldOrBody(activity, t)}
+      {activity.content_state !== "withheld" && (
+        <>
+          {["meeting", "call", "note"].includes(activity.kind) && (
+            <ActivityFollowUps
+              sourceId={activity.id}
+              archived={Boolean(activity.archived_at)}
+              onOpen={setOpened}
+            />
+          )}
+          {opened && (
+            <TaskDetailDialog
+              activityId={opened}
+              readOnly={!canUpdate || Boolean(activity.archived_at)}
+              update={update}
+              onClose={() => setOpened(null)}
+              onOpenSource={() => setOpened(null)}
+            />
+          )}
+        </>
+      )}
       {activity.content_state !== "withheld" && (
         <CommitmentReview
           decisions={activity.commitment_admissions}
@@ -239,4 +279,13 @@ function PartyLine({
       {children}
     </p>
   );
+}
+
+function activityTitle(
+  activity: Activity | undefined,
+  t: ReturnType<typeof useT>,
+): string {
+  if (!activity) return t("activity.detail.none");
+  if (activity.content_state === "withheld") return t("timeline.withheld");
+  return activity.subject?.trim() || t(TIMELINE_KIND_LABEL[activity.kind]);
 }

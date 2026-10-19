@@ -7272,6 +7272,10 @@ paths:
           description: >-
             Narrow the timeline sections to one body of work: what is filed under this project
             or under no project; correspondence filed under another project is left out.
+        - name: source_activity_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: Tasks derived from this readable source activity, under current task visibility.
         - name: thread_key
           in: query
           schema: { type: string }
@@ -44830,10 +44834,9 @@ components:
           format: uuid
           readOnly: true
           description: >-
-            The activity this one was derived from: today, the meeting whose transcript proposed a task. Null on almost every row: a task somebody typed came from
-            nowhere but them. It is a reference, not a grant: opening it goes through the
-            activity read path under the caller's own scope, so a reader who may not see
-            the meeting gets the same answer they would get by asking for it directly.
+            The conversation or note this task follows from, whether added by a human or
+            read from a conversation. Opening the source requires current source access.
+            A task cannot grant access to its source or disclose content from a withheld source.
         links:
           type: array
           description: One activity may link to >1 entity (contact + deal).
@@ -45014,11 +45017,29 @@ components:
                 a transport that sends text-with-files as a caption bounds it far below a
                 text-only message. Zero means no extra bound.
 
+    ActivityFollowUpTask:
+      type: object
+      additionalProperties: false
+      required: [subject]
+      properties:
+        subject: { type: string, minLength: 1 }
+        body: { type: [string, 'null'] }
+        due_at: { type: [string, 'null'], format: date-time }
+        assignee_id: { type: [string, 'null'], format: uuid }
+
     CreateTaskRequest:
       type: object
       description: What a task needs. Stored as an activity of kind `task`.
       required: [subject, source]
       properties:
+        source_activity_id:
+          type: string
+          format: uuid
+          description: >-
+            The non-task activity this task follows from, including email and messages.
+            The caller and assignee need access to the source content. The task preserves
+            its audience and inherits its visible links when no links are supplied.
+            This reference does not accept or settle a request.
         request_activity_id:
           type: string
           format: uuid
@@ -45036,7 +45057,7 @@ components:
         assignee_id: { type: [string, 'null'], format: uuid, description: 'Who owes it. Defaults to the caller.' }
         links:
           type: array
-          description: The records the task is about. Omit it and the task appears on no timeline.
+          description: The records the task is about. With a source activity, omitted or empty links inherit its visible links. Otherwise the task appears on no timeline.
           items:
             type: object
             required: [entity_type, entity_id]
@@ -45049,6 +45070,20 @@ components:
       type: object
       required: [kind, source]
       properties:
+        source_activity_id:
+          type: string
+          format: uuid
+          description: >-
+            The non-task activity this task follows from, including email and messages.
+            The caller and assignee need access to the source content. The task preserves
+            its audience and inherits its visible links when no links are supplied.
+            This reference does not accept or settle a request.
+        follow_up_task:
+          $ref: '#/components/schemas/ActivityFollowUpTask'
+          description: >-
+            Meeting, call or note only. Create this task and its source activity in one
+            transaction. The task inherits the source links and audience. Replaying a source
+            identity returns the original activity without adding another task.
         request_activity_id:
           type: string
           format: uuid
@@ -59177,6 +59212,9 @@ components:
         adds none.
       required: [id, source, actions]
       properties:
+        source_record:
+          allOf: [{ $ref: '#/components/schemas/AttentionSubject' }]
+          description: The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access.
         requested_decider_id:
           type: string
           format: uuid
@@ -60702,6 +60740,9 @@ components:
         browser does not.
       required: [id, source, category, level, actions, because, consequence]
       properties:
+        source_record:
+          allOf: [{ $ref: '#/components/schemas/AttentionSubject' }]
+          description: The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access.
         notice_origin: { $ref: '#/components/schemas/NoticeOrigin' }
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:

@@ -274,8 +274,7 @@ describe("a row's verbs are one line with the row's menu last", () => {
     );
     renderWorklist();
 
-    // The title links the record, so neither verb draws a second control to
-    // it, on the line or in the row's menu.
+    // The title opens the task; one separate control reaches its contact.
     await screen.findByText(/Send the proposal/);
     await userEvent.setup().click(await findRowMenu());
     const verbsToRecord = [
@@ -287,7 +286,10 @@ describe("a row's verbs are one line with the row's menu last", () => {
         .getAttribute("href")
         ?.includes("01a05500-0000-7000-8000-000000000009"),
     );
-    expect(verbsToRecord).toEqual([]);
+    expect(verbsToRecord).toHaveLength(1);
+    expect(
+      screen.getByRole("button", { name: /^Send the proposal/ }),
+    ).toBeTruthy();
   });
 
   it("offers a verb that goes somewhere, and none that does not", async () => {

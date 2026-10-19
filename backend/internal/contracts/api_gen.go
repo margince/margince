@@ -23436,7 +23436,7 @@ type Activity struct {
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 	Source   string     `json:"source"`
 
-	// SourceActivityId The activity this one was derived from: today, the meeting whose transcript proposed a task. Null on almost every row: a task somebody typed came from nowhere but them. It is a reference, not a grant: opening it goes through the activity read path under the caller's own scope, so a reader who may not see the meeting gets the same answer they would get by asking for it directly.
+	// SourceActivityId The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source.
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
 
 	// SourceId Provider message/event id; part of the idempotency key.
@@ -23482,6 +23482,14 @@ type ActivityMeetingStatus string
 
 // ActivityAudience Who may read an activity's content — see Activity.audience.
 type ActivityAudience string
+
+// ActivityFollowUpTask defines model for ActivityFollowUpTask.
+type ActivityFollowUpTask struct {
+	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
+	Body       *string             `json:"body,omitempty"`
+	DueAt      *time.Time          `json:"due_at,omitempty"`
+	Subject    string              `json:"subject"`
+}
 
 // ActivityLink defines model for ActivityLink.
 type ActivityLink struct {
@@ -26750,6 +26758,9 @@ type AttentionItem struct {
 
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
 	Source AttentionItemSource `json:"source"`
+
+	// SourceRecord The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access.
+	SourceRecord *AttentionSubject `json:"source_record,omitempty"`
 
 	// Staged What the verdict engine already worked out about a staged contact decision, so a
 	// surface can group alike questions without reading the proposal a second time.
@@ -33756,6 +33767,7 @@ type CreateActivityRequest struct {
 	Direction       *CreateActivityRequestDirection `json:"direction,omitempty"`
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
 	DurationSeconds *int                            `json:"duration_seconds,omitempty"`
+	FollowUpTask    *ActivityFollowUpTask           `json:"follow_up_task,omitempty"`
 
 	// HostUserId Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
 	// Not nullable: omitting it is how you say nothing, and the server answers that with the caller. A meeting nobody here hosted is a state imports reach, not one a human logging their own day can assert.
@@ -33793,6 +33805,9 @@ type CreateActivityRequest struct {
 	// RfcMessageId This message's RFC 5322 Message-ID, angle brackets optional. Email only. It is the identity a later capture of the same message resolves against, so an import that supplies it is recognised rather than duplicated.
 	RfcMessageId *string `json:"rfc_message_id,omitempty"`
 	Source       string  `json:"source"`
+
+	// SourceActivityId The non-task activity this task follows from, including email and messages. The caller and assignee need access to the source content. The task preserves its audience and inherits its visible links when no links are supplied. This reference does not accept or settle a request.
+	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -34655,7 +34670,7 @@ type CreateTaskRequest struct {
 	// DueAt When it is due. Optional — a task without a date is still a task.
 	DueAt *time.Time `json:"due_at,omitempty"`
 
-	// Links The records the task is about. Omit it and the task appears on no timeline.
+	// Links The records the task is about. With a source activity, omitted or empty links inherit its visible links. Otherwise the task appears on no timeline.
 	Links *[]struct {
 		EntityId   openapi_types.UUID               `json:"entity_id"`
 		EntityType CreateTaskRequestLinksEntityType `json:"entity_type"`
@@ -34664,6 +34679,9 @@ type CreateTaskRequest struct {
 	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
 	RequestActivityId *openapi_types.UUID `json:"request_activity_id,omitempty"`
 	Source            string              `json:"source"`
+
+	// SourceActivityId The non-task activity this task follows from, including email and messages. The caller and assignee need access to the source content. The task preserves its audience and inherits its visible links when no links are supplied. This reference does not accept or settle a request.
+	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
 
 	// Subject What has to be done, as one line.
 	Subject string `json:"subject"`
@@ -51875,6 +51893,9 @@ type WorklistItem struct {
 	// row rather than a hundred. Its own facts ride in `batch`.
 	Source WorklistItemSource `json:"source"`
 
+	// SourceRecord The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access.
+	SourceRecord *AttentionSubject `json:"source_record,omitempty"`
+
 	// Subject The record this item is about, named so a reader knows who it concerns before opening anything.
 	Subject *AttentionSubject `json:"subject,omitempty"`
 
@@ -52782,6 +52803,9 @@ type ListActivitiesParams struct {
 
 	// ProjectId Narrow the timeline sections to one body of work: what is filed under this project or under no project; correspondence filed under another project is left out.
 	ProjectId *openapi_types.UUID `form:"project_id,omitempty" json:"project_id,omitempty"`
+
+	// SourceActivityId Tasks derived from this readable source activity, under current task visibility.
+	SourceActivityId *openapi_types.UUID `form:"source_activity_id,omitempty" json:"source_activity_id,omitempty"`
 
 	// ThreadKey One provider conversation. The company view's timeline groups by thread client-side over the page it holds, so a group cut off by that page completes itself through this rather than by widening the page for every account that has no long thread.
 	ThreadKey *string `form:"thread_key,omitempty" json:"thread_key,omitempty"`
@@ -78267,6 +78291,19 @@ func (siw *ServerInterfaceWrapper) ListActivities(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "project_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "source_activity_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "source_activity_id", r.URL.Query(), &params.SourceActivityId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "source_activity_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "source_activity_id", Err: err})
 		}
 		return
 	}

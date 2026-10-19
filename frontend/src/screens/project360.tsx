@@ -24,10 +24,8 @@ import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { groupChronology } from "../design-system/timelinegroups";
 import { NewDealAction } from "../features/companies/companyactions";
 import { OpenEmailDrawer } from "../features/mail/openemaildrawer";
-import {
-  TaskDetailModal,
-  useTaskUpdate,
-} from "../features/worklist/taskactions";
+import { useTaskUpdate } from "../features/worklist/taskactions";
+import { TaskDetailModal } from "../features/worklist/taskdetailmodal";
 import { useLocale, useT } from "../i18n";
 import { taskWriteKeys } from "../lib/activitykeys";
 import { useCan } from "../lib/capability";

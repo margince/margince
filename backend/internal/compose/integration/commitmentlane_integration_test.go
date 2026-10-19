@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -192,6 +193,10 @@ func TestTheLaneNamesTheConversationThePromiseWasMadeIn(t *testing.T) {
 		t.Fatalf("the lane carries %d rows, want 1", len(rows))
 	}
 	row := rows[0]
+	source, err := e.Activities.GetActivity(e.Admin(), ids.From[ids.ActivityKind](row.ActivityID), storekit.LiveOnly)
+	if err != nil || source.Subject == nil || *source.Subject != row.SourceLabel {
+		t.Fatalf("the source reference does not reach its named evidence: %+v %v", source, err)
+	}
 	if row.SourceLabel != "Rückfragen zum Angebot" {
 		t.Errorf("source label = %q, want the message subject", row.SourceLabel)
 	}

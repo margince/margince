@@ -16,6 +16,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -377,6 +379,8 @@ func (t logActivity) Spec() mcp.ToolSpec {
 				"description":"Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project marks the activity as commercial correspondence, so it is made by relinking the activity, which waits for the user's yes. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect."},
 			"attendee_user_ids":{"type":"array","maxItems":25,"items":{"type":"string","format":"uuid"},
 				"description":"Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. The meeting then counts toward each one's relationship with every linked contact. An id that is not an active member is refused."},
+			"source_activity_id":{"type":"string","format":"uuid","description":` + followUpSourceDescription + `},
+			"follow_up_task":` + string(schemaFor[crmcontracts.ActivityFollowUpTask]()) + `,
 			"source_system":{"type":"string"},"source_id":{"type":"string"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),

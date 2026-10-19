@@ -20,9 +20,14 @@ import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useSinglePress } from "../design-system/presslatch";
 import { Select } from "../design-system/select";
+import { worklistKey } from "../features/worklist/worklist.queries";
 import { calendarDay } from "../format/calendarday";
 import { useT } from "../i18n";
-import { loggedActivityKeys } from "../lib/activitykeys";
+import {
+  activityFollowUpsKey,
+  loggedActivityKeys,
+  TASK_QUEUE_KEY,
+} from "../lib/activitykeys";
 import { useCanWrite } from "../lib/capability";
 import type { EntityKind } from "../lib/entity";
 import { unwrap } from "../lib/problem";
@@ -37,11 +42,8 @@ import {
 } from "./activitybody";
 import { ActivityBodyField } from "./activitybodyfield";
 import "./logactivity.css";
+import { FollowUpTaskFields } from "./followuptaskfields";
 import { MeetingAttendeeFields } from "./meetingattendees";
-
-// Log an activity from a 360: the logActivity POST, linked to the record being
-// viewed, source=manual. Success invalidates every read of this record's
-// timeline (see activitykeys); a 422 renders its detail verbatim.
 
 const EMPTY_DRAFT: ActivityDraft = {
   kind: "note",
@@ -52,25 +54,17 @@ const EMPTY_DRAFT: ActivityDraft = {
   assigneeId: "",
 };
 
-// Only a plain-text paste round-trips through normalizeTranscript's line
-// splitting the way ADR-0058's line-addressing promises: a `.vtt` file's cue
-// timestamps and header would themselves become "transcript lines", pointing
-// any future line citation at a timestamp instead of what was said.
+// Plain text keeps transcript citations aligned with spoken lines, without cue headers.
 const ACCEPTED_TRANSCRIPT_EXTENSION = ".txt";
 
-// The kinds this form starts on when a caller already knows which one the
-// reader asked for. `meeting` is absent on purpose: a meeting arrives through
-// the calendar rather than as an address somebody follows.
+// Meetings arrive through the calendar rather than a preselected form address.
 type OpeningKind = "note" | "task" | "call";
 
-// "Today" on the record's clock, which every kind this form writes files
-// against (a task's due date via `dueInstant` too). The browser's today can name
-// a day the entry does not land on: a Los Angeles afternoon is Berlin's tomorrow.
+// The record zone keeps the entered day aligned with the stored deadline.
 function todayDay(_kind: ActivityDraft["kind"], recordZone: string): string {
   return calendarDay(new Date(), recordZone);
 }
 
-// Whether a Select's answer is a kind this form writes.
 function isKind(value: string): value is ActivityDraft["kind"] {
   return (
     value === "note" ||
@@ -87,29 +81,25 @@ function freshDraft(
   return { ...EMPTY_DRAFT, kind, day: todayDay(kind, recordZone) };
 }
 
-/**
- * LogActivityForm is the composer itself, without a frame, so the same fields
- * serve the standing card on the contact and deal screens and the drawer the
- * header verbs open, whose body and foot it fills when `banded`.
- */
+// One form serves record cards and drawers; banded callers own its frame.
 export function LogActivityForm({
   entityType,
   entityId,
   onLogged,
   askedKind,
-  banded = false,
+  frame,
   onlyTasks = false,
+  sourceActivityId,
 }: Readonly<{
-  entityType: EntityKind;
-  entityId: string;
+  entityType?: EntityKind;
+  entityId?: string;
   onLogged?: () => void;
-  banded?: boolean;
-  // The kind the reader asked for, when the caller knows which one. Absent
-  // means note, the ordinary case. It is the kind ASKED rather than the kind
-  // the form starts on: it may change while this form stands.
+  frame?: (body: ReactNode, submit: ReactNode) => ReactNode;
+  // A new requested kind can arrive while the form stays mounted.
   askedKind?: OpeningKind;
   // Opened as Add task: no other kind is offered, so no date stops at today.
   onlyTasks?: boolean;
+  sourceActivityId?: string;
 }>) {
   const t = useT();
   const formId = useId();
@@ -118,14 +108,7 @@ export function LogActivityForm({
   const [draft, setDraft] = useState<ActivityDraft>(() =>
     freshDraft(recordZone, askedKind),
   );
-  // An initializer runs once, and the ask can arrive later: a reader already
-  // reading this record presses a second link that names a kind, the address
-  // changes under a form that never unmounted, and the initializer's kind is
-  // what they keep looking at. So the ask is FOLLOWED, not merely seeded.
-  //
-  // Only the kind moves, exactly as far as the reader's own Select moves it,
-  // so a subject half-typed against the old kind survives — and it moves
-  // during render rather than in an effect, so the stale kind is never painted.
+  // Follow a changed request before paint, preserving the words already entered.
   const [lastAsked, setLastAsked] = useState(askedKind);
   if (askedKind !== lastAsked) {
     setLastAsked(askedKind);
@@ -141,19 +124,14 @@ export function LogActivityForm({
   const needsAttendee = entityType === "company" && asksAttendees;
   // The same test activityRequestBody sends source_system on.
   const transcript = draft.kind === "meeting" && draft.asTranscript;
+  const banded = frame !== undefined;
   const bodyRows = transcript ? 10 : banded ? 8 : 3;
 
   const { key: idempotencyKey, renew: renewKey } = useIdempotencyKey();
   const log = useMutation({
-    // Keyed on entityId, the record this form is open on, not the created
-    // activity's own id: the reader wants the name of what the activity is
-    // ABOUT, and the record on screen is always already named in the cache.
+    // The parent record is already named in the cache.
     mutationKey: ["activity-log", entityId],
-    // The zone travels as a VARIABLE rather than being read from the closure.
-    // A mutationFn closing over render state runs against whatever the last
-    // committed render held, and what this one decides with the zone is the
-    // instant the entry is STORED at — so a stale read would not misdraw a
-    // page, it would file the activity on the wrong day, permanently.
+    // Pass the zone with the mutation so a stale render cannot store the wrong day.
     mutationFn: async (input: {
       draft: ActivityDraft;
       zone: string;
@@ -175,14 +153,21 @@ export function LogActivityForm({
       );
     },
     onSuccess: (_data, input) => {
-      for (const queryKey of loggedActivityKeys(
-        input.draft.kind,
-        entityType,
-        entityId,
-        input.attendees.contacts.map((contact) => contact.id),
-      )) {
-        queryClient.invalidateQueries({ queryKey });
-      }
+      const keys =
+        entityType && entityId
+          ? loggedActivityKeys(
+              input.draft.followUp && input.draft.kind !== "task"
+                ? "task"
+                : input.draft.kind,
+              entityType,
+              entityId,
+              input.attendees.contacts.map((contact) => contact.id),
+            )
+          : [TASK_QUEUE_KEY];
+      if (input.draft.sourceActivityId)
+        keys.push(activityFollowUpsKey(input.draft.sourceActivityId));
+      keys.push(worklistKey);
+      for (const queryKey of keys) queryClient.invalidateQueries({ queryKey });
       setDraft(freshDraft(input.zone, onlyTasks ? "task" : undefined));
       setAttendees(NO_ATTENDEES);
       renewKey();
@@ -207,6 +192,9 @@ export function LogActivityForm({
       disabled={
         !log.isPending &&
         (!draft.subject.trim() ||
+          (draft.kind !== "task" &&
+            draft.followUp !== undefined &&
+            !draft.followUp.subject.trim()) ||
           (needsAttendee && attendees.contacts.length === 0))
       }
       pending={log.isPending}
@@ -221,7 +209,12 @@ export function LogActivityForm({
       className="form-stack"
       onSubmit={singlePress((event) => {
         event.preventDefault();
-        log.mutate({ draft, zone: recordZone, attendees, idempotencyKey });
+        log.mutate({
+          draft: { ...draft, sourceActivityId },
+          zone: recordZone,
+          attendees,
+          idempotencyKey,
+        });
       })}
     >
       <div className="form-row">
@@ -291,7 +284,7 @@ export function LogActivityForm({
           is with a contact and the server refuses one filed against a company,
           so on a company this is the field that decides whether the entry can
           be sent at all — not a refinement of one that could. */}
-      {asksAttendees && (
+      {asksAttendees && entityType && entityId && (
         <MeetingAttendeeFields
           entityType={entityType}
           entityId={entityId}
@@ -328,6 +321,12 @@ export function LogActivityForm({
         value={draft.body}
         onChange={(body) => setField({ body })}
       />
+      {draft.kind !== "task" && (
+        <FollowUpTaskFields
+          value={draft.followUp}
+          onChange={(followUp) => setField({ followUp })}
+        />
+      )}
       {transcript && (
         <Field label={t("log.transcriptUpload")} hint={fileError ?? undefined}>
           {(control) => (
@@ -365,14 +364,9 @@ export function LogActivityForm({
       {actions}
     </form>
   );
-  return banded ? (
-    <>
-      <DrawerBody className="logactivity-drawer-body">{form(null)}</DrawerBody>
-      <DrawerFoot className="actions">{submit}</DrawerFoot>
-    </>
-  ) : (
-    form(<div className="form-actions">{submit}</div>)
-  );
+  return frame
+    ? frame(form(null), submit)
+    : form(<div className="form-actions">{submit}</div>);
 }
 
 /**
@@ -439,9 +433,7 @@ export function LogActivityAction({
 }: Readonly<{
   entityType: EntityKind;
   entityId: string;
-  // The kind the form starts on. A suggestion that says "no task says what
-  // happens next" opens straight onto a task rather than making the reader
-  // pick the kind the advice already named.
+  // A suggestion opens the kind it already asked for.
   askedKind?: OpeningKind;
   // Rendered already open, with no trigger button — for a caller that IS the
   // trigger (a suggestion's action), rather than a toolbar offering the verb.
@@ -460,10 +452,7 @@ export function LogActivityAction({
   // such button" learns nothing from the absence.
   disabledReasonId?: string;
   onClose?: () => void;
-  // Fires once the form actually LOGGED, ahead of the close every dismissal
-  // triggers, for a caller with its own re-read to schedule off a write
-  // rather than off the drawer merely shutting (a cancel or an Escape closes
-  // it too, and has nothing to re-read).
+  // Only a successful write asks the caller to refresh; dismissal does not.
   onLogged?: () => void;
 }>) {
   const t = useT();
@@ -500,7 +489,14 @@ export function LogActivityAction({
           entityType={entityType}
           entityId={entityId}
           askedKind={askedKind}
-          banded
+          frame={(body, submit) => (
+            <>
+              <DrawerBody className="logactivity-drawer-body">
+                {body}
+              </DrawerBody>
+              <DrawerFoot className="actions">{submit}</DrawerFoot>
+            </>
+          )}
           onlyTasks={addTask}
           onLogged={() => {
             onLogged?.();

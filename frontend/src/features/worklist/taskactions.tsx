@@ -3,7 +3,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useId } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
@@ -290,17 +290,18 @@ function TaskDueDatePick({
 }
 
 /**
- * TaskDetailModal opens one task where it was listed.
+ * TaskDetailDialog opens one task where it was listed.
  *
  * A task has no screen of its own — it lives in a timeline, not on a record
  * page — so the detail comes to the reader rather than routing them away from
  * the account they are reading.
  */
-export function TaskDetailModal({
+export function TaskDetailDialog({
   activityId,
   readOnly,
   onClose,
   update,
+  onOpenSource,
 }: Readonly<{
   activityId: string;
   // An archived company takes no new activity, so the verbs below would only
@@ -309,13 +310,12 @@ export function TaskDetailModal({
   readOnly: boolean;
   onClose: () => void;
   update: ReturnType<typeof useTaskUpdate>;
+  onOpenSource: (id: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const titleId = useId();
-  // Keep the task open while reading its original evidence.
-  const [openSource, setOpenSource] = useState<string | null>(null);
   const query = useActivity(activityId);
   const task: Activity | undefined = query.data;
   return (
@@ -392,61 +392,10 @@ export function TaskDetailModal({
             {task.source_activity_id && (
               <SourceEvidence
                 activityId={task.source_activity_id}
-                onOpenTranscript={setOpenSource}
+                onOpenTranscript={onOpenSource}
               />
             )}
           </div>
-        )}
-      </DrawerBody>
-      {openSource && (
-        <SourceActivity
-          activityId={openSource}
-          onClose={() => setOpenSource(null)}
-        />
-      )}
-    </Modal>
-  );
-}
-
-/**
- * The meeting transcript a task was read out of, opened whole.
- *
- * Only ever a transcript: `SourceEvidence` above draws an email in place and
- * routes nothing else here, so this has one kind to render rather than a
- * branch choosing between two readers.
- */
-function SourceActivity({
-  activityId,
-  onClose,
-}: Readonly<{ activityId: string; onClose: () => void }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const titleId = useId();
-  const query = useActivity(activityId);
-  const meeting: Activity | undefined = query.data;
-  return (
-    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer-reading">
-      <DrawerHead>
-        <Heading size="large" id={titleId} className="t-h2 modal-title">
-          {meeting?.subject ?? t("tasks.source")}
-        </Heading>
-        {meeting && (
-          <p className="t-caption">
-            {formatDateTime(meeting.occurred_at, locale, recordZone)}
-          </p>
-        )}
-      </DrawerHead>
-      <DrawerBody>
-        {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
-        <ErrorLine error={query.error} />
-        {/* The transcript, as it was captured. `pre-wrap` because a
-            transcript is line-per-turn and reflowing it into a paragraph
-            takes away the one structure it has. */}
-        {meeting?.body && (
-          <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>
-            {meeting.body}
-          </p>
         )}
       </DrawerBody>
     </Modal>

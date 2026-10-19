@@ -43,7 +43,8 @@ func activityCapturedPayload(ctx context.Context, kind, channelProvider string) 
 }
 
 type LogActivityInput struct {
-	recordedAt *time.Time
+	FollowUpTask *LogActivityInput
+	recordedAt   *time.Time
 	// Internal creation policy; public activity input cannot set an audience.
 	audienceMembers []AudienceMember
 	// invitedAssignee admits an invited colleague as the task's assignee. Only
@@ -206,6 +207,9 @@ func (s *Store) logActivityAndReadTranscript(
 		return crmcontracts.Activity{}, false, err
 	}
 	if in.RequestActivityID != nil {
+		if err := validateFollowUpShape(in); err != nil {
+			return crmcontracts.Activity{}, false, err
+		}
 		return s.takeEmailRequest(ctx, tx, in)
 	}
 	at := s.now()
@@ -214,35 +218,17 @@ func (s *Store) logActivityAndReadTranscript(
 	if err != nil {
 		return out, created, err
 	}
-	return out, created, s.readTranscriptOnLanding(ctx, tx, out, created)
-}
-
-// taskAssignee decides who a new task belongs to.
-//
-// A task somebody writes for themselves and does not assign is THEIRS. The
-// column used to keep the NULL and the "my work" queue compensated by treating
-// every unassigned task as the reader's own, which put each automation-created
-// follow-up on every colleague's queue at once — the lead was owned, the task
-// it minted was not, and "mine" quietly meant "mine plus everybody's".
-//
-// Owning it at the point of writing is the half of that fix which keeps the
-// self-written task where its author expects it, so the queue can go back to
-// meaning exactly what it says.
-//
-// Only for a HUMAN creating a TASK. A system principal writing on nobody's
-// behalf leaves the column NULL, which is what routes automation work to the
-// unassigned queue instead of to whoever the workflow ran as; and a caller who
-// named an assignee is obeyed.
-func taskAssignee(ctx context.Context, in LogActivityInput) *ids.UserID {
-	if in.AssigneeID != nil || in.Kind != "task" {
-		return in.AssigneeID
+	if err := s.readTranscriptOnLanding(ctx, tx, out, created); err != nil {
+		return out, created, err
 	}
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
-		return nil
+	if created && in.FollowUpTask != nil {
+		followUp := *in.FollowUpTask
+		followUp.SourceActivityID = new(ids.UUID(out.Id))
+		if _, _, err := s.logActivityAndReadTranscript(ctx, tx, followUp); err != nil {
+			return out, created, err
+		}
 	}
-	owner := ids.From[ids.UserKind](actor.UserID)
-	return &owner
+	return out, created, nil
 }
 
 // meetingHost is who HELD a meeting, which is not the same question as who
@@ -292,6 +278,9 @@ func meetingHost(ctx context.Context, in LogActivityInput) *ids.UserID {
 // store-opened (LogActivity) and caller-opened (LogActivityTx) entry
 // points.
 func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmcontracts.Activity, bool, error) {
+	if err := prepareFollowUpSource(ctx, tx, &in); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
 	if err := validateActivityDuration(in.DurationSeconds); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
@@ -303,24 +292,11 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if in.OccurredAt != nil {
 		occurredAt = in.OccurredAt.UTC()
 	}
-	assignee := taskAssignee(ctx, in)
-	host := meetingHost(ctx, in)
-	// Asked at the CREATE door too, not only at the patch. A task minted onto an
-	// agent seat is one that never reaches a queue, and it used to be refused
-	// only if somebody later tried to move it — which is after it has been sat
-	// in nobody's list for however long it took to notice.
-	//
-	// Checked against the resolved assignee rather than the input, so the
-	// self-assignment above is covered by the same question. An invited
-	// colleague may be given a NEW task when the caller named them over HTTP
-	// (invitedAssignee); automatic writers keep the active-only check.
-	checkAssignee := ensureAssigneeCanHoldWork
-	if in.invitedAssignee {
-		checkAssignee = ensureNewTaskAssignee
-	}
-	if err := checkAssignee(ctx, tx, assignee); err != nil {
+	assignee, err := checkedTaskAssignee(ctx, tx, in)
+	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
+	host := meetingHost(ctx, in)
 
 	replay, err := replayedActivity(ctx, tx, in)
 	if err != nil {

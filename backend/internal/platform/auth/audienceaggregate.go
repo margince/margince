@@ -19,7 +19,7 @@ package auth
 // here rather than being joined by a second.
 
 // AudienceWorkspaceOnly filters an activity aliased by name down to the
-// messages the whole workspace may see.
+// activities the whole workspace may see, including a task's source audience.
 //
 // It takes no placeholder, so it renumbers nothing at a call site: a caller
 // concatenates it into a WHERE clause and the surrounding arguments keep their
@@ -31,5 +31,5 @@ package auth
 // discloses the difference between them. The question an aggregate asks is
 // "may EVERYONE see this", and the answer is the same for everybody.
 func AudienceWorkspaceOnly(alias string) string {
-	return " AND " + alias + ".audience = 'workspace'"
+	return " AND " + alias + ".audience = 'workspace' AND (" + alias + ".kind <> 'task' OR " + alias + ".source_activity_id IS NULL OR EXISTS (SELECT 1 FROM activity follow_up_source WHERE follow_up_source.id = " + alias + ".source_activity_id AND follow_up_source.audience = 'workspace' AND follow_up_source.restricted_at IS NULL))"
 }

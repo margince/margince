@@ -55,7 +55,7 @@ The 28 tables owned by `activities`, as the migrations build them. [Back to the 
 | `retention_class` | `text` |  |  |
 | `retention_class_at` | `timestamp with time zone` |  |  |
 | `sent_by_colleague` | `uuid` |  | Points at `app_user.id`. |
-| `source_activity_id` | `uuid` |  | The activity this one was derived from: today, the meeting whose transcript proposed a task. |
+| `source_activity_id` | `uuid` |  | The conversation or note this task follows from, whether added by a human or read from a conversation. |
 | `source_author_id` | `uuid` |  | Points at `app_user.id`. |
 | `source_author_name` | `text` |  |  |
 | `source_id` | `text` |  | Provider message/event id; part of the idempotency key. |

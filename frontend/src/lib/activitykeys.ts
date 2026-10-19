@@ -300,3 +300,6 @@ export const CLAIM_SETTLED_KEYS: readonly QueryKey[] = [
   ["contact360"],
   DEAL_COMMITMENTS_KEY,
 ];
+
+export const activityFollowUpsKey = (sourceId: string) =>
+  ["activities", "followups", sourceId] as const;

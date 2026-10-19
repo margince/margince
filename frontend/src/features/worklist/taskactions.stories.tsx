@@ -8,14 +8,15 @@ import { taskWriteKeys } from "../../lib/activitykeys";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import {
   TaskCompleteCheck,
-  TaskDetailModal,
   TaskQuickActions,
   useTaskUpdate,
 } from "./taskactions";
+import { TaskDetailModal } from "./taskdetailmodal";
 
 // Acting on a task from the record it belongs to: the tick, the quick-action
 // row, and the detail modal a next-step row opens into. Mirrors company360.test.tsx's
@@ -91,6 +92,49 @@ function DetailModal({
   filed?: boolean;
 }>) {
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /activities/email-1": () =>
+      jsonResponse({
+        id: "email-1",
+        kind: "email",
+        subject: "Renewal paperwork",
+        occurred_at: "2026-07-27T14:00:00Z",
+        content_state: "available",
+      }),
+    "GET /activities/email-1/email-presentation": () =>
+      jsonResponse({
+        id: "email-1",
+        lifecycle: "delivered",
+        version: 1,
+        occurred_at: "2026-07-27T14:00:00Z",
+        summary: {
+          activity_id: "email-1",
+          occurred_at: "2026-07-27T14:00:00Z",
+          version: 1,
+          subject: "Renewal paperwork",
+          display_status: "team",
+          move: "needs_reply",
+          attachment_count: 0,
+        },
+        body: "Please send the agreed renewal paperwork.",
+        from: [],
+        to: [],
+        cc: [],
+        bcc: [],
+        bcc_withheld: false,
+        attachments: [],
+        links: [],
+        thread: { members: [], next_cursor: null },
+        can_reply: false,
+        can_relink: false,
+        access: {
+          content_state: "available",
+          display_status: "team",
+          audience: "workspace",
+          can_change: false,
+          change_mode: "none",
+        },
+      }),
     "GET /activities/m-1": () =>
       jsonResponse({
         id: "m-1",

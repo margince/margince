@@ -31,7 +31,6 @@ export function RowActs({
   item,
   title,
   href,
-  density,
   owner,
   allowPin = true,
   primary,
@@ -46,8 +45,6 @@ export function RowActs({
   /** The row's name, which names its menu among every other row's. */
   title: string;
   href: string | undefined;
-  /** `compact` draws the row's title as its link, as `titled` says. */
-  density?: "compact";
   /** Whose queue this row is on, which the hand-off moves work away from. */
   owner: string;
   allowPin?: boolean;
@@ -82,7 +79,7 @@ export function RowActs({
       : undefined;
   // The other ways to the record are withheld wherever the row already links
   // it: two controls opening one page ask for the same choice twice.
-  const linked = density === "compact" || framed || titled;
+  const linked = framed || titled;
   const ways = routed.filter(
     (way) => way !== lead && !(linked && way.destination === href),
   );

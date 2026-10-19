@@ -16,8 +16,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
@@ -117,3 +119,28 @@ func (e *AgentAssigneeError) FieldFault() (field, code, message string) {
 
 // fieldAssignee is the wire name of the column this module points a caller at.
 const fieldAssignee = "assignee_id"
+
+// A human's unassigned task defaults to them; automatic work stays unassigned.
+func taskAssignee(ctx context.Context, in LogActivityInput) *ids.UserID {
+	if in.AssigneeID != nil || in.Kind != string(crmcontracts.ActivityKindTask) {
+		return in.AssigneeID
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
+		return nil
+	}
+	owner := ids.From[ids.UserKind](actor.UserID)
+	return &owner
+}
+
+func checkedTaskAssignee(ctx context.Context, tx pgx.Tx, in LogActivityInput) (*ids.UserID, error) {
+	assignee := taskAssignee(ctx, in)
+	check := ensureAssigneeCanHoldWork
+	if in.invitedAssignee {
+		check = ensureNewTaskAssignee
+	}
+	if err := check(ctx, tx, assignee); err != nil {
+		return nil, err
+	}
+	return assignee, nil
+}

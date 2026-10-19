@@ -58,7 +58,8 @@ func commitmentsDueLimit(asked int) int {
 
 // CommitmentDue is one promise this rep made, with the evidence behind it.
 type CommitmentDue struct {
-	ID ids.UUID
+	ActivityID ids.UUID
+	ID         ids.UUID
 	// ContactID is who it was promised to, so the surface can route a reader to
 	// the record the promise lives on.
 	ContactID ids.ContactID
@@ -224,7 +225,7 @@ func openCommitmentsDue(
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id, c.contact_id, c.body, c.source_quote,
 		       coalesce(pr.full_name, ''), coalesce(a.subject, ''),
-		       a.occurred_at, c.due_at, c.version`+openCommitmentsDueFrom+`
+		       a.occurred_at, c.due_at, c.version, a.id`+openCommitmentsDueFrom+`
 		 ORDER BY c.due_at ASC, c.id
 		 LIMIT %[5]d`,
 		fmt.Sprintf("pr.owner_id = $%d", ownerPos), byPos, activityScope, contactScope,
@@ -237,7 +238,7 @@ func openCommitmentsDue(
 	for rows.Next() {
 		var due CommitmentDue
 		if err := rows.Scan(&due.ID, &due.ContactID, &due.Body, &due.SourceQuote,
-			&due.ContactName, &due.SourceLabel, &due.OccurredAt, &due.DueAt, &due.Version); err != nil {
+			&due.ContactName, &due.SourceLabel, &due.OccurredAt, &due.DueAt, &due.Version, &due.ActivityID); err != nil {
 			return nil, fmt.Errorf("scan a commitment coming due: %w", err)
 		}
 		out = append(out, due)

@@ -15,9 +15,15 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
+<<<<<<< HEAD
 | Tool catalog | 121.7 KB |
 | Resource catalog | 3.5 KB |
 | Approx. wire tokens | 32048 |
+=======
+| Tool catalog | 122.2 KB |
+| Resource catalog | 3.5 KB |
+| Approx. wire tokens | 32177 |
+>>>>>>> c4cfee4b6 (fix(worklist): keep follow-up tasks connected to their source)
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +40,15 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 24.6 KB | 20% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 31.5 KB | 25% | Yes, every step |
+<<<<<<< HEAD
 | Input schemas | 56.9 KB | 46% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 7% | Partly |
 | **Description + input schema** | **88.4 KB** | **72%** | **the recurring cost** |
+=======
+| Input schemas | 57.4 KB | 46% | Yes, every step |
+| _Names, annotations, punctuation_ | 8.7 KB | 7% | Partly |
+| **Description + input schema** | **88.9 KB** | **72%** | **the recurring cost** |
+>>>>>>> c4cfee4b6 (fix(worklist): keep follow-up tasks connected to their source)
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -62,7 +74,7 @@ descriptions and input schemas are what each step pays for.
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 809 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1228 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1361 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 592 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
 | [`change_state`](#change_state) | Move a lead, deal or project on |  |  | 866 |
@@ -73,7 +85,11 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
+<<<<<<< HEAD
 | [`find_records`](#find_records) | Find records | yes |  | 1688 |
+=======
+| [`find_records`](#find_records) | Find records | yes |  | 1689 |
+>>>>>>> c4cfee4b6 (fix(worklist): keep follow-up tasks connected to their source)
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 336 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
@@ -1174,6 +1190,29 @@ arguments for relink, relink_many; requires passport scope "write".)
       "description": "attach only: The file's name, with its extension",
       "type": "string"
     },
+    "follow_up_task": {
+      "description": "log only",
+      "properties": {
+        "assignee_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "due_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subject"
+      ],
+      "type": "object"
+    },
     "idempotency_key": {
       "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
@@ -1228,6 +1267,11 @@ arguments for relink, relink_many; requires passport scope "write".)
       "default": false,
       "description": "relink, relink_many only: Replace the existing link of the same entity_type (move) rather than adding one (associate)",
       "type": "boolean"
+    },
+    "source_activity_id": {
+      "description": "log, task only: A non-task source, including email or message. Caller and assignee need access to the source content. Empty links inherit its visible links; its audience is preserved. This does not accept a request.",
+      "format": "uuid",
+      "type": "string"
     },
     "source_id": {
       "description": "log only",
@@ -3160,6 +3204,9 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
           "type": "string"
         },
         "source": {
+          "type": "string"
+        },
+        "source_activity_id": {
           "type": "string"
         },
         "stage_id": {

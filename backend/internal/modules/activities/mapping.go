@@ -373,6 +373,9 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 // duration rules are the pieces of CheckKindFields, asked where they were.
 // Every branch here means "the caller said nothing, so leave it alone".
 func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityInput) error {
+	if err := followUpFieldsFrom(req, in); err != nil {
+		return err
+	}
 	if req.RequestActivityId != nil {
 		if string(req.Kind) != string(crmcontracts.ActivityKindTask) {
 			return &RequestAcceptanceFieldError{Field: "request_activity_id", Message: "Only a task can accept a request."}

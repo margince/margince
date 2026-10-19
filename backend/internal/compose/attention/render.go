@@ -428,6 +428,9 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 			actionOpen,
 		},
 	}
+	if !promise.ActivityID.IsZero() {
+		item.SourceRecord = subjectOf("activity", promise.ActivityID)
+	}
 	if promise.ReadOnly {
 		item.Actions = []crmcontracts.AttentionItemActions{actionOpen}
 	}

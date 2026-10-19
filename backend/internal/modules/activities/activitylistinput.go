@@ -44,8 +44,9 @@ type ListActivitiesInput struct {
 	// groups client-side over the page it holds; a group the page cut off
 	// completes itself through this rather than by widening the page for every
 	// account that has no long thread.
-	ThreadKey       *string
-	IncludeArchived bool
+	SourceActivityID *ids.ActivityID
+	ThreadKey        *string
+	IncludeArchived  bool
 	// AssigneeID is the work queue's narrowing: the OPEN tasks one contact
 	// holds, which is what the contract declares the parameter to mean and
 	// what the partial index behind it is built on. Done-ness is part of

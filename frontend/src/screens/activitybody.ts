@@ -28,7 +28,23 @@ export type ActivityDraft = {
   // note or meeting is not held by a colleague — so it only reaches the wire on
   // a task, the same way `day` only becomes a due date there.
   assigneeId: string;
+  sourceActivityId?: string;
+  followUp?: TaskDraft;
 };
+
+export type TaskDraft = Pick<
+  ActivityDraft,
+  "subject" | "body" | "day" | "assigneeId"
+>;
+
+export function taskRequestFields(input: TaskDraft, recordZone: string) {
+  return {
+    subject: input.subject.trim(),
+    body: outgoingBody(input.body, false),
+    ...(input.day ? { due_at: dueInstant(input.day, recordZone) } : {}),
+    ...(input.assigneeId ? { assignee_id: input.assigneeId } : {}),
+  };
+}
 
 // Who was in a meeting or call besides whoever logs it: contacts on
 // their side, colleagues on ours.
@@ -83,8 +99,8 @@ export function outgoingBody(body: string, transcript: boolean): string | null {
 // The wire body one drafted entry becomes.
 export function activityRequestBody(
   input: ActivityDraft,
-  entityType: EntityKind,
-  entityId: string,
+  entityType: EntityKind | undefined,
+  entityId: string | undefined,
   recordZone: string,
   // Who was in the room. Read only for the kinds in KINDS_WITH_A_CONTACT.
   attendees: MeetingAttendees,
@@ -100,33 +116,31 @@ export function activityRequestBody(
   const isTranscript = input.kind === "meeting" && input.asTranscript;
   return {
     kind: input.kind,
-    subject: input.subject.trim(),
-    body: outgoingBody(input.body, isTranscript),
     occurred_at: occurredInstant(input, recordZone),
-    // A due date becomes the instant that day ENDS on the RECORD's clock
-    // (format/calendarday), which is the same zone the worklist buckets
-    // overdue in and the same one the task detail renders. Minting it in the
-    // writer's own zone instead is what let an approved 9 September come back
-    // as a task due the 10th for a colleague sitting further east.
-    ...(input.kind === "task" && input.day
-      ? { due_at: dueInstant(input.day, recordZone) }
-      : {}),
-    // Only a task is held by somebody, and only when the writer named them:
-    // an unassigned task is a legitimate landing state (the worklist scopes
-    // unowned work on its own), so "" sends no field rather than a null the
-    // form would have to invent.
-    ...(input.kind === "task" && input.assigneeId
-      ? { assignee_id: input.assigneeId }
-      : {}),
+    ...(input.kind === "task"
+      ? {
+          ...taskRequestFields(input, recordZone),
+          source_activity_id: input.sourceActivityId,
+        }
+      : {
+          subject: input.subject.trim(),
+          body: outgoingBody(input.body, isTranscript),
+          ...(input.followUp
+            ? { follow_up_task: taskRequestFields(input.followUp, recordZone) }
+            : {}),
+        }),
     // Held: a hand-logged meeting already took place (the date caps at
     // today), and held is what the lead ladder reads as engagement.
     ...(input.kind === "meeting" ? { meeting_status: "held" as const } : {}),
     ...(isTranscript ? { source_system: "transcript" } : {}),
     // Only for the kinds that ask who attended. Switching to a note hides the
     // fields but keeps their picks in state. A note must not be filed against them.
-    links: withAttendees
-      ? meetingLinks(entityType, entityId, attendees.contacts)
-      : [{ entity_type: entityType, entity_id: entityId }],
+    links:
+      entityType && entityId
+        ? withAttendees
+          ? meetingLinks(entityType, entityId, attendees.contacts)
+          : [{ entity_type: entityType, entity_id: entityId }]
+        : [],
     ...(withAttendees && attendees.colleagueIds.length > 0
       ? { attendee_user_ids: [...attendees.colleagueIds] }
       : {}),

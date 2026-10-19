@@ -501,7 +501,7 @@ type Activity struct {
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 	Source   string     `json:"source"`
 
-	// SourceActivityId The activity this one was derived from: today, the meeting whose transcript proposed a task. Null on almost every row: a task somebody typed came from nowhere but them. It is a reference, not a grant: opening it goes through the activity read path under the caller's own scope, so a reader who may not see the meeting gets the same answer they would get by asking for it directly.
+	// SourceActivityId The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source.
 	SourceActivityId *string `json:"source_activity_id,omitempty"`
 
 	// SourceId Provider message/event id; part of the idempotency key.
@@ -547,6 +547,14 @@ type ActivityMeetingStatus string
 
 // ActivityAudience Who may read an activity's content — see Activity.audience.
 type ActivityAudience string
+
+// ActivityFollowUpTask defines model for ActivityFollowUpTask.
+type ActivityFollowUpTask struct {
+	AssigneeId *string    `json:"assignee_id,omitempty"`
+	Body       *string    `json:"body,omitempty"`
+	DueAt      *time.Time `json:"due_at,omitempty"`
+	Subject    string     `json:"subject"`
+}
 
 // ActivityLink defines model for ActivityLink.
 type ActivityLink struct {
@@ -611,6 +619,7 @@ type CreateActivityRequest struct {
 	Direction       *CreateActivityRequestDirection `json:"direction,omitempty"`
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
 	DurationSeconds *int                            `json:"duration_seconds,omitempty"`
+	FollowUpTask    *ActivityFollowUpTask           `json:"follow_up_task,omitempty"`
 
 	// HostUserId Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
 	// Not nullable: omitting it is how you say nothing, and the server answers that with the caller. A meeting nobody here hosted is a state imports reach, not one a human logging their own day can assert.
@@ -648,6 +657,9 @@ type CreateActivityRequest struct {
 	// RfcMessageId This message's RFC 5322 Message-ID, angle brackets optional. Email only. It is the identity a later capture of the same message resolves against, so an import that supplies it is recognised rather than duplicated.
 	RfcMessageId *string `json:"rfc_message_id,omitempty"`
 	Source       string  `json:"source"`
+
+	// SourceActivityId The non-task activity this task follows from, including email and messages. The caller and assignee need access to the source content. The task preserves its audience and inherits its visible links when no links are supplied. This reference does not accept or settle a request.
+	SourceActivityId *string `json:"source_activity_id,omitempty"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *string `json:"source_author_id,omitempty"`

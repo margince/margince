@@ -12,8 +12,14 @@ import { RowName } from "./worklist.rowname";
 import { VerdictLine } from "./worklist.verdict";
 
 // Whether the row's name links its record: a message row names itself instead.
-export function titleLinks(opener: unknown, href?: string): boolean {
-  return opener === undefined && href !== undefined;
+export function titleLinks(
+  opener: unknown,
+  href?: string,
+  sourceOpener?: () => void,
+): boolean {
+  return (
+    opener === undefined && sourceOpener === undefined && href !== undefined
+  );
 }
 
 /**
@@ -56,7 +62,12 @@ export function RowText({
       {(!emailOpener || badged) && (
         <p className="t-body worklist-row-title">
           {emailOpener ? null : (
-            <RowName title={title} href={href} open={readings.open} />
+            <RowName
+              title={title}
+              href={href}
+              open={readings.open}
+              unavailable={readings.sourceUnavailable}
+            />
           )}
           {item.overdue && <Badge tone="danger">{t("worklist.overdue")}</Badge>}
           {/* A state of the meeting, not a reason among reasons: a rep

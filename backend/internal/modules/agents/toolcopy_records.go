@@ -113,7 +113,10 @@ var logActivityCopy = toolCopy{
 	Purpose: "Record something that happened — a call, a meeting, a note, a message — on the " +
 		"records it was about: name every one of them in this call. A meeting is with a contact, " +
 		"and also concerns their company and the deal it is for.",
-	Limits: "It writes history and changes nothing else: no deal moves, no field updates, nobody " +
+	Limits: "It writes history and can add a follow_up_task to a meeting, call or note in the same " +
+		"transaction. That task inherits source links and audience; its assignee must be able to " +
+		"read the source. Source-identity replay returns the original activity without adding a task. " +
+		"No deal moves, no field updates, nobody " +
 		"is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a " +
 		"second call — relink_activity — which waits for the user's yes when it files under a " +
 		"project.",
@@ -126,7 +129,8 @@ var logActivityCopy = toolCopy{
 
 var createTaskCopy = toolCopy{
 	Purpose: "Put a to-do on someone's list: what is owed, by whom, on which records.",
-	Limits:  "Creates the task only — no reminder, no deal move; unlinked, it sits on no timeline.",
+	Limits: "Creates the task only — no reminder, no deal move. A source activity supplies its " +
+		"visible links when none are sent; without either, the task sits on no timeline.",
 	Instead: "log_activity is for what already happened.",
 }
 

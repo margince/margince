@@ -8,9 +8,10 @@ import { afterEach, expect, test } from "vitest";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { TaskDetailModal } from "./taskactions";
+import { TaskDetailModal } from "./taskdetailmodal";
 
 afterEach(cleanup);
 
@@ -24,6 +25,7 @@ afterEach(cleanup);
 
 function stubTask(sourceActivityId: string | null, capturedBy = "human:u-1") {
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -104,6 +106,7 @@ test("a transcript refused on reopen is not painted from the cache", async () =>
   // sitting in `data`. Rendering that beside the error is what this holds.
   let refused = false;
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -149,6 +152,7 @@ test("a transcript refused on reopen is not painted from the cache", async () =>
 
 test("a source that cannot be read says so instead of disappearing", async () => {
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -173,6 +177,7 @@ test("a source that cannot be read says so instead of disappearing", async () =>
 // the same presentation endpoint the panel asks.
 function stubEmailRequest(parties: Record<string, unknown> = {}) {
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -314,6 +319,7 @@ test("a task a colleague typed carries no AI mark", async () => {
 
 function stubFiledTask(links: { entity_type: string; entity_id: string }[]) {
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",

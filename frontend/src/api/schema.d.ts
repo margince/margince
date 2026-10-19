@@ -32664,7 +32664,7 @@ export interface components {
             source_id?: string | null;
             /**
              * Format: uuid
-             * @description The activity this one was derived from: today, the meeting whose transcript proposed a task. Null on almost every row: a task somebody typed came from nowhere but them. It is a reference, not a grant: opening it goes through the activity read path under the caller's own scope, so a reader who may not see the meeting gets the same answer they would get by asking for it directly.
+             * @description The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source.
              */
             readonly source_activity_id?: string | null;
             /** @description One activity may link to >1 entity (contact + deal). */
@@ -32808,8 +32808,21 @@ export interface components {
                 max_body_with_files: number;
             };
         };
+        ActivityFollowUpTask: {
+            subject: string;
+            body?: string | null;
+            /** Format: date-time */
+            due_at?: string | null;
+            /** Format: uuid */
+            assignee_id?: string | null;
+        };
         /** @description What a task needs. Stored as an activity of kind `task`. */
         CreateTaskRequest: {
+            /**
+             * Format: uuid
+             * @description The non-task activity this task follows from, including email and messages. The caller and assignee need access to the source content. The task preserves its audience and inherits its visible links when no links are supplied. This reference does not accept or settle a request.
+             */
+            source_activity_id?: string;
             /**
              * Format: uuid
              * @description Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
@@ -32829,7 +32842,7 @@ export interface components {
              * @description Who owes it. Defaults to the caller.
              */
             assignee_id?: string | null;
-            /** @description The records the task is about. Omit it and the task appears on no timeline. */
+            /** @description The records the task is about. With a source activity, omitted or empty links inherit its visible links. Otherwise the task appears on no timeline. */
             links?: {
                 /** @enum {string} */
                 entity_type: "contact" | "company" | "deal" | "lead" | "project";
@@ -32839,6 +32852,13 @@ export interface components {
             source: string;
         };
         CreateActivityRequest: {
+            /**
+             * Format: uuid
+             * @description The non-task activity this task follows from, including email and messages. The caller and assignee need access to the source content. The task preserves its audience and inherits its visible links when no links are supplied. This reference does not accept or settle a request.
+             */
+            source_activity_id?: string;
+            /** @description Meeting, call or note only. Create this task and its source activity in one transaction. The task inherits the source links and audience. Replaying a source identity returns the original activity without adding another task. */
+            follow_up_task?: components["schemas"]["ActivityFollowUpTask"];
             /**
              * Format: uuid
              * @description Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
@@ -44286,6 +44306,8 @@ export interface components {
          *     adds none.
          */
         AttentionItem: {
+            /** @description The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access. */
+            source_record?: components["schemas"]["AttentionSubject"];
             /**
              * Format: uuid
              * @description The member explicitly asked to decide, independent of who has permission to approve.
@@ -45744,6 +45766,8 @@ export interface components {
          *     browser does not.
          */
         WorklistItem: {
+            /** @description The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access. */
+            source_record?: components["schemas"]["AttentionSubject"];
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
             id: string;
@@ -54844,6 +54868,8 @@ export interface operations {
                 q?: string;
                 /** @description Narrow the timeline sections to one body of work: what is filed under this project or under no project; correspondence filed under another project is left out. */
                 project_id?: string;
+                /** @description Tasks derived from this readable source activity, under current task visibility. */
+                source_activity_id?: string;
                 /** @description One provider conversation. The company view's timeline groups by thread client-side over the page it holds, so a group cut off by that page completes itself through this rather than by widening the page for every account that has no long thread. */
                 thread_key?: string;
                 /** @description Only activities that occurred at or after this instant (inclusive). Pairs with `occurred_before` for a date range; either may stand alone. */

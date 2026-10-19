@@ -6,6 +6,7 @@ import { viewerZone } from "../format/timezone";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../testing/story-utils";
 import { OpenActivityDrawer } from "./activitydrawer";
@@ -29,6 +30,7 @@ type Story = StoryObj<typeof OpenActivityDrawer>;
 export const HistoricalMeeting: Story = {
   render: (args) => {
     installFetchStub({
+      "GET /me": meRoute({ activity: ["read"] }),
       [`GET /activities/${id}`]: () =>
         jsonResponse({
           id,
@@ -59,6 +61,7 @@ export const HistoricalMeeting: Story = {
 export const WithheldSource: Story = {
   render: (args) => {
     installFetchStub({
+      "GET /me": meRoute({ activity: ["read"] }),
       [`GET /activities/${id}`]: () =>
         jsonResponse({
           id,
@@ -70,4 +73,31 @@ export const WithheldSource: Story = {
     });
     return <OpenActivityDrawer {...args} />;
   },
+};
+
+export const MissingSource: Story = {
+  render: (args) => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read"] }),
+      [`GET /activities/${id}`]: () =>
+        jsonResponse(
+          {
+            type: "urn:margince:problem:not_found",
+            status: 404,
+            code: "not_found",
+            title: "Not found",
+          },
+          404,
+        ),
+    });
+    return <OpenActivityDrawer {...args} />;
+  },
+};
+export const MissingSourceDark: Story = {
+  ...MissingSource,
+  globals: { theme: "dark" },
+};
+export const WithheldSourceDark: Story = {
+  ...WithheldSource,
+  globals: { theme: "dark" },
 };

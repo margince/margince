@@ -140,6 +140,9 @@ func timelineNarrowings(in ListActivitiesInput, arg func(any) int) []string {
 	if !in.IncludeArchived {
 		where = append(where, activityLive)
 	}
+	if in.SourceActivityID != nil {
+		where = append(where, sprintf("a.kind = 'task' AND a.source_activity_id = $%d", arg(*in.SourceActivityID)))
+	}
 	if in.Kind != nil {
 		where = append(where, sprintf("a.kind = $%d", arg(*in.Kind)))
 	}
@@ -227,5 +230,5 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 // with the answer blanked.
 func filtersOnContent(in ListActivitiesInput) bool {
 	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
-		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.ReadableOnly
+		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.ReadableOnly || in.SourceActivityID != nil
 }
