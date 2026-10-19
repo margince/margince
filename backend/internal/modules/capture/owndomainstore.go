@@ -99,9 +99,9 @@ func (s *OwnDomainStore) List(ctx context.Context) (OwnDomainList, error) {
 }
 
 // withoutCoveredCandidates drops the candidates whose mail capture already
-// drops. A verified row always stays: it is a claim of its own, this screen is
-// the only place to remove it, and it keeps suppressing mail after the company
-// profile stops claiming the domain.
+// drops. A verified row always stays, because it is a claim of its own. This
+// screen is the only place to remove it, and it keeps suppressing mail after
+// the company profile stops claiming the domain.
 func withoutCoveredCandidates(registry []OwnDomain, trusted InternalDomains) []OwnDomain {
 	kept := make([]OwnDomain, 0, len(registry))
 	for _, row := range registry {
