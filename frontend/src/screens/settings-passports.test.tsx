@@ -430,7 +430,9 @@ describe("PassportCard — using a passport", () => {
   it("shows no code row until the server states the API address", async () => {
     vi.stubGlobal("fetch", mintBackend({ listHangs: true }));
     render("agents");
-    expect(await screen.findByText("In a script or another AI tool")).toBeTruthy();
+    expect(
+      await screen.findByText("In a script or another AI tool"),
+    ).toBeTruthy();
     expect(screen.queryByText("In your own code")).toBeNull();
   });
 
