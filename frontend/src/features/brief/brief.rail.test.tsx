@@ -73,7 +73,7 @@ describe("BriefScreen — the context rail", () => {
         jsonResponse({ ...readingsDay({}, []), next_cursor: "next" }),
     });
     const { container } = render(<BriefScreen />);
-    await screen.findByText(en["brief.feed.title"]);
+    await screen.findByText(en["brief.first.title"]);
     expect(container.querySelector("#brief-watch")).toBeNull();
   });
 
@@ -166,7 +166,7 @@ describe("BriefScreen — the context rail", () => {
     });
     render(<BriefScreen />);
 
-    await screen.findByRole("region", { name: en["brief.feed.title"] });
+    await screen.findByRole("region", { name: en["brief.first.title"] });
     // The rail's own reads settle after the feed's region appears, so this
     // waits for the page to go quiet rather than asserting into a page still
     // in flight.

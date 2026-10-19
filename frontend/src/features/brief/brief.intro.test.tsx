@@ -1,0 +1,105 @@
+/** @vitest-environment happy-dom */
+import { act, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { dayInZone, viewerZone } from "../../format/timezone";
+import { en } from "../../i18n/en";
+import { readStored, removeStored, STORAGE_KEYS } from "../../lib/storage";
+import { readingsDay } from "./brief.fixtures";
+import { BriefIntro } from "./brief.intro";
+import { render, stubApi } from "./brief.testkit";
+
+// The morning's greeting plays once a local day, over a day that has been
+// read. It never plays under reduced motion, and any key or press ends it.
+
+const NOW = new Date("2026-09-03T08:00:00Z");
+const TODAY = dayInZone(NOW.getTime(), viewerZone());
+const SKIP = en["brief.intro.skip"];
+// The curtain is named by everything it says, the way out included.
+const curtain = { name: (name: string) => name.includes(SKIP) };
+
+/** A day read this morning, the only read the greeting plays over. */
+function todaysRead(read = readingsDay()) {
+  return { ...read, as_of: NOW.toISOString() };
+}
+
+beforeEach(() => {
+  removeStored(STORAGE_KEYS.briefIntroShown);
+  stubApi({});
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+function intro(day = todaysRead()) {
+  return render(<BriefIntro firstName="Ada" day={day} now={NOW} />);
+}
+
+describe("BriefIntro", () => {
+  it("plays on the first visit of the day and records the day", () => {
+    intro();
+    expect(screen.getByRole("button", curtain)).toBeTruthy();
+    expect(screen.getByText("Good morning, Ada.")).toBeTruthy();
+    expect(readStored(STORAGE_KEYS.briefIntroShown)).toBe(TODAY);
+  });
+
+  it("does not play a second time on the same day", () => {
+    intro().unmount();
+    intro();
+    expect(screen.queryByRole("button", curtain)).toBeNull();
+  });
+
+  it("waits for the day's read before it plays or counts as played", () => {
+    render(<BriefIntro firstName="Ada" day={undefined} now={NOW} />);
+    expect(screen.queryByRole("button", curtain)).toBeNull();
+    expect(readStored(STORAGE_KEYS.briefIntroShown)).toBeNull();
+  });
+
+  it("waits out a read from an earlier day without spending the day", () => {
+    const yesterday = new Date(NOW.getTime() - 24 * 60 * 60 * 1000);
+    intro({ ...readingsDay(), as_of: yesterday.toISOString() });
+    expect(screen.queryByRole("button", curtain)).toBeNull();
+    expect(readStored(STORAGE_KEYS.briefIntroShown)).toBeNull();
+  });
+
+  it("reads the greeting and its figures out, not only the way out", () => {
+    intro();
+    const name = screen.getByRole("button", curtain).textContent ?? "";
+    expect(name).toContain("Good morning, Ada.");
+    expect(name).toContain(en["brief.intro.waiting"]);
+  });
+
+  it("never plays for a reader who asked for less motion", () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query.includes("reduce"),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    intro();
+    expect(screen.queryByRole("button", curtain)).toBeNull();
+  });
+
+  it("ends on any key", () => {
+    intro();
+    act(() => {
+      globalThis.dispatchEvent(new KeyboardEvent("keydown", { key: "a" }));
+    });
+    expect(screen.queryByRole("button", curtain)).toBeNull();
+  });
+
+  it("ends on a press", async () => {
+    const user = userEvent.setup();
+    intro();
+    await user.click(screen.getByRole("button", curtain));
+    expect(screen.queryByRole("button", curtain)).toBeNull();
+  });
+
+  it("states the day's figures the page states", () => {
+    intro(todaysRead(readingsDay({}, undefined, undefined, { total: 7 })));
+    const shown = screen.getByRole("button", curtain);
+    expect(shown.textContent).toContain("7");
+    expect(shown.textContent).toContain(en["brief.intro.waiting"]);
+  });
+});

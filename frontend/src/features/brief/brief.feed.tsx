@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Badge, Button } from "../../design-system/atoms";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { Eyebrow } from "../../design-system/eyebrow";
+import { Panel } from "../../design-system/panel";
 import {
   type SectionState,
   SurfaceState,
@@ -54,6 +55,7 @@ export function BriefFeed({
   // page opens on, and the one the sentence over it names.
   const [chosen, setChosen] = useState<string | null>(null);
   const client = useQueryClient();
+  const titleId = useId();
   const rows = waitingRows(day);
   const at = Math.max(
     0,
@@ -64,78 +66,61 @@ export function BriefFeed({
     !day?.focus || day.readings?.more_available || laneUnread(day),
   );
   return (
-    <section id="brief-today">
-      <Panel
-        // INDIGO, the same band a record's own "what needs you today" pane
-        // wears: these rows are the agent's reading of the day — what it
-        // ranked and what it prepared — and indigo is the one claim the
-        // product makes about who did that. The accent would say "the page's
-        // lead", which is true and already said by where the panel sits.
-        tone="ai"
-        title={t(
-          day?.scope === "team" ? "brief.feed.teamTitle" : "brief.feed.title",
+    <section id="brief-today" className="brief-first" aria-labelledby={titleId}>
+      <div className="brief-first-head">
+        <Eyebrow as="h2" id={titleId}>
+          {t(
+            day?.scope === "team"
+              ? "brief.feed.teamTitle"
+              : "brief.first.title",
+          )}
+        </Eyebrow>
+        {changed && (
+          <a className="entity-link" href={changed.href}>
+            <Badge>
+              {plural("brief.feed.changedBadge", changed.count, {
+                count: formatNumber(changed.count, locale),
+              })}
+            </Badge>
+          </a>
         )}
-        titleAction={
-          <span className="brief-focus-actions">
-            {/* The panel offers the agent's verbs — the reply it drafted, the
-                step it prepared — so it wears the badge every panel that
-                offers an AI verb wears: what is OFFERED, beside the tone that
-                says who wrote the body. */}
-            <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
-            {changed && (
-              <a className="entity-link" href={changed.href}>
-                <Badge>
-                  {plural("brief.feed.changedBadge", changed.count, {
-                    count: formatNumber(changed.count, locale),
-                  })}
-                </Badge>
-              </a>
-            )}
-          </span>
+      </div>
+      {refreshFailed && (
+        <p role="alert">
+          {t("brief.feed.refreshFailed")}{" "}
+          <Button variant="ghost" onClick={onRetry}>
+            {t("brief.coverage.retry")}
+          </Button>
+        </p>
+      )}
+      <SurfaceState
+        state={
+          state !== "ready"
+            ? state
+            : rows.length > 0 || partial
+              ? "ready"
+              : "empty"
         }
-        footer={day && hasFoot(day) ? <AgendaFoot day={day} /> : undefined}
+        emptyLabel={t("brief.feed.clear")}
+        loadingLabel={t("brief.feed.loading")}
       >
-        {/* Prose standing where the rows will stand pays the pane's inset
-            itself: the triage under it carries its own, and a sentence set
-            straight into the panel printed against the card's edge. */}
-        {refreshFailed && (
-          <PanelBody>
-            <p role="alert">
-              {t("brief.feed.refreshFailed")}{" "}
-              <Button variant="ghost" onClick={onRetry}>
-                {t("brief.coverage.retry")}
-              </Button>
-            </p>
-          </PanelBody>
+        {rows.length === 0 && partial && <p>{t("brief.feed.incomplete")}</p>}
+        {lead && (
+          <Triage
+            rows={rows}
+            at={at}
+            lead={lead}
+            onChoose={(item) => setChosen(identity(item))}
+            onOpenEmail={setOpenEmail}
+            onContext={onContext}
+          />
         )}
-        <SurfaceState
-          state={
-            state !== "ready"
-              ? state
-              : rows.length > 0 || partial
-                ? "ready"
-                : "empty"
-          }
-          emptyLabel={t("brief.feed.clear")}
-          loadingLabel={t("brief.feed.loading")}
-        >
-          {rows.length === 0 && partial && (
-            <PanelBody>
-              <p>{t("brief.feed.incomplete")}</p>
-            </PanelBody>
-          )}
-          {lead && (
-            <Triage
-              rows={rows}
-              at={at}
-              lead={lead}
-              onChoose={(item) => setChosen(identity(item))}
-              onOpenEmail={setOpenEmail}
-              onContext={onContext}
-            />
-          )}
-        </SurfaceState>
-      </Panel>
+      </SurfaceState>
+      {day && hasFoot(day) && (
+        <p className="t-caption brief-first-foot">
+          <AgendaFoot day={day} />
+        </p>
+      )}
       <OpenEmailDrawer
         activityId={openEmail}
         zone={viewerZone()}

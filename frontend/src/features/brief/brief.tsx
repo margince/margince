@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { PageAsideToggle } from "../../components/pageaside";
 import { Modal } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
@@ -30,6 +30,7 @@ import { BriefDials } from "./brief.dials";
 import { briefDay } from "./brief.facts";
 import { BriefFeed, BriefUpdates } from "./brief.feed";
 import { BriefGlance } from "./brief.glance";
+import { BriefIntro } from "./brief.intro";
 import { PlanSection } from "./brief.plan";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue } from "./brief.queue";
@@ -82,74 +83,95 @@ export function BriefScreen() {
   const queuedDay = briefDay(queued.data?.pages);
   const review = useWeeklyReview(address.week);
   const firstName = greetingNameOf(me.data?.user);
+  const brief = useMorningBrief();
+  const ownMorning = address.view === "morning" && address.scope === "mine";
+  const glance = (
+    <BriefGlance
+      view={address.view}
+      scope={address.scope}
+      day={
+        address.scope === "mine" && day
+          ? {
+              ...day,
+              focus: day.focus
+                ? {
+                    ...day.focus,
+                    items: day.focus.items.map((item) =>
+                      readerTask(item, me.data?.user, t),
+                    ),
+                  }
+                : undefined,
+            }
+          : undefined
+      }
+      week={address.scope === "mine" ? review.data : undefined}
+      firstName={firstName}
+      now={new Date(nowMs)}
+      briefedAt={ownMorning ? brief.data?.generated_at : undefined}
+    />
+  );
+  const controls = (
+    <div className="brief-controls">
+      <BriefDials
+        address={address}
+        offered={teamOffered}
+        onChange={(next) => setParams(paramsFor(next, params))}
+      />
+      {/* The way into the whole queue, as the head's PRIMARY control
+        with the day's count on it: this is the one page whose pane is
+        the day itself, so the switch is the main door and not a
+        detail fold. The count is the DRAWER's own total, read off the
+        drawer's own query — the same figure its head sentence ends
+        on, whichever queue it is showing. */}
+      <PageAsideToggle
+        prominent
+        controlled={{
+          open: params.get("queue") === "1",
+          count: queuedDay?.summary.total,
+          labels: {
+            show: t("brief.queue.show"),
+            hide: t("brief.queue.hide"),
+          },
+          onToggle: () => {
+            const next = new Map(params);
+            if (next.get("queue") === "1") next.delete("queue");
+            else next.set("queue", "1");
+            navigate({ screen: "home" }, next);
+          },
+        }}
+      />
+    </div>
+  );
+  // Morning stacks the controls above the sentence, so they come first in
+  // the DOM too: focus order follows the order the page is drawn in.
+  const head = (
+    <div className="brief-head">
+      {ownMorning ? (
+        <>
+          {controls}
+          {glance}
+        </>
+      ) : (
+        <>
+          {glance}
+          {controls}
+        </>
+      )}
+    </div>
+  );
   return (
     <div className="wrap brief-wrap">
-      {/* THE HEAD ON THE PAGE GROUND, the way a record's head stands: the
-          greeting where a record's name goes, the day over it, the sentence
-          under it, and the controls on the far edge where a record's verbs
-          stand. The one raised surface under it is the Focus panel — the
-          work is the card, and everything around it is the page. */}
       {/* A link to one decision, from a notice or a receipt, opens it here. */}
       <LinkedApprovalDrawer />
-      <div className="brief-head">
-        <BriefGlance
-          view={address.view}
-          scope={address.scope}
-          day={
-            address.scope === "mine" && day
-              ? {
-                  ...day,
-                  focus: day.focus
-                    ? {
-                        ...day.focus,
-                        items: day.focus.items.map((item) =>
-                          readerTask(item, me.data?.user, t),
-                        ),
-                      }
-                    : undefined,
-                }
-              : undefined
-          }
-          week={address.scope === "mine" ? review.data : undefined}
-          firstName={firstName}
-          now={new Date(nowMs)}
-        />
-        <div className="brief-controls">
-          <BriefDials
-            address={address}
-            offered={teamOffered}
-            onChange={(next) => setParams(paramsFor(next, params))}
-          />
-          {/* The way into the whole queue, as the head's PRIMARY control
-              with the day's count on it: this is the one page whose pane is
-              the day itself, so the switch is the main door and not a
-              detail fold. The count is the DRAWER's own total, read off the
-              drawer's own query — the same figure its head sentence ends
-              on, whichever queue it is showing. */}
-          <PageAsideToggle
-            prominent
-            controlled={{
-              open: params.get("queue") === "1",
-              count: queuedDay?.summary.total,
-              labels: {
-                show: t("brief.queue.show"),
-                hide: t("brief.queue.hide"),
-              },
-              onToggle: () => {
-                const next = new Map(params);
-                if (next.get("queue") === "1") next.delete("queue");
-                else next.set("queue", "1");
-                navigate({ screen: "home" }, next);
-              },
-            }}
-          />
-        </div>
-      </div>
+      {ownMorning && (
+        <BriefIntro firstName={firstName} day={day} now={new Date(nowMs)} />
+      )}
       <BriefBody
         address={address}
         teamOffered={teamOffered}
         teamWeek={teamWeek}
         query={query}
+        head={head}
       />
       <BriefQueue />
     </div>
@@ -163,36 +185,49 @@ function BriefBody({
   teamOffered,
   teamWeek,
   query,
+  head,
 }: Readonly<{
   address: BriefAddress;
   teamOffered: TeamOffers;
   teamWeek: TeamWeekReach;
   query: ReturnType<typeof useWorklist>;
+  head: ReactNode;
 }>) {
   const me = useMe();
   if (address.view === "weekly")
-    return address.scope === "team" ? (
-      <TeamWeeklyPanel reach={teamWeek} />
-    ) : (
+    return (
       <>
-        <WeeklySection />
-        <PlanSection />
+        {head}
+        {address.scope === "team" ? (
+          <TeamWeeklyPanel reach={teamWeek} />
+        ) : (
+          <>
+            <WeeklySection />
+            <PlanSection />
+          </>
+        )}
       </>
     );
   if (address.scope === "team")
     return (
-      <BriefTeamSelect lists={morningTeams(me.data?.authorization?.row_scope)}>
-        {(teamId) => (
-          <BriefTeamBoard offered={teamOffered.morning} teamId={teamId} />
-        )}
-      </BriefTeamSelect>
+      <>
+        {head}
+        <BriefTeamSelect
+          lists={morningTeams(me.data?.authorization?.row_scope)}
+        >
+          {(teamId) => (
+            <BriefTeamBoard offered={teamOffered.morning} teamId={teamId} />
+          )}
+        </BriefTeamSelect>
+      </>
     );
-  return <PersonalMorning query={query} />;
+  return <PersonalMorning query={query} head={head} />;
 }
 
 function PersonalMorning({
   query,
-}: Readonly<{ query: ReturnType<typeof useWorklist> }>) {
+  head,
+}: Readonly<{ query: ReturnType<typeof useWorklist>; head: ReactNode }>) {
   const t = useT();
   const { locale } = useLocale();
   const brief = useMorningBrief();
@@ -217,73 +252,49 @@ function PersonalMorning({
     context?.source === "task" || context?.source === "meeting_outcome";
   return (
     <>
-      {/* THE WORK, across the whole page: the Focus panel is the one card
-          the morning is for, with the row in hand and the queue beside it,
-          so it takes the page's width rather than sharing it with a rail. */}
-      <BriefFeed
-        day={day}
-        onContext={(item) => setSelected(`${item.source}-${item.id}`)}
-        state={state}
-        changed={changedSinceBrief(day)}
-        refreshFailed={query.isRefetchError}
-        onRetry={() => void query.refetch()}
-      />
-      {/* THE FIGURES UNDER THE WORK: what the day holds in five readings,
-          each a door into its lane. The work comes first because the page is
-          for clearing it — the opening sentence already says what is first
-          and how much follows — and the readings are what a reader turns to
-          once the row in hand is answered. The band also carries what the
-          read could not see and when it was assembled, because both qualify
-          the figures. */}
-      {day && (
-        <div className="brief-overview">
-          <BriefReadingsStrip day={day} />
-          <BriefCoverage
-            day={day}
-            run={brief.data}
-            onRetry={() => void query.refetch()}
-          />
-          <p className="t-caption brief-freshness">
-            {t("brief.updatedAt", {
-              when: formatDateTime(day.as_of, locale, viewerZone()),
-            })}
-            {brief.data?.generated_at && (
-              <>
-                {" "}
-                ·{" "}
-                {t("brief.createdAt", {
-                  when: formatDateTime(
-                    brief.data.generated_at,
-                    locale,
-                    viewerZone(),
-                  ),
-                })}
-              </>
-            )}
-          </p>
-        </div>
-      )}
-      {/* THE FOLLOW-THROUGH under it, in two columns: the day's notices and
-          what happened while the reader was away on the left, and on the right
-          the schedule the work is read against. */}
+      {/* The brief and the work it names in one column; beside it, the
+          figures and the meetings the work is read against. */}
       <PageZones
         shape="aside"
-        className="brief-followthrough"
-        mainClassName="record-stack brief-main"
-        asideClassName="record-aside brief-rail"
+        className="brief-morning"
+        mainClassName="brief-main"
+        asideClassName="brief-rail"
         asideLabel={t("brief.rail")}
         main={
           <>
+            {head}
+            <BriefFeed
+              day={day}
+              onContext={(item) => setSelected(`${item.source}-${item.id}`)}
+              state={state}
+              changed={changedSinceBrief(day)}
+              refreshFailed={query.isRefetchError}
+              onRetry={() => void query.refetch()}
+            />
             <BriefUpdates day={day} />
-            {/* THE RECEIPT, last and open, and the page's only one: the changes
-                still waiting for a word, what the machinery did and the night's
-                digest, in one card. It goes last because a reader opens this
-                page to find what to do next, and a list of what is already
-                finished answers a different question. */}
             <MagicPanel lead={<BriefChanges />} foot={<OvernightDigest />} />
           </>
         }
-        aside={<SchedulePanel day={day} state={state} />}
+        aside={
+          <>
+            {day && (
+              <div className="brief-overview">
+                <BriefReadingsStrip day={day} />
+                <BriefCoverage
+                  day={day}
+                  run={brief.data}
+                  onRetry={() => void query.refetch()}
+                />
+                <p className="t-caption brief-freshness">
+                  {t("brief.updatedAt", {
+                    when: formatDateTime(day.as_of, locale, viewerZone()),
+                  })}
+                </p>
+              </div>
+            )}
+            <SchedulePanel day={day} state={state} />
+          </>
+        }
       />
       {context && opensActivity ? (
         <TaskDetailModal

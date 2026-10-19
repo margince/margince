@@ -1,0 +1,59 @@
+/* The morning's greeting over the whole window. One press anywhere ends it, so
+ * the whole curtain is the button, and it carries no button chrome of its own.
+ * Above the shell's bar, because it stands in for the page under it. */
+.brief-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  padding: var(--space-6);
+  border: 0;
+  background: var(--bgPage);
+  color: var(--textPrimary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.brief-intro:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -4px;
+}
+.brief-intro-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: min(56rem, 100%);
+}
+.brief-intro-date {
+  color: var(--accentText);
+}
+.brief-intro-greeting {
+  font: var(--fontHeadingXXLarge);
+  text-wrap: balance;
+}
+/* The day's figures under a rule, one column each, wrapping on a phone. */
+.brief-intro-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6) var(--space-10);
+  padding-block-start: var(--space-5);
+  border-block-start: 1px solid var(--borderStrong);
+}
+.brief-intro-figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.brief-intro-value {
+  font: var(--fontHeadingXXLarge);
+}
+.brief-intro-label {
+  color: var(--textSecondary);
+}
+.brief-intro-skip {
+  color: var(--textSecondary);
+}
