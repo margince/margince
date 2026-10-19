@@ -1,0 +1,406 @@
+import { Bot, Circle, CircleCheck, ShieldCheck } from "lucide-react";
+import { useId } from "react";
+import type { components } from "../../api/schema";
+import {
+  Checkbox,
+  Field,
+  Radio,
+  Textarea,
+  TextInput,
+} from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
+import {
+  ConfidenceMeter,
+  confidenceLevel,
+  EvidenceChip,
+  ProvenanceTag,
+} from "../../design-system/trust";
+import { formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
+import { coldFieldLabel } from "../../screens/coldfieldlabels";
+import {
+  type CompanyDraft,
+  type CompanyFieldName,
+  CUSTOMER_FIELDS,
+  type FieldGrounding,
+  isMultilineField,
+  isRequired,
+  LEGAL_IDENTITY_FIELDS,
+  OFFER_FIELDS,
+  provenanceOf,
+  SALES_FIELDS,
+} from "./onboarding";
+import { CapNotice, saveDisabled, useFactSelection } from "./onboarding-facts";
+
+// The reviewable company form: the field groups at the house form rhythm,
+// grounded values carrying their evidence and provenance, plus the
+// legal-entity choice and the fact selection. The conversational shell
+// hosts it as the "edit fields directly" escape hatch.
+
+type CompanySiteRead = components["schemas"]["CompanySiteRead"];
+type CompanySiteReadLegalEntity =
+  components["schemas"]["CompanySiteReadLegalEntity"];
+
+export function CompanyStep({
+  draft,
+  setField,
+  read,
+  saved,
+  saveError,
+  missingRequired,
+  selectedFactKeys,
+  setSelectedFactKeys,
+  onPickEntity,
+  onFieldBlur,
+  embedded = false,
+}: Readonly<{
+  draft: CompanyDraft;
+  setField: (field: CompanyFieldName, value: string) => void;
+  onPickEntity: (entity: CompanySiteReadLegalEntity) => void;
+  read: CompanySiteRead | null;
+  saved: boolean;
+  saveError: string | null;
+  missingRequired: readonly CompanyFieldName[];
+  selectedFactKeys: readonly string[];
+  setSelectedFactKeys: (keys: string[]) => void;
+  onFieldBlur: () => void;
+  embedded?: boolean;
+}>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const pagesRead = read ? (read.pages_read ?? read.pages.length) : 0;
+  // The contract ceiling on `selected_fact_keys` is the selection model's to
+  // enforce, wherever a fact is picked: this form's cards and the fact table's
+  // checkboxes write the same key list, so they refuse on the same terms.
+  const factSelection = useFactSelection(
+    read?.facts ?? [],
+    selectedFactKeys,
+    setSelectedFactKeys,
+  );
+
+  return (
+    <section className={embedded ? "ob-company-review" : "ob-panel"}>
+      {!embedded && (
+        <>
+          <div className="kick">{t("ob.s1.kick")}</div>
+          <Heading size="xlarge" className="ttl">
+            {t("ob.s1.title")}
+          </Heading>
+          <p className="ob-sub">{t("ob.s1.sub")}</p>
+        </>
+      )}
+
+      <div className="confirm-origin t-caption">
+        <ShieldCheck aria-hidden />
+        <span>
+          {read
+            ? plural("ob.confirmWebsite", pagesRead, {
+                count: formatNumber(pagesRead, locale),
+              })
+            : t("ob.confirmManual")}
+        </span>
+      </div>
+
+      {saved && (
+        <p className="ob-sub ob-companyform-saved">
+          <CircleCheck aria-hidden className="ob-companyform-savedmark" />{" "}
+          {t("ob.s1.savedNote")}
+        </p>
+      )}
+
+      {saveError && (
+        <div className="readfail warning ob-companyform-savefail">
+          <span className="rfi">
+            <Circle aria-hidden />
+          </span>
+          <div>
+            <div className="rft">{t("ob.s1.saveFailed")}</div>
+            <p className="rfp">{saveError}</p>
+          </div>
+        </div>
+      )}
+
+      {missingRequired.length > 0 && (
+        <div className="urlnote err">
+          <Circle aria-hidden />{" "}
+          {t("ob.s1.requiredMissing", {
+            fields: missingRequired
+              .map((field) => coldFieldLabel(field, t))
+              .join(", "),
+          })}
+        </div>
+      )}
+
+      {/* One .form-stack carries the whole form at the house 8/12 rhythm; the
+          two groups are separated by labeled dividers (the create-form
+          pattern), not by per-field margins. */}
+      <div className="form-stack ob-companyform">
+        <p className="form-divider t-label">{t("ob.s1.identityLabel")}</p>
+        <LegalEntityChoice read={read} draft={draft} onPick={onPickEntity} />
+        <CompanyFieldList
+          fields={LEGAL_IDENTITY_FIELDS}
+          draft={draft}
+          missingRequired={missingRequired}
+          setField={setField}
+          onBlur={onFieldBlur}
+        />
+
+        <p className="form-divider t-label">{t("ob.s1.offerLabel")}</p>
+        <CompanyFieldList
+          fields={OFFER_FIELDS}
+          draft={draft}
+          missingRequired={missingRequired}
+          setField={setField}
+          onBlur={onFieldBlur}
+        />
+
+        <p className="form-divider t-label">{t("ob.s1.customerLabel")}</p>
+        <CompanyFieldList
+          fields={CUSTOMER_FIELDS}
+          draft={draft}
+          missingRequired={missingRequired}
+          setField={setField}
+          onBlur={onFieldBlur}
+        />
+
+        <p className="form-divider t-label">{t("ob.s1.salesLabel")}</p>
+        <CompanyFieldList
+          fields={SALES_FIELDS}
+          draft={draft}
+          missingRequired={missingRequired}
+          setField={setField}
+          onBlur={onFieldBlur}
+        />
+      </div>
+
+      {read && read.facts.length > 0 && (
+        <details className="confirm-facts">
+          {/* Collapsed by default: a hundred evidence cards between the form
+              and the Continue button turns a review into a scroll. The
+              summary states what is selected, which is the only thing a
+              human needs unless they want to change it. */}
+          <summary>
+            <span className="t-eyebrow">{t("ob.factsTitle")}</span>
+            <span>
+              {t("ob.factsSelected", {
+                selected: formatNumber(selectedFactKeys.length, locale),
+                total: formatNumber(read.facts.length, locale),
+              })}
+            </span>
+          </summary>
+          <p className="ob-sub">{t("ob.factsSub")}</p>
+          <CapNotice atCap={factSelection.atCap} locale={locale} />
+          <div className="fact-grid">
+            {read.facts.map((fact) => {
+              const selected = factSelection.isSelected(fact);
+              return (
+                <Checkbox
+                  key={`${fact.field}:${fact.value_key}`}
+                  className={`choice-card fact-card ${selected ? "selected" : ""}`}
+                  checked={selected}
+                  disabled={saveDisabled(factSelection, selected)}
+                  onChange={() => factSelection.toggle(fact)}
+                  label={
+                    <span>
+                      <b>{coldFieldLabel(fact.field, t)}</b>
+                      <span>{fact.value}</span>
+                      <small>{fact.evidence_snippet}</small>
+                    </span>
+                  }
+                />
+              );
+            })}
+          </div>
+        </details>
+      )}
+    </section>
+  );
+}
+
+function CompanyFieldList({
+  fields,
+  draft,
+  missingRequired,
+  setField,
+  onBlur,
+}: Readonly<{
+  fields: readonly Exclude<CompanyFieldName, "website">[];
+  draft: CompanyDraft;
+  missingRequired: readonly CompanyFieldName[];
+  setField: (field: CompanyFieldName, value: string) => void;
+  onBlur: () => void;
+}>) {
+  const t = useT();
+  return fields.map((field) => (
+    <CompanyFormField
+      key={field}
+      field={field}
+      value={draft.values[field]}
+      grounded={provenanceOf(draft, field)}
+      edited={draft.edited.has(field)}
+      required={isRequired(field)}
+      error={missingRequired.includes(field) ? t("ob.s1.fieldRequired") : null}
+      multiline={isMultilineField(field)}
+      onChange={(value) => setField(field, value)}
+      onBlur={onBlur}
+    />
+  ));
+}
+
+// The legal-entity choice. A group's imprint states one block per company
+// — registered name, address, register number — and the read refuses to
+// guess which of them the installation belongs to, because picking wrong
+// writes another company's legal identity into this one's CRM. So it
+// offers what it read and the human answers in one click, instead of
+// retyping five lines the page already printed.
+//
+// One entity needs no question: the read already filled the fields.
+function LegalEntityChoice({
+  read,
+  draft,
+  onPick,
+}: Readonly<{
+  read: CompanySiteRead | null;
+  draft: CompanyDraft;
+  onPick: (entity: CompanySiteReadLegalEntity) => void;
+}>) {
+  const t = useT();
+  const group = useId();
+  const entities = read?.legal_entities ?? [];
+  if (entities.length < 2) {
+    return null;
+  }
+  const chosen = draft.values.legal_name.trim();
+  return (
+    // The plates answer ONE question, so they are radios — and a fieldset with
+    // the question as its legend is what the browser already exposes as the
+    // group they belong to.
+    <fieldset className="legal-choice">
+      <legend className="l">{t("ob.legalTitle")}</legend>
+      <p className="ob-sub">{t("ob.legalSub")}</p>
+      <div className="legal-grid">
+        {entities.map((entity) => {
+          const selected = chosen !== "" && chosen === entity.name;
+          return (
+            <Radio
+              key={`${entity.name}-${entity.source_url}`}
+              className={`choice-card legal-card ${selected ? "selected" : ""}`}
+              name={group}
+              value={entity.name}
+              checked={selected}
+              onChange={() => onPick(entity)}
+              label={
+                <span>
+                  <b>{entity.name}</b>
+                  {entity.registered_address ? (
+                    <span>{entity.registered_address}</span>
+                  ) : null}
+                  {/* Both numbers, because either may be the only one a notice
+                      printed — and this is the moment a contact tells two
+                      candidates apart. */}
+                  {entity.register_number ? (
+                    <small>{entity.register_number}</small>
+                  ) : null}
+                  {entity.vat_number ? (
+                    <small>{entity.vat_number}</small>
+                  ) : null}
+                </span>
+              }
+            />
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+function CompanyFormField({
+  field,
+  value,
+  grounded,
+  edited,
+  required,
+  error,
+  multiline,
+  onChange,
+  onBlur,
+}: Readonly<{
+  field: CompanyFieldName;
+  value: string;
+  grounded: FieldGrounding | null;
+  edited: boolean;
+  required: boolean;
+  error: string | null;
+  multiline?: boolean;
+  onChange: (v: string) => void;
+  onBlur: () => void;
+}>) {
+  const t = useT();
+  // A grounding can be real without carrying a score: a legal block the human
+  // chose from the read's candidates has the page it was printed on and, when
+  // the read captured one, a verbatim quote — but nothing ever measured a
+  // confidence for it, so no meter is drawn rather than a made-up band. Same
+  // for the quote: no snippet, no chip, never an empty one. A snippet of
+  // nothing but whitespace is no snippet — a chip drawn around it would claim
+  // proof the read never captured.
+  const level = confidenceLevel(grounded?.confidence);
+  const snippet = grounded?.evidence_snippet;
+  const quote = snippet !== undefined && snippet.trim() !== "" ? snippet : null;
+  // The design-system field, so onboarding gets no bespoke label, refusal or
+  // input styling — the form must read as the same product as every other
+  // screen. The trust adornments (confidence, read-from-site, typed-by-you)
+  // ride the label; the evidence chip sits under the control it is proof for,
+  // which is why it is rendered beside the control rather than after the field.
+  return (
+    <Field
+      label={
+        <>
+          {coldFieldLabel(field, t)}{" "}
+          {level && <ConfidenceMeter level={level} />}
+          {grounded && (
+            <span className="rfprov">
+              <Bot aria-hidden /> {t("ob.readFromSite")}
+            </span>
+          )}
+          {edited && (
+            <ProvenanceTag provenance={{ kind: "human", self: true }} />
+          )}
+        </>
+      }
+      required={required}
+      error={error ?? undefined}
+    >
+      {(control) => (
+        <>
+          {multiline ? (
+            <Textarea
+              {...control}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              onBlur={onBlur}
+            />
+          ) : (
+            <TextInput
+              {...control}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              onBlur={onBlur}
+            />
+          )}
+          {grounded && quote !== null && (
+            <EvidenceChip
+              evidence={{
+                snippet: quote,
+                // source_url is carried only by url-sourced evidence; text and
+                // self-description evidence names its origin instead of
+                // linking.
+                source: grounded.source_url ?? t("ob.readFromSite"),
+              }}
+            />
+          )}
+        </>
+      )}
+    </Field>
+  );
+}

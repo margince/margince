@@ -177,20 +177,20 @@ describe("depth", () => {
       // BESIDE the browser's own focus ring instead of fighting it for the same
       // property. Four values: the keyframe set, plus the static ring that
       // replaces it under reduced motion.
-      "src/screens/onboarding-conversation/conversation.css: box-shadow: 0 0 0 2px var(--aiText)",
-      "src/screens/onboarding-conversation/conversation.css: box-shadow: 0 0 0 3px transparent",
-      "src/screens/onboarding-conversation/conversation.css: box-shadow: 0 0 0 3px var(--aiText)",
-      "src/screens/onboarding-conversation/conversation.css: box-shadow: 0 0 0 3px var(--aiText)",
+      "src/features/onboarding/onboarding-conversation/conversation.css: box-shadow: 0 0 0 2px var(--aiText)",
+      "src/features/onboarding/onboarding-conversation/conversation.css: box-shadow: 0 0 0 3px transparent",
+      "src/features/onboarding/onboarding-conversation/conversation.css: box-shadow: 0 0 0 3px var(--aiText)",
+      "src/features/onboarding/onboarding-conversation/conversation.css: box-shadow: 0 0 0 3px var(--aiText)",
       // Not a shadow at all: a sticky bar's full-bleed fill and the hairline
       // behind it, painted as two spreads because a spread is the only way to
       // reach past the bar's own box. conversation.css spells out the ordering
       // that keeps the hairline alive in exactly one pixel.
-      "src/screens/onboarding-conversation/conversation.css: box-shadow: 0 calc(100vw + 1px) 0 100vw var(--bgElevated), 0 0 0 100vw var(--borderSubtle)",
+      "src/features/onboarding/onboarding-conversation/conversation.css: box-shadow: 0 calc(100vw + 1px) 0 100vw var(--bgElevated), 0 0 0 100vw var(--borderSubtle)",
       // The one genuine drop shadow outside --shadow-pop, and the reason is the
       // ground: this dialog floats on the rail's own dark brand surface, where
       // --shadow-pop is tinted for the page and reads as a grey smear. Tinted
       // to --obDialogShadow so it is the shadow that ground would actually cast.
-      "src/screens/onboarding.css: box-shadow: 0 18px 46px color-mix(in srgb, var(--obDialogShadow) 44%, transparent)",
+      "src/features/onboarding/onboarding.css: box-shadow: 0 18px 46px color-mix(in srgb, var(--obDialogShadow) 44%, transparent)",
     ]);
   });
 

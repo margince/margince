@@ -15,6 +15,7 @@ import {
   usePaletteHotkey,
 } from "./app/palette";
 import { Shell, useRoute } from "./app/shell";
+import { useJourneyProgress } from "./features/onboarding/onboarding-journey";
 import {
   type AuthNotice,
   AuthScreen,
@@ -32,7 +33,6 @@ import { SPA_RELEASE } from "./lib/release";
 import { navigateReplacing, type Screen } from "./lib/router";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
 import { ConfinedAccountScreen, useProbeAnswer } from "./screens/confinement";
-import { useJourneyProgress } from "./screens/onboarding-journey";
 import { ReleaseSkewScreen, useSkewedApiRelease } from "./screens/releaseskew";
 import { WriteToHost } from "./screens/writetohost";
 

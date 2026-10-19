@@ -71,7 +71,7 @@ var profileVocabularyScreens = []struct {
 		why:    "the company record draws the field as its own column name",
 	},
 	{
-		file:   "../frontend/src/screens/onboarding.tsx",
+		file:   "../frontend/src/features/onboarding/onboarding.tsx",
 		opens:  "export const LEGAL_IDENTITY_FIELDS = [",
 		closes: "] as const;",
 		why:    "no section carries the field, so no screen ever offers it",
@@ -82,13 +82,13 @@ var profileVocabularyScreens = []struct {
 		omits: onlyTheLegalBlockOmits(),
 	},
 	{
-		file:   "../frontend/src/screens/onboarding.tsx",
+		file:   "../frontend/src/features/onboarding/onboarding.tsx",
 		opens:  "export function onboardingDraftPayload(values: CompanyForm) {",
 		closes: "\n}",
 		why:    "the answer is dropped from the saved draft, so a resumed interview asks for it again with the field blank",
 	},
 	{
-		file:   "../frontend/src/screens/onboarding-manual-interview.tsx",
+		file:   "../frontend/src/features/onboarding/onboarding-manual-interview.tsx",
 		opens:  "const MANUAL_QUESTIONS: readonly ManualQuestion[] = [",
 		closes: "\n];",
 		why:    "the interview never asks for the field, however many locales its question is translated into",
@@ -106,7 +106,7 @@ var profileVocabularyScreens = []struct {
 // mirror above, which reads every field the interview collects.
 //
 // The one thing this list cannot catch is its own staleness: a field dropped
-// from a sibling group stays exempt here. `frontend/src/screens/onboarding.test.tsx`
+// from a sibling group stays exempt here. `frontend/src/features/onboarding/onboarding.test.tsx`
 // closes that, comparing the four groups' union against onboardingDraftPayload
 // — so the two together hold what neither holds alone, and the frontend half
 // is the one that fails when a group loses a field.

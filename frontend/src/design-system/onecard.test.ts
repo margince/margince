@@ -136,7 +136,9 @@ describe("one card surface", () => {
     // also names a file it must have reached.
     expect(sheets.length).toBeGreaterThan(40);
     expect(
-      sheets.some((path) => path.endsWith("screens/onboarding.css")),
+      sheets.some((path) =>
+        path.endsWith("features/onboarding/onboarding.css"),
+      ),
       "the walk did not reach src/screens/, where every card this gate was written for lived",
     ).toBe(true);
     expect(

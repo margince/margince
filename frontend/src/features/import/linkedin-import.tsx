@@ -18,7 +18,7 @@ import { problemMessageOf, unwrap } from "../../lib/problem";
 import {
   LINKEDIN_ACCOUNT_KEY,
   useSaveLinkedInAccount,
-} from "../../screens/onboarding-conversation/use-linkedin-account";
+} from "../onboarding/onboarding-conversation/use-linkedin-account";
 import "./linkedin-import.css";
 
 // The LinkedIn connections import (ADR-0078 §2.1b).

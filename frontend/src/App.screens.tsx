@@ -14,7 +14,7 @@ import { composedScreens, findExtension, unitTitle } from "./lib/extensions";
 import { navigate } from "./lib/router";
 
 // Static imports are what a first paint needs: the shell, the auth surfaces and
-// the router. screens/onboarding is static too, since the shell calls its
+// the router. features/onboarding/onboarding is static too, since the shell calls its
 // company probe. A module imported statically anywhere lands in the entry chunk
 // whatever a dynamic import says, so splitting it costs a round-trip for nothing.
 // Every route chunk, registered as it is declared. A screen is split so the

@@ -9,8 +9,8 @@ import {
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { throwProblem } from "../../lib/problem";
-import { CORE_LABELS } from "../../screens/onboarding-core-label";
-import { Ignition, useIgnitionCore } from "../../screens/onboarding-ignition";
+import { CORE_LABELS } from "../onboarding/onboarding-core-label";
+import { Ignition, useIgnitionCore } from "../onboarding/onboarding-ignition";
 import {
   usePlatformDeclined,
   useRememberPlatformDeclined,
@@ -19,7 +19,7 @@ import {
 // on purpose: both onboarding CSS gates derive their corpus from that prefix,
 // so a first-run sheet named after its component would style the coldest screen
 // in the product from outside the censuses that keep the rest of it honest.
-import "../../screens/onboarding-first-run.css";
+import "../onboarding/onboarding-first-run.css";
 /**
  * What a fresh installation must be told before it can be used: the model
  * binding, which is the one step the server calls blocking. Everything else the

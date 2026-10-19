@@ -36,7 +36,7 @@ import (
 const (
 	outcomeOwner      = "internal/compose/connectors_outcome.go"
 	outcomeScreenGlob = "../frontend/src/features/capture/connectors*.tsx"
-	outcomePanelsMap  = "../frontend/src/screens/onboarding-connect-panels.tsx"
+	outcomePanelsMap  = "../frontend/src/features/onboarding/onboarding-connect-panels.tsx"
 )
 
 // outcomeConst matches the declarations that DEFINE the vocabulary.

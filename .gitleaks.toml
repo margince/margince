@@ -99,5 +99,5 @@ regexes = ['''_SHA256\s*=\s*.?[a-f0-9]{64}''']
 description = "The LinkedinStatus type name in the connect scene"
 targetRules = ["linkedin-client-id"]
 condition = "AND"
-paths = ['''frontend/src/screens/onboarding-conversation/connect-scene\.tsx$''']
+paths = ['''frontend/src/features/onboarding/onboarding-conversation/connect-scene\.tsx$''']
 regexes = ['''^LinkedinStatus$''']
