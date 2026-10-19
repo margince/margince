@@ -1700,6 +1700,7 @@ export const en = {
   // never becomes a link, because a name that did not load cannot be trusted as
   // a destination.
   "ref.nameLoadFailed": "Name did not load",
+  "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
   "ref.notInRoster": "Currently assigned (no longer in the user list)",
 
   // A record search that ANSWERED and found nothing. Distinct from a search
@@ -13585,9 +13586,7 @@ export const en = {
     "Each project gets a short key. Put [{key}] in an email subject to file the mail under this project.",
   "project.company": "Company",
   "project.owner": "Owner",
-  "project.ownerKeep": "Keep current owner",
   "project.ownerMe": "Me",
-  "project.ownerUnassign": "Unassign",
   "project.assignOwner": "Assign to a colleague",
   "project.assignOwnerTitle": "Assign to a colleague",
   "project.assignOwnerSearch": "Search colleagues",
@@ -13676,6 +13675,7 @@ export const en = {
   "project.advance.reason": "Reason",
   "project.advance.reasonRequired": "A closed project needs a reason.",
   "deal.project": "Project",
+  "deal.newProjectOwner": "Project owner",
   "deal.projectNew": "New project…",
   "deal.projectWithheld": "Project withheld",
   "deal.projectNeedsCompany":

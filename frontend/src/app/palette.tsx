@@ -10,15 +10,16 @@ import {
 import { Callout } from "../design-system/callout";
 import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
 import { usePresence } from "../design-system/presence";
+import { useCompanyContextShown } from "../features/companies/companycontextreach";
 import { SCHEDULED_SCREEN } from "../features/mail/scheduledsends";
+import { holdsEveryWord, searchWords } from "../format/collate";
 import { useLocale, useT } from "../i18n";
-import { useHoldsAdminRole } from "../lib/capability";
 import { isImeCommit } from "../lib/imecommit";
 import { navigate, type Route } from "../lib/router";
 import { openAsk } from "../lib/urlstate";
 import { useVisibleSettingsPages } from "../screens/settingsnav";
 import { settingsHref } from "../screens/settingsrouting";
-import { settingsPageAliases } from "../screens/settingssearch";
+import { settingsPageKeywords } from "../screens/settingssearch";
 import {
   CUSTOM_SCREEN,
   customPaletteScreens,
@@ -59,22 +60,21 @@ export type Command = {
   route?: Route;
 };
 
-/** The commands whose label, subtitle or one keyword holds the whole query. */
+/** The commands whose label, subtitle and keywords hold every query word. */
 export function matchingCommands(
   commands: readonly Command[],
   query: string,
 ): readonly Command[] {
-  const needle = query.trim().toLowerCase();
-  if (!needle) {
+  const words = searchWords(query);
+  if (words.length === 0) {
     return commands;
   }
-  return commands.filter(
-    (command) =>
-      command.label.toLowerCase().includes(needle) ||
-      (command.subtitle ?? "").toLowerCase().includes(needle) ||
-      (command.keywords ?? []).some((word) =>
-        word.toLowerCase().includes(needle),
-      ),
+  return commands.filter((command) =>
+    holdsEveryWord(words, [
+      command.label,
+      command.subtitle ?? "",
+      ...(command.keywords ?? []),
+    ]),
   );
 }
 
@@ -84,9 +84,9 @@ export function useBuiltinCommands(): Command[] {
   // The same table the settings rail walks, not a second opinion about it: a
   // palette reading its own list offers a page the rail no longer lists.
   const visible = useVisibleSettingsPages();
-  // Company profile draws its website card for an admin seat only, so only an
-  // admin finds the page by that card's words; any other seat would land on none.
-  const isAdmin = useHoldsAdminRole();
+  // Company profile draws its website card only where `companyContextShown`
+  // says, so only that reader finds the page by the card's words.
+  const seesCompanyContext = useCompanyContextShown();
   return useMemo(() => {
     const screens: Command[] = NAV.map((item) => ({
       id: `screen:${item.screen}`,
@@ -141,8 +141,8 @@ export function useBuiltinCommands(): Command[] {
       label: t(`settings.tab.${page.id}`),
       keywords: [
         page.id,
-        ...settingsPageAliases(page.id, { holdsAdminRole: isAdmin }),
-        ...(page.id === "company" && isAdmin
+        ...settingsPageKeywords(page.id, t, { seesCompanyContext }),
+        ...(page.id === "company" && seesCompanyContext
           ? [t("settings.companyRefresh")]
           : []),
       ],
@@ -182,7 +182,7 @@ export function useBuiltinCommands(): Command[] {
       ...offRailScreens,
       ...settingsScreens,
     ];
-  }, [t, visible, locale, isAdmin]);
+  }, [t, visible, locale, seesCompanyContext]);
 }
 
 export function CommandPalette({

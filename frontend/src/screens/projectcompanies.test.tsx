@@ -2,6 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { parseHash } from "../lib/router";
@@ -13,7 +14,7 @@ import { ProjectCompanies } from "./projectcompanies";
 // prefix the router does not answer. The oracle is parseHash — the router's own
 // entry point — so the assertion cannot drift from the route table the way a
 // hard-coded list of prefixes would.
-function renderSection(companies: readonly unknown[]) {
+function renderSection(companies: readonly unknown[], readOnly = true) {
   render(
     <QueryClientProvider
       client={
@@ -26,7 +27,7 @@ function renderSection(companies: readonly unknown[]) {
           companies={
             companies as Parameters<typeof ProjectCompanies>[0]["companies"]
           }
-          readOnly
+          readOnly={readOnly}
         />
       </LocaleProvider>
     </QueryClientProvider>,
@@ -55,5 +56,18 @@ describe("the companies on a project", () => {
       expect(route.screen).not.toBe("not-found");
       expect(route.id).toBe(netcare.company_id);
     }
+  });
+
+  // Every card carries the same "Detach" item, so the name has to say which
+  // company it takes off.
+  it("names the company on each card's detach item", async () => {
+    const user = userEvent.setup();
+    renderSection([netcare], false);
+
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+
+    expect(
+      screen.getByRole("button", { name: "Detach netcare" }),
+    ).toBeInTheDocument();
   });
 });

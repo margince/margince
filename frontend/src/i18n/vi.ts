@@ -1657,6 +1657,8 @@ export const vi = {
   "common.saving": "Đang lưu…",
   "common.loading": "Đang tải…",
   "ref.nameLoadFailed": "Không thể tải tên",
+  "owner.rosterFailed":
+    "Không thể tải danh sách thành viên. Hãy tải lại trang để chọn một người.",
   "ref.notInRoster":
     "Hiện đang được giao (không còn trong danh sách thành viên)",
   "picker.noMatch": "Không có kết quả phù hợp",
@@ -13238,9 +13240,7 @@ export const vi = {
     "Mỗi dự án có một mã ngắn. Ghi [{key}] trong tiêu đề email để xếp thư vào dự án này.",
   "project.company": "Công ty",
   "project.owner": "Phụ trách",
-  "project.ownerKeep": "Giữ người phụ trách hiện tại",
   "project.ownerMe": "Tôi",
-  "project.ownerUnassign": "Hủy giao",
   "project.assignOwner": "Giao cho một đồng nghiệp",
   "project.assignOwnerTitle": "Giao cho một đồng nghiệp",
   "project.assignOwnerSearch": "Tìm đồng nghiệp",
@@ -13331,6 +13331,7 @@ export const vi = {
   "project.advance.reason": "Lý do",
   "project.advance.reasonRequired": "Cần nhập lý do để đóng dự án.",
   "deal.project": "Dự án",
+  "deal.newProjectOwner": "Người phụ trách dự án",
   "deal.projectNew": "Dự án mới…",
   "deal.projectWithheld": "Dự án bị ẩn",
   "deal.projectNeedsCompany":

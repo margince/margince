@@ -7,6 +7,7 @@ import { useObjectCustomFields } from "../components/customfields.form";
 import { useT } from "../i18n";
 import { unwrap } from "../lib/problem";
 import { mapProjectCreate, type Project, projectFields } from "./projects.form";
+import { useOwnerPicker } from "./recordreferences";
 
 // The one create-project form both call sites open: the core fields, the
 // workspace's project custom fields, and the body the two become. The company
@@ -20,9 +21,9 @@ export function useProjectCreateForm({
 } {
   const t = useT();
   const cf = useObjectCustomFields("project", "create");
+  const owner = useOwnerPicker(null);
   const core = projectFields(t, {
-    // Owner is an edit-only field, so the create form needs no viewer.
-    me: "",
+    owner,
     currentOwner: null,
     mode: "create",
   }).filter((field) => pinned === undefined || field.key !== "company_id");

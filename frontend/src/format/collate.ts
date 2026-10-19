@@ -76,6 +76,30 @@ export function foldForMatch(value: string): string {
   return value.toLowerCase();
 }
 
+// Folded both ways, or "Zurucksetzen" misses "Zurücksetzen" while the reverse
+// works. `đ` has no decomposition, so it maps to the `d` a reader types for it.
+export function foldForSearch(value: string): string {
+  return foldForMatch(
+    value.normalize("NFD").replace(/\p{Diacritic}/gu, ""),
+  ).replaceAll("đ", "d");
+}
+
+/** The folded words of a query, each of which a match must hold. */
+export function searchWords(query: string): readonly string[] {
+  return foldForSearch(query)
+    .split(/\s+/)
+    .filter((word) => word !== "");
+}
+
+/** Whether every word lands in one or another of `fields`. */
+export function holdsEveryWord(
+  words: readonly string[],
+  fields: readonly string[],
+): boolean {
+  const folded = fields.map(foldForSearch);
+  return words.every((word) => folded.some((field) => field.includes(word)));
+}
+
 /**
  * A sentence written as a CONTINUATION, made to open a line instead.
  *

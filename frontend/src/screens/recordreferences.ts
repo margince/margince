@@ -1,18 +1,22 @@
 export { searchCompanyTargets as searchCompanyReferences } from "../features/companies/companyform";
 export { searchProjects as searchProjectReferences } from "../features/companies/companyprojects";
 
-import { rosterOwnerName, useRoster } from "../components/entityref";
+import { useAssignableUserOptions } from "../components/assigneepicker";
+import {
+  rosterOwnerName,
+  useRoster,
+  useRosterPartial,
+  useRosterPartialHint,
+} from "../components/entityref";
 import { useT } from "../i18n";
 import { useMemberName } from "../lib/membernames";
+import { useMe } from "../lib/session";
 
+// Agent seats are left out: the server refuses one as an owner on every
+// record kind, so offering it only leads to a refusal.
 export function useRecordOwners(ownerId: string | null | undefined) {
   const t = useT();
-  const roster = useRoster("user", true);
-  const options = (roster.data ?? []).flatMap((entry) =>
-    "display_name" in entry
-      ? [{ value: entry.id, label: entry.display_name }]
-      : [],
-  );
+  const options = useAssignableUserOptions();
   const missing =
     Boolean(ownerId) && !options.some((entry) => entry.value === ownerId);
   // Named by id: the current owner may be invited or deactivated, and the
@@ -24,4 +28,24 @@ export function useRecordOwners(ownerId: string | null | undefined) {
       label: rosterOwnerName(ownerId, ownerName, t, t("ref.notInRoster")),
     });
   return options;
+}
+
+// The owners, the reader, and the caveat a picker owes when the roster
+// failed or stopped short. Without the caveat a failed walk reads as a
+// workspace of one.
+export function useOwnerPicker(ownerId: string | null | undefined): {
+  owners: { value: string; label: string }[];
+  me: string;
+  hint?: string;
+} {
+  const t = useT();
+  const me = useMe();
+  const owners = useRecordOwners(ownerId);
+  const roster = useRoster("user", true);
+  const partialHint = useRosterPartialHint(useRosterPartial("user", true));
+  return {
+    owners,
+    me: me.data?.user.id ?? "",
+    hint: roster.isError ? t("owner.rosterFailed") : partialHint,
+  };
 }

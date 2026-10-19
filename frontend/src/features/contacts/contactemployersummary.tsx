@@ -6,7 +6,6 @@ import { CompanyLogo } from "../../design-system/companylogo";
 import { formatNumber } from "../../format/format";
 import { type Locale, translatePlural, type useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
-import type { Employment } from "./contactemployers";
 
 type Company = components["schemas"]["Company"];
 
@@ -85,33 +84,21 @@ export function hasEmployerFacts(company: Company | null | undefined): boolean {
   );
 }
 
-// The employer's mark, or an empty slot the same size: a second row naming
-// the same company (`show` false) carries no mark of its own, but the grid
-// column stays so every row's name and role line up under one another.
-export function EmploymentLogo({
-  employment,
-  company,
-  show,
-  t,
+// A company's mark, falling back to its monogram until a logo is on file.
+export function CompanyMark({
+  companyId,
+  name,
+  logoUrl,
 }: Readonly<{
-  employment: Employment;
-  company: Company | null | undefined;
-  show: boolean;
-  t: ReturnType<typeof useT>;
+  companyId: string;
+  name: string;
+  logoUrl: string | null | undefined;
 }>) {
-  if (!show) {
-    return <span className="pe-employment-logo" />;
-  }
-  const name = employment.company_name ?? t("field.unset");
   return (
-    <span className="pe-employment-logo">
-      <CompanyLogo
-        name={name}
-        src={company?.logo_url}
-        fallback={
-          <Avatar identity={employment.company_id} name={name} size="sm" />
-        }
-      />
-    </span>
+    <CompanyLogo
+      name={name}
+      src={logoUrl}
+      fallback={<Avatar identity={companyId} name={name} size="sm" />}
+    />
   );
 }
