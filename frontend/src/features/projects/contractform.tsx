@@ -3,6 +3,7 @@ import { useEffect, useId, useState } from "react";
 import type { components } from "../../api/schema";
 // The installation read every form shares: one query, one key, so the currency
 // this form writes is the same fact the settings screen shows.
+import { CustomFieldControls } from "../../components/customfieldcontrols";
 import { useObjectCustomFields } from "../../components/customfields.form";
 import { Button, Field, Modal } from "../../design-system/atoms";
 import {
@@ -20,7 +21,6 @@ import {
   uploadAttachment,
 } from "../../lib/attachmentupload";
 import { useInstallationSettings } from "../../lib/uploadlimit";
-import { ContractCustomFields } from "./contractcustomfields";
 import { useSeededCustomFields } from "./contractcustomseed";
 import { paperState, useContractPaper } from "./contractpaper";
 import { contractTermsBody } from "./contracttermsbody";
@@ -258,7 +258,7 @@ export function ContractForm({
             setDraft={setDraft}
             currency={contractCurrency}
           />
-          <ContractCustomFields
+          <CustomFieldControls
             fields={cf.formFields}
             values={draft.customValues}
             onChange={(customValues) => setDraft({ ...draft, customValues })}

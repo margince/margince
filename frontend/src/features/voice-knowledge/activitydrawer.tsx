@@ -3,6 +3,10 @@
 
 import { Fragment, type ReactNode, useId, useState } from "react";
 import type { components } from "../../api/schema";
+import {
+  useCustomFieldDisplay,
+  useObjectCustomFields,
+} from "../../components/customfields.form";
 import { EntityRef } from "../../components/entityref";
 import { writtenAsMarkdown } from "../../design-system/activitytimeline";
 import { Badge, Modal } from "../../design-system/atoms";
@@ -193,6 +197,7 @@ function ActivityBody({
             <RecordLinks links={filed} newTab />
           </PartyLine>
         )}
+        <CustomFieldLines activity={activity} />
       </div>
       {withheldOrBody(activity, t)}
       {activity.content_state !== "withheld" && (
@@ -231,6 +236,21 @@ function ActivityBody({
       )}
     </div>
   );
+}
+
+// The workspace's own fields, one line each, for the ones this activity holds a
+// value in. A withheld activity arrives with none, so it shows none.
+function CustomFieldLines({ activity }: Readonly<{ activity: Activity }>) {
+  const { fields } = useObjectCustomFields("activity", "record");
+  const display = useCustomFieldDisplay();
+  return fields.map((field) => {
+    const shown = display(field, activity[field.column_name]);
+    return shown === null ? null : (
+      <PartyLine key={field.column_name} label={field.label}>
+        {shown}
+      </PartyLine>
+    );
+  });
 }
 
 // The host first, then every other colleague the read names, each once.

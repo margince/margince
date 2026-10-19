@@ -9549,6 +9549,7 @@ export const en = {
   "cf.obj.lead": "Lead",
   "cf.obj.project": "Project",
   "cf.obj.contract": "Contract",
+  "cf.obj.activity": "Activity",
   "cf.listLabel": "Fields on {object}",
   "cf.col.field": "Field",
   "cf.col.type": "Type",
@@ -9566,6 +9567,8 @@ export const en = {
     "No custom fields on Project yet. Add one to track delivery data the core fields do not cover.",
   "cf.empty.contract":
     "No custom fields on Contract yet. Add one for a classification the standard terms do not cover.",
+  "cf.empty.activity":
+    "No custom fields on Activity yet. A field added here is offered on every call, meeting, note and task you log.",
   "cf.emptyReadOnly": "No custom fields on {object} yet.",
   "cf.type.text": "Text",
   "cf.type.number": "Number",

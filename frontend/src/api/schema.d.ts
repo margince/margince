@@ -4931,7 +4931,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List activities (the timeline; cursor-paginated, filterable by type/entity). */
+        /**
+         * List activities (the timeline; cursor-paginated, filterable by type/entity).
+         * @description A `cf_<slug>=<value>` query parameter narrows the list to activities whose custom field holds that value. It names an active activity custom field, and it reads content, so a row whose content the caller may not read is left out rather than listed withheld.
+         */
         get: operations["listActivities"];
         put?: never;
         /**
@@ -32736,6 +32739,9 @@ export interface components {
          *     what the DB CHECK would reject, rather than 500-ing at write time).
          *     `channel_provider` is the same kind of constraint in both directions: non-null exactly
          *     when `kind=message` (ADR-0107).
+         *     **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+         *     top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+         *     `withheld`.
          */
         Activity: {
             /** @description Decisions about promises read from this source, included on list and detail reads when its content is visible. */
@@ -32859,6 +32865,8 @@ export interface components {
             updated_at: string;
             /** Format: date-time */
             archived_at?: string | null;
+        } & {
+            [key: string]: unknown;
         };
         /**
          * @description A reference to a messaging transport registered in THIS installation
@@ -33020,6 +33028,7 @@ export interface components {
             }[];
             source: string;
         };
+        /** @description The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. */
         CreateActivityRequest: {
             /**
              * Format: uuid
@@ -33102,6 +33111,8 @@ export interface components {
             ical_uid?: string | null;
             /** @description Which occurrence of `ical_uid` this is — the occurrence's own original start, as the calendar states it. Meeting only. Required whenever `ical_uid` is given, because a series without an occurrence names every meeting in it at once. */
             ical_instance?: string | null;
+        } & {
+            [key: string]: unknown;
         };
         /**
          * @description Who may read an activity's content — see Activity.audience.
@@ -38357,7 +38368,7 @@ export interface components {
              * @description The existing core object this field is added to.
              * @enum {string}
              */
-            object: "contact" | "company" | "deal" | "lead" | "project" | "contract";
+            object: "contact" | "company" | "deal" | "lead" | "project" | "contract" | "activity";
             /** @description Display label; a rename changes it, and never the slug or column_name. */
             label: string;
             /** @description Admin-facing key the column_name derives from. */
@@ -38420,7 +38431,7 @@ export interface components {
          */
         CreateCustomFieldRequest: {
             /** @enum {string} */
-            object: "contact" | "company" | "deal" | "lead" | "project" | "contract";
+            object: "contact" | "company" | "deal" | "lead" | "project" | "contract" | "activity";
             label: string;
             /** @enum {string} */
             type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean";
@@ -68221,7 +68232,7 @@ export interface operations {
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Target core object (CUSTOM-FIELDS-PARAM-2). */
-                object: "contact" | "company" | "deal" | "lead" | "project" | "contract";
+                object: "contact" | "company" | "deal" | "lead" | "project" | "contract" | "activity";
                 /** @description Filter to one lifecycle state. Omitted returns both active and retired — this admin list intentionally does not default-exclude retired rows. */
                 status?: "active" | "retired";
             };

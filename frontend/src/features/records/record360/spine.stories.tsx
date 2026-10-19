@@ -28,10 +28,7 @@ type Logged = NonNullable<View["activities"]>["data"][number];
 // three fields that actually differ — which is the only thing a reader of a
 // story is looking for.
 const logged = (
-  one: Omit<
-    Logged,
-    "is_done" | "source" | "captured_by" | "created_at" | "updated_at"
-  >,
+  one: Partial<Logged> & Pick<Logged, "id" | "kind" | "occurred_at">,
 ): Logged => ({
   ...one,
   is_done: true,

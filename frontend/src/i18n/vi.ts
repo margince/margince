@@ -9219,6 +9219,7 @@ export const vi = {
   "cf.obj.lead": "Lead",
   "cf.obj.project": "Dự án",
   "cf.obj.contract": "Hợp đồng",
+  "cf.obj.activity": "Hoạt động",
   "cf.listLabel": "Trường trên {object}",
   "cf.col.field": "Trường",
   "cf.col.type": "Loại",
@@ -9236,6 +9237,8 @@ export const vi = {
     "Chưa có trường tùy chỉnh nào trên Dự án. Thêm một trường để theo dõi dữ liệu triển khai dự án mà trường lõi chưa bao quát.",
   "cf.empty.contract":
     "Chưa có trường tùy chỉnh nào trên Hợp đồng. Thêm một trường cho cách phân loại mà điều khoản chuẩn chưa bao quát.",
+  "cf.empty.activity":
+    "Chưa có trường tùy chỉnh nào trên Hoạt động. Trường thêm ở đây xuất hiện trên mọi cuộc gọi, cuộc họp, ghi chú và việc cần làm bạn ghi lại.",
   "cf.emptyReadOnly": "Chưa có trường tùy chỉnh nào trên {object}.",
   "cf.type.text": "Văn bản",
   "cf.type.number": "Số",

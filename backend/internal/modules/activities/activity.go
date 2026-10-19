@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // fieldKind names the activity kind in the write shape's audit and outbox
@@ -132,6 +133,10 @@ type LogActivityInput struct {
 	ICalInstance string
 	Links        []ActivityLinkInput
 	Source       string
+	// CustomFields are the create wire's cf_ values, keyed by column name.
+	// customColumns are the active fields they are checked and written against.
+	CustomFields  map[string]any
+	customColumns []fieldcatalog.Column
 	// Origin says who caused this row to exist, and the recency clocks in the
 	// schema read it: the two system origins are excluded from every
 	// last_activity_at, because neither the system asking about a silent deal
@@ -166,6 +171,9 @@ func (s *Store) LogActivity(ctx context.Context, in LogActivityInput) (crmcontra
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
+	if err := s.withCustomColumns(ctx, &in); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
 	var out crmcontracts.Activity
 	created := true
 	err := s.txRetryingLockCycles(ctx, func(tx pgx.Tx) error {
@@ -185,6 +193,9 @@ func (s *Store) LogActivity(ctx context.Context, in LogActivityInput) (crmcontra
 // second transaction of its own.
 func (s *Store) LogActivityTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmcontracts.Activity, bool, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
+	if err := s.withCustomColumns(ctx, &in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 	return s.logActivityAndReadTranscript(ctx, tx, in)
@@ -340,13 +351,14 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		in.ThreadKey, counterparty, in.CounterpartyOutboundAttested, origin,
 		in.SourceActivityID, in.Raw, in.DurationSeconds,
 	})
+	cfCols, cfHolders, args := storekit.InsertFragments(in.customColumns, in.CustomFields, args)
 	_, err = tx.Exec(ctx,
 		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
 		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, booking_interval_exact, source_system, source_id, source, captured_by,
 		                       thread_key, counterparty_email, counterparty_outbound_attested, origin,
-		                       source_activity_id, raw, duration_seconds`+authorCols+`)
+		                       source_activity_id, raw, duration_seconds`+authorCols+cfCols+`)
 		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
-		         NULLIF($19, ''), $20, $21, $22, $23, $24`+authorHolders+`)`,
+		         NULLIF($19, ''), $20, $21, $22, $23, $24`+authorHolders+cfHolders+`)`,
 		args...)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {
@@ -359,10 +371,10 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		return crmcontracts.Activity{}, false, err
 	}
 	out, err := readActivity(ctx, tx, id, storekit.LiveOnly)
-	if err != nil {
-		return crmcontracts.Activity{}, false, err
+	if err == nil {
+		err = withCustomValuesOf(ctx, tx, in.customColumns, &out)
 	}
-	return out, true, nil
+	return out, err == nil, err
 }
 
 // writeActivitySatellites writes the rows that ride with a new activity and

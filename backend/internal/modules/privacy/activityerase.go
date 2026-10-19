@@ -41,5 +41,8 @@ func clearActivityContent(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	_, err := tx.Exec(ctx, `UPDATE activity SET body = NULL, raw = NULL, subject = @subject,
  language = NULL, source_author_name = NULL, reply_verdict = NULL, reply_verdict_at = NULL,
  reply_verdict_by = NULL, archived_at = coalesce(archived_at, now()) WHERE id = @id`, pgx.StrictNamedArgs{"subject": erasedActivitySubject, "id": id})
-	return err
+	if err != nil {
+		return err
+	}
+	return clearActivityCustomValues(ctx, tx, []ids.UUID{id})
 }

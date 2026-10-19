@@ -348,6 +348,10 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 	if err := importedProvenanceFrom(req, &in); err != nil {
 		return LogActivityInput{}, err
 	}
+	if err := refuseNonCustomKeys(req.AdditionalProperties); err != nil {
+		return LogActivityInput{}, err
+	}
+	in.CustomFields = req.AdditionalProperties
 	// The task create's own rule, held on this door too: a task is its subject.
 	// Last, so a refusal of a field the caller sent wins over a missing subject.
 	if in.Kind == string(crmcontracts.CreateActivityRequestKindCreateActivityRequestKindTask) {

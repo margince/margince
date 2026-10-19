@@ -101,3 +101,49 @@ export const WithheldSourceDark: Story = {
   ...WithheldSource,
   globals: { theme: "dark" },
 };
+
+// A meeting carrying a value in a field the workspace added to activities: one
+// more line among who was there and where it is filed.
+export const WithCustomFieldValue: Story = {
+  render: (args) => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read"] }),
+      "GET /custom-fields": () =>
+        jsonResponse({
+          data: [
+            {
+              id: "cf-visit-type",
+              object: "activity",
+              label: "Visit type",
+              slug: "visit_type",
+              type: "picklist",
+              options: ["On site", "Remote"],
+              status: "active",
+              column_name: "cf_visit_type",
+              show_in_create: true,
+              created_by: "human:u-1",
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+          ],
+          page: { has_more: false },
+        }),
+      [`GET /activities/${id}`]: () =>
+        jsonResponse({
+          id,
+          kind: "meeting",
+          subject: "Plant walk-through",
+          body: "Walked the line with the shift lead.",
+          occurred_at: "2024-10-18T10:00:00Z",
+          content_state: "available",
+          links: [],
+          cf_visit_type: "On site",
+        }),
+    });
+    return <OpenActivityDrawer {...args} />;
+  },
+};
+export const WithCustomFieldValueDark: Story = {
+  ...WithCustomFieldValue,
+  globals: { theme: "dark" },
+};

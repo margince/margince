@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 37,
-      "tokens": 5963,
-      "listing_tokens": 3160,
-      "step_schema_tokens": 2206,
+      "tokens": 6050,
+      "listing_tokens": 3204,
+      "step_schema_tokens": 2249,
       "percent_of_ceiling": 18,
-      "headroom_tokens": 17247,
+      "headroom_tokens": 17160,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",

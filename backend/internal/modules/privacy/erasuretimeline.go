@@ -145,6 +145,9 @@ func (e *Eraser) redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID
 	if err != nil {
 		return nil, err
 	}
+	if err := clearActivityCustomValues(ctx, tx, redacted); err != nil {
+		return nil, err
+	}
 	// And how the reply verdict came to be what it was. DELETED rather than
 	// nulled, the way ai_feedback is: a history of judgements about somebody
 	// nobody may now assert anything about has nothing left to record. The

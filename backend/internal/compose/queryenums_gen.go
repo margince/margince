@@ -94,7 +94,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "record_types", Values: []string{"contact", "company", "deal", "lead", "project"}, Array: true, Explode: true},
 	},
 	"GET /v1/custom-fields": {
-		{Name: "object", Values: []string{"contact", "company", "deal", "lead", "project", "contract"}, Array: false, Explode: true},
+		{Name: "object", Values: []string{"contact", "company", "deal", "lead", "project", "contract", "activity"}, Array: false, Explode: true},
 		{Name: "status", Values: []string{"active", "retired"}, Array: false, Explode: true},
 	},
 	"GET /v1/data-subject-requests": {

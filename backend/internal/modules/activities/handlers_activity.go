@@ -26,6 +26,7 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 		WithinProjectID:  idArg[ids.ProjectKind](params.ProjectId),
 		OccurredAfter:    params.OccurredAfter,
 		OccurredBefore:   params.OccurredBefore,
+		CustomFilters:    httperr.CustomFieldFilters(r),
 	}
 	if params.Kind != nil {
 		k := string(*params.Kind)

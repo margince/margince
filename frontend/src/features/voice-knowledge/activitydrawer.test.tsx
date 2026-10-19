@@ -109,3 +109,47 @@ it("lists the activity's files and offers an upload while it is live", async () 
   expect(link.getAttribute("href")).toBe("/v1/attachments/att-price");
   expect(screen.getByRole("button", { name: "Add document" })).toBeTruthy();
 });
+it("reads out the value of a field the workspace added to activities", async () => {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /custom-fields": () =>
+      jsonResponse({
+        data: [
+          {
+            id: "cf-visit-type",
+            object: "activity",
+            label: "Visit type",
+            slug: "visit_type",
+            type: "picklist",
+            options: ["on_site", "remote"],
+            status: "active",
+            column_name: "cf_visit_type",
+            show_in_create: true,
+            created_by: "human:u-1",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+        ],
+        page: { has_more: false },
+      }),
+    "GET /activities/source": () =>
+      jsonResponse({
+        id: "source",
+        kind: "meeting",
+        subject: "Plant walk-through",
+        occurred_at: "2026-07-01T09:00:00Z",
+        content_state: "available",
+        links: [],
+        cf_visit_type: "on_site",
+      }),
+  });
+  renderWithQueryClient(
+    <OpenActivityDrawer
+      activityId="source"
+      zone={viewerZone()}
+      onClose={() => {}}
+    />,
+  );
+  expect(await screen.findByText("Visit type")).toBeTruthy();
+  expect(screen.getByText("on_site")).toBeTruthy();
+});

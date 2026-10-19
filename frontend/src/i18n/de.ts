@@ -9463,6 +9463,7 @@ export const de = {
   "cf.obj.lead": "Lead",
   "cf.obj.project": "Projekt",
   "cf.obj.contract": "Vertrag",
+  "cf.obj.activity": "Aktivität",
   "cf.listLabel": "Felder für {object}",
   "cf.col.field": "Feld",
   "cf.col.type": "Typ",
@@ -9480,6 +9481,8 @@ export const de = {
     "Noch keine eigenen Felder für Projekte. Füge eines hinzu, um Daten zur Umsetzung zu erfassen, die die Kernfelder nicht abdecken.",
   "cf.empty.contract":
     "Noch keine eigenen Felder für Verträge. Füge eines für eine Einordnung hinzu, die die Standardkonditionen nicht abdecken.",
+  "cf.empty.activity":
+    "Noch keine eigenen Felder für Aktivitäten. Ein hier hinzugefügtes Feld steht bei jedem Anruf, Termin, jeder Notiz und Aufgabe zur Wahl, die du erfasst.",
   "cf.emptyReadOnly": "Noch keine eigenen Felder für {object}.",
   "cf.type.text": "Text",
   "cf.type.number": "Zahl",

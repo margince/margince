@@ -44,7 +44,19 @@ export type ActivityDraft = {
   assigneeId: string;
   sourceActivityId?: string;
   followUp?: TaskDraft;
+  // The workspace's custom-field values, as the create body's cf_ keys.
+  custom?: Record<string, unknown>;
 };
+
+// isActivityKind narrows a picked value to a kind this form logs.
+export function isActivityKind(value: string): value is ActivityDraft["kind"] {
+  return (
+    value === "note" ||
+    value === "task" ||
+    value === "call" ||
+    value === "meeting"
+  );
+}
 
 export type TaskDraft = Pick<
   ActivityDraft,
@@ -158,6 +170,7 @@ export function activityRequestBody(
     ...(withAttendees && attendees.colleagueIds.length > 0
       ? { attendee_user_ids: [...attendees.colleagueIds] }
       : {}),
+    ...input.custom,
     source: "manual",
   };
 }

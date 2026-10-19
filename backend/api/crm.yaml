@@ -7242,6 +7242,10 @@ paths:
       tags: [Activities]
       operationId: listActivities
       summary: List activities (the timeline; cursor-paginated, filterable by type/entity).
+      description: >-
+        A `cf_<slug>=<value>` query parameter narrows the list to activities whose custom field
+        holds that value. It names an active activity custom field, and it reads content, so a
+        row whose content the caller may not read is left out rather than listed withheld.
       x-mcp-tool: { verb: list_records, record_type: activity, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/Cursor'
@@ -20250,7 +20254,7 @@ paths:
         - name: object
           in: query
           required: true
-          schema: { type: string, enum: [contact, company, deal, lead, project, contract] }
+          schema: { type: string, enum: [contact, company, deal, lead, project, contract, activity] }
           description: Target core object (CUSTOM-FIELDS-PARAM-2).
         - name: status
           in: query
@@ -44944,6 +44948,9 @@ components:
         what the DB CHECK would reject, rather than 500-ing at write time).
         `channel_provider` is the same kind of constraint in both directions: non-null exactly
         when `kind=message` (ADR-0107).
+        **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+        top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+        `withheld`.
       required: [id, kind, occurred_at, source, captured_by, created_at, updated_at]
       properties:
         commitment_admissions:
@@ -45127,6 +45134,7 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+      additionalProperties: true
 
     ProviderRef:
       type: string
@@ -45456,6 +45464,11 @@ components:
             start, as the calendar states it. Meeting only. Required whenever
             `ical_uid` is given, because a series without an occurrence names every
             meeting in it at once.
+      additionalProperties: true
+      description: >-
+        The workspace's active activity custom fields travel as extra top-level `cf_` keys.
+        A key that is not `cf_`-prefixed, names no active activity field, or carries a value
+        of the wrong shape for its field returns `422`.
 
     ActivityAudience:
       type: string
@@ -52465,7 +52478,7 @@ components:
         id: { type: string, format: uuid }
         object:
           type: string
-          enum: [contact, company, deal, lead, project, contract]
+          enum: [contact, company, deal, lead, project, contract, activity]
           description: The existing core object this field is added to.
         label: { type: string, description: 'Display label; a rename changes it, and never the slug or column_name.' }
         slug: { type: string, description: Admin-facing key the column_name derives from. }
@@ -52547,7 +52560,7 @@ components:
       properties:
         object:
           type: string
-          enum: [contact, company, deal, lead, project, contract]
+          enum: [contact, company, deal, lead, project, contract, activity]
         label: { type: string }
         type:
           type: string

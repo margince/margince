@@ -56,11 +56,17 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 	}
 	at := s.now()
 	in.recordedAt = &at
+	active, err := s.customColumns(ctx)
+	if err != nil {
+		return crmcontracts.Activity{}, err
+	}
 	var out crmcontracts.Activity
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = updateActivityInTx(ctx, tx, id, in)
-		return err
+		if out, err = updateActivityInTx(ctx, tx, id, in); err != nil {
+			return err
+		}
+		return withCustomValuesOf(ctx, tx, active, &out)
 	})
 	return out, err
 }

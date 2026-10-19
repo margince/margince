@@ -53,6 +53,7 @@ import {
   TranscriptUploadField,
   useReportUnattached,
 } from "./logactivityfiles";
+import { useActivityCustomFields } from "./logactivity.custom";
 import { MeetingAttendeeFields } from "./meetingattendees";
 
 const EMPTY_DRAFT: ActivityDraft = {
@@ -116,6 +117,7 @@ export function LogActivityForm({
     }
   }
   const [files, setFiles] = useState<readonly PickedFile[]>([]);
+  const custom = useActivityCustomFields();
   // Who was in the room, asked for the kinds that are with a contact (see
   // KINDS_WITH_A_CONTACT). Only a company page cannot send one without a name.
   const [attendees, setAttendees] = useState<MeetingAttendees>(NO_ATTENDEES);
@@ -177,6 +179,7 @@ export function LogActivityForm({
       setDraft(freshDraft(input.zone, onlyTasks ? "task" : undefined));
       setAttendees(NO_ATTENDEES);
       setFiles([]);
+      custom.reset();
       renewKey();
       onLogged?.();
     },
@@ -217,7 +220,7 @@ export function LogActivityForm({
       onSubmit={singlePress((event) => {
         event.preventDefault();
         log.mutate({
-          draft: { ...draft, sourceActivityId },
+          draft: { ...draft, sourceActivityId, custom: custom.body() },
           zone: recordZone,
           attendees,
           idempotencyKey,
@@ -329,6 +332,7 @@ export function LogActivityForm({
         value={draft.body}
         onChange={(body) => setField({ body })}
       />
+      {custom.controls}
       {draft.kind !== "task" && (
         <FollowUpTaskFields
           value={draft.followUp}
