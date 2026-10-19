@@ -521,3 +521,59 @@
   border-radius: var(--r-md);
   padding: var(--space-4) var(--space-5);
 }
+
+/* ON THE RECORD SHEET a zone is a SECTION of the sheet, not a pane on it: the
+ * sheet is the record's one surface, and a pane on it is a pane inside a pane.
+ * The title and the head's rule carry the zone.
+ *
+ * The section bleeds by the pane's inset, so its text stands on the sheet's
+ * edge under the tabs and a row's hover still reaches past the text it lights.
+ * The sheet's gutter holds that bleed (composed.css, `--sheetGutter`). */
+.record-sheet .panel {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  margin-inline: calc(-1 * var(--padPanel));
+}
+/* Beside the work the details column clips to its track (pagezones.css), so a
+ * bleed there is cut off with the labels in it. Its sections keep the inset. */
+@media (min-width: 1201px) {
+  .record-sheet .page-zones-aside-column .panel {
+    margin-inline: 0;
+  }
+}
+/* A section has no band to tint, so a tone keeps only its title's ink and the
+ * machine's section keeps its provenance badge: indigo on the title as well
+ * would say the badge twice on every zone a machine wrote. */
+.record-sheet
+  :is(
+    .panel-accent,
+    .panel-info,
+    .panel-success,
+    .panel-warning,
+    .panel-danger,
+    .panel-discovery,
+    .panel-ai
+  )
+  > .panel-head {
+  background: none;
+  border-bottom-color: var(--borderSubtle);
+}
+.record-sheet
+  :is(
+    .panel-accent,
+    .panel-info,
+    .panel-success,
+    .panel-warning,
+    .panel-danger,
+    .panel-discovery,
+    .panel-ai
+  )
+  > .panel-foot {
+  border-top-color: var(--borderSubtle);
+}
+.record-sheet .panel-ai > .panel-head .panel-title {
+  color: var(--textPrimary);
+}

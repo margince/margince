@@ -132,9 +132,11 @@ Sources for this section:
 
 1. **A lit ground, and one pane per zone**. The page is light green paper, lit from two corners.
 
-   An emerald glow sits behind the sidebar, and an indigo one at the top of the far edge. Each zone
-   of a record is one white pane on it, with a hairline edge and a 20px corner. Inside a pane there
-   is only a title, a rule and rows. Dark is the same room with the lights down.
+   An emerald glow sits behind the sidebar, and an indigo one at the top of the far edge. A record
+   is one white sheet on it, with a hairline edge and a 20px corner, and each zone of the record is a
+   section of that sheet: a title, a rule and rows, with no box of its own. A page that is not a
+   record gives each zone its own pane in the same shape. Dark is the same room with the lights
+   down.
 2. **Everything is a list**. The fields of a record are a list of label and value, in a panel on the
    left that folds.
 
@@ -326,8 +328,10 @@ target for that new build. The shipped sheet may not match it.
 
   Nothing at rest glows, the monogram mesh is the only gradient, and nothing stacks a shadow under a
   shadow.
-- **No pane inside a pane**. A zone is one pane; the things in it are a title, a rule and rows. The
-  only closed shapes inside a pane are the agent's tinted row and a staged row's dashed edge.
+- **No pane inside a pane**. A zone is one pane, or one section of the record's sheet; the things in
+  it are a title, a rule and rows. The only closed shapes inside it are the agent's tinted row and a
+  staged row's dashed edge. On the sheet a section's title takes no tinted band: a tone keeps the
+  title's ink, and a machine's section keeps its provenance badge.
 
 ### More, and less
 
@@ -919,7 +923,8 @@ where motion is *spent*:
 
 ## 10. Restraint: what a screen in this language does not do
 
-- Does not put a pane inside a pane. A zone is one pane; inside it a title, a hairline and rows.
+- Does not put a pane inside a pane. A zone is one pane, or one section of the record's sheet;
+  inside it a title, a hairline and rows.
 - Does not cast a shadow of its own, a glow or a gradient (the mesh of a monogram, section 3, is the
   one gradient). The resting layer is `--shadow-rest`, from the token, and never from a rule that spells
   its own. The two corner glows on the ground are the only other light, and the only tinted thing
@@ -955,8 +960,8 @@ the features a new look must not drop. The order:
 - [ ] The display face on the name, the zone titles, the verdict and a reading's figure; nothing else
       uses it.
 - [ ] Every figure is tabular (`t-num`), aligned right in a column; mono only on code.
-- [ ] Every zone is one pane with a title, a hairline and rows. The only shadow at rest is
-      `--shadow-rest`, and no rule spells one by hand.
+- [ ] Every zone is one pane, or one section of the record's sheet, with a title, a hairline and
+      rows. The only shadow at rest is `--shadow-rest`, and no rule spells one by hand.
 - [ ] One control in view with an emerald fill.
 - [ ] Anything an agent wrote is a row on `--aiLight` carrying the indigo mark. A row that asks for
       something says "Margince suggests", but never over the answer that nothing needs doing. A

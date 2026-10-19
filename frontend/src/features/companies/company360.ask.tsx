@@ -4,7 +4,6 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, Skeleton } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { Eyebrow } from "../../design-system/eyebrow";
 import {
   liveProjects,
   type PickableProject,
@@ -97,7 +96,6 @@ export function AskSection({
   const readable = Array.isArray(answer?.sentences) ? answer : undefined;
   return (
     <section className="co-part" aria-label={t("co.ask.title")}>
-      <Eyebrow as="h3">{t("co.ask.title")}</Eyebrow>
       <ProjectPicker
         projects={live}
         projectId={projectId}

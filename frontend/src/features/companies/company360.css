@@ -88,6 +88,11 @@
   gap: var(--space-4);
   align-items: start;
 }
+/* On the record sheet the pair are sections that bleed, so they stand the
+   sheet's gutter apart rather than a card's interval (composed.css). */
+.record-sheet .co-reading-pair {
+  column-gap: var(--sheetGutter);
+}
 /* What this account is worth to us. The panel is one reading in five parts —
    the verdict, the dimensions under it, the two sides of the argument, the
    labelled answers, the attribution — and a hairline between consecutive

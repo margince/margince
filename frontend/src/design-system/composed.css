@@ -682,6 +682,19 @@
 .record-sheet .record-tabs .recordtabs {
   margin-block-end: 0;
 }
+/* Two sections side by side on the sheet stand a gutter apart wide enough for
+   both bleeds (panel.css, `.record-sheet .panel`) with air left between them.
+   Folded, the work column takes that gutter back, as it takes the plain one
+   back off the sheet (pagezones.css). */
+.record-sheet {
+  --sheetGutter: calc(2 * var(--padPanel) + var(--space-4));
+}
+.record-sheet .page-zones {
+  column-gap: var(--sheetGutter);
+}
+.record-sheet .page-zones[data-aside="closed"] > .page-zones-main {
+  margin-inline-end: calc(-1 * var(--sheetGutter));
+}
 
 /* The head's facts strip: caption over value, cells laid along the row and
    wrapping when the head narrows. A `dl`, because each cell IS a term and its
