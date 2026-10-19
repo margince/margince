@@ -34,7 +34,7 @@ func workPresentationLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.MailReply }, "Reply", "Antworten", "Trả lời")
 	line(func(c *Copy) *string { return &c.MailPrepare }, "Prepare for the meeting", "Gespräch vorbereiten", "Chuẩn bị cuộc họp")
 	line(func(c *Copy) *string { return &c.MailTask }, "Complete the next step", "Nächsten Schritt erledigen", "Hoàn thành bước tiếp theo")
-	line(func(c *Copy) *string { return &c.MailOwner }, "Owner", "Verantwortlich", "Người phụ trách")
+	line(func(c *Copy) *string { return &c.MailOwner }, "Owner", "Verantwortlich", "Người chịu trách nhiệm")
 	line(func(c *Copy) *string { return &c.MailDue }, "Due", "Fällig", "Đến hạn")
 	line(func(c *Copy) *string { return &c.MailDeadline }, "Decision deadline", "Frist", "Hạn quyết định")
 	line(func(c *Copy) *string { return &c.MailOpenNow }, "Still open now", "Noch offen", "Hiện vẫn chưa hoàn tất")
