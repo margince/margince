@@ -119,7 +119,7 @@ func describeCustomFields(out *strings.Builder, entity analyticsquery.Entity) {
 		}
 		choices := field.Options
 		if field.Shape == analyticsquery.ShapeBoolean {
-			choices = []string{"true", "false"}
+			choices = []string{jsonTrue, jsonFalse}
 		}
 		fmt.Fprintf(out, "    %s %s: %s\n", name, jsonText(field.Label), jsonText(choices))
 	}
