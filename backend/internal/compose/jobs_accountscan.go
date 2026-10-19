@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -97,7 +96,7 @@ type accountScanWorker struct {
 func newAccountScanWorker(pool *pgxpool.Pool, brain completer, routingVersion func() string, log *slog.Logger) *accountScanWorker {
 	view := company360.NewService(pool, contacts.NewStore(InstallationDB(pool)),
 		deals.NewStore(InstallationDB(pool), DealsInstallation()), ProjectsStore(pool),
-		approvals.NewService(InstallationDB(pool)), time.Now)
+		newApprovalsService(InstallationDB(pool)), time.Now)
 	return &accountScanWorker{
 		svc:   companyscan.NewService(pool, view, view, brain, nil, routingVersion, time.Now, log),
 		users: identity.NewService(pool),

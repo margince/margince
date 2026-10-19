@@ -193,6 +193,7 @@ function ApprovalDetailBody({
     stagedDayFormatter(locale, zone),
     approvalNames,
     approval.requested_decider_id,
+    approval.assignee_inactive,
   );
   const named = display.filter((entry) => entry.value !== null);
   // The raw payload is shown ONCE, and where it goes says what it is. A kind
@@ -362,6 +363,8 @@ function isoOrBlank(staged: string | undefined): ISODate | "" {
  * it does not know what this installation lets a contact change.
  */
 export function StagedEditor({
+  disabled,
+  acceptLabel,
   fields,
   draft,
   onChange,
@@ -369,6 +372,8 @@ export function StagedEditor({
   onApprove,
   onCancel,
 }: Readonly<{
+  disabled?: boolean;
+  acceptLabel?: string;
   fields: readonly EditableField[];
   draft: Record<string, string>;
   onChange: (field: string, value: string) => void;
@@ -434,8 +439,13 @@ export function StagedEditor({
           /* The edited approve is the same write as the plain one and was the
              one path with no gate at all, so a second press sent a second
              verdict. */
-          <Button variant="primary" pending={pending} onClick={onApprove}>
-            {t("decision.approveEdited")}
+          <Button
+            variant="primary"
+            pending={pending}
+            disabled={disabled}
+            onClick={onApprove}
+          >
+            {acceptLabel ?? t("decision.approveEdited")}
           </Button>
         }
       >

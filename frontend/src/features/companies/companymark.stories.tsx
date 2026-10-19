@@ -81,22 +81,42 @@ export const NotYoursToChange: Story = {
   args: { profile: BOTH, canEdit: false },
 };
 
-function refuseUploads(...paths: string[]) {
+const UNSUPPORTED = {
+  type: "about:blank",
+  title: "Unsupported media type",
+  status: 415,
+  code: "unsupported_media_type",
+  detail:
+    "the upload is not an image this server can read; PNG, JPEG, GIF, WebP, ICO and SVG work",
+};
+
+const SVG_TEXT = {
+  type: "about:blank",
+  title: "Unprocessable Entity",
+  status: 422,
+  code: "svg_text_not_outlined",
+  detail:
+    "the SVG draws its words as text, which this server cannot render; convert the text to outlines in your design tool, or upload a PNG",
+};
+
+const SVG_NOT_DRAWABLE = {
+  type: "about:blank",
+  title: "Unprocessable Entity",
+  status: 422,
+  code: "svg_not_drawable",
+  detail:
+    "the SVG has parts this server cannot draw, such as embedded images; export it as a PNG",
+};
+
+function refuseUploads(
+  problem: typeof UNSUPPORTED | typeof SVG_TEXT | typeof SVG_NOT_DRAWABLE,
+  ...paths: string[]
+) {
   const refuse = () =>
-    new Response(
-      JSON.stringify({
-        type: "about:blank",
-        title: "Unsupported media type",
-        status: 415,
-        code: "unsupported_media_type",
-        detail:
-          "the upload is not an image this server can read; PNG, JPEG, GIF, WebP, ICO and SVG work",
-      }),
-      {
-        status: 415,
-        headers: { "content-type": "application/problem+json" },
-      },
-    );
+    new Response(JSON.stringify(problem), {
+      status: problem.status,
+      headers: { "content-type": "application/problem+json" },
+    });
   installFetchStub(
     Object.fromEntries(paths.map((path) => [`POST ${path}`, refuse])),
   );
@@ -121,7 +141,7 @@ async function refuseUpload(canvasElement: HTMLElement, slotName: string) {
 export const TheServerRefusesTheWideLogo: Story = {
   args: { profile: WITHOUT_MARK, canEdit: true },
   render: (args) => {
-    refuseUploads("/company/logo");
+    refuseUploads(UNSUPPORTED, "/company/logo");
     return (
       <StoryProviders>
         <CompanyMark {...args} />
@@ -137,7 +157,7 @@ export const TheServerRefusesTheWideLogo: Story = {
 export const TheServerRefusesTheSquareIcon: Story = {
   ...TheServerRefusesTheWideLogo,
   render: (args) => {
-    refuseUploads("/company/logo/icon");
+    refuseUploads(UNSUPPORTED, "/company/logo/icon");
     return (
       <StoryProviders>
         <CompanyMark {...args} />
@@ -153,7 +173,7 @@ export const TheServerRefusesTheSquareIcon: Story = {
 export const TheServerRefusesBothImages: Story = {
   ...TheServerRefusesTheWideLogo,
   render: (args) => {
-    refuseUploads("/company/logo", "/company/logo/icon");
+    refuseUploads(UNSUPPORTED, "/company/logo", "/company/logo/icon");
     return (
       <StoryProviders>
         <CompanyMark {...args} />
@@ -172,4 +192,47 @@ export const TheServerRefusesBothImagesPhone: Story = {
   ...TheServerRefusesBothImages,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+// The sentence tells the admin how to fix the file.
+export const TheServerRefusesAnSvgWithLiveText: Story = {
+  ...TheServerRefusesTheWideLogo,
+  render: (args) => {
+    refuseUploads(SVG_TEXT, "/company/logo");
+    return (
+      <StoryProviders>
+        <CompanyMark {...args} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await refuseUpload(canvasElement, "Wide logo");
+    await within(canvasElement).findByText(
+      "This SVG holds its words as text, which cannot be drawn. Convert the text to outlines in your design tool, or upload a PNG.",
+    );
+  },
+};
+
+export const TheServerRefusesAnSvgWithLiveTextPhone: Story = {
+  ...TheServerRefusesAnSvgWithLiveText,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+export const TheServerRefusesAnSvgItCannotDraw: Story = {
+  ...TheServerRefusesTheWideLogo,
+  render: (args) => {
+    refuseUploads(SVG_NOT_DRAWABLE, "/company/logo");
+    return (
+      <StoryProviders>
+        <CompanyMark {...args} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await refuseUpload(canvasElement, "Wide logo");
+    await within(canvasElement).findByText(
+      "This SVG has parts that cannot be drawn here, or draws nothing. Export the logo as a PNG from your design tool.",
+    );
+  },
 };

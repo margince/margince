@@ -27,6 +27,7 @@ export function commitmentResponsibility(
   change: Readonly<Record<string, unknown>>,
   names: ReadonlyMap<string, string>,
   t: Translator,
+  assigneeInactive = false,
 ): readonly ResolvedDisplayField[] {
   const promiser = change.promiser_seat_id;
   const assignee = change.seat_id;
@@ -38,12 +39,14 @@ export function commitmentResponsibility(
       : change.promiser_unresolved === true && party
         ? t("approval.commitment.unverifiedNamed", { name: party })
         : party || t("approval.commitment.unresolved");
-  const effect =
-    typeof assignee === "string" && assignee
-      ? t("approval.commitment.assignNamed", {
-          name:
-            names.get(assignee) ?? t("approval.commitment.unnamedColleague"),
-        })
+  const assigned = typeof assignee === "string" && assignee.length > 0;
+  const assigneeName = assigned
+    ? (names.get(assignee) ?? t("approval.commitment.unnamedColleague"))
+    : t("approval.commitment.unnamedColleague");
+  const effect = assigneeInactive
+    ? t("approval.commitment.inactiveAssignment", { name: assigneeName })
+    : assigned
+      ? t("approval.commitment.assignNamed", { name: assigneeName })
       : t("approval.commitment.assignDecider");
   return [
     { field: "party", label: t("approval.commitment.promiser"), value: madeBy },
@@ -53,4 +56,10 @@ export function commitmentResponsibility(
       value: effect,
     },
   ];
+}
+
+export function approvalAcceptable(
+  approval: Readonly<{ assignee_inactive?: boolean }>,
+): boolean {
+  return approval.assignee_inactive !== true;
 }

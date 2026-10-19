@@ -4,6 +4,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { Locale } from "../../i18n";
 import { en } from "../../i18n/en";
 import { day, renderWorklist, row, stub } from "./worklist.testkit";
 
@@ -82,5 +83,49 @@ describe("the word above a system row", () => {
     await screen.findByText("Reconnect the mailbox");
     const kind = document.querySelector(".worklist-row-kind");
     expect(kind?.textContent).toBe(en["worklist.category.system"]);
+  });
+});
+
+const taskLocales: ReadonlyArray<{ locale: Locale; label: string }> = [
+  { locale: "en", label: "Website triage" },
+  { locale: "de", label: "Website-Prüfung" },
+  { locale: "vi", label: "Đánh giá trang web" },
+];
+
+describe.each(taskLocales)("AI incidents in $locale", ({ locale, label }) => {
+  it.each([1, 12])("names the task for %i failed runs", async (count) => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "opaque-run",
+            source: "ai_work_health",
+            category: "system",
+            level: 4,
+            title: "A task needs attention",
+            ai_task: "site_triage",
+            cause_label: "Website triage",
+            ...(count > 1
+              ? {
+                  batch: {
+                    key: "system_incident",
+                    count,
+                    label: "Website triage",
+                  },
+                }
+              : {}),
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+      }),
+    );
+    renderWorklist(locale);
+    await screen.findAllByText(label, { exact: false });
+    expect(document.querySelector(".worklist-row-kind")?.textContent).toBe(
+      label,
+    );
+    expect(document.body.textContent).not.toContain("site_triage");
+    if (locale !== "en")
+      expect(document.body.textContent).not.toContain("Website triage");
   });
 });

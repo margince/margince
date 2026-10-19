@@ -1196,6 +1196,7 @@ export const de = {
   "shell.beta": "Beta",
   "shell.searchEverything": "Suchen oder Margince fragen",
   "shell.breadcrumbAria": "Navigationspfad",
+  "shell.back": "Zurück",
   "shell.license.none": "Keine Lizenz",
   "shell.license.refused": "Lizenz abgelehnt",
   "shell.signOutAria": "Abmelden",
@@ -3928,6 +3929,7 @@ export const de = {
   "offer.position": "Position",
   "offer.description": "Beschreibung",
   "offer.unit": "Einheit",
+  "offer.unitFromProduct": "Wie im Produkt",
   "offer.quantity": "Menge",
   "offer.unitPrice": "Einzelpreis",
   "offer.discountPct": "Rabatt %",
@@ -4338,6 +4340,8 @@ export const de = {
   "brief.deck.skipped_other": "{count} übersprungen",
   "brief.deck.edited_one": "1 in Bearbeitung",
   "brief.deck.edited_other": "{count} in Bearbeitung",
+  "brief.deck.acceptanceChanged":
+    "Einige Vorschläge haben sich geändert und müssen erneut geprüft werden. Deine Freigaben wurden nicht gesendet.",
   "brief.deck.commitNothingToSend": "Übersprungene entfernen",
   "brief.deck.unstage": "Letzte rückgängig machen",
   "brief.deck.clearedTitle": "Stapel leer",
@@ -10391,6 +10395,10 @@ export const de = {
   "settings.companyMarkUnsupported":
     "Nimm eine PNG-, JPEG-, GIF-, WebP-, ICO- oder SVG-Datei.",
   "settings.companyMarkTooLarge": "Nimm eine kleinere Datei.",
+  "settings.companyMarkSvgNotDrawable":
+    "Diese SVG-Datei enthält Teile, die sich hier nicht darstellen lassen, oder sie zeigt nichts. Exportiere das Logo in deinem Grafikprogramm als PNG-Datei.",
+  "settings.companyMarkSvgText":
+    "Diese SVG-Datei enthält Text, der sich nicht darstellen lässt. Wandle den Text in deinem Grafikprogramm in Pfade um, oder lade eine PNG-Datei hoch.",
   "settings.companyMarkAddWide": "Breites Logo hinzufügen",
   "settings.companyMarkReplaceWide": "Breites Logo ersetzen",
   "settings.companyMarkRemoveWide": "Breites Logo entfernen",
@@ -10461,9 +10469,18 @@ export const de = {
   "product.archiveConfirm":
     "Dieses Produkt archivieren? Bestehende Angebotspositionen behalten ihren Snapshot.",
   "product.name": "Name",
-  "product.sku": "SKU",
+  "product.sku": "Artikelnummer",
   "product.description": "Beschreibung",
   "product.unit": "Einheit",
+  "product.unitPiece": "Stück",
+  "product.unitHour": "Stunde",
+  "product.unitDay": "Tag",
+  "product.unitMonth": "Monat",
+  "product.unitFlatFee": "Pauschale",
+  "product.unitOther": "Andere",
+  "product.unitOtherLabel": "Andere Einheit",
+  "product.unitOtherRequired":
+    "Gib die Einheit ein oder wähle eine aus der Liste.",
   "product.unitPrice": "Einzelpreis",
   "product.currency": "Währung",
   "product.taxRate": "Standardsteuersatz %",
@@ -11445,7 +11462,9 @@ export const de = {
   "ownDomains.addFailed": "Domain nicht hinzugefügt",
   "ownDomains.remove": "{domain} entfernen",
   "ownDomains.candidateNote":
-    "In einem verbundenen Postfach gesehen. Die Domain stoppt die Erfassung nicht, da sie nicht bestätigt ist.",
+    "In einem verbundenen Postfach gesehen. Nachrichten zwischen Teammitgliedern auf dieser Domain werden gespeichert, bis du die Domain bestätigst.",
+  "ownDomains.confirm": "Bestätigen",
+  "ownDomains.confirmLabel": "{domain} bestätigen",
 
   "financeSource.title": "Buchhaltungsquelle",
   "financeSource.sub":
@@ -14640,6 +14659,19 @@ export const de = {
     "Eine Lead-Umwandlung wartet auf deine Freigabe",
   "magic.action.approval_overnight":
     "Ein Vorschlag aus der Nacht wartet auf deine Freigabe",
+  "approval.commitment.proposalExpiresIn": "Vorschlag läuft in {countdown} ab",
+  "approval.commitment.noDueDay": "Kein Tag genannt",
+  "approval.commitment.promiseStatus": "Stand der Zusage",
+  "approval.commitment.notFulfilled":
+    "Das Erstellen der Aufgabe markiert die Zusage nicht als erfüllt.",
+  "approval.commitment.inactiveAssignment":
+    "Für {name} kann keine Aufgabe erstellt werden: Dieses Konto kann keine Aufgaben erhalten. Verwirf den Vorschlag und erstelle eine Aufgabe für ein aktives Teammitglied.",
+  "approval.commitment.createTask_other": "{count} Aufgaben erstellen",
+  "approval.commitment.createTask_one": "Aufgabe erstellen",
+  "magic.action.approval_commitment_task_named": "{party}: {summary}",
+  "magic.action.approval_commitment_task_summary": "{summary}",
+  "magic.action.approval_commitment_task_unverified":
+    "{party} (nicht bestätigt): {summary}",
   "magic.action.approval_commitment_task":
     "Eine Zusage aus einem Gespräch wartet auf deine Freigabe",
   "magic.action.approval_capture_counterparty":
@@ -15049,4 +15081,38 @@ export const de = {
   "legalReview.offerLineRecurring_other": "{cadence} über {count} Perioden",
   "legalReview.offerLineStaged": "Vorgeschlagen, noch nicht in der Summe",
   "legalReview.packBinding": "Weitere an die Käuferseite gesendete Angebote",
+  "aiTask.name.account_scan": "Analyse des Kundenbedarfs",
+  "aiTask.name.agent_loop": "Agentensteuerung",
+  "aiTask.name.brief_ranking": "Priorisierung der Morgenübersicht",
+  "aiTask.name.capture_classify": "Nachrichtenklassifizierung",
+  "aiTask.name.capture_confidentiality_verdict":
+    "Vertraulichkeitsprüfung des Gesprächs",
+  "aiTask.name.capture_counterparty_verdict": "Erstkontaktprüfung",
+  "aiTask.name.cert_judge": "Bewertung der Modellzertifizierung",
+  "aiTask.name.cold_start": "Auswertung der Einrichtung",
+  "aiTask.name.corpus_ask": "Fragen zum Dokumentenbestand",
+  "aiTask.name.deal_health": "Deal-Statusübersicht",
+  "aiTask.name.document_extract": "Dokumentenauswertung",
+  "aiTask.name.draft_reply": "Antwortentwurf",
+  "aiTask.name.enrich": "Ergänzung aus Signaturen",
+  "aiTask.name.growth_fit": "Bewertung der Unternehmenseignung",
+  "aiTask.name.nl_search": "Suche in natürlicher Sprache",
+  "aiTask.name.offer_draft": "Angebotsentwurf",
+  "aiTask.name.owed_verdict": "Prüfung unbeantworteter Nachrichten",
+  "aiTask.name.propose_roles": "Erkennung von Einkaufsrollen",
+  "aiTask.name.rate_extract": "Erfassung von Wechselkursen",
+  "aiTask.name.request_settlement": "Prüfung der Antwort auf das Anliegen",
+  "aiTask.name.signal_extract": "Erkennung von Gesprächssignalen",
+  "aiTask.name.site_extract": "Ausführliche Website-Auswertung",
+  "aiTask.name.site_fact_extract": "Erfassung von Website-Fakten",
+  "aiTask.name.site_triage": "Website-Prüfung",
+  "aiTask.name.stage_evidence_extract": "Erkennung von Phasenbelegen",
+  "aiTask.name.summarize": "Datensatzzusammenfassung",
+  "aiTask.name.tag_suggest": "Tag-Vorschläge",
+  "aiTask.name.transcript": "Transkriptauswertung",
+  "aiTask.name.transcript_propose": "Erkennung von Besprechungsaufgaben",
+  "aiTask.name.voice_build": "Erstellung der Voice DNA",
+  "aiTask.name.weekly_learnings": "Erkenntnisse der letzten Woche",
+  "aiTask.name.weekly_review": "Wöchentlicher Rückblick",
+  "aiTask.name.unknown": "KI-Aufgabe",
 } as const satisfies Record<MessageKey, string>;
