@@ -15,10 +15,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { CompaniesScreen } from "../features/companies/companies";
 import { ContactsScreen } from "../features/contacts/contacts";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { CompaniesScreen } from "./companies";
 
 // The contacts and companies lists offer the same two bulk verbs over a
 // selection, and both open the preview before anything is written. The row a

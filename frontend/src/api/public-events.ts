@@ -725,11 +725,11 @@ export interface components {
             /** @description Which of the eight claim kinds this is — the ConversationClaimKind vocabulary of the CRM contract. Carried as a plain string rather than a second copy of that enum: the two documents generate into one Go package, and a duplicated enum there is two spellings of one vocabulary that can drift apart. */
             kind: string;
         };
-        /** @description Payload for conversation_claim.changed — a human typed over the machine, or dismissed a claim outright. Published because a correction is SHARED truth, unlike a moment dismissal: a downstream reader holding the old claim needs to know it no longer stands. */
+        /** @description Payload for conversation_claim.changed. A claim was corrected, renewed, dismissed or erased. A downstream reader holding the old claim needs to refresh it, or remove it when the status is erased. */
         PublicEventConversationClaimChanged: {
             /** Format: uuid */
             claim_id: string;
-            /** @description The claim's status after the correction — open, done or dismissed. A plain string for the same reason as `kind` above. */
+            /** @description The claim's status after the change: open, done, dismissed or erased. A plain string for the same reason as `kind` above. */
             status: string;
         };
         /** @description Payload for company.created, a union across five emit sites. They are a direct create, the capture auto-create engine, the anchor company save, the site-read confirmation, and the cold-start profile apply. Each sets only its own subset, so every field is optional. */
@@ -972,6 +972,8 @@ export interface components {
         };
         /** @description The bounded delta of activity.updated. Each field is carried only when this update touched it. The key set is fixed, so it is typed rather than an open map. */
         PublicEventActivityChangedFields: {
+            /** @description The source's recorded commitment decisions changed; fetch the source through its normal content access gate. */
+            commitment_admissions_changed?: boolean;
             /** @description True when explicit request acceptance restores an archived unfinished reminder. */
             restored?: boolean;
             /** @description The activity's new subject (absent when this update did not touch it). */

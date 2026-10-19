@@ -41,7 +41,7 @@ func moneyDefaultBy(dimension string) []string {
 // silently changed meaning is what this is about.
 //
 // The frontend already holds this rule for the plans the screen sends
-// (analytics.test.tsx, "groups every native money plan by currency"). Two
+// (analytics.reports.test.tsx, "groups every native money plan by currency"). Two
 // spellings of one invariant, and until now only one of them could fail.
 func refuseUngroupedNativeMoney(
 	spec reportSpec, groupBy []string, aggregates []reportAggregate,

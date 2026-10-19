@@ -8,9 +8,9 @@ import { Heading } from "../../design-system/heading";
 import { ProviderMark } from "../../design-system/provider-mark";
 import { Row } from "../../design-system/stack";
 import { OvernightGrantChoice } from "../../features/automations/overnight-grant";
+import { useConnectors } from "../../features/capture/connectors";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useConnectors } from "../connectors";
 import { ConnectDialog } from "./connect-dialog";
 import { WayOnward } from "./way-onward";
 

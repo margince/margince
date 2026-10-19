@@ -209,6 +209,15 @@ by who made it.
   leaves the promise kept.
 - A task you archived, a proposal you refused and a customer promise you dismissed do not come back
   when Margince reads the conversation again.
+
+When Margince reads old mail, it checks newer messages before it creates work.
+An old promise without a current deadline stays in the source, rather than becoming a new overdue task.
+A future deadline can keep an old promise current. If later context has not been read, Margince does not create the task.
+
+Open the source and open **Commitment review** to see why a reading created no task.
+Check the quoted words and any later replies before adding a follow-up from the linked record.
+A reply alone does not show that a promise was kept. Tasks you edited, reopened or pinned remain yours.
+
 Also called: action items, follow-ups from a meeting, commitments in an email.
 
 ### What happens to a request in an email?

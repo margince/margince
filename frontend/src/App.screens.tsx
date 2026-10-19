@@ -7,11 +7,11 @@ import {
   PendingBody,
   SectionHeader,
 } from "./design-system/atoms";
+import { AuthScreen } from "./features/sign-in/auth";
 import { useLocale, useT } from "./i18n";
 import type { MessageKey } from "./i18n/en";
 import { composedScreens, findExtension, unitTitle } from "./lib/extensions";
 import { navigate } from "./lib/router";
-import { AuthScreen } from "./screens/auth";
 
 // Static imports are what a first paint needs: the shell, the auth surfaces and
 // the router. screens/onboarding is static too, since the shell calls its
@@ -38,7 +38,9 @@ function routed<T>(factory: () => Promise<T>): () => Promise<T> {
 
 export const BookingScreen = lazy(
   routed(() =>
-    import("./screens/book").then((m) => ({ default: m.BookingScreen })),
+    import("./features/booking/book").then((m) => ({
+      default: m.BookingScreen,
+    })),
   ),
 );
 
@@ -52,19 +54,19 @@ export const ClientSurfaceScreen = lazy(
 
 const DealScreen = lazy(
   routed(() =>
-    import("./screens/deals").then((m) => ({ default: m.DealScreen })),
+    import("./features/deals/deals").then((m) => ({ default: m.DealScreen })),
   ),
 );
 
 const DealsScreen = lazy(
   routed(() =>
-    import("./screens/deals").then((m) => ({ default: m.DealsScreen })),
+    import("./features/deals/deals").then((m) => ({ default: m.DealsScreen })),
   ),
 );
 
 const DealRoomPage = lazy(
   routed(() =>
-    import("./screens/dealroompage").then((m) => ({
+    import("./features/deals/dealroompage").then((m) => ({
       default: m.DealRoomPage,
     })),
   ),
@@ -80,19 +82,19 @@ export const FiltersScreen = lazy(
 
 export const BriefScreen = lazy(
   routed(() =>
-    import("./screens/brief").then((m) => ({ default: m.BriefScreen })),
+    import("./features/brief/brief").then((m) => ({ default: m.BriefScreen })),
   ),
 );
 
 export const LeadScreen = lazy(
   routed(() =>
-    import("./screens/leads").then((m) => ({ default: m.LeadScreen })),
+    import("./features/leads/leads").then((m) => ({ default: m.LeadScreen })),
   ),
 );
 
 export const LeadsScreen = lazy(
   routed(() =>
-    import("./screens/leads").then((m) => ({ default: m.LeadsScreen })),
+    import("./features/leads/leads").then((m) => ({ default: m.LeadsScreen })),
   ),
 );
 
@@ -122,13 +124,13 @@ export const OAuthConsent = lazy(
 
 export const OfferScreen = lazy(
   routed(() =>
-    import("./screens/offers").then((m) => ({ default: m.OfferScreen })),
+    import("./features/deals/offers").then((m) => ({ default: m.OfferScreen })),
   ),
 );
 
 export const CompaniesScreen = lazy(
   routed(() =>
-    import("./screens/companies").then((m) => ({
+    import("./features/companies/companies").then((m) => ({
       default: m.CompaniesScreen,
     })),
   ),
@@ -136,7 +138,7 @@ export const CompaniesScreen = lazy(
 
 export const CompanyScreen = lazy(
   routed(() =>
-    import("./screens/companies").then((m) => ({
+    import("./features/companies/companies").then((m) => ({
       default: m.CompanyScreen,
     })),
   ),
@@ -165,7 +167,9 @@ export const ContactPageV2 = lazy(
 );
 
 export const BuyerRoomScreen = lazy(() =>
-  import("./screens/buyerroom").then((m) => ({ default: m.BuyerRoomScreen })),
+  import("./features/deals/buyerroom").then((m) => ({
+    default: m.BuyerRoomScreen,
+  })),
 );
 
 export const PreferenceCenterScreen = lazy(
@@ -194,7 +198,9 @@ export const ConfirmDetailsScreen = lazy(
 
 export const AnalyticsScreen = lazy(
   routed(() =>
-    import("./screens/analytics").then((m) => ({ default: m.AnalyticsScreen })),
+    import("./features/analytics/analytics").then((m) => ({
+      default: m.AnalyticsScreen,
+    })),
   ),
 );
 
@@ -208,7 +214,7 @@ export const LegalReviewsRoute = lazy(
 
 export const ScheduledSendsScreen = lazy(
   routed(() =>
-    import("./screens/scheduledsends").then((m) => ({
+    import("./features/mail/scheduledsends").then((m) => ({
       default: m.ScheduledSendsScreen,
     })),
   ),
@@ -239,7 +245,7 @@ const ShareScreen = lazy(
 );
 
 export const WorklistRedirect = lazy(() =>
-  import("./screens/brief.queue").then((m) => ({
+  import("./features/brief/brief.queue").then((m) => ({
     default: m.WorklistRedirect,
   })),
 );

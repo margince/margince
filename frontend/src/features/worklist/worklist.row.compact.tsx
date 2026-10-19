@@ -11,6 +11,7 @@ import { useTruncationTooltip } from "../../design-system/tooltip";
 import { useT } from "../../i18n";
 import { isUnprepared } from "./worklist.copy";
 import type { WorklistItem } from "./worklist.queries";
+import { RowName } from "./worklist.rowname";
 import { VerdictLine } from "./worklist.verdict";
 import "./worklist.row.compact.css";
 
@@ -31,6 +32,8 @@ export type RowReadings = Readonly<{
   /** The row's name, and where pressing it goes — no `href`, not a link. */
   title: string;
   href?: string;
+  /** Opens what the row is about in place, for a subject with no page. */
+  open?: () => void;
   /** The clock this row is racing, and what it is worth. */
   when: string | null;
   facts: string | null;
@@ -117,13 +120,7 @@ export function CompactRowLine({
   return (
     <div className="worklist-row-line">
       <p className="t-body worklist-row-title">
-        {!named ? null : href ? (
-          <a className="entity-link" href={href}>
-            {title}
-          </a>
-        ) : (
-          title
-        )}
+        {named && <RowName title={title} href={href} open={readings.open} />}
         {/* The day's states ride the name at both densities: a rep scanning for
             the row to open before it starts has to see them without reading
             anything beside them. */}

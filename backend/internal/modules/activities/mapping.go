@@ -361,6 +361,9 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 		}
 		in.Subject = &subject
 	}
+	if err := CheckEntryHasContent(in.Kind, in.Subject, in.Body); err != nil {
+		return LogActivityInput{}, err
+	}
 	return in, nil
 }
 

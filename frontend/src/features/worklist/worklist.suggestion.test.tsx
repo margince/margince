@@ -5,7 +5,7 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
-import type { DealSuggestion } from "../../screens/dealsuggestions.queries";
+import type { DealSuggestion } from "../deals/dealsuggestions.queries";
 import { day, panelNamed, renderWorklist, row, stub } from "./worklist.testkit";
 
 // A Deal Scout suggestion on the Worklist: a row To review, and under it the

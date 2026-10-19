@@ -8,11 +8,11 @@ import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
-import { ChannelReplyAction } from "../../screens/compose";
 import {
   interactionIcon,
   useInteractionLabel,
 } from "../../screens/interactionchrome";
+import { ChannelReplyAction } from "../mail/compose";
 import { openContactTab } from "../worklist/worklist.return";
 
 // Conversation memory (concept §5.10, ADR-0097 D3).

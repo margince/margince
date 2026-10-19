@@ -25,6 +25,7 @@ import { WaitingEmailLine } from "./worklist.emailtitle";
 import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
 import { leadFactsText } from "./worklist.leadfacts";
 import { hostText } from "./worklist.meetingparties";
+import { useNoticeSource } from "./worklist.noticesource";
 import { lastTouch } from "./worklist.pane";
 import type { WorklistItem } from "./worklist.queries";
 import { noticeDetail, readerTask } from "./worklist.reader";
@@ -135,6 +136,9 @@ export function WorklistRow({
   const drawer = useDrawerDials();
   const target = rowHref(item);
   const href = target && withWorklistReturn(target, drawer);
+  // A notice about a mail or meeting has no address to link, so its name opens
+  // the activity in a drawer instead.
+  const source = useNoticeSource(item);
   const viewer = useMe(false).data?.user;
   const title = itemTitle(readerTask(item, viewer, t), t, locale);
   const facts =
@@ -196,6 +200,7 @@ export function WorklistRow({
     item,
     title,
     href,
+    open: source.open,
     when,
     facts,
     said,
@@ -309,6 +314,7 @@ export function WorklistRow({
             it. It stays a block under the row, where it has the width to show
             both sides. */}
         {answer.below}
+        {source.drawer}
       </PutDownByThumb>
     </PanelRow>
   );

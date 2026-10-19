@@ -13,8 +13,8 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../i18n";
-import { jsonResponse } from "../../screens/company.fixtures";
 import { meFixture } from "../../testing/mefixture";
+import { jsonResponse } from "../companies/company.fixtures";
 import { OAuthAppCard } from "./oauth-app";
 
 afterEach(() => {

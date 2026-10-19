@@ -3,7 +3,7 @@ import { Mail, MessageSquare, Send } from "lucide-react";
 
 import type { components } from "../../api/schema";
 import { useT } from "../../i18n";
-import { useProviderLabel } from "../../screens/channelproviders";
+import { useProviderLabel } from "../capture/channelproviders";
 
 // How this contact can be written to, and what a control that opens the writing
 // surface may therefore promise.

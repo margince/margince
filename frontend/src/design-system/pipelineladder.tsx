@@ -234,10 +234,10 @@ function stageName(rung: Rung, t: ReturnType<typeof useT>): string {
   return key ? t(key) : (rung.label ?? rung.stage);
 }
 
-// EXPORTED, because a second surface reports a rung: the company-keyed door
-// onto company_triage (screens/companytriage.tsx). Its rungs are the same
-// vocabulary, and a second copy of this resolution there would be a second
-// catalog — the one that goes stale when a reason is added here.
+// Exported, because a second surface reports a rung: the company-keyed door
+// onto company_triage that features/companies/companytriage.tsx draws. Its
+// rungs are the same vocabulary. A second copy of this resolution there would
+// be a second catalog, the one that goes stale when a reason is added here.
 export function reasonText(rung: Rung, t: ReturnType<typeof useT>): string {
   if (!rung.reason) {
     return "";

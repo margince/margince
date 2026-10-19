@@ -32,7 +32,7 @@ import (
 )
 
 // The template layout keys the renderer prints, spelled as the offer-template
-// form (frontend/src/screens/offertemplates.tsx) stores them;
+// form (frontend/src/features/deals/offertemplates.tsx) stores them;
 // backend/gates/offertemplatelayout_test.go holds the two sides to one set.
 const (
 	offerLayoutHeader = "header"

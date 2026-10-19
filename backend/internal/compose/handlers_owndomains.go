@@ -8,6 +8,7 @@ package compose
 // transport — the capture store owns the RBAC gate and the audited write.
 
 import (
+	"errors"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -65,6 +66,10 @@ func (h ownDomainHandlers) CreateWorkspaceEmailDomain(w http.ResponseWriter, r *
 		return
 	}
 	domain, err := h.store.Add(r.Context(), req.Domain)
+	if errors.Is(err, capture.ErrConsumerMailDomain) {
+		httperr.Write(w, r, httperr.Validation("domain", "consumer_mail_domain", err.Error()))
+		return
+	}
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

@@ -13,7 +13,7 @@ import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { canEnrichNow } from "../../screens/provider-status";
+import { canEnrichNow } from "../capture/provider-status";
 import type { Profile, Provider } from "./contactprovider";
 
 type EnrichRun = {

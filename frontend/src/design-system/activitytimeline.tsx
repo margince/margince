@@ -130,6 +130,12 @@ export function activityTimeline(
     return {
       id: activity.id,
       kind: timelineKind(activity.kind),
+      commitmentReviewCount:
+        activity.content_state === "withheld"
+          ? 0
+          : activity.commitment_admissions?.filter(
+              (decision) => !decision.current_work,
+            ).length,
       title: timelineTitle(activity),
       // Carried beside the rendered title, which may be the body or the kind:
       // bulk grouping needs the message's OWN subject or it folds unrelated

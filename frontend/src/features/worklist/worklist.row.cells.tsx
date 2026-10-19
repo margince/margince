@@ -8,6 +8,7 @@ import { useLocale, useT } from "../../i18n";
 import { isUnprepared } from "./worklist.copy";
 import { RowCaptions } from "./worklist.row.captions";
 import type { RowReadings } from "./worklist.row.compact";
+import { RowName } from "./worklist.rowname";
 import { VerdictLine } from "./worklist.verdict";
 
 // Whether the row's name links its record: a message row names itself instead.
@@ -54,12 +55,8 @@ export function RowText({
     <>
       {(!emailOpener || badged) && (
         <p className="t-body worklist-row-title">
-          {emailOpener ? null : href ? (
-            <a className="entity-link" href={href}>
-              {title}
-            </a>
-          ) : (
-            title
+          {emailOpener ? null : (
+            <RowName title={title} href={href} open={readings.open} />
           )}
           {item.overdue && <Badge tone="danger">{t("worklist.overdue")}</Badge>}
           {/* A state of the meeting, not a reason among reasons: a rep

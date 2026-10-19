@@ -1,0 +1,274 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useId, useState } from "react";
+import { api } from "../../api/client";
+import { Button } from "../../design-system/atoms";
+import { ChoiceList } from "../../design-system/choicelist";
+import {
+  CopyableText,
+  useClipboardCopy,
+} from "../../design-system/clipboardcopy";
+import { ConfirmModal } from "../../design-system/confirmmodal";
+import { useT } from "../../i18n";
+import { useCan, useCanWrite } from "../../lib/capability";
+import { problemMessageOf, unwrap } from "../../lib/problem";
+import { type AnalyticsScope, writableScope } from "./analytics.context";
+import {
+  closeShare,
+  OPEN_SHARES_KEY,
+  SharedLinksButton,
+} from "./analytics.sharelist";
+
+// Sharing a forecast view.
+//
+// The two kinds make different promises and the dialog says so in words rather
+// than in a label: a live link answers what the reader may see TODAY, a frozen
+// one answers what was true at a moment. A reader handed a number without
+// knowing which of those it is cannot place it, and the frozen one is the case
+// where being wrong matters — a figure from three weeks ago, read as current.
+type ShareKind = "live" | "snapshot";
+
+// The link, held in state and never re-derivable. The server returns the token
+// once; there is nothing to read it back from, which is why the dialog says
+// what leaving costs before it lets the reader leave. The id is what closes it.
+type IssuedShare = Readonly<{ id: string; token: string; expiresAt: string }>;
+
+// Both verbs need `forecast:create`: the server gates the list on it as well
+// as the issue, so a seat without it is shown neither and asks for nothing.
+// Issuing and closing are writes and also need a seat that may write; a read
+// seat still lists its links, without Share view or Close link.
+export function ForecastShareActions({
+  target,
+  scope,
+  snapshotId,
+}: Readonly<{ target: string; scope: AnalyticsScope; snapshotId?: string }>) {
+  const canList = useCan("forecast", "create");
+  const canIssue = useCanWrite("forecast", "create");
+  if (!canList) {
+    return null;
+  }
+  return (
+    <div className="analytics-share-actions">
+      {canIssue && (
+        <ShareViewButton
+          target={target}
+          scope={scope}
+          snapshotId={snapshotId}
+        />
+      )}
+      <SharedLinksButton canClose={canIssue} />
+    </div>
+  );
+}
+
+export function ShareViewButton({
+  target,
+  scope,
+  snapshotId,
+}: Readonly<{
+  target: string;
+  // The population the issuer is LOOKING at. A share carrying a different one
+  // would hand a recipient a set the issuer never saw.
+  scope: AnalyticsScope;
+  // The frozen state a snapshot share would serve. Absent means there is none
+  // to freeze yet, and the snapshot choice is unavailable rather than offered
+  // and then refused by the server.
+  snapshotId?: string;
+}>) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>{t("analytics.share.open")}</Button>
+      {open && (
+        <ShareDialog
+          target={target}
+          scope={scope}
+          snapshotId={snapshotId}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+function ShareDialog({
+  target,
+  scope,
+  snapshotId,
+  onClose,
+}: Readonly<{
+  target: string;
+  scope: AnalyticsScope;
+  snapshotId?: string;
+  onClose: () => void;
+}>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const [kind, setKind] = useState<ShareKind>("live");
+  const [issued, setIssued] = useState<IssuedShare | null>(null);
+
+  const create = useMutation({
+    mutationFn: async (input: {
+      kind: ShareKind;
+      target: string;
+      scope: AnalyticsScope;
+      snapshotId?: string;
+    }) => {
+      const named = writableScope(input.scope);
+      if (!named || (input.kind === "snapshot" && !input.snapshotId)) {
+        throw new Error("Choose a supported population and captured snapshot.");
+      }
+      return unwrap(
+        await api.POST("/forecast/shares", {
+          body: {
+            kind: input.kind,
+            target: input.target,
+            // The population the issuer was reading, not the whole workspace. The
+            // recipient never sees the issuing screen, so a wider set would mislead.
+            ...named,
+            ...(input.kind === "snapshot" && input.snapshotId
+              ? { snapshot_id: input.snapshotId }
+              : {}),
+          },
+        }),
+      );
+    },
+    onSuccess: (data) => {
+      setIssued({
+        id: data.id,
+        token: data.token,
+        expiresAt: data.expires_at,
+      });
+      void queryClient.invalidateQueries({ queryKey: OPEN_SHARES_KEY });
+    },
+  });
+
+  if (issued) {
+    return <ShareLinkReveal share={issued} onClose={onClose} />;
+  }
+
+  return (
+    <ConfirmModal
+      open
+      onClose={onClose}
+      title={t("analytics.share.title")}
+      confirmLabel={t("analytics.share.create")}
+      onConfirm={() => create.mutate({ kind, target, scope, snapshotId })}
+      pending={create.isPending}
+      error={create.error ? problemMessageOf(create.error, t) : undefined}
+    >
+      <ChoiceList
+        legend={t("analytics.share.kindLegend")}
+        value={kind}
+        onChange={setKind}
+        choices={[
+          {
+            value: "live",
+            label: t("analytics.share.liveLabel"),
+            description: t("analytics.share.liveHelp"),
+          },
+          {
+            value: "snapshot",
+            disabled: !snapshotId,
+            label: t("analytics.share.snapshotLabel"),
+            description: snapshotId
+              ? t("analytics.share.snapshotHelp")
+              : t("analytics.share.snapshotUnavailable"),
+          },
+        ]}
+      />
+      <p className="t-caption">{t("analytics.share.expiryNote")}</p>
+    </ConfirmModal>
+  );
+}
+
+// The link, shown once.
+//
+// Dismissing destroys the only copy: it lives in this component's state and no
+// read returns it. So Copy is the primary act and Done is the quiet one, and
+// the caution says in words what leaving costs — the same shape the webhook
+// signing secret settled on, for the same reason.
+//
+// Close link ends it before its expiry, for a link sent to the wrong address:
+// here while the link is in hand, and later from Shared links.
+function ShareLinkReveal({
+  share,
+  onClose,
+}: Readonly<{ share: IssuedShare; onClose: () => void }>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const headingId = useId();
+  const url = shareUrl(share.token);
+  const copy = useClipboardCopy(url, {
+    copy: t("analytics.share.copy"),
+    copied: t("analytics.share.copied"),
+    remedy: t("analytics.share.copyFailed"),
+  });
+  const revoke = useMutation({
+    mutationFn: closeShare,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: OPEN_SHARES_KEY }),
+  });
+
+  if (revoke.isSuccess) {
+    return (
+      <ConfirmModal
+        open
+        onClose={onClose}
+        title={t("analytics.share.closedTitle")}
+        confirmLabel={t("analytics.share.done")}
+        onConfirm={onClose}
+      >
+        <p>{t("analytics.share.closedBody")}</p>
+      </ConfirmModal>
+    );
+  }
+
+  return (
+    <ConfirmModal
+      open
+      onClose={onClose}
+      title={t("analytics.share.linkTitle")}
+      confirmLabel={copy.label}
+      onConfirm={copy.copy}
+      error={revoke.error ? problemMessageOf(revoke.error, t) : undefined}
+      actionsLead={
+        <>
+          <Button onClick={onClose} disabled={revoke.isPending}>
+            {t("analytics.share.done")}
+          </Button>
+          <Button
+            variant="danger"
+            pending={revoke.isPending}
+            onClick={() => revoke.mutate(share.id)}
+          >
+            {t("analytics.share.revoke")}
+          </Button>
+        </>
+      }
+    >
+      <p id={headingId}>{t("analytics.share.linkWarning")}</p>
+      <CopyableText
+        text={url}
+        label={t("analytics.share.linkTitle")}
+        testId="forecast-share-link"
+      />
+      {copy.notice}
+      {!copy.copied && <p>{t("analytics.share.leaveWarning")}</p>}
+    </ConfirmModal>
+  );
+}
+
+// shareUrl builds the address the recipient opens.
+//
+// From the running origin rather than a configured base: a link built against a
+// base somebody set once stops working the day the installation moves, and it
+// fails in the recipient's hands rather than here.
+//
+// A HASH route, which is what this app serves. A path-shaped address would 404
+// on the static server — nothing routes it — and the reader would find that out
+// after sending the link on. dealroomaccess.tsx builds the buyer's link the
+// same way for the same reason.
+function shareUrl(token: string): string {
+  return `${window.location.origin}/#/analytics/shared/${token}`;
+}

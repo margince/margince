@@ -3,10 +3,10 @@ import { useEffect, useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Select } from "../design-system/select";
+import { useCaptureSettings } from "../features/capture/capture-settings";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, unwrap } from "../lib/problem";
-import { useCaptureSettings } from "./capture-settings";
 
 // The posture question, asked while a mailbox is being connected.
 //

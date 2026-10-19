@@ -25,8 +25,8 @@ import {
   ComposeModal,
   RELINK_KINDS,
   type RelinkKind,
-} from "../../screens/compose";
-import { intentAbout } from "../../screens/compose.intent";
+} from "../mail/compose";
+import { intentAbout } from "../mail/compose.intent";
 import { phrasedReasons, reasonText } from "./worklist.copy";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
 

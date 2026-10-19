@@ -1585,10 +1585,9 @@ components:
       x-entity-type: contact
       x-version: 1
       description: >-
-        Payload for conversation_claim.changed — a human typed over the
-        machine, or dismissed a claim outright. Published because a correction
-        is SHARED truth, unlike a moment dismissal: a downstream reader holding
-        the old claim needs to know it no longer stands.
+        Payload for conversation_claim.changed. A claim was corrected, renewed,
+        dismissed or erased. A downstream reader holding the old claim needs
+        to refresh it, or remove it when the status is erased.
       required:
         - claim_id
         - status
@@ -1599,7 +1598,7 @@ components:
         status:
           type: string
           description: >-
-            The claim's status after the correction — open, done or dismissed.
+            The claim's status after the change: open, done, dismissed or erased.
             A plain string for the same reason as `kind` above.
       additionalProperties: false
 
@@ -2145,6 +2144,9 @@ components:
         The bounded delta of activity.updated. Each field is carried only when this update touched
         it. The key set is fixed, so it is typed rather than an open map.
       properties:
+        commitment_admissions_changed:
+          type: boolean
+          description: The source's recorded commitment decisions changed; fetch the source through its normal content access gate.
         restored:
           type: boolean
           description: True when explicit request acceptance restores an archived unfinished reminder.

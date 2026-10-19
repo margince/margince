@@ -9,7 +9,7 @@ Room and the width ladder (sections 8–9) are in [adopt-the-design-surfaces.md]
 
 The company page goes first, because it has the most zones, the most states, and the `e2e` checks that hold it closest. Every
 later page copies what it decides. Files: `companies.tsx` (over the limit: new zones go in new files under
-`screens/company/`), `company360.tsx`, `companyheader.tsx`, `companyrail*.tsx`, `companytoday.tsx`,
+`features/companies/company/`), `company360.tsx`, `companyheader.tsx`, `companyrail*.tsx`, `companytoday.tsx`,
 `companywork.tsx`, `companyrecent.tsx`, `companycommercial.tsx`, `companydossier.tsx`, `companycontacts/`.
 
 ### 3.1 Head

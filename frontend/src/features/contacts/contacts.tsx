@@ -34,7 +34,7 @@ import {
   tagsColumn,
   useOwnerTagChips,
 } from "../../screens/recordlist";
-import { VCardImportAction, VCardImportPage } from "../../screens/vcard-import";
+import { VCardImportAction, VCardImportPage } from "../import/vcard-import";
 import { searchCompanies } from "../lists/filterreference";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import { contactCreateFields, mapContactBody } from "./contactformfields";

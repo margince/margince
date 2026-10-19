@@ -28,7 +28,7 @@ import { useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { problemCodeOf } from "../../lib/problem";
-import { useDedupeDisposition } from "../../screens/dedupe.queries";
+import { useDedupeDisposition } from "../import/dedupe.queries";
 // The review's own sheet: the two columns, the recessed cards and the trailing
 // line of verbs. It travels with the component because two hosts draw it.
 import "./worklist.pair.css";

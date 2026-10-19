@@ -245,6 +245,9 @@ func wire(a row, now time.Time) crmcontracts.Approval {
 		ExpiresAt:  &a.ExpiresAt,
 		DecidedAt:  a.DecidedAt,
 	}
+	if recipient := requestedDecider(a); !recipient.IsZero() {
+		out.RequestedDeciderId = new(openapi_types.UUID(recipient))
+	}
 	if a.OnBehalfOf != nil {
 		v := openapi_types.UUID(a.OnBehalfOf.UUID)
 		out.OnBehalfOf = &v

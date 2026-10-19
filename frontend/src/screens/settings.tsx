@@ -7,6 +7,13 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { AiBudgetCard } from "../features/ai/ai-admin";
+import { ModelPricesCard } from "../features/ai/ai-price-sync";
+import { AiProviderKeysCard } from "../features/ai/ai-provider-keys";
+import { AiRoutingCard } from "../features/ai/ai-routing";
+import { AiTasksCard } from "../features/ai/ai-tasks";
+import { AiCallsCard } from "../features/ai/aicalls";
+import { AiUsageCard } from "../features/ai/aiusage";
 import { AgentConnectionsCard } from "../features/automations/agent-token-settings";
 import { AgentAllowancesCard } from "../features/automations/agentallowances";
 import { AgentUsageByUserCard } from "../features/automations/agentusage";
@@ -17,7 +24,35 @@ import { ExtensionAccessCard } from "../features/automations/extension-access";
 import { ExtensionUnitsCard } from "../features/automations/extension-units";
 import { OAuthAppCard } from "../features/automations/oauth-app";
 import { OvernightGrantCard } from "../features/automations/overnight-grant";
+import { MeetingSettings } from "../features/booking/meeting-settings";
+import { BriefDeliveryPanel } from "../features/brief/briefdelivery";
+import { BlockedDomainsCard } from "../features/capture/blocked-domains";
+import { CaptureActivityTab } from "../features/capture/capture-activity";
+import { OwnerIdentitiesCard } from "../features/capture/capture-owner-identities";
+import { CaptureSettingsCard } from "../features/capture/capture-settings";
+import { ConnectorsCard } from "../features/capture/connectors";
+import { ConsumerMailDomainsCard } from "../features/capture/consumer-mail-domains";
+import { ProviderCard } from "../features/capture/integrations-provider";
+import {
+  MailSharingCard,
+  MailSharingPostureRow,
+} from "../features/capture/mail-sharing";
+import { OwnDomainsCard } from "../features/capture/own-domains";
+import { CompanyContextCard } from "../features/companies/company-context";
+import { OfferTemplatesAdmin } from "../features/deals/offertemplates";
+import { ProductsAdmin } from "../features/deals/products";
+import { ReviewTemplatesCard } from "../features/deals/reviewtemplates";
+import { ImportCard } from "../features/import/import";
+import { LinkedInImportCard } from "../features/import/linkedin-import";
+import {
+  LeadDisqualifyReasonsCard,
+  LeadHandlingCard,
+  LeadSourcesCard,
+} from "../features/leads/leadvocab";
 import { TagVocabularyCard } from "../features/lists/tagadmin";
+import { SignatureTemplateCard } from "../features/mail/signaturetemplatecard";
+import { InstallationSettingsCard } from "../features/sign-in/installation-settings";
+import { SignInMethodsCard } from "../features/sign-in/sign-in-methods";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
@@ -26,45 +61,15 @@ import { navigateReplacing, type Route } from "../lib/router";
 import { useMe } from "../lib/session";
 import { AccountSettings } from "./account-settings";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
-import { AiBudgetCard } from "./ai-admin";
-import { ModelPricesCard } from "./ai-price-sync";
-import { AiProviderKeysCard } from "./ai-provider-keys";
-import { AiRoutingCard } from "./ai-routing";
-import { AiTasksCard } from "./ai-tasks";
-import { AiCallsCard } from "./aicalls";
-import { AiUsageCard } from "./aiusage";
-import { BlockedDomainsCard } from "./blocked-domains";
-import { BriefDeliveryPanel } from "./briefdelivery";
-import { CaptureActivityTab } from "./capture-activity";
-import { OwnerIdentitiesCard } from "./capture-owner-identities";
-import { CaptureSettingsCard } from "./capture-settings";
-import { CompanyContextCard } from "./company-context";
 import { ConnectionOutcomesCard } from "./connection-outcomes";
-import { ConnectorsCard } from "./connectors";
-import { ConsumerMailDomainsCard } from "./consumer-mail-domains";
 import { CustomFieldsAdmin } from "./customfields";
 import { FinanceSourceCard } from "./financesource";
 import { FollowUpSettingsCard } from "./followupsettings";
-import { ImportCard } from "./import";
-import { InstallationSettingsCard } from "./installation-settings";
-import { ProviderCard } from "./integrations-provider";
 import { KnowledgeCard } from "./knowledge";
-import {
-  LeadDisqualifyReasonsCard,
-  LeadHandlingCard,
-  LeadSourcesCard,
-} from "./leadvocab";
 import { LicenseCard } from "./license";
-import { LinkedInImportCard } from "./linkedin-import";
-import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
-import { MeetingSettings } from "./meeting-settings";
 import { NotificationSettingsCard } from "./notification-settings";
-import { OfferTemplatesAdmin } from "./offertemplates";
-import { OwnDomainsCard } from "./own-domains";
-import { ProductsAdmin } from "./products";
 import { FxRatesCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
-import { ReviewTemplatesCard } from "./reviewtemplates";
 import { RolesSettings } from "./roles-settings";
 import { JurisdictionCard } from "./settings.jurisdiction";
 import { PipelinesCard } from "./settings.pipelines";
@@ -75,8 +80,6 @@ import { AgentToolsCard } from "./settings-agenttools";
 import { AuditLogCard } from "./settings-audit";
 import { AutonomyTiersCard } from "./settings-autonomytiers";
 import { PassportCard } from "./settings-passports";
-import { SignInMethodsCard } from "./sign-in-methods";
-import { SignatureTemplateCard } from "./signaturetemplatecard";
 import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
 import { VoiceDnaCard } from "./voice-dna";

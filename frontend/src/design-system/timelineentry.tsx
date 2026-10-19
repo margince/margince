@@ -10,7 +10,13 @@ import {
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { formatDate, formatNumber, formatTimeOfDay } from "../format/format";
-import { type Locale, translatePlural, useLocale, useT } from "../i18n";
+import {
+  type Locale,
+  translatePlural,
+  useLocale,
+  usePlural,
+  useT,
+} from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { Badge } from "./atoms";
 import type { ContactOn } from "./participants";
@@ -51,6 +57,7 @@ export type TimelineEntry = {
   title: string;
   atIso: string;
   provenance: Provenance;
+  commitmentReviewCount?: number;
   // A right-aligned per-row action slot (Reply / Relink). Absent on rows with
   // no affordance, which then draw no action slot.
   actions?: ReactNode;
@@ -313,4 +320,18 @@ export function groupCountLabel(group: TimelineGroup, locale: Locale): string {
   return translatePlural(locale, base, count, {
     count: formatNumber(count, locale),
   });
+}
+
+export function CommitmentReviewFlag({
+  count = 0,
+}: Readonly<{ count?: number }>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  return count > 0 ? (
+    <Badge tone="ai">
+      {plural("commitment.review.count", count, {
+        count: formatNumber(count, locale),
+      })}
+    </Badge>
+  ) : null;
 }

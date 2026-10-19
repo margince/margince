@@ -3,13 +3,9 @@
 
 package compose
 
-// A commitment read out of an email conversation, handed to the commitment
-// rule. Who made it is read from the message, never from the model: an
-// outbound message is ours and the colleague who sent it promised; an inbound
-// one is the customer's.
-
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -18,11 +14,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // extractKindCommitment is the event kind that goes to the commitment rule.
@@ -37,6 +34,9 @@ const maxExtractQuote = 300
 // word: the quote is what a reader checks the promise against, and a quote the
 // message does not contain is a promise nobody can check.
 func validateEventEvidence(event extractedEvent, thread settledThread) string {
+	if reason := validateRestatedEvidence(event, thread); reason != "" {
+		return reason
+	}
 	if !validProposedDueDate(event.DueDate) {
 		return fmt.Sprintf("an event states the due date %q, and a due date is YYYY-MM-DD or empty",
 			clampToken(event.DueDate))
@@ -54,6 +54,11 @@ func validateEventEvidence(event extractedEvent, thread settledThread) string {
 	for _, message := range thread.Messages {
 		if message.ID.String() != event.MessageID {
 			continue
+		}
+		if event.PromiserRef != "" {
+			if _, found := referencedPromiser(event.PromiserRef, message.Parties); !found {
+				return "a commitment names a promiser outside its verified message participants"
+			}
 		}
 		// The sender's own words, as dispatch reads them: a quote found only
 		// in the history the message quotes is not this sender's commitment.
@@ -110,21 +115,32 @@ func sentenceEnds(text string, i int) bool {
 // dispatchCommitment files one commitment from a conversation through the
 // commitment rule, and reports whether anything new came of it.
 func (x *SignalExtractor) dispatchCommitment(
-	ctx context.Context, tx pgx.Tx, thread settledThread, event extractedEvent, cited ids.UUID,
-) (bool, error) {
-	commitment, ok, err := x.emailCommitment(ctx, tx, thread, event, cited)
-	if err != nil || !ok {
-		return false, err
+	ctx context.Context, tx pgx.Tx, thread settledThread, event extractedEvent, cited ids.UUID, asOf time.Time,
+) (CommitmentOutcome, error) {
+	commitment, ok, err := x.emailCommitment(ctx, tx, thread, event, cited, asOf)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return CommitmentOutcome(activities.CommitmentSourceUnavailable), nil
 	}
-	outcome, _, err := x.dispatch.DispatchTx(ctx, tx, commitment, ids.NewV7())
-	return outcome != CommitmentRemembered, err
+	if err != nil || !ok {
+		return CommitmentRemembered, err
+	}
+	var outcome CommitmentOutcome
+	err = pgx.BeginFunc(ctx, tx, func(savepoint pgx.Tx) error {
+		var dispatchErr error
+		outcome, _, dispatchErr = x.dispatch.DispatchTx(ctx, savepoint, commitment, ids.NewV7())
+		return dispatchErr
+	})
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return CommitmentOutcome(activities.CommitmentSourceUnavailable), nil
+	}
+	return outcome, err
 }
 
 // emailCommitment names who made one commitment and to whom. It answers false
 // for a commitment nobody can be named for on the customer's side, because a
 // promise to watch with no contact to watch it on is filed nowhere.
 func (x *SignalExtractor) emailCommitment(
-	ctx context.Context, tx pgx.Tx, thread settledThread, event extractedEvent, cited ids.UUID,
+	ctx context.Context, tx pgx.Tx, thread settledThread, event extractedEvent, cited ids.UUID, asOf time.Time,
 ) (Commitment, bool, error) {
 	message, found := citedMessage(thread, cited)
 	// Only the words the sender wrote: a reply quoting our own promise back to
@@ -137,8 +153,11 @@ func (x *SignalExtractor) emailCommitment(
 	// that files: the reading ran outside it, and a conversation made private
 	// in between must not be filed as a shared one.
 	company, privateTo, offered, err := threadReaderNow(ctx, tx, thread.Key)
-	if err != nil || !offered {
+	if err != nil {
 		return Commitment{}, false, err
+	}
+	if !offered {
+		return Commitment{}, false, apperrors.ErrNotFound
 	}
 	thread.CompanyID, thread.PrivateTo = company, privateTo
 	parties, err := x.messages.PartiesOf(extractorContext(ctx, signalScanActor), tx, cited)
@@ -146,6 +165,8 @@ func (x *SignalExtractor) emailCommitment(
 		return Commitment{}, false, err
 	}
 	c := Commitment{
+		AsOf:             asOf,
+		ReadMessages:     fullyReadMessages(thread.Messages),
 		Extractor:        signalScanActor,
 		SourceActivityID: cited,
 		Summary:          event.Summary,
@@ -161,42 +182,13 @@ func (x *SignalExtractor) emailCommitment(
 		owner := thread.PrivateTo
 		c.PrivateTo = &owner
 	}
-	var kind, party string
-	switch message.Direction {
-	case string(crmcontracts.ActivityDirectionInbound):
-		sender, one := onlyOne(parties.SenderContacts)
-		if !one {
-			return Commitment{}, false, nil
-		}
-		contact := ids.From[ids.ContactKind](sender)
-		c.Theirs, kind, party = &contact, claimKindTheirs, "contact:"+sender.String()
-	case string(crmcontracts.ActivityDirectionOutbound):
-		kind, party = claimKindOurs, "us"
-		if seat, one := onlyOne(parties.SenderSeats); one {
-			c.Seat, party = &seat, "seat:"+seat.String()
-		}
-		if recipient, one := onlyOne(parties.RecipientContacts); one {
-			promisedTo := ids.From[ids.ContactKind](recipient)
-			c.PromisedTo = &promisedTo
-			c.Links = append(c.Links, activities.ActivityLinkInput{EntityType: string(recordTypeContact), EntityID: recipient})
-		}
-	default:
-		// Nobody recorded which side wrote it, and a promise attributed to the
-		// wrong side is worse than one not filed.
-		return Commitment{}, false, nil
-	}
-	c.Party = emailParty(message.Direction)
-	c.Body = fmt.Sprintf("%s in the email %q, sent %s.", c.Party, message.Subject, message.At.Format(time.DateOnly))
+	verified := verifiedCommitmentParties(parties)
+	kind, party := attributeCommitment(&c, event.PromiserRef, verified)
+	c.NeedsConfirmation = message.Direction != connector.DirectionOutbound || !commitmentPartyHasRole(verified, event.PromiserRef, commitmentSenderRole)
+	c.Body = fmt.Sprintf("Promiser: %s. Commitment in the email %q, sent %s.", c.Party, message.Subject, message.At.Format(time.DateOnly))
+	c.Span = span
 	c.Locator = commitmentLocator(cited, kind, party, span)
-	return c, true, nil
-}
-
-// emailParty names who made a promise in an email, as the task body says it.
-func emailParty(direction string) string {
-	if direction == string(crmcontracts.ActivityDirectionInbound) {
-		return "The customer committed to this"
-	}
-	return "We committed to this"
+	return x.withRestatedCommitment(ctx, tx, thread, event, c)
 }
 
 // citedMessage is the message of the conversation an event cites.
@@ -215,4 +207,14 @@ func onlyOne(list []ids.UUID) (ids.UUID, bool) {
 		return ids.UUID{}, false
 	}
 	return list[0], true
+}
+
+func fullyReadMessages(messages []threadMessage) []ids.UUID {
+	read := make([]ids.UUID, 0, len(messages))
+	for _, message := range messages {
+		if message.UnreadRunes == 0 || (message.QuotedRemainder && textlang.CurrentMessage(message.Body) != strings.TrimSpace(message.Body)) {
+			read = append(read, message.ID)
+		}
+	}
+	return read
 }

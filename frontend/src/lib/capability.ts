@@ -194,6 +194,26 @@ export function useRecordWriteRefusal(
 }
 
 /**
+ * Why this caller may not take a write verb, or undefined when they may.
+ *
+ * `useCanWrite` folds two refusals with different remedies: a read seat needs
+ * a full seat, a missing grant needs a role change. A sentence blaming the
+ * role for a seat sends the reader to the wrong fix, so each gets its own.
+ * The seat comes first: no grant lets a read seat write.
+ */
+export function useWriteRefusal(
+  object: RbacObject,
+  action: RbacAction,
+  reasons: Readonly<{ seat: string; grant: string }>,
+): string | undefined {
+  const granted = useCan(object, action);
+  if (!useCanMutate()) {
+    return reasons.seat;
+  }
+  return granted ? undefined : reasons.grant;
+}
+
+/**
  * Both axes, for a control whose request is an UPSERT — one endpoint that
  * inserts or replaces, so which grant it needs is not knowable until the server
  * has read the row.

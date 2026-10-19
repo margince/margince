@@ -1011,6 +1011,8 @@ export const vi = {
   "history.reversal.undoneBy": "{undoer} đã hoàn tác",
   "history.reversal.unpaired": "Hoàn tác một thay đổi trước đó",
   "history.edge.marker": "Liên kết",
+  "history.field.commitment_evidence_unavailable":
+    "Bằng chứng cam kết không còn khả dụng",
   "history.field.address": "Địa chỉ",
   "history.field.admission": "Kiểm tra đầu vào tên miền",
   "history.field.admission_reason": "Lý do kiểm tra đầu vào",
@@ -1025,6 +1027,14 @@ export const vi = {
   "history.field.corrected": "Đã sửa kết quả",
   "history.field.disposition": "Kết quả xử lý",
   "history.field.domain": "Tên miền",
+  "history.field.merged_from_id": "Gộp vào từ",
+  "history.field.merged_into_id": "Đã gộp vào",
+  "history.field.filled": "Các trường được điền thêm",
+  "history.field.relinked_emails": "Địa chỉ email đã chuyển sang",
+  "history.field.relinked_phones": "Số điện thoại đã chuyển sang",
+  "history.field.relinked_relationships": "Mối quan hệ đã chuyển sang",
+  "history.field.relinked_activity_links": "Liên kết hoạt động đã chuyển sang",
+  "history.mergedRecordUnnamed": "một bản ghi khác",
   "history.field.expected_arr_minor": "ARR dự kiến",
   "history.field.assignee_id": "Giao cho",
   "history.field.body": "Ghi chú",
@@ -2411,6 +2421,15 @@ export const vi = {
   "approval.field.connection_name": "Tên trên LinkedIn",
   "approval.field.connection_company": "Công ty trên LinkedIn",
   "approval.field.contact_name": "Liên hệ trong CRM",
+  "approval.responsibility.requestedFrom": "Người được yêu cầu quyết định",
+  "approval.commitment.promiser": "Người cam kết",
+  "approval.commitment.effect": "Khi phê duyệt",
+  "approval.commitment.unnamedColleague": "Tên đồng nghiệp không khả dụng",
+  "approval.commitment.unverifiedNamed": "Chưa xác minh: {name}",
+  "approval.commitment.unresolved": "Chưa xác định người cam kết",
+  "approval.commitment.assignNamed": "Tạo công việc giao cho {name}.",
+  "approval.commitment.assignDecider":
+    "Tạo công việc giao cho người phê duyệt.",
   "approval.field.owner": "Phụ trách",
   "approval.field.to": "Đến",
   "approval.field.currency": "Loại tiền",
@@ -2638,6 +2657,21 @@ export const vi = {
   "email.detail.cc": "Cc",
   "email.detail.filedUnder": "Xếp vào",
   "email.detail.when": "Thời gian gửi",
+  "commitment.review.count_one": "Cam kết cần xem lại: {count}",
+  "commitment.review.count_other": "Cam kết cần xem lại: {count}",
+  "commitment.review.title": "Xem lại cam kết",
+  "commitment.review.detail":
+    "Chưa tạo việc từ các kết quả này. Xem lại nguồn và phản hồi sau đó trước khi thêm việc tiếp theo từ hồ sơ liên kết.",
+  "commitment.review.historical": "Cam kết cũ không có hạn chót hiện tại.",
+  "commitment.review.incomplete":
+    "Chưa đọc hết các tin nhắn sau đó. Cam kết có thể đã được hoàn thành.",
+  "commitment.review.unknownDate": "Chưa xác minh được ngày của nguồn.",
+  "commitment.review.conflictingDates":
+    "Ngày trên thư khác với ngày thư đến hộp thư. Xem lại ngày gốc.",
+  "commitment.review.canceledMeeting": "Cuộc họp đã bị hủy.",
+  "commitment.review.pendingMeeting": "Cuộc họp chưa diễn ra.",
+  "commitment.review.unavailable": "Xem lại nguồn trước khi tạo việc.",
+  "commitment.review.evaluated": "Đã xem lại {when}",
   "activity.detail.loading": "Đang tải hoạt động…",
   "activity.detail.none": "Hoạt động này",
   "activity.detail.withheldReason": "Nội dung hoạt động bị giữ lại",
@@ -3598,6 +3632,11 @@ export const vi = {
   "recordRoles.renameTitle": "Đổi tên vai trò",
   "recordRoles.duplicate":
     "Đã có vai trò mang tên hoặc khóa này. Hãy chọn tên khác.",
+  "recordRoles.intro":
+    "Gán vai trò cho công ty, deal hoặc dự án để mọi đồng nghiệp biết nên hỏi ai về việc gì. Phụ trách hồ sơ không thay đổi. Vai trò có sẵn đi kèm Margince; vai trò tùy chỉnh được thêm tại đây.",
+  "recordRoles.colActive": "Đang bật",
+  "recordRoles.builtIn": "Có sẵn",
+  "recordRoles.custom": "Tùy chỉnh",
   "deal.acquisitionUnset": "Chưa chọn",
   "deal.acquisitionRetired": "(đã ngừng dùng)",
   "deal.waitUntil": "Chờ đến",
@@ -5032,12 +5071,10 @@ export const vi = {
   "analytics.field.direction": "Hướng",
   "analytics.field.forecast_category": "Danh mục dự báo",
   "analytics.field.host_user_id": "Chủ trì cuộc họp",
-  "analytics.field.key": "Mã dự án",
   "analytics.field.kind": "Loại hoạt động",
   "analytics.field.last_activity_at": "Hoạt động gần nhất",
   "analytics.field.lost_reason": "Lý do thua",
   "analytics.field.meeting_status": "Trạng thái cuộc họp",
-  "analytics.field.name": "Tên dự án",
   "analytics.field.open_commitments": "Cam kết đang mở",
   "analytics.field.open_deal_value_minor": "Giá trị deal đang mở",
   "analytics.field.overdue_commitments": "Cam kết quá hạn",
@@ -6111,6 +6148,8 @@ export const vi = {
     "Tin nhắn cần một kênh nên không thể nhập từ tệp. Dùng ghi chú hoặc email.",
   "import.reason.task_not_importable":
     "Việc cần làm sẽ nằm mở trong danh sách của chính bạn nên không được nhập. Dùng ghi chú.",
+  "import.reason.activity_empty":
+    "Ghi chú hoặc cuộc gọi cần có tiêu đề hoặc nội dung. Điền tiêu đề hoặc nội dung vào hàng này.",
   "import.reason.occurred_at_unnamed":
     "Nêu ngày hoạt động xảy ra, dạng YYYY-MM-DD hoặc kèm múi giờ.",
   "import.reason.timestamp_needs_zone":
@@ -6878,6 +6917,8 @@ export const vi = {
   "retention.scopeRawCapture": "Bản gốc tin nhắn đã lưu",
   "retention.scopeDealRiskDay": "Ghi nhận hằng ngày deal trọng yếu có rủi ro",
   "pipeline.new": "Pipeline mới",
+  "pipeline.createRefused":
+    "Vai trò của bạn không thể tạo pipeline. Liên hệ quản trị viên.",
   "pipeline.name": "Tên",
   "pipeline.default": "Mặc định",
   "pipeline.notDefault": "Không mặc định",
@@ -6915,6 +6956,8 @@ export const vi = {
     "Không thể lưu thứ tự. Một thành viên khác đã đổi thứ tự trước, nên đang hiển thị thứ tự mới nhất.",
   "pipeline.orderNotSaved": "Không thể lưu thứ tự. Thử lại hoặc tải lại trang.",
   "stage.new": "Giai đoạn mới",
+  "stage.createRefused":
+    "Vai trò của bạn không thể thêm giai đoạn. Liên hệ quản trị viên.",
   "stage.edit": "Sửa giai đoạn",
   "stage.name": "Tên",
   "stage.semantic": "Loại giai đoạn",
@@ -8911,7 +8954,7 @@ export const vi = {
   "cf.edit": "Sửa nhãn",
   "cf.archive": "Chuyển trường vào kho lưu trữ",
   "cf.archived":
-    "Đã chuyển “{label}” vào kho lưu trữ. Trường bị ẩn khỏi hồ sơ mới, vẫn giữ trong nhật ký hoạt động và lịch sử, và có thể khôi phục.",
+    "Đã chuyển “{label}” vào kho lưu trữ. Trường bị ẩn khỏi hồ sơ mới, vẫn giữ trong nhật ký hoạt động và lịch sử. Không thể hoàn tác việc lưu trữ.",
   "cf.renamePrompt": "Nhãn mới",
   "cf.renamed": "Đã đổi tên thành “{label}”",
   "cf.audit.title": "Thay đổi trường gần đây",
@@ -8922,7 +8965,7 @@ export const vi = {
   "cf.retired": "Đã ngừng dùng",
   "cf.retire.title": "Chuyển “{label}” vào kho lưu trữ?",
   "cf.retire.body":
-    "Trường sẽ bị ẩn khỏi hồ sơ mới và bộ lọc. Giá trị đã lưu vẫn được giữ.",
+    "Trường sẽ bị ẩn khỏi hồ sơ mới và bộ lọc. Giá trị đã lưu vẫn được giữ. Không thể hoàn tác việc lưu trữ.",
   "cf.retire.lists":
     "Các danh sách động này lọc theo trường này. Các danh sách này vẫn hoạt động với giá trị đã lưu, và mỗi danh sách sẽ nhắc thành viên phụ trách thay điều kiện lọc:",
   "cf.retire.unseen_one":
@@ -8980,7 +9023,7 @@ export const vi = {
     "Các giai đoạn deal đi qua, áp dụng cho cả công ty.",
   "settings.page.acquisition.sub": "Các kênh kinh doanh mà deal có thể quy về.",
   "settings.page.recordroles.sub":
-    "Những gì một đồng nghiệp hoặc nhóm có thể phụ trách trên một hồ sơ. Không cấp quyền truy cập.",
+    "Những gì một đồng nghiệp hoặc nhóm lo trên một hồ sơ, ví dụ quản lý khách hàng. Vai trò không cấp quyền truy cập; quyền sửa đến từ phụ trách hồ sơ và việc chia sẻ.",
   "settings.page.leads.sub":
     "Nguồn lead, lý do loại lead và thời gian phản hồi đầu tiên.",
   "settings.page.fields.sub":
@@ -9020,6 +9063,8 @@ export const vi = {
   "settings.readOnlyPageTitle": "Cài đặt chỉ đọc",
   "settings.readOnlyPage":
     "Vai trò hiện tại không có quyền thay đổi các cài đặt này.",
+  "settings.seatRefused":
+    "Tài khoản của bạn chỉ có quyền xem. Liên hệ quản trị viên để được cấp tài khoản đầy đủ quyền.",
   "settings.saveFailed": "Không thể lưu thay đổi",
   "settings.mintFailed": "Không thể tạo passport",
   "settings.search.label": "Tìm cài đặt",

@@ -45,6 +45,7 @@ import { CUSTOM_SCREEN } from "./app/custom";
 import { opensReservedPage } from "./app/nav";
 import { UnsavedGuard } from "./components/unsaved";
 import { isContactTab } from "./features/contacts/contacttab";
+import { RESET_ROUTE } from "./features/sign-in/auth";
 import { EXTENSION_SCREEN } from "./lib/extensions";
 import {
   navigate,
@@ -53,7 +54,6 @@ import {
   routeIdentity,
   type Screen,
 } from "./lib/router";
-import { RESET_ROUTE } from "./screens/auth";
 import { OnboardingScreen } from "./screens/onboarding";
 
 // The path segments below the screen. Only two of the four are dispatched on.

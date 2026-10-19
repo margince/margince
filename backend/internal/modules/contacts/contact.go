@@ -91,7 +91,7 @@ func (s *Store) CreateContact(ctx context.Context, in CreateContactInput) (crmco
 	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	by, err := s.readyContactCreate(ctx, in)
+	by, err := s.readyContactCreate(ctx, &in)
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
@@ -125,7 +125,7 @@ func (s *Store) CreateContactTx(ctx context.Context, tx pgx.Tx, in CreateContact
 	if err := refuseUncataloguedCustomFields(in.CustomFields, cols); err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	by, err := s.readyContactCreate(ctx, in)
+	by, err := s.readyContactCreate(ctx, &in)
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
@@ -136,10 +136,15 @@ func (s *Store) CreateContactTx(ctx context.Context, tx pgx.Tx, in CreateContact
 // the contact parse and the captured-by resolution — and answers the
 // attribution the write shape stamps. Both entry points call it, so neither
 // can drift from the other's validation.
-func (s *Store) readyContactCreate(ctx context.Context, in CreateContactInput) (string, error) {
+func (s *Store) readyContactCreate(ctx context.Context, in *CreateContactInput) (string, error) {
 	if err := parseContactContacts(in.Emails, in.Phones); err != nil {
 		return "", err
 	}
+	address, err := checkedAddress(in.Address)
+	if err != nil {
+		return "", err
+	}
+	in.Address = address
 	return storekit.CapturedBy(ctx)
 }
 

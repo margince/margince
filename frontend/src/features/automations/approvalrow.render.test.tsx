@@ -14,10 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import {
-  isPreviewDoor,
-  refusedPreview,
-} from "../../screens/sendpermission.testkit";
+import { isPreviewDoor, refusedPreview } from "../mail/sendpermission.testkit";
 import { ApprovalRow } from "./approvalrow";
 import type { Approval } from "./approvals.queries";
 

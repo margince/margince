@@ -290,7 +290,7 @@ describe("focus", () => {
       // One marks a refused field on the sign-in surface, which is a
       // different fact from where the keyboard is.
       "src/design-system/composed.css: outline: 2px dashed var(--accent)",
-      "src/screens/auth.css: outline: 2px solid var(--danger)",
+      "src/features/sign-in/auth.css: outline: 2px solid var(--danger)",
       "src/screens/onboarding-conversation/conversation.css: outline: 2px dashed var(--aiMed)",
     ]);
   });

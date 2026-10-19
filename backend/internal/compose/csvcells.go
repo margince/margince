@@ -293,6 +293,11 @@ func unwritableReason(object string, fields map[string]string) *cellProblem {
 	if problem := tagCellProblem(fields[csvTargetTags]); problem != nil {
 		return problem
 	}
+	if object == migration.ObjectContact || object == migration.ObjectCompany {
+		if problem := countryCellProblem(fields); problem != nil {
+			return problem
+		}
+	}
 	if object == migration.ObjectContact || object == migration.ObjectLead {
 		// Both stores parse the address before the write and refuse a malformed one.
 		email := strings.TrimSpace(fields[fieldEmail])
@@ -323,6 +328,19 @@ func unwritableReason(object string, fields map[string]string) *cellProblem {
 	}
 	return problemOf(fieldSizeBand, fields[fieldSizeBand], migration.Why(migration.ReasonSizeBandInvalid,
 		"value", fields[fieldSizeBand], "allowed", strings.Join(sizeBandVocabulary(), ", ")))
+}
+
+// countryCellProblem refuses an address country the stores would refuse, by the
+// store's own rule, so the preview and the commit agree on the cell.
+func countryCellProblem(fields map[string]string) *cellProblem {
+	raw := fields[fieldAddressCountry]
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	if _, err := contacts.NormalizeCountryCode(raw); err != nil {
+		return problemOf(fieldAddressCountry, raw, migration.Why(migration.ReasonValueRefused, "value", raw, "detail", err.Error()))
+	}
+	return nil
 }
 
 // importableSizeBands is the closed size_band vocabulary, off the contract.

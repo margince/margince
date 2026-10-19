@@ -127,7 +127,7 @@ const maxRecordDuration = 10 * time.Second
 //
 // aiRetentionStages adds the engine-owned AI stores, which batch the same way,
 // and restrictionExpiryStages the erasure of held records whose window closed.
-var MaxPassDuration = time.Duration(len(retentionSelectors)+aiRetentionStages+restrictionExpiryStages) *
+var MaxPassDuration = time.Duration(len(retentionSelectors)+aiRetentionStages+restrictionExpiryStages+heldCommitmentStages) *
 	(retentionBatch * maxRecordDuration)
 
 // embedCallRetention bounds how long an embedding-kind ai_call trace row
@@ -313,6 +313,9 @@ func (s *RetentionService) EvaluateInstallation(ctx context.Context) error {
 	// an Art. 17 request the engine suspended, and completing it is not a
 	// storage-limitation policy the operator may decline (retentionrestricted.go).
 	if err := s.evaluateRestrictionExpiry(ctx); err != nil {
+		return err
+	}
+	if err := s.evaluateHeldCommitments(ctx); err != nil {
 		return err
 	}
 	retainOnly, err := s.retainOnly(ctx)

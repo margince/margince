@@ -1010,6 +1010,8 @@ export const en = {
   "history.reversal.undoneBy": "Undone by {undoer}",
   "history.reversal.unpaired": "Undoes an earlier change",
   "history.edge.marker": "Link",
+  "history.field.commitment_evidence_unavailable":
+    "Commitment evidence unavailable",
   "history.field.address": "Address",
   "history.field.admission": "Domain intake check",
   "history.field.admission_reason": "Intake check reason",
@@ -1024,6 +1026,14 @@ export const en = {
   "history.field.corrected": "Result corrected",
   "history.field.disposition": "Disposition",
   "history.field.domain": "Domain",
+  "history.field.merged_from_id": "Merged in from",
+  "history.field.merged_into_id": "Merged into",
+  "history.field.filled": "Fields filled in",
+  "history.field.relinked_emails": "Email addresses moved over",
+  "history.field.relinked_phones": "Phone numbers moved over",
+  "history.field.relinked_relationships": "Relationships moved over",
+  "history.field.relinked_activity_links": "Activity links moved over",
+  "history.mergedRecordUnnamed": "another record",
   "history.field.expected_arr_minor": "Expected ARR",
   "history.field.assignee_id": "Assignee",
   "history.field.body": "Notes",
@@ -2513,6 +2523,15 @@ export const en = {
   "approval.field.connection_name": "Name on LinkedIn",
   "approval.field.connection_company": "Company on LinkedIn",
   "approval.field.contact_name": "Contact in CRM",
+  "approval.responsibility.requestedFrom": "Decision requested from",
+  "approval.commitment.promiser": "Promised by",
+  "approval.commitment.effect": "On approval",
+  "approval.commitment.unnamedColleague": "Colleague name unavailable",
+  "approval.commitment.unverifiedNamed": "Unverified: {name}",
+  "approval.commitment.unresolved": "Promiser unresolved",
+  "approval.commitment.assignNamed": "Creates a task assigned to {name}.",
+  "approval.commitment.assignDecider":
+    "Creates a task assigned to the person who approves.",
   "approval.field.owner": "Owner",
   "approval.field.to": "To",
   "approval.field.currency": "Currency",
@@ -2748,6 +2767,23 @@ export const en = {
   "email.detail.cc": "Cc",
   "email.detail.filedUnder": "Filed under",
   "email.detail.when": "Sent",
+  "commitment.review.count_one": "Commitment to review: {count}",
+  "commitment.review.count_other": "Commitments to review: {count}",
+  "commitment.review.title": "Commitment review",
+  "commitment.review.detail":
+    "No task was created from these readings. Review the source and later replies before adding a follow-up from a linked record.",
+  "commitment.review.historical":
+    "Historical commitment without a current deadline.",
+  "commitment.review.incomplete":
+    "Later messages were not fully read. The commitment may already be fulfilled.",
+  "commitment.review.unknownDate": "The source date could not be verified.",
+  "commitment.review.conflictingDates":
+    "The message date and mailbox arrival disagree. Review the original dates.",
+  "commitment.review.canceledMeeting": "The meeting was canceled.",
+  "commitment.review.pendingMeeting": "The meeting has not taken place yet.",
+  "commitment.review.unavailable":
+    "The source needs review before creating work.",
+  "commitment.review.evaluated": "Reviewed {when}",
   "activity.detail.loading": "Loading activity…",
   "activity.detail.none": "This activity",
   "activity.detail.withheldReason": "Activity content is withheld",
@@ -3662,12 +3698,12 @@ export const en = {
   "deal.expectedArr": "Expected ARR",
 
   "deal.monthlyApproximate": "approx.",
-  "assignments.title": "Responsible",
+  "assignments.title": "Responsibilities",
   "assignments.noAccessNote":
-    "Records who is accountable. It does not grant access to this record.",
+    "Records who looks after what. It does not grant access to this record.",
   "assignments.empty": "No one is assigned yet",
   "assignments.emptyDetail":
-    "Assign a colleague or a team to record who is accountable for this work.",
+    "Assign a colleague or a team to record who looks after this work.",
   "assignments.roleRetired": "(retired role)",
   "assignments.teamSuffix": "(team)",
   "assignments.subjectInactive": "(inactive)",
@@ -3695,7 +3731,7 @@ export const en = {
   "recordRoles.assigneeKinds": "Can be assigned to",
   "recordRoles.addLabel": "Name",
   "recordRoles.addHint":
-    "What the responsible party is accountable for, in plain words.",
+    "What the holder looks after, in plain words, for example Technical contact.",
   "recordRoles.addConfirm": "Add role",
   "recordRoles.activeFor": "{label} can be newly assigned",
   "recordRoles.colRole": "Role",
@@ -3709,6 +3745,11 @@ export const en = {
   "recordRoles.renameTitle": "Rename role",
   "recordRoles.duplicate":
     "A role with this name or key already exists. Choose another name.",
+  "recordRoles.intro":
+    "Put a role on a company, deal or project so everyone knows whom to ask about what. The owner stays responsible for the record. Built-in roles ship with Margince; custom roles were added in this installation.",
+  "recordRoles.colActive": "Active",
+  "recordRoles.builtIn": "Built-in",
+  "recordRoles.custom": "Custom",
   "deal.acquisitionUnset": "Not set",
   "deal.acquisitionRetired": "(retired)",
   "deal.waitUntil": "Wait until",
@@ -5218,12 +5259,10 @@ export const en = {
   "analytics.field.direction": "Direction",
   "analytics.field.forecast_category": "Forecast category",
   "analytics.field.host_user_id": "Meeting host",
-  "analytics.field.key": "Project key",
   "analytics.field.kind": "Activity type",
   "analytics.field.last_activity_at": "Last activity",
   "analytics.field.lost_reason": "Lost reason",
   "analytics.field.meeting_status": "Meeting status",
-  "analytics.field.name": "Project name",
   "analytics.field.open_commitments": "Open commitments",
   "analytics.field.open_deal_value_minor": "Open deal value",
   "analytics.field.overdue_commitments": "Overdue commitments",
@@ -6378,6 +6417,8 @@ export const en = {
     "A message needs a channel, so it cannot be imported from a file. Use a note or an email instead.",
   "import.reason.task_not_importable":
     "A task would land open on your own list, so it is not imported. Use a note instead.",
+  "import.reason.activity_empty":
+    "A note or a call needs a subject or a body. Fill one of them in this row.",
   "import.reason.occurred_at_unnamed":
     "Give the day the activity happened, as YYYY-MM-DD or with its time zone.",
   "import.reason.timestamp_needs_zone":
@@ -7146,6 +7187,7 @@ export const en = {
   "retention.scopeRawCapture": "Stored message originals",
   "retention.scopeDealRiskDay": "Daily record of material deals at risk",
   "pipeline.new": "New pipeline",
+  "pipeline.createRefused": "Your role cannot create pipelines. Ask an admin.",
   "pipeline.name": "Name",
   "pipeline.default": "Default",
   "pipeline.notDefault": "Not default",
@@ -7183,6 +7225,7 @@ export const en = {
     "Order not saved. Someone else changed it first, so the latest order is shown.",
   "pipeline.orderNotSaved": "Order not saved. Retry, or reload the page.",
   "stage.new": "New stage",
+  "stage.createRefused": "Your role cannot add stages. Ask an admin.",
   "stage.edit": "Edit stage",
   "stage.name": "Name",
   "stage.semantic": "Stage type",
@@ -9245,7 +9288,7 @@ export const en = {
   "cf.edit": "Edit label",
   "cf.archive": "Archive field",
   "cf.archived":
-    "“{label}” archived. It is hidden from new records, kept in audit and history, and can be restored.",
+    "“{label}” archived. It is hidden from new records and kept in audit and history. Archiving cannot be undone.",
   "cf.renamePrompt": "New label",
   "cf.renamed": "Renamed to “{label}”",
   "cf.audit.title": "Recent field changes",
@@ -9256,7 +9299,7 @@ export const en = {
   "cf.retired": "Retired",
   "cf.retire.title": "Archive “{label}”?",
   "cf.retire.body":
-    "It is hidden from new records and filters. The values already stored are kept.",
+    "It is hidden from new records and filters. The values already stored are kept. Archiving cannot be undone.",
   "cf.retire.lists":
     "These Live Lists filter on it. They keep working on the stored values, and each asks its steward to replace the clause:",
   "cf.retire.unseen_one":
@@ -9321,7 +9364,7 @@ export const en = {
   "settings.page.acquisition.sub":
     "Business channels a deal can be attributed to.",
   "settings.page.recordroles.sub":
-    "What a colleague or team can be responsible for on a record. Grants no access.",
+    "Labels for what a colleague or team looks after on a record, such as account manager. A role grants no access; the owner and sharing decide who can edit.",
   "settings.page.leads.sub":
     "Where leads come from, why they are disqualified, and how fast they get a first reply.",
   "settings.page.fields.sub":
@@ -9359,6 +9402,8 @@ export const en = {
     "Settings on this page affect different people; each one states which.",
   "settings.readOnlyPageTitle": "Read-only settings",
   "settings.readOnlyPage": "Your role cannot change these settings.",
+  "settings.seatRefused":
+    "Your seat is read-only. Ask an admin for a full seat.",
   "settings.saveFailed": "Change not saved",
   "settings.mintFailed": "Passport not created",
   "settings.search.label": "Search settings",
@@ -14396,8 +14441,8 @@ export const en = {
 
   // The machinery's receipt on Home: what ran while the reader was away, in
   // four lanes. The `magic.action.*` and `magic.consequence.*` families are
-  // the client half of a mirror the server sends keys against, so the set is
-  // the contract rather than one screen's copy (src/screens/magic.keys.ts).
+  // the client half of a mirror the server sends keys against. So the set is
+  // the contract (src/features/sign-in/magic.keys.ts), not one screen's copy.
   "magic.window.label": "Show",
   "magic.window.brief": "Since my last brief",
   "magic.window.week": "Last 7 days",

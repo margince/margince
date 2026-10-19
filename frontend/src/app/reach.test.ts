@@ -313,15 +313,14 @@ function doorsIn(
  * refuses a ceiling it cannot statically fold, correctly, since one no reader
  * can evaluate is one no reader can audit.
  *
- * 40ms a file is an order of magnitude over the local measurement, matching the
- * allowance the plural gate arrived at empirically on the same corpus with the
- * same parser. 1400 files is that gate's budgeted corpus too, chosen against
- * this tree's merge rate; the corpus is asserted in the body rather than read
- * into the constant, so outgrowing it fails by name and count instead of
- * returning as an opaque timeout.
+ * 40ms a file is an order of magnitude over the local measurement. The plural
+ * gate measured the same allowance on the same corpus with the same parser.
+ * The body asserts the corpus size, so outgrowing it fails by name and count
+ * instead of as an opaque timeout.
  */
 const PARSE_BUDGET_PER_FILE_MS = 40;
-const BUDGETED_CORPUS_FILES = 1_500;
+// Headroom for the file-length splits, which turn one long module into several.
+const BUDGETED_CORPUS_FILES = 2_500;
 const SCAN_TIMEOUT_MS = BUDGETED_CORPUS_FILES * PARSE_BUDGET_PER_FILE_MS;
 
 describe("every screen has a door", () => {

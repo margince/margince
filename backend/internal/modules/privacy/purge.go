@@ -221,7 +221,7 @@ func (s *RetentionService) anonymiseOneContact(
 			return err
 		}
 		anonymised = true
-		if err := anonymizeContactRecord(ctx, tx, id, s.eraser.payloads); err != nil {
+		if err := anonymizeContactRecord(ctx, tx, id, s.eraser); err != nil {
 			return err
 		}
 		// The verb spelled as a literal, not through the constant: the audit

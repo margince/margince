@@ -97,6 +97,10 @@ func sqlLiterals(t *testing.T, path string) []string {
 // sweep satisfy "Art. 17 reaches this table" is exactly the confusion this test
 // exists to prevent.
 var erasureCascadeFiles = []string{
+	"internal/modules/privacy/commitmentlegacy.go",
+	"internal/modules/privacy/activityerase.go",
+	"internal/modules/privacy/commitmenterasure.go",
+	"internal/modules/privacy/activitycontenterasure.go",
 	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/erasure.go",
 	// The per-reader brief cache, which both acts purge: the row holds
@@ -228,6 +232,7 @@ var reachedButNotCascade = gatekit.Waive(map[string]string{
 // failure mode a glob buys here, and it is the one with no failing assertion
 // to notice it.
 var retentionSweepFiles = []string{
+	"internal/modules/privacy/commitmenterasure.go",
 	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/retention.go",
 	"internal/modules/privacy/retentionai.go",

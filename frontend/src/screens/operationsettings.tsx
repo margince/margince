@@ -8,6 +8,7 @@ import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { SettingList } from "../design-system/settingrow";
+import { useUpdateInstallationSettings } from "../features/sign-in/installation-settings";
 import { boundsText } from "../format/bounds";
 import { formatNumber } from "../format/format";
 import { formatInterval } from "../format/interval";
@@ -15,7 +16,6 @@ import { useLocale, usePlural, useT, type Words } from "../i18n";
 import { useCan, useCanWrite } from "../lib/capability";
 import { problemMessageOf } from "../lib/problem";
 import { useInstallationSettings } from "../lib/uploadlimit";
-import { useUpdateInstallationSettings } from "./installation-settings";
 
 type Operations = components["schemas"]["OperationSettings"];
 

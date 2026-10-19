@@ -14,7 +14,7 @@ import {
   profileLabel,
   profileTone,
   useProviderConnections,
-} from "../../screens/provider-status";
+} from "../capture/provider-status";
 // What a licensed data provider was PAID to tell us about this contact
 // (ADR-0101), shown BESIDE the canonical record and never folded into it.
 //

@@ -139,7 +139,8 @@ type SARPackage struct {
 	// is entitled to know what we decided their message meant, and here that
 	// decision can be an outstanding obligation TO them, which is a thing held
 	// about somebody that they would have no other way to discover.
-	RequestSettlements []map[string]any `json:"request_settlements"`
+	RequestSettlements   []map[string]any `json:"request_settlements"`
+	CommitmentAdmissions []map[string]any `json:"commitment_admissions"`
 	// StageEvidence is what a model or a record concluded about a deal from the
 	// subject's messages. It carries the quoted words, whether they agreed or
 	// proposed, and how sure the writer was. Owed on ReplyJudgements' ground, because it

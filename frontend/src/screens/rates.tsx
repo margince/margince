@@ -19,6 +19,7 @@ import {
   QueryStates,
   WriteRefused,
 } from "../design-system/querystates";
+import { providerName } from "../features/ai/ai-provider-names";
 import { today } from "../format/calendarday";
 import { forReader } from "../format/collate";
 import { formatDate, formatUsdPerMTok } from "../format/format";
@@ -27,7 +28,6 @@ import { useLocale, useT } from "../i18n";
 import { useCan, useCanUpsert } from "../lib/capability";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
-import { providerName } from "./ai-provider-names";
 import { isPricedProvider } from "./rate-manual";
 import { RefreshFromSources } from "./rate-refresh";
 import "./rates.css";

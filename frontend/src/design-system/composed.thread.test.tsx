@@ -3,6 +3,7 @@ import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
+import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { GroupedTimelineList } from "./timeline";
 import type { TimelineEntry, TimelineGroup } from "./timelineentry";
@@ -282,4 +283,21 @@ describe("a row's place on the axis", () => {
     // newest member's day, and an older member may be from another.
     expect(screen.getByText("27/08/2026 08:15")).toBeTruthy();
   });
+});
+
+it("shows commitment review counts on a thread without exposing private readings", () => {
+  render(
+    <GroupedTimelineList
+      zone={viewerZone()}
+      groups={[
+        thread([
+          entry({ id: "visible", commitmentReviewCount: 2 }),
+          entry({ id: "private", withheld: true, commitmentReviewCount: 7 }),
+        ]),
+      ]}
+    />,
+  );
+  expect(screen.getAllByText("Commitments to review: 2")).toHaveLength(2);
+  expect(screen.queryByText("Commitments to review: 7")).toBeNull();
+  expect(screen.queryByText("Commitments to review: 9")).toBeNull();
 });

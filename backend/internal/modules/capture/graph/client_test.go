@@ -246,7 +246,7 @@ func TestDeltaInitWalksPagesFiltersTombstonesAndReturnsDeltaLink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DeltaInit: %v", err)
 	}
-	if strings.Join(ids, ",") != "m1,m2" {
+	if strings.Join(messageIDs(ids), ",") != "m1,m2" {
 		t.Errorf("ids = %v, want [m1 m2] across both pages", ids)
 	}
 	if !strings.Contains(delta, "%24deltatoken=d1") && !strings.Contains(delta, "$deltatoken=d1") {
@@ -261,7 +261,7 @@ func TestDeltaResumeCollectsAddedAndReportsRemoved(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Delta: %v", err)
 	}
-	if strings.Join(ids, ",") != "m3" {
+	if strings.Join(messageIDs(ids), ",") != "m3" {
 		t.Errorf("ids = %v, want [m3] (the tombstoned entry is not fetched)", ids)
 	}
 	// The tombstone travels its OWN way rather than being dropped. A @removed
@@ -703,7 +703,7 @@ func TestAnEntryOutsideTheWindowIsStillReturnedToBeFetched(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DeltaInit: %v", err)
 	}
-	if strings.Join(ids, ",") != "in-window,changed-old-message" {
+	if strings.Join(messageIDs(ids), ",") != "in-window,changed-old-message" {
 		t.Errorf("ids = %v, want both — a message the round named is a message to fetch", ids)
 	}
 }

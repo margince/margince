@@ -4,9 +4,12 @@ import type { Dispatch } from "react";
 import { useCallback } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import {
+  companySaveMessage,
+  storeCompany,
+} from "../../features/sign-in/installationcompany";
 import type { useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
-import { companySaveMessage, storeCompany } from "../installationcompany";
 import type { CompanyDraft, CompanyForm } from "../onboarding";
 import type { ConfirmRefusal } from "./artifact";
 import type { ClarifyAnswer } from "./company-proposal";

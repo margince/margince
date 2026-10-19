@@ -2,6 +2,7 @@ import { formatDate } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { humanizeKind } from "./approvalkind";
+import { commitmentResponsibility } from "./approvalresponsibility";
 
 // What a reader SEES of a staged proposal, per kind.
 //
@@ -389,6 +390,8 @@ export function resolveDisplay(
   change: Readonly<Record<string, unknown>>,
   t: Translator,
   formatDay: (value: string) => string,
+  names: ReadonlyMap<string, string> = new Map(),
+  requestedDecider?: string | null,
 ): readonly ResolvedDisplayField[] {
   const resolved = displayFields(kind).map((entry) => ({
     field: entry.field,
@@ -402,7 +405,24 @@ export function resolveDisplay(
     lead: entry.lead,
   }));
   const byField = new Map(resolved.map((entry) => [entry.field, entry]));
-  return resolved.filter((entry) => {
+  const fields =
+    kind === "commitment_task"
+      ? [
+          ...resolved.filter((entry) => entry.field !== "party"),
+          ...commitmentResponsibility(change, names, t),
+        ]
+      : resolved;
+  if (requestedDecider) {
+    fields.push({
+      field: "requested_decider",
+      label: t("approval.responsibility.requestedFrom"),
+      value:
+        names.get(requestedDecider) ??
+        t("approval.commitment.unnamedColleague"),
+      lead: undefined,
+    });
+  }
+  return fields.filter((entry) => {
     const supersedes = supersededBy.get(entry.field);
     if (supersedes === undefined) {
       return true;

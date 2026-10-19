@@ -15,8 +15,8 @@ import { hashWithParams, type UrlParams } from "./urlstate";
 // Four members are also spelled as a named constant elsewhere, because the
 // module that owns the route owns the name. `ext` is lib/extensions.ts's
 // EXTENSION_SCREEN, `x` is app/custom.ts's CUSTOM_SCREEN, `reset-password` is
-// screens/auth.tsx's RESET_ROUTE, and `scheduled` is
-// screens/scheduledsends.tsx's SCHEDULED_SCREEN. All four are literal types
+// features/sign-in/auth.tsx's RESET_ROUTE, and `scheduled` is
+// features/mail/scheduledsends.tsx's SCHEDULED_SCREEN. All four are literal types
 // used where a `Screen` is expected, so a rename there stops compiling here
 // rather than drifting.
 //
@@ -324,9 +324,9 @@ const HASH_CREDENTIALS: ReadonlyArray<{ screen: Screen; param: string }> = [
   // The Deal Room's buyer invitation: `#/room?c=<credential>`.
   { screen: "room", param: "c" },
   // The emailed password reset: `#/reset-password?token=<token>`. The screen
-  // name is screens/auth.tsx's RESET_ROUTE, spelled as the literal here for the
-  // same reason SCREENS above spells it — importing a screen from the router
-  // would be a cycle, and the `Screen` type still fails a rename.
+  // name is RESET_ROUTE in features/sign-in/auth.tsx, spelled as a literal here
+  // as SCREENS above spells it. Importing a screen from the router would be a
+  // cycle, and the `Screen` type still fails a rename.
   { screen: "reset-password", param: "token" },
 ];
 

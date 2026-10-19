@@ -105,7 +105,7 @@ func (s *Store) OpenCommitmentsForCompany(
 // theirPromiseOpen is a commitment the customer made that nobody has settled
 // yet. A disputed one (needs_review) is left out, as the project read leaves
 // it out, because stating a contested promise as owed states it as a fact.
-const theirPromiseOpen = `c.kind = 'commitment_theirs' AND c.status = 'open' AND NOT c.needs_review`
+const theirPromiseOpen = `c.kind = 'commitment_theirs' AND c.status = 'open' AND NOT c.needs_review AND ` + currentCommitmentAdmission
 
 // OpenTheirCommitmentsForCompany reads the open commitments the contacts
 // currently employed at one account made to us: what the deal page watches.
@@ -130,7 +130,7 @@ func openCompanyClaims(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	companyPos := arg(companyID)
-	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+	activityScope, err := claimContentClause(ctx, arg)
 	if err != nil {
 		return nil, false, err
 	}
@@ -298,7 +298,7 @@ func (s *Store) OpenCommitmentsAcrossWorkspace(
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+	activityScope, err := claimContentClause(ctx, arg)
 	if err != nil {
 		return nil, false, err
 	}
@@ -370,7 +370,7 @@ func (s *Store) CountAccountCommitments(ctx context.Context, tx pgx.Tx, companyI
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	companyPos := arg(companyID)
-	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+	activityScope, err := claimContentClause(ctx, arg)
 	if err != nil {
 		return 0, false, err
 	}

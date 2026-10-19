@@ -7,10 +7,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { AccountMenu } from "../app/account";
 import { pickOption } from "../design-system/select-testing";
+import { allowance } from "../features/ai/ai-admin.testkit";
+import { SIGN_OFF_QUERY } from "../features/mail/composesignoff";
 import { LOCALES, localeNameKey, translate } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
-import { allowance } from "./ai-admin.testkit";
-import { SIGN_OFF_QUERY } from "./composesignoff";
 import { SettingsScreen, tabContent } from "./settings";
 import {
   auditEntry,

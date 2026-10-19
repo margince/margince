@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useCompanyContextCapabilities } from "./company-context";
+import { useCompanyContextCapabilities } from "../features/companies/company-context";
 import { useOnboardingProgress } from "./onboarding";
 
 // The second half of the onboarding gate, for a DESCRIBED installation: a

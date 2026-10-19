@@ -37,7 +37,7 @@ for the frontend; the agent surface follows the same rule. Three things follow:
 
 The first raw call is the LinkedIn `Connections.csv` file send. It is a
 **`/v1` call the typed client cannot make**: the client cannot build a
-`multipart` body. Its file (`screens/linkedin-import.tsx`) says so in place, and a new exception of that kind
+`multipart` body. Its file (`features/import/linkedin-import.tsx`) says so in place, and a new exception of that kind
 needs the same note. The other raw call is `features/automations/connected-agents.tsx`
 reading `/.well-known/oauth-protected-resource`. That is **not a `/v1` route**,
 so the typed client does not carry it.
