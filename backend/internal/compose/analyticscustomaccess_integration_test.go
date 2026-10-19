@@ -106,7 +106,7 @@ func totalCount(t *testing.T, answer AnalyticsAnswer) int {
 }
 
 // A filter on a custom field that leaves out fewer deals than the floor is
-// refused. Beside the unfiltered answer it would describe those deals exactly.
+// refused. Set beside the unfiltered answer, it would describe those deals.
 func TestACustomFieldFilterThatSeparatesOutTooFewDealsIsRefused(t *testing.T) {
 	e := integration.Setup(t)
 	fixture := territoryDeals(t, e)
