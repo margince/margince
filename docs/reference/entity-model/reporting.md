@@ -6,13 +6,14 @@ The 10 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 ## report_definition
 
-9 columns · primary key `(id)` · referenced by 2 foreign keys
+10 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid` | yes | Primary key. |
 | `audience` | `text` | yes | One of `private`, `team`, `workspace`. |
 | `audience_team_id` | `uuid` |  | Points at `team.id`. |
+| `draft_revision` | `bigint` |  |  |
 | `name` | `text` | yes |  |
 | `owner_id` | `uuid` | yes | Points at `app_user.id`. |
 | `revision` | `bigint` | yes |  |
@@ -31,6 +32,8 @@ The 10 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 - `report_definition_audience_check`: `CHECK ((audience = ANY (ARRAY['private', 'team', 'workspace'])))`
 - `report_definition_check`: `CHECK (((audience = 'team') = (audience_team_id IS NOT NULL)))`
+- `report_definition_draft_after_published`: `CHECK (((draft_revision IS NULL) OR ((draft_revision >= (revision + 1)) AND (draft_revision <= '9007199254740991'::bigint))))`
+- `report_definition_draft_revision_js_safe`: `CHECK (((draft_revision >= '-9007199254740991'::bigint) AND (draft_revision <= '9007199254740991'::bigint)))`
 - `report_definition_revision_js_safe`: `CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))`
 - `report_definition_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
