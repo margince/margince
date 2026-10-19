@@ -250,9 +250,9 @@ func (s *Service) dropRevision(ctx context.Context, tx pgx.Tx, id ids.UUID, revi
 	return err
 }
 
-// evaluableRevision is a published revision, or the draft for an editor:
-// report() keeps DraftRevision only for one who may edit, so a reader asking
-// for the draft's number is answered as for any unpublished one.
+// evaluableRevision is a published revision, or the draft for an editor.
+// report() keeps DraftRevision only for one who may edit. A reader asking for
+// the draft's number is answered as for any unpublished one.
 func (s *Service) evaluableRevision(ctx context.Context, tx pgx.Tx, report crmcontracts.ReportingReport, revision int64) (crmcontracts.ReportingSelection, int64, error) {
 	if report.DraftRevision != nil && revision == *report.DraftRevision {
 		return s.revisionSelection(ctx, tx, ids.UUID(report.Id), revision)
