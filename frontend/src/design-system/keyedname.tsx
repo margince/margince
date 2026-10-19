@@ -55,7 +55,7 @@ function BareKey({ code }: Readonly<{ code: string }>) {
 // setting name or a JSON value wrap between its words. `<wbr>` adds no
 // character, so a copied key still greps.
 function KeyText({ code }: Readonly<{ code: string }>) {
-  return [...code.matchAll(/[^_.,]*[_.,]|[^_.,]+$/g)].map((part) => (
+  return [...code.matchAll(/(?:[^_.,]*[_.,])|(?:[^_.,]+$)/g)].map((part) => (
     <Fragment key={part.index}>
       {part[0]}
       {/[_.,]$/.test(part[0]) && <wbr />}
