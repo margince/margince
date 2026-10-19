@@ -9670,6 +9670,7 @@ export const de = {
   "configuration.source.config_file": "Konfigurationsdatei",
   "configuration.noValue": "Kein Wert",
   "configuration.toggle": "Details zu {key} anzeigen",
+  "configuration.detail.value": "Vollständiger Wert",
   "configuration.detail.default": "Standard: {value}",
   "configuration.detail.none": "keiner",
   "configuration.detail.type": "Typ: {type}",

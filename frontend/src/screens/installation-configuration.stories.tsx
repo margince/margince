@@ -52,6 +52,23 @@ const ENTRIES = [
     default: null,
     origin: { source: "env", name: "MARGINCE_AI_BUDGET" },
   },
+  // The longest key and variable name the registry holds, set from the
+  // environment so the source repeats the name.
+  {
+    key: "installation.follow_up_reconcile_interval_seconds",
+    env: "MARGINCE_INSTALLATION_FOLLOW_UP_RECONCILE_INTERVAL_SECONDS",
+    type: "int",
+    doc: "How often the follow-up reconcile pass runs.",
+    roles: ["worker"],
+    secret: false,
+    stored: true,
+    value: "900",
+    default: "900",
+    origin: {
+      source: "env",
+      name: "MARGINCE_INSTALLATION_FOLLOW_UP_RECONCILE_INTERVAL_SECONDS",
+    },
+  },
   {
     key: "worker.concurrency",
     env: "MARGINCE_WORKER_CONCURRENCY",

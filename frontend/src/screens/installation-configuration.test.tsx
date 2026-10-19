@@ -100,11 +100,10 @@ it("names a boot source with its name and its file", async () => {
   render(<InstallationConfigurationPage />);
 
   await screen.findByText("database.url");
-  expect(
-    within(rowOf("database.url")).getByText(
-      ".env file: MARGINCE_DATABASE_URL (.env)",
-    ),
-  ).toBeVisible();
+  const row = within(rowOf("database.url"));
+  expect(row.getByText(".env file (.env)")).toBeVisible();
+  // The key column names the variable too, so the source names it a second time.
+  expect(row.getAllByText("MARGINCE_DATABASE_URL")).toHaveLength(2);
 });
 
 it("names a boot source that carries no file by its name alone", async () => {
@@ -116,9 +115,9 @@ it("names a boot source that carries no file by its name alone", async () => {
   render(<InstallationConfigurationPage />);
 
   await screen.findByText("http.port");
-  expect(
-    within(rowOf("http.port")).getByText("Environment: MARGINCE_HTTP_PORT"),
-  ).toBeVisible();
+  const row = within(rowOf("http.port"));
+  expect(row.getByText("Environment")).toBeVisible();
+  expect(row.getAllByText("MARGINCE_HTTP_PORT")).toHaveLength(2);
   expect(document.body.textContent).not.toContain("Change it there");
 });
 
@@ -205,6 +204,28 @@ it("opens a row to show its documentation and its default", async () => {
   );
   expect(await screen.findByText("The port the api listens on.")).toBeVisible();
   expect(screen.getByText(/Default: 8080/)).toBeVisible();
+});
+
+it("cuts a long value short in its cell and shows it whole in the row's detail", async () => {
+  const budget =
+    '{"tokens_per_full_user":12000000,"company_monthly_tokens":null}';
+  stubConfiguration(200, [
+    entry({ key: "ai.budget", env: "MARGINCE_AI_BUDGET", value: budget }),
+  ]);
+  const user = userEvent.setup();
+  render(<InstallationConfigurationPage />);
+
+  await screen.findByText("ai.budget");
+  expect(
+    within(rowOf("ai.budget")).getByText(`${budget.slice(0, 40)}…`),
+  ).toBeVisible();
+  expect(screen.queryByText(budget)).toBeNull();
+
+  await user.click(
+    screen.getByRole("button", { name: "Show details for ai.budget" }),
+  );
+  expect(await screen.findByText(budget)).toBeVisible();
+  expect(screen.getByText("Full value")).toBeVisible();
 });
 
 it("narrows by key and by environment variable", async () => {

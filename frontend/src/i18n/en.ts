@@ -9754,6 +9754,7 @@ export const en = {
   "configuration.source.config_file": "Configuration file",
   "configuration.noValue": "No value",
   "configuration.toggle": "Show details for {key}",
+  "configuration.detail.value": "Full value",
   "configuration.detail.default": "Default: {value}",
   "configuration.detail.none": "none",
   "configuration.detail.type": "Type: {type}",

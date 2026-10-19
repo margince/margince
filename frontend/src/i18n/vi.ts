@@ -9420,6 +9420,7 @@ export const vi = {
   "configuration.source.config_file": "Tệp cấu hình",
   "configuration.noValue": "Không có giá trị",
   "configuration.toggle": "Xem chi tiết của {key}",
+  "configuration.detail.value": "Giá trị đầy đủ",
   "configuration.detail.default": "Mặc định: {value}",
   "configuration.detail.none": "không có",
   "configuration.detail.type": "Kiểu: {type}",

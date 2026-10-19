@@ -8,12 +8,12 @@ import type { components } from "../api/schema";
 import { Badge, EmptyState, SearchField } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
+import { KeyedName } from "../design-system/keyedname";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
-import "./installation-configuration.css";
 
 type Entry = components["schemas"]["ConfigurationEntry"];
 type Source = Entry["origin"]["source"];
@@ -35,13 +35,24 @@ function useConfiguration() {
   });
 }
 
-function sourceWords(entry: Entry, t: Translator): string {
+function SourceCell({ entry }: Readonly<{ entry: Entry }>) {
+  const t = useT();
   const { source, name, file } = entry.origin;
   const label = t(SOURCE_LABEL[source]);
   if (!name) {
     return label;
   }
-  return file ? `${label}: ${name} (${file})` : `${label}: ${name}`;
+  return <KeyedName name={file ? `${label} (${file})` : label} code={name} />;
+}
+
+// A struct or list value can run to hundreds of characters. The cell shows its
+// start, and the row's detail shows it whole.
+const VALUE_PREVIEW_CHARS = 40;
+
+function preview(value: string): string {
+  return value.length > VALUE_PREVIEW_CHARS
+    ? `${value.slice(0, VALUE_PREVIEW_CHARS)}…`
+    : value;
 }
 
 function ValueCell({ entry }: Readonly<{ entry: Entry }>) {
@@ -62,7 +73,8 @@ function ValueCell({ entry }: Readonly<{ entry: Entry }>) {
   if (entry.value === "") {
     return <span className="t-caption">{t("configuration.emptyValue")}</span>;
   }
-  return <span className="configuration-value">{entry.value}</span>;
+  const shown = preview(entry.value);
+  return <KeyedName name={shown} code={shown} />;
 }
 
 function EntryDetail({ entry }: Readonly<{ entry: Entry }>) {
@@ -71,7 +83,10 @@ function EntryDetail({ entry }: Readonly<{ entry: Entry }>) {
     entry.secret
       ? null
       : t("configuration.detail.default", {
-          value: entry.default ?? t("configuration.detail.none"),
+          value:
+            entry.default === null
+              ? t("configuration.detail.none")
+              : preview(entry.default),
         }),
     t("configuration.detail.type", { type: entry.type }),
     entry.flag
@@ -81,6 +96,14 @@ function EntryDetail({ entry }: Readonly<{ entry: Entry }>) {
   ].filter((fact) => fact !== null);
   return (
     <CellStack>
+      {!entry.secret &&
+        entry.value !== null &&
+        preview(entry.value) !== entry.value && (
+          <KeyedName
+            name={t("configuration.detail.value")}
+            code={entry.value}
+          />
+        )}
       <span>{entry.doc}</span>
       <span className="t-caption">{facts.join(" · ")}</span>
     </CellStack>
@@ -93,14 +116,9 @@ function columns(t: Translator): DataTableColumn<Entry>[] {
       key: "key",
       header: t("configuration.col.key"),
       fold: "title",
-      // The variable sits under its key rather than in a column of its own:
-      // a fourth column of long names held the table wider than its panel.
-      render: (entry) => (
-        <CellStack>
-          <span>{entry.key}</span>
-          <span className="t-caption">{entry.env}</span>
-        </CellStack>
-      ),
+      // The variable sits under its key rather than in a column of its own,
+      // so the table keeps to three columns inside its panel.
+      render: (entry) => <KeyedName name={entry.key} code={entry.env} />,
     },
     {
       key: "value",
@@ -110,7 +128,7 @@ function columns(t: Translator): DataTableColumn<Entry>[] {
     {
       key: "source",
       header: t("configuration.col.source"),
-      render: (entry) => sourceWords(entry, t),
+      render: (entry) => <SourceCell entry={entry} />,
     },
   ];
 }
