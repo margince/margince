@@ -38,11 +38,27 @@ export function useReportRevisions(reportId: string, enabled: boolean) {
   });
 }
 
-/** The selection an open draft holds, once the revisions have loaded. */
-export function draftRevision(
-  revisions: readonly ReportRevision[] | undefined,
-): ReportRevision | undefined {
-  return revisions?.find((revision) => revision.state === "draft");
+/**
+ * What the edit dialog starts from. An open draft takes every edit, so Edit
+ * waits for the draft's charts rather than starting from the published ones.
+ */
+export function useDraftEditing(
+  reportId: string,
+  report: ReportingReport | undefined,
+  canEdit: boolean,
+) {
+  const revisions = useReportRevisions(
+    reportId,
+    report?.can_manage === true && canEdit,
+  );
+  const draft = revisions.data?.data.find(
+    (revision: ReportRevision) => revision.state === "draft",
+  );
+  return {
+    editBlocked: report?.draft_revision !== undefined && !revisions.data,
+    editSelection: (shown: ReportingReport) =>
+      draft?.selection ?? shown.selection,
+  };
 }
 
 type DraftAction =
@@ -98,19 +114,22 @@ function useRevisionAction(report: ReportingReport) {
  */
 export function ReportDraftBar({
   report,
-  previewing,
+  editable,
+  previewRevision,
   onPreview,
 }: Readonly<{
   report: ReportingReport;
-  previewing: boolean;
-  onPreview: (previewing: boolean) => void;
+  editable: boolean;
+  previewRevision: number | undefined;
+  onPreview: (revision: number | undefined) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const action = useRevisionAction(report);
-  if (report.draft_revision === undefined) {
+  if (!editable || report.draft_revision === undefined) {
     return null;
   }
+  const previewing = previewRevision !== undefined;
   return (
     <Callout
       tone="info"
@@ -123,7 +142,12 @@ export function ReportDraftBar({
         {t(previewing ? "reporting.draftPreviewing" : "reporting.draftHidden")}
       </p>
       <div className="reporting-header-actions">
-        <Button variant="ghost" onClick={() => onPreview(!previewing)}>
+        <Button
+          variant="ghost"
+          onClick={() =>
+            onPreview(previewing ? undefined : report.draft_revision)
+          }
+        >
           {t(previewing ? "reporting.showPublished" : "reporting.previewDraft")}
         </Button>
         <Button
@@ -131,7 +155,7 @@ export function ReportDraftBar({
           onClick={() =>
             action.mutate(
               { kind: "publish" },
-              { onSuccess: () => onPreview(false) },
+              { onSuccess: () => onPreview(undefined) },
             )
           }
         >
@@ -143,7 +167,7 @@ export function ReportDraftBar({
           onClick={() =>
             action.mutate(
               { kind: "discard" },
-              { onSuccess: () => onPreview(false) },
+              { onSuccess: () => onPreview(undefined) },
             )
           }
         >
@@ -161,13 +185,17 @@ export function ReportDraftBar({
  */
 export function ReportVersions({
   report,
-}: Readonly<{ report: ReportingReport }>) {
+  editable,
+}: Readonly<{ report: ReportingReport; editable: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
-  const revisions = useReportRevisions(report.id, true);
+  const revisions = useReportRevisions(report.id, editable);
   const action = useRevisionAction(report);
   const draftOpen = report.draft_revision !== undefined;
+  if (!editable) {
+    return null;
+  }
   return (
     <Panel title={t("reporting.versions")}>
       <PanelBody>

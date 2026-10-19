@@ -133,18 +133,9 @@ export function SaveReportingDialog({
         selection: { ...selection, metrics, blocks: selectedBlocks },
       },
     });
-  // A draft holds charts alone, so a renamed or re-shared report is saved
-  // directly rather than lost in a draft.
-  const metadataChanged =
-    report !== undefined &&
-    (name.trim() !== report.name || audience !== report.audience);
+  const metadataChanged = renamedOrReshared(report, name, audience);
   const incomplete =
-    write.isPending ||
-    !name.trim() ||
-    metrics.length === 0 ||
-    (selection.period === "custom" &&
-      (!selection.interval ||
-        selection.interval.start_at >= selection.interval.end_at));
+    write.isPending || !name.trim() || unsaveable(selection, metrics);
   return (
     <Modal open onClose={onClose} labelledBy={title} intent="form">
       <Heading size="large" id={title} className="t-h2 modal-title">
@@ -312,5 +303,30 @@ export function SaveReportingDialog({
         </Button>
       </div>
     </Modal>
+  );
+}
+
+// A draft holds charts alone, so a renamed or re-shared report is saved
+// directly rather than lost in a draft.
+function renamedOrReshared(
+  report: ReportingReport | undefined,
+  name: string,
+  audience: string,
+): boolean {
+  return (
+    report !== undefined &&
+    (name.trim() !== report.name || audience !== report.audience)
+  );
+}
+
+function unsaveable(
+  selection: ReportingSelection,
+  metrics: readonly unknown[],
+): boolean {
+  if (metrics.length === 0) return true;
+  if (selection.period !== "custom") return false;
+  return (
+    !selection.interval ||
+    selection.interval.start_at >= selection.interval.end_at
   );
 }

@@ -150,7 +150,10 @@ it("keeps a rename out of a draft, which holds charts alone", async () => {
   );
   await user.click(screen.getByRole("button", { name: "Edit report" }));
   const dialog = await screen.findByRole("dialog", { name: "Edit report" });
-  await user.type(within(dialog).getByRole("textbox", { name: /report name/i }), "!");
+  await user.type(
+    within(dialog).getByRole("textbox", { name: /report name/i }),
+    "!",
+  );
   expect(
     within(dialog).getByRole("button", { name: "Save as draft" }),
   ).toBeDisabled();

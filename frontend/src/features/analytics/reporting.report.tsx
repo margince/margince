@@ -31,10 +31,9 @@ import { useReportDetailQueries } from "./reporting.queries";
 import { SaveReportingDialog } from "./reporting.save";
 import { ReportingScheduleDialog } from "./reporting.schedule";
 import {
-  draftRevision,
   ReportDraftBar,
   ReportVersions,
-  useReportRevisions,
+  useDraftEditing,
 } from "./reporting.versions";
 
 export function ReportingReportDetail({
@@ -50,7 +49,9 @@ export function ReportingReportDetail({
   const [archiving, setArchiving] = useState(false);
   const [comparing, setComparing] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [previewDraft, setPreviewDraft] = useState(false);
+  // The draft revision shown in place of the published one, while previewed.
+  const [previewRevision, setPreviewRevision] = useState<number>();
+  const previewDraft = previewRevision !== undefined;
   const [capturePending, setCapturePending] = useState<boolean | undefined>(
     undefined,
   );
@@ -62,20 +63,13 @@ export function ReportingReportDetail({
   const canReadSchedules = useCan("report_schedule", "read");
   const canReadEditions = useCan("report_edition", "read");
   const canSchedule = useCanWrite("report_schedule", "create");
-  const [draftShown, setDraftShown] = useState<number | undefined>();
   const { report, live, edition, editions, schedules } = useReportDetailQueries(
     reportId,
     editionId,
     { editions: canReadEditions, schedules: canReadSchedules },
-    draftShown,
+    previewRevision,
   );
-  const draftOpen = report.data?.draft_revision;
-  const shownDraft = previewDraft ? draftOpen : undefined;
-  if (shownDraft !== draftShown) setDraftShown(shownDraft);
-  const revisions = useReportRevisions(
-    reportId,
-    report.data?.can_manage === true && canEdit,
-  );
+  const draftEditing = useDraftEditing(reportId, report.data, canEdit);
   const write = useMutation({
     mutationFn: async (action: ReportAction) => {
       switch (action.kind) {
@@ -128,6 +122,7 @@ export function ReportingReportDetail({
   const canArchiveReport = canArchive && canManage;
   const canScheduleReport = canSchedule && canManage;
   const canFreezeReport = canFreeze && canReadEditions && canManage;
+  const showDraftBar = canEditReport && !editionId;
   const canCompare = allEditions.length >= 2;
   const evaluation = editionId ? edition.data?.evaluation : live.data;
   const evidencePanel =
@@ -170,7 +165,7 @@ export function ReportingReportDetail({
         {canEditReport && (
           <Button
             variant="ghost"
-            disabled={draftOpen !== undefined && !revisions.data}
+            disabled={draftEditing.editBlocked}
             onClick={() => setEditing(true)}
           >
             {t("reporting.edit")}
@@ -274,13 +269,12 @@ export function ReportingReportDetail({
             <ErrorLine error={write.error} />
           </ConfirmModal>
           <ErrorLine error={write.error} />
-          {canEditReport && !editionId && (
-            <ReportDraftBar
-              report={report}
-              previewing={previewDraft}
-              onPreview={setPreviewDraft}
-            />
-          )}
+          <ReportDraftBar
+            report={report}
+            editable={showDraftBar}
+            previewRevision={previewRevision}
+            onPreview={setPreviewRevision}
+          />
           {capturePending && (
             <p role="status">{t("reporting.capturePending")}</p>
           )}
@@ -428,7 +422,7 @@ export function ReportingReportDetail({
                 </PanelBody>
               </Panel>
             )}
-            {canEditReport && <ReportVersions report={report} />}
+            <ReportVersions report={report} editable={canEditReport} />
             {canReadEditions && (
               <Panel title={t("reporting.executions")}>
                 <PanelBody>
@@ -446,10 +440,7 @@ export function ReportingReportDetail({
           {editing && (
             <SaveReportingDialog
               report={report}
-              selection={
-                draftRevision(revisions.data?.data)?.selection ??
-                report.selection
-              }
+              selection={draftEditing.editSelection(report)}
               onClose={() => setEditing(false)}
               onSaved={() => setEditing(false)}
             />
