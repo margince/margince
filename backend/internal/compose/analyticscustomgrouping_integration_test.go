@@ -110,21 +110,18 @@ func TestEveryDoorRefusesAFieldThatLeftReportsTheSameWay(t *testing.T) {
 	}
 	_, refusals["tool"] = analyticsQueryToolRunner(e.DB())(ctx, body)
 
-	want := ""
+	reference, ok := errors.AsType[*analyticsquery.RefusalError](refusals["run"])
+	if !ok || !strings.Contains(reference.Suggest, "In reports") {
+		t.Fatalf("a direct run answered %v, want a refusal naming the repair", refusals["run"])
+	}
 	for door, err := range refusals {
 		refusal, ok := errors.AsType[*analyticsquery.RefusalError](err)
 		if !ok {
 			t.Errorf("the %s door answered %v, want a refusal", door, err)
 			continue
 		}
-		if want == "" {
-			want = refusal.Message
-		}
-		if refusal.Message != want {
-			t.Errorf("the %s door refused with %q, another with %q", door, refusal.Message, want)
-		}
-		if !strings.Contains(refusal.Suggest, "In reports") {
-			t.Errorf("the %s door refused with %q, which names no repair", door, refusal.Suggest)
+		if *refusal != *reference {
+			t.Errorf("the %s door refused with %+v, a direct run with %+v", door, *refusal, *reference)
 		}
 	}
 }

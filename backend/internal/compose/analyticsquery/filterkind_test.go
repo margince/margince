@@ -106,8 +106,9 @@ func TestAnUnknownFilterNameSuggestsEveryFilterableField(t *testing.T) {
 func TestACustomFieldOutsideReportsIsRefusedWithItsRepair(t *testing.T) {
 	t.Parallel()
 	for name, q := range map[string]Query{
-		"group":  {Entity: "deals", GroupBy: []string{"cf_territory"}, Measures: []Measure{{Fn: CountAll}}},
-		"filter": {Entity: "deals", Measures: []Measure{{Fn: CountAll}}, Filters: []Filter{{Field: "cf_territory", Op: OpEq, Value: "EMEA"}}},
+		"group":   {Entity: "deals", GroupBy: []string{"cf_territory"}, Measures: []Measure{{Fn: CountAll}}},
+		"filter":  {Entity: "deals", Measures: []Measure{{Fn: CountAll}}, Filters: []Filter{{Field: "cf_territory", Op: OpEq, Value: "EMEA"}}},
+		"measure": {Entity: "deals", Measures: []Measure{{Fn: Sum, Field: "cf_territory"}}},
 	} {
 		_, err := Compile(q, stalledSchema(), noScope)
 		refusal, ok := errors.AsType[*RefusalError](err)
@@ -117,5 +118,23 @@ func TestACustomFieldOutsideReportsIsRefusedWithItsRepair(t *testing.T) {
 		if !strings.Contains(refusal.Message, "not in reports") || !strings.Contains(refusal.Suggest, "In reports") {
 			t.Errorf("%s: refused with %q / %q, which names no repair", name, refusal.Message, refusal.Suggest)
 		}
+	}
+}
+
+// A custom field the vocabulary carries, used in the wrong role, is a wrong
+// question rather than a field out of reports.
+func TestAKnownCustomFieldInTheWrongRoleIsNotSaidToBeOutOfReports(t *testing.T) {
+	t.Parallel()
+	schema := stalledSchema()
+	entity := schema.Entities["deals"]
+	entity.Fields["cf_territory"] = Field{Name: "cf_territory", Expr: "t.cf_territory", Kind: KindDimension}
+	schema.Entities["deals"] = entity
+	_, err := Compile(Query{Entity: "deals", Measures: []Measure{{Fn: Sum, Field: "cf_territory"}}}, schema, noScope)
+	refusal, ok := errors.AsType[*RefusalError](err)
+	if !ok {
+		t.Fatalf("summing a dimension answered %v, want a RefusalError", err)
+	}
+	if strings.Contains(refusal.Message, "not in reports") {
+		t.Errorf("a field in reports was refused as out of them: %q", refusal.Message)
 	}
 }
