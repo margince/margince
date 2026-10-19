@@ -8,6 +8,7 @@ import {
   usePlural,
   useT,
 } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import {
   type ReportingChart,
   type ReportingEvaluation,
@@ -32,6 +33,9 @@ export function ChartContext({
       <span className="t-caption">
         {contextPeriod(chart, evaluation, editionId, locale, t)}
       </span>
+      {chart.kind === "owner_attainment" && (
+        <OwnerAttainmentNotes chart={chart} evaluation={evaluation} />
+      )}
       {(chart.kind === "stage_distribution" || chart.kind === "stage_age") && (
         <span className="t-caption">
           {t("reporting.closeWindow")}:{" "}
@@ -175,4 +179,51 @@ function contextPeriod(
               : "reporting.currentState",
           )
       : evaluation.context.scope.label;
+}
+
+// Whom an owner chart credits. The rules differ by metric, and a ranking
+// without them reads as one uniform measure of each owner's work.
+const OWNER_CREDIT: Partial<Record<ReportingChart["metric"], MessageKey>> = {
+  bookings_won: "reporting.creditCurrentOwner",
+  qualified_pipeline_created: "reporting.creditQualifyingOwner",
+};
+
+// An actual to date reads as short of a whole-period target until the period
+// ends. So the share of the period already gone is said.
+function OwnerAttainmentNotes({
+  chart,
+  evaluation,
+}: Readonly<{ chart: ReportingChart; evaluation: ReportingEvaluation }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const credit = OWNER_CREDIT[chart.metric];
+  const target = evaluation.context.target_interval;
+  const elapsed = target
+    ? elapsedShare(target, evaluation.context.evaluated_at)
+    : null;
+  return (
+    <>
+      {credit && <span className="t-caption">{t(credit)}</span>}
+      {elapsed != null && (
+        <span className="t-caption">
+          {t("reporting.targetPeriodElapsed", {
+            percent: formatNumber(Math.round(elapsed * 100), locale),
+          })}
+        </span>
+      )}
+    </>
+  );
+}
+
+function elapsedShare(
+  interval: { start_at: string; end_at: string },
+  at: string,
+): number | null {
+  const start = Date.parse(interval.start_at);
+  const end = Date.parse(interval.end_at);
+  const now = Date.parse(at);
+  if (!(end > start) || Number.isNaN(now)) {
+    return null;
+  }
+  return Math.min(1, Math.max(0, (now - start) / (end - start)));
 }

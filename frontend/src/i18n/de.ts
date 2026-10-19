@@ -264,6 +264,12 @@ export const de = {
   "reporting.targetBasis": "Zielzeitraum",
   "reporting.month": "Monat",
   "reporting.fiscal_quarter": "Geschäftsquartal",
+  "reporting.creditCurrentOwner":
+    "Zugeordnet dem aktuellen Verantwortlichen des Deals",
+  "reporting.creditQualifyingOwner":
+    "Zugeordnet dem Verantwortlichen zum Zeitpunkt der Qualifizierung",
+  "reporting.targetPeriodElapsed":
+    "{percent} % des Zielzeitraums sind vergangen",
   "reporting.closeWindow": "Erwarteter Abschlusszeitraum",
   "reporting.all_open": "Alle offenen Deals",
   "reporting.median": "Median in Tagen",

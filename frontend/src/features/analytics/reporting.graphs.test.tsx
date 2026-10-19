@@ -511,3 +511,34 @@ it("shows how many priced deals make each stage's value", () => {
     screen.getByRole("button", { name: /Proposal: .+ · 7 priced deals$/ }),
   ).toBeInTheDocument();
 });
+
+it("says whom an owner chart credits and how much of the target period has passed", () => {
+  installFetchStub(reportingStoryRoutes());
+  const evaluation = {
+    ...reportingStoryEvaluation,
+    context: {
+      ...reportingStoryEvaluation.context,
+      evaluated_at: "2026-10-16T00:00:00Z",
+      target_interval: {
+        start_at: "2026-10-01T00:00:00Z",
+        end_at: "2026-10-31T00:00:00Z",
+      },
+    },
+    charts: reportingStoryEvaluation.charts.filter(
+      (chart) =>
+        chart.kind === "owner_attainment" && chart.metric === "bookings_won",
+    ),
+  } satisfies typeof reportingStoryEvaluation;
+  expect(evaluation.charts.length).toBe(1);
+  render(
+    <StoryProviders>
+      <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  expect(
+    screen.getByText("Credited to each deal’s current owner"),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText("50% of the target period has passed"),
+  ).toBeInTheDocument();
+});

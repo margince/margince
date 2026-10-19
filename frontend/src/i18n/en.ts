@@ -258,6 +258,10 @@ export const en = {
   "reporting.targetBasis": "Target period",
   "reporting.month": "Month",
   "reporting.fiscal_quarter": "Fiscal quarter",
+  "reporting.creditCurrentOwner": "Credited to each deal’s current owner",
+  "reporting.creditQualifyingOwner":
+    "Credited to the owner when the deal qualified",
+  "reporting.targetPeriodElapsed": "{percent}% of the target period has passed",
   "reporting.closeWindow": "Expected close window",
   "reporting.all_open": "All open deals",
   "reporting.median": "Median days",

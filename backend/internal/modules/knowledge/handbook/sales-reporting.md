@@ -25,6 +25,7 @@ Every chart can also be read as numbers. Select a mark, with a click or the keys
 - **Pipeline stages:** open value of today for each stage in order, all measured the same way, with the number of priced deals in each stage.
 - **Sales by salesperson:** real result and target for the same target time span. A missing target and a zero
   target are two different states; a missing target does not mean low results.
+  The chart says whom it credits and how much of the target time span has passed.
 - **Stage age:** the middle age and the age that 75% of open deals stay under, for open deals of today. Small groups
   are held back. These numbers describe the whole group; they do not warn you that one deal has stopped moving.
 - **SDR outcomes:** meetings held and accepted opportunities for each week, counted
