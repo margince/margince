@@ -31,3 +31,12 @@ func TestTranscriptReviewReasonsNameTheActualMissingEvidence(t *testing.T) {
 		}
 	}
 }
+
+func TestTranscriptSemanticReasonsDescribeTheReading(t *testing.T) {
+	for state, want := range map[string]string{"completed": "already completed", "conditional": "unmet condition", "optional": "optional offer", "request": "request nobody has accepted", "unclear": "does not establish", "unassessed": "does not establish"} {
+		got := transcriptCopyFor("en").transcriptWithheldReason(CommitmentOutcome("semantic_" + state))
+		if !strings.Contains(got, want) {
+			t.Errorf("%s: %q omits %q", state, got, want)
+		}
+	}
+}

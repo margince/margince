@@ -28,6 +28,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -46,9 +47,11 @@ type transcriptProposeFixture []string
 
 // transcriptProposeExpectation identifies the cited line and verified promiser.
 type transcriptProposeExpectation struct {
-	Promiser string `json:"promiser,omitempty"`
-	Line     int    `json:"line"`
-	DueDate  string `json:"due_date"`
+	Meaning  *commitmentMeaning `json:"meaning,omitempty"`
+	Optional bool               `json:"optional,omitempty"`
+	Promiser string             `json:"promiser,omitempty"`
+	Line     int                `json:"line"`
+	DueDate  string             `json:"due_date"`
 }
 
 // transcriptProposeCases serves the one site that reads next steps out of a
@@ -101,6 +104,9 @@ func (transcriptProposeCases) Prepare(fixture, expected json.RawMessage) (aitask
 		return nil, err
 	}
 	for i := range want {
+		if err := validateExpectedMeaning(want[i].Optional, want[i].Meaning, want[i].DueDate, lines[want[i].Line-1]); err != nil {
+			return nil, err
+		}
 		if want[i].Promiser == "" {
 			continue
 		}
@@ -205,7 +211,7 @@ func (c *transcriptProposeCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			Detail: fmt.Sprintf("unparseable model output: %v", err),
 		}
 	}
-	if msg := validateTranscriptPayload(payload, len(c.lines), c.parties); msg != "" {
+	if msg := validateTranscriptPayload(payload, c.lines, c.parties); msg != "" {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
 	}
 	if disagreements := c.disagreements(payload); len(disagreements) > 0 {
@@ -223,6 +229,9 @@ func (c *transcriptProposeCase) AnswerConfidence(trace aitasks.Trace) (low, high
 	}
 	var confidences []float64
 	for _, step := range payload.proposals() {
+		if step.Meaning.withheldOutcome() != "" {
+			continue
+		}
 		confidences = append(confidences, float64(step.Confidence))
 	}
 	return spanOf(confidences)
@@ -240,11 +249,23 @@ func (c *transcriptProposeCase) AnswerConfidence(trace aitasks.Trace) (low, high
 func (c *transcriptProposeCase) disagreements(payload transcriptPayload) []string {
 	wanted := make(map[string]string, len(c.expected))
 	for _, step := range c.expected {
+		if step.Optional {
+			continue
+		}
 		wanted[fmt.Sprintf("%d:%s", step.Line, step.Promiser)] = step.DueDate
 	}
 	answered := map[string]bool{}
 	var out []string
 	for _, step := range payload.proposals() {
+		for _, expected := range c.expected {
+			if expected.Meaning != nil && slices.Contains(step.SourceLines, expected.Line) &&
+				!expectedMeaningMatches(expected.Meaning, step.Meaning) {
+				out = append(out, "the commitment meaning does not match the source")
+			}
+		}
+		if step.Meaning.withheldOutcome() != "" {
+			continue
+		}
 		matched := false
 		for _, line := range step.SourceLines {
 			key := fmt.Sprintf("%d:%s", line, c.promiserKeys[step.PromiserRef])

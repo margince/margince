@@ -1,0 +1,22 @@
+name: completed_attachment_is_not_a_new_promise_en
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture:
+  - direction: outbound
+    subject: "Signed form delivered"
+    sent: "2026-09-07"
+    body: "Mira: The signed form is attached. I sent the final copy this morning."
+  - direction: inbound
+    subject: "Signed form delivered"
+    sent: "2026-09-07"
+    body: "Alex: Received, thank you. That completes the paperwork."
+expect:
+  outcome: accepted
+  answer: [{"optional": true, "meaning": {"state": "completed", "condition": "", "deadline_precision": "none", "deadline_quote": ""}, "kind": "commitment_made", "message": 1, "due_date": ""}]
+  judge: none
+  judge_none_reason: >
+    The sender reports an already delivered attachment and the recipient
+    confirms receipt. Neither speaker promises future work. Any proposed
+    commitment would ask someone to repeat an act that is already complete.

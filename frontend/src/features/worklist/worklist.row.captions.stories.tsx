@@ -140,3 +140,24 @@ export const AccountWhoWroteLast: Story = {
     return <WorklistRow {...args} />;
   },
 };
+
+export const SupplierRequest: Story = {
+  ...WhoseRowAndWhoWroteLast,
+  args: {
+    item: {
+      ...dealFiledThread(),
+      subject: { type: "company", id: ACCOUNT, label: "Example supplier" },
+      title: "Please confirm the delivery schedule",
+      band: "review",
+      level: 6,
+      consequence: "none",
+      because: [{ kind: "non_buyer_request" }],
+    },
+    position: 1,
+    owner: "",
+  },
+};
+export const SupplierRequestDark: Story = {
+  ...SupplierRequest,
+  globals: { theme: "dark" },
+};

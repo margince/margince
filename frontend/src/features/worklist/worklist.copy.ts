@@ -17,6 +17,7 @@ import {
 } from "../contacts/contactpage.address";
 import { caseHref } from "../privacy/privacy.caselink";
 import { connectionName, connectionTitleKey } from "./worklist.connection";
+import { nonBuyerRequest } from "./worklist.eyebrow";
 import { countsUnder } from "./worklist.narrowing";
 import type {
   Worklist,
@@ -338,7 +339,10 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
     return t("worklist.untitled.generic");
   }
   const title = t(
-    connectionTitleKey(item) ?? (`worklist.untitled.${item.source}` as const),
+    nonBuyerRequest(item)
+      ? "worklist.source.awaiting_reply"
+      : (connectionTitleKey(item) ??
+          (`worklist.untitled.${item.source}` as const)),
   );
   return item.subject?.label ? `${title} · ${item.subject.label}` : title;
 }

@@ -66,6 +66,22 @@ func validateEventEvidence(event extractedEvent, thread settledThread) string {
 			return "a commitment quotes words its sender did not write in this message"
 		}
 	}
+	return validateCommitmentMeaning(event.Meaning, event.DueDate, commitmentMeaningSource(event, thread))
+}
+
+func commitmentMeaningSource(event extractedEvent, thread settledThread) string {
+	id, quote := event.MessageID, event.Quote
+	if event.RestatedMessageID != "" {
+		id, quote = event.RestatedMessageID, event.RestatedQuote
+	}
+	for _, message := range thread.Messages {
+		if message.ID.String() == id {
+			span, found := evidenceSpan(textlang.CurrentMessage(message.Body), quote)
+			if found {
+				return span
+			}
+		}
+	}
 	return ""
 }
 
@@ -165,6 +181,7 @@ func (x *SignalExtractor) emailCommitment(
 		return Commitment{}, false, err
 	}
 	c := Commitment{
+		Meaning:          event.Meaning,
 		AsOf:             asOf,
 		ReadMessages:     fullyReadMessages(thread.Messages),
 		Extractor:        signalScanActor,

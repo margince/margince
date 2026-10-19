@@ -71,6 +71,8 @@ it states — a specific thing a named party said they would do. Report one only
 transcript SAYS it: "I'll send the pricing by Friday", "we'll get you the security review".
 A stated tentative next step such as "I will try to follow up" is still a reading: include it
 with confidence at most 0.3, preserve its tentative wording, and leave an unstated date empty.
+` + commitmentOfferInstruction + `
+If a name matches several participants, keep the stated next step but leave promiser_ref empty.
 Firm commitments take priority within the proposal limit; include tentative readings only in remaining slots.
 Report nothing for topics discussed without any stated next step, for things you are inferring
 rather than reading, and for anything about what the DEAL should do — a transcript records
@@ -112,9 +114,10 @@ func NewTranscriptProposer(
 
 // proposedStep is one next step as the model reports it.
 type proposedStep struct {
-	PromiserRef string `json:"promiser_ref"`
-	Summary     string `json:"summary"`
-	Owner       string `json:"owner"`
+	Meaning     *commitmentMeaning `json:"commitment"`
+	PromiserRef string             `json:"promiser_ref"`
+	Summary     string             `json:"summary"`
+	Owner       string             `json:"owner"`
 	// DueDate is the day the transcript says the thing is due, as YYYY-MM-DD,
 	// or empty where it says none.
 	//
@@ -165,7 +168,7 @@ func transcriptRequest(lines []string, meetingDay string, lang string, parties [
 	}
 	fmt.Fprintf(&prompt,
 		`This meeting happened on %s.`+"\n"+
-			`Return JSON: { "proposals": [ { "summary", "owner", "promiser_ref", "due_date", "source_lines", "confidence" } ] } — `+
+			`Return JSON: { "proposals": [ { "summary", "owner", "promiser_ref", "due_date", "source_lines", "commitment", "confidence" } ] } — `+
 			`at most %d, and an empty list when the transcript states none. `+
 			`"summary" is one plain sentence naming the thing to be done. `+
 			`"owner" is the party who promised, as the transcript names them; a speaker may report someone else's promise. `+
@@ -186,6 +189,7 @@ func transcriptRequest(lines []string, meetingDay string, lang string, parties [
 			`"source_lines" are the line numbers it is stated on, between 1 and %d.`,
 		meetingDay, maxTranscriptProposals, len(lines))
 
+	prompt.WriteString("\n" + commitmentMeaningInstruction)
 	return model.Request{
 		System:         transcriptSystemFor(fence, lang),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
@@ -203,6 +207,7 @@ func transcriptSchema() json.RawMessage {
 		map[string]schema.Node{
 			"proposals": schema.Array(schema.Object(
 				map[string]schema.Node{
+					commitmentMeaningField:  commitmentMeaningSchema(),
 					"summary":               schema.String(),
 					"owner":                 schema.String(),
 					"promiser_ref":          schema.String(),
@@ -210,7 +215,7 @@ func transcriptSchema() json.RawMessage {
 					"source_lines":          schema.Array(schema.Integer()),
 					extractionConfidenceKey: schema.Number(),
 				},
-				"summary", "owner", "promiser_ref", "due_date", "source_lines", extractionConfidenceKey,
+				"summary", "owner", "promiser_ref", "due_date", "source_lines", extractionConfidenceKey, commitmentMeaningField,
 			)),
 		},
 		"proposals",
@@ -221,13 +226,13 @@ func transcriptSchema() json.RawMessage {
 // line one this call actually supplied. The citation check is the whole point —
 // a proposal that cannot point at a line it read is a guess, and staging a
 // guess with a citation shaped like evidence is worse than staging nothing.
-func transcriptShapeValid(lineCount int, parties []commitmentParty) ai.Validator {
+func transcriptShapeValid(lines []string, parties []commitmentParty) ai.Validator {
 	return func(text string) error {
 		var payload transcriptPayload
 		if err := json.Unmarshal([]byte(ai.Unfence(text)), &payload); err != nil {
 			return fmt.Errorf("output is not the required JSON shape: %w", err)
 		}
-		if msg := validateTranscriptPayload(payload, lineCount, parties); msg != "" {
+		if msg := validateTranscriptPayload(payload, lines, parties); msg != "" {
 			return errors.New(msg)
 		}
 		return nil
@@ -236,7 +241,7 @@ func transcriptShapeValid(lineCount int, parties []commitmentParty) ai.Validator
 
 // validateTranscriptPayload names the first fidelity violation, or "" when the
 // payload is one this site may act on.
-func validateTranscriptPayload(payload transcriptPayload, lineCount int, parties []commitmentParty) string {
+func validateTranscriptPayload(payload transcriptPayload, lines []string, parties []commitmentParty) string {
 	if payload.Proposals == nil {
 		return "the reply carries no proposals key, so it did not answer the question"
 	}
@@ -251,7 +256,10 @@ func validateTranscriptPayload(payload transcriptPayload, lineCount int, parties
 				return "a proposal names a promiser outside the verified meeting participants"
 			}
 		}
-		if msg := validateProposedStep(step, lineCount); msg != "" {
+		if msg := validateProposedStep(step, len(lines)); msg != "" {
+			return msg
+		}
+		if msg := validateCommitmentMeaning(step.Meaning, step.DueDate, quotedFromTranscript(step, lines)); msg != "" {
 			return msg
 		}
 	}
@@ -315,7 +323,7 @@ func validProposedDueDate(day string) bool {
 // ask puts one transcript to the model and returns what it may act on.
 func (p *TranscriptProposer) ask(ctx context.Context, lines []string, meetingDay string, parties []commitmentParty) ([]proposedStep, error) {
 	req := transcriptRequest(lines, meetingDay, string(p.said.Lang()), parties)
-	validate := transcriptShapeValid(len(lines), parties)
+	validate := transcriptShapeValid(lines, parties)
 	resp, err := ai.Ask(ctx, p.brain, req, validate)
 	if err != nil {
 		if ai.ModelDeclined(err) {
@@ -330,7 +338,7 @@ func (p *TranscriptProposer) ask(ctx context.Context, lines []string, meetingDay
 	if err := json.Unmarshal([]byte(ai.Unfence(resp.Text)), &payload); err != nil {
 		return nil, fmt.Errorf("%w: unparseable model output: %w", errRefusedTranscript, err)
 	}
-	if msg := validateTranscriptPayload(payload, len(lines), parties); msg != "" {
+	if msg := validateTranscriptPayload(payload, lines, parties); msg != "" {
 		return nil, fmt.Errorf("%w: %s", errRefusedTranscript, msg)
 	}
 	return payload.proposals(), nil

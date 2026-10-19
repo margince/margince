@@ -1,0 +1,59 @@
+name: intent_is_separate_from_sales_direction_en
+task: owed_verdict
+site: owed
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture:
+- subject: Message
+  body: The signed form is attached. I sent it this morning.
+  to:
+  - recipient@example.test
+- subject: Message
+  body: Received, thank you.
+  to:
+  - recipient@example.test
+- subject: Message
+  body: If useful, I could draft something next week.
+  to:
+  - recipient@example.test
+- subject: Message
+  body: 'Our monthly newsletter: book a call to explore our offers. This mailing goes to every subscriber.'
+  to:
+  - recipient@example.test
+- subject: Message
+  body: Could you approve our supplier quote for your office printers?
+  to:
+  - recipient@example.test
+- subject: Message
+  body: Can you pick up the children after school?
+  to:
+  - recipient@example.test
+- subject: Message
+  body: 'Internal note: the prospect is reviewing the proposal. No action is needed yet.'
+  to:
+  - recipient@example.test
+- subject: Message
+  body: Please send the revised quote.
+  to:
+  - recipient@example.test
+- subject: Message
+  body: We will not renew the service contract. It ends on 30 September 2026. This is our final decision;
+    no reply is required.
+  to:
+  - recipient@example.test
+expect:
+  outcome: accepted
+  answer:
+  - informs_us
+  - informs_us
+  - informs_us
+  - informs_us
+  - asks_us
+  - asks_us
+  - informs_us
+  - asks_us
+  - informs_us
+  judge: none
+  judge_none_reason: Each closed verdict is checked. Supplier and personal requests still ask for
+    action; commercial relevance is a separate fact. Reports, mass promotions, optional offers and
+    termination notices without a question do not create a request.

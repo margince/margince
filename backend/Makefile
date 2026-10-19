@@ -751,7 +751,7 @@ mcp-apps-vocab: ## Copy the MCP App admission vocabulary in from the frontend
 # keep answering out of a page the handbook no longer has.
 # TestTheEmbeddedHandbookMatchesTheDocs fails in both directions.
 handbook-embed: ## Copy the operator handbook in from docs/handbook
-	rsync -a --delete --include='*.md' --exclude='*' ../docs/handbook/ internal/modules/knowledge/handbook/
+	rsync -ac --delete --include='*.md' --exclude='*' ../docs/handbook/ internal/modules/knowledge/handbook/
 
 # Scaffolding, not generation: gen-workflow writes a write-once handler +
 # test stub for a developer to fill in (AC-W1) and is never part of

@@ -3,34 +3,34 @@
   "provider": "gemini",
   "served_model": "gemini-3.1-flash-lite",
   "env_class": "cloud_frontier",
-  "prompt_version": "p3a8e862938a5ba96ed13992106c4b18b",
+  "prompt_version": "p3f9ac990eda39cd7015767ec8ed5ad05",
   "corpus_version": "v1",
   "verdict": "certified",
-  "runs": 18,
-  "passed": 18,
+  "runs": 27,
+  "passed": 27,
   "reliability": 1,
-  "reported_accepted": 18,
+  "reported_accepted": 27,
   "reported_wrong_answer": 0,
   "reported_invalid": 0,
   "reported_abstained": 0,
   "certified_scope": "single_call",
   "context_applied": false,
   "context_scopes": null,
-  "judge_score_p50": 97,
-  "judge_score_min": 90,
-  "latency_p50": 1112,
-  "latency_p95": 2475,
-  "mean_tokens": 1478,
-  "mean_tokens_in": 1342,
-  "mean_tokens_out": 136,
+  "judge_score_p50": 95,
+  "judge_score_min": 92,
+  "latency_p50": 1011,
+  "latency_p95": 1244,
+  "mean_tokens": 1485,
+  "mean_tokens_in": 1341,
+  "mean_tokens_out": 144,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 539,
+  "est_cost_microusd": 551,
   "judge_served_model": "claude-sonnet-4-6",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
-  "ran_at": "2026-10-04T06:02:22Z",
+  "ran_at": "2026-10-19T03:25:14Z",
   "scenarios": [
     {
       "scenario": "an_answer_settles_a_request_and_an_acknowledgement_does_not",
@@ -41,7 +41,7 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        97,
+        92,
         97,
         95
       ],
@@ -89,7 +89,7 @@
       "judge_scores": [
         100,
         100,
-        100
+        95
       ],
       "bands": {
         "certified_min": 70,
@@ -110,8 +110,8 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        95,
-        97,
+        92,
+        92,
         92
       ],
       "bands": {
@@ -134,14 +134,56 @@
       "passed": 3,
       "judge_scores": [
         92,
-        92,
-        90
+        96,
+        95
       ],
       "bands": {
         "certified_min": 70,
         "degraded_min": 50,
         "floor": 40
       },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "partial_delivery_keeps_the_remaining_invoice_de",
+      "site": "request_settle",
+      "stamp": "187bc11d3dbcb90c51d82793b85ccc8cacb1907480aa24684dd3d1085b77d76e0def5a0075e04e46a00de9cd1e76d8d4a1ea24699c4a32a03f439d6bb3e20dcb18b23b234dc58d61eb8a66d640e734be4d743f517e9bd89735fb9a28764ad940",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_none": true,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "partial_delivery_keeps_the_remaining_invoice_en",
+      "site": "request_settle",
+      "stamp": "b496c7d0eaced9730ba345f38c02d1086023ac9ed10cc8c88eb3a2efbe80730c207bbacbbb5df581650032b5eac82b77252d041d74382bd3e3279041cc746ebb18b23b234dc58d61eb8a66d640e734be4d743f517e9bd89735fb9a28764ad940",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_none": true,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "partial_delivery_keeps_the_remaining_invoice_vi",
+      "site": "request_settle",
+      "stamp": "2bb48cf0a5a122aad15bafa073a78ad3e014ca7442f26642e661d70efe28bff366915689078a7fbab08d84fc63e8e2f7b6efbe3bbcc0f7a062f5f55b1c72073a18b23b234dc58d61eb8a66d640e734be4d743f517e9bd89735fb9a28764ad940",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_none": true,
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -157,8 +199,8 @@
       "passed": 3,
       "judge_scores": [
         95,
-        97,
-        95
+        100,
+        97
       ],
       "bands": {
         "certified_min": 70,

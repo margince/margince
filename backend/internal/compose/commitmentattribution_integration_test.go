@@ -69,7 +69,7 @@ func TestAMeetingReportKeepsTheCustomersPromiseOnTheCustomer(t *testing.T) {
 	reply, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
 		"summary": "Send the payment", "owner": "Ines Huber",
 		"promiser_ref": "contact:" + customer.String(), "due_date": "",
-		"source_lines": []int{1}, "confidence": taskWorthyConfidence,
+		"source_lines": []int{1}, "confidence": taskWorthyConfidence, "commitment": openCommitmentMeaning("", ""),
 	}}})
 	if err != nil {
 		t.Fatal(err)
@@ -126,7 +126,7 @@ func TestAMeetingReportCannotAssignWorkToTheNamedColleague(t *testing.T) {
 	e.activity = ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
 	reply, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
 		"summary": "Send pricing", "owner": "Priya Raman", "promiser_ref": "seat:" + e.Rep2.String(),
-		"source_lines": []int{1}, "due_date": "", "confidence": 0.95,
+		"source_lines": []int{1}, "due_date": "", "confidence": 0.95, "commitment": openCommitmentMeaning("", ""),
 	}}})
 	if err != nil {
 		t.Fatal(err)

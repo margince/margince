@@ -2870,6 +2870,8 @@ export const en = {
   "email.detail.when": "Sent",
   "commitment.review.count_one": "Commitment to review: {count}",
   "commitment.review.count_other": "Commitments to review: {count}",
+  "commitment.review.conditionWords": "Condition: {words}",
+  "commitment.review.deadlineWords": "Stated deadline: {words}",
   "commitment.review.title": "Commitment review",
   "commitment.review.detail":
     "No task was created from these readings. Review the source and later replies before adding a follow-up from a linked record.",
@@ -2882,6 +2884,15 @@ export const en = {
     "The message date and mailbox arrival disagree. Review the original dates.",
   "commitment.review.canceledMeeting": "The meeting was canceled.",
   "commitment.review.pendingMeeting": "The meeting has not taken place yet.",
+  "commitment.review.completed":
+    "The source describes work already done. No new task was created.",
+  "commitment.review.conditional":
+    "The commitment depends on a condition that has not been met.",
+  "commitment.review.optional": "This is an offer, not an agreed commitment.",
+  "commitment.review.request":
+    "This asks for work that nobody has agreed to do.",
+  "commitment.review.unclear":
+    "The source does not establish an open commitment.",
   "commitment.review.unavailable":
     "The source needs review before creating work.",
   "commitment.review.evaluated": "Reviewed {when}",
@@ -14060,6 +14071,7 @@ export const en = {
   "worklist.category.decisions": "Approval",
   "worklist.category.system": "System",
   "worklist.because.pinned": "pinned by you",
+  "worklist.because.non_buyer_request": "not established as customer work",
   "worklist.because.buyer_wrote_last": "buyer wrote last",
   "worklist.because.waiting_days": "waiting",
   "worklist.because.more_one": "+{count} more",

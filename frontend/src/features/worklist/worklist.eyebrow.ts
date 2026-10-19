@@ -12,20 +12,17 @@ const BRIEF_SIGNALS = [
   "moved",
 ] as const;
 
-/**
- * The word above a queue row, where the row's own category is the word.
- *
- * Normally the row's category, which is the queue's own grouping. A brief row
- * is the exception: every one of them sits in `deals_at_risk`, because that is
- * where the worklist folds them against the sibling risk row for the same deal
- * — but the night knows WHY it picked each one, and a deal it ranked as winnable
- * announced as "Deal at risk" is the label the reader learns to distrust.
- *
- * Only the four signals the backend derives are honoured. A value from a newer
- * build falls back to the category rather than reaching `t` with a key that has
- * no translation, which would render the key itself.
- */
+export function nonBuyerRequest(item: WorklistItem): boolean {
+  return (
+    item.source === "customer_waiting" &&
+    (item.because?.some((reason) => reason.kind === "non_buyer_request") ??
+      false)
+  );
+}
+
+// Labels follow the row's evidence when its broad category would misstate the work.
 export function eyebrowKeyFor(item: WorklistItem): MessageKey {
+  if (nonBuyerRequest(item)) return "worklist.source.awaiting_reply";
   if (item.source === "notice") return "brief.updates.title";
   if (item.source === "weekly_commitment")
     return "worklist.source.weekly_commitment";

@@ -48,7 +48,8 @@ func TestErasingOneConversationWithdrawsItsTasksAndPendingPromises(t *testing.T)
 			confidence, want = 0.95, CommitmentTaskWritten
 		}
 		c := Commitment{
-			AsOf: now, Extractor: signalScanActor, SourceActivityID: source, Summary: quote, Quote: quote,
+			Meaning: openCommitmentMeaning("2026-10-19", quote),
+			AsOf:    now, Extractor: signalScanActor, SourceActivityID: source, Summary: quote, Quote: quote,
 			Body: quote, Seat: &e.Rep1, PromisedTo: &buyer, DueDate: "2026-10-19", Confidence: confidence,
 			Locator:  commitmentLocator(source, claimKindOurs, "seat:"+e.Rep1.String(), quote),
 			Evidence: approvals.Evidence{SourceType: "activity", SourceID: source, Snippet: quote},

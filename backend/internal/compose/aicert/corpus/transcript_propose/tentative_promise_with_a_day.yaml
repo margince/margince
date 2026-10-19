@@ -9,18 +9,8 @@
   ],
   "expect": {
     "outcome": "accepted",
-    "answer": [
-      {
-        "line": 1,
-        "due_date": "2026-03-06"
-      }
-    ],
-    "rubric": "The proposed next step must preserve the tentative wording, with confidence at most 0.3. A stated date does not turn trying into a firm promise.",
-    "bands": {
-      "certified_min": 70,
-      "degraded_min": 50,
-      "floor": 40
-    }
-  },
-  "commitment_band": "hedged"
+    "answer": [],
+    "judge": "none",
+    "judge_none_reason": "Trying to send a document does not establish an unconditional deliverable. A named day does not turn tentative work into an open promise; the semantic checker rejects an actionable proposal."
+  }
 }

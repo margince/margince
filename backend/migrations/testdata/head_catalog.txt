@@ -152,6 +152,7 @@ public.activity_commitment_admission.current_work boolean NOT NULL gen=- def=-
 public.activity_commitment_admission.evaluated_at timestamp with time zone NOT NULL gen=- def=-
 public.activity_commitment_admission.evidence_ids uuid[] NOT NULL gen=- def=-
 public.activity_commitment_admission.locator text NOT NULL gen=- def=-
+public.activity_commitment_admission.meaning jsonb gen=- def=-
 public.activity_commitment_admission.outcome text NOT NULL gen=- def=-
 public.activity_commitment_admission.renewed_at timestamp with time zone gen=- def=-
 public.activity_commitment_admission.renewed_by uuid gen=- def=-

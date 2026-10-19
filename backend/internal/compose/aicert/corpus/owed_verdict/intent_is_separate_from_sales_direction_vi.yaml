@@ -1,0 +1,60 @@
+name: intent_is_separate_from_sales_direction_vi
+task: owed_verdict
+site: owed
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture:
+- subject: Message
+  body: Biểu mẫu đã ký được đính kèm. Tôi đã gửi sáng nay.
+  to:
+  - recipient@example.test
+- subject: Message
+  body: Đã nhận, cảm ơn.
+  to:
+  - recipient@example.test
+- subject: Message
+  body: Nếu hữu ích, tôi có thể soạn bản nháp vào tuần tới.
+  to:
+  - recipient@example.test
+- subject: Message
+  body: 'Bản tin hàng tháng: đặt lịch trao đổi để tìm hiểu các gói của chúng tôi. Thư này gửi đến
+    mọi người đăng ký.'
+  to:
+  - recipient@example.test
+- subject: Message
+  body: Bạn có thể duyệt báo giá của bên cung cấp máy in cho văn phòng bạn không?
+  to:
+  - recipient@example.test
+- subject: Message
+  body: Bạn có thể đón các con sau giờ học không?
+  to:
+  - recipient@example.test
+- subject: Message
+  body: 'Ghi chú nội bộ: khách hàng tiềm năng đang xem báo giá. Hiện chưa cần làm gì.'
+  to:
+  - recipient@example.test
+- subject: Message
+  body: Vui lòng gửi báo giá đã sửa.
+  to:
+  - recipient@example.test
+- subject: Message
+  body: Chúng tôi sẽ không gia hạn hợp đồng dịch vụ. Hợp đồng kết thúc ngày 30 tháng 9 năm 2026. Đây
+    là quyết định cuối cùng, không cần trả lời.
+  to:
+  - recipient@example.test
+expect:
+  outcome: accepted
+  answer:
+  - informs_us
+  - informs_us
+  - informs_us
+  - informs_us
+  - asks_us
+  - asks_us
+  - informs_us
+  - asks_us
+  - informs_us
+  judge: none
+  judge_none_reason: Each closed verdict is checked. Supplier and personal requests still ask for
+    action; commercial relevance is a separate fact. Reports, mass promotions, optional offers and
+    termination notices without a question do not create a request.

@@ -42,13 +42,8 @@ import (
 // become a task without asking.
 const CommitmentTaskKind = "commitment_task"
 
-// CommitmentTaskConfidence is the reading at or above which a promise a named
-// colleague made becomes their task without asking. Below it, down to the
-// extractor's own floor, the promise is proposed instead.
-//
-// It sits inside the gap the certification records show: a plain dated promise
-// is read at 0.9 or more, a soft one at 0.3 or less, and the extractors drop
-// anything under 0.7. TestCommitmentTaskConfidenceSitsInTheCertifiedGap holds it.
+// CommitmentTaskConfidence separates automatic tasks from proposals after semantic admission.
+// Certified firm promises must clear this threshold; confidence cannot admit a non-action.
 const CommitmentTaskConfidence = 0.85
 
 // The claim kinds a commitment is filed under.
@@ -63,6 +58,7 @@ const commitmentIdentityLocator = "locator"
 
 // Commitment is one promise as an extractor hands it to the rule.
 type Commitment struct {
+	Meaning      *commitmentMeaning
 	AsOf         time.Time
 	ReadMessages []ids.UUID
 	// Extractor is the principal id the claim and the task are captured by,
@@ -163,6 +159,9 @@ func (d *CommitmentDispatcher) DispatchTx(
 		evidence = append(evidence, openapi_types.UUID(message))
 	}
 	decision := crmcontracts.CommitmentAdmission{Locator: c.Locator, Summary: c.Summary, SourceQuote: c.Quote, Outcome: string(outcome), CurrentWork: !outcome.withheld(), RuleVersion: activities.CommitmentAdmissionVersion, EvidenceIds: evidence, EvaluatedAt: c.AsOf}
+	if c.Meaning != nil {
+		decision.Meaning = new(crmcontracts.CommitmentMeaning(*c.Meaning))
+	}
 	if c.AdmissionSourceID != nil {
 		decision.RenewedBy = new(openapi_types.UUID(*c.AdmissionSourceID))
 		decision.RenewedAt = c.RenewedAt
@@ -204,10 +203,17 @@ func (d *CommitmentDispatcher) routeCommitment(ctx context.Context, tx pgx.Tx, c
 	var recorded bool
 	if reason != activities.CommitmentSourceUnavailable {
 		var held bool
-		held, recorded, err = activities.CommitmentAdmissionStateTx(ctx, tx, ids.From[ids.ActivityKind](c.SourceActivityID), c.Locator, c.AsOf, c.AdmissionSourceID, c.RenewedAt)
+		renewedBy, renewedAt := c.AdmissionSourceID, c.RenewedAt
+		if c.Meaning.withheldOutcome() != "" {
+			renewedBy, renewedAt = nil, nil
+		}
+		held, recorded, err = activities.CommitmentAdmissionStateTx(ctx, tx, ids.From[ids.ActivityKind](c.SourceActivityID), c.Locator, c.AsOf, renewedBy, renewedAt)
 		if err != nil || held {
 			return CommitmentRemembered, ids.UUID{}, err
 		}
+	}
+	if outcome := c.Meaning.withheldOutcome(); outcome != "" {
+		return outcome, ids.UUID{}, nil
 	}
 	if reason != activities.CommitmentCurrent {
 		return d.retainWithheld(ctx, tx, c, reason, recorded)

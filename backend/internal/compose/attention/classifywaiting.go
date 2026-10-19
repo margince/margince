@@ -69,7 +69,7 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		Because:     waitingBecause(waiting, days, demoted),
 		Actions:     []crmcontracts.WorklistItemActions{},
 	}
-	if demoted.informational || waiting.ActionUnconfirmed || demoted.elsewhere {
+	if demoted.informational || waiting.ActionUnconfirmed || demoted.elsewhere || waiting.NonBuyer {
 		row.Consequence = "none"
 	}
 	// The subject travels because the row exists at all only for a reader the
@@ -195,7 +195,7 @@ func waitingLevel(waiting WaitingCustomer, d waitingDemotions) int {
 			level = levelMaterialRisk
 		}
 	}
-	if d.unproven || d.elsewhere || d.informational || waiting.ActionUnconfirmed || d.booked {
+	if d.unproven || d.elsewhere || d.informational || waiting.ActionUnconfirmed || waiting.NonBuyer || d.booked {
 		level = levelRoutine
 	}
 	return level
@@ -205,7 +205,11 @@ func waitingLevel(waiting WaitingCustomer, d waitingDemotions) int {
 // card states it: who moved last, then the count that replaces it when a
 // meeting is booked, then every demotion that applied.
 func waitingBecause(waiting WaitingCustomer, days int, d waitingDemotions) []crmcontracts.WorklistReason {
-	because := []crmcontracts.WorklistReason{reason("buyer_wrote_last", nil)}
+	first := crmcontracts.WorklistReasonKindBuyerWroteLast
+	if waiting.NonBuyer {
+		first = crmcontracts.WorklistReasonKindNonBuyerRequest
+	}
+	because := []crmcontracts.WorklistReason{reason(first, nil)}
 	if d.booked {
 		because = append(because, reason("meeting_booked",
 			&crmcontracts.WorklistValue{Kind: valueDate, Date: waiting.MeetingBookedAt}))

@@ -55,7 +55,8 @@ func TestCancellingOneCalendarOccurrenceLeavesTheHeldMeetingsPromiseCurrent(t *t
 			}
 		}
 		c := Commitment{
-			AsOf: asOf, Extractor: transcriptProposalActor, SourceActivityID: source.ID,
+			Meaning: openCommitmentMeaning("", "I will send the pricing."),
+			AsOf:    asOf, Extractor: transcriptProposalActor, SourceActivityID: source.ID,
 			Seat: &e.Rep1, Summary: "Send pricing", Quote: "I will send the pricing.", Confidence: 0.95,
 			Locator: commitmentLocator(source.ID, claimKindOurs, e.Rep1.String(), "I will send the pricing."),
 		}

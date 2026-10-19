@@ -2829,6 +2829,8 @@ export const de = {
   "email.detail.when": "Gesendet",
   "commitment.review.count_one": "Zusage zur Prüfung: {count}",
   "commitment.review.count_other": "Zusagen zur Prüfung: {count}",
+  "commitment.review.conditionWords": "Bedingung: {words}",
+  "commitment.review.deadlineWords": "Genannte Frist: {words}",
   "commitment.review.title": "Zusagen prüfen",
   "commitment.review.detail":
     "Aus diesen Auswertungen wurden keine Aufgaben erstellt. Prüfe die Quelle und spätere Antworten, bevor du im verknüpften Datensatz eine Folgeaufgabe anlegst.",
@@ -2842,6 +2844,15 @@ export const de = {
   "commitment.review.canceledMeeting": "Der Termin wurde abgesagt.",
   "commitment.review.pendingMeeting":
     "Der Termin hat noch nicht stattgefunden.",
+  "commitment.review.completed":
+    "Die Quelle beschreibt bereits erledigte Arbeit. Es wurde keine neue Aufgabe erstellt.",
+  "commitment.review.conditional":
+    "Die Zusage hängt von einer noch nicht erfüllten Bedingung ab.",
+  "commitment.review.optional": "Das ist ein Angebot, keine feste Zusage.",
+  "commitment.review.request":
+    "Die Arbeit wurde angefragt, aber noch nicht zugesagt.",
+  "commitment.review.unclear":
+    "Aus der Quelle geht keine offene Zusage hervor.",
   "commitment.review.unavailable":
     "Prüfe die Quelle, bevor du eine Aufgabe erstellst.",
   "commitment.review.evaluated": "Geprüft {when}",
@@ -14054,6 +14065,7 @@ export const de = {
   "worklist.category.decisions": "Freigabe",
   "worklist.category.system": "System",
   "worklist.because.pinned": "von dir angeheftet",
+  "worklist.because.non_buyer_request": "nicht als Kundenanliegen bestätigt",
   "worklist.because.buyer_wrote_last":
     "die Käuferseite hat zuletzt geschrieben",
   "worklist.because.waiting_days": "wartet",

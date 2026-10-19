@@ -44648,6 +44648,16 @@ components:
         start: { type: string, format: date-time }
         end: { type: string, format: date-time }
 
+    CommitmentMeaning:
+      type: object
+      description: The source-supported state and deadline precision of a possible promise.
+      required: [state, condition, deadline_precision, deadline_quote]
+      properties:
+        state: { type: string, description: "Whether the promise is open, completed, conditional, optional, a request, or unclear." }
+        condition: { type: string, description: "The unmet condition in the source's own words, otherwise empty." }
+        deadline_precision: { type: string, description: "Day, range, or none. A range does not name a due date." }
+        deadline_quote: { type: string, description: "The source's deadline words, empty when no deadline was stated." }
+
     CommitmentAdmission:
       type: object
       description: A recorded decision about whether a promise creates current work. Re-reading replaces this decision without changing human-owned work.
@@ -44658,6 +44668,7 @@ components:
         source_quote: { type: string }
         outcome: { type: string }
         current_work: { type: boolean }
+        meaning: { $ref: "#/components/schemas/CommitmentMeaning" }
         rule_version: { type: string }
         evidence_ids: { type: array, items: { type: string, format: uuid } }
         evaluated_at: { type: string, format: date-time }
@@ -61416,7 +61427,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_booked, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded, you_wrote_last, no_reply_days, met_days_ago, nothing_sent_since, no_attendee_on_file, read_only]
+          enum: [pinned, buyer_wrote_last, non_buyer_request, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_booked, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded, you_wrote_last, no_reply_days, met_days_ago, nothing_sent_since, no_attendee_on_file, read_only]
           description: 'Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it.'
         value: { $ref: '#/components/schemas/WorklistValue' }
 

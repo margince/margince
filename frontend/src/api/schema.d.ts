@@ -32523,6 +32523,17 @@ export interface components {
             /** Format: date-time */
             end?: string;
         };
+        /** @description The source-supported state and deadline precision of a possible promise. */
+        CommitmentMeaning: {
+            /** @description Whether the promise is open, completed, conditional, optional, a request, or unclear. */
+            state: string;
+            /** @description The unmet condition in the source's own words, otherwise empty. */
+            condition: string;
+            /** @description Day, range, or none. A range does not name a due date. */
+            deadline_precision: string;
+            /** @description The source's deadline words, empty when no deadline was stated. */
+            deadline_quote: string;
+        };
         /** @description A recorded decision about whether a promise creates current work. Re-reading replaces this decision without changing human-owned work. */
         CommitmentAdmission: {
             locator: string;
@@ -32530,6 +32541,7 @@ export interface components {
             source_quote: string;
             outcome: string;
             current_work: boolean;
+            meaning?: components["schemas"]["CommitmentMeaning"];
             rule_version: string;
             evidence_ids: string[];
             /** Format: date-time */
@@ -46309,7 +46321,7 @@ export interface components {
              * @description Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_booked" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded" | "you_wrote_last" | "no_reply_days" | "met_days_ago" | "nothing_sent_since" | "no_attendee_on_file" | "read_only";
+            kind: "pinned" | "buyer_wrote_last" | "non_buyer_request" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_booked" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded" | "you_wrote_last" | "no_reply_days" | "met_days_ago" | "nothing_sent_since" | "no_attendee_on_file" | "read_only";
             value?: components["schemas"]["WorklistValue"];
         };
         /**

@@ -2759,6 +2759,8 @@ export const vi = {
   "email.detail.when": "Thời gian gửi",
   "commitment.review.count_one": "Cam kết cần xem lại: {count}",
   "commitment.review.count_other": "Cam kết cần xem lại: {count}",
+  "commitment.review.conditionWords": "Điều kiện: {words}",
+  "commitment.review.deadlineWords": "Thời hạn đã nêu: {words}",
   "commitment.review.title": "Xem lại cam kết",
   "commitment.review.detail":
     "Chưa tạo việc từ các kết quả này. Xem lại nguồn và phản hồi sau đó trước khi thêm việc tiếp theo từ hồ sơ liên kết.",
@@ -2770,6 +2772,15 @@ export const vi = {
     "Ngày trên thư khác với ngày thư đến hộp thư. Xem lại ngày gốc.",
   "commitment.review.canceledMeeting": "Cuộc họp đã bị hủy.",
   "commitment.review.pendingMeeting": "Cuộc họp chưa diễn ra.",
+  "commitment.review.completed":
+    "Nguồn mô tả công việc đã làm xong. Không tạo việc mới.",
+  "commitment.review.conditional":
+    "Cam kết phụ thuộc vào một điều kiện chưa được đáp ứng.",
+  "commitment.review.optional":
+    "Đây là lời đề nghị, chưa phải cam kết đã thống nhất.",
+  "commitment.review.request": "Đây là yêu cầu, chưa có ai nhận thực hiện.",
+  "commitment.review.unclear":
+    "Nguồn chưa cho thấy một cam kết còn cần thực hiện.",
   "commitment.review.unavailable": "Xem lại nguồn trước khi tạo việc.",
   "commitment.review.evaluated": "Đã xem lại {when}",
   "activity.detail.loading": "Đang tải hoạt động…",
@@ -13719,6 +13730,7 @@ export const vi = {
   "worklist.category.decisions": "Phê duyệt",
   "worklist.category.system": "Hệ thống",
   "worklist.because.pinned": "bạn đã ghim",
+  "worklist.because.non_buyer_request": "chưa xác định là việc của khách hàng",
   "worklist.because.buyer_wrote_last": "bên mua gửi tin sau cùng",
   "worklist.because.waiting_days": "đang chờ",
   "worklist.because.more_one": "+{count} khác",

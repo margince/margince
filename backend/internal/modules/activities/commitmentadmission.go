@@ -17,7 +17,7 @@ import (
 )
 
 // CommitmentAdmissionVersion identifies the policy used by extraction and reviewed repair.
-const CommitmentAdmissionVersion = "1"
+const CommitmentAdmissionVersion = "2"
 
 // AutomaticMailContent is the content boundary shared by extraction and its admission check.
 const AutomaticMailContent = `audience = 'workspace' AND restricted_at IS NULL`

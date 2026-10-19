@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 312 |
-| Columns | 3706 |
+| Columns | 3707 |
 | Foreign keys | 518 |
 | Owning areas | 36 |
 
@@ -133,7 +133,7 @@ erDiagram
 | [`activity`](activities.md#activity) | activities | 60 | 38 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 4 | 0 |
-| [`activity_commitment_admission`](activities.md#activity_commitment_admission) | activities | 12 | 0 |
+| [`activity_commitment_admission`](activities.md#activity_commitment_admission) | activities | 13 | 0 |
 | [`activity_identity`](activities.md#activity_identity) | activities | 5 | 0 |
 | [`activity_kind`](compose.md#activity_kind) | compose | 1 | 1 |
 | [`activity_link`](activities.md#activity_link) | activities | 9 | 0 |

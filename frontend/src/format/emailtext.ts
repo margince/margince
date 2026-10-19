@@ -51,7 +51,9 @@ const SIGNATURE_DELIMITER = /^--\s*$/;
 const ATTRIBUTION = [
   /^On\s.{1,200}\swrote:\s*$/,
   /^Am\s.{1,200}\sschrieb\s?.{0,120}:\s*$/,
-  /^-{2,}\s*(Original Message|Ursprüngliche Nachricht|Forwarded message|Weitergeleitete Nachricht)/i,
+  /^-{2,}\s*(Original Message|Ursprüngliche Nachricht|Forwarded message|Weitergeleitete Nachricht|Thư được chuyển tiếp|Tin nhắn được chuyển tiếp)/i,
+  /^Begin forwarded message:\s*$/i,
+  /^(Thư được chuyển tiếp|Tin nhắn được chuyển tiếp):\s*$/i,
   /^Anfang der weitergeleiteten (E-Mail|Nachricht)/i,
   /^_{5,}\s*$/,
 ];

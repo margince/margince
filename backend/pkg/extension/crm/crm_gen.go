@@ -565,7 +565,10 @@ type CommitmentAdmission struct {
 	EvaluatedAt time.Time `json:"evaluated_at"`
 	EvidenceIds []string  `json:"evidence_ids"`
 	Locator     string    `json:"locator"`
-	Outcome     string    `json:"outcome"`
+
+	// Meaning The source-supported state and deadline precision of a possible promise.
+	Meaning *CommitmentMeaning `json:"meaning,omitempty"`
+	Outcome string             `json:"outcome"`
 
 	// RenewedAt The renewing message's source time when the decision was recorded.
 	RenewedAt *time.Time `json:"renewed_at,omitempty"`
@@ -575,6 +578,21 @@ type CommitmentAdmission struct {
 	RuleVersion string  `json:"rule_version"`
 	SourceQuote string  `json:"source_quote"`
 	Summary     string  `json:"summary"`
+}
+
+// CommitmentMeaning The source-supported state and deadline precision of a possible promise.
+type CommitmentMeaning struct {
+	// Condition The unmet condition in the source's own words, otherwise empty.
+	Condition string `json:"condition"`
+
+	// DeadlinePrecision Day, range, or none. A range does not name a due date.
+	DeadlinePrecision string `json:"deadline_precision"`
+
+	// DeadlineQuote The source's deadline words, empty when no deadline was stated.
+	DeadlineQuote string `json:"deadline_quote"`
+
+	// State Whether the promise is open, completed, conditional, optional, a request, or unclear.
+	State string `json:"state"`
 }
 
 // CreateActivityRequest defines model for CreateActivityRequest.

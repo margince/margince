@@ -14445,6 +14445,15 @@ components:
         provider: {type: string, enum: [gcal, graphcal], description: The calendar provider that holds the event. Omitted on guest reads.}
         video_call: {type: boolean, description: A video call link was requested for this meeting.}
         video_url: {type: string, description: "The join link the calendar created. Absent until the calendar accepts the invitation, or when it could not create one."}
+    CommitmentMeaning:
+      type: object
+      description: The source-supported state and deadline precision of a possible promise.
+      required: [state, condition, deadline_precision, deadline_quote]
+      properties:
+        state: {type: string, description: "Whether the promise is open, completed, conditional, optional, a request, or unclear."}
+        condition: {type: string, description: "The unmet condition in the source's own words, otherwise empty."}
+        deadline_precision: {type: string, description: "Day, range, or none. A range does not name a due date."}
+        deadline_quote: {type: string, description: "The source's deadline words, empty when no deadline was stated."}
     CommitmentAdmission:
       type: object
       description: A recorded decision about whether a promise creates current work. Re-reading replaces this decision without changing human-owned work.
@@ -14455,6 +14464,7 @@ components:
         source_quote: {type: string}
         outcome: {type: string}
         current_work: {type: boolean}
+        meaning: {$ref: "#/components/schemas/CommitmentMeaning"}
         rule_version: {type: string}
         evidence_ids: {type: array, items: {type: string, format: uuid}}
         evaluated_at: {type: string, format: date-time}

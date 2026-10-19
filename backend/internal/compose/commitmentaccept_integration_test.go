@@ -26,7 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-const mailedPromise = "We will send the revised pricing over by Friday."
+const mailedPromise = "We will send the revised pricing."
 
 // mailedProposal is an unsure commitment a colleague made in a shared mail
 // thread with a customer, staged for that colleague to accept.
@@ -47,6 +47,7 @@ func stageMailedProposal(t *testing.T) mailedProposal {
 	reply, err := json.Marshal(map[string]any{"events": []map[string]any{{
 		"kind": "commitment_made", "message_id": message.String(), "summary": "Send the revised pricing",
 		"quote": mailedPromise, "due_date": "", "confidence": 0.75, "promiser_ref": "seat:" + e.Rep2.String(),
+		"commitment": openCommitmentMeaning("", ""),
 	}}})
 	if err != nil {
 		t.Fatalf("building the model reply: %v", err)
