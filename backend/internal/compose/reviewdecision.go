@@ -283,7 +283,7 @@ func returnRoutedReview(ctx context.Context, tx pgx.Tx, proposedChange json.RawM
 // wiring sites below, so widening it is a deliberate edit rather than an
 // accident.
 func retractionRouter(pool *pgxpool.Pool) reviewRouter {
-	return reviewRouter{approvals: approvals.NewService(InstallationDB(pool))}
+	return reviewRouter{approvals: newApprovalsService(InstallationDB(pool))}
 }
 
 // reviewCloser closes the review a settled message leaves behind.

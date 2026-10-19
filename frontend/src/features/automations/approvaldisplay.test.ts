@@ -304,3 +304,52 @@ it("does not infer a requested reviewer from agent authority", () => {
     false,
   );
 });
+it.each(LOCALES)(
+  "keeps an undated promise distinct from a fulfilled task in %s",
+  (locale) => {
+    const tr = (
+      key: Parameters<typeof translate>[1],
+      params?: Record<string, string>,
+    ) => translate(locale, key, params);
+    const fields = resolveDisplay(
+      "commitment_task",
+      { summary: "Send the revised scope", party: "Alex Beck" },
+      tr,
+      (day) => day,
+    );
+    expect(fields.find((field) => field.field === "due_date")?.value).toBe(
+      tr("approval.commitment.noDueDay"),
+    );
+    expect(
+      fields.find((field) => field.field === "promise_status")?.value,
+    ).toBe(tr("approval.commitment.notFulfilled"));
+  },
+);
+
+it.each(LOCALES)(
+  "keeps the named inactive assignee separate from the promiser in %s",
+  (locale) => {
+    const t = (
+      key: Parameters<typeof translate>[1],
+      params?: Record<string, string>,
+    ) => translate(locale, key, params);
+    const fields = resolveDisplay(
+      "commitment_task",
+      { promiser_seat_id: "original", seat_id: "assignee" },
+      t,
+      (day) => day,
+      new Map([
+        ["original", "Theo"],
+        ["assignee", "Mira"],
+      ]),
+      undefined,
+      true,
+    );
+    expect(fields.find((field) => field.field === "party")?.value).toBe("Theo");
+    expect(fields.find((field) => field.field === "assignment")?.value).toBe(
+      translate(locale, "approval.commitment.inactiveAssignment", {
+        name: "Mira",
+      }),
+    );
+  },
+);

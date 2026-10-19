@@ -182,7 +182,7 @@ describe("AiTasksCard", () => {
       "ai-task-row-embeddings",
     ]);
     const verb = within(rows[1]).getByRole("button", {
-      name: "Edit Search and retrieval",
+      name: "Edit Search and retrieval across records",
     });
     expect(verb).toHaveAccessibleDescription(/embedding model row/i);
     expect(rows[1]).not.toHaveClass("rowlink");

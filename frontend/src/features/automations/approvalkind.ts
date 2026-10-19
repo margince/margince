@@ -1,4 +1,5 @@
-import type { Translator } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import type { Locale, PluralTranslator, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { WON_REASON_LABELS, WON_REASONS } from "../deals/winreason";
 import { KIND_LABEL } from "./approvalkindlabel";
@@ -188,4 +189,30 @@ export function decisionSkewKey(kind: string | null): MessageKey {
   return kind === "fx_rate_proposal"
     ? "decision.fxRateMoved"
     : "decision.versionSkew";
+}
+
+export function approvalAcceptLabel(
+  kind: string | undefined,
+  plural: PluralTranslator,
+  fallback: string,
+  locale: Locale,
+  count = 1,
+): string {
+  if (kind !== "commitment_task") return fallback;
+  return plural("approval.commitment.createTask", count, {
+    count: formatNumber(count, locale),
+  });
+}
+
+export function approvalExpiryLabel(
+  kind: string | undefined,
+  countdown: string,
+  t: Translator,
+): string {
+  return t(
+    kind === "commitment_task"
+      ? "approval.commitment.proposalExpiresIn"
+      : "decision.expiresIn",
+    { countdown },
+  );
 }
