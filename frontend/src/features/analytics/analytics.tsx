@@ -30,6 +30,7 @@ import {
   useAnalyticsSelection,
 } from "./analytics.context";
 import { type DataCoverageRow, useDataCoverage } from "./analytics.coverage";
+import { FirstRunNotice } from "./analytics.firstrun";
 import { ForecastView, SharedForecastView } from "./analytics.forecast";
 import { sourceName } from "./analytics.forecast.review";
 import { MyOutcomesView } from "./analytics.outcomes";
@@ -256,6 +257,7 @@ export function AnalyticsScreen() {
         }
       />
       <div className="analytics-body">
+        <FirstRunNotice />
         <SectionBody
           section={section}
           locale={locale}

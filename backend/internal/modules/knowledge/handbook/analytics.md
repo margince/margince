@@ -36,7 +36,7 @@ The **Deals** board itself also shows each stage's total and weighted total at t
 
 ### What analytics sections are there?
 The Analytics tabs are **Performance**, **Forecast**, **Pipeline**, **My outcomes**, **Delivery** and **Reports**. The **Setup** menu at the end of the tab row holds **Targets**, **Metric definitions** and **Data coverage**. Access decides which tabs and menu entries you get.
-The **Forecast** section is where this period will land. The **Pipeline** section holds the pipeline reports.
+The **Forecast** section is where this period will land. The **Pipeline** section holds the pipeline reports. With no deals recorded yet, Analytics says **No deals yet** and offers **Open Deals**.
 
 The **Performance** section shows outcome totals, target progress when targets are set, trends and pipeline charts.
 It also shows a **Needs your attention** list when forecast checks, unpriced deals or unread data sources need you.
