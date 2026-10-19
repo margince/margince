@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { pickOption } from "../design-system/select-testing";
+import { readingsDay } from "../features/brief/brief.fixtures";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
@@ -108,6 +109,14 @@ const connectorOff = () =>
 // The zone comes from the identity fixture rather than being typed again here.
 // A story that named one would be a second author of the reader's clock, and
 // `format/timezone.ts` is the module that owns naming zones.
+// The shell around every tab reads the worklist, and its queue, summary and
+// caveat lists are all required by the contract. An unrouted read falls to the
+// generic empty page, which carries none of them, so the page fails in a way
+// no server could produce.
+const SHELL: RouteMap = {
+  "GET /worklist": () => jsonResponse(readingsDay({}, [])),
+};
+
 const WORKING_HOURS: RouteMap = {
   "GET /me/working-hours": () =>
     jsonResponse({
@@ -125,7 +134,7 @@ function tab(tabId: string, routes: RouteMap) {
   return () => {
     // The story's own routes last, so a story about this card can still say
     // something different from the default.
-    installFetchStub({ ...WORKING_HOURS, ...routes });
+    installFetchStub({ ...SHELL, ...WORKING_HOURS, ...routes });
     return (
       <StoryProviders>
         <SettingsScreen route={settingsAddress(tabId)} />
