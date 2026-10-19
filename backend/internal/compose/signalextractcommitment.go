@@ -3,11 +3,6 @@
 
 package compose
 
-// A commitment read out of an email conversation, handed to the commitment
-// rule. Who made it is read from the message, never from the model: an
-// outbound message is ours and the colleague who sent it promised; an inbound
-// one is the customer's.
-
 import (
 	"context"
 	"errors"
@@ -19,12 +14,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // extractKindCommitment is the event kind that goes to the commitment rule.
@@ -59,6 +54,11 @@ func validateEventEvidence(event extractedEvent, thread settledThread) string {
 	for _, message := range thread.Messages {
 		if message.ID.String() != event.MessageID {
 			continue
+		}
+		if event.PromiserRef != "" {
+			if _, found := referencedPromiser(event.PromiserRef, message.Parties); !found {
+				return "a commitment names a promiser outside its verified message participants"
+			}
 		}
 		// The sender's own words, as dispatch reads them: a quote found only
 		// in the history the message quotes is not this sender's commitment.
@@ -182,42 +182,13 @@ func (x *SignalExtractor) emailCommitment(
 		owner := thread.PrivateTo
 		c.PrivateTo = &owner
 	}
-	var kind, party string
-	switch message.Direction {
-	case string(crmcontracts.ActivityDirectionInbound):
-		sender, one := onlyOne(parties.SenderContacts)
-		if !one {
-			return Commitment{}, false, nil
-		}
-		contact := ids.From[ids.ContactKind](sender)
-		c.Theirs, kind, party = &contact, claimKindTheirs, "contact:"+sender.String()
-	case string(crmcontracts.ActivityDirectionOutbound):
-		kind, party = claimKindOurs, "us"
-		if seat, one := onlyOne(parties.SenderSeats); one {
-			c.Seat, party = &seat, "seat:"+seat.String()
-		}
-		if recipient, one := onlyOne(parties.RecipientContacts); one {
-			promisedTo := ids.From[ids.ContactKind](recipient)
-			c.PromisedTo = &promisedTo
-			c.Links = append(c.Links, activities.ActivityLinkInput{EntityType: string(recordTypeContact), EntityID: recipient})
-		}
-	default:
-		// Nobody recorded which side wrote it, and a promise attributed to the
-		// wrong side is worse than one not filed.
-		return Commitment{}, false, nil
-	}
-	c.Party = emailParty(message.Direction)
-	c.Body = fmt.Sprintf("%s in the email %q, sent %s.", c.Party, message.Subject, message.At.Format(time.DateOnly))
+	verified := verifiedCommitmentParties(parties)
+	kind, party := attributeCommitment(&c, event.PromiserRef, verified)
+	c.NeedsConfirmation = message.Direction != connector.DirectionOutbound || !commitmentPartyHasRole(verified, event.PromiserRef, commitmentSenderRole)
+	c.Body = fmt.Sprintf("Promiser: %s. Commitment in the email %q, sent %s.", c.Party, message.Subject, message.At.Format(time.DateOnly))
+	c.Span = span
 	c.Locator = commitmentLocator(cited, kind, party, span)
 	return x.withRestatedCommitment(ctx, tx, thread, event, c)
-}
-
-// emailParty names who made a promise in an email, as the task body says it.
-func emailParty(direction string) string {
-	if direction == string(crmcontracts.ActivityDirectionInbound) {
-		return "The customer committed to this"
-	}
-	return "We committed to this"
 }
 
 // citedMessage is the message of the conversation an event cites.

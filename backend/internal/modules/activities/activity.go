@@ -202,6 +202,9 @@ func (s *Store) LogActivityTx(ctx context.Context, tx pgx.Tx, in LogActivityInpu
 func (s *Store) logActivityAndReadTranscript(
 	ctx context.Context, tx pgx.Tx, in LogActivityInput,
 ) (crmcontracts.Activity, bool, error) {
+	if err := CheckEntryHasContent(in.Kind, in.Subject, in.Body); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
 	if in.RequestActivityID != nil {
 		return s.takeEmailRequest(ctx, tx, in)
 	}

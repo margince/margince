@@ -633,3 +633,52 @@ it("tells a seat that may not book why, as a standing notice beside its hours", 
   expect(screen.queryByRole("alert")).toBeNull();
   expect(screen.queryByRole("switch", { name: "Accept bookings" })).toBeNull();
 });
+
+it("holds the save when a number is emptied instead of saving it as 0", async () => {
+  const user = userEvent.setup();
+  const writes: unknown[] = [];
+  mount({
+    "GET /scheduling/profile": () =>
+      jsonResponse({
+        ...bookingProfile,
+        calendar_id: "work",
+        buffer_minutes: 15,
+      }),
+    "PUT /scheduling/profile": (body) => {
+      writes.push(body);
+      return jsonResponse(bookingProfile);
+    },
+  });
+  const buffer = await screen.findByLabelText("Buffer in minutes");
+  await user.type(screen.getByLabelText("Meeting title"), "!");
+  await user.clear(buffer);
+  expect(screen.getByRole("button", { name: "Save settings" })).toHaveProperty(
+    "disabled",
+    true,
+  );
+  await user.type(buffer, "20");
+  await user.click(screen.getByRole("button", { name: "Save settings" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]).toMatchObject({ buffer_minutes: 20 });
+});
+
+it("keeps the save bar for a cleared number, so it can be discarded", async () => {
+  const user = userEvent.setup();
+  mount({
+    "GET /scheduling/profile": () =>
+      jsonResponse({
+        ...bookingProfile,
+        calendar_id: "work",
+        buffer_minutes: 15,
+      }),
+  });
+  const buffer = await screen.findByLabelText("Buffer in minutes");
+  await user.clear(buffer);
+  expect(screen.getByRole("button", { name: "Save settings" })).toHaveProperty(
+    "disabled",
+    true,
+  );
+  await user.click(screen.getByRole("button", { name: "Discard" }));
+  expect(buffer).toHaveProperty("value", "15");
+  expect(screen.queryByRole("button", { name: "Save settings" })).toBeNull();
+});

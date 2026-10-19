@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -43,12 +44,18 @@ const transcriptTargetType = string(recordTypeActivity)
 // could not be used closes the run as failed and returns nil, because retrying
 // would ask the same question of the same text and get the same answer.
 func (p *TranscriptProposer) Read(ctx context.Context, store transcriptReadStore, readID ids.UUID, activityID ids.ActivityID) error {
+	reader := *p
+	reader.said = transcriptCopyFor(identity.BaseLanguageForPrompt(ctx, p.pool))
+	return reader.readTranscript(ctx, store, readID, activityID)
+}
+
+func (p *TranscriptProposer) readTranscript(ctx context.Context, store transcriptReadStore, readID ids.UUID, activityID ids.ActivityID) error {
 	if _, err := store.BeginTranscriptRead(ctx, readID, activities.TranscriptReadLease); err != nil {
 		return err
 	}
 	reading, err := store.ReadTranscript(ctx, activityID)
 	if err != nil {
-		if detail, terminal := unreadableTranscript(err); terminal {
+		if detail, terminal := p.said.unreadableTranscript(err); terminal {
 			return p.fail(ctx, store, readID, activityID, detail)
 		}
 		// Anything else — the database unreachable, a scoped transient fault —
@@ -60,7 +67,10 @@ func (p *TranscriptProposer) Read(ctx context.Context, store transcriptReadStore
 	// between the request and the reading, and a re-normalized transcript is a
 	// different size than the one that was queued.
 	if err := activities.WithinReadingBounds(reading.Lines); err != nil {
-		return p.fail(ctx, store, readID, activityID, err.Error())
+		if detail, terminal := p.said.unreadableTranscript(err); terminal {
+			return p.fail(ctx, store, readID, activityID, detail)
+		}
+		return err
 	}
 	// The day the activity is FILED under, which is the best available answer
 	// to "when was this conversation". The composer offers it as an editable
@@ -83,14 +93,18 @@ func (p *TranscriptProposer) Read(ctx context.Context, store transcriptReadStore
 	// to give it — the meeting's own summary is what the reader recognises, so
 	// an unnamed reading draws the rail's unnamed sentence rather than a
 	// quotation from somebody's transcript.
+	parties, err := p.readCommitmentParties(ctx, activityID)
+	if err != nil {
+		return err
+	}
 	steps, err := p.ask(ai.WithSubject(ctx, activityID.Ref(), ""),
-		reading.Lines, reading.OccurredAt.Format(time.DateOnly))
+		reading.Lines, reading.OccurredAt.Format(time.DateOnly), parties)
 	if err != nil {
 		if errors.Is(err, errRefusedTranscript) {
 			p.log.WarnContext(ctx, "transcript reading refused",
 				"transcript_read_id", readID, "activity_id", activityID, "reason", err)
 			return p.fail(ctx, store, readID, activityID,
-				"the model's reading of this transcript could not be used; the transcript is unchanged and can be read again")
+				p.said.Say(transcriptWords.Refused))
 		}
 		return err
 	}
@@ -133,7 +147,7 @@ func (p *TranscriptProposer) stageAndFinish(
 				Status:      activities.TranscriptReadDone,
 				ProposalIDs: staged.proposals,
 				LineCount:   len(reading.Lines),
-				Detail:      transcriptReadDetail(len(kept), staged),
+				Detail:      p.said.transcriptReadDetail(len(kept), staged),
 			}, nil
 		})
 }
@@ -199,16 +213,18 @@ func readingIsRunning(ctx context.Context, tx pgx.Tx, readID ids.UUID) (bool, er
 // put a driver string ("failed to connect to host=…") in front of a rep on the
 // one field this feature exists to make readable, and would settle a transient
 // blip as a permanent failure.
-func unreadableTranscript(err error) (detail string, terminal bool) {
+func (said transcriptCopy) unreadableTranscript(err error) (detail string, terminal bool) {
 	var notTranscript *activities.NotATranscriptError
 	var tooLong *activities.TranscriptTooLongError
 	switch {
-	case errors.As(err, &notTranscript), errors.As(err, &tooLong):
-		return err.Error(), true
+	case errors.As(err, &notTranscript):
+		return said.Say(transcriptWords.NotTranscript), true
+	case errors.As(err, &tooLong):
+		return fmt.Sprintf(said.Say(transcriptWords.TooLong), tooLong.Lines, tooLong.Chars, activities.MaxReadableTranscriptLines, activities.MaxReadableTranscriptChars), true
 	case errors.Is(err, activities.ErrBlankTranscript):
-		return "this transcript is empty, so there is nothing to read", true
+		return said.Say(transcriptWords.Blank), true
 	case errors.Is(err, apperrors.ErrNotFound):
-		return "this transcript is no longer available to read", true
+		return said.Say(transcriptWords.Missing), true
 	}
 	return "", false
 }

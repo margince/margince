@@ -10608,6 +10608,7 @@ func (e ImportProblemKind) Valid() bool {
 
 // Defines values for ImportReasonCode.
 const (
+	ImportReasonCodeActivityEmpty                ImportReasonCode = "activity_empty"
 	ImportReasonCodeActivityHeld                 ImportReasonCode = "activity_held"
 	ImportReasonCodeActivityLinkAmbiguous        ImportReasonCode = "activity_link_ambiguous"
 	ImportReasonCodeActivityLinkAmbiguousDropped ImportReasonCode = "activity_link_ambiguous_dropped"
@@ -10724,6 +10725,8 @@ const (
 // Valid indicates whether the value is a known member of the ImportReasonCode enum.
 func (e ImportReasonCode) Valid() bool {
 	switch e {
+	case ImportReasonCodeActivityEmpty:
+		return true
 	case ImportReasonCodeActivityHeld:
 		return true
 	case ImportReasonCodeActivityLinkAmbiguous:
@@ -23456,7 +23459,7 @@ type AddDealRoomDocumentRequest struct {
 type Address struct {
 	City *string `json:"city,omitempty"`
 
-	// Country ISO-3166 alpha-2.
+	// Country ISO-3166 alpha-2. A contact or company write (and a CSV import cell) that changes the country to a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`; a code is stored upper-case. A country stored before this rule is kept as it is when a save carries it back unchanged.
 	Country              *string                `json:"country,omitempty"`
 	Line1                *string                `json:"line1,omitempty"`
 	Line2                *string                `json:"line2,omitempty"`
@@ -25515,10 +25518,13 @@ type Approval struct {
 	ProposedBy string `json:"proposed_by"`
 
 	// ProposedChange The staged diff/payload that will execute on approve.
-	ProposedChange   *map[string]interface{} `json:"proposed_change,omitempty"`
-	ResultEntityId   *openapi_types.UUID     `json:"result_entity_id,omitempty"`
-	ResultEntityType *string                 `json:"result_entity_type,omitempty"`
-	Status           ApprovalStatus          `json:"status"`
+	ProposedChange *map[string]interface{} `json:"proposed_change,omitempty"`
+
+	// RequestedDeciderId The member explicitly asked to decide, independent of who has permission to approve.
+	RequestedDeciderId *openapi_types.UUID `json:"requested_decider_id,omitempty"`
+	ResultEntityId     *openapi_types.UUID `json:"result_entity_id,omitempty"`
+	ResultEntityType   *string             `json:"result_entity_type,omitempty"`
+	Status             ApprovalStatus      `json:"status"`
 
 	// Summary One-line description of the proposed change.
 	Summary        *string             `json:"summary,omitempty"`
@@ -26570,6 +26576,9 @@ type AttentionItem struct {
 	// The band travels rather than the raw score, because a number between 0 and 100
 	// invites a client to draw a precision the §4 arithmetic does not claim.
 	Relationship *AttentionRelationshipFacts `json:"relationship,omitempty"`
+
+	// RequestedDeciderId The member explicitly asked to decide, independent of who has permission to approve.
+	RequestedDeciderId *openapi_types.UUID `json:"requested_decider_id,omitempty"`
 
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
 	Source AttentionItemSource `json:"source"`
@@ -31317,12 +31326,15 @@ type CompanySiteRead struct {
 	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
 
 	// Comparisons Version-bound comparison against current confirmed company truth.
-	Comparisons  []CompanySiteReadComparison `json:"comparisons"`
-	Contacts     []CompanySiteReadContact    `json:"contacts"`
-	CreatedAt    time.Time                   `json:"created_at"`
-	DraftVersion int                         `json:"draft_version"`
-	Facts        []CompanySiteReadFact       `json:"facts"`
-	Id           openapi_types.UUID          `json:"id"`
+	Comparisons []CompanySiteReadComparison `json:"comparisons"`
+	Contacts    []CompanySiteReadContact    `json:"contacts"`
+	CreatedAt   time.Time                   `json:"created_at"`
+
+	// DeferralReason Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons.
+	DeferralReason *string               `json:"deferral_reason,omitempty"`
+	DraftVersion   int                   `json:"draft_version"`
+	Facts          []CompanySiteReadFact `json:"facts"`
+	Id             openapi_types.UUID    `json:"id"`
 
 	// LegalEntities Every legal entity the site's legal notice states, with the identity details printed alongside it. A group publishes several; the read does not guess which one the installation belongs to, so it offers them and the human chooses. Empty when the site names none.
 	LegalEntities *[]CompanySiteReadLegalEntity `json:"legal_entities,omitempty"`
@@ -44988,10 +45000,13 @@ type ReportingContext struct {
 	PeriodKind            string               `json:"period_kind"`
 	PipelineId            *openapi_types.UUID  `json:"pipeline_id,omitempty"`
 	PopulationFingerprint string               `json:"population_fingerprint"`
-	Scope                 ReportingScope       `json:"scope"`
-	StateAt               time.Time            `json:"state_at"`
-	TargetInterval        *ReportingWindow     `json:"target_interval,omitempty"`
-	Timezone              string               `json:"timezone"`
+
+	// ProseLanguage Base language used for generated explanations. Absent on legacy readings, which use English.
+	ProseLanguage  *string          `json:"prose_language,omitempty"`
+	Scope          ReportingScope   `json:"scope"`
+	StateAt        time.Time        `json:"state_at"`
+	TargetInterval *ReportingWindow `json:"target_interval,omitempty"`
+	Timezone       string           `json:"timezone"`
 }
 
 // ReportingCoverage defines model for ReportingCoverage.
@@ -47136,6 +47151,9 @@ type SiteReadPageKind string
 type SiteReadReport struct {
 	CompanyId openapi_types.UUID `json:"company_id"`
 	CreatedAt time.Time          `json:"created_at"`
+
+	// DeferralReason Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons.
+	DeferralReason *string `json:"deferral_reason,omitempty"`
 
 	// FactCount Evidenced fields staged in the deepread proposal.
 	FactCount     *int           `json:"fact_count,omitempty"`
@@ -49611,17 +49629,20 @@ type VoiceBuild struct {
 	CandidateAction VoiceBuildCandidateAction `json:"candidate_action"`
 	CompletedAt     *time.Time                `json:"completed_at"`
 	CreatedAt       time.Time                 `json:"created_at"`
-	Id              openapi_types.UUID        `json:"id"`
-	NextAttemptAt   *time.Time                `json:"next_attempt_at"`
-	ProfileId       openapi_types.UUID        `json:"profile_id"`
-	Reason          VoiceBuildReason          `json:"reason"`
-	ResultVersion   *int                      `json:"result_version"`
-	SourceCount     int                       `json:"source_count"`
-	SourceHash      string                    `json:"source_hash"`
-	Stage           *VoiceBuildStage          `json:"stage"`
-	StartedAt       *time.Time                `json:"started_at"`
-	Status          VoiceBuildStatus          `json:"status"`
-	StatusCode      *VoiceBuildStatusCode     `json:"status_code"`
+
+	// DeferralReason Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons.
+	DeferralReason *string               `json:"deferral_reason,omitempty"`
+	Id             openapi_types.UUID    `json:"id"`
+	NextAttemptAt  *time.Time            `json:"next_attempt_at"`
+	ProfileId      openapi_types.UUID    `json:"profile_id"`
+	Reason         VoiceBuildReason      `json:"reason"`
+	ResultVersion  *int                  `json:"result_version"`
+	SourceCount    int                   `json:"source_count"`
+	SourceHash     string                `json:"source_hash"`
+	Stage          *VoiceBuildStage      `json:"stage"`
+	StartedAt      *time.Time            `json:"started_at"`
+	Status         VoiceBuildStatus      `json:"status"`
+	StatusCode     *VoiceBuildStatusCode `json:"status_code"`
 
 	// StatusDetail Safe operator guidance; never provider payload, prompt, SQL, or stack data.
 	StatusDetail *string   `json:"status_detail"`
@@ -49836,8 +49857,11 @@ type VoiceProfileEvaluation struct {
 	RemovedAvoidRules         int                                    `json:"removed_avoid_rules"`
 	RemovedRegisterRules      int                                    `json:"removed_register_rules"`
 	RepeatsPerPrompt          VoiceProfileEvaluationRepeatsPerPrompt `json:"repeats_per_prompt"`
-	SignatureSetJaccard       float32                                `json:"signature_set_jaccard"`
-	StructuredOutputValid     bool                                   `json:"structured_output_valid"`
+
+	// ReviewReasonDetails Typed explanations in the same order as review_reasons. Unknown codes use their recorded text.
+	ReviewReasonDetails   *[]VoiceReviewReason `json:"review_reason_details,omitempty"`
+	SignatureSetJaccard   float32              `json:"signature_set_jaccard"`
+	StructuredOutputValid bool                 `json:"structured_output_valid"`
 }
 
 // VoiceProfileEvaluationClassification defines model for VoiceProfileEvaluation.Classification.
@@ -49884,6 +49908,13 @@ type VoiceProfileVersionReason string
 
 // VoiceProfileVersionStatus defines model for VoiceProfileVersion.Status.
 type VoiceProfileVersionStatus string
+
+// VoiceReviewReason defines model for VoiceReviewReason.
+type VoiceReviewReason struct {
+	Code   string             `json:"code"`
+	Text   string             `json:"text"`
+	Values map[string]float64 `json:"values"`
+}
 
 // WebhookBodyContentType The Content-Type of a templated body; null means application/json.
 type WebhookBodyContentType string
@@ -58912,9 +58943,9 @@ type GetWorklistParams struct {
 	// message has no assignee, so its owner is the owner of the record it is filed
 	// under — deal, then lead, then contact, then company, first owner found. A
 	// thread no owned record attributes to anybody is the customer nobody is looking
-	// at, which is exactly what this queue is opened to find. Such a message stays
-	// reachable from `mine` as well, on the ground that an unowned customer writing
-	// in is everybody's until somebody takes them.
+	// at, which is exactly what this queue is opened to find. Unassigned work stays
+	// in this queue until somebody takes responsibility for it. `mine` requires
+	// a verified personal assignment or an explicitly requested decision.
 	//
 	// WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
 	// going quiet, meetings and duplicate pairs are read under the caller's row

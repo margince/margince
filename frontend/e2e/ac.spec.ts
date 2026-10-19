@@ -2838,7 +2838,7 @@ test.describe("filters and views", () => {
       "Branche",
       "Lebenszyklus",
       "Tag",
-      "Zuständig",
+      "Verantwortlich",
       // The custom field, and it sorts after the core ones — a reader scanning
       // for a column they added finds it in one place rather than interleaved.
       "fleet size",

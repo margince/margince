@@ -39,6 +39,9 @@ type CommitmentTaskProposal struct {
 	// SeatID is the colleague the task is for. Nil when nobody could be named,
 	// and then accepting it makes it the decider's.
 	SeatID *ids.UUID `json:"seat_id,omitempty"`
+	// PromiserSeatID preserves attribution when the proposed assignee must differ.
+	PromiserSeatID     *ids.UUID `json:"promiser_seat_id,omitempty"`
+	PromiserUnresolved bool      `json:"promiser_unresolved,omitempty"`
 	// DueDate is a day, YYYY-MM-DD, or empty. Text rather than an instant, so a
 	// reviewer edits a day and acceptance decides when that day ends.
 	DueDate string                         `json:"due_date,omitempty"`
@@ -229,7 +232,7 @@ func sourcePrivateToNow(ctx context.Context, tx pgx.Tx, source ids.UUID, staged 
 	}
 	if !offered {
 		return nil, fmt.Errorf("compose: the conversation this commitment was read from changed since, "+
-			"and who may read it is no longer known — dismiss this card and let the next reading propose it again: %w",
+			"and who may read it is no longer known — review conversation access before retrying: %w",
 			apperrors.ErrConflict)
 	}
 	if staged != nil || owner.IsZero() {

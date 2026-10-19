@@ -24,15 +24,15 @@ const CommitmentTaskSource = provenance.CommitmentTaskSource
 // archived and completed ones included. An archived task is how a rep says
 // "not mine to do", so the answer must outlive the archive or the next reading
 // of the same conversation would write it again.
-func (s *Store) CommitmentTaskWritten(ctx context.Context, tx pgx.Tx, locator string) (bool, error) {
+func (s *Store) CommitmentTaskWritten(ctx context.Context, tx pgx.Tx, locators ...string) (bool, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return false, err
 	}
 	var written bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM activity
-		                WHERE source_system = $1 AND source_id = $2)`,
-		CommitmentTaskSource, locator).Scan(&written); err != nil {
+		                WHERE source_system = $1 AND source_id = ANY($2::text[]))`,
+		CommitmentTaskSource, locators).Scan(&written); err != nil {
 		return false, fmt.Errorf("activities: reading whether the commitment's task exists: %w", err)
 	}
 	return written, nil
@@ -50,12 +50,8 @@ func (in *LogActivityInput) VisibleOnlyTo(user ids.UUID) {
 // MessageParties is who wrote one message and who it went to, as capture
 // recorded them.
 type MessageParties struct {
-	// SenderSeats are the members recorded as its sender. Capture binds a seat
-	// only from a party list the mailbox's own connection attested.
-	SenderSeats []ids.UUID
-	// SenderContacts and RecipientContacts are the contacts on either side.
-	SenderContacts    []ids.UUID
-	RecipientContacts []ids.UUID
+	From, To, Cc          []crmcontracts.EmailParty
+	Organizers, Attendees []crmcontracts.EmailParty
 }
 
 // PartiesOf reads who wrote one message and who it went to.
@@ -71,43 +67,12 @@ func (s *Store) PartiesOf(ctx context.Context, tx pgx.Tx, message ids.UUID) (Mes
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, message); err != nil {
 		return MessageParties{}, err
 	}
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	messagePos := arg(message)
-	// A contact the caller may not see is not named back to them.
-	scope, err := auth.ScopeClauseFor(ctx, "contact", "c", arg)
+	parties, err := readEmailParties(ctx, tx, ids.From[ids.ActivityKind](message))
 	if err != nil {
 		return MessageParties{}, err
 	}
-	if scope == "" {
-		scope = scopeUnbounded
-	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT p.role = 'from', p.user_id, CASE WHEN c.archived_at IS NULL THEN p.contact_id END FROM activity_participant p
-		  LEFT JOIN contact c ON c.id = p.contact_id
-		 WHERE p.activity_id = $%d AND p.role IN ('from', 'to', 'cc')
-		   AND (p.user_id IS NOT NULL OR (p.contact_id IS NOT NULL AND (%s)))
-		   AND NOT %s
-		 ORDER BY p.id`, messagePos, scope, unstatedContactSQL("p")), args...)
-	if err != nil {
-		return MessageParties{}, fmt.Errorf("activities: reading a message's parties: %w", err)
-	}
-	defer rows.Close()
-	var out MessageParties
-	for rows.Next() {
-		var sender bool
-		var seat, contact *ids.UUID
-		if err := rows.Scan(&sender, &seat, &contact); err != nil {
-			return MessageParties{}, fmt.Errorf("activities: reading a message's parties: %w", err)
-		}
-		switch {
-		case sender && seat != nil:
-			out.SenderSeats = append(out.SenderSeats, *seat)
-		case sender && contact != nil:
-			out.SenderContacts = append(out.SenderContacts, *contact)
-		case contact != nil:
-			out.RecipientContacts = append(out.RecipientContacts, *contact)
-		}
-	}
-	return out, rows.Err()
+	return MessageParties{
+		From: parties.from, To: parties.to, Cc: parties.cc,
+		Organizers: parties.organizers, Attendees: parties.attendees,
+	}, nil
 }

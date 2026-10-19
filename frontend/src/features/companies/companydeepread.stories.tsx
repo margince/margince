@@ -93,7 +93,19 @@ export const WaitingForBudget: Story = {
   render: reporting({
     status: "deferred",
     status_code: "budget_deferred",
+    deferral_reason: "budget",
     status_detail: "The AI budget for this month is spent.",
+    next_attempt_at: "2026-08-01T06:00:00Z",
+    phase: null,
+  }),
+};
+
+export const WaitingForProvider: Story = {
+  render: reporting({
+    status: "deferred",
+    status_code: "budget_deferred",
+    deferral_reason: "provider",
+    status_detail: "Compatibility retry marker",
     next_attempt_at: "2026-08-01T06:00:00Z",
     phase: null,
   }),

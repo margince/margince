@@ -43,6 +43,7 @@ import {
   approvalKindLabel,
   decisionSkewKey,
 } from "../automations/approvalkind";
+import { useApprovalNames } from "../automations/approvalresponsibility";
 import { worklistLaneHref } from "../worklist/worklist.header";
 import { worklistKey } from "../worklist/worklist.queries";
 import { commitTray } from "./brief.decisions.commit";
@@ -180,6 +181,11 @@ export function DecisionsSection({
   const plural = usePlural();
   const { locale } = useLocale();
   const stagedDay = stagedDayFormatter(locale, viewerZone());
+  const approvalNames = useApprovalNames(
+    items.flatMap((item) =>
+      item.kind === "single" ? [item.approval] : item.members,
+    ),
+  );
   const queryClient = useQueryClient();
   const viewerId = useViewerId();
   const toast = useToast();
@@ -335,6 +341,8 @@ export function DecisionsSection({
             (approval.proposed_change ?? {}) as Record<string, unknown>,
             t,
             stagedDay,
+            approvalNames,
+            approval.requested_decider_id,
           ),
         })}
       />

@@ -233,7 +233,7 @@ func TestMeetingBriefTakesARequestedProjectForAnUnattributedMeeting(t *testing.T
 	}
 	// The unfiled mail is two days old and the ERP mail three; the other
 	// engagement's mail, one day old, is the touch an unscoped read reports.
-	if strings.Contains(text, "last spoke 1 days ago") || !strings.Contains(text, "last spoke 2 days ago") {
+	if strings.Contains(text, "last spoke yesterday") || !strings.Contains(text, "last spoke 2 days ago") {
 		t.Errorf("brief = %q; the last touch counts the other engagement's mail", text)
 	}
 
@@ -248,7 +248,7 @@ func TestMeetingBriefTakesARequestedProjectForAnUnattributedMeeting(t *testing.T
 	// its newer touch — which is what proves the scoped read above dropped
 	// them rather than never having had them.
 	whole := meetingBriefText(unscoped)
-	if !strings.Contains(whole, "Rack site survey") || !strings.Contains(whole, "last spoke 1 days ago") {
+	if !strings.Contains(whole, "Rack site survey") || !strings.Contains(whole, "last spoke yesterday") {
 		t.Errorf("unscoped brief = %q; want the other engagement's meeting and touch", whole)
 	}
 }

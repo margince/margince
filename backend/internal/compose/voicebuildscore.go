@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strings"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
@@ -21,6 +22,9 @@ import (
 // candidate action, and the sample-draft field names the profile screen
 // renders.
 const (
+	voiceReasonScore          = "score"
+	voiceReasonCount          = "count"
+	voiceReasonActive         = "active"
 	voiceClassRoutine         = "routine"
 	voiceClassMaterial        = "material"
 	voiceActionAutoActivated  = "auto_activated"
@@ -42,47 +46,47 @@ type voiceDrift struct {
 
 // classify names the drift material when the candidate reads like a
 // different contact or drops learned rules; each verdict carries its reason.
-func (d voiceDrift) classify() (string, []string) {
+func (d voiceDrift) classify(said voiceCopy) (string, []crmcontracts.VoiceReviewReason) {
 	classification := voiceClassRoutine
-	var reasons []string
+	reasons := []crmcontracts.VoiceReviewReason{}
 	if d.unreadablePredecessor {
 		classification = voiceClassMaterial
-		reasons = append(reasons, "the previous version's stored profile is not comparable; review before replacing it")
+		reasons = append(reasons, crmcontracts.VoiceReviewReason{Code: ai.VoiceReasonUncomparable, Text: said.Say(voiceReviewWords.Uncomparable), Values: map[string]float64{}})
 	}
 	if d.identity < voiceEvalIdentityFloor {
 		classification = voiceClassMaterial
-		reasons = append(reasons, fmt.Sprintf("identity vocabulary shifted (jaccard %.2f)", d.identity))
+		reasons = append(reasons, crmcontracts.VoiceReviewReason{Code: ai.VoiceReasonIdentityShift, Text: fmt.Sprintf(said.Say(voiceReviewWords.Identity), d.identity), Values: map[string]float64{voiceReasonScore: d.identity}})
 	}
 	if d.signature < voiceEvalSignatureFloor {
 		classification = voiceClassMaterial
-		reasons = append(reasons, fmt.Sprintf("signature moves shifted (jaccard %.2f)", d.signature))
+		reasons = append(reasons, crmcontracts.VoiceReviewReason{Code: ai.VoiceReasonSignatureShift, Text: fmt.Sprintf(said.Say(voiceReviewWords.Signature), d.signature), Values: map[string]float64{voiceReasonScore: d.signature}})
 	}
 	if d.removedAvoid > 0 || d.removedRegister > 0 {
 		classification = voiceClassMaterial
-		reasons = append(reasons, fmt.Sprintf("%d avoid and %d register rules were removed", d.removedAvoid, d.removedRegister))
+		reasons = append(reasons, crmcontracts.VoiceReviewReason{Code: ai.VoiceReasonRulesRemoved, Text: fmt.Sprintf(said.Say(voiceReviewWords.Removed), d.removedAvoid, d.removedRegister), Values: map[string]float64{"avoid": float64(d.removedAvoid), "register": float64(d.removedRegister)}})
 	}
 	return classification, reasons
 }
 
 // failureReasons explains exactly which acceptance floor a failed candidate
 // missed.
-func failureReasons(hardFailures int, structuredValid bool, median float64) []string {
-	var reasons []string
+func (said voiceCopy) failureReasons(hardFailures int, structuredValid bool, median float64) []crmcontracts.VoiceReviewReason {
+	reasons := []crmcontracts.VoiceReviewReason{}
 	if hardFailures > 0 {
-		reasons = append(reasons, fmt.Sprintf("%d anti-AI hard failures survived sanitizing", hardFailures))
+		reasons = append(reasons, crmcontracts.VoiceReviewReason{Code: ai.VoiceReasonHardFailures, Text: fmt.Sprintf(said.Say(voiceReviewWords.HardFailures), hardFailures), Values: map[string]float64{voiceReasonCount: float64(hardFailures)}})
 	}
 	if !structuredValid {
-		reasons = append(reasons, "the model returned malformed drafts during evaluation")
+		reasons = append(reasons, crmcontracts.VoiceReviewReason{Code: ai.VoiceReasonMalformed, Text: said.Say(voiceReviewWords.Malformed), Values: map[string]float64{}})
 	}
 	if median < voiceEvalPassScore {
-		reasons = append(reasons, fmt.Sprintf("median voice score %.2f is below the %.2f floor", median, voiceEvalPassScore))
+		reasons = append(reasons, crmcontracts.VoiceReviewReason{Code: ai.VoiceReasonLowScore, Text: fmt.Sprintf(said.Say(voiceReviewWords.BelowFloor), median, voiceEvalPassScore), Values: map[string]float64{voiceReasonScore: median, "floor": voiceEvalPassScore}})
 	}
 	return reasons
 }
 
 // scoreVoiceCandidate folds the drafts into the pinned evaluation shape and
 // takes the activation decision.
-func scoreVoiceCandidate(artifact ai.VoiceArtifact, drafts []voiceEvalDraft, hardFailures int, structuredValid bool, predecessor *ai.VoiceProfileVersion) voiceEvaluationResult {
+func (said voiceCopy) scoreVoiceCandidate(artifact ai.VoiceArtifact, drafts []voiceEvalDraft, hardFailures int, structuredValid bool, predecessor *ai.VoiceProfileVersion) voiceEvaluationResult {
 	var scores []float64
 	for _, draft := range drafts {
 		if draft.body != "" {
@@ -92,17 +96,16 @@ func scoreVoiceCandidate(artifact ai.VoiceArtifact, drafts []voiceEvalDraft, har
 	median := medianOf(scores)
 	drift := voiceDriftAgainst(artifact.Inference, predecessor)
 	activeMedian := predecessorMedian(predecessor)
-	classification, reasons := drift.classify()
+	classification, reasons := drift.classify(said)
 
 	passed := hardFailures == 0 && structuredValid && median >= voiceEvalPassScore
 	if activeMedian != nil && median < *activeMedian-voiceEvalRegressionSlack {
 		passed = false
-		reasons = append(reasons, fmt.Sprintf("candidate scores %.2f against the active version's %.2f", median, *activeMedian))
+		reasons = append(reasons, crmcontracts.VoiceReviewReason{Code: ai.VoiceReasonRegression, Text: fmt.Sprintf(said.Say(voiceReviewWords.Regression), median, *activeMedian), Values: map[string]float64{voiceReasonScore: median, voiceReasonActive: *activeMedian}})
 	}
 
 	result := voiceEvaluationResult{
 		Classification: classification,
-		ReviewReasons:  reasons,
 		SampleDrafts:   bestSampleDrafts(drafts, 2),
 	}
 	switch {
@@ -113,8 +116,9 @@ func scoreVoiceCandidate(artifact ai.VoiceArtifact, drafts []voiceEvalDraft, har
 	default:
 		result.Action = voiceActionReviewRequired
 		result.StatusCode = "quality_regression"
-		result.ReviewReasons = append(result.ReviewReasons, failureReasons(hardFailures, structuredValid, median)...)
+		reasons = append(reasons, said.failureReasons(hardFailures, structuredValid, median)...)
 	}
+	result.Reasons = reasons
 	result.Evaluation = map[string]any{
 		"held_out_prompts":             voiceEvalHeldOutPrompts,
 		"repeats_per_prompt":           voiceEvalRepeatsPerPrompt,
@@ -135,20 +139,20 @@ func scoreVoiceCandidate(artifact ai.VoiceArtifact, drafts []voiceEvalDraft, har
 
 // unevaluatedVoiceResult is the small-corpus outcome: real drift numbers,
 // no drafting scores, and an explicit note that evaluation did not run.
-func unevaluatedVoiceResult(artifact ai.VoiceArtifact, predecessor *ai.VoiceProfileVersion) voiceEvaluationResult {
+func (said voiceCopy) unevaluatedVoiceResult(artifact ai.VoiceArtifact, predecessor *ai.VoiceProfileVersion) voiceEvaluationResult {
 	drift := voiceDriftAgainst(artifact.Inference, predecessor)
-	classification, reasons := drift.classify()
-	note := "the corpus is too small to reserve held-out evaluation samples; add more sources to enable scoring"
+	classification, reasons := drift.classify(said)
+	reasons = append(reasons, crmcontracts.VoiceReviewReason{Code: ai.VoiceReasonTooSmall, Text: said.Say(voiceReviewWords.TooSmall), Values: map[string]float64{}})
 	result := voiceEvaluationResult{
 		Classification: classification,
 		SampleDrafts:   []map[string]any{},
-		ReviewReasons:  append(reasons, note),
 	}
 	if predecessor == nil {
 		result.Action = voiceActionAutoActivated
 	} else {
 		result.Action = voiceActionReviewRequired
 	}
+	result.Reasons = reasons
 	result.Evaluation = map[string]any{
 		"held_out_prompts":             voiceEvalHeldOutPrompts,
 		"repeats_per_prompt":           voiceEvalRepeatsPerPrompt,

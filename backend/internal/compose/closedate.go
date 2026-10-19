@@ -165,7 +165,7 @@ func NewCloseDateCorrector(pool *pgxpool.Pool, log *slog.Logger) *deals.CloseDat
 	return deals.NewCloseDateCorrector(db,
 		closeDatePolicy{svc: approvals.NewService(db), owner: owner},
 		quietReviewReader{db: db, owner: owner},
-		log, installseam.Deals())
+		log, installseam.Deals()).WithBaseLanguage(installationLanguage(pool))
 }
 
 // closeDateConfirmEffect executes an approved close-date confirmation:

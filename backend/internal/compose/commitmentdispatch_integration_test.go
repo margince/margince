@@ -26,7 +26,7 @@ import (
 func TestAnArchivedCommitmentTaskIsNotWrittenAgain(t *testing.T) {
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
-	e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.9)})
+	e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.9)})
 	task := e.wsString(t, `SELECT id::text FROM activity WHERE kind = 'task'`)
 	taskID, err := ids.Parse(task)
 	if err != nil {
@@ -36,7 +36,7 @@ func TestAnArchivedCommitmentTaskIsNotWrittenAgain(t *testing.T) {
 		t.Fatalf("archiving the task: %v", err)
 	}
 
-	again := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.9)})
+	again := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.9)})
 	if len(again.ProposalIDs) != 0 {
 		t.Errorf("the archived promise was put to a human again (%d proposals)", len(again.ProposalIDs))
 	}
@@ -50,8 +50,11 @@ func TestAnArchivedCommitmentTaskIsNotWrittenAgain(t *testing.T) {
 func TestARewordedPromiseIsTheSamePromise(t *testing.T) {
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
-	e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.9)})
-	e.read(t, cannedBrain{reply: reworded(t, "Get the new price list to them", 3)})
+	e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.9)})
+	again := e.read(t, cannedBrain{reply: rewordedAttributed(t, "Get the new price list to them", 3, "seat:"+e.Rep2.String())})
+	if len(again.ProposalIDs) != 0 {
+		t.Fatalf("a reworded reading staged %d duplicate proposals", len(again.ProposalIDs))
+	}
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 1 {
 		t.Errorf("a reworded reading of one promise left %d tasks", n)
 	}
@@ -65,8 +68,8 @@ func TestADismissedCustomerPromiseIsNotFiledAgain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("creating the customer: %v", err)
 	}
-	integration.LinkActivity(t, e.owner, e.activity.UUID, "contact", ids.UUID(contact.Id))
-	e.read(t, cannedBrain{reply: ownedReply(t, "Frédéric de Gombert", 0.9)})
+	e.linkTranscriptContact(t, ids.UUID(contact.Id))
+	e.read(t, cannedBrain{reply: attributedReply(t, "Frédéric de Gombert", "contact:"+contact.Id.String(), 0.9)})
 	claim, err := ids.Parse(e.wsString(t, `SELECT id::text FROM conversation_claim`))
 	if err != nil {
 		t.Fatalf("reading the claim id: %v", err)
@@ -75,7 +78,7 @@ func TestADismissedCustomerPromiseIsNotFiledAgain(t *testing.T) {
 		t.Fatalf("dismissing the claim: %v", err)
 	}
 
-	e.read(t, cannedBrain{reply: ownedReply(t, "Frédéric de Gombert", 0.9)})
+	e.read(t, cannedBrain{reply: attributedReply(t, "Frédéric de Gombert", "contact:"+contact.Id.String(), 0.9)})
 	got := e.wsString(t, `SELECT count(*)::text || ' ' || string_agg(status, ',') FROM conversation_claim
 		WHERE archived_at IS NULL`)
 	if got != "1 dismissed" {
@@ -88,7 +91,7 @@ func TestADismissedCustomerPromiseIsNotFiledAgain(t *testing.T) {
 func TestARefusedPromiseIsNotWrittenWhenAReadingIsSurer(t *testing.T) {
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
-	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.75)})
+	read := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.75)})
 	if len(read.ProposalIDs) != 1 {
 		t.Fatalf("want the unsure promise proposed, got %d proposals", len(read.ProposalIDs))
 	}
@@ -98,7 +101,7 @@ func TestARefusedPromiseIsNotWrittenWhenAReadingIsSurer(t *testing.T) {
 		t.Fatalf("refusing the proposal: %v", err)
 	}
 
-	again := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.95)})
+	again := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.95)})
 	if n := e.taskCount(t); n != 0 || len(again.ProposalIDs) != 0 {
 		t.Errorf("a refused promise became %d task(s) and %d proposal(s) on a surer reading",
 			n, len(again.ProposalIDs))
@@ -110,10 +113,10 @@ func TestARefusedPromiseIsNotWrittenWhenAReadingIsSurer(t *testing.T) {
 func TestAWaitingPromiseIsNotWrittenWhenAReadingIsSurer(t *testing.T) {
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
-	if read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.75)}); len(read.ProposalIDs) != 1 {
+	if read := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.75)}); len(read.ProposalIDs) != 1 {
 		t.Fatalf("want the unsure promise proposed, got %d proposals", len(read.ProposalIDs))
 	}
-	again := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.95)})
+	again := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.95)})
 	if n := e.taskCount(t); n != 0 || len(again.ProposalIDs) != 0 {
 		t.Errorf("a waiting promise became %d task(s) and %d new proposal(s) on a surer reading",
 			n, len(again.ProposalIDs))
@@ -129,9 +132,9 @@ func TestACustomerSharingAColleaguesNameIsNotTakenForThem(t *testing.T) {
 	if err != nil {
 		t.Fatalf("creating the customer: %v", err)
 	}
-	integration.LinkActivity(t, e.owner, e.activity.UUID, "contact", ids.UUID(contact.Id))
+	e.linkTranscriptContact(t, ids.UUID(contact.Id))
 
-	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.95)})
+	read := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.95)})
 	if e.taskCount(t) != 0 || len(read.ProposalIDs) != 1 {
 		t.Errorf("a name both sides answer to became %d task(s) and %d proposal(s); want one proposal",
 			e.taskCount(t), len(read.ProposalIDs))
@@ -146,7 +149,7 @@ func linkInes(t *testing.T, e *transcriptEnv) ids.UUID {
 	if err != nil {
 		t.Fatalf("creating the customer: %v", err)
 	}
-	integration.LinkActivity(t, e.owner, e.activity.UUID, "contact", ids.UUID(contact.Id))
+	e.linkTranscriptContact(t, ids.UUID(contact.Id))
 	return ids.UUID(contact.Id)
 }
 
@@ -159,7 +162,7 @@ func TestOurPromiseIsFiledOnTheCustomerItWasMadeTo(t *testing.T) {
 	customer := linkInes(t, e)
 
 	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
-		"summary": "Send the revised pricing", "owner": "Priya Raman",
+		"summary": "Send the revised pricing", "owner": "Priya Raman", "promiser_ref": "seat:" + e.Rep2.String(),
 		"due_date": "2026-09-08", "source_lines": []int{3}, "confidence": 0.9,
 	}}})
 	if err != nil {
@@ -185,7 +188,7 @@ func TestADismissedPromiseOfOursIsNotProposedAgain(t *testing.T) {
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 	linkInes(t, e)
-	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.75)})
+	read := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.75)})
 	if len(read.ProposalIDs) != 1 {
 		t.Fatalf("want the unsure promise proposed, got %d", len(read.ProposalIDs))
 	}
@@ -202,7 +205,7 @@ func TestADismissedPromiseOfOursIsNotProposedAgain(t *testing.T) {
 		t.Fatalf("refusing the proposal: %v", err)
 	}
 
-	again := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.95)})
+	again := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.95)})
 	if len(again.ProposalIDs) != 0 || e.taskCount(t) != 0 {
 		t.Errorf("a dismissed promise came back as %d proposal(s) and %d task(s)", len(again.ProposalIDs), e.taskCount(t))
 	}
@@ -227,7 +230,7 @@ func TestTwoCustomersOfOneNameTieThePromiseToNeither(t *testing.T) {
 func TestAProposalWhoseConversationIsGoneIsNotAccepted(t *testing.T) {
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
-	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.75)})
+	read := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.75)})
 	if len(read.ProposalIDs) != 1 {
 		t.Fatalf("want the unsure promise proposed, got %d proposals", len(read.ProposalIDs))
 	}

@@ -17,6 +17,7 @@ import { useToast } from "../design-system/toast";
 import { formatNumber, identifierNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
+import { deferralDetail } from "../lib/deferral-detail";
 import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
 import { useVoiceProfile } from "./voice-profile";
@@ -30,16 +31,8 @@ import "./voice-dna.css";
 
 type VoiceProfile = components["schemas"]["VoiceProfile"];
 
-// What every mutation on this card does with a failure, spelled once: state it
-// in words written for the reader. Keeping the raw failure readable is the
-// client's mutation sink's job (app/queryclient.ts), so a save, a removal, an
-// add or a build that broke is diagnosable without every mutation here saying
-// so for itself.
-//
-// The parameter is `unknown` rather than react-query's default `Error`
-// because what a rejected promise carries is not ours to assume: a thrown
-// string reaches here just as a TypeError does, and problemMessageOf takes it
-// as it comes.
+// The mutation sink logs diagnostics; the card renders a safe explanation.
+// Rejections are unknown because promises can reject with non-Error values.
 function reportFailure(
   setError: (message: string) => void,
   t: ReturnType<typeof useT>,
@@ -419,7 +412,7 @@ function BuildControls({
           data.status === "failed" ||
           data.status === "deferred"
         ) {
-          return { status: data.status, detail: data.status_detail };
+          return { status: data.status, detail: deferralDetail(t, data) };
         }
         await new Promise((resolve) => {
           globalThis.setTimeout(resolve, 1500);

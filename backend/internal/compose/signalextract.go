@@ -78,8 +78,12 @@ inferring rather than reading. Cite the id of the message the event is stated in
 For commitments, later evidence of fulfillment or explicit withdrawal means no new commitment.
 Acknowledgement and unrelated replies do not fulfill a promise. After partial delivery, report
 only the undelivered remainder in the summary. A restatement or narrowed promise is the same
-obligation: keep citing and quoting its original promise, not the later restatement. If that
-original message is absent from this reading, do not report the restatement as a new commitment.
+obligation: when its original promise is in this reading, keep citing and quoting that original.
+An explicit report of another participant's promise ("you agreed to send pricing", "Mira promised
+to send pricing") is commitment evidence even without the original utterance. Cite the report and
+identify the reported promiser; do not invent the missing original or attribute it to the reporter.
+A bare reminder or reference to an absent promise, without stating who owes what, is not enough.
+Do not count both an original promise and a report of it as separate commitments.
 When later words explicitly renew the promise or its deadline, also give restated_message_id and
 restated_quote from that later message. Resolve its deadline against that later message date.
 A delivery, acknowledgement or quotation of earlier mail is not a renewed promise.
@@ -126,9 +130,10 @@ func NewSignalExtractor(pool *pgxpool.Pool, brain completer, now func() time.Tim
 
 // extractedEvent is one material event as the model reports it.
 type extractedEvent struct {
-	Kind      string `json:"kind"`
-	MessageID string `json:"message_id"`
-	Summary   string `json:"summary"`
+	PromiserRef string `json:"promiser_ref"`
+	Kind        string `json:"kind"`
+	MessageID   string `json:"message_id"`
+	Summary     string `json:"summary"`
 	// Quote is the cited message's own words the event is stated in. For a
 	// commitment it is what a reader checks the promise against, and where the
 	// server finds the sentence that identifies it across readings.
@@ -181,7 +186,7 @@ func (x *SignalExtractor) readThread(
 	}
 	raised, err := x.commitReading(ctx, wsID, thread, events, now)
 	if errors.Is(err, errRefusedReading) {
-		return 0, x.deferRefusedReading(ctx, wsID, thread, now, err)
+		return raised, x.deferRefusedReading(ctx, wsID, thread, now, err)
 	}
 	return raised, err
 }
@@ -240,13 +245,17 @@ func (x *SignalExtractor) deferRefusedReading(
 func (x *SignalExtractor) commitReading(
 	ctx context.Context, wsID ids.WorkspaceID, thread settledThread, events []extractedEvent, now time.Time,
 ) (int, error) {
-	raised := 0
+	raised, complete := 0, true
 	if err := database.WithWorkspaceTx(ctx, x.pool, func(tx pgx.Tx) error {
 		for _, event := range events {
 			if event.Confidence < extractConfidenceFloor {
 				continue
 			}
 			written, err := x.recordExtractedEvent(ctx, tx, thread, event, now)
+			if errors.Is(err, errRefusedReading) {
+				complete = false
+				continue
+			}
 			if err != nil {
 				return err
 			}
@@ -254,9 +263,15 @@ func (x *SignalExtractor) commitReading(
 				raised++
 			}
 		}
+		if !complete {
+			return nil
+		}
 		return markThreadScanned(ctx, tx, thread, now)
 	}); err != nil {
 		return 0, err
+	}
+	if !complete {
+		return raised, errRefusedReading
 	}
 	return raised, nil
 }
@@ -336,6 +351,9 @@ var errRefusedReading = errors.New("signal extract: the model's reading was refu
 
 // ask makes the one structured call that reads a conversation.
 func (x *SignalExtractor) ask(ctx context.Context, thread settledThread) ([]extractedEvent, error) {
+	if err := x.readCommitmentParties(ctx, &thread); err != nil {
+		return nil, err
+	}
 	req := extractRequest(thread, identity.BaseLanguageForPrompt(ctx, x.pool))
 	validate := extractShapeValid(thread)
 	// A conversation is several messages and one account, so the call names the
@@ -389,13 +407,23 @@ func extractRequest(thread settledThread, lang string) model.Request {
 		body := fmt.Sprintf("Direction: %s\nSent: %s\nSubject: %s\n%s",
 			directionWord(message.Direction), message.At.Format(time.DateOnly), message.Subject,
 			textlang.CurrentMessage(message.Body))
+		body += "\nVerified participants (reference, role, name, address):\n" + commitmentPartyPrompt(message.Parties, textlang.CurrentMessage(message.Body))
 		prompt.WriteString(fence.WrapAttr("source_id", message.ID.String(), body) + "\n")
 	}
 	fmt.Fprintf(&prompt,
-		`Return JSON: { "events": [ { "kind", "message_id", "summary", "quote", "restated_message_id", "restated_quote", "due_date", "confidence" } ] } — `+
+		`Return JSON: { "events": [ { "kind", "message_id", "summary", "quote", "restated_message_id", "restated_quote", "due_date", "promiser_ref", "confidence" } ] } — `+
 			`at most %d, and an empty list when the conversation states none. `+
 			`"summary" is one plain sentence a colleague could act on. `+
-			`"message_id" must be one of the ids above. `+
+			`"message_id" and any "restated_message_id" must be copied exactly from the cited message above, character for character. `+
+			`Never reconstruct an id or use a participant reference as a message id. `+
+			`"promiser_ref" is the verified participant reference for who made the quoted promise, `+
+			`not necessarily its sender. For "you agreed", resolve the addressed party; for a named `+
+			`third party, use a reference only when the clause identifies them unambiguously. `+
+			`CC membership alone never means someone promised. Use "" for unresolved or collective `+
+			`attribution, same-name ambiguity, and non-commitment events. When two participants share a name, `+
+			`that name alone cannot select a reference: leave it empty even if one is a colleague and another is external. `+
+			`Only that participant's exact address in the quoted clause may resolve that tie. Never choose the first match. `+
+			`Never invent a reference. `+
 			`"quote" is the words of that message the event is stated in, copied exactly; `+
 			`for "commitment_made" it is the clause the promise is made in, one promise per event. `+
 			`"due_date" is the day a commitment is due, as YYYY-MM-DD, resolving anything relative `+

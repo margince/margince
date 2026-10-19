@@ -41,6 +41,7 @@ import {
   StagedEditor,
 } from "./approvaleditor";
 import { approvalKindLabel, decisionSkewKey } from "./approvalkind";
+import { useApprovalNames } from "./approvalresponsibility";
 import type { Approval } from "./approvals.queries";
 import { stagedSendOf } from "./approvalsend";
 import "./approvalrow.css";
@@ -266,12 +267,15 @@ export function ApprovalRow({
   });
 
   const change = approval.proposed_change ?? {};
+  const approvalNames = useApprovalNames([approval]);
   const strings = editableStrings(approval.kind, change);
   const display = resolveDisplay(
     approval.kind,
     change,
     t,
     stagedDayFormatter(locale, viewerZone()),
+    approvalNames,
+    approval.requested_decider_id,
   );
 
   const problem =

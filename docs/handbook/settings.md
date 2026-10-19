@@ -181,8 +181,10 @@ The Sales group in Settings has one page per subject. There are the fields a rec
   sources, which record how a record came into Margince, are separate.
 - **Outcome reviews**: questions a seller answers when a deal is won or lost.
   There is one set for won and one for lost.
-- **Responsibility roles**: what a colleague or team can answer for on a
-  company, deal or project. A role gives no access to the record. When you
+- **Responsibility roles**: what a colleague or team looks after on a
+  company, deal or project. A role gives no access to the record; the owner
+  keeps the responsibility for it. Each role is marked **Built-in** when it comes with
+  Margince, or **Custom** when someone added it. When you
   create one, you choose what it applies to and who can hold it. You turn a role
   off with its switch instead of deleting it, so a record that carried it still
   reads well.

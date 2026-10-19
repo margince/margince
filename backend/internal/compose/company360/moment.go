@@ -37,7 +37,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -77,8 +76,9 @@ func (a *assembly) readMoment() error {
 	if err != nil {
 		return err
 	}
-	moment := momentOf(a.now, items)
-	momentaction.Withhold(a.ctx, &moment)
+	said := momentCopyFor(string(a.recordLanguage()))
+	moment := said.momentOf(a.now, items)
+	momentaction.Withhold(a.ctx, string(said.Lang()), &moment)
 	a.out.Moment = &moment
 	return nil
 }
@@ -126,19 +126,19 @@ const companyMomentScanCap = 200
 
 // accountMoment is the card itself: the promise that most needs answering, or
 // the quiet state when there is none.
-func accountMoment(now time.Time, tasks []crmcontracts.Company360NextStep, filed []time.Time, claims []contacts.CompanyCommitment) crmcontracts.ContactMoment {
-	return momentOf(now, accountPromises(tasks, filed, claims))
+func (said momentCopy) accountMoment(now time.Time, tasks []crmcontracts.Company360NextStep, filed []time.Time, claims []contacts.CompanyCommitment) crmcontracts.ContactMoment {
+	return said.momentOf(now, accountPromises(tasks, filed, claims))
 }
 
 // momentOf ranks the promises still in play and draws the card for the winner.
-func momentOf(now time.Time, items []owedwork.Item) crmcontracts.ContactMoment {
+func (said momentCopy) momentOf(now time.Time, items []owedwork.Item) crmcontracts.ContactMoment {
 	if slipped, ok := owedwork.MostRecentlySlipped(items, now); ok {
-		return promiseCard(now, slipped, true)
+		return said.promiseCard(now, slipped, true)
 	}
 	if next, ok := owedwork.Soonest(items, now); ok {
-		return promiseCard(now, next, false)
+		return said.promiseCard(now, next, false)
 	}
-	return accountNothingNeeded()
+	return said.accountNothingNeeded()
 }
 
 // accountPromises gathers the account's open promises, from both sources, in
@@ -177,21 +177,21 @@ func accountPromises(tasks []crmcontracts.Company360NextStep, filed []time.Time,
 // quotes the sentence the promise was made in, a task carries only what
 // somebody retyped. Both name who it is owed to, because on an account page
 // "we owe something" is not actionable until a reader knows to whom.
-func promiseCard(now time.Time, item owedwork.Item, late bool) crmcontracts.ContactMoment {
+func (said momentCopy) promiseCard(now time.Time, item owedwork.Item, late bool) crmcontracts.ContactMoment {
 	switch promise := item.Ref.(type) {
 	case contacts.CompanyCommitment:
-		return accountClaimCard(now, promise, late)
+		return said.accountClaimCard(now, promise, late)
 	case crmcontracts.Company360NextStep:
-		return accountTaskCard(now, promise, late)
+		return said.accountTaskCard(now, promise, late)
 	default:
 		// accountPromises puts only those two types in a Ref; a third would be
 		// a promise this card cannot render rather than one to show blank.
-		return accountNothingNeeded()
+		return said.accountNothingNeeded()
 	}
 }
 
 // accountClaimCard is the card for a promise read out of a conversation.
-func accountClaimCard(now time.Time, claim contacts.CompanyCommitment, late bool) crmcontracts.ContactMoment {
+func (said momentCopy) accountClaimCard(now time.Time, claim contacts.CompanyCommitment, late bool) crmcontracts.ContactMoment {
 	activity := openapi_types.UUID(claim.ActivityID)
 	observed := claim.OccurredAt
 	evidence := []crmcontracts.ContactMomentEvidence{{
@@ -206,36 +206,36 @@ func accountClaimCard(now time.Time, claim contacts.CompanyCommitment, late bool
 		Rule:                ruleFor(late),
 		RuleVersion:         new(momentRuleVersion),
 		EvidenceFingerprint: accountFingerprint(evidence, owedwork.Mark{Kind: "claim", ID: claim.ID.String(), At: claim.DueAt}),
-		Headline:            owedHeadline(claim.ContactName, claim.Body),
-		WhyNow:              owedWhyNow(now, claim.DueAt),
+		Headline:            said.owedHeadline(claim.ContactName, claim.Body),
+		WhyNow:              said.owedWhyNow(now, claim.DueAt),
 		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:            evidence,
 		FreshnessAt:         &observed,
-		RecommendedAction:   openTheContact(claim.ContactID),
+		RecommendedAction:   said.openTheContact(claim.ContactID),
 	}
 }
 
 // accountTaskCard is the card for a promise somebody filed as a task.
-func accountTaskCard(now time.Time, step crmcontracts.Company360NextStep, late bool) crmcontracts.ContactMoment {
+func (said momentCopy) accountTaskCard(now time.Time, step crmcontracts.Company360NextStep, late bool) crmcontracts.ContactMoment {
 	evidence := []crmcontracts.ContactMomentEvidence{{
 		Type:  crmcontracts.ContactMomentEvidenceTypeTask,
 		Id:    &step.ActivityId,
 		Label: step.Subject,
 	}}
-	whyNow := owedWhyNow(now, step.DueAt)
+	whyNow := said.owedWhyNow(now, step.DueAt)
 	if step.DueAt == nil {
-		whyNow = "Open task with no due date. Stays open until somebody does it or closes it."
+		whyNow = said.Say(momentWords.TaskUndated)
 	}
 	moment := crmcontracts.ContactMoment{
 		ClaimKey:            momentKey("moment:account_promise_task", step.ActivityId),
 		Rule:                ruleFor(late),
 		RuleVersion:         new(momentRuleVersion),
 		EvidenceFingerprint: accountFingerprint(evidence, owedwork.Mark{Kind: "due", At: step.DueAt}),
-		Headline:            owedHeadline("", step.Subject),
+		Headline:            said.owedHeadline("", step.Subject),
 		WhyNow:              whyNow,
 		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:            evidence,
-		RecommendedAction:   openTheTask(step),
+		RecommendedAction:   said.openTheTask(step),
 	}
 	return moment
 }
@@ -256,25 +256,19 @@ func ruleFor(late bool) crmcontracts.ContactMomentRule {
 // A promise whose contact this caller may not name still belongs on the card —
 // the account owes it either way — so the sentence drops the name, never the
 // promise.
-func owedHeadline(who, what string) string {
+func (said momentCopy) owedHeadline(who, what string) string {
 	if who == "" {
-		return fmt.Sprintf("You owe them: %s", what)
+		return fmt.Sprintf(said.Say(momentWords.OweThem), what)
 	}
-	return fmt.Sprintf("You owe %s: %s", who, what)
+	return fmt.Sprintf(said.Say(momentWords.OweNamed), who, what)
 }
 
 // owedWhyNow says what the date on the promise is, in the reader's terms.
-func owedWhyNow(now time.Time, due *time.Time) string {
+func (said momentCopy) owedWhyNow(now time.Time, due *time.Time) string {
 	if due == nil {
-		return "Promised with no due date. Stays open until somebody does it or closes it."
+		return said.Say(momentWords.PromiseUndated)
 	}
-	if words, late := owedwork.LateWords(due, now); late {
-		return words
-	}
-	if days := elapsed.FullDaysUntil(now, *due); days > 0 {
-		return fmt.Sprintf("Due in %d days.", days)
-	}
-	return "Due today."
+	return owedwork.DeadlineWords(*due, now, string(said.Lang()))
 }
 
 // accountNothingNeeded is the quiet success state — an answer, not a blank
@@ -290,19 +284,19 @@ func owedWhyNow(now time.Time, due *time.Time) string {
 // account through the tool surface. The contact page's rung 10 may say it,
 // having walked eight rungs to get there; this card may not, and the headline
 // says what it looked at instead.
-func accountNothingNeeded() crmcontracts.ContactMoment {
+func (said momentCopy) accountNothingNeeded() crmcontracts.ContactMoment {
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:nothing_needed",
 		Rule:                crmcontracts.ContactMomentRuleNothingNeeded,
 		RuleVersion:         new(momentRuleVersion),
 		EvidenceFingerprint: "quiet",
-		Headline:            "Nothing is owed to this account",
-		WhyNow:              "No promise to this account is open or coming due.",
+		Headline:            said.Say(momentWords.NothingOwed),
+		WhyNow:              said.Say(momentWords.NothingDue),
 		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:            []crmcontracts.ContactMomentEvidence{},
 		RecommendedAction: crmcontracts.ContactMomentAction{
 			Kind:  crmcontracts.ContactMomentActionKindLogActivity,
-			Label: "Log something",
+			Label: said.Say(momentWords.Log),
 			State: crmcontracts.ContactMomentActionStateWillConfirm,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface: crmcontracts.ContactMomentDestinationSurfaceActivityLog,
@@ -340,11 +334,11 @@ func accountFingerprint(evidence []crmcontracts.ContactMomentEvidence, promise o
 
 // openTheContact sends the reader to the record the promise lives on, which is
 // where they can see the conversation it was made in and act on it.
-func openTheContact(contactID ids.ContactID) crmcontracts.ContactMomentAction {
+func (said momentCopy) openTheContact(contactID ids.ContactID) crmcontracts.ContactMomentAction {
 	id := openapi_types.UUID(contactID.UUID)
 	return crmcontracts.ContactMomentAction{
 		Kind:  crmcontracts.ContactMomentActionKindOpenRecord,
-		Label: "Open the contact",
+		Label: said.Say(momentWords.OpenContact),
 		State: crmcontracts.ContactMomentActionStateAvailable,
 		Destination: &crmcontracts.ContactMomentDestination{
 			Surface:    crmcontracts.ContactMomentDestinationSurfaceRecord,
@@ -356,14 +350,14 @@ func openTheContact(contactID ids.ContactID) crmcontracts.ContactMomentAction {
 
 // openTheTask sends the reader to the record the task is filed against, or
 // says it cannot when the task names none.
-func openTheTask(step crmcontracts.Company360NextStep) crmcontracts.ContactMomentAction {
+func (said momentCopy) openTheTask(step crmcontracts.Company360NextStep) crmcontracts.ContactMomentAction {
 	if step.LinkedContactId != nil {
-		return openTheContact(ids.From[ids.ContactKind](ids.UUID(*step.LinkedContactId)))
+		return said.openTheContact(ids.From[ids.ContactKind](ids.UUID(*step.LinkedContactId)))
 	}
 	if step.LinkedDealId != nil {
 		return crmcontracts.ContactMomentAction{
 			Kind:  crmcontracts.ContactMomentActionKindOpenRecord,
-			Label: "Open the deal",
+			Label: said.Say(momentWords.OpenDeal),
 			State: crmcontracts.ContactMomentActionStateAvailable,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface:    crmcontracts.ContactMomentDestinationSurfaceRecord,
@@ -377,7 +371,7 @@ func openTheTask(step crmcontracts.Company360NextStep) crmcontracts.ContactMomen
 	// land the reader nowhere.
 	return crmcontracts.ContactMomentAction{
 		Kind:  crmcontracts.ContactMomentActionKindCompleteTask,
-		Label: "Open it from the task list",
+		Label: said.Say(momentWords.OpenTaskList),
 		State: crmcontracts.ContactMomentActionStateBlocked,
 	}
 }

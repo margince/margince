@@ -160,7 +160,7 @@ func TestAForwardingTargetThatFailsLeavesTheOriginalPage(t *testing.T) {
 // only the second is evidence that a domain is parked.
 func TestAnUnresolvedForwardIsNotSettledAsParked(t *testing.T) {
 	unreadable := crawlPage{Text: "", UnresolvedForward: true}
-	if verdict, err := (&siteDeepReadWorker{}).classifySeed(context.Background(), unreadable); err != nil {
+	if verdict, err := (&siteDeepReadWorker{}).classifySeed(context.Background(), domainEvidenceCopyFor("en"), unreadable); err != nil {
 		t.Fatalf("classifying: %v", err)
 	} else if verdict.Aborts() {
 		t.Errorf("verdict %+v settles the domain — an unread forward must leave the question open", verdict)
@@ -168,7 +168,7 @@ func TestAnUnresolvedForwardIsNotSettledAsParked(t *testing.T) {
 
 	// The shortcut still holds for a page that genuinely carries nothing.
 	empty := crawlPage{Text: ""}
-	if verdict, err := (&siteDeepReadWorker{}).classifySeed(context.Background(), empty); err != nil {
+	if verdict, err := (&siteDeepReadWorker{}).classifySeed(context.Background(), domainEvidenceCopyFor("en"), empty); err != nil {
 		t.Fatalf("classifying: %v", err)
 	} else if !verdict.Aborts() {
 		t.Errorf("verdict %+v does not settle a genuinely empty landing page", verdict)

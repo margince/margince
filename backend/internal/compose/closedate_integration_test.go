@@ -94,7 +94,7 @@ func setupCloseDate(t *testing.T) *closeDateEnv {
 	e.corrector = deals.NewCloseDateCorrector(e.DB(),
 		closeDatePolicy{svc: e.svc, owner: owner},
 		quietReviewReader{db: e.DB(), owner: owner}, quiet, installseam.Deals()).
-		WithClock(func() time.Time { return e.day })
+		WithClock(func() time.Time { return e.day }).WithBaseLanguage(installationLanguage(e.Pool))
 	return e
 }
 

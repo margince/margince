@@ -20,10 +20,12 @@ import (
 func TestLogActivityInputCarriesTheColleaguesWhoAttendedACall(t *testing.T) {
 	colleague := openapi_types.UUID(ids.NewV7())
 	attendees := []openapi_types.UUID{colleague}
+	subject := "Renewal call"
 
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
 		Kind:            crmcontracts.CreateActivityRequestKindCreateActivityRequestKindCall,
 		AttendeeUserIds: &attendees,
+		Subject:         &subject,
 		Source:          "human",
 	})
 	if err != nil {
