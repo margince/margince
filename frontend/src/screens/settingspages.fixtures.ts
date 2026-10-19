@@ -74,6 +74,23 @@ const INSTALLATION_SETTINGS: Schemas["InstallationSettings"] = {
   base_currency_locked: false,
 };
 
+// A fresh installation's port, read from its default.
+const CONFIGURATION: Schemas["ConfigurationEntry"][] = [
+  {
+    key: "http.addr",
+    env: "MARGINCE_ADDR",
+    flag: "addr",
+    type: "string",
+    doc: "The address the api listens on.",
+    roles: ["api"],
+    secret: false,
+    stored: false,
+    value: ":8080",
+    default: ":8080",
+    origin: { source: "default", name: "" },
+  },
+];
+
 const UNREAD_COMPANY: Schemas["CompanyProfile"] = {
   company_id: "00000000-0000-4000-8000-0000000000c1",
   display_name: "Acme Inc",
@@ -144,6 +161,7 @@ export const UNUSED_INSTALLATION_ROUTES: RouteMap = {
     jsonResponse({ available: [] } satisfies Schemas["FinanceSourceState"]),
   "GET /installation/jurisdiction": () => jsonResponse(NO_JURISDICTION),
   "GET /installation/settings": () => jsonResponse(INSTALLATION_SETTINGS),
+  "GET /installation/configuration": () => jsonResponse(CONFIGURATION),
   "GET /scheduling/profile": () => jsonResponse(bookingProfile),
   "GET /company": () => jsonResponse(UNREAD_COMPANY),
   "GET /company/context/capabilities": () => jsonResponse(COMPANY_CONTEXT_ON),

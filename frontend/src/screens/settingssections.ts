@@ -224,6 +224,7 @@ export const SETTINGS_SECTIONS = {
     "operations.sendRateWindow.label",
     "operations.sendMaxAge.label",
   ],
+  configuration: ["configuration.title"],
   extensions: [],
   reset: ["settings.dangerZone", "settings.resetDataLabel"],
 } as const satisfies Record<SettingsPageId, readonly MessageKey[]>;
