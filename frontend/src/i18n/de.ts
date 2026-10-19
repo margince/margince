@@ -5346,7 +5346,7 @@ export const de = {
   "analytics.attentionCoverageAction": "Datenabdeckung ansehen",
   "analytics.reportDealsByStage": "Alle Deals nach Phase",
   "analytics.reportLeadsByStatus": "Leads nach Status",
-  "analytics.reportActivitiesByKind": "Termine und Aufgaben nach Typ",
+  "analytics.reportActivitiesByKind": "Termine und Aufgaben",
   "analytics.reportMeetingConversion": "Konversion aus Terminen",
   "analytics.field.amount_base_minor": "Umgerechneter Betrag",
   "analytics.field.amount_minor": "Betrag",

@@ -5219,7 +5219,7 @@ export const vi = {
   "analytics.attentionCoverageAction": "Xem độ bao phủ dữ liệu",
   "analytics.reportDealsByStage": "Tất cả deal theo giai đoạn",
   "analytics.reportLeadsByStatus": "Lead theo trạng thái",
-  "analytics.reportActivitiesByKind": "Cuộc họp và việc cần làm theo loại",
+  "analytics.reportActivitiesByKind": "Cuộc họp và việc cần làm",
   "analytics.reportMeetingConversion": "Chuyển đổi cuộc họp",
   "analytics.field.amount_base_minor": "Số tiền quy đổi",
   "analytics.field.amount_minor": "Số tiền",

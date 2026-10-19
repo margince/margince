@@ -119,9 +119,9 @@ missing, this line is not shown.
 It names no currency, because one report can show deals in their own currency
 beside totals turned into yours.
 
-Reports count meetings and tasks, never email. Messages, calls and notes are
-not counted either. A report or custom question that asks for one of those kinds
-is refused, and the refusal names the kinds you can use.
+Activity reports count meetings and tasks, never email. Messages, calls and
+notes are not counted either. An activity report or custom question that asks
+for one of those kinds is refused, and the refusal names the kinds you can use.
 
 ## Explain this number
 
