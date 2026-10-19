@@ -148,7 +148,13 @@ function ProjectCompanyCard({
       actions={
         onDetach && (
           <OverflowMenu label={t("record.moreActions")}>
-            <Button variant="danger" onClick={onDetach}>
+            <Button
+              variant="danger"
+              onClick={onDetach}
+              // Five identical "Detach" items cannot say which company each
+              // one takes off.
+              aria-label={t("projectLinks.detachNamed", { name: company.name })}
+            >
               {t("projectLinks.detach")}
             </Button>
           </OverflowMenu>
