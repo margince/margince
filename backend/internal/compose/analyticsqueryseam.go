@@ -184,6 +184,7 @@ func schemaVersion(entities map[string]analyticsquery.Entity) string {
 			sum.Write([]byte(field))
 			sum.Write([]byte(entity.Fields[field].Expr))
 			sum.Write([]byte(entity.Fields[field].Kind))
+			writeCustomMeaning(sum, entity.Fields[field])
 		}
 	}
 	return hex.EncodeToString(sum.Sum(nil))[:16]

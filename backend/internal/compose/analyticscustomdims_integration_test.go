@@ -82,8 +82,7 @@ func TestACustomFieldIsNotADimensionUntilAnAdminOptsItIn(t *testing.T) {
 	_, field := territoryField(t, e)
 
 	_, err := dealsByColumn(e.Admin(), e, *field.ColumnName)
-	var refusal *analyticsquery.RefusalError
-	if !errors.As(err, &refusal) {
+	if _, ok := errors.AsType[*analyticsquery.RefusalError](err); !ok {
 		t.Fatalf("grouping by a field nobody opted in answered %v, want a refusal", err)
 	}
 }
@@ -129,11 +128,48 @@ func TestAReportableDealFieldGroupsTheDealsThatHoldIt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(document, column+` "Territory": EMEA, APAC`) {
+	if !strings.Contains(document, column+` "Territory": ["EMEA","APAC"]`) {
 		t.Errorf("the vocabulary a model reads does not name the territory and its choices:\n%s", document)
 	}
 	if AnalyticsSchemaFor(ctx).Version == schema.Version {
 		t.Error("adding a dimension left the schema version unchanged, so an old plan reads as current")
+	}
+}
+
+// Reports group deals alone by custom fields, so a company field cannot be
+// opted in: the switch would claim an effect it does not have.
+func TestOnlyADealFieldCanBeOptedIntoReporting(t *testing.T) {
+	e := integration.Setup(t)
+	catalog := customfields.NewService(e.Pool, integration.SchemaPool(t))
+	admin := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
+	field, err := catalog.Create(admin, customfields.FieldSpec{
+		Object: "company", Label: "Tier", Type: customfields.TypePicklist,
+		Options: []string{"Gold"}, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	yes := true
+	_, err = catalog.Update(admin, ids.UUID(field.Id), customfields.FieldPatch{Reportable: &yes}, nil)
+	if refusal, ok := errors.AsType[*customfields.ValidationError](err); !ok || refusal.Errors[0].Field != "reportable" {
+		t.Fatalf("opting a company field in answered %v, want a refusal naming reportable", err)
+	}
+}
+
+// A retired field leaves reports, and its row stops saying it is in them.
+func TestRetiringAReportableFieldTakesItOutOfReports(t *testing.T) {
+	e := integration.Setup(t)
+	catalog, field := territoryField(t, e)
+	optIn(t, e, catalog, field)
+	retired, err := catalog.Retire(e.As(e.Rep1, nil, integration.CustomFieldAdminPerms), ids.UUID(field.Id))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if retired.Reportable {
+		t.Error("a retired field still reads as in reports")
+	}
+	if _, err := dealsByColumn(e.Admin(), e, *field.ColumnName); err == nil {
+		t.Error("a retired field still groups deals")
 	}
 }
 

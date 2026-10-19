@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // lockedField is the FOR UPDATE snapshot that Update, Retire and SetOptions
@@ -143,7 +144,7 @@ func (s *Service) Update(ctx context.Context, id ids.UUID, patch FieldPatch, ifV
 			next.ShowInCreate = *patch.ShowInCreate
 		}
 		if patch.Reportable != nil {
-			if *patch.Reportable && !reportableType(f.Type) {
+			if *patch.Reportable && !reportable(f) {
 				return &ValidationError{Errors: []FieldError{{Field: fieldReport, Code: codeUnsupportedType}}}
 			}
 			next.Reportable = *patch.Reportable
@@ -184,11 +185,11 @@ func (p FieldPatch) auditDiff(was, now lockedField) (before, after map[string]an
 	return before, after
 }
 
-// reportableType is the kinds of field a report can group by. One value per
-// record keeps a grouped total from counting a record twice, which rules out
-// a multiselect; free text and numbers are not categories.
-func reportableType(typ string) bool {
-	return typ == TypePicklist || typ == TypeBoolean
+// reportable is the fields a report can group by: a deal's, since reports
+// group deals alone by custom fields. One value per record keeps a total from
+// counting a record twice, which rules out a multiselect.
+func reportable(f lockedField) bool {
+	return f.Object == string(datasource.EntityDeal) && (f.Type == TypePicklist || f.Type == TypeBoolean)
 }
 
 // Retire flips status to retired (CUSTOM-FIELDS-WIRE-4/AC-13): the field
@@ -213,15 +214,19 @@ func (s *Service) Retire(ctx context.Context, id ids.UUID) (crmcontracts.CustomF
 			out, err = readField(ctx, tx, id)
 			return err
 		}
+		// A retired field leaves reports, so it stops claiming to be in them.
 		if _, err := tx.Exec(ctx,
-			`UPDATE custom_field SET status = $1 WHERE id = $2`, statusRetired, id); err != nil {
+			`UPDATE custom_field SET status = $1, reportable = false WHERE id = $2`, statusRetired, id); err != nil {
 			return fmt.Errorf("customfields: updating status: %w", err)
 		}
 		if out, err = readField(ctx, tx, id); err != nil {
 			return err
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", rbacObject, id,
-			map[string]any{fieldStatus: f.Status}, map[string]any{fieldStatus: statusRetired}); err != nil {
+		before, after := map[string]any{fieldStatus: f.Status}, map[string]any{fieldStatus: statusRetired}
+		if f.Reportable {
+			before[fieldReport], after[fieldReport] = true, false
+		}
+		if _, err := storekit.Audit(ctx, tx, "update", rbacObject, id, before, after); err != nil {
 			return fmt.Errorf("customfields: audit write: %w", err)
 		}
 		return nil
