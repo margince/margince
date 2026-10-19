@@ -419,7 +419,7 @@ describe("PassportCard — using a passport", () => {
         /a passport is your personal credential for scripts/i,
       ),
     ).toBeTruthy();
-    expect(screen.getByText("In your AI tool")).toBeTruthy();
+    expect(screen.getByText("In a script or another AI tool")).toBeTruthy();
     expect(await screen.findByText("In your own code")).toBeTruthy();
     expect(
       screen.getByRole("heading", { name: "Your passports" }),
@@ -430,7 +430,7 @@ describe("PassportCard — using a passport", () => {
   it("shows no code row until the server states the API address", async () => {
     vi.stubGlobal("fetch", mintBackend({ listHangs: true }));
     render("agents");
-    expect(await screen.findByText("In your AI tool")).toBeTruthy();
+    expect(await screen.findByText("In a script or another AI tool")).toBeTruthy();
     expect(screen.queryByText("In your own code")).toBeNull();
   });
 

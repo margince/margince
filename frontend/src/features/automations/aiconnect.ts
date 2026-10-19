@@ -44,7 +44,7 @@ export type ConnectPath = Readonly<{
 const CLAUDE_HELP =
   "https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp";
 const OPENAI_HELP =
-  "https://help.openai.com/en/articles/12584461-developer-mode-apps-and-full-mcp-connectors-in-chatgpt-beta";
+  "https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt";
 const MICROSOFT_HELP =
   "https://learn.microsoft.com/en-us/microsoft-copilot-studio/mcp-add-existing-server-to-agent";
 
@@ -101,7 +101,7 @@ export const CONNECT_PATHS: Readonly<Record<ConnectPathId, ConnectPath>> = {
     steps: [
       "aiAccess.chatgpt.developerMode",
       "aiAccess.chatgpt.create",
-      "aiAccess.step.allow",
+      "aiAccess.chatgpt.ownFinish",
     ],
     pasteAfter: 2,
     note: "aiAccess.chatgpt.ownNote",

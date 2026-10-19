@@ -118,6 +118,7 @@ describe("ConnectAiToolCard", () => {
     ).toBeTruthy();
     expect(steps()).toEqual([]);
     expect(screen.queryByRole("button", { name: /Download guide/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Help from/ })).toBeNull();
     await choose("My company");
     expect(steps()).toHaveLength(3);
     for (const group of screen.getAllByRole("group")) {
@@ -190,7 +191,7 @@ describe("ConnectAiToolCard", () => {
       "https://support.google.com/gemini/answer/17209137",
     );
     expect(
-      screen.getByText("For now only in the US, in English."),
+      screen.getByText("For now only in the US, in English, on the web."),
     ).toBeTruthy();
     await choose("Microsoft Copilot", "My company");
     expect(

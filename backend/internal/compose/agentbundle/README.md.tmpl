@@ -37,7 +37,7 @@ Claude's guide: https://support.claude.com/en/articles/11175166-get-started-with
 ### Claude, on a plan you pay for
 
 1. In Claude, open "Customize", then "Connectors".
-2. Choose "Add custom connector" and paste the address above.
+2. Choose "+ Add", then "Add custom connector", and paste the address above.
 3. Margince opens. Sign in and choose "Authorize".
 
 On the Free plan, Claude allows one custom connector.
@@ -49,25 +49,26 @@ Claude's guide: https://support.claude.com/en/articles/11175166-get-started-with
 
 Your ChatGPT admin adds Margince once for your company:
 
-1. In the ChatGPT admin settings, turn on "Developer mode".
-2. Create an app named Margince with the address above, and choose OAuth for sign-in.
-3. Publish the app so everyone in your company can turn it on.
+1. In ChatGPT, open "Plugins", choose "+", then "Add custom MCP server".
+2. Name it Margince, paste the address above, choose OAuth, and choose "Create as a plugin".
+3. In the ChatGPT admin settings, open "Apps", then "Drafts", and choose "Publish".
 
-Then everyone, in a chat, opens the + menu, turns on Margince, signs in to Margince and
-chooses "Authorize".
+Then everyone, in a chat, types @, picks Margince, signs in to Margince and chooses
+"Authorize".
 
-OpenAI's guide: https://help.openai.com/en/articles/12584461-developer-mode-apps-and-full-mcp-connectors-in-chatgpt-beta
+OpenAI's guide: https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt
 
 <!-- connect: chatgpt-own -->
 ### ChatGPT, on a plan you pay for
 
-1. In ChatGPT, open "Settings", then "Apps & Connectors", and turn on "Developer mode".
-2. Choose "Create" and paste the address above.
-3. Margince opens. Sign in and choose "Authorize".
+1. In ChatGPT, open "Plugins".
+2. Choose "+", then "Add custom MCP server", name it Margince and paste the address above.
+3. Choose "Create as a plugin". Margince opens. Sign in and choose "Authorize".
 
-On Plus and Pro, ChatGPT can look things up in Margince but not change them.
+On a plan you pay for yourself this needs Pro, and ChatGPT can look things up in Margince but
+not change them.
 
-OpenAI's guide: https://help.openai.com/en/articles/12584461-developer-mode-apps-and-full-mcp-connectors-in-chatgpt-beta
+OpenAI's guide: https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt
 
 <!-- connect: copilot-company -->
 ### Microsoft Copilot, through your company
@@ -76,9 +77,10 @@ Someone at your company adds Margince to a Copilot agent once:
 
 1. In Copilot Studio, open the agent, then "Tools", "Add a tool", "New tool" and
    "Model Context Protocol".
-2. Name it Margince and paste the address above.
-3. Under authentication choose "OAuth 2.0", then "Dynamic discovery", and choose "Create".
-4. Choose "Add to agent", then publish the agent to Microsoft 365 Copilot and Teams.
+2. Name it Margince, describe it as your CRM, and paste the address above.
+3. Under authentication choose "OAuth 2.0", then "Dynamic discovery", then "Create" and "Next".
+4. Choose "Create a new connection", then "Add to agent", and publish the agent to
+   Microsoft 365 Copilot and Teams.
 
 Your company's data policies for connectors also apply to Margince. Then everyone opens
 Copilot in Teams or Microsoft 365, chooses the agent with Margince, and signs in to Margince
@@ -108,7 +110,7 @@ Google's guide: https://support.google.com/g/answer/17106276
 2. Choose "Add a custom app" and paste the address above.
 3. Margince opens. Sign in and choose "Authorize".
 
-For now this works only in the US, in English.
+For now this works only in the US, in English, on the web.
 
 Google's guide: https://support.google.com/gemini/answer/17209137
 
@@ -124,7 +126,8 @@ Run the command, then sign in in the browser. No passport is needed.
   `codex mcp login margince`. Guide: https://learn.chatgpt.com/docs/extend/mcp?surface=cli
 <!-- connect: antigravity -->
 - **Antigravity.** Add `{ "mcpServers": { "margince": { "serverUrl": "{{.MCPURL}}" } } }` to
-  `~/.gemini/config/mcp_config.json`, then sign in from its agent settings. Guide:
+  `~/.gemini/config/mcp_config.json`. Then open its agent settings, "Customizations", and
+  choose "Authenticate" next to margince. Guide:
   https://antigravity.google/docs/mcp
 {{else}}
 This Margince does not accept AI tool connections yet. Ask an administrator or operations user

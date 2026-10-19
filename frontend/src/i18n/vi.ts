@@ -5473,9 +5473,9 @@ export const vi = {
   "passport.scope.enrich": "Mua dữ liệu liên hệ",
   "passport.select": "Passport",
   "passport.noneOption": "Không dùng passport",
-  "settings.passportUseAi": "Trong công cụ AI",
+  "settings.passportUseAi": "Trong script hoặc công cụ AI khác",
   "settings.passportUseAiDetail":
-    "Cài skill Margince vào Claude Code, Codex hoặc Antigravity, rồi cung cấp passport cho công cụ đó. Skill hướng dẫn AI cách làm việc thay bạn trong Margince.",
+    "Cài skill Margince vào công cụ không tự đăng nhập được, rồi cung cấp passport cho công cụ đó. Claude Code, Codex và Antigravity đăng nhập không cần passport, trong mục Công cụ dòng lệnh.",
   "settings.skillDownload": "Tải xuống skill",
   "settings.skillDownloadFailed": "Không thể tải xuống skill",
   "settings.passportUseCode": "Trong mã nguồn riêng",
@@ -5696,7 +5696,7 @@ export const vi = {
   "agents.disconnectConfirm":
     "Thao tác này kết thúc cả kết nối chứ không chỉ một thông tin xác thực. Agent sẽ mất quyền truy cập ở lần gọi tiếp theo và không thể gia hạn. Để kết nối lại, cần duyệt lại quyền truy cập.",
   "agents.connectAntigravityPath":
-    "Antigravity không có lệnh add. Thêm khối đó vào ~/.gemini/config/mcp_config.json.",
+    "Antigravity không có lệnh add. Thêm khối đó vào ~/.gemini/config/mcp_config.json, rồi mở cài đặt agent, “Customizations”, và chọn “Authenticate” bên cạnh margince.",
   "agents.connectorOff": "Công cụ AI chưa thể kết nối với Margince.",
   "agents.connectorOffDetail":
     "Quản trị viên hoặc thành viên Vận hành có thể bật tính năng này. Trong lúc chờ, passport vẫn dùng được cho script.",
@@ -5723,7 +5723,7 @@ export const vi = {
   "aiAccess.claude.openConnectors":
     "Trong Claude, mở “Customize”, rồi “Connectors”.",
   "aiAccess.claude.addCustom":
-    "Chọn “Add custom connector” và dán địa chỉ này:",
+    "Chọn “+ Add”, rồi “Add custom connector”, và dán địa chỉ này:",
   "aiAccess.claude.connect": "Tìm Margince và chọn “Connect”.",
   "aiAccess.claude.freeNote":
     "Ở gói Free, Claude chỉ cho phép một trình kết nối tùy chỉnh.",
@@ -5739,27 +5739,30 @@ export const vi = {
   "aiAccess.chatgpt.adminLine":
     "Quản trị viên ChatGPT của bạn thêm Margince một lần cho cả công ty.",
   "aiAccess.chatgpt.admin1":
-    "Trong phần cài đặt quản trị ChatGPT, bật “Developer mode”.",
+    "Trong ChatGPT, mở “Plugins”, chọn “+”, rồi “Add custom MCP server”.",
   "aiAccess.chatgpt.admin2":
-    "Tạo một ứng dụng tên Margince với địa chỉ Margince ở trên và chọn OAuth để đăng nhập.",
-  "aiAccess.chatgpt.admin3": "Xuất bản ứng dụng để cả công ty có thể bật.",
+    "Đặt tên là Margince, dán địa chỉ Margince ở trên, chọn OAuth, rồi chọn “Create as a plugin”.",
+  "aiAccess.chatgpt.admin3":
+    "Trong phần cài đặt quản trị ChatGPT, mở “Apps”, rồi “Drafts”, và chọn “Publish”.",
   "aiAccess.chatgpt.turnOn":
-    "Trong một cuộc trò chuyện, mở menu + và bật Margince.",
-  "aiAccess.chatgpt.developerMode":
-    "Trong ChatGPT, mở “Settings”, rồi “Apps & Connectors”, và bật “Developer mode”.",
-  "aiAccess.chatgpt.create": "Chọn “Create” và dán địa chỉ này:",
+    "Trong một cuộc trò chuyện, gõ @ và chọn Margince.",
+  "aiAccess.chatgpt.developerMode": "Trong ChatGPT, mở “Plugins”.",
+  "aiAccess.chatgpt.create":
+    "Chọn “+”, rồi “Add custom MCP server”, đặt tên là Margince và dán địa chỉ này:",
+  "aiAccess.chatgpt.ownFinish":
+    "Chọn “Create as a plugin”. Margince mở ra. Đăng nhập và chọn Cấp quyền. Xong.",
   "aiAccess.chatgpt.ownNote":
-    "Ở gói Plus và Pro, ChatGPT chỉ tra cứu được trong Margince, không thay đổi được.",
+    "Với gói tự trả tiền, bạn cần gói Pro, và ChatGPT chỉ tra cứu được trong Margince, không thay đổi được.",
   "aiAccess.copilot.adminLine":
     "Một thành viên trong công ty thêm Margince vào một agent Copilot một lần.",
   "aiAccess.copilot.admin1":
     "Trong Copilot Studio, mở agent, rồi “Tools”, “Add a tool”, “New tool” và “Model Context Protocol”.",
   "aiAccess.copilot.admin2":
-    "Đặt tên là Margince và dán địa chỉ Margince ở trên.",
+    "Đặt tên là Margince, mô tả là CRM của công ty, và dán địa chỉ Margince ở trên.",
   "aiAccess.copilot.admin3":
-    "Ở phần xác thực, chọn “OAuth 2.0”, rồi “Dynamic discovery”, và chọn “Create”.",
+    "Ở phần xác thực, chọn “OAuth 2.0”, rồi “Dynamic discovery”, rồi chọn “Create” và “Next”.",
   "aiAccess.copilot.admin4":
-    "Chọn “Add to agent”, rồi xuất bản agent lên Microsoft 365 Copilot và Teams.",
+    "Chọn “Create a new connection”, rồi “Add to agent”, và xuất bản agent lên Microsoft 365 Copilot và Teams.",
   "aiAccess.copilot.admin5":
     "Chính sách dữ liệu của công ty cho trình kết nối cũng áp dụng với Margince.",
   "aiAccess.copilot.openAgent":
@@ -5774,7 +5777,7 @@ export const vi = {
   "aiAccess.gemini.openApps":
     "Trên gemini.google.com, mở “Settings”, rồi “Connected Apps”.",
   "aiAccess.gemini.addApp": "Chọn “Add a custom app” và dán địa chỉ này:",
-  "aiAccess.gemini.ownNote": "Hiện chỉ có ở Mỹ, bằng tiếng Anh.",
+  "aiAccess.gemini.ownNote": "Hiện chỉ có ở Mỹ, bằng tiếng Anh, trên web.",
   "aiAccess.guide.title": "Thiết lập Margince trong {tool}",
   "aiAccess.guide.addressHead": "Địa chỉ Margince của bạn",
   "aiAccess.guide.adminHead": "Bạn cần làm gì",

@@ -5590,9 +5590,9 @@ export const de = {
   "passport.scope.enrich": "Kontaktdaten kaufen",
   "passport.select": "Passport",
   "passport.noneOption": "Kein Passport",
-  "settings.passportUseAi": "In deinem KI-Werkzeug",
+  "settings.passportUseAi": "In einem Skript oder einem anderen KI-Tool",
   "settings.passportUseAiDetail":
-    "Installiere den Margince-Skill in Claude Code, Codex oder Antigravity und gib ihm dann deinen Passport. Der Skill sagt der KI, wie sie in Margince für dich arbeitet.",
+    "Installiere den Margince-Skill in einem Tool, das sich nicht selbst anmelden kann, und gib ihm dann deinen Passport. Claude Code, Codex und Antigravity melden sich ohne an, unter Kommandozeilen-Tools.",
   "settings.skillDownload": "Skill herunterladen",
   "settings.skillDownloadFailed": "Skill nicht heruntergeladen",
   "settings.passportUseCode": "In deinem eigenen Code",
@@ -5833,7 +5833,7 @@ export const de = {
   "agents.disconnectConfirm":
     "Damit endet die gesamte Verbindung, nicht nur ein Satz Zugangsdaten. Der Agent verliert den Zugriff beim nächsten Aufruf und kann ihn nicht erneuern. Für eine neue Verbindung muss der Zugriff erneut freigegeben werden.",
   "agents.connectAntigravityPath":
-    "Antigravity hat keinen Befehl zum Hinzufügen. Füge den Block in ~/.gemini/config/mcp_config.json ein.",
+    "Antigravity hat keinen Befehl zum Hinzufügen. Füge den Block in ~/.gemini/config/mcp_config.json ein, öffne dann die Agent-Einstellungen, „Customizations“, und wähle „Authenticate“ neben margince.",
   "agents.connectorOff":
     "KI-Tools können sich noch nicht mit Margince verbinden.",
   "agents.connectorOffDetail":
@@ -5863,7 +5863,7 @@ export const de = {
   "aiAccess.claude.openConnectors":
     "Öffne in Claude „Customize“ und dann „Connectors“.",
   "aiAccess.claude.addCustom":
-    "Wähle „Add custom connector“ und füge diese Adresse ein:",
+    "Wähle „+ Add“, dann „Add custom connector“, und füge diese Adresse ein:",
   "aiAccess.claude.connect": "Suche Margince und wähle „Connect“.",
   "aiAccess.claude.freeNote":
     "Im Free-Tarif erlaubt Claude einen eigenen Connector.",
@@ -5879,28 +5879,29 @@ export const de = {
   "aiAccess.chatgpt.adminLine":
     "Deine ChatGPT-Admins fügen Margince einmal für dein Unternehmen hinzu.",
   "aiAccess.chatgpt.admin1":
-    "Schalte in den ChatGPT-Admin-Einstellungen „Developer mode“ ein.",
+    "Öffne in ChatGPT „Plugins“, wähle „+“ und dann „Add custom MCP server“.",
   "aiAccess.chatgpt.admin2":
-    "Lege eine App namens Margince mit der Margince-Adresse von oben an und wähle OAuth für die Anmeldung.",
+    "Nenne ihn Margince, füge die Margince-Adresse von oben ein, wähle OAuth und dann „Create as a plugin“.",
   "aiAccess.chatgpt.admin3":
-    "Veröffentliche die App, damit alle in deinem Unternehmen sie einschalten können.",
-  "aiAccess.chatgpt.turnOn":
-    "Öffne in einem Chat das Menü + und schalte Margince ein.",
-  "aiAccess.chatgpt.developerMode":
-    "Öffne in ChatGPT „Settings“ und dann „Apps & Connectors“ und schalte „Developer mode“ ein.",
-  "aiAccess.chatgpt.create": "Wähle „Create“ und füge diese Adresse ein:",
+    "Öffne in den ChatGPT-Admin-Einstellungen „Apps“, dann „Drafts“, und wähle „Publish“.",
+  "aiAccess.chatgpt.turnOn": "Tippe in einem Chat @ und wähle Margince.",
+  "aiAccess.chatgpt.developerMode": "Öffne in ChatGPT „Plugins“.",
+  "aiAccess.chatgpt.create":
+    "Wähle „+“, dann „Add custom MCP server“, nenne ihn Margince und füge diese Adresse ein:",
+  "aiAccess.chatgpt.ownFinish":
+    "Wähle „Create as a plugin“. Margince öffnet sich. Melde dich an und wähle Autorisieren. Fertig.",
   "aiAccess.chatgpt.ownNote":
-    "Mit Plus und Pro kann ChatGPT in Margince nachsehen, aber nichts ändern.",
+    "Mit einem eigenen Tarif braucht das Pro, und ChatGPT kann in Margince nachsehen, aber nichts ändern.",
   "aiAccess.copilot.adminLine":
     "Jemand in deinem Unternehmen fügt Margince einmal zu einem Copilot-Agenten hinzu.",
   "aiAccess.copilot.admin1":
     "Öffne in Copilot Studio den Agenten, dann „Tools“, „Add a tool“, „New tool“ und „Model Context Protocol“.",
   "aiAccess.copilot.admin2":
-    "Nenne ihn Margince und füge die Margince-Adresse von oben ein.",
+    "Nenne ihn Margince, beschreibe ihn als euer CRM und füge die Margince-Adresse von oben ein.",
   "aiAccess.copilot.admin3":
-    "Wähle bei der Authentifizierung „OAuth 2.0“, dann „Dynamic discovery“, und wähle „Create“.",
+    "Wähle bei der Authentifizierung „OAuth 2.0“, dann „Dynamic discovery“, dann „Create“ und „Next“.",
   "aiAccess.copilot.admin4":
-    "Wähle „Add to agent“ und veröffentliche den Agenten dann in Microsoft 365 Copilot und Teams.",
+    "Wähle „Create a new connection“, dann „Add to agent“, und veröffentliche den Agenten in Microsoft 365 Copilot und Teams.",
   "aiAccess.copilot.admin5":
     "Die Datenrichtlinien deines Unternehmens für Connectors gelten auch für Margince.",
   "aiAccess.copilot.openAgent":
@@ -5916,7 +5917,7 @@ export const de = {
     "Öffne auf gemini.google.com „Settings“ und dann „Connected Apps“.",
   "aiAccess.gemini.addApp":
     "Wähle „Add a custom app“ und füge diese Adresse ein:",
-  "aiAccess.gemini.ownNote": "Vorerst nur in den USA und auf Englisch.",
+  "aiAccess.gemini.ownNote": "Vorerst nur in den USA, auf Englisch und im Web.",
   "aiAccess.guide.title": "Margince in {tool} einrichten",
   "aiAccess.guide.addressHead": "Deine Margince-Adresse",
   "aiAccess.guide.adminHead": "Was du tust",

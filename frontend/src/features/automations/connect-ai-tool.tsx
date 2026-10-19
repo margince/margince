@@ -134,9 +134,12 @@ function PathBox({
       {path.note !== undefined && (
         <p className="t-caption aiconnect-indent">{t(path.note)}</p>
       )}
-      <p className="aiconnect-indent">
-        <OffsiteLink href={path.help}>{help}</OffsiteLink>
-      </p>
+      {/* A path that cannot connect has no vendor steps worth following. */}
+      {path.unavailable === undefined && (
+        <p className="aiconnect-indent">
+          <OffsiteLink href={path.help}>{help}</OffsiteLink>
+        </p>
+      )}
     </div>
   );
 }
