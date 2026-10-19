@@ -24,6 +24,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -305,11 +307,19 @@ func assuranceToolReader(pool *pgxpool.Pool) agents.AssuranceReader {
 // reaches the tool's answer either.
 func inputChecksToolReader(pool *pgxpool.Pool) agents.InputChecksReader {
 	store := assurance.NewStore(InstallationDB(pool))
-	return func(ctx context.Context) (json.RawMessage, error) {
+	return func(ctx context.Context, args agents.InputChecksArgs) (json.RawMessage, error) {
+		population := assurance.Population{Kind: args.ScopeKind}
+		if args.ScopeID != "" {
+			id, err := ids.Parse(args.ScopeID)
+			if err != nil {
+				return nil, fmt.Errorf("scope_id is not a valid id: %w", apperrors.ErrInvalidArgument)
+			}
+			population.ID = &id
+		}
 		var found []assurance.Exception
 		if err := store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 			var err error
-			found, err = AssuranceExceptions(ctx, tx)
+			found, err = AssuranceExceptionsIn(ctx, tx, population)
 			return err
 		}); err != nil {
 			return nil, err

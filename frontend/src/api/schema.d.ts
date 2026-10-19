@@ -73898,9 +73898,18 @@ export interface operations {
                     };
                 };
             };
+            /** @description A scope the request cannot mean, such as an id without a kind or a workspace scope with an id. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
+            404: components["responses"]["NotFound"];
         };
     };
     resolveInputCheck: {

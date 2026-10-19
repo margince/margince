@@ -7078,9 +7078,14 @@ paths:
                     type: array
                     items: {$ref: '#/components/schemas/InputCheck'}
                 additionalProperties: false
+        '400':
+          description: A scope the request cannot mean, such as an id without a kind or a workspace scope with an id.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '422': {$ref: '#/components/responses/ValidationError'}
+        '404': {$ref: '#/components/responses/NotFound'}
   /forecast/movement:
     get:
       tags: [Reports]
