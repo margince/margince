@@ -89,3 +89,22 @@ describe("saying how much review work is not on screen", () => {
     expect(reviewShortfall(2, undefined)).toBeNull();
   });
 });
+
+describe("review totals follow the selected cut", () => {
+  it("does not compare a filtered panel with the whole day's review total", () => {
+    expect(reviewShortfall(2, 9, false, "decisions")).toBeNull();
+    expect(reviewShortfall(2, 9, false, "system")).toBeNull();
+    expect(reviewShortfall(2, 9, false, "all")).toEqual({
+      loaded: 2,
+      total: 9,
+      floor: false,
+    });
+  });
+  it("keeps a bounded filtered group explicit without borrowing the day total", () => {
+    expect(reviewShortfall(2, 9, true, "system")).toEqual({
+      loaded: 2,
+      total: 2,
+      floor: true,
+    });
+  });
+});

@@ -133,11 +133,13 @@ export function ReviewPanel({
   items,
   shortfall,
   more,
+  changed = false,
   rows,
 }: Readonly<{
   items: readonly WorklistItem[];
   shortfall: ReviewShortfall | null;
   more: boolean;
+  changed?: boolean;
   rows: RowContext;
 }>) {
   const t = useT();
@@ -167,15 +169,19 @@ export function ReviewPanel({
             })
           : shortfall
             ? t(
-                more
-                  ? "worklist.review.partial"
-                  : "worklist.review.partialDone",
+                changed
+                  ? "worklist.review.snapshotChanged"
+                  : more
+                    ? "worklist.review.partial"
+                    : "worklist.review.partialDone",
                 {
                   loaded: formatNumber(shortfall.loaded, locale),
                   total: formatNumber(shortfall.total, locale),
                 },
               )
-            : undefined
+            : more
+              ? t("worklist.review.more")
+              : undefined
       }
     >
       <QueueRows items={items} {...rows} />

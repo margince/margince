@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-import { useUrlParams } from "../../lib/urlstate";
+import { currentParams, useUrlParams } from "../../lib/urlstate";
 import { worklistFilterFrom } from "./worklist.header";
 import {
   UNASSIGNED,
@@ -55,7 +55,7 @@ export function useWorklistAddress(
   const owner = embedded ? (params.get("owner") ?? "") : localOwner;
   const selectedId = embedded ? (params.get("selected") ?? "") : localSelected;
   const change = (key: string, value: string) => {
-    const next = new Map(params);
+    const next = new Map(currentParams());
     if (value) next.set(key, value);
     else next.delete(key);
     if (key !== "selected") {

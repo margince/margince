@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider, translate } from "../../i18n";
 import { WorklistScreen } from "./worklist";
-import { completenessText } from "./worklist.completeness";
+import { completenessText, pillCount } from "./worklist.completeness";
 
 // What the page says about the work it is NOT showing.
 //
@@ -199,7 +199,7 @@ describe("what the page says about what it is not showing", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "1 item shown · Read limit reached for Approvals (200+). The rest appears as you clear these",
+          "1 item shown · Read limit reached for Approvals (200+). See the source limits",
         ),
       ).toBeTruthy();
     });
@@ -336,7 +336,7 @@ describe("the line compares items with items", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/^200\+ shown\. Read limit reached/),
+        screen.getByText(/^200\+ shown\. A source read limit/),
       ).toBeTruthy();
     });
     expect(screen.queryByText(/200 of 230/)).toBeNull();
@@ -398,4 +398,17 @@ describe("the line compares items with items", () => {
     page.sources_unavailable = page.sources_unavailable.slice(1);
     expect(completenessText(page, "all", t, "en", [task(1)])).toBeNull();
   });
+});
+
+it("does not print an exact pill total over a failed or withheld source", () => {
+  const page = day([
+    { category: "tasks", considered: 0, shown: 0, more_available: false },
+  ]);
+  for (const reason of ["failed", "withheld"] as const) {
+    page.sources_unavailable = [{ source: "task", category: "tasks", reason }];
+    expect(pillCount(page, "tasks")).toBeUndefined();
+    expect(pillCount(page, "all")).toBeUndefined();
+  }
+  page.sources_unavailable = [];
+  expect(pillCount(page, "tasks")).toBe(0);
 });

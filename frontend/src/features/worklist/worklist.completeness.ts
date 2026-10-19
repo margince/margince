@@ -8,6 +8,7 @@
 import { floorFigure } from "../../format/figure";
 import { formatNumber } from "../../format/format";
 import { type Locale, translatePlural } from "../../i18n";
+import { unreadSources } from "../../lib/worklistcounts";
 import { type Represented, represented } from "../../lib/worklistunits";
 import type { T } from "./worklist.copy";
 import { countsUnder } from "./worklist.narrowing";
@@ -19,23 +20,7 @@ import type {
 
 type WorklistCount = Worklist["counts"][number];
 
-// A pill draws a count only when it is exact. A category read to its bound has
-// a floor, and `FilterPills` draws no number for an absent count.
-export function pillCount(
-  day: Worklist,
-  filter: WorklistFilter,
-): number | undefined {
-  if (filter === "all") {
-    return day.counts.some((count) => count.more_available)
-      ? undefined
-      : day.counts.reduce((total, count) => total + count.considered, 0);
-  }
-  const found = day.counts.find((count) => count.category === filter);
-  if (!found || found.more_available) {
-    return undefined;
-  }
-  return found.considered;
-}
+export { pillCount } from "../../lib/worklistcounts";
 
 /**
  * What the cut on screen is not showing, or null when it shows all of it.
@@ -113,21 +98,4 @@ function limitedKind(count: WorklistCount, t: T, locale: Locale): string {
     count.considered,
   );
   return `${t(`worklist.filter.${count.category}` as const)} (${figure})`;
-}
-
-// A source that never answered may hold rows of this cut, so the line must not
-// fall silent over it. A side read that puts no row on the queue cannot.
-function unreadSources(day: Worklist, filter: WorklistFilter): number {
-  const sources = new Set(
-    day.sources_unavailable
-      .filter((entry) => entry.contributes_rows !== false)
-      .filter(
-        (entry) =>
-          filter === "all" ||
-          entry.category === undefined ||
-          entry.category === filter,
-      )
-      .map((entry) => entry.source),
-  );
-  return sources.size;
 }

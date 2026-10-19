@@ -331,19 +331,19 @@ The Worklist holds still while you work through it. Something may come in, or so
 something while you work. Then a notice headed **List changed** says which: "{arrived} new since you
 opened the list. Refresh to add them."
 
-The page is still right, only not complete. The Refresh button appears only when something came in.
+Refresh updates the totals when work arrives or leaves the list.
 
 ### How complete is this?
-The Worklist footer, and the **To review** panel, count items, not cards: "8 possible duplicates"
-is one card and 8 items.
+The Worklist footer and **To review** panel count items, not cards: 8 possible duplicates are one card.
 
 - **"{shown} of {considered} items shown"**: a share, plus "{cards} cards on screen" for a group.
 - **"Read limit reached for {kinds}"**, such as "Approvals (200+)": no share, because nobody knows
-  the total. **Load more** does not reach the rest; it comes in as you clear what is shown.
+  the total. **Load more** cannot read past a source limit. **Source read limits** names each
+  source and its scope. Review available work, then refresh. Ask an admin to check the source
+  limit if needed work is still missing.
 - **"{count} sources did not load"**: the list may not be complete, even after the last page.
 
-A box headed **Worklist incomplete** names a source that did not load. The empty list then reads
-**"No items in the sources that loaded."** instead of "Nothing is waiting on you."
+**Worklist incomplete** names sources that did not load; an empty list says **"No items in the sources that loaded."**
 
 ### Handled for you
 

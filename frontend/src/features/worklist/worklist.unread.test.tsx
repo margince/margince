@@ -4,9 +4,10 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { LocaleProvider } from "../../i18n";
+import { LocaleProvider, translate } from "../../i18n";
 import { en } from "../../i18n/en";
 import type { Worklist } from "./worklist.queries";
+import { reachNames } from "./worklist.sources";
 import { DayUnread, dayPartlyRead } from "./worklist.unread";
 
 // An unread teammate's plan is the same claim as an unread source: the day may
@@ -77,4 +78,89 @@ describe("what a team day did not read", () => {
 
     expect(container.innerHTML).toBe("");
   });
+});
+
+describe("source read limits remain visible after page continuation ends", () => {
+  it("names each bounded source and preserves personal scope within a team day", () => {
+    const day = aDay();
+    day.reach = [
+      {
+        source: "task",
+        considered: 12,
+        shown: 12,
+        more_available: true,
+        personal: false,
+      },
+      {
+        source: "notice",
+        considered: 30,
+        shown: 30,
+        more_available: true,
+        personal: true,
+      },
+    ];
+    draw(day);
+    expect(dayPartlyRead(day)).toBe(true);
+    expect(
+      screen.getByText(/read limit reached · the selected record scope/),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/read limit reached · your personal source/),
+    ).toBeTruthy();
+    expect(screen.getByText(en["worklist.limits.boundary"])).toBeTruthy();
+    expect(screen.getByText(en["worklist.limits.remedy"])).toBeTruthy();
+  });
+  it("retains an explicit boundary for an older response without source reach", () => {
+    const day = aDay();
+    Reflect.deleteProperty(day, "reach");
+    day.counts = [
+      { category: "tasks", considered: 12, shown: 12, more_available: true },
+    ];
+    draw(day);
+    expect(dayPartlyRead(day)).toBe(true);
+    expect(screen.getByText(en["worklist.limits.boundary"])).toBeTruthy();
+  });
+});
+
+it("gives every registered source an explicit boundary and remedy when bounded", () => {
+  const day = aDay();
+  // The label catalog must cover the contract's complete source enum.
+  for (const [source, label] of Object.entries(reachNames)) {
+    if (!isReachSource(source)) continue;
+    day.reach = [{ source, considered: 1, shown: 1, more_available: true }];
+    const { unmount } = draw(day);
+    expect(screen.getByText(en["worklist.limits.boundary"])).toBeTruthy();
+    expect(screen.getByText(en["worklist.limits.remedy"])).toBeTruthy();
+    expect(
+      screen.getByText(
+        `${translate("en", label)}: read limit reached · the selected record scope`,
+      ),
+    ).toBeTruthy();
+    unmount();
+  }
+});
+
+function isReachSource(
+  source: string,
+): source is NonNullable<Worklist["reach"]>[number]["source"] {
+  return source in reachNames;
+}
+
+it("retains full plan coverage beside a routine source limit", () => {
+  const day = aDay({
+    members: [
+      { ...ana, read: true },
+      { ...ben, read: true },
+    ],
+    truncated: false,
+  });
+  day.reach = [
+    { source: "task", considered: 2, shown: 2, more_available: true },
+  ];
+  draw(day);
+  expect(
+    screen.getByText("Weekly plans read for all 2 teammates."),
+  ).toBeTruthy();
+  expect(screen.getByText(en["worklist.limits.title"])).toBeTruthy();
+  expect(screen.queryByText(en["worklist.partialTitle"])).toBeNull();
 });

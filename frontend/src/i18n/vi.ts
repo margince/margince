@@ -830,6 +830,7 @@ export const vi = {
   "brief.team.plan": "Xem lại kế hoạch hiện tại",
   "brief.approval.approve": "Duyệt",
   "brief.approval.email": "Duyệt email",
+  "brief.coverage.source.domain_question": "Xét duyệt tên miền",
   "brief.coverage.source.approval": "Đề xuất",
   "brief.coverage.source.task": "Việc cần làm",
   "brief.coverage.source.dsr": "Yêu cầu về quyền riêng tư",
@@ -13637,14 +13638,27 @@ export const vi = {
   "worklist.completeness.cards_one": "{cards} thẻ trên màn hình",
   "worklist.completeness.cards_other": "{cards} thẻ trên màn hình",
   "worklist.completeness.bounded":
-    "Đã chạm giới hạn đọc ở {kinds}. Phần còn lại sẽ hiện khi bạn xử lý xong các việc này",
+    "Đã đạt giới hạn đọc ở {kinds}. Xem giới hạn của từng nguồn",
   "worklist.completeness.unread_one": "{count} nguồn chưa tải được",
   "worklist.completeness.unread_other": "{count} nguồn chưa tải được",
   "worklist.review.partial":
     "Hiển thị {loaded} trên {total}. Tải thêm ở bên dưới để xem phần còn lại.",
+  "worklist.limits.title": "Giới hạn đọc của nguồn",
+  "worklist.limits.source": "{source}: đã đạt giới hạn đọc · {scope}",
+  "worklist.emptyPage": "Trang này chưa có mục nào. Tải thêm để tiếp tục.",
+  "worklist.review.more":
+    "Các trang tiếp theo có thể chứa mục cần xét duyệt. Tải thêm bên dưới để tiếp tục.",
+  "worklist.limits.boundary":
+    "Tải thêm tiếp tục lần xem này. Thao tác này không đọc vượt giới hạn của nguồn.",
+  "worklist.limits.personal": "nguồn cá nhân của bạn",
+  "worklist.limits.selected": "phạm vi hồ sơ đã chọn",
+  "worklist.limits.remedy":
+    "Xem xét các mục hiện có rồi làm mới. Nếu vẫn thiếu công việc cần xử lý, hãy liên hệ quản trị viên để kiểm tra giới hạn đọc của nguồn.",
+  "worklist.review.snapshotChanged":
+    "Hiển thị {loaded} trên {total} mục của lần xem ban đầu. Công việc đã thay đổi; hãy làm mới để cập nhật tổng số.",
   "worklist.review.partialDone": "Hiển thị {loaded} trên {total}.",
   "worklist.review.floor":
-    "Hiển thị {loaded}+. Đã chạm giới hạn đọc; phần còn lại sẽ hiện khi bạn xử lý xong các việc này.",
+    "Hiển thị {loaded}+. Một nguồn đã đạt giới hạn đọc; xem giới hạn của từng nguồn.",
   "worklist.clear": "Không có việc nào đang chờ bạn.",
   "worklist.clearFor": "Không có việc nào đang chờ {name}.",
   "worklist.clearOfTasksToday":

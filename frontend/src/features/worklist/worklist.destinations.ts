@@ -80,24 +80,26 @@ export function reviewShortfall(
   loaded: number,
   total: number | undefined,
   floor = false,
+  filter: WorklistFilter = "all",
 ): ReviewShortfall | null {
+  const scopedTotal = filter === "all" ? total : undefined;
   // A floor is never complete, whatever the day's total says.
   if (floor) {
-    return { loaded, total: total ?? loaded, floor: true };
+    return { loaded, total: scopedTotal ?? loaded, floor: true };
   }
   // An older server sends no partition. Saying nothing is right: a figure
   // invented here would be a claim about a day this client cannot count.
-  if (total === undefined) {
+  if (scopedTotal === undefined) {
     return null;
   }
   // A total BELOW what is loaded is not a shortfall to report. The two are
   // counted over different populations — the day's candidates against the rows
   // this walk has served — and a walk that outran its own total would draw
   // "5 of 3", which reads as a bug in the product rather than in the number.
-  if (loaded >= total) {
+  if (loaded >= scopedTotal) {
     return null;
   }
-  return { loaded, total, floor: false };
+  return { loaded, total: scopedTotal, floor: false };
 }
 
 // Which narrowing actually CONTAINS this group's members.
