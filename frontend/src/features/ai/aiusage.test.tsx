@@ -102,7 +102,7 @@ it("renders historical usage without inventing cost or duplicating the live allo
       },
     ],
   });
-  expect(await screen.findByText("enrich")).toBeTruthy();
+  expect(await screen.findByText("Signature enrichment")).toBeTruthy();
   expect(screen.queryByText("850 of 1,000 tokens · 85%")).toBeNull();
   // A month nothing priced says so in words: a zero would claim a figure.
   const totals = screen.getByTestId("aiusage-totals");
@@ -132,7 +132,7 @@ it("shows estimated cost when present independently of the current allowance ban
       },
     ],
   });
-  expect(await screen.findByText("enrich")).toBeTruthy();
+  expect(await screen.findByText("Signature enrichment")).toBeTruthy();
   const totals = screen.getByTestId("aiusage-totals");
   expect(within(totals).getByText("Estimated cost")).toBeTruthy();
   expect(within(totals).getByText("€1.23")).toBeTruthy();
@@ -215,9 +215,9 @@ it("groups the spend by task, with a line per tier only where a task ran on seve
   expect(total.compareDocumentPosition(cheap)).toBe(
     Node.DOCUMENT_POSITION_FOLLOWING,
   );
-  expect(screen.getAllByText("triage")).toHaveLength(1);
+  expect(screen.getAllByText("AI task")).toHaveLength(1);
   const single = screen.getByTestId("spend-enrich-premium");
-  expect(single.textContent).toContain("enrich");
+  expect(single.textContent).toContain("Signature enrichment");
   expect(single.textContent).toContain("Premium");
 });
 
@@ -558,7 +558,7 @@ const boundRouting = {
 it("shows the decision model's pass rate and a fallback rate that opens its reasons", async () => {
   const user = userEvent.setup();
   mount(decisionUsage, 200, DECIDING_OPERATOR, boundRouting);
-  const task = await screen.findByText("site_triage");
+  const task = await screen.findByText("Website triage");
   const table = task.closest("table");
   if (!table) throw new Error("the decision summary is not a table");
   expect(within(table).getByText("25%")).toBeTruthy();
@@ -625,7 +625,7 @@ it("orders fallback reasons largest first and draws a rate of nothing as plain t
   );
   // A task that never fell back has nothing to explain: the figure is text,
   // not a control that opens an empty panel.
-  const quiet = screen.getByText("capture_classify").closest("tr");
+  const quiet = screen.getByText("Message classification").closest("tr");
   if (!quiet) throw new Error("the quiet task has no row");
   expect(within(quiet).getByText("0%")).toBeTruthy();
   expect(within(quiet).queryByRole("button")).toBeNull();

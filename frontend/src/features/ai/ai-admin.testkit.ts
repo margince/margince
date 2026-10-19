@@ -18,7 +18,7 @@ export const allowance: components["schemas"]["AiBudgetSnapshot"] = {
 };
 export const feature: components["schemas"]["AiFeatureRoute"] = {
   task: "summarize",
-  display_name: "Summarize correspondence",
+  display_name: "Record summary",
   execution_mode: "interactive",
   leading_tier: "cheap_cloud",
   normal_candidates: [

@@ -42,7 +42,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -135,7 +134,7 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 		// per-kind effects belong to the DECIDE path, and a task neither decides
 		// nor triggers one. What it does is read a decision and then take the
 		// ordinary redemption route through Registry.Invoke.
-		agents.WithTaskStore(toolTasks(pool), approvalsAdapter{svc: approvals.NewService(InstallationDB(pool))}))
+		agents.WithTaskStore(toolTasks(pool), approvalsAdapter{svc: newApprovalsService(InstallationDB(pool))}))
 }
 
 // mcpAuthenticate binds one request to its agent principal. It runs on EVERY

@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -143,6 +144,14 @@ func parseIntroDraft(raw string, facts introFacts) (introDraft, error) {
 		facts.colleagueGreeting(), facts.contact)
 	if err != nil {
 		return introDraft{}, fmt.Errorf("company360: %w", err)
+	}
+	// Named in the refusal, because ai.Ask hands this reason back to the model.
+	// A re-ask saying which claim to drop is answerable. One saying only that
+	// the draft was refused is a guess, and the next attempt picks a synonym.
+	if claim := warmthOverclaim(facts.band, subject+" "+body); claim != "" {
+		return introDraft{}, fmt.Errorf(
+			"company360: the route is cold and the draft claims %q: %w",
+			claim, apperrors.ErrInvalidArgument)
 	}
 	return introDraft{subject: subject, body: body}, nil
 }

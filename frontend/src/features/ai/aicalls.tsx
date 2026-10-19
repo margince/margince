@@ -11,6 +11,7 @@ import {
 import { Select } from "../../design-system/select";
 import { type Translator, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { aiTaskLabel } from "../../lib/ai-task-label";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
@@ -225,7 +226,7 @@ export function AiCallsCard() {
                   { value: "", label: t("aicalls.filter.all") },
                   ...options.map((option) => ({
                     value: option.task,
-                    label: option.display_name ?? option.task,
+                    label: aiTaskLabel(option.task, t, option.display_name),
                   })),
                 ]}
               />

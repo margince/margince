@@ -89,9 +89,9 @@ Your data goes to: global cloud. 17 of 31 features ready (3 re-checks pending). 
 | Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (18 of 18) |
 | Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (9 of 9) |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · premium · no separate fallback</sub> | Right every time (12 of 12) |
+| Checking whether the reply answered the request <sub>`request_settlement`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, ❌ Not reliable yet</sub> | Right in 15 of 18 tries; one test case wrong too often |
 | Company fit assessment <sub>`growth_fit`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (12 of 12) |
 | Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (27 of 27); answer quality below the bar in one test case |
-| Did our reply settle it <sub>`request_settlement`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, ❌ Not reliable yet</sub> | Right in 15 of 18 tries; one test case wrong too often |
 | Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · premium</sub> | Right every time (15 of 15) |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium</sub> | Not measured yet |
 | Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · premium · no separate fallback</sub> | Right every time (12 of 12) |
@@ -112,8 +112,8 @@ Your data goes to: global cloud. 17 of 31 features ready (3 re-checks pending). 
 | Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ✅ Ready<br><sub>gemma-4-26b-a4b-it · local_small</sub> | Right every time (42 of 42) |
 | Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, ✅ Ready</sub> | Right in 17 of 21 tries; one test case wrong too often |
 | Voice DNA build <sub>`voice_build`</sub> | ⚠️ Usable with care<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right in 33 of 36 tries; answer quality below the bar in one test case |
-| Website deep read <sub>`site_extract`</sub> | ❌ Not reliable yet<br><sub>gemma-4-31b-it · premium</sub> | Right in 12 of 15 tries; one test case wrong too often; answer quality below the bar in one test case |
 | Website fact extraction <sub>`site_fact_extract`</sub> | ❌ Not reliable yet<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right in 6 of 9 tries; one test case wrong too often; answer quality below the bar in one test case |
+| Website research <sub>`site_extract`</sub> | ❌ Not reliable yet<br><sub>gemma-4-31b-it · premium</sub> | Right in 12 of 15 tries; one test case wrong too often; answer quality below the bar in one test case |
 | Website triage <sub>`site_triage`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (15 of 15) |
 | Weekly review narrative <sub>`weekly_review`</sub> | ❌ Not reliable yet<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (45 of 45); answer quality below the bar in 2 test cases · re-check pending |
 | What last week taught <sub>`weekly_learnings`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (12 of 12) |
@@ -176,9 +176,9 @@ Your data goes to: global cloud. 20 of 31 features ready (1 re-check pending). P
 | Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready</sub> | Right every time (18 of 18) |
 | Buying-role reading <sub>`propose_roles`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready</sub> | Right every time (21 of 21); answer quality below the bar in one test case |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemini-3.6-flash · premium → gemini-3.1-flash-lite, ✅ Ready</sub> | Right every time (12 of 12) |
+| Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (18 of 18) |
 | Company fit assessment <sub>`growth_fit`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready</sub> | Right in 9 of 12 tries |
 | Deal status card <sub>`deal_health`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready</sub> | Right every time (21 of 21) |
-| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (18 of 18) |
 | Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready<br><sub>gemini-3.6-flash · premium</sub> | Right every time (15 of 15) |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>gemini-3.6-flash · premium</sub> | Not measured yet |
 | Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>gemini-3.6-flash · premium → gemini-3.1-flash-lite, ✅ Ready</sub> | Right every time (12 of 12) |
@@ -199,8 +199,8 @@ Your data goes to: global cloud. 20 of 31 features ready (1 re-check pending). P
 | Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small</sub> | Right every time (42 of 42) |
 | Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (18 of 18) |
 | Voice DNA build <sub>`voice_build`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ⚠️ Usable with care</sub> | Right every time (15 of 15); answer quality below the bar in 2 test cases |
-| Website deep read <sub>`site_extract`</sub> | ✅ Ready<br><sub>gemini-3.6-flash · premium</sub> | Right every time (15 of 15) |
 | Website fact extraction <sub>`site_fact_extract`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready</sub> | Right every time (9 of 9) |
+| Website research <sub>`site_extract`</sub> | ✅ Ready<br><sub>gemini-3.6-flash · premium</sub> | Right every time (15 of 15) |
 | Website triage <sub>`site_triage`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready</sub> | Right every time (15 of 15) |
 | Weekly review narrative <sub>`weekly_review`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ⚠️ Usable with care · re-check pending</sub> | Right every time (45 of 45); answer quality below the bar in 2 test cases · re-check pending |
 | What last week taught <sub>`weekly_learnings`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready</sub> | Right every time (12 of 12) |
@@ -263,9 +263,9 @@ Your data goes to: EU-hosted cloud. 20 of 31 features ready (1 re-check pending)
 | Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (18 of 18) |
 | Buying-role reading <sub>`propose_roles`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (21 of 21); answer quality below the bar in one test case |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemini-3.6-flash · premium → gemini-3.1-flash-lite, ✅ Ready, measured on `gemini`</sub> | Right every time (12 of 12) |
+| Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (18 of 18) |
 | Company fit assessment <sub>`growth_fit`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready, measured on `gemini`</sub> | Right in 9 of 12 tries |
 | Deal status card <sub>`deal_health`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (21 of 21) |
-| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (18 of 18) |
 | Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready<br><sub>gemini-3.6-flash · premium</sub> | Right every time (15 of 15) |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>gemini-3.6-flash · premium</sub> | Not measured yet |
 | Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>gemini-3.6-flash · premium → gemini-3.1-flash-lite, ✅ Ready, measured on `gemini`</sub> | Right every time (12 of 12) |
@@ -286,8 +286,8 @@ Your data goes to: EU-hosted cloud. 20 of 31 features ready (1 re-check pending)
 | Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small</sub> | Right every time (42 of 42) |
 | Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (18 of 18) |
 | Voice DNA build <sub>`voice_build`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ⚠️ Usable with care, measured on `gemini`</sub> | Right every time (15 of 15); answer quality below the bar in 2 test cases |
-| Website deep read <sub>`site_extract`</sub> | ✅ Ready<br><sub>gemini-3.6-flash · premium</sub> | Right every time (15 of 15) |
 | Website fact extraction <sub>`site_fact_extract`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (9 of 9) |
+| Website research <sub>`site_extract`</sub> | ✅ Ready<br><sub>gemini-3.6-flash · premium</sub> | Right every time (15 of 15) |
 | Website triage <sub>`site_triage`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (15 of 15) |
 | Weekly review narrative <sub>`weekly_review`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ⚠️ Usable with care · re-check pending, measured on `gemini`</sub> | Right every time (45 of 45); answer quality below the bar in 2 test cases · re-check pending |
 | What last week taught <sub>`weekly_learnings`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (12 of 12) |
@@ -350,9 +350,9 @@ Your data goes to: your own servers. 8 of 31 features ready (10 re-checks pendin
 | Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right every time (18 of 18) · re-check pending |
 | Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right every time (9 of 9) |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemma4:12b · premium · no separate fallback</sub> | Right every time (12 of 12) |
+| Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Right in 23 of 24 tries · re-check pending |
 | Company fit assessment <sub>`growth_fit`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 10 of 18 tries |
 | Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right every time (15 of 15); answer quality below the bar in one test case |
-| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Right in 23 of 24 tries · re-check pending |
 | Document corpus question <sub>`corpus_ask`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · premium</sub> | Right in 24 of 30 tries; one test case wrong too often; answer quality below the bar in one test case |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium</sub> | Not measured yet |
 | Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>gemma4:12b · premium · no separate fallback</sub> | Right every time (12 of 12) |
@@ -373,8 +373,8 @@ Your data goes to: your own servers. 8 of 31 features ready (10 re-checks pendin
 | Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · local_small</sub> | Right in 36 of 42 tries; 2 test cases wrong too often |
 | Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Right in 6 of 12 tries; 2 test cases wrong too often · re-check pending |
 | Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 17 of 24 tries; one test case wrong too often; answer quality below the bar in 2 test cases |
-| Website deep read <sub>`site_extract`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · premium</sub> | Right in 27 of 45 tries; 2 test cases wrong too often; answer quality below the bar in one test case |
 | Website fact extraction <sub>`site_fact_extract`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 12 of 18 tries; one test case wrong too often; answer quality below the bar in one test case |
+| Website research <sub>`site_extract`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · premium</sub> | Right in 27 of 45 tries; 2 test cases wrong too often; answer quality below the bar in one test case |
 | Website triage <sub>`site_triage`</sub> | ⚠️ Usable with care<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 20 of 21 tries; answer quality below the bar in one test case |
 | Weekly review narrative <sub>`weekly_review`</sub> | ⚠️ Usable with care<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 35 of 36 tries; answer quality below the bar in 4 test cases · re-check pending |
 | What last week taught <sub>`weekly_learnings`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 18 of 27 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
@@ -437,9 +437,9 @@ Your data goes to: global cloud. 16 of 31 features ready (3 re-checks pending). 
 | Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right every time (18 of 18) |
 | Buying-role reading <sub>`propose_roles`</sub> | ❌ Not reliable yet<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right in 20 of 27 tries; one test case wrong too often; answer quality below the bar in 2 test cases |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>mistral-medium-3-5 · premium → gpt-oss-120b, ✅ Ready</sub> | Right every time (12 of 12) |
+| Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gpt-oss-120b · local_small · no separate fallback</sub> | Right every time (18 of 18) |
 | Company fit assessment <sub>`growth_fit`</sub> | ❌ Not reliable yet<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right every time (12 of 12); answer quality below the bar in 2 test cases |
 | Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ⚠️ Usable with care</sub> | Right every time (21 of 21); answer quality below the bar in one test case |
-| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gpt-oss-120b · local_small · no separate fallback</sub> | Right every time (18 of 18) |
 | Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready<br><sub>mistral-medium-3-5 · premium</sub> | Right every time (15 of 15) |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>mistral-medium-3-5 · premium</sub> | Not measured yet |
 | Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>mistral-medium-3-5 · premium → gpt-oss-120b, ✅ Ready</sub> | Right every time (12 of 12) |
@@ -460,8 +460,8 @@ Your data goes to: global cloud. 16 of 31 features ready (3 re-checks pending). 
 | Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ⚠️ Usable with care<br><sub>gpt-oss-120b · local_small</sub> | Right in 48 of 54 tries |
 | Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready<br><sub>gpt-oss-120b · local_small · no separate fallback</sub> | Right every time (18 of 18) |
 | Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ❌ Not reliable yet</sub> | Right in 20 of 24 tries; answer quality below the bar in 2 test cases |
-| Website deep read <sub>`site_extract`</sub> | ❌ Not reliable yet<br><sub>mistral-medium-3-5 · premium</sub> | Right in 24 of 30 tries; one test case wrong too often; answer quality below the bar in one test case |
 | Website fact extraction <sub>`site_fact_extract`</sub> | ✅ Ready<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ❌ Not reliable yet</sub> | Right every time (9 of 9) |
+| Website research <sub>`site_extract`</sub> | ❌ Not reliable yet<br><sub>mistral-medium-3-5 · premium</sub> | Right in 24 of 30 tries; one test case wrong too often; answer quality below the bar in one test case |
 | Website triage <sub>`site_triage`</sub> | ✅ Ready<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right every time (15 of 15) |
 | Weekly review narrative <sub>`weekly_review`</sub> | ⚠️ Usable with care<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ⚠️ Usable with care · re-check pending</sub> | Right every time (45 of 45); answer quality below the bar in 3 test cases · re-check pending |
 | What last week taught <sub>`weekly_learnings`</sub> | ✅ Ready<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right every time (12 of 12) |
@@ -524,9 +524,9 @@ Your data goes to: EU-hosted cloud. 13 of 31 features ready (3 re-checks pending
 | Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right every time (18 of 18) |
 | Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right every time (9 of 9) |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>mistral-medium-3-5 · premium → ministral-14b-2512, ✅ Ready</sub> | Right every time (12 of 12) |
+| Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>ministral-8b-2512 · local_small → ministral-14b-2512, ✅ Ready</sub> | Right every time (18 of 18) |
 | Company fit assessment <sub>`growth_fit`</sub> | ⚠️ Usable with care<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right in 16 of 18 tries; answer quality below the bar in one test case |
 | Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ⚠️ Usable with care</sub> | Right every time (24 of 24); answer quality below the bar in 2 test cases |
-| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready<br><sub>ministral-8b-2512 · local_small → ministral-14b-2512, ✅ Ready</sub> | Right every time (18 of 18) |
 | Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready<br><sub>mistral-medium-3-5 · premium</sub> | Right every time (15 of 15) |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>mistral-medium-3-5 · premium</sub> | Not measured yet |
 | Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>mistral-medium-3-5 · premium → ministral-14b-2512, ✅ Ready</sub> | Right every time (12 of 12) |
@@ -547,8 +547,8 @@ Your data goes to: EU-hosted cloud. 13 of 31 features ready (3 re-checks pending
 | Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ✅ Ready<br><sub>ministral-8b-2512 · local_small</sub> | Right in 45 of 48 tries |
 | Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet<br><sub>ministral-8b-2512 · local_small → ministral-14b-2512, ❌ Not reliable yet</sub> | Right in 15 of 18 tries; one test case wrong too often |
 | Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ❌ Not reliable yet</sub> | Right in 11 of 18 tries; one test case wrong too often; answer quality below the bar in 3 test cases |
-| Website deep read <sub>`site_extract`</sub> | ❌ Not reliable yet<br><sub>mistral-medium-3-5 · premium</sub> | Right in 24 of 30 tries; one test case wrong too often; answer quality below the bar in one test case |
 | Website fact extraction <sub>`site_fact_extract`</sub> | ❌ Not reliable yet<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ❌ Not reliable yet</sub> | Right in 14 of 21 tries; one test case wrong too often; answer quality below the bar in one test case |
+| Website research <sub>`site_extract`</sub> | ❌ Not reliable yet<br><sub>mistral-medium-3-5 · premium</sub> | Right in 24 of 30 tries; one test case wrong too often; answer quality below the bar in one test case |
 | Website triage <sub>`site_triage`</sub> | ✅ Ready<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right every time (15 of 15) |
 | Weekly review narrative <sub>`weekly_review`</sub> | ❌ Not reliable yet<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ⚠️ Usable with care · re-check pending</sub> | Right in 23 of 24 tries; answer quality below the bar in 4 test cases · re-check pending |
 | What last week taught <sub>`weekly_learnings`</sub> | ❌ Not reliable yet<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right in 4 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases |
@@ -611,9 +611,9 @@ Your data goes to: global cloud. 21 of 31 features ready (3 re-checks pending). 
 | Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (18 of 18) |
 | Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (9 of 9) |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium → gpt-6-luna, ✅ Ready</sub> | Right every time (12 of 12) |
+| Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Right every time (18 of 18) |
 | Company fit assessment <sub>`growth_fit`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (12 of 12) |
 | Deal status card <sub>`deal_health`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (15 of 15) |
-| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Right every time (18 of 18) |
 | Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium</sub> | Right every time (15 of 15) |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>gpt-6-sol · premium</sub> | Not measured yet |
 | Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium → gpt-6-luna, ✅ Ready</sub> | Right every time (12 of 12) |
@@ -634,8 +634,8 @@ Your data goes to: global cloud. 21 of 31 features ready (3 re-checks pending). 
 | Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ❌ Not reliable yet<br><sub>gpt-6-luna · local_small</sub> | Right in 36 of 42 tries; 2 test cases wrong too often |
 | Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Right every time (18 of 18) |
 | Voice DNA build <sub>`voice_build`</sub> | ⚠️ Usable with care<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ⚠️ Usable with care</sub> | Right in 35 of 36 tries; answer quality below the bar in one test case |
-| Website deep read <sub>`site_extract`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium</sub> | Right every time (15 of 15) |
 | Website fact extraction <sub>`site_fact_extract`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (9 of 9) |
+| Website research <sub>`site_extract`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium</sub> | Right every time (15 of 15) |
 | Website triage <sub>`site_triage`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (15 of 15) |
 | Weekly review narrative <sub>`weekly_review`</sub> | ⚠️ Usable with care<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (36 of 36); answer quality below the bar in 2 test cases · re-check pending |
 | What last week taught <sub>`weekly_learnings`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (9 of 9) |
@@ -698,9 +698,9 @@ Your data goes to: your own servers. 8 of 31 features ready (13 re-checks pendin
 | Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right every time (18 of 18) · re-check pending |
 | Buying-role reading <sub>`propose_roles`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right in 13 of 24 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · premium · no separate fallback</sub> | Right every time (12 of 12) |
+| Checking whether the reply answered the request <sub>`request_settlement`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · local_small · no separate fallback</sub> | Right in 6 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases · re-check pending |
 | Company fit assessment <sub>`growth_fit`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right in 0 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases |
 | Deal status card <sub>`deal_health`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right every time (9 of 9); answer quality below the bar in one test case |
-| Did our reply settle it <sub>`request_settlement`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · local_small · no separate fallback</sub> | Right in 6 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases · re-check pending |
 | Document corpus question <sub>`corpus_ask`</sub> | ⚠️ Usable with care<br><sub>Qwen3-14B-4bit · premium</sub> | Right in 28 of 33 tries; one test case wrong too often; answer quality below the bar in one test case |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>Qwen3-14B-4bit · premium</sub> | Not measured yet |
 | Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · premium · no separate fallback</sub> | Right every time (9 of 9) · re-check pending |
@@ -721,8 +721,8 @@ Your data goes to: your own servers. 8 of 31 features ready (13 re-checks pendin
 | Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · local_small</sub> | Right in 36 of 42 tries; 2 test cases wrong too often |
 | Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · local_small · no separate fallback</sub> | Right in 7 of 15 tries; 2 test cases wrong too often · re-check pending |
 | Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right in 15 of 18 tries; one test case wrong too often; answer quality below the bar in 3 test cases |
-| Website deep read <sub>`site_extract`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · premium</sub> | Right in 34 of 45 tries; one test case wrong too often; answer quality below the bar in one test case |
 | Website fact extraction <sub>`site_fact_extract`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right in 6 of 9 tries; one test case wrong too often; answer quality below the bar in one test case |
+| Website research <sub>`site_extract`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · premium</sub> | Right in 34 of 45 tries; one test case wrong too often; answer quality below the bar in one test case |
 | Website triage <sub>`site_triage`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right every time (18 of 18) |
 | Weekly review narrative <sub>`weekly_review`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right every time (30 of 30); answer quality below the bar in 4 test cases · re-check pending |
 | What last week taught <sub>`weekly_learnings`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right in 9 of 15 tries; 2 test cases wrong too often; answer quality below the bar in 3 test cases · re-check pending |

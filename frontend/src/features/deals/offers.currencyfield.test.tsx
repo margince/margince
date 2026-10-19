@@ -22,7 +22,7 @@ const BASE: Line = {
   id: "00000000-0000-7000-8000-000000000001",
   position: 1,
   description: "Implementation",
-  unit: "unit",
+  unit: "piece",
   quantity: 1,
   unit_price_minor: 0,
   discount_pct: 0,

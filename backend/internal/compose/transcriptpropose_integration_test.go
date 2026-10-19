@@ -97,7 +97,7 @@ func setupTranscript(t *testing.T) *transcriptEnv {
 	t.Helper()
 	e := &transcriptEnv{Env: integration.Setup(t), owner: integration.OwnerConn(t)}
 	e.ctx = e.As(e.Rep1, []ids.UUID{e.Team1}, transcriptPerms)
-	e.svc = approvals.NewService(e.DB())
+	e.svc = newApprovalsService(e.DB())
 	e.svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(e.svc, e.Activities, e.Contacts))
 	e.svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck(e.Activities))
 

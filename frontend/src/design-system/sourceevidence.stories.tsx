@@ -114,3 +114,20 @@ export const Failed: StoryObj = {
     );
   },
 };
+
+export const Withheld: StoryObj = {
+  render: () => {
+    installFetchStub({
+      [`GET /activities/${ACTIVITY}`]: () =>
+        jsonResponse({
+          ...activity("meeting"),
+          content_state: "withheld",
+        }),
+    });
+    return (
+      <StoryProviders>
+        <SourceEvidence activityId={ACTIVITY} onOpenTranscript={() => {}} />
+      </StoryProviders>
+    );
+  },
+};

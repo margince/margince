@@ -15,6 +15,7 @@ import {
   type MockInstance,
   vi,
 } from "vitest";
+import { LOCALES, translate } from "../i18n";
 import { AiRuntimeChip, type AiRuntimeLabels } from "./airuntimechip";
 import { Heading } from "./heading";
 import { Modal } from "./modal";
@@ -264,3 +265,54 @@ describe("the runtime chip", () => {
     expect(button).toHaveAttribute("aria-expanded", "true");
   });
 });
+
+it.each(LOCALES)(
+  "names a runtime task in %s without exposing its wire key",
+  async (locale) => {
+    const user = userEvent.setup();
+    render(
+      <AiRuntimeChip
+        configured="demo-model"
+        labels={LABELS}
+        locale={locale}
+        runtime={{
+          currency: "USD",
+          call_attempts: 1,
+          tokens_in: 10,
+          tokens_out: 5,
+          latency_ms: 10,
+          estimated_cost_microusd: 100,
+          unpriced_calls: 0,
+          models: [
+            {
+              task: "site_triage",
+              tier: "premium",
+              provider: "demo",
+              configured_model: "demo-model",
+              served_model: "demo-model",
+              call_attempts: 1,
+              tokens_in: 10,
+              tokens_out: 5,
+              cached_tokens: 0,
+              cache_write_tokens: 0,
+              reasoning_tokens: 0,
+              latency_ms: 10,
+              estimated_cost_microusd: 100,
+              unpriced_calls: 0,
+              last_used_at: "2026-09-01T09:00:00Z",
+            },
+          ],
+        }}
+      />,
+    );
+    await user.click(
+      screen.getByRole("button", { name: new RegExp(LABELS.chip) }),
+    );
+    expect(
+      screen.getByText(
+        `${translate(locale, "aiTask.name.site_triage")} · premium · demo`,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/site_triage/)).not.toBeInTheDocument();
+  },
+);

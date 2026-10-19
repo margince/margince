@@ -101,6 +101,7 @@ func aiWorkItem(run TroubledRun) crmcontracts.AttentionItem {
 		if name := ai.DisplayName(ai.Task(run.Kind)); name != "" {
 			label := name
 			item.CauseLabel = &label
+			item.AiTask = new(crmcontracts.AiTask(run.Kind))
 		}
 	}
 	if run.Summary != "" {

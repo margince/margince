@@ -35,7 +35,7 @@ const RUNTIME: AiRunSummary = {
   unpriced_calls: 0,
   models: [
     {
-      task: "company-read",
+      task: "site_triage",
       tier: "premium",
       provider: "deepseek",
       configured_model: "deepseek-chat",
@@ -52,7 +52,7 @@ const RUNTIME: AiRunSummary = {
       last_used_at: "2026-08-17T09:14:00Z",
     },
     {
-      task: "extract",
+      task: "signal_extract",
       tier: "local-small",
       provider: "ollama",
       configured_model: "llama3.1:8b",
