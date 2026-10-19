@@ -59,7 +59,7 @@ func TestADecisionWaitingReachesTheReceiptThroughTheRealApprovalsEngine(t *testi
 	ctx = principal.WithActor(ctx, actor)
 	staged, err := queue.Stage(ctx, approvals.StageInput{
 		Kind: "commitment_task", ProposedChange: change, DiffHash: hash,
-		TargetType: "deal", TargetID: deal, Summary: "a summary naming nothing",
+		TargetType: "deal", TargetID: deal, Summary: "Send revised pricing",
 	})
 	if err != nil {
 		t.Fatalf("staging the decision: %v", err)
@@ -84,8 +84,11 @@ func TestADecisionWaitingReachesTheReceiptThroughTheRealApprovalsEngine(t *testi
 	if !found {
 		t.Fatalf("a proposal the engine staged is absent from needs_you: %+v", receipt.NeedsYou)
 	}
-	if line.Summary.Key != "magic.action.approval_commitment_task" {
-		t.Errorf("summary key = %q, want the sentence commitment_task asks", line.Summary.Key)
+	if line.Summary.Key != "magic.action.approval_commitment_task_summary" {
+		t.Errorf("summary key = %q, want the sentence naming the proposed task", line.Summary.Key)
+	}
+	if line.Summary.Values == nil || (*line.Summary.Values)["summary"] != "Send revised pricing" {
+		t.Fatalf("proposed task is missing from the receipt: %+v", line.Summary.Values)
 	}
 	// The caption the engine froze at staging, which is what the approver was
 	// shown; a lane resolving it itself would name whatever the record became.

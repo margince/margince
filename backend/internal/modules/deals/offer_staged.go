@@ -168,7 +168,7 @@ func insertStagedOfferLine(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, 
 	if err := CheckStagedLine(in); err != nil {
 		return crmcontracts.OfferLineItem{}, err
 	}
-	const unit, discount = "unit", "0.00"
+	const unit, discount = defaultUnit, zeroPct
 	fig, err := LineTotals(OfferLineInput{
 		Quantity: in.Quantity, UnitPriceMinor: in.UnitPriceMinor, DiscountPct: discount, TaxRate: in.TaxRate,
 	})

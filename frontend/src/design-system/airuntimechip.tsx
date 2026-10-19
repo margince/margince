@@ -14,7 +14,8 @@ import {
 import type { components } from "../api/schema";
 import { formatAiRunCost } from "../format/aicost";
 import { formatNumber } from "../format/format";
-import type { Locale } from "../i18n";
+import { type Locale, translate } from "../i18n";
+import { aiTaskLabel } from "../lib/ai-task-label";
 import "./airuntimechip.css";
 import { coveredByDialog } from "./dialogfocus";
 import { useScrollRegion } from "./scrollregion";
@@ -203,7 +204,7 @@ export function AiRuntimeChip({
           />
           <RuntimeRow
             label={labels.route}
-            value={routes(runtime) || labels.unavailable}
+            value={routes(runtime, locale) || labels.unavailable}
           />
           <RuntimeRow
             label={labels.calls}
@@ -353,10 +354,11 @@ function servedModels(runtime?: AiRunSummary) {
   ).join(" + ");
 }
 
-function routes(runtime?: AiRunSummary) {
+function routes(runtime: AiRunSummary | undefined, locale: Locale) {
   return unique(
     (runtime?.models ?? []).map(
-      (entry) => `${entry.task} · ${entry.tier} · ${entry.provider}`,
+      (entry) =>
+        `${aiTaskLabel(entry.task, (key, params) => translate(locale, key, params))} · ${entry.tier} · ${entry.provider}`,
     ),
   ).join(" + ");
 }

@@ -1,6 +1,7 @@
 import { providerName } from "../../format/connectorprovider";
 import type { Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { aiTaskLabel } from "../../lib/ai-task-label";
 import type { WorklistItem } from "./worklist.queries";
 
 /** The signals the overnight run can name, and the only ones this eyebrow trusts. */
@@ -47,6 +48,8 @@ export function conditionOf(item: WorklistItem, t: Translator): string | null {
   // A capture connection is named by its provider, and its account rides the
   // row's detail.
   if (item.connection) return providerName(item.connection.provider, t);
+  if (item.ai_task || item.source === "ai_work_health")
+    return aiTaskLabel(item.ai_task, t, item.cause_label);
   return item.cause_label ?? null;
 }
 

@@ -221,6 +221,7 @@ it("keeps a greyed Edit on a row with nothing to tune, saying where its model is
   armHoverIntent();
   const embed = {
     ...feature,
+    task: "embeddings",
     display_name: "Search and retrieval",
     defaults: undefined,
   };
@@ -230,7 +231,7 @@ it("keeps a greyed Edit on a row with nothing to tune, saying where its model is
     </LocaleProvider>,
   );
   const edit = screen.getByRole("button", {
-    name: "Edit Search and retrieval",
+    name: "Edit Search and retrieval across records",
   });
   expect(edit).toBeDisabled();
   expect(edit).toHaveAccessibleDescription(

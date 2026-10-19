@@ -10,7 +10,11 @@ import type {
   DecisionSharedFacts,
   DeckVerdict,
 } from "./decisiondeck";
-import { representative, sharedFacts } from "./decisiondeck.verdicts";
+import {
+  itemAcceptable,
+  representative,
+  sharedFacts,
+} from "./decisiondeck.verdicts";
 
 // One item of the deck, as the card that asks it.
 //
@@ -40,9 +44,13 @@ export function DeckItemCard({
   ) => DecisionDeckChips;
   onStage: (item: DecisionDeckItem, verdict: DeckVerdict) => void;
 }>) {
-  const approval = representative(item, now);
-  const trim = chips?.(approval, sharedFacts(item)) ?? {};
   const members = item.kind === "bundle" ? item.members : [];
+  const shared = sharedFacts(item);
+  const refused = members.find(
+    (member) => chips?.(member, shared).canAccept === false,
+  );
+  const approval = refused ?? representative(item, now);
+  const trim = chips?.(approval, shared) ?? {};
   return (
     <DecisionCard
       approval={approval}
@@ -52,7 +60,10 @@ export function DeckItemCard({
       // popover and its menu keeps the full row (see DecisionCompactWords).
       compact={layout === "row" ? labels.compactRow : undefined}
       now={now}
-      labels={labels.card}
+      labels={{
+        ...labels.card,
+        accept: trim.acceptLabel ?? labels.card.accept,
+      }}
       provenance={trim.provenance}
       confidence={trim.confidence}
       display={trim.display}
@@ -67,22 +78,29 @@ export function DeckItemCard({
         </>
       }
       detail={
-        members.length > 0 ? (
-          <Disclosure
-            className="ddeck-bundle-open"
-            summary={labels.bundleMembers(members.length)}
-          >
-            {/* A list, not an indent: the size and the boundaries of the set
+        <>
+          {trim.detail}
+          {members.length > 0 ? (
+            <Disclosure
+              className="ddeck-bundle-open"
+              summary={labels.bundleMembers(members.length)}
+            >
+              {/* A list, not an indent: the size and the boundaries of the set
                 have to reach a reader who is hearing this page. */}
-            <ul className="ddeck-bundle-members">
-              {members.map((member) => (
-                <li key={member.id}>{member.summary ?? member.kind}</li>
-              ))}
-            </ul>
-          </Disclosure>
-        ) : undefined
+              <ul className="ddeck-bundle-members">
+                {members.map((member) => (
+                  <li key={member.id}>{member.summary ?? member.kind}</li>
+                ))}
+              </ul>
+            </Disclosure>
+          ) : undefined}
+        </>
       }
-      onAccept={() => onStage(item, "accept")}
+      onAccept={
+        itemAcceptable(item, now, chips)
+          ? () => onStage(item, "accept")
+          : undefined
+      }
       onEdit={() => onStage(item, "edit")}
       onReject={() => onStage(item, "reject")}
       onSkip={() => onStage(item, "skip")}

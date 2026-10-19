@@ -79,9 +79,9 @@ func resolveProductSnapshot(ctx context.Context, tx pgx.Tx, productID *ids.Produ
 // normalizeLineDefaults resolves unit/discount/tax to their stored defaults
 // when neither the caller nor the product snapshot supplied a value.
 func normalizeLineDefaults(unit, discountPct, taxRate *string) (unitVal, discount, tax string) {
-	unitVal = "unit"
+	unitVal = defaultUnit
 	if unit != nil && values.HasVisibleText(*unit) {
-		unitVal = strings.TrimSpace(*unit)
+		unitVal = canonicalUnit(strings.TrimSpace(*unit))
 	}
 	discount = zeroPct
 	if discountPct != nil {

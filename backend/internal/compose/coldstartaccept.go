@@ -63,7 +63,7 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 // lead is told through. An empty lane refuses every site lead, which is right
 // for the services that only stage.
 func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *approvals.Service {
-	svc := approvals.NewService(InstallationDB(pool)).
+	svc := newApprovalsService(InstallationDB(pool)).
 		WithUndoableRelease(undoableAgentRelease(activities.FilingsStayUndoable))
 	store := newCounterpartyStore(pool)
 	svc.WithEffect("coldstart", coldstartAcceptEffect(svc, store))
@@ -123,7 +123,7 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 // window closes. The builder stays because the sweep needs a service and the
 // next kind that owns expiry state registers here.
 func expiringApprovalsService(pool *pgxpool.Pool) *approvals.Service {
-	return approvals.NewService(InstallationDB(pool))
+	return newApprovalsService(InstallationDB(pool))
 }
 
 // coldstartAcceptEffect builds the approvals.ApprovedEffect compose
