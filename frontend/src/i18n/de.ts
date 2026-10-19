@@ -264,6 +264,8 @@ export const de = {
   "reporting.targetBasis": "Zielzeitraum",
   "reporting.month": "Monat",
   "reporting.fiscal_quarter": "Geschäftsquartal",
+  "reporting.creditCapturedOwner":
+    "Zugeordnet dem Verantwortlichen des Deals zum Zeitpunkt dieser Ausgabe",
   "reporting.creditCurrentOwner":
     "Zugeordnet dem aktuellen Verantwortlichen des Deals",
   "reporting.creditQualifyingOwner":

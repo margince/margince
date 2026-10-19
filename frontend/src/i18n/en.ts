@@ -258,6 +258,8 @@ export const en = {
   "reporting.targetBasis": "Target period",
   "reporting.month": "Month",
   "reporting.fiscal_quarter": "Fiscal quarter",
+  "reporting.creditCapturedOwner":
+    "Credited to each deal’s owner when this edition was captured",
   "reporting.creditCurrentOwner": "Credited to each deal’s current owner",
   "reporting.creditQualifyingOwner":
     "Credited to the owner when the deal qualified",

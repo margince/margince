@@ -34,7 +34,11 @@ export function ChartContext({
         {contextPeriod(chart, evaluation, editionId, locale, t)}
       </span>
       {chart.kind === "owner_attainment" && (
-        <OwnerAttainmentNotes chart={chart} evaluation={evaluation} />
+        <OwnerAttainmentNotes
+          chart={chart}
+          evaluation={evaluation}
+          captured={editionId != null}
+        />
       )}
       {(chart.kind === "stage_distribution" || chart.kind === "stage_age") && (
         <span className="t-caption">
@@ -183,8 +187,16 @@ function contextPeriod(
 
 // Whom an owner chart credits. The rules differ by metric, and a ranking
 // without them reads as one uniform measure of each owner's work.
+// A saved edition keeps the owner it captured, so its sales are credited to
+// that owner rather than to today's.
 const OWNER_CREDIT: Partial<Record<ReportingChart["metric"], MessageKey>> = {
   bookings_won: "reporting.creditCurrentOwner",
+  qualified_pipeline_created: "reporting.creditQualifyingOwner",
+};
+const CAPTURED_OWNER_CREDIT: Partial<
+  Record<ReportingChart["metric"], MessageKey>
+> = {
+  bookings_won: "reporting.creditCapturedOwner",
   qualified_pipeline_created: "reporting.creditQualifyingOwner",
 };
 
@@ -193,11 +205,23 @@ const OWNER_CREDIT: Partial<Record<ReportingChart["metric"], MessageKey>> = {
 function OwnerAttainmentNotes({
   chart,
   evaluation,
-}: Readonly<{ chart: ReportingChart; evaluation: ReportingEvaluation }>) {
+  captured,
+}: Readonly<{
+  chart: ReportingChart;
+  evaluation: ReportingEvaluation;
+  captured: boolean;
+}>) {
   const t = useT();
   const { locale } = useLocale();
-  const credit = OWNER_CREDIT[chart.metric];
-  const target = evaluation.context.target_interval;
+  const credit = (captured ? CAPTURED_OWNER_CREDIT : OWNER_CREDIT)[
+    chart.metric
+  ];
+  // Only where the server applied a target to these points. A week read
+  // against a month's target carries none. The month's progress would then
+  // describe a period the chart does not show.
+  const target = chart.points.some((point) => point.target != null)
+    ? evaluation.context.target_interval
+    : undefined;
   const elapsed = target
     ? elapsedShare(target, evaluation.context.evaluated_at)
     : null;
