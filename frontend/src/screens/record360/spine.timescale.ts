@@ -6,11 +6,8 @@ import { calendarDaysBetween } from "../../format/format";
 // What the time scale reads off a spine stop: its kind and its instant.
 type TimedStop = Readonly<{ tone: string; at?: string }>;
 
-// The narrowest a stop may be drawn. A date is set on one line — broken across
-// two it reads as two moments — so under any less than this the dates run into
-// each other and the row becomes one smear of digits. At the floor the track
-// outgrows its card and the thread scrolls, which is what this axis already
-// does with more history than fits; crushing the stops is what it may not do.
+// The narrowest a stop may be drawn. A date stays on one line, and narrower
+// stops run their dates together. At the floor the thread scrolls instead.
 const STOP_FLOOR = "6.5rem";
 
 // How much of the axis a stop takes: the days until the next dated stop.
@@ -24,11 +21,8 @@ export function stopColumn(
   stops: readonly TimedStop[],
 ): string {
   if (stop.tone === "now") {
-    // Its label's width and not a share of the axis. `auto` reads the stop's
-    // MINIMUM contribution, which every stop declares as zero so a long
-    // subject cannot widen the thread — so once the track outgrew its card the
-    // marker was the one column that collapsed, and today vanished off an axis
-    // whose whole reading is what falls either side of it.
+    // Its label's width. `auto` would read the stop's minimum, which every
+    // stop declares as zero, so a scrolling track would collapse today.
     return "max-content";
   }
   return `minmax(${STOP_FLOOR}, ${daysCovered(stop, stops.slice(index + 1))}fr)`;
