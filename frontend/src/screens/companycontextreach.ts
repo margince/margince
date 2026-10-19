@@ -9,10 +9,8 @@ import { unwrap } from "../lib/problem";
 
 type Capabilities = components["schemas"]["CompanyContextCapabilities"];
 
-// The rollout answer every surface that gates on the flag shares — the card
-// here and the onboarding journey. Named so a caller can ask
-// the cache whether the answer has LANDED, which is a different question from
-// whether the request went out.
+// Every surface gated on the flag reads this one cached answer. Named so a
+// caller can ask whether the answer has landed, not only whether it was sent.
 export const companyContextCapabilitiesQueryKey = [
   "company-context-capabilities",
 ];
