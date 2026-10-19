@@ -1,6 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { api } from "../../api/client";
 import {
   Badge,
   Button,
@@ -12,10 +10,9 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { formatDecimal, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { leadScoreKey } from "../../lib/leadkeys";
-import { unwrap } from "../../lib/problem";
 import { scoreFactorLabel, scoreTone } from "./leadpresentation";
 import type { Lead, LeadWriter } from "./leads";
+import { useLeadScore } from "./leadscore.queries";
 
 // The server's score grants points to a title naming a decision maker, by this
 // pattern. It is mirrored here only to say why a title earned nothing; it never
@@ -72,19 +69,10 @@ function ScoreShortfall({ lead }: Readonly<{ lead: Lead }>) {
   );
 }
 
-function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
+function ScoreBreakdown({ lead }: Readonly<{ lead: Lead }>) {
   const t = useT();
   const { locale } = useLocale();
-  const explain = useQuery({
-    queryKey: leadScoreKey(id),
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/leads/{id}/score", {
-          params: { path: { id } },
-        }),
-      );
-    },
-  });
+  const explain = useLeadScore(lead);
 
   if (explain.isPending) {
     return <span>{t("lead.scoreLoading")}</span>;
@@ -172,7 +160,7 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
 
 // The breakdown behind the score. The server refuses it for an archived lead,
 // so there the line is left out instead of drawn as a failure.
-function ScoreExplanation({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
+function ScoreExplanation({ lead }: Readonly<{ lead: Lead }>) {
   const t = useT();
   if (lead.archived_at) {
     return null;
@@ -180,7 +168,7 @@ function ScoreExplanation({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
   return (
     <>
       <span>{t("lead.explainScore")}</span>
-      <ScoreBreakdown id={id} lead={lead} />
+      <ScoreBreakdown lead={lead} />
     </>
   );
 }
@@ -190,7 +178,6 @@ function ScoreExplanation({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
 // with If-Match(lead.version).
 function LeadScorePanel({
   lead,
-  id,
   terminalReasonId,
   overriding,
   setOverriding,
@@ -201,7 +188,6 @@ function LeadScorePanel({
   writer,
 }: Readonly<{
   lead: Lead;
-  id: string;
   terminalReasonId: string;
   overriding: boolean;
   setOverriding: (next: boolean) => void;
@@ -225,7 +211,7 @@ function LeadScorePanel({
 
   return (
     <div className="lead-stack">
-      <ScoreExplanation id={id} lead={lead} />
+      <ScoreExplanation lead={lead} />
       {lead.score_override_reason ? (
         <div className="lead-stack">
           <p>
@@ -313,12 +299,10 @@ function LeadScorePanel({
  */
 export function LeadScoreCard({
   lead,
-  id,
   writer,
   terminalReasonId,
 }: Readonly<{
   lead: Lead;
-  id: string;
   writer: LeadWriter;
   terminalReasonId: string;
 }>) {
@@ -360,7 +344,6 @@ export function LeadScoreCard({
         >
           <LeadScorePanel
             lead={lead}
-            id={id}
             terminalReasonId={terminalReasonId}
             overriding={overriding}
             setOverriding={setOverriding}

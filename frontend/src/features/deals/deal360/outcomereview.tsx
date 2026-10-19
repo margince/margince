@@ -31,9 +31,13 @@ export function OutcomeReviewPanel({
   dealId,
   status,
   closingOccurrenceId,
+  archived = false,
 }: Readonly<{
   dealId: string;
   status: string;
+  // The server writes no review against an archived deal, so the button is
+  // absent there while the reviews already written stay readable.
+  archived?: boolean;
   // The closing this deal is on NOW. Null on a deal closed before closings were
   // recorded — those keep their reviews readable but take no new one, because
   // there is no occurrence to attach it to.
@@ -61,7 +65,7 @@ export function OutcomeReviewPanel({
   // rather than disabled when they are not: the grant to write an activity, a
   // closing to hang the review on, and a template that asks the questions. A disabled button would
   // invite a reader to hunt for the reason.
-  const canAdd = canWrite && !!closingOccurrenceId && !!template;
+  const canAdd = canWrite && !archived && !!closingOccurrenceId && !!template;
   const current = reviews.filter(
     (r) => r.closing_occurrence_id === closingOccurrenceId,
   );

@@ -54,6 +54,15 @@ const DEAL_TABS = ["overview", "room", "files", "legal", "history"] as const;
 
 type DealTab = (typeof DEAL_TABS)[number];
 
+// The tabs this deal offers. The legal reviews of an archived deal are
+// refused by the server, so the tab is left out there, and a reader who had it
+// open lands on the overview.
+function tabsOf(deal: Deal, legalReview: boolean): readonly DealTab[] {
+  return DEAL_TABS.filter(
+    (each) => each !== "legal" || (legalReview && !deal.archived_at),
+  );
+}
+
 // One sentence for why this deal takes no changes, whichever reason applies,
 // said once across the header so every refused control can point at it.
 // Absent while the deal is live and the reader's: `undefined`, not an element
@@ -103,7 +112,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // point at it are two different slots of the same header.
   const readOnlyReasonId = useId();
   const [tab, setTab] = useState<DealTab>("overview");
-  const legalReview = useLegalReviewAvailable();
+  const legalReview = useLegalReviewAvailable() === true;
   const [pending, setPending] = useState<PendingAdvance | null>(null);
   // The deal that just closed, while the review is on offer for it. Separate
   // from `pending`, which is the question before the close; this is the offer
@@ -135,8 +144,8 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // and the readings band share those cache entries rather than adding two
   // requests for facts the page already holds.
   //
-  // The server answers none of the deal's status, coverage or offers once it
-  // is archived, so they are asked for only after the deal has said it is live.
+  // The server answers neither the deal's status nor its coverage once it is
+  // archived, so they are asked for only after the deal has said it is live.
   const live = dealQuery.isSuccess && !dealQuery.data.archived_at;
   const statusQuery = useDealStatusCard(id, live);
   const coverageRead = useDealCoverage(id, live);
@@ -152,7 +161,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const [openEmail, setOpenEmail] = useOpenEmail();
   const offersQuery = useQuery({
     queryKey: ["deal-offers", id],
-    enabled: live,
     queryFn: async () => {
       return unwrap(
         await api.GET("/deals/{id}/offers", {
@@ -219,6 +227,9 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               setPending(input);
             }
           };
+          const shownTab = tabsOf(deal, legalReview).includes(tab)
+            ? tab
+            : "overview";
           return (
             <div className="record-sheet">
               <RecordView
@@ -302,10 +313,8 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 // two controls on one page, not one nested in the other.
                 tabs={
                   <RecordTabs
-                    options={DEAL_TABS.filter(
-                      (each) => legalReview || each !== "legal",
-                    )}
-                    value={tab}
+                    options={tabsOf(deal, legalReview)}
+                    value={shownTab}
                     onChange={(next) => {
                       setTab(next);
                       scrollPageToTop();
@@ -329,7 +338,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   children with no interval of its own, so the reading and the
                   contacts under it take the record's rhythm from here rather
                   than from a margin one of them carries. */}
-                {tab === "overview" && (
+                {shownTab === "overview" && (
                   <div className="record-stack">
                     <DealOverviewPane
                       deal={deal}
@@ -361,12 +370,12 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                     />
                   </div>
                 )}
-                {tab === "room" && (
+                {shownTab === "room" && (
                   <DealRoomTab dealId={deal.id} dealName={deal.name} />
                 )}
-                {tab === "files" && <DealFiles deal={deal} />}
-                {tab === "legal" && legalReview && <DealLegalTab deal={deal} />}
-                {tab === "history" && (
+                {shownTab === "files" && <DealFiles deal={deal} />}
+                {shownTab === "legal" && <DealLegalTab deal={deal} />}
+                {shownTab === "history" && (
                   <DealHistoryTab deal={deal} onOpenEmail={setOpenEmail} />
                 )}
                 {/* One drawer over the deal. Both the overview's citations and

@@ -14,11 +14,11 @@ import { useDealStatusCard } from "./dealstatus";
 
 export function DealEmailAside({
   dealId,
-  live = true,
+  live,
 }: Readonly<{
   dealId: string;
   // False for an archived deal, whose status the server refuses.
-  live?: boolean;
+  live: boolean;
 }>) {
   const status = useDealStatusCard(dealId, live);
   // A reply target only counts once the read has answered. While it is in

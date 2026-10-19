@@ -43,7 +43,7 @@ export function dealCoverageKey(dealId: string) {
  * `live` is false for an archived deal, which the server refuses to read the
  * coverage of: asking would only draw a section that failed to load.
  */
-export function useDealCoverage(dealId: string, live = true) {
+export function useDealCoverage(dealId: string, live: boolean) {
   const query = useQuery({
     queryKey: dealCoverageKey(dealId),
     enabled: live,

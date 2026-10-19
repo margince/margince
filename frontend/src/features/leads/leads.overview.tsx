@@ -106,7 +106,6 @@ export function LeadOverviewPane({
             content rather than as two readings a rep consults in order. */}
         <LeadScoreCard
           lead={lead}
-          id={id}
           writer={writer}
           terminalReasonId={terminalReasonId}
         />
@@ -121,10 +120,11 @@ export function LeadOverviewPane({
             />
           </PanelBody>
         </Panel>
-        {/* The server answers no lists for an archived lead. */}
-        {!lead.archived_at && (
-          <RecordListsPanel entityType="lead" entityId={id} />
-        )}
+        <RecordListsPanel
+          entityType="lead"
+          entityId={id}
+          archived={Boolean(lead.archived_at)}
+        />
       </RecordReading>
     </div>
   );

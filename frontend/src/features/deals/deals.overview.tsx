@@ -254,9 +254,9 @@ export function DealOverviewPane({
           briefing names, then what is on the table beside who is in the room
           (the deal's two sides), then what the customer committed to. */}
       <RecordReading>
-        {/* The call, the offers and the committee are read from endpoints the
-            server refuses for an archived deal. The thread the call holds is
-            the page's own timeline, so it stands alone. */}
+        {/* The call and the committee are read from endpoints the server
+            refuses for an archived deal. The thread the call holds is the
+            page's own timeline, so it stands alone. */}
         {deal.archived_at ? (
           spine
         ) : (
@@ -269,20 +269,20 @@ export function DealOverviewPane({
           />
         )}
         <DealApprovals approvals={dealApprovals} decide={onDecide} />
-        {!deal.archived_at && (
-          <RecordReadingPair>
-            {/* The money reading's door scrolls here; the id is the strip's own
+        <RecordReadingPair>
+          {/* The money reading's door scrolls here; the id is the strip's own
               constant, so a rename cannot leave the door pointing at nothing. */}
-            <div id={DEAL_OFFERS_ANCHOR}>
-              <OffersPanel
-                offers={offers}
-                creating={creatingOffer}
-                locale={locale}
-                dealCurrency={deal.currency ?? null}
-                refusedReasonId={refusedReasonId}
-                onCreate={onCreateOffer}
-              />
-            </div>
+          <div id={DEAL_OFFERS_ANCHOR}>
+            <OffersPanel
+              offers={offers}
+              creating={creatingOffer}
+              locale={locale}
+              dealCurrency={deal.currency ?? null}
+              refusedReasonId={refusedReasonId}
+              onCreate={onCreateOffer}
+            />
+          </div>
+          {!deal.archived_at && (
             <DealCommitteeCard
               dealId={deal.id}
               coverage={coverage.coverage}
@@ -290,8 +290,8 @@ export function DealOverviewPane({
               pending={coverage.pending}
               refusedReasonId={refusedReasonId}
             />
-          </RecordReadingPair>
-        )}
+          )}
+        </RecordReadingPair>
         <DealWatchCard dealId={deal.id} onOpenEmail={onOpenEmail} />
       </RecordReading>
       <DealBrief
@@ -309,6 +309,7 @@ export function DealOverviewPane({
         dealId={deal.id}
         status={deal.status}
         closingOccurrenceId={deal.closing_occurrence_id}
+        archived={Boolean(deal.archived_at)}
       />
       {/* Neither the related-evidence panel nor the inline log form stands
           here any more. The evidence it listed — recent touches, open tasks,

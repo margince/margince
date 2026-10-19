@@ -207,11 +207,11 @@ export function DealContext({
       <DealDetails deal={deal} meId={meId} />
       <RecordTeam recordType="deal" recordId={deal.id} readOnly={!canWrite} />
       <DealTagsSection deal={deal} />
-      {/* The server answers neither the lists nor the status of an archived
-          deal, so the column leaves them out rather than draw a failure. */}
-      {!deal.archived_at && (
-        <RecordListsPanel entityType="deal" entityId={deal.id} />
-      )}
+      <RecordListsPanel
+        entityType="deal"
+        entityId={deal.id}
+        archived={Boolean(deal.archived_at)}
+      />
       <DealEmailAside dealId={deal.id} live={!deal.archived_at} />
     </>
   );

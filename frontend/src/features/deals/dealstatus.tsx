@@ -86,7 +86,7 @@ function verdictTone(standing: string): StandingTone {
 // box costs no second request.
 //
 // `live` is false for an archived deal, whose status the server refuses.
-export function useDealStatusCard(dealId: string, live = true) {
+export function useDealStatusCard(dealId: string, live: boolean) {
   const t = useT();
   return useQuery({
     queryKey: ["deal-status", dealId],
@@ -126,7 +126,8 @@ export function DealStatusCardPanel({
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const status = useDealStatusCard(dealId);
+  // The call card is drawn only for a live deal.
+  const status = useDealStatusCard(dealId, true);
   const rewrite = useMutation({
     mutationKey: ["deal-status-refresh", dealId],
     mutationFn: async () => {

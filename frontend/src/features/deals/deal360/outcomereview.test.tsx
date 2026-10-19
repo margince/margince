@@ -127,6 +127,20 @@ it("offers no way in without write access", async () => {
   expect(screen.queryByRole("button", { name: "Add review" })).toBeNull();
 });
 
+it("offers no way in on an archived deal, which takes no new review", async () => {
+  stubFetch([]);
+  render(
+    <OutcomeReviewPanel
+      dealId="d-1"
+      status="won"
+      closingOccurrenceId={CLOSING}
+      archived
+    />,
+  );
+  expect(await screen.findByText(/No review written yet/)).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Add review" })).toBeNull();
+});
+
 it("renders the questions frozen onto the review, not today's template", async () => {
   stubFetch([
     {

@@ -1,6 +1,5 @@
-import { type UseQueryResult, useQuery } from "@tanstack/react-query";
+import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
 import { Button, StatCard } from "../../design-system/atoms";
@@ -14,10 +13,9 @@ import {
 import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { leadScoreKey } from "../../lib/leadkeys";
-import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { leadStatusLabel, scoreFactorLabel } from "./leadpresentation";
+import { useLeadScore } from "./leadscore.queries";
 import { firstResponseClock } from "./leadstanding";
 
 // The lead's four readings, in the cards every record page draws them in: how
@@ -153,25 +151,15 @@ function ScoreCard({
   locale,
   t,
 }: Readonly<{ lead: Lead; locale: Locale; t: Translator }>) {
-  // The server refuses the breakdown of an archived lead, so the card shows the
-  // figure without a receipt rather than one that failed to load.
-  const explain = useQuery({
-    queryKey: leadScoreKey(lead.id),
-    enabled: !lead.archived_at,
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/leads/{id}/score", {
-          params: { path: { id: lead.id } },
-        }),
-      );
-    },
-  });
+  const explain = useLeadScore(lead);
   return (
     <StatCard
       label={t("lead.score")}
       value={formatNumber(lead.score, locale)}
       detail={scoreReasonLabel(lead, t, "lead.readings.scoreManual")}
       meter={{ filled: lead.score, total: 100 }}
+      // An archived lead shows the figure without a receipt, not one that
+      // failed to load.
       basis={
         lead.archived_at ? undefined : scoreBasis(explain, lead, locale, t)
       }

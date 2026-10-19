@@ -55,7 +55,7 @@ function renderBox() {
       }
     >
       <LocaleProvider initial="en">
-        <DealEmailAside dealId={DEAL} />
+        <DealEmailAside dealId={DEAL} live />
       </LocaleProvider>
     </QueryClientProvider>,
   );
