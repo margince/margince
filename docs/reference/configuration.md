@@ -1705,6 +1705,10 @@ run `make dev` again.
 `--env-file` to the api and the worker. The script reads `.env.local` for its own choices and never
 exports it. So a value there shows `.env.local` as its source, and locks its control.
 
+The script's own defaults, such as `MARGINCE_PUBLIC_BASE_URL`, `MARGINCE_AI_FAKE` and the blobstore
+bucket, are exported only for a name that neither the environment nor `.env.local` sets. None of them
+is passed as a flag, because a flag outranks `.env.local`.
+
 `MARGINCE_ENV` names the posture, and no trust decision rests on it. Nothing that deletes data
 keys off it. `operations.allow_data_reset` arms the data reset. That is why the dev setting that
 arms it lives in the tracked `config/margince.dev.yaml`, and every other posture gets the compiled
