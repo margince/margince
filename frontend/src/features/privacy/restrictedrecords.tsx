@@ -22,7 +22,7 @@ import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
-import { humanizeToken } from "../../screens/audit";
+import { humanizeToken } from "../settings/audit";
 
 // The Held lane reads through the retention ladder's authority. A role that may
 // not see how long records are kept may not see which are kept either.

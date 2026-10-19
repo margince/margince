@@ -17,7 +17,7 @@ import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { hashWithParams, useUrlParams } from "../../lib/urlstate";
-import { settingsHref } from "../../screens/settingsrouting";
+import { settingsHref } from "../settings/settingsrouting";
 import { tierLabel } from "./ai-decision-labels";
 import { providerName } from "./ai-provider-names";
 import { CallTable } from "./aicalls-table";

@@ -23,7 +23,7 @@ import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { extensionTitle } from "../../lib/extensions";
 import { unwrap } from "../../lib/problem";
-import { HealthCard } from "../../screens/healthcard";
+import { HealthCard } from "../settings/healthcard";
 
 // GET /admin/extension-ingest-health — whether an installed connector is
 // sending records this CRM cannot represent.

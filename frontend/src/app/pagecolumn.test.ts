@@ -27,7 +27,7 @@ import { rulesIn } from "../testing/css";
 //    comparing values is what lets them drift and then reports it afterwards.
 // 2. **The settings pair shares a token.** A settings page's body is narrower
 //    than its page, and the head follows it there. The stack's measure
-//    (screens/settings.css) and the head's (app/shell.css) must be the SAME
+//    (features/settings/settings.css) and the head's (app/shell.css) must be the SAME
 //    custom property, and that property must be spelled once in the tree —
 //    otherwise the measure exists twice and one of the two moves first.
 //
@@ -42,7 +42,7 @@ const appDir = dirname(fileURLToPath(import.meta.url));
 const srcDir = join(appDir, "..");
 
 const SHELL_CSS = join(appDir, "shell.css");
-const SETTINGS_CSS = join(srcDir, "screens", "settings.css");
+const SETTINGS_CSS = join(srcDir, "features", "settings", "settings.css");
 const TOKENS_CSS = join(srcDir, "design-system", "tokens.css");
 
 // A sheet this small is a read that went wrong, not a sheet.

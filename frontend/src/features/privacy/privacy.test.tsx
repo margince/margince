@@ -4,8 +4,8 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
-import { RequestsPanel } from "../../screens/settings.privacy";
 import { meFixture } from "../../testing/mefixture";
+import { RequestsPanel } from "../settings/settings.privacy";
 import { ConsentPurposesCard } from "./privacy.purposes";
 import {
   choose,

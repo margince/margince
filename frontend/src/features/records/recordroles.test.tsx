@@ -4,8 +4,8 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
-import { jsonResponse, render } from "../../screens/settings.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { jsonResponse, render } from "../settings/settings.testkit";
 import { RecordRolesCard } from "./recordroles";
 
 beforeEach(() => {

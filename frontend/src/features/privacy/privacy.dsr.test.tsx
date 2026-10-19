@@ -9,7 +9,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { RequestsPanel } from "../../screens/settings.privacy";
+import { RequestsPanel } from "../settings/settings.privacy";
 import {
   choose,
   DSRS,

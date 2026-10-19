@@ -27,7 +27,7 @@ import {
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
-import "../../screens/settings-agents.css";
+import "../settings/settings-agents.css";
 
 type CounterSet = Readonly<Record<AgentCounter, AgentCounterUsage>>;
 type PassportSummary = components["schemas"]["PassportSummary"];

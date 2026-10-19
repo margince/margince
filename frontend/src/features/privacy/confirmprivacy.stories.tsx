@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
 import { installFetchStub, StoryProviders } from "../../testing/story-utils";
 import { PrivacyNotice } from "./confirmprivacy";
-import "../../screens/preferences.css";
+import "../settings/preferences.css";
 import "./confirm.css";
 
 // The page a notice link opens, and the one link a contact who asked us to

@@ -3,9 +3,9 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useToast } from "../../design-system/toast";
-import { jsonResponse, render } from "../../screens/settings.testkit";
-import { SignatureSettingRow } from "../../screens/settingssignaturerow";
 import { meFixture } from "../../testing/mefixture";
+import { jsonResponse, render } from "../settings/settings.testkit";
+import { SignatureSettingRow } from "../settings/settingssignaturerow";
 import { SignatureHtml } from "./signaturehtml";
 import { SignatureTemplateCard } from "./signaturetemplatecard";
 

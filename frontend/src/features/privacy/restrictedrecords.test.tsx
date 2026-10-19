@@ -13,8 +13,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { RequestsPanel } from "../../screens/settings.privacy";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { RequestsPanel } from "../settings/settings.privacy";
 import { RestrictedRecordsCard } from "./restrictedrecords";
 
 // The Held lane shows what a statutory obligation holds, by transaction and

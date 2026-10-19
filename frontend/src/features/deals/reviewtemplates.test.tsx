@@ -5,9 +5,9 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { jsonResponse, render } from "../../screens/settings.testkit";
 import type { GrantSpec } from "../../testing/mefixture";
 import { meFixture } from "../../testing/mefixture";
+import { jsonResponse, render } from "../settings/settings.testkit";
 import type { ReviewTemplate } from "./outcomereview.queries";
 import { ReviewTemplatesCard } from "./reviewtemplates";
 

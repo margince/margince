@@ -12,7 +12,7 @@ import { formatNumber } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
-import { humanizeToken } from "../../screens/audit";
+import { humanizeToken } from "../settings/audit";
 
 // Which kinds of proposal answer themselves, for the reader and nobody else.
 //

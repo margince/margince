@@ -10,10 +10,10 @@ import {
 } from "react";
 import type { components } from "../api/schema";
 import { Avatar } from "../design-system/atoms";
+import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import { routeHash } from "../lib/router";
 import { useMe } from "../lib/session";
-import { SETTINGS_SCREEN } from "../screens/settingsnav";
 import { AccountRelease, type RowSeat, SignOutRow } from "./accountfoot";
 import { usePopoverDismiss } from "./popover";
 import "./account.css";

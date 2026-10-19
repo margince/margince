@@ -3,7 +3,7 @@ import type { components } from "../../../api/schema";
 import { formatNumber } from "../../../format/format";
 import type { Locale } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
-import { coldFieldLabelKey } from "../../../screens/coldfieldlabels";
+import { coldFieldLabelKey } from "../../settings/coldfieldlabels";
 import type { BuildStage } from "./conversation-machine";
 
 type CompanySiteRead = components["schemas"]["CompanySiteRead"];

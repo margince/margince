@@ -11,7 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { SettingsScreen, settingsAddress } from "../../screens/settings";
+import { SettingsScreen, settingsAddress } from "../settings/settings";
 import { ConnectedAgentsCard } from "./connected-agents";
 
 // The split GET /passports feeds: a passport the human minted belongs to the

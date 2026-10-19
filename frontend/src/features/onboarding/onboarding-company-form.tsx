@@ -17,7 +17,7 @@ import {
 } from "../../design-system/trust";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { coldFieldLabel } from "../../screens/coldfieldlabels";
+import { coldFieldLabel } from "../settings/coldfieldlabels";
 import {
   type CompanyDraft,
   type CompanyFieldName,

@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Kbd } from "../design-system/atoms";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
 import { IconAction } from "../design-system/iconaction";
+import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useLocale, useT } from "../i18n";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
 import {
@@ -11,7 +12,6 @@ import {
   rememberListAddress,
 } from "../lib/listreturn";
 import { type Route, routeHash, useHash } from "../lib/router";
-import { SETTINGS_SCREEN } from "../screens/settingsnav";
 import { AccountMenu } from "./account";
 import { useFiltersCrumbs } from "./filterstrail";
 import {

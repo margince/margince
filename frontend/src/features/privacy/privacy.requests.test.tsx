@@ -18,8 +18,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { RequestsPanel } from "../../screens/settings.privacy";
 import { meFixture } from "../../testing/mefixture";
+import { RequestsPanel } from "../settings/settings.privacy";
 import { type DataSubjectRequest, DsrDetail } from "./privacy.requests";
 
 const NAMED: DataSubjectRequest = {

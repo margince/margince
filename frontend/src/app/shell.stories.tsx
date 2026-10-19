@@ -20,11 +20,11 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { PageHeadAction } from "../components/pageheadaction";
 import { Button, Card } from "../design-system/atoms";
+import { SETTINGS_PAGES } from "../features/settings/settingscatalog";
+import { SettingsSearchBox } from "../features/settings/settingssearchbox";
 import type { Locale } from "../i18n";
 import { en } from "../i18n/en";
 import type { Route } from "../lib/router";
-import { SETTINGS_PAGES } from "../screens/settingscatalog";
-import { SettingsSearchBox } from "../screens/settingssearchbox";
 import type { GrantSpec } from "../testing/mefixture";
 import {
   installFetchStub,
@@ -43,7 +43,7 @@ import { TopBar } from "./topbar";
 // settings frame below stands the stack under the shell WITHOUT that screen —
 // so without this the frame would draw an uncapped column and quietly
 // misrepresent the one thing it exists to show.
-import "../screens/settings.css";
+import "../features/settings/settings.css";
 
 // fullscreen: the shell sizes itself to the viewport, so Storybook's default
 // canvas padding would clip the sidebar foot and misrepresent the layout — and
@@ -508,7 +508,7 @@ const SETTINGS_SECTION: NavSection = {
   lead: <SettingsSearchBox pages={SETTINGS_PAGES} />,
   groups: [
     // The group that carries the level's NAME, and the Overview row with it.
-    // Production builds this from the catalog (screens/settingsnav.tsx); here it
+    // Production builds this from the catalog (features/settings/settingsnav.tsx). Here it
     // is spelled out, because a level with no first heading would be a picture
     // of an unnamed panel.
     {

@@ -6,7 +6,7 @@ import {
   actorAttribution,
   HUMAN_ACTOR_PREFIX,
   isAuditActorType,
-} from "../../screens/audit";
+} from "../settings/audit";
 import type { WorklistItem } from "./worklist.queries";
 
 type Viewer = Readonly<{ id: string; display_name: string }>;

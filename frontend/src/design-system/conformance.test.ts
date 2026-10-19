@@ -337,9 +337,9 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
   // the `btn` BASE token only — a `.btn-*` modifier in a STYLESHEET is how the
   // variants are declared, and a component class that merely ends in `btn`
   // (`iconbtn`) is a different control. And it matches every element
-  // EXCEPT an anchor: `Button` renders a `<button>`, so a link that looks like
-  // a button (screens/client.tsx's "create a lead" href) has no component to
-  // reach for and is legitimately styled by hand.
+  // except an anchor. `Button` renders a `<button>`, so a link that looks like
+  // a button (features/settings/client.tsx's "create a lead" href) has no component to
+  // reach for. It is correctly styled by hand.
   it("renders every button through Button — no hand-rolled btn classes", () => {
     const violations: string[] = [];
     for (const file of files) {

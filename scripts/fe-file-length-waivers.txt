@@ -13,13 +13,13 @@
 # lines its rewritten paths added, and by nothing else. Its PR body lists each
 # raise.
 # Format: <frozen-line-count> <path>
-969 frontend/src/screens/webhooks.tsx
+969 frontend/src/features/settings/webhooks.tsx
 1086 frontend/src/features/onboarding/onboarding-conversation/connect-act.test.tsx
 1134 frontend/src/features/records/record360/spine.test.tsx
 1182 frontend/src/features/onboarding/onboarding-conversation/company-act.test.tsx
 1488 frontend/src/features/onboarding/onboarding-conversation/confirm-card.tsx
 1725 frontend/src/features/onboarding/onboarding-facts.test.tsx
-610 frontend/src/screens/settings.tsx
+610 frontend/src/features/settings/settings.tsx
 509 frontend/src/features/voice-knowledge/documentextraction.tsx
 508 frontend/src/features/onboarding/onboarding-backread.tsx
 554 frontend/src/features/projects/project360.tsx
@@ -34,7 +34,7 @@
 541 frontend/src/features/records/relationships.tsx
 844 frontend/src/features/onboarding/onboarding-gate.tsx
 894 frontend/src/features/onboarding/onboarding-conversation/voice-scenes.tsx
-848 frontend/src/screens/settingscatalog.ts
+848 frontend/src/features/settings/settingscatalog.ts
 892 frontend/src/features/records/share.tsx
 
 # The build scripts, frozen when the gate learned to read them.
