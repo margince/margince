@@ -333,6 +333,7 @@ function withGatewayProblem(response: Response, request: Request): Response {
       type: "about:blank",
       title: "Gateway",
       status: response.status,
+      // problem-code:client the gateway sent no Problem, so this writes one
       code: "gateway_unavailable",
       detail: "the server did not finish this request",
     }),

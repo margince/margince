@@ -330,12 +330,13 @@ it("shows the server's refusal of a removal beside the control", async () => {
       Response.json(
         {
           type: "about:blank",
-          title: "Conflict",
-          status: 409,
-          code: "company_mark_locked",
-          detail: "the mark is being replaced by another write",
+          title: "Service Unavailable",
+          status: 503,
+          code: "write_contention",
+          detail:
+            "this write met a concurrent write to the same records and was rolled back to let the other finish. Nothing in the request is wrong and nothing was written; send it again.",
         },
-        { status: 409 },
+        { status: 503 },
       ),
     ),
   );
@@ -344,9 +345,7 @@ it("shows the server's refusal of a removal beside the control", async () => {
   await user.click(screen.getByRole("button", { name: "Remove wide logo" }));
 
   expect(await screen.findByText("Wide logo not removed")).toBeTruthy();
-  expect(
-    await screen.findByText(/being replaced by another write/),
-  ).toBeTruthy();
+  expect(await screen.findByText(/met a concurrent write/)).toBeTruthy();
 });
 
 it("tells the admin to outline the text when an SVG draws its words as text", async () => {

@@ -1,6 +1,8 @@
 /** @vitest-environment happy-dom */
-import { cleanup } from "@testing-library/react";
+import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "../i18n";
+import { ProvenanceTag } from "./provenance";
 import { provenanceOf } from "./provenanceof";
 
 afterEach(() => {
@@ -18,7 +20,7 @@ describe("provenanceOf", () => {
     // An agent id keeps the bare name, never "agent: agent:<id>".
     expect(provenanceOf("agent:capture")).toEqual({
       kind: "agent",
-      agent: "capture",
+      job: "capture",
     });
     // A connector reads as a connector, not an agent.
     expect(provenanceOf("connector:gmail")).toEqual({
@@ -57,11 +59,11 @@ describe("provenanceOf", () => {
       kind: "agent",
       agent: undefined,
     });
-    // A named tool is not opaque and keeps its name. The rule is about ids
-    // that name nothing, and still attributes agents.
+    // A named tool is not opaque and keeps its job name for the tag to look
+    // up. The rule is about ids that name nothing, and still attributes agents.
     expect(provenanceOf("agent:document-extractor")).toEqual({
       kind: "agent",
-      agent: "document-extractor",
+      job: "document-extractor",
     });
   });
 
@@ -106,11 +108,11 @@ describe("provenanceOf", () => {
       self: false,
       userId: "abc:stale-tail",
     });
-    // An agent id that is a name all the way through is a name a reader can act
-    // on, however many segments it has.
+    // An agent id that is a name all the way through is kept whole, however
+    // many segments it has.
     expect(provenanceOf("agent:ext:notes:summarise")).toEqual({
       kind: "agent",
-      agent: "ext:notes:summarise",
+      job: "ext:notes:summarise",
     });
   });
 
@@ -167,23 +169,48 @@ describe("provenanceOf", () => {
 // A tool's identifier is not its name.
 //
 // The wire spells a job the way the code does. Printed as is, a reader sees
-// "Automated by capture_counterparty_verdict": the plumbing, offered as information.
+// "Automatisiert durch signal-scan": the plumbing, in a sentence in their own
+// language.
 describe("what a tool is called on screen", () => {
-  it("writes a tool's name in words rather than as an identifier", () => {
-    const provenance = provenanceOf("agent:capture_counterparty_verdict");
+  const tagText = (capturedBy: string, locale: "en" | "de") => {
+    render(
+      <LocaleProvider initial={locale}>
+        <ProvenanceTag provenance={provenanceOf(capturedBy)} />
+      </LocaleProvider>,
+    );
+    return document.body.textContent;
+  };
 
-    expect(provenance).toEqual({
-      kind: "agent",
-      agent: "capture counterparty verdict",
-    });
+  it("names an agent in the reader's language, never by its id", () => {
+    expect(tagText("agent:signal-scan", "de")).toBe(
+      "Automatisiert durch E-Mail-Analyse",
+    );
+    cleanup();
+    expect(tagText("agent:capture_counterparty_verdict", "en")).toBe(
+      "Automated by Mail sender check",
+    );
   });
 
-  it("still says nothing where the id has no name in it", () => {
-    const provenance = provenanceOf(
-      "agent:01a05500-0000-7000-8000-000000000001",
+  it("says only the kind for an agent the catalogue cannot name", () => {
+    expect(tagText("agent:ext:notes:summarise", "de")).toBe(
+      "Automatisiert durch einen Agenten",
     );
+    cleanup();
+    expect(tagText("agent:01a05500-0000-7000-8000-000000000001", "en")).toBe(
+      "Automated by an agent",
+    );
+    cleanup();
+    expect(tagText("agent:signal_scanner_v2", "en")).toBe(
+      "Automated by an agent",
+    );
+  });
 
-    expect(provenance).toEqual({ kind: "agent", agent: undefined });
+  // The core catalogue cannot know a unit's jobs, so an extension dispatcher
+  // keeps its unit and job as words rather than losing its name.
+  it("names an extension dispatcher from its kind", () => {
+    expect(tagText("agent:ext_openchannel_drain", "de")).toBe(
+      "Automatisiert durch openchannel drain",
+    );
   });
 });
 

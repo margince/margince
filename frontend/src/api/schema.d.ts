@@ -11326,9 +11326,10 @@ export interface paths {
          *     (PATCH). Governed by the `installation_settings` RBAC object.
          *
          *     `base_currency_locked` reports whether the currency has stopped being changeable, and
-         *     `base_currency_locked_reason` says why, naming how many deals have already frozen a
-         *     conversion rate against it (ADR-0085 §7). A client renders the field read-only from
-         *     the flag rather than discovering the refusal by attempting a write.
+         *     `base_currency_lock` says why as facts: which reason holds it and how many records or
+         *     currency rates hold it (ADR-0085 §7). `base_currency_locked_reason` carries the same
+         *     facts as one English sentence for older clients. A client renders the field read-only
+         *     from the flag rather than discovering the refusal by attempting a write.
          */
         get: operations["getInstallationSettings"];
         put?: never;
@@ -20736,10 +20737,13 @@ export interface components {
              */
             base_currency_locked: boolean;
             /**
-             * @description Why the currency is locked, naming what has already converted against it. Absent
-             *     when it is still changeable.
+             * @description Why the currency is locked, naming what has already converted against it, as one
+             *     English sentence. Absent when it is still changeable. A client words the reason
+             *     from `base_currency_lock` instead, and reads this only from a server that does not
+             *     send that object.
              */
             base_currency_locked_reason?: string;
+            base_currency_lock?: components["schemas"]["BaseCurrencyLock"];
             /**
              * Format: int64
              * @description The largest upload request this installation accepts, in bytes — set by whoever
@@ -21430,6 +21434,18 @@ export interface components {
             oidc_group_role_map: {
                 [key: string]: string;
             };
+        };
+        /** @description Why the base currency is locked, as facts a client words in its reader's language. Present exactly when `base_currency_locked_reason` is (ADR-0085 §7). */
+        BaseCurrencyLock: {
+            /**
+             * @description `rates_frozen`: closed deals, sent offers, mirrored invoices, contracts or commission entries have frozen a conversion rate against the base, and nothing undoes that. `rate_sheet`: currency rates convert into the base; clearing them lifts the lock.
+             * @enum {string}
+             */
+            reason: "rates_frozen" | "rate_sheet";
+            /** @description How many records froze a rate (`rates_frozen`), or how many currency rates convert into the base (`rate_sheet`). */
+            count: number;
+            /** @description The ISO-4217 code the currency rates convert into. Sent only with `rate_sheet`, and absent there when the installation holds no stored base to name. */
+            base_currency?: string;
         };
         /** @description One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen. */
         SignInProvider: {
@@ -37953,6 +37969,12 @@ export interface components {
             /** @description The job layer's vetted operator sentence. A failure whose stored text did not come from that closed vocabulary reports a fixed substitute instead — the raw cause never travels here. */
             reason: string;
         };
+        /**
+         * @description The verb of one audit row, as both the audit log and a record's history
+         *     serve it. One list, so the two reads cannot name the same row two ways.
+         * @enum {string}
+         */
+        AuditAction: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke" | "delete" | "place_legal_hold" | "lift_legal_hold" | "request_legal_review" | "withdraw_legal_review";
         /** @description An append-only audit row. Mirrors the `audit_log` table. */
         AuditLogEntry: {
             /** Format: uuid */
@@ -37994,8 +38016,7 @@ export interface components {
              * @description The bulk change that wrote this row; null for a change made on its own.
              */
             batch_id?: string | null;
-            /** @enum {string} */
-            action: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke" | "delete" | "place_legal_hold" | "lift_legal_hold" | "request_legal_review" | "withdraw_legal_review";
+            action: components["schemas"]["AuditAction"];
             entity_type: string;
             /**
              * Format: uuid
@@ -38207,8 +38228,12 @@ export interface components {
         /**
          * @description One rendered history line for a record mutation. `before`/`after` are
          *     masked to the viewer's readable fields — an absent key was hidden, not null.
-         *     `summary` is server-composed plain language; field-level detail lives in
-         *     before/after for the client to render.
+         *     `summary` is server-composed plain language in English. A client that
+         *     renders the line in its reader's language builds it from `action` and the
+         *     actor fields. It falls back to `summary` for an edge row, whose role
+         *     travels only in the sentence, and for an action or actor kind it does
+         *     not know.
+         *     Field-level detail lives in before/after for the client to render.
          */
         AuditHistoryEntry: {
             /** Format: uuid */
@@ -38234,7 +38259,16 @@ export interface components {
              *     "via {agent_client}" where it would otherwise say "via an agent".
              */
             agent_client?: string | null;
-            action: string;
+            action: components["schemas"]["AuditAction"];
+            /**
+             * Format: uuid
+             * @description The Agent Seat Passport the change was made under, as FieldHistoryEntry
+             *     carries it. A machine row with a passport and no `on_behalf_of` had a
+             *     human authority the row failed to record; one without a passport
+             *     never had one. With `on_behalf_of` set and no `on_behalf_of_name`,
+             *     the authority was recorded and the member no longer resolves.
+             */
+            passport_id?: string | null;
             /** Format: date-time */
             occurred_at: string;
             authorization_rule?: string | null;

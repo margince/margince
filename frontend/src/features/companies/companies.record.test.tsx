@@ -10,7 +10,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../../i18n";
+import { LocaleProvider, translate } from "../../i18n";
 import { CompanyScreen } from "./companies";
 import { openProfile, openRecordMenu, render } from "./companies.testkit";
 import {
@@ -400,6 +400,7 @@ describe("CompanyScreen — the record's history", () => {
               id: "h1",
               actor_type: "human",
               actor_id: "u1",
+              actor_name: "Demo Admin",
               action: "create",
               occurred_at: "2026-07-13T10:00:00Z",
               summary: "Created the record",
@@ -417,8 +418,8 @@ describe("CompanyScreen — the record's history", () => {
 
     await userEvent.click(await openRecordMenu("company-full-history"));
 
-    await waitFor(() =>
-      expect(screen.getByText("Created the record")).toBeTruthy(),
+    await screen.findByText(
+      translate("en", "history.verb.create", { subject: "Demo Admin" }),
     );
   });
 

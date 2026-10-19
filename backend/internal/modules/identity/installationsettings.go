@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/currencylock"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
@@ -46,12 +47,10 @@ type InstallationSettings struct {
 	// because this struct is what the setting STORED, and reporting it as the
 	// typed vocabulary would claim a validation the read did not perform.
 	ForecastForwardMeasure string
-	// BaseCurrencyLocked and its reason let a client render the field
-	// read-only instead of discovering the refusal by attempting a write —
-	// the same information the write path would give, offered before the
-	// operator types a currency they cannot save.
-	BaseCurrencyLocked       bool
-	BaseCurrencyLockedReason string
+	// BaseCurrencyLocked and its facts let a client render the field read-only
+	// before the operator types a currency the write would refuse.
+	BaseCurrencyLocked bool
+	BaseCurrencyLock   currencylock.Lock
 	// EnabledOidcProviders is the admin's chosen provider list, or nil when they
 	// have never chosen — which means every provider the deployment configured.
 	// It is the STORED answer and not the effective one: the deployment decides
@@ -222,7 +221,7 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
-	locked, why, err := s.baseCurrencyLock(ctx)
+	lock, locked, err := s.baseCurrencyLock(ctx)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
@@ -240,30 +239,30 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 		DeadWorkBannerHours:        bannerHours,
 		OAuthAccessTokenTTLMinutes: tokenTTL,
 		ForecastForwardMeasure:     measure,
-		BaseCurrencyLocked:         locked, BaseCurrencyLockedReason: why,
+		BaseCurrencyLocked:         locked, BaseCurrencyLock: lock,
 		EnabledOidcProviders: providers,
 		Operations:           operations,
 		AgentAllowances:      allowances,
 	}, nil
 }
 
-// baseCurrencyLock asks the entry's own probe, so the answer the read reports
-// and the answer the write enforces come from one place. A read with the probe
-// unwired reports "changeable", which is what the write would then do — the
-// two agree even when the wiring is wrong, and the fitness gate catches the
-// wiring.
-func (s *InstallationSettingsStore) baseCurrencyLock(ctx context.Context) (bool, string, error) {
+// baseCurrencyLock asks the probe LockBaseCurrencyWith also gave the write.
+// The settings-catalog gate holds that both slots are wired.
+func (s *InstallationSettingsStore) baseCurrencyLock(ctx context.Context) (currencylock.Lock, bool, error) {
+	if baseCurrencyLockProbe == nil {
+		return currencylock.Lock{}, false, nil
+	}
+	var lock currencylock.Lock
 	var locked bool
-	var why string
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var probeErr error
-		locked, why, probeErr = BaseCurrency.Frozen(ctx, tx)
+		lock, locked, probeErr = baseCurrencyLockProbe(ctx, tx)
 		return probeErr
 	})
 	if err != nil {
-		return false, "", fmt.Errorf("identity: reading base-currency lock state: %w", err)
+		return currencylock.Lock{}, false, fmt.Errorf("identity: reading base-currency lock state: %w", err)
 	}
-	return locked, why, nil
+	return lock, locked, nil
 }
 
 // encodeInstallationPatch reduces every field of a sparse patch to its wire

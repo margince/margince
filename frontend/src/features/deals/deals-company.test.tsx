@@ -122,6 +122,8 @@ function stubBackend(opts: {
   // Resolves before the companies page answers, so a test can look at what
   // the board asked for while that read was still out.
   pageGate?: Promise<void>;
+  // The capped companies page answers with a server error.
+  pageFails?: boolean;
   single?: Deal;
   // The project a deal names, as its own per-id read answers it.
   project?: { id: string; name: string };
@@ -170,6 +172,9 @@ function stubBackend(opts: {
       if (opts.pageGate) {
         await opts.pageGate;
       }
+      if (opts.pageFails) {
+        return jsonResponse({ title: "Boom" }, 500);
+      }
       return jsonResponse({
         data: opts.page ?? [],
         page: { next_cursor: null },
@@ -204,6 +209,15 @@ function stubBackend(opts: {
     }
     return jsonResponse({ data: [], page: { next_cursor: null } });
   });
+}
+
+/** The edit form's searched company field, with the pick it names. */
+function companyPicker(): HTMLElement {
+  const picker = screen.getByLabelText("Company").closest(".recordpicker");
+  if (!(picker instanceof HTMLElement)) {
+    throw new Error("no company picker on the edit form");
+  }
+  return picker;
 }
 
 /** The board card naming `name` — the whole card is one button. */
@@ -345,6 +359,23 @@ describe("the board past the picker's first page", () => {
       stubBackend({
         deals: [deal({ company_id: "o-offpage" })],
         page: [{ id: "o1", display_name: "Acme Corp" }],
+        byId: {
+          "o-offpage": { id: "o-offpage", display_name: "Northgate Systems" },
+        },
+      }),
+    );
+    render(<DealsScreen />);
+
+    expect(await screen.findByText("Northgate Systems")).toBeTruthy();
+  });
+
+  // A failed page is settled too: the cards still get their names by id.
+  it("names a company by id when the picker's page fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      stubBackend({
+        deals: [deal({ company_id: "o-offpage" })],
+        pageFails: true,
         byId: {
           "o-offpage": { id: "o-offpage", display_name: "Northgate Systems" },
         },
@@ -613,21 +644,18 @@ describe("a deal's edit form over a withheld reference", () => {
     expect(screen.getAllByText(/Partner withheld/).length).toBeGreaterThan(0);
   });
 
-  // Present, and off the pickable page: the same rule the partner field
-  // already held. A select whose stored value is not among its options shows
-  // blank, which reads as "no company" on a deal that has one.
-  it("names a company the pickable page cannot reach", async () => {
-    await openEdit(
-      deal({ company_id: "o-offpage" }),
-      [{ id: "o1", display_name: "Acme Corp" }],
-      { "o-offpage": { id: "o-offpage", display_name: "Northgate Systems" } },
-    );
+  // The picker is searched and holds no page of companies, so the stored
+  // company is named by its own read. A bare id reads as a broken record.
+  it("names the deal's company in the searched picker", async () => {
+    await openEdit(deal({ company_id: "o-offpage" }), [], {
+      "o-offpage": { id: "o-offpage", display_name: "Northgate Systems" },
+    });
 
+    const picker = companyPicker();
     await waitFor(() =>
-      expect(
-        screen.getByRole("combobox", { name: "Company" }).textContent,
-      ).toContain("Northgate Systems"),
+      expect(within(picker).getByText("Northgate Systems")).toBeTruthy(),
     );
+    expect(within(picker).queryByText("o-offpage")).toBeNull();
   });
 
   // The third reference the wire can withhold, and the one the form used to
@@ -663,14 +691,19 @@ describe("a deal's edit form over a withheld reference", () => {
     );
   });
 
-  it("names a company the pickable page does hold, without a second read", async () => {
-    await openEdit(deal({ company_id: "o1" }), [
-      { id: "o1", display_name: "Acme Corp" },
-    ]);
+  it("re-points the deal at a company found by searching", async () => {
+    const user = await openEdit(
+      deal({ company_id: "o1" }),
+      [{ id: "o2", display_name: "Northgate Systems" }],
+      { o1: { id: "o1", display_name: "Acme Corp" } },
+    );
 
-    expect(
-      screen.getByRole("combobox", { name: "Company" }).textContent,
-    ).toContain("Acme Corp");
+    await user.type(screen.getByLabelText("Company"), "North");
+    await user.click(
+      await screen.findByRole("button", { name: "Northgate Systems" }),
+    );
+    expect(within(companyPicker()).getByText("Northgate Systems")).toBeTruthy();
+    expect(within(companyPicker()).queryByText("Acme Corp")).toBeNull();
   });
 });
 

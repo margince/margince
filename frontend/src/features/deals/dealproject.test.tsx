@@ -59,6 +59,15 @@ function inForm() {
   return within(screen.getByRole("dialog"));
 }
 
+/** Searches the create form's company field by `name` and picks the match. */
+async function pickCompany(
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+) {
+  await user.type(inForm().getByLabelText("Company"), name);
+  await user.click(await inForm().findByRole("button", { name }));
+}
+
 const stages = [
   {
     id: "s1",
@@ -111,6 +120,9 @@ function dealBackend(opts: {
   // What an advance answers; null for the default success.
   onAdvance?: () => Response | null;
   companies?: { id: string; display_name: string }[];
+  // Companies past the first page: a search by name finds them, a plain list
+  // read never does.
+  farCompanies?: { id: string; display_name: string }[];
   // Which companies the server would match each project for, by project id.
   // A project is worked by several companies and a row names only its ANCHOR,
   // so a fixture that could not say this could not express the case the deal
@@ -184,10 +196,16 @@ function dealBackend(opts: {
         });
       }
       if (pathname.endsWith("/companies")) {
+        const firstPage = opts.companies ?? [
+          { id: "o-1", display_name: "Brandt Automotive" },
+        ];
+        const q = new URL(url).searchParams.get("q");
         return jsonResponse({
-          data: opts.companies ?? [
-            { id: "o-1", display_name: "Brandt Automotive" },
-          ],
+          data: q
+            ? [...firstPage, ...(opts.farCompanies ?? [])].filter((company) =>
+                company.display_name.includes(q),
+              )
+            : firstPage,
           page: { next_cursor: null },
         });
       }
@@ -246,11 +264,7 @@ describe("the deal form's project picker", () => {
     render(<DealsScreen />);
     await user.click(await screen.findByTestId("new-record"));
     await user.type(screen.getByLabelText("Deal name *"), "Phase two");
-    await pickOption(
-      user,
-      inForm().getByLabelText("Company"),
-      "Brandt Automotive",
-    );
+    await pickCompany(user, "Brandt Automotive");
     // Only the chosen company's open projects are offered.
     await user.click(screen.getByLabelText("Project"));
     expect(screen.queryByRole("option", { name: /Old one/ })).toBeNull();
@@ -276,11 +290,7 @@ describe("the deal form's project picker", () => {
     render(<DealsScreen />);
     await user.click(await screen.findByTestId("new-record"));
     await user.type(screen.getByLabelText("Deal name *"), "Phase two");
-    await pickOption(
-      user,
-      inForm().getByLabelText("Company"),
-      "Brandt Automotive",
-    );
+    await pickCompany(user, "Brandt Automotive");
     await pickOption(user, screen.getByLabelText("Project"), "New project…");
     await user.type(screen.getByLabelText("Project name *"), "Born here");
     // No key field here either: the server mints one from the name.
@@ -326,11 +336,7 @@ describe("the deal form's project picker", () => {
     });
     render(<DealsScreen />);
     await user.click(await screen.findByTestId("new-record"));
-    await pickOption(
-      user,
-      inForm().getByLabelText("Company"),
-      "Brandt Automotive",
-    );
+    await pickCompany(user, "Brandt Automotive");
     await user.click(screen.getByLabelText("Project"));
     expect(screen.getByRole("option", { name: "CRM rollout" })).toBeTruthy();
     expect(screen.queryByRole("option", { name: "Joint rollout" })).toBeNull();
@@ -338,7 +344,7 @@ describe("the deal form's project picker", () => {
 
     // The reader changes their mind mid-form. The picker used to go empty here
     // and stay empty until the deal was saved and reopened.
-    await pickOption(user, inForm().getByLabelText("Company"), "Other GmbH");
+    await pickCompany(user, "Other GmbH");
     await user.click(screen.getByLabelText("Project"));
     await waitFor(() =>
       expect(
@@ -368,23 +374,40 @@ describe("the deal form's project picker", () => {
         picker.getAttribute("aria-disabled") === "true",
     ).toBe(true);
 
-    await pickOption(
-      user,
-      inForm().getByLabelText("Company"),
-      "Brandt Automotive",
-    );
+    await pickCompany(user, "Brandt Automotive");
     await pickOption(user, screen.getByLabelText("Project"), "CRM rollout");
     expect(screen.getByLabelText("Project").textContent).toContain(
       "CRM rollout",
     );
 
-    await pickOption(user, inForm().getByLabelText("Company"), "Other GmbH");
+    await pickCompany(user, "Other GmbH");
     expect(screen.getByLabelText("Project").textContent).not.toContain(
       "CRM rollout",
     );
     await user.click(screen.getByLabelText("Project"));
     expect(screen.getByRole("option", { name: "Elsewhere" })).toBeTruthy();
     expect(screen.queryByRole("option", { name: "CRM rollout" })).toBeNull();
+  });
+});
+
+describe("the deal form's company picker", () => {
+  it("finds a company past the first page by name and posts it with the deal", async () => {
+    const user = userEvent.setup();
+    const writes = dealBackend({
+      farCompanies: [{ id: "o-77", display_name: "Wendt Logistik" }],
+    });
+    render(<DealsScreen />);
+    await user.click(await screen.findByTestId("new-record"));
+    await user.type(screen.getByLabelText("Deal name *"), "Phase two");
+    await pickCompany(user, "Wendt Logistik");
+    expect(inForm().getByText("Wendt Logistik")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() =>
+      expect(writes.some((write) => write.url.endsWith("/deals"))).toBe(true),
+    );
+    const posted = writes.find((write) => write.url.endsWith("/deals"));
+    expect(posted?.body).toMatchObject({ company_id: "o-77" });
   });
 });
 

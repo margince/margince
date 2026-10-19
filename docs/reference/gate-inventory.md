@@ -71,6 +71,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `forecastperiodparity_test.go` | H3 | Every period the contract offers must be a window the server can resolve. |
 | `forwardmeasureparity_test.go` | H3 | Every forward measure must be spelled the same on all three sides. |
 | `frontendacquisitionkinds_test.go` | H3 | The browser knows every way the server says a contact was obtained, and no other. |
+| `frontendagentlabels_test.go` | H2 | A provenance tag names the agent behind a proposal or a change by its words, never by its principal id. |
 | `frontendapprovalkinds_test.go` | H1 | Every kind a proposal can be staged under must have words a reader recognises, or the queue prints the wire enum at them. |
 | `frontendattentionsources_test.go` | H1 | Every source the Worklist can carry must have a body the decision lane knows how to draw, or the lane asks the wrong endpoint about it. |
 | `frontendaudiencereasons_test.go` | H3 | A held message says why it was held, or the reader cannot argue with the verdict. |
@@ -125,6 +126,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `meetinghorizonparity_test.go` | H2 | How far into the diary a meeting still says a relationship is live, spelled twice in two modules that may not import each other, and held equal here. |
 | `mergedecidableauthority_test.go` | H2 | Who may settle a duplicate pair has one answer, and the card must ask the same thing the write asks. |
 | `minorunitscale_test.go` | H3 | A currency's minor-unit scale (100 for EUR, 1000 for KWD, 1 for VND) is one fact, and the table that holds it lives in shared/kernel/values. |
+| `mockproblemcodes_test.go` | H2 | Every Problem a frontend test, story or fixture answers carries a code the server can send. |
 | `modelreplyfence_test.go` | H3 | A markdown fence around a model's JSON is presentation, and no site may read it as a malformed answer. |
 | `modelroutes_test.go` | H3 | The SPA's table of routes that hold a model call open must be the contract's. |
 | `modulecatalogtables_test.go` | H2 | The module catalog's Owns-tables column is the ownership map. |

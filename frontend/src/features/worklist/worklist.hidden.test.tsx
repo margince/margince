@@ -68,7 +68,9 @@ function draw(
         rowReads.push(url);
       }
       const body = isRows ? rows : answer;
-      return body === "fails" ? json({ code: "unavailable" }, 503) : json(body);
+      return body === "fails"
+        ? json({ code: "service_unavailable" }, 503)
+        : json(body);
     }),
   );
   const client = new QueryClient({

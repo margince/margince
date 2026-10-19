@@ -1,6 +1,10 @@
 import { formatDate } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import type {
+  DisplayField,
+  ResolvedDisplayField,
+} from "./approvaldisplay.types";
 import { humanizeKind } from "./approvalkind";
 import { commitmentResponsibility } from "./approvalresponsibility";
 
@@ -33,32 +37,13 @@ import { commitmentResponsibility } from "./approvalresponsibility";
 //     declared rather than in JSON key order.
 //
 // A kind that declares nothing keeps the old behaviour, so the raw-args kinds
-// (an agent tool's arguments, an automation rule's action) are unchanged: they
-// carry no typed payload for this map to describe, and inventing labels for a
-// bag of unknown keys would be guessing.
-export type DisplayField = {
-  readonly field: string;
-  /** What the field is CALLED. A wire name is a payload path, not a caption. */
-  readonly label: MessageKey;
-  /**
-   * How to read the value.
-   *
-   * `prose` is a sentence the server wrote for a human. `date` is a date-only
-   * wire string, rendered on the reader's calendar. `enum` looks the value up
-   * in `optionLabels` — a raw enum on screen ("unrealistic_stale") is a wire
-   * token wearing a caption. `text` is a value that is already a word: a name,
-   * an address, a stage.
-   */
-  readonly as: "prose" | "text" | "date" | "enum";
-  /**
-   * Promotes this field to the card's lead sentence rather than a labelled
-   * fact. At most one per kind, and only ever a field that answers "why am I
-   * being asked this?" — the reason, never the value being proposed.
-   */
-  readonly lead?: true;
-  /** What each enum value is CALLED. Required in spirit for `as: "enum"`. */
-  readonly optionLabels?: Readonly<Record<string, MessageKey>>;
-};
+// (an agent tool's arguments, an automation rule's action) are unchanged. They
+// carry no typed payload to describe, and labels for unknown keys would be
+// guesses. The declaration's shape is `DisplayField` in approvaldisplay.types.ts.
+export type {
+  DisplayField,
+  ResolvedDisplayField,
+} from "./approvaldisplay.types";
 
 // The §11 hygiene findings, spelled as deals.CloseDateFlag spells them
 // (modules/deals/closedate.go). A flag with no entry here renders as its own
@@ -298,6 +283,10 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
       // dated is not overdue, and a reviewer who knows the deadline can supply
       // it here rather than opening the task afterwards to add one.
       { field: "due_date", label: "approval.field.due_date", as: "date" },
+      // Where the task says it came from: the mail's subject and date, or the
+      // transcript lines. The server writes it once, in its own language, so
+      // the label marks it as the original text rather than a translation.
+      { field: "body", label: "approval.field.sourceText", as: "prose" },
     ],
     // An automation composed this reply. Subject and body are the draft the card
     // already renders; `intent` is why the rule fired.
@@ -470,14 +459,6 @@ export function resolveDisplay(
 const supersededBy = new Map<string, string>([
   ["previous_close_date", "expected_close_date"],
 ]);
-
-/** A DisplayField with its label and value resolved for one payload. */
-export type ResolvedDisplayField = Readonly<{
-  field: string;
-  label: string;
-  value: string | null;
-  lead?: true;
-}>;
 
 /**
  * How a staged date-only value reads on screen.

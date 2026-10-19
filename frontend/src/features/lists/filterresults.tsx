@@ -15,6 +15,7 @@
 // every non-generated column of the table and thirty columns is not a table
 // anybody reads.
 
+import { useCompanyMarksByID } from "../../components/companymarks";
 import { type ListColumn, ListTable } from "../../design-system/listtable";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -24,6 +25,7 @@ import {
   type VocabularyField,
 } from "../../lib/filterdata";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
+import { ReferenceCell } from "./filterresultcell";
 
 /** A preview row: schema-derived, so its values span every type the table holds. */
 type PreviewRow = Record<string, unknown>;
@@ -136,15 +138,42 @@ export function FilterResults({
   const t = useT();
   const rows: readonly PreviewRow[] = preview?.rows ?? [];
   const names = previewColumnNames(preview?.columns ?? [], named);
-  const columns: ListColumn<PreviewRow>[] = names.map((name, index) => ({
-    key: name,
-    header: headerFor(name, fields, t),
-    // The identity column is fixed: it is what makes a row recognisable, so the
-    // picker may not hide it and the phone layout promotes it to the card's
-    // heading.
-    fixed: index === 0,
-    cell: (row) => cellText(row[name]),
-  }));
+  const referenceOf = (name: string) =>
+    fields.find((field) => field.name === name)?.references;
+  // Every company the page names, read in one batch rather than one request
+  // per cell.
+  const companies = useCompanyMarksByID(
+    names
+      .filter((name) => referenceOf(name) === "company")
+      .flatMap((name) =>
+        rows.flatMap((row) => {
+          const value = row[name];
+          return typeof value === "string" ? [value] : [];
+        }),
+      ),
+  );
+  const columns: ListColumn<PreviewRow>[] = names.map((name, index) => {
+    const reference = referenceOf(name);
+    return {
+      key: name,
+      header: headerFor(name, fields, t),
+      // The identity column is fixed, because it makes a row recognisable. The
+      // picker may not hide it, and a phone shows it as the card's heading.
+      fixed: index === 0,
+      cell: (row) => {
+        const value = row[name];
+        return reference && typeof value === "string" && value !== "" ? (
+          <ReferenceCell
+            reference={reference}
+            id={value}
+            companies={companies}
+          />
+        ) : (
+          cellText(value)
+        );
+      },
+    };
+  });
 
   return (
     <ListTable<PreviewRow>

@@ -137,7 +137,12 @@ export const Planned: Story = {
  *  which is what stops a denial reading as a week with nothing in it. */
 export const Refused: Story = {
   render: () =>
-    frame(() => jsonResponse({ title: "Forbidden", code: "forbidden" }, 403)),
+    frame(() =>
+      jsonResponse(
+        { title: "Forbidden", status: 403, code: "permission_denied" },
+        403,
+      ),
+    ),
 };
 
 /** The form a new commitment is typed into. Its own frame because it is the

@@ -265,8 +265,7 @@ describe("LeadBulkBar — disqualify", () => {
 
   it("names the rows that refused instead of claiming the batch closed", async () => {
     const { deletions } = stubFetch({
-      "l-2": () =>
-        problemResponse(409, "already_disqualified", "Already closed."),
+      "l-2": () => problemResponse(404, "not_found", "not found"),
     });
     const done: Array<readonly BulkOutcome[]> = [];
     const user = userEvent.setup();
@@ -307,7 +306,7 @@ describe("LeadBulkBar — disqualify", () => {
       "l-2": () =>
         new Response(
           JSON.stringify({
-            code: "version_conflict",
+            code: "version_skew",
             detail: "Somebody else changed this lead.",
           }),
           { status: 409, headers: { "content-type": "application/json" } },
@@ -348,7 +347,7 @@ describe("LeadBulkBar — disqualify", () => {
     const conflict = () =>
       new Response(
         JSON.stringify({
-          code: "version_conflict",
+          code: "version_skew",
           detail: "Somebody else changed this lead.",
         }),
         { status: 409, headers: { "content-type": "application/json" } },

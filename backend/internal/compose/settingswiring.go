@@ -48,7 +48,7 @@ var settingsDefinitions = sync.OnceValue(func() []settings.Definition {
 	// Injected here, once, the way ADR-0054 requires; settingscatalog_test.go
 	// asserts it actually happened, because an unwired probe fails OPEN (the
 	// setting stays changeable) rather than loudly.
-	identity.BaseCurrency.WithFreeze(deals.BaseCurrencyFreeze(identity.BaseCurrency.Key()))
+	identity.LockBaseCurrencyWith(deals.BaseCurrencyLock(identity.BaseCurrency.Key()))
 
 	var defs []settings.Definition
 	defs = append(defs, activities.Definitions()...)

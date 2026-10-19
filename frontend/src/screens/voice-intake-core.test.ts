@@ -219,7 +219,7 @@ describe("which refusal the server named", () => {
   it("reads a per-field code out of details.errors", () => {
     expect(
       refusalOf({
-        code: "validation_failed",
+        code: "validation_error",
         details: { errors: [{ code: "speaker_label_required" }] },
       }),
     ).toBe("unattributed");
@@ -338,7 +338,11 @@ describe("the outcomes an intake can end as", () => {
   it("resolves a server refusal as an outcome rather than throwing", async () => {
     stubApi({
       status: 422,
-      body: { code: "unsupported_format", detail: "Cannot read that." },
+      body: {
+        code: "validation_error",
+        detail: "Cannot read that.",
+        details: { errors: [{ field: "format", code: "unsupported_format" }] },
+      },
     });
     const outcome = await intakeUpload("r", "notes.txt", "some words here");
     expect(outcome).toMatchObject({ kind: "refused", reason: "unsupported" });
@@ -347,7 +351,11 @@ describe("the outcomes an intake can end as", () => {
   it("carries the problem through when the refusal code is unknown", async () => {
     stubApi({
       status: 422,
-      body: { code: "brand_new_rule", detail: "Nope." },
+      body: {
+        code: "validation_error",
+        detail: "Nope.",
+        details: { errors: [{ field: "content", code: "brand_new_rule" }] },
+      },
     });
     const outcome = await intakeUpload("r", "notes.txt", "some words here");
     expect(outcome).toMatchObject({ kind: "refused", reason: null });

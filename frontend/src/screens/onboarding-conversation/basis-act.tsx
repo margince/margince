@@ -8,10 +8,8 @@ import { Field, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { QueryGate } from "../../design-system/querystates";
-import {
-  currencyNote,
-  useUpdateInstallationSettings,
-} from "../../features/sign-in/installation-settings";
+import { useUpdateInstallationSettings } from "../../features/sign-in/installation-settings";
+import { useCurrencyNote } from "../../features/sign-in/installation-settings.currency";
 import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
@@ -65,6 +63,7 @@ function reportingPatch(
 
 export function BasisAct({ state, dispatch }: BasisActProps) {
   const t = useT();
+  const currencyNote = useCurrencyNote();
   const canManage = useCanWrite("installation_settings", "update");
   const settings = useInstallationSettings(canManage);
   // What the reader typed over the stored values, and nothing else: the
@@ -139,7 +138,7 @@ export function BasisAct({ state, dispatch }: BasisActProps) {
                 </Heading>
                 <Field
                   label={t("installationSettings.baseCurrency")}
-                  hint={currencyNote(current, t)}
+                  hint={currencyNote(current)}
                   error={refused.get("base_currency")}
                 >
                   {(control) => (
