@@ -17,7 +17,8 @@ import { catalogs, LocaleProvider, translate } from "../i18n";
 import { en } from "../i18n/en";
 import { LOCALES } from "../i18n/locale";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
-import { CustomFieldsAdmin, FieldBuilder } from "./customfields";
+import { CustomFieldsAdmin } from "./customfields";
+import { FieldBuilder } from "./customfields.builder";
 import { AuditRail, FieldTable } from "./customfields.table";
 
 afterEach(cleanup);
