@@ -371,34 +371,16 @@ function SectionBody({
           scopeControl={scopeControl}
         />
       ) : null;
-    case "pipeline": {
-      // Deals follow the picker so Pipeline and Performance count one set of
-      // records. Delivery below does not: a project is read company-wide.
-      // The picker needs forecast access; a deal reader without it keeps the
-      // unscoped cards rather than an empty tab.
-      if (!selection && !contextFailed) {
-        return null;
-      }
-      const scope = selection?.scope;
+    case "pipeline":
       return (
-        <>
-          {scope && (
-            <FilterBar label={t("analytics.filters")}>{scopeControl}</FilterBar>
-          )}
-          {SECTION_REPORTS.pipeline.map((report) => (
-            <ReportCard
-              // Keyed by scope too, so an open explanation never outlives
-              // the records it explains.
-              key={scope ? `${report}:${scopeKey(scope)}` : report}
-              report={report}
-              stages={stages}
-              locale={locale}
-              scope={scope}
-            />
-          ))}
-        </>
+        <PipelineSection
+          selection={selection}
+          contextFailed={contextFailed}
+          scopeControl={scopeControl}
+          stages={stages}
+          locale={locale}
+        />
       );
-    }
     default:
       return (
         <>
@@ -413,4 +395,46 @@ function SectionBody({
         </>
       );
   }
+}
+
+// Deals follow the picker so Pipeline and Performance count one set of
+// records; Delivery does not, because a project is read company-wide. The
+// picker needs forecast access, so a deal reader without it keeps the
+// unscoped cards rather than an empty tab.
+function PipelineSection({
+  selection,
+  contextFailed,
+  scopeControl,
+  stages,
+  locale,
+}: Readonly<{
+  selection: AnalyticsSelection | null;
+  contextFailed: boolean;
+  scopeControl: ReactNode;
+  stages: readonly Stage[];
+  locale: Locale;
+}>) {
+  const t = useT();
+  if (!selection && !contextFailed) {
+    return null;
+  }
+  const scope = selection?.scope;
+  return (
+    <>
+      {scope && (
+        <FilterBar label={t("analytics.filters")}>{scopeControl}</FilterBar>
+      )}
+      {SECTION_REPORTS.pipeline.map((report) => (
+        <ReportCard
+          // Keyed by scope too, so an open explanation never outlives the
+          // records it explains.
+          key={scope ? `${report}:${scopeKey(scope)}` : report}
+          report={report}
+          stages={stages}
+          locale={locale}
+          scope={scope}
+        />
+      ))}
+    </>
+  );
 }
