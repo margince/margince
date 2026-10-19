@@ -10,12 +10,12 @@ import { sessionOnlyFetch } from "../testing/appharness";
 import { ignoreSearch, newClient, renderWith } from "./testing/shellharness";
 import { TopBar } from "./topbar";
 
-// The way back from a record. The installed app runs standalone, with no
-// browser Back, so the bar's own control and the trail's parent are the only
-// ways out, and both must land on the list as the reader left it.
+// The way back from a record. The installed app has no browser Back. The
+// bar's Back and the trail's parent are the only ways out. Both must land on
+// the list as the reader left it.
 //
-// The bar is mounted over the real address store and the real history, so
-// every move here is a real hash change and every step back a real one.
+// The bar is mounted over the real address store and the real history. Every
+// move here is a real hash change, and every step back is a real one.
 
 afterEach(() => {
   cleanup();
@@ -37,7 +37,7 @@ function nextHashChange(): Promise<unknown> {
   );
 }
 
-// Arrives at `hash` the way a cold page load does: the bar mounts only after
+// Arrives at `hash` the way a cold page load does. The bar mounts only after
 // the arrival is delivered, so the app sees no move of its own.
 async function mountAt(hash: string) {
   vi.stubGlobal("fetch", vi.fn(sessionOnlyFetch()));
@@ -77,8 +77,8 @@ describe("Top bar way back from a record", () => {
   });
 
   // The browser's own Back, where there is one, returns to the record opened
-  // cold. Nothing of ours is behind it still, so the bar's Back must not step
-  // out of the app (in the installed app that step does nothing at all).
+  // cold. Nothing of ours is behind it, so the bar's Back must not step out of
+  // the app. In the installed app that step would do nothing at all.
   it("stays in the app after the reader steps back to a record opened cold", async () => {
     const user = userEvent.setup();
     await mountAt("#/contacts/p-anna");
@@ -129,8 +129,8 @@ describe("Top bar way back from a record", () => {
     expect(window.location.hash).toBe("#/home");
   });
 
-  // The Ask dialog stands over a list rather than being part of it, so a way
-  // back must not reopen a question the reader had already closed.
+  // The Ask dialog stands over a list and is not part of it. A way back must
+  // not reopen a question the reader had already closed.
   it("keeps the filter and drops the Ask dialog from the trail's parent", async () => {
     await mountAt("#/contacts?ask=1&askq=Who&city=Hamburg");
 

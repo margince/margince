@@ -72,8 +72,8 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
   const filtersCrumbs = useFiltersCrumbs(route);
 
   if (belowList(route)) {
-    // A record's trail leads back to the list it was opened from, narrowed the
-    // way the reader left it, so going up does not cost them their filter.
+    // A record's trail leads back to the list it was opened from. The list
+    // keeps the filter the reader left it with.
     return [
       {
         label: resolveTitle(route.screen, navItem?.labelKey, t),

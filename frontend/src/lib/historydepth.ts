@@ -1,12 +1,9 @@
 // How far into this app's own run of history entries the reader is.
 //
-// The installed app has no browser Back, so the app's Back must know whether
-// `history.back()` lands on a screen of ours or leaves the app (at the first
-// standalone entry it does nothing at all). The browser gives no answer, so
-// every entry is stamped in `history.state` with its depth: 0 for an entry the
-// app did not push itself, one more than the entry before for an in-app move.
-// A stamp outlives a reload, which is right: the entries below a stamped one
-// are ours either way.
+// The app's Back must know whether `history.back()` stays in the app. The
+// browser does not say, so each entry carries its depth in `history.state`.
+// Depth 0 is an entry the app did not push; an in-app move adds one.
+// A stamp outlives a reload, and the entries below it are still ours.
 
 const DEPTH_KEY = "marginceDepth";
 
@@ -49,10 +46,9 @@ function stamp(value: number): void {
  *
  * `moved`: the app just moved by `hashchange`. `replaced`: the app rewrote the
  * address of the entry it is on. `start`: the app begins watching the address.
- * A stamp written at another address than the current one is trusted only
- * after a replace. Otherwise it is the previous entry's state carried along by
- * a fragment move (happy-dom does this), so the entry is new, and a new entry
- * drops every forward one, as the browser does.
+ * A stamp written at another address is trusted only after a replace.
+ * Otherwise it was copied from the previous entry (happy-dom does this), so
+ * the entry is new. A new entry drops every forward one, as the browser does.
  */
 export function noteHistoryEntry(how: "moved" | "replaced" | "start"): void {
   const hash = globalThis.location.hash;

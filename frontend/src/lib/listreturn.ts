@@ -2,16 +2,15 @@ import { stepsBackOutOf } from "./historydepth";
 import { parseHash, type Route, routeHash, type Screen } from "./router";
 import { GLOBAL_DIALS, hashWithParams, parseParams } from "./urlstate";
 
-// The address each list screen last stood at in this page load, its filter
-// query included. Memory rather than storage: a reload starts a new visit, and
-// the plain list is the honest parent for a record opened cold.
+// The address each list screen last stood at in this page load, filter
+// included. Memory, not storage: after a reload the parent is the plain list.
 const lastListAddress = new Map<Screen, string>();
 
 /**
  * Note the address the reader is at, if it is a list.
  *
- * The Ask dialog's dials are dropped: they stand over whatever list is open,
- * and a way back to the list must not reopen a question the reader closed.
+ * The Ask dialog's dials are dropped. They stand over whatever list is open,
+ * and a way back must not reopen a question the reader closed.
  */
 export function rememberListAddress(hash: string): void {
   const route = parseHash(hash);
