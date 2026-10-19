@@ -1168,6 +1168,7 @@ export const en = {
   "shell.beta": "Beta",
   "shell.searchEverything": "Search or ask Margince",
   "shell.breadcrumbAria": "Breadcrumb",
+  "shell.back": "Back",
   "shell.license.none": "No license",
   "shell.license.refused": "License refused",
   "shell.signOutAria": "Sign out",
@@ -3962,6 +3963,7 @@ export const en = {
   "offer.position": "Position",
   "offer.description": "Description",
   "offer.unit": "Unit",
+  "offer.unitFromProduct": "From the product",
   "offer.quantity": "Quantity",
   "offer.unitPrice": "Unit price",
   "offer.discountPct": "Discount %",
@@ -4421,6 +4423,8 @@ export const en = {
   // The same control where NOTHING in the tray will be sent. It still commits —
   // that is what moves the skips out of the deck and opens an edit on its own
   // form — so it says what pressing it does rather than offering a send.
+  "brief.deck.acceptanceChanged":
+    "Some approvals changed and need another look. Their acceptances were not sent.",
   "brief.deck.commitNothingToSend": "Clear skipped",
   "brief.deck.unstage": "Undo last",
   "brief.deck.clearedTitle": "Deck clear",
@@ -10542,6 +10546,14 @@ export const en = {
   "product.sku": "SKU",
   "product.description": "Description",
   "product.unit": "Unit",
+  "product.unitPiece": "Piece",
+  "product.unitHour": "Hour",
+  "product.unitDay": "Day",
+  "product.unitMonth": "Month",
+  "product.unitFlatFee": "Flat fee",
+  "product.unitOther": "Other",
+  "product.unitOtherLabel": "Other unit",
+  "product.unitOtherRequired": "Type the unit, or pick one from the list.",
   "product.unitPrice": "Unit price",
   "product.currency": "Currency",
   "product.taxRate": "Default tax rate %",
@@ -14675,6 +14687,19 @@ export const en = {
     "Promoting a lead is waiting for your word",
   "magic.action.approval_overnight":
     "An overnight proposal is waiting for your word",
+  "approval.commitment.proposalExpiresIn": "Proposal expires in {countdown}",
+  "approval.commitment.noDueDay": "No day stated",
+  "approval.commitment.promiseStatus": "Commitment status",
+  "approval.commitment.notFulfilled":
+    "Creating the task does not mark the commitment as fulfilled.",
+  "approval.commitment.inactiveAssignment":
+    "Cannot create a task for {name}: this account cannot receive tasks. Dismiss this proposal and create a task for an active colleague.",
+  "approval.commitment.createTask_other": "Create {count} tasks",
+  "approval.commitment.createTask_one": "Create task",
+  "magic.action.approval_commitment_task_named": "{party}: {summary}",
+  "magic.action.approval_commitment_task_summary": "{summary}",
+  "magic.action.approval_commitment_task_unverified":
+    "{party} (unverified): {summary}",
   "magic.action.approval_commitment_task":
     "A commitment from a conversation is waiting for your word",
   "magic.action.approval_capture_counterparty":
@@ -15066,6 +15091,40 @@ export const en = {
   "legalReview.offerLineRecurring_other": "{cadence} for {count} periods",
   "legalReview.offerLineStaged": "Proposed, not yet in the total",
   "legalReview.packBinding": "Other offers sent to the buyer",
+  "aiTask.name.account_scan": "Reading what an account needs",
+  "aiTask.name.agent_loop": "Agent reasoning loop",
+  "aiTask.name.brief_ranking": "Morning brief ranking",
+  "aiTask.name.capture_classify": "Message classification",
+  "aiTask.name.capture_confidentiality_verdict": "Thread confidentiality check",
+  "aiTask.name.capture_counterparty_verdict": "First-time sender check",
+  "aiTask.name.cert_judge": "Certification judging",
+  "aiTask.name.cold_start": "Onboarding read",
+  "aiTask.name.corpus_ask": "Document corpus question",
+  "aiTask.name.deal_health": "Deal status card",
+  "aiTask.name.document_extract": "Document extraction",
+  "aiTask.name.draft_reply": "Reply drafting",
+  "aiTask.name.enrich": "Signature enrichment",
+  "aiTask.name.growth_fit": "Company fit assessment",
+  "aiTask.name.nl_search": "Natural-language search",
+  "aiTask.name.offer_draft": "Offer drafting",
+  "aiTask.name.owed_verdict": "Unanswered-message triage",
+  "aiTask.name.propose_roles": "Buying-role reading",
+  "aiTask.name.rate_extract": "Exchange rate extraction",
+  "aiTask.name.request_settlement":
+    "Checking whether the reply answered the request",
+  "aiTask.name.signal_extract": "Signal extraction",
+  "aiTask.name.site_extract": "Website research",
+  "aiTask.name.site_fact_extract": "Website fact extraction",
+  "aiTask.name.site_triage": "Website triage",
+  "aiTask.name.stage_evidence_extract": "Stage evidence extraction",
+  "aiTask.name.summarize": "Record summary",
+  "aiTask.name.tag_suggest": "Tag suggestions",
+  "aiTask.name.transcript": "Transcript reading",
+  "aiTask.name.transcript_propose": "Meeting follow-up extraction",
+  "aiTask.name.voice_build": "Voice DNA build",
+  "aiTask.name.weekly_learnings": "What last week taught",
+  "aiTask.name.weekly_review": "Weekly review narrative",
+  "aiTask.name.unknown": "AI task",
 } as const;
 
 export type MessageKey = keyof typeof en;

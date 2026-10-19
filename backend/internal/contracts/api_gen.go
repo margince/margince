@@ -1243,6 +1243,114 @@ func (e AiRunSummaryCurrency) Valid() bool {
 	}
 }
 
+// Defines values for AiTask.
+const (
+	AiTaskAccountScan                   AiTask = "account_scan"
+	AiTaskAgentLoop                     AiTask = "agent_loop"
+	AiTaskBriefRanking                  AiTask = "brief_ranking"
+	AiTaskCaptureClassify               AiTask = "capture_classify"
+	AiTaskCaptureConfidentialityVerdict AiTask = "capture_confidentiality_verdict"
+	AiTaskCaptureCounterpartyVerdict    AiTask = "capture_counterparty_verdict"
+	AiTaskCertJudge                     AiTask = "cert_judge"
+	AiTaskColdStart                     AiTask = "cold_start"
+	AiTaskCorpusAsk                     AiTask = "corpus_ask"
+	AiTaskDealHealth                    AiTask = "deal_health"
+	AiTaskDocumentExtract               AiTask = "document_extract"
+	AiTaskDraftReply                    AiTask = "draft_reply"
+	AiTaskEnrich                        AiTask = "enrich"
+	AiTaskGrowthFit                     AiTask = "growth_fit"
+	AiTaskNlSearch                      AiTask = "nl_search"
+	AiTaskOfferDraft                    AiTask = "offer_draft"
+	AiTaskOwedVerdict                   AiTask = "owed_verdict"
+	AiTaskProposeRoles                  AiTask = "propose_roles"
+	AiTaskRateExtract                   AiTask = "rate_extract"
+	AiTaskRequestSettlement             AiTask = "request_settlement"
+	AiTaskSignalExtract                 AiTask = "signal_extract"
+	AiTaskSiteExtract                   AiTask = "site_extract"
+	AiTaskSiteFactExtract               AiTask = "site_fact_extract"
+	AiTaskSiteTriage                    AiTask = "site_triage"
+	AiTaskStageEvidenceExtract          AiTask = "stage_evidence_extract"
+	AiTaskSummarize                     AiTask = "summarize"
+	AiTaskTagSuggest                    AiTask = "tag_suggest"
+	AiTaskTranscript                    AiTask = "transcript"
+	AiTaskTranscriptPropose             AiTask = "transcript_propose"
+	AiTaskVoiceBuild                    AiTask = "voice_build"
+	AiTaskWeeklyLearnings               AiTask = "weekly_learnings"
+	AiTaskWeeklyReview                  AiTask = "weekly_review"
+)
+
+// Valid indicates whether the value is a known member of the AiTask enum.
+func (e AiTask) Valid() bool {
+	switch e {
+	case AiTaskAccountScan:
+		return true
+	case AiTaskAgentLoop:
+		return true
+	case AiTaskBriefRanking:
+		return true
+	case AiTaskCaptureClassify:
+		return true
+	case AiTaskCaptureConfidentialityVerdict:
+		return true
+	case AiTaskCaptureCounterpartyVerdict:
+		return true
+	case AiTaskCertJudge:
+		return true
+	case AiTaskColdStart:
+		return true
+	case AiTaskCorpusAsk:
+		return true
+	case AiTaskDealHealth:
+		return true
+	case AiTaskDocumentExtract:
+		return true
+	case AiTaskDraftReply:
+		return true
+	case AiTaskEnrich:
+		return true
+	case AiTaskGrowthFit:
+		return true
+	case AiTaskNlSearch:
+		return true
+	case AiTaskOfferDraft:
+		return true
+	case AiTaskOwedVerdict:
+		return true
+	case AiTaskProposeRoles:
+		return true
+	case AiTaskRateExtract:
+		return true
+	case AiTaskRequestSettlement:
+		return true
+	case AiTaskSignalExtract:
+		return true
+	case AiTaskSiteExtract:
+		return true
+	case AiTaskSiteFactExtract:
+		return true
+	case AiTaskSiteTriage:
+		return true
+	case AiTaskStageEvidenceExtract:
+		return true
+	case AiTaskSummarize:
+		return true
+	case AiTaskTagSuggest:
+		return true
+	case AiTaskTranscript:
+		return true
+	case AiTaskTranscriptPropose:
+		return true
+	case AiTaskVoiceBuild:
+		return true
+	case AiTaskWeeklyLearnings:
+		return true
+	case AiTaskWeeklyReview:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiTaskOverrideThinking.
 const (
 	AiTaskOverrideThinkingHigh    AiTaskOverrideThinking = "high"
@@ -25068,6 +25176,9 @@ type AiStatus struct {
 	UnusedTiers          *[]string        `json:"unused_tiers,omitempty"`
 }
 
+// AiTask AI task key from the task catalog, used to localize its display name.
+type AiTask string
+
 // AiTaskFlow defines model for AiTaskFlow.
 type AiTaskFlow struct {
 	// Steps The decision model first, then each tier in ladder order.
@@ -25523,6 +25634,9 @@ type ApplyTagRequestEntityType string
 
 // Approval A staged 🟡 confirm-first action awaiting human decision.
 type Approval struct {
+	// AssigneeInactive For a pending commitment, whether its named task assignee cannot receive the task. True for invited, deactivated, archived, missing, or agent seats. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee.
+	AssigneeInactive *bool `json:"assignee_inactive,omitempty"`
+
 	// BundleId The act that staged this proposal together with its siblings: today, a website read's company facts and the leads it published. Null for a proposal staged on its own. It is a grouping id, not a foreign key: there is no
 	// bundle entity, and every member keeps its own diff hash, version pin, expiry and
 	// verdict (ADR-0036 — the staged row IS the authority object). Decide the whole set with
@@ -26482,6 +26596,9 @@ type AttentionItem struct {
 	// suggestion until later in the day. One word for both would make a client that
 	// handles `snooze` generically write the wrong endpoint.
 	Actions []AttentionItemActions `json:"actions"`
+
+	// AiTask AI task key from the task catalog, used to localize its display name.
+	AiTask *AiTask `json:"ai_task,omitempty"`
 
 	// AssigneeId Who holds this task, null when nobody has taken it. Sent by `task`.
 	//
@@ -34257,7 +34374,7 @@ type CreateProductRequest struct {
 	Sku            *string  `json:"sku,omitempty"`
 	Source         string   `json:"source"`
 
-	// Unit Defaults to 'unit'.
+	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`.
 	Unit                 *string                `json:"unit,omitempty"`
 	UnitPriceMinor       int64                  `json:"unit_price_minor"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -42121,10 +42238,12 @@ type OfferLineItemInput struct {
 	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 
 	// Quantity > 0, up to 3 decimal places.
-	Quantity       float64  `json:"quantity"`
-	TaxRate        *float64 `json:"tax_rate,omitempty"`
-	Unit           *string  `json:"unit,omitempty"`
-	UnitPriceMinor *int64   `json:"unit_price_minor,omitempty"`
+	Quantity float64  `json:"quantity"`
+	TaxRate  *float64 `json:"tax_rate,omitempty"`
+
+	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to the product's unit, else `piece`.
+	Unit           *string `json:"unit,omitempty"`
+	UnitPriceMinor *int64  `json:"unit_price_minor,omitempty"`
 }
 
 // OfferLineItemInputBillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
@@ -42958,7 +43077,7 @@ type Product struct {
 	Sku    *string `json:"sku,omitempty"`
 	Source string  `json:"source"`
 
-	// Unit 'unit' | 'hour' | 'day' | …; display only, free text.
+	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. A row written before the keys may hold a known spelling such as `Tag`, which a client shows as its key. Display only.
 	Unit string `json:"unit"`
 
 	// UnitPriceMinor Integer minor units (P11); no float money.
@@ -51411,6 +51530,9 @@ type WorklistItem struct {
 
 	// Actions What this item offers, routed to the endpoint that owns the verb.
 	Actions []WorklistItemActions `json:"actions"`
+
+	// AiTask AI task key from the task catalog, used to localize its display name.
+	AiTask *AiTask `json:"ai_task,omitempty"`
 
 	// Band The heading this row sits under, as an OUTCOME rather than a priority number.
 	//

@@ -1,5 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 
+import { noteHistoryEntry } from "./historydepth";
 import { hashWithParams, type UrlParams } from "./urlstate";
 
 // Hash routing: "#/deals/01J9ZK" → { screen: "deals", id: "01J9ZK" }.
@@ -407,6 +408,11 @@ export function forgetHashCredential(screen: Screen, credential: string): void {
 const watchers = new Set<() => void>();
 
 function announce(): void {
+  // A replace keeps the entry, and the address noted for it must follow. With
+  // nobody watching, no entry is being counted.
+  if (watchers.size > 0) {
+    noteHistoryEntry("replaced");
+  }
   // A copy, so a watcher that unsubscribes while being told does not change the
   // set underneath the loop.
   for (const watcher of [...watchers]) {
@@ -414,23 +420,20 @@ function announce(): void {
   }
 }
 
-// Set once this page load has moved between addresses: only then does
-// `history.back()` land on an earlier screen of this app.
-let movedSinceLoad = false;
-export const backStaysInApp = (): boolean => movedSinceLoad;
-
 function addressChanged(): void {
-  movedSinceLoad = true;
   // A second link pasted into an open tab is a hash change and nothing else:
   // the screen does not remount for one, and whatever renders next is decided
   // above the route. So the credential comes out of the new address before
   // React is told there is one.
   takeFromHash();
+  noteHistoryEntry("moved");
   announce();
 }
 
 function subscribe(onChange: () => void): () => void {
   if (watchers.size === 0) {
+    // The entry the app starts on, so the first move is counted from it.
+    noteHistoryEntry("start");
     globalThis.addEventListener("hashchange", addressChanged);
   }
   watchers.add(onChange);

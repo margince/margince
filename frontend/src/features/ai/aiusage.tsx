@@ -17,6 +17,7 @@ import { formatMoney, formatNumber, monthAndYear } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { formatTokens } from "../../format/tokens";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { aiTaskLabel } from "../../lib/ai-task-label";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
@@ -209,7 +210,7 @@ function AiUsageBody({
   const decisions = decisionsBound && (
     <DecisionSummary
       decisions={data.decisions ?? []}
-      taskName={(task) => taskNames.get(task) ?? task}
+      taskName={(task) => aiTaskLabel(task, t, taskNames.get(task))}
       taskSummary={(task) => taskSummaries.get(task)}
     />
   );

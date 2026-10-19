@@ -25,6 +25,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "webhooks.headers.namePlaceholder",
   // Markup with placeholders, which is the same in every language.
   "signatureTemplate.placeholder",
+  // The promiser and stored summary are values separated by punctuation.
+  "magic.action.approval_commitment_task_named",
+  "magic.action.approval_commitment_task_summary",
   // Latency percentiles and OpenRouter's own name read the same in every
   // language, as does a raw key = value line the summary falls back to.
   "aiFigures.col.p50",
@@ -254,7 +257,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "history.field.email",
   "settings.voice.register.email",
   "settings.voice.kind.email",
-  "product.sku",
   "compose.cc",
   "compose.bcc",
   "compose.transportEmail",

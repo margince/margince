@@ -37,7 +37,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -123,7 +122,7 @@ type SignalExtractor struct {
 func NewSignalExtractor(pool *pgxpool.Pool, brain completer, now func() time.Time, log *slog.Logger) *SignalExtractor {
 	return &SignalExtractor{
 		pool: pool, brain: brain, now: now, log: log,
-		dispatch: NewCommitmentDispatcher(pool, approvals.NewService(InstallationDB(pool))),
+		dispatch: NewCommitmentDispatcher(pool, newApprovalsService(InstallationDB(pool))),
 		messages: activities.NewStore(InstallationDB(pool)),
 	}
 }
