@@ -4234,7 +4234,7 @@ export const de = {
   "brief.weekly.pickWeek": "Andere Woche öffnen",
   "brief.weekly.none":
     "Noch kein Wochenrückblick. Der erste wird am Montag nach deiner ersten vollen Woche erstellt.",
-  "brief.weekly.tasksDelivered": "Aufgaben erledigt",
+  "brief.weekly.tasksDelivered": "Fällige Aufgaben erledigt",
   "brief.weekly.ofDue": "{done} von {due}",
   "brief.weekly.dealsWon": "Gewonnen",
   "brief.weekly.dealsLost": "Verloren",
@@ -5563,14 +5563,45 @@ export const de = {
   "settings.signatureEdit": "Signatur bearbeiten",
   "settings.signatureNone": "Keine Grußformel festgelegt",
   "settings.signatureCancel": "Abbrechen",
+  "delivery.loadFailed":
+    "Die E-Mail-Einstellungen konnten nicht geladen werden. Lade die Seite erneut.",
   "delivery.morningLabel": "Morgenbericht",
   "delivery.morningHelp":
     "Sendet den täglichen Morgenbericht der Home-Seite zusätzlich per E-Mail.",
   "delivery.weeklyLabel": "Wochenrückblick",
   "delivery.weeklyHelp":
-    "Sendet den Wochenrückblick vom Montag zusätzlich per E-Mail.",
+    "Sendet die letzte abgeschlossene Berichtswoche an deinem gewählten Arbeitstag.",
   "delivery.byEmail": "Per E-Mail",
   "delivery.none": "Nicht per E-Mail",
+  "delivery.hourLabel": "Uhrzeit für Zusammenfassungen",
+  "delivery.scheduleHelp":
+    "Eine persönliche Uhrzeit nutzt deine Arbeitstage und Zeitzone mit einem Versandfenster von drei Stunden. Der bisherige Plan bleibt bis zu deiner Änderung.",
+  "delivery.legacyTime": "Bisheriger Morgenplan (Berichtszeitzone):",
+  "delivery.workingStart": "Beginn meiner Arbeitszeit",
+  "delivery.weekdayLabel": "Tag des Wochenrückblicks",
+  "delivery.weekdayHelp":
+    "Ein freier Tag wird auf den nächsten Arbeitstag verschoben. Die Berichtswoche bleibt fest; spätere Arbeitstage erlauben eine Nachholung.",
+  "delivery.quietLabel": "Ruhige Morgen",
+  "delivery.onlyUseful": "Nur mit nützlichem Inhalt",
+  "delivery.quietAlso": "Auch eine Statusübersicht an ruhigen Morgen",
+  "delivery.combineLabel": "Routine-E-Mails zusammenfassen",
+  "delivery.combineHelp":
+    "Eine Zusammenfassung pro Berichtstag verbindet verfügbare Wochenergebnisse, aktuelle Aufgaben und gewählte Sammel-Kategorien. Sofortige Freigaben bleiben separat.",
+  "delivery.separate": "Separate Routine-E-Mails",
+  "delivery.combined": "Verfügbare Inhalte zusammenfassen",
+  "delivery.scopeLabel": "Umfang der Zusammenfassungen",
+  "delivery.scope.personal": "Meine Arbeit",
+  "delivery.scope.team": "Gewähltes Team",
+  "delivery.scope.combined": "Meine Arbeit und gewähltes Team",
+  "delivery.teamHelp":
+    "Wähle ein Team, bevor du seine Ansicht aktivierst. Der Zugriff wird beim Versand erneut geprüft.",
+  "delivery.weekday1": "Montag",
+  "delivery.weekday2": "Dienstag",
+  "delivery.weekday3": "Mittwoch",
+  "delivery.weekday4": "Donnerstag",
+  "delivery.weekday5": "Freitag",
+  "delivery.weekday6": "Samstag",
+  "delivery.weekday7": "Sonntag",
   "delivery.panelTitle": "Zusammenfassungen per E-Mail",
   "settings.appearance": "Darstellung",
   "settings.appearanceHelp":
@@ -13304,6 +13335,12 @@ export const de = {
     "Der Sendezeitpunkt ist verstrichen, während das System nicht lief, und für den Versand ist es jetzt zu spät. Plane die Nachricht neu oder ziehe sie zurück.",
   "sched.held.timerExhausted":
     "Der Sendeauftrag hat keine Versuche mehr. Plane die Nachricht neu, um es erneut zu versuchen.",
+  "sched.held.passportRevoked":
+    "Die Agenten-Berechtigung wurde widerrufen. Prüfe die Nachricht vor einem neuen Versand.",
+  "sched.held.followupSettled":
+    "Die Anfrage wurde nach der Planung beantwortet oder erledigt. Prüfe, ob diese Nachfrage noch nötig ist.",
+  "sched.held.meetingCanceled":
+    "Der Termin wurde nach der Planung abgesagt. Prüfe diese Nachricht vor dem Versand.",
   "sched.held.sendRefused":
     "Eine Prüfung hat die Nachricht bei Fälligkeit blockiert. Es wurde nichts gesendet.",
   "sched.inZone": "in {zone}",

@@ -1,30 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package mailcopy is what this installation's outbound mail says, in the
-// language the installation speaks.
-//
-// Every message the product sent was hard-coded English while the screens were
-// translated three ways. For the two transactional messages that is a small
-// thing — a reader reading a password link already knows what they asked for.
-// The weekly retrospective is not: it arrives unasked every Monday, it is the
-// product talking to a rep about their own week, and a German-speaking rep read
-// their Home panel in German and then got an English summary of the same
-// numbers.
-//
-// ONE catalog for every sender rather than a table beside each one. Three
-// senders each inventing their own is how one product comes to have three
-// voices, and it is the duplication the issue that raised this named.
-//
-// THE WEEKLY'S LABELS ARE THE SCREEN'S. "Tasks delivered" in the mail is the
-// same phrase the weekly panel draws, so they are not translated twice: the
-// strings here are the frontend catalog's, and a gate compares them. Two
-// translations of one label is how the mail comes to say something the panel
-// does not, in a message whose whole subject is numbers the reader can also see
-// on screen.
-//
-// Held by: TestEveryMailLabelMatchesTheScreenThatShowsIt
-// (backend/gates/mailcopy_test.go)
+// Package mailcopy owns localized outbound vocabulary.
+// The screen-label parity gate keeps shared metric definitions consistent.
 package mailcopy
 
 import (
@@ -127,6 +105,41 @@ func Known(language string) bool {
 // field of every language: that is what stops a language reaching a mailbox
 // half-written.
 type Copy struct {
+	Language              Language
+	MorningPreview        string
+	WeeklyPreview         string
+	DigestPreview         string
+	NotificationPreview   string
+	ResetPreview          string
+	InvitePreview         string
+	RoomPreview           string
+	NoticePreview         string
+	ConfirmRecordPreview  string
+	ConfirmConsentPreview string
+	OptOutAckPreview      string
+
+	MailPersonal    string
+	MailTeam        string
+	MailHelp        string
+	MailMissing     string
+	InviteBy        string
+	MailWhy         string
+	MailCoverage    string
+	MailReview      string
+	MailReply       string
+	MailPrepare     string
+	MailTask        string
+	MailOwner       string
+	MailDue         string
+	WeeklyCompleted string
+	WeeklyResults   string
+	RoomSubject     string
+	RoomIntro       string
+	RoomAction      string
+	RoomPersonal    string
+	RoomIgnore      string
+	RoomDisclosure  string
+
 	// The unsubscribe footer under an outgoing message. A German mail with
 	// an English footer is the product speaking two languages in one
 	// message, and the footer is the half a recipient reads when they want
@@ -177,7 +190,6 @@ type Copy struct {
 	// mail reported the week and asked nothing, so it read as a receipt for
 	// work already done — while the screen it links to opens with a panel
 	// inviting the reader to plan the next one.
-	WeeklyPlanAhead string
 	// The three outcomes a deal line reports, lower-case because they are read
 	// inside a sentence rather than as a label.
 	WeeklyOutcomeWon   string

@@ -4152,7 +4152,7 @@ export const vi = {
   "brief.weekly.pickWeek": "Mở tuần khác",
   "brief.weekly.none":
     "Chưa có bản tổng kết tuần. Bản đầu tiên sẽ có vào thứ Hai sau tuần đầy đủ đầu tiên.",
-  "brief.weekly.tasksDelivered": "Việc cần làm đã hoàn tất",
+  "brief.weekly.tasksDelivered": "Việc đến hạn đã hoàn tất",
   "brief.weekly.ofDue": "{done} trên {due}",
   "brief.weekly.dealsWon": "Thắng",
   "brief.weekly.dealsLost": "Thua",
@@ -5446,13 +5446,44 @@ export const vi = {
   "settings.signatureEdit": "Sửa chữ ký",
   "settings.signatureNone": "Chưa có lời kết",
   "settings.signatureCancel": "Hủy",
+  "delivery.loadFailed": "Không thể tải lựa chọn email. Tải lại để thử lại.",
   "delivery.morningLabel": "Bản tin sáng",
   "delivery.morningHelp":
     "Gửi thêm bản tin trong ngày qua email. Bản tin luôn hiển thị trên Trang chủ.",
   "delivery.weeklyLabel": "Tổng kết tuần",
-  "delivery.weeklyHelp": "Gửi thêm bản tổng kết thứ Hai qua email.",
+  "delivery.weeklyHelp":
+    "Gửi tuần báo cáo đã kết thúc vào ngày làm việc bạn chọn.",
   "delivery.byEmail": "Qua email",
   "delivery.none": "Không qua email",
+  "delivery.hourLabel": "Giờ gửi email định kỳ",
+  "delivery.scheduleHelp":
+    "Chọn giờ cá nhân để dùng ngày làm việc và múi giờ của bạn, trong cửa sổ gửi ba giờ. Lịch trước đây giữ nguyên cho đến khi bạn đổi.",
+  "delivery.legacyTime": "Lịch buổi sáng trước đây (múi giờ báo cáo):",
+  "delivery.workingStart": "Bắt đầu giờ làm việc",
+  "delivery.weekdayLabel": "Ngày tổng kết tuần",
+  "delivery.weekdayHelp":
+    "Nếu ngày đã chọn là ngày nghỉ, dùng ngày làm việc kế tiếp. Tuần báo cáo giữ nguyên; có thể gửi bù vào ngày làm việc sau.",
+  "delivery.quietLabel": "Buổi sáng ít việc",
+  "delivery.onlyUseful": "Chỉ khi có nội dung hữu ích",
+  "delivery.quietAlso": "Cũng gửi bản tóm tắt trạng thái vào buổi sáng ít việc",
+  "delivery.combineLabel": "Gộp email định kỳ",
+  "delivery.combineHelp":
+    "Một email định kỳ mỗi ngày báo cáo gộp kết quả tuần, việc hiện tại và các nhóm thông báo bạn chọn khi có. Phê duyệt tức thì vẫn riêng.",
+  "delivery.separate": "Email định kỳ riêng biệt",
+  "delivery.combined": "Gộp nội dung có sẵn",
+  "delivery.scopeLabel": "Phạm vi email định kỳ",
+  "delivery.scope.personal": "Việc của tôi",
+  "delivery.scope.team": "Nhóm đã chọn",
+  "delivery.scope.combined": "Việc của tôi và nhóm đã chọn",
+  "delivery.teamHelp":
+    "Chọn nhóm trước khi bật chế độ xem. Quyền truy cập được kiểm tra lại khi gửi.",
+  "delivery.weekday1": "Thứ Hai",
+  "delivery.weekday2": "Thứ Ba",
+  "delivery.weekday3": "Thứ Tư",
+  "delivery.weekday4": "Thứ Năm",
+  "delivery.weekday5": "Thứ Sáu",
+  "delivery.weekday6": "Thứ Bảy",
+  "delivery.weekday7": "Chủ Nhật",
   "delivery.panelTitle": "Bản tóm tắt qua email",
   "settings.appearance": "Giao di\u1ec7n",
   "settings.appearanceHelp":
@@ -12987,6 +13018,12 @@ export const vi = {
     "Đã qua giờ gửi trong lúc hệ thống không chạy, và giờ đã quá muộn để gửi. Đổi giờ gửi hoặc thu hồi tin nhắn.",
   "sched.held.timerExhausted":
     "Tác vụ gửi đã hết lượt thử. Đổi giờ gửi để thử lại.",
+  "sched.held.passportRevoked":
+    "Quyền của tác nhân đã bị thu hồi. Hãy xem lại thư trước khi chọn tài khoản gửi khác.",
+  "sched.held.followupSettled":
+    "Yêu cầu đã được trả lời hoặc hoàn thành sau khi lên lịch. Hãy xem còn cần thư theo dõi này không.",
+  "sched.held.meetingCanceled":
+    "Cuộc họp đã bị hủy sau khi lên lịch. Hãy xem lại thư trước khi gửi.",
   "sched.held.sendRefused":
     "Một bước kiểm tra đã chặn tin nhắn này khi đến giờ gửi. Không có gì được gửi.",
   "sched.inZone": "theo giờ {zone}",

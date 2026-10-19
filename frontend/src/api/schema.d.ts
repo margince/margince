@@ -33611,9 +33611,12 @@ export interface components {
              *     `missed_window` — it came due while nothing was running and is now too late to be the
              *     message that was written. `timer_exhausted` — the job that wakes it ran out of
              *     attempts. `send_refused` — a gate refused for another reason at fire.
+             *     `passport_revoked` — the agent credential was revoked.
+             *     `followup_settled` — the recorded request was answered or completed after scheduling.
+             *     `meeting_canceled` — the meeting named as follow-up evidence was canceled.
              * @enum {string|null}
              */
-            held_reason?: "consent_withdrawn" | "sender_inactive" | "missed_window" | "timer_exhausted" | "send_refused" | null;
+            held_reason?: "consent_withdrawn" | "sender_inactive" | "passport_revoked" | "missed_window" | "timer_exhausted" | "send_refused" | "followup_settled" | "meeting_canceled" | null;
             /**
              * Format: uuid
              * @description The review this message's refusal opened, when one stands. Null on every message
@@ -36667,12 +36670,24 @@ export interface components {
              *     and "tell me every morning either way" are different asks.
              */
             quiet_day_notice?: boolean;
-            /**
-             * @description The local hour a delivery should not arrive before, in the installation's
-             *     reporting timezone. Absent means the job's own hour, which is what every seat
-             *     gets today.
-             */
+            /** @description Legacy morning-only hour floor in the installation reporting timezone. Kept unchanged until routine_delivery_time is explicitly chosen. */
             delivery_hour_local?: number;
+            /** @description Personal working-hours start, or a whole hour in the existing personal timezone. The three-hour window can cross midnight. Choosing working restores the default. Existing explicit morning-only hours remain effective until this field is chosen. */
+            routine_delivery_time?: string;
+            /**
+             * @description Optional chosen scope; team content is checked against live team-review authority at delivery.
+             * @enum {string}
+             */
+            routine_mail_scope?: "personal" | "team" | "combined";
+            /**
+             * Format: uuid
+             * @description The selected live team for team or combined scope. Personal scope ignores a retained selection.
+             */
+            routine_mail_team_id?: string;
+            /** @description Earliest weekday, Monday 1 through Sunday 7. A non-working choice rolls to the next working weekday; later workdays allow catch-up. */
+            weekly_delivery_day?: number;
+            /** @description Combine eligible notices and current actions with the weekly message when it is ready, using one routine email per reporting day. Defaults to false; class opt-outs remain effective. */
+            combine_routine_email?: boolean;
         };
         /** @description Four money readings over one period, the counts that say what they leave out, and the frame they were computed in. */
         ForecastReadings: {

@@ -65,7 +65,7 @@ func (b *briefJobEnv) grantEveryRepTheBriefsReads(t *testing.T) {
 	if err := owner.QueryRow(ctx,
 		`INSERT INTO role (key, name, permissions)
 		 VALUES ('brief_reader', 'Brief Reader',
-		         '{"objects":{"deal":{"read":true},"installation_settings":{"read":true}},"row_scope":"all"}'::jsonb)
+		         '{"objects":{"activity":{"read":true,"update":true},"deal":{"read":true},"installation_settings":{"read":true}},"row_scope":"all"}'::jsonb)
 		 RETURNING id`).Scan(&roleID); err != nil {
 		t.Fatalf("seeding the brief reader role: %v", err)
 	}

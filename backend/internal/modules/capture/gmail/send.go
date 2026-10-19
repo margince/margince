@@ -16,7 +16,7 @@ import (
 	"slices"
 
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
-	"github.com/margince/margince/backend/internal/modules/capture/mailwire"
+	"github.com/margince/margince/backend/internal/platform/mailwire"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/pkg/extension"
 )

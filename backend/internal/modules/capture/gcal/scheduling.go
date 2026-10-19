@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture/calendarwire"
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
+	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -146,7 +147,7 @@ func (e scheduledEvent) conferencePending() bool {
 
 func (a *httpAPI) Save(ctx context.Context, token string, in connector.CalendarAppointment) (connector.CalendarReceipt, error) {
 	event := scheduledEvent{
-		Summary: in.Subject, Description: in.Description, Location: in.Location,
+		Summary: in.Subject, Description: emailview.MeetingDescription(in.Description), Location: in.Location,
 		Start: eventTime{in.Start}, End: eventTime{in.End},
 	}
 	for _, email := range in.Attendees {

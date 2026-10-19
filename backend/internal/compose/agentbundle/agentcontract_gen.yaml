@@ -15179,13 +15179,16 @@ components:
           description: The timeline activity this produced, once released.
         held_reason:
           type: [string, 'null']
-          enum: [consent_withdrawn, sender_inactive, missed_window, timer_exhausted, send_refused, null]
+          enum: [consent_withdrawn, sender_inactive, passport_revoked, missed_window, timer_exhausted, send_refused, followup_settled, meeting_canceled, null]
           description: |-
             Why a human has to look at it. `consent_withdrawn` — a recipient withdrew consent
             after it was scheduled. `sender_inactive` — the scheduler lost their seat or mailbox.
             `missed_window` — it came due while nothing was running and is now too late to be the
             message that was written. `timer_exhausted` — the job that wakes it ran out of
             attempts. `send_refused` — a gate refused for another reason at fire.
+            `passport_revoked` — the agent credential was revoked.
+            `followup_settled` — the recorded request was answered or completed after scheduling.
+            `meeting_canceled` — the meeting named as follow-up evidence was canceled.
         review_id:
           type: [string, 'null']
           format: uuid

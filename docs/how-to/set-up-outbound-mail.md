@@ -8,7 +8,7 @@ relay that you set up below.
 ## Which mail goes out which way
 
 Mail a user writes goes out through **the connected mailbox of that user**. The
-composer, replies, planned sends and sequences all send as the rep, through
+composer, replies and planned sends all send as the rep, through
 the Gmail, Microsoft 365 or IMAP connection they made under Settings →
 Integrations. To set that up, see [connect-a-mailbox.md](connect-a-mailbox.md).
 
@@ -105,3 +105,13 @@ A dev stack from `make dev` has no relay: `config/margince.example.yaml` ships
 the block as a comment. To close a privacy notice duty on such a stack,
 set up a relay as above. Or tell the contact in another way, and close
 the duty with **End the duty…**, with a note of how you let them know.
+
+## Product email format
+
+Product mail carries HTML and plain text with the same words. Both use the shared mail code.
+Controller notices keep their approved wording and sealed personal links through the delivery lane.
+For the SendGrid SMTP host, the request turns off click and open tracking for each product message. Other relays
+may apply their own changes; check a test message after changing relay settings.
+
+The [SMTP filter contract](https://www.twilio.com/docs/sendgrid/for-developers/sending-email/smtp-filters)
+states the per-message override. It does not change the relay account settings.

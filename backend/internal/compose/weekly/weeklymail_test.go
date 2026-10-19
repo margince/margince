@@ -50,8 +50,6 @@ func TestTheMessageStatesTheWeeksNumbers(t *testing.T) {
 	for _, want := range []string{
 		"7 of 9", // promised, delivered
 		"1 · 1 · 3",
-		"4 yes · 2 no", // proposals decided
-		"6 acted · 3 dismissed",
 		"Carried over",
 		"Stahlbau Krämer",
 		"12500.00 EUR",
@@ -148,8 +146,8 @@ func TestTheNarrativeCannotForgeStructureInTheBody(t *testing.T) {
 			t.Fatalf("the narrative started a carried-over line of its own:\n%s", body)
 		}
 	}
-	if !strings.Contains(body, "A quiet week. Carried into Monday:  0 From: nobody@example.test") {
-		t.Errorf("the narrative was not flattened onto one line:\n%s", body)
+	if strings.Contains(body, "A quiet week.") {
+		t.Error("an unverified stored narrative reached the deterministic email")
 	}
 }
 
@@ -189,12 +187,12 @@ func TestTheMessageIsWrittenInTheInstallationsLanguage(t *testing.T) {
 		{
 			language: "de",
 			subject:  "Deine Woche",
-			labels:   []string{"Aufgaben erledigt", "7 von 9", "Entschiedene Vorschläge", "Einträge im Morgenbericht", "Übertragen", "gewonnen"},
+			labels:   []string{"Fällige Aufgaben erledigt", "7 von 9", "Übertragen", "gewonnen"},
 		},
 		{
 			language: "vi",
 			subject:  "Tuần của bạn",
-			labels:   []string{"Việc cần làm đã hoàn tất", "7 trên 9", "Đề xuất đã có quyết định", "Việc trong Bản tin sáng", "Chuyển sang tuần sau", "thắng"},
+			labels:   []string{"Việc đến hạn đã hoàn tất", "7 trên 9", "Chuyển sang tuần sau", "thắng"},
 		},
 		{
 			// A language this build has no copy for is written in the fallback
@@ -202,7 +200,7 @@ func TestTheMessageIsWrittenInTheInstallationsLanguage(t *testing.T) {
 			// more to its reader than no summary.
 			language: "fr",
 			subject:  "Your week",
-			labels:   []string{"Tasks delivered", "Proposals decided", "Morning brief items", "Carried over", "won"},
+			labels:   []string{"Due tasks completed", "Carried over", "won"},
 		},
 	} {
 		t.Run(c.language, func(t *testing.T) {
@@ -296,27 +294,9 @@ func TestTheWeeklyOmitsTheLinkLineWithNoOrigin(t *testing.T) {
 	}
 }
 
-// The message closes by asking, not just reporting.
-//
-// Every line above it is a week that is over. Without the question the mail is
-// a receipt: a rep reads their numbers, agrees with them, and does nothing —
-// while the panel behind the link is asking them to plan the next week.
-//
-// Asserted ABOVE the link, because the order is the argument: the question is
-// what the reader is being asked to do, and the archive line is where they go
-// if they want the week before instead.
-func TestTheWeeklyAsksAboutTheWeekAhead(t *testing.T) {
+func TestTheWeeklyOffersAConcretePlanningAction(t *testing.T) {
 	body := MailBody(mailFixture(), "https://crm.example.test", english)
-
-	asked := strings.Index(body, english.WeeklyPlanAhead)
-	if asked < 0 {
-		t.Fatalf("the weekly message never asks about the week ahead:\n%s", body)
-	}
-	link := strings.Index(body, english.WeeklyFullWeek)
-	if link < 0 {
-		t.Fatalf("the weekly message lost its archive line:\n%s", body)
-	}
-	if asked > link {
-		t.Errorf("the planning question sits below the archive link:\n%s", body)
+	if !strings.Contains(body, "Review the results and plan your next step\n  https://crm.example.test/#/home?view=weekly") {
+		t.Fatal("weekly lost the planning destination")
 	}
 }

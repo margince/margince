@@ -3229,6 +3229,27 @@ func (e BriefDeliveryMorningBriefDelivery) Valid() bool {
 	}
 }
 
+// Defines values for BriefDeliveryRoutineMailScope.
+const (
+	BriefDeliveryRoutineMailScopeCombined BriefDeliveryRoutineMailScope = "combined"
+	BriefDeliveryRoutineMailScopePersonal BriefDeliveryRoutineMailScope = "personal"
+	BriefDeliveryRoutineMailScopeTeam     BriefDeliveryRoutineMailScope = "team"
+)
+
+// Valid indicates whether the value is a known member of the BriefDeliveryRoutineMailScope enum.
+func (e BriefDeliveryRoutineMailScope) Valid() bool {
+	switch e {
+	case BriefDeliveryRoutineMailScopeCombined:
+		return true
+	case BriefDeliveryRoutineMailScopePersonal:
+		return true
+	case BriefDeliveryRoutineMailScopeTeam:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BriefDeliveryWeeklyDelivery.
 const (
 	BriefDeliveryWeeklyDeliveryEmail BriefDeliveryWeeklyDelivery = "email"
@@ -15550,7 +15571,10 @@ func (e ScheduledAgentName) Valid() bool {
 // Defines values for ScheduledSendHeldReason.
 const (
 	ScheduledSendHeldReasonConsentWithdrawn ScheduledSendHeldReason = "consent_withdrawn"
+	ScheduledSendHeldReasonFollowupSettled  ScheduledSendHeldReason = "followup_settled"
+	ScheduledSendHeldReasonMeetingCanceled  ScheduledSendHeldReason = "meeting_canceled"
 	ScheduledSendHeldReasonMissedWindow     ScheduledSendHeldReason = "missed_window"
+	ScheduledSendHeldReasonPassportRevoked  ScheduledSendHeldReason = "passport_revoked"
 	ScheduledSendHeldReasonSendRefused      ScheduledSendHeldReason = "send_refused"
 	ScheduledSendHeldReasonSenderInactive   ScheduledSendHeldReason = "sender_inactive"
 	ScheduledSendHeldReasonTimerExhausted   ScheduledSendHeldReason = "timer_exhausted"
@@ -15561,7 +15585,13 @@ func (e ScheduledSendHeldReason) Valid() bool {
 	switch e {
 	case ScheduledSendHeldReasonConsentWithdrawn:
 		return true
+	case ScheduledSendHeldReasonFollowupSettled:
+		return true
+	case ScheduledSendHeldReasonMeetingCanceled:
+		return true
 	case ScheduledSendHeldReasonMissedWindow:
+		return true
+	case ScheduledSendHeldReasonPassportRevoked:
 		return true
 	case ScheduledSendHeldReasonSendRefused:
 		return true
@@ -27497,9 +27527,10 @@ type BoughtField struct {
 // BriefDelivery What one member wants delivered. Every field is optional in BOTH directions: absent
 // on a read means they have never chosen, absent on a write means leave it alone.
 type BriefDelivery struct {
-	// DeliveryHourLocal The local hour a delivery should not arrive before, in the installation's
-	// reporting timezone. Absent means the job's own hour, which is what every seat
-	// gets today.
+	// CombineRoutineEmail Combine eligible notices and current actions with the weekly message when it is ready, using one routine email per reporting day. Defaults to false; class opt-outs remain effective.
+	CombineRoutineEmail *bool `json:"combine_routine_email,omitempty"`
+
+	// DeliveryHourLocal Legacy morning-only hour floor in the installation reporting timezone. Kept unchanged until routine_delivery_time is explicitly chosen.
 	DeliveryHourLocal *int `json:"delivery_hour_local,omitempty"`
 
 	// MorningBriefDelivery Whether the morning brief arrives by mail. `none` is a CHOICE to receive
@@ -27511,13 +27542,28 @@ type BriefDelivery struct {
 	// and "tell me every morning either way" are different asks.
 	QuietDayNotice *bool `json:"quiet_day_notice,omitempty"`
 
+	// RoutineDeliveryTime Personal working-hours start, or a whole hour in the existing personal timezone. The three-hour window can cross midnight. Choosing working restores the default. Existing explicit morning-only hours remain effective until this field is chosen.
+	RoutineDeliveryTime *string `json:"routine_delivery_time,omitempty"`
+
+	// RoutineMailScope Optional chosen scope; team content is checked against live team-review authority at delivery.
+	RoutineMailScope *BriefDeliveryRoutineMailScope `json:"routine_mail_scope,omitempty"`
+
+	// RoutineMailTeamId The selected live team for team or combined scope. Personal scope ignores a retained selection.
+	RoutineMailTeamId *openapi_types.UUID `json:"routine_mail_team_id,omitempty"`
+
 	// WeeklyDelivery The same, for the weekly review.
 	WeeklyDelivery *BriefDeliveryWeeklyDelivery `json:"weekly_delivery,omitempty"`
+
+	// WeeklyDeliveryDay Earliest weekday, Monday 1 through Sunday 7. A non-working choice rolls to the next working weekday; later workdays allow catch-up.
+	WeeklyDeliveryDay *int `json:"weekly_delivery_day,omitempty"`
 }
 
 // BriefDeliveryMorningBriefDelivery Whether the morning brief arrives by mail. `none` is a CHOICE to receive
 // nothing; absent is not.
 type BriefDeliveryMorningBriefDelivery string
+
+// BriefDeliveryRoutineMailScope Optional chosen scope; team content is checked against live team-review authority at delivery.
+type BriefDeliveryRoutineMailScope string
 
 // BriefDeliveryWeeklyDelivery The same, for the weekly review.
 type BriefDeliveryWeeklyDelivery string
@@ -45907,6 +45953,9 @@ type ScheduledSend struct {
 	// `missed_window` — it came due while nothing was running and is now too late to be the
 	// message that was written. `timer_exhausted` — the job that wakes it ran out of
 	// attempts. `send_refused` — a gate refused for another reason at fire.
+	// `passport_revoked` — the agent credential was revoked.
+	// `followup_settled` — the recorded request was answered or completed after scheduling.
+	// `meeting_canceled` — the meeting named as follow-up evidence was canceled.
 	HeldReason *ScheduledSendHeldReason `json:"held_reason,omitempty"`
 	Id         openapi_types.UUID       `json:"id"`
 
@@ -45960,6 +46009,9 @@ type ScheduledSend struct {
 // `missed_window` — it came due while nothing was running and is now too late to be the
 // message that was written. `timer_exhausted` — the job that wakes it ran out of
 // attempts. `send_refused` — a gate refused for another reason at fire.
+// `passport_revoked` — the agent credential was revoked.
+// `followup_settled` — the recorded request was answered or completed after scheduling.
+// `meeting_canceled` — the meeting named as follow-up evidence was canceled.
 type ScheduledSendHeldReason string
 
 // ScheduledSendStatus `scheduled`: waiting; the rep may move or cancel it.
