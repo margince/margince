@@ -4,9 +4,10 @@ import { api } from "../../api/client";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import { describedByIds } from "../../design-system/describedby";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { describedWith, lockFor } from "../../format/settinglocks";
+import { lockFor } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
@@ -245,7 +246,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
               {(control) => (
                 <TextInput
                   {...control}
-                  aria-describedby={describedWith(
+                  aria-describedby={describedByIds(
                     control["aria-describedby"],
                     lockReasonId,
                   )}
@@ -262,7 +263,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
               {(control) => (
                 <TextInput
                   {...control}
-                  aria-describedby={describedWith(
+                  aria-describedby={describedByIds(
                     control["aria-describedby"],
                     lockReasonId,
                   )}
@@ -282,7 +283,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
                 {(control) => (
                   <TextInput
                     {...control}
-                    aria-describedby={describedWith(
+                    aria-describedby={describedByIds(
                       control["aria-describedby"],
                       lockReasonId,
                     )}

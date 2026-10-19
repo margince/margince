@@ -3,9 +3,9 @@
 
 import { Button, Field } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { describedByIds } from "../../design-system/describedby";
 import { Select } from "../../design-system/select";
 import { formatNumber, identifierNumber } from "../../format/format";
-import { describedWith } from "../../format/settinglocks";
 import { useLocale, useT } from "../../i18n";
 import { problemCodeOf, problemMessageOf } from "../../lib/problem";
 
@@ -88,7 +88,7 @@ export function TimeoutField({
       {(control) => (
         <Select
           {...control}
-          aria-describedby={describedWith(
+          aria-describedby={describedByIds(
             control["aria-describedby"],
             reasonId,
           )}

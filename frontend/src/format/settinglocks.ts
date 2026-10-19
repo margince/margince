@@ -64,17 +64,6 @@ export function lockReasonOr(
 }
 
 /**
- * A control's `aria-describedby` plus the id of the one reason a locked form
- * draws, so every refused control in it is told why.
- */
-export function describedWith(
-  own: string | undefined,
-  reasonId: string | undefined,
-): string | undefined {
-  return [own, reasonId].filter(Boolean).join(" ") || undefined;
-}
-
-/**
  * The id a form's one drawn refusal takes, which every refused control points
  * at. Undefined while nothing refuses, so no control points at a missing node.
  */

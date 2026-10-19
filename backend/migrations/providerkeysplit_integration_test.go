@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const providerKeySplitMigration = "core/1792139047_each_provider_key_is_its_own_setting"
+const providerKeySplitMigration = "core/1792380523_each_provider_key_is_its_own_setting"
 
 func providerKeyRows(ctx context.Context, t *testing.T, conn *pgx.Conn) map[string]string {
 	t.Helper()

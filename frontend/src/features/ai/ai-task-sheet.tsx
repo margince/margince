@@ -12,6 +12,7 @@ import {
   Field,
   SegmentedControl,
 } from "../../design-system/atoms";
+import { describedByIds } from "../../design-system/describedby";
 import {
   DrawerBody,
   DrawerFoot,
@@ -21,11 +22,7 @@ import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { Select } from "../../design-system/select";
 import { formatNumber } from "../../format/format";
-import {
-  describedWith,
-  lockReasonOr,
-  useRefusalId,
-} from "../../format/settinglocks";
+import { lockReasonOr, useRefusalId } from "../../format/settinglocks";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { aiTaskLabel } from "../../lib/ai-task-label";
@@ -314,7 +311,7 @@ function TaskSettings({
         {(control) => (
           <Select
             {...control}
-            aria-describedby={describedWith(
+            aria-describedby={describedByIds(
               control["aria-describedby"],
               reasonId,
             )}
