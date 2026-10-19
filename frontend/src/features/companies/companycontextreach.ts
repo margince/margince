@@ -31,7 +31,9 @@ export function companyContextShown(
   holdsAdminRole: boolean,
   capabilities: Capabilities | undefined,
 ): boolean {
-  return holdsAdminRole && capabilities?.read_enabled !== false;
+  return (
+    holdsAdminRole && (capabilities === undefined || capabilities.read_enabled)
+  );
 }
 
 /** `companyContextShown` for the reader signed in. */
