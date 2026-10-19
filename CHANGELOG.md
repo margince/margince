@@ -13,7 +13,7 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 ### Added
 
 - A custom field can stay out of create forms. Each custom field has a
-  **Show in create forms** setting, on by default, so every existing field
+  **In create forms** setting, on by default, so every existing field
   keeps showing. Turned off, the field leaves the dialogs that create a record
   and stays on the record page, where it can still be edited. Settings →
   **Fields** shows and changes it, and the custom-field API takes

@@ -99,9 +99,8 @@ func (h Handlers) CreateCustomField(w http.ResponseWriter, r *http.Request, _ cr
 	httperr.WriteJSON(w, http.StatusCreated, field)
 }
 
-// RenameCustomField updates the catalog label, the create-dialog setting, or
-// both (CUSTOM-FIELDS-WIRE-3). It is a merge-PATCH, so an absent member is
-// left as it is; column_name, object and type never move.
+// RenameCustomField is the contract's name for the settings PATCH, which sets
+// show_in_create as well as the label.
 func (h Handlers) RenameCustomField(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.RenameCustomFieldParams) {
 	ifVersion, ok := httperr.IfMatchVersion(w, r)
 	if !ok {

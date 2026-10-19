@@ -780,7 +780,7 @@ describe("the create-form setting on the field table", () => {
     expect(patch?.url).toContain("/custom-fields/d1");
     expect(patch?.body).toEqual({ show_in_create: false });
     expect(
-      await screen.findByText(/no longer shows in create forms/),
+      await screen.findByText(/hidden from create forms/),
     ).toBeInTheDocument();
   });
 

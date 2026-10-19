@@ -34500,7 +34500,7 @@ type CustomField struct {
 	Currency *string            `json:"currency,omitempty"`
 	Id       openapi_types.UUID `json:"id"`
 
-	// Label Display label; the only thing a rename updates.
+	// Label Display label; a rename changes it, and never the slug or column_name.
 	Label string `json:"label"`
 
 	// Object The existing core object this field is added to.

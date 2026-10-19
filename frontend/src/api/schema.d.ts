@@ -38104,7 +38104,7 @@ export interface components {
              * @enum {string}
              */
             object: "contact" | "company" | "deal" | "lead" | "project" | "contract";
-            /** @description Display label; the only thing a rename updates. */
+            /** @description Display label; a rename changes it, and never the slug or column_name. */
             label: string;
             /** @description Admin-facing key the column_name derives from. */
             slug: string;

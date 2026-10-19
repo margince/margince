@@ -18094,7 +18094,7 @@ components:
           type: string
           enum: [contact, company, deal, lead, project, contract]
           description: The existing core object this field is added to.
-        label: {type: string, description: Display label; the only thing a rename updates.}
+        label: {type: string, description: 'Display label; a rename changes it, and never the slug or column_name.'}
         slug: {type: string, description: Admin-facing key the column_name derives from.}
         type:
           type: string
