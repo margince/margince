@@ -258,8 +258,8 @@ a log or an audit row.
 | The tables | `channel_connection`, `contact_channel_identity`, the channel rows of `erasure_suppression`, and the channel shape of `comms_outbound` |
 | The REST contract | `backend/api/crm.yaml` (`/channel-connections*`, `/activities/{id}/send-message`) |
 | Where jobs are declared | `backend/api/jobs.yaml` (`telegram_poll_sweep`, `telegram_poll`, `telegram_ingest`) |
-| The card, the panel to connect or replace, and the words for each status | `frontend/src/screens/connectors.tsx`, `telegram-connect-form.tsx`, `connector-status.ts` |
-| The reply composer, and the **Reply** button on the timeline | `frontend/src/screens/compose.tsx`, `contacttransports.ts` |
+| The card, the panel to connect or replace, and the words for each status | `frontend/src/features/capture/connectors.tsx`, `telegram-connect-form.tsx`, `connector-status.ts` |
+| The reply composer, and the **Reply** button on the timeline | `frontend/src/features/mail/compose.tsx`, `contacttransports.ts` |
 
 ## Where to go next
 

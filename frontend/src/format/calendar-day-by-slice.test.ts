@@ -47,7 +47,7 @@ const srcRoot = join(here, "..");
 // written about a different one — so the count is part of what is ratified, and
 // a third cut in a function ratified for two is a finding again.
 const deliberateUtcDays: Record<string, { sites: number; why: string }> = {
-  "screens/aiusage.tsx#monthAround": {
+  "features/ai/aiusage.tsx#monthAround": {
     sites: 2,
     why: "the two boundaries are read back off dates this function just built with Date.UTC(...) from the month it was given, so the round trip never touches a clock or a zone. Naming the month is the zoned question, and only currentMonth asks it",
   },

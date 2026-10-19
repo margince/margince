@@ -285,43 +285,6 @@ func predicateFor(p principal.Principal, table string, arg func(any) int,
 	}
 }
 
-// EnsureVisibleLive is the strict row probe: the row must EXIST, be LIVE
-// (archived_at IS NULL) and pass the caller's row scope. It differs from
-// EnsureVisible in both halves that matter to a caller handing data back —
-// an unbounded actor does not skip the existence check, and a soft-deleted
-// row never passes.
-//
-// Both differences are load-bearing where a record is served or referenced
-// outside the store that owns it. Art. 17 erasure anonymizes a contact in
-// place and stamps archived_at while LEAVING owner_id alone, so the
-// tombstone still satisfies the original owner's predicate: a probe without
-// the live filter answers "yes, still yours" for a record every live read
-// path now refuses.
-func EnsureVisibleLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	idPos := arg(id)
-
-	clause, err := ScopeClauseFor(ctx, table, "", arg)
-	if err != nil {
-		return err
-	}
-	q := fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $%d AND archived_at IS NULL`, table, idPos)
-	if clause != "" {
-		q += " AND " + clause
-	}
-	q += ")"
-
-	var visible bool
-	if err := tx.QueryRow(ctx, q, args...).Scan(&visible); err != nil {
-		return err
-	}
-	if !visible {
-		return apperrors.ErrNotFound
-	}
-	return nil
-}
-
 // EnsureVisibleForSubjectRights is EnsureVisible for the GDPR engines:
 // it applies the caller's own/team row scope exactly like EnsureVisible,
 // but does NOT apply capture privacy. Articles 15 and 17 owe the data
@@ -386,38 +349,6 @@ func VisibleTo(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (bool,
 	default:
 		return false, err
 	}
-}
-
-// EnsureVisible applies the row scope to a single-row operation: get,
-// update, archive, advance. Out of scope reads as ErrNotFound — the
-// caller cannot distinguish "not yours" from "not there", by design.
-// Activities scope through their links (the activities module's
-// link-walk clause); pipelines have no owner and are governed by object
-// grants only.
-func EnsureVisible(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	idPos := arg(id)
-
-	clause, err := ScopeClauseFor(ctx, table, "", arg)
-	if err != nil {
-		return err
-	}
-	if clause == "" {
-		return nil
-	}
-
-	var visible bool
-	err = tx.QueryRow(ctx,
-		fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $%d AND %s)`, table, idPos, clause),
-		args...).Scan(&visible)
-	if err != nil {
-		return err
-	}
-	if !visible {
-		return apperrors.ErrNotFound
-	}
-	return nil
 }
 
 // VisibleSubset answers, in ONE statement, which of the given rows of a

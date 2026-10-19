@@ -1,10 +1,10 @@
 import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
 import { Meter } from "../design-system/readings";
+import { medianDaysLabel } from "../features/companies/company360";
+import { amountOf, FinanceFigure } from "../features/companies/companyfinance";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { medianDaysLabel } from "./company360";
-import { amountOf, FinanceFigure } from "./companyfinance";
 
 // The overdue reading: the one figure on the finance panel that asks for a
 // decision, and everything the panel knows about why it is that size.

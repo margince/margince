@@ -19,7 +19,7 @@ import { RecordTeam } from "./recordteam";
 // something there, or a reader takes it for a broken panel.
 
 const meta: Meta<typeof RecordTeam> = {
-  title: "Records/Record 360/Responsible",
+  title: "Records/Record 360/Responsibilities",
   component: RecordTeam,
   parameters: { layout: "padded" },
 };

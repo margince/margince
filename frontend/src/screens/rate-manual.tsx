@@ -16,18 +16,21 @@ import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { WriteRefused } from "../design-system/querystates";
 import { Select } from "../design-system/select";
+import type { ModelLane } from "../features/ai/ai-models";
+import {
+  offeredModels,
+  useAiModelCatalogue,
+  useAvailableModels,
+} from "../features/ai/ai-models";
+import {
+  DECISION_PROVIDERS,
+  PROVIDERS,
+} from "../features/ai/ai-routing-fields";
 import { today } from "../format/calendarday";
 import { PER_MTOK_PRICE } from "../format/priceinput";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, unwrap } from "../lib/problem";
-import type { ModelLane } from "./ai-models";
-import {
-  offeredModels,
-  useAiModelCatalogue,
-  useAvailableModels,
-} from "./ai-models";
-import { DECISION_PROVIDERS, PROVIDERS } from "./ai-routing-fields";
 import "./rates.css";
 
 type SheetRow = components["schemas"]["AiModelRate"];

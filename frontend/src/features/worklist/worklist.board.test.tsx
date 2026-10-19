@@ -5,7 +5,7 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
-import { jsonResponse, render, stubApi } from "../../screens/brief.testkit";
+import { jsonResponse, render, stubApi } from "../brief/brief.testkit";
 import { TeamBoard } from "./worklist.board";
 
 // A named team lists the seats that have not signed in yet. Their counts were

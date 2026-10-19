@@ -1,10 +1,13 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useCallback } from "react";
 import type { components } from "../../api/schema";
+import {
+  outstandingStep,
+  useInstallationSetup,
+} from "../../features/sign-in/installation-setup";
+import { usePlatformDeclined } from "../../features/sign-in/installation-setup.decline";
 import type { useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
-import { outstandingStep, useInstallationSetup } from "../installation-setup";
-import { usePlatformDeclined } from "../installation-setup.decline";
 import type { CompanyDraft } from "../onboarding";
 import { changeDraftField, normalizeUrl } from "../onboarding";
 import type {

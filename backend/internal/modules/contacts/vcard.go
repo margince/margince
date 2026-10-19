@@ -100,9 +100,16 @@ func (e *TooManyCardsError) FieldFault() (field, code, message string) {
 // that refuses, because the reader has no way to notice the contact who is
 // missing.
 func ParseVCards(r io.Reader) ([]VCardEntry, error) {
-	lines, err := unfoldVCardLines(io.LimitReader(r, vcardMaxBytes+1))
+	raw := &countingReader{r: io.LimitReader(r, vcardMaxBytes+1)}
+	lines, err := unfoldVCardLines(raw)
 	if err != nil {
 		return nil, err
+	}
+	// The line scanner drops the carriage return of a CRLF line, so its own
+	// count is short by one byte per line. The bytes actually read are the
+	// bound: one past it means the file was cut, and a prefix is not the file.
+	if raw.n > vcardMaxBytes {
+		return nil, fmt.Errorf("contacts: the vCard file exceeds %d bytes", vcardMaxBytes)
 	}
 	var out []VCardEntry
 	var current *VCardEntry
@@ -157,13 +164,28 @@ func ParseVCards(r io.Reader) ([]VCardEntry, error) {
 	return out, nil
 }
 
+// countingReader counts the bytes that pass through it.
+type countingReader struct {
+	r io.Reader
+	n int
+}
+
+func (c *countingReader) Read(p []byte) (int, error) {
+	n, err := c.r.Read(p)
+	c.n += n
+	return n, err
+}
+
 // unfoldVCardLines joins continuation lines, which is the first thing any vCard
 // reader must do: a long value is split across lines and the continuations are
 // marked by a leading space or tab, so a parser reading raw lines sees half an
 // address and a fragment.
 func unfoldVCardLines(r io.Reader) ([]string, error) {
 	scanner := bufio.NewScanner(r)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1<<20)
+	// A line may be as long as the file may be. An embedded photo on one unfolded
+	// line imports as it does folded. A file past the bound is refused below in
+	// the product's words, not the scanner's.
+	scanner.Buffer(make([]byte, 0, 64*1024), vcardMaxBytes+2)
 	var lines []string
 	// The line under construction is built in ONE builder rather than by
 	// re-appending to the slice's last element: `lines[n-1] += x` copies the

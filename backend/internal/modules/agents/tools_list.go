@@ -60,8 +60,7 @@ type FilterVocabulary interface {
 }
 
 // listRecordTypes is the enumeration vocabulary, in schema order. A type here
-// has a contract list operation and a store behind the seam. An untyped sweep
-// still leaves activity out; a list names it, as GET /activities does.
+// has a contract list operation and a store behind the seam.
 var listRecordTypes = []string{
 	string(datasource.EntityContact), string(datasource.EntityCompany),
 	string(datasource.EntityDeal), string(datasource.EntityLead), string(datasource.EntityProject),
@@ -122,7 +121,7 @@ func (t listRecords) Spec() mcp.ToolSpec {
 			"limit":{"type":"integer","minimum":1,"maximum":50},
 			"cursor":{"type":"string","description":"Keyset cursor from a previous page's next_cursor"}},
 			"additionalProperties":false}`),
-		OutputSchema: schemaFor[SearchRecordsResult](),
+		OutputSchema: schemaFor[ListRecordsResult](),
 	}
 }
 
@@ -223,7 +222,7 @@ func (t listRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(searchResult(ctx, t.name, res))
+	return json.Marshal(listResult(ctx, t.name, res))
 }
 
 // pageLimit reads the page size, telling an ABSENT argument from an explicit

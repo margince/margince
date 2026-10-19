@@ -83,8 +83,12 @@ func (p *TranscriptProposer) Read(ctx context.Context, store transcriptReadStore
 	// to give it — the meeting's own summary is what the reader recognises, so
 	// an unnamed reading draws the rail's unnamed sentence rather than a
 	// quotation from somebody's transcript.
+	parties, err := p.readCommitmentParties(ctx, activityID)
+	if err != nil {
+		return err
+	}
 	steps, err := p.ask(ai.WithSubject(ctx, activityID.Ref(), ""),
-		reading.Lines, reading.OccurredAt.Format(time.DateOnly))
+		reading.Lines, reading.OccurredAt.Format(time.DateOnly), parties)
 	if err != nil {
 		if errors.Is(err, errRefusedTranscript) {
 			p.log.WarnContext(ctx, "transcript reading refused",
@@ -232,6 +236,7 @@ type transcriptStaging struct {
 	proposals []ids.UUID
 	tasks     int
 	watched   int
+	withheld  map[CommitmentOutcome]int
 }
 
 // stage hands each promise to the commitment rule, under one bundle id.
@@ -249,15 +254,20 @@ func (p *TranscriptProposer) stage(
 		return transcriptStaging{}, err
 	}
 	bundleID := ids.NewV7()
-	var out transcriptStaging
+	asOf := p.now()
+	out := transcriptStaging{withheld: make(map[CommitmentOutcome]int)}
 	for _, step := range steps {
-		commitment, err := p.commitmentFrom(ctx, tx, step, reading, activityID)
+		commitment, err := p.commitmentFrom(ctx, tx, step, reading, activityID, asOf)
 		if err != nil {
 			return transcriptStaging{}, err
 		}
 		outcome, id, err := p.dispatch.DispatchTx(ctx, tx, commitment, bundleID)
 		if err != nil {
 			return transcriptStaging{}, err
+		}
+		if outcome.withheld() {
+			out.withheld[outcome]++
+			continue
 		}
 		switch outcome {
 		case CommitmentProposed:
@@ -266,7 +276,7 @@ func (p *TranscriptProposer) stage(
 			out.tasks++
 		case CommitmentWatched:
 			out.watched++
-		case CommitmentRemembered:
+		case CommitmentRemembered, CommitmentRetained:
 			// Already a task, already waiting, refused or dismissed: this
 			// reading adds nothing new.
 		}

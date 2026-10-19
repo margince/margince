@@ -17,6 +17,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -94,7 +95,7 @@ func (s *Service) MarkRowsDone(ctx context.Context, rows []RowRef) error {
 	missing := make(map[RowRef]bool, len(rows))
 	for _, row := range rows {
 		if !offersDone(crmcontracts.WorklistItemSource(row.Source)) {
-			return fmt.Errorf("attention: a %q row offers no Done: %w", row.Source, apperrors.ErrInvalidArgument)
+			return httperr.Validation("rows", "not_doneable", fmt.Sprintf("a %q row offers no Done", row.Source))
 		}
 		missing[row] = true
 	}

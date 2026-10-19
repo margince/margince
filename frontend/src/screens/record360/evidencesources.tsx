@@ -30,7 +30,7 @@ import { useRecordZone } from "../../lib/recordzone";
 import { Citations, type Cited, type OpenReceipt } from "./citations";
 // The basis block is styled beside the citation chips it falls back to, in the
 // stylesheet those rules already live in.
-import "../company360.css";
+import "../../features/companies/company360.css";
 
 type DealMoveEvidence = components["schemas"]["DealNextBestActionEvidence"];
 

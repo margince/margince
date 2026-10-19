@@ -1,9 +1,9 @@
 import { Button } from "../design-system/atoms";
+import { usePageTitle, Wordmark } from "../features/sign-in/auth";
+import { AuthCardTitle, AuthExperience } from "../features/sign-in/auth-core";
 import { useT } from "../i18n";
 import { useAuthCapabilities } from "../lib/capabilities";
 import { releaseSkew } from "../lib/release";
-import { usePageTitle, Wordmark } from "./auth";
-import { AuthCardTitle, AuthExperience } from "./auth-core";
 
 /**
  * The gate that stops this bundle rendering against an api from another release.

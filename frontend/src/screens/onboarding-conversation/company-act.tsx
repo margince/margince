@@ -2,9 +2,9 @@ import type { Dispatch } from "react";
 import { useCallback, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { ErrorLine } from "../../design-system/errorline";
+import { InstallationSetup } from "../../features/sign-in/installation-setup";
 import { useLocale, useT } from "../../i18n";
 import { useMe } from "../../lib/session";
-import { InstallationSetup } from "../installation-setup";
 import { OnboardingGate } from "../onboarding-gate";
 import { CompanyActArtifact } from "./artifact";
 import {

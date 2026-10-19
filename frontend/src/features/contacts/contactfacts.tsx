@@ -16,7 +16,7 @@ import { useLocale, useT } from "../../i18n";
 import { useMemberName } from "../../lib/membernames";
 import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
-import { buyingRoleLabel } from "../../screens/companycontacts/summary";
+import { buyingRoleLabel } from "../companies/companycontacts/summary";
 
 type Contact = components["schemas"]["Contact"];
 

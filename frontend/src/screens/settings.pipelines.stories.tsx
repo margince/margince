@@ -176,7 +176,7 @@ export const NoCriteriaYet: Story = {
   },
 };
 
-/** The same page for a reader who may only look. */
+/** The same page for a reader who may only look: the create verbs stay, refused with why. */
 export const OnePipelineReadOnly: Story = {
   render: alone({ pipeline: ["read"] }),
 };

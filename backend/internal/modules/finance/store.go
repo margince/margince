@@ -36,6 +36,8 @@ type Store struct {
 	// installation that has not wired it, which serves the card without the
 	// panel rather than failing.
 	billingContacts BillingContactReader
+	// sources resolves the providers Connect can open; nil offers none.
+	sources Sources
 }
 
 // BaseCurrencyFunc resolves the installation's reporting currency inside a

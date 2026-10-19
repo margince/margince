@@ -65,7 +65,7 @@ var embedText = map[string]string{
 	// the ROWS it returns, not the fact that a phrase from a colleague's legal
 	// mail is what pulled them back. A limited activity is therefore not indexed
 	// at all, and audiencerescope drops the vector when a row narrows.
-	entityActivity: `SELECT concat_ws(' ', subject, body) FROM activity WHERE id = $1 AND archived_at IS NULL AND audience = 'workspace'`,
+	entityActivity: `SELECT concat_ws(' ', a.subject, a.body) FROM activity a WHERE a.id = $1 AND a.archived_at IS NULL AND ` + activityIndexable("a"),
 	entityProject:  `SELECT concat_ws(' ', name, key, description) FROM project WHERE id = $1 AND archived_at IS NULL`,
 	// NO product or offer_template ENTRY, and adding one back needs a schema
 	// change first, not just a line here. `embedding.entity_type` carries a

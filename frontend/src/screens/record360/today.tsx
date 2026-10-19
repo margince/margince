@@ -26,7 +26,7 @@ import {
 } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { useT } from "../../i18n";
-import "../company360.css";
+import "../../features/companies/company360.css";
 // The verb column: `.today-actions` and `.today-verb`, drawn here rather than
 // left to whichever page mounts a row that needs them.
 import "./record360.css";

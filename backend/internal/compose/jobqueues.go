@@ -77,5 +77,8 @@ func jobQueues() map[string]river.QueueConfig {
 		importWriteQueue: {MaxWorkers: importWriteMaxWorkers},
 		// A test run a user watches never queues behind a commit (importCheckQueue).
 		importCheckQueue: {MaxWorkers: importCheckMaxWorkers},
+		// A finance pass reads an accounting system this deployment does not
+		// control: outbound-bound, so the deep-read posture (accountingReadQueue).
+		accountingReadQueue: {MaxWorkers: accountingReadMaxWorkers},
 	}
 }

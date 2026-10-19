@@ -48,7 +48,7 @@ describe("every list fetcher asks for the page size the reader picked", () => {
       "contacts.tsx",
     );
     expect(listScreens().map((file) => basename(file))).toContain(
-      "companies.tsx",
+      "companies.list.tsx",
     );
     expect(listScreens().length).toBeGreaterThanOrEqual(6);
   });

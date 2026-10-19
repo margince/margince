@@ -1,0 +1,512 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en } from "../../i18n/en";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  type RouteMap,
+  StoryProviders,
+  stubWithSession,
+} from "../../testing/story-utils";
+import type { WorklistItem } from "../worklist/worklist.queries";
+import {
+  automaticDateReceipt,
+  automaticStageReceipt,
+} from "../worklist/worklist.receiptreview.fixtures";
+import { BriefScreen } from "./brief";
+import {
+  type Approval,
+  bundle,
+  deals,
+  decisionRow,
+  digest,
+  lapsed,
+  NOT_FOUND,
+  narratedWeek,
+  pipelineRows,
+  ranked,
+  readingsDay,
+  report,
+  singles,
+  taskRow,
+  WEEK_START,
+  type WeeklyReview,
+  type Worklist,
+  waitingEmailRow,
+  wholeDecisions,
+  wholeMeetings,
+} from "./brief.fixtures";
+import type { MorningDigest } from "./brief.queries";
+
+// Decisions share the ranked agenda. Their full proposal opens in the same
+// review drawer used by the worklist, and accepting one refreshes the agenda.
+// Fixed fixtures keep both themes and the expired state reproducible.
+
+type Frame = {
+  /** Proposals available to the agenda and its review drawers. */
+  approvals: Approval[];
+  /** The nightly digest, or null for the 404 an installation answers before its
+   *  first run. */
+  digest?: MorningDigest | null;
+  /** The week just gone, or null for the 404 a rep sees before their first
+   *  full week. Its two null-narrative states are the ones worth a screenshot:
+   *  a week nobody narrated, and a week a pass found unremarkable. */
+  weekly?: WeeklyReview | null;
+  /** What the pipeline report answers. A refusal is a state of its own. */
+  pipeline?: () => Response;
+  /** The morning as the worklist answers it. Stated rather than left to the
+   *  stub's fallback, because the fallback is a LIST page — `{data, page}` —
+   *  and `/worklist` answers a `Worklist`, whose `queue` the walk reads to
+   *  decide whether to ask for a second page. A fallback of the wrong envelope
+   *  therefore did not render an empty Brief, it crashed every frame in this
+   *  file on `queue.length` of undefined. */
+  day?: Worklist;
+  /** Extra routes a frame's own play() needs. */
+  extra?: RouteMap;
+};
+
+function brief({
+  approvals,
+  digest: overnight = digest,
+  weekly = narratedWeek,
+  pipeline = () => report(pipelineRows),
+  day,
+  extra = {},
+}: Frame) {
+  return () => {
+    const decided = new Set<string>();
+    const approvalRoutes: RouteMap = {};
+    for (const approval of approvals) {
+      approvalRoutes[`GET /approvals/${approval.id}`] = () =>
+        jsonResponse(approval);
+      approvalRoutes[`POST /approvals/${approval.id}/approve`] = () => {
+        decided.add(approval.id);
+        return jsonResponse({ ...approval, status: "approved" });
+      };
+    }
+    const morning = () => {
+      if (day) return day;
+      const pending = approvals.filter((approval) => !decided.has(approval.id));
+      const decisions = pending.map((approval) => ({
+        ...decisionRow(approval.id, approval.kind === "send_email"),
+        kind: approval.kind,
+        title: approval.summary ?? approval.kind,
+        due_at: approval.expires_at ?? undefined,
+      }));
+      return readingsDay(
+        { review: pending.length },
+        [...decisions, ...readingsDay().queue],
+        [wholeDecisions(pending.length), wholeMeetings(2)],
+      );
+    };
+    installFetchStub({
+      "GET /me": meRoute({}),
+      "GET /approvals": () =>
+        jsonResponse({
+          data: approvals.filter(
+            (approval) => approval.bundle_id && !decided.has(approval.id),
+          ),
+          page: { next_cursor: null, has_more: false },
+        }),
+      ...approvalRoutes,
+      "GET /weekly-reviews": () => jsonResponse({ weeks: [WEEK_START] }),
+      "GET /weekly-reviews/latest": () =>
+        weekly ? jsonResponse(weekly) : jsonResponse(NOT_FOUND, 404),
+      "GET /digest": () =>
+        overnight ? jsonResponse(overnight) : jsonResponse(NOT_FOUND, 404),
+      "GET /deals": () =>
+        jsonResponse({ data: deals, page: { next_cursor: null } }),
+      "GET /companies/company-nordwind": () =>
+        jsonResponse({
+          id: "company-nordwind",
+          display_name: "Nordwind Logistik",
+        }),
+      "GET /companies/company-acme": () =>
+        jsonResponse({
+          id: "company-acme",
+          display_name: "Acme Fördertechnik",
+        }),
+      "GET /projects/01a00000-0000-7000-8000-000000000001": () =>
+        jsonResponse({
+          id: "01a00000-0000-7000-8000-000000000001",
+          name: "ERP replacement",
+        }),
+      "GET /projects/01a00000-0000-7000-8000-000000000002": () =>
+        jsonResponse({
+          id: "01a00000-0000-7000-8000-000000000002",
+          name: "Depot rollout",
+        }),
+      // The screen reads this before it draws anything: the team toggle, the
+      // coverage line and the readings strip are all cuts of this one answer.
+      "GET /worklist": () => jsonResponse(morning()),
+      "GET /worklist/handled": () =>
+        jsonResponse({
+          as_of: morning().as_of,
+          receipts: [],
+          truncated: false,
+        }),
+      "POST /reports/deals-by-stage": () => pipeline(),
+      ...extra,
+    });
+    return (
+      <StoryProviders>
+        <BriefScreen />
+      </StoryProviders>
+    );
+  };
+}
+
+const meta: Meta<typeof BriefScreen> = {
+  parameters: { layout: "fullscreen" },
+  title: "Shell/Home/Page",
+  component: BriefScreen,
+};
+export default meta;
+type Story = StoryObj<typeof BriefScreen>;
+
+export const DecisionsInToday: Story = {
+  render: brief({ approvals: [...singles, ...bundle] }),
+};
+
+export const OneDecision: Story = {
+  render: brief({ approvals: singles.slice(1, 2) }),
+};
+
+async function openDecision(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  await userEvent.click(await canvas.findByRole("button", { name: "Decide" }));
+  return within(
+    await within(canvasElement.ownerDocument.body).findByRole("dialog", {
+      name: "Your decision",
+    }),
+  );
+}
+
+export const DecisionOpened: Story = {
+  render: brief({ approvals: singles.slice(1, 2) }),
+  play: async ({ canvasElement }) => {
+    const drawer = await openDecision(canvasElement);
+    await drawer.findByRole("button", { name: en["brief.approval.approve"] });
+  },
+};
+
+export const DecisionApproved: Story = {
+  render: brief({ approvals: singles.slice(1, 2) }),
+  play: async ({ canvasElement }) => {
+    const drawer = await openDecision(canvasElement);
+    await userEvent.click(
+      await drawer.findByRole("button", { name: en["brief.approval.approve"] }),
+    );
+    await waitFor(() =>
+      expect(
+        within(canvasElement).queryByRole("button", { name: "Decide" }),
+      ).toBeNull(),
+    );
+    // The refreshed agenda still stands, counted rather than named: the panel
+    // head lost its sub slot, so the sentence that said how many rows it holds
+    // is gone from every catalog and asserting it would test nothing.
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelectorAll("#brief-today .brief-focus-list > li"),
+      ).toHaveLength(2),
+    );
+  },
+};
+
+export const NoDecisions: Story = {
+  render: brief({ approvals: [] }),
+};
+
+export const ExpiredDecision: Story = {
+  render: brief({ approvals: [lapsed] }),
+  play: async ({ canvasElement }) => {
+    const drawer = await openDecision(canvasElement);
+    await drawer.findAllByText(en["decision.expired"]);
+    await expect(
+      drawer.queryByRole("button", { name: en["brief.approval.email"] }),
+    ).toBeNull();
+  },
+};
+
+// ── The rail ────────────────────────────────────────────────────────────────
+
+// Before the first nightly run there is no digest, so the Overnight panel is
+// absent rather than a row of zeros: a fabricated count is worse than a missing
+// one, because a reader cannot tell it apart from a real one.
+export const DigestAbsent: Story = {
+  render: brief({ approvals: [...singles], digest: null }),
+};
+
+// The one place connector health reaches a reader without visiting Settings. A
+// degraded source is news — said in Settings' own vocabulary, with the way to
+// fix it — while a healthy one stays silent, as it does in every other frame
+// here: a permanent green row is noise.
+export const ConnectorUnhealthy: Story = {
+  render: brief({
+    approvals: [...singles],
+    digest: {
+      ...digest,
+      connectors: [
+        {
+          provider: "gmail",
+          status: "reauth_required",
+          last_sync_error_class: "auth",
+        },
+      ],
+    },
+  }),
+};
+
+// One read refused while the other four are healthy. That is the whole reason
+// this page fans out to five independent reads: the pipeline says the figure
+// could not be loaded — a refusal, not an absence — and the deck, the queue, the
+// digest and the quiet list are untouched beside it.
+/** The honest degrade: the week was measured and nobody narrated it. The
+ *  numbers are all there, and the panel says the sentence is missing rather
+ *  than letting the reader conclude there was nothing to say. */
+export const WeeklyWithoutItsSentence: Story = {
+  render: brief({
+    approvals: [],
+    weekly: { ...narratedWeek, narrative: null, narrated_at: null },
+  }),
+};
+
+/** A pass that ran and found the week unremarkable. No sentence and no notice
+ *  — the stamp is what makes this different from the state above. */
+export const WeeklyQuietlyNarrated: Story = {
+  render: brief({
+    approvals: [],
+    weekly: { ...narratedWeek, narrative: null },
+  }),
+};
+
+export const OnePanelRefused: Story = {
+  render: brief({
+    approvals: [...singles],
+    pipeline: () =>
+      jsonResponse(
+        { title: "Forbidden", status: 403, code: "permission_denied" },
+        403,
+      ),
+  }),
+};
+
+// The other half of the same honesty: the figures ARRIVED, and a field mask kept
+// rows out of them. Saying so is the difference between a partial answer and a
+// wrong one.
+export const PipelinePartial: Story = {
+  render: brief({
+    approvals: [],
+    pipeline: () => report(pipelineRows, 4),
+  }),
+};
+
+const promise = taskRow(
+  "promise",
+  "Prepare a comparison showing two products and both translation options.",
+);
+const otherPromise = {
+  ...taskRow(
+    "other-promise",
+    "Prepare the revised comparison sheet for the same customer.",
+  ),
+  due_at: "2026-09-11T21:59:59Z",
+};
+// The row in hand is a customer's MESSAGE: the canonical email row names it —
+// who wrote, when, the subject at the headline rung, their own words under
+// it — and the verbs that answer it stand under the words. The queue beside
+// it holds the rest of the day; pressing a row puts it in hand instead.
+const SixPrioritiesDay = readingsDay({}, [
+  waitingEmailRow(),
+  promise,
+  otherPromise,
+  ...[1, 2, 3, 4].map((n) =>
+    taskRow(`followup-${n}`, `Follow up on customer commitment ${n}`),
+  ),
+]);
+export const SixPriorities: Story = {
+  render: brief({ approvals: [], day: SixPrioritiesDay }),
+};
+// A row that is not an activity opens its details in the drawer beside the
+// queue; its close is the way back to Focus.
+export const RowDetailsOpen: Story = {
+  render: brief({ approvals: [], day: SixPrioritiesDay }),
+  play: async ({ canvasElement }) => {
+    const [context] = await within(canvasElement).findAllByRole("button", {
+      name: en["brief.focus.context"],
+    });
+    if (!context) {
+      throw new Error("Focus shows no context button to open");
+    }
+    await userEvent.click(context);
+    await within(document.body).findByRole("dialog", {
+      name: en["brief.focus.context"],
+    });
+  },
+};
+// The same morning read by a seat whose row scope REACHES A TEAM. The
+// Mine/Team dial is drawn from the worklist's own `scope_options`, so a seat
+// that reaches nobody else never sees it — which is why the frame above cannot
+// show it, and why this one exists.
+export const TeamSeat: Story = {
+  render: brief({
+    approvals: [],
+    day: {
+      ...SixPrioritiesDay,
+      scope_options: ["mine", "team"],
+    },
+  }),
+};
+export const TaskEvidence: Story = {
+  render: brief({
+    approvals: [],
+    day: readingsDay({}, [promise, otherPromise]),
+    extra: {
+      "GET /activities/promise": () =>
+        jsonResponse({
+          id: "promise",
+          kind: "task",
+          subject: promise.title,
+          body: "Original commitment from the first meeting: prepare both translation variants by 9 September. A later meeting may record a separate deadline; confirm which commitment remains before closing either task.",
+          occurred_at: "2026-09-07T10:00:00Z",
+          version: 1,
+          is_done: false,
+        }),
+    },
+  }),
+  play: async ({ canvasElement }) => {
+    const [context] = await within(canvasElement).findAllByRole("button", {
+      name: en["brief.focus.context"],
+    });
+    if (!context) {
+      throw new Error("Focus shows no context button to open");
+    }
+    await userEvent.click(context);
+  },
+};
+export const SixPrioritiesPhone: Story = {
+  ...SixPriorities,
+  tags: ["uat-phone"],
+};
+
+const dealID = "01a00000-0000-7000-8000-000000000011";
+const conversationID = "01a00000-0000-7000-8000-000000000014";
+const workingMorningRows: WorklistItem[] = [
+  ...Array.from(
+    { length: 6 },
+    (_, index): WorklistItem => ({
+      ...taskRow(
+        `task-${index}`,
+        index === 0
+          ? "Prepare the comparison of both product demonstrations for the customer"
+          : `Follow up on the agreed next step ${index}`,
+      ),
+      due_at: "2026-09-10T08:30:00Z",
+      overdue: true,
+      urgent: true,
+      subject: { type: "deal", id: dealID, label: "PIM Rollout phase 2" },
+    }),
+  ),
+  {
+    id: conversationID,
+    source: "customer_waiting",
+    category: "customer_waiting",
+    level: 2,
+    consequence: "buyer_waits",
+    title: "PIM Rollout phase 2",
+    detail: "Could you send the updated implementation schedule?",
+    urgent: true,
+    because: [],
+    actions: ["open"],
+    subject: { type: "deal", id: dealID, label: "PIM Rollout phase 2" },
+    move: { action: "draft_reply", activity_id: conversationID },
+  },
+  {
+    id: "risk-one",
+    source: "deal_at_risk",
+    category: "deals_at_risk",
+    level: 4,
+    consequence: "deal_drifts",
+    title: "Northstar renewal",
+    because: [{ kind: "quiet_days", value: { kind: "days", days: 21 } }],
+    actions: ["open"],
+    deal: {
+      amount_minor: 8_900_000,
+      currency: "EUR",
+      quiet_days: 21,
+      expected_close_date: "2026-09-27",
+    },
+    subject: {
+      type: "deal",
+      id: "01a00000-0000-7000-8000-000000000015",
+      label: "Northstar renewal",
+    },
+    verdict: {
+      source: "deal_status",
+      standing: "drifting",
+      line: "The buyer has not answered the proposal. Agree a next step before the forecast date.",
+      as_of: "2026-09-13T08:00:00Z",
+    },
+  },
+  {
+    id: "lead-one",
+    source: "lead_response",
+    category: "leads",
+    level: 5,
+    consequence: "buyer_waits",
+    title: "Kirsten Vogel asked about pricing",
+    because: [],
+    actions: ["open"],
+    subject: {
+      type: "lead",
+      id: "01a00000-0000-7000-8000-000000000016",
+      label: "Kirsten Vogel",
+    },
+  },
+];
+
+export const WorkingMorning: Story = {
+  render: () => {
+    const day = readingsDay(
+      {
+        prospecting: 1,
+        buyer_replies: 1,
+        review: 0,
+        revenue_at_risk_minor: 8_900_000,
+        revenue_currency: "EUR",
+      },
+      workingMorningRows,
+      [],
+      { urgent: 7, due: 6 },
+    );
+    stubWithSession(
+      {
+        "GET /worklist": () =>
+          jsonResponse({ ...day, as_of: "2026-09-13T08:00:00Z" }),
+        "GET /brief": () =>
+          jsonResponse({ ...ranked, generated_at: "2026-09-13T05:30:00Z" }),
+        "GET /digest": () => jsonResponse({ title: "Not found" }, 404),
+        "GET /worklist/handled": () =>
+          jsonResponse({
+            as_of: day.as_of,
+            receipts: [automaticDateReceipt, automaticStageReceipt],
+            truncated: false,
+          }),
+        [`GET /deals/${dealID}`]: () =>
+          jsonResponse({ id: dealID, name: "PIM Rollout phase 2" }),
+        "POST /reports/deals-by-stage": () =>
+          jsonResponse({ rows: [], columns: [] }),
+      },
+      { deal: ["read", "update"], activity: ["read", "update"] },
+    );
+    return (
+      <StoryProviders>
+        <BriefScreen />
+      </StoryProviders>
+    );
+  },
+};

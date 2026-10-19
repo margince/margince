@@ -4,6 +4,7 @@
 package compose_test
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 
@@ -59,7 +60,11 @@ func TestCommitmentTaskConfidenceSitsInTheCertifiedGap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	checked := 0
+	current, _, err := aicert.CurrentStamps(context.Background(), scenarios, census)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checked := map[string]int{}
 	for _, rec := range records {
 		if rec.Kind != "" || rec.Verdict != "certified" || bands[rec.Task] == nil {
 			continue
@@ -67,7 +72,11 @@ func TestCommitmentTaskConfidenceSitsInTheCertifiedGap(t *testing.T) {
 		if waivedRecords.Waived(t, rec.Provider+"/"+rec.ServedModel) {
 			continue
 		}
-		checked++
+		if rec.PromptVersion != current[rec.Task] {
+			t.Logf("%s/%s: historical certification does not describe this build", rec.Task, rec.ServedModel)
+			continue
+		}
+		checked[rec.Task]++
 		firmMin, hedgedMax := commitmentGap(t, rec, bands[rec.Task])
 		who := rec.Task + "/" + rec.Provider + "/" + rec.ServedModel
 		if firmMin != nil && *firmMin < compose.CommitmentTaskConfidence {
@@ -79,8 +88,10 @@ func TestCommitmentTaskConfidenceSitsInTheCertifiedGap(t *testing.T) {
 				who, *hedgedMax, compose.CommitmentTaskConfidence)
 		}
 	}
-	if checked == 0 {
-		t.Error("no certified record of a commitment-reading task was found")
+	for task := range bands {
+		if checked[task] == 0 {
+			t.Errorf("%s has no current certified record — %s", task, rerunCertLane)
+		}
 	}
 }
 

@@ -227,6 +227,8 @@ func TestOnlyATimedKindStatesHowLongItTook(t *testing.T) {
 	}
 
 	req.Kind = crmcontracts.CreateActivityRequestKindCreateActivityRequestKindCall
+	subject := "Renewal call"
+	req.Subject = &subject
 	in, err := LogActivityInputFrom(req)
 	if err != nil {
 		t.Fatalf("a call may state its duration: %v", err)

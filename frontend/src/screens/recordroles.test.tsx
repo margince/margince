@@ -144,6 +144,15 @@ function rolesBackend(
           record_types: ["project"],
           assignee_kinds: ["user"],
         },
+        {
+          ...TECHNICAL_CONTACT,
+          id: "role-customer_success_manager",
+          key: "customer_success_manager",
+          label: "Customer success manager",
+          record_types: ["company"],
+          assignee_kinds: ["user"],
+          system: false,
+        },
       ],
     });
   });
@@ -182,6 +191,21 @@ it("says where a role applies and who holds it in words, never the stored keys",
   expect(within(lead).getByText("On projects")).toBeInTheDocument();
   expect(
     within(lead).getByText(en["recordRoles.heldBy.user"]),
+  ).toBeInTheDocument();
+});
+
+it("marks which roles ship with Margince and which an admin added", async () => {
+  vi.stubGlobal("fetch", rolesBackend(ADMIN));
+  render(<RecordRolesCard />);
+  const shipped = await screen.findByTestId("record-role-technical_contact");
+  const added = screen.getByTestId("record-role-customer_success_manager");
+  expect(within(shipped).getByText(en["recordRoles.builtIn"])).toBeTruthy();
+  expect(within(shipped).queryByText(en["recordRoles.custom"])).toBeNull();
+  expect(within(added).getByText(en["recordRoles.custom"])).toBeTruthy();
+  expect(within(added).queryByText(en["recordRoles.builtIn"])).toBeNull();
+  expect(screen.getByText(en["recordRoles.intro"])).toBeInTheDocument();
+  expect(
+    screen.getByRole("columnheader", { name: en["recordRoles.colActive"] }),
   ).toBeInTheDocument();
 });
 

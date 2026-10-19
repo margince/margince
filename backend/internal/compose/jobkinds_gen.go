@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "94220e0e175b6a8c296e7239331199bd345f4108b85c360223293c722b6c1225"
+const jobContractHash = "1f749f3a0889597a8f7316fd47f5ae48f11b9e41507d3031a801d5424cb19de2"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -59,6 +59,7 @@ type declaredJobArgs interface {
 		EmbedDriftSweepArgs |
 		EmbedReindexArgs |
 		EmploymentImportSweepArgs |
+		FinanceSyncArgs |
 		FinanceSyncSweepArgs |
 		FollowUpReconcileArgs |
 		ForecastSnapshotSweepArgs |
@@ -187,6 +188,7 @@ var (
 	_ jobs.WorkspaceScoped = ScheduledSendArgs{}
 	_ jobs.WorkspaceScoped = SendEmailArgs{}
 	_ jobs.WorkspaceScoped = DocumentExtractArgs{}
+	_ jobs.WorkspaceScoped = FinanceSyncArgs{}
 	_ jobs.WorkspaceScoped = FxRateRefreshArgs{}
 	_ jobs.WorkspaceScoped = GeocodeCompanyArgs{}
 	_ jobs.WorkspaceScoped = GmailWatchRenewArgs{}

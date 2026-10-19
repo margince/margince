@@ -42,7 +42,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
@@ -191,7 +190,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// reconcile, the drift sweep, the reindex pass — answer nobody and are
 		// deliberately left unbounded here.
 		searchHandlers: search.NewHandlers(
-			InstallationDB(pool).Bounded(database.CallerPredicateBudget),
+			rankedSearchDB(pool),
 			collections.CountTagReachBatch, activities.EmailSummariesByIDBatch, contacts.LivePartnerCompaniesBatch,
 			contacts.CompanyLogoURLsBatch),
 		// Constructed, not merely embedded: the handler carries no nil-pool

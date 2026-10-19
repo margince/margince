@@ -22,11 +22,7 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 	if err := s.refuseIfShieldedNow(ctx, tx, id); err != nil {
 		return err
 	}
-	_, err := tx.Exec(ctx,
-		// The language, the byline and the reply verdict were read from the text,
-		// so they go with it (erasuretimeline.go).
-		`UPDATE activity SET body = NULL, raw = NULL, subject = $2, language = NULL, source_author_name = NULL, reply_verdict = NULL, reply_verdict_at = NULL, reply_verdict_by = NULL, archived_at = coalesce(archived_at, now()) WHERE id = $1`,
-		id, erasedActivitySubject)
+	err := clearActivityContent(ctx, tx, id)
 	if err == nil {
 		// Everything the text left behind, through the call the restriction lift
 		// and the controller's release make too, so the three cannot drift.
@@ -38,5 +34,12 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 		// paths emit events, and the bus consumer re-folds for them.
 		err = s.invalidateGraph(ctx, tx, id)
 	}
+	return err
+}
+
+func clearActivityContent(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	_, err := tx.Exec(ctx, `UPDATE activity SET body = NULL, raw = NULL, subject = @subject,
+ language = NULL, source_author_name = NULL, reply_verdict = NULL, reply_verdict_at = NULL,
+ reply_verdict_by = NULL, archived_at = coalesce(archived_at, now()) WHERE id = @id`, pgx.StrictNamedArgs{"subject": erasedActivitySubject, "id": id})
 	return err
 }

@@ -155,7 +155,7 @@ describe("a search the server refuses as too broad", () => {
   it("shows the server's advice instead of a bare failure", async () => {
     const user = steppedClock();
     const advice =
-      "this search matched too much of the workspace to rank in time — add another word, or narrow it with types";
+      "this search matched too much of the workspace to rank in time — add another word, or narrow it by record type";
     vi.stubGlobal(
       "fetch",
       vi.fn(

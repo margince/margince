@@ -127,6 +127,8 @@ type WaitingReply struct {
 	// Resolved through the SAME visibility-gated links, so an owner appears only
 	// where the reader may see the record naming them.
 	OwnerID ids.UUID
+	// OwnerKnown distinguishes a readable unassigned record from a withheld owner.
+	OwnerKnown bool
 }
 
 // WaitingScanCap bounds the work one read does. Beyond this the answer is
@@ -335,12 +337,8 @@ func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before
 		defer rows.Close()
 		waiting = []WaitingReply{}
 		for rows.Next() {
-			var row WaitingReply
-			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
-				&row.ContactID, &row.CompanyID, &row.DealID,
-				&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
-				&row.Engaged, &row.OwnerID, &row.Threaded, &row.ThreadKey, &row.ChannelProvider,
-				&row.MeetingBookedAt); err != nil {
+			row, err := scanWaitingReply(rows)
+			if err != nil {
 				return err
 			}
 			waiting = append(waiting, row)
@@ -468,4 +466,17 @@ func ownDomainSenderSQL(alias string, domainArg int) string {
 	                   WHERE (sender.domain = own.domain
 	                       OR right(sender.domain, length(own.domain) + 1)
 	                          = '.' || own.domain)))`, alias, domainArg)
+}
+
+func scanWaitingReply(record pgx.Row) (WaitingReply, error) {
+	var row WaitingReply
+	err := record.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
+		&row.ContactID, &row.CompanyID, &row.DealID,
+		&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
+		&row.Engaged, &row.OwnerID, &row.OwnerKnown, &row.Threaded, &row.ThreadKey, &row.ChannelProvider,
+		&row.MeetingBookedAt)
+	if !row.OwnerKnown {
+		row.OwnerID = ids.Nil
+	}
+	return row, err
 }

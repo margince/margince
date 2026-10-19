@@ -1,8 +1,8 @@
 import { Badge } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import type { PickableProject } from "../design-system/projectpicker";
+import { AskSection } from "../features/companies/company360";
 import { useT } from "../i18n";
-import { AskSection } from "./company360";
 import type { OpenReceipt } from "./record360";
 
 /**

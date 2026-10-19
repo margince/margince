@@ -134,7 +134,7 @@ func (s *Store) SetLeadManualSignal(ctx context.Context, leadID ids.LeadID, in S
 		}); err != nil {
 			return err
 		}
-		return recomputeLeadScoreTx(ctx, tx, leadID, time.Now().UTC(), false)
+		return recomputeLeadScoreTx(ctx, tx, leadID, time.Now().UTC())
 	})
 	if err != nil {
 		return crmcontracts.LeadManualSignal{}, err
@@ -184,7 +184,7 @@ func (s *Store) ListLeadManualSignals(ctx context.Context, leadID ids.LeadID) ([
 	}
 	var signals []crmcontracts.LeadManualSignal
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, "lead", leadID.UUID); err != nil {
+		if err := auth.EnsureVisibleExisting(ctx, tx, "lead", leadID.UUID); err != nil {
 			return err
 		}
 		rows, err := tx.Query(ctx,
@@ -249,7 +249,7 @@ func (s *Store) ClearLeadManualSignal(ctx context.Context, leadID ids.LeadID, fa
 		}); err != nil {
 			return err
 		}
-		return recomputeLeadScoreTx(ctx, tx, leadID, time.Now().UTC(), false)
+		return recomputeLeadScoreTx(ctx, tx, leadID, time.Now().UTC())
 	})
 }
 

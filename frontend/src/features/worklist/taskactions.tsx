@@ -25,7 +25,6 @@ import { SourceEvidence } from "../../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../../format/calendarday";
 import { formatDate, formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { CLAIM_SETTLED_KEYS } from "../../lib/activitykeys";
 import { problemCodeOf, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { mostSpecificFirst, RecordLinks } from "../../screens/recordlinks";
@@ -43,7 +42,15 @@ import { refetchAfterWrite } from "./taskwritefollowup";
 // from, so the caller passes them in — the work queue is workspace-wide, the
 // record's timeline is not.
 
+export {
+  useAutomationRetry,
+  useClaimSettle,
+  useMeetingOutcome,
+  useNoticeRead,
+} from "./taskactions.rowwrites";
+
 type Activity = components["schemas"]["Activity"];
+
 type TaskPatch = {
   id: string;
   // The version the press was decided against. Every verb on a task goes
@@ -444,136 +451,4 @@ function SourceActivity({
       </DrawerBody>
     </Modal>
   );
-}
-
-// useNoticeRead settles one notice — the acknowledge verb's whole meaning.
-// Its own hook beside useTaskUpdate because the two route to different
-// owners: a task's verbs go to the activity, a notice's one verb goes to
-// the notice's own read endpoint.
-export function useNoticeRead(invalidateKeys: readonly QueryKey[]) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      unwrap(
-        await api.POST("/notices/{id}/read", {
-          params: { path: { id } },
-        }),
-        t,
-      );
-    },
-    onSuccess: () => {
-      for (const queryKey of invalidateKeys) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-    },
-  });
-}
-
-/**
- * Running one failed automation firing again.
- *
- * It resolves with the server's answer rather than throwing on a refusal,
- * because a refusal is a fact about the run and not a fault: the firing was
- * blocked on purpose, or its handler has not been established safe to repeat,
- * or its trigger event cannot be rebuilt. Each of those is something to TELL
- * the reader, and an error path would have to reconstruct which one it was.
- */
-export function useAutomationRetry(invalidateKeys: readonly QueryKey[]) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      return unwrap(
-        await api.POST("/automations/runs/{id}/retry", {
-          params: { path: { id } },
-        }),
-        t,
-      );
-    },
-    onSuccess: () => {
-      for (const queryKey of invalidateKeys) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-    },
-  });
-}
-
-/**
- * Recording how a meeting went.
- *
- * Its own hook rather than a wider `useTaskUpdate`: that one's body is
- * task-shaped (is_done, due_at, remind_at), and a meeting outcome is a
- * different fact about a different kind of activity. Widening it would let a
- * caller send `is_done` for a meeting, which the server refuses with a
- * `field_not_valid_for_kind` fault — a refusal the types can prevent instead.
- */
-export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: {
-      id: string;
-      // The version the answer was decided against, for the reason the task
-      // verb beside it carries one: two readers answering the same meeting
-      // would otherwise both succeed and the later one would win silently.
-      version: number | undefined;
-      status: "held" | "no_show" | "canceled";
-    }) => {
-      unwrap(
-        await api.PATCH("/activities/{id}", {
-          params: {
-            path: { id: input.id },
-            ...ifMatch(requireVersion(input.version)),
-          },
-          body: { meeting_status: input.status },
-        }),
-        t,
-      );
-    },
-    onSuccess: (_data, input) => {
-      for (const queryKey of invalidateKeys) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-      // The meeting's own detail read too: a drawer open on it would otherwise
-      // keep showing the row as unanswered after it has been answered.
-      queryClient.invalidateQueries({ queryKey: ["activity", input.id] });
-    },
-  });
-}
-
-/**
- * Settling a promise: it was kept, or it no longer stands.
- *
- * Its own hook rather than useTaskUpdate's: a claim is not an activity, and the
- * two settle through different endpoints. `done` and `dismissed` are kept apart
- * by the server because they answer different questions later — how many
- * commitments this workspace keeps is a fact about the team, and how many
- * extracted claims were never real is a fact about the extractor.
- */
-export function useClaimSettle(invalidateKeys: readonly QueryKey[]) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: {
-      id: string;
-      outcome: "done" | "dismissed";
-    }) => {
-      unwrap(
-        await api.POST("/claims/{id}/settle", {
-          params: { path: { id: input.id } },
-          body: { outcome: input.outcome },
-        }),
-        t,
-      );
-    },
-    onSuccess: () => {
-      for (const queryKey of invalidateKeys) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-      for (const queryKey of CLAIM_SETTLED_KEYS) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-    },
-  });
 }

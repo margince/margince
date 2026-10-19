@@ -378,7 +378,7 @@ func (s *RunStore) humanTouchedSince(ctx context.Context, id RunID, rows []mapRo
 				     SELECT 1 FROM audit_log a
 				      WHERE a.entity_type = $2 AND a.entity_id = m.native_id
 				        AND a.actor_type = 'human' AND a.occurred_at > m.created_at
-				        AND `+storekit.AuditNotFromAnImport+`)`,
+				        AND `+storekit.AuditNotFromAnImport("a")+`)`,
 				id, object, nativeIDs)
 			if err != nil {
 				return fmt.Errorf("checking which %s rows a human touched since import: %w", object, err)

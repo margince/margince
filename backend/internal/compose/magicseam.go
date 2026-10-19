@@ -50,14 +50,7 @@ func newMagicService(
 		WithSourceHealth(magicSourceHealth{registry: captureHealthRegistry(db)})
 }
 
-// magicPendingDecisions reads the staged queue for the needs-you lane.
-//
-// Only the approvals this caller could themselves decide come back, because
-// that filter lives in the engine: the lane adds no authority of its own, and a
-// receipt that widened the inbox would be a side channel around it.
-//
-// attentionApprovals.ListWire spells the same read for the feed; the two stay
-// separate because each satisfies its own consumer's interface.
+// Home uses the owning inbox policy for both authority and explicit responsibility.
 type magicPendingDecisions struct{ svc *approvals.Service }
 
 // stagedAndUndecided is the status the inbox filter takes, in the contract's
@@ -68,7 +61,7 @@ func (m magicPendingDecisions) PendingApprovals(
 	ctx context.Context, limit int,
 ) ([]crmcontracts.Approval, error) {
 	status := stagedAndUndecided
-	rows, _, err := m.svc.ListWire(ctx, approvals.ListInput{Status: &status, Limit: limit})
+	rows, _, err := m.svc.ListWire(ctx, approvals.ListInput{Status: &status, Limit: limit, RequestedForReader: true})
 	return rows, err
 }
 

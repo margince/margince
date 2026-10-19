@@ -6,8 +6,8 @@ import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { type Translator, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
-import { useProviderLabel } from "../../screens/channelproviders";
 import { interactionIcon } from "../../screens/interactionchrome";
+import { useProviderLabel } from "../capture/channelproviders";
 import { ConfirmDetailsAction, ConsentSection } from "../privacy/consent";
 import { consentWord } from "./contactreadings";
 

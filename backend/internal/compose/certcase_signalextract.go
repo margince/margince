@@ -46,9 +46,10 @@ type signalExtractFixture []signalExtractMessage
 // signalExtractMessage is one message in exactly the fields the prompt
 // consumes. It carries no id — see Prepare.
 type signalExtractMessage struct {
-	Direction string `json:"direction"`
-	Subject   string `json:"subject"`
-	Body      string `json:"body"`
+	Participants []certCommitmentParty `json:"participants,omitempty"`
+	Direction    string                `json:"direction"`
+	Subject      string                `json:"subject"`
+	Body         string                `json:"body"`
 	// Sent is the day the message went, YYYY-MM-DD. A relative deadline is
 	// resolved against it, so a scenario that dates a promise names its day.
 	Sent string `json:"sent,omitempty"`
@@ -58,11 +59,13 @@ type signalExtractMessage struct {
 // carries a real day the way production's does.
 const certSentDefault = "2026-09-07"
 
-// signalExtractExpectation is one event the scenario says the conversation
-// states: its kind, and the 1-based position of the message stating it.
+// signalExtractExpectation identifies an event, its cited message and verified promiser.
 type signalExtractExpectation struct {
-	Kind    string `json:"kind"`
-	Message int    `json:"message"`
+	Kind            string `json:"kind"`
+	Message         int    `json:"message"`
+	RestatedMessage int    `json:"restated_message,omitempty"`
+	DueDate         string `json:"due_date,omitempty"`
+	Promiser        string `json:"promiser,omitempty"`
 }
 
 // signalExtractCases serves the one site that reads material events out of a
@@ -104,7 +107,14 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 		return nil, err
 	}
 	thread := settledThread{Key: "cert-thread", CompanyID: ids.NewV7()}
+	identities := map[string]ids.UUID{}
+	references := make([]map[string]string, len(messages))
 	for i, message := range messages {
+		parties, refs, err := prepareCommitmentParties(message.Participants, identities)
+		if err != nil {
+			return nil, err
+		}
+		references[i] = refs
 		sent := message.Sent
 		if sent == "" {
 			sent = certSentDefault
@@ -116,28 +126,36 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 		}
 		thread.Messages = append(thread.Messages, threadMessage{
 			ID:        ids.NewV7(),
+			Parties:   parties,
 			Direction: message.Direction,
 			Subject:   message.Subject,
 			Body:      message.Body,
 			At:        at,
 		})
 	}
-	return &signalExtractCase{thread: thread, expected: want}, nil
+	for i := range want {
+		if want[i].Promiser == "" {
+			continue
+		}
+		_, found := references[want[i].Message-1][want[i].Promiser]
+		if !found {
+			return nil, fmt.Errorf("expected promiser %q is not a participant of message %d", want[i].Promiser, want[i].Message)
+		}
+	}
+	return &signalExtractCase{thread: thread, expected: want, promiserKeys: certPromiserKeys(references...)}, nil
 }
 
 // refuseUnreadableThread names a conversation the thread read could never have
-// returned: it takes at most extractThreadMessages and truncates every body to
-// extractBodyLimit, so a fixture beyond either bound would certify a prompt the
-// product cannot send.
+// returned. History reads add a recent window; every body still has the same size bound.
 func refuseUnreadableThread(messages signalExtractFixture) error {
 	if len(messages) == 0 {
 		return errors.New(
 			"signal_extract/thread_events: the fixture supplies no message, so there is no conversation to read")
 	}
-	if len(messages) > extractThreadMessages {
+	if len(messages) > extractContextMessages {
 		return fmt.Errorf(
 			"signal_extract/thread_events: the fixture carries %d messages, but one call reads at most %d",
-			len(messages), extractThreadMessages)
+			len(messages), extractContextMessages)
 	}
 	for i, message := range messages {
 		if n := utf8.RuneCountInString(message.Body); n > extractBodyLimit {
@@ -170,6 +188,9 @@ func refuseUnreachableEvents(want []signalExtractExpectation, messages int) erro
 				"signal_extract/thread_events: expectation %d names kind %q, which this site never records",
 				i+1, event.Kind)
 		}
+		if event.RestatedMessage != 0 && (event.RestatedMessage <= event.Message || event.RestatedMessage > messages) {
+			return fmt.Errorf("signal_extract/thread_events: expectation %d has an invalid restatement position", i+1)
+		}
 		if event.Message < 1 || event.Message > messages {
 			return fmt.Errorf(
 				"signal_extract/thread_events: expectation %d cites message %d, and the conversation has %d",
@@ -182,8 +203,9 @@ func refuseUnreachableEvents(want []signalExtractExpectation, messages int) erro
 // signalExtractCase is one conversation ready to be read, closed over the
 // minted ids and the events the scenario expects.
 type signalExtractCase struct {
-	thread   settledThread
-	expected []signalExtractExpectation
+	promiserKeys map[string]string
+	thread       settledThread
+	expected     []signalExtractExpectation
 }
 
 // Run issues the one request this site sends, bare: production wraps the same
@@ -272,13 +294,26 @@ func (c *signalExtractCase) disagreements(payload extractPayload) []string {
 	}
 	reported := map[string]bool{}
 	for _, event := range payload.events() {
-		reported[fmt.Sprintf("%s@%d", event.Kind, position[event.MessageID])] = true
+		reported[fmt.Sprintf("%s@%d:%s", event.Kind, position[event.MessageID], c.promiserKeys[event.PromiserRef])] = true
 	}
 	wanted := map[string]bool{}
 	for _, event := range c.expected {
-		wanted[fmt.Sprintf("%s@%d", event.Kind, event.Message)] = true
+		wanted[fmt.Sprintf("%s@%d:%s", event.Kind, event.Message, event.Promiser)] = true
 	}
 	var out []string
+	for _, expected := range c.expected {
+		for _, event := range payload.events() {
+			if event.Kind != expected.Kind || position[event.MessageID] != expected.Message {
+				continue
+			}
+			if expected.RestatedMessage != 0 && position[event.RestatedMessageID] != expected.RestatedMessage {
+				out = append(out, "the renewed promise does not cite its restatement")
+			}
+			if expected.DueDate != "" && event.DueDate != expected.DueDate {
+				out = append(out, "the renewed deadline does not match its source date")
+			}
+		}
+	}
 	for key := range wanted {
 		if !reported[key] {
 			out = append(out, fmt.Sprintf("the conversation states %s and the reply does not report it", key))

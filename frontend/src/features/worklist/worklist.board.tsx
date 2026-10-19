@@ -15,7 +15,7 @@ import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
-import { TeamPlanReview } from "../../screens/brief.teamplan";
+import { TeamPlanReview } from "../brief/brief.teamplan";
 import { CoachingMoves } from "./worklist.coaching";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { type TeamBoardMember, useTeamBoard } from "./worklist.queries";

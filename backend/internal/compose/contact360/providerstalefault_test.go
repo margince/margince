@@ -26,8 +26,8 @@ import (
 
 func failedRun() []providerRunRow {
 	return []providerRunRow{{
-		state:    string(provider.RunFailed),
-		safeCode: "provider_error",
+		State:          provider.RunFailed,
+		SafeStatusCode: "provider_error",
 	}}
 }
 
@@ -120,14 +120,14 @@ func TestAPaidRunIsNotHiddenBehindAMissingIdentifier(t *testing.T) {
 		{
 			name: "paid and nothing landed",
 			run: providerRunRow{
-				state:           string(provider.RunCompleted),
-				claimsUnwritten: true,
+				State:           provider.RunCompleted,
+				ClaimsUnwritten: true,
 			},
 			want: crmcontracts.ContactProviderProfileStateCompletedClaimsUnwritten,
 		},
 		{
 			name: "outcome never learned",
-			run:  providerRunRow{state: string(provider.RunSubmissionUnknown)},
+			run:  providerRunRow{State: provider.RunSubmissionUnknown},
 			want: crmcontracts.ContactProviderProfileStateSubmissionUnknown,
 		},
 		{
@@ -135,7 +135,7 @@ func TestAPaidRunIsNotHiddenBehindAMissingIdentifier(t *testing.T) {
 			// the contact cannot be looked up over their own bought values is
 			// the contradiction this whole section exists to avoid.
 			name: "bought and delivered",
-			run:  providerRunRow{state: string(provider.RunCompleted)},
+			run:  providerRunRow{State: provider.RunCompleted},
 			want: crmcontracts.ContactProviderProfileStateCompleted,
 		},
 	} {
