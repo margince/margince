@@ -273,8 +273,7 @@ export const vi = {
   "reporting.targetBasis": "Kỳ mục tiêu",
   "reporting.month": "Tháng",
   "reporting.fiscal_quarter": "Quý tài chính",
-  "reporting.creditCurrentOwner":
-    "Ghi nhận cho thành viên đang phụ trách deal",
+  "reporting.creditCurrentOwner": "Ghi nhận cho thành viên đang phụ trách deal",
   "reporting.creditQualifyingOwner":
     "Ghi nhận cho thành viên phụ trách lúc deal đủ điều kiện",
   "reporting.targetPeriodElapsed": "Đã qua {percent}% thời gian mục tiêu",
