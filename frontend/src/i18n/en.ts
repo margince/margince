@@ -5405,7 +5405,7 @@ export const en = {
   "analytics.attentionCoverageAction": "View data coverage",
   "analytics.reportDealsByStage": "All deals by stage",
   "analytics.reportLeadsByStatus": "Leads by status",
-  "analytics.reportActivitiesByKind": "Activities by type",
+  "analytics.reportActivitiesByKind": "Meetings and tasks by type",
   "analytics.reportMeetingConversion": "Meeting conversion",
   "analytics.field.amount_base_minor": "Converted amount",
   "analytics.field.amount_minor": "Amount",

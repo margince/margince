@@ -34,13 +34,13 @@ import (
 )
 
 // evidenceFixture is two cells of activities-by-kind plus a matching record
-// outside the population. Seven calls clear the floor of five: four mention
-// pricing and three do not. Six notes, one mentioning pricing, are the other
+// outside the population. Seven meetings clear the floor of five: four mention
+// pricing and three do not. Six tasks, one mentioning pricing, are the other
 // cell; the deal is not an activity at all.
 type evidenceFixture struct {
-	pricingCalls, otherCalls []ids.UUID
-	pricingNote              ids.UUID
-	pricingDeal              ids.UUID
+	pricingMeetings, otherMeetings []ids.UUID
+	pricingTask                    ids.UUID
+	pricingDeal                    ids.UUID
 }
 
 func seedEvidenceFixture(t *testing.T, e *SearchEnv) evidenceFixture {
@@ -51,14 +51,14 @@ func seedEvidenceFixture(t *testing.T, e *SearchEnv) evidenceFixture {
 	}
 	var f evidenceFixture
 	for range 4 {
-		f.pricingCalls = append(f.pricingCalls, activity("call", "The buyer pushed back on pricing again"))
+		f.pricingMeetings = append(f.pricingMeetings, activity("meeting", "The buyer pushed back on pricing again"))
 	}
 	for range 3 {
-		f.otherCalls = append(f.otherCalls, activity("call", "Walked through the onboarding plan"))
+		f.otherMeetings = append(f.otherMeetings, activity("meeting", "Walked through the onboarding plan"))
 	}
-	f.pricingNote = activity("note", "Pricing sheet sent over")
+	f.pricingTask = activity("task", "Pricing sheet sent over")
 	for range 5 {
-		activity("note", "Filed the meeting minutes")
+		activity("task", "Filed the meeting minutes")
 	}
 	pipeline := e.SeedID(t, `INSERT INTO pipeline (id, name, is_default) VALUES ($1, 'Sales', true)`)
 	stage := e.SeedID(t, `INSERT INTO stage (id, pipeline_id, name, position, semantic, win_probability)
@@ -163,7 +163,7 @@ func evidenceNoted(answer agents.SearchReportEvidenceResult, code string) bool {
 
 // One cell searched whole: its matches are cited, its non-matches are
 // counterexamples, and the share is stated because nothing was out of reach.
-// The note and the deal also say "pricing" and are never cited.
+// The task and the deal also say "pricing" and are never cited.
 func TestReportEvidenceSearchesOnlyTheCellsRecords(t *testing.T) {
 	e := SetupSearch(t)
 	f := seedEvidenceFixture(t, e)
@@ -171,27 +171,27 @@ func TestReportEvidenceSearchesOnlyTheCellsRecords(t *testing.T) {
 	runID := saveActivitiesByKind(ctx, t, e)
 
 	answer := mustSearchEvidence(ctx, t, e,
-		`{"run_id":"`+runID.String()+`","cell":["call"],"query":"pricing"}`)
+		`{"run_id":"`+runID.String()+`","cell":["meeting"],"query":"pricing"}`)
 
 	cited := citedIDs(answer)
-	for _, id := range f.pricingCalls {
+	for _, id := range f.pricingMeetings {
 		if !cited[id] {
-			t.Errorf("the call %s mentions pricing and is not cited: %+v", id, answer.Citations)
+			t.Errorf("the meeting %s mentions pricing and is not cited: %+v", id, answer.Citations)
 		}
 	}
-	if cited[f.pricingNote] || cited[f.pricingDeal] {
+	if cited[f.pricingTask] || cited[f.pricingDeal] {
 		t.Fatalf("a record outside the cell was cited as its evidence: %+v", answer.Citations)
 	}
-	if len(answer.Citations) != len(f.pricingCalls) {
-		t.Errorf("%d citations, want the %d pricing calls", len(answer.Citations), len(f.pricingCalls))
+	if len(answer.Citations) != len(f.pricingMeetings) {
+		t.Errorf("%d citations, want the %d pricing meetings", len(answer.Citations), len(f.pricingMeetings))
 	}
 	countered := map[ids.UUID]bool{}
 	for _, record := range answer.Counterexamples {
 		countered[record.ID] = true
 	}
-	for _, id := range f.otherCalls {
+	for _, id := range f.otherMeetings {
 		if !countered[id] {
-			t.Errorf("the call %s does not mention pricing and is not a counterexample", id)
+			t.Errorf("the meeting %s does not mention pricing and is not a counterexample", id)
 		}
 	}
 	if answer.Coverage != agents.CoverageCompleteExact {
@@ -202,7 +202,7 @@ func TestReportEvidenceSearchesOnlyTheCellsRecords(t *testing.T) {
 	}
 }
 
-// Without a cell the search covers every cell the run served, so the note's
+// Without a cell the search covers every cell the run served, so the task's
 // mention of pricing becomes evidence; the cell above narrowed it away.
 func TestReportEvidenceWithoutACellSearchesTheWholeRun(t *testing.T) {
 	e := SetupSearch(t)
@@ -213,8 +213,8 @@ func TestReportEvidenceWithoutACellSearchesTheWholeRun(t *testing.T) {
 	answer := mustSearchEvidence(ctx, t, e, `{"run_id":"`+runID.String()+`","query":"pricing"}`)
 
 	cited := citedIDs(answer)
-	if !cited[f.pricingNote] {
-		t.Errorf("the whole run was searched and the pricing note is not cited: %+v", answer.Citations)
+	if !cited[f.pricingTask] {
+		t.Errorf("the whole run was searched and the pricing task is not cited: %+v", answer.Citations)
 	}
 	if cited[f.pricingDeal] {
 		t.Fatalf("a deal was cited as evidence about activities: %+v", answer.Citations)
@@ -232,20 +232,20 @@ func TestReportEvidenceCountsOnlyWhatTheReaderCanRead(t *testing.T) {
 	f := seedEvidenceFixture(t, e)
 	ctx := e.evidenceReader()
 	runID := saveActivitiesByKind(ctx, t, e)
-	hidden := f.pricingCalls[0]
+	hidden := f.pricingMeetings[0]
 	hideFromTheReader(t, e, hidden)
 
 	answer := mustSearchEvidence(ctx, t, e,
-		`{"run_id":"`+runID.String()+`","cell":["call"],"query":"pricing"}`)
+		`{"run_id":"`+runID.String()+`","cell":["meeting"],"query":"pricing"}`)
 
 	if citedIDs(answer)[hidden] {
-		t.Fatalf("a call the reader may no longer read was cited: %+v", answer.Citations)
+		t.Fatalf("a meeting the reader may no longer read was cited: %+v", answer.Citations)
 	}
 	if !evidenceNoted(answer, agents.CodeOverReadableRecords) {
 		t.Errorf("notes = %+v, want the readable-records basis said", answer.Notes)
 	}
 	if answer.Prevalence == nil || answer.Prevalence.Matched != 3 || answer.Prevalence.Of != 6 {
-		t.Errorf("prevalence = %+v, want 3 of the 6 calls the reader can read", answer.Prevalence)
+		t.Errorf("prevalence = %+v, want 3 of the 6 meetings the reader can read", answer.Prevalence)
 	}
 }
 
@@ -256,14 +256,14 @@ func TestAHiddenRecordChangesNothingInTheAnswer(t *testing.T) {
 	seedEvidenceFixture(t, e)
 	ctx := e.evidenceReader()
 	runID := saveActivitiesByKind(ctx, t, e)
-	args := `{"run_id":"` + runID.String() + `","cell":["call"],"query":"pricing"}`
+	args := `{"run_id":"` + runID.String() + `","cell":["meeting"],"query":"pricing"}`
 	_, before, err := searchEvidence(ctx, e, args)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	hidden := e.SeedID(t, `INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by)
-		VALUES ($1, 'call', 'Weekly check-in', 'Pricing was the only topic', now() - interval '1 hour', 'manual', 'human:x')`)
+		VALUES ($1, 'meeting', 'Weekly check-in', 'Pricing was the only topic', now() - interval '1 hour', 'manual', 'human:x')`)
 	hideFromTheReader(t, e, hidden)
 	_, after, err := searchEvidence(ctx, e, args)
 	if err != nil {
@@ -280,15 +280,15 @@ func TestReportEvidenceReportsAbstentions(t *testing.T) {
 	e := SetupSearch(t)
 	seedEvidenceFixture(t, e)
 	silent := e.SeedID(t, `INSERT INTO activity (id, kind, occurred_at, source, captured_by)
-		VALUES ($1, 'call', now() - interval '1 hour', 'manual', 'human:x')`)
+		VALUES ($1, 'meeting', now() - interval '1 hour', 'manual', 'human:x')`)
 	ctx := e.evidenceReader()
 	runID := saveActivitiesByKind(ctx, t, e)
 
 	answer := mustSearchEvidence(ctx, t, e,
-		`{"run_id":"`+runID.String()+`","cell":["call"],"query":"pricing"}`)
+		`{"run_id":"`+runID.String()+`","cell":["meeting"],"query":"pricing"}`)
 
 	if len(answer.Abstentions) != 1 || answer.Abstentions[0].ID != silent {
-		t.Fatalf("abstentions = %+v, want only the call with no text", answer.Abstentions)
+		t.Fatalf("abstentions = %+v, want only the meeting with no text", answer.Abstentions)
 	}
 	if answer.Tally.Unjudged != 1 || !evidenceNoted(answer, agents.CodeRecordsUnjudged) {
 		t.Errorf("tally %+v, notes %+v: the abstention is not reported", answer.Tally, answer.Notes)
@@ -304,11 +304,11 @@ func TestAnAbstentionIsCountedAsARead(t *testing.T) {
 	e := SetupSearch(t)
 	seedEvidenceFixture(t, e)
 	silent := e.SeedID(t, `INSERT INTO activity (id, kind, occurred_at, source, captured_by)
-		VALUES ($1, 'call', now() - interval '1 hour', 'manual', 'human:x')`)
+		VALUES ($1, 'meeting', now() - interval '1 hour', 'manual', 'human:x')`)
 	ctx := e.evidenceReader()
 	runID := saveActivitiesByKind(ctx, t, e)
 
-	_, sealed, err := searchEvidence(ctx, e, `{"run_id":"`+runID.String()+`","cell":["call"],"query":"pricing"}`)
+	_, sealed, err := searchEvidence(ctx, e, `{"run_id":"`+runID.String()+`","cell":["meeting"],"query":"pricing"}`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -323,9 +323,9 @@ func TestAnAbstentionIsCountedAsARead(t *testing.T) {
 func TestTheProviderMarksAnUnreadableActivityWithheld(t *testing.T) {
 	e := SetupSearch(t)
 	f := seedEvidenceFixture(t, e)
-	hideFromTheReader(t, e, f.pricingCalls[0])
+	hideFromTheReader(t, e, f.pricingMeetings[0])
 	record, err := compose.NewProvider(e.Pool).Read(e.evidenceReader(),
-		datasource.EntityRef{Type: datasource.EntityActivity, ID: f.pricingCalls[0]})
+		datasource.EntityRef{Type: datasource.EntityActivity, ID: f.pricingMeetings[0]})
 	if err != nil {
 		t.Fatalf("reading the activity back: %v", err)
 	}

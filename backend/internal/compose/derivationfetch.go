@@ -277,7 +277,7 @@ func derivationWhere(
 	ctx context.Context, tx pgx.Tx, spec reportSpec, plan derivationPlan,
 	requested RequestedScope, arg func(any) int,
 ) ([]string, string, error) {
-	where := []string{spec.baseWhere}
+	where := []string{spec.populationWhere()}
 	for _, p := range plan.preds {
 		switch {
 		case p.threshold != nil:

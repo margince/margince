@@ -333,6 +333,11 @@ func validateFilters(entity Entity, filters []Filter) error {
 				Suggest: valueAdvice(field.Shape),
 			}
 		}
+		if !valuelessOps[f.Op] {
+			if err := field.Domain.Admits(f.Field, f.Value); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }

@@ -151,10 +151,9 @@ var atRiskRelationshipsCopy = toolCopy{
 
 // The prebuilt reports exist so a common question costs one call. That is only
 // true if a caller reaching for a number finds them BEFORE it finds the
-// ad-hoc query path, and it stopped being true: asked how much of the logged
-// activity was inbound against outbound — which `activities-by-kind` answers
-// outright — a model went to describe_analytics_vocabulary and composed two
-// queries instead. Correct, three times the work, and around the curation.
+// ad-hoc query path, and it stopped being true: asked for a breakdown that
+// `activities-by-kind` answers outright, a model went to
+// describe_analytics_vocabulary and composed two queries instead. Correct, three times the work, and around the curation.
 // So the boundary is stated here rather than left to be inferred from which
 // tool sounds more general.
 var runReportCopy = toolCopy{
