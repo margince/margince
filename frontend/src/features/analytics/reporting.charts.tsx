@@ -32,6 +32,7 @@ import {
 import { movementLabel } from "./reporting.movement";
 import { SdrOutcomes } from "./reporting.sdroutcomes";
 import { ResultsSummary, TargetProgress } from "./reporting.summary";
+import { WrittenSummary } from "./reporting.written";
 import "./reporting.css";
 
 type EvidenceAction = (reference: ReportingEvidenceRef) => void;
@@ -71,6 +72,7 @@ export function ReportingCharts({
   const wide = wideCharts(charts);
   return (
     <div className="reporting-results">
+      <WrittenSummary evaluation={evaluation} />
       <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
       {afterSummary}
       <div className="reporting-grid">
