@@ -225,9 +225,9 @@ var searchBranches = []searchBranch{
 		extraWhere: "NOT %s.is_anchor", identifier: storekit.CompanyDomains,
 	},
 	{entity: "deal", table: entityDeal, title: columnName, snippet: noSnippet},
-	// A person's name alone does not say why searching an account found them.
+	// A name alone does not say why searching an account found the lead.
 	// So a lead's excerpt is its company, as a contact hit carries its employer.
-	// A lead with no person name is already titled by that company.
+	// A lead with no full name is already titled by that company.
 	{
 		entity: "lead", table: entityLead, title: "coalesce(full_name, company_name, email)",
 		snippet: "CASE WHEN t.full_name IS NOT NULL THEN t.company_name END", snippetIsContext: true,
