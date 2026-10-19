@@ -297,6 +297,8 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 ### Run it in production
 
 - [deploy-margince.md](how-to/deploy-margince.md): run Margince on your own servers.
+- [host-margince-for-customers.md](how-to/host-margince-for-customers.md): run one installation for each
+  company you host, and split the work with each customer.
 - [self-hosting.md](explanation/self-hosting.md): why it runs the way it does, and what it does when
   something fails.
 - [deployment.md](deployment.md): the old page, now a pointer to the two above.
