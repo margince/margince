@@ -157,7 +157,10 @@ describe("the split lost no card", () => {
     // be satisfied by the card being nowhere at all.
     expect(cardsOn("account")).not.toContain("<AutonomySettingsCard />");
     expect(cardsOn("agents")).toContain("<AiAccessTab />");
-    const aiAccess = bodyOf("AiAccessTab", "settings.aiaccess.tsx");
+    const aiAccess = [
+      bodyOf("AiAccessTab", "settings.aiaccess.tsx"),
+      bodyOf("DeveloperTabs", "settings.aiaccess.tsx"),
+    ].join("\n");
     expect(aiAccess).toContain("<AutonomySettingsCard />");
     expect(aiAccess).toContain("<ConnectAiToolCard />");
     expect(aiAccess).toContain("<PassportCard />");

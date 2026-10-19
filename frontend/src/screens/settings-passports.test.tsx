@@ -416,7 +416,7 @@ describe("PassportCard — using a passport", () => {
     render("agents");
     expect(
       await screen.findByText(
-        /a passport is your personal credential for scripts/i,
+        /a passport is your personal API key for scripts/i,
       ),
     ).toBeTruthy();
     expect(screen.getByText("In a script or another AI tool")).toBeTruthy();

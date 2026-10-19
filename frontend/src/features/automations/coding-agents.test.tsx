@@ -1,9 +1,10 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { CommandLineToolsCard } from "./commandline-tools";
+import { CodingAgentsCard } from "./coding-agents";
 
 afterEach(() => {
   cleanup();
@@ -30,50 +31,57 @@ function renderCard(status: number) {
       }
     >
       <LocaleProvider initial="en">
-        <CommandLineToolsCard />
+        <CodingAgentsCard />
       </LocaleProvider>
     </QueryClientProvider>,
   );
 }
 
-describe("CommandLineToolsCard", () => {
-  it("offers a command per tool, built from the URL the server advertises", async () => {
+describe("CodingAgentsCard", () => {
+  it("shows one tool at a time, each command built from the URL the server advertises", async () => {
     renderCard(200);
     expect(
       await screen.findByText(
         "claude mcp add --transport http margince https://crm.acme.test/mcp",
       ),
     ).toBeTruthy();
+    expect(screen.getByText("Then run /mcp.")).toBeTruthy();
+    expect(screen.queryByText(/codex mcp add/)).toBeNull();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Codex" }));
     expect(
       screen.getByText(
         "codex mcp add margince --url https://crm.acme.test/mcp",
       ),
     ).toBeTruthy();
     expect(screen.getByText("Then run codex mcp login margince.")).toBeTruthy();
+    expect(screen.queryByText(/claude mcp add/)).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Antigravity" }));
     // Antigravity refuses the `url`/`httpUrl` spellings; a wrong key is a
     // config that silently does nothing.
     expect(
       screen.getByText(/"serverUrl": "https:\/\/crm\.acme\.test\/mcp"/),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/choose “Authenticate” next to margince/),
     ).toBeTruthy();
   });
 
   it("no longer offers Gemini CLI, which Antigravity replaced", async () => {
     renderCard(200);
     await screen.findByText(/claude mcp add/);
-    expect(screen.queryByText(/gemini mcp add/)).toBeNull();
+    expect(
+      screen.getAllByRole("button").map((button) => button.textContent),
+    ).toEqual(["Claude Code", "Codex", "Antigravity"]);
   });
 
-  it("links each tool to its own docs", async () => {
+  it("links the chosen tool to its own docs", async () => {
     renderCard(200);
-    const docs = await screen.findByRole("link", { name: /Codex docs/ });
-    expect(docs.getAttribute("href")).toBe(
-      "https://learn.chatgpt.com/docs/extend/mcp?surface=cli",
-    );
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Codex" }));
     expect(
-      screen
-        .getByRole("link", { name: /Antigravity docs/ })
-        .getAttribute("href"),
-    ).toBe("https://antigravity.google/docs/mcp");
+      screen.getByRole("link", { name: /Codex docs/ }).getAttribute("href"),
+    ).toBe("https://learn.chatgpt.com/docs/extend/mcp?surface=cli");
   });
 
   it("shows a failed discovery as an error with a retry, not an empty card", async () => {

@@ -7,7 +7,7 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { CommandLineToolsCard } from "./commandline-tools";
+import { CodingAgentsCard } from "./coding-agents";
 
 function story(connectorEnabled = true) {
   return () => {
@@ -19,18 +19,18 @@ function story(connectorEnabled = true) {
     });
     return (
       <StoryProviders>
-        <CommandLineToolsCard />
+        <CodingAgentsCard />
       </StoryProviders>
     );
   };
 }
 
-const meta: Meta<typeof CommandLineToolsCard> = {
-  title: "Settings/You/AI access/Command-line tools",
-  component: CommandLineToolsCard,
+const meta: Meta<typeof CodingAgentsCard> = {
+  title: "Settings/You/AI access/Coding agents",
+  component: CodingAgentsCard,
 };
 export default meta;
-type Story = StoryObj<typeof CommandLineToolsCard>;
+type Story = StoryObj<typeof CodingAgentsCard>;
 
 export const Commands: Story = { render: story() };
 

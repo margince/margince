@@ -633,13 +633,14 @@ describe("SettingsScreen restructured pages", () => {
     // licence at all — gating it behind the company group would have meant only
     // admins could mint one.
     const developers = await screen.findByText("For developers");
-    await userEvent.setup().click(developers);
+    const user = userEvent.setup();
+    await user.click(developers);
     expect(
       await screen.findByRole("heading", { name: "Passports" }),
     ).toBeTruthy();
     expect(screen.getByText("Scout")).toBeTruthy();
-    // And the autonomy table the passports sit under, which came off the
-    // company's AI entry with them.
+    // And the autonomy table, one tab over under Agent rules.
+    await user.click(screen.getByRole("button", { name: "Agent rules" }));
     expect(
       screen.getByRole("heading", { name: "Autonomy tiers" }),
     ).toBeTruthy();
@@ -658,6 +659,13 @@ describe("SettingsScreen restructured pages", () => {
     expect(developers.textContent).toContain("Passports");
     await userEvent.setup().click(screen.getByText("For developers"));
     expect(developers.open).toBe(true);
+    // API keys open first: the passports, not the coding agents.
+    expect(
+      screen
+        .getByRole("button", { name: "API keys" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(screen.queryByRole("heading", { name: "Coding agents" })).toBeNull();
   });
 
   it("renders the consent registry on Privacy, and the trail on its own page", async () => {

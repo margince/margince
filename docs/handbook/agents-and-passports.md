@@ -34,7 +34,7 @@ Those are **Read records**, **Draft messages**, **Change records**, **Send messa
 Also called: API key, token, agent credential, access token.
 
 ### How do I give an agent access to Margince?
-To give a script or your own code access to Margince, open **Settings → AI access**, then **For developers**. Choose **New passport** on the **Passports** card.
+To give a script or your own code access to Margince, open **Settings → AI access**, then **For developers**. Choose **New passport** on the **API keys** tab.
 1. Open the account menu, choose **Settings**, then **AI access**.
 2. Open **For developers**.
 3. Choose **New passport**.
@@ -49,7 +49,7 @@ Also called: create an API key, script access, integrate an agent.
 ### How do I use a passport in my AI tool?
 To use a passport in an AI tool such as Claude Code, Codex or Antigravity, download the Margince skill. Then save your passport where the tool can find it.
 1. Open **Settings → AI access**, then **For developers**.
-2. On the **Passports** card, under **In your AI tool**, choose **Download skill**.
+2. On the **API keys** tab, under **In a script or another AI tool**, choose **Download skill**.
 3. Open `margince-skill.zip`. It holds one folder, `margince`.
 4. For Claude Code, move the folder to `~/.claude/skills/margince`. For Claude Desktop, add the zip file as a skill in the app's settings.
 5. For Codex or Antigravity, follow the `README.md` in the folder. You move the folder, then add one line to your `AGENTS.md` or `GEMINI.md`.
@@ -59,13 +59,13 @@ Also called: Claude skill, add Margince to Claude Code, Codex, Antigravity, AI t
 
 ### How do I call Margince from my own code?
 To call Margince from your own code, send your passport with each call.
-On the **Passports** card in **For developers**, under **In your own code**, choose **curl**, **Python** or **JavaScript**, then **Copy example**. It reads the passport from `MARGINCE_PASSPORT`, so set that first.
+On the **API keys** tab in **For developers**, under **In your own code**, choose **curl**, **Python** or **JavaScript**, then **Copy example**. It reads the passport from `MARGINCE_PASSPORT`, so set that first.
 The `openapi.yaml` file in the skill lists every call a passport can make.
 Also called: REST API, API key, script, access token, integration.
 
-### How do I connect a command-line tool to Margince?
-To connect a command-line tool such as Claude Code, Codex or Antigravity, open **Settings → AI access**, then **For developers**, and find the **Command-line tools** card.
-Do what the card shows for your tool: run the command, or for Antigravity add the block to the file it names. Then sign in in the browser and choose **Authorize** on **Authorize access**. You need no passport for this.
+### How do I connect a coding agent to Margince?
+For Claude Code, Codex or Antigravity, open **Settings → AI access**, then **For developers**, the **Coding agents** tab and your tool.
+Do what the tab shows for your tool: run the command, or for Antigravity add the block to the file it names. Then sign in in the browser and choose **Authorize** on **Authorize access**. You need no passport for this.
 If the page says AI tools "cannot connect to Margince yet", an administrator or operations user must turn it on first.
 Also called: MCP client, MCP server, command line, AI assistant integration.
 
@@ -133,7 +133,7 @@ sending. A send then waits in Approvals like anything else. Whoever runs your
 installation sets this; there is no switch for it in Settings. If you need sends
 confirmed, ask them whether that floor is set. Ask; do not guess.
 
-The **Autonomy tiers** card in **Settings → AI access**, under **For developers**, states the same rule.
+The **Autonomy tiers** card in **Settings → AI access**, on the **Agent rules** tab under **For developers**, states the same rule.
 It reads "Send email, book meetings, update a contact or deal: runs immediately if the
 agent has that permission. Granting the permission is the approval." and
 "Enrichment and tag merges: wait in Approvals."

@@ -5709,7 +5709,7 @@ export const en = {
   "rbac.masked": "Masked value",
   "settings.passports": "Passports",
   "settings.passportsSub":
-    "A passport is your personal credential for scripts and your own code. Whatever uses it acts as you, with the permissions you tick, and never more. To use Margince in an AI tool, connect the tool above instead.",
+    "A passport is your personal API key for scripts and your own code. Whatever uses it acts as you, with the permissions you tick, and never more. To use Margince in an AI tool, connect the tool above instead.",
   // What each passport scope admits, in words. The wire carries `read`/`draft`/
   // `write`/`send`/`enrich`; a human granting them is choosing what an agent may
   // do on their behalf, and the protocol token alone does not say — "write" and
@@ -5723,7 +5723,7 @@ export const en = {
   "passport.noneOption": "No passport",
   "settings.passportUseAi": "In a script or another AI tool",
   "settings.passportUseAiDetail":
-    "Install the Margince skill in a tool that cannot sign in by itself, then give it your passport. Claude Code, Codex and Antigravity sign in without one, under Command-line tools.",
+    "Install the Margince skill in a tool that cannot sign in by itself, then give it your passport. Claude Code, Codex and Antigravity sign in without one, under Coding agents.",
   "settings.skillDownload": "Download skill",
   "settings.skillDownloadFailed": "Skill not downloaded",
   "settings.passportUseCode": "In your own code",
@@ -6104,8 +6104,11 @@ export const en = {
   "aiAccess.guide.checked": "These steps were checked on {date}.",
   "aiAccess.dev.title": "For developers",
   "aiAccess.dev.sub":
-    "Command-line tools, passports for scripts and your own code, the tool list and autonomy settings.",
-  "aiAccess.cli.title": "Command-line tools",
+    "API keys for your own code, coding agents, and what agents may do without you.",
+  "aiAccess.dev.tab.passports": "API keys",
+  "aiAccess.dev.tab.agents": "Coding agents",
+  "aiAccess.dev.tab.rules": "Agent rules",
+  "aiAccess.cli.title": "Coding agents",
   "aiAccess.cli.sub":
     "Connect once, then sign in in the browser. No passport needed.",
   "aiAccess.cli.then": "Then run {command}.",

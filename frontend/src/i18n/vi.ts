@@ -5518,7 +5518,7 @@ export const vi = {
   "rbac.masked": "Giá trị đã che",
   "settings.passports": "Passport",
   "settings.passportsSub":
-    "Passport là thông tin xác thực cá nhân cho script và mã của riêng bạn. Bất kỳ thứ gì dùng passport đều hành động với tư cách của bạn, trong phạm vi các quyền đã chọn và không bao giờ vượt quá. Để dùng Margince trong công cụ AI, hãy kết nối công cụ ở phía trên.",
+    "Passport là khóa API cá nhân cho script và mã của riêng bạn. Bất kỳ thứ gì dùng passport đều hành động với tư cách của bạn, trong phạm vi các quyền đã chọn và không bao giờ vượt quá. Để dùng Margince trong công cụ AI, hãy kết nối công cụ ở phía trên.",
   "passport.scope.read": "Đọc hồ sơ",
   "passport.scope.draft": "Soạn nháp tin nhắn",
   "passport.scope.write": "Sửa hồ sơ",
@@ -5528,7 +5528,7 @@ export const vi = {
   "passport.noneOption": "Không dùng passport",
   "settings.passportUseAi": "Trong script hoặc công cụ AI khác",
   "settings.passportUseAiDetail":
-    "Cài skill Margince vào công cụ không tự đăng nhập được, rồi cung cấp passport cho công cụ đó. Claude Code, Codex và Antigravity đăng nhập không cần passport, trong mục Công cụ dòng lệnh.",
+    "Cài skill Margince vào công cụ không tự đăng nhập được, rồi cung cấp passport cho công cụ đó. Claude Code, Codex và Antigravity đăng nhập không cần passport, trong mục Agent lập trình.",
   "settings.skillDownload": "Tải xuống skill",
   "settings.skillDownloadFailed": "Không thể tải xuống skill",
   "settings.passportUseCode": "Trong mã nguồn riêng",
@@ -5839,8 +5839,11 @@ export const vi = {
   "aiAccess.guide.checked": "Các bước này được kiểm tra vào {date}.",
   "aiAccess.dev.title": "Dành cho nhà phát triển",
   "aiAccess.dev.sub":
-    "Công cụ dòng lệnh, passport cho script và mã của riêng bạn, danh sách công cụ và cài đặt tự chủ.",
-  "aiAccess.cli.title": "Công cụ dòng lệnh",
+    "Khóa API cho mã của riêng bạn, agent lập trình, và những gì agent được làm khi không có bạn.",
+  "aiAccess.dev.tab.passports": "Khóa API",
+  "aiAccess.dev.tab.agents": "Agent lập trình",
+  "aiAccess.dev.tab.rules": "Quy tắc cho agent",
+  "aiAccess.cli.title": "Agent lập trình",
   "aiAccess.cli.sub":
     "Kết nối một lần, rồi đăng nhập trong trình duyệt. Không cần passport.",
   "aiAccess.cli.then": "Sau đó chạy {command}.",

@@ -10,7 +10,7 @@ two tiers, what waits for a human, passports and allowances) are on
 ### What does the AI do in Margince?
 The AI in Margince drafts emails, reads deal documents for deal fields, and fills in company records from the web. It answers questions from a document set you filed, and ranks your Morning brief during the night.
 
-Everything it suggests carries its evidence. Changes to your records either wait as an approval, or appear as an automatic change. You can turn off each kind of automatic change in **Settings → AI access**, under **For developers**.
+Everything it suggests carries its evidence. Changes to your records either wait as an approval, or appear as an automatic change. You can turn off each kind of automatic change in **Settings → AI access**, on the **Agent rules** tab under **For developers**.
 Also called: AI features, assistant, copilot, what can Margince AI do.
 
 ### Can the AI send email on my behalf?
@@ -172,7 +172,7 @@ The **AI** group in Settings holds four pages: **AI usage**, **AI models**,
 **AI call log** and **Automations**.
 
 In **Settings → AI access** you connect your AI tool. Under **For developers**
-there, you create your own passports and switch **Automatic changes** on or off.
+there, you create your own passports on **API keys** and switch **Automatic changes** on or off on **Agent rules**.
 
 The full record of actions is in **Settings → Audit log**: every action, with the
 human, agent or connected system that did it.

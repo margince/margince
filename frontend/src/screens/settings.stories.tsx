@@ -214,10 +214,12 @@ const aiAccessRoutes = {
   "GET /.well-known/oauth-protected-resource": connectorOn,
 };
 
-async function openDevelopers(canvasElement: HTMLElement) {
-  await userEvent.click(
-    await within(canvasElement).findByText("For developers"),
-  );
+async function openDevelopers(canvasElement: HTMLElement, tab?: string) {
+  const canvas = within(canvasElement);
+  await userEvent.click(await canvas.findByText("For developers"));
+  if (tab !== undefined) {
+    await userEvent.click(await canvas.findByRole("button", { name: tab }));
+  }
 }
 
 export const AiAccess: Story = {
@@ -237,14 +239,28 @@ export const AiAccessPhone: Story = {
   render: tab("agents", aiAccessRoutes),
 };
 
-// Every developer card, open: commands, passports, tools and autonomy.
+// For developers open on its first tab, API keys.
 export const AiAccessDevelopersOpen: Story = {
   name: "AI access — for developers open",
   render: tab("agents", aiAccessRoutes),
   play: async ({ canvasElement }) => openDevelopers(canvasElement),
 };
 
-// The connector switched off: the picker and the command-line card both say so
+export const AiAccessCodingAgents: Story = {
+  name: "AI access — coding agents",
+  render: tab("agents", aiAccessRoutes),
+  play: async ({ canvasElement }) =>
+    openDevelopers(canvasElement, "Coding agents"),
+};
+
+export const AiAccessAgentRules: Story = {
+  name: "AI access — agent rules",
+  render: tab("agents", aiAccessRoutes),
+  play: async ({ canvasElement }) =>
+    openDevelopers(canvasElement, "Agent rules"),
+};
+
+// The connector switched off: the picker and the coding-agents card both say so
 // and say what still works. It is the state a default install is in.
 export const AiAccessConnectorOff: Story = {
   name: "AI access — connector off",
@@ -252,7 +268,8 @@ export const AiAccessConnectorOff: Story = {
     ...aiAccessRoutes,
     "GET /.well-known/oauth-protected-resource": connectorOff,
   }),
-  play: async ({ canvasElement }) => openDevelopers(canvasElement),
+  play: async ({ canvasElement }) =>
+    openDevelopers(canvasElement, "Coding agents"),
 };
 
 // The row's menu opens the revoke confirm, left open here so the guarded
@@ -357,7 +374,7 @@ const selectScoutPassport = async ({
 }: {
   canvasElement: HTMLElement;
 }) => {
-  await openDevelopers(canvasElement);
+  await openDevelopers(canvasElement, "Agent rules");
   const canvas = within(canvasElement);
   // The listbox is portalled to the body, outside this story's canvas, so the
   // pick goes through the shared helper rather than a canvas-scoped query.

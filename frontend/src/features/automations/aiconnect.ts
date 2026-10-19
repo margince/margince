@@ -158,9 +158,17 @@ export function connectPath(tool: AiTool, plan: AiPlan): ConnectPath {
   return CONNECT_PATHS[`${tool}-${plan}`];
 }
 
+export type CliId = "claude-code" | "codex" | "antigravity";
+
+// Product names, typed as the vendor spells them in every language.
+export const CLI_NAMES: Readonly<Record<CliId, string>> = {
+  "claude-code": "Claude Code",
+  codex: "Codex",
+  antigravity: "Antigravity",
+};
+
 export type CliPath = Readonly<{
-  id: "claude-code" | "codex" | "antigravity";
-  name: string;
+  id: CliId;
   help: string;
   command: (mcpUrl: string) => string;
   signIn?: string;
@@ -171,21 +179,18 @@ export type CliPath = Readonly<{
 export const CLI_PATHS: readonly CliPath[] = [
   {
     id: "claude-code",
-    name: "Claude Code",
     help: "https://code.claude.com/docs/en/mcp",
     command: (url) => `claude mcp add --transport http margince ${url}`,
     signIn: "/mcp",
   },
   {
     id: "codex",
-    name: "Codex",
     help: "https://learn.chatgpt.com/docs/extend/mcp?surface=cli",
     command: (url) => `codex mcp add margince --url ${url}`,
     signIn: "codex mcp login margince",
   },
   {
     id: "antigravity",
-    name: "Antigravity",
     help: "https://antigravity.google/docs/mcp",
     // Antigravity refuses the `url`/`httpUrl` spellings its siblings accept.
     command: (url) =>

@@ -233,8 +233,8 @@ To connect your AI tool, see [How do I connect my AI tool to Margince?](agents-a
 To create an agent passport, open Settings → **AI access**, then **For developers**, and see [How do I give an agent access to Margince?](agents-and-passports.md#how-do-i-give-an-agent-access-to-margince).
 Also called: API key, access token, connect an AI agent.
 
-**Your connections** lists each AI tool you connected. Under **For developers**
-you also see the list of actions agents may use. Choosing **Disconnect** on a
+**Your connections** lists each AI tool you connected. Under **For developers**,
+the **Agent rules** tab shows the list of actions agents may use. Choosing **Disconnect** on a
 connection ends the whole connection, not one key. The
 agent loses access on its next call and cannot get it back. Connecting it again
 means approving access again.

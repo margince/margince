@@ -5636,7 +5636,7 @@ export const de = {
   "rbac.masked": "Verborgener Wert",
   "settings.passports": "Passports",
   "settings.passportsSub":
-    "Ein Passport ist dein persönlicher Zugang für Skripte und eigenen Code. Was ihn nutzt, handelt als du, mit den Berechtigungen, die du auswählst, und nie darüber hinaus. Um Margince in einem KI-Tool zu nutzen, verbinde das Tool stattdessen oben.",
+    "Ein Passport ist dein persönlicher API-Schlüssel für Skripte und eigenen Code. Was ihn nutzt, handelt als du, mit den Berechtigungen, die du auswählst, und nie darüber hinaus. Um Margince in einem KI-Tool zu nutzen, verbinde das Tool stattdessen oben.",
   "passport.scope.read": "Datensätze lesen",
   "passport.scope.draft": "Nachrichten entwerfen",
   "passport.scope.write": "Datensätze ändern",
@@ -5646,7 +5646,7 @@ export const de = {
   "passport.noneOption": "Kein Passport",
   "settings.passportUseAi": "In einem Skript oder einem anderen KI-Tool",
   "settings.passportUseAiDetail":
-    "Installiere den Margince-Skill in einem Tool, das sich nicht selbst anmelden kann, und gib ihm dann deinen Passport. Claude Code, Codex und Antigravity brauchen keinen Passport; sie melden sich unter Kommandozeilen-Tools selbst an.",
+    "Installiere den Margince-Skill in einem Tool, das sich nicht selbst anmelden kann, und gib ihm dann deinen Passport. Claude Code, Codex und Antigravity brauchen keinen Passport; sie melden sich unter Coding-Agenten selbst an.",
   "settings.skillDownload": "Skill herunterladen",
   "settings.skillDownloadFailed": "Skill nicht heruntergeladen",
   "settings.passportUseCode": "In deinem eigenen Code",
@@ -5980,8 +5980,11 @@ export const de = {
   "aiAccess.guide.checked": "Diese Schritte wurden am {date} geprüft.",
   "aiAccess.dev.title": "Für die Entwicklung",
   "aiAccess.dev.sub":
-    "Kommandozeilen-Tools, Passports für Skripte und eigenen Code, die Tool-Liste und Autonomie-Einstellungen.",
-  "aiAccess.cli.title": "Kommandozeilen-Tools",
+    "API-Schlüssel für eigenen Code, Coding-Agenten und was Agenten ohne dich tun dürfen.",
+  "aiAccess.dev.tab.passports": "API-Schlüssel",
+  "aiAccess.dev.tab.agents": "Coding-Agenten",
+  "aiAccess.dev.tab.rules": "Regeln für Agenten",
+  "aiAccess.cli.title": "Coding-Agenten",
   "aiAccess.cli.sub":
     "Einmal verbinden, dann im Browser anmelden. Kein Passport nötig.",
   "aiAccess.cli.then": "Führe dann {command} aus.",

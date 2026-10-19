@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useState } from "react";
+import { SegmentedControl } from "../design-system/atoms";
 import { Disclosure } from "../design-system/disclosure";
 import { AutonomySettingsCard } from "../features/automations/autonomy-settings";
-import { CommandLineToolsCard } from "../features/automations/commandline-tools";
+import { CodingAgentsCard } from "../features/automations/coding-agents";
 import { ConnectAiToolCard } from "../features/automations/connect-ai-tool";
 import { ConnectedAgentsCard } from "../features/automations/connected-agents";
 import { useT } from "../i18n";
@@ -31,14 +33,42 @@ export function AiAccessTab() {
           </span>
         }
       >
-        <div className="aiaccess-dev">
-          <CommandLineToolsCard />
-          <PassportCard />
+        <DeveloperTabs />
+      </Disclosure>
+    </>
+  );
+}
+
+const DEVELOPER_TABS = ["passports", "agents", "rules"] as const;
+type DeveloperTab = (typeof DEVELOPER_TABS)[number];
+
+// API keys open first: a developer who opens this section most often came for
+// a passport. One tab shows at a time, so the section stays one screen long.
+function DeveloperTabs() {
+  const t = useT();
+  const [tab, setTab] = useState<DeveloperTab>("passports");
+  return (
+    <div className="aiaccess-dev">
+      <SegmentedControl
+        label={t("aiAccess.dev.title")}
+        options={DEVELOPER_TABS}
+        value={tab}
+        onChange={setTab}
+        labels={{
+          passports: t("aiAccess.dev.tab.passports"),
+          agents: t("aiAccess.dev.tab.agents"),
+          rules: t("aiAccess.dev.tab.rules"),
+        }}
+      />
+      {tab === "passports" && <PassportCard />}
+      {tab === "agents" && <CodingAgentsCard />}
+      {tab === "rules" && (
+        <>
           <AgentToolsCard />
           <AutonomyTiersCard />
           <AutonomySettingsCard />
-        </div>
-      </Disclosure>
-    </>
+        </>
+      )}
+    </div>
   );
 }
