@@ -12,8 +12,8 @@ import (
 
 func territorySpec(options ...string) reportSpec {
 	return withCustomDimensions(prebuiltReports["deals-by-stage"], []fieldcatalog.ReportableColumn{{
-		Column: fieldcatalog.Column{Name: "cf_territory", Type: fieldcatalog.TypePicklist, Options: options},
-		Label:  "Territory",
+		Name: "cf_territory", Type: fieldcatalog.TypePicklist, Options: options,
+		Label: "Territory",
 	}})
 }
 
