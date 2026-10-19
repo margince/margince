@@ -227,6 +227,7 @@ export const vi = {
   "reporting.allPipelines": "Tất cả pipeline",
   "reporting.resultsThrough": "Kết quả tính đến {at}",
   "reporting.noSalesWon": "Chưa có doanh số đã chốt",
+  "reporting.openPipelineAsOf": "Tính đến {at}",
   "reporting.openPipelineBasis_one":
     "Giao dịch đang mở: {count} · tính đến {at}",
   "reporting.openPipelineBasis_other":

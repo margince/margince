@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   installFetchStub,
@@ -112,4 +113,51 @@ it("says open pipeline is a count now and the expected finish is this quarter's"
     .getAllByText(/^(Sales won|Forecast landing|Open pipeline)$/)
     .map((node) => node.textContent);
   expect(labels).toEqual(["Sales won", "Forecast landing", "Open pipeline"]);
+});
+
+it("keeps a withheld deal count unknown instead of printing zero", () => {
+  const evaluation: typeof reportingStoryEvaluation = {
+    ...reportingStoryEvaluation,
+    metrics: reportingStoryEvaluation.metrics.map((metric) =>
+      metric.id === "open_pipeline"
+        ? {
+            ...metric,
+            coverage: { ...metric.coverage, eligible_count: undefined },
+          }
+        : metric,
+    ),
+  };
+  render(
+    <StoryProviders>
+      <ResultsSummary evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  expect(screen.getByText(/^As of /)).toBeVisible();
+  expect(screen.queryByText(/Open deals: 0/)).toBeNull();
+});
+
+it("opens the forecast section from the forecast landing, not an empty evidence list", async () => {
+  const onEvidence = vi.fn();
+  const evaluation: typeof reportingStoryEvaluation = {
+    ...reportingStoryEvaluation,
+    metrics: [
+      {
+        id: "forecast_landing",
+        version: "1",
+        unit: "EUR",
+        value: 76000000,
+        coverage: { status: "ok", withheld: false },
+        evidence: { metric: "forecast_landing", context_id: "state" },
+      },
+    ],
+  };
+  window.location.hash = "#/analytics/performance";
+  render(
+    <StoryProviders>
+      <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
+    </StoryProviders>,
+  );
+  await userEvent.setup().click(screen.getByRole("button", { name: "Open" }));
+  expect(onEvidence).not.toHaveBeenCalled();
+  expect(window.location.hash).toMatch(/^#\/analytics\/forecast/);
 });

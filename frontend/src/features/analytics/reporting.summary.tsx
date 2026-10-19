@@ -2,6 +2,7 @@ import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
+import { openAnalyticsSection } from "./analytics.address";
 import {
   metricLabel,
   type ReportingEvaluation,
@@ -127,11 +128,7 @@ export function ResultsSummary({
                 </p>
               </>
             }
-            onOpen={
-              metric.coverage.status === "no_data"
-                ? undefined
-                : () => onEvidence(metric.evidence)
-            }
+            onOpen={headlineOpen(metric, onEvidence)}
             meter={comparable ? { filled: actual, total: target } : undefined}
           />
         );
@@ -177,14 +174,33 @@ function headlineBasis(
   const { t, plural, locale } = words;
   const { context } = evaluation;
   if (metric.id === "open_pipeline") {
-    const count = metric.coverage.eligible_count ?? 0;
-    return plural("reporting.openPipelineBasis", count, {
-      count: formatNumber(count, locale),
-      at: formatDateAbbrev(context.state_at, locale, context.timezone),
-    });
+    const at = formatDateAbbrev(context.state_at, locale, context.timezone);
+    const count = metric.coverage.eligible_count;
+    // A withheld count stays unknown rather than reading as zero deals.
+    return count == null
+      ? t("reporting.openPipelineAsOf", { at })
+      : plural("reporting.openPipelineBasis", count, {
+          count: formatNumber(count, locale),
+          at,
+        });
   }
   if (metric.id === "forecast_landing") {
     return t("reporting.forecastLandingBasis");
   }
   return reportingPeriodLabel(context.interval, context.timezone, locale);
+}
+
+// The forecast landing is a projection rather than a sum of records, so its
+// evidence is the Forecast section, where its parts open their own deals.
+function headlineOpen(
+  metric: ReportingEvaluation["metrics"][number],
+  onEvidence: (reference: ReportingEvidenceRef) => void,
+): (() => void) | undefined {
+  if (metric.coverage.status === "no_data") {
+    return undefined;
+  }
+  if (metric.id === "forecast_landing") {
+    return () => openAnalyticsSection("forecast");
+  }
+  return () => onEvidence(metric.evidence);
 }

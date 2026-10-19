@@ -213,6 +213,7 @@ export const en = {
   "reporting.allPipelines": "All pipelines",
   "reporting.resultsThrough": "Results through {at}",
   "reporting.noSalesWon": "No sales won",
+  "reporting.openPipelineAsOf": "As of {at}",
   "reporting.openPipelineBasis_one": "Open deal: {count} · as of {at}",
   "reporting.openPipelineBasis_other": "Open deals: {count} · as of {at}",
   "reporting.forecastLandingBasis":
