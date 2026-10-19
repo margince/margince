@@ -1,7 +1,7 @@
 import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
-import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { formatDateAbbrev, formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import {
   metricLabel,
   type ReportingEvaluation,
@@ -33,6 +33,16 @@ export function TargetProgress({
   );
 }
 
+// Results over the period first, then where this quarter is heading, then
+// what is open now.
+const HEADLINE_METRICS = [
+  "bookings_won",
+  "forecast_landing",
+  "open_pipeline",
+  "meetings_held",
+  "accepted_opportunities",
+] as const;
+
 export function ResultsSummary({
   evaluation,
   onEvidence,
@@ -42,10 +52,8 @@ export function ResultsSummary({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const metrics = evaluation.metrics.filter((metric) =>
-    ["bookings_won", "meetings_held", "accepted_opportunities"].includes(
-      metric.id,
-    ),
+  const metrics = HEADLINE_METRICS.flatMap(
+    (id) => evaluation.metrics.find((metric) => metric.id === id) ?? [],
   );
   if (!metrics.length) return null;
   return (
@@ -140,6 +148,7 @@ function OutcomePeriod({
   metric: ReportingEvaluation["metrics"][number];
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   return (
     <>
@@ -147,11 +156,7 @@ function OutcomePeriod({
         {metric.id === "bookings_won" && metric.coverage.status === "no_data"
           ? `${t("reporting.noSalesWon")} · `
           : ""}
-        {reportingPeriodLabel(
-          evaluation.context.interval,
-          evaluation.context.timezone,
-          locale,
-        )}
+        {headlineBasis(evaluation, metric, { t, plural, locale })}
       </span>
       {metric.coverage.status !== "ok" &&
         !(
@@ -159,4 +164,27 @@ function OutcomePeriod({
         ) && <span>{t(`reporting.status.${metric.coverage.status}`)}</span>}
     </>
   );
+}
+
+// What a headline figure is about. Sales won covers the chosen period; open
+// pipeline is the state now, so it names a moment and a count, never the
+// period; the expected finish is always this fiscal quarter's.
+function headlineBasis(
+  evaluation: ReportingEvaluation,
+  metric: ReportingEvaluation["metrics"][number],
+  words: Words,
+): string {
+  const { t, plural, locale } = words;
+  const { context } = evaluation;
+  if (metric.id === "open_pipeline") {
+    const count = metric.coverage.eligible_count ?? 0;
+    return plural("reporting.openPipelineBasis", count, {
+      count: formatNumber(count, locale),
+      at: formatDateAbbrev(context.state_at, locale, context.timezone),
+    });
+  }
+  if (metric.id === "forecast_landing") {
+    return t("reporting.forecastLandingBasis");
+  }
+  return reportingPeriodLabel(context.interval, context.timezone, locale);
 }

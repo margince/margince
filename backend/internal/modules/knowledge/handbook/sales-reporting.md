@@ -7,6 +7,8 @@ Open **Analytics → Performance**. Choose **Sales** for sales won, pipeline sta
 
 Sales won follows the close time span you picked and the deal owner of today. If a deal gets a new owner, its live sales and target results move to the new owner. Saved snapshots keep the owner and results from that time. Open pipeline and stage age show the pipeline as it is now, with the time window for expected closes printed next to the chart.
 
+The row of figures at the top shows sales won and open pipeline, with the number of open deals and the date it was read. When the time span is this quarter and you may read the forecast, it also shows **Forecast landing**: where the deal forecast expects this fiscal quarter to end. Click any figure to open the records behind it.
+
 A salesperson's target is for the month or the fiscal quarter that holds the end of the time span you picked. If the cutoff of today comes first, it is the month or quarter that holds that cutoff. It is compared with the real result for that month or quarter. Changing the time span does not turn today's pipeline into history.
 
 “This month” and “This quarter” follow the calendar of your Margince and start again when that time span starts. The dates next to the numbers name the time span measured. A custom time span can be up to 12 months long. If the end date is today or later, real results stop at the reporting cutoff of today, shown above the charts. Future sales are not counted. A time span that is all in the future is refused; choose a start date before the cutoff.
