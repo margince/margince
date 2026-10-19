@@ -534,7 +534,7 @@ func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 // shown. The number names all that changing the base would re-mean.
 func TestTheFrozenRateCountSumsEveryKindOfRecord(t *testing.T) {
 	e := SetupSearch(t)
-	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
 
 	pipeline := e.SeedID(t, `INSERT INTO pipeline (id, name, is_default) VALUES ($1, 'Census fixture', false)`)
@@ -578,7 +578,7 @@ func TestTheFrozenRateCountSumsEveryKindOfRecord(t *testing.T) {
 // base unnamed, not the default the read falls back to.
 func TestARateSheetWithNoStoredBaseLocksWithoutNamingOne(t *testing.T) {
 	e := SetupSearch(t)
-	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
 
 	if _, err := e.Owner.Exec(context.Background(), `DELETE FROM setting WHERE key = $1`, identity.BaseCurrency.Key()); err != nil {
