@@ -15179,13 +15179,16 @@ components:
           description: The timeline activity this produced, once released.
         held_reason:
           type: [string, 'null']
-          enum: [consent_withdrawn, sender_inactive, missed_window, timer_exhausted, send_refused, null]
+          enum: [consent_withdrawn, sender_inactive, passport_revoked, missed_window, timer_exhausted, send_refused, followup_settled, meeting_canceled, null]
           description: |-
             Why a human has to look at it. `consent_withdrawn` — a recipient withdrew consent
             after it was scheduled. `sender_inactive` — the scheduler lost their seat or mailbox.
             `missed_window` — it came due while nothing was running and is now too late to be the
             message that was written. `timer_exhausted` — the job that wakes it ran out of
             attempts. `send_refused` — a gate refused for another reason at fire.
+            `passport_revoked` — the agent credential was revoked.
+            `followup_settled` — the recorded request was answered or completed after scheduling.
+            `meeting_canceled` — the meeting named as follow-up evidence was canceled.
         review_id:
           type: [string, 'null']
           format: uuid
@@ -16641,6 +16644,9 @@ components:
         - definition_version
         - member_ids
       properties:
+        prose_language:
+          type: string
+          description: Base language used for generated explanations. Absent on legacy readings, which use English.
         period_kind: {type: string}
         scope:
           $ref: '#/components/schemas/ReportingScope'
@@ -18610,6 +18616,7 @@ components:
         seed_url: {type: string, format: uri}
         status: {type: string, enum: [queued, deferred, running, done, partial, failed, cancelled]}
         status_code: {type: [string, 'null'], enum: [null, budget_deferred, bot_blocked, http_server_error, timeout, http_client_error, dns, tls, robots_disallowed, unreadable, internal, stale_reclaim], description: 'Why a read did not finish: budget_deferred, or the closed failure vocabulary a failed crawl is diagnosed with.'}
+        deferral_reason: {type: string, description: 'Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons.'}
         status_detail: {type: [string, 'null'], description: 'Safe guidance only; never provider payload, prompt, SQL, or stack data.'}
         next_attempt_at: {type: [string, 'null'], format: date-time}
         pages:

@@ -3,17 +3,8 @@
 
 package graph
 
-// The OUTBOUND half of the Outlook connector: transmitting one message as the
-// connected mailbox owner. Split from graph.go the way Gmail's send is split
-// from its capture, because it answers a different question and rides a
-// different scope.
-//
-// The bytes are the SHARED renderer (capture/mailwire), not a second one:
-// Microsoft's sendMail accepts a complete RFC822 message under a `text/plain`
-// content type, which is the same wire format Gmail's messages.send takes. What
-// a multipart/alternative puts first, whether an attachment's filename rides in
-// one header or two, where base64 folds — those have one right answer, and two
-// renderers would answer them twice.
+// Graph and Gmail accept the same MIME message.
+// Shared mailwire keeps attachment, threading and sender rules consistent.
 
 import (
 	"context"
@@ -21,7 +12,7 @@ import (
 	"slices"
 
 	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
-	"github.com/margince/margince/backend/internal/modules/capture/mailwire"
+	"github.com/margince/margince/backend/internal/platform/mailwire"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 

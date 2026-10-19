@@ -230,24 +230,19 @@ func readableIDs(moment ArcMoment) []string {
 }
 
 // arcSummary is the moment's one line: how much happened, over what stretch.
-func arcSummary(moment ArcMoment, conversations int) string {
-	span := formatDay(moment.From)
-	if formatDay(moment.To) != span {
-		span = fmt.Sprintf("%s–%s", span, formatDay(moment.To))
+func (said briefCopy) arcSummary(moment ArcMoment, conversations int) string {
+	span := moment.From.UTC().Format(time.DateOnly)
+	if end := moment.To.UTC().Format(time.DateOnly); end != span {
+		span += "–" + end
 	}
 	if moment.Title == "" {
-		return fmt.Sprintf("%s: %s.", span, plural(conversations, "conversation"))
+		if conversations == 1 {
+			return fmt.Sprintf(said.Say(arcWords.One), span)
+		}
+		return fmt.Sprintf(said.Say(arcWords.Many), span, conversations)
 	}
-	return fmt.Sprintf("%s: %s, on %s.", span, plural(conversations, "conversation"), moment.Title)
-}
-
-func formatDay(at time.Time) string {
-	return at.UTC().Format("2 Jan")
-}
-
-func plural(count int, noun string) string {
-	if count == 1 {
-		return fmt.Sprintf("1 %s", noun)
+	if conversations == 1 {
+		return fmt.Sprintf(said.Say(arcWords.OneTitle), span, moment.Title)
 	}
-	return fmt.Sprintf("%d %ss", count, noun)
+	return fmt.Sprintf(said.Say(arcWords.ManyTitle), span, conversations, moment.Title)
 }

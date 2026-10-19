@@ -42,6 +42,8 @@ type BackendOptions = {
     source: "admin" | "mailbox";
     verified: boolean;
   }[];
+  /** A problem body every POST is refused with. */
+  postRefusal?: { status: number; detail: string };
 };
 
 // backendFor answers /me with the given grants and /capture/email-domains with
@@ -69,7 +71,20 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
       }
       if (url.pathname.endsWith("/capture/email-domains")) {
         if (req.method === "POST") {
-          capturedPost = await req.json();
+          const body: { domain: string } = await req.json();
+          capturedPost = body;
+          if (opts.postRefusal) {
+            return new Response(JSON.stringify(opts.postRefusal), {
+              status: opts.postRefusal.status,
+              headers: { "content-type": "application/problem+json" },
+            });
+          }
+          // Adding a candidate confirms it, as the server does.
+          state.data = state.data.map((row) =>
+            row.domain === body.domain
+              ? { ...row, source: "admin", verified: true }
+              : row,
+          );
           return jsonResponse(
             { domain: "brandt.de", source: "admin", verified: true },
             201,
@@ -243,7 +258,7 @@ describe("OwnDomainsCard", () => {
     const { fetchMock } = backendFor(CAPTURE_EDITOR, {
       domains: [
         { domain: "brandt.de", source: "admin", verified: true },
-        { domain: "seen.de", source: "mailbox", verified: false },
+        { domain: "brandt.com", source: "admin", verified: true },
       ],
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -253,7 +268,7 @@ describe("OwnDomainsCard", () => {
     await user.click(
       await screen.findByRole("button", { name: /remove brandt\.de/i }),
     );
-    const next = screen.getByRole("button", { name: /remove seen\.de/i });
+    const next = screen.getByRole("button", { name: /remove brandt\.com/i });
     await waitFor(() => expect(document.activeElement).toBe(next));
 
     await user.click(next);
@@ -282,6 +297,71 @@ describe("OwnDomainsCard", () => {
     expect(
       screen.queryByRole("button", { name: en["common.undo"] }),
     ).toBeNull();
+  });
+
+  // Confirming is adding the domain again, so the row's verb sends the same
+  // write the add dialog does.
+  it("confirms a candidate in place", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, post } = backendFor(CAPTURE_EDITOR, {
+      domains: [{ domain: "seen.de", source: "mailbox", verified: false }],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OwnDomainsCard />);
+
+    expect(
+      await screen.findByText(en["ownDomains.candidateNote"]),
+    ).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", {
+        name: en["ownDomains.confirmLabel"].replace("{domain}", "seen.de"),
+      }),
+    );
+    await waitFor(() => expect(post()).toEqual({ domain: "seen.de" }));
+    // The confirmed row drops its mark and its confirm verb, and focus stays
+    // in the row on the verb that is left.
+    const remove = screen.getByRole("button", { name: /remove seen\.de/i });
+    await waitFor(() => expect(document.activeElement).toBe(remove));
+    expect(screen.queryByText(en["ownDomains.candidate"])).toBeNull();
+  });
+
+  it("says on the row why a confirm was refused", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, post } = backendFor(CAPTURE_EDITOR, {
+      domains: [{ domain: "seen.de", source: "mailbox", verified: false }],
+      postRefusal: { status: 422, detail: "seen.de cannot be confirmed now" },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OwnDomainsCard />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["ownDomains.confirmLabel"].replace("{domain}", "seen.de"),
+      }),
+    );
+    await waitFor(() => expect(post()).toEqual({ domain: "seen.de" }));
+    const managed = screen.getByTestId("own-domains-list");
+    expect((await within(managed).findByRole("alert")).textContent).toContain(
+      "seen.de cannot be confirmed now",
+    );
+    expect(screen.getByText(en["ownDomains.candidate"])).toBeTruthy();
+  });
+
+  it("refuses confirming a candidate for a role that cannot change the list", async () => {
+    const { fetchMock } = backendFor(
+      {},
+      { domains: [{ domain: "seen.de", source: "mailbox", verified: false }] },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OwnDomainsCard />);
+
+    const confirm = await screen.findByRole("button", {
+      name: en["ownDomains.confirmLabel"].replace("{domain}", "seen.de"),
+    });
+    expect(confirm.hasAttribute("disabled")).toBe(true);
   });
 
   it("marks only an unconfirmed domain, since confirmed is the normal state", async () => {

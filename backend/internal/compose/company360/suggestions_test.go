@@ -45,7 +45,7 @@ func TestStaleThreadFiresOnOurUnansweredMessage(t *testing.T) {
 	companyID := testCompanyID(t)
 	newest := sentAgo(10, crmcontracts.ActivityDirectionOutbound)
 
-	got := staleThread(companyID, suggestNow, newest)
+	got := englishSuggestions.staleThread(companyID, suggestNow, newest)
 	if got == nil {
 		t.Fatal("no suggestion for a 10-day-old unanswered outbound message")
 	}
@@ -66,7 +66,7 @@ func TestStaleThreadFiresOnOurUnansweredMessage(t *testing.T) {
 // contact who is waiting for their reply would be worse than silence.
 func TestStaleThreadStaysSilentWhenTheyAnsweredLast(t *testing.T) {
 	companyID := testCompanyID(t)
-	if got := staleThread(companyID, suggestNow, sentAgo(10, crmcontracts.ActivityDirectionInbound)); got != nil {
+	if got := englishSuggestions.staleThread(companyID, suggestNow, sentAgo(10, crmcontracts.ActivityDirectionInbound)); got != nil {
 		t.Fatalf("suggestion %+v for a thread waiting on US", got)
 	}
 }
@@ -87,10 +87,10 @@ func TestStaleThreadFiresAtTheReplyWindowAndNotBefore(t *testing.T) {
 		t.Errorf("the reply window is %d days, not a week — if that is intended, say so "+
 			"here and in the reason a rep reads", noReplyDays)
 	}
-	if got := staleThread(companyID, suggestNow, sentAgo(noReplyDays-1, crmcontracts.ActivityDirectionOutbound)); got != nil {
+	if got := englishSuggestions.staleThread(companyID, suggestNow, sentAgo(noReplyDays-1, crmcontracts.ActivityDirectionOutbound)); got != nil {
 		t.Errorf("suggestion %+v one day inside the reply window", got)
 	}
-	got := staleThread(companyID, suggestNow, sentAgo(noReplyDays, crmcontracts.ActivityDirectionOutbound))
+	got := englishSuggestions.staleThread(companyID, suggestNow, sentAgo(noReplyDays, crmcontracts.ActivityDirectionOutbound))
 	if got == nil {
 		t.Fatalf("no suggestion at exactly %d days, the window's own edge", noReplyDays)
 	}
@@ -107,7 +107,7 @@ func TestStaleThreadFiresAtTheReplyWindowAndNotBefore(t *testing.T) {
 func TestStaleThreadStaysSilentWithoutADirection(t *testing.T) {
 	companyID := testCompanyID(t)
 	newest := lastMessage{ID: ids.NewV7(), At: suggestNow.AddDate(0, 0, -30)}
-	if got := staleThread(companyID, suggestNow, newest); got != nil {
+	if got := englishSuggestions.staleThread(companyID, suggestNow, newest); got != nil {
 		t.Fatalf("suggestion %+v for a message with no recorded direction", got)
 	}
 }
@@ -137,8 +137,8 @@ func TestStalledDealFingerprintOnlyMovesWhenTheDealIsWorked(t *testing.T) {
 	first := idle("Renewal")
 	worked := stalledDeal{ID: first.ID, Name: first.Name, IdleSince: suggestNow.AddDate(0, 0, -70)}
 
-	before := stalledDealSuggestions([]stalledDeal{first})
-	after := stalledDealSuggestions([]stalledDeal{worked})
+	before := englishSuggestions.stalledDealSuggestions([]stalledDeal{first})
+	after := englishSuggestions.stalledDealSuggestions([]stalledDeal{worked})
 	if len(before) != 1 || len(after) != 1 {
 		t.Fatalf("got %d and %d suggestions, want one each", len(before), len(after))
 	}
@@ -149,7 +149,7 @@ func TestStalledDealFingerprintOnlyMovesWhenTheDealIsWorked(t *testing.T) {
 
 	// The same stall keeps its fingerprint, or the dismissal would not hold for as
 	// long as the situation does.
-	if repeat := stalledDealSuggestions([]stalledDeal{first}); repeat[0].Fingerprint != before[0].Fingerprint {
+	if repeat := englishSuggestions.stalledDealSuggestions([]stalledDeal{first}); repeat[0].Fingerprint != before[0].Fingerprint {
 		t.Error("the same stall hashed differently between reads — a dismissal would not hold")
 	}
 
@@ -157,7 +157,7 @@ func TestStalledDealFingerprintOnlyMovesWhenTheDealIsWorked(t *testing.T) {
 	// reads — so a fingerprint over the idle instant alone would stay silenced
 	// through every stage the deal went on to reach.
 	advanced := stalledDeal{ID: first.ID, Name: first.Name, IdleSince: first.IdleSince, StageMoves: 1}
-	moved := stalledDealSuggestions([]stalledDeal{advanced})
+	moved := englishSuggestions.stalledDealSuggestions([]stalledDeal{advanced})
 	if moved[0].Fingerprint == before[0].Fingerprint {
 		t.Error("a deal advanced to a new stage reuses the earlier fingerprint — " +
 			"the dismissal would outlast every stage it goes on to reach")
@@ -197,7 +197,7 @@ func TestStalledDealFingerprintOnlyMovesWhenTheDealIsWorked(t *testing.T) {
 func TestStalledDealsRaiseOnePerDeal(t *testing.T) {
 	first, second := idle("Renewal"), idle("Expansion")
 
-	got := stalledDealSuggestions([]stalledDeal{first, second})
+	got := englishSuggestions.stalledDealSuggestions([]stalledDeal{first, second})
 	if len(got) != 2 {
 		t.Fatalf("got %d suggestions, want one per stalled deal", len(got))
 	}

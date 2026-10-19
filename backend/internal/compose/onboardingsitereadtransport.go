@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -325,6 +326,7 @@ func companySiteRead(read contacts.SiteRead, compared []contacts.SiteReadCompari
 		DraftVersion: read.DraftVersion, ProposalHash: read.ProposalHash,
 		CreatedAt: read.CreatedAt, UpdatedAt: read.UpdatedAt, PagesRead: &read.PagesRead,
 		StatusDetail: read.StatusDetail, NextAttemptAt: read.NextAttemptAt,
+		DeferralReason: providerwait.Reason(read.Status, read.StatusCode, read.StatusDetail),
 	}
 	attachCompanySiteReadOptionals(&out, read, runtime)
 	return out

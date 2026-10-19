@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -103,6 +102,11 @@ func (a row) effectiveStatus(now time.Time) string {
 		return StatusExpired
 	}
 	return a.Status
+}
+
+// PendingAt applies the same lazy expiry as the approval inbox.
+func (a row) PendingAt(now time.Time) bool {
+	return a.effectiveStatus(now) == statusPending
 }
 
 // inboxBatch is the scan window List filters per round trip; List keeps

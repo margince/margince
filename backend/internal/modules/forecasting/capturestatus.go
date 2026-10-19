@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // CaptureKey separates pipeline captures from whole-scope captures.
@@ -60,7 +61,7 @@ func readCaptureStatus(ctx context.Context, tx pgx.Tx, key string, lock bool) (i
 }
 
 // RecordCaptureStatus records attempts independently of successful snapshot creation.
-func (s *Store) RecordCaptureStatus(ctx context.Context, scope Scope, pipeline *ids.UUID, at time.Time, success bool) error {
+func (s *Store) RecordCaptureStatus(ctx context.Context, scope Scope, pipeline *ids.UUID, at time.Time, success bool, language textlang.Lang) error {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return err
 	}
@@ -92,7 +93,7 @@ func (s *Store) RecordCaptureStatus(ctx context.Context, scope Scope, pipeline *
 				return err
 			}
 		} else {
-			reason := "Capture failed. Check the configured team and pipeline, then retry the forecast capture job."
+			reason := captureWords.Failed.In(language)
 			after.Failure = &reason
 		}
 		//craft:ignore naked-any pgx arguments bind the typed capture metadata.

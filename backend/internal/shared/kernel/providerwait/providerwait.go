@@ -19,3 +19,16 @@ const Clause = "status_detail = '" + Detail + "'"
 
 // NotClause selects every other deferral, including a row with no detail.
 const NotClause = "status_detail IS DISTINCT FROM '" + Detail + "'"
+
+// Reason exposes the persisted retry discriminator without translating the
+// compatibility sentence that older workers still use in their SQL predicates.
+func Reason(status string, code, detail *string) *string {
+	if status != "deferred" || code == nil || *code != "budget_deferred" {
+		return nil
+	}
+	reason := "budget"
+	if detail != nil && *detail == Detail {
+		reason = "provider"
+	}
+	return &reason
+}

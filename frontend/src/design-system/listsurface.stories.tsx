@@ -1,9 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Plus } from "lucide-react";
+import { Phone, Plus } from "lucide-react";
 import { useState } from "react";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { Button } from "./atoms";
+import { IconAction } from "./iconaction";
+import { Menu, useCloseOnEscape } from "./listmenu";
 import { CountLine, ListSurface, type ListView } from "./listsurface";
 
 // The surface's header when its sentence is longer than the row: German runs
@@ -122,4 +124,46 @@ export const GermanCountPhone: Story = {
   tags: ["uat-phone"],
   render: () => <GermanSurface />,
   play: async ({ canvasElement }) => nothingPushedOut(canvasElement),
+};
+
+function SortMenuBesideAVerb() {
+  const [open, setOpen] = useState<string | null>("sort");
+  useCloseOnEscape(open, () => setOpen(null));
+  return (
+    <div style={{ display: "flex", gap: "var(--space-3)" }}>
+      <span className="lt-menu-wrap">
+        <Button
+          aria-expanded={open !== null}
+          onClick={() => setOpen(open === null ? "sort" : null)}
+        >
+          Sort
+        </Button>
+        <Menu open={open !== null} head="Sort by">
+          <Button variant="ghost">Name</Button>
+          <Button variant="ghost">Last updated</Button>
+        </Menu>
+      </span>
+      <IconAction label="Call" icon={<Phone aria-hidden="true" />} />
+    </div>
+  );
+}
+
+export const MenuUnderATip: Story = {
+  name: "Menu under a tip",
+  render: () => <SortMenuBesideAVerb />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const menu = canvas.getByRole("group", { name: "Sort by" });
+    const call = canvas.getByRole("button", { name: "Call" });
+    await userEvent.hover(call);
+    const body = within(document.body);
+    await waitFor(() => expect(body.getByRole("tooltip")).toBeVisible());
+
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(body.queryByRole("tooltip")).toBeNull());
+    await expect(menu).toHaveClass("open");
+
+    await userEvent.keyboard("{Escape}");
+    await expect(menu).not.toHaveClass("open");
+  },
 };

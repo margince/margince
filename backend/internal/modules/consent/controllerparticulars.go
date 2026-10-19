@@ -3,21 +3,6 @@
 
 package consent
 
-// Who this installation is, in the words a message has to carry.
-//
-// Every jurisdiction pack declares disclosures — Art. 13 GDPR wants the
-// controller named and a privacy contact reachable at first contact; German
-// §7(3) UWG wants an objection route on every advertising message; Vietnamese
-// Decree 91/2020 wants the advertiser identified. The packs have declared them
-// since they shipped and nothing rendered one, because nothing knew who the
-// controller WAS: there is no name, no address and no privacy contact recorded
-// anywhere in this product.
-//
-// gates/messagingruleapplied_test.go's register says so in its own words —
-// "nothing renders a disclosure into a message body" — and that line cannot be
-// removed until an installation can state its own particulars. This is where it
-// states them.
-
 import (
 	"fmt"
 	"strings"
@@ -31,22 +16,8 @@ import (
 // trusted with one is trusted with the other.
 const controllerParticularsObject = "installation_settings"
 
-// ControllerParticulars is what the installation must be able to say about
-// itself when it writes to somebody.
-//
-// FREE TEXT, not a structured address. The particulars a jurisdiction demands
-// differ in shape — a German business letter wants a register court and number,
-// a Vietnamese advertising mail wants a phone and a website — and a struct with
-// a field per jurisdiction would be a form nobody outside that jurisdiction can
-// fill in. What every pack actually needs is a block of words to put at the
-// bottom of a message, written by somebody who knows what their own law
-// requires.
-//
-// Each field is bounded because it is destined for every message this
-// installation sends: an unbounded one is a way to make every mail arbitrarily
-// large, and a footer nobody reads is not a disclosure. Nothing renders them
-// into a body yet — gates/messagingruleapplied_test.go carries that gap — so
-// the bound is set before the consumer rather than after it.
+// ControllerParticulars holds bounded disclosure text for the applicable jurisdiction.
+// DisclosuresFor selects the fields required by each send category.
 type ControllerParticulars struct {
 	// LegalName is who is writing, as the law would name them. Art. 13(1)(a)
 	// GDPR's "identity of the controller" and Decree 91/2020's advertiser.

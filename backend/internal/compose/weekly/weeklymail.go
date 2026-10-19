@@ -27,7 +27,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -65,18 +64,9 @@ func MailSubject(review Review, words mailcopy.Copy) string {
 // whose only call to action it is.
 func MailBody(review Review, homeURL string, words mailcopy.Copy) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s%s\n\n", words.WeeklyHeading, review.LocalWeekStart.Format(mailcopy.DateLayout))
+	fmt.Fprintf(&b, "%s%s\n\n", words.WeeklyHeading, review.LocalWeekStart.Format(mailcopy.DateLayout)+" – "+review.LocalWeekStart.AddDate(0, 0, 6).Format(mailcopy.DateLayout))
 
-	// The sentence first, when a pass wrote one. It is the only part of the
-	// message that reads as a contact talking, so it goes above the numbers it
-	// is about rather than under them.
-	//
-	// FLATTENED like every other rendered string, and this is the one that most
-	// needs it: a model wrote it, and a model is exactly the source somebody can
-	// steer into emitting a newline followed by a line that looks like ours.
-	if review.Narrative != "" {
-		b.WriteString(mailcopy.OneLine(review.Narrative) + "\n\n")
-	}
+	b.WriteString(words.WeeklyResults + "\n\n")
 	figures := figuresOf(review, words)
 	if figures.beforeHistory() {
 		b.WriteString(words.WeeklyBeforeHistory + "\n\n")
@@ -94,29 +84,18 @@ func MailBody(review Review, homeURL string, words mailcopy.Copy) string {
 			figures.value(figures.set.Deals,
 				figures.won(strconv.Itoa(c.DealsWon))+" · "+strconv.Itoa(c.DealsLost)+" · "+strconv.Itoa(c.DealsMoved)),
 		},
-		{words.WeeklyDecided, strconv.Itoa(c.ProposalsAccepted) + " " + words.WeeklyYes +
-			" · " + strconv.Itoa(c.ProposalsRejected) + " " + words.WeeklyNo},
-		{words.WeeklyQueue, strconv.Itoa(c.BriefItemsActed) + " " + words.WeeklyActed +
-			" · " + strconv.Itoa(c.BriefItemsDismissed) + " " + words.WeeklyDismissed},
 		{words.WeeklyCarried, figures.value(figures.set.Tasks, strconv.Itoa(c.TasksCarriedOver))},
+	}
+	if c.TasksCompleted != nil {
+		rows = append([][2]string{{words.WeeklyCompleted, figures.value(figures.set.Tasks, strconv.Itoa(*c.TasksCompleted))}}, rows...)
+	}
+	if review.Money.Known {
+		rows = append([][2]string{{words.WeeklyDealsWon, figures.value(figures.set.Deals, figures.won(values.MajorUnits(review.Money.WonMinor, review.Money.Currency)+" "+review.Money.Currency))}}, rows...)
 	}
 	writeRows(&b, rows)
 
 	writeDealLines(&b, review.Deals, words)
 
-	// The message closes forward, not back.
-	//
-	// Everything above it reports a week that is over. Without a question the
-	// mail is a receipt — a rep reads their numbers, agrees with them and does
-	// nothing, while the panel the link opens is asking them to plan the next
-	// week. Asked in the PANEL's own words (mailcopy pairs it to plan.title),
-	// so the message invites exactly what the page it opens offers.
-	//
-	// It sits above the archive link because it is what the reader is being
-	// asked to do; the archive is where they go if they want the week before.
-	b.WriteString("\n" + words.WeeklyPlanAhead + "\n")
-	// The WEEKLY view, not the bare origin: this message is about a week, and
-	// the page it opened without the fragment was showing this morning.
 	mailcopy.Link(&b, homeURL, mailcopy.BriefWeeklyFragment, words.WeeklyFullWeek)
 	return b.String()
 }
@@ -187,37 +166,21 @@ type MailAttempt struct {
 	Email string
 }
 
-// ClaimMailAttempt takes the one attempt this week's mail is allowed, and
-// hands back what to send. Claimed reports whether this caller won it.
-//
-// THE CLAIM IS WRITTEN BEFORE THE RELAY IS DIALLED, and that ordering is the
-// design rather than an optimisation.
-//
-// The transport is a synchronous SMTP call with no retry identity and no
-// receipt (platform/mailer). There is nothing to reconcile against afterwards,
-// so the only thing that can bound duplicates is a claim taken first: the
-// UPDATE below is conditional on mail_attempted_at being NULL, exactly one
-// transaction can win it, and every retry after it reads zero rows and does
-// nothing.
-//
-// WHAT THIS COSTS, so the next reader does not "fix" it: any failure after the
-// claim loses the mail. A crash before the relay is contacted, a refused
-// envelope, a connection dropped mid-body — all of them leave a claimed row
-// and no message. That is deliberate. A weekly retrospective delivered twice
-// is a contact told their own week twice on the one morning the mail exists to
-// make calm, and this installation cannot tell a failed send from a delivered
-// one, so it cannot retry without risking exactly that.
-//
-// Do NOT turn this into a retry loop. If confirmed delivery is ever wanted,
-// the answer is a delivery ledger with a real receipt from the transport, not
-// a second attempt over a transport that reports nothing.
-//
-// The failure is RECORDED rather than only logged: MailFailed writes the cause
-// beside the stamp, so a missing weekly is answerable from the row.
-//
-// Held by: TestTheWeeklyMailIsAttemptedOnce
-// (backend/internal/compose/weeklymail_integration_test.go)
+// ClaimMailAttempt spends the existing weekly identity before contacting the relay.
+// An uncertain send keeps its claim, preventing a retry from producing another copy.
 func (e *Engine) ClaimMailAttempt(ctx context.Context, reviewID ids.UUID, now time.Time) (MailAttempt, bool, error) {
+	var attempt MailAttempt
+	var claimed bool
+	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		var err error
+		attempt, claimed, err = e.ClaimMailAttemptTx(ctx, tx, reviewID, now)
+		return err
+	})
+	return attempt, claimed, err
+}
+
+// ClaimMailAttemptTx lets a combined edition claim its existing rows atomically.
+func (e *Engine) ClaimMailAttemptTx(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, now time.Time) (MailAttempt, bool, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return MailAttempt{}, false, err
 	}
@@ -225,9 +188,10 @@ func (e *Engine) ClaimMailAttempt(ctx context.Context, reviewID ids.UUID, now ti
 	if err != nil {
 		return MailAttempt{}, false, err
 	}
+
 	var attempt MailAttempt
 	var claimed bool
-	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	claim := func() error {
 		// The row scope and the claim in ONE statement. A review belongs to
 		// the rep whose week it was, so the user predicate is what stops an id
 		// alone from burning somebody else's attempt.
@@ -271,8 +235,8 @@ func (e *Engine) ClaimMailAttempt(ctx context.Context, reviewID ids.UUID, now ti
 		}
 		claimed = true
 		return nil
-	})
-	if err != nil {
+	}
+	if err := claim(); err != nil {
 		return MailAttempt{}, false, err
 	}
 	return attempt, claimed, nil
@@ -333,4 +297,22 @@ func outcomeWord(outcome string, words mailcopy.Copy) string {
 		return words.WeeklyOutcomeMoved
 	}
 	return outcome
+}
+
+// MailPending reads the existing personal claim without spending it.
+func (e *Engine) MailPending(ctx context.Context, reviewID ids.UUID) (bool, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return false, err
+	}
+	user, err := reviewUser(ctx)
+	if err != nil {
+		return false, err
+	}
+	var pending bool
+	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		args := []any{reviewID, user}
+		holders := strings.Split(storekit.Placeholders(args), ",")
+		return tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM weekly_review WHERE id = "+holders[0]+" AND user_id = "+holders[1]+" AND mail_attempted_at IS NULL)", args...).Scan(&pending)
+	})
+	return pending, err
 }

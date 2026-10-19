@@ -7,11 +7,16 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -35,6 +40,7 @@ func (p *weeklyMeasurementProbe) Complete(context.Context, model.Request) (model
 func TestWeeklyMeasurementsFinishBeforeAnyModelCall(t *testing.T) {
 	e := integration.Setup(t)
 	seedManagerRoles(t, e, e.Rep1, e.Rep2, e.Rep3)
+	seedMeasuredNarrativeSources(t, e)
 	w := teamSnapshotWorker(e)
 	probe := &weeklyMeasurementProbe{t: t, env: e}
 	w.narrator = probe
@@ -42,34 +48,42 @@ func TestWeeklyMeasurementsFinishBeforeAnyModelCall(t *testing.T) {
 		t.Fatal(err)
 	}
 	if probe.calls == 0 {
-		t.Fatal("model boundary was never exercised")
+		review, err := w.engine.LatestReview(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		facts, err := json.Marshal(review.NumericSummary)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Fatalf("model boundary was never exercised; measured sources: %s", facts)
 	}
 }
 
-func TestWeeklyReviewHourAppliesToTeamsAndSundayCanCatchUp(t *testing.T) {
-	for _, tc := range []struct {
-		name  string
-		at    time.Time
-		ready bool
+func TestTeamReviewsKeepTheClosedPeriodAtAnyDeliveryHour(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		at   time.Time
+		week string
 	}{
-		{"before Monday opening", time.Date(2026, 6, 8, 5, 59, 0, 0, time.UTC), false},
-		{"Monday opening", time.Date(2026, 6, 8, 6, 0, 0, 0, time.UTC), true},
-		{"Sunday catchup", time.Date(2026, 6, 14, 1, 0, 0, 0, time.UTC), true},
+		{"before the week closes", time.Date(2026, 6, 7, 23, 59, 0, 0, time.UTC), "2026-05-25"},
+		{"Monday opening", time.Date(2026, 6, 8, 0, 0, 0, 0, time.UTC), "2026-06-01"},
+		{"before the old delivery floor", time.Date(2026, 6, 8, 5, 59, 0, 0, time.UTC), "2026-06-01"},
+		{"Sunday catchup", time.Date(2026, 6, 14, 1, 0, 0, 0, time.UTC), "2026-06-01"},
 	} {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			e := integration.Setup(t)
-			e.WsExec(t, `UPDATE setting SET value='"UTC"'::jsonb WHERE key='installation.timezone'`)
 			seedManagerRoles(t, e, e.Rep1, e.Rep2, e.Rep3)
-			w := teamSnapshotWorker(e)
-			if err := w.measureWorkspace(e.Admin(), e.WS, tc.at); err != nil {
+			if err := teamSnapshotWorker(e).measureWorkspace(e.Admin(), e.WS, test.at); err != nil {
 				t.Fatal(err)
 			}
-			got := e.WsCount(t, `SELECT count(*) FROM team_weekly_review WHERE reps_counted>0`)
-			if tc.ready && got != 2 {
-				t.Fatalf("expected both team reviews, got %d", got)
+			var count int
+			var binds reportingBindings
+			if err := integration.OwnerConn(t).QueryRow(e.Admin(), `SELECT count(*) FROM team_weekly_review WHERE reps_counted>0 AND local_week_start=`+binds.add(test.week)+`::date`, binds.values...).Scan(&count); err != nil {
+				t.Fatal(err)
 			}
-			if !tc.ready && e.WsCount(t, `SELECT count(*) FROM team_weekly_review`) > 0 {
-				t.Fatal("premature team review was frozen")
+			if count != 2 {
+				t.Fatalf("%d teams use closed period %s", count, test.week)
 			}
 		})
 	}
@@ -121,5 +135,41 @@ func TestReadOnlyPlanAuthorityStillReceivesRecordedWork(t *testing.T) {
 	}
 	if e.WsCount(t, `SELECT count(*) FROM weekly_plan`) != 0 {
 		t.Fatal("read-only report created a plan")
+	}
+}
+
+func seedMeasuredNarrativeSources(t *testing.T, e *integration.Env) {
+	t.Helper()
+	at := time.Date(2026, 5, 18, 9, 0, 0, 0, time.UTC)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	owner := ids.From[ids.UserKind](e.Rep1)
+	pipeline, stage, won := integration.DealFixture(t, e)
+	deal, err := e.Deals.WithClock(func() time.Time { return at }).CreateDeal(ctx, deals.CreateDealInput{Name: "Measured opportunity", PipelineID: pipeline, StageID: stage, OwnerID: &owner, AmountMinor: new(int64(10000)), Currency: new("EUR"), Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	closedAt := time.Date(2026, 6, 3, 9, 0, 0, 0, time.UTC)
+	if _, err := e.Deals.WithClock(func() time.Time { return closedAt }).AdvanceDeal(ctx, ids.From[ids.DealKind](ids.UUID(deal.Id)), deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: new("purchase_order")}); err != nil {
+		t.Fatal(err)
+	}
+	e.WsExec(t, `UPDATE role SET permissions=jsonb_set(permissions,'{objects,lead}','{"read":true}'::jsonb) WHERE key='manager'`)
+	if _, _, err := e.Contacts.WithClock(func() time.Time { return at }).CreateLead(ctx, contacts.CreateLeadInput{FullName: new("Measured lead"), OwnerID: &owner, Source: "manual"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := e.Activities.WithClock(func() time.Time { return at }).LogActivity(ctx, activities.LogActivityInput{Kind: "task", Subject: new("Send the quote"), AssigneeID: &owner, Source: "manual"}); err != nil {
+		t.Fatal(err)
+	}
+	// Only fixture timestamps move; each source was written through its real writer.
+	var binds reportingBindings
+	stamp, who := binds.add(at), binds.add(e.Rep1)
+	e.WsExec(t, `UPDATE deal SET created_at=`+stamp+` WHERE owner_id=`+who, binds.values...)
+	e.WsExec(t, `UPDATE lead SET created_at=`+stamp+` WHERE owner_id=`+who, binds.values...)
+	e.WsExec(t, `UPDATE activity SET created_at=`+stamp+` WHERE kind='task' AND assignee_id=`+who, binds.values...)
+	logHeldMeeting(t, e, e.Rep1, at)
+	plan := weeklyPlanStore(e.Pool)
+	for _, week := range []time.Time{at, teamJobClock.AddDate(0, 0, -7)} {
+		if _, err := plan.StartWeek(ctx, week); err != nil {
+			t.Fatal(err)
+		}
 	}
 }

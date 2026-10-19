@@ -202,6 +202,7 @@ func stricter(a, b Rules) Rules {
 	}
 	out.FrequencyCap = tighterCap(a.FrequencyCap, b.FrequencyCap)
 	out.OptOutAcknowledgement = a.OptOutAcknowledgement || b.OptOutAcknowledgement
+	out.OptOutAcknowledgementWithin = shorterWindow(a.OptOutAcknowledgementWithin, b.OptOutAcknowledgementWithin)
 	// An exception only where BOTH grant it: a route to advertising without
 	// consent that one jurisdiction does not recognise is not available in a
 	// send both govern.

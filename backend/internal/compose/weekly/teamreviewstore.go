@@ -31,7 +31,7 @@ const teamReviewSelect = `
 	       commitments_due, commitments_kept,
 	       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor,
 	       base_currency, reps_unread, numeric_summary,
-	       proposals_accepted, proposals_rejected, auto_change_reversals, coalesce(summary, '')
+	       proposals_accepted, proposals_rejected, auto_change_reversals, coalesce(summary, ''), coalesce(summary_language, 'en')
 	  FROM team_weekly_review`
 
 // memberFrozenWeek is one member's frozen week as the team snapshot folds it.
@@ -213,7 +213,7 @@ func scanTeamReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (TeamReview, er
 		&c.CommitmentsDue, &c.CommitmentsKept,
 		&created, &won, &lost, &currency, &review.RepsUnread, &review.NumericSummary,
 		&review.Quality.ProposalsAccepted, &review.Quality.ProposalsRejected,
-		&review.Quality.AutoChangeReversals, &review.Summary); {
+		&review.Quality.AutoChangeReversals, &review.Summary, &review.Language); {
 	case errors.Is(err, pgx.ErrNoRows):
 		return TeamReview{}, apperrors.ErrNotFound
 	case err != nil:

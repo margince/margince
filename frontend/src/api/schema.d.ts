@@ -9489,7 +9489,12 @@ export interface paths {
          * @description Multipart upload. The image is re-encoded to an aspect-preserving PNG, so a wide
          *     wordmark remains wide and what is served from `logo_url` is always this origin's own
          *     bytes, never third-party markup. PNG, JPEG, GIF, WebP, ICO and SVG are accepted;
-         *     anything that will not decode is refused as 415.
+         *     a file that is not one of those types is refused as 415. An SVG that draws its words as
+         *     text (`<text>`, `<tspan>`, `<textPath>`) is refused as 422 with code
+         *     `svg_text_not_outlined`, because the rasterizer draws shapes and no glyphs, so
+         *     the words would be lost. An SVG the rasterizer cannot draw faithfully (for example
+         *     embedded images, filters, masks or a blank result) is refused as 422 with code
+         *     `svg_not_drawable`.
          *
          *     The upload is a HUMAN write and takes precedence: while it stands, a website read
          *     resolving a different mark leaves it alone. `DELETE` gives the field back — the
@@ -9531,7 +9536,10 @@ export interface paths {
          *
          *     Multipart upload, decoded and re-encoded exactly as the wide mark is: PNG, JPEG,
          *     GIF, WebP, ICO and SVG are accepted, what is served from `logo_icon_url` is always
-         *     this origin's own bytes, and anything that will not decode is refused as 415.
+         *     this origin's own bytes, and a file that is not one of those types is refused as
+         *     415. An SVG that draws its words as text is refused as 422 with code
+         *     `svg_text_not_outlined`, and one with parts it cannot draw as 422 with code
+         *     `svg_not_drawable`.
          *
          *     `DELETE` takes the icon off. The two slots are independent: a company with only a
          *     wide mark keeps drawing that mark in the collapsed rail, which is what every
@@ -33611,9 +33619,12 @@ export interface components {
              *     `missed_window` — it came due while nothing was running and is now too late to be the
              *     message that was written. `timer_exhausted` — the job that wakes it ran out of
              *     attempts. `send_refused` — a gate refused for another reason at fire.
+             *     `passport_revoked` — the agent credential was revoked.
+             *     `followup_settled` — the recorded request was answered or completed after scheduling.
+             *     `meeting_canceled` — the meeting named as follow-up evidence was canceled.
              * @enum {string|null}
              */
-            held_reason?: "consent_withdrawn" | "sender_inactive" | "missed_window" | "timer_exhausted" | "send_refused" | null;
+            held_reason?: "consent_withdrawn" | "sender_inactive" | "passport_revoked" | "missed_window" | "timer_exhausted" | "send_refused" | "followup_settled" | "meeting_canceled" | null;
             /**
              * Format: uuid
              * @description The review this message's refusal opened, when one stands. Null on every message
@@ -35957,6 +35968,8 @@ export interface components {
             blocks: components["schemas"]["ReportingBlockKind"][];
         };
         ReportingContext: {
+            /** @description Base language used for generated explanations. Absent on legacy readings, which use English. */
+            prose_language?: string;
             period_kind: string;
             scope: components["schemas"]["ReportingScope"];
             /** Format: uuid */
@@ -36665,12 +36678,24 @@ export interface components {
              *     and "tell me every morning either way" are different asks.
              */
             quiet_day_notice?: boolean;
-            /**
-             * @description The local hour a delivery should not arrive before, in the installation's
-             *     reporting timezone. Absent means the job's own hour, which is what every seat
-             *     gets today.
-             */
+            /** @description Legacy morning-only hour floor in the installation reporting timezone. Kept unchanged until routine_delivery_time is explicitly chosen. */
             delivery_hour_local?: number;
+            /** @description Personal working-hours start, or a whole hour in the existing personal timezone. The three-hour window can cross midnight. Choosing working restores the default. Existing explicit morning-only hours remain effective until this field is chosen. */
+            routine_delivery_time?: string;
+            /**
+             * @description Optional chosen scope; team content is checked against live team-review authority at delivery.
+             * @enum {string}
+             */
+            routine_mail_scope?: "personal" | "team" | "combined";
+            /**
+             * Format: uuid
+             * @description The selected live team for team or combined scope. Personal scope ignores a retained selection.
+             */
+            routine_mail_team_id?: string;
+            /** @description Earliest weekday, Monday 1 through Sunday 7. A non-working choice rolls to the next working weekday; later workdays allow catch-up. */
+            weekly_delivery_day?: number;
+            /** @description Combine eligible notices and current actions with the weekly message when it is ready, using one routine email per reporting day. Defaults to false; class opt-outs remain effective. */
+            combine_routine_email?: boolean;
         };
         /** @description Four money readings over one period, the counts that say what they leave out, and the frame they were computed in. */
         ForecastReadings: {
@@ -39410,6 +39435,8 @@ export interface components {
              * @enum {string|null}
              */
             status_code: null | "budget_deferred" | "bot_blocked" | "http_server_error" | "timeout" | "http_client_error" | "dns" | "tls" | "robots_disallowed" | "unreadable" | "internal" | "stale_reclaim";
+            /** @description Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons. */
+            deferral_reason?: string;
             /** @description Safe guidance only; never provider payload, prompt, SQL, or stack data. */
             status_detail: string | null;
             /** Format: date-time */
@@ -39674,6 +39701,8 @@ export interface components {
              * @enum {string|null}
              */
             status_code: null | "budget_deferred" | "bot_blocked" | "http_server_error" | "timeout" | "http_client_error" | "dns" | "tls" | "robots_disallowed" | "unreadable" | "internal" | "stale_reclaim";
+            /** @description Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons. */
+            deferral_reason?: string;
             /** @description Safe guidance only; never provider payload, prompt, SQL, or stack data. */
             status_detail: string | null;
             /** Format: date-time */
@@ -41533,6 +41562,8 @@ export interface components {
             candidate_action: "none" | "auto_activated" | "review_required";
             /** @enum {string|null} */
             status_code: null | "budget_deferred" | "model_unavailable" | "invalid_output" | "quality_regression" | "material_drift" | "internal";
+            /** @description Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons. */
+            deferral_reason?: string;
             /** @description Safe operator guidance; never provider payload, prompt, SQL, or stack data. */
             status_detail: string | null;
             /** Format: date-time */
@@ -41549,7 +41580,16 @@ export interface components {
             /** Format: date-time */
             archived_at: string | null;
         };
+        VoiceReviewReason: {
+            code: string;
+            text: string;
+            values: {
+                [key: string]: number;
+            };
+        };
         VoiceProfileEvaluation: {
+            /** @description Typed explanations in the same order as review_reasons. Unknown codes use their recorded text. */
+            review_reason_details?: components["schemas"]["VoiceReviewReason"][];
             /** @constant */
             held_out_prompts: 5;
             /** @constant */

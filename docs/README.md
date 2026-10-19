@@ -209,6 +209,8 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 
 ### Explanation: understand the why
 
+- [shared-record-language.md](explanation/shared-record-language.md): text on shared records.
+
 #### The shape of the system
 
 - [backend-onboarding.md](explanation/backend-onboarding.md): start here. A map of the backend, and the
