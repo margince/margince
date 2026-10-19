@@ -5240,7 +5240,8 @@ export const vi = {
   "analytics.setup": "Thiết lập",
   "analytics.filters": "Bộ lọc",
   "analytics.firstRunTitle": "Chưa có deal nào để phân tích",
-  "analytics.firstRunBody": "Phân tích sẽ có dữ liệu khi các deal bạn xem được được ghi nhận. Mở Deal để tạo mới hoặc nhập dữ liệu.",
+  "analytics.firstRunBody":
+    "Phân tích sẽ có dữ liệu khi các deal bạn xem được được ghi nhận. Mở Deal để tạo mới hoặc nhập dữ liệu.",
   "analytics.firstRunAction": "Mở Deal",
   "analytics.attention": "Cần chú ý",
   "analytics.attentionNoOwner": "Chưa giao",
