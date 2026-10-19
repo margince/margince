@@ -223,7 +223,7 @@ export const de = {
   "reporting.openPipelineBasis_one": "Offener Deal: {count} · Stand {at}",
   "reporting.openPipelineBasis_other": "Offene Deals: {count} · Stand {at}",
   "reporting.forecastLandingBasis":
-    "Dieses Geschäftsquartal, aus der Deal-Prognose",
+    "Dieses Geschäftsquartal, berechnet aus der Deal-Prognose",
   "reporting.this_month": "Dieser Monat",
   "reporting.last_month": "Letzter Monat",
   "reporting.last_week": "Letzte abgeschlossene Woche",

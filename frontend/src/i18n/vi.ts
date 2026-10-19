@@ -229,10 +229,10 @@ export const vi = {
   "reporting.noSalesWon": "Chưa có doanh số đã chốt",
   "reporting.openPipelineAsOf": "Tính đến {at}",
   "reporting.openPipelineBasis_one":
-    "Giao dịch đang mở: {count} · tính đến {at}",
+    "Thương vụ đang mở: {count} · tính đến {at}",
   "reporting.openPipelineBasis_other":
-    "Giao dịch đang mở: {count} · tính đến {at}",
-  "reporting.forecastLandingBasis": "Quý tài chính này, theo dự báo giao dịch",
+    "Thương vụ đang mở: {count} · tính đến {at}",
+  "reporting.forecastLandingBasis": "Quý tài chính này, theo dự báo thương vụ",
   "reporting.this_month": "Tháng này",
   "reporting.last_month": "Tháng trước",
   "reporting.last_week": "Tuần đã hoàn tất gần nhất",

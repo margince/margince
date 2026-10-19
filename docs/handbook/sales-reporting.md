@@ -7,7 +7,7 @@ Open **Analytics → Performance**. Choose **Sales** for sales won, pipeline sta
 
 Sales won follows the close time span you picked and the deal owner of today. If a deal gets a new owner, its live sales and target results move to the new owner. Saved snapshots keep the owner and results from that time. Open pipeline and stage age show the pipeline as it is now, with the time window for expected closes printed next to the chart.
 
-The row of figures at the top shows sales won and open pipeline, with the number of open deals and the date it was read. When the time span is this quarter and you may read the forecast, it also shows **Forecast landing**: where the deal forecast expects this fiscal quarter to end. Click any figure to open the records behind it.
+The row of figures at the top shows sales won and open pipeline, with the number of open deals and the date it was read. With the time span set to this quarter, it also shows **Forecast landing**. That is where the deal forecast expects this fiscal quarter to end, and it needs forecast access. Click sales won or open pipeline to open the records behind it. Click **Forecast landing** to open the **Forecast** section, where each part links to its deals.
 
 A salesperson's target is for the month or the fiscal quarter that holds the end of the time span you picked. If the cutoff of today comes first, it is the month or quarter that holds that cutoff. It is compared with the real result for that month or quarter. Changing the time span does not turn today's pipeline into history.
 
