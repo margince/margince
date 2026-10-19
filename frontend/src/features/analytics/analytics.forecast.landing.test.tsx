@@ -7,7 +7,11 @@ import type { components } from "../../api/schema";
 import { formatMoneyCompact } from "../../format/format";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { LandingCard, SufficiencyCard } from "./analytics.forecast.landing";
+import {
+  LandingCard,
+  RecordsLandingCard,
+  SufficiencyCard,
+} from "./analytics.forecast.landing";
 
 type Readings = components["schemas"]["ForecastReadings"];
 type Landing = NonNullable<Readings["landing"]>;
@@ -193,30 +197,13 @@ describe("whether the open deals support the reference", () => {
 });
 
 describe("a manager's call beside the records", () => {
-  it("shows the deal records' projection apart from the call", () => {
+  it("shows the deal records' projection as its own card", () => {
     draw(
-      <LandingCard
-        landing={landing({
-          amount_minor: 900_00,
-          measure: "manager_call",
-          remaining_minor: 0,
-          system_minor: 650_00,
-        })}
-        currency="EUR"
-        locale="en"
-      />,
+      <RecordsLandingCard systemMinor={650_00} currency="EUR" locale="en" />,
     );
     expect(screen.getByText(en["forecast.landingRecords"])).toBeTruthy();
     expect(
       screen.getByText(formatMoneyCompact(650_00, "EUR", "en")),
     ).toBeTruthy();
-    expect(
-      screen.getByText(formatMoneyCompact(900_00, "EUR", "en")),
-    ).toBeTruthy();
-  });
-
-  it("shows one figure when the landing already is the records' projection", () => {
-    draw(<LandingCard landing={landing()} currency="EUR" locale="en" />);
-    expect(screen.queryByText(en["forecast.landingRecords"])).toBeNull();
   });
 });
