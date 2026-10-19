@@ -48592,6 +48592,9 @@ components:
       - definition_version
       - member_ids
       properties:
+        prose_language:
+          type: string
+          description: Base language used for generated explanations. Absent on legacy readings, which use English.
         period_kind: {type: string}
         scope:
           $ref: '#/components/schemas/ReportingScope'
@@ -53784,6 +53787,7 @@ components:
         root_url: { type: string, format: uri }
         status: { type: string, enum: [queued, deferred, reading, ready, partial, failed, confirmed, abandoned] }
         status_code: { type: [string, 'null'], enum: [null, budget_deferred, bot_blocked, http_server_error, timeout, http_client_error, dns, tls, robots_disallowed, unreadable, internal, stale_reclaim], description: 'Why a read did not finish: budget_deferred, or the closed failure vocabulary a failed crawl is diagnosed with.' }
+        deferral_reason: { type: string, description: 'Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons.' }
         status_detail: { type: [string, 'null'], description: 'Safe guidance only; never provider payload, prompt, SQL, or stack data.' }
         next_attempt_at: { type: [string, 'null'], format: date-time }
         stopped_reason:
@@ -54103,6 +54107,7 @@ components:
         seed_url: { type: string, format: uri }
         status: { type: string, enum: [queued, deferred, running, done, partial, failed, cancelled] }
         status_code: { type: [string, 'null'], enum: [null, budget_deferred, bot_blocked, http_server_error, timeout, http_client_error, dns, tls, robots_disallowed, unreadable, internal, stale_reclaim], description: 'Why a read did not finish: budget_deferred, or the closed failure vocabulary a failed crawl is diagnosed with.' }
+        deferral_reason: { type: string, description: 'Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons.' }
         status_detail: { type: [string, 'null'], description: 'Safe guidance only; never provider payload, prompt, SQL, or stack data.' }
         next_attempt_at: { type: [string, 'null'], format: date-time }
         pages:
@@ -56124,6 +56129,7 @@ components:
         result_version: { type: [integer, 'null'], minimum: 1 }
         candidate_action: { type: string, enum: [none, auto_activated, review_required], default: none }
         status_code: { type: [string, 'null'], enum: [null, budget_deferred, model_unavailable, invalid_output, quality_regression, material_drift, internal] }
+        deferral_reason: { type: string, description: 'Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons.' }
         status_detail: { type: [string, 'null'], description: 'Safe operator guidance; never provider payload, prompt, SQL, or stack data.' }
         next_attempt_at: { type: [string, 'null'], format: date-time }
         version: { type: integer, minimum: 1 }
@@ -56132,6 +56138,16 @@ components:
         completed_at: { type: [string, 'null'], format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+
+    VoiceReviewReason:
+      type: object
+      required: [code, text, values]
+      properties:
+        code: { type: string }
+        text: { type: string }
+        values:
+          type: object
+          additionalProperties: { type: number, format: double }
 
     VoiceProfileEvaluation:
       type: object
@@ -56149,6 +56165,10 @@ components:
         - classification
         - passed
       properties:
+        review_reason_details:
+          type: array
+          description: Typed explanations in the same order as review_reasons. Unknown codes use their recorded text.
+          items: { $ref: "#/components/schemas/VoiceReviewReason" }
         held_out_prompts: { type: integer, const: 5 }
         repeats_per_prompt: { type: integer, const: 3 }
         active_median_voice_score: { type: [number, 'null'], minimum: 0, maximum: 1 }

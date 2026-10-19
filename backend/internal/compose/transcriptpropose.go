@@ -89,6 +89,7 @@ func transcriptSystemFor(fence promptfence.Fence, lang string) string {
 // TranscriptProposer reads a transcript and hands each promise in it to the
 // commitment rule.
 type TranscriptProposer struct {
+	said     transcriptCopy
 	pool     *pgxpool.Pool
 	brain    completer
 	dispatch *CommitmentDispatcher
@@ -314,7 +315,7 @@ func validProposedDueDate(day string) bool {
 
 // ask puts one transcript to the model and returns what it may act on.
 func (p *TranscriptProposer) ask(ctx context.Context, lines []string, meetingDay string, parties []commitmentParty) ([]proposedStep, error) {
-	req := transcriptRequest(lines, meetingDay, identity.BaseLanguageForPrompt(ctx, p.pool), parties)
+	req := transcriptRequest(lines, meetingDay, string(p.said.Lang()), parties)
 	validate := transcriptShapeValid(len(lines), parties)
 	resp, err := ai.Ask(ctx, p.brain, req, validate)
 	if err != nil {

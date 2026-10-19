@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 312 |
-| Columns | 3695 |
+| Columns | 3699 |
 | Foreign keys | 517 |
 | Owning areas | 36 |
 
@@ -220,7 +220,7 @@ erDiagram
 | [`company`](contacts.md#company) | contacts | 43 | 42 |
 | [`company_brief`](compose.md#company_brief) | compose | 7 | 0 |
 | [`company_domain`](contacts.md#company_domain) | contacts | 10 | 0 |
-| [`company_domain_disposition`](contacts.md#company_domain_disposition) | contacts | 19 | 0 |
+| [`company_domain_disposition`](contacts.md#company_domain_disposition) | contacts | 22 | 0 |
 | [`company_dossier`](compose.md#company_dossier) | compose | 6 | 0 |
 | [`company_fact`](contacts.md#company_fact) | contacts | 18 | 0 |
 | [`company_geocode_state`](contacts.md#company_geocode_state) | contacts | 5 | 0 |
@@ -404,7 +404,7 @@ erDiagram
 | [`taggable`](collections.md#taggable) | collections | 8 | 0 |
 | [`team`](identity.md#team) | identity | 6 | 8 |
 | [`team_membership`](identity.md#team_membership) | identity | 5 | 0 |
-| [`team_weekly_review`](compose.md#team_weekly_review) | compose | 27 | 4 |
+| [`team_weekly_review`](compose.md#team_weekly_review) | compose | 28 | 4 |
 | [`team_weekly_review_coverage`](compose.md#team_weekly_review_coverage) | compose | 12 | 0 |
 | [`team_weekly_review_member`](compose.md#team_weekly_review_member) | compose | 5 | 0 |
 | [`team_weekly_review_outlook`](compose.md#team_weekly_review_outlook) | compose | 15 | 0 |

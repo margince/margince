@@ -20,9 +20,10 @@ import (
 )
 
 func (s *Service) framework(ctx context.Context, tx pgx.Tx) (crmcontracts.ReportingFramework, error) {
-	out := crmcontracts.ReportingFramework{Definition: crmcontracts.ReportingFrameworkInput{Template: reportingSales, Qualification: []crmcontracts.ReportingQualification{}, CaptureContexts: []crmcontracts.ReportingCaptureContext{}, Reason: "Not configured"}}
+	out := crmcontracts.ReportingFramework{Definition: crmcontracts.ReportingFrameworkInput{Template: reportingSales, Qualification: []crmcontracts.ReportingQualification{}, CaptureContexts: []crmcontracts.ReportingCaptureContext{}}}
 	err := tx.QueryRow(ctx, "SELECT f.revision,f.version,r.definition,r.effective_at FROM reporting_framework f JOIN reporting_framework_revision r ON r.revision=f.revision").Scan(&out.Revision, &out.Version, &out.Definition, &out.EffectiveAt)
 	if errors.Is(err, pgx.ErrNoRows) {
+		out.Definition.Reason = s.statusCopy(ctx, tx).Say(statusWords.Unconfigured)
 		return out, nil
 	}
 	return out, err

@@ -35957,6 +35957,8 @@ export interface components {
             blocks: components["schemas"]["ReportingBlockKind"][];
         };
         ReportingContext: {
+            /** @description Base language used for generated explanations. Absent on legacy readings, which use English. */
+            prose_language?: string;
             period_kind: string;
             scope: components["schemas"]["ReportingScope"];
             /** Format: uuid */
@@ -39410,6 +39412,8 @@ export interface components {
              * @enum {string|null}
              */
             status_code: null | "budget_deferred" | "bot_blocked" | "http_server_error" | "timeout" | "http_client_error" | "dns" | "tls" | "robots_disallowed" | "unreadable" | "internal" | "stale_reclaim";
+            /** @description Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons. */
+            deferral_reason?: string;
             /** @description Safe guidance only; never provider payload, prompt, SQL, or stack data. */
             status_detail: string | null;
             /** Format: date-time */
@@ -39674,6 +39678,8 @@ export interface components {
              * @enum {string|null}
              */
             status_code: null | "budget_deferred" | "bot_blocked" | "http_server_error" | "timeout" | "http_client_error" | "dns" | "tls" | "robots_disallowed" | "unreadable" | "internal" | "stale_reclaim";
+            /** @description Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons. */
+            deferral_reason?: string;
             /** @description Safe guidance only; never provider payload, prompt, SQL, or stack data. */
             status_detail: string | null;
             /** Format: date-time */
@@ -41533,6 +41539,8 @@ export interface components {
             candidate_action: "none" | "auto_activated" | "review_required";
             /** @enum {string|null} */
             status_code: null | "budget_deferred" | "model_unavailable" | "invalid_output" | "quality_regression" | "material_drift" | "internal";
+            /** @description Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons. */
+            deferral_reason?: string;
             /** @description Safe operator guidance; never provider payload, prompt, SQL, or stack data. */
             status_detail: string | null;
             /** Format: date-time */
@@ -41549,7 +41557,16 @@ export interface components {
             /** Format: date-time */
             archived_at: string | null;
         };
+        VoiceReviewReason: {
+            code: string;
+            text: string;
+            values: {
+                [key: string]: number;
+            };
+        };
         VoiceProfileEvaluation: {
+            /** @description Typed explanations in the same order as review_reasons. Unknown codes use their recorded text. */
+            review_reason_details?: components["schemas"]["VoiceReviewReason"][];
             /** @constant */
             held_out_prompts: 5;
             /** @constant */

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { deferralDetail } from "../../lib/deferral-detail";
 import type { GateNotice } from "../onboarding-gate";
 import type { ConversationState, NarrationEntry } from "./conversation-types";
 
@@ -83,7 +84,9 @@ export function gateNoticeFor(input: GateNoticeInput): GateNotice | undefined {
   if (read?.status === "deferred") {
     return {
       tone: "paused",
-      message: input.pausedWithDetail(read.status_detail ?? ""),
+      message: input.pausedWithDetail(
+        deferralDetail(input.translate, read) ?? "",
+      ),
     };
   }
   if (read?.status === "failed" || read?.status === "abandoned") {

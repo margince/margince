@@ -108,7 +108,7 @@ func DeterministicPlan(in Input, ranked *rankedClaims) Plan {
 		Objective: objectiveFor(in, typ, ranked),
 		Opening:   openingFor(in, typ),
 		TopRisk:   topRiskFor(in, ranked),
-		Arc:       arcSentences(arc),
+		Arc:       briefCopyFor(in.Language).arcSentences(arc),
 		Advance:   advanceFor(in, typ),
 		Scenarios: scenariosFor(in, typ),
 		Unknowns:  unknowns,
@@ -119,7 +119,7 @@ func DeterministicPlan(in Input, ranked *rankedClaims) Plan {
 }
 
 // arcSentences renders each moment as a cited fact.
-func arcSentences(moments []ArcMoment) []ArcSentence {
+func (said briefCopy) arcSentences(moments []ArcMoment) []ArcSentence {
 	out := make([]ArcSentence, 0, len(moments))
 	for _, moment := range moments {
 		ids := readableIDs(moment)
@@ -133,7 +133,7 @@ func arcSentences(moments []ArcMoment) []ArcSentence {
 		out = append(out, ArcSentence{
 			Moment: moment,
 			Summary: Sentence{
-				Text:     arcSummary(moment, conversationCount(moment)),
+				Text:     said.arcSummary(moment, conversationCount(moment)),
 				Evidence: evidence,
 			},
 		})

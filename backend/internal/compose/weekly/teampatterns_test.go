@@ -20,7 +20,7 @@ func kinds(patterns []Pattern) []string {
 // strong week sits beside the problem rather than hiding it.
 func TestEveryRuleThatFiresIsListedInChainOrder(t *testing.T) {
 	counts := Counts{LeadsBreached: 1, DealsWon: 2, MeetingsHeld: 3, MeetingsWithNextStep: 1}
-	got := kinds(patternsFor(counts, 1, &DealBlock{ForecastDown: 1, Regressions: 2}))
+	got := kinds(teamCopyFor("en").patternsFor(counts, 1, &DealBlock{ForecastDown: 1, Regressions: 2}))
 	want := []string{
 		FocusHelpRequested, FocusLeadsBreached, FocusForecastDowngrades,
 		FocusStageRegressions, FocusStrongWeek, FocusMeetingsWithoutNextStep,
@@ -32,7 +32,7 @@ func TestEveryRuleThatFiresIsListedInChainOrder(t *testing.T) {
 
 // A strong week is one finding however many reasons it has.
 func TestAStrongWeekIsListedOnce(t *testing.T) {
-	got := kinds(patternsFor(Counts{DealsWon: 1, CommitmentsDue: 2, CommitmentsKept: 2}, 0, nil))
+	got := kinds(teamCopyFor("en").patternsFor(Counts{DealsWon: 1, CommitmentsDue: 2, CommitmentsKept: 2}, 0, nil))
 	if !slices.Equal(got, []string{FocusStrongWeek}) {
 		t.Errorf("patterns = %v, want one strong week", got)
 	}
@@ -40,10 +40,10 @@ func TestAStrongWeekIsListedOnce(t *testing.T) {
 
 // A quiet week is said only when nothing else fired.
 func TestAQuietWeekIsOnlyTheAbsenceOfEveryOtherRule(t *testing.T) {
-	if got := kinds(patternsFor(Counts{}, 0, nil)); !slices.Equal(got, []string{FocusQuietWeek}) {
+	if got := kinds(teamCopyFor("en").patternsFor(Counts{}, 0, nil)); !slices.Equal(got, []string{FocusQuietWeek}) {
 		t.Errorf("an empty week reads %v, want only quiet_week", got)
 	}
-	if got := kinds(patternsFor(Counts{LeadsBreached: 1}, 0, nil)); slices.Contains(got, FocusQuietWeek) {
+	if got := kinds(teamCopyFor("en").patternsFor(Counts{LeadsBreached: 1}, 0, nil)); slices.Contains(got, FocusQuietWeek) {
 		t.Errorf("a week with a breach also reads as quiet: %v", got)
 	}
 }
@@ -61,7 +61,7 @@ func TestNextStepCoverageFiresBelowHalf(t *testing.T) {
 		{"at the minimum open deals", 3, 1, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got := kinds(patternsFor(Counts{}, 0, &DealBlock{Open: tc.open, WithNextStep: tc.steps}))
+			got := kinds(teamCopyFor("en").patternsFor(Counts{}, 0, &DealBlock{Open: tc.open, WithNextStep: tc.steps}))
 			if slices.Contains(got, FocusNoNextStepCoverage) != tc.wantFiring {
 				t.Errorf("%d of %d with a next step: patterns %v", tc.steps, tc.open, got)
 			}
@@ -85,7 +85,7 @@ func TestProvisionalCloseDatesFireAboveThirtyPercent(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			block := &DealBlock{Open: tc.open, WithNextStep: tc.open, CloseDateProvisional: tc.provisional}
-			got := kinds(patternsFor(Counts{}, 0, block))
+			got := kinds(teamCopyFor("en").patternsFor(Counts{}, 0, block))
 			if slices.Contains(got, FocusCloseDatesProvisional) != tc.wantFiring {
 				t.Errorf("patterns %v", got)
 			}
@@ -95,7 +95,7 @@ func TestProvisionalCloseDatesFireAboveThirtyPercent(t *testing.T) {
 
 // A week with no deal scorecard says nothing about deals.
 func TestNoDealScorecardMeansNoDealPattern(t *testing.T) {
-	if got := kinds(patternsFor(Counts{}, 0, nil)); !slices.Equal(got, []string{FocusQuietWeek}) {
+	if got := kinds(teamCopyFor("en").patternsFor(Counts{}, 0, nil)); !slices.Equal(got, []string{FocusQuietWeek}) {
 		t.Errorf("patterns %v", got)
 	}
 }
@@ -103,7 +103,7 @@ func TestNoDealScorecardMeansNoDealPattern(t *testing.T) {
 // The focus is the head of the list, for a fresh rep and for one frozen
 // before patterns were kept.
 func TestTheFocusIsTheFirstPattern(t *testing.T) {
-	fresh := repFrom(TeamMember{DisplayName: "Ada"}, Counts{LeadsBreached: 2, DealsWon: 1}, 0, nil)
+	fresh := teamCopyFor("en").repFrom(TeamMember{DisplayName: "Ada"}, Counts{LeadsBreached: 2, DealsWon: 1}, 0, nil)
 	if fresh.FocusKind != fresh.Patterns[0].Kind || fresh.FocusLabel != fresh.Patterns[0].Label {
 		t.Errorf("fresh rep: focus %s and first pattern %s", fresh.FocusKind, fresh.Patterns[0].Kind)
 	}

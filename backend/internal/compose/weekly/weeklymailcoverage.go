@@ -57,8 +57,8 @@ func (f mailFigures) value(coverage *crmcontracts.WeeklyFigureCoverage, count st
 		return count
 	}
 	since := coverage.RecordedSince
-	// The engine's Reason is English prose and the mail speaks the installation's
-	// language. An undated figure takes the catalog's words where the panel shows Reason.
+	// The panel keeps Reason in its write language. Mail uses its current
+	// language catalog so the numeric caption agrees with the rest of the message.
 	switch coverage.Status {
 	case crmcontracts.WeeklyFigureCoverageStatusNotRecorded:
 		if since == nil {

@@ -76,7 +76,7 @@ func TestEachSuggestionNamesWhatPerformingItMeans(t *testing.T) {
 	company := ids.From[ids.CompanyKind](ids.NewV7())
 	unanswered := ids.NewV7()
 
-	stale := staleThread(company, now, lastMessage{
+	stale := englishSuggestions.staleThread(company, now, lastMessage{
 		ID: unanswered, Direction: "outbound", At: now.AddDate(0, 0, -14),
 	})
 	if stale == nil || stale.Action == nil {
@@ -92,7 +92,7 @@ func TestEachSuggestionNamesWhatPerformingItMeans(t *testing.T) {
 	}
 
 	dealID := ids.NewV7()
-	stalled := stalledDealSuggestions([]stalledDeal{{ID: dealID, Name: "Retrofit"}})
+	stalled := englishSuggestions.stalledDealSuggestions([]stalledDeal{{ID: dealID, Name: "Retrofit"}})
 	if len(stalled) != 1 || stalled[0].Action == nil {
 		t.Fatalf("the stalled-deal rule named no action: %+v", stalled)
 	}

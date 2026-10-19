@@ -5,6 +5,10 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de = {
+  "aiWait.provider":
+    "Der KI-Anbieter ist nicht erreichbar. Die Arbeit wird automatisch fortgesetzt, sobald er wieder verfügbar ist.",
+  "aiWait.budget":
+    "Das KI-Budget ist ausgeschöpft. Die Arbeit wird automatisch fortgesetzt, sobald wieder Budget verfügbar ist.",
   "reporting.latestSnapshot": "Letzter Snapshot",
   "reporting.contextDetails": "Berichtsdetails",
   "reporting.targetRemaining": "{amount} fehlen zum Ziel",
@@ -1043,6 +1047,8 @@ export const de = {
     "Nachweis der Zusage nicht verfügbar",
   "history.field.address": "Adresse",
   "history.field.admission": "Eingangsprüfung der Domain",
+  "history.field.admission_reason_code": "Kategorie des Aufnahmegrunds",
+  "history.field.admission_sender_kind": "Absenderkategorie",
   "history.field.admission_reason": "Grund der Eingangsprüfung",
   "history.field.admission_source": "Quelle der Eingangsprüfung",
   "history.field.amount_minor": "Wert",
@@ -4355,7 +4361,9 @@ export const de = {
   "deepread.unavailable":
     "Die Website-Recherche ist auf diesem Server nicht eingerichtet.",
   "deepread.statusQueued": "Geplant",
-  "deepread.statusDeferred": "Wartet auf KI-Kontingent",
+  "deepread.statusDeferred": "Wartet auf Fortsetzung",
+  "deepread.statusBudgetWait": "Wartet auf KI-Budget",
+  "deepread.statusProviderWait": "Wartet auf KI-Anbieter",
   "deepread.statusRunning": "Website wird analysiert…",
   "deepread.statusDone": "Fertig",
   "deepread.statusPartial": "Vorzeitig beendet",
@@ -9890,6 +9898,20 @@ export const de = {
   "voice.candidate.concernsLabel": "Warum diese Version eine Prüfung braucht",
   "voice.candidate.applyHint":
     "Wenn diese Version nach dir klingt, verwende sie. Wenn nicht, behalte deinen aktuellen Schreibstil und füge weitere Schreibproben hinzu. Der nächste Aufbau lernt aus diesen Schreibproben.",
+  "voice.candidate.reason.uncomparable":
+    "Das vorherige Stimmprofil konnte nicht verglichen werden. Prüfe diese Version, bevor du es ersetzt.",
+  "voice.candidate.reason.identity":
+    "Dein typisches Vokabular hat sich verändert (Ähnlichkeit {score}). Prüfe, ob es noch nach dir klingt.",
+  "voice.candidate.reason.signature":
+    "Deine typischen Formulierungen haben sich verändert (Ähnlichkeit {score}). Prüfe die Beispielentwürfe.",
+  "voice.candidate.reason.regression":
+    "Diese Version erreichte {score}, deine aktive Version {active}. Prüfe sie, bevor du dein aktuelles Stimmprofil ersetzt.",
+  "voice.candidate.reason.smallCorpus":
+    "Für eine getrennte Bewertung gibt es zu wenige Beispiele. Füge weitere Quellen hinzu, um eine Bewertung zu ermöglichen.",
+  "voice.candidate.reason.corpusChanged":
+    "Deine Textbeispiele haben sich während der Erstellung geändert. Prüfe die Version, bevor du sie verwendest.",
+  "voice.candidate.reason.activeChanged":
+    "Dein aktives Stimmprofil hat sich während der Bewertung geändert. Prüfe die Version, bevor du sie verwendest.",
   "voice.candidate.reason.malformed":
     "Die Bewertung beruht auf weniger Beispielen als üblich, da einige Beispielentwürfe nicht gelesen werden konnten.",
   "voice.candidate.reason.lowScore":
@@ -9897,7 +9919,7 @@ export const de = {
   "voice.candidate.reason.hardFailures":
     "Formulierungen, die dieser Schreibstil vermeiden soll und die in den Beispielentwürfen vorkamen: {n}.",
   "voice.candidate.reason.rulesRemoved":
-    "Seit deiner vorherigen Version weggefallene Regeln darüber, was zu vermeiden ist: {n}.",
+    "Seit deiner vorherigen Version weggefallene Regeln zu Formulierungen und Sprachregister: {n}.",
   "voice.candidate.apply": "Diese Version verwenden",
   "voice.candidate.reject": "Aktuellen Schreibstil behalten",
   "voice.history.label": "Versionen und Lernen",
@@ -12626,6 +12648,9 @@ export const de = {
   "today.scan.readDeals_other": "{count} Deals",
   "today.scan.stale":
     "Das Unternehmen hat sich seitdem geändert. Das Unternehmen wird innerhalb einer Stunde erneut analysiert.",
+  "today.scan.providerResumes":
+    "Die Analyse wird {when} erneut versucht. Der KI-Anbieter ist derzeit nicht verfügbar.",
+  "today.scan.scheduledResumes": "Die Analyse wird {when} fortgesetzt.",
   "today.scan.resumes":
     "Die Analyse wird am {when} fortgesetzt. Das KI-Kontingent hat die Analyse pausiert.",
   "provider.readOnly":

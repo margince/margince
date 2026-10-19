@@ -67,9 +67,17 @@ func TestEveryListedReasonTravelsAsACode(t *testing.T) {
 	e.inTx(ctx, t, "claiming the domain for a company", func(tx pgx.Tx) error {
 		return admitClaimedDomainTx(ctx, tx, "claimed.example")
 	})
-	if _, err := e.store.SetDomainAdmission(ctx, "kept.example", DomainAdmitted, KeptDomainReason); err != nil {
+	if _, err := e.store.KeepDomainAsCompany(ctx, "kept.example"); err != nil {
 		t.Fatalf("keeping an open question as a company: %v", err)
 	}
+	e.inTx(ctx, t, "changing display text without changing the decision", func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE company_domain_disposition SET admission_reason=@reason
+ WHERE domain = ANY(@domains)`, pgx.NamedArgs{
+			"reason":  "Unveränderte Entscheidung, andere Formulierung.",
+			"domains": []string{"bulk.example", "claimed.example", "kept.example"},
+		})
+		return err
+	})
 	// No writer stamps heuristic today, and the schema still admits it.
 	e.inTx(ctx, t, "recording a heuristic refusal", func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `

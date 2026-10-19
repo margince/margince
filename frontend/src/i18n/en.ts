@@ -3,6 +3,10 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "aiWait.provider":
+    "The AI provider is unavailable. This work resumes automatically when it recovers.",
+  "aiWait.budget":
+    "The AI budget has reached its limit. This work resumes automatically when budget is available.",
   "reporting.latestSnapshot": "Latest snapshot",
   "reporting.contextDetails": "Reporting details",
   "reporting.targetRemaining": "{amount} remaining",
@@ -1014,6 +1018,8 @@ export const en = {
     "Commitment evidence unavailable",
   "history.field.address": "Address",
   "history.field.admission": "Domain intake check",
+  "history.field.admission_reason_code": "Intake reason category",
+  "history.field.admission_sender_kind": "Sender category",
   "history.field.admission_reason": "Intake check reason",
   "history.field.admission_source": "Intake check source",
   "history.field.amount_minor": "Value",
@@ -4442,7 +4448,9 @@ export const en = {
   "deepread.starting": "Starting…",
   "deepread.unavailable": "Website research is not configured on this server.",
   "deepread.statusQueued": "Queued",
-  "deepread.statusDeferred": "Waiting for AI budget",
+  "deepread.statusDeferred": "Waiting to resume",
+  "deepread.statusBudgetWait": "Waiting for AI budget",
+  "deepread.statusProviderWait": "Waiting for AI provider",
   "deepread.statusRunning": "Reading website…",
   "deepread.statusDone": "Done",
   "deepread.statusPartial": "Stopped early",
@@ -9976,6 +9984,20 @@ export const en = {
   "voice.candidate.concernsLabel": "Why this version needs review",
   "voice.candidate.applyHint":
     "If it reads like you, use it. If not, keep your current voice and add more writing samples; the next build learns from them.",
+  "voice.candidate.reason.uncomparable":
+    "The previous voice profile could not be compared. Review this version before replacing it.",
+  "voice.candidate.reason.identity":
+    "Your characteristic vocabulary changed (similarity {score}). Review whether it still sounds like you.",
+  "voice.candidate.reason.signature":
+    "Your characteristic phrasing changed (similarity {score}). Review the sample drafts.",
+  "voice.candidate.reason.regression":
+    "This version scored {score}; your active version scored {active}. Review it before replacing your current voice.",
+  "voice.candidate.reason.smallCorpus":
+    "There are too few samples for a separate evaluation. Add more sources to enable scoring.",
+  "voice.candidate.reason.corpusChanged":
+    "Your writing samples changed during this build. Review the version before using it.",
+  "voice.candidate.reason.activeChanged":
+    "Your active voice changed during this evaluation. Review the version before using it.",
   "voice.candidate.reason.malformed":
     "The scoring check could not read some sample drafts, so the score is based on fewer samples than usual.",
   "voice.candidate.reason.lowScore":
@@ -9983,7 +10005,7 @@ export const en = {
   "voice.candidate.reason.hardFailures":
     "Phrases this voice should avoid that appeared in the sample drafts: {n}.",
   "voice.candidate.reason.rulesRemoved":
-    "Rules about what to avoid dropped since your previous version: {n}.",
+    "Rules about wording and register dropped since your previous version: {n}.",
   "voice.candidate.apply": "Use this version",
   "voice.candidate.reject": "Keep current voice",
   "voice.history.label": "Versions and learning",
@@ -12640,6 +12662,9 @@ export const en = {
   "today.scan.readDeals_other": "{count} deals",
   "today.scan.stale":
     "The company has changed since. It is analyzed again within the hour.",
+  "today.scan.providerResumes":
+    "Analysis retries {when}. Waiting for the AI provider.",
+  "today.scan.scheduledResumes": "Analysis resumes {when}.",
   "today.scan.resumes": "Analysis resumes {when}. Paused by the AI budget.",
   "provider.title": "Contact data",
   "provider.readOnly":

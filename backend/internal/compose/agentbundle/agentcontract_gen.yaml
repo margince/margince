@@ -16641,6 +16641,9 @@ components:
         - definition_version
         - member_ids
       properties:
+        prose_language:
+          type: string
+          description: Base language used for generated explanations. Absent on legacy readings, which use English.
         period_kind: {type: string}
         scope:
           $ref: '#/components/schemas/ReportingScope'
@@ -18610,6 +18613,7 @@ components:
         seed_url: {type: string, format: uri}
         status: {type: string, enum: [queued, deferred, running, done, partial, failed, cancelled]}
         status_code: {type: [string, 'null'], enum: [null, budget_deferred, bot_blocked, http_server_error, timeout, http_client_error, dns, tls, robots_disallowed, unreadable, internal, stale_reclaim], description: 'Why a read did not finish: budget_deferred, or the closed failure vocabulary a failed crawl is diagnosed with.'}
+        deferral_reason: {type: string, description: 'Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons.'}
         status_detail: {type: [string, 'null'], description: 'Safe guidance only; never provider payload, prompt, SQL, or stack data.'}
         next_attempt_at: {type: [string, 'null'], format: date-time}
         pages:

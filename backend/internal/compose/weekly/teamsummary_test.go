@@ -73,7 +73,7 @@ func TestTheCommonPatternTieGoesToTheChain(t *testing.T) {
 		summaryRep("Cy", 0, FocusLeadsBreached),
 		summaryRep("Di", 0, FocusLeadsBreached),
 	}
-	if got := commonPatternSentence(reps); got != "Most common pattern: leads breached (2 members)." {
+	if got := teamCopyFor("en").commonPatternSentence(reps); got != "Most common pattern: leads breached (2 members)." {
 		t.Errorf("tie broke to %q", got)
 	}
 }
@@ -81,7 +81,7 @@ func TestTheCommonPatternTieGoesToTheChain(t *testing.T) {
 // A horizon without a basis says nothing about coverage.
 func TestAnAbsentBasisWritesNoCoverageSentence(t *testing.T) {
 	refused := []Coverage{CoverageRefused("month", "EUR")}
-	if got := coverageSentence(refused, "month"); got != "" {
+	if got := teamCopyFor("en").coverageSentence(refused, "month"); got != "" {
 		t.Errorf("an unread call produced %q", got)
 	}
 }

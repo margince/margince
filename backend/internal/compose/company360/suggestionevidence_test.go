@@ -23,7 +23,7 @@ func TestTheNoReplyCitationCarriesTheMessagesOwnWords(t *testing.T) {
 	newest.Subject = "Slots for the pilot review"
 	newest.Excerpt = "Hi Anna, two slots next week would work on our side."
 
-	got := staleThread(testCompanyID(t), suggestNow, newest)
+	got := englishSuggestions.staleThread(testCompanyID(t), suggestNow, newest)
 	if got == nil {
 		t.Fatal("the rule did not fire on a 10-day-old unanswered email")
 	}
@@ -49,7 +49,7 @@ func TestTheNoReplyCitationWithholdsWordsTheReaderMayNotRead(t *testing.T) {
 	newest := sentAgo(10, crmcontracts.ActivityDirectionOutbound)
 	newest.Kind = string(crmcontracts.ActivityKindCall)
 
-	got := staleThread(testCompanyID(t), suggestNow, newest)
+	got := englishSuggestions.staleThread(testCompanyID(t), suggestNow, newest)
 	if got == nil {
 		t.Fatal("the rule went silent on a message whose words are withheld")
 	}
@@ -65,7 +65,7 @@ func TestTheNoReplyCitationWithholdsWordsTheReaderMayNotRead(t *testing.T) {
 func TestTheStalledDealCitationSaysWhenItWasLastWorked(t *testing.T) {
 	deal := idle("Renewal")
 
-	got := stalledDealSuggestions([]stalledDeal{deal})
+	got := englishSuggestions.stalledDealSuggestions([]stalledDeal{deal})
 	if len(got) != 1 {
 		t.Fatalf("got %d suggestions, want one", len(got))
 	}
@@ -76,8 +76,8 @@ func TestTheStalledDealCitationSaysWhenItWasLastWorked(t *testing.T) {
 	if cited.At == nil || !cited.At.Equal(deal.IdleSince) {
 		t.Errorf("at = %v, want the instant the deal was last worked", cited.At)
 	}
-	if cited.Origin == nil || *cited.Origin != originStalledDeal {
-		t.Errorf("origin = %v, want %q", cited.Origin, originStalledDeal)
+	if cited.Origin == nil || *cited.Origin != "Open deal, last worked" {
+		t.Errorf("origin = %v, want %q", cited.Origin, "Open deal, last worked")
 	}
 }
 
@@ -101,8 +101,8 @@ func TestTheConflictQuotesTheMailThatEndedTheContract(t *testing.T) {
 	if cited.At == nil || !cited.At.Equal(read) {
 		t.Errorf("at = %v, want when the signal was read", cited.At)
 	}
-	if cited.Origin == nil || *cited.Origin != originContractEnded {
-		t.Errorf("origin = %v, want %q", cited.Origin, originContractEnded)
+	if cited.Origin == nil || *cited.Origin != "Read from their correspondence" {
+		t.Errorf("origin = %v, want %q", cited.Origin, "Read from their correspondence")
 	}
 }
 
@@ -115,14 +115,14 @@ func TestTheCitationsWordsNeverReachTheFingerprint(t *testing.T) {
 	worded := bare
 	worded.Kind, worded.Subject, worded.Excerpt = "email", "Re: pilot", "Two slots next week."
 
-	if a, b := staleThread(companyID, suggestNow, bare), staleThread(companyID, suggestNow, worded); a.Fingerprint != b.Fingerprint {
+	if a, b := englishSuggestions.staleThread(companyID, suggestNow, bare), englishSuggestions.staleThread(companyID, suggestNow, worded); a.Fingerprint != b.Fingerprint {
 		t.Errorf("the no-reply fingerprint moved with the words:\n  %s\n  %s", a.Fingerprint, b.Fingerprint)
 	}
 
 	dealID := ids.NewV7()
 	unnamed := stalledDeal{ID: dealID, Name: "Renewal", IdleSince: suggestNow.AddDate(0, 0, -90)}
 	renamed := stalledDeal{ID: dealID, Name: "Renewal 2027", IdleSince: unnamed.IdleSince}
-	a, b := stalledDealSuggestions([]stalledDeal{unnamed}), stalledDealSuggestions([]stalledDeal{renamed})
+	a, b := englishSuggestions.stalledDealSuggestions([]stalledDeal{unnamed}), englishSuggestions.stalledDealSuggestions([]stalledDeal{renamed})
 	if a[0].Fingerprint != b[0].Fingerprint {
 		t.Errorf("the stalled-deal fingerprint moved with the name:\n  %s\n  %s", a[0].Fingerprint, b[0].Fingerprint)
 	}

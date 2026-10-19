@@ -11,9 +11,10 @@ import { useLastSubject } from "../design-system/presence";
 import { QueryGate } from "../design-system/querystates";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber, identifierNumber } from "../format/format";
-import { type Locale, useLocale, usePlural, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
+import { reviewReasonText } from "../lib/voice-review-reason";
 import { parseVoiceInsights, VoiceInsights } from "./voice-insights";
 import { changeColumns, versionColumns } from "./voice-versions.tables";
 import "./voice-dna.css";
@@ -90,51 +91,6 @@ export function ActiveVoiceInsights({
   );
 }
 
-// The evaluator writes its reasons for an operator reading a log, and they
-// reached the owner verbatim: "median voice score 0.56 is below the 0.60 floor"
-// says nothing to the colleague being asked to decide. Each known shape is stated
-// again in words about THEIR voice and what to do about it.
-//
-// An unrecognized reason is shown as it came rather than dropped: a reason
-// nobody can read is bad, and a reason nobody can SEE is worse — it would let
-// a candidate be held back for a cause the owner is never told.
-function reviewReasonText(
-  t: ReturnType<typeof useT>,
-  locale: Locale,
-  reason: string,
-): string {
-  const lowScore =
-    /median voice score ([\d.]+) is below the ([\d.]+) floor/.exec(reason);
-  if (lowScore) {
-    // Through the formatter, like every other figure on this page: the
-    // evaluator writes "0.56" because it writes for a log, and a German reader
-    // reads 0,56. A score handed straight to the sentence kept the log's
-    // notation in front of a reader who does not use it.
-    return t("voice.candidate.reason.lowScore", {
-      score: formatNumber(Number(lowScore[1] ?? 0), locale),
-      floor: formatNumber(Number(lowScore[2] ?? 0), locale),
-    });
-  }
-  const hardFailures = /^(\d+) anti-AI hard failures survived/.exec(reason);
-  if (hardFailures) {
-    return t("voice.candidate.reason.hardFailures", {
-      n: formatNumber(Number(hardFailures[1] ?? 0), locale),
-    });
-  }
-  const rulesRemoved =
-    /^(\d+) avoid and (\d+) register rules were removed/.exec(reason);
-  if (rulesRemoved) {
-    const dropped = Number(rulesRemoved[1] ?? 0) + Number(rulesRemoved[2] ?? 0);
-    return t("voice.candidate.reason.rulesRemoved", {
-      n: formatNumber(dropped, locale),
-    });
-  }
-  if (reason.includes("malformed drafts during evaluation")) {
-    return t("voice.candidate.reason.malformed");
-  }
-  return reason;
-}
-
 // A candidate never replaces the active voice silently: the owner applies
 // or rejects it, with the version itself and the evaluator's reasons in view.
 function CandidateBanner({
@@ -199,8 +155,18 @@ function CandidateBanner({
         <>
           <p className="vdna-label">{t("voice.candidate.concernsLabel")}</p>
           <ul className="vdna-reasons">
-            {candidate.review_reasons.map((reason) => (
-              <li key={reason}>{reviewReasonText(t, locale, reason)}</li>
+            {candidate.review_reasons.map((reason, index) => (
+              <li key={reason}>
+                {reviewReasonText(
+                  t,
+                  locale,
+                  reason,
+                  candidate.evaluation.review_reason_details === undefined
+                    ? undefined
+                    : (candidate.evaluation.review_reason_details[index] ??
+                        null),
+                )}
+              </li>
             ))}
           </ul>
         </>

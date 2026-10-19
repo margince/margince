@@ -2429,6 +2429,9 @@ public.company_domain_disposition acl=margince_owner=arwdDxt/margince_owner,marg
 public.company_domain_disposition.admission text gen=- def=-
 public.company_domain_disposition.admission_at timestamp with time zone gen=- def=-
 public.company_domain_disposition.admission_reason text gen=- def=-
+public.company_domain_disposition.admission_reason_code text gen=- def=-
+public.company_domain_disposition.admission_reason_coded_at timestamp with time zone gen=- def=-
+public.company_domain_disposition.admission_sender_kind text gen=- def=-
 public.company_domain_disposition.admission_source text gen=- def=-
 public.company_domain_disposition.attempts integer NOT NULL gen=- def=0
 public.company_domain_disposition.company_domain_disposition_admission_check CHECK (((admission IS NULL) OR (admission = ANY (ARRAY['suppressed'::text, 'admitted'::text]))))
@@ -7124,6 +7127,7 @@ public.team_weekly_review.proposals_rejected integer gen=- def=-
 public.team_weekly_review.reps_counted integer NOT NULL gen=- def=0
 public.team_weekly_review.reps_unread integer NOT NULL gen=- def=0
 public.team_weekly_review.summary text gen=- def=-
+public.team_weekly_review.summary_language text gen=- def=-
 public.team_weekly_review.team_id uuid NOT NULL gen=- def=-
 public.team_weekly_review.team_name text NOT NULL gen=- def=-
 public.team_weekly_review.team_weekly_review_counts_are_tallies CHECK (((reps_counted >= 0) AND (reps_unread >= 0) AND (deals_won >= 0) AND (deals_lost >= 0) AND (deals_moved >= 0) AND (leads_routed >= 0) AND (leads_answered_in_target >= 0) AND (leads_breached >= 0) AND (meetings_held >= 0) AND (meetings_with_next_step >= 0) AND (commitments_due >= 0) AND (commitments_kept >= 0) AND ((pipeline_created_minor IS NULL) OR (pipeline_created_minor >= 0)) AND ((pipeline_won_minor IS NULL) OR (pipeline_won_minor >= 0)) AND ((pipeline_lost_minor IS NULL) OR (pipeline_lost_minor >= 0))))

@@ -255,13 +255,13 @@ func TestEveryMeetingKindHasACaveatThatFitsIt(t *testing.T) {
 		crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDelivery,
 		crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRenewalRisk,
 	} {
-		if got := caveatFor(MeetingType{Value: kind}); got == caveatUnknown {
+		if got := briefCopyFor("en").caveatFor(MeetingType{Value: kind}); got == objectiveWords.CaveatUnknown.En {
 			t.Errorf("a %q meeting is told the plan does not know what it is for", kind)
 		}
 	}
 	// And `unknown` still gets the one that says so, or the check above would
 	// pass by making every kind share a caveat that fits none of them.
-	if got := caveatFor(MeetingType{Value: crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown}); got != caveatUnknown {
+	if got := briefCopyFor("en").caveatFor(MeetingType{Value: crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown}); got != objectiveWords.CaveatUnknown.En {
 		t.Errorf("an unknown meeting's caveat = %q, want the one that says to ask", got)
 	}
 }

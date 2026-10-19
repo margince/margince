@@ -36,7 +36,7 @@ func sentAt(at time.Time) *wroteTo {
 }
 
 func askedWith(page *crmcontracts.Contact360, sent *wroteTo, dismissed func(crmcontracts.ContactMoment) bool) crmcontracts.ContactMoment {
-	return deriveMomentPast(readerCtx(), now, page, dismissed, proposer(readerCtx(), page, sent, time.UTC, dismissed))
+	return momentCopyFor("en").deriveMomentPast(readerCtx(), now, page, dismissed, momentCopyFor("en").proposer(readerCtx(), page, sent, time.UTC, dismissed))
 }
 
 func neverDismissed(crmcontracts.ContactMoment) bool { return false }
@@ -46,7 +46,7 @@ func TestAnEmailAfterTheTaskAsksWhetherItWasDone(t *testing.T) {
 	sent := sentAt(now.Add(-6 * time.Hour))
 
 	got := askedWith(page, sent, neverDismissed)
-	if got.Headline != "You may have done this — you wrote to them on 4 Aug" {
+	if got.Headline != "You may have done this — you wrote to them on 2026-08-04" {
 		t.Fatalf("headline = %q, want the question naming the day we wrote", got.Headline)
 	}
 	if got.Rule != crmcontracts.ContactMomentRuleOverduePromise {
@@ -138,8 +138,8 @@ func TestTheQuestionNamesTheDayInTheRecordZone(t *testing.T) {
 		t.Fatalf("loading the zone: %v", err)
 	}
 	sent := sentAt(time.Date(2026, 8, 3, 20, 0, 0, 0, time.UTC))
-	got := deriveMomentPast(readerCtx(), now, page, neverDismissed, proposer(readerCtx(), page, sent, saigon, neverDismissed))
-	if got.Headline != "You may have done this — you wrote to them on 4 Aug" {
+	got := momentCopyFor("en").deriveMomentPast(readerCtx(), now, page, neverDismissed, momentCopyFor("en").proposer(readerCtx(), page, sent, saigon, neverDismissed))
+	if got.Headline != "You may have done this — you wrote to them on 2026-08-04" {
 		t.Errorf("headline = %q, want the day in the record zone", got.Headline)
 	}
 }
@@ -166,7 +166,7 @@ func TestDoneIsWithheldFromAReaderWhoCannotWriteThePromise(t *testing.T) {
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
 			moment := c.moment
-			momentaction.Withhold(as(c.grants), &moment)
+			momentaction.Withhold(as(c.grants), "en", &moment)
 			if moment.RecommendedAction.State != c.want {
 				t.Errorf("Done state = %q, want %q", moment.RecommendedAction.State, c.want)
 			}
@@ -183,7 +183,7 @@ func TestReassigningATaskRearmsItsNotYet(t *testing.T) {
 	page.NextSteps.Data[0].AssigneeId = new(openapi_types.UUID(ids.NewV7()))
 	sent := sentAt(now.Add(-time.Hour))
 	ask := func() crmcontracts.ContactMoment {
-		return deriveMomentPast(ctx, now, page, neverDismissed, proposer(ctx, page, sent, time.UTC, neverDismissed))
+		return momentCopyFor("en").deriveMomentPast(ctx, now, page, neverDismissed, momentCopyFor("en").proposer(ctx, page, sent, time.UTC, neverDismissed))
 	}
 
 	theirs := ask()

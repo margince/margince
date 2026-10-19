@@ -16,7 +16,7 @@ import (
 
 func readReportingMeetings(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
 	if frame.PipelineId != nil {
-		return nil, reportingGap("unsupported", "Meetings have no pipeline dimension; choose all pipelines"), nil
+		return nil, reportingGap("unsupported", reporting.ExplanationCopy(frame).Say(reportingCoverageWords.MeetingPipeline)), nil
 	}
 	var b reportingBindings
 	legacy := "(held.id IS NULL OR held.customer_eligible_at_change IS NULL OR held.partial_pre_history)"
@@ -42,7 +42,7 @@ func readReportingMeetings(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
 	visible += " AND " + fieldScope
-	query := `SELECT COALESCE(held.id,a.id)::text,a.id,COALESCE(a.subject,'Meeting'),` + owner + `,COALESCE(u.display_name,''),` + start + `,
+	query := `SELECT COALESCE(held.id,a.id)::text,a.id,COALESCE(a.subject,` + b.add(reporting.ExplanationCopy(frame).Say(reportingLabelWords.Meeting)) + `),` + owner + `,COALESCE(u.display_name,''),` + start + `,
  CASE WHEN ` + legacy + ` THEN 'current_meeting' ELSE 'held_transition' END
  FROM activity a LEFT JOIN LATERAL(SELECT h.* FROM activity_meeting_history h WHERE h.activity_id=a.id AND h.effective_at<=` + b.add(frame.EvaluatedAt) + ` ORDER BY h.effective_at DESC,h.id DESC LIMIT 1) held ON true
  LEFT JOIN app_user u ON u.id=(` + owner + `)
@@ -53,7 +53,7 @@ func readReportingMeetings(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	facts, coverage, err := readOutcomeFacts(ctx, tx, frame, reportingMeetingsHeld, string(recordTypeActivity), query, b)
 	for _, fact := range facts {
 		if fact.Provenance == "current_meeting" {
-			coverage = reportingGap(reportingPartial, "Older meetings use their current host and customer links because historical attribution is unavailable.")
+			coverage = reportingGap(reportingPartial, reporting.ExplanationCopy(frame).Say(reportingCoverageWords.LegacyMeetings))
 			break
 		}
 	}

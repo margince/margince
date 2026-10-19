@@ -14,6 +14,10 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "aiWait.provider":
+    "Nhà cung cấp AI hiện không khả dụng. Công việc sẽ tự động tiếp tục khi nhà cung cấp hoạt động trở lại.",
+  "aiWait.budget":
+    "Ngân sách AI đã đạt giới hạn. Công việc sẽ tự động tiếp tục khi có ngân sách.",
   "reporting.latestSnapshot": "Ảnh chụp mới nhất",
   "reporting.contextDetails": "Chi tiết báo cáo",
   "reporting.targetRemaining": "Còn {amount}",
@@ -1015,6 +1019,8 @@ export const vi = {
     "Bằng chứng cam kết không còn khả dụng",
   "history.field.address": "Địa chỉ",
   "history.field.admission": "Kiểm tra đầu vào tên miền",
+  "history.field.admission_reason_code": "Loại lý do tiếp nhận",
+  "history.field.admission_sender_kind": "Loại người gửi",
   "history.field.admission_reason": "Lý do kiểm tra đầu vào",
   "history.field.admission_source": "Nguồn kiểm tra đầu vào",
   "history.field.amount_minor": "Giá trị",
@@ -4272,7 +4278,9 @@ export const vi = {
   "deepread.starting": "Đang bắt đầu…",
   "deepread.unavailable": "Máy chủ này chưa cấu hình tìm hiểu trang web.",
   "deepread.statusQueued": "Đang chờ xử lý",
-  "deepread.statusDeferred": "Đang chờ hạn mức AI",
+  "deepread.statusDeferred": "Đang chờ tiếp tục",
+  "deepread.statusBudgetWait": "Đang chờ ngân sách AI",
+  "deepread.statusProviderWait": "Đang chờ nhà cung cấp AI",
   "deepread.statusRunning": "Đang đọc trang web…",
   "deepread.statusDone": "Xong",
   "deepread.statusPartial": "Đã dừng sớm",
@@ -9642,6 +9650,20 @@ export const vi = {
   "voice.candidate.concernsLabel": "Vì sao phiên bản này cần xem lại",
   "voice.candidate.applyHint":
     "Nếu bản này đúng văn phong của bạn, hãy dùng. Nếu không, giữ giọng văn hiện tại và thêm văn mẫu; bản dựng tiếp theo sẽ học từ đó.",
+  "voice.candidate.reason.uncomparable":
+    "Không thể so sánh hồ sơ giọng văn trước đó. Hãy kiểm tra phiên bản này trước khi thay thế.",
+  "voice.candidate.reason.identity":
+    "Từ vựng đặc trưng đã thay đổi (độ tương đồng {score}). Hãy kiểm tra xem giọng văn có còn phù hợp không.",
+  "voice.candidate.reason.signature":
+    "Cách diễn đạt đặc trưng đã thay đổi (độ tương đồng {score}). Hãy kiểm tra các bản nháp mẫu.",
+  "voice.candidate.reason.regression":
+    "Phiên bản này đạt {score}; phiên bản đang dùng đạt {active}. Hãy kiểm tra trước khi thay thế giọng văn hiện tại.",
+  "voice.candidate.reason.smallCorpus":
+    "Chưa đủ mẫu để đánh giá riêng. Hãy thêm nguồn để có thể chấm điểm.",
+  "voice.candidate.reason.corpusChanged":
+    "Các mẫu văn bản đã thay đổi trong quá trình tạo. Hãy kiểm tra phiên bản trước khi sử dụng.",
+  "voice.candidate.reason.activeChanged":
+    "Giọng văn đang dùng đã thay đổi trong quá trình đánh giá. Hãy kiểm tra phiên bản trước khi sử dụng.",
   "voice.candidate.reason.malformed":
     "Bước chấm điểm không thể đọc một số bản nháp mẫu, nên điểm số dựa trên ít mẫu hơn thường lệ.",
   "voice.candidate.reason.lowScore":
@@ -9649,7 +9671,7 @@ export const vi = {
   "voice.candidate.reason.hardFailures":
     "Cụm từ giọng này cần tránh nhưng vẫn xuất hiện trong bản nháp mẫu: {n}.",
   "voice.candidate.reason.rulesRemoved":
-    "Số quy tắc về điều cần tránh đã bị bỏ so với phiên bản trước: {n}.",
+    "Số quy tắc về cách diễn đạt và văn phong đã bị bỏ so với phiên bản trước: {n}.",
   "voice.candidate.apply": "Dùng phiên bản này",
   "voice.candidate.reject": "Giữ giọng văn hiện tại",
   "voice.history.label": "Phiên bản và học hỏi",
@@ -12308,6 +12330,9 @@ export const vi = {
   "today.scan.readDeals_other": "{count} deal",
   "today.scan.stale":
     "Công ty đã có thay đổi kể từ đó. Margince sẽ phân tích lại trong vòng một giờ.",
+  "today.scan.providerResumes":
+    "Phân tích sẽ thử lại {when}. Đang chờ nhà cung cấp AI.",
+  "today.scan.scheduledResumes": "Phân tích tiếp tục {when}.",
   "today.scan.resumes":
     "Đang tạm dừng vì đã chạm ngân sách AI. Sẽ tiếp tục phân tích {when}.",
   "provider.readOnly":

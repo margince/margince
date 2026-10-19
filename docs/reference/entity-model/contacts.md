@@ -150,7 +150,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company_domain_disposition
 
-19 columns · primary key `(id)` · referenced by 0 foreign keys
+22 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -158,6 +158,9 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `admission` | `text` |  | One of `suppressed`, `admitted`. |
 | `admission_at` | `timestamp with time zone` |  |  |
 | `admission_reason` | `text` |  |  |
+| `admission_reason_code` | `text` |  |  |
+| `admission_reason_coded_at` | `timestamp with time zone` |  |  |
+| `admission_sender_kind` | `text` |  |  |
 | `admission_source` | `text` |  | One of `verdict`, `heuristic`, `human`. |
 | `attempts` | `integer`, default `0` | yes |  |
 | `company_id` | `uuid` |  | Points at `company.id`. |
