@@ -42,6 +42,7 @@ import {
   momentFallbackVerb,
   momentVerb,
 } from "./companytodayverbs";
+import "./company360.css";
 
 type HealthRating = components["schemas"]["HealthDimension"]["rating"];
 

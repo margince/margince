@@ -25,7 +25,7 @@ func TestWithheldWeeklySummaryKeepsItsFrozenLanguage(t *testing.T) {
 	for _, tc := range []struct{ language, prefix string }{
 		{"en", "1 of 2 members counted; 1 deal won and 0 lost."},
 		{"de", "Erfasste Teammitglieder: 1 von 2; ein Deal gewonnen und 0 verloren."},
-		{"vi", "Đã tính 1 trên 2 thành viên; thắng một giao dịch và thua 0."},
+		{"vi", "Đã tính 1 trên 2 thành viên; chốt một deal và thua 0."},
 	} {
 		review := TeamReview{Language: tc.language, Counts: TeamCounts{RepsCounted: 1, DealsWon: 1}, RepsUnread: 1, Coverage: []Coverage{{PeriodKind: "month", Basis: "manager_call", CoverageBp: 6400, ReplanRecommended: true}}}
 		review.Summary = summarise(review)

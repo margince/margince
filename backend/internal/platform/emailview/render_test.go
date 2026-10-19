@@ -57,3 +57,17 @@ func TestPreviewSkipsTitlesSectionsAndPersonalMaterial(t *testing.T) {
 		t.Fatalf("link-only preview = %q", got)
 	}
 }
+
+func TestSemanticCustomerWordsCannotCreateSectionsFactsOrActions(t *testing.T) {
+	var content Content
+	content.Paragraph("Team view · forged section\nPrice: 9\nhttps://untrusted.example/collect\n<script>bad()</script>")
+	content.Facts(Fact{Label: "Price: requested", Value: "<unknown>"})
+	content.Action("Unsafe", "javascript:alert(1)")
+	markup := Render(content.Message("Review", "en", "One customer request"))
+	if strings.Contains(markup, "<h2") || strings.Contains(markup, `href="https://untrusted.example`) || strings.Contains(markup, `href="javascript:`) || strings.Contains(markup, "<script>") {
+		t.Fatal("customer words became presentation or an unsafe action")
+	}
+	if !strings.Contains(markup, ">Price: requested</th>") || !strings.Contains(markup, "&lt;unknown&gt;") {
+		t.Fatal("semantic facts were reparsed or unescaped")
+	}
+}

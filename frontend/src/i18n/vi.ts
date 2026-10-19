@@ -631,8 +631,8 @@ export const vi = {
     "Công việc CRM đã ghi nhận trong tuần đã kết thúc này. Thiếu dữ liệu ghi nhận không có nghĩa là không hoạt động.",
   "brief.weekly.notRecorded": "Không ghi nhận",
   "brief.weekly.recordedFrom": "Ghi nhận từ {date}",
-  "brief.weekly.noRecords": "Nguồn này không có dữ liệu",
-  "brief.weekly.partialFrom": "Một phần tuần: tính từ {date}",
+  "brief.weekly.noRecords": "Chưa có thông tin cho phần báo cáo này",
+  "brief.weekly.partialFrom": "Số liệu chỉ bao gồm thời gian từ {date}",
   "brief.weekly.partialValue": "{value} (một phần)",
   "brief.week.beforeHistory":
     "Tuần này nằm trước thời điểm có dữ liệu đầu tiên nên không có số liệu để báo cáo.",
@@ -4257,9 +4257,9 @@ export const vi = {
     "Chưa có bản tổng kết tuần. Bản đầu tiên sẽ có vào thứ Hai sau tuần đầy đủ đầu tiên.",
   "brief.weekly.tasksDelivered": "Việc đến hạn đã hoàn tất",
   "brief.weekly.ofDue": "{done} trên {due}",
-  "brief.weekly.dealsWon": "Thắng",
-  "brief.weekly.dealsLost": "Thua",
-  "brief.weekly.dealsMoved": "Đã chuyển",
+  "brief.weekly.dealsWon": "Deal đã chốt",
+  "brief.weekly.dealsLost": "Deal đã mất",
+  "brief.weekly.dealsMoved": "Deal đã đổi giai đoạn",
   "brief.weekly.decided": "Đề xuất đã có quyết định",
   "brief.weekly.acceptedRejected":
     "{accepted} đã chấp nhận · {rejected} đã từ chối",
@@ -4272,10 +4272,10 @@ export const vi = {
   "brief.weekly.planCommitmentsKept": "Cam kết đã hoàn thành",
   "brief.weekly.meetingsHeld": "Cuộc họp có việc tiếp theo",
   "brief.weekly.ofMeetings": "{withStep} trên {held}",
-  "brief.weekly.carriedOver": "Chuyển sang tuần sau",
-  "brief.weekly.outcome.moved": "đã chuyển",
-  "brief.weekly.outcome.won": "thắng",
-  "brief.weekly.outcome.lost": "thua",
+  "brief.weekly.carriedOver": "Việc còn mở cuối tuần",
+  "brief.weekly.outcome.moved": "đã đổi giai đoạn",
+  "brief.weekly.outcome.won": "đã chốt",
+  "brief.weekly.outcome.lost": "đã mất",
   "brief.act": "Xong",
   "brief.dismiss": "Bỏ qua",
 
@@ -8931,6 +8931,8 @@ export const vi = {
   "confirm.field.phone": "Điện thoại",
   "confirm.field.company": "Công ty",
   "confirm.field.none": "Chưa ghi nhận",
+  "confirm.marketing.optional":
+    "Việc đăng ký nhận tin là tùy chọn. Quý khách có thể sửa thông tin liên hệ mà không cần đăng ký.",
   "confirm.marketing.title": "Thỉnh thoảng nhận tin tức?",
   "confirm.marketing.ask":
     "Thỉnh thoảng gửi tin tức, khoảng mỗi tháng một lần. Lựa chọn của quý khách được tôn trọng.",

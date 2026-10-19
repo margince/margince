@@ -229,12 +229,15 @@ func localWeekWindow(ctx context.Context, tx pgx.Tx, weekStart time.Time) (time.
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}
-	var start, end time.Time
-	if err := tx.QueryRow(ctx, `
-		SELECT ($1::date)::timestamp AT TIME ZONE $2,
-		       ($1::date + 7)::timestamp AT TIME ZONE $2`, weekStart, zone).
-		Scan(&start, &end); err != nil {
-		return time.Time{}, time.Time{}, fmt.Errorf("weekly: bounding the local week: %w", err)
+	return WeekWindow(weekStart, zone)
+}
+
+// WeekWindow interprets the stored week date in its reporting zone, including DST.
+func WeekWindow(week time.Time, zoneName string) (time.Time, time.Time, error) {
+	zone, err := time.LoadLocation(zoneName)
+	if err != nil {
+		return time.Time{}, time.Time{}, fmt.Errorf("weekly: reading the reporting timezone: %w", err)
 	}
-	return start, end, nil
+	start := time.Date(week.Year(), week.Month(), week.Day(), 0, 0, 0, 0, zone)
+	return start, start.AddDate(0, 0, 7), nil
 }

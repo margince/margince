@@ -5,91 +5,143 @@ package compose
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
 
-func (w *weeklyGenerateWorker) weeklyMessage(ctx context.Context, review weekly.Review, settings identity.Delivery, now time.Time, words mailcopy.Copy) (string, error) {
+func (w *weeklyGenerateWorker) weeklyMessage(ctx context.Context, review weekly.Review, settings identity.Delivery, now time.Time, words mailcopy.Copy) (emailview.Message, error) {
 	scope := settings.ScopeChoice()
-	var body strings.Builder
-	if scope != identity.RoutineTeam {
-		if scope == identity.RoutineCombined {
-			body.WriteString(words.MailPersonal + "\n\n")
-		}
-		body.WriteString(weekly.MailBody(review, w.mail.PublicBaseURL, words))
-	}
-	if scope != identity.RoutinePersonal {
-		team, err := w.teamWeeklyMessage(ctx, review, settings, words)
+	body, title, hasTeam := w.weeklyBaseMessage(ctx, review, settings, words)
+	if scope != identity.RoutineTeam && !routineCombines(settings) {
+		open, err := w.openTasksMail(ctx, review, now, words)
 		if err != nil {
-			w.log.WarnContext(ctx, "team weekly unavailable; personal content remains available", "cause", err)
-			if scope == identity.RoutineTeam {
-				body.WriteString(words.MailPersonal + "\n\n" + weekly.MailBody(review, w.mail.PublicBaseURL, words))
+			w.log.WarnContext(ctx, "current weekly tasks unavailable", "cause", err)
+			if len(body.Blocks) > 0 {
+				body.Paragraph(words.MailCoverage)
 			}
-			body.WriteString("\n" + words.MailMissing + "\n")
 		} else {
-			body.WriteString(team)
+			body.Append(open)
 		}
 	}
 	morning, err := w.combinedMorningMessage(ctx, settings, now, words)
 	if err != nil {
-		return "", err
+		return emailview.Message{}, err
 	}
-	if morning != "" {
-		body.WriteString("\n\n" + morning)
+	if len(morning.Blocks) > 0 {
+		if len(body.Blocks) == 0 {
+			title = morning.Title
+		} else {
+			body.Heading(morning.Title)
+		}
+		body.Append(emailview.Content{Blocks: morning.Blocks})
 	}
-	mailPreferences(&body, w.mail.PublicBaseURL, words)
-	return body.String(), nil
+	if len(body.Blocks) == 0 {
+		return emailview.Message{}, nil
+	}
+	if scope == identity.RoutineTeam && hasTeam {
+		body.Action(words.MailTeamOpen, w.teamWeekURL(settings, review))
+	} else if weekly.MailUseful(review) {
+		body.Action(words.WeeklyFullWeek, mailcopy.Destination(w.mail.PublicBaseURL, mailcopy.WeeklyFragment(review.LocalWeekStart.Format(time.DateOnly))))
+	}
+	return body.Message(title, string(words.Language), body.Preview(words.WeeklyPreview)), nil
 }
 
-func (w *weeklyGenerateWorker) teamWeeklyMessage(ctx context.Context, review weekly.Review, settings identity.Delivery, words mailcopy.Copy) (string, error) {
+func (w *weeklyGenerateWorker) weeklyBaseMessage(ctx context.Context, review weekly.Review, settings identity.Delivery, words mailcopy.Copy) (emailview.Content, string, bool) {
+	scope := settings.ScopeChoice()
+	personal := weekly.MailMessage(review, "", words)
+	title := personal.Title
+	var body emailview.Content
+	if scope != identity.RoutineTeam && weekly.MailUseful(review) {
+		if scope == identity.RoutineCombined {
+			body.Heading(words.MailPersonal)
+		}
+		body.Append(emailview.Content{Blocks: personal.Blocks})
+	}
+	var team emailview.Message
+	if scope != identity.RoutinePersonal {
+		var err error
+		team, err = w.teamWeeklyMessage(ctx, review, settings, words)
+		if err != nil {
+			w.log.WarnContext(ctx, "team weekly unavailable; delivering available personal facts", "cause", err)
+			if scope == identity.RoutineTeam && weekly.MailUseful(review) {
+				body.Heading(words.MailPersonal)
+				body.Append(emailview.Content{Blocks: personal.Blocks})
+			}
+			if len(body.Blocks) > 0 {
+				body.Paragraph(words.MailMissing)
+			}
+		} else if len(team.Blocks) > 0 {
+			if scope == identity.RoutineTeam {
+				title = team.Title
+			} else {
+				body.Heading(team.Title)
+			}
+			body.Append(emailview.Content{Blocks: team.Blocks})
+			if scope == identity.RoutineCombined {
+				body.Action(words.MailTeamOpen, w.teamWeekURL(settings, review))
+			}
+		}
+	}
+	return body, title, len(team.Blocks) > 0
+}
+
+func (w *weeklyGenerateWorker) teamWeekURL(settings identity.Delivery, review weekly.Review) string {
+	if settings.TeamID == nil {
+		return ""
+	}
+	return mailcopy.Destination(w.mail.PublicBaseURL, mailcopy.TeamFragment(settings.TeamID.String(), review.LocalWeekStart.Format(time.DateOnly)))
+}
+
+func (w *weeklyGenerateWorker) teamWeeklyMessage(ctx context.Context, review weekly.Review, settings identity.Delivery, words mailcopy.Copy) (emailview.Message, error) {
 	if _, _, err := w.users.DeliveryTeam(ctx, settings); err != nil {
-		return "", err
+		return emailview.Message{}, err
 	}
 	team, err := w.engine.TeamReview(ctx, *settings.TeamID, review.LocalWeekStart)
 	if err != nil {
-		return "", err
+		return emailview.Message{}, err
 	}
-	var body strings.Builder
-	fmt.Fprintf(&body, "\n%s · %s\n%s – %s\n\n", words.MailTeam, mailcopy.OneLine(team.TeamName), team.LocalWeekStart.Format(time.DateOnly), team.LocalWeekStart.AddDate(0, 0, 6).Format(time.DateOnly))
-	if team.Summary != "" {
-		body.WriteString(mailcopy.OneLine(team.Summary) + "\n\n")
+	if !weekly.TeamMailUseful(team) {
+		return emailview.Message{}, nil
 	}
+	var body emailview.Content
+	body.Paragraph(weekly.TeamMailSummary(team, words))
+	body.Facts(weekly.TeamMailFacts(team, words)...)
 	if team.RepsUnread > 0 {
-		body.WriteString(words.MailMissing + "\n\n")
+		body.Paragraph(words.MailMissing)
 	}
 	for _, member := range team.Reps {
-		if member.FocusLabel == "" && member.HelpRequested == 0 {
-			continue
+		if focus := weekly.TeamMailFocus(member, string(words.Language)); focus != "" {
+			body.Paragraph(mailcopy.OneLine(member.DisplayName) + ": " + focus)
 		}
-		fmt.Fprintf(&body, "%s: %s\n", mailcopy.OneLine(member.DisplayName), mailcopy.OneLine(member.FocusLabel))
 		if member.HelpRequested > 0 {
-			fmt.Fprintf(&body, "%s: %d\n", words.MailHelp, member.HelpRequested)
+			help, err := w.weeklyHelpMail(ctx, member, review.LocalWeekStart, words)
+			if err != nil {
+				return emailview.Message{}, err
+			}
+			body.Append(help)
 		}
-		body.WriteString("\n")
 	}
-	mailcopy.Link(&body, w.mail.PublicBaseURL, mailcopy.BriefWeeklyFragment, words.WeeklyFullWeek)
-
-	return body.String(), nil
+	body.Append(teamCurrentMail(team, w.mail.PublicBaseURL, words))
+	title := words.MailTeam + " · " + mailcopy.OneLine(team.TeamName) + " · " + words.DateRange(team.LocalWeekStart, team.LocalWeekStart.AddDate(0, 0, 6))
+	return body.Message(title, string(words.Language), body.Preview(words.WeeklyPreview)), nil
 }
 
-func (w *weeklyGenerateWorker) combinedMorningMessage(ctx context.Context, settings identity.Delivery, now time.Time, words mailcopy.Copy) (string, error) {
+func (w *weeklyGenerateWorker) combinedMorningMessage(ctx context.Context, settings identity.Delivery, now time.Time, words mailcopy.Copy) (emailview.Message, error) {
 	if !routineCombines(settings) || (settings.MorningBrief != nil && *settings.MorningBrief == identity.DeliveryNone) {
-		return "", nil
+		return emailview.Message{}, nil
 	}
-	window, allowed, err := routineWindowFor(ctx, w.users, now, settings)
+	_, allowed, err := routineWindowFor(ctx, w.users, now, settings)
 	if err != nil || !allowed {
-		return "", err
+		return emailview.Message{}, err
 	}
 	worker := briefGenerateWorker{pool: w.pool, users: w.users, log: w.log, mail: BriefMailConfig(w.mail)}
-	morning, useful, err := worker.morningMessage(ctx, briefs.BriefRun{LocalDay: window.Day}, now, words)
+	morning, useful, err := worker.morningMessage(ctx, now, words, true)
 	if err != nil || !useful {
-		return "", err
+		return emailview.Message{}, err
 	}
 	return morning, nil
 }

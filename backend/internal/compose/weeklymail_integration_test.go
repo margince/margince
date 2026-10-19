@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -102,12 +103,17 @@ func setupWeeklyMail(t *testing.T) *mailEnv {
 	}
 }
 
-// seedReview writes one rep's review the way the deterministic pass leaves it.
 func (e *mailEnv) seedReview(t *testing.T, week time.Time) ids.UUID {
 	t.Helper()
-	return integration.SeedIDRow(t, integration.OwnerConn(t), `
-		INSERT INTO weekly_review (id, user_id, local_week_start, as_of)
-		VALUES ($1, $2, $3, now())`, e.Rep1, week)
+	logHeldMeeting(t, e.Env, e.Rep1, week.Add(48*time.Hour))
+	review, _, err := e.worker.engine.AssembleFor(e.repCtx, week.AddDate(0, 0, 7).Add(9*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !weekly.MailUseful(review) {
+		t.Fatal("recorded customer meeting did not qualify for delivery")
+	}
+	return review.ID
 }
 
 func TestTheWeeklyMailIsAttemptedOnce(t *testing.T) {
@@ -124,7 +130,7 @@ func TestTheWeeklyMailIsAttemptedOnce(t *testing.T) {
 	if got := e.relay.count(); got != 1 {
 		t.Fatalf("the relay was handed the week %d times; the mail is at-most-once", got)
 	}
-	if !strings.Contains(e.relay.subjects[0], "2026-06-29") {
+	if !strings.Contains(e.relay.subjects[0], mailcopy.For("en").Date(week)) {
 		t.Errorf("the subject does not name the week: %q", e.relay.subjects[0])
 	}
 }
@@ -261,6 +267,8 @@ func TestEveryRepIsMeasuredBeforeTheFirstRelayIsDialled(t *testing.T) {
 	for _, rep := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3} {
 		e.GrantRole(t, rep, "rep")
 	}
+
+	logHeldMeeting(t, e.Env, e.Rep1, weeklyMailClock.AddDate(0, 0, -3))
 
 	var atFirstDial int
 	var dials int

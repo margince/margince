@@ -22,24 +22,13 @@ import {
   useHealthReason,
 } from "./companylookups";
 import type { CompanyTab } from "./companytab";
+import "./company360.css";
 
-/**
- * HealthCard is how the relationship stands, in the parts a reader can act on.
- *
- * Each line names a fact, not a single score. A score taken as the max over
- * the account's contacts lets one talkative contact speak for the account.
- * "No inbound for 90 days" says what to do, where "2/100" says only a mood.
- *
- * A part the server could not compute is absent, never zero. Zero is a claim
- * about the account; absence is a fact about the reading.
- */
-// The rating vocabulary, worst first. The order is the worst-of rule: a
-// verdict is the lowest-ranked rating among the dimensions that have one.
 export type StateStrip = NonNullable<Company360["state_strip"]>;
 
 // Whose move it is, in words. Exported because the daily brief's context band
-// reads the same `engagement` field. companytoday.tsx takes the label from
-// here rather than deriving it a second time.
+// reads the same `engagement` field. companytoday.lines.tsx takes the label
+// from here rather than deriving it a second time.
 export const ENGAGEMENT_LABELS: Record<
   NonNullable<StateStrip["engagement"]>["state"],
   MessageKey

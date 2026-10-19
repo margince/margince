@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -125,14 +126,14 @@ type controllerTemplate struct {
 // — which is both a deliverability problem and a fair reaction.
 var controllerTemplates = map[string]controllerTemplate{
 	TemplateRecordConfirmation: {
-		version:  2,
+		version:  3,
 		category: commsauthz.CategoryRecordConfirmation,
 		subject:  func(w mailcopy.Copy) string { return w.ConfirmRecordSubject },
 		intro:    func(w mailcopy.Copy) string { return w.ConfirmRecordBody },
 		closing:  func(w mailcopy.Copy) string { return w.ConfirmRecordIgnore },
 	},
 	TemplateConsentConfirmation: {
-		version:  3,
+		version:  4,
 		category: commsauthz.CategoryConsentConfirmation,
 		subject:  func(w mailcopy.Copy) string { return w.ConfirmConsentSubject },
 		intro:    func(w mailcopy.Copy) string { return w.ConfirmConsentBody },
@@ -141,14 +142,14 @@ var controllerTemplates = map[string]controllerTemplate{
 	// Version 1, because this wording has never shipped. The two above moved
 	// for changes made after they had.
 	TemplatePrivacyNotice: {
-		version:  1,
+		version:  2,
 		category: commsauthz.CategoryPrivacyNotice,
 		subject:  func(w mailcopy.Copy) string { return w.NoticeSubject },
 		intro:    func(w mailcopy.Copy) string { return w.NoticeBody },
 		closing:  func(w mailcopy.Copy) string { return w.NoticeIgnore },
 	},
 	TemplateOptOutAcknowledgement: {
-		version:  1,
+		version:  2,
 		category: commsauthz.CategoryOptoutConfirmation,
 		subject:  func(w mailcopy.Copy) string { return w.OptOutAckSubject },
 		intro:    func(w mailcopy.Copy) string { return w.OptOutAckBody },
@@ -180,7 +181,7 @@ func ControllerTemplateRegistry() interface {
 // Registered reports whether this build knows the wording at that version.
 func (templateRegistry) Registered(key string, version int) bool {
 	t, ok := controllerTemplates[key]
-	return ok && t.version == version
+	return ok && (t.version == version || historicalControllerVersion(key, version))
 }
 
 // ControllerTemplateVersion is the version of the wording this build sends
@@ -197,6 +198,10 @@ func ControllerTemplateVersion(key string) (int, bool) {
 // the two meet in memory at dispatch — so the link is absent from the delivery
 // row, the timeline, the audit entry and the outbox event alike.
 func RenderControllerTemplate(key string, expiresAt time.Time, language string) (Rendered, commsauthz.Category, error) {
+	return renderTemplateContext(key, expiresAt, language, "")
+}
+
+func renderTemplateContext(key string, expiresAt time.Time, language, purpose string) (Rendered, commsauthz.Category, error) {
 	t, ok := controllerTemplates[key]
 	if !ok {
 		return Rendered{}, "", fmt.Errorf("consent: %q is not a registered controller template", key)
@@ -216,16 +221,22 @@ func RenderControllerTemplate(key string, expiresAt time.Time, language string) 
 			Body: body.String(), Language: language,
 		}, t.category, nil
 	}
-	body.WriteString(t.intro(words) + "\n\n  " + linkPlaceholder + "\n\n" + words.ConfirmPersonal)
+	subject := t.subject(words)
+	body.WriteString(t.intro(words) + "\n\n")
+	if key == TemplateConsentConfirmation && purpose != "" {
+		subject += ": " + mailcopy.OneLine(purpose)
+		body.WriteString(words.ConsentPurposeLabel + ": " + mailcopy.OneLine(purpose) + "\n\n")
+	}
+	body.WriteString(controllerAction(key, words) + "\n  " + linkPlaceholder + "\n\n" + words.ConfirmPersonal)
 	if !expiresAt.IsZero() {
 		// Appended to the personal-link sentence rather than substituted into
 		// it: the shipped English replaced a phrase inside its own body text,
 		// which stops working the moment a language spells that sentence
 		// differently.
-		fmt.Fprintf(&body, words.ConfirmExpiry, expiresAt.Format(mailcopy.DateLayout))
+		fmt.Fprintf(&body, words.ConfirmExpiry, words.Instant(expiresAt.UTC()))
 	}
 	body.WriteString("\n\n" + t.closing(words) + "\n")
-	return Rendered{Key: key, Version: t.version, Subject: t.subject(words), Body: body.String(), Language: language}, t.category, nil
+	return Rendered{Key: key, Version: t.version, Subject: subject, Body: body.String(), Language: language}, t.category, nil
 }
 
 // ControllerTemplateKeys derives previews and fixture coverage from the registry.
@@ -240,5 +251,39 @@ func ControllerTemplateKeys() []string {
 
 // RenderControllerPresentation frames the frozen words without changing their version.
 func RenderControllerPresentation(rendered Rendered, brand string) string {
-	return emailview.Render(emailview.Message{Title: rendered.Subject, Preheader: mailcopy.For(rendered.Language).Preview(rendered.Subject), Text: rendered.Body, Language: rendered.Language, Brand: brand, ActionPlaceholder: linkPlaceholder})
+	words := mailcopy.For(rendered.Language)
+	label := controllerAction(rendered.Key, words)
+	before, after, found := strings.Cut(rendered.Body, label+"\n  "+linkPlaceholder)
+	if !found {
+		var content emailview.Content
+		for paragraph := range strings.SplitSeq(rendered.Body, "\n\n") {
+			content.Paragraph(strings.TrimSpace(paragraph))
+		}
+		message := content.Message(rendered.Subject, rendered.Language, words.Preview(rendered.Subject))
+		message.Text, message.Brand = rendered.Body, brand
+		return emailview.Render(message)
+	}
+	var content emailview.Content
+	for paragraph := range strings.SplitSeq(before, "\n\n") {
+		content.Paragraph(strings.TrimSpace(paragraph))
+	}
+	content.Action(label, linkPlaceholder)
+	for paragraph := range strings.SplitSeq(after, "\n\n") {
+		content.Paragraph(strings.TrimSpace(paragraph))
+	}
+	message := content.Message(rendered.Subject, rendered.Language, words.Preview(rendered.Subject))
+	message.Text, message.Brand, message.ActionPlaceholder = rendered.Body, brand, linkPlaceholder
+	return emailview.Render(message)
+}
+
+func historicalControllerVersion(key string, version int) bool {
+	switch key {
+	case TemplateRecordConfirmation:
+		return version == 2
+	case TemplateConsentConfirmation:
+		return version == 3
+	case TemplatePrivacyNotice, TemplateOptOutAcknowledgement:
+		return version == 1
+	}
+	return false
 }

@@ -462,11 +462,9 @@ const connectedFinance: FinanceSummary = {
 // it is missing, which is precisely what no populated fixture can show.
 //
 // `Strip` itself returns `<StoryProviders>`, so it sits outside the
-// LocaleProvider it renders and cannot call `useT` directly; `StripBody`
-// is the inner component that mounts inside that context, mirroring the
-// real caller's label wiring (companies.tsx's CompanyBand) rather than
-// the identity functions that used to stand in for it and rendered the raw
-// wire enum instead of its copy.
+// LocaleProvider it renders and cannot call `useT` directly. `StripBody` is the
+// inner component that mounts inside that context. It mirrors the real caller's
+// label wiring (companyreading.tsx), so the story draws copy, not the wire enum.
 function StripBody({ view }: Readonly<{ view?: View }>) {
   return <StateStrip companyId="o-1" view={view} />;
 }

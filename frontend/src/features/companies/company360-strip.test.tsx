@@ -75,9 +75,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// The real caller (companies.tsx's CompanyBand) hands the strip its copy
-// functions, so the fixtures do too — a strip fed identity functions would draw
-// the wire enum and prove nothing about what a reader sees.
+// The real caller (companyreading.tsx) hands the strip its copy functions, so
+// the fixtures do too. A strip fed identity functions would draw the wire enum
+// and prove nothing about what a reader sees.
 function renderStrip(
   three60: Company360,
   onOpenTab?: (tab: CompanyTab) => void,

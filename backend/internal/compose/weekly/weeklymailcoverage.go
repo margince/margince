@@ -113,7 +113,19 @@ func (f mailFigures) beforeHistory() bool {
 
 func (f mailFigures) date(at time.Time) string {
 	if f.zone == nil {
-		return at.UTC().Format(mailcopy.DateLayout) + " UTC"
+		return f.words.Date(at.UTC()) + " UTC"
 	}
-	return at.In(f.zone).Format(mailcopy.DateLayout)
+	return f.words.Date(at.In(f.zone))
+}
+
+func measuredFigure(coverage *crmcontracts.WeeklyFigureCoverage) bool {
+	return coverage == nil || coverage.Status == crmcontracts.WeeklyFigureCoverageStatusRecorded
+}
+
+func (f mailFigures) completeBookings() bool {
+	return f.bookings == nil || (!f.bookings.Withheld && (f.bookings.Status == crmcontracts.ReportingStatusOk || f.bookings.Status == crmcontracts.ReportingStatusNoData))
+}
+
+func (f mailFigures) readableBookings() bool {
+	return f.bookings == nil || (!f.bookings.Withheld && slices.Contains(readableBookings, f.bookings.Status))
 }

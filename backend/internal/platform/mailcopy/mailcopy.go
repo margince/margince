@@ -8,7 +8,6 @@ package mailcopy
 import (
 	"slices"
 	"strings"
-	"time"
 )
 
 // Language is a base language this installation can send in. The set is the
@@ -33,20 +32,6 @@ const (
 // build that adds a language to the contract and not to this catalog is caught
 // by the gate, not by a rep's mailbox.
 const Fallback = English
-
-// DateLayout is how a date is written in this installation's mail, in every
-// language.
-//
-// ISO, and that is deliberate: `2 January 2006` puts an English month name in
-// the middle of a German sentence — the half-translated message this catalog
-// exists to stop — and a numeric order like 06/01 is read as 6 January by half
-// the world. Go's layouts name months in English and nothing here translates
-// one, so a formatted date is the one part of a mail a catalog cannot fix.
-//
-// It lives beside the copy rather than beside each sender. The weekly, the
-// morning brief and the confirm link all write dates a recipient reads, and
-// three constants would be three chances to decide this differently.
-const DateLayout = time.DateOnly
 
 // Languages is every language this build carries copy for, in a stable order.
 //
@@ -105,6 +90,42 @@ func Known(language string) bool {
 // field of every language: that is what stops a language reaching a mailbox
 // half-written.
 type Copy struct {
+	MailCurrent          string
+	MailStale            string
+	MailMembersCounted   string
+	MailManagerResponse  string
+	BusinessPurpose      string
+	MarketingPurpose     string
+	TransactionalPurpose string
+	WeeklyLeads          string
+	WeeklyAnswered       string
+	WeeklyBreached       string
+	WeeklyMeetings       string
+	WeeklyNextSteps      string
+	WeeklyPromises       string
+
+	MailTeamOpen string
+	MailTeamDay  string
+
+	WeeklyWonOne   string
+	WeeklyWonMany  string
+	WeeklyDoneOne  string
+	WeeklyDoneMany string
+	MailOpenNow    string
+	MailDecisions  string
+	MailUpdates    string
+
+	RoomSharedBy   string
+	ControllerFrom string
+
+	ConfirmRecordAction  string
+	ConfirmConsentAction string
+	NoticeAction         string
+	WeeklyWonRevenue     string
+	WeeklyOverview       string
+	MailDeadline         string
+	ConsentPurposeLabel  string
+
 	Language              Language
 	MorningPreview        string
 	WeeklyPreview         string
@@ -299,7 +320,6 @@ type Copy struct {
 	// working day, so it names the top of the queue and links to the rest
 	// rather than restating a day a reader is about to open anyway.
 	MorningSubject string
-	MorningHeading string
 	// MorningTop heads the ranked lines. MorningAndMore is the "%d more"
 	// tail when the queue runs past the cap.
 	MorningTop     string

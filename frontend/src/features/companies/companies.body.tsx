@@ -28,6 +28,7 @@ import { CompanyDocumentsCard } from "./companydocuments";
 import { EvidenceModal } from "./companyevidence";
 import { CompanyFinanceCard } from "./companyfinance";
 import type { CompanyTab } from "./companytab";
+import "./company360.css";
 
 // What the composer is anchored on. A reply answers the message it names. An
 // account-started message names the contact it goes to, because it has no

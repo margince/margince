@@ -100,7 +100,7 @@ it("keeps a partly recorded figure's number with its start date", () => {
     figureReading(figures.won, { value: "3", detail: "€965,000" }, place),
   ).toEqual({
     value: "3",
-    detail: `€965,000 · Partial week: counted from ${day("2026-09-10T08:00:00Z")}`,
+    detail: `€965,000 · Figures cover the period from ${day("2026-09-10T08:00:00Z")} only`,
   });
   expect(figureValue(figures.moved, "3", t)).toBe("3 (partial)");
   expect(figureReading(figures.leads, { value: "7 of 9" }, place)).toEqual({

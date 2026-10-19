@@ -129,8 +129,8 @@ export const SIZE_BAND_OPTIONS = [
   "5000+",
 ] as const;
 
-// Exported so worstOf (company360.tsx) reads the same three ranks and the
-// same order rather than keeping its own copy of the scale it ranks against.
+// The rating vocabulary, worst first. The order is the worst-of rule: a
+// verdict is the lowest-ranked rating among the dimensions that have one.
 export const HEALTH_RANK = ["at_risk", "good", "strong"] as const;
 export type HealthRating = (typeof HEALTH_RANK)[number];
 

@@ -20,11 +20,11 @@ even when the user who clicked the button has one. This covers:
 |---|---|
 | Privacy notice (GDPR Art. 14) | **Send privacy notice** on a "Privacy notice owed" card |
 | Confirm-your-details link | **Ask them to confirm their details** on a contact |
-| Double opt-in link for a purpose that needs confirming | the same button |
+| Double opt-in link for a purpose that needs confirming | asking the contact to confirm that purpose |
 | Password reset | **Forgot password** on the sign-in page |
 | Member invitation | Settings → Users & roles |
 | Deal Room invitation | inviting a buyer to a Deal Room |
-| Weekly review and morning brief by email | the schedule of the worker, as the rep sets it in Settings → Account |
+| Weekly review and morning brief by email | the schedule of the worker, as the rep sets it in their own settings |
 
 The privacy notice and the confirm links carry a link that works one time, and that opens
 the contact's own page for that message. They go through the relay so that the link never sits
@@ -115,3 +115,32 @@ may apply their own changes; check a test message after changing relay settings.
 
 The [SMTP filter contract](https://www.twilio.com/docs/sendgrid/for-developers/sending-email/smtp-filters)
 states the per-message override. It does not change the relay account settings.
+
+Recipient copy uses a member's saved account language for morning and weekly reports,
+notices and password links. If no supported language is saved, it uses the
+installation language, then English. New member invitations, buyer room links
+and controller messages use the installation language because those paths have
+no saved recipient language. A meeting reminder uses the language of its conversation, with the installation language as its fallback.
+
+Product messages use the shared mail view for sections, text and links.
+Record labels stay text. HTML and plain text come from the same blocks.
+Buyer and privacy messages use `Sie` in German; colleague messages use `du`. Consent wording changes need a new template version.
+Queued messages keep their frozen text, HTML and sealed link reference.
+
+The email preview tool reads message captures exported by the recipient integration
+tests. It writes an index page and both formats for each capture; it does not
+keep another copy of the templates.
+
+To build examples with test records from the real mail workers, start the test database
+with `make db-up`, then run from the repository root:
+
+```sh
+email_examples="$(mktemp -d)"
+make test-it DIR=backend/internal/compose RUN='TestProduction.*Previews' \
+  IT_ARGS="-email-previews=$email_examples"
+(cd backend && go run ./tools/emailpreview -in "$email_examples" -out "$email_examples/gallery")
+```
+
+Open `index.html` in the output folder. Each message has an HTML file and a plain-text
+file. Tests check that an empty report sends no email.
+Browser previews check wrapping and themes. They do not certify every email client.

@@ -8,6 +8,7 @@ import { GrowthFitPanel } from "./companygrowthfit";
 import { SignalsSection } from "./companyrail";
 import { type CompanyOverviewProps, CompanyReading } from "./companyreading";
 import { hasWorkInFlight } from "./companywork";
+import "./company360.css";
 
 // Whether this account has anything captured against it at all.
 //

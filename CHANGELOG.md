@@ -20,6 +20,12 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
   `show_in_create` on create and update, so an import can create a field that
   only keeps a value from a previous system.
 
+- Recipient email summaries name results and unfinished work, use the member's
+  saved language and suppress empty weeks. Team priorities follow the worklist's
+  ranking across members. Product mail shares explicit sections and actions;
+  buyer and privacy messages use formal German and state precise link expiry.
+  Contacts can correct details without selecting optional marketing consent.
+
 - **MCP tools match the API.** An MCP tool takes every
   filter, sort and option its REST route takes. `read_view` reads a route's
   views, such as a company's 360 or a deal's status. `change_record_parts`
