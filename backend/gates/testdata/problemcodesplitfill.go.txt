@@ -17,3 +17,5 @@ type notCarrier struct{ Code string }
 type definedOther notCarrier
 
 func fillDefinedOther(n *definedOther) { n.Code = "not_a_problem" }
+
+func fillPromotedAliased(w aliasedWrap) { w.DetailedError.Code = "planted_split_promoted_aliased" }

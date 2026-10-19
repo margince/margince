@@ -8,6 +8,7 @@ package gates
 
 import (
 	"go/ast"
+	"maps"
 	"slices"
 	"strings"
 )
@@ -123,18 +124,46 @@ func (c *emittedCensus) fieldType(holder ast.Expr, owner *goUnit, field string, 
 	return nil, nil, false
 }
 
-// structOf answers the shape a named type of this census declares.
+// structOf answers the shape a named type of this census declares, through
+// the aliases and defined types that name it.
 func (c *emittedCensus) structOf(typ ast.Expr, unit *goUnit) (*ast.StructType, *goUnit, bool) {
-	if star, ok := typ.(*ast.StarExpr); ok {
-		typ = star.X
+	for range 8 {
+		if star, ok := typ.(*ast.StarExpr); ok {
+			typ = star.X
+		}
+		name, ok := c.literalType(unit, typ)
+		dir, typeName, _ := strings.Cut(name, ".")
+		if shape := c.structs[dir][typeName]; ok && shape != nil {
+			return shape, c.structAt[shape], true
+		}
+		named, declaredIn, isNamed := c.namedType(typ, unit)
+		if !isNamed {
+			break
+		}
+		typ, unit = named, declaredIn
 	}
-	name, ok := c.literalType(unit, typ)
-	dir, typeName, _ := strings.Cut(name, ".")
-	shape := c.structs[dir][typeName]
-	if !ok || shape == nil {
-		return nil, nil, false
+	return nil, nil, false
+}
+
+// carrierLiterals answers every composite literal that builds the carrier:
+// spelled as itself, or as an alias or defined type of it.
+func (c *emittedCensus) carrierLiterals(carrier string) []fieldSet {
+	sets := slices.Clone(c.composite[problemWriterDir+"."+carrier])
+	for _, name := range slices.Sorted(maps.Keys(c.named)) {
+		if c.namesCarrier(name, carrier, 0) {
+			sets = append(sets, c.composite[name]...)
+		}
 	}
-	return shape, c.structAt[shape], true
+	return sets
+}
+
+func (c *emittedCensus) namesCarrier(name, carrier string, depth int) bool {
+	declared, known := c.named[name]
+	if !known || depth > 8 {
+		return false
+	}
+	target, ok := c.literalType(declared.unit, declared.typ)
+	return ok && (target == problemWriterDir+"."+carrier || c.namesCarrier(target, carrier, depth+1))
 }
 
 // namedType answers what a non-struct type this census declares names.

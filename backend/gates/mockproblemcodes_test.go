@@ -528,6 +528,7 @@ func TestTheEmittedCodeCensusReadsEveryPlantedSite(t *testing.T) {
 		"planted_fault_return", "planted_assigned", "planted_ranged", "planted_elided",
 		"planted_split_var", "planted_split_asserted", "planted_split_asserted_local", "planted_split_aliased",
 		"planted_split_defined", "planted_nested", "planted_split_nested", "planted_split_embedded", "planted_split_embedded_selector", "planted_split_promoted",
+		"planted_split_promoted_aliased", "planted_split_aliased_literal", "planted_split_defined_literal",
 	} {
 		if _, read := census.codes[code]; !read {
 			t.Errorf("the census did not read the planted %q", code)

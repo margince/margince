@@ -137,7 +137,7 @@ func sharedStatusCodes(t *testing.T) map[int][]string {
 	}
 	for name := range bodyCodeCarriers {
 		shape := census.structs[problemWriterDir][name]
-		for _, set := range census.composite[problemWriterDir+"."+name] {
+		for _, set := range census.carrierLiterals(name) {
 			status, hasStatus := fieldValue(set.lit, shape, "Status")
 			code, hasCode := fieldValue(set.lit, shape, "Code")
 			if hasStatus && hasCode {
@@ -374,7 +374,7 @@ func (c *emittedCensus) readSources() {
 	c.holdCarrierLists()
 	for name := range bodyCodeCarriers {
 		shape := c.structs[problemWriterDir][name]
-		for _, set := range c.composite[problemWriterDir+"."+name] {
+		for _, set := range c.carrierLiterals(name) {
 			if value, ok := fieldValue(set.lit, shape, "Code"); ok {
 				c.read(value, set.unit, set.in)
 			}

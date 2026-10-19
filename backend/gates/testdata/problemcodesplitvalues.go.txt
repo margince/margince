@@ -12,3 +12,7 @@ func fillAssertedLocal(err error) {
 	refusal := err.(*httperr.DetailedError)
 	refusal.Code = "planted_split_asserted_local"
 }
+
+func buildAliased() *aliased { return &aliased{Code: "planted_split_aliased_literal"} }
+
+func buildDefined() defined { return defined{Code: "planted_split_defined_literal"} }
