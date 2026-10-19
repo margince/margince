@@ -4,8 +4,8 @@
 A preset is a `seeds.ai_routing` block. You can copy it into your own `config/margince.yaml`, or
 point a certification run at it with `make e2e-ai ROUTING=config/presets/<name>.yaml`.
 
-Presets are **not** read on their own. Nothing in the product loads this folder: `MARGINCE_ENV`
-picks `margince.<env>.yaml` and no more. A file that binds a cloud vendor decides where the text of
+Presets are **not** read on their own. Nothing in the product loads this folder; a program reads only
+the files `--config` and `--config-file` name. A file that binds a cloud vendor decides where the text of
 this installation goes, so an operator must choose it; it is never inherited.
 
 | preset | binds | needs |
@@ -20,7 +20,7 @@ this installation goes, so an operator must choose it; it is never inherited.
 | [`qwen3_local_vllm.yaml`](qwen3_local_vllm.yaml) | every tier to Qwen3-14B (MLX 4-bit) on loopback vLLM, embeddings to `bge-m3` on a second vLLM; zero egress | two vLLM servers started with the flags in the file's header |
 
 `gemini_cloud.yaml` is the binding a dev stack starts with today, lifted out of
-`margince.dev.yaml` so it can be named and used again. The dev overlay still has its own copy,
+`margince.dev.yaml` so it can be named and used again. The dev file still has its own copy,
 because that file is the dev posture and has to stand alone.
 
 `gemini_vertex_eu.yaml` binds the Flash and Flash-Lite of `gemini_cloud.yaml` at their thinking

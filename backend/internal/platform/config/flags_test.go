@@ -5,6 +5,8 @@ package config
 
 import (
 	"flag"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -79,5 +81,29 @@ func TestACommandsOwnFlagsLeaveTheSettingsToLoad(t *testing.T) {
 	}
 	if *steps != 3 || Val(cfg, dsn) != "from-flag" || !Val(cfg, fake) {
 		t.Fatalf("steps %d, settings %v", *steps, cfg.TraceLines())
+	}
+}
+
+// A command with flags of its own still takes the loader's. Migrate and the
+// worker's lanes read an env file as the serving programs do.
+func TestACommandTakesTheLoaderFlags(t *testing.T) {
+	dsn := Define(Spec[string]{Key: "dsn", Env: "X_DSN", Flag: "dsn", Type: String, Doc: "d"})
+	reg := mustRegistry(t, dsn)
+	envFile := filepath.Join(t.TempDir(), "x.env")
+	if err := os.WriteFile(envFile, []byte("X_DSN=from-file\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	fs := flag.NewFlagSet("cmd", flag.ContinueOnError)
+	settings := AddFlags(fs, reg)
+	if err := fs.Parse([]string{"--env-file", envFile, "--config-trace"}); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(reg, Sources{Args: settings.Args()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, origin := ValWithSource(cfg, dsn)
+	if got != "from-file" || origin.Source != SourceEnvFile || origin.File != envFile || !cfg.Trace() {
+		t.Fatalf("dsn %q from %+v, trace %v", got, origin, cfg.Trace())
 	}
 }

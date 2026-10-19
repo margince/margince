@@ -93,9 +93,11 @@ func run(root string, check bool, out io.Writer) error {
 	}
 	for _, path := range slices.Sorted(maps.Keys(files)) {
 		target := filepath.Join(root, path)
+		//nolint:gosec // target is a fixed output path under the -root the developer passed
 		if err := os.MkdirAll(filepath.Dir(target), 0o750); err != nil {
 			return fmt.Errorf("gen-config: creating the directory of %s: %w", path, err)
 		}
+		//nolint:gosec // as above: a fixed output path under -root
 		if err := os.WriteFile(target, files[path], 0o600); err != nil {
 			return fmt.Errorf("gen-config: writing %s: %w", path, err)
 		}
@@ -140,7 +142,8 @@ func render(settings []setting, page string, env envInputs, fields fieldDocs) (m
 func differing(root string, files map[string][]byte) ([]string, error) {
 	var stale []string
 	for _, path := range slices.Sorted(maps.Keys(files)) {
-		current, err := os.ReadFile(filepath.Join(root, path)) // #nosec G304 -- a fixed path under the repository root
+		//nolint:gosec // a fixed output path under the repository root
+		current, err := os.ReadFile(filepath.Join(root, path))
 		switch {
 		case errors.Is(err, os.ErrNotExist):
 			stale = append(stale, path)

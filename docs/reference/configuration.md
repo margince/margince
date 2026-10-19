@@ -1,10 +1,9 @@
 <!-- prose:plain -->
 # Configuration reference
 
-Three binaries, one per process role, live under `backend/cmd/`. Configuration is flags. Every boot
-flag of the api and the worker can also be set through `MARGINCE_<FLAG>` (`-` as `_`). A flag you
-set wins over the `MARGINCE_` value. An empty required value is a
-boot error, and so is a `--log-level` / `--log-format` value it does not take.
+Three binaries, one per process role, live under `backend/cmd/`. Each setting has a key and a variable,
+some have a flag, and each is read from several sources in a fixed order. An empty required value is
+a boot error, and so is a value its setting does not take.
 
 A limit an admin changes while the product runs is a setting, not configuration. The daily cap on
 automatic web page reads, the limits per read and how often Margince reads a mailbox are on
@@ -21,25 +20,105 @@ worked through, is in [tutorials/getting-started.md](../tutorials/getting-starte
 
 ## Where a value comes from
 
-A value comes from the first source in its row that has one; "default" is the value in the code.
-The api and the worker follow the same rules, and each reads only the values it uses.
+The api, the worker and `cmd/migrate` read every setting the same way. A value comes from the first
+of these sources that has one:
 
-| Kind of value | Sources, first match wins | When no source has a value |
+1. a flag, such as `--log-level`;
+2. a variable in the environment, such as `MARGINCE_LOG_LEVEL`;
+3. the `.env` file that `--env-file` or `MARGINCE_ENV_FILE` names;
+4. the YAML file that `--config-file` or `MARGINCE_CONFIG_FILE` names;
+5. the base YAML file that `--config` or `MARGINCE_CONFIG` names, `margince.yaml` when neither is set;
+6. the value an admin saved in the app, for a setting whose Type says stored;
+7. the default in the code.
+
+A value replaces the one below it whole. A list or an object from a higher source is never merged
+with a lower one. An empty variable counts as unset, in the environment and in the `.env` file.
+
+**The `.env` file.** Nothing reads a `.env` file unless `--env-file` names one. It takes
+`NAME=value` lines, an optional `export ` in front, `#` comments, and single or double quotes. A `$` in a
+value stays a `$`, and no other variable is put in its place. When a name is on two lines, the last one wins.
+
+**The loader's own names.** `--config`, `--config-file`, `--env-file` and `--config-trace` come only
+from a flag or the environment, and `MARGINCE_ENV` only from the environment. They choose the files,
+so a file cannot set them: a value for one in the `.env` file or a YAML file stops the boot.
+
+**What stops the boot.** Margince lists every fault at once, so one restart fixes them all. A boot
+stops on any of these:
+
+- a flag it does not know;
+- a key in either YAML file that no program reads;
+- a value that fails the check of its setting;
+- a required value that no source sets;
+- a `--config-file` that does not exist;
+- an old posture file beside the base file, such as `margince.dev.yaml` beside `margince.yaml`,
+  unless `--config-file` names that same file.
+
+A base file that does not exist is not a fault, because an installation may run on flags and
+variables alone. A `MARGINCE_*` variable that no program reads only logs a warning, with its name
+and never its value.
+
+**Trace mode.** `--config-trace`, or `MARGINCE_CONFIG_TRACE=true`, logs each source read, in the
+order above, with its path. Then it logs one line per setting with its value and where the value
+came from. A secret shows `<secret>` in place of its value.
+
+**The Configuration page.** Settings → Configuration lists each setting with its value and its
+source. `GET /v1/installation/configuration` returns the same list, with `value: null` and
+`secret: true` for a secret. How a user reads the page is in
+[the handbook](../handbook/configuration.md).
+
+**The lock.** A boot source that sets a stored setting locks it in the app. Every settings read
+returns `locks`, which name each locked key and its source, and the screen shows the control turned
+off with the source. A write that changes a locked value gets a 409 with the code
+`setting_locked_by_boot_source` and a message that names the source. A write that sends the same
+value is accepted, except for a secret, which refuses even its own value. So a save cannot confirm a
+guess of a secret.
+
+### Where the order does not apply
+
+- `installation.base_currency` and `installation.timezone` are only in the database. SQL reads both
+  rows, so a boot value would give SQL and Go two answers. Bootstrap writes them from
+  `workspace.base_currency` and `workspace.timezone`, and Settings → Company profile changes them.
+- `ai.routing` takes the variable `MARGINCE_AI_ROUTING_BINDING`. `MARGINCE_AI_ROUTING` is the
+  variable of the old `--ai-routing` flag, which still parses and is not used.
+- No boot source sets the state the product writes for itself. That is
+  `installation.agent_window_next_hours` and `installation.agent_window_next_from`, a window change
+  waiting for the next reset. It is also `ai.price_sync_last_run` and `privacy.retention_floor_carry`.
+  The records of where the vault holds the relay password and the license are state too.
+- The Google and Microsoft apps each take several variables, listed under
+  [Settings a boot source can set](#settings-a-boot-source-can-set). An app locks only when the
+  environment sets both its client ID and its client secret.
+- Each AI provider key is a setting of its own, `ai.provider_keys_<provider>`. A boot value for one
+  provider locks that key and leaves the others to the app.
+
+### Secrets
+
+A secret's value shows in no log, error, trace, Configuration page or API answer; only its name and
+source do. A flag, a variable and the `.env` file take a secret as plain text. A YAML file refuses a
+plain secret, and takes one of these references, which also work in the other sources:
+
+- `${file:/path}` reads the file and removes one line break at its end. The source names the path. A
+  file that cannot be read stops the boot and names the path, and so does one over 64 KiB.
+- `${env:NAME}` reads the variable `NAME` from the environment. An unset `NAME` stops the boot.
+- `${none}` says the secret is absent. Only `email.smtp.password` takes it; see
+  [The vault may hold copies of the two deployment credentials](#the-vault-may-hold-copies-of-the-two-deployment-credentials).
+
+A secret saved in the app, such as a provider key, is sealed in the vault. Its row holds only a
+reference to it.
+
+| Credential | Sources, first match wins | When no source has a value |
 |---|---|---|
-| Flag or `MARGINCE_*` variable | flag → environment variable → default | The default. |
-| Key in `margince.yaml` | flag → environment variable → `--env-file` → `--config-file` → `margince.yaml` → default | The default. |
-| Setting an admin changes | value saved in the database → default; a boot source comes first for the [settings a boot source can set](#settings-a-boot-source-can-set) | The default, except for the company name and the reporting timezone, which bootstrap writes and which refuse to run unset. |
-| Seed in `margince.yaml` | `--config-file` → `margince.yaml` → default, root by root | Used when the company is created, and again by a data reset. |
-| AI provider key, Google or Microsoft app | environment variable → value saved in Settings | That provider, or that mailbox connection, is off. |
-| SMTP password | `email.smtp.password` reference → a copy an earlier release sealed in the vault; `${none}` deletes that copy | The relay is used with no password. |
+| SMTP password | `email.smtp.password` → a copy an earlier release sealed in the vault; `${none}` deletes that copy | The relay is used with no password. |
 | License | `MARGINCE_LICENSE` → `license.token` (or the older `license.token_file`) → a copy an earlier release sealed in the vault | Production refuses to boot; `dev` and `test` run with no license. |
 
-**Files.** How the base file and `--config-file` work together is in
-[The file layer](#the-file-layer-a-base-and-an-optional---config-file).
+### Seeds
 
-**Seeds.** These are `workspace`, `bootstrap_admin` and `seeds.*` (pipeline, consent purposes,
-retention, starter automations, booking page, legal review, `ai_routing`). The api writes them in one transaction
-when it boots on a database with no company. Without `bootstrap_admin` it prints a one-time setup
+Seeds are `workspace`, `bootstrap_admin` and `seeds.*` (pipeline, consent purposes, retention,
+starter automations, booking page, legal review, `ai_routing`). They are in the YAML files and
+outside the order. `--config-file` replaces the base's roots one by one, so its `seeds:` block
+replaces the base's `seeds:` whole. The bootstrap checks run once, over the result, so
+`--config-file` may supply a whole `bootstrap_admin` the base only started.
+
+The api writes them in one transaction when it boots on a database with no company. Without `bootstrap_admin` it prints a one-time setup
 token instead. The user who claims the installation enters the company and the first admin, and
 the `seeds.*` values still apply.
 
@@ -63,16 +142,12 @@ queue and the `legal_reviewed` criterion kind, and a stage stops waiting for leg
 recorded are kept.
 
 **Settings.** Most settings get no row at bootstrap, so the default applies until an admin saves a
-value. When a value fails the check of its setting, the save gets a 422 that names the setting. Editing
-`margince.yaml` never changes a saved setting.
+value. When a value fails the check of its setting, the save gets a 422 that names the setting. A boot
+source never writes a saved setting: while it sets one, its value wins and the row is left as it is.
 
 **Model binding.** The binding says which model serves each AI tier and which model embeds. It is a
 setting: `seeds.ai_routing` gives a new installation its first value, and Settings → AI changes it.
 Without a binding or `--ai-fake`, the worker does not start its AI runner or its embedding lane.
-
-**Secrets.** An empty bootstrap password or license reference is an error that names the field.
-Copies of the SMTP password and the license that an earlier release sealed are in
-[The vault may hold copies of the two deployment credentials](#the-vault-may-hold-copies-of-the-two-deployment-credentials).
 
 ## Every setting
 
@@ -343,25 +418,22 @@ admin can also change under Settings.
 ### Settings a boot source can set
 
 An admin changes each setting whose Type says stored, in [Every setting](#every-setting), under
-Settings. An operator can also set one at boot, by its variable or by its key in `margince.yaml` or
-`--config-file`. A value set at boot wins over the value
-saved in the database, and the row is left as it is. The setting is then locked. A save of any other
-value gets a 409 that names the source, and a save of the same value changes nothing.
+Settings. An operator can also set one from any boot source, which then locks it in the app as
+[The lock](#where-a-value-comes-from) says.
 
 A data reset keeps the saved rows of the first 12 settings, from `installation.name` to
 `identity.oidc_group_role_map`, of `ai.routing`, `ai.task_overrides` and `ai.budget`, and of each
 `ai.provider_keys_*`. It deletes the rest.
 
 Each `ai.provider_keys_*` is a secret. Its saved row holds only a reference to the key sealed in the
-key vault. In `margince.yaml` it takes only a `${env:...}` or `${file:...}` reference. A boot value
-is read where it is and is never sealed into the vault. A key sealed before is left in place, and
-read again once no boot source sets the key. A save of a boot-set key gets a 409 even when it sends
-the same key, so a save cannot confirm a guess of it.
+key vault. A boot value is read where it is and is never sealed into the vault. A key sealed before
+is left in place, and read again once no boot source sets the key.
 
 The Google and Microsoft apps are not in the table, because each takes several variables:
 `MARGINCE_GMAIL_CLIENT_ID` and `MARGINCE_GMAIL_CLIENT_SECRET`; `MARGINCE_GRAPH_CLIENT_ID`,
 `MARGINCE_GRAPH_CLIENT_SECRET` and `MARGINCE_GRAPH_TENANT`. An app these set wins over the app saved
-in Settings, and a save or a removal of the saved app gets a 409. The saved app is left in place.
+in Settings when the variables set both its client ID and its client secret. A save or a removal of
+the saved app then gets a 409, and the saved app is left in place.
 
 A value in each `ai.*` setting replaces the whole document; no source merges into another. A
 boot-set `ai.routing` also refuses a change to the settings of one provider, and it wins over
@@ -373,6 +445,11 @@ name on the company profile.
 
 A boot-set `installation.agent_window_hours` also keeps a window length an admin saved for the next
 reset from taking over.
+
+Some bounds are checked in code and not shown in the Type column.
+`installation.dead_work_banner_hours` takes 1 to 168. `installation.geocode_backfill_interval_seconds`
+and `installation.technical_backfill_interval_seconds` take 300 to 604800, or `0` for off.
+`installation.forecast_forward_measure` takes `commit_evidence`, `weighted` or `manager_call`.
 
 `consent.authorization_modes` names every category or none; a value that leaves one out fails the
 boot. `consent.controller_particulars` takes the fields `LegalName`, `PostalAddress`,
@@ -388,15 +465,15 @@ A boot-set `deals.legal_review_enabled` wins over `seeds.legal_review`, and a bo
 ## Common log flags (api, worker)
 
 
-Both roles log to stdout, and their log lines carry the `correlation_id` of each request through the
-correlation slog wrapper. `cmd/migrate` takes no log flag. It writes what it did to stdout and
+Both roles log to stdout, as slog text (`--log-format text`) or slog JSON (`json`). Their log lines
+carry the `correlation_id` of each request through the correlation slog wrapper. `cmd/migrate` takes no log flag. It writes what it did to stdout and
 failures to stderr, with no logger you can set up.
 
 ## cmd/api: the HTTP process role
 
 | Flag | Env | Default | Meaning |
 |---|---|---|---|
-| `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file (`bootstrap` + `auth`: `workspace`, `bootstrap_admin`, `seeds`, `email`; a field it does not know is an error, and secrets are `*_file` references). With a missing file, an installation that already exists still starts; to bootstrap an empty database needs `workspace` + `bootstrap_admin` |
+| `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the base YAML file: the seeds and any setting key (a key it does not know is an error, and a secret takes a reference). With a missing file, an installation that already exists still starts; to bootstrap an empty database needs `workspace` + `bootstrap_admin` |
 | `--config-file` | `MARGINCE_CONFIG_FILE` | — | a second YAML file, layered over the base file |
 | `--env-file` | `MARGINCE_ENV_FILE` | — | a `.env` file to read |
 | `--config-trace` | `MARGINCE_CONFIG_TRACE` | `false` | log each configuration source read and the origin of each setting; a secret shows by name only |
@@ -404,6 +481,45 @@ failures to stderr, with no logger you can set up.
 
 With `--inline-relay` (the default), a Redis Margince cannot reach fails the boot. Without a relay,
 every write that commits would leave its outbox row with nothing to send it.
+
+### The model flags
+
+- `--ai-routing` is read and not used: the binding is the stored setting `ai.routing`. A boot that
+  gets a path logs a warning that it is ignored. A new installation declares its binding under
+  `seeds.ai_routing`, and a running one changes it under Settings → AI with no restart. A role that
+  started with nothing bound keeps no watch on the binding, so restart it once after the first
+  binding is stored. With a binding, the api serves the cold-start read-back, the brief ranking and
+  the AI drafts.
+- `--ai-fake` runs the offline fake model, for dev and test, only when nothing else can serve. A
+  stored binding that can serve comes before it. It serves when nothing is bound, or when the stored
+  binding cannot be built, so a dev stack with no key still starts. When `MARGINCE_ENV` is
+  production, only the flag turns it on: the variable or a file stops the boot.
+
+### Lookups on public services
+
+`--geocode-base-url` and `--vat-check-base-url` are read by both roles: the worker does the lookup,
+and the api decides whether to queue one. Set each on both roles or on none. The value `public`
+picks the public service of each, which this installation asks one request at a time:
+
+- **Geocoding** uses the public Nominatim service, for a test only. Its rules let a scheduled client
+  send 4 requests a minute, so Margince waits 15 seconds between requests. Unset, company addresses
+  get no map point, and a `within_radius` query answers `distance_ranking_unavailable`.
+- **VAT checks** use the VIES service of the EU, with 2 seconds between checks. Unset, Margince
+  stores the VAT ID of a company as its web page stated it.
+- **`--certlog-base-url`**, on the worker, turns on the technical lookup. That reads what a company
+  runs from its DNS records, its certificate history and its first web page. `public` uses the free
+  `https://crt.sh`, with 5 seconds between queries. Unset, the company record keeps no technical
+  profile, and its button answers 501.
+
+### Other api flags
+
+- `--webhook-key` is a base64 32-byte key that seals the webhook signing secrets. Unset, the
+  `/webhook-subscriptions` paths that change data (create, a new key, replay) answer 503, and the
+  read paths still list.
+- `--metrics-token` unset refuses every `/metrics` scrape with the same 401 a wrong token gets,
+  unless `--metrics-access=open`. See [Metrics access](#metrics-access).
+- `--trusted-proxies` takes CIDR prefixes joined by `,`. An address with no `/N` is its own `/32`
+  (or `/128`). See [Trusted proxies](#trusted-proxies).
 
 ### Trusted proxies
 
@@ -836,6 +952,10 @@ lands in `weekly_review.mail_error` next to the try time, so the row can explain
 review. Set `--public-base-url` on the worker too, or the message goes out without its link back to
 Home.
 
+**Without `--webhook-key` the worker sends no webhooks.** It runs no `cg:webhooks` consumer and no
+retry sweep. **The worker needs `--public-base-url` too** for a marketing send that an agent run of
+this role starts. Without it the send refuses, and does not send a link someone could forge.
+
 **Only this process retries failed webhooks.** Both roles run the `cg:webhooks` consumer when
 `--webhook-key` is set, so a deployment with only the api still makes the first try of each
 delivery. The retry sweep is a River job on a schedule (`webhook_retry` → one
@@ -848,7 +968,7 @@ the api says so. Webhook retries need `cmd/worker`. See
 
 | Flag | Env | Default | Meaning |
 |---|---|---|---|
-| `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment file. The worker reads it for the `ai.capture_payloads` setting the Surface-B runner follows. Capture applies to both the api and worker roles; the worker runs the source with the most content, the agent runs. A missing file starts with capture off. With capture on, the `ai_call_payload` / `content` retention window is the whole limit on what is kept: see [AI payload capture and its window](#ai-payload-capture-and-its-window-api-worker) before you pick one |
+| `--config`, `--config-file`, `--env-file`, `--config-trace` | as on the api | as on the api | the same files, read the same way; see [Where a value comes from](#where-a-value-comes-from). The worker reads the deployment file for the `ai.capture_payloads` setting the Surface-B runner follows. Capture applies to both the api and worker roles; the worker runs the source with the most content, the agent runs. A missing file starts with capture off. With capture on, the `ai_call_payload` / `content` retention window is the whole limit on what is kept: see [AI payload capture and its window](#ai-payload-capture-and-its-window-api-worker) before you pick one |
 
 ### The operator surface of the worker
 
@@ -994,7 +1114,8 @@ has to leave room for:
 
 1. **The job runner stops taking jobs at once.** No job is claimed after that. Anything still in
    the queue stays for another replica, or for the next start of this one.
-2. **Running jobs go on for `--job-drain-window`** (default `20s`), with their context whole. A
+2. **Running jobs go on for `--job-drain-window`** (default `20s`, and it must be above zero), with
+   their context whole. A
    job that ends inside the window completes as normal; it is not retried and does not run twice.
 3. **Then their context is cancelled.** The worker waits up to **`5s`** more for each to return.
    River records the stopped try and retries it; the failure is marked `interrupted`, and
@@ -1044,6 +1165,11 @@ a **default an admin can edit**, and each installation decides its own. Three th
 use 0 then would put the process on a bus it was set up to stay off. A UNIX socket path
 (`/var/run/redis.sock`) is an address, not a host with an ending, and is passed through whole.
 
+`--redis-password` is the bus credential, where the Redis server needs one. Empty is the normal case
+on a network the deployment controls. Set it when anything else can reach the bus; the desktop
+bundle makes one for each installation, because its bus listens on loopback. Set it through the
+environment, because every process on the machine can read argv.
+
 **Why it exists.** The stream names and consumer groups are constants (`gw:events:crm:*`, `cg:*`).
 So two installations pointed at one Redis database share one consumer group per name.
 
@@ -1066,8 +1192,47 @@ surfaces stay their declared 501. Secrets go through the environment, never CLI 
 (any user can read argv). Roles: **api** serves connect/callback, **worker** runs the background
 sync.
 
+- **The apps.** `MARGINCE_GMAIL_CLIENT_ID` and `MARGINCE_GMAIL_CLIENT_SECRET` are the Google app;
+  `MARGINCE_GRAPH_CLIENT_ID` and `MARGINCE_GRAPH_CLIENT_SECRET` the Microsoft (Entra) app. Both
+  roles read them. An admin can store each app under Settings instead, with no restart. A pair the
+  deployment sets wins over the stored app and locks it.
+- **One Microsoft app** serves Outlook mail (`/connectors/graph/*`) and Outlook calendar
+  (`/connectors/graphcal/*`). Grant it the mail permissions (`Mail.Read`, `Mail.Send`) and
+  `Calendars.ReadWrite`, and register a redirect URI for each. They are separate connections with
+  separate consents.
+- **`--graph-tenant`** is the Microsoft identity tenant of capture, `common` (any company) when
+  unset. It takes one authority, never a list.
+- **`--connector-state-key`**, on the api, is the HMAC key that signs the OAuth connect `state`. It
+  must be at least 32 bytes, and both connect steps need it.
+- **`--api-base-url`** is the base of the api the outside can reach, for the OAuth callback
+  `redirect_uri`; it defaults to `--public-base-url`. Set it only when the api and the app each have
+  their own origin, as in dev. Google sign-in (`/auth/oidc/google/*`) uses this `redirect_uri` too.
+  Add it to the redirect URIs of the Google app in its cloud settings, or every try ends in
+  `redirect_uri_mismatch`.
+- **`--mcp-apps-base-url`** is the origin the api reads the MCP App view documents from, at start
+  and again from time to time. It defaults to `--public-base-url`, and only matters while
+  `mcp.connector_enabled` is on. The api itself must reach it, which may differ from what the
+  public reaches; a CDN origin works. The scheme must be `https` unless the host is a loopback or
+  private address. A value the fetch would refuse stops the boot and names the setting.
+- **Gmail push.** `--gmail-pubsub-topic` on the worker (`projects/<p>/topics/<t>`) turns on the
+  job that registers and renews the push watch; unset, capture polls. `--gmail-push-token` on the
+  api is the shared secret on the push URL and turns on `POST /webhooks/gmail`. Set
+  `--gmail-push-audience` and `--gmail-push-service-account` together, and the webhook also checks
+  the Google OIDC token. `--gmail-jwks-url` is for test and dev only.
+- **Graph push.** `--graph-notification-url` on the worker is the public URL Microsoft posts change
+  notices to, token included (`https://<api>/webhooks/graph?token=…`). `--graph-push-token` on the
+  api turns on `POST /webhooks/graph`, and must be the same token. It is the only check at that
+  route, because Microsoft signs nothing on a change notice.
+
 
 ### Microsoft sign-in tenants
+
+`--microsoft-signin-tenant`, on the api, lists the Entra directory IDs, joined by `,`. Their members
+may sign in through `/auth/oidc/microsoft/*`, on the same app as Graph capture. Unset, it takes
+`--graph-tenant` when that names a directory. With neither, a Microsoft app stored under Settings
+signs members in on the directory it is pinned to. An app with no pin signs nobody in.
+Add the callback the api prints at boot (`<api-base>/v1/auth/oidc/microsoft/callback`) to the
+redirect URIs of the Entra app, and grant it `openid profile email`.
 
 - **Sign-in cannot run on `common`/`organizations`/`consumers`.** Sign-in matches the address on
   the token to a member that is already there. The admin of any Entra tenant can set the `mail`
@@ -1138,6 +1303,14 @@ local folder in its place would make the attachments that are already there go m
   behind. It can be run again until a store is set up.
 - The bucket is created on first connect, and the store waits for a backend that is still starting,
   with a limited retry.
+- `MARGINCE_BLOBSTORE_REGION` is required when an endpoint is set, and has no default, because it
+  decides where a bucket that holds attachments is created. For MinIO any value works. A missing
+  endpoint, bucket and region are reported in one error.
+- `MARGINCE_BLOBSTORE_USE_SSL` is read by `strconv.ParseBool`: `1`, `t`, `T`, `true`, `TRUE`,
+  `True`, and the same forms of false. Any other value stops the boot, and is never read as off.
+- The path provider creates the folder owner-only (`0700`). Bytes land under `<path>/blob/<key>`
+  and their content type under `<path>/meta/<key>`. Each is written to a short-lived file and then
+  renamed, so a stopped write never leaves a cut-off attachment a row still points at.
 
 
 ## Secret vault (api, worker): connector credentials
@@ -1154,6 +1327,7 @@ command line, where any user on the machine can read argv.
   which seals to the vault.
 - Set it, and the api gets the `/readyz` keyvault probe and the path through the vault. At boot the
   worker also moves any old `auth` bytea rows into the vault; to run that twice does no harm.
+- `MARGINCE_KEYVAULT_ROOT_KEY` is 32 bytes in standard base64; `openssl rand -base64 32` makes one.
 - A key that is set but is not 32 bytes (once read as base64) is a boot error. So is an unset key on
   an installation that already holds sealed ciphertext. A new deployment that dropped the variable
   is refused, not run in a weaker mode (see below).
@@ -1296,8 +1470,16 @@ not. A failed probe ends with a status other than zero, and must not be read as 
 section from `margince.yaml`; if you leave it, the api keeps reading a password file that is no
 longer written. Use `migrate reset-password` to change the password of a user who already exists.
 
+Migrate's owner DSN is `--dsn`, else `MARGINCE_OWNER_DSN`, else `MARGINCE_DSN`. The owner variable
+comes first because every verb here runs DDL, and `MARGINCE_DSN` is the app role everywhere else,
+with no right to run DDL. `MARGINCE_DSN` stays the last choice for a small installation that runs
+everything under one credential with enough rights. An empty `--dsn` is refused, never read as
+unset. For the database verbs, the DSN must name another database, such as `postgres`, because
+`CREATE` and `DROP DATABASE` cannot run inside the database they drop.
+
 | Flag | Env | Default | Meaning |
 |---|---|---|---|
+| `--config`, `--config-file`, `--env-file`, `--config-trace` | as on the api | as on the api | the same files, read the same way; see [Where a value comes from](#where-a-value-comes-from) |
 | `--steps` | (none) | `1` | migrations to undo (`down` only) |
 | `--email` | (none) | (none) | user email (`reset-password` only): the way in for the operator when all else fails. It sets the password of that user right in the database, and reads the new password from **stdin** (never argv). It is the way back in when the admin is locked out and no outbound email is set up. It covers a locked-out admin, and recovery the operator leads. Normal onboarding happens in Settings → Users & roles. There, an installation with no outbound email offers a "Get set-password link" per member, to hand over by another route |
 | `--name` | (none) | (none) | database name (`recreate-db`, `drop-db`, `db-exists` only): the admin step of the integration lane that copies a database per package. Drop if it exists and create, drop if it exists, or print `true`/`false`. The drops are `WITH (FORCE)`, so a session that is still open is ended, and does not make the clean-up fail some of the time. It runs on the same owner DSN the migrations and tests use. So the lane needs no host psql, and a changed `MARGINCE_TEST_DSN` points at one cluster the whole way. A name (or template) over the name limit of the server (63 bytes by default) is refused, never cut short into the name of another database |
@@ -1311,7 +1493,10 @@ longer written. Use `migrate reset-password` to change the password of a user wh
 ## What the image entrypoint reads (api and worker)
 
 The image entrypoint scripts in `scripts/deploy/` read these before they start a binary. The binaries then
-resolve their other flags from the `MARGINCE_*` values above. The steps that use them are in
+resolve their other flags from the `MARGINCE_*` values above. A file mounted at `/.env` is passed to
+`margince-migrate`, the api and the worker as `--env-file /.env`, so it ranks below the environment
+the container gets. The scripts read the values below from it too, without exporting it. Put
+`MARGINCE_ENV` in the environment, never in `/.env`: a value there stops the boot. The steps that use them are in
 [how-to/deploy-margince.md](../how-to/deploy-margince.md), and the template with notes is
 [`.env.example`](../../.env.example).
 
@@ -1516,33 +1701,16 @@ the first run; both are gitignored. `--config` reaches both the api and the work
 such as `ai.capture_payloads` applies to every role. To reset, delete `config/margince.yaml` and
 run `make dev` again.
 
-#### The file layer: a base and an optional `--config-file`
-
-`--config` names the base file, `config/margince.yaml` by default. `--config-file` names a second
-YAML file read over it, such as [`config/margince.dev.yaml`](../../config/margince.dev.yaml), which
-`make dev` passes to the api and the worker. A file named for a posture beside the base
-(`margince.dev.yaml` beside `margince.yaml`) stops the boot unless `--config-file` names it. So a
-posture file that armed something is never dropped without a word.
-
-The full order, where a later source wins:
-
-```
-compiled defaults → margince.yaml → --config-file → --env-file → env vars → flags
-```
-
-The last source that has a setting key replaces it whole. A list in `--config-file` is the whole
-list, and a key it leaves out keeps the base's value. The
-bootstrap roots (`version`, `workspace`, `bootstrap_admin`, `seeds`) are replaced root by root: a
-`seeds:` block in `--config-file` replaces the base's `seeds:` whole.
-
-An unknown key in either file is a boot error that names the file that holds it. The bootstrap
-checks run once, over the result, so `--config-file` may supply a whole `bootstrap_admin` the base
-only started.
+`make dev` also passes the tracked `config/margince.dev.yaml` as `--config-file` and `.env.local` as
+`--env-file` to the api and the worker. The script reads `.env.local` for its own choices and never
+exports it. So a value there shows `.env.local` as its source, and locks its control.
 
 `MARGINCE_ENV` names the posture, and no trust decision rests on it. Nothing that deletes data
 keys off it. `operations.allow_data_reset` arms the data reset. That is why the dev setting that
 arms it lives in the tracked `config/margince.dev.yaml`, and every other posture gets the compiled
 default.
+
+### Capture, company context and lists
 
 `capture.trace_payloads` (default `true`) keeps the sender of each traced message and a limited
 subject (320 and 300 characters, never a body). It keeps them in the 24-hour Capture activity trace

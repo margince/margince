@@ -139,6 +139,18 @@ func TestLocationsAndPostureComeOnlyFromFlagsOrEnv(t *testing.T) {
 	}
 }
 
+// An env file copied from the old template carries bare MARGINCE_ENV= and
+// MARGINCE_CONFIG= lines; empty is unset, so they name nothing to refuse.
+func TestAnEmptyLoaderNameInTheEnvFileIsUnset(t *testing.T) {
+	_, err := load(t, fixture{
+		args:  []string{"--env-file", "{dir}/x.env"},
+		files: map[string]string{"x.env": "MARGINCE_ENV=\nMARGINCE_CONFIG=\nMARGINCE_LOG_LEVEL=debug\n"},
+	}, level)
+	if err != nil {
+		t.Fatalf("got %v", err)
+	}
+}
+
 func TestANamedConfigFileThatIsMissingIsAFault(t *testing.T) {
 	_, err := load(t, fixture{args: []string{"--config-file", "{dir}/absent.yaml"}}, level)
 	if err == nil || !strings.Contains(err.Error(), "absent.yaml") {

@@ -77,9 +77,24 @@ func addFlag(fs *flag.FlagSet, s Any, record func(string)) {
 // command also takes flags Load does not know, such as migrate's --steps.
 type CommandFlags struct{ given []string }
 
-// AddFlags registers r's flags on fs, without defaults, as PrintUsage does.
+// AddFlags registers the loader's flags and r's on fs, without defaults, as
+// PrintUsage does.
 func AddFlags(fs *flag.FlagSet, r *Registry) *CommandFlags {
 	c := &CommandFlags{}
+	for _, v := range loaderVars {
+		if v.Flag == "" {
+			continue
+		}
+		record := func(value string) error {
+			c.given = append(c.given, "--"+v.Flag+"="+value)
+			return nil
+		}
+		if v.Flag == "config-trace" {
+			fs.BoolFunc(v.Flag, v.Doc, record)
+		} else {
+			fs.Func(v.Flag, v.Doc, record)
+		}
+	}
 	for _, s := range r.All() {
 		addFlag(fs, s, func(v string) { c.given = append(c.given, "--"+s.Flag()+"="+v) })
 	}

@@ -33,7 +33,7 @@ type Bootstrap struct {
 // Workspace names the installation's singleton workspace — the tenant every
 // row is filed under, and what the schema has always called it. Consumed only
 // when the workspace is created; it never reconciles into an existing
-// installation (§6.3 of the ratified concept).
+// installation.
 //
 // It was spelled `company` until the schema and the config disagreed
 // loudly enough to notice: `workspace` is the table, `workspace_id` is the
@@ -109,9 +109,9 @@ func (b BootstrapAdmin) passwordRef() Secret {
 }
 
 // RetentionSeed selects the retention POSTURE a fresh installation is
-// bootstrapped into (GCS-PARAM-7). It does not select the policy rows: those stay
-// the data-model's pins (DM-SEED-1..8) under either posture, so an installation
-// that must keep everything still SEES the ladder it is not running.
+// bootstrapped into. It does not select the policy rows: bootstrap plants the
+// same built-in rows under either posture. So an installation that must keep
+// everything still SEES the ladder it is not running.
 //
 // The key exists because bootstrap plants the rows and the nightly pass can fire
 // before an admin first logs in. A deployment under a contractual
@@ -125,7 +125,7 @@ type RetentionSeed struct {
 
 // The two postures seeds.retention.default_policy admits.
 const (
-	// RetentionStandardPosture plants DM-SEED-1..8 with destruction enabled —
+	// RetentionStandardPosture plants the built-in rows with destruction enabled:
 	// storage limitation (Art. 5(1)(e)) as the out-of-the-box posture.
 	RetentionStandardPosture = "standard"
 	// RetentionRetainOnlyPosture plants the same rows and turns the retain-only

@@ -386,7 +386,7 @@ The same folder for Windows, at `build/desktop/margince-windows/`. These targets
 
 `GO`, `PG_PORT` (15432), `REDIS_PORT` (16379), `DB_NAME` (`margince`), `OWNER_DSN`, `APP_DSN`: all overridable (`make migrate PG_PORT=5432`). The Makefile exports `MARGINCE_ENV=dev` and the `MARGINCE_TEST_*` variables so tests find the dev containers.
 
-`make dev` resolves each DSN in the product's own order. First an explicit `OWNER_DSN`/`APP_DSN` argument, else `MARGINCE_OWNER_DSN`/`MARGINCE_DSN` (what the binaries themselves read), else the compose default. It passes the result as an explicit `--dsn`. The resolution happens in the script because `--dsn` outranks the environment, so a value set only in `.env.local` would be inert for the dev stack.
+`make dev` resolves each DSN in the product's own order. First an explicit `OWNER_DSN`/`APP_DSN` argument, else `MARGINCE_OWNER_DSN`/`MARGINCE_DSN` (what the binaries themselves read), else the compose default. It passes the result as an explicit `--dsn`. The resolution happens in the script because `--dsn` outranks the environment, so a value set only in `.env.local` would be inert for the dev stack. The script reads `.env.local` without exporting it. It passes the file to the api and the worker as `--env-file`, so a value there shows `.env.local` as its source.
 
 The stack keeps two things for itself whatever DSN it is handed:
 

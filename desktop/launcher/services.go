@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -117,47 +118,44 @@ func (b *backend) migrate() error {
 	return nil
 }
 
-// childEnv is the environment a role inherits, in three layers: what this
-// launcher DEFAULTS, what the user sets, and what the launcher OWNS outright.
+// childEnv is what a role inherits on top of the launcher's environment: the
+// launcher's defaults, then what it owns. Each role reads margince.env itself
+// through --env-file, which ranks below the environment. So a default is set
+// only where neither the file nor the launcher's environment names it.
 //
-// EVERY DSN is in the third layer rather than on the command line. A Windows DSN
-// carries the database password, and any local process can read another
-// process's arguments — the same reason initdb is handed its password in a file
-// (postgres_windows.go). An environment is not secret either, but reading
-// another process's takes more than `ps`. Nothing in margince.env can displace
-// them, because they come last and the last value of a duplicated key wins.
+// Every DSN is owned and kept off argv, which any local process can read; the
+// same reason initdb gets its password in a file (postgres_windows.go).
 //
-// MARGINCE_ENV is in the FIRST layer, and that is a deliberate reversal.
-//
-// A serving role boots on a license or it does not boot, and MARGINCE_ENV is
-// fail-closed: an installation that names nothing is production and is held to a
-// license it was never issued. So a desktop bundle pinned to production could
-// not start at all — which is what happened, with the reason buried in api.log.
-//
-// `dev` is what a single contact running their own copy actually is. What it
-// costs is narrow and worth naming precisely, because the obvious fear is
-// wrong: it does NOT arm the admin data-reset endpoint. That needs
-// operations.allow_data_reset in margince.yaml, which layout.go never writes,
-// and the posture alone leaves it a 404. What the posture does change is that
-// /me reports non_production, and that a license minted by a test authority
-// would be honoured — this installation has neither.
-//
-// It is a default rather than a decision, so an operator who HAS a license can
-// put MARGINCE_ENV=production in margince.env and be held to it.
-// MARGINCE_BLOBSTORE_PATH is in the first layer for the same reason as
-// MARGINCE_ENV: it is a default, not a decision. A desktop installation has
-// local disk and no object storage service, and with no store wired the api
-// answers 501 on every attachment and serves no company logo — so the folder
-// points the filesystem provider at data/blobs and the feature simply works.
-// An operator who names a real S3 endpoint (or another path) in margince.env
-// overrides it, because the user layer comes after this one.
+// MARGINCE_ENV defaults to dev because a role in production refuses to boot
+// without a license, and a desktop bundle is never issued one. The dev posture
+// does not arm the data reset: that needs operations.allow_data_reset, which
+// layout.go never writes. An operator with a license starts the launcher with
+// MARGINCE_ENV=production; the roles take the posture only from the
+// environment. MARGINCE_BLOBSTORE_PATH defaults to data/blobs, so attachments
+// and logos work with no object store.
 func (b *backend) childEnv(launcherOwned ...string) []string {
-	env := []string{
-		"MARGINCE_ENV=" + defaultRuntimeEnv,
-		"MARGINCE_BLOBSTORE_PATH=" + b.layout.blobs(),
+	var env []string
+	for _, d := range [][2]string{
+		{"MARGINCE_ENV", defaultRuntimeEnv},
+		{"MARGINCE_BLOBSTORE_PATH", b.layout.blobs()},
+	} {
+		if os.Getenv(d[0]) == "" && userValue(b.userEnv, d[0]) == "" {
+			env = append(env, d[0]+"="+d[1])
+		}
 	}
-	env = append(env, b.userEnv...)
 	return append(env, launcherOwned...)
+}
+
+// userValue is name's last value in margince.env, the one the roles' loader
+// keeps, or "" when the file leaves it unset.
+func userValue(userEnv []string, name string) string {
+	value := ""
+	for _, entry := range userEnv {
+		if v, ok := strings.CutPrefix(entry, name+"="); ok {
+			value = v
+		}
+	}
+	return value
 }
 
 // defaultRuntimeEnv is the posture a desktop installation takes unless its
@@ -197,6 +195,7 @@ func (b *backend) start(ctx context.Context) error {
 	apiArgs := append([]string{
 		"--addr", fmt.Sprintf("%s:%d", loopbackHost, port),
 		"--config", b.layout.configPath(),
+		"--env-file", b.layout.envPath(),
 		"--redis", b.bus.addr(),
 	}, b.aiFlags()...)
 
@@ -230,6 +229,7 @@ func (b *backend) start(ctx context.Context) error {
 	// outbox rows are claimed FOR UPDATE SKIP LOCKED.
 	workerArgs := append([]string{
 		"--config", b.layout.configPath(),
+		"--env-file", b.layout.envPath(),
 		"--redis", b.bus.addr(),
 	}, b.aiFlags()...)
 

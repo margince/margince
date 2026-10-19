@@ -10,7 +10,7 @@
       "type": "integer"
     },
     "workspace": {
-      "description": "Workspace names the installation's singleton workspace — the tenant every row is filed under, and what the schema has always called it. Consumed only when the workspace is created; it never reconciles into an existing installation (§6.3 of the ratified concept).",
+      "description": "Workspace names the installation's singleton workspace — the tenant every row is filed under, and what the schema has always called it. Consumed only when the workspace is created; it never reconciles into an existing installation.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -118,7 +118,7 @@
           }
         },
         "retention": {
-          "description": "RetentionSeed selects the retention POSTURE a fresh installation is bootstrapped into (GCS-PARAM-7). It does not select the policy rows: those stay the data-model's pins (DM-SEED-1..8) under either posture, so an installation that must keep everything still SEES the ladder it is not running.",
+          "description": "RetentionSeed selects the retention POSTURE a fresh installation is bootstrapped into. It does not select the policy rows: bootstrap plants the same built-in rows under either posture. So an installation that must keep everything still SEES the ladder it is not running.",
           "type": [
             "object",
             "null"

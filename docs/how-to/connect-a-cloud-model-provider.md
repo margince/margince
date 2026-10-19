@@ -187,7 +187,7 @@ a change to it. Either way the binding has no key in it:
 make dev
 ```
 
-To run without `make dev`, export the value by hand. Production does the same through the tool that
+To run without `make dev`, export the value by hand, or pass the file with `--env-file .env.local`. Production does the same through the tool that
 runs its programs:
 
 ```sh

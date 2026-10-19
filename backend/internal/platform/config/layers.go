@@ -128,6 +128,9 @@ func envFileLayer(reg *Registry, readFile func(string) ([]byte, error), path str
 	}
 	var faults []error
 	for _, name := range slices.Sorted(maps.Keys(vars)) {
+		if vars[name] == "" {
+			continue
+		}
 		if why := readOnlyElsewhere(name); why != "" {
 			faults = append(faults, fmt.Errorf("%s: %s", path, why))
 		}
