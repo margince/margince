@@ -9407,7 +9407,6 @@ export const vi = {
   "configuration.col.key": "Khóa",
   "configuration.col.value": "Giá trị",
   "configuration.col.source": "Nguồn",
-  "configuration.col.env": "Biến môi trường",
   "configuration.col.detail": "Chi tiết",
   "configuration.secret": "Bí mật",
   "configuration.unset": "Chưa đặt",

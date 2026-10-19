@@ -9657,7 +9657,6 @@ export const de = {
   "configuration.col.key": "Schlüssel",
   "configuration.col.value": "Wert",
   "configuration.col.source": "Quelle",
-  "configuration.col.env": "Umgebungsvariable",
   "configuration.col.detail": "Details",
   "configuration.secret": "Geheim",
   "configuration.unset": "Nicht gesetzt",

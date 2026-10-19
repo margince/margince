@@ -13,6 +13,7 @@ import { QueryGate } from "../design-system/querystates";
 import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
+import "./installation-configuration.css";
 
 type Entry = components["schemas"]["ConfigurationEntry"];
 type Source = Entry["origin"]["source"];
@@ -61,7 +62,7 @@ function ValueCell({ entry }: Readonly<{ entry: Entry }>) {
   if (entry.value === "") {
     return <span className="t-caption">{t("configuration.emptyValue")}</span>;
   }
-  return <span>{entry.value}</span>;
+  return <span className="configuration-value">{entry.value}</span>;
 }
 
 function EntryDetail({ entry }: Readonly<{ entry: Entry }>) {
@@ -91,9 +92,15 @@ function columns(t: Translator): DataTableColumn<Entry>[] {
     {
       key: "key",
       header: t("configuration.col.key"),
-      grow: true,
       fold: "title",
-      render: (entry) => entry.key,
+      // The variable sits under its key rather than in a column of its own:
+      // a fourth column of long names held the table wider than its panel.
+      render: (entry) => (
+        <CellStack>
+          <span>{entry.key}</span>
+          <span className="t-caption">{entry.env}</span>
+        </CellStack>
+      ),
     },
     {
       key: "value",
@@ -104,11 +111,6 @@ function columns(t: Translator): DataTableColumn<Entry>[] {
       key: "source",
       header: t("configuration.col.source"),
       render: (entry) => sourceWords(entry, t),
-    },
-    {
-      key: "env",
-      header: t("configuration.col.env"),
-      render: (entry) => entry.env,
     },
   ];
 }

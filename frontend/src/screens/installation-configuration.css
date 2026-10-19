@@ -1,0 +1,10 @@
+/*
+ * SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion
+ */
+
+/* A struct or list value is JSON with no spaces, so without this it would
+   hold the column open past the panel's edge. */
+.configuration-value {
+  overflow-wrap: anywhere;
+}

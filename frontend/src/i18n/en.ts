@@ -9741,7 +9741,6 @@ export const en = {
   "configuration.col.key": "Key",
   "configuration.col.value": "Value",
   "configuration.col.source": "Source",
-  "configuration.col.env": "Environment variable",
   "configuration.col.detail": "Details",
   "configuration.secret": "Secret",
   "configuration.unset": "Not set",
