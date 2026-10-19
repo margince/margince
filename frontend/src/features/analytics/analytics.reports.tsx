@@ -15,6 +15,11 @@ import type { Section } from "./analytics.address";
 import { FIELD_CURRENCY, type ReportRow, type Stage } from "./analytics.cells";
 import { CompanyTable } from "./analytics.company";
 import {
+  type AnalyticsScope,
+  reportScope,
+  scopeKey,
+} from "./analytics.context";
+import {
   ProjectCommitmentsTable,
   ProjectsByPhaseTable,
   ProjectsGoneQuietTable,
@@ -209,17 +214,21 @@ export function ReportCard({
   report,
   stages,
   locale,
+  scope,
 }: Readonly<{
   report: ReportKey;
   stages: readonly Stage[];
   locale: Locale;
+  // The picker's record scope. Absent, the report measures its own default:
+  // the reader's lens for deals, every readable project for delivery.
+  scope?: AnalyticsScope;
 }>) {
   const t = useT();
   const [explain, setExplain] = useState(false);
   const explainId = useId();
 
   const reportQuery = useQuery({
-    queryKey: ["report", report],
+    queryKey: ["report", report, scope ? scopeKey(scope) : null],
     queryFn: async () => {
       return unwrap(
         await api.POST("/reports/{report}", {
@@ -228,6 +237,7 @@ export function ReportCard({
           // (report.go branches on len==0). So the delivery reports' empty plans ask
           // for what their specs declare.
           body: {
+            scope: scope ? reportScope(scope) : undefined,
             group_by: REPORT_GROUP_BY[report],
             aggregates: REPORT_AGGREGATES[report],
           },

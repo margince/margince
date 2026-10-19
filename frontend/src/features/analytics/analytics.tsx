@@ -367,6 +367,23 @@ function SectionBody({
           scopeControl={scopeControl}
         />
       ) : null;
+    case "pipeline":
+      // Deals follow the picker so Pipeline and Performance count one set of
+      // records. Delivery below does not: a project is read company-wide.
+      return selection ? (
+        <>
+          <FilterBar label={t("analytics.filters")}>{scopeControl}</FilterBar>
+          {SECTION_REPORTS.pipeline.map((report) => (
+            <ReportCard
+              key={report}
+              report={report}
+              stages={stages}
+              locale={locale}
+              scope={selection.scope}
+            />
+          ))}
+        </>
+      ) : null;
     default:
       return (
         <>

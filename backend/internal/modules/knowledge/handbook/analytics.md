@@ -102,9 +102,9 @@ plain sentence instead: **"These numbers cover {scope}."**
 
 Archived teams are never offered.
 
-The scope picker rules Performance, Forecast and Custom reports. Pipeline
-and Delivery report cards use their own record scopes; changing the picker does
-not change those cards.
+The scope picker rules Performance, Forecast, Pipeline and Custom reports, so
+these sections count the same records. Delivery does not follow the picker: it
+covers every project you can read.
 
 A report that counts every record still checks a named owner. Filtering one to
 somebody you may not measure is refused. Grouping one by owner counts only
