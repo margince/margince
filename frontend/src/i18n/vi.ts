@@ -13638,7 +13638,7 @@ export const vi = {
   "worklist.completeness.cards_one": "{cards} thẻ trên màn hình",
   "worklist.completeness.cards_other": "{cards} thẻ trên màn hình",
   "worklist.completeness.bounded":
-    "Đã đạt giới hạn đọc ở {kinds}. Xem giới hạn của từng nguồn",
+    "Đã đạt giới hạn đọc ở {kinds}. Xem giới hạn của từng nguồn.",
   "worklist.completeness.unread_one": "{count} nguồn chưa tải được",
   "worklist.completeness.unread_other": "{count} nguồn chưa tải được",
   "worklist.review.partial":

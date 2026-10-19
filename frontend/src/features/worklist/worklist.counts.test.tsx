@@ -199,7 +199,7 @@ describe("what the page says about what it is not showing", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "1 item shown · Read limit reached for Approvals (200+). See the source limits",
+          "1 item shown · Read limit reached for Approvals (200+). See the source limits.",
         ),
       ).toBeTruthy();
     });

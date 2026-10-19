@@ -13976,7 +13976,7 @@ export const de = {
   "worklist.completeness.cards_one": "{cards} Karte sichtbar",
   "worklist.completeness.cards_other": "{cards} Karten sichtbar",
   "worklist.completeness.bounded":
-    "Lesegrenze erreicht bei {kinds}. Sieh dir die Quellengrenzen an",
+    "Lesegrenze erreicht bei {kinds}. Sieh dir die Quellengrenzen an.",
   "worklist.completeness.unread_one": "{count} Quelle nicht geladen",
   "worklist.completeness.unread_other": "{count} Quellen nicht geladen",
   "worklist.review.partial":

@@ -13975,7 +13975,7 @@ export const en = {
   "worklist.completeness.cards_one": "{cards} card on screen",
   "worklist.completeness.cards_other": "{cards} cards on screen",
   "worklist.completeness.bounded":
-    "Read limit reached for {kinds}. See the source limits",
+    "Read limit reached for {kinds}. See the source limits.",
   "worklist.completeness.unread_one": "{count} source did not load",
   "worklist.completeness.unread_other": "{count} sources did not load",
   "worklist.review.partial":
