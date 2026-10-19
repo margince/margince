@@ -58,6 +58,9 @@ import (
 // a failing gate: the gate's message says to clear the column, or to say here
 // why it stays.
 var erasureColumnBaseline = map[string][]string{
+	// The hash identifies the promise; the version and actor identify its reader.
+	// Retained work needs this provenance after the summary and quotation are cleared.
+	"activity_commitment_admission": {"locator", "rule_version", "captured_by"},
 	// Metric/type enums, generated UUID grouping and opaque context/contribution hashes contain no subject prose.
 	"report_edition_contribution": {"group_key", "metric", "source_type", "context_id", "contribution_key"},
 	// Closed publication access class (private/team/workspace), never subject-authored content.

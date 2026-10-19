@@ -153,6 +153,34 @@ func TestUndoingABulkArchiveBringsBackEachContactWithItsTagsListsAndLinks(t *tes
 	}
 }
 
+func TestTheUndoOfAnArchiveShowsTheOwnerTheRecordsComeBackTo(t *testing.T) {
+	e := integration.Setup(t)
+	items := seedBulkContacts(t, e, e.Rep1, 2)
+	engine := bulkEngineFor(e)
+	archived, err := engine.Execute(e.Admin(), archiveContacts(items))
+	if err != nil || archived.Changed != 2 {
+		t.Fatalf("archiving two → %+v, %v", archived, err)
+	}
+	batch := ids.UUID(archived.BatchId)
+	owner := openapi_types.UUID(e.Rep1)
+
+	preview, err := engine.PreviewUndo(e.Admin(), batch)
+	if err != nil {
+		t.Fatalf("PreviewUndo: %v", err)
+	}
+	if len(preview.Sample) != 2 {
+		t.Fatalf("the undo preview shows %d rows, want 2", len(preview.Sample))
+	}
+	for _, row := range preview.Sample {
+		if row.Before.OwnerId == nil || *row.Before.OwnerId != owner || row.After.OwnerId == nil || *row.After.OwnerId != owner {
+			t.Errorf("undo preview row %s owner before %v after %v, want %s on both sides", row.Id, row.Before.OwnerId, row.After.OwnerId, owner)
+		}
+		if !row.Before.Archived || row.After.Archived {
+			t.Errorf("undo preview row %s archived before %v after %v, want true then false", row.Id, row.Before.Archived, row.After.Archived)
+		}
+	}
+}
+
 func TestUndoingABulkReassignHandsEachContactBackToItsOwner(t *testing.T) {
 	e := integration.Setup(t)
 	items := seedBulkContacts(t, e, e.Rep1, 3)

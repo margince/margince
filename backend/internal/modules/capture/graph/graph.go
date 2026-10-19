@@ -269,8 +269,8 @@ func (c *Connector) pullFolder(
 	// re-delivery re-captures it, where the other order would destroy the copy
 	// that just arrived.
 	reportRemovals(ctx, sink, removed)
-	for _, id := range ids {
-		raw, err := c.api.GetMIME(ctx, access, id)
+	for _, message := range ids {
+		raw, err := c.api.GetMIME(ctx, access, message.ID)
 		if errors.Is(err, connector.ErrSkip) {
 			// A message the provider refuses to hand over: deleted since the
 			// delta named it, or oversized (truncated MIME is not honest
@@ -283,7 +283,7 @@ func (c *Connector) pullFolder(
 			// cursor so the next cycle retries from the same watermark.
 			return "", err
 		}
-		if _, err := captureOne(ctx, raw, sink, c.bounces, owner, folder, sentByOwner, time.Time{}); err != nil {
+		if _, err := captureOne(ctx, raw, sink, c.bounces, owner, folder, sentByOwner, message.ReceivedAt); err != nil {
 			return "", err
 		}
 	}
@@ -300,7 +300,7 @@ func (c *Connector) pullFolder(
 // An ANCHOR round reports no removals, and that is right rather than a gap: it
 // establishes a cursor rather than replaying history, so it has no prior state
 // to say anything was deleted from.
-func (c *Connector) selectMessages(ctx context.Context, access, folder, start string) (ids, removed []string, next string, err error) {
+func (c *Connector) selectMessages(ctx context.Context, access, folder, start string) (ids []MessageRef, removed []string, next string, err error) {
 	if start == "" {
 		anchored, link, anchorErr := c.api.DeltaInit(ctx, access, folder, c.now().Add(-anchorWindow))
 		return anchored, nil, link, anchorErr

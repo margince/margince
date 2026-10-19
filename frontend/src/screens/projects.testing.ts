@@ -3,8 +3,11 @@
 
 import { type Mock, vi } from "vitest";
 import type { components } from "../api/schema";
+import {
+  emptyPage,
+  jsonResponse,
+} from "../features/companies/company.fixtures";
 import { meFixture } from "../testing/mefixture";
-import { emptyPage, jsonResponse } from "./company.fixtures";
 import { COMPANY, project, project360 } from "./projects.fixtures";
 
 type Project = components["schemas"]["Project"];

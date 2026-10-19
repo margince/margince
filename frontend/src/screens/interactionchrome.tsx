@@ -9,8 +9,8 @@ import {
   StickyNote,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { useProviderLabel } from "../features/capture/channelproviders";
 import { useT } from "../i18n";
-import { useProviderLabel } from "./channelproviders";
 
 // How a captured interaction is drawn and named, in ONE place.
 //

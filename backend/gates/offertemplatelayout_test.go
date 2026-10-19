@@ -25,7 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 )
 
-const offerTemplateForm = "../frontend/src/screens/offertemplates.tsx"
+const offerTemplateForm = "../frontend/src/features/deals/offertemplates.tsx"
 
 // tsLayoutLiteral captures the body of every `layout: { … }` object literal;
 // the form spells one for create and one for the full-replace update.

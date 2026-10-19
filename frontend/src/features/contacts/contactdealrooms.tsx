@@ -12,8 +12,8 @@ import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { RoomStateBadge, STATE_LABELS } from "../../screens/dealroom";
-import { participantsKey } from "../../screens/dealroomaccess";
+import { RoomStateBadge, STATE_LABELS } from "../deals/dealroom";
+import { participantsKey } from "../deals/dealroomaccess";
 
 // The rooms a contact can still enter, on the contact's own page. An admin
 // removing "Max, who left the buyer" knows the contact, not the deals — the

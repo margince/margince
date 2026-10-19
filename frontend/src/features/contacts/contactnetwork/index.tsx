@@ -21,7 +21,7 @@ import { RelationshipMap } from "../../../design-system/relationshipmap";
 import { SurfaceState } from "../../../design-system/surfacestate";
 import { formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
-import { mapLabels } from "../../../screens/companycontacts/summary";
+import { mapLabels } from "../../companies/companycontacts/summary";
 import { useContactGraph } from "../contactgraph";
 import { availabilityLabel, RoutesPanel, useOwnRoute } from "../contactroutes";
 import { IntroAsksPanel } from "../introasks";

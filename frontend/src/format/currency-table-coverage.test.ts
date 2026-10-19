@@ -38,13 +38,10 @@ import { parseSource } from "../../scripts/lib/source-tree";
 // table in a different coat.
 //
 // WHAT THIS DOES NOT CATCH, deliberately: a table built from an ARRAY of codes,
-// and a vocabulary of OFFERED currencies. `deals.tsx` and `companyactions.tsx`
-// each spell `["EUR", "USD", "GBP", "CHF"]` for the currency picker — that is a
-// list of what this deployment sells in, a product decision, not a claim about
-// what a currency IS, and folding it in here would gate a preference with a
-// rule about facts. (It is a genuine third copy of one list and deserves its
-// own answer; it is not this one.) Nor does this follow a computed key, which
-// would need the type checker.
+// and a vocabulary of OFFERED currencies. The currency picker's list is one
+// such vocabulary, owned by `format/currencychoices.ts`, which every picker
+// calls. Nor does this follow a computed key, which would need the type
+// checker.
 //
 // `mcp-apps/bridge.ts` needs no exemption and is worth saying so: it formats
 // money for a document served to a third-party host and CANNOT import the

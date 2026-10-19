@@ -16,8 +16,8 @@ import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
-import type { BriefMarkRequest } from "../../screens/brief.queries";
-import { useBriefItemMark } from "../../screens/brief.queries";
+import type { BriefMarkRequest } from "../brief/brief.queries";
+import { useBriefItemMark } from "../brief/brief.queries";
 import type { WorklistItem } from "./worklist.queries";
 
 /**

@@ -203,7 +203,7 @@ func TestASectionNamesTheCategoriesTheProviderHadNothingFor(t *testing.T) {
 	}}
 	requested := []string{"professional_email", "mobile", "current_employment"}
 
-	got := categoriesWithoutAnswer(desc, requested, deliveredKeys(runID, claims))
+	got := categoriesWithoutAnswer(desc, requested, deliveredKeys(runID.String(), claims))
 
 	want := []string{"mobile", "professional_email"}
 	if len(got) != len(want) {
@@ -227,7 +227,7 @@ func TestACategoryAnsweredByAnOlderRunIsStillReportedSilentForTheLatest(t *testi
 	// An earlier run bought a number; the latest run asked again and got none.
 	claims := []storedClaim{{key: string(provider.ClaimMobilePhones), runID: older}}
 
-	got := categoriesWithoutAnswer(desc, []string{"mobile"}, deliveredKeys(latest, claims))
+	got := categoriesWithoutAnswer(desc, []string{"mobile"}, deliveredKeys(latest.String(), claims))
 
 	// The reader is deciding whether the run they just paid for was worth it.
 	// Reading the union would call it answered on the strength of a purchase
@@ -242,7 +242,7 @@ func TestACategoryTheAdapterNeverMappedIsNotAccusedOfSilence(t *testing.T) {
 	// The adapter declared no correspondence for this category.
 	desc := provider.Descriptor{Categories: []provider.Category{"exotic"}}
 
-	got := categoriesWithoutAnswer(desc, []string{"exotic"}, deliveredKeys(runID, nil))
+	got := categoriesWithoutAnswer(desc, []string{"exotic"}, deliveredKeys(runID.String(), nil))
 
 	// Silence about the mapping is not evidence the provider withheld
 	// anything, and reporting it would blame a vendor for the adapter's gap.
@@ -273,7 +273,7 @@ func TestAFallbackThatNeverFiredIsNotReportedAsUnanswered(t *testing.T) {
 	}}
 	requested := []string{"professional_email", "personal_email"}
 
-	got := categoriesWithoutAnswer(desc, requested, deliveredKeys(runID, claims))
+	got := categoriesWithoutAnswer(desc, requested, deliveredKeys(runID.String(), claims))
 
 	// Reporting the fallback would claim the provider was asked and had
 	// nothing, on a line whose whole job is saying what the money bought.
@@ -299,7 +299,7 @@ func TestAFallbackThatDidFireIsReportedWhenItFoundNothing(t *testing.T) {
 
 	// Neither answered: the professional pass came back empty, which is
 	// exactly what issues the fallback, and it found nothing either.
-	got := categoriesWithoutAnswer(desc, requested, deliveredKeys(runID, nil))
+	got := categoriesWithoutAnswer(desc, requested, deliveredKeys(runID.String(), nil))
 
 	want := []string{"personal_email", "professional_email"}
 	if len(got) != len(want) {
@@ -329,7 +329,7 @@ func TestASkippedPrerequisiteMeansTheCategoryWasNeverAsked(t *testing.T) {
 
 	// No email found, so no mobile lookup was ever issued.
 	got := categoriesWithoutAnswer(desc, []string{"professional_email", "mobile"},
-		deliveredKeys(runID, nil))
+		deliveredKeys(runID.String(), nil))
 
 	// The email is a real silence; the mobile is a question nobody asked.
 	if len(got) != 1 || got[0] != "professional_email" {
@@ -343,15 +343,15 @@ func TestOnlyACompletedRunWithItsClaimsWrittenSpeaksForTheProvider(t *testing.T)
 		run     providerRunRow
 		answers bool
 	}{
-		{"completed", providerRunRow{state: "completed"}, true},
-		{"still queued", providerRunRow{state: "queued"}, false},
-		{"in flight", providerRunRow{state: "in_progress"}, false},
-		{"skipped without calling", providerRunRow{state: "skipped"}, false},
-		{"failed", providerRunRow{state: "failed"}, false},
-		{"outcome never learned", providerRunRow{state: "submission_unknown"}, false},
+		{"completed", providerRunRow{State: "completed"}, true},
+		{"still queued", providerRunRow{State: "queued"}, false},
+		{"in flight", providerRunRow{State: "in_progress"}, false},
+		{"skipped without calling", providerRunRow{State: "skipped"}, false},
+		{"failed", providerRunRow{State: "failed"}, false},
+		{"outcome never learned", providerRunRow{State: "submission_unknown"}, false},
 		// The provider DID answer and the hand-off dropped it. Reporting this
 		// as provider silence blames the vendor for our own defect.
-		{"claims never written", providerRunRow{state: "completed", claimsUnwritten: true}, false},
+		{"claims never written", providerRunRow{State: "completed", ClaimsUnwritten: true}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if answerable(tc.run) != tc.answers {
@@ -383,7 +383,7 @@ func TestTheAskedSetExcludesWhatWasNeverSent(t *testing.T) {
 	claims := []storedClaim{{key: string(provider.ClaimProfessionalEmails), runID: runID}}
 	requested := []string{"professional_email", "mobile", "personal_email"}
 
-	got := asked(desc, requested, deliveredKeys(runID, claims))
+	got := asked(desc, requested, deliveredKeys(runID.String(), claims))
 
 	// Two questions reached the provider, not three. Counting the unfired
 	// fallback would report a lookup nobody made, and the receipt divides by

@@ -9,6 +9,9 @@ import {
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { Badge, Button, Disclosure, Field } from "../design-system/atoms";
+import { CaptureNotice } from "../features/capture/capture-notice";
+import { useConnectors } from "../features/capture/connectors";
+import { imapErrorMessage } from "../features/capture/imap-connect-form";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, unwrap } from "../lib/problem";
@@ -18,10 +21,7 @@ import {
   STORAGE_KEYS,
   writeStored,
 } from "../lib/storage";
-import { CaptureNotice } from "./capture-notice";
 import { ConnectPostureStep } from "./connect-posture";
-import { useConnectors } from "./connectors";
-import { imapErrorMessage } from "./imap-connect-form";
 import { OnboardingBackread } from "./onboarding-backread";
 
 // The provider connect panels: real inbox capture, one panel per provider.
@@ -249,10 +249,10 @@ export function OAuthReturnPanel({
   onDone: () => void;
 }>) {
   const t = useT();
-  // The shared read, held until the return actually says "ok": one cache entry
-  // for every reader of this path (screens/connectors.tsx), so the roster this
-  // panel confirms a mailbox from is the same one the connect scene draws its
-  // cards from and the shell's chip gauges the import from.
+  // The shared read, held until the return says "ok". Every reader of this path
+  // (features/capture/connectors.tsx) shares one cache entry. So this panel, the
+  // connect scene's cards and the shell's import chip all read the same roster
+  // of connected mailboxes.
   const connections = useConnectors({ enabled: outcome === "ok" });
   const returning = asOAuthProvider(provider);
   // Raised while the posture write is in flight. The backread is what reads a

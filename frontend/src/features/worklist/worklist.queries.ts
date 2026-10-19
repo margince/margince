@@ -1,23 +1,41 @@
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { ifMatch, requireVersion } from "../../api/version";
-import { throwProblem, unwrap } from "../../lib/problem";
+
+export {
+  loadedQueue,
+  useHandledForYou,
+  useTeamBoard,
+  useTeamExceptions,
+  useWorklist,
+  worklistKey,
+} from "./worklist.reads";
+export {
+  subjectAcceptsAnOwner,
+  useApproval,
+  useClearDisposition,
+  useCoachTeammate,
+  useNudgeDismissal,
+  usePinRow,
+  useReassignTask,
+  useRefreshWalk,
+  useSetDisposition,
+  useTakeOwnership,
+} from "./worklist.writes";
 
 export type Worklist = components["schemas"]["Worklist"];
+
 export type WorklistItem = components["schemas"]["WorklistItem"];
+
 export type WorklistReason = components["schemas"]["WorklistReason"];
+
 export type WorklistComparison = components["schemas"]["WorklistComparison"];
+
 export type WorklistValue = components["schemas"]["WorklistValue"];
+
 // Derived from the contract's own enums rather than spelled again here: a
 // hand-written union goes stale the moment the server adds a value, and it goes
 // stale silently — nothing compares the two.
 export type WorklistScope = Worklist["scope"];
+
 /**
  * The one scope word an ADDRESS carries: `#/worklist/unassigned`.
  *
@@ -27,8 +45,11 @@ export type WorklistScope = Worklist["scope"];
  * opening what it names.
  */
 export const UNASSIGNED: WorklistScope = "unassigned";
+
 export type WorklistFilter = NonNullable<Worklist["filter"]>;
+
 export type WorklistCategory = WorklistItem["category"];
+
 // The ways a row can be put down, derived from the item rather than spelled
 // again: the contract declares them inline, and a hand-written union would go
 // stale the moment the server gained a fourth — silently, because nothing
@@ -36,482 +57,22 @@ export type WorklistCategory = WorklistItem["category"];
 export type WorklistDisposition = NonNullable<
   WorklistItem["dispositions"]
 >[number];
+
 // What a snooze waits for. Derived from the contract's shared schema for the
 // reason the disposition union is: a hand-written union goes stale the moment
 // the server gains a fourth condition, and nothing compares the two.
 export type ReopenCondition = components["schemas"]["ReopenCondition"];
+
 export type TeamBoard = components["schemas"]["TeamBoard"];
+
 export type TeamExceptions = components["schemas"]["TeamExceptions"];
+
 export type HandledForYou = components["schemas"]["HandledForYou"];
+
 export type WorklistWalk = components["schemas"]["WorklistWalk"];
+
 export type Receipt = components["schemas"]["Receipt"];
+
 export type TeamException = components["schemas"]["TeamException"];
+
 export type TeamBoardMember = components["schemas"]["TeamBoardMember"];
-
-export const worklistKey = ["worklist"] as const;
-
-// The whole day in one read, at one scope or one named owner, and one filter.
-//
-// The key carries every dial, so switching any of them is a different query
-// rather than a refetch of the same one — which is what lets the reader move
-// back to a view they have already loaded without watching it reassemble.
-//
-// A named owner narrows the day to one contact's queue and OUTRANKS the scope
-// word: "their queue" is a narrower question than any of mine/team/all, and the
-// server answers 422 for the pair rather than guessing which was meant. So the
-// scope travels only when nobody is named.
-export function useWorklist(
-  scope: WorklistScope,
-  filter: WorklistFilter,
-  owner?: string,
-  enabled = true,
-) {
-  return useInfiniteQuery({
-    enabled,
-    queryKey: [...worklistKey, scope, filter, owner ?? ""],
-    refetchOnWindowFocus: true,
-    initialPageParam: undefined as string | undefined,
-    queryFn: async ({ pageParam }): Promise<Worklist> => {
-      const dials = owner ? { owner, filter } : { scope, filter };
-      return unwrap(
-        await api.GET("/worklist", {
-          params: {
-            query: pageParam ? { ...dials, cursor: pageParam } : dials,
-          },
-        }),
-      );
-    },
-    // The server hands back no cursor on the final page, which is how a walk
-    // ends. Returning undefined for an empty page too, so a day that empties
-    // between reads stops rather than asking again for nothing.
-    getNextPageParam: (last) =>
-      last.queue.length > 0 ? (last.next_cursor ?? undefined) : undefined,
-  });
-}
-
-/**
- * The rows loaded so far, as one queue.
- *
- * DEDUPED, and that is a correctness requirement rather than defensive tidying.
- * The contract is explicit that a walk offers no snapshot: the day is
- * re-assembled and re-ranked on every read, so a row crossing the page boundary
- * between two reads is served twice or not at all. Twice is the case a client
- * can fix, and React would otherwise render duplicate keys for it.
- *
- * By source AND id, the same identity the screen selects by: `id` alone is not
- * unique across lanes.
- */
-export function loadedQueue(pages: readonly Worklist[]): WorklistItem[] {
-  const seen = new Set<string>();
-  const rows: WorklistItem[] = [];
-  for (const page of pages) {
-    for (const item of page.queue) {
-      const identity = `${item.source}-${item.id}`;
-      if (seen.has(identity)) {
-        continue;
-      }
-      seen.add(identity);
-      rows.push(item);
-    }
-  }
-  return rows;
-}
-
-// Who on the team is carrying what.
-//
-// Its own read rather than a widening of the queue above, because that queue
-// assembles ONE contact's day: the per-user sources were never read for anybody
-// else, so no scope could produce a colleague's rows. This answers counts, and
-// pressing a row opens that contact's day through the owner above — which is the
-// drill-down the board exists to route to.
-//
-// `enabled` carries the reader's tier, taken from the queue's own scope_options
-// so the two cannot disagree. A seat that may not ask for `team` is refused this
-// endpoint as well, and fetching anyway would put a 403 behind a surface the
-// reader was never shown a way into.
-/**
- * What the product did on this reader's behalf.
- *
- * No `enabled` gate, unlike the manager reads beside it: a receipt is the
- * reader's own and every act it reports was taken for them, so there is no tier
- * to hold. The server refuses a caller with no human behind it, which is the
- * only refusal this read has.
- */
-export function useHandledForYou() {
-  return useQuery({
-    queryKey: [...worklistKey, "handled"],
-    queryFn: async (): Promise<HandledForYou> => {
-      return unwrap(await api.GET("/worklist/handled", {}));
-    },
-  });
-}
-
-/**
- * What is going wrong on this lead's team.
- *
- * `enabled` for the reason the board takes one: the read is gated to the lead
- * tier, so asking it as a rep earns a 403 the screen would have to render as
- * something. A caller that cannot hold the tier does not ask.
- */
-export function useTeamExceptions(enabled: boolean) {
-  return useQuery({
-    enabled,
-    queryKey: [...worklistKey, "exceptions"],
-    queryFn: async (): Promise<TeamExceptions> => {
-      return unwrap(await api.GET("/worklist/exceptions", {}));
-    },
-  });
-}
-
-export function useTeamBoard(enabled: boolean, team?: string) {
-  return useQuery({
-    enabled,
-    queryKey: [...worklistKey, "team", team ?? ""],
-    queryFn: async (): Promise<TeamBoard> => {
-      return unwrap(
-        await api.GET("/worklist/team", {
-          params: { query: { team } },
-        }),
-      );
-    },
-  });
-}
-
-// Hand one task to somebody else.
-//
-// The SAME endpoint the record surface calls. This page adds no rule of its own
-// about who may be assigned what — it puts the existing verb where the reader
-// is standing, and the server answers exactly as it would from anywhere else.
-export function useReassignTask() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: {
-      activityId: string;
-      // The version the reassigning lead was looking at. Unpinned, two leads
-      // hand the same task to different contacts, the second press overwrites the
-      // first, and neither is told: the row then sits on one contact's queue
-      // while the other believes they delegated it.
-      version: number | undefined;
-      assigneeId: string;
-    }) => {
-      unwrap(
-        await api.PATCH("/activities/{id}", {
-          params: {
-            path: { id: input.activityId },
-            ...ifMatch(requireVersion(input.version)),
-          },
-          body: { assignee_id: input.assigneeId },
-        }),
-      );
-    },
-    onSuccess: (_data, input) => {
-      // Every scope and owner of this queue, because the task left one
-      // contact's day and arrived in another's: refetching only the view in
-      // front of the reader would leave the receiving queue stale until
-      // something else happened to invalidate it.
-      queryClient.invalidateQueries({ queryKey: worklistKey });
-      queryClient.invalidateQueries({
-        queryKey: ["activity", input.activityId],
-      });
-    },
-  });
-}
-
-// Give one record a new owner, through the module that owns it.
-//
-// The exception's SUBJECT decides the endpoint, and this table is the whole
-// dispatch. A generic worklist writer that set an owner across deals, leads and
-// activities would be a second writer of a field five modules already own, and
-// each of them audits and events its own writes — the plan's rule for takeover
-// is that it reuses the source owner's operation rather than reaching past it.
-//
-// Exhaustive over AttentionSubject's own union, so a seventh subject type is a
-// compile error here rather than a button that quietly does nothing. The field
-// differs on activities because a task is ASSIGNED rather than owned, and the
-// two words are the modules' own — collapsing them would write a field that
-// does not exist and fail at runtime on exactly one subject type.
-const OWNER_WRITE = {
-  deal: { path: "/deals/{id}", field: "owner_id" },
-  lead: { path: "/leads/{id}", field: "owner_id" },
-  contact: { path: "/contacts/{id}", field: "owner_id" },
-  company: { path: "/companies/{id}", field: "owner_id" },
-  project: { path: "/projects/{id}", field: "owner_id" },
-  activity: { path: "/activities/{id}", field: "assignee_id" },
-} as const satisfies Record<
-  NonNullable<TeamException["subject"]["type"]>,
-  { path: string; field: "owner_id" | "assignee_id" }
->;
-
-/**
- * Whether this subject can be handed to somebody at all.
- *
- * Every type in the union has an owner write today, so this is true for all of
- * them — but it is asked rather than assumed, because the honest answer when a
- * source has no owner write is a control that is absent with a reason, not one
- * that fails when pressed.
- */
-export function subjectAcceptsAnOwner(
-  subject: TeamException["subject"],
-): boolean {
-  return subject.type !== undefined && subject.type in OWNER_WRITE;
-}
-
-// Take one exception's record for yourself.
-//
-// Every queue is invalidated, not just the reader's: the record left somebody
-// else's day and arrived in this one, and refetching only the view in front of
-// the caller would leave the other queue claiming work it no longer holds.
-export function useTakeOwnership() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: {
-      subject: TeamException["subject"];
-      userId: string;
-    }) => {
-      const write = input.subject.type && OWNER_WRITE[input.subject.type];
-      if (!write) {
-        // Not reachable through the control, which is drawn only where
-        // subjectAcceptsAnOwner agrees. Thrown rather than returned so a future
-        // caller that skips that check fails loudly instead of reporting a
-        // handover that never happened.
-        throw new Error(`no owner write for subject ${input.subject.type}`);
-      }
-      unwrap(
-        await api.PATCH(write.path as "/deals/{id}", {
-          params: { path: { id: input.subject.id } },
-          body: { [write.field]: input.userId },
-        }),
-      );
-    },
-    onSuccess: () => {
-      // worklistKey alone, which the exceptions read is keyed UNDER
-      // ([...worklistKey, "exceptions"]) — so this one invalidation reaches
-      // the panel the press was made from as well as every queue. A second
-      // call naming the exceptions key separately would be the same refetch
-      // asked for twice, and a hand-typed key is how the two drift apart.
-      queryClient.invalidateQueries({ queryKey: worklistKey });
-    },
-  });
-}
-
-// Leave a note on a teammate's queue.
-//
-// Nothing is invalidated here: the notice lands in the RECIPIENT's day, which
-// is not a view this reader is holding. Their own page is unchanged, and
-// pretending otherwise by refetching it would only make the press feel like it
-// had done something local.
-export function useCoachTeammate() {
-  return useMutation({
-    mutationFn: async (input: {
-      recipientUserId: string;
-      kind: components["schemas"]["NoticeKind"];
-      note: string;
-    }) => {
-      unwrap(
-        await api.POST("/notices", {
-          body: {
-            recipient_user_id: input.recipientUserId,
-            kind: input.kind,
-            // An empty note is ABSENT rather than an empty string: the coach
-            // added none, which the kind's own headline already covers.
-            ...(input.note.trim() === "" ? {} : { note: input.note }),
-          },
-        }),
-      );
-    },
-  });
-}
-
-// One staged proposal, whole.
-//
-// The queue sends a ROW's worth of each item — a sentence, a category, a
-// reason. Deciding one needs the rest: the payload a reader may edit, who
-// staged it, the evidence behind it. So the row that is being decided fetches
-// the approval it is showing, which is the same read the record page makes.
-export function useApproval(id: string, enabled: boolean) {
-  return useQuery({
-    enabled,
-    queryKey: ["approvals", "one", id],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/approvals/{id}", {
-          params: { path: { id } },
-        }),
-      );
-    },
-  });
-}
-
-// Put a waiting message down, or pick it back up.
-//
-// The Worklist claims to be finite: work it and it empties. A message the rep
-// has already judged had no way to leave, so it returned every morning and the
-// count above it stayed wrong.
-//
-// The queue is invalidated rather than edited in place, for the reason the
-// reassign mutation states: the rank numbers and the summary above them are the
-// server's, and a row removed locally leaves both describing a page that is no
-// longer on screen.
-/**
- * Set a lapsed contact aside, and put them back.
- *
- * THIRTY DAYS, and the number lives here rather than being asked of the reader.
- * A duration picker on this verb would ask a rep to predict when a quiet
- * relationship becomes worth chasing again, which is not a thing anybody knows
- * — and the contract caps it at ninety precisely because no value means
- * forever. A relationship worth raising once is worth raising again.
- */
-export function useNudgeDismissal() {
-  const queryClient = useQueryClient();
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: worklistKey });
-  };
-  const dismiss = useMutation({
-    mutationFn: async (input: { contactId: string }) => {
-      unwrap(
-        await api.PUT("/contacts/{id}/nudge-dismissal", {
-          params: { path: { id: input.contactId } },
-          body: { days: DISMISSAL_DAYS },
-        }),
-      );
-    },
-    onSuccess: invalidate,
-  });
-  const restore = useMutation({
-    mutationFn: async (input: { contactId: string }) => {
-      unwrap(
-        await api.DELETE("/contacts/{id}/nudge-dismissal", {
-          params: { path: { id: input.contactId } },
-        }),
-      );
-    },
-    onSuccess: invalidate,
-  });
-  return { dismiss, restore };
-}
-
-/**
- * How long a set-aside contact stays off the lane.
- *
- * Thirty rather than the contract's ninety-day ceiling: the cap is what the
- * server will accept, not what a rep means by "not now". A month is long enough
- * that the row stops being noise and short enough that a relationship worth
- * keeping comes back while it still is one.
- */
-const DISMISSAL_DAYS = 30;
-
-export function useSetDisposition() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: {
-      activityId: string;
-      disposition: WorklistDisposition;
-      snoozedUntil?: string;
-      reopenOn?: ReopenCondition;
-      reopenRef?: string;
-    }) => {
-      unwrap(
-        await api.PUT("/activities/{id}/disposition", {
-          params: { path: { id: input.activityId } },
-          body: {
-            disposition: input.disposition,
-            // Only a snooze names a moment or a condition. Sending either on the
-            // others is a 422, because a hand-off that expires on a Thursday is
-            // not a hand-off.
-            ...(input.snoozedUntil
-              ? { snoozed_until: input.snoozedUntil }
-              : {}),
-            ...(input.reopenOn ? { reopen_on: input.reopenOn } : {}),
-            ...(input.reopenRef ? { reopen_ref: input.reopenRef } : {}),
-          },
-        }),
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: worklistKey });
-    },
-  });
-}
-
-// The undo behind every set-aside verb.
-//
-// `scope` decides the REACH of the undo, and the default is deliberately the
-// narrow one: clearing your own snooze must not also re-admit a thread a
-// colleague ruled out for the whole workspace.
-export function useClearDisposition() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: {
-      activityId: string;
-      scope: "mine" | "thread";
-    }) => {
-      unwrap(
-        await api.DELETE("/activities/{id}/disposition", {
-          params: {
-            path: { id: input.activityId },
-            query: { scope: input.scope },
-          },
-        }),
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: worklistKey });
-    },
-  });
-}
-
-/**
- * The reader's own override: this row leads their day, whatever the ranking
- * chose.
- *
- * The row identity is the pair, not the id: the lanes mint ids independently,
- * so an id alone can name a row in a lane the reader was not looking at. The
- * pin store keys on the same pair for the same reason.
- */
-export function usePinRow() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: {
-      source: string;
-      rowId: string;
-      pinned: boolean;
-    }) => {
-      const { error } = input.pinned
-        ? await api.DELETE("/worklist/pins", {
-            params: { query: { source: input.source, row_id: input.rowId } },
-          })
-        : await api.PUT("/worklist/pins", {
-            body: { source: input.source, row_id: input.rowId },
-          });
-      if (error) {
-        throwProblem(error);
-      }
-    },
-    onSuccess: () => {
-      // The whole day, because a pin REORDERS it: the row moves to the top and
-      // every row it passed moves down. Invalidating the one row would leave
-      // the page holding an order the server no longer agrees with.
-      queryClient.invalidateQueries({ queryKey: worklistKey });
-    },
-  });
-}
-
-/**
- * Start a NEW walk over today's rows.
- *
- * `refetch` is not this. An infinite query refetches every page it holds, each
- * with the cursor it was loaded under — and every page past the first carries
- * the SNAPSHOT. So a reader who had paged once and then pressed the refresh
- * this notice offers resumed the very walk they were asking to leave: the work
- * that arrived behind them stayed absent, and the notice sat there telling them
- * to do what they had just done.
- *
- * Resetting drops the loaded pages, so the next fetch is a first page with no
- * cursor and the server freezes a fresh snapshot over the day as it stands now.
- */
-export function useRefreshWalk() {
-  const queryClient = useQueryClient();
-  return () => {
-    void queryClient.resetQueries({ queryKey: worklistKey });
-  };
-}

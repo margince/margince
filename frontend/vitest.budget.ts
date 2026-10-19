@@ -19,9 +19,9 @@
 // that test can fail while every assertion in it is passing, and the failure
 // names the test rather than the wait that was slow.
 //
-// The repo had already found this once and written it down — in
-// src/screens/company-context.test.tsx, which pins its own
-// `TEST_MS = SETTLE_MS * 4` with the reason spelled out: "it must cover EVERY
+// The repo had already found this once and written it down: the test file
+// src/features/companies/company-context.test.tsx pins its own `TEST_MS` and
+// says why. `TEST_MS = SETTLE_MS * 4`, because "it must cover every
 // waiter in there: four run in sequence, each bounded by SETTLE_MS. A test whose
 // own limit is smaller than the sum lets vitest fire while a waiter still has
 // budget, and what surfaces then is an opaque timeout rather than the assertion

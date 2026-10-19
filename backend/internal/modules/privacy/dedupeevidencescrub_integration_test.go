@@ -55,7 +55,7 @@ var dedupeEvidenceActs = map[string]struct {
 	},
 	"the retention sweep's contact arm": {
 		run: func(ctx context.Context, tx pgx.Tx, s dedupeSubjects) error {
-			return anonymizeContactRecord(ctx, tx, s.contact.UUID, nil)
+			return anonymizeContactRecord(ctx, tx, s.contact.UUID, &Eraser{})
 		},
 		contact: true,
 	},

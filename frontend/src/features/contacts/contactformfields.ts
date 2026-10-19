@@ -5,7 +5,7 @@ import type { components } from "../../api/schema";
 import type { CreateField, FormRows } from "../../components/create";
 import { normalizeProfileUrl } from "../../format/profileurl";
 import type { useT } from "../../i18n";
-import { addressPatch } from "../../screens/companyform";
+import { addressPatch } from "../companies/companyform";
 
 // Creation and Details share the field definitions and collection mappers.
 // The update mapper sends only fields submitted by the active editor.

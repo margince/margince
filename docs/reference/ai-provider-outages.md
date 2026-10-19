@@ -55,7 +55,7 @@ does in this state.
 | `propose_roles` | Buying-role reading | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
 | `rate_extract` | Exchange rate extraction | background | `premium` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
 | `request_settlement` | Did our reply settle it | background | `local_small` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
-| `signal_extract` | Signal extraction | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
+| `signal_extract` | Signal extraction | background | `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `site_extract` | Website deep read | background | `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `site_fact_extract` | Website fact extraction | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `site_triage` | Website triage | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | a failed decision call hands the task to its ladder |

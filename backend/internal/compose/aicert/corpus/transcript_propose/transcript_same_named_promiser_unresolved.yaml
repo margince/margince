@@ -1,0 +1,11 @@
+name: transcript_same_named_promiser_unresolved
+task: transcript_propose
+site: next_steps
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture: {"lines": ["Mira Chen: Alex Lee agreed to send the pricing by Friday."], "participants": [{"key": "mira", "kind": "seat", "role": "organizer", "name": "Mira Chen", "address": ""}, {"key": "alex_one", "kind": "seat", "role": "attendee", "name": "Alex Lee", "address": ""}, {"key": "alex_two", "kind": "contact", "role": "attendee", "name": "Alex Lee", "address": ""}]}
+expect:
+  outcome: accepted
+  answer: [{"line": 1, "due_date": "2026-03-06", "promiser": ""}]
+  rubric: "The speaker reports another participant's promise. Return an empty reference because both participants have the same stated name. Do not substitute the speaker or organizer."
+  bands: {certified_min: 70, degraded_min: 50, floor: 40}

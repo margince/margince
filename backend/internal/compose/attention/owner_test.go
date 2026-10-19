@@ -301,18 +301,6 @@ func holdsABatch(rows []ranked) bool {
 	return false
 }
 
-// TestATeamPageDropsAnOutsideTeamTask closes the hole publishing the owner
-// opened.
-//
-// keepTeams judges a row through answersTo, which reads `ranked.owner`. The
-// task lane never set it, so a task answered nobody and the filter kept it as
-// unowned work — the gap its own comment describes for link-less tasks, which
-// auth.ActivityDiscoverClause makes discoverable installation-wide. Putting the
-// assignee on the wire made that worse: the colleague's user id travelled with
-// the row.
-//
-// The two readings come off one field now, so a task cannot be unowned to the
-// filter and owned to the client.
 func TestATeamPageDropsAnOutsideTeamTask(t *testing.T) {
 	t.Parallel()
 	outsider := ids.MustParse("01a05500-0000-7000-8000-00000000d15e")

@@ -131,12 +131,16 @@ func TestABackfillIsReadRatherThanMarkedRead(t *testing.T) {
 	if len(second.Messages) == 0 {
 		t.Fatal("the second read took nothing, so a backfilled message is never sent to the model")
 	}
-	for _, message := range second.Messages {
-		if !message.At.Before(firstOldest) {
-			t.Errorf("the second read took a message at %s, which the first read had already covered "+
-				"(it started at %s) — the window did not move", message.At, firstOldest)
-		}
+	if second.ReadFromNow == nil || !second.ReadFromNow.Before(firstOldest) {
+		t.Fatal("the history cursor did not move backward")
 	}
+	if len(second.Messages) > extractContextMessages {
+		t.Fatal("history and recent context exceeded the shared bound")
+	}
+	if newest := second.Messages[len(second.Messages)-1].At; !newest.Equal(first.Newest) {
+		t.Fatalf("history omitted the current conversation tail: %v", newest)
+	}
+
 	// And it reached the backfill specifically, not merely something older.
 	if oldest := second.Messages[0].At; !oldest.Before(base) {
 		t.Errorf("the oldest message read was %s, and the backfill sits before %s — the window walked "+

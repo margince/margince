@@ -129,7 +129,7 @@ var bothDoorsToolCall = regexp.MustCompile(`\.tool(?:Refused)?\(t, "([a-z0-9_]+)
 
 // bothDoorsComparison finds a call that compares what two doors returned or
 // left. A file that has none compares nothing, so its tool calls prove nothing.
-var bothDoorsComparison = regexp.MustCompile(`\b(?:sameEffect|sameStaged|sameStored|sameIDs|sameDoorRecords|bothDoorsName)\(|sameRecords\[`)
+var bothDoorsComparison = regexp.MustCompile(`\b(?:sameEffect|sameStaged|sameStored|sameIDs|sameRanking|sameDoorRecords|bothDoorsName)\(|sameRecords\[`)
 
 // toolsAskedOnBothDoors names the tools a test file asks through the tool door,
 // when the file also compares the two doors. A call in a comment is no call.

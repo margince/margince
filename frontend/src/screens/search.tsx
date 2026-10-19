@@ -26,6 +26,7 @@ import {
   QueryStates,
 } from "../design-system/querystates";
 import { RecordCard } from "../design-system/recordcard";
+import { companyTabRoute } from "../features/companies/companytab";
 import { formatDateTime, formatNumber } from "../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
 import { ENTITY } from "../lib/entity";
@@ -33,7 +34,6 @@ import { unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { navigate, routeHash, useRoute } from "../lib/router";
 import { useUrlParams } from "../lib/urlstate";
-import { companyTabRoute } from "./companytab";
 import { type OpenHit, useSearchPanels } from "./searchpanels";
 import "./search.css";
 

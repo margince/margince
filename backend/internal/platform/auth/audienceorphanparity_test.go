@@ -113,7 +113,7 @@ func TestBothSpellingsOfTheAudienceGateDrawOnTheSameArms(t *testing.T) {
 	if len(readSide) == 0 {
 		t.Fatal("the read clause names no relation at all — the extraction is broken, so every comparison below is vacuous")
 	}
-	existential := relationsIn(sqlOf(t, "audienceorphan.go", "ActivityHasAReaderTx"))
+	existential := relationsIn(sqlOf(t, "audienceorphan.go", "activityHasReaderExceptTx"))
 
 	var missing, extra []string
 	for rel := range readSide {

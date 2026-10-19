@@ -133,6 +133,14 @@ func sarJudgementSections(pkg *SARPackage, authored []ids.UUID) []sarSection {
 		   WHERE s.request_activity_id = ANY($1)`,
 			messages,
 		},
+		{&pkg.CommitmentAdmissions, `SELECT d.locator, d.outcome, d.rule_version, d.evaluated_at,
+          d.captured_by, d.source_activity_id, d.renewed_by, d.renewed_at,
+          CASE WHEN ` + sarContentDisclosed + ` AND (d.renewed_by IS NULL OR EXISTS (
+            SELECT 1 FROM activity a WHERE a.id = d.renewed_by AND ` + sarContentDisclosed + `
+          )) THEN d.summary END AS summary,
+          CASE WHEN ` + sarContentDisclosed + ` THEN d.source_quote END AS source_quote
+          FROM activity_commitment_admission d JOIN activity a ON a.id = d.source_activity_id
+          WHERE d.source_activity_id = ANY($1) OR d.renewed_by = ANY($1)`, messages},
 		// What a deal's stage ledger read out of the subject's messages. The
 		// snippet quotes the message, so it is withheld wherever the body is. The
 		// criterion is named by its label, because a bare id tells the subject

@@ -32,6 +32,13 @@ import (
 // about — the field the trail is searched by.
 const auditKeyOwnDomain = "own_email_domain"
 
+// ErrConsumerMailDomain refuses a consumer-mail domain as the workspace's own.
+// An own domain stops capture for every message whose participants are all on
+// it. A shared webmail domain would drop mail between unrelated senders, and
+// the skipped mail cannot be recovered. The workspace's `never` carve-outs are
+// honoured, the same list the capture pipeline reads.
+var ErrConsumerMailDomain = errors.New("that is a consumer-mail domain shared by unrelated senders; register the domain your company's mail is addressed to")
+
 // OwnDomain is one registered domain and how it got there.
 type OwnDomain struct {
 	Domain    string
@@ -150,6 +157,13 @@ func (s *OwnDomainStore) Add(ctx context.Context, raw string) (OwnDomain, error)
 		// takes it — the sync's seed and the removal as well as this.
 		if err := lockOwnDomain(ctx, tx, domain); err != nil {
 			return err
+		}
+		consumer, matcherErr := MatcherTx(ctx, tx)
+		if matcherErr != nil {
+			return matcherErr
+		}
+		if consumer.IsConsumer(domain) {
+			return ErrConsumerMailDomain
 		}
 		// The prior state, so the trail distinguishes "an admin registered a new
 		// domain" from "an admin confirmed a candidate a mailbox had seen".

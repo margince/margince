@@ -1,27 +1,30 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useProviderHealth } from "../features/ai/ai-provider-health";
+import {
+  CaptureHealthCard,
+  useCaptureHealth,
+} from "../features/capture/capturehealth";
+import {
+  ExtensionIngestHealthCard,
+  useExtensionIngestHealth,
+} from "../features/capture/extingesthealth";
+import { ProviderHealthCard } from "../features/capture/providerhealth";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import { useCan } from "../lib/capability";
 import { routeHash } from "../lib/router";
 import { useMe } from "../lib/session";
-import { useProviderHealth } from "./ai-provider-health";
-import { CaptureHealthCard, useCaptureHealth } from "./capturehealth";
 import {
   EmbedReindexCard,
   useEmbedReindexAvailable,
   useEmbedReindexStatus,
 } from "./embedreindex";
-import {
-  ExtensionIngestHealthCard,
-  useExtensionIngestHealth,
-} from "./extingesthealth";
 import { HealthStrip } from "./healthcard";
 import { JobHealthCard, useJobHealth } from "./jobhealth";
 import { BackgroundSchedulesCard, SendPacingCard } from "./operationsettings";
-import { ProviderHealthCard } from "./providerhealth";
 import { RecoveryHealthCard, useRecoveryHealth } from "./recoveryhealth";
 import { settingsHref } from "./settingsrouting";
 import {

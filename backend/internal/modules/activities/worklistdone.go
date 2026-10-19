@@ -20,6 +20,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -160,7 +161,7 @@ func (s *Store) judgeRows(
 	}
 	rows = distinctRows(rows)
 	if len(rows) == 0 || len(rows) > maxDoneRows {
-		return fmt.Errorf("activities: a Done names 1 to %d rows: %w", maxDoneRows, apperrors.ErrInvalidArgument)
+		return httperr.Validation("rows", "out_of_range", fmt.Sprintf("a Done names 1 to %d rows", maxDoneRows))
 	}
 	onActivity := false
 	for _, row := range rows {

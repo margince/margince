@@ -25,10 +25,10 @@ import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody } from "../design-system/panel";
+import { ComposeModal, type RelinkKind } from "../features/mail/compose";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
-import { ComposeModal, type RelinkKind } from "./compose";
 
 /**
  * Whether this record has an inbound message still awaiting an answer, and

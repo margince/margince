@@ -3,7 +3,10 @@
 
 package attention
 
-import crmcontracts "github.com/margince/margince/backend/internal/contracts"
+import (
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
 
 // Which producers answer for the ACTING USER only, whatever scope was asked.
 //
@@ -67,4 +70,45 @@ var sourceAnswersForTheActorOnly = map[crmcontracts.WorklistItemSource]bool{
 	// A fold stands for its members and carries no reading of its own. Marking
 	// it either way would describe rows it only represents.
 	"batch": false,
+}
+
+// Push responsibility before the inbox page bound; narrowToScope still covers other
+// producers and folded rows. Team membership mirrors rowsForRoster, including unassigned work.
+func (s *Service) approvalQuery(depth int) ApprovalQuery {
+	query := ApprovalQuery{Status: "pending", Limit: depth}
+	switch s.taskScope {
+	case TasksMine:
+		query.RequestedForReader = true
+	case TasksUnassigned:
+		query.OnlyUnassigned = true
+	case TasksOwnedBy:
+		query.RequestedForOwners = []ids.UUID{s.taskOwner}
+	default:
+		if s.noticeOwners != nil {
+			query.RequestedForOwners = append([]ids.UUID{ids.Nil}, s.noticeOwners...)
+		}
+	}
+	return query
+}
+
+// forOwner isolates the named owner's scope from concurrent requests.
+func (s *Service) forOwner(owner ids.UUID) *Service {
+	narrowed := *s
+	narrowed.taskScope = TasksOwnedBy
+	narrowed.taskOwner = owner
+	return &narrowed
+}
+
+// forReader copies the shared service so one request cannot change another's scope.
+func (s *Service) forReader() *Service {
+	narrowed := *s
+	narrowed.taskScope = TasksMine
+	return &narrowed
+}
+
+// forUnowned isolates the unassigned scope from concurrent requests.
+func (s *Service) forUnowned() *Service {
+	narrowed := *s
+	narrowed.taskScope = TasksUnassigned
+	return &narrowed
 }

@@ -133,6 +133,8 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	"internal/modules/activities:SetCalendarMethodTx":   "the calendar-method re-read writes an archived message on purpose: the method is a fact of the message, and an archived decline brought back must still read as a reply rather than as mail owed an answer. The row stays archived; only calendar_method changes, and only from NULL",
 	"internal/modules/activities:WithholdStoredFilesTx": "withholding a captured file's bytes reaches an archived row on purpose: archiving hides an attachment and keeps its object, so a strip that skipped archived rows would leave a private message's bytes stored for good. The row stays archived; only its key, checksum and bytes_withheld change",
 	"internal/modules/deals:RestoreDealTx":              "the deal un-archive, which brings back exactly the relationships the deal's archive retired, matched on that archive's own stamp",
+	"internal/modules/identity:countFailure":            "every caller first reads the member through LiveMemberSQL under FOR UPDATE in the same transaction (recordFailedLogin, recordFailedChange, lockSecondFactorStreak), so the row it folds is live",
+	"internal/modules/identity:resetLockoutStreak":      "its callers read the member through LiveMemberSQL in the same transaction (checkCredentials, and lockSecondFactorStreak on second-factor completion), so the row it clears is live",
 	// ERASURE AND RETENTION MUST WRITE ARCHIVED ROWS. This is the family that
 	// makes a row-level trigger impossible, and the reason each entry gives is
 	// the specific destruction it performs rather than a restatement of that
@@ -143,7 +145,6 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	"internal/modules/privacy:archiveActivity":         "the retention sweep retiring a message whose window closed. The write IS the archive transition, chosen by a clock rather than by a caller",
 	"internal/modules/privacy:archiveDeal":             "the deal arm of the same sweep, and the same transition: a deal past its window is archived because of when it closed",
 	"internal/modules/privacy:anonymizeLead":           "the retention sweep's lead anonymization, which stamps archived_at as part of the destruction and must run on a lead an earlier pass already retired",
-	"internal/modules/privacy:eraseActivityContent":    "the retention sweep destroying a message's text. It coalesces archived_at, so refusing an archived row would spare exactly the messages the sweep already took off the timeline and left the words standing",
 	"internal/modules/privacy:anonymizeContactRecord":  "the retention sweep's contact arm, stamping the tombstone name and archived_at together. Its subject is chosen by a retention policy, and an archived contact still holds every column this nulls",
 	"internal/modules/privacy:eraseVoiceSignalContent": "the time-based sweep over voice learning signals, which carry no subject linkage for Art. 17 to find — the clock is the only thing that reaches them, and the row's own state is not a reason to leave the text",
 	"internal/modules/privacy:liftAndEraseHeldRecord":  "lifting a statutory hold and destroying what it preserved, in one statement. The record was archived when the hold was placed; requiring it to be live would make the lift unable to reach anything it is ever asked about",

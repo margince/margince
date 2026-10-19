@@ -8,15 +8,15 @@ import { Field, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { QueryGate } from "../../design-system/querystates";
+import {
+  currencyNote,
+  useUpdateInstallationSettings,
+} from "../../features/sign-in/installation-settings";
 import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemFieldErrorsOf } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
-import {
-  currencyNote,
-  useUpdateInstallationSettings,
-} from "../installation-settings";
 import type {
   ConversationEvent,
   ConversationState,

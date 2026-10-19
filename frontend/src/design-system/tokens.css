@@ -77,7 +77,7 @@
    *
    * It is a token rather than a rule in the shell's sheet because TWO surfaces
    * stand on it: the app shell, and the buyer's Deal Room, which is a page of
-   * its own outside the shell (screens/buyerroom.css). Spelled twice, the two
+   * its own outside the shell (features/deals/buyerroom.css). Spelled twice, the two
    * would drift, and the one a client sees is the one nobody is looking at. */
   --groundLit:
     radial-gradient(900px 620px at 0 0, var(--glowA), transparent 70%) no-repeat,

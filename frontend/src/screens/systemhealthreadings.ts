@@ -3,12 +3,12 @@
 
 import type { components } from "../api/schema";
 import type { STAT_CARD_TONES } from "../design-system/statcard";
-import { formatNumber } from "../format/format";
-import type { Translator, Words } from "../i18n";
 import {
   answersFromStandIn,
   answersOnlyFromStandIn,
-} from "./ai-provider-health";
+} from "../features/ai/ai-provider-health";
+import { formatNumber } from "../format/format";
+import type { Translator, Words } from "../i18n";
 
 // Each System health report read down to one answer. It says what the slot in
 // the page's row shows, and whether the full card stands under the row.

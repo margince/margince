@@ -132,6 +132,13 @@ func (s *Store) updateCompanyInTx(
 			return crmcontracts.Company{}, err
 		}
 	}
+	// MOVED, not merely set. Re-sending the same name is not a re-authoring.
+	// Otherwise an agent round-tripping a record it just read would freeze a
+	// provisional domain-derived name as human-chosen. The stamp is the top of
+	// the name-source lattice, so no automated source overwrites it.
+	if _, changed := p.Moved()[fieldDisplayName]; changed {
+		p.SetStamp("name_source", nameSourceHuman)
+	}
 	if err := p.ApplyGuarded(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
 		if constraint, ok := storekit.CheckViolation(err); ok && constraint == "company_owner_private_names_its_owner" {
 			return crmcontracts.Company{}, &RequiredFieldError{Field: filterOwnerID}
@@ -143,23 +150,6 @@ func (s *Store) updateCompanyInTx(
 	}
 	if err := s.relocateIfAddressMoved(ctx, tx, id, p); err != nil {
 		return crmcontracts.Company{}, err
-	}
-	// MOVED, not merely set. A human editing the display name is the top of the
-	// name-source lattice (ADR-0072/A118): stamp 'human' so no automated source
-	// ever overwrites it. Re-sending the same value is not a re-authoring, and
-	// reading After() made it one — an agent round-tripping a record it had just
-	// read froze a provisional domain-derived name for good, with nothing in the
-	// record saying a contact had never chosen it.
-	//
-	// Spelled HERE rather than beside the description stamp it belongs with,
-	// because it is a by-id UPDATE of a shareable record and its guard is the
-	// row this function's ApplyGuarded just locked. Moved into a helper, the
-	// write leaves its guard and its write-authority probe behind, and the two
-	// gates that check for them are right to say so.
-	if _, changed := p.Moved()[fieldDisplayName]; changed {
-		if _, err := tx.Exec(ctx, `UPDATE company SET name_source = 'human' WHERE id = $1`, id); err != nil {
-			return crmcontracts.Company{}, fmt.Errorf("stamp company name provenance: %w", err)
-		}
 	}
 	if err := recordCompanyUpdate(ctx, tx, id, p, in, by); err != nil {
 		return crmcontracts.Company{}, err

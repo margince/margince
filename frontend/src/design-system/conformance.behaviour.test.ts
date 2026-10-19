@@ -290,7 +290,7 @@ describe("focus", () => {
       // One marks a refused field on the sign-in surface, which is a
       // different fact from where the keyboard is.
       "src/design-system/composed.css: outline: 2px dashed var(--accent)",
-      "src/screens/auth.css: outline: 2px solid var(--danger)",
+      "src/features/sign-in/auth.css: outline: 2px solid var(--danger)",
       "src/screens/onboarding-conversation/conversation.css: outline: 2px dashed var(--aiMed)",
     ]);
   });
@@ -381,8 +381,8 @@ describe("unsaved edits", () => {
     expect(
       wearers,
       "a second guard is a guard that unmounts with its own screen; render " +
-        "the one in App.tsx and claim from the card with `useUnsavedGuard`",
-    ).toEqual(["src/App.tsx"]);
+        "the one in App.views.tsx and claim from the card with `useUnsavedGuard`",
+    ).toEqual(["src/App.views.tsx"]);
   });
 });
 

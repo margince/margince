@@ -2,11 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { MarginceCoreScene } from "../design-system/margince-core";
+import { useConnectors } from "../features/capture/connectors";
 import { formatNumber, formatPercent } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { liveCapture } from "../lib/capture-progress";
 import { useImportRunOnScreen } from "../lib/import-onscreen";
-import { useConnectors } from "../screens/connectors";
 import "./capture-chip.css";
 
 /** Where the chip leads: the connections card, which holds the run in full. */

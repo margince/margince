@@ -320,8 +320,13 @@ The tag is the version, read and checked by
 default; a tag with an ending, such as `v0.0.1-rc.1`, becomes a `pre-release`. A tag the script cannot
 read is refused in seconds, before either bundle compiles PostgreSQL from source.
 
-Two more checks share that first job. The tag points at a commit on `main`, and the commit carries
-no failing `verdict` from `merge-attest`. That last check picks releases, and does not gate merges.
+Three more checks share that first job. The tag points at a commit on `main`. `LICENSE` carries the
+release's Change Date and version, checked by
+[`scripts/release-license-stamped.sh`](../../scripts/release-license-stamped.sh)
+(`make test-release-license-stamped`). And the commit carries no failing `verdict` from
+`merge-attest`.
+
+That last check picks releases, and does not gate merges.
 To merge past `ci` is a standing decision here, so a missing result passes. A result that exists
 but is not done yet refuses.
 

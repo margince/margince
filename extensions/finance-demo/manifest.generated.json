@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "name": "finance-demo",
+  "version": "1.0.0",
+  "risk_tiers": [],
+  "finance_sources": [
+    {
+      "provider": "offline_demo"
+    }
+  ]
+}

@@ -3,10 +3,10 @@
 
 import { type ReactNode, useState } from "react";
 import { SEARCH_ACTIVITY_SEGMENT } from "../app/searchkinds";
+import { OpenEmailDrawer } from "../features/mail/openemaildrawer";
 import { useOpenEmail } from "../lib/openemail";
 import { useRecordZone } from "../lib/recordzone";
 import { OpenActivityDrawer } from "./activitydrawer";
-import { OpenEmailDrawer } from "./openemaildrawer";
 
 /** Opens a hit in the panel for what it is: a message, or any other activity. */
 export type OpenHit = (activityId: string, panel: "email" | "activity") => void;
