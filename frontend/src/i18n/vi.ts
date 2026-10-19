@@ -239,6 +239,31 @@ export const vi = {
     "Đang mở ngày {date}: {amount} trong {count} deal.",
   "reporting.writtenOpen_other":
     "Đang mở ngày {date}: {amount} trong {count} deal.",
+  "reporting.prepared.title": "Báo cáo soạn sẵn",
+  "reporting.prepared.open": "Mở",
+  "reporting.prepared.preview": "Xem trước",
+  "reporting.prepared.saveCopy": "Lưu bản sao",
+  "reporting.prepared.weeklyTitle": "Tổng kết bán hàng hằng tuần",
+  "reporting.prepared.weeklyPurpose":
+    "Doanh số đã chốt tuần trước, pipeline đang mở theo giai đoạn và kết quả của từng thành viên.",
+  "reporting.prepared.healthTitle": "Sức khỏe pipeline",
+  "reporting.prepared.healthPurpose":
+    "Deal đang mở theo giai đoạn, đã nằm ở đó bao lâu, và những gì đã thay đổi.",
+  "reporting.prepared.ownerTitle": "Kết quả theo thành viên chịu trách nhiệm",
+  "reporting.prepared.ownerPurpose":
+    "Doanh số đã chốt và tỷ lệ thắng quý này của từng thành viên, so với mục tiêu nếu có.",
+  "reporting.prepared.qualificationTitle": "Đánh giá đủ điều kiện",
+  "reporting.prepared.qualificationPurpose":
+    "Pipeline đủ điều kiện tháng này và bàn giao đã chấp nhận.",
+  "reporting.prepared.personalTitle": "Kết quả cá nhân",
+  "reporting.prepared.personalPurpose":
+    "Deal đang mở và cuộc họp của bạn, trong Kết quả của tôi.",
+  "reporting.prepared.accountsTitle": "Deal đang mở theo công ty",
+  "reporting.prepared.accountsPurpose":
+    "Deal đang mở theo công ty và tỷ trọng trong pipeline, trong Pipeline.",
+  "reporting.prepared.deliveryTitle": "Đánh giá triển khai",
+  "reporting.prepared.deliveryPurpose":
+    "Cam kết dự án, dự án im ắng và các giai đoạn, trong Triển khai.",
   "reporting.noSalesWon": "Chưa có doanh số đã chốt",
   "reporting.openPipelineAsOf": "Tính đến {at}",
   "reporting.openPipelineBasis_one": "Deal đang mở: {count} · tính đến {at}",

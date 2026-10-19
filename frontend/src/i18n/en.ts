@@ -223,6 +223,31 @@ export const en = {
     "Forecast for the end of the fiscal quarter, as of {date}: {amount}.",
   "reporting.writtenOpen_one": "Open on {date}: {amount} in {count} deal.",
   "reporting.writtenOpen_other": "Open on {date}: {amount} in {count} deals.",
+  "reporting.prepared.title": "Prepared reports",
+  "reporting.prepared.open": "Open",
+  "reporting.prepared.preview": "Preview",
+  "reporting.prepared.saveCopy": "Save a copy",
+  "reporting.prepared.weeklyTitle": "Weekly sales review",
+  "reporting.prepared.weeklyPurpose":
+    "Last week’s sales won, the open pipeline by stage and each salesperson’s result.",
+  "reporting.prepared.healthTitle": "Pipeline health",
+  "reporting.prepared.healthPurpose":
+    "Open deals by stage, how long they have sat there, and what moved.",
+  "reporting.prepared.ownerTitle": "Sales results by owner",
+  "reporting.prepared.ownerPurpose":
+    "This quarter’s sales won and win rate per salesperson, against targets where set.",
+  "reporting.prepared.qualificationTitle": "Qualification review",
+  "reporting.prepared.qualificationPurpose":
+    "Pipeline qualified this month and handoffs accepted.",
+  "reporting.prepared.personalTitle": "Personal outcomes",
+  "reporting.prepared.personalPurpose":
+    "Your own open deals and meetings, in My outcomes.",
+  "reporting.prepared.accountsTitle": "Open deals by company",
+  "reporting.prepared.accountsPurpose":
+    "Open deals per company and each one’s share of the pipeline, in Pipeline.",
+  "reporting.prepared.deliveryTitle": "Delivery review",
+  "reporting.prepared.deliveryPurpose":
+    "Project commitments, quiet projects and phases, in Delivery.",
   "reporting.noSalesWon": "No sales won",
   "reporting.openPipelineAsOf": "As of {at}",
   "reporting.openPipelineBasis_one": "Open deal: {count} · as of {at}",

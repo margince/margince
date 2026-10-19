@@ -229,6 +229,31 @@ export const de = {
     "Prognose für das Ende des Geschäftsquartals, Stand {date}: {amount}.",
   "reporting.writtenOpen_one": "Offen am {date}: {amount} in {count} Deal.",
   "reporting.writtenOpen_other": "Offen am {date}: {amount} in {count} Deals.",
+  "reporting.prepared.title": "Vorbereitete Berichte",
+  "reporting.prepared.open": "Öffnen",
+  "reporting.prepared.preview": "Vorschau",
+  "reporting.prepared.saveCopy": "Kopie speichern",
+  "reporting.prepared.weeklyTitle": "Wöchentlicher Vertriebsüberblick",
+  "reporting.prepared.weeklyPurpose":
+    "Gewonnener Umsatz der letzten Woche, offene Pipeline nach Phase und das Ergebnis je Verantwortlichem.",
+  "reporting.prepared.healthTitle": "Zustand der Pipeline",
+  "reporting.prepared.healthPurpose":
+    "Offene Deals nach Phase, wie lange sie dort liegen, und was sich bewegt hat.",
+  "reporting.prepared.ownerTitle": "Ergebnisse je Verantwortlichem",
+  "reporting.prepared.ownerPurpose":
+    "Gewonnener Umsatz und Abschlussquote dieses Quartals je Verantwortlichem, mit Zielen, wo gesetzt.",
+  "reporting.prepared.qualificationTitle": "Qualifizierung",
+  "reporting.prepared.qualificationPurpose":
+    "Diesen Monat qualifizierte Pipeline und angenommene Übergaben.",
+  "reporting.prepared.personalTitle": "Eigene Ergebnisse",
+  "reporting.prepared.personalPurpose":
+    "Deine offenen Deals und Termine, unter Meine Ergebnisse.",
+  "reporting.prepared.accountsTitle": "Offene Deals je Unternehmen",
+  "reporting.prepared.accountsPurpose":
+    "Offene Deals je Unternehmen und ihr Anteil an der Pipeline, unter Pipeline.",
+  "reporting.prepared.deliveryTitle": "Umsetzung",
+  "reporting.prepared.deliveryPurpose":
+    "Projektzusagen, ruhende Projekte und Phasen, unter Umsetzung.",
   "reporting.noSalesWon": "Keine gewonnenen Abschlüsse",
   "reporting.openPipelineAsOf": "Stand {at}",
   "reporting.openPipelineBasis_one": "Offener Deal: {count} · Stand {at}",

@@ -338,7 +338,7 @@ function SectionBody({
         />
       ) : null;
     case "reports":
-      return <ReportingLibrary />;
+      return <ReportingLibrary scope={selection?.scope} />;
     case "targets":
       return <ReportingTargets />;
     case "definitions":
