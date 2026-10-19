@@ -9,9 +9,10 @@ import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 
-// An installation with no deals yet. Its reports are empty because nothing
-// has been recorded. A row of empty charts does not say that, so the page
-// names the first step instead.
+// No deal this reader can see, archived ones included. The reports are empty
+// because nothing they could measure has been recorded. A row of empty charts
+// does not say that, so the page names the first step. It speaks of the
+// reader's deals only, because their row scope may hide everyone else's.
 export function FirstRunNotice() {
   const t = useT();
   const canReadDeals = useCan("deal", "read");
@@ -19,7 +20,11 @@ export function FirstRunNotice() {
     queryKey: ["deals", "first-run"],
     enabled: canReadDeals,
     queryFn: async () =>
-      unwrap(await api.GET("/deals", { params: { query: { limit: 1 } } })),
+      unwrap(
+        await api.GET("/deals", {
+          params: { query: { limit: 1, include_archived: true } },
+        }),
+      ),
   });
   if (!canReadDeals || !probe.data || probe.data.data.length > 0) {
     return null;

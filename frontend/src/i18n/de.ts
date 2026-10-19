@@ -5365,9 +5365,8 @@ export const de = {
   "analytics.sectionReports": "Berichte",
   "analytics.setup": "Einrichtung",
   "analytics.filters": "Filter",
-  "analytics.firstRunTitle": "Noch keine Deals",
-  "analytics.firstRunBody":
-    "Die Auswertungen füllen sich, sobald Deals erfasst werden. Lege auf der Seite Deals den ersten Deal an oder importiere deine Daten.",
+  "analytics.firstRunTitle": "Noch keine Deals für die Auswertung",
+  "analytics.firstRunBody": "Die Auswertungen füllen sich, sobald Deals erfasst werden, die du sehen kannst. Öffne Deals, um einen anzulegen oder deine Daten zu importieren.",
   "analytics.firstRunAction": "Deals öffnen",
   "analytics.attention": "Braucht deine Aufmerksamkeit",
   "analytics.attentionNoOwner": "Kein Verantwortlicher",

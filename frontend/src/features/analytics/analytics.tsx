@@ -257,7 +257,7 @@ export function AnalyticsScreen() {
         }
       />
       <div className="analytics-body">
-        <FirstRunNotice />
+        {DEAL_SECTIONS.includes(section) && <FirstRunNotice />}
         <SectionBody
           section={section}
           locale={locale}
@@ -294,6 +294,14 @@ const SETUP_LABEL: Readonly<Record<SetupSection, MessageKey>> = {
   definitions: "reporting.definitions",
   coverage: "analytics.sectionCoverage",
 };
+
+// The sections whose figures are about deals, where "no deals yet" explains
+// an empty page. Setup, delivery and custom reports measure other things.
+const DEAL_SECTIONS: readonly Section[] = [
+  "performance",
+  "pipeline",
+  "forecast",
+];
 
 function isSetupSection(section: Section): section is SetupSection {
   return section in SETUP_LABEL;

@@ -74,6 +74,8 @@ export type ReportsStubOpts = {
   context?: Record<string, unknown>;
   // A refused context read, for a seat that reads deals without forecasts.
   contextStatus?: number;
+  // A seat that may also read deals, for the views that probe them.
+  dealRead?: boolean;
 };
 
 // The rows one report answers with.
@@ -118,6 +120,7 @@ function meAnswer(opts: ReportsStubOpts) {
       report_definition: ["read"],
       reporting_framework: ["read"],
       data_coverage: granted ? ["read"] : [],
+      ...(opts.dealRead ? { deal: ["read"] } : {}),
     },
   });
 }

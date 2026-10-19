@@ -5424,9 +5424,8 @@ export const en = {
   "analytics.sectionReports": "Reports",
   "analytics.setup": "Setup",
   "analytics.filters": "Filters",
-  "analytics.firstRunTitle": "No deals yet",
-  "analytics.firstRunBody":
-    "Analytics fills in as deals are recorded. Create your first deal or import your records from the Deals screen.",
+  "analytics.firstRunTitle": "No deals to report on yet",
+  "analytics.firstRunBody": "Analytics fills in as the deals you can see are recorded. Open Deals to create one or import your records.",
   "analytics.firstRunAction": "Open Deals",
   "analytics.attention": "Needs your attention",
   "analytics.attentionNoOwner": "No owner",
