@@ -142,6 +142,14 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/capture/connectors.historybaseline.stories.tsx",
+    why: "A mailbox history baseline stores the zone its owner picked the date in; the fixture carries that stored zone.",
+  },
+  {
+    file: "features/capture/connectors.historybaseline.test.tsx",
+    why: "A mailbox history baseline stores the zone its owner picked the date in; the fixture carries that stored zone.",
+  },
+  {
     file: "features/automations/approvalpreview.test.ts",
     why: "The preview must use the card's supplied date formatter and zone in every locale, independent of the test machine's zone.",
   },
