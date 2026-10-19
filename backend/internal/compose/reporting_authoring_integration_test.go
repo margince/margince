@@ -7,11 +7,13 @@ package compose
 
 import (
 	"errors"
+	"net/http"
 	"testing"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -130,33 +132,45 @@ func TestReportingTargetsRejectAmbiguousPeriodsAndIdentityChanges(t *testing.T) 
 	f := reportingBusiness(t)
 	cases := []struct {
 		name   string
+		field  string
 		change func(*crmcontracts.ReportingTargetInput)
 	}{
-		{"negative", func(in *crmcontracts.ReportingTargetInput) { in.Value = -1 }},
-		{"inexact", func(in *crmcontracts.ReportingTargetInput) { in.Value = 9007199254740992 }},
-		{"no reason", func(in *crmcontracts.ReportingTargetInput) { in.Reason = " " }},
-		{"unsupported metric", func(in *crmcontracts.ReportingTargetInput) { in.Metric = "stage_age" }},
-		{"partial month", func(in *crmcontracts.ReportingTargetInput) {
+		{"negative", "value", func(in *crmcontracts.ReportingTargetInput) { in.Value = -1 }},
+		{"inexact", "value", func(in *crmcontracts.ReportingTargetInput) { in.Value = 9007199254740992 }},
+		{"no reason", "reason", func(in *crmcontracts.ReportingTargetInput) { in.Reason = " " }},
+		{"unsupported metric", "metric", func(in *crmcontracts.ReportingTargetInput) { in.Metric = "stage_age" }},
+		{"partial month", "period_start", func(in *crmcontracts.ReportingTargetInput) {
 			in.PeriodStart.Time = in.PeriodStart.AddDate(0, 0, 1)
 		}},
-		{"invalid basis", func(in *crmcontracts.ReportingTargetInput) { in.PeriodKind = "unknown" }},
+		{"invalid basis", "period_kind", func(in *crmcontracts.ReportingTargetInput) { in.PeriodKind = "unknown" }},
+		{"owner without an id", "scope", func(in *crmcontracts.ReportingTargetInput) {
+			in.Scope = crmcontracts.ReportingScope{Kind: "owner"}
+		}},
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
 			input := f.target.Definition
 			test.change(&input)
-			if _, err := f.service.CreateTarget(f.human, input); !errors.Is(err, apperrors.ErrInvalidArgument) {
-				t.Fatalf("invalid target: %v", err)
-			}
+			_, err := f.service.CreateTarget(f.human, input)
+			requireRefusedField(t, err, test.field)
 		})
 	}
 	changed := f.target.Definition
 	changed.Metric = "qualified_pipeline_created"
-	if _, err := f.service.UpdateTarget(f.human, ids.UUID(f.target.Id), f.target.Version, changed); !errors.Is(err, apperrors.ErrInvalidArgument) {
-		t.Fatalf("target identity changed: %v", err)
-	}
+	_, err := f.service.UpdateTarget(f.human, ids.UUID(f.target.Id), f.target.Version, changed)
+	requireRefusedField(t, err, "metric")
 	saved, err := f.service.GetTarget(f.human, ids.UUID(f.target.Id))
 	if err != nil || saved.Definition.Metric != f.target.Definition.Metric || saved.Version != f.target.Version {
 		t.Fatalf("invalid update changed target: %+v %v", saved, err)
+	}
+}
+
+// requireRefusedField holds the 422 shape the contract lists: a refusal that
+// names the field to fix, not a bare invalid argument.
+func requireRefusedField(t *testing.T, err error, field string) {
+	t.Helper()
+	var refused *httperr.DetailedError
+	if !errors.As(err, &refused) || refused.Status != http.StatusUnprocessableEntity || len(refused.Fields) != 1 || refused.Fields[0].Field != field {
+		t.Fatalf("want a 422 naming %q, got %v", field, err)
 	}
 }

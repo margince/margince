@@ -5,6 +5,7 @@ package reporting
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -136,10 +138,22 @@ func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int, f
 	return out, err
 }
 
+// refusedField names the request field behind a refusal of the caller's
+// choice. Any other failure is the server's and keeps its own answer.
+func refusedField(field string, err error) error {
+	if !errors.Is(err, apperrors.ErrInvalidArgument) {
+		return err
+	}
+	return httperr.Validation(field, "invalid", "choose a valid "+field)
+}
+
 func (s *Service) validateTarget(ctx context.Context, tx pgx.Tx, in *crmcontracts.ReportingTargetInput) (crmcontracts.ReportingWindow, string, error) {
 	empty := crmcontracts.ReportingWindow{}
-	if in.Value < 0 || in.Value > values.MaxExactInteger || !values.HasVisibleText(in.Reason) || utf8.RuneCountInString(in.Reason) > 1000 {
-		return empty, "", invalid("enter a non-negative target and a revision reason")
+	if in.Value < 0 || in.Value > values.MaxExactInteger {
+		return empty, "", httperr.Validation("value", "out_of_range", "enter a non-negative target")
+	}
+	if !values.HasVisibleText(in.Reason) || utf8.RuneCountInString(in.Reason) > 1000 {
+		return empty, "", httperr.Validation("reason", "required", "enter a revision reason of at most 1000 characters")
 	}
 	catalog, err := s.evaluator.Catalog(ctx, textlang.English)
 	if err != nil {
@@ -147,15 +161,15 @@ func (s *Service) validateTarget(ctx context.Context, tx pgx.Tx, in *crmcontract
 	}
 	index := slices.IndexFunc(catalog.Metrics, func(m crmcontracts.ReportingMetricDefinition) bool { return m.Id == in.Metric && m.SupportsTarget })
 	if index < 0 {
-		return empty, "", invalid("this metric does not support targets")
+		return empty, "", httperr.Validation("metric", "unsupported", "this metric does not support targets")
 	}
 	scope, err := s.authority.Scope(ctx, tx, in.Scope, true)
 	if err != nil {
-		return empty, "", err
+		return empty, "", refusedField("scope", err)
 	}
 	in.Scope = scope
 	if err := s.authority.Pipeline(ctx, tx, (*ids.UUID)(in.PipelineId)); err != nil {
-		return empty, "", err
+		return empty, "", refusedField("pipeline_id", err)
 	}
 	calendar, err := s.calendar(ctx, tx)
 	if err != nil {
@@ -169,10 +183,10 @@ func (s *Service) validateTarget(ctx context.Context, tx pgx.Tx, in *crmcontract
 	start := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, zone)
 	interval, err := TargetWindow(crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, 0, 1)}, string(in.PeriodKind), calendar)
 	if err != nil {
-		return empty, "", err
+		return empty, "", refusedField("period_kind", err)
 	}
 	if !interval.StartAt.Equal(start) {
-		return empty, "", invalid("the target must start on the first day of its month or fiscal quarter")
+		return empty, "", httperr.Validation("period_start", "not_period_start", "the target must start on the first day of its month or fiscal quarter")
 	}
 	unit := catalog.Metrics[index].Unit
 	if unit == "money" {
@@ -250,7 +264,7 @@ func (s *Service) UpdateTarget(ctx context.Context, id ids.UUID, version int64, 
 			return err
 		}
 		if before.Definition.Metric != in.Metric || before.Definition.Scope.Kind != in.Scope.Kind || !sameID(before.Definition.Scope.Id, in.Scope.Id) || !sameID(before.Definition.PipelineId, in.PipelineId) || !interval.StartAt.Equal(before.Interval.StartAt) || !interval.EndAt.Equal(before.Interval.EndAt) || before.Unit != unit {
-			return invalid("create a separate target for a different metric, scope or period")
+			return httperr.Validation("metric", "immutable", "create a separate target for a different metric, scope or period")
 		}
 		out = before
 		out.Definition = in
