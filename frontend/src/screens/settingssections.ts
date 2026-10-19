@@ -226,7 +226,7 @@ export const SETTINGS_SECTIONS = {
   reset: ["settings.dangerZone", "settings.resetDataLabel"],
 } as const satisfies Record<SettingsPageId, readonly MessageKey[]>;
 
-// The company-context card's names, which it draws for an admin alone.
+// The company-context card's names, drawn where `companyContextShown` says.
 export const COMPANY_CONTEXT_SECTIONS: readonly MessageKey[] = [
   "settings.brandTitle",
   "settings.companyContextTitle",

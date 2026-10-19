@@ -11,7 +11,10 @@ import { LocaleProvider } from "../i18n";
 import * as router from "../lib/router";
 import { meFixture } from "../testing/mefixture";
 import { SETTINGS_PAGES, type SettingsPage } from "./settingscatalog";
-import { COMPANY_CONTEXT_ON } from "./settingspages.fixtures";
+import {
+  COMPANY_CONTEXT_OFF,
+  COMPANY_CONTEXT_ON,
+} from "./settingspages.fixtures";
 import { SettingsSearchBox } from "./settingssearchbox";
 
 afterEach(() => {
@@ -25,12 +28,13 @@ afterEach(() => {
 function mount(
   pages: readonly SettingsPage[] = SETTINGS_PAGES,
   roles: string[] = [],
+  capabilities = COMPANY_CONTEXT_ON,
 ) {
   const client = new QueryClient({
     defaultOptions: { queries: { staleTime: Infinity } },
   });
   client.setQueryData(["me"], meFixture({ roles }));
-  client.setQueryData(companyContextCapabilitiesQueryKey, COMPANY_CONTEXT_ON);
+  client.setQueryData(companyContextCapabilitiesQueryKey, capabilities);
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
@@ -62,8 +66,8 @@ describe("the settings search box", () => {
     expect(box().getAttribute("aria-expanded")).toBe("true");
   });
 
-  // The company-context card draws for an admin alone, so its words lead only
-  // an admin to Company profile; ops reaches the page and would find no VAT.
+  // The company-context card draws where `companyContextShown` says, and only
+  // there does "vat" lead to Company profile. Ops would find no VAT on it.
   it.each([
     [["admin"], true],
     [["ops"], false],
@@ -81,6 +85,18 @@ describe("the settings search box", () => {
       ).toBe(sent);
     },
   );
+
+  it("keeps vat from Company profile while the rollout hides the card", async () => {
+    const user = userEvent.setup();
+    mount(SETTINGS_PAGES, ["admin"], COMPANY_CONTEXT_OFF);
+    await user.type(box(), "vat");
+
+    expect(
+      options().some((option) =>
+        option.textContent?.includes("Company profile"),
+      ),
+    ).toBe(false);
+  });
 
   // The search is handed the reader's own pages, so it cannot offer one the
   // sidebar did not draw. Asserted through the CONTROL rather than only through
