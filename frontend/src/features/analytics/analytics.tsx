@@ -25,6 +25,7 @@ import {
 import type { Stage } from "./analytics.cells";
 import {
   type AnalyticsSelection,
+  scopeKey,
   useAnalyticsContext,
   useAnalyticsSelection,
 } from "./analytics.context";
@@ -259,6 +260,7 @@ export function AnalyticsScreen() {
           section={section}
           locale={locale}
           context={context.data}
+          contextFailed={context.isError}
           selection={selection}
           onSelectScope={selectScope}
           scopeControl={scopeControl}
@@ -311,6 +313,7 @@ function SectionBody({
   section,
   locale,
   context,
+  contextFailed,
   selection,
   onSelectScope,
   scopeControl,
@@ -319,6 +322,7 @@ function SectionBody({
   section: Section;
   locale: Locale;
   context: components["schemas"]["AnalyticsContext"] | undefined;
+  contextFailed: boolean;
   selection: AnalyticsSelection | null;
   onSelectScope: (scope: AnalyticsSelection["scope"]) => void;
   scopeControl: ReactNode;
@@ -367,23 +371,34 @@ function SectionBody({
           scopeControl={scopeControl}
         />
       ) : null;
-    case "pipeline":
+    case "pipeline": {
       // Deals follow the picker so Pipeline and Performance count one set of
       // records. Delivery below does not: a project is read company-wide.
-      return selection ? (
+      // The picker needs forecast access; a deal reader without it keeps the
+      // unscoped cards rather than an empty tab.
+      if (!selection && !contextFailed) {
+        return null;
+      }
+      const scope = selection?.scope;
+      return (
         <>
-          <FilterBar label={t("analytics.filters")}>{scopeControl}</FilterBar>
+          {scope && (
+            <FilterBar label={t("analytics.filters")}>{scopeControl}</FilterBar>
+          )}
           {SECTION_REPORTS.pipeline.map((report) => (
             <ReportCard
-              key={report}
+              // Keyed by scope too, so an open explanation never outlives
+              // the records it explains.
+              key={scope ? `${report}:${scopeKey(scope)}` : report}
               report={report}
               stages={stages}
               locale={locale}
-              scope={selection.scope}
+              scope={scope}
             />
           ))}
         </>
-      ) : null;
+      );
+    }
     default:
       return (
         <>

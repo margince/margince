@@ -7,7 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { formatMoney } from "../../format/format";
 import { AnalyticsScreen } from "./analytics";
-import { render, reportsStub } from "./analytics.testkit";
+import { ownLensContext, render, reportsStub } from "./analytics.testkit";
 
 afterEach(() => {
   cleanup();
@@ -117,25 +117,19 @@ it("draws no pipeline total when an unpriced stage's shortfall cannot be stated"
   expect(screen.getAllByText(formatMoney(20_000, "EUR", "en"))).toHaveLength(1);
 });
 
-it("asks the pipeline cards for the picked record scope, and leaves delivery company-wide", async () => {
+it("asks every pipeline card for the picked record scope, and leaves delivery company-wide", async () => {
   const bodies: { key: string; body: Record<string, unknown> }[] = [];
   vi.stubGlobal(
     "fetch",
     reportsStub({
       onRun: (key, body) => bodies.push({ key, body }),
       context: {
+        ...ownLensContext,
         default_scope: { kind: "workspace", label: "Whole company" },
         allowed_scopes: [
           { kind: "workspace", label: "Whole company" },
           { kind: "team", id: "t-north", label: "North" },
         ],
-        capabilities: {
-          view_manager_forecast: true,
-          submit_manager_forecast: true,
-        },
-        as_of: "2026-09-04T00:00:00Z",
-        timezone: "Europe/Berlin",
-        base_currency: "EUR",
       },
     }),
   );
@@ -145,14 +139,18 @@ it("asks the pipeline cards for the picked record scope, and leaves delivery com
   expect(
     await screen.findByRole("combobox", { name: "Record scope" }),
   ).toBeTruthy();
+  const pipelineReports = [
+    "pipeline-current",
+    "forecast",
+    "open-deals-per-company",
+  ];
   await vi.waitFor(() =>
     expect(
-      bodies.find((sent) => sent.key === "pipeline-current")?.body.scope,
-    ).toEqual({ kind: "team", id: "t-north" }),
+      pipelineReports.map(
+        (report) => bodies.find((sent) => sent.key === report)?.body.scope,
+      ),
+    ).toEqual(pipelineReports.map(() => ({ kind: "team", id: "t-north" }))),
   );
-  expect(
-    bodies.find((sent) => sent.key === "open-deals-per-company")?.body.scope,
-  ).toEqual({ kind: "team", id: "t-north" });
 
   await userEvent
     .setup()
@@ -165,4 +163,25 @@ it("asks the pipeline cards for the picked record scope, and leaves delivery com
       .filter((sent) => sent.key.startsWith("project"))
       .map((sent) => sent.body.scope),
   ).toEqual([undefined, undefined, undefined]);
+});
+
+it("keeps the pipeline cards for a deal reader whose context read is refused", async () => {
+  const bodies: { key: string; body: Record<string, unknown> }[] = [];
+  vi.stubGlobal(
+    "fetch",
+    reportsStub({
+      onRun: (key, body) => bodies.push({ key, body }),
+      contextStatus: 403,
+    }),
+  );
+  window.location.hash = "#/analytics/pipeline";
+  render(<AnalyticsScreen />);
+
+  await vi.waitFor(() =>
+    expect(bodies.some((sent) => sent.key === "pipeline-current")).toBe(true),
+  );
+  expect(
+    bodies.find((sent) => sent.key === "pipeline-current")?.body.scope,
+  ).toBeUndefined();
+  expect(screen.queryByRole("combobox", { name: "Record scope" })).toBeNull();
 });

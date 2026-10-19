@@ -71,6 +71,8 @@ export type ReportsStubOpts = {
   derivation?: Record<string, unknown>;
   onDerivation?: (url: string) => void;
   context?: Record<string, unknown>;
+  // A refused context read, for a seat that reads deals without forecasts.
+  contextStatus?: number;
 };
 
 // The rows one report answers with.
@@ -244,7 +246,13 @@ const ROUTES: readonly Route[] = [
   },
   {
     when: ({ url }) => url.includes("/analytics/context"),
-    answer: (_asked, opts) => jsonResponse(contextAnswer(opts)),
+    answer: (_asked, opts) =>
+      opts.contextStatus === undefined
+        ? jsonResponse(contextAnswer(opts))
+        : jsonResponse(
+            { title: "Refused", status: opts.contextStatus },
+            opts.contextStatus,
+          ),
   },
   {
     when: ({ url, method }) => method === "GET" && url.includes("/derivation"),
