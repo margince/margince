@@ -17,7 +17,7 @@ import type { MessageKey } from "../../i18n/en";
 import { useCanWriteRecord } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { AddDocumentDialog } from "../../screens/adddocument";
+import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import "./dealfiles.css";
 
 // The deal's Files area: what a rep uploaded on the deal, and what arrived

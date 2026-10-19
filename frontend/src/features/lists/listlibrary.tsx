@@ -31,10 +31,10 @@ import {
   type LibraryItem,
   nameOf,
   resourceOf,
-} from "../../screens/library";
+} from "../voice-knowledge/library";
 import { EditFilterAction, mayEditFilter } from "./filterlistedit";
 import { RECORDS_COUNT_LABEL } from "./filtersaddress";
-import "../../screens/library.css";
+import "../voice-knowledge/library.css";
 import {
   type List,
   type ListRecordType,

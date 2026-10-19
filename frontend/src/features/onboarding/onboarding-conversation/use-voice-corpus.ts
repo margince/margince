@@ -5,17 +5,17 @@ import { formatNumber } from "../../../format/format";
 import { useLocale } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { problemMessage } from "../../../lib/problem";
-import { isAcceptedCorpusFile } from "../../../screens/voice-corpus-file";
+import { isAcceptedCorpusFile } from "../../voice-knowledge/voice-corpus-file";
 import type {
   IntakeOutcome,
   RefusalReason,
-} from "../../../screens/voice-intake-core";
+} from "../../voice-knowledge/voice-intake-core";
 import {
   intakeFile,
   intakePaste,
   intakeTranscript,
   sourceRef,
-} from "../../../screens/voice-intake-core";
+} from "../../voice-knowledge/voice-intake-core";
 import type {
   ConversationEvent,
   ConversationState,

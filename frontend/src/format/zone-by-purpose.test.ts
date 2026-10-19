@@ -386,7 +386,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Pins viewerZone()'s answer and its UTC fallback by pretending to be in a named zone.",
   },
   {
-    file: "screens/adddocument.test.tsx",
+    file: "features/voice-knowledge/adddocument.test.tsx",
     why: "Installation-settings fixture: the company timezone the document form reads back.",
   },
   {

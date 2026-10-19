@@ -5,8 +5,8 @@ import { ErrorLine } from "../../design-system/errorline";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useVoiceProfile } from "../../screens/voice-profile";
 import type { Transport } from "../contacts/contacttransports";
+import { useVoiceProfile } from "../voice-knowledge/voice-profile";
 import {
   colleagueMailboxesOf,
   useComposeThread,

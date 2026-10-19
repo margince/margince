@@ -4,7 +4,7 @@ import { SourceEvidence } from "../../design-system/sourceevidence";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
-import { OpenActivityDrawer } from "../../screens/activitydrawer";
+import { OpenActivityDrawer } from "../voice-knowledge/activitydrawer";
 
 export function ApprovalEvidence({
   approval,

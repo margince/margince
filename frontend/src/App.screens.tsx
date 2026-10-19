@@ -228,7 +228,9 @@ export const TagResultScreen = lazy(() =>
 
 export const SearchRoute = lazy(
   routed(() =>
-    import("./screens/search").then((m) => ({ default: m.SearchRoute })),
+    import("./features/voice-knowledge/search").then((m) => ({
+      default: m.SearchRoute,
+    })),
   ),
 );
 
