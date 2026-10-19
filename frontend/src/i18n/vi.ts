@@ -172,6 +172,8 @@ export const vi = {
     "Một số bằng chứng nguồn không khả dụng. Số liệu chỉ gồm các hồ sơ có quyền xem và đã định giá.",
   "reporting.edit": "Sửa báo cáo",
   "reporting.saveDraft": "Lưu bản nháp",
+  "reporting.draftKeepsName":
+    "Bản nháp giữ nguyên tên và phạm vi xem của báo cáo. Để đổi những điều này, hãy lưu trực tiếp báo cáo.",
   "reporting.draftEditNote":
     "Thao tác này lưu các biểu đồ thành bản nháp. Để đổi tên hoặc phạm vi xem, hãy công bố hoặc bỏ bản nháp trước.",
   "reporting.draftOpen": "Bản nháp {revision} chưa được công bố",

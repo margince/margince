@@ -3,7 +3,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import {
@@ -86,6 +92,7 @@ it("lets an editor preview, then publish, an open draft", async () => {
       ),
     ).toBe(true),
   );
+  expect(screen.getByRole("button", { name: "Save snapshot" })).toBeDisabled();
   await user.click(screen.getByRole("button", { name: "Publish draft" }));
   await waitFor(() => expect(publish).toHaveBeenCalledOnce());
   expect(
@@ -95,38 +102,78 @@ it("lets an editor preview, then publish, an open draft", async () => {
 
 it("saves an edit as a draft, sending the charts alone", async () => {
   const user = userEvent.setup({ delay: null });
-  let body: unknown;
+  let body: { selection?: { blocks: string[] } } | undefined;
   installFetchStub({
     ...reportingStoryRoutes(),
     "GET /analytics/reports/report/revisions": () =>
       jsonResponse({ data: [revision(3, "published")] }),
     "PUT /analytics/reports/report/draft": (sentBody) => {
-      body = sentBody;
+      body = sentBody as typeof body;
       return jsonResponse({ ...reportingStoryReport, draft_revision: 4 });
     },
+  });
+  const sent = sentRequests();
+  renderReport();
+  await user.click(
+    await screen.findByRole("button", { name: "Report actions" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Edit report" }));
+  const dialog = await screen.findByRole("dialog", { name: "Edit report" });
+  const published = reportingStoryReport.selection.blocks;
+  const dropped = within(dialog)
+    .getAllByRole("checkbox")
+    .filter((box) => (box as HTMLInputElement).checked)
+    .at(-1);
+  if (!dropped) throw new Error("the dialog shows no chosen chart to drop");
+  await user.click(dropped);
+  await user.click(
+    within(dialog).getByRole("button", { name: "Save as draft" }),
+  );
+  await waitFor(() => expect(body).toBeDefined());
+  expect(Object.keys(body ?? {})).toEqual(["selection"]);
+  expect(body?.selection?.blocks).toEqual(published.slice(0, -1));
+  expect(sent().find((r) => r.method === "PUT")?.ifMatch).toContain(
+    String(reportingStoryReport.version),
+  );
+});
+
+it("keeps a rename out of a draft, which holds charts alone", async () => {
+  const user = userEvent.setup({ delay: null });
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/reports/report/revisions": () =>
+      jsonResponse({ data: [revision(3, "published")] }),
   });
   renderReport();
   await user.click(
     await screen.findByRole("button", { name: "Report actions" }),
   );
   await user.click(screen.getByRole("button", { name: "Edit report" }));
-  await user.click(
-    await screen.findByRole("button", { name: "Save as draft" }),
-  );
-  await waitFor(() => expect(body).toBeDefined());
-  expect(Object.keys(body as object)).toEqual(["selection"]);
+  const dialog = await screen.findByRole("dialog", { name: "Edit report" });
+  await user.type(within(dialog).getByRole("textbox", { name: /report name/i }), "!");
+  expect(
+    within(dialog).getByRole("button", { name: "Save as draft" }),
+  ).toBeDisabled();
 });
 
 it("restores an earlier revision from the version list", async () => {
   const user = userEvent.setup({ delay: null });
-  const restore = vi.fn(() =>
-    jsonResponse({ ...reportingStoryReport, revision: 4, version: 4 }),
-  );
+  let restored = false;
+  const restore = vi.fn(() => {
+    restored = true;
+    return jsonResponse({ ...reportingStoryReport, revision: 4, version: 4 });
+  });
   installFetchStub({
     ...reportingStoryRoutes(),
     "GET /analytics/reports/report/revisions": () =>
       jsonResponse({
-        data: [revision(3, "published"), revision(2, "earlier")],
+        data: restored
+          ? [
+              revision(4, "published"),
+              revision(3, "earlier"),
+              revision(2, "earlier"),
+            ]
+          : [revision(3, "published"), revision(2, "earlier")],
       }),
     "POST /analytics/reports/report/revisions/2/restore": restore,
   });
@@ -137,8 +184,8 @@ it("restores an earlier revision from the version list", async () => {
   );
   await waitFor(() => expect(restore).toHaveBeenCalledOnce());
   expect(
-    screen.queryByRole("button", { name: "Restore version 3" }),
-  ).toBeNull();
+    await screen.findByRole("button", { name: "Restore version 3" }),
+  ).toBeVisible();
 });
 
 it("shows a reader no draft and no version list", async () => {

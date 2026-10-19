@@ -137,7 +137,7 @@ func TestDiscardingADraftLeavesThePublishedRevision(t *testing.T) {
 }
 
 // Restoring an earlier revision publishes a copy of it as the newest one. The
-// earlier revision stays as it was, so an edition made from it still reads it.
+// earlier revision stays as it was and still evaluates.
 func TestRestoringAnEarlierRevisionPublishesACopyOfIt(t *testing.T) {
 	f := reportWithReader(t)
 	id := ids.UUID(f.report.Id)
@@ -229,5 +229,32 @@ func TestPublishingADraftChecksItUnderThePublisher(t *testing.T) {
 	if err != nil || after.Revision != 1 || after.DraftRevision == nil {
 		t.Errorf("after the refused publish the report is at %d with draft %v (%v), want 1 and the draft kept",
 			after.Revision, after.DraftRevision, err)
+	}
+}
+
+// Replacing a draft records the charts it held and the ones it now holds, so
+// the audit says what changed in a draft nobody else could see.
+func TestReplacingADraftAuditsTheChartsItHeldAndHolds(t *testing.T) {
+	f := reportWithReader(t)
+	id := ids.UUID(f.report.Id)
+	first, err := f.service.SaveReportDraft(f.human, id, f.report.Version,
+		crmcontracts.ReportingReportDraftInput{Selection: f.shorter()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.service.SaveReportDraft(f.human, id, first.Version,
+		crmcontracts.ReportingReportDraftInput{Selection: f.selection()}); err != nil {
+		t.Fatal(err)
+	}
+	var before, after []string
+	if err := f.env.owner.QueryRow(context.Background(), `
+		SELECT ARRAY(SELECT jsonb_array_elements_text(before->'draft_selection'->'blocks')),
+		       ARRAY(SELECT jsonb_array_elements_text(after->'draft_selection'->'blocks'))
+		  FROM audit_log WHERE entity_id = $1 ORDER BY occurred_at DESC, id DESC LIMIT 1`, id,
+	).Scan(&before, &after); err != nil {
+		t.Fatal(err)
+	}
+	if len(before) != len(f.shorter().Blocks) || len(after) != len(f.selection().Blocks) {
+		t.Errorf("the replacement audits draft charts %v then %v, want the shorter draft then the full one", before, after)
 	}
 }

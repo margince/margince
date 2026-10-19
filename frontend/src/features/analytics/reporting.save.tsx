@@ -133,6 +133,11 @@ export function SaveReportingDialog({
         selection: { ...selection, metrics, blocks: selectedBlocks },
       },
     });
+  // A draft holds charts alone, so a renamed or re-shared report is saved
+  // directly rather than lost in a draft.
+  const metadataChanged =
+    report !== undefined &&
+    (name.trim() !== report.name || audience !== report.audience);
   const incomplete =
     write.isPending ||
     !name.trim() ||
@@ -159,6 +164,7 @@ export function SaveReportingDialog({
             <TextInput
               {...field}
               value={name}
+              disabled={draftOpen}
               onChange={(event) => setName(event.target.value)}
               maxLength={160}
             />
@@ -172,6 +178,7 @@ export function SaveReportingDialog({
             <Select
               {...field}
               value={audience}
+              disabled={draftOpen}
               options={[
                 { value: "private", label: t("reporting.private") },
                 ...(selection.scope.kind === "team"
@@ -282,6 +289,9 @@ export function SaveReportingDialog({
             </Disclosure>
           </div>
         )}
+        {metadataChanged && !draftOpen && (
+          <p className="t-caption">{t("reporting.draftKeepsName")}</p>
+        )}
         <ErrorLine error={write.error} />
       </form>
       <div className="actions">
@@ -291,7 +301,7 @@ export function SaveReportingDialog({
         {report && !draftOpen && (
           <Button
             variant="ghost"
-            disabled={incomplete}
+            disabled={incomplete || metadataChanged}
             onClick={() => save(true)}
           >
             {t("reporting.saveDraft")}

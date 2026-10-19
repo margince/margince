@@ -168,7 +168,11 @@ export function ReportingReportDetail({
     (canEditReport || canCreate || canArchiveReport) && (
       <OverflowMenu label={t("reporting.actions")}>
         {canEditReport && (
-          <Button variant="ghost" onClick={() => setEditing(true)}>
+          <Button
+            variant="ghost"
+            disabled={draftOpen !== undefined && !revisions.data}
+            onClick={() => setEditing(true)}
+          >
             {t("reporting.edit")}
           </Button>
         )}
@@ -233,13 +237,19 @@ export function ReportingReportDetail({
               )}
               {reportActions(report)}
               {canScheduleReport && (
-                <Button variant="ghost" onClick={() => setScheduleId("new")}>
+                <Button
+                  variant="ghost"
+                  disabled={previewDraft}
+                  onClick={() => setScheduleId("new")}
+                >
                   {t("reporting.schedule")}
                 </Button>
               )}
               {canFreezeReport && (
                 <Button
-                  disabled={write.isPending || capturePending !== false}
+                  disabled={
+                    write.isPending || capturePending !== false || previewDraft
+                  }
                   onClick={() =>
                     write.mutate({ kind: "freeze", report, key: requestKey })
                   }

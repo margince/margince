@@ -158,6 +158,8 @@ export const en = {
     "Some source evidence is unavailable. Figures include only readable, priced records.",
   "reporting.edit": "Edit report",
   "reporting.saveDraft": "Save as draft",
+  "reporting.draftKeepsName":
+    "A draft keeps the report’s name and who sees it. To change those, save the report directly.",
   "reporting.draftEditNote":
     "This saves the charts as a draft. To change the name or who sees the report, publish or discard the draft first.",
   "reporting.draftOpen": "Draft {revision} is not published yet",

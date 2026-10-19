@@ -164,6 +164,8 @@ export const de = {
     "Einige Nachweise sind nicht verfügbar. Die Werte enthalten nur lesbare Datensätze mit bekanntem Wert.",
   "reporting.edit": "Bericht bearbeiten",
   "reporting.saveDraft": "Als Entwurf speichern",
+  "reporting.draftKeepsName":
+    "Ein Entwurf behält Namen und Sichtbarkeit des Berichts. Um sie zu ändern, den Bericht direkt speichern.",
   "reporting.draftEditNote":
     "Gespeichert werden die Diagramme als Entwurf. Um Namen oder Sichtbarkeit zu ändern, zuerst den Entwurf veröffentlichen oder verwerfen.",
   "reporting.draftOpen": "Entwurf {revision} ist noch nicht veröffentlicht",

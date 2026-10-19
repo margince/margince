@@ -63,6 +63,10 @@ func (s *Service) SaveReportDraft(ctx context.Context, id ids.UUID, version int6
 		if err := s.validateRevision(ctx, tx, &in.Selection); err != nil {
 			return err
 		}
+		replaced, err := s.draftSelection(ctx, tx, before)
+		if err != nil {
+			return err
+		}
 		if before.DraftRevision != nil {
 			if err := s.dropRevision(ctx, tx, id, *before.DraftRevision); err != nil {
 				return err
@@ -77,7 +81,7 @@ func (s *Service) SaveReportDraft(ctx context.Context, id ids.UUID, version int6
 		out = before
 		out.DraftRevision = &draft
 		out.Version++
-		return s.writeDraftState(ctx, tx, before, out, "update")
+		return s.writeDraftState(ctx, tx, reportImage{before, replaced}, reportImage{out, &in.Selection}, "update")
 	})
 	return out, err
 }
@@ -96,10 +100,14 @@ func (s *Service) DiscardReportDraft(ctx context.Context, id ids.UUID, version i
 		if before.DraftRevision == nil {
 			return apperrors.ErrNotFound
 		}
+		discarded, err := s.draftSelection(ctx, tx, before)
+		if err != nil {
+			return err
+		}
 		out = before
 		out.DraftRevision = nil
 		out.Version++
-		if err := s.writeDraftState(ctx, tx, before, out, "update"); err != nil {
+		if err := s.writeDraftState(ctx, tx, reportImage{before, discarded}, reportImage{out, nil}, "update"); err != nil {
 			return err
 		}
 		return s.dropRevision(ctx, tx, id, *before.DraftRevision)
@@ -136,7 +144,7 @@ func (s *Service) PublishReportDraft(ctx context.Context, id ids.UUID, version i
 		out = before
 		out.Revision, out.Selection, out.DraftRevision = *before.DraftRevision, selection, nil
 		out.Version++
-		return s.writeDraftState(ctx, tx, before, out, "update")
+		return s.writeDraftState(ctx, tx, reportImage{before, &selection}, reportImage{out, nil}, "update")
 	})
 	return out, err
 }
@@ -174,7 +182,7 @@ func (s *Service) RestoreReportRevision(ctx context.Context, id ids.UUID, versio
 		if err := s.saveReportRevision(ctx, tx, out); err != nil {
 			return err
 		}
-		return s.writeDraftState(ctx, tx, before, out, "restore")
+		return s.writeDraftState(ctx, tx, reportImage{before, nil}, reportImage{out, nil}, "restore")
 	})
 	return out, err
 }
@@ -220,16 +228,33 @@ func revisionState(report crmcontracts.ReportingReport, revision int64) crmcontr
 	}
 }
 
+// reportImage is a report as the audit records a revision change: the report,
+// and the charts its draft holds when one is open.
+type reportImage struct {
+	crmcontracts.ReportingReport
+	DraftSelection *crmcontracts.ReportingSelection `json:"draft_selection,omitempty"`
+}
+
 // writeDraftState records the report's published revision, draft and version
 // as one change. The audit's before and after images show which of the three
-// moved; the action is from the audit log's closed set.
-func (s *Service) writeDraftState(ctx context.Context, tx pgx.Tx, before, after crmcontracts.ReportingReport, action string) error {
+// moved, with the draft's charts; the action is from the audit log's closed set.
+func (s *Service) writeDraftState(ctx context.Context, tx pgx.Tx, before, after reportImage, action string) error {
 	var b bindings
 	query := "UPDATE report_definition SET revision=" + b.add(after.Revision) + ",draft_revision=" + b.add(after.DraftRevision) + ",version=" + b.add(after.Version) + " WHERE id=" + b.add(after.Id)
 	if _, err := tx.Exec(ctx, query, b.values...); err != nil {
 		return fmt.Errorf("reporting: moving a report's revisions: %w", err)
 	}
 	return recordChange(ctx, tx, "report_definition", ids.UUID(after.Id), action, &before, after)
+}
+
+// draftSelection is the open draft's charts, or nil when there is none.
+func (s *Service) draftSelection(ctx context.Context, tx pgx.Tx, report crmcontracts.ReportingReport) (draft *crmcontracts.ReportingSelection, err error) {
+	if report.DraftRevision != nil {
+		var selection crmcontracts.ReportingSelection
+		selection, _, err = s.revisionSelection(ctx, tx, ids.UUID(report.Id), *report.DraftRevision)
+		draft = &selection
+	}
+	return draft, err
 }
 
 // rewriteDraftSelection stores a draft's selection as checked at publish, so
