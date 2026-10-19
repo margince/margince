@@ -37,10 +37,16 @@ export function dealCoverageKey(dealId: string) {
   return [...DEAL_COVERAGE_KEY, dealId] as const;
 }
 
-/** useDealCoverage reads who is on a deal and what is wrong with that. */
-export function useDealCoverage(dealId: string) {
+/**
+ * useDealCoverage reads who is on a deal and what is wrong with that.
+ *
+ * `live` is false for an archived deal, which the server refuses to read the
+ * coverage of: asking would only draw a section that failed to load.
+ */
+export function useDealCoverage(dealId: string, live = true) {
   const query = useQuery({
     queryKey: dealCoverageKey(dealId),
+    enabled: live,
     queryFn: async (): Promise<DealCoverage> => {
       return unwrap(
         await api.GET("/deals/{id}/coverage", {
@@ -55,7 +61,7 @@ export function useDealCoverage(dealId: string) {
     // at all, so one answer covers every reader.
     withheld: (query.data?.sections_omitted ?? []).length > 0,
     ready: query.isSuccess,
-    pending: query.isPending,
+    pending: live && query.isPending,
     query,
   };
 }

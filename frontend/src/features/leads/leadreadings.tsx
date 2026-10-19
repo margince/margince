@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -153,8 +153,11 @@ function ScoreCard({
   locale,
   t,
 }: Readonly<{ lead: Lead; locale: Locale; t: Translator }>) {
+  // The server refuses the breakdown of an archived lead, so the card shows the
+  // figure without a receipt rather than one that failed to load.
   const explain = useQuery({
     queryKey: leadScoreKey(lead.id),
+    enabled: !lead.archived_at,
     queryFn: async () => {
       return unwrap(
         await api.GET("/leads/{id}/score", {
@@ -163,6 +166,27 @@ function ScoreCard({
       );
     },
   });
+  return (
+    <StatCard
+      label={t("lead.score")}
+      value={formatNumber(lead.score, locale)}
+      detail={scoreReasonLabel(lead, t, "lead.readings.scoreManual")}
+      meter={{ filled: lead.score, total: 100 }}
+      basis={
+        lead.archived_at ? undefined : scoreBasis(explain, lead, locale, t)
+      }
+    />
+  );
+}
+
+type ScoreRead = UseQueryResult<components["schemas"]["LeadScoreExplanation"]>;
+
+function scoreBasis(
+  explain: ScoreRead,
+  lead: Lead,
+  locale: Locale,
+  t: Translator,
+): ReactNode {
   const factors = explain.data?.current?.factors ?? [];
   // The receipt behind the figure follows the read: still working, could not
   // be read (with the one thing to do about it), nothing counted, or the
@@ -174,38 +198,36 @@ function ScoreCard({
   // silence would leave the figure standing over "no qualifying signals". For
   // a score of ZERO the absence is the truth, whether or not a breakdown was
   // retained.
-  const basis = explain.isPending ? (
-    <p>{t("lead.scoreLoading")}</p>
-  ) : explain.isError ? (
-    <>
-      <p>{t("lead.scoreFactorsFailed")}</p>
-      <Button variant="ghost" onClick={() => explain.refetch()}>
-        {t("common.retry")}
-      </Button>
-    </>
-  ) : factors.length > 0 ? (
-    <FactList
-      numeric
-      facts={factors.map((factor) => ({
-        key: factor.factor,
-        term: scoreFactorLabel(factor.factor, t),
-        value: formatDecimal(factor.points, locale, 1),
-        note: whoseJudgement(factor, t),
-      }))}
-    />
-  ) : explain.data?.explained || lead.score === 0 ? (
+  if (explain.isPending) {
+    return <p>{t("lead.scoreLoading")}</p>;
+  }
+  if (explain.isError) {
+    return (
+      <>
+        <p>{t("lead.scoreFactorsFailed")}</p>
+        <Button variant="ghost" onClick={() => explain.refetch()}>
+          {t("common.retry")}
+        </Button>
+      </>
+    );
+  }
+  if (factors.length > 0) {
+    return (
+      <FactList
+        numeric
+        facts={factors.map((factor) => ({
+          key: factor.factor,
+          term: scoreFactorLabel(factor.factor, t),
+          value: formatDecimal(factor.points, locale, 1),
+          note: whoseJudgement(factor, t),
+        }))}
+      />
+    );
+  }
+  return explain.data?.explained || lead.score === 0 ? (
     <p>{t("lead.scoreNoFactors")}</p>
   ) : (
     <p>{t("lead.scoreNotStoredYet")}</p>
-  );
-  return (
-    <StatCard
-      label={t("lead.score")}
-      value={formatNumber(lead.score, locale)}
-      detail={scoreReasonLabel(lead, t, "lead.readings.scoreManual")}
-      meter={{ filled: lead.score, total: 100 }}
-      basis={basis}
-    />
   );
 }
 

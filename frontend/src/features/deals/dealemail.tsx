@@ -12,8 +12,15 @@
 import { RecordEmailAside } from "../records/recordemail";
 import { useDealStatusCard } from "./dealstatus";
 
-export function DealEmailAside({ dealId }: Readonly<{ dealId: string }>) {
-  const status = useDealStatusCard(dealId);
+export function DealEmailAside({
+  dealId,
+  live = true,
+}: Readonly<{
+  dealId: string;
+  // False for an archived deal, whose status the server refuses.
+  live?: boolean;
+}>) {
+  const status = useDealStatusCard(dealId, live);
   // A reply target only counts once the read has answered. While it is in
   // flight the box still draws and still opens the composer — it simply starts
   // a fresh mail, which is the safe half: a rep who meant to reply sees the

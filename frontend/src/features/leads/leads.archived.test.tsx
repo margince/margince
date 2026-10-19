@@ -436,3 +436,30 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     expect(patchBody).toMatchObject({ owner_id: "u-42" });
   });
 });
+
+describe("LeadScreen — an archived lead does not ask for what the server refuses", () => {
+  it("never reads the score breakdown and reports no failed section", async () => {
+    const { urls } = stubFetchWithMe(async (url) => {
+      if (url.includes("/score")) {
+        return jsonResponse(
+          { status: 404, code: "not_found", title: "Not found" },
+          404,
+        );
+      }
+      return jsonResponse({
+        ...lead,
+        status: "disqualified",
+        archived_at: "2026-07-13T00:00:00Z",
+      });
+    });
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() =>
+      expect(screen.getAllByText("Disqualified").length).toBeGreaterThan(0),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(urls.filter((url) => url.includes("/score"))).toEqual([]);
+    expect(screen.queryByText(en["lead.scoreFactorsFailed"])).toBeNull();
+  });
+});

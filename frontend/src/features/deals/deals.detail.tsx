@@ -134,8 +134,12 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // the signal chips and the coverage card. Read here so the header's sentence
   // and the readings band share those cache entries rather than adding two
   // requests for facts the page already holds.
-  const statusQuery = useDealStatusCard(id);
-  const coverageRead = useDealCoverage(id);
+  //
+  // The server answers none of the deal's status, coverage or offers once it
+  // is archived, so they are asked for only after the deal has said it is live.
+  const live = dealQuery.isSuccess && !dealQuery.data.archived_at;
+  const statusQuery = useDealStatusCard(id, live);
+  const coverageRead = useDealCoverage(id, live);
   // The pane's content, handed over whether or not it is showing: `asideOpen`
   // folds the column, and its cards mount only while it is open or leaving.
   const dealContext = (deal: Deal) => (
@@ -148,6 +152,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const [openEmail, setOpenEmail] = useOpenEmail();
   const offersQuery = useQuery({
     queryKey: ["deal-offers", id],
+    enabled: live,
     queryFn: async () => {
       return unwrap(
         await api.GET("/deals/{id}/offers", {

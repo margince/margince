@@ -121,7 +121,10 @@ export function LeadOverviewPane({
             />
           </PanelBody>
         </Panel>
-        <RecordListsPanel entityType="lead" entityId={id} />
+        {/* The server answers no lists for an archived lead. */}
+        {!lead.archived_at && (
+          <RecordListsPanel entityType="lead" entityId={id} />
+        )}
       </RecordReading>
     </div>
   );

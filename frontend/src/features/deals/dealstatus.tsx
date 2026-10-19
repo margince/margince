@@ -84,10 +84,13 @@ function verdictTone(standing: string): StandingTone {
 // box takes `reply_to` out of the same entry, so the two cannot end up
 // disagreeing about whether there is a message waiting for an answer — and the
 // box costs no second request.
-export function useDealStatusCard(dealId: string) {
+//
+// `live` is false for an archived deal, whose status the server refuses.
+export function useDealStatusCard(dealId: string, live = true) {
   const t = useT();
   return useQuery({
     queryKey: ["deal-status", dealId],
+    enabled: live,
     queryFn: async () => {
       return unwrap(
         await api.GET("/deals/{id}/status", {

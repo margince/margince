@@ -254,35 +254,44 @@ export function DealOverviewPane({
           briefing names, then what is on the table beside who is in the room
           (the deal's two sides), then what the customer committed to. */}
       <RecordReading>
-        <DealStatusCardPanel
-          dealId={deal.id}
-          dealName={deal.name}
-          pulse={pulse}
-          spine={spine}
-          onOpenEmail={onOpenEmail}
-        />
-        <DealApprovals approvals={dealApprovals} decide={onDecide} />
-        <RecordReadingPair>
-          {/* The money reading's door scrolls here; the id is the strip's own
-              constant, so a rename cannot leave the door pointing at nothing. */}
-          <div id={DEAL_OFFERS_ANCHOR}>
-            <OffersPanel
-              offers={offers}
-              creating={creatingOffer}
-              locale={locale}
-              dealCurrency={deal.currency ?? null}
-              refusedReasonId={refusedReasonId}
-              onCreate={onCreateOffer}
-            />
-          </div>
-          <DealCommitteeCard
+        {/* The call, the offers and the committee are read from endpoints the
+            server refuses for an archived deal. The thread the call holds is
+            the page's own timeline, so it stands alone. */}
+        {deal.archived_at ? (
+          spine
+        ) : (
+          <DealStatusCardPanel
             dealId={deal.id}
-            coverage={coverage.coverage}
-            withheld={coverage.withheld}
-            pending={coverage.pending}
-            refusedReasonId={refusedReasonId}
+            dealName={deal.name}
+            pulse={pulse}
+            spine={spine}
+            onOpenEmail={onOpenEmail}
           />
-        </RecordReadingPair>
+        )}
+        <DealApprovals approvals={dealApprovals} decide={onDecide} />
+        {!deal.archived_at && (
+          <RecordReadingPair>
+            {/* The money reading's door scrolls here; the id is the strip's own
+              constant, so a rename cannot leave the door pointing at nothing. */}
+            <div id={DEAL_OFFERS_ANCHOR}>
+              <OffersPanel
+                offers={offers}
+                creating={creatingOffer}
+                locale={locale}
+                dealCurrency={deal.currency ?? null}
+                refusedReasonId={refusedReasonId}
+                onCreate={onCreateOffer}
+              />
+            </div>
+            <DealCommitteeCard
+              dealId={deal.id}
+              coverage={coverage.coverage}
+              withheld={coverage.withheld}
+              pending={coverage.pending}
+              refusedReasonId={refusedReasonId}
+            />
+          </RecordReadingPair>
+        )}
         <DealWatchCard dealId={deal.id} onOpenEmail={onOpenEmail} />
       </RecordReading>
       <DealBrief

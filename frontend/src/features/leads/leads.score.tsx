@@ -170,6 +170,21 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
   );
 }
 
+// The breakdown behind the score. The server refuses it for an archived lead,
+// so there the line is left out instead of drawn as a failure.
+function ScoreExplanation({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
+  const t = useT();
+  if (lead.archived_at) {
+    return null;
+  }
+  return (
+    <>
+      <span>{t("lead.explainScore")}</span>
+      <ScoreBreakdown id={id} lead={lead} />
+    </>
+  );
+}
+
 // The score block: its explanation, and the Commercial Judgement override.
 // Status, owner and score controls share one PATCH /leads/{id} mutation sent
 // with If-Match(lead.version).
@@ -210,8 +225,7 @@ function LeadScorePanel({
 
   return (
     <div className="lead-stack">
-      <span>{t("lead.explainScore")}</span>
-      <ScoreBreakdown id={id} lead={lead} />
+      <ScoreExplanation id={id} lead={lead} />
       {lead.score_override_reason ? (
         <div className="lead-stack">
           <p>
