@@ -21,7 +21,6 @@ import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useSinglePress } from "../../design-system/presslatch";
 import { Select } from "../../design-system/select";
-import { calendarDay } from "../../format/calendarday";
 import { useT } from "../../i18n";
 import {
   activityFileStaleKeys,
@@ -38,10 +37,12 @@ import { worklistKey } from "../worklist/worklist.queries";
 import {
   type ActivityDraft,
   activityRequestBody,
+  freshDraft,
   isActivityKind,
   KINDS_WITH_A_CONTACT,
   type MeetingAttendees,
   NO_ATTENDEES,
+  todayDay,
 } from "./activitybody";
 import { ActivityBodyField } from "./activitybodyfield";
 import "./logactivity.css";
@@ -56,29 +57,8 @@ import {
 } from "./logactivityfiles";
 import { MeetingAttendeeFields } from "./meetingattendees";
 
-const EMPTY_DRAFT: ActivityDraft = {
-  kind: "note",
-  subject: "",
-  body: "",
-  day: "",
-  asTranscript: false,
-  assigneeId: "",
-};
-
 // Meetings arrive through the calendar rather than a preselected form address.
 type OpeningKind = "note" | "task" | "call";
-
-// The record zone keeps the entered day aligned with the stored deadline.
-function todayDay(_kind: ActivityDraft["kind"], recordZone: string): string {
-  return calendarDay(new Date(), recordZone);
-}
-
-function freshDraft(
-  recordZone: string,
-  kind: ActivityDraft["kind"] = "note",
-): ActivityDraft {
-  return { ...EMPTY_DRAFT, kind, day: todayDay(kind, recordZone) };
-}
 
 // One form serves record cards and drawers; banded callers own its frame.
 export function LogActivityForm({

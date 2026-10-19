@@ -48,16 +48,6 @@ export type ActivityDraft = {
   custom?: Record<string, unknown>;
 };
 
-// isActivityKind narrows a picked value to a kind this form logs.
-export function isActivityKind(value: string): value is ActivityDraft["kind"] {
-  return (
-    value === "note" ||
-    value === "task" ||
-    value === "call" ||
-    value === "meeting"
-  );
-}
-
 export type TaskDraft = Pick<
   ActivityDraft,
   "subject" | "body" | "day" | "assigneeId"
@@ -192,4 +182,28 @@ function meetingLinks(
     }
   }
   return links.length > 0 ? links : [record];
+}
+
+const EMPTY_DRAFT: ActivityDraft = {
+  kind: "note",
+  subject: "",
+  body: "",
+  day: "",
+  asTranscript: false,
+  assigneeId: "",
+};
+
+// The record zone keeps the entered day aligned with the stored deadline.
+export function todayDay(
+  _kind: ActivityDraft["kind"],
+  recordZone: string,
+): string {
+  return calendarDay(new Date(), recordZone);
+}
+
+export function freshDraft(
+  recordZone: string,
+  kind: ActivityDraft["kind"] = "note",
+): ActivityDraft {
+  return { ...EMPTY_DRAFT, kind, day: todayDay(kind, recordZone) };
 }
