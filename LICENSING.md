@@ -1,6 +1,6 @@
 # Licensing and the Contributor License Agreement
 
-Margince is source-available, not open source. The code is public and free to read, run and modify. Production use is free up to ten seats, and from the eleventh seat a commercial subscription applies. Nobody may host Margince as a service for others without a partner agreement. The full terms are in [LICENSE](LICENSE).
+Margince is source-available, not open source. The code is public and free to read, run and modify. Production use is free up to three seats, and from the fourth seat a commercial subscription applies. Nobody may host Margince as a service for others without a partner agreement. The full terms are in [LICENSE](LICENSE).
 
 <!-- prose:allow bold counsel's wording; the conversion is stated as legal approved it -->
 **Every release converts to the Apache License 2.0 no later than two years after it ships.** The LICENSE file of each release states its Change Date, the day that version becomes fully open source, permanently, for everyone. We describe Margince as "source-available, becomes Apache 2.0 in two years", and we do not describe it as open source before that point.
