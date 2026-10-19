@@ -37,6 +37,21 @@ const ENTRIES = [
     default: "8080",
     origin: { source: "default", name: "" },
   },
+  // A struct value is JSON with no spaces: the row that once held the table
+  // wider than its panel.
+  {
+    key: "ai.budget",
+    env: "MARGINCE_AI_BUDGET",
+    type: "struct",
+    doc: "The AI token allowance per seat and per company.",
+    roles: ["api", "worker"],
+    secret: false,
+    stored: true,
+    value:
+      '{"tokens_per_full_user":12000000,"company_monthly_tokens":null,"tokens_per_light_user":3000000}',
+    default: null,
+    origin: { source: "env", name: "MARGINCE_AI_BUDGET" },
+  },
   {
     key: "worker.concurrency",
     env: "MARGINCE_WORKER_CONCURRENCY",
