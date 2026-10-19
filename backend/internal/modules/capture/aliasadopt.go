@@ -26,13 +26,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -65,12 +63,8 @@ type adoptableMessage struct {
 func (s *Sink) adoptMailForNewIdentityTx(
 	ctx context.Context, tx pgx.Tx, seat ids.UUID, address string,
 ) error {
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return nil
-	}
-	provider := strings.TrimPrefix(actor.ID, "connector:")
-	if provider == "" || provider == actor.ID {
+	provider := deliveringConnector(ctx)
+	if provider == "" {
 		// Not a connector principal, so there is no captured mail of this
 		// seat's to adopt through this door.
 		return nil
@@ -117,7 +111,7 @@ func adoptHeldMailForIdentityTx(
 	}
 	adopted := make([]ids.ActivityID, 0, len(candidates))
 	for _, msg := range candidates {
-		if err := adoptOneMessageTx(ctx, tx, seat, posture, msg); err != nil {
+		if err := adoptOneMessageTx(ctx, tx, seat, provider, posture, msg); err != nil {
 			return nil, err
 		}
 		adopted = append(adopted, msg.id)
@@ -195,7 +189,7 @@ func adoptableMessagesTx(
 //     A held mailbox holds it, a shared one opens it, and neither needs a
 //     verdict to say so.
 func adoptOneMessageTx(
-	ctx context.Context, tx pgx.Tx, seat ids.UUID, posture string, msg adoptableMessage,
+	ctx context.Context, tx pgx.Tx, seat ids.UUID, provider, posture string, msg adoptableMessage,
 ) error {
 	inherited, err := settledVerdictForTx(ctx, tx, seat, msg.threadKey, msg.counterparty)
 	if err != nil {
@@ -215,7 +209,7 @@ func adoptOneMessageTx(
 	if openQuestion {
 		status = VerdictPending
 	}
-	if err := recordImportTx(ctx, tx, msg.id, seat, birthDecision{
+	if err := recordImportTx(ctx, tx, msg.id, seat, provider, birthDecision{
 		posture:       posture,
 		verdictStatus: status,
 	}, time.Time{}, time.Time{}); err != nil {

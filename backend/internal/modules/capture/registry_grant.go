@@ -298,6 +298,11 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 		              -- direction.
 		              signature_enrich_enabled = CASE WHEN $7 THEN NULL
 		                                              ELSE capture_connection.signature_enrich_enabled END,
+		              -- The history baseline is a date chosen for the previous account's mail.
+		              history_baseline_date = CASE WHEN $7 THEN NULL ELSE capture_connection.history_baseline_date END,
+		              history_baseline_tz = CASE WHEN $7 THEN NULL ELSE capture_connection.history_baseline_tz END,
+		              history_baseline_set_by = CASE WHEN $7 THEN NULL ELSE capture_connection.history_baseline_set_by END,
+		              history_baseline_set_at = CASE WHEN $7 THEN NULL ELSE capture_connection.history_baseline_set_at END,
 		              -- A rebind points this row at a DIFFERENT mailbox, and a
 		              -- watch handle names a subscription in the mailbox it was
 		              -- made against. Kept, it would send the next renewal to

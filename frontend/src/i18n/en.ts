@@ -2908,6 +2908,8 @@ export const en = {
     "No task was created from these readings. Review the source and later replies before adding a follow-up from a linked record.",
   "commitment.review.historical":
     "Historical commitment without a current deadline.",
+  "commitment.review.beforeBaseline":
+    "Sent before the date this mailbox suggests commitments from.",
   "commitment.review.incomplete":
     "Later messages were not fully read. The commitment may already be fulfilled.",
   "commitment.review.unknownDate": "The source date could not be verified.",
@@ -8112,6 +8114,13 @@ export const en = {
     "Follows the company setting. Changing it here gives this mailbox its own setting.",
   "connectors.signatureEnrich.ownAnswer":
     "This mailbox’s own setting, independent of the company setting.",
+  "connectors.historyBaseline.label": "Suggest commitments from",
+  "connectors.historyBaseline.help":
+    "Mail sent before this date suggests no automatic commitments for you. The mail stays captured and searchable. Changing or clearing the date completes or deletes nothing.",
+  "connectors.historyBaseline.current":
+    "Set to {date} ({zone}) for this mailbox only.",
+  "connectors.historyBaseline.save": "Save date",
+  "connectors.historyBaseline.clear": "Clear date",
   "hold.sectionTitle": "Private correspondence",
   "hold.notHeld": "Mail with this contact follows your mailbox setting.",
   "hold.heldByAddress":

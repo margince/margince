@@ -26,6 +26,7 @@ import {
   missingSendGrant,
 } from "./connector-status";
 import { ConnectorContextTagRow } from "./connectors.contexttag";
+import { HistoryBaselineRow } from "./connectors.historybaseline";
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 type MailPosture = NonNullable<CaptureConnection["mail_posture"]>;
@@ -72,6 +73,7 @@ export function ConnectionDrawer({
             <SettingList testId={`connector-${conn.provider}-settings`}>
               {mailbox && <MailPostureRow conn={conn} />}
               {mailbox && <SignatureEnrichmentRow conn={conn} />}
+              {mailbox && <HistoryBaselineRow conn={conn} />}
               <ConnectorContextTagRow conn={conn} />
             </SettingList>
           )}

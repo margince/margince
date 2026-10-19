@@ -13,6 +13,7 @@ import { Panel, PanelBody, PanelRow } from "./panel";
 type Admission = components["schemas"]["CommitmentAdmission"];
 const REASONS: Readonly<Record<string, MessageKey>> = {
   historical_without_current_deadline: "commitment.review.historical",
+  before_mailbox_history_baseline: "commitment.review.beforeBaseline",
   later_context_not_assessed: "commitment.review.incomplete",
   later_context_not_read: "commitment.review.incomplete",
   source_time_unknown: "commitment.review.unknownDate",

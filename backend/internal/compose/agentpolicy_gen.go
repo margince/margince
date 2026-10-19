@@ -915,6 +915,7 @@ var agentPolicies = map[string]agentPolicy{
 	"PUT /v1/companies/{id}/partner":                                        {Op: "upsertPartner", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/company":                                                       {Op: "putAnchorCompany", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/connectors/{provider}/context-tag":                             {Op: "setConnectorContextTag", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PUT /v1/connectors/{provider}/history-baseline":                        {Op: "setConnectorHistoryBaseline", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/connectors/{provider}/mail-posture":                            {Op: "setConnectorMailPosture", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/connectors/{provider}/signature-enrichment":                    {Op: "setConnectorSignatureEnrichment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/contacts/{id}/nudge-dismissal":                                 {Op: "dismissRelationshipNudge", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

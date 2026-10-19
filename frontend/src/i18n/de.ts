@@ -2870,6 +2870,8 @@ export const de = {
   "commitment.review.detail":
     "Aus diesen Auswertungen wurden keine Aufgaben erstellt. Prüfe die Quelle und spätere Antworten, bevor du im verknüpften Datensatz eine Folgeaufgabe anlegst.",
   "commitment.review.historical": "Ältere Zusage ohne aktuelle Frist.",
+  "commitment.review.beforeBaseline":
+    "Vor dem Datum gesendet, ab dem dieses Postfach Zusagen vorschlägt.",
   "commitment.review.incomplete":
     "Spätere Nachrichten wurden nicht vollständig gelesen. Die Zusage könnte bereits erfüllt sein.",
   "commitment.review.unknownDate":
@@ -8046,6 +8048,13 @@ export const de = {
     "Folgt der Unternehmenseinstellung. Eine Änderung hier gibt diesem Postfach eine eigene Einstellung.",
   "connectors.signatureEnrich.ownAnswer":
     "Eigene Einstellung dieses Postfachs, unabhängig von der Unternehmenseinstellung.",
+  "connectors.historyBaseline.label": "Zusagen vorschlagen ab",
+  "connectors.historyBaseline.help":
+    "Aus E-Mails vor diesem Datum werden dir keine Zusagen automatisch vorgeschlagen. Die E-Mails bleiben erfasst und durchsuchbar. Ein geändertes oder entferntes Datum erledigt oder löscht nichts.",
+  "connectors.historyBaseline.current":
+    "Für dieses Postfach auf {date} ({zone}) gesetzt.",
+  "connectors.historyBaseline.save": "Datum speichern",
+  "connectors.historyBaseline.clear": "Datum entfernen",
   "hold.sectionTitle": "Private Korrespondenz",
   "hold.notHeld":
     "E-Mails mit diesem Kontakt folgen der Einstellung deines Postfachs.",

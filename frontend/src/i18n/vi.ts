@@ -2799,6 +2799,8 @@ export const vi = {
   "commitment.review.detail":
     "Chưa tạo việc từ các kết quả này. Xem lại nguồn và phản hồi sau đó trước khi thêm việc tiếp theo từ hồ sơ liên kết.",
   "commitment.review.historical": "Cam kết cũ không có hạn chót hiện tại.",
+  "commitment.review.beforeBaseline":
+    "Gửi trước ngày hộp thư này bắt đầu gợi ý cam kết.",
   "commitment.review.incomplete":
     "Chưa đọc hết các tin nhắn sau đó. Cam kết có thể đã được hoàn thành.",
   "commitment.review.unknownDate": "Chưa xác minh được ngày của nguồn.",
@@ -7841,6 +7843,13 @@ export const vi = {
     "Theo cài đặt của công ty. Đổi ở đây thì hộp thư này sẽ có cài đặt riêng.",
   "connectors.signatureEnrich.ownAnswer":
     "Cài đặt riêng của hộp thư này, độc lập với cài đặt của công ty.",
+  "connectors.historyBaseline.label": "Gợi ý cam kết từ ngày",
+  "connectors.historyBaseline.help":
+    "Thư gửi trước ngày này sẽ không tự động gợi ý cam kết cho bạn. Thư vẫn được lưu và tìm kiếm được. Đổi hoặc xóa ngày không hoàn thành hay xóa mục nào.",
+  "connectors.historyBaseline.current":
+    "Đã đặt là {date} ({zone}), chỉ cho hộp thư này.",
+  "connectors.historyBaseline.save": "Lưu ngày",
+  "connectors.historyBaseline.clear": "Xóa ngày",
   "hold.sectionTitle": "Trao đổi riêng tư",
   "hold.notHeld": "Thư với liên hệ này tuân theo cài đặt hộp thư của bạn.",
   "hold.heldByAddress":

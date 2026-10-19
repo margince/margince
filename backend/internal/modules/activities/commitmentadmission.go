@@ -40,6 +40,7 @@ const (
 	CommitmentTimeContradicted  CommitmentAdmissionReason = "source_time_contradicted"
 	CommitmentMeetingCancelled  CommitmentAdmissionReason = "meeting_cancelled"
 	CommitmentMeetingPending    CommitmentAdmissionReason = "meeting_not_yet_held"
+	CommitmentBeforeBaseline    CommitmentAdmissionReason = "before_mailbox_history_baseline"
 )
 
 // CommitmentAdmissionInput names the source and the context actually read.

@@ -1235,6 +1235,10 @@ func (stubs) DisconnectConnector(w nethttp.ResponseWriter, r *nethttp.Request, p
 	httperr.NotImplemented(w, r, "DisconnectConnector")
 }
 
+func (stubs) SetConnectorHistoryBaseline(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
+	httperr.NotImplemented(w, r, "SetConnectorHistoryBaseline")
+}
+
 func (stubs) SetConnectorMailPosture(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
 	httperr.NotImplemented(w, r, "SetConnectorMailPosture")
 }

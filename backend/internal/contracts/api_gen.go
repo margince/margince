@@ -28405,7 +28405,12 @@ type CaptureConnection struct {
 	// and needs no word at all.
 	ContextTag *ConnectorContextTag `json:"context_tag,omitempty"`
 	CreatedAt  *time.Time           `json:"created_at,omitempty"`
-	Id         openapi_types.UUID   `json:"id"`
+
+	// HistoryBaseline The local date this mailbox's automatic commitment suggestions start from. Absent when the
+	// owner chose none, which keeps the normal policy. Set and cleared through
+	// PUT /connectors/{provider}/history-baseline.
+	HistoryBaseline *MailHistoryBaseline `json:"history_baseline,omitempty"`
+	Id              openapi_types.UUID   `json:"id"`
 
 	// LastSyncErrorClass rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log.
 	LastSyncErrorClass *string `json:"last_sync_error_class,omitempty"`
@@ -41145,6 +41150,18 @@ type MailDraftInput struct {
 	To       *[]string `json:"to,omitempty"`
 }
 
+// MailHistoryBaseline The local date this mailbox's automatic commitment suggestions start from. Absent when the
+// owner chose none, which keeps the normal policy. Set and cleared through
+// PUT /connectors/{provider}/history-baseline.
+type MailHistoryBaseline struct {
+	// Date Mail from a local day strictly before this date suggests no automatic commitments.
+	Date  openapi_types.Date `json:"date"`
+	SetAt time.Time          `json:"set_at"`
+
+	// Timezone The IANA zone the date is read in, such as Europe/Berlin.
+	Timezone string `json:"timezone"`
+}
+
 // MeResponse defines model for MeResponse.
 type MeResponse struct {
 	// AdminPasswordLink Whether THIS CALLER may issue member set-password links (`issueUserPasswordLink`) — true only when the caller holds `admin` AND the installation has no outbound-email channel AND a public base URL is configured. Deliberately a caller capability rather than a deployment-posture flag: `/me` answers every authenticated member, and a bare posture boolean would tell every rep whether the installation has email configured. Clients render the action on this, so an admin never sees a control that can only fail (ADR-0061 Amendment 1).
@@ -47235,6 +47252,15 @@ type SetLeadManualSignalRequest struct {
 
 // SetLeadManualSignalRequestFactor defines model for SetLeadManualSignalRequest.Factor.
 type SetLeadManualSignalRequestFactor string
+
+// SetMailHistoryBaselineRequest The date one mailbox's automatic commitment suggestions start from.
+type SetMailHistoryBaselineRequest struct {
+	// Date The first local day that suggests automatic commitments. Null clears the baseline.
+	Date *openapi_types.Date `json:"date"`
+
+	// Timezone The IANA zone `date` is read in. Required with a date; ignored when clearing.
+	Timezone *string `json:"timezone,omitempty"`
+}
 
 // SetMailPostureRequest What one mailbox asks of the mail it brings in.
 type SetMailPostureRequest struct {
@@ -59990,6 +60016,9 @@ type ConnectConnectorJSONRequestBody = ConnectConnectorRequest
 // SetConnectorContextTagJSONRequestBody defines body for SetConnectorContextTag for application/json ContentType.
 type SetConnectorContextTagJSONRequestBody = SetConnectorContextTagRequest
 
+// SetConnectorHistoryBaselineJSONRequestBody defines body for SetConnectorHistoryBaseline for application/json ContentType.
+type SetConnectorHistoryBaselineJSONRequestBody = SetMailHistoryBaselineRequest
+
 // SetConnectorMailPostureJSONRequestBody defines body for SetConnectorMailPosture for application/json ContentType.
 type SetConnectorMailPostureJSONRequestBody = SetMailPostureRequest
 
@@ -71501,6 +71530,9 @@ type ServerInterface interface {
 	// Disconnect the calling user's mail/calendar capture.
 	// (POST /connectors/{provider}/disconnect)
 	DisconnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	// Set the date this mailbox's automatic commitment suggestions start from.
+	// (PUT /connectors/{provider}/history-baseline)
+	SetConnectorHistoryBaseline(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
 	// Set what this mailbox asks of the mail it brings in.
 	// (PUT /connectors/{provider}/mail-posture)
 	SetConnectorMailPosture(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
@@ -74975,6 +75007,12 @@ func (_ Unimplemented) SetConnectorContextTag(w http.ResponseWriter, r *http.Req
 // Disconnect the calling user's mail/calendar capture.
 // (POST /connectors/{provider}/disconnect)
 func (_ Unimplemented) DisconnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set the date this mailbox's automatic commitment suggestions start from.
+// (PUT /connectors/{provider}/history-baseline)
+func (_ Unimplemented) SetConnectorHistoryBaseline(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -90903,6 +90941,38 @@ func (siw *ServerInterfaceWrapper) DisconnectConnector(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DisconnectConnector(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetConnectorHistoryBaseline operation middleware
+func (siw *ServerInterfaceWrapper) SetConnectorHistoryBaseline(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider CaptureProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetConnectorHistoryBaseline(w, r, provider)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -115320,6 +115390,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/connectors/{provider}/disconnect", wrapper.DisconnectConnector)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/connectors/{provider}/history-baseline", wrapper.SetConnectorHistoryBaseline)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/connectors/{provider}/mail-posture", wrapper.SetConnectorMailPosture)

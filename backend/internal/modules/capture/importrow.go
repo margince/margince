@@ -34,11 +34,11 @@ import (
 // table exists for, and it reaches this code through the replay path, where the
 // activity already exists and nothing else is written.
 //
-// Recapture fills missing transport timestamps without resetting the import
-// posture or the verdict a later step wrote.
+// Recapture fills missing transport timestamps and adds a new delivering
+// connector without resetting the import posture or the verdict a later step wrote.
 func recordImportTx(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
-	ownerUserID ids.UUID, birth birthDecision, receivedAt, sourceAt time.Time,
+	ownerUserID ids.UUID, provider string, birth birthDecision, receivedAt, sourceAt time.Time,
 ) error {
 	if ownerUserID == ids.Nil {
 		// No identifiable seat behind this capture. Nothing to attribute the
@@ -46,13 +46,7 @@ func recordImportTx(
 		// does not exist.
 		return nil
 	}
-	// The SEAT, not the connection that delivered the message. The Sink is
-	// handed a record and a principal, not the grant that produced them, so the
-	// delivering connection is not in reach here — and guessing it from the
-	// seat's newest live connection would name the wrong mailbox for anyone who
-	// has two. A seat's decisions are per seat anyway, so the column would have
-	// no reader; it lands with the code that can fill it honestly.
-	//
+	// providers comes from the authenticated principal; (seat, provider) is one connection.
 	// provider_received_at is the provider's own arrival time in THIS seat's
 	// mailbox (connector.NormalizedRecord.ProviderReceivedAt), NULL when the
 	// transport stated none or stated one outside the storable range. It is
@@ -67,16 +61,22 @@ func recordImportTx(
 	}
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
+	var providers []string
+	if provider != "" {
+		providers = []string{provider}
+	}
 	query := fmt.Sprintf(`
 		INSERT INTO capture_import (activity_id, user_id, posture_at_import, verdict_status, verdict_reason, verdict_reasons,
-		                            provider_received_at, source_occurred_at)
-		VALUES ($%d, $%d, NULLIF($%d, ''), NULLIF($%d, ''), NULLIF($%d, ''), $%d, $%d, $%d)
+		                            provider_received_at, source_occurred_at, providers)
+		VALUES ($%d, $%d, NULLIF($%d, ''), NULLIF($%d, ''), NULLIF($%d, ''), $%d, $%d, $%d, coalesce($%d::text[], '{}'))
 		ON CONFLICT (activity_id, user_id) DO UPDATE SET
 		 provider_received_at = coalesce(capture_import.provider_received_at, EXCLUDED.provider_received_at),
-		 source_occurred_at = coalesce(capture_import.source_occurred_at, EXCLUDED.source_occurred_at)
+		 source_occurred_at = coalesce(capture_import.source_occurred_at, EXCLUDED.source_occurred_at),
+		 providers = ARRAY(SELECT DISTINCT unnest(capture_import.providers || EXCLUDED.providers) ORDER BY 1)
 		WHERE (capture_import.provider_received_at IS NULL AND EXCLUDED.provider_received_at IS NOT NULL)
-		   OR (capture_import.source_occurred_at IS NULL AND EXCLUDED.source_occurred_at IS NOT NULL)`,
-		arg(activityID), arg(ownerUserID), arg(birth.posture), arg(birth.verdictStatus), arg(birth.reason), arg(birth.reasons), arg(received), arg(occurred))
+		   OR (capture_import.source_occurred_at IS NULL AND EXCLUDED.source_occurred_at IS NOT NULL)
+		   OR NOT (EXCLUDED.providers <@ capture_import.providers)`,
+		arg(activityID), arg(ownerUserID), arg(birth.posture), arg(birth.verdictStatus), arg(birth.reason), arg(birth.reasons), arg(received), arg(occurred), arg(providers))
 	if _, err := tx.Exec(ctx, query, args...); err != nil {
 		return fmt.Errorf("capture: recording the import of %s: %w", activityID, err)
 	}
@@ -160,7 +160,7 @@ func (s *Sink) recordThisImport(
 	if original, ok := rec.Fields.(ActivityFields); ok && original.Kind == kindEmail {
 		sourceAt = original.OccurredAt
 	}
-	if err := recordImportTx(ctx, tx, id, owner, birth, rec.ProviderReceivedAt, sourceAt); err != nil {
+	if err := recordImportTx(ctx, tx, id, owner, deliveringConnector(ctx), birth, rec.ProviderReceivedAt, sourceAt); err != nil {
 		return err
 	}
 	if err := stampMessageEnds(ctx, tx, id, owner, fields, rec.Counterparty); err != nil {

@@ -41,10 +41,15 @@
   list-style: none;
 }
 
-.connector-actions {
+.connector-actions,
+.connector-baseline {
   display: flex;
   align-items: center;
   gap: var(--gapActions);
+}
+
+.connector-baseline {
+  flex-wrap: wrap;
 }
 
 /* On a phone a roster row keeps its menu and chevron at the end of its first

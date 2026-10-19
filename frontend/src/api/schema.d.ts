@@ -10557,6 +10557,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/connectors/{provider}/history-baseline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
+                 */
+                provider: components["parameters"]["CaptureProvider"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the date this mailbox's automatic commitment suggestions start from.
+         * @description The mailbox owner's own answer, and only for their own mailbox: the write matches on the
+         *     authenticated user, so there is no id that reaches a colleague's connection.
+         *
+         *     Mail this mailbox delivered on a local day strictly before `date`, in `timezone`, suggests
+         *     no automatic commitments for this seat. Mail on the date itself is not excluded. The mail
+         *     stays captured and searchable, and a withheld promise is listed for review with the
+         *     reason `before_mailbox_history_baseline`.
+         *
+         *     It applies only to mail this mailbox is proven to have delivered, and only to work that
+         *     would go to this seat. A message another mailbox also delivered follows that mailbox's own
+         *     answer, and a colleague's commitments are never withheld by it. Meeting transcripts are
+         *     not mail and are never affected.
+         *
+         *     A null `date` clears it. Setting, moving or clearing the date completes, archives and
+         *     deletes nothing: it changes which new automatic suggestions are admitted. Audited like
+         *     every other change to a connection. Human-only, like every per-mailbox setting.
+         */
+        put: operations["setConnectorHistoryBaseline"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/connectors/{provider}/context-tag": {
         parameters: {
             query?: never;
@@ -22329,6 +22378,7 @@ export interface components {
              */
             readonly mail_posture?: "shared" | "classified" | "held";
             context_tag?: components["schemas"]["ConnectorContextTag"];
+            history_baseline?: components["schemas"]["MailHistoryBaseline"];
             /** Format: date-time */
             readonly created_at?: string;
             /** Format: date-time */
@@ -22372,6 +22422,32 @@ export interface components {
              *     capture must never fail over a word somebody archived afterwards.
              */
             tag_id: string | null;
+        };
+        /**
+         * @description The local date this mailbox's automatic commitment suggestions start from. Absent when the
+         *     owner chose none, which keeps the normal policy. Set and cleared through
+         *     PUT /connectors/{provider}/history-baseline.
+         */
+        MailHistoryBaseline: {
+            /**
+             * Format: date
+             * @description Mail from a local day strictly before this date suggests no automatic commitments.
+             */
+            date: string;
+            /** @description The IANA zone the date is read in, such as Europe/Berlin. */
+            timezone: string;
+            /** Format: date-time */
+            set_at: string;
+        };
+        /** @description The date one mailbox's automatic commitment suggestions start from. */
+        SetMailHistoryBaselineRequest: {
+            /**
+             * Format: date
+             * @description The first local day that suggests automatic commitments. Null clears the baseline.
+             */
+            date: string | null;
+            /** @description The IANA zone `date` is read in. Required with a date; ignored when clearing. */
+            timezone?: string;
         };
         /** @description One mailbox's answer to the nightly signature pass. */
         SetSignatureEnrichmentRequest: {
@@ -64506,6 +64582,48 @@ export interface operations {
         };
         responses: {
             /** @description The connection, with its posture as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    setConnectorHistoryBaseline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
+                 */
+                provider: components["parameters"]["CaptureProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetMailHistoryBaselineRequest"];
+            };
+        };
+        responses: {
+            /** @description The connection, with its baseline as it now stands. */
             200: {
                 headers: {
                     [name: string]: unknown;

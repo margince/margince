@@ -56,7 +56,28 @@ func (d *CommitmentDispatcher) admission(ctx context.Context, tx pgx.Tx, c Commi
 			return "", err
 		}
 	}
-	return activities.AdmitAutomaticCommitment(evidence, c.AsOf, due), nil
+	reason := activities.AdmitAutomaticCommitment(evidence, c.AsOf, due)
+	if reason != activities.CommitmentCurrent || !evidence.CapturedMail {
+		return reason, nil
+	}
+	return mailboxBaselineAdmission(ctx, tx, c, sourceID, evidence.OccurredAt)
+}
+
+// mailboxBaselineAdmission withholds current mail work when the mailbox of the
+// seat it would go to set a later history baseline. Another seat's baseline never applies.
+func mailboxBaselineAdmission(ctx context.Context, tx pgx.Tx, c Commitment, sourceID ids.UUID, occurredAt time.Time) (activities.CommitmentAdmissionReason, error) {
+	holder := c.Seat
+	if holder == nil {
+		holder = c.PrivateTo
+	}
+	if holder == nil {
+		return activities.CommitmentCurrent, nil
+	}
+	excluded, err := capture.HistoryBaselineExcludesTx(ctx, tx, ids.From[ids.ActivityKind](sourceID), *holder, occurredAt)
+	if err != nil || !excluded {
+		return activities.CommitmentCurrent, err
+	}
+	return activities.CommitmentBeforeBaseline, nil
 }
 
 func commitmentOriginalTime(ctx context.Context, tx pgx.Tx, rawID *ids.UUID) (time.Time, error) {

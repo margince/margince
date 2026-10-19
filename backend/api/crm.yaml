@@ -15970,6 +15970,48 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /connectors/{provider}/history-baseline:
+    parameters:
+      - $ref: '#/components/parameters/CaptureProvider'
+    put:
+      tags: [Connectors]
+      operationId: setConnectorHistoryBaseline
+      summary: Set the date this mailbox's automatic commitment suggestions start from.
+      description: |
+        The mailbox owner's own answer, and only for their own mailbox: the write matches on the
+        authenticated user, so there is no id that reaches a colleague's connection.
+
+        Mail this mailbox delivered on a local day strictly before `date`, in `timezone`, suggests
+        no automatic commitments for this seat. Mail on the date itself is not excluded. The mail
+        stays captured and searchable, and a withheld promise is listed for review with the
+        reason `before_mailbox_history_baseline`.
+
+        It applies only to mail this mailbox is proven to have delivered, and only to work that
+        would go to this seat. A message another mailbox also delivered follows that mailbox's own
+        answer, and a colleague's commitments are never withheld by it. Meeting transcripts are
+        not mail and are never affected.
+
+        A null `date` clears it. Setting, moving or clearing the date completes, archives and
+        deletes nothing: it changes which new automatic suggestions are admitted. Audited like
+        every other change to a connection. Human-only, like every per-mailbox setting.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetMailHistoryBaselineRequest' }
+      responses:
+        '200':
+          description: The connection, with its baseline as it now stands.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /connectors/{provider}/context-tag:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
@@ -32581,6 +32623,7 @@ components:
             AFTERWARDS; already-captured mail keeps the audience it has unless the same call asks
             for `apply_to_history`.
         context_tag: { $ref: '#/components/schemas/ConnectorContextTag' }
+        history_baseline: { $ref: '#/components/schemas/MailHistoryBaseline' }
         created_at: { type: string, format: date-time, readOnly: true }
         updated_at: { type: string, format: date-time, readOnly: true }
     ConnectorContextTag:
@@ -32628,6 +32671,37 @@ components:
 
             Validated here, at the moment it is set, rather than when a record lands: a
             capture must never fail over a word somebody archived afterwards.
+    MailHistoryBaseline:
+      type: object
+      additionalProperties: false
+      readOnly: true
+      required: [date, timezone, set_at]
+      description: |
+        The local date this mailbox's automatic commitment suggestions start from. Absent when the
+        owner chose none, which keeps the normal policy. Set and cleared through
+        PUT /connectors/{provider}/history-baseline.
+      properties:
+        date:
+          type: string
+          format: date
+          description: Mail from a local day strictly before this date suggests no automatic commitments.
+        timezone:
+          type: string
+          description: The IANA zone the date is read in, such as Europe/Berlin.
+        set_at: { type: string, format: date-time }
+    SetMailHistoryBaselineRequest:
+      type: object
+      additionalProperties: false
+      required: [date]
+      description: The date one mailbox's automatic commitment suggestions start from.
+      properties:
+        date:
+          type: [string, 'null']
+          format: date
+          description: The first local day that suggests automatic commitments. Null clears the baseline.
+        timezone:
+          type: string
+          description: 'The IANA zone `date` is read in. Required with a date; ignored when clearing.'
     SetSignatureEnrichmentRequest:
       type: object
       additionalProperties: false
