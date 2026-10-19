@@ -162,11 +162,8 @@ func (a analyticsSchemaResource) ReadResource(ctx context.Context, uri string) (
 }
 
 // analyticsVocabularyText is the vocabulary document, composed for this
-// caller. ONE writer: the resource above and the vocabulary tool's reader
-// below both serve it, so the two doors cannot drift.
-//
-// Held by: TestTheAnalyticsResourceAndTheToolReaderServeOneDocument
-// (internal/compose/analyticscustomdims_integration_test.go)
+// caller. The resource above and the tool's reader below both serve it; held by
+// TestTheAnalyticsResourceAndTheToolReaderServeOneDocument.
 //
 // With no installation database, as when the published MCP page is built, the
 // document is the prebuilt catalog's: no installation means no custom fields.

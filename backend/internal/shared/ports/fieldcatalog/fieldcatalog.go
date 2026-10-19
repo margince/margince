@@ -100,8 +100,8 @@ type FilterableReader interface {
 
 // ReportableColumn is a column an administrator opted into reporting, with
 // the label reports show it under. Opting in publishes the label and options to
-// every reader of reports over the field's object, so a consumer may pass both
-// to anyone who may read that object, without `custom_field:read`.
+// every reader of reports over the field's object. A consumer may pass both to
+// anyone who may read that object, without `custom_field:read`.
 type ReportableColumn struct {
 	Column
 	Label string

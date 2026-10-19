@@ -75,8 +75,8 @@ func dealsByColumn(ctx context.Context, e *integration.Env, column string) (Anal
 	return answer, err
 }
 
-// A field an administrator has not opted in is not a dimension: grouping by
-// it is refused by name, the same refusal any unknown field gets.
+// A field an administrator has not opted in is not a dimension. Grouping by it
+// is refused by name, the same refusal any unknown field gets.
 func TestACustomFieldIsNotADimensionUntilAnAdminOptsItIn(t *testing.T) {
 	e := integration.Setup(t)
 	_, field := territoryField(t, e)

@@ -38,10 +38,9 @@ func (d customDimension) describe(field analyticsquery.Field) analyticsquery.Fie
 }
 
 // analyticsCatalog is the populations a question may be asked of in this
-// installation: the prebuilt catalog, with every deal population extended by
-// the deal fields an administrator opted into reporting. A deal field adds no
-// row scope of its own: the deal's own scope already bounds which values a
-// reader's question reaches.
+// installation. Every deal population of the prebuilt catalog gains the deal
+// fields an administrator opted into reporting. Such a field adds no row scope
+// of its own, because the deal's scope already bounds the values a reader reaches.
 func analyticsCatalog(ctx context.Context, tx pgx.Tx) (map[string]reportSpec, error) {
 	cols, err := customfields.ReportableColumnsIn(ctx, tx, string(datasource.EntityDeal))
 	if err != nil {

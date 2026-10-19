@@ -41,8 +41,8 @@ func AnalyticsSchemaFor(ctx context.Context) analyticsquery.Schema {
 }
 
 // AnalyticsSchemaIn derives what this caller may ask about in this
-// installation, with the specs it was derived from, so the scope a question is
-// run under reads the same fields the vocabulary offered.
+// installation, and returns the specs it was derived from. The scope a question
+// runs under then reads the same fields the vocabulary offered.
 func AnalyticsSchemaIn(ctx context.Context, tx pgx.Tx) (analyticsquery.Schema, map[string]reportSpec, error) {
 	specs, err := analyticsCatalog(ctx, tx)
 	if err != nil {

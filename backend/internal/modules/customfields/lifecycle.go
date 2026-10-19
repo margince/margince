@@ -129,34 +129,34 @@ func (s *Service) Update(ctx context.Context, id ids.UUID, patch FieldPatch, ifV
 		if ifVersion != nil && *ifVersion != f.Version {
 			return apperrors.ErrVersionSkew
 		}
-		label, show, reportable := f.Label, f.ShowInCreate, f.Reportable
+		next := f
 		if patch.Label != nil {
-			label = *patch.Label
+			next.Label = *patch.Label
 			if err := serializeSchemaChange(ctx, tx, f.Object); err != nil {
 				return err
 			}
-			if err := refuseTakenLabel(ctx, tx, f.Object, id, label); err != nil {
+			if err := refuseTakenLabel(ctx, tx, f.Object, id, next.Label); err != nil {
 				return err
 			}
 		}
 		if patch.ShowInCreate != nil {
-			show = *patch.ShowInCreate
+			next.ShowInCreate = *patch.ShowInCreate
 		}
 		if patch.Reportable != nil {
 			if *patch.Reportable && !reportableType(f.Type) {
 				return &ValidationError{Errors: []FieldError{{Field: fieldReport, Code: codeUnsupportedType}}}
 			}
-			reportable = *patch.Reportable
+			next.Reportable = *patch.Reportable
 		}
 		if _, err := tx.Exec(ctx,
 			`UPDATE custom_field SET label = $1, show_in_create = $2, reportable = $3 WHERE id = $4`,
-			label, show, reportable, id); err != nil {
+			next.Label, next.ShowInCreate, next.Reportable, id); err != nil {
 			return fmt.Errorf("customfields: updating settings: %w", err)
 		}
 		if out, err = readField(ctx, tx, id); err != nil {
 			return err
 		}
-		before, after := patch.auditDiff(f, label, show, reportable)
+		before, after := patch.auditDiff(f, next)
 		if _, err := storekit.Audit(ctx, tx, "update", rbacObject, id, before, after); err != nil {
 			return fmt.Errorf("customfields: audit write: %w", err)
 		}
@@ -170,16 +170,16 @@ func (s *Service) Update(ctx context.Context, id ids.UUID, patch FieldPatch, ifV
 
 // auditDiff names only the settings the patch carried, so the trail of a
 // rename does not claim the create-dialog setting moved, and the other way.
-func (p FieldPatch) auditDiff(f lockedField, label string, show, reportable bool) (before, after map[string]any) {
+func (p FieldPatch) auditDiff(was, now lockedField) (before, after map[string]any) {
 	before, after = map[string]any{}, map[string]any{}
 	if p.Label != nil {
-		before[fieldLabel], after[fieldLabel] = f.Label, label
+		before[fieldLabel], after[fieldLabel] = was.Label, now.Label
 	}
 	if p.ShowInCreate != nil {
-		before[fieldShow], after[fieldShow] = f.ShowInCreate, show
+		before[fieldShow], after[fieldShow] = was.ShowInCreate, now.ShowInCreate
 	}
 	if p.Reportable != nil {
-		before[fieldReport], after[fieldReport] = f.Reportable, reportable
+		before[fieldReport], after[fieldReport] = was.Reportable, now.Reportable
 	}
 	return before, after
 }
