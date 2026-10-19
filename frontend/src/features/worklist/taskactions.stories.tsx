@@ -143,45 +143,6 @@ function DetailModal({
         body: TRANSCRIPT,
         occurred_at: "2026-07-27T14:00:00Z",
       }),
-    // The email a request was read out of. Unstubbed, both reads fall to the
-    // empty list envelope, and the panel formats an `occurred_at` that is not
-    // there: `RangeError: Invalid time value` from a date formatter.
-    "GET /activities/email-1": () =>
-      jsonResponse({ id: "email-1", kind: "email", body: "" }),
-    "GET /activities/email-1/email-presentation": () =>
-      jsonResponse({
-        id: "email-1",
-        lifecycle: "delivered",
-        occurred_at: "2026-07-26T08:15:00Z",
-        version: 1,
-        summary: {
-          activity_id: "email-1",
-          occurred_at: "2026-07-26T08:15:00Z",
-          version: 1,
-          subject: "Can you send the renewal paperwork?",
-          display_status: "team",
-          move: "needs_reply",
-          attachment_count: 0,
-        },
-        body: "Dana asked for the paperwork before Friday.",
-        from: [],
-        to: [],
-        cc: [],
-        bcc: [],
-        bcc_withheld: false,
-        attachments: [],
-        links: [],
-        thread: { members: [], next_cursor: null },
-        can_reply: false,
-        can_relink: false,
-        access: {
-          content_state: "available",
-          display_status: "team",
-          audience: "workspace",
-          can_change: false,
-          change_mode: "none",
-        },
-      }),
     "GET /activities/a-1": () =>
       jsonResponse({
         id: "a-1",
