@@ -2208,7 +2208,7 @@
     },
     {
       "name": "read_forecast",
-      "tokens": 826,
+      "tokens": 824,
       "agents": [],
       "required_by_cases": [
         "case21_what_are_we_closing",

@@ -10,16 +10,16 @@
   "totals": {
     "tools": 37,
     "resources": 9,
-    "tool_catalog_bytes": 125180,
+    "tool_catalog_bytes": 125170,
     "resource_catalog_bytes": 3588,
-    "approx_wire_tokens_total": 32192,
+    "approx_wire_tokens_total": 32189,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 32245,
-      "input_schema_bytes": 58834,
+      "input_schema_bytes": 58824,
       "output_schema_bytes": 25189,
-      "description_plus_input_schema_bytes": 91079
+      "description_plus_input_schema_bytes": 91069
     }
   },
   "tools": {
@@ -4515,16 +4515,16 @@
               "type": "string"
             },
             "scope_id": {
-              "description": "readings only: The team or owner, for those scopes. Refused with scope_kind=workspace, which names no subject.",
+              "description": "input_exceptions, readings only: The team or owner, for a team or owner scope_kind",
               "format": "uuid",
               "type": "string"
             },
             "scope_kind": {
-              "description": "readings only: Whose forecast. Omit for this caller's own default population; a wider one is refused.",
+              "description": "input_exceptions, readings only: Only the findings on the deals of this population. Omit for every finding you can see.",
               "enum": [
-                "workspace",
+                "owner",
                 "team",
-                "owner"
+                "workspace"
               ],
               "type": "string"
             },
