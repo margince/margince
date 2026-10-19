@@ -169,21 +169,18 @@ this number."
 The **No category** tile appears only when a deal falls in it. A tile with
 nothing in it says **"No deals"**, never an empty mark.
 
-**Open pipeline by close month**: the month each open deal is expected to
-close, with its deals, value and weighted value. Months come in calendar order.
-Deals with no close date come last, under **No close date**.
+**Open pipeline by close month**: deals, value and weighted value per expected
+close month, in calendar order. **No close date** comes last.
 
 **Open deals per company**: company, currency, open deals, value without
 weighting, and share of open pipeline. These rows stay in their own currency
 and are grouped by company *and* currency. So two currencies on one company are
 two rows.
 
-The share is of the open pipeline in the same currency. It is shown only when
-the list holds every row and no deal is hidden from you. If not, there is no
-true total to take it from.
+The share is of the open pipeline in the same currency. It shows only when the
+list holds every row and no deal is hidden from you.
 
-Where not every deal carries an amount, a note says so:
-"{priced} of {total} priced".
+Where not every deal has an amount, a note says "{priced} of {total} priced".
 
 ## Performance
 
