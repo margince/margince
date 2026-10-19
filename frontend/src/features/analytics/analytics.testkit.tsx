@@ -65,6 +65,7 @@ export type ReportsStubOpts = {
   phaseRows?: Record<string, unknown>[];
   commitmentRows?: Record<string, unknown>[];
   quietRows?: Record<string, unknown>[];
+  closeMonthRows?: Record<string, unknown>[];
   // The coverage read: a payload, a status (403 for a seat without the ops
   // grant, 404 for a fresh installation), or omitted for the default 403.
   coverage?: { status: number; body?: unknown };
@@ -227,8 +228,15 @@ type Route = Readonly<{
 
 async function reportRoute(asked: Asked, opts: ReportsStubOpts) {
   const key = asked.url.match(/\/reports\/([^/?]+)/)?.[1] ?? "";
-  opts.onRun?.(key, await asked.json());
-  return jsonResponse(reportAnswer(key, opts));
+  const body = await asked.json();
+  opts.onRun?.(key, body);
+  // One report asked by close month is its own answer, not the stage rows.
+  const groupBy = Array.isArray(body.group_by) ? body.group_by : [];
+  return jsonResponse(
+    groupBy.includes("close_month")
+      ? { ...reportAnswer(key, opts), rows: opts.closeMonthRows ?? [] }
+      : reportAnswer(key, opts),
+  );
 }
 
 // The endpoints an Analytics suite meets, and what each answers. A TABLE and

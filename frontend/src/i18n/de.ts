@@ -5389,6 +5389,7 @@ export const de = {
   "analytics.field.open_commitments": "Offene Zusagen",
   "analytics.field.open_deal_value_minor": "Offener Deal-Wert",
   "analytics.field.overdue_commitments": "Überfällige Zusagen",
+  "analytics.field.close_month": "Abschlussmonat",
   "analytics.field.owner_id": "Verantwortlich",
   "analytics.field.partner_company_id": "Partnerunternehmen",
   "analytics.field.partner_sourced": "Von Partnern vermittelt",
@@ -5706,6 +5707,9 @@ export const de = {
   "forecast.fxMissing": "Wechselkurs fehlt",
   "analytics.reportForecast": "Prognosekategorien",
   "analytics.shareOfOpenPipeline": "Anteil an offener Pipeline",
+  "analytics.reportPipelineByCloseMonth": "Offene Pipeline nach Abschlussmonat",
+  "analytics.closeMonth": "Abschlussmonat",
+  "analytics.noCloseDate": "Kein Abschlussdatum",
   "analytics.reportOpenByCompany": "Offene Deals pro Unternehmen",
   "analytics.retiredPipeline": "{name} (stillgelegt)",
   "analytics.forecastBanner":

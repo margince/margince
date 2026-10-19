@@ -5261,6 +5261,7 @@ export const vi = {
   "analytics.field.open_commitments": "Cam kết đang mở",
   "analytics.field.open_deal_value_minor": "Giá trị deal đang mở",
   "analytics.field.overdue_commitments": "Cam kết quá hạn",
+  "analytics.field.close_month": "Tháng chốt",
   "analytics.field.owner_id": "Người chịu trách nhiệm",
   "analytics.field.partner_company_id": "Công ty đối tác",
   "analytics.field.partner_sourced": "Do đối tác mang về",
@@ -5572,6 +5573,9 @@ export const vi = {
   "forecast.fxMissing": "Thiếu tỷ giá",
   "analytics.reportForecast": "Danh mục dự báo",
   "analytics.shareOfOpenPipeline": "Tỷ trọng pipeline đang mở",
+  "analytics.reportPipelineByCloseMonth": "Pipeline đang mở theo tháng chốt",
+  "analytics.closeMonth": "Tháng chốt",
+  "analytics.noCloseDate": "Chưa có ngày chốt",
   "analytics.reportOpenByCompany": "Deal đang mở theo công ty",
   "analytics.retiredPipeline": "{name} (đã ngừng dùng)",
   "analytics.forecastBanner":

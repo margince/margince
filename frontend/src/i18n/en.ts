@@ -5448,6 +5448,7 @@ export const en = {
   "analytics.field.open_commitments": "Open commitments",
   "analytics.field.open_deal_value_minor": "Open deal value",
   "analytics.field.overdue_commitments": "Overdue commitments",
+  "analytics.field.close_month": "Close month",
   "analytics.field.owner_id": "Owner",
   "analytics.field.partner_company_id": "Partner company",
   "analytics.field.partner_sourced": "Partner-sourced",
@@ -5760,6 +5761,9 @@ export const en = {
   "forecast.fxMissing": "Exchange rate missing",
   "analytics.reportForecast": "Forecast categories",
   "analytics.shareOfOpenPipeline": "Share of open pipeline",
+  "analytics.reportPipelineByCloseMonth": "Open pipeline by close month",
+  "analytics.closeMonth": "Close month",
+  "analytics.noCloseDate": "No close date",
   "analytics.reportOpenByCompany": "Open deals per company",
   "analytics.retiredPipeline": "{name} (retired)",
   "analytics.forecastBanner":
