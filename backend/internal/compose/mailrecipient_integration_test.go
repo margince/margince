@@ -24,12 +24,26 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 var emailPreviewDirectory = flag.String("email-previews", "", "write fictional production-assembled mail examples to this directory")
+
+// previewWeek is the Monday, at UTC midnight, after the current week. Rows a
+// store dates from the wall clock then always land before the week under review.
+func previewWeek(t *testing.T) time.Time {
+	t.Helper()
+	today := clocktest.Now(t).UTC().Truncate(24 * time.Hour)
+	return today.AddDate(0, 0, 7-(int(today.Weekday())+6)%7)
+}
+
+// reviewHour is the Monday morning after week, when its review is assembled.
+func reviewHour(week time.Time) time.Time {
+	return week.AddDate(0, 0, 7).Add(9*time.Hour + 30*time.Minute)
+}
 
 func exportRecipientMail(t *testing.T, name, subject, text, markup string) {
 	t.Helper()
@@ -70,7 +84,7 @@ func TestTeamMorningRanksAcrossEveryRosterMember(t *testing.T) {
 	if err != nil || len(roster) != 4 {
 		t.Fatalf("roster: %d %v", len(roster), err)
 	}
-	now := time.Date(2026, 10, 26, 9, 30, 0, 0, time.UTC)
+	now := reviewHour(previewWeek(t))
 	for i, member := range roster {
 		title, due := fmt.Sprintf("Routine customer task %d", i), now.Add(14*24*time.Hour)
 		if i == len(roster)-1 {
@@ -96,17 +110,19 @@ func TestTeamMorningRanksAcrossEveryRosterMember(t *testing.T) {
 	exportRecipientMail(t, "team-priority-de", message.Title, message.Text, emailview.Render(message))
 }
 
-func seedRecipientOutcomes(t *testing.T, e *mailEnv) {
+// seedRecipientOutcomes records a won deal and two due tasks on the Thursday of week.
+func seedRecipientOutcomes(t *testing.T, e *mailEnv, week time.Time) {
 	t.Helper()
-	e.Deals.WithClock(func() time.Time { return time.Date(2026, 10, 23, 12, 0, 0, 0, time.UTC) })
-	e.Activities.WithClock(func() time.Time { return time.Date(2026, 10, 23, 12, 0, 0, 0, time.UTC) })
+	thursday := week.AddDate(0, 0, 3).Add(12 * time.Hour)
+	e.Deals = e.Deals.WithClock(func() time.Time { return thursday })
+	e.Activities = e.Activities.WithClock(func() time.Time { return thursday })
 	pipeline, open, won := integration.DealFixture(t, e.Env)
 	deal := e.SeedDeal(t, "Northstar renewal", pipeline, open, &e.Rep1)
 	reason, detail := "verbal", "Customer accepted the renewal"
 	if _, err := e.Deals.AdvanceDeal(e.Admin(), ids.From[ids.DealKind](deal), deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: &reason, WonWithoutContractDetail: &detail}); err != nil {
 		t.Fatal(err)
 	}
-	due := time.Date(2026, 10, 23, 15, 30, 0, 0, time.UTC)
+	due := thursday.Add(3*time.Hour + 30*time.Minute)
 	for _, member := range []ids.UUID{e.Rep1, e.Rep2} {
 		title := "Send the revised Northstar quote"
 		assignee := ids.From[ids.UserKind](member)
@@ -123,9 +139,10 @@ func TestProductionRoutineRecipientPreviews(t *testing.T) {
 				e := setupWeeklyMail(t)
 				labelRecipientTeam(t, e.Env)
 				e.worker.engine = newWeeklyEngine(e.Pool)
-				now := time.Date(2026, 10, 26, 9, 30, 0, 0, time.UTC)
+				week := previewWeek(t)
+				now := reviewHour(week)
 				e.worker.now = func() time.Time { return now }
-				seedRecipientOutcomes(t, e)
+				seedRecipientOutcomes(t, e, week)
 				if _, err := e.worker.users.SaveMyLocale(e.repCtx, language); err != nil {
 					t.Fatal(err)
 				}
@@ -181,7 +198,7 @@ func TestProductionRoutineRecipientPreviews(t *testing.T) {
 }
 
 func TestProductionAccountRoomAndPrivacyPreviews(t *testing.T) {
-	expiry := time.Date(2026, 11, 15, 12, 37, 0, 0, time.UTC)
+	expiry := previewWeek(t).AddDate(0, 0, 25).Add(12*time.Hour + 37*time.Minute)
 	for _, language := range []string{"en", "de", "vi"} {
 		words := mailcopy.For(language)
 		messages := map[string]emailview.Message{
@@ -210,7 +227,7 @@ func TestProductionAccountRoomAndPrivacyPreviews(t *testing.T) {
 
 func TestAnEmptyWeekDoesNotSubmitOrSpendAnEmail(t *testing.T) {
 	e := setupWeeklyMail(t)
-	now := time.Date(2026, 10, 26, 9, 30, 0, 0, time.UTC)
+	now := reviewHour(previewWeek(t))
 	e.worker.now = func() time.Time { return now }
 	review, _, err := e.worker.engine.AssembleFor(e.repCtx, now)
 	if err != nil {
@@ -256,7 +273,9 @@ func TestProductionNoticeRecipientPreviews(t *testing.T) {
 
 func TestProductionHelpAndPartialWeekPreviews(t *testing.T) {
 	e := setupWeeklyMail(t)
-	start := time.Date(2026, 10, 19, 0, 0, 0, 0, time.UTC)
+	// A week already closed: the meeting row's created_at is the database's now(),
+	// after the week, so its occurred_at alone sets the partial boundary.
+	start := previewWeek(t).AddDate(0, 0, -21)
 	plan := weeklyPlanStore(e.Pool)
 	commitment, err := plan.AddCommitment(e.repCtx, start, weeklyplan.NewCommitment{Label: "Northstar renewal", DueOn: &start})
 	if err != nil {
@@ -268,17 +287,22 @@ func TestProductionHelpAndPartialWeekPreviews(t *testing.T) {
 	e.worker.engine = newWeeklyEngine(e.Pool)
 	since := start.Add(48 * time.Hour)
 	held, subject := "held", "Northstar customer review"
-	e.Activities.WithClock(func() time.Time { return since.Add(time.Hour) })
+	e.Activities = e.Activities.WithClock(func() time.Time { return since.Add(time.Hour) })
 	contact := e.SeedContact(t, "Northstar buyer", &e.Rep1)
 	if _, _, err := e.Activities.LogActivity(e.repCtx, activities.LogActivityInput{Kind: "meeting", Subject: &subject, OccurredAt: &since, MeetingStatus: &held, Source: "manual", Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}}}); err != nil {
 		t.Fatal(err)
 	}
-	partial, _, err := e.worker.engine.AssembleFor(e.repCtx, start.AddDate(0, 0, 7).Add(9*time.Hour))
+	partial, _, err := e.worker.engine.AssembleFor(e.repCtx, reviewHour(start))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if partial.NumericSummary == nil || partial.NumericSummary.FigureCoverage == nil || partial.NumericSummary.FigureCoverage.Meetings == nil || partial.NumericSummary.FigureCoverage.Meetings.Status != "partial" {
 		t.Fatal("production review did not retain partial meeting coverage")
+	}
+	// The mail prints the boundary in the review's frozen zone, not the zone pgx scanned it in.
+	zone, err := time.LoadLocation(partial.NumericSummary.Timezone)
+	if err != nil {
+		t.Fatal(err)
 	}
 	for _, language := range []string{"en", "de", "vi"} {
 		words := mailcopy.For(language)
@@ -290,7 +314,7 @@ func TestProductionHelpAndPartialWeekPreviews(t *testing.T) {
 		exportRecipientMail(t, "team-help-"+language, message.Title, message.Text, emailview.Render(message))
 		message = weekly.MailMessage(partial, "https://example.test", words)
 		boundary := partial.NumericSummary.FigureCoverage.Meetings.RecordedSince
-		if boundary == nil || !strings.Contains(message.Text, words.Date(*boundary)) {
+		if boundary == nil || !strings.Contains(message.Text, words.Date(boundary.In(zone))) {
 			t.Fatalf("partial coverage lost its boundary: counts=%+v body=%s", partial.Counts, message.Text)
 		}
 		exportRecipientMail(t, "weekly-partial-"+language, message.Title, message.Text, emailview.Render(message))
@@ -305,7 +329,7 @@ func TestProductionMorningRecipientPreviews(t *testing.T) {
 				b := setupBriefJob(t).withMailer(relay)
 				labelRecipientTeam(t, b.Env)
 				seedWorkFor(t, b.Env, b.Rep1, b.Rep2)
-				now := time.Date(2026, 10, 26, 9, 30, 0, 0, time.UTC)
+				now := reviewHour(previewWeek(t))
 				b.now = now
 				ctx := b.As(b.Rep1, []ids.UUID{b.Team1}, integration.AdminPerms)
 				if _, err := b.worker.users.SaveMyLocale(ctx, language); err != nil {
@@ -333,8 +357,9 @@ func TestProductionMorningRecipientPreviews(t *testing.T) {
 
 func TestATeamWeeklyWithoutAnOriginKeepsEveryContentBlock(t *testing.T) {
 	e := setupWeeklyMail(t)
-	now := time.Date(2026, 10, 26, 9, 30, 0, 0, time.UTC)
-	seedRecipientOutcomes(t, e)
+	week := previewWeek(t)
+	now := reviewHour(week)
+	seedRecipientOutcomes(t, e, week)
 	scope := identity.RoutineTeam
 	settings, err := e.worker.users.SaveMyDelivery(e.repCtx, identity.Delivery{Scope: &scope, TeamID: &e.Team1})
 	if err != nil {
