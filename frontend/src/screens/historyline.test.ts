@@ -8,11 +8,11 @@ import { de } from "../i18n/de";
 import { en, type MessageKey } from "../i18n/en";
 import { vi } from "../i18n/vi";
 import {
-  HISTORY_VERB,
   type HistoryLineFacts,
   historyLine,
   historySubject,
 } from "./historyline";
+import { HISTORY_VERB } from "./historyverbs";
 
 type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];
 
