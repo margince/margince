@@ -12,41 +12,30 @@ import (
 
 func commercialChanges(approval crmcontracts.Approval) (map[string]json.RawMessage, bool, error) {
 	switch approval.Kind {
-	case "advance_deal", "progress_deal", "update_record", "assign_owner", "lifecycle_change":
+	case previewAdvanceDeal, previewProgressDeal, toolUpdateRecord, "assign_owner", lifecycleProposalKind:
 	default:
 		return nil, false, nil
 	}
 	if approval.ProposedChange == nil {
 		return nil, true, nil
 	}
-	raw, err := json.Marshal(approval.ProposedChange)
+	args, err := commercialArguments(approval)
 	if err != nil {
 		return nil, true, err
 	}
-	var args map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &args); err != nil {
-		return nil, true, apperrors.ErrInvalidArgument
-	}
-	if _, rest := args["operation"]; rest {
-		body := args["body"]
-		args = nil
-		if err := json.Unmarshal(body, &args); err != nil {
-			return nil, true, apperrors.ErrInvalidArgument
-		}
-	}
 	switch approval.Kind {
-	case "advance_deal", "progress_deal":
-		changes := map[string]json.RawMessage{"stage_id": args["to_stage_id"]}
-		for _, key := range []string{"lost_reason", "won_without_contract_reason", "won_without_contract_detail", "note"} {
+	case previewAdvanceDeal, previewProgressDeal:
+		changes := map[string]json.RawMessage{fieldStageID: args["to_stage_id"]}
+		for _, key := range []string{"lost_reason", "won_without_contract_reason", "won_without_contract_detail", bulkParamNote} {
 			if value, ok := args[key]; ok {
 				changes[key] = value
 			}
 		}
 		return changes, true, nil
-	case "lifecycle_change":
-		return map[string]json.RawMessage{"lifecycle": args["proposed_lifecycle"]}, true, nil
+	case lifecycleProposalKind:
+		return map[string]json.RawMessage{previewLifecycle: args["proposed_lifecycle"]}, true, nil
 	case "assign_owner":
-		return map[string]json.RawMessage{"owner_id": args["owner_id"]}, true, nil
+		return map[string]json.RawMessage{bulkParamOwner: args[bulkParamOwner]}, true, nil
 	default:
 		if fields, ok := args["fields"]; ok {
 			args = nil
@@ -54,7 +43,26 @@ func commercialChanges(approval crmcontracts.Approval) (map[string]json.RawMessa
 				return nil, true, apperrors.ErrInvalidArgument
 			}
 		}
-		_, covered := args["owner_id"]
+		_, covered := args[bulkParamOwner]
 		return args, covered, nil
 	}
+}
+
+func commercialArguments(approval crmcontracts.Approval) (map[string]json.RawMessage, error) {
+	raw, err := json.Marshal(approval.ProposedChange)
+	if err != nil {
+		return nil, err
+	}
+	var args map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &args); err != nil {
+		return nil, apperrors.ErrInvalidArgument
+	}
+	if _, rest := args["operation"]; rest {
+		body := args["body"]
+		args = nil
+		if err := json.Unmarshal(body, &args); err != nil {
+			return nil, apperrors.ErrInvalidArgument
+		}
+	}
+	return args, nil
 }

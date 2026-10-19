@@ -16,12 +16,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// PreviewContextError distinguishes missing review context from changed records.
 type PreviewContextError struct{ State string }
 
 func (e *PreviewContextError) Error() string {
 	return "approval context is " + e.State
 }
 
+// MessageFault gives clients a recoverable context refusal without internal details.
 func (e *PreviewContextError) MessageFault() (code, message string) {
 	switch e.State {
 	case "incomplete":

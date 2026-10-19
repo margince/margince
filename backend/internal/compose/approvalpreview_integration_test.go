@@ -254,9 +254,11 @@ func TestOpenStagePreviewDoesNotRequireUnrelatedMaskedMoney(t *testing.T) {
 	if _, err := e.Deals.UpdateDeal(e.Admin(), deal, deals.UpdateDealInput{AmountMinor: new(int64(250000)), Currency: new("EUR")}); err != nil {
 		t.Fatal(err)
 	}
-	perms := principal.Permissions{RoleKeys: []string{"rep"}, RowScope: principal.RowScopeAll,
+	perms := principal.Permissions{
+		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeAll,
 		Objects:    map[string]principal.ObjectGrant{"deal": {Read: true}, "pipeline": {Read: true}},
-		FieldMasks: []principal.FieldMask{{Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways}}}
+		FieldMasks: []principal.FieldMask{{Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways}},
+	}
 	ctx := e.As(e.Rep1, nil, perms)
 	preview, err := e.Deals.PreviewAdvanceDeal(ctx, deal, deals.AdvanceDealInput{ToStageID: next})
 	if err != nil || len(preview.After) == 0 {

@@ -14,12 +14,12 @@ import (
 )
 
 func (r approvalPreviewReader) moneyValue(ctx context.Context, field string, value *crmcontracts.ApprovalPreviewValue, fields map[string]json.RawMessage) error {
-	if value.Kind != "number" {
+	if value.Kind != previewValueNumber {
 		return nil
 	}
 	var currency string
 	switch field {
-	case "amount_minor", "expected_arr_minor":
+	case acceptFieldAmountMinor, "expected_arr_minor":
 		if err := json.Unmarshal(fields["currency"], &currency); err != nil || currency == "" {
 			return apperrors.ErrInvalidArgument
 		}

@@ -58,7 +58,7 @@ func (s *Service) DecideWire(ctx context.Context, id ids.ApprovalID, approve boo
 	if err != nil {
 		return crmcontracts.Approval{}, err
 	}
-	return s.contextWire(ctx, a)
+	return s.committedWire(ctx, a), nil
 }
 
 // DecideEditedWire answers the edited decision with the same context as the inbox.
@@ -67,7 +67,7 @@ func (s *Service) DecideEditedWire(ctx context.Context, id ids.ApprovalID, edite
 	if err != nil {
 		return crmcontracts.Approval{}, err
 	}
-	return s.contextWire(ctx, a)
+	return s.committedWire(ctx, a), nil
 }
 
 func (s *Service) contextWire(ctx context.Context, a row) (crmcontracts.Approval, error) {
@@ -92,9 +92,7 @@ func (s *Service) DecideBundleWire(ctx context.Context, bundleID ids.UUID, appro
 		rows = append(rows, wire(member.Approval, now))
 		subjects = append(subjects, member.Approval)
 	}
-	if err := s.readDecisionContext(ctx, rows, subjects); err != nil {
-		return nil, err
-	}
+	s.readCommittedContext(ctx, rows, subjects)
 	out := make([]crmcontracts.ApprovalBundleMember, 0, len(members))
 	for index, member := range members {
 		out = append(out, crmcontracts.ApprovalBundleMember{
@@ -103,4 +101,21 @@ func (s *Service) DecideBundleWire(ctx context.Context, bundleID ids.UUID, appro
 		})
 	}
 	return out, nil
+}
+
+// A context outage must not turn a committed verdict into an apparent refusal.
+func (s *Service) readCommittedContext(ctx context.Context, rows []crmcontracts.Approval, subjects []row) {
+	if err := s.readDecisionContext(ctx, rows, subjects); err != nil {
+		s.logger().ErrorContext(ctx, "approval decisions committed but context could not be read", "err", err)
+		for i, subject := range subjects {
+			rows[i] = wire(subject, s.now())
+			rows[i].Preview = &crmcontracts.ApprovalPreview{Version: 1, State: "unavailable", Changes: []crmcontracts.ApprovalPreviewChange{}}
+		}
+	}
+}
+
+func (s *Service) committedWire(ctx context.Context, a row) crmcontracts.Approval {
+	out := []crmcontracts.Approval{wire(a, s.now())}
+	s.readCommittedContext(ctx, out, []row{a})
+	return out[0]
 }

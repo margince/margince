@@ -8,9 +8,9 @@ package compose
 import (
 	"errors"
 	"fmt"
+	"testing"
 
 	"github.com/jackc/pgx/v5"
-	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"

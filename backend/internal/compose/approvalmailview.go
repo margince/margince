@@ -42,7 +42,7 @@ func refreshApprovalNotice(ctx context.Context, pool *pgxpool.Pool, attempt noti
 		return attempt, false, err
 	}
 	if approvals.PreviewRefusal(current.Preview) != nil {
-		return attempt, false, nil
+		return attempt, false, nil //nolint:nilerr // A refused preview suppresses mail; delivery itself has not failed.
 	}
 	if approval.Summary != nil && *approval.Summary != "" {
 		attempt.Notice.Subject = *approval.Summary

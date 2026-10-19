@@ -9,11 +9,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/notices"
@@ -108,7 +108,7 @@ func TestRestagingRefreshesStalePendingContextWithoutForgettingDeclines(t *testi
 				t.Fatal(err)
 			}
 			fresh := stage()
-			if fresh == first || fresh.UUID.IsZero() {
+			if fresh == first || fresh.IsZero() {
 				t.Fatal("stale proposal was joined")
 			}
 			old, err := svc.GetWire(ctx, first)
@@ -122,7 +122,7 @@ func TestRestagingRefreshesStalePendingContextWithoutForgettingDeclines(t *testi
 			if _, err := svc.Decide(ctx, fresh, false, nil); err != nil {
 				t.Fatal(err)
 			}
-			if door == "unless_declined" && !stage().UUID.IsZero() {
+			if door == "unless_declined" && !stage().IsZero() {
 				t.Fatal("restaging forgot a human decline")
 			}
 		})
@@ -166,5 +166,45 @@ func TestBundlePreflightReleasesItsConnectionAndPropagatesInfrastructureFailure(
 	members, err := svc.DecideBundle(ctx, bundle, true, nil)
 	if err != nil || len(members) != 1 || members[0].Outcome != approvals.BundleDecided {
 		t.Fatalf("retry after recovery: %+v, %v", members, err)
+	}
+}
+
+func TestCommittedDeclinesSurvivePreviewReadFailure(t *testing.T) {
+	for _, bundled := range []bool{false, true} {
+		t.Run(fmt.Sprint(bundled), func(t *testing.T) {
+			e := integration.Setup(t)
+			ctx := e.Admin()
+			company := e.SeedCompany(t, "Harbor", &e.AdminUser)
+			raw, hash, err := diffhash.Canonical([]byte(fmt.Sprintf(`{"record_type":"company","id":%q,"fields":{"owner_id":null}}`, company)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			svc := NewApprovalsService(e.DB())
+			bundle := ids.NewV7()
+			id, err := svc.Stage(ctx, approvals.StageInput{Kind: "update_record", TargetType: "company", TargetID: company, ProposedChange: raw, DiffHash: hash, BundleID: bundle})
+			if err != nil {
+				t.Fatal(err)
+			}
+			svc.WithPreview(func(context.Context, crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
+				return nil, errors.New("preview reader unavailable")
+			})
+			var result crmcontracts.Approval
+			if bundled {
+				members, err := svc.DecideBundleWire(ctx, bundle, false, nil)
+				if err != nil || len(members) != 1 {
+					t.Fatalf("decline response: %+v, %v", members, err)
+				}
+				result = members[0].Approval
+			} else {
+				result, err = svc.DecideWire(ctx, id, false, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			stored, err := svc.Get(ctx, id)
+			if err != nil || stored.Status != "rejected" || result.Status != "rejected" || result.Preview == nil || result.Preview.State != "unavailable" {
+				t.Fatalf("committed decline lost: stored=%+v response=%+v err=%v", stored, result, err)
+			}
+		})
 	}
 }

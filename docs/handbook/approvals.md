@@ -198,10 +198,9 @@ confirmation.
 
 ## When something changed first
 
-The record may change while an approval waits. Then the app says
-"This record changed after it was staged. Stage it again before deciding." and
-offers **Reload**. So you never approve a proposal based on an older version of
-the record.
+The record may change while an approval waits. Stage the proposal again before
+approving it so the decision uses the current record. You can still reject the
+old proposal.
 
 If someone else answered first, you see "Already decided. Nothing left to do."
 Nobody can decide it a second time; that try is refused.

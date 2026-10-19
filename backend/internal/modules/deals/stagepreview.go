@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// StageTransitionPreview projects the same fields and effects as the stage writer.
 type StageTransitionPreview struct {
 	Before  json.RawMessage
 	After   json.RawMessage
@@ -86,7 +87,7 @@ func wonEffects(status string, patch *storekit.Patch) []string {
 		return nil
 	}
 	effects := []string{effectClassifyCorrespondence}
-	if _, changed := patch.After()["status"]; changed {
+	if _, changed := patch.After()[filterStatus]; changed {
 		effects = append(effects, effectStartDelivery)
 	}
 	return effects
@@ -101,9 +102,9 @@ func stagePreviewWithheld(masked *[]string, changes map[string]any, before, afte
 			return true
 		}
 		switch field {
-		case "pipeline_id", "stage_id", "status":
+		case filterPipelineID, filterStageID, filterStatus:
 			return true
-		case "amount_minor", "currency":
+		case amountField, currencyField:
 			if before != DealOpen || after != DealOpen {
 				return true
 			}

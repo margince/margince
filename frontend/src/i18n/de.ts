@@ -17,17 +17,17 @@ export const de = {
   "approval.preview.correspondence":
     "Verknüpfte Korrespondenz als Geschäftsbriefe einordnen.",
   "approval.preview.delivery":
-    "Bei berechtigten verknüpften Projekten die Lieferung starten.",
+    "Bei berechtigten verknüpften Projekten die Umsetzung starten.",
   "approval.preview.minorUnits":
     "{amount} {currency} in kleinster Währungseinheit",
   "approval.preview.empty": "Nicht gesetzt",
   "approval.preview.status": "Freigabekontext",
   "approval.preview.stale":
-    "Dieser Datensatz wurde nach dem Vorschlag geändert. Fordere vor der Freigabe einen neuen Vorschlag an.",
+    "Dieser Eintrag wurde nach dem Vorschlag geändert. Fordere vor der Freigabe einen neuen Vorschlag an.",
   "approval.preview.incomplete":
     "Die vollständige Änderung kann nicht angezeigt werden. Fordere vor der Freigabe einen neuen Vorschlag an.",
   "approval.preview.unavailable":
-    "Der Freigabekontext ist nicht verfügbar. Lade neu oder fordere einen neuen Vorschlag an.",
+    "Der Freigabekontext ist nicht verfügbar. Lade die Seite neu oder fordere einen neuen Vorschlag an.",
   "approval.preview.change": "{before} → {after}",
   "approval.preview.authorityUnknown":
     "Der Grund für deine Freigabeberechtigung ist nicht verfügbar.",
