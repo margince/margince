@@ -104,12 +104,11 @@ export function EmploymentRow({
         <InlineText
           label={t("rel.role")}
           value={employment.role ?? ""}
-          // The contact's own title stands in for a role nobody has
-          // recorded on THIS employment yet: as `placeholder`, not
-          // `value`, so it reads the way InlineText already draws an
-          // unset field (muted) rather than as a fact this edge has
-          // actually stored. The ordinary "Add title" invitation only
-          // applies when there is nothing else to suggest.
+          // The contact's own title stands in for a role nobody has recorded
+          // on this employment yet. It goes in `suggested`, so it reads as
+          // InlineText draws an unset field (muted) and not as a stored fact.
+          // The ordinary "Add title" invitation applies only when there is
+          // nothing else to suggest.
           placeholder={t("field.addTitle")}
           suggested={fallbackRole}
           canEdit={canEdit}

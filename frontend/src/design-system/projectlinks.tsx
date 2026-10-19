@@ -98,10 +98,10 @@ export type ProjectLinksAdapter = Readonly<{
   // callback: the create form, its fields and its write are the page's, and a
   // callback would leave this section owning a button with no form behind it.
   create?: ReactNode;
-  // Draw each linked record as the caller's own card instead of the plain row,
-  // for a link whose target is a record worth a mark and facts of its own (a
-  // company). `onDetach` is absent when this row's link cannot be removed from
-  // here, so the card shows no verb.
+  // Draw each linked record as the caller's own card instead of the plain row.
+  // It suits a target worth a mark and facts of its own, such as a company.
+  // `onDetach` is absent when the link cannot be removed from here, so the
+  // card shows no verb.
   card?: (
     linked: LinkedProject,
     onDetach: (() => void) | undefined,
@@ -300,9 +300,9 @@ function LinkedRows({
           <Button
             variant="ghost"
             onClick={() => onDetach(project)}
-            // Every row's verb reads the same to the eye and must not to
-            // a screen reader: a button list of five "Detach" entries
-            // cannot say which record each one takes off.
+            // Every row's verb reads the same to the eye. A screen reader
+            // needs the name, because five "Detach" buttons cannot say which
+            // record each one takes off.
             aria-label={t("projectLinks.detachNamed", { name: project.name })}
           >
             {t("projectLinks.detach")}

@@ -275,8 +275,8 @@ describe("ProjectLinks", () => {
     expect(screen.queryByText(/company\.link_project/)).toBeNull();
   });
 
-  // A caller that supplies `card` owns how a row looks; the section still owns
-  // when the verb exists, so a read-only record hands the card no way to detach.
+  // A caller that supplies `card` owns how a row looks. The section still owns
+  // when the verb exists, so a read-only record gives the card no way to detach.
   it("hands a supplied card its detach verb only while the record is writable", () => {
     const card: ProjectLinksAdapter["card"] = (linked, onDetach) => (
       <p>{`${linked.name}:${onDetach ? "can-detach" : "fixed"}`}</p>

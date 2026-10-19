@@ -4,13 +4,12 @@
 import type { ReactNode } from "react";
 import "./companycard.css";
 
-// One company a record is tied to, as a card: the mark, the name over its
-// facts, a line of its own for whatever the record says about the tie, and the
-// row's verbs at the far edge.
+// One company a record is tied to, as a card. It holds the mark, the name over
+// its facts, whatever the record says about the tie, and the row's verbs.
 //
-// The contact page's employers and the project page's companies are the same
-// question — which companies is this record connected to — so they share the
-// one card instead of each drawing a list of its own.
+// The contact page's employers and the project page's companies answer one
+// question: which companies is this record connected to. They share this card
+// instead of each drawing a list of its own.
 export function CompanyCard({
   logo,
   title,
