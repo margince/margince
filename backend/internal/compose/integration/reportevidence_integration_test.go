@@ -84,9 +84,14 @@ func (e *SearchEnv) evidenceReader() context.Context {
 // saveActivitiesByKind saves the grouped count the way run_analytics_query does.
 func saveActivitiesByKind(ctx context.Context, t *testing.T, e *SearchEnv) ids.UUID {
 	t.Helper()
+	return saveActivitiesGroupedBy(ctx, t, e, "kind")
+}
+
+func saveActivitiesGroupedBy(ctx context.Context, t *testing.T, e *SearchEnv, groupBy ...string) ids.UUID {
+	t.Helper()
 	q := analyticsquery.Query{
 		Entity:   "activities-by-kind",
-		GroupBy:  []string{"kind"},
+		GroupBy:  groupBy,
 		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "activities"}},
 	}
 	var runID ids.UUID
@@ -348,11 +353,11 @@ func TestTheWholeRunNeverOpensAWithheldCell(t *testing.T) {
 	seedEvidenceFixture(t, e)
 	var small []ids.UUID
 	for range 2 {
-		small = append(small, e.SeedID(t, `INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by)
-			VALUES ($1, 'email', 'Site visit', 'Pricing came up on site', now() - interval '1 hour', 'manual', 'human:x')`))
+		small = append(small, e.SeedID(t, `INSERT INTO activity (id, kind, direction, subject, body, occurred_at, source, captured_by)
+			VALUES ($1, 'task', 'inbound', 'Site visit', 'Pricing came up on site', now() - interval '1 hour', 'manual', 'human:x')`))
 	}
 	ctx := e.evidenceReader()
-	runID := saveActivitiesByKind(ctx, t, e)
+	runID := saveActivitiesGroupedBy(ctx, t, e, "kind", "direction")
 
 	answer := mustSearchEvidence(ctx, t, e, `{"run_id":"`+runID.String()+`","query":"pricing"}`)
 
