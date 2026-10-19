@@ -12,8 +12,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -21,17 +19,12 @@ func TestCloseDateReceiptRetainsItsWrittenLanguageAndCorrection(t *testing.T) {
 	for _, tc := range []struct{ language, phrase string }{{"en", "could not read its correspondence"}, {"de", "Korrespondenz konnte nicht gelesen"}, {"vi", "không đọc được trao đổi"}} {
 		t.Run(tc.language, func(t *testing.T) {
 			env := setupCloseDate(t)
-			settingStore := settings.New(env.Pool, settings.NewRegistry(identity.BaseLanguage))
-			if err := settings.Set(env.Admin(), settingStore, identity.BaseLanguage, tc.language); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(env.Admin(), t, env.Pool, tc.language)
 			id := env.seedSweepDeal(t, "Quiet deal", env.late, new("commit"), new(30), 90)
 			if err := env.sweep(); err != nil {
 				t.Fatal(err)
 			}
-			if err := settings.Set(env.Admin(), settingStore, identity.BaseLanguage, "en"); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(env.Admin(), t, env.Pool, "en")
 			store := deals.NewStore(env.DB(), DealsInstallation())
 			receipts, err := store.RecentCorrectionsOwnedBy(env.As(env.Rep1, []ids.UUID{env.Team1}, integration.AdminPerms), time.Time{}, 10)
 			if err != nil {

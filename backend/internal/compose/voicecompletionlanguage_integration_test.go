@@ -11,9 +11,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -24,10 +23,7 @@ func TestStaleVoiceCompletionKeepsTheBuildLanguage(t *testing.T) {
 		t.Run(tc.language, func(t *testing.T) {
 			quote := "A concrete sample from the original corpus."
 			env, build := seedVoiceBuild(t, quote, 6)
-			config := settings.New(env.e.Pool, settings.NewRegistry(identity.BaseLanguage))
-			if err := settings.Set(env.e.Admin(), config, identity.BaseLanguage, tc.language); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(env.e.Admin(), t, env.e.Pool, tc.language)
 			changed := false
 			scripted := &scriptedBuildBrain{judgeScore: .9, quote: quote}
 			brain := brainFunc(func(ctx context.Context, req model.Request) (model.Response, error) {
@@ -37,9 +33,7 @@ func TestStaleVoiceCompletionKeepsTheBuildLanguage(t *testing.T) {
 					if err != nil {
 						return model.Response{}, err
 					}
-					if err := settings.Set(env.e.Admin(), config, identity.BaseLanguage, "en"); err != nil {
-						return model.Response{}, err
-					}
+					integration.SetBaseLanguage(env.e.Admin(), t, env.e.Pool, "en")
 				}
 				return scripted.Complete(ctx, req)
 			})

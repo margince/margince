@@ -32,6 +32,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/redistest"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
@@ -59,7 +61,10 @@ func TestABootFailureAfterALaneStartedStillJoinsIt(t *testing.T) {
 	var background sync.WaitGroup
 	defer joinLanes(stopLanes, &background, laneLog)
 
-	lanes, err := startEventLanes(laneCtx, &background, workerConfig{webhookKey: "not-a-valid-signing-key"},
+	lanes, err := startEventLanes(laneCtx, &background, workerConfig{
+		webhookKey: "not-a-valid-signing-key",
+		settings:   configtest.MustLoad(t, "", blobstore.Settings()...),
+	},
 		pool, rdb, nil, compose.ModelPath{}, laneLog, &announced)
 	if err == nil {
 		t.Fatal("startEventLanes accepted a malformed webhook signing key — this test needs it to fail AFTER a lane was launched")

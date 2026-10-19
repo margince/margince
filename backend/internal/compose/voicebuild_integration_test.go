@@ -29,7 +29,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -375,10 +374,7 @@ func TestVoiceBuildStarterCorpusActivatesUnevaluated(t *testing.T) {
 func voiceStarterLanguage(t *testing.T, language, explanation string) {
 	quote := "Starter quote for a thin corpus."
 	env, build := seedVoiceBuild(t, quote, 2)
-	store := settings.New(env.e.Pool, settings.NewRegistry(identity.BaseLanguage))
-	if err := settings.Set(env.e.Admin(), store, identity.BaseLanguage, language); err != nil {
-		t.Fatal(err)
-	}
+	integration.SetBaseLanguage(env.e.Admin(), t, env.e.Pool, language)
 	worker := newVoiceBuildWorker(env.e.Pool, &scriptedBuildBrain{judgeScore: 0.9, quote: quote}, slog.New(slog.DiscardHandler))
 	if err := worker.Work(t.Context(), voiceBuildJob(env, build)); err != nil {
 		t.Fatal(err)
@@ -489,17 +485,12 @@ func TestVoiceBuildWorkWithoutABrainFailsClosed(t *testing.T) {
 	for _, tc := range []struct{ language, explanation string }{{"en", "AI provider"}, {"de", "KI-Anbieter"}, {"vi", "nhà cung cấp AI"}} {
 		t.Run(tc.language, func(t *testing.T) {
 			env, build := seedVoiceBuild(t, "Brainless quote.", 6)
-			settingStore := settings.New(env.e.Pool, settings.NewRegistry(identity.BaseLanguage))
-			if err := settings.Set(env.e.Admin(), settingStore, identity.BaseLanguage, tc.language); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(env.e.Admin(), t, env.e.Pool, tc.language)
 			worker := newVoiceBuildWorker(env.e.Pool, nil, slog.New(slog.DiscardHandler))
 			if err := worker.Work(context.Background(), voiceBuildJob(env, build)); err != nil {
 				t.Fatalf("Work: %v", err)
 			}
-			if err := settings.Set(env.e.Admin(), settingStore, identity.BaseLanguage, "en"); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(env.e.Admin(), t, env.e.Pool, "en")
 			finished, err := env.store.GetBuild(env.owner, env.profile.ID, build.ID)
 			if err != nil {
 				t.Fatal(err)

@@ -10,10 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -38,9 +35,7 @@ func TestAccountMomentLanguagePreservesDismissalAndEvidence(t *testing.T) {
 		{"de", "Sie schulden ihnen: Original promise", "Keine offenen Zusagen gegenüber diesem Unternehmen"},
 		{"vi", "Bạn cần thực hiện cho họ: Original promise", "Không có cam kết nào chưa thực hiện với công ty này"},
 	} {
-		if err := settings.Set(e.Admin(), compose.NewSettingsStore(e.Pool), identity.BaseLanguage, tc.language); err != nil {
-			t.Fatal(err)
-		}
+		integration.SetBaseLanguage(e.Admin(), t, e.Pool, tc.language)
 		hidden, err := svc.Assemble(reader, company)
 		if err != nil {
 			t.Fatal(err)

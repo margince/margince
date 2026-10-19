@@ -14,9 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -50,11 +48,8 @@ func TestDealMovementReadUsesBaseLanguageAndPreservesItsSource(t *testing.T) {
 	seatInRoom(t, owner, e.WS, prior, attendee)
 	seatUserInRoom(t, owner, prior, e.AdminUser)
 	service := meetingBriefServiceAt(e, changed.Add(time.Hour))
-	store := settings.New(e.Pool, settings.NewRegistry(identity.BaseLanguage))
 	for _, tc := range []struct{ language, prefix string }{{"en", "Since then the deal"}, {"de", "Seitdem ist der Deal"}, {"vi", "Kể từ đó, giao dịch"}} {
-		if err := settings.Set(e.Admin(), store, identity.BaseLanguage, tc.language); err != nil {
-			t.Fatal(err)
-		}
+		SetBaseLanguage(e.Admin(), t, e.Pool, tc.language)
 		brief, err := service.Get(e.Admin(), meeting)
 		if err != nil {
 			t.Fatal(err)

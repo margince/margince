@@ -288,10 +288,10 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
   }
 }
 
-// What YOU are connected to: most surfaces here read a per-user seam (the
-// server scopes the mail connectors to the caller, and LinkedIn reads `/me`), so
-// it sits in the personal group and needs no grant. The catalog marks it `mixed`
-// because ConnectorsCard's second panel is the workspace's Telegram bot, and the
+// What YOU are connected to. Most surfaces here read a per-user seam: the
+// server scopes mail connectors to the caller, and LinkedIn reads `/me`. So it
+// sits in the personal group and needs no grant. The catalog marks it `mixed`:
+// ConnectorsCard's second panel is the workspace's Telegram bot. The
 // mail-sharing row states a rule that is changed on Capture rules.
 function ConnectionsTab() {
   return (

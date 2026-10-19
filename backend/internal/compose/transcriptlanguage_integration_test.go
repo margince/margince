@@ -9,23 +9,17 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 func TestTranscriptReadingRetainsItsWrittenExplanationLanguage(t *testing.T) {
 	for _, tc := range []struct{ language, text string }{{"en", "states no next steps"}, {"de", "keine nächsten Schritte"}, {"vi", "không nêu rõ"}} {
 		t.Run(tc.language, func(t *testing.T) {
 			env := setupTranscript(t)
-			settingStore := settings.New(env.Pool, settings.NewRegistry(identity.BaseLanguage))
-			if err := settings.Set(env.Admin(), settingStore, identity.BaseLanguage, tc.language); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(env.Admin(), t, env.Pool, tc.language)
 			read := env.read(t, cannedBrain{reply: `{"proposals":[]}`})
-			if err := settings.Set(env.Admin(), settingStore, identity.BaseLanguage, "en"); err != nil {
-				t.Fatal(err)
-			}
+			integration.SetBaseLanguage(env.Admin(), t, env.Pool, "en")
 			finished, err := env.Activities.GetTranscriptRead(env.ctx, env.activity, read.ID)
 			if err != nil {
 				t.Fatal(err)

@@ -14,8 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -33,9 +31,7 @@ func TestCompanySuggestionUsesBaseLanguageWithoutChangingEvidence(t *testing.T) 
 	}
 	var baseline crmcontracts.Company360Suggestion
 	for _, language := range []string{"en", "de", "vi"} {
-		if err := settings.Set(e.Admin(), NewSettingsStore(e.Pool), identity.BaseLanguage, language); err != nil {
-			t.Fatal(err)
-		}
+		integration.SetBaseLanguage(e.Admin(), t, e.Pool, language)
 		page := pageOf(t, e, quietAccount{company: ids.From[ids.CompanyKind](company), now: now})
 		if page.Suggestions == nil {
 			t.Fatal("suggestions were omitted")

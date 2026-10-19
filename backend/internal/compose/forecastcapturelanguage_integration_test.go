@@ -14,9 +14,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -24,7 +23,6 @@ import (
 func TestForecastCaptureFailureKeepsItsWrittenLanguage(t *testing.T) {
 	e := setupForecast(t)
 	store := newForecastStoreFor(e.Pool)
-	config := settings.New(e.Pool, settings.NewRegistry(identity.BaseLanguage))
 	writer := principal.WithCorrelationID(principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:capture-language"), ids.NewV7())
 	at := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
 	// Corrupt persisted configuration exercises the worker's failed-capture path.
@@ -33,15 +31,11 @@ func TestForecastCaptureFailureKeepsItsWrittenLanguage(t *testing.T) {
 	}
 	worker := &forecastSnapshotSweepWorker{pool: e.Pool, now: func() time.Time { return at }, log: slog.New(slog.DiscardHandler)}
 	for _, tc := range []struct{ language, words string }{{"en", "Capture failed"}, {"de", "Erfassung ist fehlgeschlagen"}, {"vi", "Không thể ghi nhận"}} {
-		if err := settings.Set(reportingActor(e), config, identity.BaseLanguage, tc.language); err != nil {
-			t.Fatal(err)
-		}
+		integration.SetBaseLanguage(reportingActor(e), t, e.Pool, tc.language)
 		if err := worker.freeze(writer, e.WS); err == nil {
 			t.Fatal("invalid stored timezone must fail capture")
 		}
-		if err := settings.Set(reportingActor(e), config, identity.BaseLanguage, "en"); err != nil {
-			t.Fatal(err)
-		}
+		integration.SetBaseLanguage(reportingActor(e), t, e.Pool, "en")
 		if err := store.InTx(reportingActor(e), func(ctx context.Context, tx pgx.Tx) error {
 			status, err := store.CaptureStatusTx(ctx, tx, forecasting.Scope{Kind: "workspace"}, nil)
 			if err != nil {
