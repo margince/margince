@@ -5340,6 +5340,9 @@ export const de = {
   "analytics.setup": "Einrichtung",
   "analytics.filters": "Filter",
   "analytics.attention": "Braucht deine Aufmerksamkeit",
+  "analytics.attentionNoOwner": "Kein Verantwortlicher",
+  "analytics.attentionFindingDetail": "{owner} · {amount} betroffen",
+  "analytics.attentionReview": "Prüfen",
   "analytics.attentionChecks_one": "1 Prüfung zur Einschätzung offen",
   "analytics.attentionChecks_other": "{count} Prüfungen zur Einschätzung offen",
   "analytics.attentionChecksDetail":

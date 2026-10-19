@@ -5214,6 +5214,9 @@ export const vi = {
   "analytics.setup": "Thiết lập",
   "analytics.filters": "Bộ lọc",
   "analytics.attention": "Cần chú ý",
+  "analytics.attentionNoOwner": "Chưa giao",
+  "analytics.attentionFindingDetail": "{owner} · {amount} bị ảnh hưởng",
+  "analytics.attentionReview": "Xem xét",
   "analytics.attentionChecks_one": "1 mục kiểm tra dự báo cần trả lời",
   "analytics.attentionChecks_other": "{count} mục kiểm tra dự báo cần trả lời",
   "analytics.attentionChecksDetail":

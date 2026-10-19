@@ -39,7 +39,7 @@ The Analytics tabs are **Performance**, **Forecast**, **Pipeline**, **My outcome
 The **Forecast** section is where this period will land. The **Pipeline** section holds the pipeline reports.
 
 The **Performance** section shows outcome totals, target progress when targets are set, trends and pipeline charts.
-It also shows a **Needs your attention** list when forecast checks, unpriced deals or unread data sources need you.
+It also shows a **Needs your attention** list when forecast checks, unpriced deals or unread data sources need you. It names up to five open forecast checks one by one: the deal, what the check found, the owner and the money at stake, the most severe and largest first. **Review** opens the forecast review. When there are more checks, one line counts them all.
 The **Reports** section lists saved reports and starts a custom report with **New custom report**. A seat that cannot read saved reports gets a **Custom reports** tab instead.
 
 The **My outcomes** section shows your own open deals and meetings, for a rep only.
