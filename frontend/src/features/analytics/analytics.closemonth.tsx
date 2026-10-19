@@ -16,6 +16,7 @@ import {
   rowMoney,
 } from "./analytics.cells";
 import { CellExplain, rowDerivationUrl } from "./analytics.explain";
+import { pricedFootnote } from "./analytics.pipeline";
 
 const closeMonth = (row: ReportRow) =>
   typeof row.close_month === "string" ? row.close_month : null;
@@ -88,20 +89,37 @@ export function CloseMonthTable({
           header: t("analytics.unweighted"),
           align: "end",
           grow: true,
-          render: (row: ReportRow) => (
-            <BarFigure
-              value={rowMoney(row, "raw_minor")}
-              part={rowMoney(row, "weighted_minor")}
-              scale={scale}
-              label={t("analytics.unweighted")}
-            >
-              {formatMoneyOrAbsent(
-                rowMoney(row, "raw_minor"),
-                baseCurrency,
-                locale,
-              )}
-            </BarFigure>
-          ),
+          render: (row: ReportRow) => {
+            // A deal with no amount or no rate counts in the month and adds
+            // nothing to its total, so the shortfall is said beside it.
+            const priced = rowMoney(row, "priced_deals");
+            const footnote =
+              priced == null
+                ? null
+                : pricedFootnote(
+                    priced,
+                    rowCount(row, "deal_count"),
+                    locale,
+                    t,
+                  );
+            return (
+              <BarFigure
+                value={rowMoney(row, "raw_minor")}
+                part={rowMoney(row, "weighted_minor")}
+                scale={scale}
+                label={t("analytics.unweighted")}
+              >
+                <span className="analytics-money-cell">
+                  {formatMoneyOrAbsent(
+                    rowMoney(row, "raw_minor"),
+                    baseCurrency,
+                    locale,
+                  )}
+                  {footnote && <span className="t-caption">{footnote}</span>}
+                </span>
+              </BarFigure>
+            );
+          },
         },
         {
           key: "weighted",

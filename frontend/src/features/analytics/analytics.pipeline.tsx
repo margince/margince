@@ -50,7 +50,7 @@ const UNCATEGORISED = "";
 // The footnote for a money figure a currency the rate sheet cannot price left
 // short. Null when every counted deal was priced. The TABLE's spelling; a stat
 // card states the same gap through `analytics.forecastPriced`, as a fragment.
-function pricedFootnote(
+export function pricedFootnote(
   pricedDeals: number,
   total: number,
   locale: Locale,

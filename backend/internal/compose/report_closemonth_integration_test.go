@@ -50,4 +50,11 @@ func TestOpenPipelineGroupsByCloseMonth(t *testing.T) {
 	if len(opened.Rows) != 2 {
 		t.Errorf("November's drill-through opened %d deals, want the 2 it counted: %v", len(opened.Rows), opened.Rows)
 	}
+
+	undatedHandle := derivationURL("pipeline-current", nil, []string{"close_month"},
+		[]reportAggregate{{Fn: aggFnCount, As: "deals"}}, map[string]any{"close_month": nil}, time.Time{}, "")
+	openedUndated := e.explainReport(admin, t, "pipeline-current", undatedHandle)
+	if len(openedUndated.Rows) != 1 || openedUndated.Rows[0]["id"] != undated.String() {
+		t.Errorf("the no-close-date drill-through opened %v, want the one undated deal", openedUndated.Rows)
+	}
 }
