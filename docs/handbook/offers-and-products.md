@@ -123,11 +123,15 @@ The rate card in Margince is the **Products** list at **Settings → Products an
 To add a product to the rate card in Margince, open **Settings → Products and offers** and click **New product**.
 1. Open the account menu at the top right and choose **Settings**, then **Products and offers**.
 2. Click **New product**.
-3. Fill **Name**, **Unit price** and **Currency** (all required). If you like, also fill **SKU**, **Description**, **Unit**, **Default tax rate %** and **Billing**. **Billing period** shows only once **Billing** is **Recurring**, and then you must pick one.
-
-**Unit** is a list: Piece, Hour, Day, Month or Flat fee, and Piece if you change nothing. Each one shows in the reader's language. For any other unit, pick **Other** and type it in **Other unit**; Margince shows it as you typed it. A unit typed before the list existed, such as "Tag" or "hours", shows as the choice it names. The same list sets the unit of an offer line.
+3. Fill **Name**, **Unit price** and **Currency** (all required). If you like, also fill **SKU**, **Description**, **Unit**, **Default tax rate %**, **Billing** and **Billing period**.
 To change a price, use **Edit product** in its row's **…** menu; **Archive product** there stops using one. Without the right role the list reads "Read-only. Your role cannot change products."
 Also called: price list, price book, catalogue, SKU.
+
+**Unit** is a list: **Piece**, **Hour**, **Day**, **Month** or **Flat fee**. It is **Piece** if you change nothing. Each one shows in the reader's language. The same list sets the unit of an offer line.
+
+For any other unit, pick **Other** and type it in **Other unit**. Margince shows it as you typed it. A unit typed before the list existed, such as "Tag" or "hours", shows as the choice it names.
+
+**Billing period** shows only once **Billing** is **Recurring**, and then you must pick one.
 
 A product holds a name, a SKU if you want one, a description, a unit, a unit price and currency, and a default tax rate. It also holds its billing type: one-time or recurring, and for recurring, the period.
 

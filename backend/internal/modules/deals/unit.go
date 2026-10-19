@@ -8,25 +8,33 @@ import (
 	"strings"
 )
 
+// The unit keys. The client shows each one in its reader's language.
+const (
+	unitPiece   = "piece"
+	unitHour    = "hour"
+	unitDay     = "day"
+	unitMonth   = "month"
+	unitFlatFee = "flat_fee"
+)
+
 // defaultUnit is the unit key a product or line gets when nobody named one.
-// The client shows each key in its reader's language.
-const defaultUnit = "piece"
+const defaultUnit = unitPiece
 
 // unitSpellings maps a unit's spelling, lower-cased, to its key. Each key spells
 // itself. The client reads rows written while the unit was free text through
 // its own copy of this table, frontend/src/features/deals/productunit.tsx, and
 // backend/gates/frontendunitspellings_test.go holds the two equal.
 var unitSpellings = map[string]string{
-	"piece": "piece", "pieces": "piece", "unit": "piece", "units": "piece",
-	"pc": "piece", "pcs": "piece", "each": "piece", "item": "piece", "items": "piece",
-	"stück": "piece", "stueck": "piece", "stk": "piece", "cái": "piece",
-	"hour": "hour", "hours": "hour", "h": "hour", "hr": "hour", "hrs": "hour",
-	"stunde": "hour", "stunden": "hour", "std": "hour", "giờ": "hour",
-	"day": "day", "days": "day", "tag": "day", "tage": "day",
-	"personentag": "day", "personentage": "day", "ngày": "day",
-	"month": "month", "months": "month", "monat": "month", "monate": "month", "tháng": "month",
-	"flat_fee": "flat_fee", "flat fee": "flat_fee", "flat rate": "flat_fee", "lump sum": "flat_fee",
-	"pauschal": "flat_fee", "pauschale": "flat_fee", "festpreis": "flat_fee", "trọn gói": "flat_fee",
+	unitPiece: unitPiece, "pieces": unitPiece, "unit": unitPiece, "units": unitPiece,
+	"pc": unitPiece, "pcs": unitPiece, "each": unitPiece, "item": unitPiece, "items": unitPiece,
+	"stück": unitPiece, "stueck": unitPiece, "stk": unitPiece, "cái": unitPiece,
+	unitHour: unitHour, "hours": unitHour, "h": unitHour, "hr": unitHour, "hrs": unitHour,
+	"stunde": unitHour, "stunden": unitHour, "std": unitHour, "giờ": unitHour,
+	unitDay: unitDay, "days": unitDay, "tag": unitDay, "tage": unitDay,
+	"personentag": unitDay, "personentage": unitDay, "ngày": unitDay,
+	unitMonth: unitMonth, "months": unitMonth, "monat": unitMonth, "monate": unitMonth, "tháng": unitMonth,
+	unitFlatFee: unitFlatFee, "flat fee": unitFlatFee, "flat rate": unitFlatFee, "lump sum": unitFlatFee,
+	"pauschal": unitFlatFee, "pauschale": unitFlatFee, "festpreis": unitFlatFee, "trọn gói": unitFlatFee,
 }
 
 // UnitSpellings is the spelling-to-key table, for the gate that holds the
