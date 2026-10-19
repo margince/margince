@@ -38608,6 +38608,11 @@ export interface components {
             granted: boolean;
         };
         /**
+         * @description AI task key from the task catalog, used to localize its display name.
+         * @enum {string}
+         */
+        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "request_settlement" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
+        /**
          * @description What kind of AI work an occurrence is. Every AI task this build can run reports here,
          *     because a task that reports nothing is AI work the product performed and then denied.
          *     What a reader is SHOWN is a separate decision and belongs to the client: a complete
@@ -39781,6 +39786,8 @@ export interface components {
         };
         /** @description A staged 🟡 confirm-first action awaiting human decision. */
         Approval: {
+            /** @description For a pending commitment, whether its named task assignee cannot receive the task. True for invited, deactivated, archived, missing, or agent seats. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee. */
+            readonly assignee_inactive?: boolean;
             /**
              * Format: uuid
              * @description The member explicitly asked to decide, independent of who has permission to approve.
@@ -41716,7 +41723,7 @@ export interface components {
             /** @description Optional; unique per workspace while live. */
             sku?: string | null;
             description?: string | null;
-            /** @description 'unit' | 'hour' | 'day' | …; display only, free text. */
+            /** @description A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. A row written before the keys may hold a known spelling such as `Tag`, which a client shows as its key. Display only. */
             unit: string;
             /**
              * Format: int64
@@ -41761,7 +41768,7 @@ export interface components {
             name: string;
             sku?: string | null;
             description?: string | null;
-            /** @description Defaults to 'unit'. */
+            /** @description A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`. */
             unit?: string | null;
             /** Format: int64 */
             unit_price_minor: number;
@@ -42547,6 +42554,7 @@ export interface components {
             /** Format: uuid */
             product_id?: string | null;
             description?: string | null;
+            /** @description A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to the product's unit, else `piece`. */
             unit?: string | null;
             /**
              * Format: double
@@ -44343,6 +44351,7 @@ export interface components {
              *     that was renamed, while a reader shown `automation_run:01a0…` learns nothing.
              */
             cause_ref?: string;
+            ai_task?: components["schemas"]["AiTask"];
             /**
              * @description What `cause_ref` identifies, in words — the automation's name, the mailbox that
              *     stopped.
@@ -45761,6 +45770,7 @@ export interface components {
              *     parsed. Absent on a row that reports no shared condition.
              */
             cause_ref?: string;
+            ai_task?: components["schemas"]["AiTask"];
             /**
              * @description What `cause_ref` identifies, in words — the automation's name, the mailbox that
              *     stopped. This is the half a reader sees; the identity beside it is not drawable.

@@ -112,8 +112,13 @@ var RequireSSO = settings.Define[bool](
 // corporate login. 64 groups is generous — a map is one entry per role a
 // directory hands out, and there are six roles.
 const (
-	maxGroupRoleMapEntries = 64
-	maxGroupKeyLen         = 255
+	// MaxGroupRoleMapEntries is exported so a gate can read it: the browser
+	// disables Add group at the same number, and the contract publishes it as
+	// maxProperties. Three readings of one ceiling, held together by
+	// backend/gates/groupromapcap_test.go.
+	MaxGroupRoleMapEntries = 64
+
+	maxGroupKeyLen = 255
 )
 
 // OidcGroupRoleMap grants roles from the corporate directory: each key is a
@@ -158,8 +163,8 @@ var OidcGroupRoleMap = settings.Define[map[string]string](
 // key that was never a role cannot be stored, only become stale later by a
 // role being retired after the map was saved (the sign-in sync skips those).
 func validateGroupRoleMap(m map[string]string) error {
-	if len(m) > maxGroupRoleMapEntries {
-		return fmt.Errorf("at most %d groups may be mapped, not %d", maxGroupRoleMapEntries, len(m))
+	if len(m) > MaxGroupRoleMapEntries {
+		return fmt.Errorf("at most %d groups may be mapped, not %d", MaxGroupRoleMapEntries, len(m))
 	}
 	for group, roleKey := range m {
 		// Runes, not bytes, for the reason the provider keys count them: a

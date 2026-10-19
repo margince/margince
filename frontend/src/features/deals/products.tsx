@@ -27,6 +27,13 @@ import { ArchiveAction } from "../../screens/archive";
 import { billingOf, billingPatchOf } from "../../screens/billingclassification";
 import "../lists/listsection.css";
 import { currencyOptions } from "../../format/currencychoices";
+import {
+  OTHER_UNIT,
+  storedUnitOf,
+  unitChoiceOf,
+  unitLabel,
+  unitOptions,
+} from "./productunit";
 
 type Product = components["schemas"]["Product"];
 
@@ -75,7 +82,19 @@ function productFields(t: Translator): CreateField[] {
     { key: "name", label: "product.name", required: true },
     { key: "sku", label: "product.sku" },
     { key: "description", label: "product.description" },
-    { key: "unit", label: "product.unit", placeholder: "day" },
+    {
+      key: "unit",
+      label: "product.unit",
+      type: "select",
+      required: true,
+      options: unitOptions(t),
+    },
+    {
+      key: "unit_other",
+      label: "product.unitOtherLabel",
+      required: true,
+      showWhen: (values) => values.unit === OTHER_UNIT,
+    },
     {
       key: "unit_price",
       label: "product.unitPrice",
@@ -105,16 +124,17 @@ function productFields(t: Translator): CreateField[] {
       ],
     },
     {
+      // Only a recurring price has a period, and the server refuses one
+      // without it, so the choice appears, and is owed, only then.
       key: "billing_interval_months",
       label: "product.billingInterval",
       type: "select",
-      options: [
-        { value: "", label: t("product.billingNoInterval") },
-        ...BILLING_MONTHS.map((months) => ({
-          value: String(months),
-          label: t(CADENCE[months]),
-        })),
-      ],
+      required: true,
+      showWhen: (values) => values.billing_model === "recurring",
+      options: BILLING_MONTHS.map((months) => ({
+        value: String(months),
+        label: t(CADENCE[months]),
+      })),
     },
   ];
 }
@@ -185,8 +205,11 @@ function ProductStatus({ product }: Readonly<{ product: Product }>) {
 }
 
 function editableProduct(p: Product) {
+  const unit = unitChoiceOf(p.unit);
   return {
     ...p,
+    unit: unit.choice,
+    unit_other: unit.other,
     unit_price: String(toMajorUnits(p.unit_price_minor, p.currency)),
     billing_model: p.billing_model ?? "",
     billing_interval_months:
@@ -254,7 +277,8 @@ export function ProductsAdmin() {
           name: (values.name ?? "").trim(),
           sku: values.sku?.trim() || null,
           description: values.description?.trim() || null,
-          unit: values.unit?.trim() || null,
+          unit:
+            storedUnitOf(values.unit ?? "", values.unit_other ?? "") || null,
           unit_price_minor: toMinor(
             values.unit_price,
             values.currency || "EUR",
@@ -287,7 +311,9 @@ export function ProductsAdmin() {
             name: String(values.name).trim(),
             sku: (values.sku as string)?.trim() || null,
             description: (values.description as string)?.trim() || null,
-            unit: (values.unit as string)?.trim() || undefined,
+            unit:
+              storedUnitOf(text(values.unit), text(values.unit_other)) ||
+              undefined,
             // The form's currency, else the product's stored one: the same value the
             // PATCH below sends, so the amount and its scale cannot disagree. Narrowed,
             // not asserted: `as string` on an undefined value would silently scale the
@@ -417,6 +443,11 @@ export function ProductsAdmin() {
             sort: "unit_price_minor",
             cell: (p: Product) => <ProductPrice product={p} />,
             numeric: true,
+          },
+          {
+            key: "unit",
+            header: t("product.unit"),
+            cell: (p: Product) => unitLabel(p.unit, t),
           },
           {
             key: "billing",

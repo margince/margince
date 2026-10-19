@@ -4,6 +4,7 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { type DecisionApproval, decisionLapsed } from "./decisioncard";
 import type {
+  DecisionDeckChips,
   DecisionDeckItem,
   DeckVerdict,
   StagedDecision,
@@ -100,6 +101,7 @@ export function itemLapsed(item: DecisionDeckItem, now: number): boolean {
  * chip could truthfully report either way.
  */
 export type DecisionSharedFacts = Readonly<{
+  memberCount?: number;
   kind?: string;
   proposedBy?: string;
   confidence?: number;
@@ -117,6 +119,7 @@ export type DecisionSharedFacts = Readonly<{
 export function sharedFacts(item: DecisionDeckItem): DecisionSharedFacts {
   const members = item.kind === "single" ? [item.approval] : item.members;
   return {
+    memberCount: members.length,
     kind: agreed(members, (member) => member.kind),
     proposedBy: agreed(members, (member) => member.proposed_by),
     confidence: agreed(members, (member) => member.confidence),
@@ -200,4 +203,18 @@ export function deckKeyHandler({
  */
 export function verdictSends(entry: StagedDecision): boolean {
   return entry.verdict === "accept" || entry.verdict === "reject";
+}
+
+export function itemAcceptable(
+  item: DecisionDeckItem,
+  now: number,
+  chips?: (
+    approval: DecisionApproval,
+    shared: DecisionSharedFacts,
+  ) => DecisionDeckChips,
+): boolean {
+  if (itemLapsed(item, now)) return false;
+  const members = item.kind === "single" ? [item.approval] : item.members;
+  const shared = sharedFacts(item);
+  return members.every((member) => chips?.(member, shared).canAccept !== false);
 }

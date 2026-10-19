@@ -39,11 +39,17 @@ import {
   resolveDisplay,
   stagedDayFormatter,
 } from "../automations/approvaldisplay";
+import { ApprovalEvidence } from "../automations/approvalevidence";
 import {
+  approvalAcceptLabel,
+  approvalExpiryLabel,
   approvalKindLabel,
   decisionSkewKey,
 } from "../automations/approvalkind";
-import { useApprovalNames } from "../automations/approvalresponsibility";
+import {
+  approvalAcceptable,
+  useApprovalNames,
+} from "../automations/approvalresponsibility";
 import { worklistLaneHref } from "../worklist/worklist.header";
 import { worklistKey } from "../worklist/worklist.queries";
 import { commitTray } from "./brief.decisions.commit";
@@ -60,12 +66,14 @@ import { commitTray } from "./brief.decisions.commit";
 // than shared with the Decisions row for the same reason `deckLabels` is: what a
 // countdown is CALLED belongs to the screen showing it, and the deck's own
 // vocabulary is already divergent ("Later" is a verdict only it offers).
-function statusLabels(t: Translator, locale: Locale): DecisionStatusLabels {
+function statusLabels(
+  t: Translator,
+  locale: Locale,
+  kind: string,
+): DecisionStatusLabels {
   return {
     expiresIn: (msRemaining) =>
-      t("decision.expiresIn", {
-        countdown: formatCountdown(msRemaining, t, locale),
-      }),
+      approvalExpiryLabel(kind, formatCountdown(msRemaining, t, locale), t),
     approved: t("decision.status.approved"),
     rejected: t("decision.status.rejected"),
     expired: t("decision.status.expired"),
@@ -130,6 +138,7 @@ function deckLabels(
       }),
     commit: t("brief.deck.commit"),
     commitNothingToSend: t("brief.deck.commitNothingToSend"),
+    acceptanceChanged: t("brief.deck.acceptanceChanged"),
     unstage: t("brief.deck.unstage"),
     clearedTitle: t("brief.deck.clearedTitle"),
     cleared: (count) =>
@@ -310,6 +319,15 @@ export function DecisionsSection({
         // of the siblings it was staged with. A chip makes a claim about the
         // ACT; the body shows one proposal in the set.
         chips={(approval, shared) => ({
+          canAccept: approvalAcceptable(approval),
+          detail: <ApprovalEvidence approval={approval} />,
+          acceptLabel: approvalAcceptLabel(
+            shared.kind,
+            plural,
+            t("brief.approval.approve"),
+            locale,
+            shared.memberCount,
+          ),
           meta: (
             <>
               {shared.kind !== undefined && (
@@ -324,7 +342,7 @@ export function DecisionsSection({
                 approval={approval}
                 decided={false}
                 now={nowMs}
-                labels={statusLabels(t, locale)}
+                labels={statusLabels(t, locale, approval.kind)}
               />
             </>
           ),
@@ -343,6 +361,7 @@ export function DecisionsSection({
             stagedDay,
             approvalNames,
             approval.requested_decider_id,
+            approval.assignee_inactive,
           ),
         })}
       />
