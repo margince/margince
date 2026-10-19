@@ -66,6 +66,11 @@ export const routes: readonly MockRoute[] = [
     path: "/installation/settings",
     handle: reply(session.installationSettings),
   },
+  {
+    method: "GET",
+    path: "/installation/configuration",
+    handle: reply(session.installationConfiguration),
+  },
   // An installation with the demo source composed in and nothing connected.
   {
     method: "GET",
