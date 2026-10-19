@@ -6,6 +6,8 @@ package capture
 import (
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 func berlinBaseline(day string) *HistoryBaseline {
@@ -86,7 +88,7 @@ func TestEveryDeliveringMailboxMustExcludeTheMessage(t *testing.T) {
 
 func TestABaselineInAZoneTheHostCannotLoadFails(t *testing.T) {
 	baseline := HistoryBaseline{Date: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), Timezone: "Mars/Olympus"}
-	if _, err := baseline.Excludes(time.Now()); err == nil {
+	if _, err := baseline.Excludes(clocktest.Now(t)); err == nil {
 		t.Error("an unknown zone excluded nothing and reported no error")
 	}
 }

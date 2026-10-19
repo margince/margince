@@ -6,6 +6,7 @@ package compose
 import (
 	"errors"
 	"net/http"
+	"slices"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -14,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // noMailBaseline is what the baseline door says to a calendar connection.
@@ -31,6 +33,10 @@ func (h connectorHandlers) SetConnectorHistoryBaseline(w http.ResponseWriter, r 
 	}
 	var req crmcontracts.SetMailHistoryBaselineRequest
 	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if req.Date == nil && !slices.Contains(httperr.ClearedFields(r), "date") {
+		httperr.Write(w, r, &values.ParseError{Field: "date", Code: "date_required", Message: "send a date, or null to clear the baseline"})
 		return
 	}
 	var date *time.Time

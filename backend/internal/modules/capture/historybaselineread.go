@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -43,14 +42,17 @@ func SeatHistoryBaselinesTx(ctx context.Context, tx pgx.Tx, activityID ids.Activ
 	var delivered []string
 	var importedAt time.Time
 	var legacyProvider string
+	var legacy bool
 	err := tx.QueryRow(ctx, `
 		SELECT ci.source_occurred_at, ci.delivered_by, ci.imported_at,
 		       a.captured_by = 'connector:' || split_part(a.captured_by, ':', 2) || ':' || ci.user_id::text,
-		       split_part(a.captured_by, ':', 2)
+		       split_part(a.captured_by, ':', 2),
+		       NOT EXISTS (SELECT 1 FROM unnest(ci.delivered_by) AS d(mailbox)
+		                    WHERE split_part(d.mailbox, ':', 1) = split_part(a.captured_by, ':', 2))
 		  FROM capture_import ci
 		  JOIN activity a ON a.id = ci.activity_id AND a.restricted_at IS NULL
 		 WHERE ci.activity_id = $1 AND ci.user_id = $2`, activityID, seat).
-		Scan(&out.SourceAt, &delivered, &importedAt, &out.FirstCapture, &legacyProvider)
+		Scan(&out.SourceAt, &delivered, &importedAt, &out.FirstCapture, &legacyProvider, &legacy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return SeatHistoryBaselines{}, nil
 	}
@@ -60,7 +62,7 @@ func SeatHistoryBaselinesTx(ctx context.Context, tx pgx.Tx, activityID ids.Activ
 	if out.Baselines, err = deliveredBaselinesTx(ctx, tx, seat, delivered); err != nil {
 		return SeatHistoryBaselines{}, err
 	}
-	if out.FirstCapture && !deliveredThrough(delivered, legacyProvider) {
+	if out.FirstCapture && legacy {
 		legacy, err := legacyBaselineTx(ctx, tx, seat, legacyProvider, importedAt)
 		if err != nil {
 			return SeatHistoryBaselines{}, err
@@ -106,15 +108,6 @@ func legacyBaselineTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, provider st
 		return nil, fmt.Errorf("capture: reading the %s baseline of %s: %w", provider, seat, err)
 	}
 	return []*HistoryBaseline{c.baseline()}, nil
-}
-
-func deliveredThrough(delivered []string, provider string) bool {
-	for _, mailbox := range delivered {
-		if strings.HasPrefix(mailbox, provider+":") {
-			return true
-		}
-	}
-	return false
 }
 
 func allExclude(baselines []*HistoryBaseline, at time.Time) (bool, error) {

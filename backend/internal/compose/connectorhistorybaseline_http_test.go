@@ -35,6 +35,13 @@ func TestAHistoryBaselineOnAMailboxTheCallerHasNotConnectedReadsAsAbsent(t *test
 	}
 }
 
+func TestAHistoryBaselineWithNoDateKeyIsRefusedRatherThanCleared(t *testing.T) {
+	h := connectorHandlers{registry: capture.NewRegistry(nil, nil, deadAuthority{}, nil)}
+	if got := putHistoryBaseline(h, "gmail", `{"timezone":"Europe/Berlin"}`); got != http.StatusUnprocessableEntity {
+		t.Errorf("status = %d, want 422: only an explicit null clears", got)
+	}
+}
+
 func TestAHistoryBaselineWithNoRegistryComposedIsUnwired(t *testing.T) {
 	var h connectorHandlers
 	if got := putHistoryBaseline(h, "gmail", `{"date":null}`); got != http.StatusNotImplemented {
