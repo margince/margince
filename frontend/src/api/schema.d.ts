@@ -39843,8 +39843,50 @@ export interface components {
             /** @description 1-based line numbers within the source record's body that this claim was read from, for a source whose body is line-addressed (a meeting transcript today, (ADR-0058): line N is the Nth newline-split segment of activity.body). Absent for a source that is not line-addressed. */
             source_lines?: number[];
         };
+        ApprovalPreviewValue: {
+            /** @description How the reader should format this value. */
+            kind: string;
+            /** @description Authorized readable value, or a lifecycle code for translation. */
+            text: string;
+            /** @description ISO currency of a money value in minor units. */
+            currency?: string;
+            entity_type?: string;
+            /** Format: uuid */
+            entity_id?: string;
+        };
+        ApprovalPreviewChange: {
+            /** @description Canonical field name, translated by the client where known. */
+            field: string;
+            before: components["schemas"]["ApprovalPreviewValue"];
+            after: components["schemas"]["ApprovalPreviewValue"];
+        };
+        /** @description Authorized context that must be considered separately from the proposed effect. */
+        ApprovalPreviewConflict: {
+            kind: string;
+            /** @description A sanitized explanation containing only facts this reader may see. */
+            summary: string;
+            /** @description Whether the domain requires reconciliation before this proposal can be approved. */
+            blocks_approval: boolean;
+        };
+        /** @description A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. */
+        ApprovalPreview: {
+            /** @description Additional business effects released by this approval. Other proposals remain separate decisions. */
+            effects?: string[];
+            /** @description Current evidence resolved with the reader's source permissions. An empty array replaces historical evidence. */
+            evidence?: components["schemas"]["ApprovalEvidence"][];
+            version: number;
+            /** @description Whether the full effect can still be explained from authorized records. */
+            state: string;
+            changes: components["schemas"]["ApprovalPreviewChange"][];
+            /** @description Why this reader can answer the proposal, separate from its business reason. */
+            reviewer_reason: string;
+            current_version?: number;
+            /** @description Current authorized conflicts. Absence means they were not assessed, not that none exist. Related proposals remain separate decisions; approving this proposal never approves them. */
+            conflicts?: components["schemas"]["ApprovalPreviewConflict"][];
+        };
         /** @description A staged 🟡 confirm-first action awaiting human decision. */
         Approval: {
+            preview?: components["schemas"]["ApprovalPreview"];
             /** @description For a pending commitment, whether its named task assignee cannot receive the task. True for invited, deactivated, archived, missing, or agent seats. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee. */
             readonly assignee_inactive?: boolean;
             /**

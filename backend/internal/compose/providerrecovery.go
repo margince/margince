@@ -49,7 +49,7 @@ func NewProviderRecovery(pool *pgxpool.Pool) *ProviderRecovery {
 		pool:      pool,
 		pending:   capture.NewPendingStore(InstallationDB(pool)),
 		enrich:    capture.NewAutoEnrichStore(InstallationDB(pool)),
-		approvals: newApprovalsService(InstallationDB(pool)),
+		approvals: NewApprovalsService(InstallationDB(pool)),
 	}
 }
 

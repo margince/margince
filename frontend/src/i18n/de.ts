@@ -5,6 +5,38 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de = {
+  "approval.preview.nameUnavailable": "Name nicht verfügbar",
+  "approval.preview.structured": "Strukturierter Wert: {value}",
+  "approval.preview.resolveConflict":
+    "Kläre die widersprüchlichen Angaben, bevor du diese Änderung freigibst.",
+  "history.field.closed_at": "Abgeschlossen am",
+  "history.field.amount_minor_base": "Betrag in Basiswährung",
+  "approval.preview.conflict": "Widersprüchlicher Kontext",
+  "approval.preview.execution": "Wird beim Anwenden festgelegt",
+  "approval.preview.effects": "Weitere Änderungen",
+  "approval.preview.correspondence":
+    "Verknüpfte Korrespondenz als Geschäftsbriefe einordnen.",
+  "approval.preview.delivery":
+    "Bei berechtigten verknüpften Projekten die Lieferung starten.",
+  "approval.preview.minorUnits":
+    "{amount} {currency} in kleinster Währungseinheit",
+  "approval.preview.empty": "Nicht gesetzt",
+  "approval.preview.status": "Freigabekontext",
+  "approval.preview.stale":
+    "Dieser Datensatz wurde nach dem Vorschlag geändert. Fordere vor der Freigabe einen neuen Vorschlag an.",
+  "approval.preview.incomplete":
+    "Die vollständige Änderung kann nicht angezeigt werden. Fordere vor der Freigabe einen neuen Vorschlag an.",
+  "approval.preview.unavailable":
+    "Der Freigabekontext ist nicht verfügbar. Lade neu oder fordere einen neuen Vorschlag an.",
+  "approval.preview.change": "{before} → {after}",
+  "approval.preview.authorityUnknown":
+    "Der Grund für deine Freigabeberechtigung ist nicht verfügbar.",
+  "approval.preview.reviewer": "Freigabeberechtigung",
+  "approval.preview.requested":
+    "Du wurdest gebeten, diesen Vorschlag zu prüfen.",
+  "approval.preview.onBehalf":
+    "Der Agent hat diese Änderung in deinem Namen vorgeschlagen.",
+  "approval.preview.authority": "Du darfst diese Änderung vornehmen.",
   "aiWait.provider":
     "Der KI-Anbieter ist nicht erreichbar. Die Arbeit wird automatisch fortgesetzt, sobald er wieder verfügbar ist.",
   "aiWait.budget":

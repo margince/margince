@@ -211,7 +211,7 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 	// no digest, so a source reading a database it does not have would fail on
 	// a path that never counts anything.
 	if pool != nil {
-		r = r.WithDigestReview(newDigestReviewSource(pool, newApprovalsService(db)))
+		r = r.WithDigestReview(newDigestReviewSource(pool, NewApprovalsService(db)))
 	}
 	// The standing IMAP connector needs no deployment config — credentials
 	// are per-connection, vault-sealed — so every capture-capable role
@@ -288,7 +288,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// composes a sink gets the same one — the worker runs mail capture and
 		// never sees the api's options.
 		WithFileKeeper(capturedFileKeeper{store: activities.NewStore(InstallationDB(pool)).WithBlobstore(cfg.Blob)}).
-		WithStager(mergeStager{svc: newApprovalsService(InstallationDB(pool))}).
+		WithStager(mergeStager{svc: NewApprovalsService(InstallationDB(pool))}).
 		WithBaseLanguage(installationLanguage(pool)).
 		// The ADR-0063 auto-create pipeline: every captured mail ensures
 		// its counterparty exists, through the contacts module's ONE dedupe

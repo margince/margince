@@ -9,7 +9,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
@@ -17,7 +16,7 @@ import (
 )
 
 func (w *weeklyGenerateWorker) openTasksMail(ctx context.Context, review weekly.Review, now time.Time, words mailcopy.Copy) (emailview.Content, error) {
-	service := newAttentionService(w.pool, approvals.NewService(InstallationDB(w.pool)), func() time.Time { return now })
+	service := newAttentionService(w.pool, NewApprovalsService(InstallationDB(w.pool)), func() time.Time { return now })
 	hours, _, err := w.users.MyWorkingHours(ctx)
 	if err != nil {
 		return emailview.Content{}, err

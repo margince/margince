@@ -3,6 +3,34 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "approval.preview.nameUnavailable": "Name unavailable",
+  "approval.preview.structured": "Structured value: {value}",
+  "approval.preview.resolveConflict":
+    "Resolve the conflicting context before approving this change.",
+  "history.field.closed_at": "Closed on",
+  "history.field.amount_minor_base": "Amount in base currency",
+  "approval.preview.conflict": "Conflicting context",
+  "approval.preview.execution": "Set when applied",
+  "approval.preview.effects": "Also changes",
+  "approval.preview.correspondence":
+    "Classify linked correspondence as business records.",
+  "approval.preview.delivery": "Start delivery on eligible linked projects.",
+  "approval.preview.minorUnits": "{amount} {currency} minor units",
+  "approval.preview.empty": "Not set",
+  "approval.preview.status": "Approval context",
+  "approval.preview.stale":
+    "This record changed after the proposal. Request a new proposal before approving.",
+  "approval.preview.incomplete":
+    "The full change cannot be shown. Request a new proposal before approving.",
+  "approval.preview.unavailable":
+    "Approval context is unavailable. Reload or request a new proposal.",
+  "approval.preview.change": "{before} → {after}",
+  "approval.preview.authorityUnknown":
+    "The reason you can review this change is unavailable.",
+  "approval.preview.reviewer": "Review authority",
+  "approval.preview.requested": "You were asked to review this proposal.",
+  "approval.preview.onBehalf": "The agent proposed this change on your behalf.",
+  "approval.preview.authority": "You have permission to make this change.",
   "aiWait.provider":
     "The AI provider is unavailable. This work resumes automatically when it recovers.",
   "aiWait.budget":

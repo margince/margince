@@ -233,6 +233,7 @@ func checkPin(
 // short-circuits silently — the human approves a row that anyone may then
 // change before the authorized call lands.
 var versionTables = map[string]bool{
+	"stage":      true,
 	tableContact: true, tableCompany: true, tableDeal: true, tableLead: true, objectActivity: true,
 	targetOffer: true, targetProduct: true, tableList: true, targetTag: true, targetRelationship: true,
 	tableProject: true, targetSavedView: true, targetOfferTemplate: true, targetWebhookSubscription: true,

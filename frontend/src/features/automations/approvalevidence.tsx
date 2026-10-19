@@ -12,7 +12,6 @@ export function ApprovalEvidence({
   const t = useT();
   const zone = useRecordZone();
   const [opened, setOpened] = useState<string | null>(null);
-  if (approval.kind !== "commitment_task") return null;
   const legacySource = approval.proposed_change?.source_activity_id;
   const source =
     approval.target_entity_type === "activity" && approval.target_entity_id
@@ -20,7 +19,21 @@ export function ApprovalEvidence({
       : typeof legacySource === "string"
         ? legacySource
         : null;
-  if (!source) {
+  const sources = approval.preview?.evidence
+    ? [
+        ...new Set(
+          approval.preview.evidence.flatMap((item) =>
+            item.source_type === "activity" && item.source_id
+              ? [item.source_id]
+              : [],
+          ),
+        ),
+      ]
+    : approval.kind === "commitment_task" && source
+      ? [source]
+      : [];
+  if (sources.length === 0 && approval.kind !== "commitment_task") return null;
+  if (sources.length === 0) {
     return (
       <SurfaceState
         label={t("stat.evidence")}
@@ -34,7 +47,9 @@ export function ApprovalEvidence({
   }
   return (
     <>
-      <SourceEvidence activityId={source} onOpenTranscript={setOpened} />
+      {sources.map((id) => (
+        <SourceEvidence key={id} activityId={id} onOpenTranscript={setOpened} />
+      ))}
       <OpenActivityDrawer
         activityId={opened}
         zone={zone}

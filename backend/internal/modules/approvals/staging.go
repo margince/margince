@@ -172,6 +172,16 @@ func (s *Service) stageOrJoinPendingInTx(ctx context.Context, tx pgx.Tx, in Stag
 			ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, joinArgs...).Scan(&id)
 	switch {
 	case err == nil:
+		stale, err := withdrawStalePendingInTx(ctx, tx, id)
+		if err != nil {
+			return ids.ApprovalID{}, err
+		}
+		if stale {
+			id, err = s.insertProposalInTx(ctx, tx, in)
+			if err != nil {
+				return ids.ApprovalID{}, err
+			}
+		}
 		if err := s.rebundleJoinedInTx(ctx, tx, in, id); err != nil {
 			return ids.ApprovalID{}, err
 		}

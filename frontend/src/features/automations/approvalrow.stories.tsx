@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
 import type { Locale } from "../../i18n";
+import { commercialApproval } from "../../testing/commercial-approval";
 import {
   installFetchStub,
   jsonResponse,
@@ -273,6 +274,39 @@ export const InactiveAssignee: Story = {
           summary: "Send the revised scope",
           party: "Alex Beck",
           seat_id: "assignee",
+        },
+      })}
+    />
+  ),
+};
+
+export const CommercialDecision: Story = {
+  render: () => <Row subject={commercialApproval()} />,
+};
+
+export const CommercialDecisionGerman: Story = {
+  render: () => <Row locale="de" subject={commercialApproval()} />,
+};
+
+export const CommercialDecisionVietnamese: Story = {
+  render: () => <Row locale="vi" subject={commercialApproval()} />,
+};
+
+export const CommercialDecisionDark: Story = {
+  ...CommercialDecision,
+  globals: { theme: "dark" },
+};
+
+export const StaleCommercialDecision: Story = {
+  render: () => (
+    <Row
+      subject={commercialApproval({
+        preview: {
+          version: 1,
+          state: "stale",
+          current_version: 4,
+          reviewer_reason: "requested_decider",
+          changes: [],
         },
       })}
     />

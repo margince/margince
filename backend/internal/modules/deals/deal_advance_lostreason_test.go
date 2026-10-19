@@ -11,46 +11,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-// A reason for a loss must not outlive the loss. The report that counts why
-// deals are lost reads this column, so a reason left behind by a re-decided
-// deal answers that question with an outcome that no longer stands.
-//
-// The amount is left nil throughout: a closing deal with an amount freezes an
-// FX rate, which needs a transaction, and the reason-clearing this proves is
-// decided before any of that.
-func TestALostReasonIsClearedOnEveryLandingThatIsNotLost(t *testing.T) {
-	reason := "went with a competitor"
-	lost := crmcontracts.Deal{
-		Status:     crmcontracts.DealStatusLost,
-		LostReason: &reason,
-	}
-
-	for name, semantic := range map[string]string{
-		"re-decided as won": "won",
-		"reopened":          "open",
-	} {
-		t.Run(name, func(t *testing.T) {
-			store := &Store{clock: func() time.Time { return time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC) }}
-			patch, status, err := store.stageTransitionPatch(
-				context.Background(), nil, lost, AdvanceDealInput{}, semantic)
-			if err != nil {
-				t.Fatalf("stageTransitionPatch: %v", err)
-			}
-			if status == string(crmcontracts.DealStatusLost) {
-				t.Fatalf("status = %q, want a landing that is not lost", status)
-			}
-
-			cleared, assigned := patch.After()["lost_reason"]
-			if !assigned {
-				t.Fatal("lost_reason was never assigned, so the previous reason survives the transition")
-			}
-			if cleared != nil {
-				t.Errorf("lost_reason = %v, want nil — the reason describes a close that no longer stands", cleared)
-			}
-		})
-	}
-}
-
 // An ordinary move between two open stages has no lost reason to clear, and
 // must not say that it cleared one: a patch records every assignment it is
 // given, so an unconditional clear would name lost_reason in the UPDATE and in

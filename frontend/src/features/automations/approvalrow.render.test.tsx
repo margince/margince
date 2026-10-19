@@ -287,3 +287,38 @@ describe("a decision that lost its race", () => {
     expect(screen.queryByText(en["decision.versionSkew"])).toBeNull();
   });
 });
+
+it("updates the visible approval change while its reason is edited", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => jsonResponse({ items: [] })),
+  );
+  render(
+    <ApprovalRow
+      approval={closeDateApproval({
+        kind: "advance_deal",
+        summary: "Move Harbor to lost",
+        proposed_change: { lost_reason: "Old reason" },
+        preview: {
+          version: 1,
+          state: "ready",
+          reviewer_reason: "record_authority",
+          changes: [
+            {
+              field: "lost_reason",
+              before: { kind: "empty", text: "" },
+              after: { kind: "text", text: "Old reason" },
+            },
+          ],
+        },
+      })}
+    />,
+  );
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: en["trust.edit"] }));
+  const reason = screen.getByDisplayValue("Old reason");
+  await user.clear(reason);
+  await user.type(reason, "Corrected reason");
+  expect(screen.getByText("Corrected reason")).toBeVisible();
+  expect(screen.queryByText("Old reason")).toBeNull();
+});

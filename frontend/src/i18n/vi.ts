@@ -14,6 +14,37 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "approval.preview.nameUnavailable": "Không có tên",
+  "approval.preview.structured": "Giá trị có cấu trúc: {value}",
+  "approval.preview.resolveConflict":
+    "Làm rõ thông tin mâu thuẫn trước khi phê duyệt thay đổi này.",
+  "history.field.closed_at": "Ngày chốt",
+  "history.field.amount_minor_base": "Giá trị theo tiền tệ cơ sở",
+  "approval.preview.conflict": "Thông tin mâu thuẫn",
+  "approval.preview.execution": "Được xác định khi áp dụng",
+  "approval.preview.effects": "Thay đổi kèm theo",
+  "approval.preview.correspondence":
+    "Phân loại thư từ liên quan là hồ sơ kinh doanh.",
+  "approval.preview.delivery":
+    "Bắt đầu triển khai các dự án liên quan đủ điều kiện.",
+  "approval.preview.minorUnits":
+    "{amount} {currency} theo đơn vị tiền tệ nhỏ nhất",
+  "approval.preview.empty": "Chưa đặt",
+  "approval.preview.status": "Ngữ cảnh phê duyệt",
+  "approval.preview.stale":
+    "Hồ sơ đã thay đổi sau khi đề xuất được tạo. Yêu cầu đề xuất mới trước khi duyệt.",
+  "approval.preview.incomplete":
+    "Không thể hiển thị đầy đủ thay đổi. Yêu cầu đề xuất mới trước khi duyệt.",
+  "approval.preview.unavailable":
+    "Ngữ cảnh phê duyệt không có sẵn. Tải lại hoặc yêu cầu đề xuất mới.",
+  "approval.preview.change": "Từ {before} thành {after}",
+  "approval.preview.authorityUnknown":
+    "Không có thông tin về lý do bạn có thể duyệt thay đổi này.",
+  "approval.preview.reviewer": "Quyền phê duyệt",
+  "approval.preview.requested": "Bạn được yêu cầu xem xét đề xuất này.",
+  "approval.preview.onBehalf":
+    "Trợ lý AI đã đề xuất thay đổi này thay mặt bạn.",
+  "approval.preview.authority": "Bạn có quyền thực hiện thay đổi này.",
   "aiWait.provider":
     "Nhà cung cấp AI hiện không khả dụng. Công việc sẽ tự động tiếp tục khi nhà cung cấp hoạt động trở lại.",
   "aiWait.budget":

@@ -25684,6 +25684,9 @@ type Approval struct {
 	Kind       string              `json:"kind"`
 	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
 
+	// Preview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
+	Preview *ApprovalPreview `json:"preview,omitempty"`
+
 	// ProposalId For kind=coldstart, the ColdStartProposal this approval accepts (links the staged proposal to its approval item).
 	ProposalId *openapi_types.UUID `json:"proposal_id,omitempty"`
 
@@ -25782,6 +25785,61 @@ type ApprovalEvidenceSourceType string
 type ApprovalListResponse struct {
 	Data []Approval `json:"data"`
 	Page PageInfo   `json:"page"`
+}
+
+// ApprovalPreview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
+type ApprovalPreview struct {
+	Changes []ApprovalPreviewChange `json:"changes"`
+
+	// Conflicts Current authorized conflicts. Absence means they were not assessed, not that none exist. Related proposals remain separate decisions; approving this proposal never approves them.
+	Conflicts      *[]ApprovalPreviewConflict `json:"conflicts,omitempty"`
+	CurrentVersion *int                       `json:"current_version,omitempty"`
+
+	// Effects Additional business effects released by this approval. Other proposals remain separate decisions.
+	Effects *[]string `json:"effects,omitempty"`
+
+	// Evidence Current evidence resolved with the reader's source permissions. An empty array replaces historical evidence.
+	Evidence *[]ApprovalEvidence `json:"evidence,omitempty"`
+
+	// ReviewerReason Why this reader can answer the proposal, separate from its business reason.
+	ReviewerReason string `json:"reviewer_reason"`
+
+	// State Whether the full effect can still be explained from authorized records.
+	State   string `json:"state"`
+	Version int    `json:"version"`
+}
+
+// ApprovalPreviewChange defines model for ApprovalPreviewChange.
+type ApprovalPreviewChange struct {
+	After  ApprovalPreviewValue `json:"after"`
+	Before ApprovalPreviewValue `json:"before"`
+
+	// Field Canonical field name, translated by the client where known.
+	Field string `json:"field"`
+}
+
+// ApprovalPreviewConflict Authorized context that must be considered separately from the proposed effect.
+type ApprovalPreviewConflict struct {
+	// BlocksApproval Whether the domain requires reconciliation before this proposal can be approved.
+	BlocksApproval bool   `json:"blocks_approval"`
+	Kind           string `json:"kind"`
+
+	// Summary A sanitized explanation containing only facts this reader may see.
+	Summary string `json:"summary"`
+}
+
+// ApprovalPreviewValue defines model for ApprovalPreviewValue.
+type ApprovalPreviewValue struct {
+	// Currency ISO currency of a money value in minor units.
+	Currency   *string             `json:"currency,omitempty"`
+	EntityId   *openapi_types.UUID `json:"entity_id,omitempty"`
+	EntityType *string             `json:"entity_type,omitempty"`
+
+	// Kind How the reader should format this value.
+	Kind string `json:"kind"`
+
+	// Text Authorized readable value, or a lifecycle code for translation.
+	Text string `json:"text"`
 }
 
 // ApproveImportRunRequest What the approver read. Without a body, the run is approved at whatever version it holds.

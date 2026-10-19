@@ -114,7 +114,7 @@ func (p SendPath) withPoolDefaults(pool *pgxpool.Pool) SendPath {
 		// message stopped must be told on every role that can hold one, and
 		// "unwired" here is indistinguishable from a message that stopped
 		// silently.
-		p.HeldNotifier = NewScheduledSendHeldNotifier(newApprovalsService(InstallationDB(pool)))
+		p.HeldNotifier = NewScheduledSendHeldNotifier(NewApprovalsService(InstallationDB(pool)))
 	}
 	return p
 }

@@ -18710,11 +18710,79 @@ components:
           description: >-
             1-based line numbers within the source record's body that this claim was read from, for a source whose body is line-addressed (a meeting transcript today,: line N is the Nth newline-split segment of activity.body). Absent for a source that is not line-addressed.
           items: {type: integer, minimum: 1}
+    ApprovalPreviewValue:
+      type: object
+      required: [kind, text]
+      properties:
+        kind:
+          type: string
+          description: How the reader should format this value.
+        text:
+          type: string
+          description: Authorized readable value, or a lifecycle code for translation.
+        currency: {type: string, description: ISO currency of a money value in minor units.}
+        entity_type: {type: string}
+        entity_id: {type: string, format: uuid}
+    ApprovalPreviewChange:
+      type: object
+      required: [field, before, after]
+      properties:
+        field:
+          type: string
+          description: Canonical field name, translated by the client where known.
+        before: {$ref: '#/components/schemas/ApprovalPreviewValue'}
+        after: {$ref: '#/components/schemas/ApprovalPreviewValue'}
+    ApprovalPreviewConflict:
+      type: object
+      description: Authorized context that must be considered separately from the proposed effect.
+      required: [kind, summary, blocks_approval]
+      properties:
+        kind:
+          type: string
+        summary:
+          type: string
+          description: A sanitized explanation containing only facts this reader may see.
+        blocks_approval:
+          type: boolean
+          description: Whether the domain requires reconciliation before this proposal can be approved.
+    ApprovalPreview:
+      type: object
+      description: >-
+        A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
+      required: [version, state, changes, reviewer_reason]
+      properties:
+        effects:
+          type: array
+          description: Additional business effects released by this approval. Other proposals remain separate decisions.
+          items:
+            type: string
+        evidence:
+          type: array
+          description: Current evidence resolved with the reader's source permissions. An empty array replaces historical evidence.
+          items: {$ref: '#/components/schemas/ApprovalEvidence'}
+        version: {type: integer, minimum: 1}
+        state:
+          type: string
+          description: Whether the full effect can still be explained from authorized records.
+        changes:
+          type: array
+          items: {$ref: '#/components/schemas/ApprovalPreviewChange'}
+        reviewer_reason:
+          type: string
+          description: Why this reader can answer the proposal, separate from its business reason.
+        current_version: {type: integer}
+        conflicts:
+          type: array
+          description: >-
+            Current authorized conflicts. Absence means they were not assessed, not that none exist. Related proposals remain separate decisions; approving this proposal never approves them.
+          items: {$ref: '#/components/schemas/ApprovalPreviewConflict'}
     Approval:
       type: object
       description: A staged confirm-first action awaiting human decision.
       required: [id, kind, status, proposed_by, created_at]
       properties:
+        preview:
+          $ref: '#/components/schemas/ApprovalPreview'
         assignee_inactive:
           type: boolean
           readOnly: true

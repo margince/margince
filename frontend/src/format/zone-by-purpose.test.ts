@@ -142,6 +142,10 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/automations/approvalpreview.test.ts",
+    why: "The preview must use the card's supplied date formatter and zone in every locale, independent of the test machine's zone.",
+  },
+  {
     file: "features/analytics/reporting.fixtures.ts",
     why: "The report API fixture carries the installation timezone so schedule and frozen-period rendering remain independent of the browser zone.",
   },

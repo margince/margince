@@ -108,7 +108,14 @@ export function readPayload(
     withoutRepeatedLead(declared, approval.summary),
     cardName(approval, draft),
   );
-  const diffs = diffsOf(change);
+  const comparisons = display.flatMap((entry) =>
+    entry.comparison
+      ? [{ field: entry.field, label: entry.label, ...entry.comparison }]
+      : [],
+  );
+  const diffs = display.some((entry) => entry.comparison !== undefined)
+    ? comparisons
+    : diffsOf(change);
   // The lead survives both layouts: the one sentence explaining why a decision
   // is in front of somebody is the thing a row is most missing.
   const lead = display.find((entry) => entry.lead)?.value ?? null;

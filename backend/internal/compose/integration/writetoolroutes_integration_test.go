@@ -13,10 +13,12 @@ import (
 	"encoding/json"
 	"maps"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -83,8 +85,13 @@ func dealStage(t *testing.T, e *apptest.AppEnv, deal string) string {
 // stagedProgressions answers the progress_deal approvals staged on one deal.
 func stagedProgressions(t *testing.T, e *apptest.AppEnv, deal string) []string {
 	t.Helper()
-	rows, err := e.Owner.Query(t.Context(),
-		`SELECT id::text FROM approval WHERE kind = 'progress_deal' AND target_entity_id = $1`, deal)
+	return stagedDealCalls(t, e, deal, "progress_deal")
+}
+
+func stagedDealCalls(t *testing.T, e *apptest.AppEnv, deal, kind string) []string {
+	t.Helper()
+	args := []any{deal, kind}
+	rows, err := e.Owner.Query(t.Context(), storekit.SQLf(`SELECT id::text FROM approval WHERE target_entity_id = $%d AND kind = $%d`, len(args)-1, len(args)), args...)
 	if err != nil {
 		t.Fatalf("reading the approvals staged on %s: %v", deal, err)
 	}
@@ -164,12 +171,33 @@ func TestAConfirmFirstProgressStagesOneApprovalOnEitherDoor(t *testing.T) {
 	}
 	toolRefusal := d.mcp.CallRefused(t, "progress_deal", with(win, "deal_id", viaTool))
 	if fromTool := stagedProgressions(t, d.e, viaTool); len(fromTool) != 1 || !strings.Contains(toolRefusal, fromTool[0]) {
-		t.Errorf("the tool door staged %v and answered %q, want one approval named in the answer", fromTool, toolRefusal)
+		t.Fatalf("the tool door staged %v and answered %q, want one approval named in the answer", fromTool, toolRefusal)
 	}
 	var gated fileRefusal
 	if status := d.e.Call(t, "POST", "/v1/deals/"+viaGate+"/advance", win, d.bearer, &gated); status != http.StatusForbidden || gated.Code != refusal.Code {
 		t.Errorf("the advance route answers a won move %d %q, and the progress route 403 %q; one rule answers both",
 			status, gated.Code, refusal.Code)
+	}
+
+	changes := readCommercialPreview(t, d.e, staged[0])
+	if len(changes) != 4 {
+		t.Fatalf("stage effects=%+v", changes)
+	}
+	for _, change := range changes {
+		if change.Field == "stage_id" && (change.Before.Kind != "stage" || change.After.Kind != "stage" || change.Before.Text == stages.Open || change.After.Text == stages.Won) {
+			t.Fatalf("stage labels=%+v", change)
+		}
+	}
+	viaAdvanceTool := openDeal(t, d.e, stages, "Tool advance renewal")
+	advanceRefusal := d.mcp.CallRefused(t, "advance_deal", with(win, "deal_id", viaAdvanceTool))
+	advances := stagedDealCalls(t, d.e, viaAdvanceTool, "advance_deal")
+	if len(advances) != 1 || !strings.Contains(advanceRefusal, advances[0]) {
+		t.Fatalf("advance staged=%v refusal=%s", advances, advanceRefusal)
+	}
+	for _, id := range []string{stagedProgressions(t, d.e, viaTool)[0], ExtractStagedApprovalID(t, gated.Detail), advances[0]} {
+		if other := readCommercialPreview(t, d.e, id); !reflect.DeepEqual(changes, other) {
+			t.Fatalf("stage previews disagree: %+v / %+v", changes, other)
+		}
 	}
 
 	if status := d.e.Call(t, "POST", "/v1/approvals/"+staged[0]+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {

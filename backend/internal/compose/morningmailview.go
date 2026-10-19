@@ -11,7 +11,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/emailview"
@@ -33,7 +32,7 @@ type morningSelection struct {
 }
 
 func (w *briefGenerateWorker) morningMessage(ctx context.Context, now time.Time, words mailcopy.Copy, embedded bool) (emailview.Message, bool, error) {
-	service := newAttentionService(w.pool, approvals.NewService(InstallationDB(w.pool)), func() time.Time { return now })
+	service := newAttentionService(w.pool, NewApprovalsService(InstallationDB(w.pool)), func() time.Time { return now })
 	day, err := service.Worklist(ctx, "mine", "", ids.Nil, 50, "")
 	if err != nil {
 		return emailview.Message{}, false, err
