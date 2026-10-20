@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer provides two distinct counts in German: 3 meetings held (Termine haben stattgefunden) and 4 only booked (nur gebucht), satisfying the requirement for one number per standing.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer gives a count for each of the two standings — how many meetings have taken place (held), and how many are only booked so far. Two numbers, one per standing, in any language: the report answers in German too, so 'zwei gebucht, ein stattgefunden' is exactly as good as 'one held against two booked'. Answer no if the answer gives only a single total, or describes the split in words with no numbers behind it, or reports the report's grouping and filter names instead of the counts. Which of the two is larger, whether it also counts cancelled meetings or no-shows, and whether the answer hedges about precision, is not yours to judge.",
+  "answer": "Kurz: 3 Termine haben stattgefunden, 4 sind bisher nur gebucht.\n\nIch habe dafür den Bericht activities-by-kind laufen lassen, auf Termine gefiltert und nach meeting_status gruppiert — den Feldnamen habe ich nicht geraten, sondern vorher im Vokabular nachgesehen.\n\nEin Termin ist als \"Vertragsunterzeichnung\" erfasst; an der Zählung ändert das nichts."
+}

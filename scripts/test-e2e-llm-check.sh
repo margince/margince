@@ -976,7 +976,7 @@ judges "$c30" case30 announces-the-coinage-as-a-list 1 "$c30_coinage" "!$c30_abs
 c7="case7-ask-for-a-number.yaml"
 c7_counts="the judge says NO to: Criterion 1."
 c7_denial="the judge says NO to: Criterion 3."
-judges "$c7" case7 counts-the-directions-in-german 0 "!the judge says NO"
+judges "$c7" case7 counts-the-meetings-in-german 0 "!the judge says NO"
 judges "$c7" case7 answers-with-a-rough-split 0 "!the judge says NO"
 # The vocabulary handed back in place of the number. This is the fixture for the
 # regex that was DELETED rather than replaced: an answer that recites the
