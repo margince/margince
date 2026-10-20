@@ -88,7 +88,7 @@ func parseAITaskRetrieveFlags(args []string) (aiTaskRetrieveFlags, error) {
 		return aiTaskRetrieveFlags{}, err
 	}
 	if err := fs.Parse(args); err != nil {
-		return aiTaskRetrieveFlags{}, err
+		return aiTaskRetrieveFlags{}, config.FlagFault(fs, err)
 	}
 	loaded, err := shared.load()
 	if err != nil {

@@ -135,14 +135,19 @@ func parseChecked(s Any, text string) (any, error) {
 }
 
 // undeclared names the variables no program reads, from the environment and
-// the .env file alike. Values never leave this function.
-func undeclared(known func(string) bool, layers []layer) []string {
+// the .env file alike, each with the name it likely meant. Values never leave
+// this function.
+func undeclared(names known, layers []layer) []string {
 	seen := map[string]bool{}
 	for _, l := range layers {
 		for name, value := range l.vars {
-			if reportable(name, value) && !reserved[name] && !known(name) {
-				seen[name] = true
+			if !reportable(name, value) || reserved[name] || names.envs[name] {
+				continue
 			}
+			if near := names.nearEnv(name); near != "" {
+				name += " (did you mean " + near + "?)"
+			}
+			seen[name] = true
 		}
 	}
 	return slices.Sorted(maps.Keys(seen))

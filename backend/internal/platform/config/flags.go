@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"strings"
 )
 
 // given names the loader's own flags that appeared, so an explicit
@@ -14,7 +15,7 @@ import (
 type flagValues struct {
 	raw                         map[string]string
 	config, configFile, envFile string
-	trace                       bool
+	trace, check                bool
 	given                       map[string]bool
 }
 
@@ -26,7 +27,7 @@ func parseFlags(r *Registry, args []string) (flagValues, error) {
 	fs := newFlagSet(r, &out)
 	fs.SetOutput(io.Discard)
 	if err := fs.Parse(args); err != nil {
-		return flagValues{}, err
+		return flagValues{}, FlagFault(fs, err)
 	}
 	if fs.NArg() > 0 {
 		return flagValues{}, fmt.Errorf("unexpected argument at position %d; flags take --name=value", len(args)-fs.NArg()+1)
@@ -49,6 +50,7 @@ func newFlagSet(r *Registry, out *flagValues) *flag.FlagSet {
 	fs.StringVar(&out.configFile, "config-file", "", loaderDoc("config-file"))
 	fs.StringVar(&out.envFile, "env-file", "", loaderDoc("env-file"))
 	fs.BoolVar(&out.trace, "config-trace", false, loaderDoc("config-trace"))
+	fs.BoolVar(&out.check, checkFlag, false, loaderDoc(checkFlag))
 	for _, s := range r.All() {
 		addFlag(fs, s, func(v string) { out.raw[s.Flag()] = v })
 	}
@@ -82,7 +84,9 @@ type CommandFlags struct{ given []string }
 func AddFlags(fs *flag.FlagSet, r *Registry) *CommandFlags {
 	c := &CommandFlags{}
 	for _, v := range loaderVars {
-		if v.Flag == "" {
+		// A command with flags of its own runs its own verb, which a dry run of
+		// the configuration would skip in silence.
+		if v.Flag == "" || v.Flag == checkFlag {
 			continue
 		}
 		record := func(value string) error {
@@ -104,3 +108,21 @@ func AddFlags(fs *flag.FlagSet, r *Registry) *CommandFlags {
 // Args are the registry flags the command line gave, as Load's Args, so Load
 // still parses each value and ranks it against the environment.
 func (c *CommandFlags) Args() []string { return c.given }
+
+// undefinedFlag is how the flag package words an unknown flag. It names the
+// flag with one dash, whichever the command line used.
+const undefinedFlag = "flag provided but not defined: -"
+
+// FlagFault adds to fs's parse error the flag an unknown one likely meant.
+func FlagFault(fs *flag.FlagSet, err error) error {
+	name, ok := strings.CutPrefix(err.Error(), undefinedFlag)
+	if !ok {
+		return err
+	}
+	var names []string
+	fs.VisitAll(func(f *flag.Flag) { names = append(names, f.Name) })
+	if near := Suggest(name, names); near != "" {
+		return fmt.Errorf("%w; did you mean --%s?", err, near)
+	}
+	return err
+}

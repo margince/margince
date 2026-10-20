@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -77,19 +78,11 @@ type apiConfig struct {
 // It hands compose the result before anything composes, so every stored
 // setting a boot source sets is locked.
 func loadAPIConfig(args, environ []string) (apiConfig, *config.Config, error) {
-	reg, err := compose.ProgramRegistry(config.RoleAPI)
+	reg, src, posture, err := apiSources(args, environ)
 	if err != nil {
 		return apiConfig{}, nil, err
 	}
-	posture := runtimeenv.Parse(config.EnvironValue(environ, runtimeenv.EnvVar))
-	loaded, err := config.Load(reg, config.Sources{
-		Args:           args,
-		Environ:        environ,
-		KnownKey:       compose.AllSettingKeys,
-		KnownEnv:       compose.AllSettingEnvs,
-		BootstrapRoots: deployconfig.Roots(),
-		Faults:         func(c *config.Config) []error { return apiFaults(c, posture) },
-	})
+	loaded, err := config.Load(reg, src)
 	if errors.Is(err, flag.ErrHelp) {
 		config.PrintUsage(os.Stderr, reg)
 	}
@@ -102,6 +95,35 @@ func loadAPIConfig(args, environ []string) (apiConfig, *config.Config, error) {
 	}
 	compose.UseConfig(loaded)
 	return cfg, loaded, nil
+}
+
+// apiSources are what the api loads, for a boot and a --check-config alike.
+func apiSources(args, environ []string) (*config.Registry, config.Sources, runtimeenv.Environment, error) {
+	reg, err := compose.ProgramRegistry(config.RoleAPI)
+	if err != nil {
+		return nil, config.Sources{}, "", err
+	}
+	posture := runtimeenv.Parse(config.EnvironValue(environ, runtimeenv.EnvVar))
+	return reg, config.Sources{
+		Args:           args,
+		Environ:        environ,
+		Known:          compose.AllSettingNames(),
+		BootstrapRoots: deployconfig.Roots(),
+		Faults:         func(c *config.Config) []error { return apiFaults(c, posture) },
+	}, posture, nil
+}
+
+// checkAPIConfig runs --check-config when args ask for it: the boot's load,
+// bootstrap roots included, and nothing that opens a connection.
+func checkAPIConfig(args, environ []string, stdout io.Writer) (bool, error) {
+	reg, src, _, err := apiSources(args, environ)
+	if err != nil || !config.CheckRequested(reg, args) {
+		return false, err
+	}
+	if err := config.Check(stdout, reg, src); err != nil {
+		return true, bootError(err)
+	}
+	return true, nil
 }
 
 // fromRegistry copies the resolved settings into the struct the rest of
@@ -125,9 +147,9 @@ func fromRegistry(loaded *config.Config, posture runtimeenv.Environment) (apiCon
 		mcpConnector: config.Val(loaded, ps.MCPConnector),
 		posture:      posture,
 	}
-	trusted, err := httpserver.ParseTrustedProxies(config.Val(loaded, ps.TrustedProxies))
+	trusted, err := trustedProxies(loaded)
 	if err != nil {
-		return apiConfig{}, fmt.Errorf("--trusted-proxies: %w", err)
+		return apiConfig{}, err
 	}
 	cfg.trustedProxies = trusted
 	return cfg, nil
@@ -165,7 +187,21 @@ func apiFaults(c *config.Config, posture runtimeenv.Environment) []error {
 	if err := ps.FakeModelFault(c, posture); err != nil {
 		faults = append(faults, err)
 	}
+	if _, err := trustedProxies(c); err != nil {
+		faults = append(faults, err)
+	}
+	faults = append(faults, deployconfig.Faults(c.Files())...)
 	return append(faults, compose.MailFaults(c)...)
+}
+
+// trustedProxies is checked among the load's faults, so --check-config sees it,
+// and read again once the load holds.
+func trustedProxies(c *config.Config) (httpserver.TrustedProxies, error) {
+	trusted, err := httpserver.ParseTrustedProxies(config.Val(c, ps.TrustedProxies))
+	if err != nil {
+		return httpserver.TrustedProxies{}, fmt.Errorf("--trusted-proxies: %w", err)
+	}
+	return trusted, nil
 }
 
 // senderConfigured reports whether this deployment can put a message in

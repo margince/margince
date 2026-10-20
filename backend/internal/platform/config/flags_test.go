@@ -5,6 +5,7 @@ package config
 
 import (
 	"flag"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -105,5 +106,28 @@ func TestACommandTakesTheLoaderFlags(t *testing.T) {
 	got, origin := ValWithSource(cfg, dsn)
 	if got != "from-file" || origin.Source != SourceEnvFile || origin.File != envFile || !cfg.Trace() {
 		t.Fatalf("dsn %q from %+v, trace %v", got, origin, cfg.Trace())
+	}
+}
+
+func TestAnUnknownFlagNamesTheOneItLikelyMeant(t *testing.T) {
+	reg := mustRegistry(t, Define(Spec[string]{Key: "log.level", Env: "X_LOG_LEVEL", Flag: "log-level", Type: String, Doc: "d"}))
+	_, err := parseFlags(reg, []string{"--log-lvl=debug"})
+	if err == nil || !strings.HasSuffix(err.Error(), "did you mean --log-level?") {
+		t.Fatalf("got %v", err)
+	}
+	_, err = parseFlags(reg, []string{"--redis=x"})
+	if err == nil || strings.Contains(err.Error(), "did you mean") {
+		t.Fatalf("a flag near no name got a suggestion: %v", err)
+	}
+}
+
+// A command with a verb of its own does not take --check-config: it would run
+// the verb and skip the check in silence.
+func TestACommandWithItsOwnVerbRefusesTheCheckFlag(t *testing.T) {
+	fs := flag.NewFlagSet("cmd", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	AddFlags(fs, mustRegistry(t))
+	if err := fs.Parse([]string{"--" + checkFlag}); err == nil {
+		t.Fatal("a command's own flag set took --check-config")
 	}
 }

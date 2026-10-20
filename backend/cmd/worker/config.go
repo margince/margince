@@ -10,6 +10,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
 	"time"
 
@@ -18,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/dbsettings"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
@@ -76,19 +79,11 @@ type workerConfig struct {
 // reports every fault of the configuration in one error. Like the api's, it
 // hands compose the result before anything composes.
 func loadWorkerConfig(args, environ []string) (workerConfig, *config.Config, error) {
-	reg, err := compose.ProgramRegistry(config.RoleWorker)
+	reg, src, posture, err := workerSources(args, environ)
 	if err != nil {
 		return workerConfig{}, nil, err
 	}
-	posture := runtimeenv.Parse(config.EnvironValue(environ, runtimeenv.EnvVar))
-	loaded, err := config.Load(reg, config.Sources{
-		Args:           args,
-		Environ:        environ,
-		KnownKey:       compose.AllSettingKeys,
-		KnownEnv:       compose.AllSettingEnvs,
-		BootstrapRoots: deployconfig.Roots(),
-		Faults:         func(c *config.Config) []error { return workerFaults(c, posture) },
-	})
+	loaded, err := config.Load(reg, src)
 	if errors.Is(err, flag.ErrHelp) {
 		config.PrintUsage(os.Stderr, reg)
 	}
@@ -97,6 +92,36 @@ func loadWorkerConfig(args, environ []string) (workerConfig, *config.Config, err
 	}
 	compose.UseConfig(loaded)
 	return fromRegistry(loaded, posture), loaded, nil
+}
+
+// workerSources are what the worker loads, for a boot and a --check-config
+// alike.
+func workerSources(args, environ []string) (*config.Registry, config.Sources, runtimeenv.Environment, error) {
+	reg, err := compose.ProgramRegistry(config.RoleWorker)
+	if err != nil {
+		return nil, config.Sources{}, "", err
+	}
+	posture := runtimeenv.Parse(config.EnvironValue(environ, runtimeenv.EnvVar))
+	return reg, config.Sources{
+		Args:           args,
+		Environ:        environ,
+		Known:          compose.AllSettingNames(),
+		BootstrapRoots: deployconfig.Roots(),
+		Faults:         func(c *config.Config) []error { return workerFaults(c, posture) },
+	}, posture, nil
+}
+
+// checkWorkerConfig runs --check-config when args ask for it: the boot's
+// load, bootstrap roots included, and nothing that opens a connection.
+func checkWorkerConfig(args, environ []string, stdout io.Writer) (bool, error) {
+	reg, src, _, err := workerSources(args, environ)
+	if err != nil || !config.CheckRequested(reg, args) {
+		return false, err
+	}
+	if err := config.Check(stdout, reg, src); err != nil {
+		return true, fmt.Errorf("worker: %w", err)
+	}
+	return true, nil
 }
 
 // fromRegistry copies the resolved settings into the struct the rest of
@@ -133,6 +158,7 @@ func workerFaults(c *config.Config, posture runtimeenv.Environment) []error {
 			faults = append(faults, err)
 		}
 	}
+	faults = append(faults, deployconfig.Faults(c.Files())...)
 	return append(faults, compose.MailFaults(c)...)
 }
 
@@ -179,4 +205,11 @@ func sendPath(cfg workerConfig, delivery compose.DeliveryMachinery) compose.Send
 // poll, the push-watch job, and the send lane are all absent by omission.
 func (c workerConfig) gmailAppWired() bool {
 	return c.gmailClientID != "" && c.gmailClientSecret != ""
+}
+
+// newWorkerLogger installs the operator's logger as the process default. A
+// job's failure is logged by jobs.faultFor through the package-level slog
+// functions, so without the default it misses the configured sink.
+func newWorkerLogger(cfg workerConfig, stdout io.Writer) (*slog.Logger, error) {
+	return httpserver.InstallProcessLogger(stdout, cfg.logLevel, cfg.logFormat)
 }

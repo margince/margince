@@ -44,10 +44,18 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err := run(ctx, os.Args[1:], os.Stdout); err != nil {
+	if err := start(ctx, os.Args[1:], os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, "api:", err)
 		os.Exit(1)
 	}
+}
+
+// start is --check-config when args ask for it, and the boot otherwise.
+func start(ctx context.Context, args []string, stdout io.Writer) error {
+	if checked, err := checkAPIConfig(args, config.Environ(), stdout); checked || err != nil {
+		return err
+	}
+	return run(ctx, args, stdout)
 }
 
 // run boots the HTTP server (plus, by default, the inline outbox relay).

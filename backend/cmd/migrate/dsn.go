@@ -37,8 +37,7 @@ func (d *dsnSettings) resolve(environ []string) (string, error) {
 	loaded, err := config.Load(d.reg, config.Sources{
 		Args:           d.given.Args(),
 		Environ:        environ,
-		KnownKey:       compose.AllSettingKeys,
-		KnownEnv:       compose.AllSettingEnvs,
+		Known:          compose.AllSettingNames(),
 		BootstrapRoots: deployconfig.Roots(),
 	})
 	if err != nil {
