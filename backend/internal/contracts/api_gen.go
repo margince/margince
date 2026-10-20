@@ -45978,6 +45978,9 @@ type ReportingReport struct {
 	CanManage *bool     `json:"can_manage,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 
+	// Description What the report is for, in the author's words. Absent when none was given.
+	Description *string `json:"description,omitempty"`
+
 	// DraftRevision The unpublished draft revision, shown only to an editor of the report. Absent when there
 	// is no draft. Evaluate it with `revision` to preview it.
 	DraftRevision       *int64             `json:"draft_revision,omitempty"`
@@ -46006,8 +46009,11 @@ type ReportingReportDraftInput struct {
 type ReportingReportInput struct {
 	Audience       ReportingReportInputAudience `json:"audience"`
 	AudienceTeamId *openapi_types.UUID          `json:"audience_team_id,omitempty"`
-	Name           string                       `json:"name"`
-	Selection      ReportingSelection           `json:"selection"`
+
+	// Description What the report is for, in the author's words. Empty or blank stores no description.
+	Description *string            `json:"description,omitempty"`
+	Name        string             `json:"name"`
+	Selection   ReportingSelection `json:"selection"`
 }
 
 // ReportingReportInputAudience defines model for ReportingReportInput.Audience.

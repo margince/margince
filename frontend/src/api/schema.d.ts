@@ -36555,6 +36555,8 @@ export interface components {
         };
         ReportingReportInput: {
             name: string;
+            /** @description What the report is for, in the author's words. Empty or blank stores no description. */
+            description?: string;
             /** @enum {string} */
             audience: "private" | "team" | "workspace";
             /** Format: uuid */
@@ -36578,6 +36580,8 @@ export interface components {
             /** Format: uuid */
             owner_id: string;
             name: string;
+            /** @description What the report is for, in the author's words. Absent when none was given. */
+            description?: string;
             /** @enum {string} */
             audience: "private" | "team" | "workspace";
             /** Format: uuid */

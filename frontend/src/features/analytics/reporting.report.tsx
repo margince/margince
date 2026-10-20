@@ -78,6 +78,7 @@ export function ReportingReportDetail({
             await api.POST("/analytics/reports", {
               body: {
                 name: (action.name ?? action.report.name).slice(0, 160),
+                description: action.report.description,
                 audience: "private",
                 selection: action.report.selection,
               },
@@ -207,6 +208,9 @@ export function ReportingReportDetail({
               <Heading as="h2" size="large">
                 {report.name}
               </Heading>
+              {report.description && (
+                <p className="reporting-description">{report.description}</p>
+              )}
               <p className="t-caption">
                 {report.selection.scope.label} ·{" "}
                 {t(`reporting.${report.selection.period}`)} ·{" "}

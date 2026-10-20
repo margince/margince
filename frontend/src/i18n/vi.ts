@@ -346,6 +346,7 @@ export const vi = {
   "reporting.restricted": "Hồ sơ bị hạn chế",
   "reporting.next": "Trang tiếp",
   "reporting.name": "Tên báo cáo",
+  "reporting.description": "Mục đích",
   "reporting.audience": "Hiển thị với",
   "reporting.private": "Chỉ tôi",
   "reporting.team": "Nhóm đã chọn",

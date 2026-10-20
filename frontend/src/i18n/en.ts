@@ -330,6 +330,7 @@ export const en = {
   "reporting.restricted": "Restricted record",
   "reporting.next": "Next page",
   "reporting.name": "Report name",
+  "reporting.description": "Purpose",
   "reporting.audience": "Visible to",
   "reporting.private": "Only me",
   "reporting.team": "Selected team",

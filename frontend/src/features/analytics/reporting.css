@@ -53,6 +53,12 @@
   gap: var(--space-5);
   margin-bottom: var(--space-5);
 }
+/* The author's line breaks are kept; a long purpose wraps at reading width. */
+.reporting-description {
+  margin: var(--space-2) 0 0;
+  max-width: 70ch;
+  white-space: pre-line;
+}
 .reporting-header-actions {
   display: flex;
   gap: var(--gapActions);

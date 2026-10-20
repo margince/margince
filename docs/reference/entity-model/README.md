@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 312 |
-| Columns | 3719 |
+| Columns | 3720 |
 | Foreign keys | 518 |
 | Owning areas | 36 |
 
@@ -362,7 +362,7 @@ erDiagram
 | [`record_role`](assignments.md#record_role) | assignments | 11 | 1 |
 | [`relationship`](contacts.md#relationship) | contacts | 22 | 1 |
 | [`relationship_nudge_dismissal`](contacts.md#relationship_nudge_dismissal) | contacts | 5 | 0 |
-| [`report_definition`](reporting.md#report_definition) | reporting | 10 | 2 |
+| [`report_definition`](reporting.md#report_definition) | reporting | 11 | 2 |
 | [`report_definition_revision`](reporting.md#report_definition_revision) | reporting | 6 | 2 |
 | [`report_edition`](reporting.md#report_edition) | reporting | 12 | 1 |
 | [`report_edition_contribution`](reporting.md#report_edition_contribution) | reporting | 9 | 0 |
