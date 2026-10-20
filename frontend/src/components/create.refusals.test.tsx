@@ -77,7 +77,7 @@ describe("CreateAction field refusals", () => {
       <CreateAction
         label="New deal"
         fields={fields}
-        create={() => Promise.resolve()}
+        create={() => Promise.resolve({ id: "1" })}
         invalidate="deals"
         screen="deals"
       />,
