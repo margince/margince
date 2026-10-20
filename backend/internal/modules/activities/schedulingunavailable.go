@@ -29,7 +29,7 @@ func calendarReadFailure(ctx context.Context, host ids.UserID, provider, calenda
 	if !ok {
 		unavailable = connector.NewCalendarUnavailable(calendar, "", err)
 	}
-	// Warn, not error: a person repairs the host's diary, and nothing failed in
+	// Warn, not error: the host repairs their own diary, and nothing failed in
 	// this process. The line lets an operator tell a deleted calendar from a
 	// revoked grant from a provider outage.
 	slog.WarnContext(ctx, "availability refused: selected calendar could not be checked",
