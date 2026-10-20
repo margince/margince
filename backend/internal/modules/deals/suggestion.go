@@ -341,7 +341,7 @@ func SupersedeStaleSuggestionsTx(ctx context.Context, tx pgx.Tx, buyerEligible f
 		return 0, fmt.Errorf("deals: reading superseded suggestions: %w", err)
 	}
 	for _, id := range retired {
-		if err := recordSuperseded(ctx, tx, id); err != nil {
+		if err := recordSuperseded(ctx, tx, id, nil); err != nil {
 			return 0, err
 		}
 	}
@@ -383,7 +383,7 @@ func SupersedeDuplicateSuggestionsTx(ctx context.Context, tx pgx.Tx, pairs [][2]
 		return 0, fmt.Errorf("deals: reading suggestions superseded as raised twice: %w", err)
 	}
 	for _, id := range retired {
-		if err := recordSuperseded(ctx, tx, id); err != nil {
+		if err := recordSuperseded(ctx, tx, id, nil); err != nil {
 			return 0, err
 		}
 	}
@@ -463,7 +463,7 @@ func claimsRetired(claims []duplicateClaim) []ids.UUID {
 const columnState = "state"
 
 // supersedeTx retires one open suggestion the caller holds locked.
-func supersedeTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+func supersedeTx(ctx context.Context, tx pgx.Tx, id ids.UUID, evidence map[string]any) error {
 	tag, err := tx.Exec(ctx, `
 		UPDATE deal_suggestion SET state = 'superseded', decided_at = now()
 		 WHERE id = $1 AND state = 'open'`, id)
@@ -473,14 +473,14 @@ func supersedeTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	if tag.RowsAffected() == 0 {
 		return nil
 	}
-	return recordSuperseded(ctx, tx, id)
+	return recordSuperseded(ctx, tx, id, evidence)
 }
 
 // recordSuperseded writes the audit row and the event for one retirement.
-func recordSuperseded(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	auditID, err := storekit.Audit(ctx, tx, "update", suggestionEntity, id,
+func recordSuperseded(ctx context.Context, tx pgx.Tx, id ids.UUID, evidence map[string]any) error {
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", suggestionEntity, id,
 		map[string]any{columnState: SuggestionOpen},
-		map[string]any{columnState: SuggestionSuperseded})
+		map[string]any{columnState: SuggestionSuperseded}, evidence)
 	if err != nil {
 		return fmt.Errorf("deals: auditing a superseded suggestion: %w", err)
 	}

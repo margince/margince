@@ -9,8 +9,13 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { suggestion } from "../deals/dealsuggestion.fixture";
 import { HomeRepairControls } from "./homerepair";
-import { proposalRepairReview, repairReview } from "./homerepair.fixtures";
+import {
+  proposalRepairReview,
+  repairReview,
+  suggestionRepairReview,
+} from "./homerepair.fixtures";
 
 function example(
   canActivate: boolean,
@@ -22,11 +27,13 @@ function example(
       "GET /me": meRoute({
         data_task: ["read", "update"],
         activity: ["read", "delete"],
+        deal: ["read", "create"],
       }),
       "GET /approvals/*": () =>
         jsonResponse({ summary: "Prepare the account review" }),
       "GET /activities/*": () =>
         jsonResponse({ subject: "Prepare the account review" }),
+      "GET /deal-suggestions/*": () => jsonResponse(suggestion),
       "POST /admin/home-repair/preview": () => jsonResponse(preview),
       "POST /admin/home-repair/activate": () =>
         refused
@@ -47,6 +54,25 @@ const meta = {
 } satisfies Meta<typeof HomeRepairControls>;
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+export const DealSuggestions: Story = {
+  render: example(true, false, suggestionRepairReview),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Deal suggestions" }),
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Preview items" }),
+    );
+    await expect(
+      await canvas.findByText("Retire automatic deal suggestion"),
+    ).toBeInTheDocument();
+    await expect(
+      canvas.getByRole("button", { name: "Apply 1 reviewed change" }),
+    ).toBeInTheDocument();
+  },
+};
 
 export const Review: Story = {
   render: example(true),

@@ -84,6 +84,9 @@ func applyHomeRepairBatch(ctx context.Context, tx pgx.Tx, pool *pgxpool.Pool, in
 }
 
 func applyHomeRepairItem(ctx context.Context, tx pgx.Tx, store *activities.Store, expected homeRepairTaskRef, activation datatask.Activation, runID ids.UUID) (bool, error) {
+	if expected.Source == "suggestion" {
+		return applyHomeRepairSuggestion(ctx, tx, expected, activation, runID)
+	}
 	if expected.Source == "approval" {
 		return applyHomeRepairProposal(ctx, tx, expected, activation, runID)
 	}

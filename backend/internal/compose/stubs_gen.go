@@ -1647,6 +1647,10 @@ func (stubs) ListDealSuggestions(w nethttp.ResponseWriter, r *nethttp.Request, p
 	httperr.NotImplemented(w, r, "ListDealSuggestions")
 }
 
+func (stubs) GetDealSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetDealSuggestion")
+}
+
 func (stubs) AcceptDealSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.AcceptDealSuggestionParams) {
 	httperr.NotImplemented(w, r, "AcceptDealSuggestion")
 }

@@ -112,6 +112,19 @@ export const WithEvidence: Story = {
   },
 };
 
+export const Retired: Story = {
+  render: () => {
+    stub(true);
+    return (
+      <StoryProviders>
+        <DealSuggestionCard
+          suggestion={{ ...suggestion, state: "superseded" }}
+        />
+      </StoryProviders>
+    );
+  },
+};
+
 // No finished document reading stated an amount with its currency, so none is
 // proposed — the card says nothing about money rather than a guess.
 export const NoAmount: Story = {

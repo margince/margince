@@ -782,7 +782,7 @@ paths:
               properties:
                 limit: {type: integer, minimum: 1, maximum: 1000}
                 after: {type: string, format: uuid}
-                source: {type: string, enum: [task, approval], default: task}
+                source: {type: string, enum: [task, approval, suggestion], default: task}
       responses:
         '200':
           description: Exact reviewed identities, dispositions and rule version. Use the last identity to read the next page.
@@ -5288,6 +5288,26 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /deal-suggestions/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: getDealSuggestion
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Read one suggestion and its currently visible evidence.
+      description: Requires deal and company read permission and visibility of every cited source. Missing and inaccessible suggestions both return 404.
+      responses:
+        '200':
+          description: The suggestion in its current state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealSuggestion' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /deal-suggestions/{id}/accept:
     parameters:
@@ -52894,21 +52914,22 @@ components:
       required: [id, version, action, reason]
       properties:
         id: {type: string, format: uuid}
-        source: {type: string, enum: [task, approval]}
+        source: {type: string, enum: [task, approval, suggestion]}
         snapshot: {type: string, minLength: 64, maxLength: 64}
         version: {type: integer, format: int64}
         action:
           type: string
-          enum: [archive_automatic_reminder, withdraw_proposal, human_review, leave_current]
+          enum: [archive_automatic_reminder, withdraw_proposal, supersede_suggestion, human_review, leave_current]
         reason: {type: string}
 
     HomeRepairCounts:
       type: object
       additionalProperties: false
-      required: [archive, withdraw, review, keep]
+      required: [archive, withdraw, supersede, review, keep]
       properties:
         archive: {type: integer, minimum: 0}
         withdraw: {type: integer, minimum: 0}
+        supersede: {type: integer, minimum: 0}
         review: {type: integer, minimum: 0}
         keep: {type: integer, minimum: 0}
 

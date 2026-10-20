@@ -14,6 +14,16 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "homeRepair.suggestionPermission":
+    "Cần quyền tạo deal để ngừng các đề xuất này.",
+  "homeRepair.supersede": "Ngừng đề xuất deal tự động",
+  "homeRepair.suggestions": "Đề xuất deal",
+  "homeRepair.reason.dealExists":
+    "Công ty này đã có deal đang mở. Xem xét deal đó trước khi mở deal khác.",
+  "homeRepair.reason.dealSource":
+    "Ngày của nguồn không còn khớp với bằng chứng dùng cho đề xuất này.",
+  "homeRepair.reason.buyer":
+    "Các nguồn đã xem xét không còn xác minh yêu cầu hiện tại của bên mua.",
   "homeRepair.reason.engagement":
     "Hợp đồng hoặc công việc đang thực hiện không phù hợp với việc kết thúc toàn bộ quan hệ khách hàng.",
   "homeRepair.reason.workstream":
@@ -50,11 +60,11 @@ export const vi = {
     "Công việc này vẫn đáp ứng các quy tắc hiện tại.",
   "homeRepair.unnamed": "Không có chi tiết",
   "homeRepair.explain":
-    "Xem xét tối đa 25 mục mỗi lần. Có thể lưu trữ lời nhắc tự động đã cũ và rút các đề xuất trùng lặp hoặc đã cũ. Công việc do người dùng xử lý được giữ lại; không mục nào được đánh dấu hoàn thành.",
+    "Chỉ bao gồm công việc hiện có quyền xem. Xem xét tối đa 25 mục mỗi lần. Có thể lưu trữ lời nhắc tự động đã cũ và rút các đề xuất trùng lặp hoặc đã cũ. Công việc do người dùng xử lý được giữ lại; không mục nào được đánh dấu hoàn thành.",
   "homeRepair.preview": "Xem trước các mục",
   "homeRepair.next": "Xem trang tiếp theo",
   "homeRepair.summary":
-    "Lời nhắc cần lưu trữ: {archive}. Đề xuất cần rút: {withdraw}. Giữ để xem xét: {review}; giữ làm công việc hiện tại: {keep}.",
+    "Lời nhắc cần lưu trữ: {archive}. Đề xuất cần rút: {withdraw}. Đề xuất deal cần ngừng: {supersede}. Giữ để xem xét: {review}; giữ làm công việc hiện tại: {keep}.",
   "homeRepair.apply_one": "Áp dụng {count} thay đổi đã xem xét",
   "homeRepair.apply_other": "Áp dụng {count} thay đổi đã xem xét",
   "homeRepair.started":

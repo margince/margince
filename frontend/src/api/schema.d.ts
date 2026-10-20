@@ -3617,6 +3617,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deal-suggestions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read one suggestion and its currently visible evidence.
+         * @description Requires deal and company read permission and visibility of every cited source. Missing and inaccessible suggestions both return 404.
+         */
+        get: operations["getDealSuggestion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deal-suggestions/{id}/accept": {
         parameters: {
             query?: never;
@@ -38623,17 +38646,18 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            source?: "task" | "approval";
+            source?: "task" | "approval" | "suggestion";
             snapshot?: string;
             /** Format: int64 */
             version: number;
             /** @enum {string} */
-            action: "archive_automatic_reminder" | "withdraw_proposal" | "human_review" | "leave_current";
+            action: "archive_automatic_reminder" | "withdraw_proposal" | "supersede_suggestion" | "human_review" | "leave_current";
             reason: string;
         };
         HomeRepairCounts: {
             archive: number;
             withdraw: number;
+            supersede: number;
             review: number;
             keep: number;
         };
@@ -48625,7 +48649,7 @@ export interface operations {
                      * @default task
                      * @enum {string}
                      */
-                    source?: "task" | "approval";
+                    source?: "task" | "approval" | "suggestion";
                 };
             };
         };
@@ -53173,6 +53197,32 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getDealSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The suggestion in its current state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealSuggestion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     acceptDealSuggestion: {

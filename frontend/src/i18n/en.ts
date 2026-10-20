@@ -3,6 +3,16 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "homeRepair.suggestionPermission":
+    "Deal creation permission is required to retire these suggestions.",
+  "homeRepair.supersede": "Retire automatic deal suggestion",
+  "homeRepair.suggestions": "Deal suggestions",
+  "homeRepair.reason.dealExists":
+    "This company already has an open deal. Review that deal before opening another.",
+  "homeRepair.reason.dealSource":
+    "The source dates no longer match the evidence used for this suggestion.",
+  "homeRepair.reason.buyer":
+    "The reviewed sources no longer verify a current buyer request.",
   "homeRepair.reason.engagement":
     "An active contract or delivery contradicts ending the whole account.",
   "homeRepair.reason.workstream":
@@ -42,11 +52,11 @@ export const en = {
     "The current admission rules still allow this work.",
   "homeRepair.unnamed": "Details unavailable",
   "homeRepair.explain":
-    "Review up to 25 items at a time. Obsolete automatic reminders can be archived and duplicate or obsolete proposals withdrawn. Human work is preserved; nothing is marked completed.",
+    "Only work you can currently inspect is included. Review up to 25 items at a time. Obsolete automatic reminders can be archived and duplicate or obsolete proposals withdrawn. Human work is preserved; nothing is marked completed.",
   "homeRepair.preview": "Preview items",
   "homeRepair.next": "Review next page",
   "homeRepair.summary":
-    "Reminders to archive: {archive}. Proposals to withdraw: {withdraw}. Keep for review: {review}; keep as current work: {keep}.",
+    "Reminders to archive: {archive}. Proposals to withdraw: {withdraw}. Deal suggestions to retire: {supersede}. Keep for review: {review}; keep as current work: {keep}.",
   "homeRepair.apply_one": "Apply {count} reviewed change",
   "homeRepair.apply_other": "Apply {count} reviewed changes",
   "homeRepair.started":

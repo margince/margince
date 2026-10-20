@@ -21,7 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-const homeRepairVersion = "1:" + activities.CommitmentAdmissionVersion
+const homeRepairVersion = "2:" + activities.CommitmentAdmissionVersion
 
 type homeRepairScope struct {
 	Tasks []homeRepairTaskRef `json:"tasks"`
@@ -47,6 +47,9 @@ func previewHomeRepairAfterTx(ctx context.Context, tx pgx.Tx, after ids.UUID, li
 func previewHomeRepairSourceTx(ctx context.Context, tx pgx.Tx, source string, after ids.UUID, limit int, asOf time.Time) (datatask.ReviewRequest, error) {
 	if limit < 1 || limit > 1000 {
 		return datatask.ReviewRequest{}, apperrors.ErrInvalidArgument
+	}
+	if source == "suggestion" {
+		return previewHomeRepairSuggestionsTx(ctx, tx, after, limit, asOf)
 	}
 	scope := homeRepairScope{Tasks: make([]homeRepairTaskRef, 0, limit)}
 	if source == "approval" {
@@ -116,6 +119,12 @@ func validateHomeRepairTx(ctx context.Context, tx pgx.Tx, review datatask.Review
 			return "", apperrors.ErrInvalidArgument
 		}
 		seen[expected.ID] = true
+		if expected.Source == "suggestion" {
+			if err := validateHomeRepairSuggestionTx(ctx, tx, expected, review.AsOf); err != nil {
+				return "", err
+			}
+			continue
+		}
 		if expected.Source == "approval" {
 			if err := validateHomeRepairProposalTx(ctx, tx, expected, review.AsOf, false); err != nil {
 				return "", err

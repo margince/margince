@@ -18,10 +18,11 @@ import (
 type homeRepairAction string
 
 const (
-	repairWithdrawProposal homeRepairAction = "withdraw_proposal"
-	repairArchiveReminder  homeRepairAction = "archive_automatic_reminder"
-	repairHumanReview      homeRepairAction = "human_review"
-	repairLeaveCurrent     homeRepairAction = "leave_current"
+	repairSupersedeSuggestion homeRepairAction = "supersede_suggestion"
+	repairWithdrawProposal    homeRepairAction = "withdraw_proposal"
+	repairArchiveReminder     homeRepairAction = "archive_automatic_reminder"
+	repairHumanReview         homeRepairAction = "human_review"
+	repairLeaveCurrent        homeRepairAction = "leave_current"
 )
 
 type homeRepairTaskDecision struct {

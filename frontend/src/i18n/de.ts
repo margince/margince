@@ -5,6 +5,16 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de = {
+  "homeRepair.suggestionPermission":
+    "Zum Zurückziehen dieser Vorschläge brauchst du die Berechtigung, Deals zu erstellen.",
+  "homeRepair.supersede": "Automatischen Deal-Vorschlag zurückziehen",
+  "homeRepair.suggestions": "Deal-Vorschläge",
+  "homeRepair.reason.dealExists":
+    "Dieses Unternehmen hat bereits einen offenen Deal. Prüfe ihn, bevor du einen weiteren eröffnest.",
+  "homeRepair.reason.dealSource":
+    "Die Quelldaten stimmen nicht mehr mit den Belegen dieses Vorschlags überein.",
+  "homeRepair.reason.buyer":
+    "Die geprüften Quellen belegen keine aktuelle Käuferanfrage mehr.",
   "homeRepair.reason.engagement":
     "Ein aktiver Vertrag oder eine laufende Leistung spricht gegen das Ende der gesamten Kundenbeziehung.",
   "homeRepair.reason.workstream":
@@ -43,11 +53,11 @@ export const de = {
     "Die aktuellen Regeln lassen diese Aufgabe weiterhin zu.",
   "homeRepair.unnamed": "Details nicht verfügbar",
   "homeRepair.explain":
-    "Prüfe bis zu 25 Einträge gleichzeitig. Veraltete automatische Erinnerungen können archiviert und doppelte oder veraltete Vorschläge zurückgezogen werden. Menschlich bearbeitete Aufgaben bleiben erhalten; nichts wird als erledigt markiert.",
+    "Es wird nur Arbeit angezeigt, die du derzeit einsehen kannst. Prüfe bis zu 25 Einträge gleichzeitig. Veraltete automatische Erinnerungen können archiviert und doppelte oder veraltete Vorschläge zurückgezogen werden. Menschlich bearbeitete Aufgaben bleiben erhalten; nichts wird als erledigt markiert.",
   "homeRepair.preview": "Einträge prüfen",
   "homeRepair.next": "Nächste Seite prüfen",
   "homeRepair.summary":
-    "Erinnerungen zum Archivieren: {archive}. Zurückzuziehende Vorschläge: {withdraw}. Zur Prüfung behalten: {review}; als aktuelle Arbeit behalten: {keep}.",
+    "Erinnerungen zum Archivieren: {archive}. Zurückzuziehende Vorschläge: {withdraw}. Zurückzuziehende Deal-Vorschläge: {supersede}. Zur Prüfung behalten: {review}; als aktuelle Arbeit behalten: {keep}.",
   "homeRepair.apply_one": "{count} geprüfte Änderung anwenden",
   "homeRepair.apply_other": "{count} geprüfte Änderungen anwenden",
   "homeRepair.started":

@@ -106,6 +106,8 @@ func homeRepairReviewWire(review datatask.ReviewRequest) (crmcontracts.HomeRepai
 			out.Counts.Archive++
 		case repairWithdrawProposal:
 			out.Counts.Withdraw++
+		case repairSupersedeSuggestion:
+			out.Counts.Supersede++
 		case repairHumanReview:
 			out.Counts.Review++
 		case repairLeaveCurrent:

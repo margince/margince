@@ -10827,6 +10827,7 @@ const (
 	HomeRepairTaskActionArchiveAutomaticReminder HomeRepairTaskAction = "archive_automatic_reminder"
 	HomeRepairTaskActionHumanReview              HomeRepairTaskAction = "human_review"
 	HomeRepairTaskActionLeaveCurrent             HomeRepairTaskAction = "leave_current"
+	HomeRepairTaskActionSupersedeSuggestion      HomeRepairTaskAction = "supersede_suggestion"
 	HomeRepairTaskActionWithdrawProposal         HomeRepairTaskAction = "withdraw_proposal"
 )
 
@@ -10839,6 +10840,8 @@ func (e HomeRepairTaskAction) Valid() bool {
 		return true
 	case HomeRepairTaskActionLeaveCurrent:
 		return true
+	case HomeRepairTaskActionSupersedeSuggestion:
+		return true
 	case HomeRepairTaskActionWithdrawProposal:
 		return true
 	default:
@@ -10848,14 +10851,17 @@ func (e HomeRepairTaskAction) Valid() bool {
 
 // Defines values for HomeRepairTaskSource.
 const (
-	HomeRepairTaskSourceApproval HomeRepairTaskSource = "approval"
-	HomeRepairTaskSourceTask     HomeRepairTaskSource = "task"
+	HomeRepairTaskSourceApproval   HomeRepairTaskSource = "approval"
+	HomeRepairTaskSourceSuggestion HomeRepairTaskSource = "suggestion"
+	HomeRepairTaskSourceTask       HomeRepairTaskSource = "task"
 )
 
 // Valid indicates whether the value is a known member of the HomeRepairTaskSource enum.
 func (e HomeRepairTaskSource) Valid() bool {
 	switch e {
 	case HomeRepairTaskSourceApproval:
+		return true
+	case HomeRepairTaskSourceSuggestion:
 		return true
 	case HomeRepairTaskSourceTask:
 		return true
@@ -21099,14 +21105,17 @@ func (e RelinkActivityJSONBodyEntityType) Valid() bool {
 
 // Defines values for PreviewHomeRepairJSONBodySource.
 const (
-	PreviewHomeRepairJSONBodySourceApproval PreviewHomeRepairJSONBodySource = "approval"
-	PreviewHomeRepairJSONBodySourceTask     PreviewHomeRepairJSONBodySource = "task"
+	PreviewHomeRepairJSONBodySourceApproval   PreviewHomeRepairJSONBodySource = "approval"
+	PreviewHomeRepairJSONBodySourceSuggestion PreviewHomeRepairJSONBodySource = "suggestion"
+	PreviewHomeRepairJSONBodySourceTask       PreviewHomeRepairJSONBodySource = "task"
 )
 
 // Valid indicates whether the value is a known member of the PreviewHomeRepairJSONBodySource enum.
 func (e PreviewHomeRepairJSONBodySource) Valid() bool {
 	switch e {
 	case PreviewHomeRepairJSONBodySourceApproval:
+		return true
+	case PreviewHomeRepairJSONBodySourceSuggestion:
 		return true
 	case PreviewHomeRepairJSONBodySourceTask:
 		return true
@@ -38556,10 +38565,11 @@ type HistoryEdgeOtherEntityType string
 
 // HomeRepairCounts defines model for HomeRepairCounts.
 type HomeRepairCounts struct {
-	Archive  int `json:"archive"`
-	Keep     int `json:"keep"`
-	Review   int `json:"review"`
-	Withdraw int `json:"withdraw"`
+	Archive   int `json:"archive"`
+	Keep      int `json:"keep"`
+	Review    int `json:"review"`
+	Supersede int `json:"supersede"`
+	Withdraw  int `json:"withdraw"`
 }
 
 // HomeRepairReview defines model for HomeRepairReview.
@@ -74016,6 +74026,9 @@ type ServerInterface interface {
 	// Open Deal Scout suggestions the caller may see, newest first.
 	// (GET /deal-suggestions)
 	ListDealSuggestions(w http.ResponseWriter, r *http.Request, params ListDealSuggestionsParams)
+	// Read one suggestion and its currently visible evidence.
+	// (GET /deal-suggestions/{id})
+	GetDealSuggestion(w http.ResponseWriter, r *http.Request, id Id)
 	// Open the suggested deal or link the evidence to an existing deal.
 	// (POST /deal-suggestions/{id}/accept)
 	AcceptDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params AcceptDealSuggestionParams)
@@ -77853,6 +77866,12 @@ func (_ Unimplemented) ResolveDealRoomThread(w http.ResponseWriter, r *http.Requ
 // Open Deal Scout suggestions the caller may see, newest first.
 // (GET /deal-suggestions)
 func (_ Unimplemented) ListDealSuggestions(w http.ResponseWriter, r *http.Request, params ListDealSuggestionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read one suggestion and its currently visible evidence.
+// (GET /deal-suggestions/{id})
+func (_ Unimplemented) GetDealSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -97924,6 +97943,38 @@ func (siw *ServerInterfaceWrapper) ListDealSuggestions(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListDealSuggestions(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDealSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) GetDealSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDealSuggestion(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -118695,6 +118746,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deal-suggestions", wrapper.ListDealSuggestions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deal-suggestions/{id}", wrapper.GetDealSuggestion)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deal-suggestions/{id}/accept", wrapper.AcceptDealSuggestion)

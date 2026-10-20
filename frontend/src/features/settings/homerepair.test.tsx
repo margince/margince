@@ -6,20 +6,36 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { meFixture } from "../../testing/mefixture";
+import { suggestion } from "../deals/dealsuggestion.fixture";
 import { HomeRepairControls } from "./homerepair";
 import {
   proposalRepairReview as proposalReview,
   repairReview as review,
+  suggestionRepairReview,
 } from "./homerepair.fixtures";
 import { jsonResponse, render } from "./settings.testkit";
 
-function serve(status = 204, payload = review, previews: unknown[] = []) {
+function serve(
+  status = 204,
+  payload = review,
+  previews: unknown[] = [],
+  mayRetire = true,
+) {
   const writes: unknown[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
       const request = input instanceof Request ? input : new Request(input);
-      if (request.url.endsWith("/me")) return jsonResponse(meFixture());
+      if (request.url.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({
+            allow: { deal: mayRetire ? ["read", "create"] : ["read"] },
+          }),
+        );
+      }
+      if (request.url.includes("/deal-suggestions/")) {
+        return jsonResponse(suggestion);
+      }
       if (request.url.endsWith("/preview")) {
         previews.push(await request.json());
         return jsonResponse(payload);
@@ -44,6 +60,52 @@ function serve(status = 204, payload = review, previews: unknown[] = []) {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+});
+
+it("shows the exact deal suggestion before activating its reviewed retirement", async () => {
+  const previews: unknown[] = [];
+  const writes = serve(204, suggestionRepairReview, previews);
+  render(<HomeRepairControls version={7} canActivate />);
+  fireEvent.click(screen.getByRole("button", { name: "Deal suggestions" }));
+  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
+  const apply = await screen.findByRole("button", {
+    name: "Apply 1 reviewed change",
+  });
+  expect(previews).toEqual([{ limit: 25, source: "suggestion" }]);
+  expect(
+    screen.getByText("Retire automatic deal suggestion"),
+  ).toBeInTheDocument();
+  const inspect = screen.getByRole("button", { name: "Inspect" });
+  await waitFor(() => expect(inspect).toBeEnabled());
+  fireEvent.click(inspect);
+  expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  expect(
+    screen.getByText(/The buyer requested a platform migration proposal/),
+  ).toBeInTheDocument();
+  expect(writes).toEqual([]);
+  fireEvent.click(screen.getByRole("button", { name: "Close" }));
+  fireEvent.click(apply);
+  await waitFor(() =>
+    expect(writes).toEqual([{ version: 7, review: suggestionRepairReview }]),
+  );
+});
+
+it("allows suggestion inspection but explains missing retirement authority", async () => {
+  const writes = serve(204, suggestionRepairReview, [], false);
+  render(<HomeRepairControls version={7} canActivate />);
+  fireEvent.click(screen.getByRole("button", { name: "Deal suggestions" }));
+  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
+  expect(
+    await screen.findByText(
+      "Deal creation permission is required to retire these suggestions.",
+    ),
+  ).toBeInTheDocument();
+  const inspect = screen.getByRole("button", { name: "Inspect" });
+  await waitFor(() => expect(inspect).toBeEnabled());
+  expect(
+    screen.queryByRole("button", { name: "Apply 1 reviewed change" }),
+  ).toBeNull();
+  expect(writes).toEqual([]);
 });
 
 it("requires a separate explicit action after showing named tasks and their dispositions", async () => {
@@ -106,7 +168,7 @@ it("reviews proposals separately and activates only their displayed snapshot", a
   ).toBeInTheDocument();
   expect(
     screen.getByText(
-      "Reminders to archive: 0. Proposals to withdraw: 1. Keep for review: 0; keep as current work: 0.",
+      "Reminders to archive: 0. Proposals to withdraw: 1. Deal suggestions to retire: 0. Keep for review: 0; keep as current work: 0.",
     ),
   ).toBeInTheDocument();
   expect(writes).toEqual([]);

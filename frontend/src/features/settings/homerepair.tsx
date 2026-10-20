@@ -2,32 +2,40 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ActionRow } from "../../design-system/actionrow";
-import { Button } from "../../design-system/atoms";
+import { Button, Modal } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterPills } from "../../design-system/filterpills";
+import { Heading } from "../../design-system/heading";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useActivity } from "../../lib/activityread";
+import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { ApprovalDetailModal } from "../automations/approvaleditor";
+import { DealSuggestionCard, suggestedName } from "../deals/dealsuggestion";
+import { useDealSuggestion } from "../deals/dealsuggestions.queries";
 import { OpenActivityDrawer } from "../voice-knowledge/activitydrawer";
 
 type Review = components["schemas"]["HomeRepairReview"];
 type Task = components["schemas"]["HomeRepairTask"];
 const actionLabels: Record<Task["action"], MessageKey> = {
+  supersede_suggestion: "homeRepair.supersede",
   withdraw_proposal: "homeRepair.withdraw",
   archive_automatic_reminder: "homeRepair.archive",
   human_review: "homeRepair.keepReview",
   leave_current: "homeRepair.keepCurrent",
 };
-const reasonLabels: Record<string, MessageKey> = {
+export const HOME_REPAIR_REASON_LABELS: Record<string, MessageKey> = {
+  company_has_deal: "homeRepair.reason.dealExists",
+  suggestion_source_changed: "homeRepair.reason.dealSource",
+  buyer_no_longer_verified: "homeRepair.reason.buyer",
   human_adoption_not_excluded: "homeRepair.reason.adopted",
   source_rule_not_verified: "homeRepair.reason.unverified",
   source_unavailable: "homeRepair.reason.unavailable",
@@ -82,7 +90,8 @@ function RepairItemRow({
     <SettingRow
       label={label}
       description={t(
-        reasonLabels[task.reason] ?? "homeRepair.reason.unverified",
+        HOME_REPAIR_REASON_LABELS[task.reason] ??
+          "homeRepair.reason.unverified",
       )}
       control={
         <Button variant="ghost" disabled={disabled} onClick={onInspect}>
@@ -121,6 +130,41 @@ function RepairApproval({ task }: Readonly<{ task: Task }>) {
   );
 }
 
+function RepairSuggestion({ task }: Readonly<{ task: Task }>) {
+  const t = useT();
+  const heading = useId();
+  const [open, setOpen] = useState(false);
+  const detail = useDealSuggestion(task.id);
+  const suggestion = detail.error ? undefined : detail.data;
+  const label = suggestion
+    ? suggestedName(suggestion, t)
+    : t("homeRepair.unnamed");
+  return (
+    <>
+      <RepairItemRow
+        task={task}
+        label={label}
+        disabled={!suggestion}
+        onInspect={() => setOpen(true)}
+      />
+      <ErrorLine error={detail.error} />
+      {open && suggestion && (
+        <Modal
+          open
+          onClose={() => setOpen(false)}
+          labelledBy={heading}
+          intent="form"
+        >
+          <Heading size="large" id={heading} className="modal-title">
+            {label}
+          </Heading>
+          <DealSuggestionCard suggestion={suggestion} />
+        </Modal>
+      )}
+    </>
+  );
+}
+
 export function HomeRepairControls({
   version,
   canActivate,
@@ -129,14 +173,17 @@ export function HomeRepairControls({
   const { locale } = useLocale();
   const client = useQueryClient();
   const plural = usePlural();
-  const [source, setSource] = useState<"task" | "approval">("task");
+  const mayRetireSuggestions = useCanWrite("deal", "create");
+  const [source, setSource] = useState<"task" | "approval" | "suggestion">(
+    "task",
+  );
   const preview = useMutation({
     mutationFn: async ({
       after,
       source,
     }: {
       after?: string;
-      source: "task" | "approval";
+      source: "task" | "approval" | "suggestion";
     }) =>
       unwrap(
         await api.POST("/admin/home-repair/preview", {
@@ -159,7 +206,9 @@ export function HomeRepairControls({
   const review =
     preview.variables?.source === source ? preview.data : undefined;
   const changeCount =
-    (review?.counts.archive ?? 0) + (review?.counts.withdraw ?? 0);
+    (review?.counts.archive ?? 0) +
+    (review?.counts.withdraw ?? 0) +
+    (review?.counts.supersede ?? 0);
   return (
     <>
       <p>{t("homeRepair.explain")}</p>
@@ -168,6 +217,7 @@ export function HomeRepairControls({
         pills={[
           { value: "task", label: t("homeRepair.tasks") },
           { value: "approval", label: t("homeRepair.proposals") },
+          { value: "suggestion", label: t("homeRepair.suggestions") },
         ]}
         label={t("homeRepair.kind")}
         onChange={(next) => {
@@ -209,32 +259,40 @@ export function HomeRepairControls({
             {t("homeRepair.summary", {
               archive: formatNumber(review.counts.archive, locale),
               withdraw: formatNumber(review.counts.withdraw, locale),
+              supersede: formatNumber(review.counts.supersede ?? 0, locale),
               review: formatNumber(review.counts.review, locale),
               keep: formatNumber(review.counts.keep, locale),
             })}
           </p>
           <SettingList>
             {review.tasks.map((task) =>
-              task.source === "approval" ? (
+              task.source === "suggestion" ? (
+                <RepairSuggestion key={task.id} task={task} />
+              ) : task.source === "approval" ? (
                 <RepairApproval key={task.id} task={task} />
               ) : (
                 <RepairTask key={task.id} task={task} />
               ),
             )}
           </SettingList>
-          {canActivate && changeCount > 0 && (
-            <ActionRow>
-              <Button
-                pending={activate.isPending}
-                disabled={preview.isPending || version < 1}
-                onClick={() => activate.mutate(review)}
-              >
-                {plural("homeRepair.apply", changeCount, {
-                  count: formatNumber(changeCount, locale),
-                })}
-              </Button>
-            </ActionRow>
+          {canActivate && source === "suggestion" && !mayRetireSuggestions && (
+            <p>{t("homeRepair.suggestionPermission")}</p>
           )}
+          {canActivate &&
+            (source !== "suggestion" || mayRetireSuggestions) &&
+            changeCount > 0 && (
+              <ActionRow>
+                <Button
+                  pending={activate.isPending}
+                  disabled={preview.isPending || version < 1}
+                  onClick={() => activate.mutate(review)}
+                >
+                  {plural("homeRepair.apply", changeCount, {
+                    count: formatNumber(changeCount, locale),
+                  })}
+                </Button>
+              </ActionRow>
+            )}
         </>
       )}
       {activate.isSuccess && <p>{t("homeRepair.started")}</p>}

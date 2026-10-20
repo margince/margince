@@ -355,6 +355,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/deal-rooms/{id}/participants":                                  {Op: "listDealRoomParticipants", Access: "tool", Tool: "list_records", RecordType: "deal_room_participant", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/deal-rooms/{id}/threads":                                       {Op: "listDealRoomThreads", Access: "tool", Tool: "list_records", RecordType: "deal_room_thread", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/deal-suggestions":                                              {Op: "listDealSuggestions", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/deal-suggestions/{id}":                                         {Op: "getDealSuggestion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/deals":                                                         {Op: "listDeals", Access: "tool", Tool: "list_records", RecordType: "deal", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/deals/at-risk":                                                 {Op: "listAtRiskRelationships", Access: "tool", Tool: "at_risk_relationships", RecordType: "deal", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"GET /v1/deals/slipping":                                                {Op: "listSlippingDeals", Access: "tool", Tool: "whats_slipping_this_week", RecordType: "deal", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
