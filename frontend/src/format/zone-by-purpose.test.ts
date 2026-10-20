@@ -255,6 +255,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The case asserts that the weekly's 'written at' renders in the INSTALLATION's zone, so it provides one through RecordZoneProvider and formats its expectation against the same name. The alternative is naming FALLBACK_RECORD_ZONE, which the arm below forbids and rightly: the component reads that same constant, so the assertion would hold however wrong the zone decision was.",
   },
   {
+    file: "features/brief/brief.weekly.report.test.tsx",
+    why: "The report's title, calendar week and next-report date are days in the installation's zone, so the case provides one through RecordZoneProvider. Without it the expected dates would follow whichever runner's zone the case ran in.",
+  },
+  {
     file: "features/analytics/analytics.forecast.test.tsx",
     why: "The stubbed readings carry the installation zone the SERVER sends — the frame is the server's answer, not the reader's setting. A zone read off the runner would make the fixture describe whichever machine ran it.",
   },
