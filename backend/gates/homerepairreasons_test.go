@@ -5,6 +5,8 @@
 
 package gates
 
+// Home repair labels cover the reasons emitted by its canonical classifiers and reviewed projections.
+
 import (
 	"go/ast"
 	"go/parser"
