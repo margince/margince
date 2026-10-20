@@ -151,14 +151,14 @@ func TestAReportableDealFieldGroupsTheDealsThatHoldIt(t *testing.T) {
 	}
 }
 
-// Reports group deals alone by custom fields, so a company field cannot be
-// opted in: the switch would claim an effect it does not have.
-func TestOnlyADealFieldCanBeOptedIntoReporting(t *testing.T) {
+// Reports group deals by their own fields and their company's, so a contact
+// field cannot be opted in: the switch would claim an effect it does not have.
+func TestOnlyADealOrCompanyFieldCanBeOptedIntoReporting(t *testing.T) {
 	e := integration.Setup(t)
 	catalog := customfields.NewService(e.Pool, integration.SchemaPool(t))
 	admin := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
 	field, err := catalog.Create(admin, customfields.FieldSpec{
-		Object: "company", Label: "Tier", Type: customfields.TypePicklist,
+		Object: "contact", Label: "Tier", Type: customfields.TypePicklist,
 		Options: []string{"Gold"}, Source: "manual",
 	})
 	if err != nil {
@@ -167,7 +167,7 @@ func TestOnlyADealFieldCanBeOptedIntoReporting(t *testing.T) {
 	yes := true
 	_, err = catalog.Update(admin, ids.UUID(field.Id), customfields.FieldPatch{Reportable: &yes}, nil)
 	if refusal, ok := errors.AsType[*customfields.ValidationError](err); !ok || refusal.Errors[0].Field != "reportable" {
-		t.Fatalf("opting a company field in answered %v, want a refusal naming reportable", err)
+		t.Fatalf("opting a contact field in answered %v, want a refusal naming reportable", err)
 	}
 }
 

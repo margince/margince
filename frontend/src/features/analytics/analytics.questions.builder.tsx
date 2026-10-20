@@ -10,7 +10,7 @@ import { Panel, PanelBody, PanelGroupHead } from "../../design-system/panel";
 import { MultiSelect, Select } from "../../design-system/select";
 import { forReader } from "../../format/collate";
 import { ordinalNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { type Locale, useLocale, useT } from "../../i18n";
 import type { VocabularyField } from "../../lib/filterdata";
 import { ValueControl } from "../lists/filtervalue";
 import {
@@ -25,6 +25,7 @@ import {
 import {
   type AnalyticsEntity,
   analyticsFieldLabel,
+  coverageLines,
   customFieldOf,
   customLabels,
   entityLabel,
@@ -63,12 +64,24 @@ function startingValue(entity: AnalyticsEntity, field: string) {
   return valueShape(entity, field) === "boolean" ? true : "";
 }
 
+// Each picked custom field's coverage, one line apiece; nothing when the
+// grouping names none.
+function coverageHint(
+  t: Translate,
+  locale: Locale,
+  entity: AnalyticsEntity | undefined,
+  groupBy: readonly string[],
+) {
+  const lines = coverageLines(t, locale, entity, groupBy);
+  return lines.length > 0 ? lines.join(" ") : undefined;
+}
+
 function fieldOptions(
   t: Translate,
   fields: readonly string[],
   entity: AnalyticsEntity | undefined,
 ) {
-  const custom = customLabels(entity ? [entity] : []);
+  const custom = customLabels(t, entity ? [entity] : []);
   return fields.map((field) => ({
     value: field,
     label: analyticsFieldLabel(t, field, custom),
@@ -132,7 +145,10 @@ export function QuestionBuilder({
               />
             )}
           </Field>
-          <Field label={t("analytics.q.groupBy")}>
+          <Field
+            label={t("analytics.q.groupBy")}
+            hint={coverageHint(t, locale, entity, draft.groupBy)}
+          >
             {(control) => (
               <MultiSelect
                 {...control}
@@ -391,7 +407,7 @@ function FilterRow({
   const t = useT();
   const controlOp = valueControlOp(filter.op);
   const fieldName = filter.field
-    ? analyticsFieldLabel(t, filter.field, customLabels([entity]))
+    ? analyticsFieldLabel(t, filter.field, customLabels(t, [entity]))
     : t("analytics.q.filterN", { n: ordinalNumber(position) });
   return (
     <li

@@ -3325,7 +3325,7 @@ public.custom_field.custom_field_created_by_fkey FOREIGN KEY (created_by) REFERE
 public.custom_field.custom_field_currency_check CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$'::text)))
 public.custom_field.custom_field_object_check CHECK ((object = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'contract'::text])))
 public.custom_field.custom_field_pkey PRIMARY KEY (id)
-public.custom_field.custom_field_reportable_type_check CHECK (((NOT reportable) OR ((object = 'deal'::text) AND (type = ANY (ARRAY['picklist'::text, 'boolean'::text])))))
+public.custom_field.custom_field_reportable_type_check CHECK (((NOT reportable) OR ((object = ANY (ARRAY['deal'::text, 'company'::text])) AND (type = ANY (ARRAY['picklist'::text, 'boolean'::text])))))
 public.custom_field.custom_field_status_check CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text])))
 public.custom_field.custom_field_type_check CHECK ((type = ANY (ARRAY['text'::text, 'number'::text, 'date'::text, 'currency'::text, 'picklist'::text, 'multiselect'::text, 'boolean'::text])))
 public.custom_field.custom_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))

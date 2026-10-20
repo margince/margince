@@ -1423,6 +1423,24 @@ func (e AiUsageBudgetBand) Valid() bool {
 	}
 }
 
+// Defines values for AnalyticsCustomFieldObject.
+const (
+	AnalyticsCustomFieldObjectCompany AnalyticsCustomFieldObject = "company"
+	AnalyticsCustomFieldObjectDeal    AnalyticsCustomFieldObject = "deal"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsCustomFieldObject enum.
+func (e AnalyticsCustomFieldObject) Valid() bool {
+	switch e {
+	case AnalyticsCustomFieldObjectCompany:
+		return true
+	case AnalyticsCustomFieldObjectDeal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AnalyticsCustomFieldType.
 const (
 	AnalyticsCustomFieldTypeBoolean  AnalyticsCustomFieldType = "boolean"
@@ -25570,13 +25588,31 @@ type AnalyticsCustomField struct {
 	// Name The field as `group_by` and a filter name it.
 	Name string `json:"name"`
 
+	// Object The record the field belongs to. A company field is read through the deal's company,
+	// and a deal whose company the caller may not open drops out of an answer that groups
+	// or filters by it.
+	Object AnalyticsCustomFieldObject `json:"object"`
+
 	// Options The choices a picklist offers today, empty for a boolean. A record may still hold a
 	// choice an administrator has since removed.
 	Options []string `json:"options"`
 
+	// Records How many live deals the caller can read when the schema was served.
+	Records int `json:"records"`
+
 	// Type The value shape. A picklist holds one of `options`; a boolean holds yes or no.
 	Type AnalyticsCustomFieldType `json:"type"`
+
+	// WithValue How many of those `records` hold a value in this field. A company field counts a deal
+	// only when the caller may open its company. A grouping by a field with few values
+	// leaves most deals in the empty group.
+	WithValue int `json:"with_value"`
 }
+
+// AnalyticsCustomFieldObject The record the field belongs to. A company field is read through the deal's company,
+// and a deal whose company the caller may not open drops out of an answer that groups
+// or filters by it.
+type AnalyticsCustomFieldObject string
 
 // AnalyticsCustomFieldType The value shape. A picklist holds one of `options`; a boolean holds yes or no.
 type AnalyticsCustomFieldType string

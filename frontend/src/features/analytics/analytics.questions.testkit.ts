@@ -39,15 +39,35 @@ export const ENTITIES: AnalyticsEntity[] = [
 // Deals with two fields an administrator opted into reporting.
 export const CUSTOM_DEALS: AnalyticsEntity = {
   name: "deals-by-stage",
-  group_by: ["cf_strategic", "cf_territory", "status"],
+  group_by: ["cf_strategic", "cf_territory", "company_cf_tier", "status"],
   measures: ["amount_minor"],
   custom_fields: [
-    { name: "cf_strategic", label: "Strategic", type: "boolean", options: [] },
+    {
+      name: "cf_strategic",
+      label: "Strategic",
+      type: "boolean",
+      options: [],
+      object: "deal",
+      records: 10,
+      with_value: 10,
+    },
     {
       name: "cf_territory",
       label: "Territory",
       type: "picklist",
       options: ["EMEA", "APAC"],
+      object: "deal",
+      records: 10,
+      with_value: 7,
+    },
+    {
+      name: "company_cf_tier",
+      label: "Tier",
+      type: "picklist",
+      options: ["Gold", "Silver"],
+      object: "company",
+      records: 10,
+      with_value: 3,
     },
   ],
 };

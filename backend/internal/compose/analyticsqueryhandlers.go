@@ -52,7 +52,7 @@ func (h analyticsQueryHandlers) GetAnalyticsSchema(w http.ResponseWriter, r *htt
 	var schema analyticsquery.Schema
 	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		schema, _, err = AnalyticsSchemaIn(ctx, tx)
+		schema, err = AnalyticsSchemaWithCoverage(ctx, tx)
 		return err
 	}); err != nil {
 		httperr.Write(w, r, err)

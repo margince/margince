@@ -5577,6 +5577,8 @@ export const en = {
   "analytics.q.filterN": "Filter {n}",
   "analytics.q.filters": "Filters",
   "analytics.q.groupBy": "Group by",
+  "analytics.q.companyField": "{label} (company)",
+  "analytics.q.fieldCoverage": "{label} has a value on {count} of {total} deals you can read.",
   "analytics.q.limited_one":
     "Only the first group is shown. Add a filter to narrow the question.",
   "analytics.q.limited_other":

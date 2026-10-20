@@ -51208,10 +51208,26 @@ components:
       additionalProperties: false
     AnalyticsCustomField:
       type: object
-      required: [name, label, type, options]
+      required: [name, label, type, options, object, records, with_value]
       properties:
         name: { type: string, description: "The field as `group_by` and a filter name it." }
         label: { type: string, description: "The name an administrator gave the field." }
+        object:
+          type: string
+          enum: [deal, company]
+          description: |
+            The record the field belongs to. A company field is read through the deal's company,
+            and a deal whose company the caller may not open drops out of an answer that groups
+            or filters by it.
+        records:
+          type: integer
+          description: How many live deals the caller can read when the schema was served.
+        with_value:
+          type: integer
+          description: |
+            How many of those `records` hold a value in this field. A company field counts a deal
+            only when the caller may open its company. A grouping by a field with few values
+            leaves most deals in the empty group.
         type:
           type: string
           enum: [picklist, boolean]

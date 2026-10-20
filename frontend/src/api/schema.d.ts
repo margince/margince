@@ -37574,6 +37574,21 @@ export interface components {
             /** @description The name an administrator gave the field. */
             label: string;
             /**
+             * @description The record the field belongs to. A company field is read through the deal's company,
+             *     and a deal whose company the caller may not open drops out of an answer that groups
+             *     or filters by it.
+             * @enum {string}
+             */
+            object: "deal" | "company";
+            /** @description How many live deals the caller can read when the schema was served. */
+            records: number;
+            /**
+             * @description How many of those `records` hold a value in this field. A company field counts a deal
+             *     only when the caller may open its company. A grouping by a field with few values
+             *     leaves most deals in the empty group.
+             */
+            with_value: number;
+            /**
              * @description The value shape. A picklist holds one of `options`; a boolean holds yes or no.
              * @enum {string}
              */

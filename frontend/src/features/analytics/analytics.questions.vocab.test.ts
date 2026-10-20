@@ -7,6 +7,7 @@ import { CUSTOM_DEALS, ENTITIES, QUERY } from "./analytics.questions.testkit";
 import {
   analyticsFieldLabel,
   columnLabel,
+  coverageLines,
   customLabels,
   explainGroup,
   fieldsForFn,
@@ -26,7 +27,7 @@ const t = (
 ) => translate("en", key, params);
 
 describe("the installation's own fields", () => {
-  const labels = customLabels([CUSTOM_DEALS]);
+  const labels = customLabels(t, [CUSTOM_DEALS]);
 
   it("reads under the label an administrator gave them", () => {
     expect(analyticsFieldLabel(t, "cf_territory", labels)).toBe("Territory");
@@ -53,6 +54,25 @@ describe("the installation's own fields", () => {
   it("takes a yes-or-no field as a boolean and a picklist as text", () => {
     expect(valueShape(CUSTOM_DEALS, "cf_strategic")).toBe("boolean");
     expect(valueShape(CUSTOM_DEALS, "cf_territory")).toBe("text");
+  });
+
+  it("names a company's field as the company's", () => {
+    expect(analyticsFieldLabel(t, "company_cf_tier", labels)).toBe(
+      "Tier (company)",
+    );
+  });
+
+  it("says how many deals hold a value in each custom field grouped by", () => {
+    expect(
+      coverageLines(t, "en", CUSTOM_DEALS, [
+        "status",
+        "cf_territory",
+        "company_cf_tier",
+      ]),
+    ).toEqual([
+      "Territory has a value on 7 of 10 deals you can read.",
+      "Tier (company) has a value on 3 of 10 deals you can read.",
+    ]);
   });
 });
 

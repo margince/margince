@@ -10,7 +10,8 @@
 // without a render and the builder only draws what these decide.
 
 import type { components } from "../../api/schema";
-import { isMessageKey, type useT } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import { isMessageKey, type Locale, type useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemDetails } from "../../lib/problembody";
 import type { FilterOp } from "../../lib/segmentpredicate";
@@ -148,13 +149,49 @@ export function entityLabel(t: Translate, name: string): string {
 export type CustomLabels = ReadonlyMap<string, string>;
 
 export function customLabels(
+  t: Translate,
   entities: readonly AnalyticsEntity[],
 ): CustomLabels {
   return new Map(
     entities.flatMap((entity) =>
-      (entity.custom_fields ?? []).map((field) => [field.name, field.label]),
+      (entity.custom_fields ?? []).map((field) => [
+        field.name,
+        customFieldLabel(t, field),
+      ]),
     ),
   );
+}
+
+// A company's field reads through the deal's company, so its name says so: a
+// deal field and a company field may carry the same label.
+function customFieldLabel(t: Translate, field: CustomField): string {
+  return field.object === "company"
+    ? t("analytics.q.companyField", { label: field.label })
+    : field.label;
+}
+
+/**
+ * How many readable deals hold a value in each custom field the reader groups
+ * by, so a grouping by a sparse field does not read as complete.
+ */
+export function coverageLines(
+  t: Translate,
+  locale: Locale,
+  entity: AnalyticsEntity | undefined,
+  groupBy: readonly string[],
+): string[] {
+  return groupBy.flatMap((name) => {
+    const field = entity ? customFieldOf(entity, name) : undefined;
+    return field
+      ? [
+          t("analytics.q.fieldCoverage", {
+            label: customFieldLabel(t, field),
+            count: formatNumber(field.with_value, locale),
+            total: formatNumber(field.records, locale),
+          }),
+        ]
+      : [];
+  });
 }
 
 export function customFieldOf(

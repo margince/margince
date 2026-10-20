@@ -937,8 +937,8 @@ describe("the reporting setting on the field table", () => {
   it("offers no reporting column on an object reports do not group", () => {
     wrap(
       <FieldTable
-        object="company"
-        fields={[field({ object: "company", type: "boolean" })]}
+        object="contact"
+        fields={[field({ object: "contact", type: "boolean" })]}
         canEdit
         meUserId="u1"
         onRename={() => {}}
@@ -947,6 +947,25 @@ describe("the reporting setting on the field table", () => {
       />,
     );
     expect(screen.queryByText(en["cf.col.inReports"])).toBeNull();
+  });
+
+  it("offers a company picklist to reports, which group deals by it", () => {
+    wrap(
+      <FieldTable
+        object="company"
+        fields={[
+          field({ object: "company", label: "Tier", type: "picklist" }),
+        ]}
+        canEdit
+        meUserId="u1"
+        onRename={() => {}}
+        onArchive={() => {}}
+        onSetting={() => {}}
+      />,
+    );
+    expect(
+      screen.getByRole("switch", { name: "Use “Tier” in reports" }),
+    ).toBeInTheDocument();
   });
 });
 
