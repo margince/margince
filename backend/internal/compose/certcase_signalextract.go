@@ -62,6 +62,10 @@ const certSentDefault = "2026-09-07"
 // signalExtractExpectation identifies an event, its cited message and verified promiser.
 type signalExtractExpectation struct {
 	Recipients      []string           `json:"recipients,omitempty"`
+	LifecycleScope  string             `json:"lifecycle_scope,omitempty"`
+	Workstream      string             `json:"workstream,omitempty"`
+	Buyer           string             `json:"buyer,omitempty"`
+	CommercialRole  string             `json:"commercial_role,omitempty"`
 	Meaning         *commitmentMeaning `json:"meaning,omitempty"`
 	Optional        bool               `json:"optional,omitempty"`
 	Kind            string             `json:"kind"`
@@ -147,12 +151,13 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 		if err := validateExpectedRecipients(want[i].Recipients, references[want[i].Message-1]); err != nil {
 			return nil, err
 		}
-		if want[i].Promiser == "" {
-			continue
-		}
-		_, found := references[want[i].Message-1][want[i].Promiser]
-		if !found {
-			return nil, fmt.Errorf("expected promiser %q is not a participant of message %d", want[i].Promiser, want[i].Message)
+		for _, key := range []string{want[i].Promiser, want[i].Buyer} {
+			if key == "" {
+				continue
+			}
+			if _, found := references[want[i].Message-1][key]; !found {
+				return nil, fmt.Errorf("expected participant %q is not a participant of message %d", key, want[i].Message)
+			}
 		}
 	}
 	return &signalExtractCase{thread: thread, expected: want, promiserKeys: certPromiserKeys(references...)}, nil
@@ -327,6 +332,18 @@ func (c *signalExtractCase) disagreements(payload extractPayload) []string {
 			}
 			if c.promiserKeys[event.PromiserRef] == expected.Promiser && !expectedRecipientsMatch(expected.Recipients, event.RecipientRefs, c.promiserKeys) {
 				out = append(out, "the recipients do not match the quoted promise")
+			}
+			if expected.LifecycleScope != "" && event.LifecycleScope != expected.LifecycleScope {
+				out = append(out, "the lifecycle scope does not match the source")
+			}
+			if expected.Workstream != "" && event.Workstream != expected.Workstream {
+				out = append(out, "the named workstream does not match the source")
+			}
+			if expected.Buyer != "" && c.promiserKeys[event.BuyerRef] != expected.Buyer {
+				out = append(out, "the buyer does not match the verified participant")
+			}
+			if expected.CommercialRole != "" && event.CommercialRole != expected.CommercialRole {
+				out = append(out, "the commercial role does not match the request")
 			}
 			if !expectedMeaningMatches(expected.Meaning, event.Meaning) {
 				out = append(out, "the commitment meaning does not match the source")

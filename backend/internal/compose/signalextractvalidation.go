@@ -64,7 +64,7 @@ func extractSchema() json.RawMessage {
 			"events": schema.Array(schema.Object(
 				map[string]schema.Node{
 					commitmentMeaningField:  commitmentMeaningSchema(),
-					paramKind:               schema.Enum("contract_ended", "new_opportunity", "commitment_made"),
+					paramKind:               schema.Enum("contract_ended", extractKindOpportunity, "commitment_made"),
 					"message_id":            schema.String(),
 					"summary":               schema.String(),
 					claimQuoteKey:           schema.String(),
@@ -73,6 +73,10 @@ func extractSchema() json.RawMessage {
 					"restated_quote":        schema.String(),
 					"promiser_ref":          schema.String(),
 					commitmentRecipientsKey: schema.Array(schema.String()),
+					"lifecycle_scope":       schema.Enum("", lifecycleScopeCompany, lifecycleScopeWorkstream, lifecycleScopeUnknown),
+					"workstream":            schema.String(),
+					"buyer_ref":             schema.String(),
+					"commercial_role":       schema.Enum(commercialRoleBuyer, commercialRoleSupplier, commercialRolePartner, commercialRoleProvider, commercialRoleUnknown),
 					extractionConfidenceKey: schema.Number(),
 				},
 				paramKind, "message_id", "summary", claimQuoteKey, "due_date", "promiser_ref", extractionConfidenceKey,

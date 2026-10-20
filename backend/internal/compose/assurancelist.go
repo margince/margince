@@ -72,9 +72,9 @@ func TeamAssuranceExceptions(
 	return assuranceExceptionsOwnedBy(ctx, tx, members, nil, limit)
 }
 
-// assuranceExceptionsOwnedBy is both readers' body. Nil owners reads every
+// assuranceDealExceptionsOwnedBy is both deal readers' body. Nil owners reads every
 // finding the caller may see; a zero limit reads them all.
-func assuranceExceptionsOwnedBy(
+func assuranceDealExceptionsOwnedBy(
 	ctx context.Context, tx pgx.Tx, owners []ids.UUID, requested *RequestedScope, limit int,
 ) ([]assurance.Exception, error) {
 	// Both halves, and the object half first. Every finding here is ABOUT a

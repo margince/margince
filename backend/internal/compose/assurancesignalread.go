@@ -1,0 +1,113 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package compose
+
+import (
+	"context"
+	"fmt"
+	"sort"
+	"strings"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+func assuranceExceptionsOwnedBy(ctx context.Context, tx pgx.Tx, owners []ids.UUID, requested *RequestedScope, limit int) ([]assurance.Exception, error) {
+	found, err := assuranceDealExceptionsOwnedBy(ctx, tx, owners, requested, 0)
+	if err != nil {
+		return nil, err
+	}
+	signals, err := assuranceSignalExceptions(ctx, tx, owners, requested)
+	if err != nil {
+		return nil, err
+	}
+	found = append(found, signals...)
+	sort.SliceStable(found, func(i, j int) bool {
+		if found[i].Severity != found[j].Severity {
+			return assuranceSeverity(found[i].Severity) < assuranceSeverity(found[j].Severity)
+		}
+		if !found[i].LastSeenAt.Equal(found[j].LastSeenAt) {
+			return found[i].LastSeenAt.After(found[j].LastSeenAt)
+		}
+		return found[i].ID.String() < found[j].ID.String()
+	})
+	if limit > 0 && len(found) > limit {
+		found = found[:limit]
+	}
+	return found, nil
+}
+
+func assuranceSeverity(severity string) int {
+	switch severity {
+	case assurance.SeverityHigh:
+		return 0
+	case assurance.SeverityMedium:
+		return 1
+	default:
+		return 2
+	}
+}
+
+func assuranceSignalExceptions(ctx context.Context, tx pgx.Tx, owners []ids.UUID, requested *RequestedScope) ([]assurance.Exception, error) {
+	if !auth.ReadGranted(ctx, "signal") || !auth.ReadGranted(ctx, "activity") || !auth.ReadGranted(ctx, "company") {
+		return nil, nil
+	}
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	signalScope, err := auth.SignalScopeClause(ctx, "s", arg)
+	if err != nil {
+		return nil, err
+	}
+	if signalScope == "" {
+		signalScope = sqlUnnarrowed
+	}
+	companyScope, err := auth.ScopeClauseFor(ctx, "company", "c", arg)
+	if err != nil {
+		return nil, err
+	}
+	if companyScope != "" {
+		signalScope += " AND " + companyScope
+	}
+	content, err := auth.ActivityContentClause(ctx, "ca", arg)
+	if err != nil {
+		return nil, err
+	}
+	if owners != nil {
+		signalScope += fmt.Sprintf(" AND c.owner_id = ANY($%d)", arg(owners))
+	}
+	if requested != nil {
+		_, population, err := AnalyticsPopulationClause(ctx, tx, *requested, "c", arg, unownedIsPartOfDefault)
+		if err != nil {
+			return nil, err
+		}
+		if population != "" {
+			signalScope += " AND " + population
+		}
+	}
+	suggestionScope, err := deals.ReadableSuggestionClause(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	columns := strings.Replace(exceptionColumns, "e.observed", `CASE WHEN EXISTS (
+  SELECT 1 FROM deal_suggestion s WHERE s.id::text = e.observed->>'suggestion_id'
+  AND s.state = 'open' AND `+suggestionScope+`) THEN e.observed ELSE e.observed - 'suggestion_id' END`, 1)
+	rows, err := tx.Query(ctx, `SELECT `+columns+`, c.display_name, c.owner_id
+ FROM assurance_exception e JOIN signal s ON s.id = e.subject_id
+ JOIN company c ON c.id = s.resolved_company_id
+ WHERE e.subject_kind = 'signal' AND e.status = 'open'
+ AND s.archived_at IS NULL AND c.archived_at IS NULL AND `+signalScope+`
+ AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) cite
+  WHERE cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
+   WHERE ca.id = `+storekit.CitedActivityID("cite")+` AND ca.archived_at IS NULL AND `+content+`))
+ ORDER BY e.last_seen_at DESC, e.id`, args...)
+	if err != nil {
+		return nil, fmt.Errorf("compose: reading signal findings: %w", err)
+	}
+	return pgx.CollectRows(rows, scanLabelledException)
+}

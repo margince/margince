@@ -174,6 +174,15 @@ A deal is created on **Deals**, on a company page, on a project page, from the
 command palette, or by qualifying a lead. How a deal then moves through stages,
 closes and reopens is on [The pipeline: how a deal moves](the-pipeline.md).
 
+### How do I review a possible deal?
+A deal suggestion names the buyer's company and shows the dated evidence behind it. Read the source before accepting it. A meeting, an invitation or a proposal you sent does not establish that someone wants to buy.
+
+Choose **Link to existing deal** when the request belongs to a deal already at that company. Otherwise, check the proposed details before creating a deal. Dismiss a suggestion with a reason when it should not become a deal.
+
+Buying evidence without a proposal appears in **Input checks**. Open **Answer** to read the source, check who is buying, and choose a deal. You can create a deal there when you have permission, then save the answer to file the source on it. **Not relevant** and **Remind later** keep the decision explicit.
+
+Old buying evidence carries its source date and a warning to check whether the buyer still wants it. The mailbox history date can exclude old promises from automatic work while leaving this evidence available for review.
+
 ### How do I create a deal?
 To create a deal in Margince, open **Deals** in the sidebar and choose **New deal**.
 1. Enter a **Deal name** (required).

@@ -88,6 +88,9 @@ func (s *Scanner) Preview(ctx context.Context, now time.Time) (Preview, error) {
 			return fmt.Errorf("%w: %w", errSubjectsUnreadable, err)
 		}
 		pass := askEveryRule(now, subjects, s.cfg)
+		if _, err := s.askSignals(ctx, tx, now, &pass); err != nil {
+			return err
+		}
 		out.EligibleDeals = pass.eligible
 		out.Counts = countByType(pass.findings())
 		out.Readiness = Readiness(out.Coverage, pass.findings(), s.cfg)

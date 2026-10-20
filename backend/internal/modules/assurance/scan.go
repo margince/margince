@@ -25,6 +25,7 @@ type CoverageFunc func(ctx context.Context, tx pgx.Tx, now time.Time) []SourceCo
 // Scanner runs one nightly pass.
 type Scanner struct {
 	store    *Store
+	signals  SignalSubjectsFunc
 	subjects SubjectsFunc
 	coverage CoverageFunc
 	cfg      Config
@@ -37,9 +38,10 @@ func NewScanner(store *Store, subjects SubjectsFunc, coverage CoverageFunc, cfg 
 
 // Result is what one pass came to.
 type Result struct {
-	RunID         ids.UUID
-	EligibleDeals int
-	Findings      int
+	RunID           ids.UUID
+	EligibleDeals   int
+	EligibleSignals int
+	Findings        int
 	// Cleared counts formerly open findings this pass closed because their
 	// condition is no longer present.
 	Cleared int64
@@ -160,6 +162,10 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 		}
 
 		pass := askEveryRule(now, subjects, s.cfg)
+		out.EligibleSignals, err = s.askSignals(ctx, tx, now, &pass)
+		if err != nil {
+			return err
+		}
 		out.EligibleDeals = pass.eligible
 		out.Findings = len(pass.raised)
 		for _, r := range pass.raised {
@@ -182,6 +188,13 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 			return err
 		}
 		out.Cleared = cleared
+		if s.signals != nil {
+			signalCleared, err := s.store.closeAbsentSignals(ctx, tx, pass.seen)
+			if err != nil {
+				return err
+			}
+			out.Cleared += signalCleared
+		}
 		// And the findings whose SUBJECT went, which the clearing above
 		// deliberately leaves alone: it speaks only about deals it walked, and
 		// a departed deal was never walked. Unbounded by rule type, unlike the
@@ -199,7 +212,7 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 		if out.Readiness == ReadinessChecksIncomplete {
 			out.Status = StatusIncomplete
 		}
-		return s.store.FinishRun(ctx, tx, runID, out.EligibleDeals, 0, out.Cleared,
+		return s.store.FinishRun(ctx, tx, runID, out.EligibleDeals, out.EligibleSignals, out.Cleared,
 			out.Status, out.Readiness)
 	})
 	if err != nil {
