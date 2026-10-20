@@ -13561,7 +13561,6 @@ export const vi = {
   "sched.group.held": "Đang chờ bạn xử lý",
   "sched.group.waiting": "Đã hẹn giờ",
   "sched.group.waitingEmpty": "Chưa hẹn giờ tin nhắn nào.",
-  "sched.group.closed": "Đã gửi hoặc đã thu hồi",
   "sched.status.scheduled": "Đã hẹn giờ",
   "sched.status.released": "Đang gửi",
   "sched.status.sent": "\u0110\u00e3 g\u1eedi",

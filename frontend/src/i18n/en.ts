@@ -13895,7 +13895,6 @@ export const en = {
   "sched.group.held": "Held for your action",
   "sched.group.waiting": "Scheduled",
   "sched.group.waitingEmpty": "No messages scheduled.",
-  "sched.group.closed": "Sent or withdrawn",
   "sched.status.scheduled": "Scheduled",
   // "Released" is the wire's word for the step between waiting and sent: the
   // activity and the delivery exist and the provider has not answered yet. To a

@@ -13901,7 +13901,6 @@ export const de = {
   "sched.group.held": "Zurückgehalten, wartet auf dich",
   "sched.group.waiting": "Geplant",
   "sched.group.waitingEmpty": "Keine Nachrichten geplant.",
-  "sched.group.closed": "Gesendet oder zurückgezogen",
   "sched.status.scheduled": "Geplant",
   "sched.status.released": "Wird gesendet",
   "sched.status.sent": "Gesendet",
