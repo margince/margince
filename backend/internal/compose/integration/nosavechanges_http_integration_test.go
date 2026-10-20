@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -263,6 +264,19 @@ var noOpProbedRoutes = map[string]string{
 	"PATCH /deals/{id}":                 "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
 	"PATCH /projects/{id}":              "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
 	"PATCH /contracts/{id}":             "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
+}
+
+// Every probed route is a PATCH or a PUT. The contract-side check lives in the
+// gates package, which reads this table from source.
+func TestTheProbeTableListsOnlySaveRoutes(t *testing.T) {
+	for route, probe := range noOpProbedRoutes {
+		if !strings.HasPrefix(route, "PATCH /") && !strings.HasPrefix(route, "PUT /") {
+			t.Errorf("%q is not a PATCH or PUT route", route)
+		}
+		if !strings.HasPrefix(probe, "Test") {
+			t.Errorf("%s names %q, which is not a test", route, probe)
+		}
+	}
 }
 
 func TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing(t *testing.T) {
