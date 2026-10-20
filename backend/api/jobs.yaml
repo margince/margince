@@ -90,6 +90,9 @@
 # but never built is one a fan-out child is inserted onto (workspaceSweepOpts
 # reads the DECLARED queue) with no client to work it.
 queues:
+  data_task:
+    max_workers: 1
+    reason: Bounded database corrections run apart from interactive jobs and serialize across processes with a database lock.
   default: {max_workers: 5}
   comms_send:
     max_workers: 3
@@ -329,6 +332,25 @@ kinds:
       presses Sync now, so the customer directory arrives without waiting for
       the six-hourly sweep. It is the pass the sweep runs per workspace, under
       the same five minutes.
+
+  data_task_run:
+    role: worker
+    fleet: true
+    go_type: DataTaskRunArgs
+    queue: data_task
+    timeout: 2m
+    opts_owner: caller
+    reason: A globally serialized bounded correction batch, paced between transactions.
+
+  data_task_reconcile:
+    role: worker
+    fleet: true
+    go_type: DataTaskReconcileArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 10m
+    reason: Seed missing correction progress and restore an interrupted executor job.
 
   capture_backfill_reconcile:
     role: worker

@@ -84,6 +84,7 @@ export const E2E_ADMIN_GRANTS: GrantSpec = {
   // above stays read-only and no spec opens a request.
   privacy_request: ["read", "update"],
   job_health: ["read"],
+  data_task: ["read", "update"],
   extension_access: ["read"],
   // AI usage, model calls and the health card, all three.
   ai_diagnostics: ["read"],

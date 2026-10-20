@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 122.5 KB |
+| Tool catalog | 123.1 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 32254 |
+| Approx. wire tokens | 32411 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 24.6 KB | 20% | **No**: a result's shape, never listed to a model |
+| Output schemas | 24.6 KB | 19% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 31.6 KB | 25% | Yes, every step |
-| Input schemas | 57.6 KB | 47% | Yes, every step |
+| Input schemas | 58.2 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 7% | Partly |
-| **Description + input schema** | **89.2 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **89.8 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -77,7 +77,7 @@ descriptions and input schemas are what each step pays for.
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
-| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 834 |
+| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 912 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes |  | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes |  | 395 |
@@ -87,7 +87,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
 | [`read_record`](#read_record) | Read a record | yes |  | 307 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1647 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1726 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 989 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 488 |
@@ -4433,6 +4433,45 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                           ],
                           "type": "object"
                         },
+                        "layout": {
+                          "items": {
+                            "properties": {
+                              "cards": {
+                                "items": {
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "kind": {
+                                      "type": "string"
+                                    },
+                                    "metric": {
+                                      "type": "string"
+                                    },
+                                    "width": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "kind",
+                                    "width"
+                                  ],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "title": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "cards"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
                         "metrics": {
                           "items": {
                             "type": "string"
@@ -5877,6 +5916,45 @@ search its evidence, and quote coverage with each number.
             "start_at"
           ],
           "type": "object"
+        },
+        "layout": {
+          "items": {
+            "properties": {
+              "cards": {
+                "items": {
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "metric": {
+                      "type": "string"
+                    },
+                    "width": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "width"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "title": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "cards"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "metrics": {
           "items": {

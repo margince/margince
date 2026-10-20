@@ -271,6 +271,7 @@ var heldDimension = activityDimension{scopeMarkers: heldScopeMarkers, literalMar
 // ClassifyBacklogPredicate, which filters archived rows. A reason a gate can
 // work out is better computed than written down.
 var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/capture/heldmailtask.go:StampHeldMailTx":                    heldMailMaintenanceReader,
 	"internal/modules/privacy/commitmenterasure.go:unavailableCommitmentForTask":  "the erasure writer reads only source and locator IDs while locking the retained access boundary. It must find held tasks to finish or postpone cleanup; the shared task eraser separately rechecks the hold before clearing content",
 	"internal/modules/privacy/commitmentlegacy.go:legacyCommitmentDerivatives":    "erasure must find held tasks created before the admission ledger. It returns only task and source IDs to the same hold-preserving erasure path; excluding a held task would leave its quoted source exposed",
 	"internal/modules/privacy/commitmenterasure.go:commitmentDerivatives":         "erasure locks derived task IDs before removing their evidence. Held tasks must be found so their content is preserved and their provenance remains unavailable; excluding them would delete the audience boundary. No task content is returned",

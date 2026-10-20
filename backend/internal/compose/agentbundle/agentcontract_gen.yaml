@@ -16775,6 +16775,51 @@ components:
           items:
             $ref: '#/components/schemas/ReportingBlockKind'
           maxItems: 20
+          description: |-
+            The chart kinds the report draws, in order. When `layout` is present the service
+            derives this list from it (each kind once, in the order the layout first names it)
+            and ignores what was sent, so a client that reads only `blocks` keeps working.
+        layout:
+          type: array
+          maxItems: 8
+          description: |-
+            Sections of cards, in reading order. Absent means one untitled section of
+            full-width cards in `blocks` order. A report holds at most 20 cards in total,
+            counted across all its sections.
+          items:
+            $ref: '#/components/schemas/ReportingSection'
+    ReportingSection:
+      type: object
+      additionalProperties: false
+      required: [cards]
+      properties:
+        title:
+          type: string
+          maxLength: 120
+          description: The heading over this section. Absent or blank draws none.
+        cards:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/ReportingCard'
+    ReportingCard:
+      type: object
+      additionalProperties: false
+      required: [id, kind, width]
+      properties:
+        id:
+          type: string
+          pattern: '^[a-z0-9-]{1,32}$'
+          description: A short id the client mints. Unique within the report, so one chart kind can be placed twice.
+        kind:
+          $ref: '#/components/schemas/ReportingBlockKind'
+        metric:
+          $ref: '#/components/schemas/ReportingMetricID'
+          description: The one metric this card draws. Absent draws the kind for every selected metric that has it.
+        width:
+          type: string
+          enum: [full, half]
+          description: '`half` shares a row with the next half card. A chart that needs the whole width draws full regardless.'
     ReportingContext:
       type: object
       additionalProperties: false

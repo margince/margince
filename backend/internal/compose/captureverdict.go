@@ -297,6 +297,12 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 	if addressIsARoleMailbox(row.Email) {
 		return e.applyJudged(ctx, row, capture.KindRoleMailbox, capture.VerdictMeasurement{})
 	}
+	// Google's meeting mail is evidence a meeting took place, and a model's
+	// noise answer would hide every later message from that sender. Settled as
+	// a role mailbox: the mail stays visible and nobody is recorded.
+	if capture.IsGoogleMeetingMail(row.Email, row.SenderAuthenticated) {
+		return e.applyJudged(ctx, row, capture.KindRoleMailbox, capture.VerdictMeasurement{})
+	}
 	// The other address-only refusal, and the one this lane was missing: an
 	// address nobody answers at all. See addressNamesNoContact for what the gap
 	// cost — a stray `contact` answer at 0.95 for an expense tool's receipts

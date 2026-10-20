@@ -5,12 +5,6 @@ package compose
 
 // The inventory: which transport handler sets the contract surface is made of.
 //
-// Split from server.go, which the file itself already distinguished — that one
-// is how the surface is ASSEMBLED (New, the routes, the middleware); this is
-// what it is assembled FROM. The list grows with every module that gains a
-// transport, so keeping it beside the assembly meant a new handler set nudged
-// an unrelated file toward its ceiling.
-
 import (
 	"context"
 	"io"
@@ -146,6 +140,7 @@ type Server struct {
 	webhooksHandlers
 	dataResetHandlers
 	jobHealthHandlers
+	dataTaskHandlers
 	captureHealthHandlers
 	extensionIngestHealthHandlers
 	recoveryHealthHandlers

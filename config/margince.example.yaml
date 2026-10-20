@@ -331,6 +331,12 @@ bootstrap_admin:
 #   # means nobody, and a boot value that names no active colleague reaches nobody and logs a warning.
 #   unassigned_escalation_user_id:
 
+# ---- data_tasks ----
+# data_tasks:
+#   # Delay between saved batches of data tasks.
+#   # default: 1s
+#   pace: 1s
+
 # ---- deals ----
 # deals:
 #   # Let a deal be sent to legal for review, and let a legal_reviewed criterion hold a deal at its

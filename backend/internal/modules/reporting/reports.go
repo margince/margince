@@ -148,6 +148,7 @@ func (s *Service) validateReport(ctx context.Context, tx pgx.Tx, in *crmcontract
 // validateRevision checks what one revision holds, and resolves its scope. A
 // draft and a published revision pass the same checks.
 func (s *Service) validateRevision(ctx context.Context, tx pgx.Tx, selection *crmcontracts.ReportingSelection) error {
+	deriveLayoutBlocks(selection)
 	if err := s.validateSelection(ctx, *selection); err != nil {
 		return err
 	}
@@ -190,19 +191,24 @@ func (s *Service) validateSelection(ctx context.Context, selection crmcontracts.
 	if len(selection.Blocks) > 20 {
 		return refuse("selection.blocks", "out_of_range", "choose at most twenty charts")
 	}
-	seen := map[crmcontracts.ReportingMetricID]bool{}
 	allowed := map[crmcontracts.ReportingBlockKind]bool{}
+	metricBlocks := map[crmcontracts.ReportingMetricID][]crmcontracts.ReportingBlockKind{}
 	for _, id := range selection.Metrics {
-		if seen[id] {
+		if _, seen := metricBlocks[id]; seen {
 			return refuse("selection.metrics", "duplicate", "a metric may appear only once")
 		}
-		seen[id] = true
 		index := slices.IndexFunc(catalog.Metrics, func(m crmcontracts.ReportingMetricDefinition) bool { return m.Id == id })
 		if index < 0 {
 			return refuse("selection.metrics", "unsupported", "a selected metric is unavailable")
 		}
+		metricBlocks[id] = catalog.Metrics[index].Blocks
 		for _, block := range catalog.Metrics[index].Blocks {
 			allowed[block] = true
+		}
+	}
+	if selection.Layout != nil {
+		if err := validateLayout(*selection.Layout, metricBlocks); err != nil {
+			return err
 		}
 	}
 	blocks := map[crmcontracts.ReportingBlockKind]bool{}

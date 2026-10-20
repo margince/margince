@@ -47,11 +47,18 @@ func fromAddress(rec connector.NormalizedRecord, address string) connector.Norma
 // correspondent, against the activity the first message created.
 func judgeSenderPersonal(ctx context.Context, t *testing.T, db *database.DB, firstSourceID, address string) {
 	t.Helper()
+	judgeSenderPersonalBy(ctx, t, db, firstSourceID, address, false)
+}
+
+// judgeSenderPersonalBy is judgeSenderPersonal with the choice of who decided:
+// the model, or the seat itself.
+func judgeSenderPersonalBy(ctx context.Context, t *testing.T, db *database.DB, firstSourceID, address string, byOwner bool) {
+	t.Helper()
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
-			INSERT INTO capture_pending_counterparty (email, activity_id, owner_id, status, kind, resolved_at)
-			SELECT $3, a.id, $2, 'noise', 'personal', now()
-			  FROM activity a WHERE a.source_id = $1`, firstSourceID, captureSeatID, address)
+			INSERT INTO capture_pending_counterparty (email, activity_id, owner_id, status, kind, resolved_at, resolved_by_owner)
+			SELECT $3, a.id, $2, 'noise', 'personal', now(), $4
+			  FROM activity a WHERE a.source_id = $1`, firstSourceID, captureSeatID, address, byOwner)
 		if err == nil && tag.RowsAffected() != 1 {
 			err = fmt.Errorf("the first message %s was not captured, so no verdict was seeded", firstSourceID)
 		}
@@ -178,6 +185,43 @@ func TestACorrespondenceContactsFilesSurviveAPersonalVerdict(t *testing.T) {
 	encoded := base64.StdEncoding.EncodeToString(onePDF().Body)
 	if raw := storedOriginal(ctx, t, db, "msg-contact-"+tag); !bytes.Contains(raw, []byte(encoded)) {
 		t.Error("the stored original lost a correspondence contact's attachment")
+	}
+}
+
+// A personal verdict a forged notes mail earned keeps no authority over the
+// notes Gmail authenticated as Google's: their files are stored.
+func TestAuthenticatedGoogleNotesKeepTheirFilesUnderAPersonalVerdict(t *testing.T) {
+	for name, byOwner := range map[string]bool{"judged by the model": false, "chosen by the seat": true} {
+		t.Run(name, func(t *testing.T) { notesFilesUnderPersonalVerdict(t, byOwner) })
+	}
+}
+
+// notesFilesUnderPersonalVerdict: a model's personal verdict leaves the files of
+// authenticated notes in place; the seat's own personal choice still withholds them.
+func notesFilesUnderPersonalVerdict(t *testing.T, byOwner bool) {
+	ctx, db, tag := captureWorkspace(t)
+	ctx = asConnectorFor(ctx, "connector:gmail", captureSeatID)
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
+	const address = "gemini-notes@google.com"
+	viaGmail := func(sourceID string) connector.NormalizedRecord {
+		rec := fromAddress(mailRecord(sourceID), address)
+		rec.CapturedBy = "connector:gmail"
+		return rec
+	}
+
+	if _, err := sink.Upsert(ctx, viaGmail("msg-forged-"+tag)); err != nil {
+		t.Fatalf("capturing the forged message: %v", err)
+	}
+	judgeSenderPersonalBy(ctx, t, db, "msg-forged-"+tag, address, byOwner)
+
+	rec := withAttachedOriginal(withFiles(viaGmail("msg-notes-"+tag), onePDF()))
+	rec.SenderAuthentication = connector.SenderAuthentication{Server: "mx.google.com", DMARCPassDomain: "google.com"}
+	if _, err := sink.Upsert(ctx, rec); err != nil {
+		t.Fatalf("capturing the authenticated notes: %v", err)
+	}
+	encoded := base64.StdEncoding.EncodeToString(onePDF().Body)
+	if kept := bytes.Contains(storedOriginal(ctx, t, db, "msg-notes-"+tag), []byte(encoded)); kept == byOwner {
+		t.Errorf("the notes' files were kept: %v; want kept unless the seat chose personal (by the seat: %v)", kept, byOwner)
 	}
 }
 

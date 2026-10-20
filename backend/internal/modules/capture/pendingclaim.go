@@ -70,7 +70,9 @@ func (s *PendingStore) ClaimDue(ctx context.Context, limit int) ([]PendingCounte
 			                           THEN 'outbound'
 			                      WHEN a.direction = 'inbound' THEN 'inbound'
 			                      ELSE '' END
-			                      FROM activity a WHERE a.id = p.activity_id), '')`,
+			                      FROM activity a WHERE a.id = p.activity_id), ''),
+			          coalesce((SELECT a.inbound_sender_authenticated AND a.counterparty_email = p.email
+			                      FROM activity a WHERE a.id = p.activity_id), false)`,
 			limit, pendingLease.Seconds(), PendingMaxAttempts, claim,
 			MaxCapturedNameChars, MaxCapturedSubjectChars, MaxCapturedBodyChars)
 		if err != nil {
@@ -80,7 +82,7 @@ func (s *PendingStore) ClaimDue(ctx context.Context, limit int) ([]PendingCounte
 		for rows.Next() {
 			p := PendingCounterparty{Claim: claim}
 			if err := rows.Scan(&p.ID, &p.Email, &p.Domain, &p.DisplayName,
-				&p.ActivityID, &p.OwnerID, &p.Subject, &p.Body, &p.Direction); err != nil {
+				&p.ActivityID, &p.OwnerID, &p.Subject, &p.Body, &p.Direction, &p.SenderAuthenticated); err != nil {
 				return err
 			}
 			out = append(out, p)

@@ -718,6 +718,51 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /admin/data-tasks:
+    get:
+      tags: [Identity]
+      operationId: listDataTasks
+      security: [{cookieAuth: []}]
+      x-agent-access: human-only
+      summary: Read background correction progress.
+      description: Requires data_task:read. A failed ledger read returns an error, never empty progress.
+      responses:
+        '200':
+          description: Registered correction steps in execution order.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/DataTaskProgress'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /admin/data-tasks/control:
+    post:
+      tags: [Identity]
+      operationId: controlDataTask
+      security: [{cookieAuth: []}]
+      x-agent-access: human-only
+      summary: Pause, resume, retry or estimate a background correction.
+      description: Requires data_task:update and the observed ledger version. Retry retains the audit run ID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DataTaskControl'}
+      responses:
+        '204': {description: The correction control was recorded.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /admin/job-health:
     get:
       tags: [Identity]
@@ -49417,6 +49462,51 @@ components:
           items:
             $ref: '#/components/schemas/ReportingBlockKind'
           maxItems: 20
+          description: |
+            The chart kinds the report draws, in order. When `layout` is present the service
+            derives this list from it (each kind once, in the order the layout first names it)
+            and ignores what was sent, so a client that reads only `blocks` keeps working.
+        layout:
+          type: array
+          maxItems: 8
+          description: |
+            Sections of cards, in reading order. Absent means one untitled section of
+            full-width cards in `blocks` order. A report holds at most 20 cards in total,
+            counted across all its sections.
+          items:
+            $ref: '#/components/schemas/ReportingSection'
+    ReportingSection:
+      type: object
+      additionalProperties: false
+      required: [cards]
+      properties:
+        title:
+          type: string
+          maxLength: 120
+          description: The heading over this section. Absent or blank draws none.
+        cards:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/ReportingCard'
+    ReportingCard:
+      type: object
+      additionalProperties: false
+      required: [id, kind, width]
+      properties:
+        id:
+          type: string
+          pattern: '^[a-z0-9-]{1,32}$'
+          description: A short id the client mints. Unique within the report, so one chart kind can be placed twice.
+        kind:
+          $ref: '#/components/schemas/ReportingBlockKind'
+        metric:
+          $ref: '#/components/schemas/ReportingMetricID'
+          description: The one metric this card draws. Absent draws the kind for every selected metric that has it.
+        width:
+          type: string
+          enum: [full, half]
+          description: '`half` shares a row with the next half card. A chart that needs the whole width draws full regardless.'
     ReportingContext:
       type: object
       additionalProperties: false
@@ -52168,7 +52258,7 @@ components:
          channel_connection, import_run, installation_settings, finance, integrations,
          retention_policy, capture_trace, license, contract, ai_routing, ai_budget, commission, deal_room,
          knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage,
-         user_admin, role_admin, team_admin, privacy_request, audit_log, job_health,
+         user_admin, role_admin, team_admin, privacy_request, audit_log, job_health, data_task,
          extension_access, system_reset, ai_diagnostics, consent_config, communication_exception,
          authentication_policy, oauth_application, agent_client, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit, legal_review]
 
@@ -52771,6 +52861,54 @@ components:
             bug from "every record fails its key".
         refused: { type: integer, description: Records this check refused in the window. }
         last_refused_at: { type: string, format: date-time }
+
+    DataTaskControl:
+      type: object
+      additionalProperties: false
+      required: [task_id, step, action, version]
+      properties:
+        task_id: {type: string, minLength: 1, maxLength: 200}
+        step: {type: string, minLength: 1, maxLength: 100}
+        action: {type: string, enum: [pause, resume, retry, estimate]}
+        version: {type: integer, format: int64, minimum: 1}
+
+    DataTaskProgress:
+      type: object
+      additionalProperties: false
+      required: [task_id, title, step, task_version, status, version, batch_limit, scanned, changed, batches, estimate_capped, consecutive_failures, missing_prerequisites]
+      properties:
+        task_id: {type: string}
+        title: {type: string}
+        step: {type: string}
+        task_version: {type: integer}
+        run_id: {type: string, format: uuid}
+        status: {type: string, enum: [pending, running, paused, done, failed]}
+        version: {type: integer, format: int64, minimum: 0}
+        batch_limit: {type: integer}
+        scanned: {type: integer, format: int64, minimum: 0}
+        changed: {type: integer, format: int64, minimum: 0}
+        batches: {type: integer, format: int64, minimum: 0}
+        estimate:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Bounded count of rows to inspect; absent means unknown, not zero.
+        estimate_capped: {type: boolean}
+        estimated_at: {type: string, format: date-time}
+        consecutive_failures: {type: integer, minimum: 0}
+        last_error_class: {type: string}
+        error_sentence: {type: string}
+        error_remedy: {type: string}
+        next_attempt_at: {type: string, format: date-time}
+        last_progress_at: {type: string, format: date-time}
+        first_release: {type: string}
+        blocked_reason:
+          type: string
+          enum: [waiting_for_worker, newer_release_required, paused, failed, retry_wait, earlier_step, missing_prerequisite]
+        blocked_by: {type: string}
+        missing_prerequisites:
+          type: array
+          items: {type: string}
 
     JobHealth:
       type: object
