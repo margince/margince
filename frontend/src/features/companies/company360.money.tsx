@@ -5,7 +5,6 @@ import { formatMoneyCompact } from "../../format/format";
 import type { Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemCodeOf } from "../../lib/problem";
-import { useFinanceSummary } from "../projects/financesummary";
 import type { Company360 } from "./company360";
 import { WITHHELD_READING } from "./company360health";
 import {
@@ -13,6 +12,7 @@ import {
   HEALTH_RATING_LABEL,
   LIFECYCLE_LABELS,
 } from "./companylookups";
+import { useFinanceSummary } from "./financesummary";
 
 type Health = NonNullable<Company360["health"]>;
 

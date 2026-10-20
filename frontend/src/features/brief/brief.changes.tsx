@@ -15,7 +15,7 @@ import {
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
-import { listReadState } from "../worklist/worklist.listread";
+import { listReadState } from "../../lib/worklist.listread";
 import { useHandledForYou } from "../worklist/worklist.queries";
 import { receiptSummary } from "../worklist/worklist.receiptcopy";
 import { ReceiptReview } from "../worklist/worklist.receiptreview";

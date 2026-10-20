@@ -4,6 +4,12 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import {
+  FINISHED_STATES,
+  RoomStateBadge,
+  refusalFor,
+  useDealRoom,
+} from "../../components/dealroom";
+import {
   Button,
   EmptyState,
   Field,
@@ -23,12 +29,6 @@ import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { RoomFacts, RoomText, ViewAsBuyerButton } from "./deal360/dealroomtab";
-import {
-  FINISHED_STATES,
-  RoomStateBadge,
-  refusalFor,
-  useDealRoom,
-} from "./dealroom";
 import { DealRoomAccess } from "./dealroomaccess";
 import { DealRoomConversation } from "./dealroomconversation";
 import "./dealroompage.css";

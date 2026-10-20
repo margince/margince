@@ -32,6 +32,10 @@ import { VisibilityLine } from "../../design-system/visibility";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import {
+  useMessageAudience,
+  useThreadAudience,
+} from "../../lib/audienceservice";
 import { problemMessageOf } from "../../lib/problem";
 import {
   AUDIENCE_CHOICES,
@@ -42,10 +46,6 @@ import {
   memberKey,
   useAudienceCandidates,
 } from "../lists/audiencemembers";
-import {
-  useMessageAudience,
-  useThreadAudience,
-} from "../lists/audienceservice";
 import "./emailaccesseditor.css";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];

@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { jsonResponse, render } from "../settings/settings.testkit";
+import { jsonResponse, render } from "../../testing/settings.testkit";
 import { RecordRolesCard } from "./recordroles";
 
 beforeEach(() => {

@@ -11,6 +11,13 @@ import { RecordTabs } from "../../design-system/recordtabs";
 import { RecordView } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import { useRecordWriteRefusal } from "../../lib/capability";
+import { contactPageState, contactQuery } from "../../lib/contact.queries";
+import { BRIEF_PARAM } from "../../lib/contactpage.address";
+import {
+  CONTACT_TABS,
+  type ContactTab,
+  contactTabRoute,
+} from "../../lib/contacttab";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
@@ -21,7 +28,6 @@ import { BriefQueue } from "../brief/brief.queue";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { useWaitingDraftBand } from "../mail/composewaitingdraft";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
-import { contactPageState, contactQuery } from "./contact.queries";
 import { useContact360 } from "./contact360";
 import { ContactActions } from "./contactactions";
 import { ArchivedContactPage } from "./contactarchived";
@@ -29,10 +35,8 @@ import { ContactResearchDrawer } from "./contactdrawers";
 import { ContactFacts } from "./contactfacts";
 import { ContactOpening } from "./contactopening";
 import { ContactOverview } from "./contactoverview";
-import { BRIEF_PARAM } from "./contactpage.address";
 import { ContactRail } from "./contactrail";
 import { ContactSubtitle } from "./contactsubtitle";
-import { CONTACT_TABS, type ContactTab, contactTabRoute } from "./contacttab";
 import "./contact360.css";
 import {
   navigateKeepingReturn,

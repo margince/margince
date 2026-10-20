@@ -2,11 +2,11 @@ import { useMutation } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { api } from "../../api/client";
+import { AuthCardTitle } from "../../components/auth-core";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { usePasswordReveal } from "../../design-system/passwordreveal";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { AuthCardTitle } from "./auth-core";
 import { isTooShort, MIN_PASSWORD } from "./passwordrule";
 
 /*

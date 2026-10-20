@@ -11,11 +11,11 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { RecordShell } from "../../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../../i18n";
+import { companyBackstop, jsonResponse } from "../../testing/company.fixtures";
+import { stubFetch } from "../../testing/company.testkit";
+import { RecordShell } from "../../testing/recordshell.testkit";
 import { CompanyScreen } from "./companies";
-import { companyBackstop, jsonResponse } from "./company.fixtures";
-import { stubFetch } from "./company.testkit";
 
 afterEach(() => {
   cleanup();

@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { feature } from "../../testing/ai-admin.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { feature } from "./ai-admin.testkit";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import type { SliceValue } from "./ai-routing-slice";
 import { ServingSection } from "./ai-serving-editor";

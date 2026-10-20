@@ -6,7 +6,7 @@ import {
   reportingStoryEvaluation,
   reportingStoryFramework,
   reportingStoryScope,
-} from "../src/features/analytics/reporting.fixtures";
+} from "../src/testing/reporting.fixtures";
 import { forecastEvaluation } from "../src/features/analytics/reporting.scenarios";
 import { mockApi } from "./seed";
 

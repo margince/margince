@@ -1,4 +1,10 @@
 import type { ReactNode } from "react";
+import {
+  CompanyMark,
+  employerFacts,
+  hasEmployerFacts,
+  useEmployerSummary,
+} from "../../components/contactemployersummary";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { CompanyCard } from "../../design-system/companycard";
 import { ErrorLine } from "../../design-system/errorline";
@@ -8,12 +14,6 @@ import { type Locale, useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import type { Employment, EmploymentActions } from "./contactemployers";
-import {
-  CompanyMark,
-  employerFacts,
-  hasEmployerFacts,
-  useEmployerSummary,
-} from "./contactemployersummary";
 import { stillHeld } from "./employmentcurrency";
 
 // One employment edge: the company it names, the role at that company (inline-

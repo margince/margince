@@ -4,7 +4,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { day, renderWorklist, row, stub } from "./worklist.testkit";
+import { day, renderWorklist, row, stub } from "../../testing/worklist.testkit";
 
 // The standing line on a deal row.
 //

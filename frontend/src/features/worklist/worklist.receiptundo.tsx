@@ -18,9 +18,9 @@ import { useState } from "react";
 import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { VERSION_SKEW_CODE } from "../../lib/historyundo";
 import { problemCodeOf, problemMessageOf } from "../../lib/problem";
-import { VERSION_SKEW_CODE } from "../records/historyundo";
-import { useRecordRestore } from "../records/recordrestore";
+import { useRecordRestore } from "../../lib/recordrestore";
 import { type Receipt, worklistKey } from "./worklist.queries";
 
 export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {

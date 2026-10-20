@@ -278,6 +278,10 @@ export const de = {
   "reporting.cardSection": "Abschnitt für {chart}",
   "reporting.removeCard": "{chart} entfernen",
   "reporting.addChart": "Diagramm hinzufügen",
+  "reporting.previewChart": "Vorschau",
+  "reporting.previewLoading": "Vorschau wird geladen…",
+  "reporting.previewEmpty":
+    "Für Zeitraum und Kennzahlen dieses Berichts gibt es noch nichts zu zeichnen. Das Diagramm trotzdem hinzufügen oder den Zeitraum unter Bericht anpassen ändern.",
   "reporting.chooseChart": "Diagramm zum Hinzufügen",
   "reporting.exportCsv": "CSV exportieren",
   "reporting.captureContexts": "Täglichen Pipeline-Verlauf speichern",

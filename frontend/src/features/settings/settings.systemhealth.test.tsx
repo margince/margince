@@ -9,9 +9,9 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { defaultOperations } from "./operationsettings.fixtures";
+import { defaultOperations } from "../../testing/operationsettings.fixtures";
+import { jsonResponse, render } from "../../testing/settings.testkit";
 import { SystemHealthPage } from "./settings.systemhealth";
-import { jsonResponse, render } from "./settings.testkit";
 
 const OPERATOR: GrantSpec = {
   job_health: ["read"],

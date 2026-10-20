@@ -3,16 +3,16 @@
 
 import type { components } from "../../api/schema";
 import { CORE_OBJECTS } from "../../format/rbacobjects";
+import { agentClientList } from "../../testing/agent-clients.fixtures";
+import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
+import { allowance, status } from "../../testing/ai-admin.testkit";
+import { bookingProfile } from "../../testing/book.testkit";
+import { readingsDay } from "../../testing/brief.fixtures";
+import { formatFixture } from "../../testing/import.fixtures";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { defaultOperations } from "../../testing/operationsettings.fixtures";
+import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import { jsonResponse, type RouteMap } from "../../testing/story-utils";
-import { allowance, status } from "../ai/ai-admin.testkit";
-import { agentClientList } from "../automations/agent-clients.fixtures";
-import { defaultAgentAllowances } from "../automations/agentallowances.fixtures";
-import { bookingProfile } from "../booking/book.testkit";
-import { readingsDay } from "../brief/brief.fixtures";
-import { formatFixture } from "../import/import.fixtures";
-import { defaultOperations } from "./operationsettings.fixtures";
-import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 
 type Schemas = components["schemas"];
 

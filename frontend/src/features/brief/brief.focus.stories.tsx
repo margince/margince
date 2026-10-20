@@ -6,13 +6,13 @@ import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { en } from "../../i18n/en";
+import { taskRow, waitingEmailRow } from "../../testing/brief.fixtures";
 import {
   installFetchStub,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import type { WorklistItem } from "../worklist/worklist.queries";
-import { taskRow, waitingEmailRow } from "./brief.fixtures";
 import { Triage } from "./brief.focus";
 
 // THE FOCUS PANEL'S INSIDE: the card in hand on the stack of what is still

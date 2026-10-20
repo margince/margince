@@ -40,8 +40,8 @@ import {
   type AttachmentParent,
   uploadAttachment,
 } from "../../lib/attachmentupload";
+import { useProviderCarriage } from "../../lib/channelproviders";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useProviderCarriage } from "../capture/channelproviders";
 import { type CarriageViolation, carriageViolations } from "./carriage";
 import type { RelinkKind } from "./compose";
 import "./composeattachments.css";

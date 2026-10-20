@@ -3,7 +3,7 @@
 
 import type { components } from "../../api/schema";
 import type { MessageKey } from "../../i18n/en";
-import type { Section } from "./analytics.address";
+import type { Section } from "../../lib/analytics.address";
 
 type ReportingSelection = components["schemas"]["ReportingSelection"];
 type MetricID = components["schemas"]["ReportingMetricID"];

@@ -14,6 +14,7 @@ import {
   useListQuery,
 } from "../../components/listquery";
 import { useOwnerChips } from "../../components/ownerdials";
+import { lastActivityColumn, ownerColumn } from "../../components/recordlist";
 import { Badge, EmptyState } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { Chip } from "../../design-system/readings";
@@ -21,9 +22,8 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
+import { useSavedViews } from "../../lib/savedviews.queries";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
-import { useSavedViews } from "../lists/savedviews.queries";
-import { lastActivityColumn, ownerColumn } from "../records/recordlist";
 import { useProjectCreateForm } from "./projects.create";
 import {
   PHASE_LABEL,

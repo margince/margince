@@ -2,7 +2,7 @@
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../../i18n/en";
-import { render } from "./brief.testkit";
+import { render } from "../../testing/brief.testkit";
 import { ScorecardPanel } from "./brief.weekly.scorecard";
 
 // The scorecard's whole design is that ABSENT is not ZERO, and every case here

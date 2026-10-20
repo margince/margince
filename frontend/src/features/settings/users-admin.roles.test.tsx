@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { en } from "../../i18n/en";
-import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
+import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import { UsersAdminCard } from "./users-admin";
 import {
   backend,

@@ -16,12 +16,23 @@ import {
   listFetchLimit,
   useListQuery,
 } from "../../components/listquery";
+import {
+  mineEmptyNote,
+  standardViews,
+  useOwnerTagChips,
+} from "../../components/recordlist";
 import { SegmentedControl } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { QueryGate } from "../../design-system/querystates";
 import { useOwnToast } from "../../design-system/toast";
 import { leadIdentityName } from "../../format/leadname";
 import { useLocale, useT } from "../../i18n";
+import {
+  sourceFilterOptions,
+  sourcePickOptions,
+  useLeadSettings,
+  useLeadSources,
+} from "../../lib/leadsources";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
@@ -29,21 +40,10 @@ import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import { listQueryParams } from "../../lib/tagfilter";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
-import {
-  mineEmptyNote,
-  standardViews,
-  useOwnerTagChips,
-} from "../records/recordlist";
 import { LeadBulkBar } from "./leadbulk";
 import { LEAD_STATUS_FILTER_OPTIONS, LeadBoard } from "./leadpresentation";
 import { leadColumns } from "./leads.columns";
 import { leadIdentityFields } from "./leads.contactoffers";
-import {
-  sourceFilterOptions,
-  sourcePickOptions,
-  useLeadSettings,
-  useLeadSources,
-} from "./leadsources";
 import "./leads.css";
 import { createLead, UNASSIGNED_OWNER } from "./leads.list.queries";
 

@@ -12,9 +12,9 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider, translate } from "../../i18n";
+import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AgentAllowancesCard } from "./agentallowances";
-import { defaultAgentAllowances } from "./agentallowances.fixtures";
 
 // Settings → AI usage: what one passport may do per window. The values read at
 // rest; an admin opens a form, changes what moved, and saves them in one

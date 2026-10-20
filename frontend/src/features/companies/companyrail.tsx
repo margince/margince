@@ -1,6 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import {
+  contactRole,
+  contactsSlice,
+  RAIL_ROW_LIMIT,
+  SectionSummary,
+  sectionAnswered,
+} from "../../components/companyrailshared";
+import { CounterpartyHoldRow } from "../../components/counterparty-hold";
 import { Button } from "../../design-system/atoms";
 import { AvatarStack } from "../../design-system/avatarstack";
 import { Disclosure, DisclosureGroup } from "../../design-system/disclosure";
@@ -19,7 +27,6 @@ import { useCanWriteRecord } from "../../lib/capability";
 import { problemCodeOf, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
-import { CounterpartyHoldRow } from "../privacy/counterparty-hold";
 import { signalKindLabel, signalTone } from "../records/record360";
 import { RecordCustomFields } from "../records/recordcustomfields";
 import { RecordTeam } from "../records/recordteam";
@@ -28,13 +35,6 @@ import { CompanyDetails } from "./companydetails";
 import { DealsSection } from "./companyraildeals";
 import { CompanyProfileDetails } from "./companyraildetails";
 import { ProjectsSection } from "./companyrailprojects";
-import {
-  contactRole,
-  contactsSlice,
-  RAIL_ROW_LIMIT,
-  SectionSummary,
-  sectionAnswered,
-} from "./companyrailshared";
 import { CompanyTriageSection } from "./companytriage";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:

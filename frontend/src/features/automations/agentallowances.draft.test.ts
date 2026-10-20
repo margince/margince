@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
 import { defaultsDraft } from "./agentallowances.draft";
-import { defaultAgentAllowances } from "./agentallowances.fixtures";
 
 const TUNED = {
   ...defaultAgentAllowances,

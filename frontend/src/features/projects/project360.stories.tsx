@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { PageAsideProvider } from "../../components/pageaside";
+import { COMPANY, project, project360 } from "../../testing/projects.fixtures";
 import {
   emptyPage,
   installFetchStub,
@@ -11,7 +12,6 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ProjectScreen } from "./project360";
-import { COMPANY, project, project360 } from "./projects.fixtures";
 
 // The project page, in the states a reader can meet it in: every section
 // present, two sections withheld from the reader's role, a closed project, and

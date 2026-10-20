@@ -4,8 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
+import {
+  jsonResponse,
+  PIPELINE_ADMIN,
+  render,
+} from "../../testing/settings.testkit";
 import { StageAutomationCard } from "./settings.stageautomation";
-import { jsonResponse, PIPELINE_ADMIN, render } from "./settings.testkit";
 
 // What a transition has earned, as a reader sees it.
 //

@@ -12,13 +12,13 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
 import { ReportingDefinitions } from "./reporting.definitions";
-import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
 import { reportingSchedule, reportingTargets } from "./reporting.scenarios";
 import { ReportingScheduleDialog } from "./reporting.schedule";
 import {

@@ -14,9 +14,24 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { useFilterVocabulary } from "../../lib/filterdata";
+import {
+  type ObjectTab,
+  RESOURCE_OF,
+  TAB_LABEL,
+  tabOfViewResource,
+  UNIT_LABEL,
+} from "../../lib/filtersaddress";
 import { useListsAvailable } from "../../lib/lists.queries";
 import { problemCodeOf, problemMessageOf } from "../../lib/problem";
 import { navigateReplacing } from "../../lib/router";
+import {
+  filterStateFrom,
+  filterTreeOf,
+  openableTree,
+  type SavedView,
+  useSavedView,
+  useSaveView,
+} from "../../lib/savedviews.queries";
 import { type Group, type Node, rootGroup } from "../../lib/segmentpredicate";
 import { useFilterDraft, useFirstAnswer, wireSignature } from "./filterdraft";
 import {
@@ -39,24 +54,9 @@ import {
 } from "./filterhead";
 import { FilterOutcome } from "./filtermatches";
 import { usePlainWords } from "./filterpropose";
-import {
-  type ObjectTab,
-  RESOURCE_OF,
-  TAB_LABEL,
-  tabOfViewResource,
-  UNIT_LABEL,
-} from "./filtersaddress";
 import { type SavedKind, SaveFilterModal, useLandOnSaved } from "./filtersave";
 import { filterSentence, useSentenceWords } from "./filtersentence";
 import { type Reread, useReload } from "./filterview.reload";
-import {
-  filterStateFrom,
-  filterTreeOf,
-  openableTree,
-  type SavedView,
-  useSavedView,
-  useSaveView,
-} from "./savedviews.queries";
 import { DeleteViewAction, RenameViewAction } from "./viewactions";
 import "./filters.css";
 

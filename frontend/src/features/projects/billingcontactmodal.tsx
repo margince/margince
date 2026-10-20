@@ -9,7 +9,7 @@ import {
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { searchByEntity } from "../records/relationshipcandidates";
+import { searchByEntity } from "../../lib/relationshipcandidates";
 import type { BillingContact, BillingContactRole } from "./billingcontacts";
 import type { BillingContactActions } from "./billingcontacts.queries";
 import "../../design-system/querystates.css";

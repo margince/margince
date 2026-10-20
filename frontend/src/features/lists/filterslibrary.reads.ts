@@ -10,8 +10,11 @@ import { SEARCH_DEBOUNCE_MS } from "../../design-system/debouncedsearch";
 import { formatNumber } from "../../format/format";
 import { useLocale } from "../../i18n";
 import { type FilterResource, useFilterVocabulary } from "../../lib/filterdata";
+import { LIBRARY_TYPES } from "../../lib/filtersaddress";
 import { useLists } from "../../lib/lists.queries";
+import { useAllSavedViews } from "../../lib/savedviews.queries";
 import type { UrlParams } from "../../lib/urlstate";
+import { filterSentence, useSentenceWords } from "./filtersentence";
 import {
   type LibraryCut,
   type LibraryGroup,
@@ -21,10 +24,7 @@ import {
   sortForReader,
   treeOf,
   withFound,
-} from "../voice-knowledge/library";
-import { LIBRARY_TYPES } from "./filtersaddress";
-import { filterSentence, useSentenceWords } from "./filtersentence";
-import { useAllSavedViews } from "./savedviews.queries";
+} from "./library";
 
 export const SEARCH_PARAM = "q";
 export const TYPE_PARAM = "type";

@@ -5,6 +5,7 @@ import "@testing-library/jest-dom/vitest";
 import { afterEach, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
+import { view } from "../../testing/contactpage.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -12,7 +13,6 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ContactDetails } from "./contactdetails";
-import { view } from "./contactpage.testkit";
 
 afterEach(cleanup);
 const contact = { ...view.contact, version: 3, title: "Director" };

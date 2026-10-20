@@ -1,7 +1,6 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { unwrap } from "../../lib/problem";
-import { represented } from "../../lib/worklistunits";
 import type {
   HandledForYou,
   TeamBoard,
@@ -11,6 +10,7 @@ import type {
   WorklistItem,
   WorklistScope,
 } from "./worklist.queries";
+import { represented } from "./worklistunits";
 
 export const worklistKey = ["worklist"] as const;
 

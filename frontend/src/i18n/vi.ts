@@ -284,6 +284,10 @@ export const vi = {
   "reporting.cardSection": "Phần của {chart}",
   "reporting.removeCard": "Xóa {chart}",
   "reporting.addChart": "Thêm biểu đồ",
+  "reporting.previewChart": "Xem trước",
+  "reporting.previewLoading": "Đang tải bản xem trước…",
+  "reporting.previewEmpty":
+    "Chưa có gì để vẽ cho kỳ và chỉ số của báo cáo này. Vẫn thêm biểu đồ, hoặc đổi kỳ trong Tùy chỉnh báo cáo.",
   "reporting.chooseChart": "Biểu đồ cần thêm",
   "reporting.exportCsv": "Xuất CSV",
   "reporting.captureContexts": "Ghi nhận lịch sử pipeline hằng ngày",

@@ -11,8 +11,10 @@ import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
 import { lockFor } from "../../format/settinglocks";
 import { LOCALES, localeNameKey, useLocale, useT } from "../../i18n";
-import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "../../lib/aicaches";
 import { useCanWrite } from "../../lib/capability";
+// Installation facts are readable by every role; only admin/ops may change them.
+// Each row opens the shared sparse-patch form with its own field focused.
+import { useCurrencyNote } from "../../lib/installation-settings.currency";
 import {
   problemFieldErrorsOf,
   problemMessageOf,
@@ -25,9 +27,7 @@ import {
   INSTALLATION_SETTINGS_KEY,
   useInstallationSettings,
 } from "../../lib/uploadlimit";
-// Installation facts are readable by every role; only admin/ops may change them.
-// Each row opens the shared sparse-patch form with its own field focused.
-import { useCurrencyNote } from "./installation-settings.currency";
+import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "./aicaches";
 import {
   fiscalYearStartSummary,
   InstallationProfileDialog,

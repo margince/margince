@@ -11,6 +11,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import {
+  CompanyMark,
+  employerFacts,
+  hasEmployerFacts,
+  useEmployerSummary,
+} from "../../components/contactemployersummary";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { CompanyCard } from "../../design-system/companycard";
 import {
@@ -22,12 +28,6 @@ import type { RecordPickerCandidate } from "../../design-system/recordpicker";
 import { useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { COMPANY_ROLES, roleKey } from "../companies/companyprojects";
-import {
-  CompanyMark,
-  employerFacts,
-  hasEmployerFacts,
-  useEmployerSummary,
-} from "../contacts/contactemployersummary";
 
 type ProjectCompany = components["schemas"]["ProjectCompany"];
 

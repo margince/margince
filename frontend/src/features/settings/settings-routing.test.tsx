@@ -4,14 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { translate } from "../../i18n";
 import { parseHash, routeHash } from "../../lib/router";
 import { meFixture } from "../../testing/mefixture";
-import { SettingsScreen } from "./settings";
 import {
   jsonResponse,
   readOn,
   render,
   renderNav,
   settingsBackend,
-} from "./settings.testkit";
+} from "../../testing/settings.testkit";
+import { SettingsScreen } from "./settings";
 import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
 import { settingsHref, settingsRouteTarget } from "./settingsrouting";
 

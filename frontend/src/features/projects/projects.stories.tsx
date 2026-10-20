@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { COMPANY, project } from "../../testing/projects.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -9,7 +10,6 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ProjectsScreen } from "./projects";
-import { COMPANY, project } from "./projects.fixtures";
 
 // The projects list in its two readings — rows, and the instructional
 // first-run plate. The page a row leads to is the other screen, and its

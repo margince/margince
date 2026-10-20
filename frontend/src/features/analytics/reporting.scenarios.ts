@@ -3,7 +3,7 @@ import {
   REPORTING_FIXTURE_ZONE,
   reportingStoryEvaluation,
   reportingStoryReport,
-} from "./reporting.fixtures";
+} from "../../testing/reporting.fixtures";
 import type { ReportingEdition, ReportingEvaluation } from "./reporting.model";
 
 const coverage = {

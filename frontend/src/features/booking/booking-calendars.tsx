@@ -3,7 +3,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { MultiSelect, Select } from "../../design-system/select";
 import { providerName } from "../../format/connectorprovider";
 import { useT } from "../../i18n";
-import { missingCalendarWriteGrant } from "../capture/connector-status";
+import { missingCalendarWriteGrant } from "../../lib/connector-status";
 import { useBookingCalendar } from "./booking-calendar-state";
 
 export function BookingCalendars({

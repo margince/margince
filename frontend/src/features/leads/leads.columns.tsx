@@ -3,17 +3,18 @@
 // company, so the company has to be readable and sortable, and a long name in
 // front of it can no longer push it off the row.
 import type { components } from "../../api/schema";
-import { Badge } from "../../design-system/atoms";
-import { CellStrip, type ListColumn } from "../../design-system/listtable";
-import { formatDateAbbrev, formatNumber } from "../../format/format";
-import { leadIdentityName } from "../../format/leadname";
-import type { useLocale, useT } from "../../i18n";
 import {
   createdColumn,
   lastActivityColumn,
   ownerColumn,
   tagsColumn,
-} from "../records/recordlist";
+} from "../../components/recordlist";
+import { Badge } from "../../design-system/atoms";
+import { CellStrip, type ListColumn } from "../../design-system/listtable";
+import { formatDateAbbrev, formatNumber } from "../../format/format";
+import { leadIdentityName } from "../../format/leadname";
+import type { useLocale, useT } from "../../i18n";
+import { type LeadSource, sourceLabelFor } from "../../lib/leadsources";
 import { openTaskCountLabel } from "./leadopentasks";
 import {
   SlaBadge,
@@ -21,7 +22,6 @@ import {
   scoreFactorLabel,
   scoreTone,
 } from "./leadpresentation";
-import { type LeadSource, sourceLabelFor } from "./leadsources";
 import { terminalBadge } from "./leadstanding";
 
 type Lead = components["schemas"]["Lead"];

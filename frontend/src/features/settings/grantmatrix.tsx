@@ -8,7 +8,7 @@ import { KeyedName } from "../../design-system/keyedname";
 import type { ScrollRegionName } from "../../design-system/scrollregion";
 import { Switch } from "../../design-system/switch";
 import { useT } from "../../i18n";
-import type { ObjectGrant, Role } from "./roles.queries";
+import type { ObjectGrant, Role } from "../../lib/roles.queries";
 import "./grantmatrix.css";
 
 // The grid a role grant is written through: one row per subject, one column per

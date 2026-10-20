@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import type { Reference } from "../../components/filterreference";
 import type { VocabularyField } from "../../lib/filterdata";
 import type { FilterOp, LeafValue } from "../../lib/segmentpredicate";
 import {
@@ -10,7 +11,6 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import type { Reference } from "./filterreference";
 import { ValueControl } from "./filtervalue";
 
 // One control per kind of value a clause can compare against. The

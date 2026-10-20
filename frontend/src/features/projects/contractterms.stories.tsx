@@ -3,10 +3,10 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { ProjectContractRow } from "../../components/contractterms";
 import { Panel } from "../../design-system/panel";
 import { useLocale, useT } from "../../i18n";
 import { StoryProviders } from "../../testing/story-utils";
-import { ProjectContractRow } from "./contractterms";
 import "./projects.css";
 
 // One agreement per row on the project's contracts card: its status badge, its

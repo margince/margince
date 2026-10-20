@@ -11,11 +11,14 @@ import {
 } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  MAX_MEETING_NAMES,
+  MeetingAttendeeFields,
+} from "../../components/meetingattendees";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { LogActivity } from "./logactivity";
-import { MAX_MEETING_NAMES, MeetingAttendeeFields } from "./meetingattendees";
 
 // Everyone in a logged meeting reaches the wire. Each contact is a link, so the
 // meeting shows in their History and their company's. Each colleague is an

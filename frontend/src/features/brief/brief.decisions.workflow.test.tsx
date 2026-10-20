@@ -7,9 +7,8 @@ import { en } from "../../i18n/en";
 import {
   type Approval,
   usePendingApprovals,
-} from "../automations/approvals.queries";
-import { DecisionsSection } from "./brief.decisions";
-import { deckItems } from "./brief.decisions.items";
+} from "../../lib/approvals.queries";
+import { deckItems } from "../../lib/brief.decisions.items";
 import {
   jsonResponse,
   pendingPage,
@@ -18,7 +17,8 @@ import {
   stubApi,
   writeRoutes,
   writes,
-} from "./brief.testkit";
+} from "../../testing/brief.testkit";
+import { DecisionsSection } from "./brief.decisions";
 
 afterEach(() => {
   cleanup();

@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { useReferenceOptions } from "../../components/filterreference";
 import { useT } from "../../i18n";
-import { useReferenceOptions } from "../lists/filterreference";
 import { valueLabel } from "./analytics.questions.values";
 import { fieldReference } from "./analytics.questions.vocab";
 

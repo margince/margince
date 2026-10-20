@@ -5,9 +5,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { jsonResponse, render } from "../../testing/settings.testkit";
 import { permissionDenied } from "../../testing/story-utils";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
-import { jsonResponse, render } from "./settings.testkit";
 
 // Settings › Acquisition sources: every role reads the list; the custom_field
 // write verbs decide who may change it, and the card disables rather than hides.

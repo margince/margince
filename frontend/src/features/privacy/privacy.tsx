@@ -33,6 +33,14 @@ import { useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { isOption } from "../../lib/options";
 import {
+  DSR_KIND_LABEL,
+  DSR_STATUS_FACETS,
+  DSR_STATUS_LABEL,
+  type DsrStatusFacet,
+  isIllegalTransition,
+  isLegalHold,
+} from "../../lib/privacy.logic";
+import {
   ProblemError,
   problemFieldErrorsOf,
   problemMessageOf,
@@ -49,14 +57,6 @@ import {
   earlierDueTooLate,
   useRequestDeadline,
 } from "./privacy.deadline";
-import {
-  DSR_KIND_LABEL,
-  DSR_STATUS_FACETS,
-  DSR_STATUS_LABEL,
-  type DsrStatusFacet,
-  isIllegalTransition,
-  isLegalHold,
-} from "./privacy.logic";
 import { ErasureRefusals } from "./privacy.notices";
 import {
   type DataSubjectRequest,

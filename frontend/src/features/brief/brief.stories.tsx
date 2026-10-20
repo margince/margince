@@ -5,20 +5,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { en } from "../../i18n/en";
 import {
-  installFetchStub,
-  jsonResponse,
-  meRoute,
-  type RouteMap,
-  StoryProviders,
-  stubWithSession,
-} from "../../testing/story-utils";
-import type { WorklistItem } from "../worklist/worklist.queries";
-import {
-  automaticDateReceipt,
-  automaticStageReceipt,
-} from "../worklist/worklist.receiptreview.fixtures";
-import { BriefScreen } from "./brief";
-import {
   type Approval,
   bundle,
   deals,
@@ -39,7 +25,21 @@ import {
   waitingEmailRow,
   wholeDecisions,
   wholeMeetings,
-} from "./brief.fixtures";
+} from "../../testing/brief.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  type RouteMap,
+  StoryProviders,
+  stubWithSession,
+} from "../../testing/story-utils";
+import {
+  automaticDateReceipt,
+  automaticStageReceipt,
+} from "../../testing/worklist.receiptreview.fixtures";
+import type { WorklistItem } from "../worklist/worklist.queries";
+import { BriefScreen } from "./brief";
 import type { MorningDigest } from "./brief.queries";
 
 // Decisions share the ranked agenda. Their full proposal opens in the same

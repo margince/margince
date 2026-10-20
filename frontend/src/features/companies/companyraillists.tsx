@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { SectionSummary } from "../../components/companyrailshared";
 import { Disclosure } from "../../design-system/atoms";
 import { PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { RecordListsBody } from "../records/recordlists";
-import { SectionSummary } from "./companyrailshared";
 
 /**
  * The lists this account is on that the reader may find, as one slice of the

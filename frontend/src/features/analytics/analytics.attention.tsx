@@ -7,10 +7,13 @@ import { Button } from "../../design-system/atoms";
 import { Panel, PanelRow } from "../../design-system/panel";
 import { formatMoneyOrAbsent, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import {
+  openAnalyticsSection,
+  type Section,
+} from "../../lib/analytics.address";
 import { useCan } from "../../lib/capability";
 import { isEntityKind } from "../../lib/entity";
 import { useMemberNames } from "../../lib/membernames";
-import { openAnalyticsSection, type Section } from "./analytics.address";
 import type { AnalyticsScope } from "./analytics.context";
 import { useDataCoverage } from "./analytics.coverage";
 import { checkLabel, useInputChecks } from "./analytics.forecast.review";

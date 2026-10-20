@@ -5,6 +5,7 @@ import { CalendarPlus, CheckSquare, FileText } from "lucide-react";
 import { useId, useRef } from "react";
 import type { components } from "../../api/schema";
 import { ExtensionEntries } from "../../components/extensionentries";
+import { searchCompanyContacts } from "../../components/meetingattendees";
 import { Button } from "../../design-system/atoms";
 import { ListPopover } from "../../design-system/listpopover";
 import { useT } from "../../i18n";
@@ -13,7 +14,6 @@ import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { ComposeModal } from "../mail/compose";
 import { LogActivityAction } from "../records/logactivity";
-import { searchCompanyContacts } from "../records/meetingattendees";
 import { EmailVerb } from "../records/recordemail";
 
 // The account header's verbs, in the shape every record page draws them:

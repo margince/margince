@@ -3,12 +3,12 @@
 
 import type { useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
-import { problemCode, problemCodeOf, throwProblem } from "../../lib/problem";
 import {
   fetchRouting,
   ROUTING_KEY,
   type RoutingRead,
-} from "./ai-routing-query";
+} from "../../lib/ai-routing-query";
+import { problemCode, problemCodeOf, throwProblem } from "../../lib/problem";
 import {
   type SliceValue,
   sameSlice,

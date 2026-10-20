@@ -6,8 +6,8 @@ import { formatDateAbbrev, formatTimeOfDay } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { meetingRow, readingsDay } from "../../testing/brief.fixtures";
 import type { WorklistItem } from "../worklist/worklist.queries";
-import { meetingRow, readingsDay } from "./brief.fixtures";
 import { SchedulePanel, scheduleIsEmpty } from "./brief.schedule";
 
 // The two rail panels, and what each of them refuses to claim.

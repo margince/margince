@@ -1,12 +1,13 @@
 import { useCallback, useId, useState } from "react";
 import type { components } from "../../api/schema";
+import { SendPermission } from "../../components/sendpermission";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import type { Transport } from "../contacts/contacttransports";
-import { useVoiceProfile } from "../voice-knowledge/voice-profile";
+import type { Transport } from "../../lib/contacttransports";
+import { useVoiceProfile } from "../../lib/voice-profile";
 import {
   colleagueMailboxesOf,
   useComposeThread,
@@ -34,7 +35,6 @@ import {
   useTransportDial,
 } from "./composetarget";
 import { useVoiceDraft } from "./composevoicedraft";
-import { SendPermission } from "./sendpermission";
 import { SendRefusal } from "./sendrefusal";
 import "./compose.css";
 import { ComposeHead } from "./compose.head";

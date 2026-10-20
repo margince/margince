@@ -5,7 +5,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { day, renderWorklist, stub } from "./worklist.testkit";
+import { day, renderWorklist, stub } from "../../testing/worklist.testkit";
 
 // Broad visibility diagnostics must not describe a personal or named queue.
 

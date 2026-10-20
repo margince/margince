@@ -16,18 +16,18 @@ import { formatTimeOfDay, fullDayName } from "../../format/format";
 import { formatDayFull, formatTimeRange } from "../../format/meetingtime";
 import { dayInZone, viewerZone } from "../../format/timezone";
 import {
+  bookingConnection,
+  bookingHours,
+  bookingProfile,
+  bookingSlots,
+} from "../../testing/book.testkit";
+import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { BookingScreen } from "./book";
-import {
-  bookingConnection,
-  bookingHours,
-  bookingProfile,
-  bookingSlots,
-} from "./book.testkit";
 import { MeetingSettings } from "./meeting-settings";
 
 afterEach(() => {
