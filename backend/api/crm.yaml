@@ -62011,8 +62011,8 @@ components:
         not_shown_count_withheld:
           type: boolean
           description: >-
-            True when the reader cannot inspect unsupported record counts. No count is
-            disclosed; absence of described actions does not establish a complete receipt.
+            True when the reader cannot inspect workspace-wide unsupported record counts.
+            Those counts are withheld; absence of described actions does not establish a complete receipt.
         sources_unavailable:
           type: array
           items: { $ref: '#/components/schemas/WorklistSourceUnavailable' }

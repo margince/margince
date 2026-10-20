@@ -418,7 +418,11 @@ function RiskReading({ day }: Readonly<{ day: Worklist }>) {
               "brief.readings.unpricedCount",
               day.readings.unpriced_deals,
               {
-                count: formatNumber(day.readings.unpriced_deals, locale),
+                count: floorFigure(
+                  formatNumber(day.readings.unpriced_deals, locale),
+                  incomplete,
+                  day.readings.unpriced_deals,
+                ),
               },
             )
           : undefined,

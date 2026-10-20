@@ -797,7 +797,8 @@ export const de = {
   "brief.schedule.reconnect": "Kalender neu verbinden",
   "brief.schedule.nextAt": "Nächster Termin um {time}",
   "brief.readings.riskPartial": "Nur bekannter Wert · nicht alles geprüft",
-  "brief.readings.unpricedCount_one": "1 Deal ohne Preis · nicht enthalten",
+  "brief.readings.unpricedCount_one":
+    "{count} Deal ohne Preis · nicht enthalten",
   "brief.readings.unpricedCount_other":
     "{count} Deals ohne Preis · nicht enthalten",
   "brief.coverage.source.generic": "Sonstige Einträge",
@@ -4513,7 +4514,6 @@ export const de = {
   "brief.digestSynced": "Synchronisierungsdetails",
   "brief.digestContacts": "Erstellte Kontakte",
   "brief.digestCompanies": "Erstellte Unternehmen",
-  "brief.digestDedupe": "Zu prüfende Duplikate",
   "brief.digestClassify":
     "Zusagen: {commitments} · Termine: {meetings} · Nachrichten ohne Vertriebsaktion: {noise}",
   "brief.digestProjects": "Projekte",
@@ -14342,8 +14342,7 @@ export const de = {
   "worklist.rowMenu": "Weitere Aktionen für {title}",
   "worklist.readings.label": "Zahlen von heute",
   "worklist.readings.revenue": "Wert markierter Pipeline-Deals",
-  "worklist.readings.revenue.detail": "Heute stagnierende Deals",
-  "worklist.readings.revenue.unpriced": "Stagnierende Deals · keiner mit Preis",
+  "worklist.readings.revenue.unpriced": "Markierte Deals · kein Wert verfügbar",
   "worklist.readings.revenue.noFigure": "Ohne Preis",
   "worklist.readings.replies": "Antworten der Käuferseite",
   "worklist.readings.replies.detail": "Wartende Kontakte",
@@ -14441,7 +14440,7 @@ export const de = {
   "worklist.because.promised": "von dir zugesagt",
   "worklist.because.approved_and_failed": "freigegeben, aber nicht ausgeführt",
   "worklist.because.account_termination":
-    "Kontobeendigung braucht deine Entscheidung",
+    "Kontobeendigung braucht eine Entscheidung",
   "worklist.because.blocks_customer_work": "ein Kontakt wartet darauf",
   "worklist.because.routine": "routinemäßiges Aufräumen",
   "worklist.because.repeated_failure": "wiederholter Fehler",

@@ -780,7 +780,7 @@ export const vi = {
   "brief.schedule.reconnect": "Kết nối lại lịch",
   "brief.schedule.nextAt": "Cuộc họp tiếp theo lúc {time}",
   "brief.readings.riskPartial": "Chỉ giá trị đã biết · chưa kiểm tra hết",
-  "brief.readings.unpricedCount_one": "1 deal chưa định giá · không tính",
+  "brief.readings.unpricedCount_one": "{count} deal chưa định giá · không tính",
   "brief.readings.unpricedCount_other":
     "{count} deal chưa định giá · không tính",
   "brief.coverage.source.generic": "Công việc khác",
@@ -4416,7 +4416,6 @@ export const vi = {
   "brief.digestSynced": "Chi tiết đồng bộ",
   "brief.digestContacts": "Liên hệ đã tạo",
   "brief.digestCompanies": "Công ty đã tạo",
-  "brief.digestDedupe": "Bản trùng cần xem lại",
   "brief.digestClassify":
     "Cam kết: {commitments} · Cuộc họp: {meetings} · Tin nhắn không cần thao tác bán hàng: {noise}",
   "brief.digestProjects": "Dự án",
@@ -14000,9 +13999,7 @@ export const vi = {
   "worklist.rowMenu": "Thao tác khác cho {title}",
   "worklist.readings.label": "Số liệu hôm nay",
   "worklist.readings.revenue": "Giá trị pipeline được đánh dấu",
-  "worklist.readings.revenue.detail": "Deal đang chững lại hôm nay",
-  "worklist.readings.revenue.unpriced":
-    "Deal đang chững lại · chưa deal nào có giá trị",
+  "worklist.readings.revenue.unpriced": "Deal được đánh dấu · chưa có giá trị",
   "worklist.readings.revenue.noFigure": "Chưa có giá trị",
   "worklist.readings.replies": "Phản hồi của bên mua",
   "worklist.readings.replies.detail": "Khách hàng đang chờ",
@@ -14099,7 +14096,7 @@ export const vi = {
   "worklist.because.promised": "bạn đã cam kết",
   "worklist.because.approved_and_failed": "đã duyệt nhưng không chạy",
   "worklist.because.account_termination":
-    "việc chấm dứt quan hệ khách hàng cần quyết định của bạn",
+    "việc chấm dứt quan hệ khách hàng cần được quyết định",
   "worklist.because.blocks_customer_work": "khách hàng đang chờ việc này",
   "worklist.because.routine": "dọn dẹp thường lệ",
   "worklist.because.repeated_failure": "lỗi lặp lại",

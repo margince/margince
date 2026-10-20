@@ -170,6 +170,12 @@ describe("the receipt draws every lane it promises", () => {
     ).toBeTruthy();
   });
 
+  it("reports a fully read empty receipt as clear", async () => {
+    stub(receipt({ not_shown_count_withheld: false, not_shown: [] }));
+    renderMagic();
+    expect(await screen.findByText("Nothing done for you")).toBeTruthy();
+  });
+
   it("does not claim an empty receipt is complete when unsupported counts are withheld", async () => {
     stub(receipt({ not_shown_count_withheld: true }));
     renderMagic();

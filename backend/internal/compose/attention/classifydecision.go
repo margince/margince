@@ -112,3 +112,16 @@ func blocksCustomerWork(item crmcontracts.AttentionItem) bool {
 		return false
 	}
 }
+
+func accountTerminationPreview(approval crmcontracts.Approval) bool {
+	if approval.Kind != "lifecycle_change" || approval.RequestedDeciderId == nil ||
+		approval.Preview == nil || approval.Preview.State != "ready" {
+		return false
+	}
+	for _, change := range approval.Preview.Changes {
+		if change.Field == "lifecycle" && change.After.Text == string(crmcontracts.CompanyLifecycleFormerCustomer) {
+			return true
+		}
+	}
+	return false
+}

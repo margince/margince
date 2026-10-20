@@ -41281,7 +41281,7 @@ type MagicReceipt struct {
 	// absence for any other seat is not a zero.
 	NotShown []MagicNotShown `json:"not_shown"`
 
-	// NotShownCountWithheld True when the reader cannot inspect unsupported record counts. No count is disclosed; absence of described actions does not establish a complete receipt.
+	// NotShownCountWithheld True when the reader cannot inspect workspace-wide unsupported record counts. Those counts are withheld; absence of described actions does not establish a complete receipt.
 	NotShownCountWithheld *bool `json:"not_shown_count_withheld,omitempty"`
 
 	// Since The start of the window reported, resolved by the server. A client shows it, because "nothing happened" over an hour and over a day are different claims.

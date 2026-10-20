@@ -153,10 +153,7 @@ export function MagicPanel({
   const drawn = LANES.filter((lane) => hasLines(shown?.[lane]));
   const done = rowsOf(shown?.done);
   const doneRecords = recordsOf(done);
-  const doneFloor =
-    sumIsFloor("done", done) ||
-    shown?.not_shown_count_withheld === true ||
-    (shown?.not_shown?.length ?? 0) > 0;
+  const doneFloor = sumIsFloor("done", done) || doneCoverageIncomplete(shown);
   // "All" would claim the whole of a count that is only a floor.
   const doneFold = plural(
     doneFloor ? "magic.done.atLeast" : "magic.done.all",
@@ -243,6 +240,13 @@ export function MagicPanel({
 
 // A lane off a payload this client cannot read is not an empty one: absent is
 // version skew, and only a list the server sent can say there is nothing in it.
+function doneCoverageIncomplete(receipt: MagicReceipt | undefined): boolean {
+  return (
+    receipt?.not_shown_count_withheld === true ||
+    (receipt?.not_shown?.length ?? 0) > 0
+  );
+}
+
 function hasLines(rows: readonly MagicLine[] | undefined): boolean {
   return rowsOf(rows).length > 0;
 }
@@ -306,10 +310,7 @@ function LaneSummary({
   }
   const answers = LANES.map((lane) => {
     const rows = receipt[lane];
-    const countWithheld =
-      lane === "done" &&
-      (receipt.not_shown_count_withheld ||
-        (receipt.not_shown?.length ?? 0) > 0);
+    const countWithheld = lane === "done" && doneCoverageIncomplete(receipt);
     if (
       !Array.isArray(rows) ||
       (rows.length === 0 && (!canReportEmpty || countWithheld))

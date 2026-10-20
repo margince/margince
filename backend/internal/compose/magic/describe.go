@@ -124,10 +124,10 @@ func changedFields(before, after map[string]any) []string {
 // reasonFromEvidence turns the source an enrichment recorded into a why.
 func reasonFromEvidence(evidence, after map[string]any) *crmcontracts.MagicSentence {
 	if correction, ok := evidence[deals.CloseDateCorrectionKind].(string); ok {
-		switch correction {
-		case "downgrade_and_review":
+		switch deals.CloseDateAction(correction) {
+		case deals.CloseDateActionDowngradeAndReview:
 			return &crmcontracts.MagicSentence{Key: "magic.why.forecast_review"}
-		case "auto_apply", "provisional_confirm":
+		case deals.CloseDateActionAutoApply, deals.CloseDateActionProvisionalConfirm:
 			return &crmcontracts.MagicSentence{Key: "magic.why.forecast_date"}
 		}
 	}

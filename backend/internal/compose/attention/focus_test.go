@@ -156,7 +156,7 @@ func TestFocusPrioritizesOnlyAVerifiedAccountTerminationDecision(t *testing.T) {
 		t.Run(state, func(t *testing.T) {
 			approval := crmcontracts.Approval{
 				Kind: "lifecycle_change", Summary: new("Review account termination"), RequestedDeciderId: &owner,
-				Preview: &crmcontracts.ApprovalPreview{Version: 1, State: state},
+				Preview: &crmcontracts.ApprovalPreview{Version: 1, State: state, Changes: []crmcontracts.ApprovalPreviewChange{{Field: "lifecycle", After: crmcontracts.ApprovalPreviewValue{Kind: "enum", Text: "former_customer"}}}},
 			}
 			termination := approvalItem(approval, nil)
 			row := classifyDecision(termination, rankInstant)
@@ -170,7 +170,7 @@ func TestFocusPrioritizesOnlyAVerifiedAccountTerminationDecision(t *testing.T) {
 				routine := classifyDecision(item("reply", "approval", withKind("send_email")), rankInstant)
 				focus := focusOf([]ranked{routine, row}, []ranked{routine, row}, rankInstant, ids.UUID{})
 				if len(focus.Items) != 2 || focus.Items[0].Kind == nil || *focus.Items[0].Kind != "lifecycle_change" {
-					t.Fatalf("routine reply outranked verified termination: %+v", focus.Items)
+					t.Fatalf("blocking send outranked verified termination: %+v", focus.Items)
 				}
 			}
 		})
@@ -184,6 +184,25 @@ func TestFocusRequiresTerminationResponsibilityAndAnAvailableDecision(t *testing
 	} {
 		if focusEligible(classifyDecision(approvalItem(approval, nil), rankInstant), rankInstant) {
 			t.Fatal("a termination without responsibility or verified evidence entered focus")
+		}
+	}
+}
+
+func TestTerminationFocusKeepsPreviewConflictsAndOtherTransitionsInReview(t *testing.T) {
+	for _, test := range []struct {
+		target  string
+		blocked bool
+	}{{"customer", false}, {"former_customer", true}} {
+		approval := crmcontracts.Approval{
+			Kind: "lifecycle_change", RequestedDeciderId: new(crmcontracts.Approval{Id: [16]byte{1}}.Id),
+			Preview: &crmcontracts.ApprovalPreview{Version: 1, State: "ready", Changes: []crmcontracts.ApprovalPreviewChange{{Field: "lifecycle", After: crmcontracts.ApprovalPreviewValue{Kind: "enum", Text: test.target}}}},
+		}
+		if test.blocked {
+			approval.Preview.Conflicts = &[]crmcontracts.ApprovalPreviewConflict{{BlocksApproval: true}}
+		}
+		row := classifyDecision(approvalItem(approval, nil), rankInstant)
+		if focusEligible(row, rankInstant) {
+			t.Fatalf("target %s blocked %v entered focus", test.target, test.blocked)
 		}
 	}
 }

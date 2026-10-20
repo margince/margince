@@ -154,14 +154,12 @@ describe("the brief readings strip", () => {
     expect(screen.getByText(en["brief.readings.decisions"])).toBeTruthy();
   });
 
-  // The property that can actually regress: on a fully answered morning, no slot
-  // draws an em dash. The strings of the retired slots are gone from all three
-  // catalogs, so asserting THOSE are absent is an assertion nothing in the tree
-  // can fail — a test that cannot go red is not a guard.
   it("uses the priced risk from the same day as the other readings", () => {
     draw({ revenue_at_risk_minor: 42000000, revenue_currency: "EUR" });
     expect(screen.getByText(/420k/i)).toBeTruthy();
-    expect(screen.getByText(`EUR · ${en["brief.readings.riskBasis"]}`)).toBeTruthy();
+    expect(
+      screen.getByText(`EUR · ${en["brief.readings.riskBasis"]}`),
+    ).toBeTruthy();
   });
 
   it("still draws five slots when nothing is waiting", () => {
@@ -982,6 +980,7 @@ it("marks known deal value and urgent work as incomplete when a source fails", (
     {
       revenue_at_risk_minor: 1200000,
       revenue_currency: "EUR",
+      unpriced_deals: 2,
       more_available: false,
     },
     [],
@@ -994,5 +993,7 @@ it("marks known deal value and urgent work as incomplete when a source fails", (
   drawDay(day);
   expect(strippedFigures()).toContain("3+");
   expect(screen.getByText(/12k.*\+/i)).toBeTruthy();
-  expect(screen.getByText(en["brief.readings.riskPartial"], { exact: false })).toBeTruthy();
+  expect(
+    screen.getByText(/Known value only · not all checked.*2\+/),
+  ).toBeTruthy();
 });

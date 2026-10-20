@@ -46683,7 +46683,7 @@ export interface components {
              *     absence for any other seat is not a zero.
              */
             not_shown: components["schemas"]["MagicNotShown"][];
-            /** @description True when the reader cannot inspect unsupported record counts. No count is disclosed; absence of described actions does not establish a complete receipt. */
+            /** @description True when the reader cannot inspect workspace-wide unsupported record counts. Those counts are withheld; absence of described actions does not establish a complete receipt. */
             not_shown_count_withheld?: boolean;
             /** @description Lanes that could not be read. "All clear" is forbidden while one is here: a lane the reader may not see and a lane with nothing in it are different answers. */
             sources_unavailable: components["schemas"]["WorklistSourceUnavailable"][];
