@@ -259,7 +259,7 @@ export const de = {
   "reporting.previewChart": "Vorschau",
   "reporting.previewLoading": "Vorschau wird geladen…",
   "reporting.previewEmpty":
-    "Keine Werte für dieses Diagramm in diesem Zeitraum.",
+    "Für Zeitraum und Kennzahlen dieses Berichts gibt es noch nichts zu zeichnen. Das Diagramm trotzdem hinzufügen oder den Zeitraum unter Bericht anpassen ändern.",
   "reporting.chooseChart": "Diagramm zum Hinzufügen",
   "reporting.exportCsv": "CSV exportieren",
   "reporting.captureContexts": "Täglichen Pipeline-Verlauf speichern",

@@ -249,7 +249,8 @@ export const en = {
   "reporting.addChart": "Add chart",
   "reporting.previewChart": "Preview",
   "reporting.previewLoading": "Loading the preview…",
-  "reporting.previewEmpty": "No figures for this chart in this period.",
+  "reporting.previewEmpty":
+    "Nothing to draw for this report’s period and metrics yet. Add the chart anyway, or change the period under Customize report.",
   "reporting.chooseChart": "Chart to add",
   "reporting.exportCsv": "Export CSV",
   "reporting.captureContexts": "Record daily pipeline history",
