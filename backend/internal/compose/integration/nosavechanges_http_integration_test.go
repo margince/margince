@@ -128,6 +128,32 @@ func TestASaveOfTheStoredValuesChangesNothing(t *testing.T) {
 	t.Run("tag with no field", func(t *testing.T) {
 		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/tags/"+tag.ID, AnyMap{}, tag.ID, tag.Version)
 	})
+	t.Run("tag with its stored colour, description and suggestion switch", func(t *testing.T) {
+		var set versionedWire
+		stored := AnyMap{"color": "teal", "description": "Interest in product A", "suggestible": true}
+		if status := e.Call(t, "PATCH", "/v1/tags/"+tag.ID, stored,
+			map[string]string{"If-Match": strconv.FormatInt(tag.Version, 10)}, &set); status != http.StatusOK {
+			t.Fatalf("setting the tag's fields -> %d", status)
+		}
+		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/tags/"+tag.ID, stored, tag.ID, set.Version)
+	})
+	t.Run("a relationship patch that breaks its dates is still refused", func(t *testing.T) {
+		var second, dated versionedWire
+		if status := e.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": "Dated Co"}, nil, &second); status != http.StatusCreated {
+			t.Fatalf("creating the second company -> %d", status)
+		}
+		if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
+			"kind": "employment", "contact_id": e.contactID, "company_id": second.ID,
+			"started_at": "2020-01-01", "source": "manual",
+		}, nil, &dated); status != http.StatusCreated {
+			t.Fatalf("creating the dated employment -> %d", status)
+		}
+		status := e.Call(t, "PATCH", "/v1/relationships/"+dated.ID, AnyMap{"ended_at": "2019-01-01"},
+			map[string]string{"If-Match": strconv.FormatInt(dated.Version, 10)}, nil)
+		if status < http.StatusBadRequest {
+			t.Errorf("an end date before the start date -> %d, want a refusal", status)
+		}
+	})
 }
 
 func TestAWebhookSubscriptionSavedAsItAlreadyIsChangesNothing(t *testing.T) {
@@ -160,4 +186,19 @@ func TestAWebhookSubscriptionSavedAsItAlreadyIsChangesNothing(t *testing.T) {
 		version = created.Subscription.Version + 1
 	}
 	assertSaveChangesNothing(t, e, "PATCH", path, AnyMap{"state": "paused"}, created.Subscription.ID, version)
+}
+
+func TestADealRoomExpirySetToItsStoredValueChangesNothing(t *testing.T) {
+	e := apptest.SetupApp(t)
+	apptest.BootstrapWorkspaceSession(t, e, "Room Expiry", "ada@expiry.test", "Ada Admin")
+	_, roomID, version := openRoomOnANewDeal(t, e, "Expiry agreement")
+
+	var set versionedWire
+	body := AnyMap{"expires_at": "2027-01-15T10:00:00Z"}
+	if status := e.Call(t, "PUT", "/v1/deal-rooms/"+roomID+"/expiry", body,
+		map[string]string{"If-Match": strconv.FormatInt(version, 10)}, &set); status != http.StatusOK {
+		t.Fatalf("setting the expiry -> %d", status)
+	}
+	assertSaveChangesNothing(t, e, "PUT", "/v1/deal-rooms/"+roomID+"/expiry",
+		AnyMap{"expires_at": "2027-01-15T12:00:00+02:00"}, roomID, set.Version)
 }
