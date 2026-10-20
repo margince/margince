@@ -330,38 +330,14 @@ func settleSignalTx(ctx context.Context, tx pgx.Tx, signalID ids.UUID, source, o
 	return true, nil
 }
 
-// AcknowledgeOpenForCompanyTx marks every open signal of one kind on one account
-// acknowledged, and reports how many moved.
-//
-// An account can carry several signals saying the same thing — three
-// conversations that each mention the contract ending are three rows. A human
-// answering the proposal that came out of one of them has answered the
-// question all of them ask, and settling only the cited row leaves the rest
-// open forever: the record has left the stage the reconciler looks for, so no
-// later pass considers them again and nothing else will ever close them.
-//
-// It takes the KIND rather than a list of ids because the decision was about
-// the account's situation, not about which row happened to be quoted on the
-// card the reader saw.
-//
-// TWO principals, deliberately. ctx is who WRITES — the machine, so the
-// acknowledgement carries the same provenance as the stage move beside it.
-// decider is the human whose row scope BOUNDS it, and only rows they could
-// have opened themselves are settled.
-//
-// The two are not the same question, and the account is not the answer to the
-// second. A signal is matched here by resolved_company_id, while signal row scope
-// is inherited from its SUBJECT (auth.SignalScopeClause: contact, company
-// or deal). Those can differ — a signal resolved to this account whose subject
-// is a deal the decider may not see — so seeing the account is not seeing
-// every signal on it, and a bulk settle keyed on the account alone would
-// mutate rows outside the decider's scope.
-func AcknowledgeOpenForCompanyTx(
-	ctx context.Context, decider context.Context, tx pgx.Tx, companyID ids.UUID, kind string,
+// AcknowledgeCoveredForCompanyTx preserves signals outside the decision's evidence set.
+// The decider bounds visibility; ctx carries the writer's provenance.
+func AcknowledgeCoveredForCompanyTx(
+	ctx context.Context, decider context.Context, tx pgx.Tx, companyID ids.UUID, kind string, covered []ids.UUID,
 ) (int, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	companyPos, kindPos := arg(companyID), arg(kind)
+	companyPos, kindPos, coveredPos := arg(companyID), arg(kind), arg(covered)
 	scope, err := auth.SignalScopeClause(decider, "signal", arg)
 	if err != nil {
 		return 0, err
@@ -372,19 +348,19 @@ func AcknowledgeOpenForCompanyTx(
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT id FROM signal
-		 WHERE resolved_company_id = $%d AND kind = $%d
+		 WHERE resolved_company_id = $%d AND kind = $%d AND id = ANY($%d::uuid[])
 		   AND status = 'open' AND archived_at IS NULL
 		   AND %s
-		 ORDER BY detected_at`, companyPos, kindPos, scope), args...)
+		 ORDER BY detected_at`, companyPos, kindPos, coveredPos, scope), args...)
 	if err != nil {
 		return 0, fmt.Errorf("list the account's open signals: %w", err)
 	}
-	ids, err := pgx.CollectRows(rows, pgx.RowTo[idsUUID])
+	named, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 	if err != nil {
 		return 0, fmt.Errorf("read the account's open signals: %w", err)
 	}
 	settled := 0
-	for _, signalID := range ids {
+	for _, signalID := range named {
 		// Each through the same CAS the single-signal path takes, so a row a
 		// human triaged between the read and this write keeps their outcome.
 		moved, err := AcknowledgeTx(ctx, tx, signalID, ResolutionSourceApproval)
@@ -397,11 +373,6 @@ func AcknowledgeOpenForCompanyTx(
 	}
 	return settled, nil
 }
-
-// idsUUID names the scan target for the id list above. pgx.RowTo needs a
-// concrete type and ids.UUID is already one; the alias exists only so the
-// generic call reads as what it collects.
-type idsUUID = ids.UUID
 
 // CitesActivity reports whether any live signal was raised citing this message.
 //
