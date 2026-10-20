@@ -13,8 +13,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// A report keeps the purpose its author typed, trimmed. A blank one is no
-// description, and one past 2000 characters is refused by name.
+// A report keeps the purpose its author typed, trimmed. An update that leaves
+// it out keeps it, a blank one clears it, and one past 2000 characters is
+// refused by name.
 func TestASavedReportKeepsItsPurpose(t *testing.T) {
 	f := reportingBusiness(t)
 	purpose := "  Weekly pipeline review for the board.  "
@@ -33,9 +34,19 @@ func TestASavedReportKeepsItsPurpose(t *testing.T) {
 		t.Fatalf("the report reads back description %v, want the trimmed purpose", read.Description)
 	}
 
+	input.Description = nil
+	input.Name = "Board review, renamed"
+	renamed, err := f.service.UpdateReport(f.human, ids.UUID(created.Id), created.Version, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if renamed.Description == nil || *renamed.Description != "Weekly pipeline review for the board." {
+		t.Fatalf("an update that left the description out changed it to %v, want it kept", renamed.Description)
+	}
+
 	blank := "   "
 	input.Description = &blank
-	updated, err := f.service.UpdateReport(f.human, ids.UUID(created.Id), created.Version, input)
+	updated, err := f.service.UpdateReport(f.human, ids.UUID(created.Id), renamed.Version, input)
 	if err != nil {
 		t.Fatal(err)
 	}

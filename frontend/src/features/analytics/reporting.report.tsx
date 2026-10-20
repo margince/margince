@@ -204,19 +204,7 @@ export function ReportingReportDetail({
       {(report) => (
         <>
           <div className="reporting-header">
-            <div>
-              <Heading as="h2" size="large">
-                {report.name}
-              </Heading>
-              {report.description && (
-                <p className="reporting-description">{report.description}</p>
-              )}
-              <p className="t-caption">
-                {report.selection.scope.label} ·{" "}
-                {t(`reporting.${report.selection.period}`)} ·{" "}
-                {t(`reporting.${report.audience}`)}
-              </p>
-            </div>
+            <ReportTitle report={report} />
             <div className="reporting-header-actions">
               {canReadEditions && (
                 <Select
@@ -471,5 +459,25 @@ export function ReportingReportDetail({
         </>
       )}
     </QueryGate>
+  );
+}
+
+// The report's name, its purpose when it has one, and what it covers.
+function ReportTitle({ report }: Readonly<{ report: ReportingReport }>) {
+  const t = useT();
+  return (
+    <div>
+      <Heading as="h2" size="large">
+        {report.name}
+      </Heading>
+      {report.description && (
+        <p className="reporting-description">{report.description}</p>
+      )}
+      <p className="t-caption">
+        {report.selection.scope.label} ·{" "}
+        {t(`reporting.${report.selection.period}`)} ·{" "}
+        {t(`reporting.${report.audience}`)}
+      </p>
+    </div>
   );
 }

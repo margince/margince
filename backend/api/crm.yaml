@@ -49555,7 +49555,7 @@ components:
         description:
           type: string
           maxLength: 2000
-          description: What the report is for, in the author's words. Empty or blank stores no description.
+          description: What the report is for, in the author's words. Blank text clears it. Left out of an update, the stored one is kept.
         audience:
           type: string
           enum:

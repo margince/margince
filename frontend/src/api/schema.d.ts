@@ -36555,7 +36555,7 @@ export interface components {
         };
         ReportingReportInput: {
             name: string;
-            /** @description What the report is for, in the author's words. Empty or blank stores no description. */
+            /** @description What the report is for, in the author's words. Blank text clears it. Left out of an update, the stored one is kept. */
             description?: string;
             /** @enum {string} */
             audience: "private" | "team" | "workspace";

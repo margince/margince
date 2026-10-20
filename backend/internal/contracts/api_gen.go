@@ -46010,7 +46010,7 @@ type ReportingReportInput struct {
 	Audience       ReportingReportInputAudience `json:"audience"`
 	AudienceTeamId *openapi_types.UUID          `json:"audience_team_id,omitempty"`
 
-	// Description What the report is for, in the author's words. Empty or blank stores no description.
+	// Description What the report is for, in the author's words. Blank text clears it. Left out of an update, the stored one is kept.
 	Description *string            `json:"description,omitempty"`
 	Name        string             `json:"name"`
 	Selection   ReportingSelection `json:"selection"`

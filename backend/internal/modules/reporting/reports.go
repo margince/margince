@@ -311,7 +311,11 @@ func (s *Service) UpdateReport(ctx context.Context, id ids.UUID, version int64, 
 		}
 		out = before
 		out.Name = strings.TrimSpace(in.Name)
-		out.Description = reportDescription(in.Description)
+		// Omitted keeps the stored purpose: a client that predates the field
+		// must not erase it. Blank text is how an author clears it.
+		if in.Description != nil {
+			out.Description = reportDescription(in.Description)
+		}
 		out.Audience = crmcontracts.ReportingReportAudience(in.Audience)
 		out.AudienceTeamId = in.AudienceTeamId
 		out.Selection = in.Selection

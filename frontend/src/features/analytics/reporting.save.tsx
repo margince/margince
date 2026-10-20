@@ -175,7 +175,6 @@ export function SaveReportingDialog({
               value={description}
               disabled={draftOpen}
               onChange={(event) => setDescription(event.target.value)}
-              maxLength={2000}
               rows={3}
             />
           )}
