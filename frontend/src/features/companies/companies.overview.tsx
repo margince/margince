@@ -4,7 +4,7 @@ import { AssistantPanel } from "../voice-knowledge/assistant";
 import type { Company360View } from "./companies";
 import { LatestSection } from "./company/glance";
 import { GrowthFitPanel } from "./companygrowthfit";
-import { PeopleSection, SignalsSection } from "./companyrail";
+import { ContactsSection, SignalsSection } from "./companyrail";
 import { DealsSection } from "./companyraildeals";
 import { type CompanyOverviewProps, CompanyReading } from "./companyreading";
 import { hasWorkInFlight } from "./companywork";
@@ -79,7 +79,7 @@ export function CompanyOverviewStack(props: CompanyOverviewProps) {
             onOpenEmail={props.onOpenEmail}
           />
           <DealsSection view={view} loading={loading} onTab={onOpenTab} />
-          <PeopleSection view={view} loading={loading} onTab={onOpenTab} />
+          <ContactsSection view={view} loading={loading} onTab={onOpenTab} />
         </>
       )}
     </div>

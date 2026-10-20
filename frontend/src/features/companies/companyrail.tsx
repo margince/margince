@@ -220,11 +220,11 @@ function hostOf(website: string | null | undefined): string | undefined {
 }
 
 /**
- * PeopleSection is who is on the account: the top of the roster as pills, each
+ * ContactsSection is who is on the account: the top of the roster as pills, each
  * opening the contact. The set-role and route-in verbs stay on the Contacts
  * tab's own roster rather than being rebuilt here a second time.
  */
-export function PeopleSection({
+export function ContactsSection({
   view,
   loading,
   onTab,

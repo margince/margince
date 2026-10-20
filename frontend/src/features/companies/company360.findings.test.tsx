@@ -470,13 +470,13 @@ describe("company view — the account's own tabs", () => {
     );
     renderCompany();
     // The overview names the account's contacts in a section of its own.
-    const people = (await screen.findAllByRole("heading"))
+    const roster = (await screen.findAllByRole("heading"))
       .find((heading) => heading.textContent?.startsWith("Contacts"))
       ?.closest<HTMLElement>(".panel");
-    if (!people) {
+    if (!roster) {
       throw new Error("the overview draws no Contacts section");
     }
-    expect(await within(people).findByText("Christian Hagemeyer")).toBeTruthy();
+    expect(await within(roster).findByText("Christian Hagemeyer")).toBeTruthy();
 
     // The tab is the roster in full, and the fields column keeps no copy.
     await userEvent.click(screen.getByRole("button", { name: /^Contacts/ }));

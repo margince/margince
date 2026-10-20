@@ -8,7 +8,7 @@ import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
-import { PeopleSection } from "./companyrail";
+import { ContactsSection } from "./companyrail";
 import {
   emptyPage,
   jsonResponse,
@@ -35,7 +35,7 @@ function renderSections({
   return render(
     <>
       <DealsSection view={three60} loading={false} onTab={onOpenTab} />
-      <PeopleSection view={three60} loading={false} onTab={onOpenTab} />
+      <ContactsSection view={three60} loading={false} onTab={onOpenTab} />
     </>,
   );
 }
