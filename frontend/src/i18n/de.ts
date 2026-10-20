@@ -92,12 +92,50 @@ export const de = {
     "Ein vorheriger Schritt muss zuerst abgeschlossen werden.",
   "dataTasks.blocked.missing_prerequisite":
     "Erforderliche Aktualisierungen müssen zuerst abgeschlossen werden.",
+  "dealSuggestion.linkedUnlinked":
+    "Belege verknüpft. Einige Belege bleiben unverändert, da die Berechtigung zum Verschieben fehlt.",
+  "dealSuggestion.searchExisting": "Deals suchen",
+  "dealSuggestion.existingDeal": "Bestehender Deal",
+  "dealSuggestion.moreDeals": "Weitere Deals laden",
+  "dealSuggestion.noMatchingDeals":
+    "Keine passenden Deals bei diesem Unternehmen.",
+  "dealSuggestion.changed":
+    "Dieser Vorschlag ist nicht mehr verfügbar. Lade die Prüfpunkte neu, um den aktuellen Stand zu sehen.",
+  "dealSuggestion.linkExisting": "Mit bestehendem Deal verknüpfen",
+  "dealSuggestion.linked": "Belege mit dem Deal verknüpft.",
+  "dealSuggestion.dismissTitle": "Deal-Vorschlag verwerfen",
+  "dealSuggestion.linkEffect":
+    "Die genannten Belege mit einem Deal bei {company} verknüpfen; es entsteht kein neuer Deal.",
+  "dealSuggestion.dismissEffect":
+    "Diesen Vorschlag für {company} schließen und den Grund speichern.",
+  "dealSuggestion.dismissReason": "Grund",
+  "dealSuggestion.dismissReason.not_a_deal": "Kein Kaufinteresse",
+  "dealSuggestion.dismissReason.already_tracked": "Bereits erfasst",
+  "dealSuggestion.dismissReason.wrong_company": "Falsches Unternehmen",
+  "dealSuggestion.dismissReason.historical": "Frühere Aktivität",
+  "dealSuggestion.dismissReason.other": "Anderer Grund",
   "approval.preview.nameUnavailable": "Name nicht verfügbar",
   "approval.preview.structured": "Strukturierter Wert: {value}",
   "approval.preview.resolveConflict":
     "Kläre die widersprüchlichen Angaben, bevor du diese Änderung freigibst.",
   "history.field.closed_at": "Abgeschlossen am",
   "history.field.amount_minor_base": "Betrag in Basiswährung",
+  "approval.preview.activeContract":
+    "Ein Vertrag ist noch aktiv. Prüfe ihn, bevor du die Kundenbeziehung beendest.",
+  "approval.preview.activeDelivery":
+    "Ein Projekt wird noch geliefert. Prüfe es, bevor du die Kundenbeziehung beendest.",
+  "approval.preview.unknownScope":
+    "Die Quelle belegt nicht, dass die gesamte Kundenbeziehung beendet wurde.",
+  "approval.preview.incompleteEvidence":
+    "Die aktuellen Belege sind unvollständig. Prüfe das Unternehmen, bevor du seinen Status änderst.",
+  "approval.preview.newerEvidence":
+    "Die Quelle wurde nach diesem Vorschlag geändert. Prüfe die aktuellen Belege.",
+  "approval.preview.scopeCompany": "Gesamte Kundenbeziehung",
+  "approval.preview.scopeWorkstream": "Ein Auftrag",
+  "approval.preview.scopeUnknown": "Umfang nicht geklärt",
+  "approval.preview.scope": "Umfang der Beendigung",
+  "approval.preview.sourceDate": "Datum der Quelle",
+  "approval.preview.workstream": "Auftrag",
   "approval.preview.conflict": "Widersprüchlicher Kontext",
   "approval.preview.execution": "Wird beim Anwenden festgelegt",
   "approval.preview.effects": "Weitere Änderungen",
@@ -940,6 +978,8 @@ export const de = {
   "dealSuggestion.field.amount": "Betrag",
   "dealSuggestion.field.currency": "Währung",
   "dealSuggestion.field.stage": "Phase",
+  "dealSuggestion.accountOwner": "Für das Unternehmen zuständig",
+  "dealSuggestion.unassignedOwner": "Nicht zugewiesen",
   "dealSuggestion.field.owner": "Verantwortlich",
   "dealSuggestion.ownerMe": "Selbst",
   "dealSuggestion.field.closeDate": "Voraussichtlicher Abschluss",
@@ -5762,6 +5802,13 @@ export const de = {
   "analytics.share.closeBody":
     "Der Link funktioniert ab sofort für niemanden mehr, der ihn hat. Ein geschlossener Link lässt sich nicht wieder öffnen.",
   "analytics.frame": "Stand {asOf} · {zone}",
+  "review.unlinkedSignal": "Kaufinteresse ohne Deal",
+  "review.signalNotRelevant": "Nicht relevant",
+  "review.signalOccurred": "Datum der Quelle: {date}",
+  "review.uncertainBuyer":
+    "Prüfe vor dem Anlegen eines Deals, wer kauft und für welches Unternehmen.",
+  "review.historicalSignal":
+    "Diese Quelle ist alt. Prüfe vor dem Verknüpfen, ob das Kaufinteresse noch besteht.",
   "review.title": "Prüfungen vor der Einschätzung",
   "review.ready": "Bereit",
   "review.readyWithExceptions": "Bereit, mit Hinweisen",

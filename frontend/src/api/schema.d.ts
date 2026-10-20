@@ -3600,9 +3600,10 @@ export interface paths {
         /**
          * Open Deal Scout suggestions the caller may see, newest first.
          * @description A suggestion proposes opening a deal for a company that has no open deal,
-         *     from evidence the scout found: a held meeting with somebody at the company,
-         *     the pair of `new_opportunity` and `commitment_made` signals within thirty
-         *     days, or a proposal or contract sent to it as a document. A suggestion is
+         *     from a verified buyer request paired with a commitment on the same matter.
+         *     Source dates must be within thirty days of each other. Meetings and sent
+         *     proposals corroborate that request; neither establishes buyer intent alone.
+         *     Historical or uncertain requests remain input checks for qualification. A suggestion is
          *     listed only to a reader who may read the company and EVERY piece of its
          *     evidence. Suggestions are never deals: no deal list, board total, forecast
          *     or report counts them.
@@ -3629,7 +3630,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Open the suggested deal, with the caller's corrections.
+         * Open the suggested deal or link the evidence to an existing deal.
          * @description Creates the deal on the company, files the evidence messages under it and
          *     acknowledges the signals that raised it, in one transaction. A message the
          *     caller may not move stays where it is and is listed in
@@ -3640,7 +3641,10 @@ export interface paths {
          *     or superseded, and `409 suggestion_superseded` when the company has an
          *     open deal by now: the suggestion is retired and no second deal is
          *     opened. A replay under the same Idempotency-Key answers the first
-         *     result.
+         *     result. Supplying `existing_deal_id` instead links the evidence to a live
+         *     deal on the same company, requiring update access to that deal. It cannot
+         *     be combined with corrections. Opening a new deal requires create access
+         *     and rechecks the buyer attribution and source evidence.
          */
         post: operations["acceptDealSuggestion"];
         delete?: never;
@@ -24007,6 +24011,11 @@ export interface components {
             /** Format: uuid */
             company_id: string;
             company_name: string;
+            /**
+             * Format: uuid
+             * @description The current company owner responsible for reviewing this suggestion.
+             */
+            owner_id?: string | null;
             /** Format: uuid */
             pipeline_id: string;
             /**
@@ -24060,6 +24069,11 @@ export interface components {
         };
         /** @description The caller's corrections. An omitted field keeps the suggestion's value. */
         AcceptDealSuggestionRequest: {
+            /**
+             * Format: uuid
+             * @description Link this evidence to a live deal at the same company instead of creating one. Requires permission to update that deal; cannot be combined with corrections.
+             */
+            existing_deal_id?: string;
             /** @description Without one the deal is named after the company. */
             name?: string;
             /** Format: int64 */
@@ -24079,6 +24093,13 @@ export interface components {
              * @description A date the caller chose. Without one the deal carries the suggestion's date, marked provisional.
              */
             close_date?: string;
+        };
+        DismissDealSuggestionRequest: {
+            /**
+             * @description The reason kept with the audited decision. Omitted means not_a_deal.
+             * @enum {string}
+             */
+            reason?: "not_a_deal" | "already_tracked" | "wrong_company" | "historical" | "other";
         };
         DealSuggestionAcceptance: {
             suggestion: components["schemas"]["DealSuggestion"];
@@ -35543,11 +35564,35 @@ export interface components {
             /** Format: date-time */
             resolved_at: string;
         };
+        /** @description A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message. */
+        SourceQuoteProof: {
+            start: number;
+            end: number;
+            sha256: string;
+        };
         SignalEvidence: {
+            source_quote?: components["schemas"]["SourceQuoteProof"];
+            /**
+             * Format: uuid
+             * @description The buyer identified among the cited source’s verified participants.
+             */
+            buyer_contact_id?: string;
+            /**
+             * @description The commercial role supported by the cited source, independent of recipient order.
+             * @enum {string}
+             */
+            commercial_role?: "buyer" | "supplier" | "partner" | "provider" | "unknown";
             snippet: string;
             /** @enum {string|null} */
             source_type?: "activity" | "deal" | "signal" | "relationship" | "page" | "contract" | null;
             source_id?: string | null;
+            /**
+             * @description Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+             * @enum {string}
+             */
+            lifecycle_scope?: "company" | "workstream" | "unknown";
+            /** @description The engagement named in the cited words, when present. Never inferred from the company name. */
+            workstream?: string;
         };
         /** @description One rep's statement about one contact, answering one refusal. */
         RecordCommunicationContextRequest: {
@@ -37403,7 +37448,7 @@ export interface components {
             subject_id: string;
             /**
              * @description The record this finding is about, named and addressed — the same shape the Worklist carries, so a client routes it through the one registry rather than mapping `subject_kind` onto a screen a second time.
-             *     `subject_kind` and `subject_id` stay: they are the durable fields, and a client that has them and not this still draws today's label. Null when the read that found this exception could not name the record — which today means it is not a deal, since only a deal's findings are returned at all.
+             *     `subject_kind` and `subject_id` stay: they are the durable fields, and a client that has them and not this still draws today's label. Null when the read could not name the record. A signal finding opens its verified company while retaining the signal as its durable review subject.
              */
             readonly subject?: components["schemas"]["AttentionSubject"] | null;
             /** @enum {string} */
@@ -37435,6 +37480,11 @@ export interface components {
             last_seen_at: string;
         };
         ResolveInputCheck: {
+            /**
+             * Format: uuid
+             * @description For fixed_record on an unlinked signal, file its source evidence on this deal at the same company and settle the signal in the same transaction.
+             */
+            deal_id?: string;
             /**
              * @description What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked.
              * @enum {string}
@@ -40495,8 +40545,17 @@ export interface components {
             /** @description Whether the domain requires reconciliation before this proposal can be approved. */
             blocks_approval: boolean;
         };
+        /** @description Current readable source and scope supporting a company lifecycle review. */
+        LifecyclePreviewEvidence: {
+            /** @enum {string} */
+            scope: "company" | "workstream" | "unknown";
+            /** Format: date-time */
+            occurred_at: string;
+            workstream?: string;
+        };
         /** @description A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. */
         ApprovalPreview: {
+            lifecycle_evidence?: components["schemas"]["LifecyclePreviewEvidence"];
             /** @description Additional business effects released by this approval. Other proposals remain separate decisions. */
             effects?: string[];
             /** @description Current evidence resolved with the reader's source permissions. An empty array replaces historical evidence. */
@@ -53136,7 +53195,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DismissDealSuggestionRequest"];
+            };
+        };
         responses: {
             /** @description The dismissed suggestion. */
             200: {

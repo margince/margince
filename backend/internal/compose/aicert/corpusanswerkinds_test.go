@@ -103,6 +103,8 @@ var recognisedOwners = []string{
 	// the floor exists to produce.
 	"request_settlement/request_settle",
 	"signal_extract/thread_events",
+	"signal_extract/thread_events",
+	"signal_extract/thread_events",
 	"signal_extract/thread_events, transcript_propose/next_steps",
 	"signal_extract/thread_events, transcript_propose/next_steps",
 	"site_triage/triage",

@@ -147,6 +147,10 @@ function stubBackend(opts: {
           })
         : jsonResponse({ ...suggestion, state: "dismissed" });
     }
+    if (path === "/users/names")
+      return jsonResponse({
+        data: [{ id: "account-owner", display_name: "Mira Chen" }],
+      });
     if (path === "/deal-suggestions") {
       return jsonResponse({
         data: opts.suggestions,
@@ -306,11 +310,23 @@ describe("what an acceptance sends", () => {
 });
 
 describe("a suggestion's card", () => {
+  it("names the account owner without claiming a proposed deal already has an owner", async () => {
+    vi.stubGlobal("fetch", stubBackend({ suggestions: [] }));
+    draw(
+      <DealSuggestionCard
+        suggestion={{ ...suggestion, owner_id: "account-owner" }}
+      />,
+    );
+    expect(screen.getByText(/Account owner:/)).toBeTruthy();
+    expect(await screen.findByText("Mira Chen")).toBeTruthy();
+  });
+
   it("names the deal, its amount and every piece of evidence", async () => {
     vi.stubGlobal("fetch", stubBackend({ suggestions: [] }));
     draw(<DealSuggestionCard suggestion={suggestion} />);
     expect(screen.getByText("Acme GmbH: proposal sent")).toBeTruthy();
     expect(screen.getByText("€12,500.00")).toBeTruthy();
+    expect(screen.getByText(/Unassigned/)).toBeTruthy();
     expect(screen.getByText("Sent: Angebot_2026.pdf")).toBeTruthy();
     expect(screen.getByText("Meeting held: Scoping workshop")).toBeTruthy();
     expect(
@@ -370,10 +386,45 @@ describe("a suggestion's card", () => {
     draw(<DealSuggestionCard suggestion={suggestion} />);
 
     await user.click(await screen.findByRole("button", { name: "Not a deal" }));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Not a deal",
+      }),
+    );
     await waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0].path).toBe("/deal-suggestions/sg-1/dismiss");
+    expect(sent[0].body).toEqual({ reason: "not_a_deal" });
     expect(sent[0].key).toBeTruthy();
   });
+});
+
+it("links evidence to an existing deal without sending creation fields", async () => {
+  const user = userEvent.setup();
+  const sent: Sent[] = [];
+  vi.stubGlobal("fetch", stubBackend({ suggestions: [], sent }));
+  draw(<DealSuggestionCard suggestion={suggestion} />);
+  await user.click(
+    await screen.findByRole("button", { name: "Link to existing deal" }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  await waitFor(() =>
+    expect(
+      within(dialog)
+        .getByLabelText(/Existing deal/)
+        .hasAttribute("disabled"),
+    ).toBe(false),
+  );
+  await pickOption(
+    user,
+    within(dialog).getByLabelText(/Existing deal/),
+    "Fleet retrofit",
+  );
+  await user.click(
+    within(dialog).getByRole("button", { name: "Link to existing deal" }),
+  );
+  await waitFor(() => expect(sent).toHaveLength(1));
+  expect(sent[0].body).toEqual({ existing_deal_id: "d1" });
+  expect(await screen.findByText("Evidence linked to the deal.")).toBeTruthy();
 });
 
 describe("a suggestion on the pipeline board", () => {
@@ -447,6 +498,11 @@ describe("the accept dialog's pickers and the refusals", () => {
     draw(<DealSuggestionCard suggestion={suggestion} />);
 
     await user.click(await screen.findByRole("button", { name: "Not a deal" }));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Not a deal",
+      }),
+    );
     expect(
       await screen.findByText(
         "Someone already decided this suggestion. Reload to see where it stands.",
@@ -466,6 +522,11 @@ describe("the accept dialog's pickers and the refusals", () => {
     draw(<DealSuggestionCard suggestion={suggestion} />);
 
     await user.click(await screen.findByRole("button", { name: "Not a deal" }));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Not a deal",
+      }),
+    );
     expect(
       await screen.findByText("That did not go through. Try again."),
     ).toBeTruthy();

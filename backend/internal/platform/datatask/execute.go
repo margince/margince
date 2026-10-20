@@ -73,7 +73,7 @@ func lockExecutor(ctx context.Context, tx pgx.Tx) (bool, error) {
 func (e *Engine) runBatch(ctx context.Context, tx pgx.Tx, picked selection) error {
 	p := picked.progress
 	if picked.task.Manual && !picked.task.hasCurrentReview(p) {
-		return fmt.Errorf("manual data task requires a current reviewed activation")
+		return errors.New("manual data task requires a current reviewed activation")
 	}
 	if p.Activation != nil {
 		remaining := int64(p.Activation.Limit) - p.Scanned

@@ -22,6 +22,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -181,6 +182,10 @@ func RecordSuggestionTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (bool
 	if err := validDraft(d); err != nil {
 		return false, err
 	}
+	current, err := suggestionSourceTimes(ctx, tx, d.Evidence)
+	if err != nil || !current {
+		return false, err
+	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return false, err
@@ -309,19 +314,24 @@ func insertSuggestionEvidence(ctx context.Context, tx pgx.Tx, suggestion ids.UUI
 // there and live — a message cited by a signal included. A suggestion that
 // clause hides from everybody would otherwise block its company for good.
 // System-only, for the same reason recording is.
-func SupersedeStaleSuggestionsTx(ctx context.Context, tx pgx.Tx) (int, error) {
+func SupersedeStaleSuggestionsTx(ctx context.Context, tx pgx.Tx, buyerEligible func(func(any) int) string) (int, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return 0, err
 	}
+	if buyerEligible == nil {
+		return 0, apperrors.ErrInvalidArgument
+	}
 	var args []any
-	stands, err := suggestionVisibleClause(ctx, func(v any) int { args = append(args, v); return len(args) })
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	stands, err := suggestionVisibleClause(ctx, arg)
 	if err != nil {
 		return 0, err
 	}
+	buyer := buyerEligible(arg)
 	rows, err := tx.Query(ctx, `
 		UPDATE deal_suggestion s SET state = 'superseded', decided_at = now()
 		 WHERE s.state = 'open'
-		   AND (NOT `+SuggestionCompanyFreeClause("s.company_id")+` OR NOT `+stands+`)
+		   AND (NOT `+SuggestionCompanyFreeClause("s.company_id")+` OR NOT `+stands+` OR NOT `+buyer+`)
 		RETURNING s.id`, args...)
 	if err != nil {
 		return 0, fmt.Errorf("deals: superseding suggestions: %w", err)

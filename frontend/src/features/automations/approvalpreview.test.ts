@@ -23,6 +23,24 @@ const preview: Preview = {
 };
 
 describe("commercial approval preview", () => {
+  it.each(LOCALES)(
+    "explains an unknown conflict without a summary in %s",
+    (locale) => {
+      const unknown: Preview = {
+        ...preview,
+        conflicts: [
+          { kind: "future_reason", summary: " ", blocks_approval: true },
+        ],
+      };
+      const rows = commercialPreviewDisplay(unknown, (key, params) =>
+        translate(locale, key, params),
+      );
+      expect(
+        rows.find((row) => row.field === "preview_conflict_0")?.value,
+      ).toBe(translate(locale, "approval.preview.incompleteEvidence"));
+      expect(approvalAcceptable({ preview: unknown })).toBe(false);
+    },
+  );
   it.each(LOCALES)("labels a structured companion value in %s", (locale) => {
     const value = '{"city":"Berlin"}';
     const rows = commercialPreviewDisplay(
@@ -376,3 +394,42 @@ it.each([true, false])(
     );
   },
 );
+
+it("keeps source date and scope visible while an active agreement blocks termination", () => {
+  const rows = commercialPreviewDisplay(
+    {
+      ...preview,
+      state: "stale",
+      lifecycle_evidence: {
+        scope: "workstream",
+        occurred_at: "2026-07-31T12:00:00Z",
+        workstream: "Atlas pilot",
+      },
+      conflicts: [
+        {
+          kind: "active_contract",
+          summary: "Server fallback",
+          blocks_approval: true,
+        },
+      ],
+    },
+    (key) => key,
+    "en",
+    () => "31 July 2026",
+  );
+  expect(rows).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        field: "lifecycle_scope",
+        value: "approval.preview.scopeWorkstream",
+      }),
+      expect.objectContaining({ field: "source_date", value: "31 July 2026" }),
+      expect.objectContaining({ field: "workstream", value: "Atlas pilot" }),
+      expect.objectContaining({
+        field: "preview_conflict_0",
+        value: "approval.preview.activeContract",
+      }),
+    ]),
+  );
+  expect(rows.some((row) => row.field === "owner_id")).toBe(false);
+});

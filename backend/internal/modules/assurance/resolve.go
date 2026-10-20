@@ -36,8 +36,6 @@ const (
 	OutcomeConditionCleared = "condition_cleared"
 )
 
-// subjectKindDeal is the one subject a finding is minted about, and the table
-// whose write authority decides who may answer it.
 const subjectKindDeal = "deal"
 
 // codeInvalid is the ParseError code for a value of the wrong shape, as
@@ -63,6 +61,7 @@ const MaxSuppression = 90 * 24 * time.Hour
 
 // Resolution is somebody's answer to a finding.
 type Resolution struct {
+	DealID      *ids.UUID
 	Outcome     string
 	Reason      string
 	EvidenceRef string
@@ -98,6 +97,9 @@ func (s *Store) Resolve(ctx context.Context, exceptionID ids.UUID, in Resolution
 
 	return database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		if err := ensureAnswerable(ctx, tx, exceptionID); err != nil {
+			return err
+		}
+		if err := s.applySignalDecision(ctx, tx, exceptionID, in); err != nil {
 			return err
 		}
 		// The status the answer leaves the finding in. A deferral does NOT
@@ -165,30 +167,40 @@ func (s *Store) Resolve(ctx context.Context, exceptionID ids.UUID, in Resolution
 	})
 }
 
-// ensureAnswerable admits an answer only from a caller who may change the deal
-// the finding is about. Every rep holds the forecast grant to answer findings.
-// Which findings is the deal's own write authority, because a suppressing
-// answer hides the finding from that deal's owner and their lead.
+// A suppressing answer requires write authority over its subject.
 func ensureAnswerable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID) error {
-	if err := auth.Require(ctx, subjectKindDeal, principal.ActionUpdate); err != nil {
-		return err
+	kinds := make([]string, 0, 2)
+	dealErr := auth.Require(ctx, subjectKindDeal, principal.ActionUpdate)
+	if dealErr == nil {
+		kinds = append(kinds, subjectKindDeal)
 	}
+	if signalErr := auth.Require(ctx, subjectKindSignal, principal.ActionUpdate); signalErr == nil {
+		kinds = append(kinds, subjectKindSignal)
+	}
+	if len(kinds) == 0 {
+		return dealErr
+	}
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	query := fmt.Sprintf(`SELECT subject_kind, subject_id FROM assurance_exception
+ WHERE id = $%d AND status = 'open' AND subject_kind = ANY($%d) FOR UPDATE`, arg(exceptionID), arg(kinds))
 	var kind string
 	var subjectID ids.UUID
-	err := tx.QueryRow(ctx, `
-		SELECT subject_kind, subject_id FROM assurance_exception
-		WHERE id = $1 AND status = 'open'
-		FOR UPDATE`, exceptionID).Scan(&kind, &subjectID)
+	err := tx.QueryRow(ctx, query, args...).Scan(&kind, &subjectID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return apperrors.ErrNotFound
 	}
 	if err != nil {
 		return fmt.Errorf("assurance: reading the finding: %w", err)
 	}
-	// UpsertException mints every finding about a deal. A row naming anything
-	// else has no write authority to ask, so nobody may answer it.
+	if kind == subjectKindSignal {
+		return ensureSignalAnswerable(ctx, tx, subjectID)
+	}
 	if kind != subjectKindDeal {
 		return apperrors.ErrNotFound
+	}
+	if err := auth.Require(ctx, subjectKindDeal, principal.ActionUpdate); err != nil {
+		return err
 	}
 	// Not the live probe: an answer puts nothing on the deal, and CloseDeparted
 	// closes the findings of a deal that was archived.

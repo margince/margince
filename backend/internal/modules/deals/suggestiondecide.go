@@ -26,6 +26,8 @@ import (
 )
 
 // dealScoutSource is the provenance of a deal opened from a suggestion.
+const dismissReasonNotADeal = "not_a_deal"
+
 const dealScoutSource = "agent:dealscout"
 
 // SuggestionEffects are the writes an acceptance makes outside this module:
@@ -33,6 +35,7 @@ const dealScoutSource = "agent:dealscout"
 // signals that raised it. Compose supplies them, because deals may import
 // neither activities nor signals.
 type SuggestionEffects interface {
+	BuyerStillVerified(ctx context.Context, tx pgx.Tx, current Suggestion, asOf time.Time) (bool, error)
 	// LinkActivityToDeal files one message under the deal, on the caller's
 	// authority. A refusal is ErrPermissionDenied or ErrNotFound.
 	LinkActivityToDeal(ctx context.Context, tx pgx.Tx, activityID, dealID ids.UUID) error
@@ -72,14 +75,20 @@ func (e *SuggestionDecidedError) Unwrap() error { return apperrors.ErrConflict }
 // SuggestionSupersededError is an acceptance that found the company already
 // has an open deal. The suggestion is retired rather than opening a second
 // deal. It answers 409.
-type SuggestionSupersededError struct{}
+type SuggestionSupersededError struct{ EvidenceChanged bool }
 
 func (e *SuggestionSupersededError) Error() string {
+	if e.EvidenceChanged {
+		return "deals: the suggestion source evidence changed"
+	}
 	return "deals: the company already has an open deal"
 }
 
 // MessageFault says why nothing was opened.
 func (e *SuggestionSupersededError) MessageFault() (code, message string) {
+	if e.EvidenceChanged {
+		return "suggestion_superseded", "The source evidence changed, so this suggestion was retired. Review the current evidence."
+	}
 	return "suggestion_superseded", "This company already has an open deal, so the suggestion was retired. Open the deal instead."
 }
 
@@ -101,13 +110,14 @@ func (e *NoAmountConflictError) FieldFault() (field, code, message string) {
 // suggestion's own value; the amount and currency travel as a pair, and
 // NoAmount drops the suggested amount.
 type AcceptSuggestionInput struct {
-	Name        *string
-	NoAmount    bool
-	AmountMinor *int64
-	Currency    *string
-	StageID     *ids.UUID
-	OwnerID     *ids.UUID
-	CloseDate   *time.Time
+	ExistingDealID *ids.UUID
+	Name           *string
+	NoAmount       bool
+	AmountMinor    *int64
+	Currency       *string
+	StageID        *ids.UUID
+	OwnerID        *ids.UUID
+	CloseDate      *time.Time
 }
 
 // SuggestionAcceptance is what an acceptance did: the deal it opened, the
@@ -123,17 +133,31 @@ type SuggestionAcceptance struct {
 // AcceptSuggestion opens the proposed deal and records the decision, in one
 // transaction.
 func (s *Store) AcceptSuggestion(ctx context.Context, id ids.UUID, in AcceptSuggestionInput) (SuggestionAcceptance, error) {
-	if err := auth.Require(ctx, "deal", principal.ActionCreate); err != nil {
+	action := principal.ActionCreate
+	if in.ExistingDealID != nil {
+		action = principal.ActionUpdate
+	}
+	if err := auth.Require(ctx, "deal", action); err != nil {
 		return SuggestionAcceptance{}, err
 	}
 	if s.suggestionEffects == nil {
 		return SuggestionAcceptance{}, errors.New("deals: accepting a suggestion needs its effects wired")
 	}
 	var out SuggestionAcceptance
-	superseded := false
+	superseded, evidenceChanged := false, false
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		current, err := openSuggestionForDecision(ctx, tx, id)
 		if err != nil {
+			return err
+		}
+		if evidenceChanged, err = supersedeIfEvidenceChanged(ctx, tx, current); err != nil || evidenceChanged {
+			return err
+		}
+		if in.ExistingDealID != nil {
+			out, err = s.linkSuggestionTx(ctx, tx, current, in)
+			return err
+		}
+		if evidenceChanged, err = s.supersedeIfBuyerChanged(ctx, tx, current); err != nil || evidenceChanged {
 			return err
 		}
 		if superseded, err = supersedeIfCompanyTaken(ctx, tx, current); err != nil || superseded {
@@ -155,8 +179,8 @@ func (s *Store) AcceptSuggestion(ctx context.Context, id ids.UUID, in AcceptSugg
 		out.Suggestion.State = SuggestionAccepted
 		return recordDecision(ctx, tx, current.ID, SuggestionAccepted, &out.DealID)
 	})
-	if err == nil && superseded {
-		return SuggestionAcceptance{}, &SuggestionSupersededError{}
+	if err == nil && (superseded || evidenceChanged) {
+		return SuggestionAcceptance{}, &SuggestionSupersededError{EvidenceChanged: evidenceChanged}
 	}
 	return out, err
 }
@@ -189,21 +213,30 @@ func supersedeIfCompanyTaken(ctx context.Context, tx pgx.Tx, current Suggestion)
 // DismissSuggestion records that the evidence is not a deal. The decision is
 // the workspace's: nobody is offered this evidence again, and the company is
 // offered a new suggestion only on evidence newer than now.
-func (s *Store) DismissSuggestion(ctx context.Context, id ids.UUID) (Suggestion, error) {
+func (s *Store) DismissSuggestion(ctx context.Context, id ids.UUID, reasons ...string) (Suggestion, error) {
+	var out Suggestion
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = DismissSuggestionTx(ctx, tx, id, reasons...)
+		return err
+	})
+	return out, err
+}
+
+// DismissSuggestionTx lets a related review share the reasoned dismissal transaction.
+func DismissSuggestionTx(ctx context.Context, tx pgx.Tx, id ids.UUID, reasons ...string) (Suggestion, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionCreate); err != nil {
 		return Suggestion{}, err
 	}
-	var out Suggestion
-	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		current, err := openSuggestionForDecision(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-		out = current
-		out.State = SuggestionDismissed
-		return recordDecision(ctx, tx, current.ID, SuggestionDismissed, nil)
-	})
-	return out, err
+	current, err := openSuggestionForDecision(ctx, tx, id)
+	if err != nil {
+		return Suggestion{}, err
+	}
+	if err := recordDecision(ctx, tx, current.ID, SuggestionDismissed, nil, reasons...); err != nil {
+		return Suggestion{}, err
+	}
+	current.State = SuggestionDismissed
+	return current, nil
 }
 
 // openSuggestionForDecision locks the suggestion under the caller's
@@ -343,7 +376,7 @@ func (s *Store) linkInSavepoint(ctx context.Context, tx pgx.Tx, activityID, deal
 
 // recordDecision moves an open suggestion to its decided state, with the
 // audit row and the event in the same transaction.
-func recordDecision(ctx context.Context, tx pgx.Tx, id ids.UUID, state string, dealID *ids.UUID) error {
+func recordDecision(ctx context.Context, tx pgx.Tx, id ids.UUID, state string, dealID *ids.UUID, reasons ...string) error {
 	actor, err := storekit.Actor(ctx)
 	if err != nil {
 		return err
@@ -359,6 +392,16 @@ func recordDecision(ctx context.Context, tx pgx.Tx, id ids.UUID, state string, d
 		return &SuggestionDecidedError{State: "decided"}
 	}
 	after := map[string]any{columnState: state}
+	if state == SuggestionDismissed {
+		reason := dismissReasonNotADeal
+		if len(reasons) > 0 {
+			reason = reasons[0]
+		}
+		if !crmcontracts.DismissDealSuggestionRequestReason(reason).Valid() {
+			return apperrors.ErrInvalidArgument
+		}
+		after["dismiss_reason"] = reason
+	}
 	if dealID != nil {
 		after["accepted_deal_id"] = *dealID
 	}

@@ -68,17 +68,20 @@ func (h Handlers) ListInputChecks(w http.ResponseWriter, r *http.Request, params
 	}{Data: ExceptionsToWire(found)})
 }
 
-// subjectOf names the record a finding is about, so the row can open it.
-//
-// Only a NAMED subject becomes one: the label comes from the surface read's own
-// join, under the caller's own deal scope, so an empty one means the reader was
-// never shown the name and a row carrying the id alone is the honest answer.
-//
-// The kind is mapped rather than cast. `subject_kind` and AttentionSubject's
-// vocabulary overlap on `deal` and nowhere else — an offer, a contract and a
-// signal are not screens a subject routes to — so a kind this map does not know
-// yields no subject rather than a link that opens nothing.
+// Signal findings open their verified company; the signal remains the review subject.
 func subjectOf(e Exception) *crmcontracts.AttentionSubject {
+	if e.SubjectKind == subjectKindSignal {
+		slots := decodeSlots(e.Claim)
+		company, ok := (*slots)["company_id"].(string)
+		if !ok || e.SubjectLabel == "" {
+			return nil
+		}
+		id, err := ids.Parse(company)
+		if err != nil {
+			return nil
+		}
+		return &crmcontracts.AttentionSubject{Type: crmcontracts.AttentionSubjectTypeCompany, Id: openapi_types.UUID(id), Label: &e.SubjectLabel}
+	}
 	kind, ok := subjectKinds[e.SubjectKind]
 	if !ok || e.SubjectLabel == "" {
 		return nil
@@ -91,9 +94,6 @@ func subjectOf(e Exception) *crmcontracts.AttentionSubject {
 	}
 }
 
-// subjectKinds maps a finding's subject onto the contract's subject vocabulary.
-// Today the surface read returns deal findings only; the map is what makes a
-// second kind arriving later a deliberate act rather than a silent link.
 var subjectKinds = map[string]crmcontracts.AttentionSubjectType{
 	"deal": crmcontracts.AttentionSubjectTypeDeal,
 }
@@ -225,6 +225,7 @@ func (h Handlers) ResolveInputCheck(
 		return
 	}
 	in := Resolution{
+		DealID:      (*ids.UUID)(body.DealId),
 		Outcome:     string(body.Outcome),
 		Reason:      derefString(body.Reason),
 		EvidenceRef: derefString(body.EvidenceRef),

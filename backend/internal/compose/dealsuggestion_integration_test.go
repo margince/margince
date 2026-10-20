@@ -39,7 +39,7 @@ func (e *scoutEnv) rep(user ids.UUID, team ids.UUID) context.Context {
 
 // decider is the deals store with the acceptance effects the server wires.
 func (e *scoutEnv) decider() *deals.Store {
-	return e.Deals.WithSuggestionEffects(dealSuggestionEffects{})
+	return e.Deals.WithClock(func() time.Time { return e.now }).WithSuggestionEffects(dealSuggestionEffects{})
 }
 
 // onlySuggestion answers the company's one suggestion as the reader sees it.
@@ -57,6 +57,7 @@ func TestADismissalHidesTheSuggestionFromEveryoneAndIsAudited(t *testing.T) {
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
 	e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(3))
+	e.buyerPair(t, acme, e.daysAgo(6))
 	e.pass(t)
 	rep1 := e.rep(e.Rep1, e.Team1)
 	suggestion := e.onlySuggestion(rep1, t, acme)
@@ -83,9 +84,10 @@ func TestADismissalReArmsOnlyForNewerEvidence(t *testing.T) {
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
 	e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(3))
+	e.buyerPair(t, acme, e.daysAgo(6))
 	e.pass(t)
-	suggestion := e.onlySuggestion(e.Admin(), t, acme)
-	if _, err := e.decider().DismissSuggestion(e.Admin(), suggestion.ID); err != nil {
+	suggestion := e.onlySuggestion(e.signalReader(), t, acme)
+	if _, err := e.decider().DismissSuggestion(e.signalReader(), suggestion.ID); err != nil {
 		t.Fatalf("dismissing: %v", err)
 	}
 	dismissedAt, err := time.Parse(time.RFC3339Nano,
@@ -104,9 +106,10 @@ func TestADismissalReArmsOnlyForNewerEvidence(t *testing.T) {
 	}
 
 	e.meeting(e.Admin(), t, "Budget meeting", &dana, dismissedAt.Add(time.Minute))
+	e.buyerPair(t, acme, dismissedAt.Add(2*time.Minute))
 	e.pass(t)
-	fresh := e.onlySuggestion(e.Admin(), t, acme)
-	if fresh.ID == suggestion.ID || len(fresh.Evidence) != 1 || fresh.Evidence[0].Title != "Budget meeting" {
+	fresh := e.onlySuggestion(e.signalReader(), t, acme)
+	if fresh.ID == suggestion.ID || len(fresh.Evidence) != 3 {
 		t.Fatalf("after newer evidence the company shows %+v, want a new suggestion citing only the new meeting", fresh)
 	}
 }
@@ -118,8 +121,8 @@ func TestAcceptingOpensTheDealWithTheRepsCorrections(t *testing.T) {
 	rep1 := e.rep(e.Rep1, e.Team1)
 	ours := e.meeting(rep1, t, "Scoping workshop", &dana, e.daysAgo(3))
 	theirs := e.meeting(e.rep(e.Rep3, e.Team2), t, "Intro call", &dana, e.daysAgo(4))
-	mail := e.email(t, "Next steps", "inbound", acme, e.daysAgo(6))
-	opportunity := e.signal(t, "new_opportunity", acme, mail, e.daysAgo(5), ids.Nil)
+	mail, buyer := e.buyingEmail(t, acme, e.daysAgo(6))
+	opportunity := e.signal(t, "new_opportunity", acme, mail, e.daysAgo(5), ids.Nil, buyer)
 	commitment := e.signal(t, "commitment_made", acme, mail, e.daysAgo(2), ids.Nil)
 	e.pass(t)
 	suggestion := e.onlySuggestion(rep1, t, acme)
@@ -176,10 +179,11 @@ func TestAcceptingWithoutADateLeavesTheSuggestionsOwn(t *testing.T) {
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
 	e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(3))
+	e.buyerPair(t, acme, e.daysAgo(6))
 	e.pass(t)
-	suggestion := e.onlySuggestion(e.Admin(), t, acme)
+	suggestion := e.onlySuggestion(e.signalReader(), t, acme)
 
-	out, err := e.decider().AcceptSuggestion(e.Admin(), suggestion.ID, deals.AcceptSuggestionInput{})
+	out, err := e.decider().AcceptSuggestion(e.signalReader(), suggestion.ID, deals.AcceptSuggestionInput{})
 	if err != nil {
 		t.Fatalf("accepting: %v", err)
 	}
@@ -202,6 +206,7 @@ func TestASuggestionIsShownOnlyToAReaderWhoMaySeeAllOfItsEvidence(t *testing.T) 
 	rep1, rep3 := e.rep(e.Rep1, e.Team1), e.rep(e.Rep3, e.Team2)
 	e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(5))
 	private := e.meeting(rep1, t, "Pricing call", &dana, e.daysAgo(3))
+	e.buyerPair(t, acme, e.daysAgo(6))
 	e.pass(t)
 	if shown := e.suggestions(rep3, t, acme); len(shown) != 1 {
 		t.Fatalf("before the limit a colleague is shown %d suggestions, want 1", len(shown))
@@ -232,8 +237,9 @@ func TestASuggestionWhoseEvidenceIsArchivedIsHiddenAndThenRetired(t *testing.T) 
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
 	meeting := e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(3))
+	e.buyerPair(t, acme, e.daysAgo(6))
 	e.pass(t)
-	e.onlySuggestion(e.Admin(), t, acme)
+	e.onlySuggestion(e.signalReader(), t, acme)
 
 	if _, err := e.Activities.ArchiveActivity(e.Admin(), ids.From[ids.ActivityKind](meeting), nil); err != nil {
 		t.Fatalf("archiving the meeting: %v", err)
@@ -254,6 +260,7 @@ func TestAnOpenDealSupersedesTheSuggestion(t *testing.T) {
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
 	e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(3))
+	e.buyerPair(t, acme, e.daysAgo(6))
 	e.pass(t)
 	company := ids.From[ids.CompanyKind](acme)
 	if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
@@ -273,17 +280,18 @@ func TestASuggestionFromSignalsIsHiddenWhenAMessageTheyCiteIsLimited(t *testing.
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	rep1, rep3 := e.rep(e.Rep1, e.Team1), e.rep(e.Rep3, e.Team2)
+	buyer := e.employee(t, "Mira Buyer", acme)
 	subject, inbound, at := "Next steps", "inbound", e.daysAgo(6)
 	mail, _, err := e.Activities.LogActivity(rep1, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Direction: &inbound, OccurredAt: &at, Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "company", EntityID: acme}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: buyer}},
 	})
 	if err != nil {
 		t.Fatalf("logging the mail: %v", err)
 	}
 	cited := ids.UUID(mail.Id)
-	e.signal(t, "new_opportunity", acme, cited, e.daysAgo(5), ids.Nil)
-	e.signal(t, "commitment_made", acme, e.email(t, "Confirmed", "inbound", acme, at), e.daysAgo(2), ids.Nil)
+	e.signal(t, "new_opportunity", acme, cited, e.daysAgo(5), ids.Nil, buyer)
+	e.signal(t, "commitment_made", acme, cited, e.daysAgo(2), ids.Nil)
 	e.pass(t)
 	if shown := e.suggestions(rep3, t, acme); len(shown) != 1 {
 		t.Fatalf("before the limit a colleague is shown %d suggestions, want 1", len(shown))

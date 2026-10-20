@@ -34,6 +34,12 @@ const maxExtractQuote = 300
 // word: the quote is what a reader checks the promise against, and a quote the
 // message does not contain is a promise nobody can check.
 func validateEventEvidence(event extractedEvent, thread settledThread) string {
+	if reason := validateLifecycleEvidence(event, thread); reason != "" {
+		return reason
+	}
+	if reason := validateOpportunityBuyer(event, thread); reason != "" {
+		return reason
+	}
 	if reason := validateRestatedEvidence(event, thread); reason != "" {
 		return reason
 	}

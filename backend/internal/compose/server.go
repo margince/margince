@@ -279,7 +279,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// The assurance surface reads what last night's pass found. Its scan
 		// is a job rather than a request, so the handler set is a read.
 		assuranceHandlers: assurance.NewHandlers(
-			assurance.NewStore(InstallationDB(pool)),
+			assurance.NewStore(InstallationDB(pool)).WithSignalDecision(DecideAssuranceSignal),
 			AssuranceExceptionsIn,
 			func() time.Time { return time.Now().UTC() },
 		),

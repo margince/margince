@@ -16039,13 +16039,38 @@ components:
         note: {type: [string, 'null'], description: 'What they wrote about it, if anything.'}
         resolved_by: {type: [string, 'null'], format: uuid, description: 'The colleague who answered; null once their account is deleted.'}
         resolved_at: {type: string, format: date-time}
+    SourceQuoteProof:
+      type: object
+      description: A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message.
+      required: [start, end, sha256]
+      properties:
+        start: {type: integer, minimum: 0}
+        end: {type: integer, minimum: 1}
+        sha256: {type: string, pattern: '^[a-f0-9]{64}$'}
+      additionalProperties: false
     SignalEvidence:
       type: object
       required: [snippet]
       properties:
+        source_quote: {$ref: '#/components/schemas/SourceQuoteProof'}
+        buyer_contact_id:
+          type: string
+          format: uuid
+          description: The buyer identified among the cited source’s verified participants.
+        commercial_role:
+          type: string
+          enum: [buyer, supplier, partner, provider, unknown]
+          description: The commercial role supported by the cited source, independent of recipient order.
         snippet: {type: string}
         source_type: {type: [string, 'null'], enum: [activity, deal, signal, relationship, page, contract, null]}
         source_id: {type: [string, 'null']}
+        lifecycle_scope:
+          type: string
+          enum: [company, workstream, unknown]
+          description: Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+        workstream:
+          type: string
+          description: The engagement named in the cited words, when present. Never inferred from the company name.
     SignalListResponse:
       type: object
       required: [data, page]
@@ -18840,12 +18865,22 @@ components:
         blocks_approval:
           type: boolean
           description: Whether the domain requires reconciliation before this proposal can be approved.
+    LifecyclePreviewEvidence:
+      type: object
+      description: Current readable source and scope supporting a company lifecycle review.
+      required: [scope, occurred_at]
+      properties:
+        scope: {type: string, enum: [company, workstream, unknown]}
+        occurred_at: {type: string, format: date-time}
+        workstream: {type: string}
     ApprovalPreview:
       type: object
       description: >-
         A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
       required: [version, state, changes, reviewer_reason]
       properties:
+        lifecycle_evidence:
+          $ref: '#/components/schemas/LifecyclePreviewEvidence'
         effects:
           type: array
           description: Additional business effects released by this approval. Other proposals remain separate decisions.

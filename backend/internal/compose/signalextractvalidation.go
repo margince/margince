@@ -64,7 +64,7 @@ func extractSchema() json.RawMessage {
 			"events": schema.Array(schema.Object(
 				map[string]schema.Node{
 					commitmentMeaningField:  commitmentMeaningSchema(),
-					paramKind:               schema.Enum("contract_ended", "new_opportunity", "commitment_made"),
+					paramKind:               schema.Enum("contract_ended", extractKindOpportunity, "commitment_made"),
 					"message_id":            schema.String(),
 					"summary":               schema.String(),
 					claimQuoteKey:           schema.String(),
@@ -73,6 +73,14 @@ func extractSchema() json.RawMessage {
 					"restated_quote":        schema.String(),
 					"promiser_ref":          schema.String(),
 					commitmentRecipientsKey: schema.Array(schema.String()),
+					"lifecycle_scope": schema.Enum("", lifecycleScopeCompany, lifecycleScopeWorkstream, lifecycleScopeUnknown).
+						Describe("Empty for new_opportunity and commitment_made. Only contract_ended uses company, workstream or unknown."),
+					"workstream": schema.String().
+						Describe("Empty unless contract_ended explicitly names an engagement and lifecycle_scope is company or workstream. Copy only that engagement name from the cited message; never describe tasks, context or reasoning."),
+					"buyer_ref": schema.String().
+						Describe("Verified external contact: reference requesting our company’s work. Never an own seat: reference. Empty unless commercial_role is buyer."),
+					"commercial_role": schema.Enum(commercialRoleBuyer, commercialRoleSupplier, commercialRolePartner, commercialRoleProvider, commercialRoleUnknown).
+						Describe("The external counterparty’s role relative to our company. Our own purchase from them makes them supplier, not buyer."),
 					extractionConfidenceKey: schema.Number(),
 				},
 				paramKind, "message_id", "summary", claimQuoteKey, "due_date", "promiser_ref", extractionConfidenceKey,

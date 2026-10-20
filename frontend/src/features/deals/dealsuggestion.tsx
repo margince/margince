@@ -11,6 +11,7 @@
 
 import { type ReactNode, useId, useState } from "react";
 import { useAssignableUserOptions } from "../../components/assigneepicker";
+import { EntityRef } from "../../components/entityref";
 import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
 import { DateInput, isISODate } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
@@ -26,16 +27,16 @@ import {
   ProvenanceTag,
   StagingCard,
 } from "../../design-system/trust";
-import { formatMoney } from "../../format/format";
+import { formatDate, formatMoney } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { problemCodeOf } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
+import { DealSuggestionAnswerDialog } from "./dealsuggestion.answer";
 import {
   type AcceptDealSuggestionBody,
   type DealSuggestion,
   useAcceptDealSuggestion,
   useDealSuggestions,
-  useDismissDealSuggestion,
 } from "./dealsuggestions.queries";
 import "./dealsuggestion.css";
 import { currencyOptions } from "../../format/currencychoices";
@@ -72,6 +73,7 @@ export function DealSuggestionCard({
 }: Readonly<{ suggestion: DealSuggestion; compact?: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
+  const zone = useRecordZone();
   return (
     <StagingCard>
       <div className="dealsuggestion" data-testid="deal-suggestion">
@@ -81,12 +83,22 @@ export function DealSuggestionCard({
           />
           <ConfidenceMeter level={confidenceLevel(suggestion.confidence)} />
         </Row>
-        <p className="proposal-value">
+        <p>
           <span className="staged-value">{suggestedName(suggestion, t)}</span>
         </p>
         {suggestion.amount_minor != null && suggestion.currency && (
           <p className="dealsuggestion-amount t-caption">
             {formatMoney(suggestion.amount_minor, suggestion.currency, locale)}
+          </p>
+        )}
+        {!compact && (
+          <p className="t-caption">
+            {t("dealSuggestion.accountOwner")}:{" "}
+            {suggestion.owner_id ? (
+              <EntityRef kind="user" id={suggestion.owner_id} />
+            ) : (
+              t("dealSuggestion.unassignedOwner")
+            )}
           </p>
         )}
         {!compact && (
@@ -99,7 +111,9 @@ export function DealSuggestionCard({
                   evidence.attachment_id
                 }
               >
-                {evidenceLine(evidence, t)}
+                <span>{evidenceLine(evidence, t)}</span>
+                {" — "}
+                {formatDate(evidence.occurred_at, locale, zone)}
               </li>
             ))}
           </ul>
@@ -110,66 +124,56 @@ export function DealSuggestionCard({
   );
 }
 
-/**
- * Open the deal, or say it is not one. Drawn only for a reader who may create a
- * deal, which is what both answers write; everyone else sees the suggestion and
- * no verb.
- */
 export function SuggestionAnswers({
   suggestion,
 }: Readonly<{ suggestion: DealSuggestion }>) {
   const t = useT();
-  const toast = useToast();
-  const mayDecide = useCanWrite("deal", "create");
-  const dismiss = useDismissDealSuggestion();
-  const [accepting, setAccepting] = useState(false);
-  if (!mayDecide) {
-    return null;
-  }
+  const mayCreate = useCanWrite("deal", "create");
+  const mayLink = useCanWrite("deal", "update");
+  const [action, setAction] = useState<"create" | "link" | "dismiss" | null>(
+    null,
+  );
+  if (!mayCreate && !mayLink) return null;
   return (
     <div className="dealsuggestion-answers">
-      <Button
-        variant="ai"
-        onClick={() => setAccepting(true)}
-        data-testid="deal-suggestion-accept"
-      >
-        {t("dealSuggestion.open")}
-      </Button>
-      <Button
-        variant="ghost"
-        pending={dismiss.isPending}
-        onClick={() =>
-          dismiss.mutate(
-            { id: suggestion.id, idempotencyKey: crypto.randomUUID() },
-            {
-              onSuccess: () => toast.show(t("dealSuggestion.dismissed")),
-              onError: (error) =>
-                toast.show(t(decisionFailure(error)), {
-                  tone: "danger",
-                  sticky: problemCodeOf(error) === "conflict",
-                }),
-            },
-          )
-        }
-        data-testid="deal-suggestion-dismiss"
-      >
-        {t("dealSuggestion.dismiss")}
-      </Button>
-      {accepting && (
+      {mayCreate && (
+        <Button
+          variant="ai"
+          onClick={() => setAction("create")}
+          data-testid="deal-suggestion-accept"
+        >
+          {t("dealSuggestion.open")}
+        </Button>
+      )}
+      {mayLink && (
+        <Button onClick={() => setAction("link")}>
+          {t("dealSuggestion.linkExisting")}
+        </Button>
+      )}
+      {mayCreate && (
+        <Button
+          variant="ghost"
+          onClick={() => setAction("dismiss")}
+          data-testid="deal-suggestion-dismiss"
+        >
+          {t("dealSuggestion.dismiss")}
+        </Button>
+      )}
+      {action === "create" && (
         <AcceptSuggestionDialog
           suggestion={suggestion}
-          onClose={() => setAccepting(false)}
+          onClose={() => setAction(null)}
+        />
+      )}
+      {(action === "link" || action === "dismiss") && (
+        <DealSuggestionAnswerDialog
+          suggestion={suggestion}
+          action={action}
+          onClose={() => setAction(null)}
         />
       )}
     </div>
   );
-}
-
-// A conflict means somebody decided first; retrying would only be refused again.
-function decisionFailure(error: unknown) {
-  return problemCodeOf(error) === "conflict"
-    ? ("dealSuggestion.decided" as const)
-    : ("dealSuggestion.failed" as const);
 }
 
 type Draft = {

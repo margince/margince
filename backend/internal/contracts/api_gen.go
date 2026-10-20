@@ -9301,6 +9301,33 @@ func (e DirectCommunicationSendRequestReasonCode) Valid() bool {
 	}
 }
 
+// Defines values for DismissDealSuggestionRequestReason.
+const (
+	DismissDealSuggestionRequestReasonAlreadyTracked DismissDealSuggestionRequestReason = "already_tracked"
+	DismissDealSuggestionRequestReasonHistorical     DismissDealSuggestionRequestReason = "historical"
+	DismissDealSuggestionRequestReasonNotADeal       DismissDealSuggestionRequestReason = "not_a_deal"
+	DismissDealSuggestionRequestReasonOther          DismissDealSuggestionRequestReason = "other"
+	DismissDealSuggestionRequestReasonWrongCompany   DismissDealSuggestionRequestReason = "wrong_company"
+)
+
+// Valid indicates whether the value is a known member of the DismissDealSuggestionRequestReason enum.
+func (e DismissDealSuggestionRequestReason) Valid() bool {
+	switch e {
+	case DismissDealSuggestionRequestReasonAlreadyTracked:
+		return true
+	case DismissDealSuggestionRequestReasonHistorical:
+		return true
+	case DismissDealSuggestionRequestReasonNotADeal:
+		return true
+	case DismissDealSuggestionRequestReasonOther:
+		return true
+	case DismissDealSuggestionRequestReasonWrongCompany:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EmailAccessChangeMode.
 const (
 	EmailAccessChangeModeMessageAudience    EmailAccessChangeMode = "message_audience"
@@ -12286,6 +12313,27 @@ func (e LicenseEntitlementState) Valid() bool {
 	case LicenseEntitlementStateRejected:
 		return true
 	case LicenseEntitlementStateValid:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LifecyclePreviewEvidenceScope.
+const (
+	LifecyclePreviewEvidenceScopeCompany    LifecyclePreviewEvidenceScope = "company"
+	LifecyclePreviewEvidenceScopeUnknown    LifecyclePreviewEvidenceScope = "unknown"
+	LifecyclePreviewEvidenceScopeWorkstream LifecyclePreviewEvidenceScope = "workstream"
+)
+
+// Valid indicates whether the value is a known member of the LifecyclePreviewEvidenceScope enum.
+func (e LifecyclePreviewEvidenceScope) Valid() bool {
+	switch e {
+	case LifecyclePreviewEvidenceScopeCompany:
+		return true
+	case LifecyclePreviewEvidenceScopeUnknown:
+		return true
+	case LifecyclePreviewEvidenceScopeWorkstream:
 		return true
 	default:
 		return false
@@ -16735,6 +16783,54 @@ func (e SignalStatus) Valid() bool {
 	case SignalStatusOpen:
 		return true
 	case SignalStatusResolved:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SignalEvidenceCommercialRole.
+const (
+	SignalEvidenceCommercialRoleBuyer    SignalEvidenceCommercialRole = "buyer"
+	SignalEvidenceCommercialRolePartner  SignalEvidenceCommercialRole = "partner"
+	SignalEvidenceCommercialRoleProvider SignalEvidenceCommercialRole = "provider"
+	SignalEvidenceCommercialRoleSupplier SignalEvidenceCommercialRole = "supplier"
+	SignalEvidenceCommercialRoleUnknown  SignalEvidenceCommercialRole = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the SignalEvidenceCommercialRole enum.
+func (e SignalEvidenceCommercialRole) Valid() bool {
+	switch e {
+	case SignalEvidenceCommercialRoleBuyer:
+		return true
+	case SignalEvidenceCommercialRolePartner:
+		return true
+	case SignalEvidenceCommercialRoleProvider:
+		return true
+	case SignalEvidenceCommercialRoleSupplier:
+		return true
+	case SignalEvidenceCommercialRoleUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SignalEvidenceLifecycleScope.
+const (
+	SignalEvidenceLifecycleScopeCompany    SignalEvidenceLifecycleScope = "company"
+	SignalEvidenceLifecycleScopeUnknown    SignalEvidenceLifecycleScope = "unknown"
+	SignalEvidenceLifecycleScopeWorkstream SignalEvidenceLifecycleScope = "workstream"
+)
+
+// Valid indicates whether the value is a known member of the SignalEvidenceLifecycleScope enum.
+func (e SignalEvidenceLifecycleScope) Valid() bool {
+	switch e {
+	case SignalEvidenceLifecycleScopeCompany:
+		return true
+	case SignalEvidenceLifecycleScopeUnknown:
+		return true
+	case SignalEvidenceLifecycleScopeWorkstream:
 		return true
 	default:
 		return false
@@ -23552,6 +23648,9 @@ type AcceptDealSuggestionRequest struct {
 	CloseDate *openapi_types.Date `json:"close_date,omitempty"`
 	Currency  *string             `json:"currency,omitempty"`
 
+	// ExistingDealId Link this evidence to a live deal at the same company instead of creating one. Requires permission to update that deal; cannot be combined with corrections.
+	ExistingDealId *openapi_types.UUID `json:"existing_deal_id,omitempty"`
+
 	// Name Without one the deal is named after the company.
 	Name *string `json:"name,omitempty"`
 
@@ -26278,6 +26377,9 @@ type ApprovalPreview struct {
 
 	// Evidence Current evidence resolved with the reader's source permissions. An empty array replaces historical evidence.
 	Evidence *[]ApprovalEvidence `json:"evidence,omitempty"`
+
+	// LifecycleEvidence Current readable source and scope supporting a company lifecycle review.
+	LifecycleEvidence *LifecyclePreviewEvidence `json:"lifecycle_evidence,omitempty"`
 
 	// ReviewerReason Why this reader can answer the proposal, separate from its business reason.
 	ReviewerReason string `json:"reviewer_reason"`
@@ -36365,8 +36467,11 @@ type DealSuggestion struct {
 	Kind DealSuggestionKind `json:"kind"`
 
 	// NameHint Which evidence leads, as a code the client words in the reader's language. The proposed deal name is the company's name and this hint; nothing in a suggestion is text copied out of a message.
-	NameHint   DealSuggestionNameHint `json:"name_hint"`
-	PipelineId openapi_types.UUID     `json:"pipeline_id"`
+	NameHint DealSuggestionNameHint `json:"name_hint"`
+
+	// OwnerId The current company owner responsible for reviewing this suggestion.
+	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
+	PipelineId openapi_types.UUID  `json:"pipeline_id"`
 
 	// StageId The stage the deal would open in: the default pipeline's first open stage.
 	StageId openapi_types.UUID  `json:"stage_id"`
@@ -36580,6 +36685,15 @@ type DismissContactMomentRequest struct {
 type DismissDealMoveRequest struct {
 	Fingerprint string `json:"fingerprint"`
 }
+
+// DismissDealSuggestionRequest defines model for DismissDealSuggestionRequest.
+type DismissDealSuggestionRequest struct {
+	// Reason The reason kept with the audited decision. Omitted means not_a_deal.
+	Reason *DismissDealSuggestionRequestReason `json:"reason,omitempty"`
+}
+
+// DismissDealSuggestionRequestReason The reason kept with the audited decision. Omitted means not_a_deal.
+type DismissDealSuggestionRequestReason string
 
 // DismissRelationshipNudgeRequest defines model for DismissRelationshipNudgeRequest.
 type DismissRelationshipNudgeRequest struct {
@@ -39428,7 +39542,7 @@ type InputCheck struct {
 	Status   InputCheckStatus        `json:"status"`
 
 	// Subject The record this finding is about, named and addressed — the same shape the Worklist carries, so a client routes it through the one registry rather than mapping `subject_kind` onto a screen a second time.
-	// `subject_kind` and `subject_id` stay: they are the durable fields, and a client that has them and not this still draws today's label. Null when the read that found this exception could not name the record — which today means it is not a deal, since only a deal's findings are returned at all.
+	// `subject_kind` and `subject_id` stay: they are the durable fields, and a client that has them and not this still draws today's label. Null when the read could not name the record. A signal finding opens its verified company while retaining the signal as its durable review subject.
 	Subject     *AttentionSubject     `json:"subject,omitempty"`
 	SubjectId   openapi_types.UUID    `json:"subject_id"`
 	SubjectKind InputCheckSubjectKind `json:"subject_kind"`
@@ -40974,6 +41088,16 @@ type LicenseHolder struct {
 	// `acme-prod`. It tells two installations of one customer apart.
 	Subject string `json:"subject"`
 }
+
+// LifecyclePreviewEvidence Current readable source and scope supporting a company lifecycle review.
+type LifecyclePreviewEvidence struct {
+	OccurredAt time.Time                     `json:"occurred_at"`
+	Scope      LifecyclePreviewEvidenceScope `json:"scope"`
+	Workstream *string                       `json:"workstream,omitempty"`
+}
+
+// LifecyclePreviewEvidenceScope defines model for LifecyclePreviewEvidence.Scope.
+type LifecyclePreviewEvidenceScope string
 
 // LinkFinanceSourceCustomerRequest defines model for LinkFinanceSourceCustomerRequest.
 type LinkFinanceSourceCustomerRequest struct {
@@ -46442,6 +46566,9 @@ type RescheduleSendRequest struct {
 
 // ResolveInputCheck defines model for ResolveInputCheck.
 type ResolveInputCheck struct {
+	// DealId For fixed_record on an unlinked signal, file its source evidence on this deal at the same company and settle the signal in the same transaction.
+	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
+
 	// EvidenceRef What was looked at, for an answer that rests on something.
 	EvidenceRef *string `json:"evidence_ref,omitempty"`
 
@@ -48129,10 +48256,30 @@ type SignalStatus string
 
 // SignalEvidence defines model for SignalEvidence.
 type SignalEvidence struct {
-	Snippet    string                    `json:"snippet"`
-	SourceId   *string                   `json:"source_id,omitempty"`
-	SourceType *SignalEvidenceSourceType `json:"source_type,omitempty"`
+	// BuyerContactId The buyer identified among the cited source’s verified participants.
+	BuyerContactId *openapi_types.UUID `json:"buyer_contact_id,omitempty"`
+
+	// CommercialRole The commercial role supported by the cited source, independent of recipient order.
+	CommercialRole *SignalEvidenceCommercialRole `json:"commercial_role,omitempty"`
+
+	// LifecycleScope Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+	LifecycleScope *SignalEvidenceLifecycleScope `json:"lifecycle_scope,omitempty"`
+	Snippet        string                        `json:"snippet"`
+	SourceId       *string                       `json:"source_id,omitempty"`
+
+	// SourceQuote A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message.
+	SourceQuote *SourceQuoteProof         `json:"source_quote,omitempty"`
+	SourceType  *SignalEvidenceSourceType `json:"source_type,omitempty"`
+
+	// Workstream The engagement named in the cited words, when present. Never inferred from the company name.
+	Workstream *string `json:"workstream,omitempty"`
 }
+
+// SignalEvidenceCommercialRole The commercial role supported by the cited source, independent of recipient order.
+type SignalEvidenceCommercialRole string
+
+// SignalEvidenceLifecycleScope Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+type SignalEvidenceLifecycleScope string
 
 // SignalEvidenceSourceType defines model for SignalEvidence.SourceType.
 type SignalEvidenceSourceType string
@@ -48381,6 +48528,13 @@ type SourceAuthor struct {
 	// Via Which system the record came from (`hubspot`), so a surface can say where the attribution comes from rather than presenting it as something typed here. Null when the origin was not recorded.
 	// An import writes its rows inside a reserved `mirror:` namespace, which is machinery for the replay key and is never what a reader should see. The prefix is stripped here: a row stored as `mirror:hubspot` reads `hubspot`.
 	Via *string `json:"via,omitempty"`
+}
+
+// SourceQuoteProof A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message.
+type SourceQuoteProof struct {
+	End    int    `json:"end"`
+	Sha256 string `json:"sha256"`
+	Start  int    `json:"start"`
 }
 
 // Stage A pipeline stage. Mirrors the `stage` table.
@@ -60817,6 +60971,9 @@ type ReplyDealRoomThreadJSONRequestBody = PostDealRoomCommentRequest
 
 // AcceptDealSuggestionJSONRequestBody defines body for AcceptDealSuggestion for application/json ContentType.
 type AcceptDealSuggestionJSONRequestBody = AcceptDealSuggestionRequest
+
+// DismissDealSuggestionJSONRequestBody defines body for DismissDealSuggestion for application/json ContentType.
+type DismissDealSuggestionJSONRequestBody = DismissDealSuggestionRequest
 
 // CreateDealJSONRequestBody defines body for CreateDeal for application/json ContentType.
 type CreateDealJSONRequestBody = CreateDealRequest
@@ -73775,7 +73932,7 @@ type ServerInterface interface {
 	// Open Deal Scout suggestions the caller may see, newest first.
 	// (GET /deal-suggestions)
 	ListDealSuggestions(w http.ResponseWriter, r *http.Request, params ListDealSuggestionsParams)
-	// Open the suggested deal, with the caller's corrections.
+	// Open the suggested deal or link the evidence to an existing deal.
 	// (POST /deal-suggestions/{id}/accept)
 	AcceptDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params AcceptDealSuggestionParams)
 	// Record that the suggestion is not a deal, for the whole workspace.
@@ -77603,7 +77760,7 @@ func (_ Unimplemented) ListDealSuggestions(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Open the suggested deal, with the caller's corrections.
+// Open the suggested deal or link the evidence to an existing deal.
 // (POST /deal-suggestions/{id}/accept)
 func (_ Unimplemented) AcceptDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params AcceptDealSuggestionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
