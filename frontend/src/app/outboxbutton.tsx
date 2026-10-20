@@ -13,28 +13,26 @@ import { useLocale, usePlural, useT } from "../i18n";
 import { navigate } from "../lib/router";
 import "./outboxbutton.css";
 
-// The way back to a message a rep scheduled, from anywhere in the app. The
-// queue is off the rail on purpose — a queue of one contact's own unsent mail is
-// not a destination of its own — so this sits beside the bell instead: a thing
-// that is waiting FOR the reader, shown only as loud as it is.
+// The way back to a scheduled message from any page. The queue has no sidebar
+// row, because one contact's unsent mail is not a destination of its own.
+// So it sits beside the bell, as something waiting for the reader.
 //
-// It draws nothing until the queue has answered and nothing when the read fails:
-// a clock that cannot say what it holds would only be a second place to be wrong.
+// It draws nothing until the queue answers, and nothing when the read fails.
+// A clock that cannot say what it holds would be a second place to be wrong.
 
 export function OutboxButton() {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const queue = useScheduledSends();
-  // A chrome control must never take the shell down: an answer that is not a
-  // list (a client and server on other versions) draws nothing.
+  // A chrome control must not take the shell down. An answer that is not a
+  // list, from a client and server on other versions, draws nothing.
   if (!Array.isArray(queue.data)) return null;
   const { waiting, held } = queueCounts(queue.data);
   const total = waiting + held;
 
-  // The counts join the NAME, as the bell's do: `aria-label` replaces the
-  // contents for name computation, so a figure left to the badge alone would
-  // reach a screen reader from nowhere.
+  // The counts join the name, as the bell's do. `aria-label` replaces the
+  // contents, so a figure left to the badge would never reach a screen reader.
   const name =
     held > 0
       ? t("outbox.nameHeld", {
@@ -59,8 +57,7 @@ export function OutboxButton() {
         <Clock aria-hidden />
         {total > 0 && (
           <span className="outbox-count">
-            {/* A held message is the one that will not send itself, so it is the
-                one that changes the colour. */}
+            {/* A held message will not send itself, so it changes the colour. */}
             <Badge variant="primary" tone={held > 0 ? "warning" : "accent"}>
               {formatNumber(total, locale)}
             </Badge>

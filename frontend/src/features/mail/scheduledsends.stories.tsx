@@ -130,9 +130,8 @@ export const OnlyWaiting: Story = {
   },
 };
 
-// Moving is unconfirmed: the three common moments are one press, and the picker
-// below them opens seeded from the send's own moment, so a rep who opens it and
-// saves without touching it does not move the message.
+// Moving is unconfirmed. The three common moments are one press.
+// The picker below them starts at the send's own moment, so saving it untouched moves nothing.
 export const MovingAMessage: Story = {
   render: () => {
     stubQueue([waiting]);
@@ -185,8 +184,7 @@ export const FullQueueGerman: Story = {
   },
 };
 
-// The held band on its own, and the other cut of the queue: a rep who wants to
-// know what is going out today reads one sentence's worth of page.
+// The Today cut of the queue: what goes out before midnight, and nothing else.
 export const TodayOnly: Story = {
   render: () => {
     stubQueue([

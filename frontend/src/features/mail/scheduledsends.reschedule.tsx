@@ -16,15 +16,12 @@ import type { ScheduledSend } from "./scheduledqueue";
 export type Move = Readonly<{ id: string; version: number; at: string }>;
 
 /**
- * Rescheduling in one press: the composer's own three moments, from the same
- * function so "Tomorrow morning" means the same hour in both places, and a
- * picker for anything else.
+ * Rescheduling in one press: the composer's own three moments, and a picker.
+ * The presets come from the composer's function, so "Tomorrow morning" is the
+ * same hour in both places.
  *
- * Time only, which is the contract's own rule. The approval is bound to the
- * content, so changing it is cancel-and-recompose. The picker is seeded from
- * the send's moment in the reader's zone and read back through
- * `scheduleFields`, as the composer's send-later control does, so the two agree
- * on what a picked moment means.
+ * Only the time can change, because the approval is bound to the content.
+ * The picker reads back through `scheduleFields`, as the composer does.
  */
 export function RescheduleMenu({
   send,

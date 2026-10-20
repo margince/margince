@@ -11,9 +11,9 @@ import {
 import { NotificationBell } from "./notificationbell";
 import { OutboxButton } from "./outboxbutton";
 
-// The clock beside the bell: what a rep has scheduled and not yet sent. A story
-// here is an ANSWER of the queue endpoint, mounted beside the bell in a strip,
-// because the pair is read together and the count sits on the glyph's corner.
+// The clock beside the bell: what a rep has scheduled and not yet sent.
+// Each story is one answer of the queue endpoint, mounted next to the bell.
+// The two are read together, and the count sits on the glyph's corner.
 
 type Status = "scheduled" | "held" | "sent";
 

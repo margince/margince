@@ -55,11 +55,9 @@ export function useQueueWrites(readerZone: string, onWithdrawn: () => void) {
     },
   });
 
-  // Moving is confirmed by a toast with the way back rather than by a dialog:
-  // a moved message can be moved to where it was. The way back is a second
-  // write, so it asks the REFRESHED list for the version it must precede —
-  // `onSuccess` above has finished invalidating by the time this one runs, and
-  // the version the row was drawn with is already spent.
+  // A move is confirmed by a toast with an undo, not by a dialog.
+  // The undo is a second write, so it reads the refreshed list for its version.
+  // The version the row was drawn with is already spent.
   const moveWithUndo = (input: Move, send: ScheduledSend) => {
     move.mutate(input, {
       onSuccess: () => {
@@ -86,12 +84,10 @@ export function useQueueWrites(readerZone: string, onWithdrawn: () => void) {
     });
   };
 
-  // A 409 on either write says one thing: the row on screen is not the row on
-  // the server. It already fired, somebody withdrew it, or another surface moved
-  // it first — and all three want the same next step, which is to read the list
-  // again rather than to retry a write against a version that is gone. It is
-  // told apart from every other failure because "reload and look" is useless
-  // advice for a 500 and the only useful advice here.
+  // A 409 on either write means the row on screen is not the row on the server.
+  // It already fired, was withdrawn, or another surface moved it first.
+  // All three want a re-read, not a retry against a version that is gone.
+  // It is told apart because "reload" is useless advice for a 500.
   const skew =
     isVersionSkewOf(move.error) || isVersionSkewOf(withdraw.error)
       ? t("sched.skew")

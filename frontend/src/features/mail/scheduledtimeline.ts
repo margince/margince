@@ -50,15 +50,11 @@ export function relativeDay(
 }
 
 /**
- * The queue cut the three ways the page reads it, and the message that goes
- * next.
+ * The queue cut the way the page reads it, and the message that goes next.
  *
- * `held` is first on the page because it is the only status that is waiting on
- * the sender: a gate refused at fire, or the moment passed while nothing was
- * running, and the message will not send itself. `waiting` is the queue proper.
- * `closed` is everything that will not change on its own (released, sent,
- * cancelled), kept because a rep who withdrew a message wants to see that it is
- * withdrawn rather than gone.
+ * `held` is the only status waiting on the sender. It will not send itself.
+ * `closed` will not change on its own, and stays so a withdrawn message reads
+ * as withdrawn rather than gone.
  */
 export function readQueue(
   sends: readonly ScheduledSend[],

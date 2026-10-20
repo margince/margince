@@ -7,10 +7,9 @@ import type { components } from "../../api/schema";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 
-// The sender's own queue behind "send later", read once and shared. The page
-// and the top bar's outbox button ask the same question, so they share one
-// cache entry and one request; this file stays free of any drawing so the bar
-// can import it without pulling the page into the startup graph.
+// The sender's own queue behind "send later", read once and shared.
+// The page and the top bar's outbox button share one cache entry and one request.
+// This file draws nothing, so the bar can import it without loading the page.
 
 export type ScheduledSend = components["schemas"]["ScheduledSend"];
 
@@ -22,9 +21,8 @@ export const SCHEDULED_SCREEN = "scheduled" as const;
 /**
  * The caller's own queue.
  *
- * No status filter on the request: the page reads in groups and one unfiltered
- * read fills all of them, where asking per group would be three requests for
- * one question.
+ * No status filter on the request. One unfiltered read fills every group the
+ * page shows, where asking per group would be three requests for one question.
  */
 export function useScheduledSends() {
   const t = useT();
