@@ -265,6 +265,7 @@ var noOpProbedRoutes = map[string]string{
 	"PATCH /deals/{id}":                 "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
 	"PATCH /projects/{id}":              "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
 	"PATCH /contracts/{id}":             "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /legal-entities/{id}":        "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
 }
 
 // Every probed route is a PATCH or a PUT. The contract-side check lives in the
@@ -362,6 +363,14 @@ func TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing(t *testing.T) {
 		}
 		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/deals/"+dealID,
 			AnyMap{"name": "Acme rollout", "amount_minor": 250_000_00, "currency": "EUR"}, dealID, deal.Version)
+	})
+	t.Run("legal entity", func(t *testing.T) {
+		body := AnyMap{"display_name": "Acme Wien", "legal_name": "Acme Wien GmbH", "country": "at"}
+		var entity versionedWire
+		if status := e.Call(t, "POST", "/v1/legal-entities", body, nil, &entity); status != http.StatusCreated {
+			t.Fatalf("creating the legal entity -> %d", status)
+		}
+		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/legal-entities/"+entity.ID, body, entity.ID, entity.Version)
 	})
 }
 
