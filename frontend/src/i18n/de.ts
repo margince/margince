@@ -13487,9 +13487,9 @@ export const de = {
     "Wer eine Liste sieht, sieht dadurch keinen Datensatz, den er nicht schon sehen durfte.",
   "lists.teamLabel": "Welches Team",
   "lists.team.allMine": "Alle meine Teams",
-  "lists.team.allOwners": "Alle Teams der zust\u00e4ndigen Person",
+  "lists.team.allOwners": "Alle Teams der verantwortlichen Person",
   "lists.audience.yourTeams": "Deine Teams",
-  "lists.audience.ownerTeams": "Die Teams der zust\u00e4ndigen Person",
+  "lists.audience.ownerTeams": "Die Teams der verantwortlichen Person",
   "lists.audience.unknownTeam": "Ein Team, das du nicht sehen kannst",
   "lists.health.ownerless": "Niemand verantwortlich",
   "lists.health.invalid": "Filter funktioniert nicht mehr",
@@ -13961,7 +13961,7 @@ export const de = {
   "project.advance.reasonRequired":
     "Ein abgeschlossenes Projekt braucht eine Begründung.",
   "deal.project": "Projekt",
-  "deal.newProjectOwner": "Zuständig für das Projekt",
+  "deal.newProjectOwner": "Verantwortlich für das Projekt",
   "deal.projectNew": "Neues Projekt…",
   "deal.projectWithheld": "Projekt ausgeblendet",
   "deal.projectNeedsCompany":
