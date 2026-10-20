@@ -15,8 +15,6 @@ package contactdraft
 // no claim about what the recipient thinks, no invented urgency.
 
 import (
-	"strings"
-
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -74,14 +72,7 @@ func deterministicSubject(in Input) string {
 func deterministicBody(in Input) string {
 	phrases := draftfloor.For(in.Envelope.Lang(), in.Envelope.Band())
 
-	lines := []string{greeting(in), ""}
-	if phrases.Opener != "" {
-		lines = append(lines, phrases.Opener, "")
-	}
-	if opener := deterministicOpener(in); opener != "" {
-		lines = append(lines, opener, "")
-	}
-	return strings.Join(append(lines, phrases.Ask), "\n")
+	return draftfloor.Body(in.Envelope.Lang(), greeting(in), phrases.Opener, deterministicOpener(in), phrases.Ask)
 }
 
 // greeting names the recipient, or greets the group when the message goes to

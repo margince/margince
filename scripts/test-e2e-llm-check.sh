@@ -1073,6 +1073,21 @@ c44="case44-chase-what-is-slipping.yaml"
 judges "$c44" case44 says-nothing-went-out 0 "!the judge says NO"
 judges "$c44" case44 claims-everything-went-out 1 "the judge says NO to: Criterion 2." "!the judge says NO to: Criterion 1."
 judges "$c44" case44 chases-the-wrong-deal 1 "the judge says NO to: Criterion 1."
+# One slipping deal makes a hand-drafted chaser for it the same work as the bulk
+# route; a hand-drafted one for Körber is the wrong deal by another route.
+judges "$c44" case44 drafts-the-one-deal-by-hand 0 "!the judge says NO" "!never called"
+judges "$c44" case44 drafts-koerber-by-hand 1 "called draft_outbound carrying 'Körber'" "!the judge says NO"
+
+# CASE 4 — no judge: criterion 6 is the advice to go through the owner, and the
+# pattern must take it by name or by pronoun after the name, and refuse an
+# answer that names the owner and advises nobody.
+c4="case4-use-the-moment.yaml"
+c4_advice="never said anything matching"
+judges "$c4" case4 asks-the-owner-by-name 0 "!$c4_advice"
+judges "$c4" case4 checks-with-her-in-the-next-sentence 0 "!$c4_advice"
+judges "$c4" case4 checks-with-her-before-showing-up 0 "!$c4_advice"
+judges "$c4" case4 names-the-owner-and-stops 1 "$c4_advice"
+judges "$c4" case4 advises-nobody-by-name 1 "$c4_advice"
 c45="case45-move-the-deal-on.yaml"
 judges "$c45" case45 explains-from-the-readings 0 "!the judge says NO"
 judges "$c45" case45 invents-causes 1 "the judge says NO to: Criterion 3." "!the judge says NO to: Criterion 1."
