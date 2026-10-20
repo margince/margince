@@ -168,7 +168,7 @@ func customFieldCoverage(
 	ctx context.Context, tx pgx.Tx, fields map[string]customDimension,
 ) (map[string]analyticsquery.Coverage, error) {
 	if len(fields) == 0 {
-		return nil, nil
+		return map[string]analyticsquery.Coverage{}, nil
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }

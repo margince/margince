@@ -353,9 +353,7 @@ A deal or company picklist or yes/no field has a switch under **In reports**. Tu
 
 ## Tags
 
-A tag is a shared word this company files records under. Anyone can put one on a record; **only admin and ops seats** add, rename or retire them.
-
-Every tag has its own page that lists the records with it, grouped by type.
+A tag is a shared word this company files records under. Anyone can put one on a record; **only admin and ops seats** add, rename or retire them. Every tag has its own page that lists the records with it, grouped by type.
 
 ### How do I tag a record?
 To tag a contact, company or deal in Margince, open the record, find its **Tags** panel and choose **Add tag**.
