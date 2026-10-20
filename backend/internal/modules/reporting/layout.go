@@ -75,29 +75,39 @@ func validateLayout(
 			if cards > 20 {
 				return refuse("selection.layout", "out_of_range", "place at most twenty cards")
 			}
-			if !cardID.MatchString(card.Id) || ids[card.Id] {
-				return refuse("selection.layout", "invalid", "give each card its own short id")
-			}
-			ids[card.Id] = true
-			if card.Width != crmcontracts.ReportingCardWidthFull && card.Width != crmcontracts.ReportingCardWidthHalf {
-				return refuse("selection.layout", "invalid", "make a card full or half width")
-			}
-			if card.Kind == questionKind || card.Question != nil {
-				if err := validateQuestionCard(card); err != nil {
-					return err
-				}
-				continue
-			}
-			target, err := cardTargetOf(card, metricBlocks)
-			if err != nil {
+			if err := validateCard(card, metricBlocks, ids, targets); err != nil {
 				return err
 			}
-			if overlaps(targets, target) {
-				return refuse("selection.layout", "duplicate", "place each chart once")
-			}
-			targets[target] = true
 		}
 	}
+	return nil
+}
+
+// validateCard checks one card's id and width, then what it draws. ids and
+// targets are the cards already placed, which this one may not repeat.
+func validateCard(
+	card crmcontracts.ReportingCard,
+	metricBlocks map[crmcontracts.ReportingMetricID][]crmcontracts.ReportingBlockKind,
+	ids map[string]bool, targets map[cardTarget]bool,
+) error {
+	if !cardID.MatchString(card.Id) || ids[card.Id] {
+		return refuse("selection.layout", "invalid", "give each card its own short id")
+	}
+	ids[card.Id] = true
+	if card.Width != crmcontracts.ReportingCardWidthFull && card.Width != crmcontracts.ReportingCardWidthHalf {
+		return refuse("selection.layout", "invalid", "make a card full or half width")
+	}
+	if card.Kind == questionKind || card.Question != nil {
+		return validateQuestionCard(card)
+	}
+	target, err := cardTargetOf(card, metricBlocks)
+	if err != nil {
+		return err
+	}
+	if overlaps(targets, target) {
+		return refuse("selection.layout", "duplicate", "place each chart once")
+	}
+	targets[target] = true
 	return nil
 }
 
