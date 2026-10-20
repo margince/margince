@@ -8,6 +8,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"maps"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -23,10 +24,7 @@ import (
 // withRoleAdmin gives the reporting fixture's seat the role matrix's read.
 func withRoleAdmin(ctx context.Context) context.Context {
 	actor, _ := principal.Actor(ctx)
-	objects := map[string]principal.ObjectGrant{}
-	for object, grant := range actor.Permissions.Objects {
-		objects[object] = grant
-	}
+	objects := maps.Clone(actor.Permissions.Objects)
 	objects["role_admin"] = principal.ObjectGrant{Read: true}
 	actor.Permissions.Objects = objects
 	return principal.WithActor(ctx, actor)
