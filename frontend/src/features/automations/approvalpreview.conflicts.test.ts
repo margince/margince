@@ -33,9 +33,9 @@ describe("lifecycle conflict translations", () => {
       "approvalpreviewevidence.go",
       "setLifecyclePreviewContext",
     );
-    const assignments = [...preview.matchAll(/\breason\s*=(?!=)\s*([^\n]+)/g)].map(
-      (match) => match[1].trim(),
-    );
+    const assignments = [
+      ...preview.matchAll(/\breason\s*=(?!=)\s*([^\n]+)/g),
+    ].map((match) => match[1].trim());
     expect(assignments.length).toBeGreaterThan(0);
     for (const value of assignments) expect(value).toMatch(/^"[a-z_]+"$/);
     const kinds = [
