@@ -9826,6 +9826,195 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/legal-entities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The legal entities this installation trades as, the default entity first.
+         * @description Every installation has exactly one default entity, created by the migration that
+         *     introduced entities. The default entity stores none of the anchor company's fields:
+         *     its `display_name`, `legal_name`, address, VAT ID, register entry and `logo_url` are
+         *     read from the company profile (`GET /company`), so the company form stays their only
+         *     editor. An installation that has not described its company yet answers an empty
+         *     `display_name` for it.
+         *
+         *     Every seeded role reads this list. Archived entities are left out unless
+         *     `include_archived=true`.
+         */
+        get: operations["listLegalEntities"];
+        put?: never;
+        /**
+         * Describe a further legal entity.
+         * @description Needs `legal_entity:create`, which only the admin role holds by default. `display_name`,
+         *     `legal_name` and `country` are required. A `display_name` another live entity already
+         *     has, ignoring case, is refused as 409 `legal_entity_name_taken`. The default entity
+         *     counts with the company's name.
+         */
+        post: operations["createLegalEntity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/legal-entities/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** One legal entity, archived or live. */
+        get: operations["getLegalEntity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change a legal entity's description.
+         * @description A field left out keeps its value. A field sent as an empty string is cleared. A
+         *     required field (`display_name`, `legal_name`, `country`) cannot be cleared on an entity
+         *     that is not the default.
+         *
+         *     On the default entity, the fields it reads from the company profile are refused as
+         *     422 `legal_entity_field_on_company_form`: change them on the company form instead.
+         *     Its `country`, `default_language`, bank details and `imprint` are its own.
+         *
+         *     An archived entity is refused as 404.
+         */
+        patch: operations["updateLegalEntity"];
+        trace?: never;
+    };
+    "/legal-entities/{id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archive a legal entity nobody works for any more.
+         * @description Needs `legal_entity:delete`. The default entity is refused as 409
+         *     `legal_entity_default_is_permanent`. An entity that still has members is refused as
+         *     409 `legal_entity_has_members`: move its users to another entity first.
+         *     A stale `If-Match` version is refused as 409 `version_skew`.
+         */
+        post: operations["archiveLegalEntity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/legal-entities/{id}/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replace a legal entity's logo with an uploaded image.
+         * @description Multipart upload, decoded and re-encoded exactly as the company logo is: PNG, JPEG,
+         *     GIF, WebP, ICO and SVG are accepted, and anything else is refused as 415. An SVG that
+         *     draws its words as text is refused as 422 `svg_text_not_outlined`, and one with parts
+         *     the server cannot draw as 422 `svg_not_drawable`.
+         *
+         *     The default entity wears the company logo and is refused as 409
+         *     `legal_entity_field_on_company_form`: upload it on the company form instead.
+         *     Both refusals, a missing grant and a stale `If-Match` version (409 `version_skew`)
+         *     are answered before the upload is read.
+         */
+        post: operations["uploadLegalEntityLogo"];
+        /**
+         * Take a legal entity's logo off.
+         * @description The stored object is collected. Removing a logo the entity never had is not an error.
+         *     The default entity is refused as 409 `legal_entity_field_on_company_form`, and a stale
+         *     `If-Match` version as 409 `version_skew`.
+         */
+        delete: operations["deleteLegalEntityLogo"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/legal-entities/{id}/logo/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Stream a legal entity's logo image.
+         * @description The bytes behind `LegalEntity.logo_url`, always this server's own PNG re-encode. It sits
+         *     apart from the upload, so a conditional upload takes its version from the entity. 404
+         *     when the entity has no logo. The default entity's logo is the company's, served by
+         *     `GET /companies/{id}/logo`.
+         */
+        get: operations["getLegalEntityLogo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/legal-entities/{id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The users assigned to this legal entity.
+         * @description A user works for the entity their assignment names. A user with no assignment works
+         *     for the default entity, so the default entity's list is always empty: list the users
+         *     (`GET /users`) and take away those assigned elsewhere.
+         */
+        get: operations["listLegalEntityMembers"];
+        /**
+         * Make this legal entity the one a user works for.
+         * @description Needs `legal_entity:update` and `user_admin:update`. A user works for one entity at a
+         *     time, so this moves them from wherever they were. Assigning a user to the default
+         *     entity removes their assignment, because no assignment already means the default.
+         *     Assigning a user to the entity they already work for changes nothing. An archived
+         *     entity is refused as 404, and an unknown user as 422.
+         */
+        put: operations["assignLegalEntityMember"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/company/context/capabilities": {
         parameters: {
             query?: never;
@@ -38481,7 +38670,7 @@ export interface components {
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "data_task" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "agent_client" | "seat_usage" | "team_oversight" | "team_lead" | "report_definition" | "sales_target" | "reporting_framework" | "report_schedule" | "report_edition" | "reporting_credit" | "legal_review";
+        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "data_task" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "agent_client" | "seat_usage" | "team_oversight" | "team_lead" | "report_definition" | "sales_target" | "reporting_framework" | "report_schedule" | "report_edition" | "reporting_credit" | "legal_review" | "legal_entity";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -39949,6 +40138,110 @@ export interface components {
             readonly created_at: string;
             /** Format: date-time */
             readonly updated_at: string;
+        };
+        /**
+         * @description One legal entity the installation trades as. On the default entity
+         *     (`is_default`), `display_name`, `legal_name`, `address`, `vat_id`, `register_court`,
+         *     `register_number` and `logo_url` are the anchor company's values, read live.
+         */
+        LegalEntity: {
+            /** Format: uuid */
+            id: string;
+            /** @description The entity a user with no assignment works for. Exactly one exists, and it cannot be archived. */
+            is_default: boolean;
+            /** @description The name the product shows for the entity. Empty on the default entity until the company is described. */
+            display_name: string;
+            /** @description The registered name documents are issued under. */
+            legal_name?: string | null;
+            address: components["schemas"]["LegalEntityAddress"];
+            /** @description The entity's VAT identification number. */
+            vat_id?: string | null;
+            /** @description The court that keeps the entity's commercial register entry. */
+            register_court?: string | null;
+            /** @description The entity's commercial register number. */
+            register_number?: string | null;
+            /** @description Where the entity is established, as a lower-case ISO 3166-1 alpha-2 code. Null on the default entity means the installation's country. */
+            country?: string | null;
+            /** @description The ISO 639-1 language the entity's documents default to. Null means the base text. */
+            default_language?: string | null;
+            /** @description The name the entity's bank account is held in. */
+            bank_account_holder?: string | null;
+            /** @description The IBAN, upper case, without spaces. */
+            iban?: string | null;
+            /** @description The BIC, upper case. */
+            bic?: string | null;
+            /** @description The legal notice the entity prints, up to 4000 characters. */
+            imprint?: string | null;
+            /** @description Where the entity's logo is streamed from. Null when it has none. */
+            logo_url?: string | null;
+            /** @description How many users are assigned to the entity. Always 0 on the default entity, whose members are the users with no assignment. */
+            member_count: number;
+            /** Format: int64 */
+            version: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: date-time */
+            archived_at?: string | null;
+        };
+        /** @description The registered address. The country is the entity's `country`. */
+        LegalEntityAddress: {
+            line1?: string | null;
+            line2?: string | null;
+            postal_code?: string | null;
+            city?: string | null;
+            region?: string | null;
+        };
+        LegalEntityListResponse: {
+            data: components["schemas"]["LegalEntity"][];
+        };
+        CreateLegalEntityRequest: {
+            display_name: string;
+            legal_name: string;
+            /** @description Lower-case ISO 3166-1 alpha-2, for example `de`. */
+            country: string;
+            address?: components["schemas"]["LegalEntityAddress"];
+            vat_id?: string;
+            register_court?: string;
+            register_number?: string;
+            /** @description ISO 639-1, for example `de`. */
+            default_language?: string;
+            bank_account_holder?: string;
+            /** @description Spaces are removed and letters upper-cased before the check. */
+            iban?: string;
+            bic?: string;
+            imprint?: string;
+        };
+        /** @description A field left out keeps its value; a field sent as an empty string is cleared. */
+        UpdateLegalEntityRequest: {
+            display_name?: string;
+            legal_name?: string;
+            country?: string;
+            address?: components["schemas"]["LegalEntityAddress"];
+            vat_id?: string;
+            register_court?: string;
+            register_number?: string;
+            default_language?: string;
+            bank_account_holder?: string;
+            iban?: string;
+            bic?: string;
+            imprint?: string;
+        };
+        LegalEntityMember: {
+            /** Format: uuid */
+            user_id: string;
+            /** Format: uuid */
+            legal_entity_id: string;
+            /** Format: date-time */
+            assigned_at: string;
+        };
+        LegalEntityMemberListResponse: {
+            data: components["schemas"]["LegalEntityMember"][];
+        };
+        AssignLegalEntityMemberRequest: {
+            /** Format: uuid */
+            user_id: string;
         };
         /**
          * @description The installation's own company. The flat properties remain compatibility aliases for the
@@ -64799,6 +65092,351 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    listLegalEntities: {
+        parameters: {
+            query?: {
+                /** @description Include soft-deleted (archived) rows. Default false. */
+                include_archived?: components["parameters"]["IncludeArchived"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The entities. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalEntityListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createLegalEntity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateLegalEntityRequest"];
+            };
+        };
+        responses: {
+            /** @description The entity as stored. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalEntity"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getLegalEntity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The entity. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalEntity"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateLegalEntity: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateLegalEntityRequest"];
+            };
+        };
+        responses: {
+            /** @description The entity as stored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalEntity"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    archiveLegalEntity: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The archived entity. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalEntity"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    uploadLegalEntityLogo: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The entity, carrying the `logo_url` the upload now answers. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalEntity"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            413: components["responses"]["PayloadTooLarge"];
+            /** @description The upload is not an image this server can decode and re-encode. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description The deployment has no object store configured, so no logo can be stored or served. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteLegalEntityLogo: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The entity, with no `logo_url`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalEntity"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getLegalEntityLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The normalized logo bytes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The deployment has no object store configured, so no logo can be stored or served. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listLegalEntityMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The assignments, oldest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalEntityMemberListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    assignLegalEntityMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignLegalEntityMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description The user now works for this entity. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getAnchorCompanyContextCapabilities: {
