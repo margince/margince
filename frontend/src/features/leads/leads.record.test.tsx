@@ -61,6 +61,10 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
     });
     render(<LeadScreen id="l-1" />);
 
+    // The fixture carries no title, so its row waits behind the empties link.
+    await userEvent.click(
+      await screen.findByRole("button", { name: /empty field/ }),
+    );
     await userEvent.click(
       await screen.findByRole("button", { name: "Change Title" }),
     );

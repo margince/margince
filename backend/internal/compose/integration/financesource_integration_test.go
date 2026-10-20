@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/finance"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -72,7 +73,7 @@ func financeAdmin(e *Env) context.Context {
 func financeStoreFor(e *Env, source testBooksSource) *finance.Store {
 	return finance.NewStore(compose.InstallationDB(e.Pool), func(context.Context, pgx.Tx) (string, error) {
 		return "EUR", nil
-	}).WithSources(testBooksSources{source: source})
+	}, identity.TimezoneAppliedTx).WithSources(testBooksSources{source: source})
 }
 
 // connectAndSync connects testBooks and runs the first pass, which brings in

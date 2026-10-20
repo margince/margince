@@ -52,6 +52,7 @@ export function view(overrides: Partial<Company360> = {}): Company360 {
       page: emptyPage,
       won_lifetime: { amount_minor: 0, currency: "EUR" },
       lost_count: 0,
+      won_count: 0,
     },
     activities: { data: [], page: emptyPage },
     next_steps: { data: [], page: emptyPage },

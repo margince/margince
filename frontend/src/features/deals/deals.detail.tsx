@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useId, useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../../api/client";
 import { PageAsideToggle, usePageAside } from "../../components/pageaside";
 import { Badge } from "../../design-system/atoms";
@@ -8,7 +8,7 @@ import { IdentityLine } from "../../design-system/identityline";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
 import { useRecordTimeline } from "../../design-system/recordtimeline";
-import { RecordView } from "../../design-system/recordview";
+import { RecordRefusal, RecordView } from "../../design-system/recordview";
 import { useLocale, useT } from "../../i18n";
 import { useRecordWriteRefusal } from "../../lib/capability";
 import { useOpenEmail } from "../../lib/openemail";
@@ -61,24 +61,6 @@ function tabsOf(deal: Deal, legalReview: boolean): readonly DealTab[] {
   return DEAL_TABS.filter(
     (each) => each !== "legal" || (legalReview && !deal.archived_at),
   );
-}
-
-// One sentence for why this deal takes no changes, whichever reason applies,
-// said once across the header so every refused control can point at it.
-// Absent while the deal is live and the reader's: `undefined`, not an element
-// that renders null, because RecordView reserves space for anything it is
-// handed. A line always reserved would read as a record with nothing said.
-function dealBand({
-  reason,
-  reasonId,
-}: Readonly<{
-  reason: string | undefined;
-  reasonId: string;
-}>): ReactNode | undefined {
-  if (reason === undefined) {
-    return undefined;
-  }
-  return <p id={reasonId}>{reason}</p>;
 }
 
 /**
@@ -231,178 +213,174 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
             ? tab
             : "overview";
           return (
-            <div className="record-sheet">
-              <RecordView
-                back={<WorklistReturnLink />}
-                // Context first: who these contacts are, before the verbs that
-                // act on them. The seats stay out of the main column because
-                // the readings band counts them. Every record page draws this
-                // pane, fold and memory.
-                aside={dealContext(deal)}
-                asideOpen={details.open}
-                name={deal.name}
-                identity={deal.id}
-                // One rung under the record scale. The name stays the largest
-                // thing on the page. Beside a work column that opens on the
-                // reader's ask, it need not be masthead size.
-                scale="compact"
-                // The way in (which account this deal is on) sits on the
-                // name's own line. Every other record's head draws its
-                // subtitle in this inline shape.
-                nameBadge={<DealSubtitle deal={deal} />}
-                zone={recordZone}
-                actionsInline
-                // The deal's standing reads beside its name, not at the far
-                // end of the header among the verbs. A reader asking "is this
-                // still open?" looks at the name, so the answer belongs there.
-                pulse={
-                  <IdentityLine separator="space">
-                    <Badge tone={dealStatusTone(deal.status)}>
-                      {deal.status}
-                    </Badge>
-                    <DealProjectChip deal={deal} />
-                  </IdentityLine>
-                }
-                // What it is worth, where it sits, when it is due, whose deal
-                // it is, which account it is on and how it reached Margince.
-                // Named cells rather than one dot-separated sentence to parse.
-                badges={
-                  <DealIdentityFacts
-                    deal={deal}
-                    stages={stages}
-                    locale={locale}
-                  />
-                }
-                actions={
+            <RecordView
+              back={<WorklistReturnLink />}
+              // Context first: who these contacts are, before the verbs that
+              // act on them. The seats stay out of the main column because
+              // the readings band counts them. Every record page draws this
+              // pane, fold and memory.
+              aside={dealContext(deal)}
+              asideOpen={details.open}
+              asideToggle={<PageAsideToggle pane />}
+              name={deal.name}
+              identity={deal.id}
+              // One rung under the record scale. The name stays the largest
+              // thing on the page. Beside a work column that opens on the
+              // reader's ask, it need not be masthead size.
+              scale="compact"
+              // The way in (which account this deal is on) sits on the
+              // name's own line. Every other record's head draws its
+              // subtitle in this inline shape.
+              nameBadge={<DealSubtitle deal={deal} />}
+              zone={recordZone}
+              actionsInline
+              // The deal's standing reads beside its name, not at the far
+              // end of the header among the verbs. A reader asking "is this
+              // still open?" looks at the name, so the answer belongs there.
+              pulse={
+                <IdentityLine separator="space">
+                  <Badge tone={dealStatusTone(deal.status)}>
+                    {deal.status}
+                  </Badge>
+                  <DealProjectChip deal={deal} />
+                </IdentityLine>
+              }
+              // What it is worth, when it is due, whose deal it is and which
+              // account it is on, as one line under the name.
+              subtitle={<DealIdentityFacts deal={deal} locale={locale} />}
+              markShape="tile"
+              actions={
+                <>
+                  {/* Why this deal takes no changes, while it does not: said
+                      once, in the record's access note. */}
+                  {readOnlyReason !== undefined && (
+                    <RecordRefusal id={readOnlyReasonId}>
+                      {readOnlyReason}
+                    </RecordRefusal>
+                  )}
                   <DealActions
                     deal={deal}
                     openStages={openStages}
                     refusedReasonId={refusedReasonId}
                   />
-                }
-                // Where the deal stands, at the foot of its head. A reader
-                // arrives asking which stage this is in, and the answer must
-                // come before the tabs.
-                standing={
-                  <DealCockpit
-                    deal={deal}
-                    stages={stages}
-                    advancing={advance.isPending}
-                    // A deal that takes no changes (archived, or not this
-                    // caller's to write) is not moved through the pipeline.
-                    // A control that can only fail is worse than none. A
-                    // closed deal is refused too, for another reason.
-                    // Reopening is its own action, with a dialog saying the
-                    // close date and frozen rate are cleared. A stepper
-                    // button that reopened without it would be a second
-                    // door to the same write.
-                    advanceRefused={readOnly || deal.status !== "open"}
-                    refusedReasonId={refusedReasonId}
-                    onAdvance={onAdvance}
-                  />
-                }
-                // The sentence naming why this deal takes no changes, while
-                // it does not.
-                band={dealBand({
-                  reason: readOnlyReason,
-                  reasonId: readOnlyReasonId,
-                })}
-                // The strip frames the whole record, not the work alone. It
-                // runs across both columns and the details pane opens under it.
-                // So choosing a body and choosing what stands beside it read as
-                // two controls on one page, not one nested in the other.
-                tabs={
-                  <RecordTabs
-                    options={tabsOf(deal, legalReview)}
-                    value={shownTab}
-                    onChange={(next) => {
-                      setTab(next);
-                      scrollPageToTop();
-                    }}
-                    labels={{
-                      overview: t("tab.overview"),
-                      room: t("tab.dealRoom"),
-                      files: t("tab.documents"),
-                      legal: t("legalReview.tab"),
-                      history: t("tab.history"),
-                    }}
-                    // The switch for the deal's details column, at the end of
-                    // the tab row. It chooses what the page shows beside the
-                    // work. So it stands with the controls for the work column,
-                    // never in the head among the deal's verbs.
-                    trailing={<PageAsideToggle />}
-                  />
-                }
-              >
-                {/* One stack for the whole overview: the work column draws its
+                </>
+              }
+              // The strip frames the whole record, not the work alone. It
+              // runs across both columns and the details pane opens under it.
+              // So choosing a body and choosing what stands beside it read as
+              // two controls on one page, not one nested in the other.
+              tabs={
+                <RecordTabs
+                  options={tabsOf(deal, legalReview)}
+                  value={shownTab}
+                  onChange={(next) => {
+                    setTab(next);
+                    scrollPageToTop();
+                  }}
+                  labels={{
+                    overview: t("tab.overview"),
+                    room: t("tab.dealRoom"),
+                    files: t("tab.documents"),
+                    legal: t("legalReview.tab"),
+                    history: t("tab.history"),
+                  }}
+                />
+              }
+            >
+              {/* One stack for the whole overview: the work column draws its
                   children with no interval of its own, so the reading and the
                   contacts under it take the record's rhythm from here rather
                   than from a margin one of them carries. */}
-                {shownTab === "overview" && (
-                  <div className="record-stack">
-                    <DealOverviewPane
-                      deal={deal}
-                      onOpenEmail={setOpenEmail}
-                      dealApprovals={dealApprovals}
-                      onDecide={(input) => decide.mutate(input)}
-                      offers={offersQuery.data?.data}
-                      creatingOffer={createOffer.isPending}
-                      locale={locale}
-                      onCreateOffer={(currency) => createOffer.mutate(currency)}
-                      pulse={
-                        <DealPulse
-                          card={statusQuery.data}
-                          timeline={threadQuery.activities}
-                        />
-                      }
-                      spine={
-                        <TimelineThread
-                          thread={threadQuery}
-                          commercial={{
-                            next_close_on: deal.expected_close_date,
-                          }}
-                          onOpenEmail={setOpenEmail}
-                        />
-                      }
-                      coverage={coverageRead}
-                      readOnly={readOnly}
-                      refusedReasonId={refusedReasonId}
-                    />
-                  </div>
-                )}
-                {shownTab === "room" && (
-                  <DealRoomTab dealId={deal.id} dealName={deal.name} />
-                )}
-                {shownTab === "files" && <DealFiles deal={deal} />}
-                {shownTab === "legal" && <DealLegalTab deal={deal} />}
-                {shownTab === "history" && (
-                  <DealHistoryTab deal={deal} onOpenEmail={setOpenEmail} />
-                )}
-                {/* One drawer over the deal. Both the overview's citations and
+              {shownTab === "overview" && (
+                <div className="record-stack">
+                  <DealOverviewPane
+                    deal={deal}
+                    onOpenEmail={setOpenEmail}
+                    dealApprovals={dealApprovals}
+                    onDecide={(input) => decide.mutate(input)}
+                    offers={offersQuery.data?.data}
+                    creatingOffer={createOffer.isPending}
+                    locale={locale}
+                    onCreateOffer={(currency) => createOffer.mutate(currency)}
+                    pulse={
+                      <DealPulse
+                        card={statusQuery.data}
+                        timeline={threadQuery.activities}
+                      />
+                    }
+                    spine={
+                      <TimelineThread
+                        thread={threadQuery}
+                        commercial={{
+                          next_close_on: deal.expected_close_date,
+                        }}
+                        onOpenEmail={setOpenEmail}
+                      />
+                    }
+                    coverage={coverageRead}
+                    readOnly={readOnly}
+                    refusedReasonId={refusedReasonId}
+                    // Where the deal stands, in its 360: the stage path and
+                    // how long it has stood where it is.
+                    path={
+                      <DealCockpit
+                        deal={deal}
+                        stages={stages}
+                        advancing={advance.isPending}
+                        // A deal that takes no changes (archived, or not this
+                        // caller's to write) is not moved through the
+                        // pipeline. A closed deal is refused too: reopening
+                        // is its own action, with a dialog saying the close
+                        // date and frozen rate are cleared.
+                        advanceRefused={readOnly || deal.status !== "open"}
+                        refusedReasonId={refusedReasonId}
+                        onAdvance={onAdvance}
+                        inStage={
+                          statusQuery.data
+                            ? {
+                                enteredAt: statusQuery.data.stage_entered_at,
+                                usualDays:
+                                  statusQuery.data.stage_usual_days ?? null,
+                              }
+                            : undefined
+                        }
+                      />
+                    }
+                  />
+                </div>
+              )}
+              {shownTab === "room" && (
+                <DealRoomTab dealId={deal.id} dealName={deal.name} />
+              )}
+              {shownTab === "files" && <DealFiles deal={deal} />}
+              {shownTab === "legal" && <DealLegalTab deal={deal} />}
+              {shownTab === "history" && (
+                <DealHistoryTab deal={deal} onOpenEmail={setOpenEmail} />
+              )}
+              {/* One drawer over the deal. Both the overview's citations and
                   the history tab's own rows open it, so a message found from
                   either place lands in the same reader. */}
-                <OpenEmailDrawer
-                  activityId={openEmail}
-                  zone={recordZone}
-                  onClose={() => setOpenEmail(null)}
-                />
-                <ErrorLine
-                  error={advanceErrorBehind(advance.error, pending !== null)}
-                />
-                <ConfirmAdvanceModal
-                  pending={pending}
-                  onClose={() => setPending(null)}
-                  onConfirm={(input) => advance.mutateAsync(input)}
-                  onClosed={(deal, reason) =>
-                    setClosed(closedDealOf(deal, reason))
-                  }
-                />
-                <CloseReviewOffer
-                  closed={closed}
-                  onDismiss={() => setClosed(null)}
-                />
-              </RecordView>
-            </div>
+              <OpenEmailDrawer
+                activityId={openEmail}
+                zone={recordZone}
+                onClose={() => setOpenEmail(null)}
+              />
+              <ErrorLine
+                error={advanceErrorBehind(advance.error, pending !== null)}
+              />
+              <ConfirmAdvanceModal
+                pending={pending}
+                onClose={() => setPending(null)}
+                onConfirm={(input) => advance.mutateAsync(input)}
+                onClosed={(deal, reason) =>
+                  setClosed(closedDealOf(deal, reason))
+                }
+              />
+              <CloseReviewOffer
+                closed={closed}
+                onDismiss={() => setClosed(null)}
+              />
+            </RecordView>
           );
         }}
       </QueryGate>

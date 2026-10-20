@@ -109,6 +109,7 @@ describe("company view — withheld sections", () => {
           page: emptyPage,
           won_lifetime: { amount_minor: 0, currency: "EUR" },
           lost_count: 0,
+          won_count: 0,
         },
       }),
     );
@@ -150,7 +151,7 @@ describe("company view — withheld sections", () => {
 
     // The standing is the 360's word now, under the readings row: withheld
     // reads as withheld there, on the word and on each dimension.
-    const call = await screen.findByText("Company brief");
+    const call = await screen.findByText(/How it stands/);
     const pane = call.closest(".panel");
     if (!(pane instanceof HTMLElement)) {
       throw new Error("the 360 has no pane");
@@ -173,7 +174,7 @@ describe("company view — withheld sections", () => {
     );
     renderCompany();
 
-    const call = await screen.findByText("Company brief");
+    const call = await screen.findByText(/How it stands/);
     const pane = call.closest(".panel");
     if (!(pane instanceof HTMLElement)) {
       throw new Error("the 360 has no pane");
@@ -243,18 +244,14 @@ describe("company view — the verbs that change a section", () => {
     );
     renderCompany();
 
-    // Two surfaces read the same missing grant: the details column's Deals
-    // slice — which rides on the page's own mount and never unmounts across
-    // a tab switch — and the Deals tab body itself. The header's facts line
-    // carries no pipeline figure (the readings row under the tabs does, and
-    // it is not drawn on the Deals tab). The count is pinned EXACTLY rather
-    // than as "at least one": a floor would pass on a tab that rendered
-    // nothing while some other surface still spoke.
+    // The Deals tab body is the one surface on that tab that reads the grant.
+    // The count is pinned at one, not "at least one". A floor would pass on a
+    // tab that rendered nothing while some other surface still spoke.
     await userEvent.click(
       await screen.findByRole("button", { name: /^Deals/ }),
     );
     await waitFor(() =>
-      expect(screen.queryAllByText("Hidden for your role")).toHaveLength(2),
+      expect(screen.queryAllByText("Hidden for your role")).toHaveLength(1),
     );
     // And the empty state it did NOT draw: "no open deal" is a claim about
     // the account that this payload cannot support.
@@ -428,7 +425,7 @@ describe("company view — a section still loading is not one that failed", () =
     // arrives.
     const brief = () => {
       const panel = screen
-        .getByRole("heading", { name: "Needs attention" })
+        .getByRole("heading", { name: "Next" })
         .closest("section");
       if (!panel) {
         throw new Error("the day's brief has no section wrapper");
@@ -460,17 +457,20 @@ describe("company view — a failed read is not an empty account", () => {
     await waitFor(() =>
       expect(screen.getByText(/this page may be incomplete/)).toBeTruthy(),
     );
-    // The business rail STAYS, with each card saying it could not be loaded.
-    // Removing it would read as an account with no contacts and no deals,
-    // which is the one thing this page does not know.
-    const card = screen.getByRole("complementary", { name: "Context" });
-    expect(within(card).getAllByText(/did not load/).length).toBeGreaterThan(0);
-    expect(
-      within(card).queryByText("No open deals for this company."),
-    ).toBeNull();
-    expect(
-      within(card).queryByText("No contact linked to this account yet."),
-    ).toBeNull();
+    // The overview's Deals and Contacts sections STAY, each saying it could
+    // not be loaded. Dropping them would read as an account with neither.
+    for (const title of ["Deals", "Contacts"]) {
+      const panel = screen
+        .getAllByRole("heading", { name: title })
+        .map((heading) => heading.closest<HTMLElement>(".panel"))
+        .find((each) => each !== null);
+      if (!panel) {
+        throw new Error(`the ${title} section is not drawn`);
+      }
+      expect(within(panel).getByText(/did not load/)).toBeTruthy();
+    }
+    expect(screen.queryByText("No deals for this company yet.")).toBeNull();
+    expect(screen.queryByText("No contacts yet.")).toBeNull();
   });
 
   it("distinguishes a section that is missing from one that is empty", async () => {
@@ -505,6 +505,7 @@ describe("company view — figures that outlive the list they sit under", () => 
           page: emptyPage,
           won_lifetime: { amount_minor: 12_000_000, currency: "EUR" },
           lost_count: 3,
+          won_count: 0,
         },
       }),
     );

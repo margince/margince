@@ -3,7 +3,7 @@
 
 package company360
 
-// The deals section: the account's open pipeline, plus the two lifetime
+// The deals section: the account's open pipeline, plus the lifetime
 // figures the header shows. Both are taken over the caller's deal row
 // scope, so a total can never disclose a deal the list does not.
 
@@ -34,7 +34,7 @@ func openDealsWhere(companyPos int, dealScope string) string {
 		companyPos, dealScope)
 }
 
-// dealsSection reads the account's open deals plus the two lifetime
+// dealsSection reads the account's open deals plus the lifetime
 // figures the header shows. won_lifetime sums amount_minor_base — each
 // deal's amount at its FROZEN close-time rate — so the figure never moves
 // when today's FX does.
@@ -112,55 +112,65 @@ func dealsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now t
 	}
 	open, page := truncate(open)
 
-	lifetime, lost, err := closedTotals(ctx, tx, companyID, baseCurrency)
+	closed, err := closedTotals(ctx, tx, companyID, baseCurrency)
 	if err != nil {
 		return crmcontracts.Company360Deals{}, err
 	}
 	return crmcontracts.Company360Deals{
 		Data:        open,
 		Page:        page,
-		WonLifetime: lifetime,
-		LostCount:   lost,
+		WonLifetime: closed.wonLifetime,
+		WonCount:    closed.wonCount,
+		LostCount:   closed.lostCount,
 	}, nil
 }
 
-// closedTotals sums won money and counts lost deals over the same row
-// scope the open list uses — a total that included deals the caller cannot
-// open would disclose their existence through arithmetic.
+// closedDeals are the account's lifetime figures over its won and lost deals.
+type closedDeals struct {
+	wonLifetime crmcontracts.Money
+	wonCount    int
+	lostCount   int
+}
+
+// closedTotals sums won money and counts won and lost deals over the row scope
+// the open list uses. A total over deals the caller cannot open would disclose
+// them through arithmetic.
 func closedTotals(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 	baseCurrency string,
-) (crmcontracts.Money, int, error) {
+) (closedDeals, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	companyPos := arg(companyID)
 	dealScope, err := scopeClause(ctx, "deal", "d", arg)
 	if err != nil {
-		return crmcontracts.Money{}, 0, err
+		return closedDeals{}, err
 	}
 	// The won TOTAL is a sum over the converted amount, so a mask that
 	// withholds the figure on a row must withhold it here too: a total is the
 	// one place a withheld number reappears whole. A masked row contributes
-	// NULL, which SUM skips, and it still counts toward the LOST count beside
-	// it — that one is about the deal's existence rather than its size.
+	// NULL, which SUM skips. It still counts toward the won and lost counts
+	// beside it, because those are about the deal's existence, not its size.
 	amount, err := auth.MaskedColumnSQL(ctx, "deal", "amount_minor", "d", "amount_minor_base", arg)
 	if err != nil {
-		return crmcontracts.Money{}, 0, err
+		return closedDeals{}, err
 	}
 	var wonMinor int64
-	var lost int
+	var out closedDeals
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT coalesce(sum(%[3]s) FILTER (WHERE d.status = 'won'), 0)::bigint,
+		       count(*) FILTER (WHERE d.status = 'won'),
 		       count(*) FILTER (WHERE d.status = 'lost')
 		FROM deal d
 		WHERE d.company_id = $%[1]d AND d.archived_at IS NULL
-		  AND d.status IN ('won','lost') AND (%[2]s)`, companyPos, dealScope, amount), args...).Scan(&wonMinor, &lost)
+		  AND d.status IN ('won','lost') AND (%[2]s)`, companyPos, dealScope, amount), args...).Scan(&wonMinor, &out.wonCount, &out.lostCount)
 	// No GROUP BY, so no empty result to handle: an ungrouped aggregate returns
 	// exactly one row whatever it counted, and the coalesce above makes that row
 	// an honest zero in the installation's own currency for an account with no
 	// closed deal. The clause used to group by the tenant, which produced no row
 	// at all in that case.
 	if err != nil {
-		return crmcontracts.Money{}, 0, err
+		return closedDeals{}, err
 	}
-	return crmcontracts.Money{AmountMinor: &wonMinor, Currency: &baseCurrency}, lost, nil
+	out.wonLifetime = crmcontracts.Money{AmountMinor: &wonMinor, Currency: &baseCurrency}
+	return out, nil
 }

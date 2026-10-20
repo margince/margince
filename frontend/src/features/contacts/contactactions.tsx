@@ -7,6 +7,7 @@ import { useId } from "react";
 import { ExtensionEntries } from "../../components/extensionentries";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { IconAction } from "../../design-system/iconaction";
+import { RecordRefusal } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
@@ -137,9 +138,9 @@ export function ContactActions({
           to it: two groups of verbs, not one toolbar. */}
       <span className="record-actions-sep" aria-hidden="true" />
       {logRefused === logRefusedId && (
-        <p className="t-caption" id={logRefusedId}>
+        <RecordRefusal id={logRefusedId}>
           {t("record.logActivityRefused")}
-        </p>
+        </RecordRefusal>
       )}
       {/* A CRM a rep cannot write a meeting into is a CRM that only reads.
           This is the standing way in; the moment card offers the same form

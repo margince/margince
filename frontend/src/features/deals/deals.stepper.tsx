@@ -1,7 +1,10 @@
 import { useId } from "react";
 import type { components } from "../../api/schema";
 import { StageLadder, type StageStep } from "../../design-system/stageladder";
-import { useT } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import { useNow } from "../../format/now";
+import { useLocale, usePlural, useT, type Words } from "../../i18n";
+import { daysInStage } from "./deal360/stagetime";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
@@ -32,6 +35,7 @@ export function DealStageLadder({
   advanceRefused,
   refusedReasonId,
   onAdvance,
+  inStage,
 }: Readonly<{
   deal: Deal;
   stages: readonly Stage[];
@@ -41,8 +45,16 @@ export function DealStageLadder({
    * undefined while it does. */
   refusedReasonId?: string;
   onAdvance: (toStage: Stage) => void;
+  /** When the deal entered its stage, and how long won deals usually spend
+   * there (null below the history the median needs), from the status card. */
+  inStage?: { enteredAt: string; usualDays: number | null };
 }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  // Pinned at mount: the reading is in days, and a deal page is not left open
+  // long enough for one to turn.
+  const now = useNow(0);
   // WHY THE LADDER REFUSES, said once and pointed at.
   //
   // Every rung is refused for the same cause, so they name ONE element rather
@@ -61,10 +73,16 @@ export function DealStageLadder({
     advanceRefused && refusedReasonId === undefined
       ? t("deal.closedTakesNoStage")
       : undefined;
+  const stageName = stages.find((stage) => stage.id === deal.stage_id)?.name;
+  const days = inStage ? daysInStage(inStage.enteredAt, now) : null;
+  const stageTime =
+    inStage && days !== null && stageName && deal.status === "open"
+      ? stageTimeLine(days, inStage.usualDays, stageName, { t, plural, locale })
+      : undefined;
   return (
     <StageLadder
       label={t("deals.stage")}
-      hint={ownReason ? <span id={ownReasonId}>{ownReason}</span> : undefined}
+      hint={ownReason ? <span id={ownReasonId}>{ownReason}</span> : stageTime}
       steps={dealStageSteps({
         deal,
         stages,
@@ -74,6 +92,25 @@ export function DealStageLadder({
       })}
     />
   );
+}
+
+// How long the deal has stood in its stage, against how long won deals usually
+// stand there: the reading a stalled deal is found by.
+function stageTimeLine(
+  days: number,
+  usualDays: number | null,
+  stageName: string,
+  { t, plural, locale }: Words,
+): string {
+  const span = (count: number) =>
+    plural("co.spine.days", count, { count: formatNumber(count, locale) });
+  return usualDays === null
+    ? t("deal.stage.time", { stage: stageName, days: span(days) })
+    : t("deal.stage.timeUsual", {
+        stage: stageName,
+        days: span(days),
+        usual: span(Math.round(usualDays)),
+      });
 }
 
 // The pipeline's stages as ladder rungs: what is behind the deal, where it

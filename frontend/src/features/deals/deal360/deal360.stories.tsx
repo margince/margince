@@ -50,6 +50,8 @@ export const NeedsYou: Story = {
             },
             generated_at: "2026-08-24T00:00:00Z",
             generated_by: "model",
+            stage_entered_at: "2026-06-18T09:00:00Z",
+            stage_usual_days: null,
           } as components["schemas"]["DealStatusCard"]
         }
         timeline={[]}
@@ -70,6 +72,8 @@ export const TheirMove: Story = {
             reply_to: null,
             generated_at: "2026-08-24T00:00:00Z",
             generated_by: "model",
+            stage_entered_at: "2026-06-18T09:00:00Z",
+            stage_usual_days: null,
           } as components["schemas"]["DealStatusCard"]
         }
         timeline={[]}

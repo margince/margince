@@ -270,6 +270,9 @@ describe("DealScreen — edit, archive (A3)", () => {
 
     render(<DealScreen id="x" />);
     await user.click(
+      await screen.findByRole("button", { name: /empty field/ }),
+    );
+    await user.click(
       await screen.findByRole("button", { name: "Change via partner" }),
     );
     await user.click(screen.getByLabelText("via partner"));

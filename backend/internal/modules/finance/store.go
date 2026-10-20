@@ -31,6 +31,9 @@ type Store struct {
 	// then FREEZES a rate onto rows it will not revisit, so a store that only
 	// looked constructed would write a mistake it cannot take back.
 	baseCurrency BaseCurrencyFunc
+	// timezone resolves the installation's zone, the one whose calendar month
+	// the monthly invoiced series ends on.
+	timezone TimezoneFunc
 	// billingContacts answers who handles this customer's invoices, bound by
 	// compose because the relationship table belongs to contacts. Nil in an
 	// installation that has not wired it, which serves the card without the
@@ -46,11 +49,15 @@ type Store struct {
 // of a registry it has no other use for.
 type BaseCurrencyFunc func(context.Context, pgx.Tx) (string, error)
 
+// TimezoneFunc resolves the installation's IANA zone name inside a transaction
+// the caller already holds. Compose binds it to the setting identity owns.
+type TimezoneFunc func(context.Context, pgx.Tx) (string, error)
+
 // NewStore binds the store to the pool every tenant read runs through.
 // NewStore opens this module's store on a handle already bound to the
 // workspace it serves.
-func NewStore(db *database.DB, baseCurrency BaseCurrencyFunc) *Store {
-	return &Store{db: db, now: time.Now, baseCurrency: baseCurrency}
+func NewStore(db *database.DB, baseCurrency BaseCurrencyFunc, timezone TimezoneFunc) *Store {
+	return &Store{db: db, now: time.Now, baseCurrency: baseCurrency, timezone: timezone}
 }
 
 // WithClock replaces the store's clock. Tests only: a summary that reads

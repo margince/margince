@@ -61,11 +61,13 @@ async function openRecord(page: Page, route: string, options?: MockApiOptions) {
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 }
 
-// The switch at the end of the tab row: the one control there that SETS rather
-// than does, so `aria-pressed` is what names it structurally — the word on it
-// is copy this suite does not pin.
+// The details switch: in the pane's head while it is open, and the strip it
+// folds to while closed. A phone draws a drawer, and its switch is in the tab
+// row. `aria-pressed` names it; the word on it is copy this suite does not pin.
 function detailsSwitch(page: Page) {
-  return page.locator(".recordtabs-trailing button[aria-pressed]");
+  return page.locator(
+    ".record-aside-head button[aria-pressed], .page-zones-aside-fold button[aria-pressed], .recordtabs-trailing button[aria-pressed]",
+  );
 }
 
 type Box = { name: string; width: number; height: number };
@@ -199,10 +201,12 @@ test.describe("the record's rhythm", () => {
     const head = await present(page, ".record-head");
     const tabs = await present(page, "[data-testid='record-tabs']");
     const band = await edge(page, ".record-band");
-    // The work column rather than the grid around it: a record with neither
-    // rail nor aside draws no `.page-zones` at all, and this column is the
-    // one block every shape puts at the columns' top edge.
-    const columns = await present(page, ".page-zones-main");
+    // The head, the strip and the band open the record's sheet. The content
+    // is the first block after the band, or after the strip when none is drawn.
+    const columns = await present(
+      page,
+      band ? ".record-band + *" : "[data-testid='record-tabs'] + *",
+    );
 
     isOneStep(
       tabs.top - head.bottom,
@@ -272,7 +276,7 @@ test.describe("the record's details pane", () => {
   const STACKED = [900, 390];
 
   for (const record of RECORDS) {
-    test(`opens beside the work column, under the tab row, on a ${record.name} at ${BESIDE}px`, async ({
+    test(`opens beside the work column, level with its top, on a ${record.name} at ${BESIDE}px`, async ({
       page,
     }) => {
       await page.setViewportSize({ width: BESIDE, height: 900 });
@@ -280,8 +284,7 @@ test.describe("the record's details pane", () => {
 
       const pane = page.locator(".record-aside");
       // Open on arrival: the attributes stand beside the work from the first
-      // frame, and the switch at the end of the tab row is how a reader
-      // folds them away and brings them back.
+      // frame, and the pane's own switch folds them away and brings them back.
       await expect(pane, "the pane is not open on arrival").toBeVisible();
       await detailsSwitch(page).click();
       await expect(pane, "the switch did not close the pane").toBeHidden();
@@ -305,22 +308,20 @@ test.describe("the record's details pane", () => {
       });
       const paneBox = await pane.boundingBox();
       const work = await page.locator(".page-zones-main").boundingBox();
-      const tabs = await page
-        .locator("[data-testid='record-tabs']")
-        .boundingBox();
-      if (!paneBox || !work || !tabs) {
+      if (!paneBox || !work) {
         throw new Error(
-          "the pane, the work column and the tab row are visible but one has no box",
+          "the pane and the work column are visible but one has no box",
         );
       }
       expect(
         paneBox.x,
         "the pane is not beside the work column",
       ).toBeGreaterThanOrEqual(work.x + work.width - 1);
+      // A card of its own beside the record's sheet, so the two start level.
       expect(
-        paneBox.y,
-        "the pane does not open under the tab row",
-      ).toBeGreaterThanOrEqual(tabs.y + tabs.height - 1);
+        Math.abs(paneBox.y - work.y),
+        "the pane does not start level with the work column",
+      ).toBeLessThanOrEqual(1);
     });
 
     for (const width of STACKED) {

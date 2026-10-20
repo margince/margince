@@ -143,6 +143,7 @@ const populated: View = {
     page,
     won_lifetime: { amount_minor: 12_000_000, currency: "EUR" },
     lost_count: 1,
+    won_count: 0,
   },
   // Two projects, three of the work card's shapes: a commitment they made and
   // have not kept, a project nobody has filed against, and one with neither.
@@ -305,6 +306,7 @@ const empty: View = {
     page,
     won_lifetime: { amount_minor: 0, currency: "EUR" },
     lost_count: 0,
+    won_count: 0,
   },
   projects: [],
   projects_page: page,

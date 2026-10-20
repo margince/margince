@@ -22,6 +22,7 @@ import {
 import {
   HEALTH_DIMENSION_LABEL,
   HEALTH_DIMENSION_MEANS,
+  HEALTH_RANK,
   HEALTH_RATING_LABEL,
   HEALTH_STANDING_TONE,
   useAccountStanding,
@@ -57,6 +58,9 @@ export type TodayDimension = {
   reading: string;
   // How loud the rating is. Absent where there is no rating to be loud about.
   tone?: "calm" | "warning" | "danger";
+  // How far up the rating scale it stands, from 1; absent where nothing is
+  // rated. The scale is `HEALTH_RANK`, so its length is the whole.
+  step?: number;
   // What this dimension weighs. Three words on a card cannot say what went
   // into "Commercial · Good", and a rating nobody can interpret is taken on trust.
   means: string;
@@ -192,6 +196,7 @@ export function useTodayReading({
       ? t(HEALTH_RATING_LABEL[rating])
       : t(healthWithheld ? "record.notShown" : "co.strip.notAssessed"),
     tone: rating ? HEALTH_STANDING_TONE[rating] : undefined,
+    step: rating ? HEALTH_RANK.indexOf(rating) + 1 : undefined,
     means: t(HEALTH_DIMENSION_MEANS[key]),
     // The working, from the same place the call's own grounding is built.
     // So a dimension's chip and the verdict's "what this rests on" cannot

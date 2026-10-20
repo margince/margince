@@ -8,8 +8,6 @@
    once and picked by the `size` prop rather than by whatever context a caller
    happened to drop the chip into. */
 .avatar {
-  border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--accentMed);
   color: var(--accentText);
   display: inline-flex;
@@ -47,13 +45,22 @@
   height: 46px;
 }
 /* The mark of a record PAGE: the one picture in the head, beside a name set
-   at the record rung. Sized to the reference's 72, which reads as the page's
-   own mark rather than as a large list avatar — at 56 beside a 44px name it
-   was the smaller of the two things naming the record. Round like every other
-   rung: a company and a contact are one kind of chip. */
+   at the record rung. At 64 it stands level with the name and the facts line
+   under it. Round like every other rung: a company and a contact are one kind
+   of chip. */
 .avatar-xl {
-  width: 72px;
-  height: 72px;
+  width: 64px;
+  height: 64px;
+}
+/* A tile keeps the tree's own corner, so the round shape is the circle's alone. */
+.avatar:not(.avatar-tile) {
+  border-radius: var(--r-full);
+  corner-shape: round;
+}
+/* The record page's own mark for a company or a deal: the pane's corner on a
+   square, in the house corner rather than the round chip's circle. */
+.avatar-tile {
+  border-radius: var(--r-lg);
 }
 
 /* An avatar beside its label on one line — a list cell, a search hit, a node
@@ -106,6 +113,11 @@
   width: calc(100% - 4px);
   height: calc(100% - 4px);
   object-fit: contain;
+}
+.avatar:not(.avatar-tile) .avatar-img {
   border-radius: var(--r-full);
   corner-shape: round;
+}
+.avatar-tile .avatar-img {
+  border-radius: var(--r-md);
 }

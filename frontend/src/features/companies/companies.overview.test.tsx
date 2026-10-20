@@ -163,7 +163,7 @@ describe("CompanyScreen — next-step suggestions", () => {
     stubFetch(companyBackstop);
     renderSuggestionsFor(company360);
 
-    await screen.findByRole("heading", { name: "Needs attention" });
+    await screen.findByRole("heading", { name: "Next" });
     expect(screen.queryByRole("button", { name: "Not now" })).toBeNull();
   });
 
@@ -349,60 +349,54 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
 
   // Every card is on the page, wherever it sits. Each is named, not counted:
   // a count passes on a layout that lost one card and grew another. Each is
-  // asserted where it lives: the pipeline on the Deals tab, the money on the
-  // Finance tab, tags/lists in the context column.
+  // asserted where it lives: the work on the overview, the readings on
+  // Profile, the fields in the context column.
   it("carries every panel of the overview stack, and files what is left in the context column", async () => {
     stubFetch(companyBackstop, { company360 });
     const { container } = render(<CompanyScreen id="o-1" />);
     await screen.findByRole("heading", { name: company.display_name });
 
-    // The overview stack: what is worth doing and the pipeline's own figures.
-    // The advice rows are the suggestions suite's above.
     const stack = container.querySelector(".co-overview-stack");
-    expect(stack).toBeTruthy();
+    if (!(stack instanceof HTMLElement)) {
+      throw new Error("overview stack did not render");
+    }
     // The money is a tab, so the overview column must not also carry it: a
-    // figure in two places must be reconciled. Contract and pipeline figures,
-    // projects and Finance each read on their own tab. "Commercial" also names
-    // a health dimension in the brief, so the panel heading is what is checked.
-    const headings = within(stack as HTMLElement)
+    // figure in two places must be reconciled. "Commercial" also names a
+    // health dimension in the brief, so the panel heading is what is checked.
+    const headings = within(stack)
       .getAllByRole("heading")
-      .map((heading) => heading.textContent);
+      .map((heading) => heading.textContent ?? "");
     expect(headings).not.toContain("Commercial");
-    expect(stack?.textContent).not.toContain("Finance");
-    expect(stack?.textContent).not.toContain("Lists & tags");
+    expect(stack.textContent).not.toContain("Finance");
+    expect(stack.textContent).not.toContain("Lists & tags");
+    for (const section of ["Latest", "Deals", "Contacts"]) {
+      expect(headings.some((one) => one.startsWith(section))).toBe(true);
+    }
+    // What Margince read into the account beyond its 360 stands on Profile.
+    expect(stack.textContent).not.toContain("Growth fit");
+    expect(stack.textContent).not.toContain("Signals");
 
-    // What is in flight reads on the Deals tab and the rail's DealsSection.
-    // This fixture has none, so the fit card takes the overview's work slot:
-    // whether to sell here at all differs from what is running today.
-    expect(stack?.textContent).toContain("Growth fit");
-
-    // What Margince spotted reads in the work column, beside the rest of what
-    // wants a decision, rather than in the context column.
-    expect(stack?.textContent).toContain("Signals");
-
-    // The relationships and how the account is filed live in the page's
-    // context column. That column is the shell's and is portalled out of this
-    // record's tree, so it is queried off the document. The rail's summaries
-    // stand on every tab, capped to their top rows.
+    // The fields and how the account is filed live in the page's context
+    // column. That column is the shell's and is portalled out of this
+    // record's tree, so it is queried off the document.
     const rail = document.querySelector(".co-rail");
     expect(rail).toBeTruthy();
-    for (const card of ["Active deals", "Key contacts", "Details", "Tags"]) {
+    for (const card of ["Details", "Tags"]) {
       expect(rail?.textContent).toContain(card);
     }
 
-    // The pipeline and the commercial picture have their own tab too. Named by
-    // prefix: a tab carries the count of what is behind it, so its accessible
-    // name is the label and the figure.
-    await userEvent.click(screen.getByRole("button", { name: /^Deals/ }));
+    // The readings, on Profile. This fixture has nothing in flight, so the
+    // fit card is drawn: whether to sell here at all.
+    await openProfile();
     await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "Deals" })).toBeTruthy(),
+      expect(document.body.textContent).toContain("Growth fit"),
     );
+    expect(document.body.textContent).toContain("Signals");
   });
 
-  // Cards of unequal height never share a row: a tall needs list beside a
-  // short Ask box leaves a gap. So the glance is one column at every width,
-  // in the order a rep works it.
-  it("stacks the glance in one column: what needs a contact, the money, what the account is, then the questions", async () => {
+  // Cards of unequal height never share a row, so the glance is one column at
+  // every width, in the order a rep works it.
+  it("stacks the glance in one column: what is next, what happened, the deals, then the contacts", async () => {
     stubFetch(companyBackstop, { company360 });
     const { container } = render(<CompanyScreen id="o-1" />);
     await screen.findByRole("heading", { name: company.display_name });
@@ -413,20 +407,16 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
       throw new Error("overview stack did not render");
     }
 
-    // Each pane's own title, in DOM order.
+    // Each pane's own title, in DOM order. A title can carry its count.
     const headings = within(stack)
       .getAllByRole("heading")
-      .map((heading) => heading.textContent);
-    const needsAt = headings.indexOf("Needs attention");
-    const dossierAt = headings.indexOf("Company overview");
-    const askAt = headings.indexOf("Ask about this company");
-    // The fit card takes this account's slot. Nothing in this fixture is in
-    // flight, so the question is whether to sell here at all.
-    const fitAt = headings.indexOf("Growth fit");
-    expect(needsAt).toBeGreaterThanOrEqual(0);
-    expect(dossierAt).toBeGreaterThan(needsAt);
-    expect(askAt).toBeGreaterThan(dossierAt);
-    expect(fitAt).toBeGreaterThan(askAt);
+      .map((heading) => heading.textContent ?? "");
+    const at = (title: string) =>
+      headings.findIndex((one) => one.startsWith(title));
+    expect(at("Next")).toBeGreaterThanOrEqual(0);
+    expect(at("Latest")).toBeGreaterThan(at("Next"));
+    expect(at("Deals")).toBeGreaterThan(at("Latest"));
+    expect(at("Contacts")).toBeGreaterThan(at("Deals"));
   });
 
   // The drawer opens over the record, not into a column of it. It is portalled
@@ -474,28 +464,17 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     const { container } = render(<CompanyScreen id="o-1" />);
     await screen.findByRole("heading", { name: company.display_name });
 
-    // Folded on arrival, naming how much it holds: that subjectless call
-    // counts.
-    const stack = container.querySelector(".co-overview-stack");
-    const fold = stack?.querySelector("details");
-    const summary = fold?.querySelector("summary");
-    await waitFor(() => expect(summary?.textContent).toContain("Activity · 1"));
-    expect(fold?.open).toBe(false);
-
-    // Opened, the call is in it, not the sentence an account with nothing
-    // logged would get.
-    if (!summary) {
-      throw new Error("the thread fold draws no summary to open it by");
-    }
-    await userEvent.click(summary);
-    expect(fold?.open).toBe(true);
-    expect(stack?.textContent).not.toContain("Nothing logged with them yet");
+    // Latest is open on arrival, and the subjectless call is a row in it.
+    await waitFor(() =>
+      expect(container.querySelectorAll(".co-latest li")).toHaveLength(1),
+    );
+    const latest = container.querySelector(".co-latest");
+    expect(latest?.textContent).not.toContain("Nothing logged with them yet");
   });
 
-  // A control that says only "show" makes a reader open it to find out whether
-  // it was worth opening. The folded row carries the newest exchange, so the
-  // decision is made before the click and the glance keeps its space.
-  it("teases the newest exchange on the folded row, without opening it", async () => {
+  // The overview shows what happened last first, so the newest exchange is
+  // the one a reader meets before scrolling.
+  it("leads Latest with the newest exchange", async () => {
     stubFetch(companyBackstop, {
       company360: {
         ...company360,
@@ -523,32 +502,22 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     const { container } = render(<CompanyScreen id="o-1" />);
     await screen.findByRole("heading", { name: company.display_name });
 
-    const fold = container
-      .querySelector(".co-overview-stack")
-      ?.querySelector("details");
-    const summary = fold?.querySelector("summary");
     await waitFor(() =>
-      expect(summary?.textContent).toContain("Rate sheet sent"),
+      expect(container.querySelector(".co-latest")?.textContent).toContain(
+        "Quarterly review",
+      ),
     );
-
-    // Teased, not opened: the row says what is under it while the section
-    // stays folded.
-    expect(fold?.open).toBe(false);
-    // The newest, not the first the reader would meet scrolling.
-    expect(summary?.textContent).not.toContain("Quarterly review");
+    const text = container.querySelector(".co-latest")?.textContent ?? "";
+    expect(text.indexOf("Rate sheet sent")).toBeGreaterThanOrEqual(0);
+    expect(text.indexOf("Rate sheet sent")).toBeLessThan(
+      text.indexOf("Quarterly review"),
+    );
   });
 
   // A name and a link say somebody exists. To pick which contact to call, a
   // reader would open all three to find the buyer. The list carries that.
-  it("carries what a listed contact does and how to write to them", async () => {
+  it("carries what a listed contact does and links to their record", async () => {
     stubFetch(companyBackstop, {
-      // The reader has a mailbox to send from, so the address is the
-      // composer's; without one it would be their own mail client's.
-      connectors: {
-        data: [
-          { id: "g1", provider: "gmail", status: "connected", scopes: [] },
-        ],
-      },
       company360: {
         ...company360,
         contacts: {
@@ -580,27 +549,14 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
 
     // The name opens the record and is the link's whole name. The mark beside
     // it draws initials as text, which would otherwise be announced first.
-    // The page names this contact in the roster card and the references beside
-    // it. Every one is asserted, since a single lookup misses a stray link.
+    // Every link to the contact is asserted, since one lookup misses a stray.
     const names = await screen.findAllByRole("link", { name: "Anna Brandt" });
     for (const each of names) {
       expect(each.getAttribute("href")).toBe("#/contacts/p-1");
     }
-    const name = names[0];
     expect(screen.getAllByText("Head of Procurement").length).toBeGreaterThan(
       0,
     );
-
-    // The address is its own control, a sibling of the name, not nested in it.
-    // A control inside a link is a press nobody can predict. It is a button
-    // into the product's composer, never a link the reader's mail client takes.
-    const write = (
-      await screen.findAllByRole("button", {
-        name: "anna.brandt@brandt-automotive.de",
-      })
-    )[0];
-    expect(write.hasAttribute("href")).toBe(false);
-    expect(name.contains(write)).toBe(false);
   });
 
   // None of the reference cards comes from the 360; each runs its own read.

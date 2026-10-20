@@ -181,6 +181,10 @@ it("adds the first phone from Details without changing email", async () => {
     },
     { ...contact, phones: [] },
   );
+  // A contact with no number files the field with the other empty ones.
+  await user.click(
+    await screen.findByRole("button", { name: /^Show \d+ empty fields?$/ }),
+  );
   await user.click(
     await screen.findByRole("button", { name: "Edit phone numbers" }),
   );

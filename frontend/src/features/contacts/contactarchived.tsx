@@ -7,6 +7,7 @@ import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { IdentityLine } from "../../design-system/identityline";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { RecordOriginFacts } from "../../design-system/recordfacts";
 import { RecordView } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import { invalidateRecord } from "../../lib/recordwritekeys";
@@ -40,49 +41,53 @@ export function ArchivedContactPage({
   const recordZone = useRecordZone();
   return (
     <div className="wrap">
-      <div className="record-sheet">
-        <RecordView
-          back={<WorklistReturnLink />}
-          name={contact.full_name}
-          identity={contact.id}
-          scale="compact"
-          pulse={
-            <IdentityLine separator="space">
-              <Badge tone="warning">{t("record.archived")}</Badge>
-              <RecordAccess key={contact.id} kind="contact" record={contact} />
-            </IdentityLine>
-          }
-          badges={<ContactFacts contact={contact} />}
-          actions={
-            <ContactActions
-              view={{ contact }}
-              contactId={contact.id}
-              onWrite={refused}
-              onResearch={refused}
-              onLogActivity={refused}
-              onAddTask={refused}
-              refusedReasonId={refusedReasonId}
+      <RecordView
+        back={<WorklistReturnLink />}
+        name={contact.full_name}
+        identity={contact.id}
+        scale="compact"
+        pulse={
+          <IdentityLine separator="space">
+            <Badge tone="warning">{t("record.archived")}</Badge>
+            <RecordAccess key={contact.id} kind="contact" record={contact} />
+          </IdentityLine>
+        }
+        // No fields column on an archived contact, so its origin stays here.
+        subtitle={
+          <>
+            <ContactFacts contact={contact} />
+            <RecordOriginFacts record={contact} />
+          </>
+        }
+        actions={
+          <ContactActions
+            view={{ contact }}
+            contactId={contact.id}
+            onWrite={refused}
+            onResearch={refused}
+            onLogActivity={refused}
+            onAddTask={refused}
+            refusedReasonId={refusedReasonId}
+          />
+        }
+        actionsInline
+        zone={recordZone}
+        band={band}
+      >
+        <Panel title={t("record.fullHistory")}>
+          <PanelBody>
+            <RecordHistoryTab
+              kind="contact"
+              id={contact.id}
+              restore={{
+                version: contact.version,
+                onRestored: () =>
+                  invalidateRecord(queryClient, "contact", contact.id),
+              }}
             />
-          }
-          actionsInline
-          zone={recordZone}
-          band={band}
-        >
-          <Panel title={t("record.fullHistory")}>
-            <PanelBody>
-              <RecordHistoryTab
-                kind="contact"
-                id={contact.id}
-                restore={{
-                  version: contact.version,
-                  onRestored: () =>
-                    invalidateRecord(queryClient, "contact", contact.id),
-                }}
-              />
-            </PanelBody>
-          </Panel>
-        </RecordView>
-      </div>
+          </PanelBody>
+        </Panel>
+      </RecordView>
     </div>
   );
 }

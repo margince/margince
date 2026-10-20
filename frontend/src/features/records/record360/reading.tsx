@@ -18,7 +18,12 @@
 import type { ReactNode } from "react";
 import { Panel } from "../../../design-system/panel";
 import { BriefTitle } from "./brieftitle";
-import { type Grounding, type StandingTone, VerdictHead } from "./verdict";
+import {
+  type Grounding,
+  SourcesPill,
+  type StandingTone,
+  VerdictHead,
+} from "./verdict";
 // The group's own rules — `.co-reading`, `.co-reading-pair`,
 // `.co-reading-call` — live in company360.css, for the reason README.md gives:
 // renaming them reaches four stylesheets. Imported HERE rather than left to
@@ -94,8 +99,23 @@ export function CallCard({
   return (
     <Panel
       tone="ai"
+      className="record-hero"
       title={title ?? <BriefTitle name={name} />}
-      titleAction={title ? titleAction : undefined}
+      titleAction={
+        <>
+          {title ? titleAction : undefined}
+          {standing && restsOn ? (
+            <SourcesPill count={restsOn.length}>
+              {restsOn.map((item) => (
+                <li key={item.key}>
+                  <p className="r360-rests-quote">{item.quote}</p>
+                  <p className="r360-rests-from t-caption">{item.from}</p>
+                </li>
+              ))}
+            </SourcesPill>
+          ) : null}
+        </>
+      }
       footer={footer}
     >
       {standing ? (
@@ -103,7 +123,6 @@ export function CallCard({
           label={standing.label}
           tone={standing.tone}
           because={because}
-          restsOn={restsOn}
           scale={scale}
         />
       ) : null}

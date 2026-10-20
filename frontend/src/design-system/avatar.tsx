@@ -7,6 +7,7 @@ export function Avatar({
   identity,
   src,
   size = "sm",
+  shape = "round",
 }: Readonly<{
   name: string;
   /**
@@ -28,6 +29,12 @@ export function Avatar({
    * brings its chips down from its own sheet, density being its decision.
    */
   size?: "sm" | "md" | "lg" | "xl";
+  /**
+   * `tile` is a company's or a deal's mark on its own record page. Its rounded
+   * square reads as a thing, and a contact's round mark as a face. Everywhere
+   * else every mark is round, a company's included, so a list stays one shape.
+   */
+  shape?: "round" | "tile";
 }>) {
   // An image that fails to load falls back to the monogram for the rest of
   // this mount. Keyed by src so a record whose logo changes gets a fresh try
@@ -53,7 +60,8 @@ export function Avatar({
     "avatar",
     logo ? "avatar-has-logo" : "avatar-mesh",
     `avatar-${size}`,
-  ];
+    shape === "tile" ? "avatar-tile" : "",
+  ].filter(Boolean);
   return (
     <span
       className={classes.join(" ")}

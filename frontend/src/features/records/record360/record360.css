@@ -256,3 +256,101 @@
   align-items: center;
   gap: var(--space-1);
 }
+
+/* As the sheet's lead the call is a headline: the word at the verdict rung,
+   the sentence under it at reading size, and the working under both. One
+   column at every width, so the word never shares its line with a control. */
+.record-sheet .record-hero .r360-verdict {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  justify-items: start;
+}
+.record-sheet .record-hero .r360-standing {
+  font: var(--fontVerdict);
+}
+.record-sheet .record-hero .r360-because {
+  font: var(--fontVerdictBecause);
+  color: var(--textPrimary);
+  max-width: 60ch;
+}
+.record-sheet .record-hero .r360-rests-toggle {
+  grid-column: 1;
+  margin-top: var(--space-2);
+}
+/* A call not reached yet is a fact about the reading, not a verdict on the
+   record: it keeps the heading rung and the secondary ink, so an account
+   nobody has assessed does not shout its blank across the page. */
+.record-sheet .record-hero .r360-standing-unknown {
+  font: var(--fontHeadingLarge);
+  color: var(--textSecondary);
+}
+
+/* The receipts as a list over the card, opened from the head's pill: each
+   reading's words, then where they were read. */
+.r360-sources-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-inline-size: 22rem;
+}
+
+/* As the sheet's lead the call and its rings stand side by side: the verdict
+   on the left where the eye starts, the readings it rests on to its right,
+   and the thread and everything after them across the whole card. Stacked
+   once the work column cannot give each half a readable measure. */
+.record-sheet .record-hero:has(> .r360-rings) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.record-sheet .record-hero:has(> .r360-rings) > * {
+  grid-column: 1 / -1;
+}
+.record-sheet .record-hero > .panel-body:has(> .r360-verdict) {
+  grid-column: 1;
+}
+.record-sheet .record-hero > .r360-rings {
+  grid-column: 2;
+  align-self: center;
+}
+/* A ring body with nothing to draw takes no place beside the verdict. */
+.record-sheet .record-hero > .r360-rings:empty {
+  display: none;
+}
+@container work (max-width: 48rem) {
+  .record-sheet .record-hero:has(> .r360-rings) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .record-sheet .record-hero > .panel-body:has(> .r360-verdict),
+  .record-sheet .record-hero > .r360-rings {
+    grid-column: 1 / -1;
+  }
+}
+
+/* In the next-step strip a move reads as one line of work: the ask at the
+   small heading rung, what it rests on under it, and its verbs side by side at
+   the row's far end. */
+.record-next .co-move-ask,
+.record-next .co-todo-title {
+  font: var(--fontHeadingSmall);
+}
+.record-next .today-actions {
+  flex-direction: row;
+  align-items: center;
+  min-width: 0;
+}
+.record-next .today-verb > .btn,
+.record-next .today-verb > .btn-with-reason > .btn {
+  width: auto;
+}
+.record-next .co-move {
+  background: none;
+}
+.record-next .co-move-basis {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}

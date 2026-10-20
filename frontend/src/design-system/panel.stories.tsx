@@ -430,6 +430,34 @@ export const AiToneRowsOnly: Story = {
   },
 };
 
+// On a record's sheet a panel is a SECTION of it: no box, no tinted band. A
+// tone keeps its title's ink and the machine's section keeps its badge.
+export const OnRecordSheet: StoryObj = {
+  render: () => (
+    <div className="record-sheet">
+      <div className="record-stack">
+        <Panel
+          title="Needs attention"
+          titleAction={<Button variant="ghost">View tasks</Button>}
+        >
+          <PanelRow>Send the renewal paperwork · due 1 Jul</PanelRow>
+          <PanelRow>Reply to Dana Buyer about the walkthrough</PanelRow>
+        </Panel>
+        <Panel tone="warning" title="Gone quiet">
+          <PanelBody>No reply from the account in 12 days.</PanelBody>
+        </Panel>
+        <Panel
+          tone="ai"
+          title="What changed on this account"
+          titleAction={<Badge tone="ai">AI-assisted</Badge>}
+        >
+          <PanelRow>The renewal date moved forward by three weeks.</PanelRow>
+        </Panel>
+      </div>
+    </div>
+  ),
+};
+
 // actions: verbs that CHANGE the panel, in their own band under the body. The
 // footer reports; this acts. A caller renders it only when the content is
 // real — an "add" button under a section whose read failed offers a write

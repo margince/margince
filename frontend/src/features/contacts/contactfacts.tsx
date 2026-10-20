@@ -3,20 +3,11 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { rosterOwnerName } from "../../components/entityref";
 import { ContactLink } from "../../design-system/contactlink";
 import { OffsiteLink } from "../../design-system/offsitelink";
-import { Popover } from "../../design-system/popover";
-import { provenanceOf } from "../../design-system/provenanceof";
 import { Fact, RecordFacts } from "../../design-system/recordfacts";
-import { ProvenanceTag } from "../../design-system/trust";
-import { formatDateAbbrev } from "../../format/format";
 import { linkedinUrl } from "../../format/weburl";
-import { useLocale, useT } from "../../i18n";
-import { useMemberName } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
-import { useViewerId } from "../../lib/session";
-import { buyingRoleLabel } from "../companies/companycontacts/summary";
+import { useT } from "../../i18n";
 
 type Contact = components["schemas"]["Contact"];
 
@@ -36,21 +27,19 @@ function ProfileLink({ href }: Readonly<{ href: string }>) {
   );
 }
 
-// The buying role is what the relationship edge records, never read off a
-// title. A contact with a title can still have none, and then the cell is gone.
+// What they do and where, then the ways to reach them. Owner and buying role
+// stand in the fields column and beside the name, so the line does not repeat
+// them.
 export function ContactFacts({
   contact,
-  buyingRole,
-}: Readonly<{ contact: Contact; buyingRole?: string | null }>): ReactNode {
+  role,
+}: Readonly<{ contact: Contact; role?: ReactNode }>): ReactNode {
   const t = useT();
-  const { locale } = useLocale();
-  const zone = useRecordZone();
-  const viewerId = useViewerId();
-  const ownerName = useMemberName(contact.owner_id);
   const email = contact.emails?.[0]?.email;
   const phone = contact.phones?.[0]?.phone;
   return (
     <RecordFacts>
+      {role ? <Fact label={t("history.field.title")}>{role}</Fact> : null}
       {email && (
         <Fact label={t("history.field.email")}>
           <ContactLink
@@ -79,42 +68,6 @@ export function ContactFacts({
           <ProfileLink href={contact.social.linkedin} />
         </Fact>
       )}
-      <Fact label={t("contact.page.owner")}>
-        {rosterOwnerName(
-          contact.owner_id,
-          ownerName,
-          t,
-          t("contact.page.ownerUnassigned"),
-        )}
-      </Fact>
-      {buyingRole && (
-        <Fact label={t("contact.page.buyingRole")}>
-          {buyingRoleLabel(buyingRole, t)}
-        </Fact>
-      )}
-      <Fact label={t("list.created")}>
-        {formatDateAbbrev(contact.created_at, locale, zone)}
-      </Fact>
-      {/* The provenance pill names the KIND of source (the sparkle, the
-          words); the popover behind it answers WHICH one, which for a mailbox
-          capture is a message id no reader should have to scan past. */}
-      <Fact label={t("history.field.source")}>
-        <Popover
-          label={
-            <ProvenanceTag
-              provenance={provenanceOf(
-                contact.captured_by,
-                viewerId,
-                contact.author,
-                contact.source,
-                contact.imported_from,
-              )}
-            />
-          }
-        >
-          <p className="t-body">{contact.source || t("trust.sourceUnknown")}</p>
-        </Popover>
-      </Fact>
     </RecordFacts>
   );
 }

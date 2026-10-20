@@ -1,0 +1,28 @@
+.stage-pips {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.stage-pips-track {
+  display: inline-flex;
+  gap: var(--space-1);
+  flex: none;
+}
+.stage-pip {
+  inline-size: var(--space-4);
+  block-size: var(--space-1);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--borderSubtle);
+}
+.stage-pip-on {
+  background: var(--accent);
+}
+.stage-pip-stalled {
+  background: var(--orbAmber);
+}
+.stage-pips-label {
+  min-width: 0;
+  color: var(--textSecondary);
+}

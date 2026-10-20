@@ -77,14 +77,13 @@ function card(by: WrittenByWriter | undefined) {
 }
 
 describe("the relationship brief discloses the machine that reads it", () => {
-  // The claim is the panel's AI tone plus the WrittenBy mark in its head,
-  // once. No "AI-assisted" pill on top of those: the tone already says a
-  // machine wrote the prose, and the mark names which one.
+  // The claim is the writer named in the section's foot, once. No
+  // "AI-assisted" pill on top of it: the name already says which machine
+  // wrote the prose.
   it("discloses a model's prose by naming the writer, once", () => {
     const panel = card("model");
-    expect(panel.classList).toContain("panel-ai");
     expect(within(panel).queryByText("AI-assisted")).toBeNull();
-    expect(within(panel).getByText("Written by Margince")).toBeInTheDocument();
+    expect(within(panel).getAllByText("Written by Margince")).toHaveLength(1);
   });
 
   it("says a composition was assembled, and names no model", () => {

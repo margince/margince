@@ -174,6 +174,7 @@ export function partnerFields(
         key: "partner_company_id",
         label: "deal.partnerCompany",
         type: "select",
+        withheld: true,
         options: [{ value: "", label: t("deal.partnerWithheld") }],
       },
     ];
@@ -256,6 +257,7 @@ function companyEditField(
       key: "company_id",
       label: "create.relatedCompany",
       type: "select",
+      withheld: true,
       options: [{ value: "", label: t("deal.companyWithheld") }],
     };
   }
@@ -380,6 +382,7 @@ export function editProjectFields(
         key: "project_id",
         label: "deal.project",
         type: "select",
+        withheld: true,
         options: [{ value: "", label: t("deal.projectWithheld") }],
       },
     ];

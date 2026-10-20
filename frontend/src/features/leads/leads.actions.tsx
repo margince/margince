@@ -2,6 +2,7 @@ import { ArrowUpRight, CheckSquare, FileText } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { EntityRef } from "../../components/entityref";
 import { Button, OverflowMenu } from "../../design-system/atoms";
+import { RecordRefusal } from "../../design-system/recordview";
 import { leadIdentityName } from "../../format/leadname";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
@@ -123,7 +124,9 @@ export function LeadActions({
           to it: two groups of verbs, not one toolbar. */}
       <span className="record-actions-sep" aria-hidden="true" />
       {!archived && logGrantKnown && !canLog && (
-        <p id={logRefusedId}>{t("record.logActivityRefused")}</p>
+        <RecordRefusal id={logRefusedId}>
+          {t("record.logActivityRefused")}
+        </RecordRefusal>
       )}
       {/* A CRM a rep cannot write a meeting into is a CRM that only reads.
           This is the standing way in, the same pair contactactions.tsx and

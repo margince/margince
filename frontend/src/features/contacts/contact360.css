@@ -119,6 +119,9 @@
   color: var(--textPrimary);
   min-width: 0;
 }
+.pe-row-value > .pe-row-absent {
+  color: var(--textSecondary);
+}
 
 /* The profile row's two halves: the address as a value somebody can correct,
    and the verb that visits it. They wrap as a pair rather than the link being
@@ -198,6 +201,44 @@
 .pe-brief-reading dd.pe-brief-reading-verdict {
   font: var(--fontHeadingSmall);
 }
+/* As the sheet's lead the verdict takes the row to itself at the verdict rung,
+   and the readings it was read from line up under it. */
+.record-sheet .pe-brief .pe-brief-reading:has(> .pe-brief-reading-verdict) {
+  grid-column: 1 / -1;
+}
+.record-sheet .pe-brief .pe-brief-reading dd.pe-brief-reading-verdict {
+  font: var(--fontVerdict);
+}
+@media (min-width: 721px) {
+  .record-sheet .pe-brief .pe-brief-readings {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+/* On the sheet the four readings are one ruled strip, each cell parted from
+   the one before it, so they read as one row of facts and not four tiles. */
+.record-sheet .pe-brief > .panel-body > .pe-brief-readings {
+  gap: 0;
+  margin-block-start: var(--space-5);
+  border-block: 1px solid var(--borderSubtle);
+}
+.record-sheet .pe-brief > .panel-body > .pe-brief-readings > .pe-brief-reading {
+  padding: var(--space-3);
+}
+.record-sheet
+  .pe-brief
+  > .panel-body
+  > .pe-brief-readings
+  > .pe-brief-reading
+  + .pe-brief-reading {
+  border-inline-start: 1px solid var(--borderSubtle);
+}
+.record-sheet
+  .pe-brief
+  > .panel-body
+  > .pe-brief-readings
+  > .pe-brief-reading:first-child {
+  padding-inline-start: 0;
+}
 .pe-brief-reading dd.pe-brief-reading-success {
   color: var(--successText);
 }
@@ -254,6 +295,14 @@
 /* ---------------------------------------------------------------------------
    The deal card and its buying committee (§5.8).
    --------------------------------------------------------------------------- */
+/* With no deal, the role they would hold sits on the same line. */
+.pe-deal-none {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 .pe-deal-head {
   display: flex;
   align-items: baseline;
@@ -315,10 +364,6 @@
 .pe-loop-due {
   color: var(--warningText);
   white-space: nowrap;
-}
-
-.pe-loop-overdue {
-  color: var(--dangerText);
 }
 
 /* ---------------------------------------------------------------------------
@@ -408,8 +453,32 @@
   color: var(--successText);
 }
 
-.pe-rail-value-warning {
-  color: var(--warningText);
+/* In the rail an address, a number or a profile URL holds one line and gives
+   way at its end, so its kind stays beside it rather than breaking mid-word. */
+.pe-rail .fieldgrid-handle > .link-button,
+.pe-rail .fieldgrid-value > .inline-editable:has(+ .link-button) {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.pe-rail .fieldgrid-handle {
+  flex-wrap: nowrap;
+  max-width: 100%;
+}
+
+/* In the rail a company is a row, not a card: the panel is already its frame. */
+.pe-rail .company-card {
+  padding: var(--space-2) 0; /* ds:ignore a row in the rail, flush with the panel that frames it */
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.pe-rail .company-card:hover {
+  background: none;
 }
 
 /* The pulse card's overall reading sits under a rule: it summarizes the rows
@@ -981,6 +1050,152 @@
 
 .pe-deal-card-committee-row {
   display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The brief's lead: the call and the judgement under it on the left, the
+   shares it is read from on the right, stacked once the column cannot give
+   both a readable measure. */
+.pe-brief-lead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-4) var(--space-8);
+  align-items: center;
+}
+@container work (max-width: 48rem) {
+  .pe-brief-lead {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.pe-brief-call {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.pe-brief-call .pe-brief-readings {
+  margin: 0;
+}
+
+/* On the sheet the call, its lead sentence and the rings share one grid, and
+   what the lead leaves unsaid runs under both as a quiet callout. */
+.record-sheet .pe-brief .pe-brief-lead {
+  grid-template-areas:
+    "verdict rings"
+    "lead rings"
+    "lines lines";
+  row-gap: var(--space-2);
+}
+.record-sheet .pe-brief .pe-brief-call,
+.record-sheet .pe-brief .pe-brief-call > .co-brief-read {
+  display: contents;
+}
+.record-sheet .pe-brief .pe-brief-call > .pe-brief-readings {
+  grid-area: verdict;
+}
+.record-sheet .pe-brief .co-brief-lead {
+  grid-area: lead;
+  padding-bottom: 0;
+  border-bottom: 0;
+  max-width: 56ch;
+  color: var(--textSecondary);
+}
+.record-sheet .pe-brief .pe-brief-lead > .rings-with-legend {
+  grid-area: rings;
+}
+.record-sheet .pe-brief .co-brief-lines {
+  grid-area: lines;
+  padding: 0;
+  margin-block-start: var(--space-4);
+}
+.record-sheet .pe-brief .co-brief-lines > li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-md);
+  background: var(--bgInset);
+  color: var(--textSecondary);
+}
+.record-sheet .pe-brief .co-brief-lines > li::before {
+  content: "";
+  flex: none;
+  align-self: center;
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--warning);
+}
+@container work (max-width: 48rem) {
+  .record-sheet .pe-brief .pe-brief-lead {
+    grid-template-areas: "verdict" "lead" "rings" "lines";
+  }
+}
+/* The axis and the sources are the reading's evidence and its byline, so no
+   seam parts them from it. */
+.record-sheet .pe-brief > .panel-body.co-spine::before {
+  content: none;
+}
+.record-sheet .pe-brief > .panel-foot {
+  border-top: 0;
+  padding-block-start: 0;
+}
+.pe-brief-reading dd:has(> .pe-brief-trend-warming) {
+  color: var(--successText);
+}
+.pe-brief-reading dd:has(> .pe-brief-trend-cooling) {
+  color: var(--warningText);
+}
+/* The figure stands beside the call at a glance's size, not as a second lead. */
+.record-sheet .pe-brief .rings {
+  inline-size: 5.25rem;
+  block-size: 5.25rem;
+}
+/* The axis as one line under its dates: today named on the dates' own row,
+   and each stop's kind and subject on one caption line under its title. */
+.record-sheet .pe-brief .co-spine-now > .co-spine-when {
+  display: none;
+}
+.record-sheet .pe-brief .co-spine-now > .co-spine-title {
+  display: block;
+  grid-row: 1;
+  align-self: end;
+  padding-block-end: var(--space-1);
+  white-space: nowrap;
+  font-weight: var(--fontWeightBold);
+}
+.record-sheet .pe-brief .co-spine-now-word::after {
+  content: " · ";
+}
+.record-sheet .pe-brief .co-spine-title {
+  font-weight: var(--fontWeightMedium);
+}
+.record-sheet .pe-brief .co-spine-detail {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--space-1);
+}
+.record-sheet .pe-brief .co-spine-detail > .co-spine-relation {
+  order: -1;
+}
+.record-sheet .pe-brief .co-spine-detail > .co-spine-relation::after {
+  content: " ·";
+}
+/* Its sources read as a footnote: who wrote it, then the way to what it rests
+   on, in the machine's ink. */
+.pe-brief-foot .popover-trigger {
+  min-block-size: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--aiText);
+  font: inherit;
+}
+.pe-brief-foot {
+  display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
 }

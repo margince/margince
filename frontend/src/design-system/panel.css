@@ -54,7 +54,7 @@
  * A compound longer than the line breaks at a syllable, as `.fieldgrid-label`
  * does. */
 .panel-head .panel-title {
-  font-family: var(--fontFamilyHeading);
+  font: var(--fontPanelTitle);
   color: var(--textPrimary);
   min-width: 0;
   margin-right: auto;
@@ -520,4 +520,195 @@
 .staging-card {
   border-radius: var(--r-md);
   padding: var(--space-4) var(--space-5);
+}
+
+/* ON THE RECORD SHEET a zone is a card on the sheet's ground: the same edge
+ * and corner as any pane, on the opaque elevated ground rather than glass,
+ * because the sheet under it is already the glass. Its head is no band: the
+ * title and its one link sit on the card's top line, and the rows start under
+ * a hairline of their own. */
+.record-sheet .panel {
+  background: var(--bgElevated);
+  backdrop-filter: none;
+}
+.record-sheet .panel > .panel-head {
+  min-height: 0;
+  align-items: baseline;
+  padding-block: var(--space-5) var(--space-2);
+  border-bottom: 0;
+}
+/* The FIELDS COLUMN beside the sheet is unboxed too, and quieter still: what
+ * the record is filed as, read by label. A group's title takes the secondary
+ * ink, with no band and no rule. It keeps the pane's inset rather than
+ * bleeding, because the column clips to its track (pagezones.css) and a bleed
+ * there cut its labels off. */
+.record-aside .panel {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.record-aside .panel > .panel-head {
+  min-height: 0;
+  padding-block: 0 var(--space-1);
+  border-bottom: 0;
+  background: none;
+}
+.record-aside .panel > .panel-head .panel-title {
+  color: var(--textSecondary);
+}
+/* A record's cards take the small heading rung rather than a standalone
+   card's, and the fields column names its groups at the caption's size. */
+.record-sheet {
+  --fontPanelTitle: var(--fontHeadingSmall);
+}
+.record-aside {
+  --fontPanelTitle: var(--fontBodySmall);
+}
+/* A section has no band to tint, so a tone keeps only its title's ink and the
+ * machine's section keeps its provenance badge: indigo on the title as well
+ * would say the badge twice on every zone a machine wrote. */
+.record-sheet
+  :is(
+    .panel-accent,
+    .panel-info,
+    .panel-success,
+    .panel-warning,
+    .panel-danger,
+    .panel-discovery,
+    .panel-ai
+  )
+  > .panel-head {
+  background: none;
+  border-bottom-color: var(--borderSubtle);
+}
+.record-sheet
+  :is(
+    .panel-accent,
+    .panel-info,
+    .panel-success,
+    .panel-warning,
+    .panel-danger,
+    .panel-discovery,
+    .panel-ai
+  )
+  > .panel-foot {
+  border-top-color: var(--borderSubtle);
+}
+.record-sheet .panel-ai > .panel-head .panel-title {
+  color: var(--textPrimary);
+}
+
+/* THE LEAD of the sheet is the one section that keeps a surface: the record's
+ * 360, the reading the page exists to give. A hairline and a wash of the
+ * call's own tone, lit from the corner the eye starts at, and no shadow: it
+ * sits in the sheet's plane and is told apart by its ground alone. The tone
+ * is read off the standing it holds, so a page sets no tone on it by hand. */
+.record-sheet .panel.record-hero {
+  --heroWash: var(--aiLight);
+  margin-inline: calc(-1 * var(--space-3));
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(
+      120% 140% at 0% 0%,
+      color-mix(in srgb, var(--heroWash) 85%, transparent),
+      transparent 60%
+    ),
+    var(--bgElevated);
+}
+.record-sheet .record-hero:has(.r360-standing-calm, .pe-brief-reading-success) {
+  --heroWash: var(--successBg);
+}
+.record-sheet .record-hero:has(.r360-standing-accent) {
+  --heroWash: var(--accentLight);
+}
+.record-sheet .record-hero:has(.r360-standing-warning) {
+  --heroWash: var(--warningBg);
+}
+.record-sheet
+  .record-hero:has(.r360-standing-danger, .pe-brief-reading-danger) {
+  --heroWash: var(--dangerBg);
+}
+/* The lead's head names it and needs no rule under it: the surface already
+ * says where the lead begins, and a rule would cut the verdict from its name. */
+.record-sheet .record-hero > .panel-head {
+  border-bottom-color: transparent;
+}
+/* Its title is a dateline in the secondary ink: "How it stands · 13 Aug"
+ * names the reading and when it was made, and the verdict is the headline. */
+.record-sheet .record-hero > .panel-head .panel-title {
+  color: var(--textSecondary);
+}
+/* The rings stand beside the verdict, not under it, so no rule parts them. */
+.record-sheet .record-hero > .panel-body + .panel-body.r360-rings::before {
+  content: none;
+}
+
+/* THE OVERVIEW'S SECTIONS are cards in two columns under the record's lead:
+ * the next step and the 360 run the sheet's width, and every other card takes
+ * a column. Narrow, the columns fold to one. */
+.record-sheet .record-sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--space-4);
+}
+.record-sheet
+  .record-sections
+  > :is(.co-lead, .record-hero, .pe-brief-anchor, .co-reading) {
+  grid-column: 1 / -1;
+}
+/* The next step leads and the 360 follows it, whatever order the cards a
+   record hands in were written in. */
+.record-sheet .record-sections > .co-lead {
+  order: -2;
+}
+.record-sheet
+  .record-sections
+  > :is(.record-hero, .pe-brief-anchor, .co-reading) {
+  order: -1;
+}
+
+/* THE NEXT STEP is one strip across the sheet: its name and a rule, the first
+ * thing to do, and how much more waits behind it at the far end. */
+.record-sheet .record-next {
+  --fontPanelTitle: var(--fontHeadingXSmall);
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  align-items: center;
+  column-gap: var(--space-4);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-5);
+  border-radius: var(--r-md);
+}
+.record-sheet .record-next > .panel-head {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: stretch;
+  align-items: center;
+  padding: 0 var(--space-4) 0 0;
+  border-inline-end: 1px solid var(--borderSubtle);
+}
+.record-sheet .record-next > .panel-head .panel-title {
+  color: var(--textSecondary);
+}
+.record-sheet .record-next > * {
+  grid-column: 2;
+}
+.record-sheet .record-next > .record-next-more {
+  grid-column: 3;
+  grid-row: 1;
+}
+.record-sheet .record-next > :is(.panel-row, .panel-body, .panel-foot) {
+  padding: 0;
+  border: 0;
+}
+.record-sheet .record-next > .panel-row::before {
+  content: none;
+}
+@container work (max-width: 48rem) {
+  .record-sheet .record-sections {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

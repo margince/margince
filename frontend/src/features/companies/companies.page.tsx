@@ -1,11 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useId, useState } from "react";
-import { usePageAside } from "../../components/pageaside";
+import { PageAsideToggle, usePageAside } from "../../components/pageaside";
 import { Modal } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
-import { RecordView } from "../../design-system/recordview";
+import { RecordRefusal, RecordView } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import { invalidateCompany } from "../../lib/recordwritekeys";
@@ -154,8 +154,6 @@ export function CompanyPage({
       // The composite read still in flight, as opposed to failed. An
       // undefined `view` alone cannot tell the rail's sections which of the
       // two holds, and each needs its own drawing.
-      loading={loading}
-      onTab={onTab}
     />
   );
   const {
@@ -175,170 +173,161 @@ export function CompanyPage({
     filterToChanges();
   };
   return (
-    <div className="record-sheet">
-      <RecordView
-        back={<WorklistReturnLink />}
-        name={company.display_name}
-        identity={company.id}
-        avatarSrc={company.logo_url}
-        // One rung under the record scale. The name stays the largest thing on
-        // the page. Beside a work column that opens on the reader's ask, it
-        // need not be the size of a masthead.
-        scale="compact"
-        // Where the account stands, the one control on the name's own line.
-        nameBadge={<CompanyNameLine company={company} />}
-        // What the account is, the way in, what it is to us and who may read
-        // it, as the row under the name.
-        pulse={<CompanyMarks company={company} />}
-        zone={recordZone}
-        // The way in, who holds the account and when its own row was written,
-        // as the facts strip every record page carries under its pulse.
-        //
-        // The prose description reads in the details grid instead. It is the
-        // one header item a reader cannot act on, and it has no length bound.
-        // On an enriched account it repeats the industry two lines above.
-        badges={
-          <CompanyIdentityFacts
-            company={company}
-            view={view}
-            loading={loading}
-          />
-        }
-        // The composer opens from a button rather than standing open above the
-        // page. A whole form in the header's action strip would push the
-        // account's own story below the fold.
-        actions={
-          <>
-            {/* One sentence for the whole strip. Both action groups below refuse
+    <RecordView
+      back={<WorklistReturnLink />}
+      name={company.display_name}
+      identity={company.id}
+      avatarSrc={company.logo_url}
+      // One rung under the record scale. The name stays the largest thing on
+      // the page. Beside a work column that opens on the reader's ask, it
+      // need not be the size of a masthead.
+      scale="compact"
+      // Where the account stands, the one control on the name's own line.
+      nameBadge={<CompanyNameLine company={company} />}
+      // What the account is, who holds it and the way in, as one line under
+      // the name. When its row was written stands in the fields column.
+      subtitle={
+        <CompanyIdentityFacts company={company} view={view} loading={loading} />
+      }
+      // What the account is to us and who may read it, under the line.
+      pulse={<CompanyMarks company={company} />}
+      markShape="tile"
+      zone={recordZone}
+      // The composer opens from a button rather than standing open above the
+      // page. A whole form in the header's action strip would push the
+      // account's own story below the fold.
+      actions={
+        <>
+          {/* One sentence for the whole strip. Both action groups below refuse
               for the same reason, so the reason belongs to the page. Stated in
               each group, an archived account would say it twice once the menu
               opened. */}
-            {verbRefusal && (
-              <p className="t-caption" id={archivedParagraphId}>
-                {verbRefusal}
-              </p>
-            )}
-            <CompanyHeaderActions
-              company={company}
-              composerOpen={writingEmail}
-              onComposerOpen={setWritingEmail}
-              drawer={activityDrawer}
-              onDrawer={setActivityDrawer}
-              archivedReasonId={archivedReasonId}
-            />
-            {/* Last in the row, after the verbs it holds the remainder of. A
+          {verbRefusal ? (
+            <RecordRefusal id={archivedParagraphId}>
+              {verbRefusal}
+            </RecordRefusal>
+          ) : null}
+          <CompanyHeaderActions
+            company={company}
+            composerOpen={writingEmail}
+            onComposerOpen={setWritingEmail}
+            drawer={activityDrawer}
+            onDrawer={setActivityDrawer}
+            archivedReasonId={archivedReasonId}
+          />
+          {/* Last in the row, after the verbs it holds the remainder of. A
               menu of everything else reads as the first thing to press when it
               leads the row. */}
-            <CompanyActionBadges
-              company={company}
-              archivedReasonId={archivedReasonId}
-              view={view}
-              onOpenHistory={() => setAuditOpen(true)}
-              onSetUpPartner={() => onTab("partner")}
-              onOpenDecisions={
-                tab === "overview" ? () => setDecisionsOpen(true) : undefined
-              }
-            />
-          </>
-        }
-        actionsInline
-        // The account's context, beside the work under the tab row. What is
-        // true of the account does not belong to the open tab, so the pane
-        // stays put when a tab changes.
-        aside={rail}
-        asideOpen={details.open}
-        // The bar that chooses which part of the account to read, across the
-        // page above the columns. The details pane opens under it, from the
-        // control at its end.
-        tabs={tabs}
-        // The chronology is the account's story and belongs to the overview.
-        // The Partner tab is a form, so it does not repeat it under itself.
-        {...slots}
-      >
-        <CompanyRecordBody
-          company={company}
-          view={view}
-          refusedReasonId={archivedReasonId}
-          loading={loading}
-          failed={failed}
-          tab={tab}
-          onTab={onTab}
-          t={t}
-          receipt={receipt}
-          composing={composing}
-          onCompose={setComposing}
-          onPerform={(action) => {
-            // Total over the kinds the server can name. A kind this page
-            // cannot perform is a compile error here, never a button that
-            // swallows the click.
-            switch (action.kind) {
-              case "draft_reply":
-                if (action.activity_id) {
-                  setComposing({ kind: "reply", id: action.activity_id });
-                }
-                return;
-              case "open_deal":
-                if (action.deal_id) {
-                  navigate({ screen: "deals", id: action.deal_id });
-                }
-                return;
-              case "add_task":
-                // Never reached: the advice section writes the step itself,
-                // through the POST /tasks the task form uses. The server
-                // prepared the body, so this page would only relay it. A
-                // surface here would add a second author to a rule's sentence.
-                return;
-              default:
-                unreachableAction(action.kind);
+          <CompanyActionBadges
+            company={company}
+            archivedReasonId={archivedReasonId}
+            view={view}
+            onOpenHistory={() => setAuditOpen(true)}
+            onSetUpPartner={() => onTab("partner")}
+            onOpenDecisions={
+              tab === "overview" ? () => setDecisionsOpen(true) : undefined
             }
-          }}
-          decisionsOpen={decisionsOpen}
-          onDecisionsOpen={setDecisionsOpen}
-          openTaskId={openTaskId}
-          onOpenTask={setOpenTaskId}
-          onOpenTaskFromToday={openTaskFromToday}
-          onLogActivity={() => setActivityDrawer("log")}
-          taskUpdate={taskUpdate}
-          onOpenHistory={showChanges}
-        />
-        {/* The email drawer, on the same rule as the audit spine below: it
+          />
+        </>
+      }
+      actionsInline
+      // The account's context, beside the work under the tab row. What is
+      // true of the account does not belong to the open tab, so the pane
+      // stays put when a tab changes.
+      aside={rail}
+      asideOpen={details.open}
+      asideToggle={<PageAsideToggle pane />}
+      // The bar that chooses which part of the account to read, across the
+      // page above the columns. The details pane opens under it, from the
+      // control at its end.
+      tabs={tabs}
+      // The chronology is the account's story and belongs to the overview.
+      // The Partner tab is a form, so it does not repeat it under itself.
+      {...slots}
+    >
+      <CompanyRecordBody
+        company={company}
+        view={view}
+        refusedReasonId={archivedReasonId}
+        loading={loading}
+        failed={failed}
+        tab={tab}
+        onTab={onTab}
+        t={t}
+        receipt={receipt}
+        composing={composing}
+        onCompose={setComposing}
+        onPerform={(action) => {
+          // Total over the kinds the server can name. A kind this page
+          // cannot perform is a compile error here, never a button that
+          // swallows the click.
+          switch (action.kind) {
+            case "draft_reply":
+              if (action.activity_id) {
+                setComposing({ kind: "reply", id: action.activity_id });
+              }
+              return;
+            case "open_deal":
+              if (action.deal_id) {
+                navigate({ screen: "deals", id: action.deal_id });
+              }
+              return;
+            case "add_task":
+              // Never reached: the advice section writes the step itself,
+              // through the POST /tasks the task form uses. The server
+              // prepared the body, so this page would only relay it. A
+              // surface here would add a second author to a rule's sentence.
+              return;
+            default:
+              unreachableAction(action.kind);
+          }
+        }}
+        decisionsOpen={decisionsOpen}
+        onDecisionsOpen={setDecisionsOpen}
+        openTaskId={openTaskId}
+        onOpenTask={setOpenTaskId}
+        onOpenTaskFromToday={openTaskFromToday}
+        onLogActivity={() => setActivityDrawer("log")}
+        taskUpdate={taskUpdate}
+        onOpenHistory={showChanges}
+      />
+      {/* The email drawer, on the same rule as the audit spine below: it
           belongs to the record. In the Timeline tab's own slot it would
           unmount with that tab and leave its id behind. Returning to Timeline
           could then put it over an already-open dialog. */}
-        <OpenEmailDrawer
-          activityId={openEmail}
-          zone={recordZone}
-          onClose={() => setOpenEmail(null)}
-        />
-        {/* The audit spine, opened from the header's overflow menu. It belongs
+      <OpenEmailDrawer
+        activityId={openEmail}
+        zone={recordZone}
+        onClose={() => setOpenEmail(null)}
+      />
+      {/* The audit spine, opened from the header's overflow menu. It belongs
           to the record, not to a tab, so it opens over whichever tab is up. */}
-        <Modal
-          open={auditOpen}
-          onClose={() => setAuditOpen(false)}
-          labelledBy="co-audit-title"
-          intent="drawer-reading"
-        >
-          <DrawerHead>
-            <Heading size="large" id="co-audit-title" className="t-h2">
-              {t("record.fullHistory")}
-            </Heading>
-          </DrawerHead>
-          <DrawerBody>
-            {/* Mounted only while open: the two history reads behind it are
+      <Modal
+        open={auditOpen}
+        onClose={() => setAuditOpen(false)}
+        labelledBy="co-audit-title"
+        intent="drawer-reading"
+      >
+        <DrawerHead>
+          <Heading size="large" id="co-audit-title" className="t-h2">
+            {t("record.fullHistory")}
+          </Heading>
+        </DrawerHead>
+        <DrawerBody>
+          {/* Mounted only while open: the two history reads behind it are
               the page's most expensive, and only a reader who opens it pays. */}
-            {auditOpen && (
-              <RecordHistoryTab
-                kind="company"
-                id={company.id}
-                restore={{
-                  version: company.version,
-                  onRestored: () => invalidateCompany(queryClient, company),
-                }}
-              />
-            )}
-          </DrawerBody>
-        </Modal>
-      </RecordView>
-    </div>
+          {auditOpen && (
+            <RecordHistoryTab
+              kind="company"
+              id={company.id}
+              restore={{
+                version: company.version,
+                onRestored: () => invalidateCompany(queryClient, company),
+              }}
+            />
+          )}
+        </DrawerBody>
+      </Modal>
+    </RecordView>
   );
 }

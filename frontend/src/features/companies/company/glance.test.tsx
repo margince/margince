@@ -7,16 +7,16 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
-import { ThreadFold } from "./glance";
+import { LatestSection } from "./glance";
 
 type Company360 = components["schemas"]["Company360"];
 type Activity = components["schemas"]["Activity"];
 
 afterEach(cleanup);
 
-// The fold draws the account's messages in full, so a reader who can see a
+// The section draws the account's messages in full, so a reader who can see a
 // message expects to open it.
-describe("the folded thread on the account's 360", () => {
+describe("the latest on the account's overview", () => {
   const EMAIL_ID = "01a05500-0000-7000-8000-00000000dd01";
 
   const emailRow: Activity = {
@@ -68,7 +68,7 @@ describe("the folded thread on the account's 360", () => {
   function drawThread(onOpenEmail?: (activityId: string) => void) {
     return render(
       <LocaleProvider initial="en">
-        <ThreadFold
+        <LatestSection
           view={threadView()}
           loading={false}
           onOpenEmail={onOpenEmail}

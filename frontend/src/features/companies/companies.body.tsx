@@ -14,6 +14,7 @@ import type { Company, Company360View } from "./companies";
 import type { useCitedReceipt } from "./companies.chronology";
 import {
   CompanyOverviewStack,
+  CompanyReadings,
   offerResearchOnOverview,
 } from "./companies.overview";
 import { CompanyProfileTab } from "./companies.profile";
@@ -27,6 +28,7 @@ import { useHasSiteRead } from "./companydeepread";
 import { CompanyDocumentsCard } from "./companydocuments";
 import { EvidenceModal } from "./companyevidence";
 import { CompanyFinanceCard } from "./companyfinance";
+import { CompanyFiling } from "./companyrail";
 import type { CompanyTab } from "./companytab";
 import "./company360.css";
 
@@ -318,6 +320,24 @@ export function CompanyRecordBody({
         onOpenRecord={openCitation}
         onOpenReceipt={receipt.open}
         onOpenEmail={receipt.openEmail}
+        readings={
+          <>
+            <CompanyReadings
+              company={company}
+              view={view}
+              onOpenRecord={openCitation}
+              onOpenReceipt={receipt.open}
+              onOpenEmail={receipt.openEmail}
+            />
+            <CompanyFiling
+              companyId={company.id}
+              company={company}
+              view={view}
+              loading={loading}
+              onTab={onTab}
+            />
+          </>
+        }
       />
     </>
   );

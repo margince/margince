@@ -102,3 +102,30 @@ describe("the switch goes with the pane", () => {
     expect(view.container.querySelector("aside")).not.toBeNull();
   });
 });
+
+// On the pane the switch is a quiet "hide" in its head. Folded, it is the
+// strip that brings the pane back.
+describe("the switch the pane carries", () => {
+  function PaneRecord() {
+    const details = usePageAside();
+    return (
+      <>
+        <PageAsideToggle pane />
+        {details.open && <aside>Nine fields and the tags.</aside>}
+      </>
+    );
+  }
+
+  it("folds the pane to a strip that opens it again", async () => {
+    const user = userEvent.setup();
+    const { pane, getByRole } = record(<PaneRecord />);
+
+    await user.click(getByRole("button", { name: "Hide details" }));
+    expect(pane()).toBeNull();
+
+    const strip = getByRole("button", { name: "Show details" });
+    expect(strip.textContent).toBe("Details");
+    await user.click(strip);
+    expect(pane()).not.toBeNull();
+  });
+});

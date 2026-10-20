@@ -7,9 +7,11 @@ import { Badge, Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
-import { useT } from "../../i18n";
+import { formatDayMonth } from "../../format/format";
+import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { hasMoveControl, MoveButton } from "../records/movebutton";
 import {
@@ -25,6 +27,8 @@ import {
   useSetAside,
   WrittenBy,
 } from "../records/record360";
+import { DealRings } from "./deal360/dealrings";
+import { useDealCoverage } from "./deal360/usedealcoverage";
 import { useDealSignals } from "./dealsignals";
 import "./dealstatus.css";
 
@@ -107,10 +111,14 @@ export function DealStatusCardPanel({
   dealName,
   pulse,
   spine,
+  path,
   onOpenEmail,
 }: Readonly<{
   dealId: string;
   dealName: string;
+  // Where the deal stands on its pipeline, drawn in the call in every state
+  // of the read. It comes from the deal, not from the card.
+  path?: ReactNode;
   // Opens a cited message in the deal page's own email drawer. The card cites
   // the conversations the deal was read from, and the page already mounts the
   // drawer its timeline opens into.
@@ -149,6 +157,7 @@ export function DealStatusCardPanel({
         card={status.data}
         pulse={pulse}
         spine={spine}
+        path={path}
         onOpenEmail={onOpenEmail}
         onRewrite={() => rewrite.mutate()}
         rewriting={rewrite.isPending}
@@ -161,7 +170,18 @@ export function DealStatusCardPanel({
   // reading carries still names what is being read.
   return (
     <>
+      {/* The day's work keeps its place over the call in every state of the
+          read: the page has one shape, and a panel that comes and goes with a
+          request reads as a record that has and then has not any work. What
+          it says follows the read — pending, failed — rather than claiming a
+          quiet day it has not established. */}
+      <TodayPanel
+        state={status.isPending ? "loading" : "failed"}
+        onOpenTasks={() => navigate({ screen: "worklist" })}
+        tasksLabel={t("today.workQueue")}
+      />
       <CallCard name={dealName}>
+        {path ? <PanelBody>{path}</PanelBody> : null}
         <QueryStates
           query={status}
           pendingLines={6}
@@ -178,16 +198,6 @@ export function DealStatusCardPanel({
           ) : null}
         </QueryStates>
       </CallCard>
-      {/* The day's work keeps its place under the call in every state of the
-          read: the page has one shape, and a panel that comes and goes with a
-          request reads as a record that has and then has not any work. What
-          it says follows the read — pending, failed — rather than claiming a
-          quiet day it has not established. */}
-      <TodayPanel
-        state={status.isPending ? "loading" : "failed"}
-        onOpenTasks={() => navigate({ screen: "worklist" })}
-        tasksLabel={t("today.workQueue")}
-      />
     </>
   );
 }
@@ -198,6 +208,7 @@ function Briefing({
   card,
   pulse,
   spine,
+  path,
   onOpenEmail,
   onRewrite,
   rewriting,
@@ -207,15 +218,21 @@ function Briefing({
   card: DealStatusCard;
   pulse?: ReactNode;
   spine?: ReactNode;
+  path?: ReactNode;
   // Opens a cited message in the deal page's email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
   onRewrite: () => void;
   rewriting: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
   // The findings ride the coverage card's own query, so this costs no second
   // request and the two cannot disagree about what is wrong with the deal.
   const coverage = useDealSignals(dealId);
+  // The same shared read the signals come from, for the committee's ring.
+  // The card answered, and the server answers it only for a live deal.
+  const committee = useDealCoverage(dealId, true);
   const because = card.verdict?.because.sentences ?? [];
   return (
     <>
@@ -224,8 +241,36 @@ function Briefing({
           needs was the last thing they reached. The lead sentence keeps its
           RECEIPTS: it is the sentence a reader is most likely to challenge, on
           a card whose whole premise is that they can. */}
+      {/* Drawn only where there is a move. A deal whose reading found nothing
+          owed today is a deal with one fewer card to read, not a card whose
+          body says it found nothing: the reading below already reports what
+          the day holds, and a panel repeating that in a sentence spends a
+          card on an absence. The pending and failed states keep their panel,
+          because a read still running has not established a quiet day. */}
+      {card.next ? (
+        <TodayPanel
+          onOpenTasks={() => navigate({ screen: "worklist" })}
+          tasksLabel={t("today.workQueue")}
+        >
+          <Move
+            key="next"
+            dealId={dealId}
+            move={card.next}
+            onOpenEmail={onOpenEmail}
+          />
+        </TodayPanel>
+      ) : null}
       <CallCard
         name={dealName}
+        // A date that cannot be read keeps the kit's own head; Intl throws on it.
+        title={
+          Number.isNaN(Date.parse(card.generated_at))
+            ? undefined
+            : t("record.howItStands", {
+                when: formatDayMonth(card.generated_at, locale, recordZone),
+              })
+        }
+        titleAction={<WrittenBy by={card.generated_by} />}
         standing={
           card.verdict
             ? {
@@ -244,29 +289,14 @@ function Briefing({
           ) : undefined
         }
       >
+        <PanelBody className="r360-rings">
+          <DealRings card={card} coverage={committee.coverage} />
+        </PanelBody>
+        {path ? <PanelBody>{path}</PanelBody> : null}
         {pulse ? <PanelBody>{pulse}</PanelBody> : null}
         <SignalStrip signals={coverage.signals} />
         {spine}
       </CallCard>
-      {/* Drawn only where there IS a move. A deal whose reading found nothing
-          owed today is a deal with one fewer card to read, not a card whose
-          body says it found nothing: the reading above already reports what
-          the day holds, and a panel repeating that in a sentence spends a
-          card on an absence. The pending and failed states keep their panel,
-          because a read still running has not established a quiet day. */}
-      {card.next ? (
-        <TodayPanel
-          onOpenTasks={() => navigate({ screen: "worklist" })}
-          tasksLabel={t("today.workQueue")}
-        >
-          <Move
-            key="next"
-            dealId={dealId}
-            move={card.next}
-            onOpenEmail={onOpenEmail}
-          />
-        </TodayPanel>
-      ) : null}
       {/* The reading, under the call and the work: what has happened and
           where that leaves things, in prose with its sources. What is holding
           the deal up, what the buyer wants and the rest of the reasoning sit

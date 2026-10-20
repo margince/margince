@@ -3,17 +3,15 @@
 
 import type { components } from "../../api/schema";
 import { useRoster } from "../../components/entityref";
-import { formatDate } from "../../format/format";
+import { formatDayMonth } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { useAccountScan } from "../capture/accountscan";
 import { type OpenReceipt, RecordSpine, WrittenBy } from "../records/record360";
-import { ThreadFold } from "./company/glance";
 import { recordNamesIn, StateStrip, type SuggestionAction } from "./company360";
 import { DeepReadPanel } from "./companydeepread";
 import type { CompanyTab } from "./companytab";
 import { Company360Call, NeedsList, useTodayReading } from "./companytoday";
-import { sinceLastVisitFooter } from "./companywork";
 
 type Company = components["schemas"]["Company"];
 type Company360View = components["schemas"]["Company360"];
@@ -52,7 +50,6 @@ export function CompanyReading({
   view,
   loading,
   failed,
-  onOpenHistory,
   onOpenRecord,
   onOpenReceipt,
   onOpenEmail,
@@ -110,31 +107,27 @@ export function CompanyReading({
         <StateStrip companyId={company.id} view={view} onOpenTab={onOpenTab} />
       )}
       {/* An account with nothing on file asks whether to research it, so the
-          offer leads; once there is anything to read, the call below leads. */}
+          offer leads; once there is anything to read, the next move and the call do. */}
       {offerResearch && <DeepReadPanel companyId={company.id} />}
+      {/* The record's next move leads, over the reading it comes from: it is
+          what a reader opened the record to do. */}
+      <NeedsList reading={reading} onOpenTasks={onOpenTasks} />
       <Company360Call
         reading={reading}
         name={company.display_name}
-        title={t("company.brief.title")}
-        titleAction={
-          view && (
-            <>
-              {/* Intl throws on an unparseable date, and a server one release
-                  out of step answers without `as_of`. */}
-              {!Number.isNaN(Date.parse(view.as_of)) && (
-                <span className="t-caption">
-                  {t("contact.brief.updatedAt", {
-                    when: formatDate(view.as_of, locale, recordZone),
-                  })}
-                </span>
-              )}
-              {/* Composed from the account's own records, not model prose. */}
-              <WrittenBy by="deterministic" />
-            </>
-          )
+        // A dateline over the call: what this is, and as of when. Intl throws
+        // on an unparseable date, and a server one release out of step
+        // answers without `as_of`, so the date waits for one it can read.
+        title={
+          view && !Number.isNaN(Date.parse(view.as_of))
+            ? t("record.howItStands", {
+                when: formatDayMonth(view.as_of, locale, recordZone),
+              })
+            : t("company.brief.title")
         }
+        // Composed from the account's own records, not model prose.
+        titleAction={view && <WrittenBy by="deterministic" />}
         scale="compact"
-        footer={sinceLastVisitFooter(view)}
       >
         <RecordSpine
           source={view}
@@ -145,20 +138,7 @@ export function CompanyReading({
           nameOf={nameOf}
           onOpenEmail={onOpenEmail}
         />
-        {/* Keyed on the account: the page stays mounted across companies, and a
-            thread opened on one must not arrive open on the next. */}
-        <ThreadFold
-          key={company.id}
-          view={view}
-          loading={loading}
-          onOpenHistory={onOpenHistory}
-          onOpenRecord={onOpenRecord}
-          onOpenEmail={onOpenEmail}
-        />
       </Company360Call>
-      {/* Full width at every measure: cards of unequal height never share a
-          row, or the shorter one's row is left half empty. */}
-      <NeedsList reading={reading} onOpenTasks={onOpenTasks} />
     </>
   );
 }

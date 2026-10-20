@@ -40,23 +40,20 @@ const live: typeof archivedContact = {
   address: { city: "Munich", country: "DE" },
 };
 
-function Facts({
-  contact,
-  buyingRole,
-}: Readonly<{ contact: typeof archivedContact; buyingRole?: string }>) {
+function Facts({ contact }: Readonly<{ contact: typeof archivedContact }>) {
   installFetchStub({ "GET /me": meRoute({ contact: ["read", "update"] }) });
   return (
     <StoryProviders>
-      <ContactFacts contact={contact} buyingRole={buyingRole} />
+      <ContactFacts contact={contact} />
     </StoryProviders>
   );
 }
 
 export const Live: Story = {
-  render: () => <Facts contact={live} buyingRole="champion" />,
+  render: () => <Facts contact={live} />,
 };
 
-// The row alone: no buying role without the 360, and no address on file.
+// The row alone, with no address on file.
 export const Archived: Story = {
   render: () => <Facts contact={archivedContact} />,
 };

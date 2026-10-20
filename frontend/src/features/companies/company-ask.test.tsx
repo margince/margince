@@ -11,14 +11,14 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { CompanyScreen } from "./companies";
+import { openProfile } from "./companies.testkit";
 import { companyBackstop, jsonResponse } from "./company.fixtures";
 import { stubFetch } from "./company.testkit";
 
 // "Ask about this company" spent months reachable only from a test file: the
-// panel existed, its round-trip worked, and no route rendered it. So the claim
-// this file makes is deliberately the one mounting the component in isolation
-// cannot make — that a reader who opens a company finds the questions on the
-// page, and that pressing one answers there.
+// panel existed, its round-trip worked, and no route rendered it. So this file
+// makes the claim a mount in isolation cannot. A reader who opens a company
+// finds the questions on its Profile tab, and pressing one answers there.
 
 afterEach(() => {
   cleanup();
@@ -50,15 +50,15 @@ const answer = {
   ],
 };
 
-describe("the company overview carries the ask surface", () => {
-  it("offers the prepared questions on the page a reader opens the account to", async () => {
+describe("the company record carries the ask surface", () => {
+  it("offers the prepared questions on the Profile tab", async () => {
     stubFetch(companyBackstop);
 
     render(<CompanyScreen id="o-1" />);
+    await openProfile();
 
-    // The panel's own title, so this passes only while something on the
-    // overview actually draws AssistantPanel — a question button alone would
-    // still be found if the panel were mounted anywhere else on the record.
+    // The panel's own title, so this passes only while the tab draws
+    // AssistantPanel. A question button alone would be found anywhere.
     expect(
       await screen.findByRole("heading", { name: "Ask about this company" }),
     ).toBeTruthy();
@@ -79,6 +79,7 @@ describe("the company overview carries the ask surface", () => {
     });
 
     render(<CompanyScreen id="o-1" />);
+    await user.click(await screen.findByRole("button", { name: "Profile" }));
 
     await user.click(
       await screen.findByRole("button", { name: "What is open here?" }),

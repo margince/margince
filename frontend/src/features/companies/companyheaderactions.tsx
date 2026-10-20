@@ -7,6 +7,7 @@ import type { components } from "../../api/schema";
 import { ExtensionEntries } from "../../components/extensionentries";
 import { Button } from "../../design-system/atoms";
 import { ListPopover } from "../../design-system/listpopover";
+import { RecordRefusal } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
@@ -81,14 +82,14 @@ export function CompanyHeaderActions({
   return (
     <>
       {archived && !archivedReasonId && (
-        <p className="t-caption" id={ownReasonId}>
+        <RecordRefusal id={ownReasonId}>
           {t("record.archivedReadOnly")}
-        </p>
+        </RecordRefusal>
       )}
       {!archived && logGrantKnown && !canLog && (
-        <p className="t-caption" id={logRefusedId}>
+        <RecordRefusal id={logRefusedId}>
           {t("record.logActivityRefused")}
-        </p>
+        </RecordRefusal>
       )}
       <CompanyWriteEmail
         company={company}
@@ -118,9 +119,9 @@ export function CompanyHeaderActions({
         reasonId={archived ?? (logGrantKnown ? bookRefusedId : undefined)}
       />
       {!archived && logGrantKnown && !canLog && (
-        <p className="t-caption" id={bookRefusedId}>
+        <RecordRefusal id={bookRefusedId}>
           {t("scheduling.bookRefused")}
-        </p>
+        </RecordRefusal>
       )}
       <ExtensionEntries
         slot="record_header.company"

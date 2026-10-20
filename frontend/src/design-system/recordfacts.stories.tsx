@@ -2,7 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Fact, RecordFacts } from "./recordfacts";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
+import { Fact, RecordFacts, RecordOriginFacts } from "./recordfacts";
 
 const meta: Meta<typeof RecordFacts> = {
   title: "Components/Text and data display/Record facts",
@@ -20,4 +25,24 @@ export const Strip: Story = {
       <Fact label="Created">1 June 2026</Fact>
     </RecordFacts>
   ),
+};
+
+// Where a row came from, as the fields column shows it: an imported record
+// names who wrote it in the system it came from.
+export const Origin: Story = {
+  render: () => {
+    installFetchStub({ "GET /me": meRoute({ contact: ["read"] }) });
+    return (
+      <StoryProviders>
+        <RecordOriginFacts
+          record={{
+            created_at: "2026-06-01T08:00:00Z",
+            captured_by: "human:u-admin",
+            author: { display_name: "Mutaz Suleiman", via: "HubSpot" },
+            source: "hubspot",
+          }}
+        />
+      </StoryProviders>
+    );
+  },
 };

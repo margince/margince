@@ -319,7 +319,7 @@ describe("the contact page's memory card", () => {
     const user = userEvent.setup();
     const { container } = renderCard(viewWith([emailRow(), noteRow]));
 
-    const strip = container.querySelector(".filterpills");
+    const strip = container.querySelector(".segmented");
     expect(strip).not.toBeNull();
     expect(strip?.closest(".panel-head")).toBeNull();
     expect(strip?.closest(".panel-body")).not.toBeNull();

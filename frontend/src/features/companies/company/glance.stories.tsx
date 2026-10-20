@@ -2,27 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
 import type { components } from "../../../api/schema";
-import { Panel } from "../../../design-system/panel";
 import {
   installFetchStub,
   meRoute,
   StoryProviders,
 } from "../../../testing/story-utils";
-import { ThreadFold } from "./glance";
+import { LatestSection } from "./glance";
 
-// The thread folded inside the account's 360.
-//
-// It arrives CLOSED, so the row itself is the thing to judge: it has to say
-// what is inside — how many exchanges, and the newest one — well enough that a
-// reader can decide whether opening it is worth the half-page it costs. The
-// second frame is that page, which is the only way to see that the teaser and
-// the first row of the list say the same thing rather than two things.
-//
-// It folds inside the 360's lead card, so it is drawn here inside a panel: on
-// its own it would float with no band above it and the summary's measure would
-// be nobody's.
+// What happened on the account lately, as the overview's Latest section.
 
 type Company360 = components["schemas"]["Company360"];
 type Activity = components["schemas"]["Activity"];
@@ -76,59 +64,37 @@ function view(activities: Activity[]): Company360 {
   };
 }
 
-function Fold({ data }: Readonly<{ data: Company360 }>) {
+function Latest({ data }: Readonly<{ data: Company360 }>) {
   installFetchStub({ "GET /me": meRoute({ company: ["read"] }) });
   return (
     <StoryProviders>
       <div style={{ maxWidth: 640 }}>
-        <Panel title="Nordwind Logistik">
-          <ThreadFold
-            view={data}
-            loading={false}
-            onOpenHistory={() => {}}
-            onOpenRecord={() => {}}
-            onOpenEmail={() => {}}
-          />
-        </Panel>
+        <LatestSection
+          view={data}
+          loading={false}
+          onOpenHistory={() => {}}
+          onOpenRecord={() => {}}
+          onOpenEmail={() => {}}
+        />
       </div>
     </StoryProviders>
   );
 }
 
 const meta: Meta = {
-  title: "Records/Company 360/Thread fold",
+  title: "Records/Company 360/Latest",
   parameters: { layout: "padded" },
 };
 export default meta;
 
 type Story = StoryObj;
 
-// Closed, which is how a reader meets it: the count, the newest exchange and
-// its day, with the way to the History tab outside the toggle.
-export const Teased: Story = {
-  render: () => <Fold data={view([inboundEmail, loggedCall])} />,
+// The newest exchanges first, with the way to the History tab beside the title.
+export const Exchanges: Story = {
+  render: () => <Latest data={view([inboundEmail, loggedCall])} />,
 };
 
-// The toggle is the `<summary>` of a `<details>`, which carries no button role
-// of its own — the whole row is the control, so the name it wears is what a
-// reader presses and what these plays reach for.
-const openTheFold =
-  (name: string): NonNullable<Story["play"]> =>
-  async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByText(name));
-  };
-
-// Opened. The teaser's exchange is the list's first row, and the reading it
-// teased is now the message itself.
-export const Opened: Story = {
-  render: () => <Fold data={view([inboundEmail, loggedCall])} />,
-  play: openTheFold("Activity · 2"),
-};
-
-// An account nothing has been filed against: the fold opens on the section's
-// own empty state rather than teasing an exchange it cannot promise.
+// An account nothing has been filed against: the section's own empty state.
 export const NothingLogged: Story = {
-  render: () => <Fold data={view([])} />,
-  play: openTheFold("Activity"),
+  render: () => <Latest data={view([])} />,
 };

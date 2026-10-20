@@ -87,6 +87,7 @@ export const Populated: Story = {
           page,
           won_lifetime: { amount_minor: 0, currency: "EUR" },
           lost_count: 0,
+          won_count: 0,
         },
       }}
     />
@@ -112,6 +113,7 @@ export const Truncated: Story = {
             page: { has_more: true },
             won_lifetime: { amount_minor: 0, currency: "EUR" },
             lost_count: 0,
+            won_count: 0,
           },
         }}
       />

@@ -40,6 +40,7 @@ export function PageZones({
   railClassName,
   aside,
   asideOpen = true,
+  asideFold,
   asideLabel,
   asideClassName,
   className,
@@ -77,6 +78,9 @@ export function PageZones({
   // costs its content nothing. Absent means open, which is what a page with no
   // such toggle means.
   asideOpen?: boolean;
+  // What stands in the aside's track while it is folded: a narrow strip that
+  // brings it back. Absent folds the track to nothing.
+  asideFold?: ReactNode;
   // The aside's accessible name, on the same rule as `railLabel`. Two
   // landmarks sharing one name is a dead end for anyone moving between them,
   // so a page whose aside holds something other than context names it.
@@ -139,6 +143,9 @@ export function PageZones({
         >
           {aside}
         </aside>
+      )}
+      {aside && asideFold && !asideOpen && (
+        <div className="page-zones-aside-fold">{asideFold}</div>
       )}
     </div>
   );

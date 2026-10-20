@@ -38287,6 +38287,26 @@ components:
             from one invoice would state a payment habit the number beside it
             refuses to.
           items: { type: integer }
+        invoiced_by_month:
+          type: array
+          minItems: 12
+          maxItems: 12
+          description: >-
+            Net invoiced per calendar month (the `net_invoiced` fold: issued minus
+            credited, in the installation's base currency) for the twelve months
+            ending with the current one, oldest first. "Current" is today's date in
+            the installation's timezone. A credit note reduces the month of the
+            invoice it credits, as it does in `net_invoiced`.
+
+            Always twelve entries when present: a month with nothing invoiced is
+            there with a zero amount and a zero count, so a chart never has to tell
+            a quiet month from a missing one.
+
+            Absent when the other figures are absent (no connection, unmapped, the
+            first sync still running, or no invoices mirrored), and absent under the
+            same FIN-AC-6 refusal: one invoice in the twelve months without a
+            conversion rate withholds the whole series rather than one bar.
+          items: { $ref: '#/components/schemas/FinanceInvoicedMonth' }
         recent_invoices:
           type: array
           maxItems: 5
@@ -38341,6 +38361,33 @@ components:
             Days between the due date and settlement, or between the due date and
             today while it is still open. Absent when the invoice carries no due
             date — lateness against no deadline is not a reading.
+
+    FinanceInvoicedMonth:
+      type: object
+      description: >-
+        One calendar month of a customer's net invoiced amount, in the installation's
+        base currency.
+      required: [month, amount_minor, currency, count]
+      properties:
+        month:
+          type: string
+          pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$'
+          description: The calendar month, as `YYYY-MM`.
+        amount_minor:
+          type: integer
+          format: int64
+          description: >-
+            Issued minus credited for the invoices issued in the month, in minor
+            units of `currency`. Zero for a month with nothing issued; negative only
+            when credits against the month's invoices exceed them.
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          description: The installation's base currency, the same label `net_invoiced` carries.
+        count:
+          type: integer
+          minimum: 0
+          description: How many invoices were issued in the month. Credit notes are not counted.
 
     RecordViewAck:
       type: object
@@ -38784,7 +38831,7 @@ components:
           enum: [open, won, lost]
           description: |
             Always `open` in the 360's `deals.data` — closed deals are reported by
-            `won_lifetime` and `lost_count`, not listed. The full vocabulary is declared
+            `won_lifetime`, `won_count` and `lost_count`, not listed. The full vocabulary is declared
             because this is the deal's own status field, not a filter echo.
         stage_id: { type: [string, 'null'], format: uuid }
         stage_name: { type: [string, 'null'] }
@@ -38833,14 +38880,21 @@ components:
 
     Company360Deals:
       type: object
-      description: The account's open deals plus the two lifetime figures the header needs.
-      required: [data, page, won_lifetime, lost_count]
+      description: The account's open deals plus the lifetime figures the header needs.
+      required: [data, page, won_lifetime, won_count, lost_count]
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/Company360Deal' } }
         page: { $ref: '#/components/schemas/PageInfo' }
         won_lifetime:
           allOf: [{ $ref: '#/components/schemas/Money' }]
           description: Every won deal on this account, converted at each deal's frozen close-time rate. Never a live re-conversion.
+        won_count:
+          type: integer
+          minimum: 0
+          description: >-
+            How many won deals this account has, over the same deals `won_lifetime` sums.
+            A deal whose amount is masked from the reader still counts here, as it does
+            in `lost_count`: the count is about the deal's existence, not its size.
         lost_count: { type: integer, minimum: 0 }
 
     Company360NextStep:
@@ -41259,7 +41313,7 @@ components:
         records do not support saying anything — never that the section was
         forgotten. A section invented to fill the layout is the failure this
         shape exists to prevent.
-      required: [deal_id, story, generated_at, generated_by]
+      required: [deal_id, story, stage_entered_at, stage_usual_days, generated_at, generated_by]
       properties:
         deal_id: { type: string, format: uuid }
         story:
@@ -41301,6 +41355,31 @@ components:
             Independent of `next` on purpose. Whether there is something to reply
             to is a fact about the deal; which move ranks first is a judgement,
             and the two must not have to agree for the reply to be reachable.
+        stage_entered_at:
+          type: string
+          format: date-time
+          description: |
+            When the deal last entered its current stage: the latest stage-history
+            entry into it, or the deal's creation when it has never moved. The same
+            instant the health score's stage-velocity factor counts from.
+
+            Read fresh on every request, never from the cached card, so the time in
+            stage a client derives from it is current.
+        stage_usual_days:
+          type: [number, 'null']
+          format: double
+          minimum: 1
+          description: |
+            How many days won deals of this pipeline usually spend in this stage: the
+            median of their completed stays in it. The same measurement the health
+            score's stage-velocity factor compares against.
+
+            Null when there is no measurement to report: fewer than ten won deals
+            carry a completed stay in this stage, or their median is under a day.
+            The health score then compares against a fixed default, and that
+            default is never sent here as if it had been measured.
+
+            Read fresh on every request, like `stage_entered_at`.
         generated_at: { type: string, format: date-time }
         generated_by: { $ref: '#/components/schemas/WrittenBy' }
       additionalProperties: false

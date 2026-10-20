@@ -7,9 +7,11 @@ import { EmptyState, Skeleton } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { PanelBody } from "../../design-system/panel";
 import { Popover } from "../../design-system/popover";
+import { RingDot, Rings } from "../../design-system/rings";
 import { useT } from "../../i18n";
 import { CallCard, TodayPanel } from "../records/record360";
 import "./company360.css";
+import { HEALTH_RANK } from "./companylookups";
 import {
   type TodayDimension,
   type TodayReading,
@@ -43,7 +45,10 @@ function DimensionChip({ dimension }: Readonly<{ dimension: TodayDimension }>) {
   const t = useT();
   return (
     <div className="co-360-reading">
-      <dt className="t-caption">{dimension.label}</dt>
+      <dt className="t-caption">
+        <RingDot tone={dimension.tone} />
+        {dimension.label}
+      </dt>
       <dd
         className={
           dimension.tone ? `co-360-reading-${dimension.tone}` : undefined
@@ -75,6 +80,13 @@ function DimensionChip({ dimension }: Readonly<{ dimension: TodayDimension }>) {
             </>
           ) : null}
         </Popover>
+        {/* What the rating rests on, in the rule's own words, under it: the
+            caption that makes a ring's arc a reading rather than a shape. */}
+        {dimension.because ? (
+          <span className="co-360-reading-why t-caption">
+            {dimension.because}
+          </span>
+        ) : null}
       </dd>
     </div>
   );
@@ -138,7 +150,18 @@ export function Company360Call({
       scale={scale}
       footer={footer}
     >
-      <PanelBody className="co-360-dims">
+      <PanelBody className="co-360-dims r360-rings">
+        <Rings
+          label={reading.dimensions
+            .map((dimension) => `${dimension.label}: ${dimension.reading}`)
+            .join(", ")}
+          rings={reading.dimensions.map((dimension) => ({
+            key: dimension.key,
+            value: dimension.step ?? 0,
+            max: HEALTH_RANK.length,
+            tone: dimension.tone,
+          }))}
+        />
         <dl className="co-360-readings">
           {reading.dimensions.map((dimension) => (
             <DimensionChip key={dimension.key} dimension={dimension} />
@@ -164,12 +187,14 @@ export function NeedsList({
   // Tasks tab of its own.
   onOpenTasks?: () => void;
 }>) {
+  const t = useT();
   if (reading.state !== "ready") {
     return <TodayPanel state={reading.state} onOpenTasks={onOpenTasks} />;
   }
   return (
     <TodayPanel
       onOpenTasks={onOpenTasks}
+      restTitle={t("today.alsoOnList")}
       footer={reading.footer}
       notice={reading.notice}
       complete={reading.complete}

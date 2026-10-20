@@ -78,6 +78,7 @@ function view(deals: Deal[], lostCount: number): View {
       page,
       won_lifetime: { amount_minor: 0, currency: "EUR" },
       lost_count: lostCount,
+      won_count: 0,
     },
   };
 }

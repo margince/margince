@@ -118,8 +118,8 @@ export const RailEmployments: Story = {
 };
 
 // The rail's consent slot when a purpose is refused rather than merely
-// unrecorded: verdictClass (contactrail.tsx) reads this as the refused/warning
-// treatment. The readings above carry no consent slot (the header's Write
+// unrecorded: verdictTone (contactconsentpanel.tsx) reads this as the
+// refused/warning treatment. The readings above carry no consent slot (the header's Write
 // verb states the refusal), so this is the one surface that draws it.
 export const RailConsentBlocked: Story = {
   render: () => {

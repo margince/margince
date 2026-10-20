@@ -61,6 +61,18 @@
 .page-zones[data-aside="closed"] > .page-zones-main {
   margin-inline-end: calc(-1 * var(--gapCards));
 }
+/* A page that leaves a strip in the folded pane's place keeps a track for it
+   and its gutter beside the work. */
+.page-zones[data-aside="closed"]:has(> .page-zones-aside-fold) {
+  --asideW: var(--asideFoldW, 0px);
+}
+.page-zones[data-aside="closed"]:has(> .page-zones-aside-fold)
+  > .page-zones-main {
+  margin-inline-end: 0;
+}
+.page-zones > .page-zones-aside-fold {
+  grid-area: aside;
+}
 /* Armed one frame after mount (pagezones.tsx), which is what keeps a page that
    LOADS with its pane open — or with it folded — from animating into the state
    it opened in. Nothing else in this file moves.
@@ -157,7 +169,8 @@
      asked for. */
   .page-zones > .page-zones-main,
   .page-zones > .page-zones-rail-column,
-  .page-zones > .page-zones-aside-column {
+  .page-zones > .page-zones-aside-column,
+  .page-zones > .page-zones-aside-fold {
     grid-area: auto;
   }
   /* The story stays first and full width once the rails sit under it:

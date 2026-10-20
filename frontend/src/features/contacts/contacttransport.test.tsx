@@ -281,19 +281,26 @@ describe("the conversation timeline", () => {
 });
 
 describe("the relationship brief's source chips", () => {
+  // The sources stand behind the pill in the brief's head, and the list it
+  // opens is drawn over the page rather than inside the card.
+  async function openSources() {
+    await userEvent.click(screen.getByRole("button", { name: /source/ }));
+  }
+
   it("names the transport of a cited chat message", async () => {
-    const { container } = render(
+    render(
       <ContactBriefCard
         brief={briefCiting("activity", "a-chat")}
         loading={false}
         view={viewWith({ activities: [aChatMessage] })}
       />,
     );
+    await openSources();
     // The chip's day rides beside the name, so the reader can tell one chat
     // citation from another on the same conversation.
     await screen.findByText("Zalo OA 15 Aug");
 
-    const chip = chipTransportCell(container);
+    const chip = chipTransportCell(document.body);
     expect(chip.textContent).toBe("Zalo OA 15 Aug");
     expect(chip.querySelector(".lucide-message-square")).toBeTruthy();
     expect(chip.querySelector(".lucide-mail")).toBeNull();
@@ -313,6 +320,7 @@ describe("the relationship brief's source chips", () => {
         onOpenEmail={onOpenEmail}
       />,
     );
+    await openSources();
 
     const cite = screen.getByRole("button", { name: /Re: the pilot/ });
     await userEvent.click(cite);
@@ -322,8 +330,8 @@ describe("the relationship brief's source chips", () => {
   // The transport chip is still right for every kind that is NOT mail, which
   // is the direction a one-sided change would break: a card that stopped
   // naming transports altogether would pass an email-only assertion.
-  it("still names the transport of a cited call", () => {
-    const { container } = render(
+  it("still names the transport of a cited call", async () => {
+    render(
       <ContactBriefCard
         brief={briefCiting("activity", "a-call")}
         loading={false}
@@ -334,14 +342,15 @@ describe("the relationship brief's source chips", () => {
         }}
       />,
     );
+    await openSources();
 
-    const chip = chipTransportCell(container);
+    const chip = chipTransportCell(document.body);
     expect(chip.textContent).toBe("Call 15 Aug");
   });
 
   // A message this reader is outside the audience of names no subject and
   // opens nothing. The citation says a source exists without disclosing it.
-  it("neither names nor opens a cited mail that is withheld", () => {
+  it("neither names nor opens a cited mail that is withheld", async () => {
     const onOpenEmail = vi.fn();
     render(
       <ContactBriefCard
@@ -351,6 +360,7 @@ describe("the relationship brief's source chips", () => {
         onOpenEmail={onOpenEmail}
       />,
     );
+    await openSources();
 
     expect(screen.queryByText("Angebot Q4")).toBeNull();
     expect(screen.getByText("Not shared with you")).toBeTruthy();
@@ -361,16 +371,17 @@ describe("the relationship brief's source chips", () => {
   // The brief cites what the WRITER read, which is not bounded by the page of
   // activities this reader was handed. A citation the page cannot resolve is
   // named for the one thing it certainly is.
-  it("claims no transport for a citation it cannot resolve", () => {
-    const { container } = render(
+  it("claims no transport for a citation it cannot resolve", async () => {
+    render(
       <ContactBriefCard
         brief={briefCiting("activity", "a-not-on-this-page")}
         loading={false}
         view={viewWith({ activities: [aChatMessage] })}
       />,
     );
+    await openSources();
 
-    const chip = chipTransportCell(container);
+    const chip = chipTransportCell(document.body);
     expect(chip.textContent).toBe("Activity");
     expect(chip.querySelector(".lucide-mail")).toBeNull();
     expect(chip.querySelector(".lucide-message-square")).toBeNull();

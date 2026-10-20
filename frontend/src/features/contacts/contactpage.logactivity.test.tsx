@@ -68,11 +68,12 @@ describe("logging an activity", () => {
       name: /Log activity/,
     });
     expect(button).toHaveProperty("disabled", true);
-    expect(
-      within(header).getByText(
-        "You do not have permission to log activities on this record.",
-      ),
-    ).toBeTruthy();
+    // Said once on the page, in the record's access note, and named by the
+    // verb as its description.
+    const reason = screen.getByText(
+      "You do not have permission to log activities on this record.",
+    );
+    expect(button.getAttribute("aria-describedby")).toBe(reason.id);
   });
 
   // "Add task" issues the same POST /activities as "Log activity", so the
@@ -88,7 +89,7 @@ describe("logging an activity", () => {
     });
     expect(addTask).toHaveProperty("disabled", true);
     expect(
-      within(header).getAllByText(
+      screen.getAllByText(
         "You do not have permission to log activities on this record.",
       ),
     ).toHaveLength(1);

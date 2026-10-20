@@ -47,13 +47,24 @@ export function timelineSpineSource(
       data: activities
         .filter((row) => row.kind === "task" && !row.is_done)
         .sort((a, b) => dueOrder(a.due_at) - dueOrder(b.due_at))
-        .map((task) => ({
-          activity_id: task.id,
-          subject: task.subject ?? "",
-          due_at: task.due_at,
-          overdue: Boolean(task.due_at && Date.parse(task.due_at) < at),
-        })),
+        .map((task) => spineTask(task, at)),
     },
+  };
+}
+
+/**
+ * spineTask is one open task as a stop ahead on the thread. It is overdue once
+ * its due day is behind the instant `at`.
+ */
+export function spineTask(
+  task: Pick<Activity, "id" | "subject" | "due_at">,
+  at: number,
+): NonNullable<SpineSource["next_steps"]>["data"][number] {
+  return {
+    activity_id: task.id,
+    subject: task.subject ?? "",
+    due_at: task.due_at,
+    overdue: Boolean(task.due_at && Date.parse(task.due_at) < at),
   };
 }
 

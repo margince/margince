@@ -8,6 +8,7 @@ import { OffsiteLink } from "../../design-system/offsitelink";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { Popover } from "../../design-system/popover";
 import { RecordCard } from "../../design-system/recordcard";
+import { RecordOriginFacts } from "../../design-system/recordfacts";
 import {
   type SectionState,
   SurfaceState,
@@ -25,14 +26,15 @@ import { RecordCustomFields } from "../records/recordcustomfields";
 import { RecordTeam } from "../records/recordteam";
 import { CompanyReachCard } from "./company-reach";
 import { CompanyDetails } from "./companydetails";
-import { DealsSection } from "./companyraildeals";
 import { CompanyProfileDetails } from "./companyraildetails";
 import { ProjectsSection } from "./companyrailprojects";
 import {
+  AllRowsLink,
   contactRole,
   contactsSlice,
   RAIL_ROW_LIMIT,
   SectionSummary,
+  SectionTitle,
   sectionAnswered,
 } from "./companyrailshared";
 import { CompanyTriageSection } from "./companytriage";
@@ -43,29 +45,10 @@ import { CompanyTriageSection } from "./companytriage";
 import "./company360.css";
 import { ListsSection } from "./companyraillists";
 
-// The record page's LEFT rail (mockup State A): the account's context,
-// beside the work rather than under it. Passed to RecordView's `rail` slot,
-// so it takes the wider of the two rail shares (page-zones-rail: 3fr/7fr)
-// rather than the narrower `aside` share a right-hand column would get.
-//
-// Drawn as separate panels, each answering one question about the account:
-// its details and tags, its registration, its team, its open deals, its
-// projects, its contacts, its hold, in the order a reader works down the
-// column, rather than the disclosures the rail used to fold into one card: a
-// hairline inside a panel reads as one story about that panel's own subject, and a
-// panel's own edge is what tells a reader they have moved on to a different
-// one. Tags file under Details rather than in their own panel: a tag is a
-// fact about the account, on the same card as the rest of them.
-//
-// Health moved to the readings row above the tabs, so it is not repeated
-// here — two copies of the same verdict is a value the reader has to
-// reconcile. "Our team on this account" and "Leads from this company" are
-// not drawn: neither has a field or an endpoint behind it yet.
-//
-// The rail is not rendered while the composer is open. That is the page's
-// decision rather than this component's: the drawer opens over the page as
-// its own overlay, and the rail standing behind it would only be two things
-// competing for the same glance.
+// The record page's fields column: what the account is. It holds the details
+// and custom fields, their origin, the registration and the lists. Each has a
+// panel of its own, because a panel's edge tells a reader the question changed.
+// How the account is looked after stands on Profile (CompanyFiling below).
 
 type Company = components["schemas"]["Company"];
 type Company360 = components["schemas"]["Company360"];
@@ -76,8 +59,6 @@ export function CompanyRail({
   companyId,
   company,
   view,
-  loading,
-  onTab,
 }: Readonly<{
   companyId: string;
   // The page's own resolved record, read regardless of how the composite
@@ -86,32 +67,13 @@ export function CompanyRail({
   // going blank on a read the page already has the answer to.
   company?: Company;
   view?: Company360;
-  // The composite read `view` comes off is still in flight. Threaded to the
-  // sections that read `view` straight (Deals, Contacts, Tags) so their
-  // `sectionState` calls can tell "still loading" apart from "the read
-  // failed" — both hand a section an undefined `view`, and without this flag
-  // every one of them reads the failed state for as long as the read runs,
-  // flashing "could not be loaded" on every ordinary page open.
-  loading: boolean;
-  // Where each panel's header link goes: Deals/Contacts switch the record's own
-  // tab strip, Details opens Profile. One callback rather than three, because
-  // every use is the same verb aimed at a different tab.
-  onTab: (tab: "deals" | "contacts" | "profile") => void;
 }>) {
   const t = useT();
-  // The same per-row answer the company's other verbs read: an archived
-  // company, or one this seat may read but not write, takes no new
-  // responsibilities.
   const resolved = view?.company ?? company;
-  const canWriteCompany =
-    useCanWriteRecord("company", resolved) && !resolved?.archived_at;
   return (
-    // A plain div: the shell's own <aside> is the landmark around this, and a
-    // second labelled region inside it would give a reader two names for one
-    // column. Inside it ONE pane of named sections (DESIGN.md §6): the
-    // account's fields, its deals, its contacts, the hold, its tags — each a
-    // disclosure with its own summary, so the column reads as one object with
-    // five slices rather than five cards a reader has to assemble.
+    // A plain div: the shell's own <aside> is the landmark around this. A
+    // second labelled region inside it would give one column two names. It
+    // holds what the account is: its fields, origin, registration and lists.
     <div className="co-rail">
       {/* Details lead the column: the account's own fields are the first
             thing a reader orients by, and they draw from the page's already-
@@ -120,6 +82,15 @@ export function CompanyRail({
         <>
           <CompanyDetails company={resolved} />
           <RecordCustomFields kind="company" record={resolved} />
+          {/* When the row was written and by whom: a fact about the record,
+              filed with its fields rather than in the line under its name. */}
+          <Panel title={t("record.origin")}>
+            <PanelBody>
+              {/* The record row the head reads, before the 360's copy of it:
+                  the two may carry different provenance mid-refresh. */}
+              <RecordOriginFacts record={company ?? resolved} />
+            </PanelBody>
+          </Panel>
         </>
       )}
       <Panel>
@@ -134,41 +105,65 @@ export function CompanyRail({
               </PanelBody>
             </Disclosure>
           )}
-          <Disclosure
-            className="co-sect"
-            summary={<SectionSummary title={t("assignments.title")} />}
-          >
-            <RecordTeam
-              recordType="company"
-              recordId={companyId}
-              readOnly={!canWriteCompany}
-              bare
-            />
-          </Disclosure>
-          {/* Both summaries stand on every tab, the open one included: the
-            column is the reader's anchor while they move between tabs, and
-            each shows only the top RAIL_ROW_LIMIT rows — a summary beside a
-            tab is not a duplicate of it, a full copy would be. */}
-          {/* The server refuses an archived account's 360 and its lists. */}
-          {!resolved?.archived_at && (
-            <>
-              <DealsSection view={view} loading={loading} onTab={onTab} />
-              <ProjectsSection view={view} loading={loading} onTab={onTab} />
-              <ContactsSection view={view} loading={loading} onTab={onTab} />
-              {/* Beside the contacts, answering the same question from the
-                  other side. Those are the contacts on file here. This is who
-                  on the team can reach the ones that are not. */}
-              {resolved && <CompanyReachCard companyId={resolved.id} />}
-              <ListsSection companyId={companyId} />
-            </>
-          )}
-          <CompanyHoldSection company={resolved} />
-          {/* Beside the hold, and for the same reason: both are about the
-            account's mail DOMAIN rather than about the work on it. */}
-          <CompanyTriageSection companyId={companyId} />
+          {/* The server refuses an archived account's lists. */}
+          {!resolved?.archived_at && <ListsSection companyId={companyId} />}
         </DisclosureGroup>
       </Panel>
     </div>
+  );
+}
+
+/**
+ * CompanyFiling is how the account is looked after beyond its fields. It holds
+ * who is responsible, its projects, who on the team can reach it, and its mail
+ * domain's hold. It stands on the Profile tab, so the fields column keeps to
+ * what the account is.
+ */
+export function CompanyFiling({
+  companyId,
+  company,
+  view,
+  loading,
+  onTab,
+}: Readonly<{
+  companyId: string;
+  company?: Company;
+  view?: Company360;
+  loading: boolean;
+  onTab: (tab: "deals" | "contacts" | "profile") => void;
+}>) {
+  const t = useT();
+  const resolved = view?.company ?? company;
+  const canWriteCompany =
+    useCanWriteRecord("company", resolved) && !resolved?.archived_at;
+  return (
+    <Panel>
+      <DisclosureGroup>
+        <Disclosure
+          className="co-sect"
+          summary={<SectionSummary title={t("assignments.title")} />}
+        >
+          <RecordTeam
+            recordType="company"
+            recordId={companyId}
+            readOnly={!canWriteCompany}
+            bare
+          />
+        </Disclosure>
+        {/* The server refuses an archived account's 360 and its lists. */}
+        {!resolved?.archived_at && (
+          <>
+            <ProjectsSection view={view} loading={loading} onTab={onTab} />
+            {/* Who on the team can reach the contacts not yet on file. */}
+            {resolved && <CompanyReachCard companyId={resolved.id} />}
+          </>
+        )}
+        <CompanyHoldSection company={resolved} />
+        {/* Beside the hold, and for the same reason: both are about the
+            account's mail domain rather than about the work on it. */}
+        <CompanyTriageSection companyId={companyId} />
+      </DisclosureGroup>
+    </Panel>
   );
 }
 
@@ -219,12 +214,11 @@ function hostOf(website: string | null | undefined): string | undefined {
 }
 
 /**
- * ContactsSection is a glance at the roster: who is here, how they have
- * answered, and, where the graph read supports it, the colleagues already in
- * contact with them. The set-role and route-in verbs stay on the Contacts tab's
- * own roster rather than being rebuilt here a second time.
+ * ContactsSection is who is on the account: the top of the roster as pills, each
+ * opening the contact. The set-role and route-in verbs stay on the Contacts
+ * tab's own roster rather than being rebuilt here a second time.
  */
-function ContactsSection({
+export function ContactsSection({
   view,
   loading,
   onTab,
@@ -235,66 +229,60 @@ function ContactsSection({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  // Already ranked. The server orders the contacts section by engagement, then
-  // relationship strength, then id (contacts.RankContacts) BEFORE it cuts to
-  // twenty-five, so re-sorting here would be a second spelling of that rule —
-  // and the copy that drifts, since only one of the two is what chose which
-  // twenty-five arrived.
+  // Already ranked: the server orders contacts by engagement, strength and id
+  // (contacts.RankContacts) before it cuts to twenty-five. Re-sorting here
+  // would be a second spelling of that rule.
   const { contacts, count, state } = contactsSlice(view, loading);
   const answered = sectionAnswered(state);
-  // Starts open while the reader has opened no other section of the rail.
   return (
-    <Disclosure
-      className="co-sect"
-      open
-      summary={
-        <SectionSummary
+    <Panel
+      title={
+        <SectionTitle
           title={t("co.rail.contacts.title")}
-          count={answered ? count : undefined}
+          count={
+            answered && count != null ? formatNumber(count, locale) : undefined
+          }
         />
       }
+      titleAction={
+        state === "ready" ? (
+          <AllRowsLink
+            label={t("co.contacts.all")}
+            onOpen={() => onTab("contacts")}
+          />
+        ) : undefined
+      }
     >
-      {state === "ready" ? (
-        // The top of the byReach order: the rail glances at who matters most
-        // on the account, and the Contacts tab is the full roster.
-        <ul className="record-card-list">
-          {contacts.slice(0, RAIL_ROW_LIMIT).map((contact) => (
-            <li key={contact.contact_id}>
-              <ContactCard contact={contact} />
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <PanelBody>
-          <SurfaceState
-            state={state}
-            emptyLabel={t("co.rail.contacts.empty")}
-            loadingLabel={t("co.rail.contacts.title")}
-          >
-            {null}
-          </SurfaceState>
-          {/* The empty state's one verb; the foot below stands only once
-              there are rows, so an empty roster never offers the same
-              tab twice under two names. */}
-          {state === "empty" && (
-            <div className="card-actions">
-              <Button variant="ghost" onClick={() => onTab("contacts")}>
-                {t("co.rail.contacts.add")}
-              </Button>
-            </div>
-          )}
-        </PanelBody>
-      )}
-      {state === "ready" && (
-        <div className="card-actions">
-          <Button variant="ghost" onClick={() => onTab("contacts")}>
-            {count != null
-              ? t("co.rail.all", { count: formatNumber(count, locale) })
-              : t("co.rail.allUncounted")}
-          </Button>
-        </div>
-      )}
-    </Disclosure>
+      <PanelBody>
+        {state === "ready" ? (
+          <ul className="record-card-list record-card-pills">
+            {contacts.slice(0, RAIL_ROW_LIMIT).map((contact) => (
+              <li key={contact.contact_id}>
+                <ContactCard contact={contact} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <>
+            <SurfaceState
+              state={state}
+              emptyLabel={t("co.rail.contacts.empty")}
+              loadingLabel={t("co.rail.contacts.title")}
+            >
+              {null}
+            </SurfaceState>
+            {/* The empty state's one verb. */}
+            {state === "empty" && (
+              <div className="card-actions">
+                <Button variant="ghost" onClick={() => onTab("contacts")}>
+                  {t("co.rail.contacts.add")}
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -308,7 +296,6 @@ function ContactCard({ contact }: Readonly<{ contact: Contact }>) {
       identity={contact.contact_id}
       href={routeHash({ screen: "contacts", id: contact.contact_id })}
       position={contactRole(contact)}
-      email={contact.primary_email ?? undefined}
       aside={
         colleagues.length > 0 && (
           /* The rail's own wrapper: whether the stack's trigger wears a

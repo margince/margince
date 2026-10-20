@@ -1,9 +1,13 @@
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
-import { Avatar, Badge, Button } from "../../design-system/atoms";
+import {
+  Avatar,
+  Badge,
+  Button,
+  SegmentedControl,
+} from "../../design-system/atoms";
 import { EmailEntry } from "../../design-system/emailentry";
-import { FilterPills } from "../../design-system/filterpills";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
@@ -125,20 +129,20 @@ export function ContactMemory({
         </Button>
       }
     >
-      {/* The cut sits UNDER the head, not in it. Five options do not fit beside
-          the title on the one band a panel head is, and a strip that wrapped to
-          a second row gave this card a head taller than every other card in the
-          stack. Under it, the row reads as what it is: what narrows the list
-          below it. FilterPills rather than a SegmentedControl, because these
-          are cuts THROUGH a list and not a setting: the same row the History
-          tab draws over the same conversations, so one record teaches one
-          control. */}
+      {/* The cut sits under the head, not in it: five options beside the title
+          gave this card a taller head than every other card in the stack. One
+          compact switch, because the glance shows a handful of rows and the
+          cut is a quick narrowing of them, not a lane through a ledger. */}
       <PanelBody>
-        <FilterPills
-          pills={FILTERS.map((value) => ({
-            value,
-            label: t(`contact.memory.${value}`),
-          }))}
+        <SegmentedControl
+          options={FILTERS}
+          labels={{
+            all: t("contact.memory.all"),
+            email: t("contact.memory.email"),
+            meetings: t("contact.memory.meetings"),
+            calls: t("contact.memory.calls"),
+            notes: t("contact.memory.notes"),
+          }}
           value={filter}
           onChange={setFilter}
           label={t("contact.memory.title")}

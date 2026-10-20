@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { Badge } from "../../design-system/atoms";
+import { Badge, Button } from "../../design-system/atoms";
 import { EvidenceMark } from "../../design-system/evidencemark";
 import { Heading } from "../../design-system/heading";
 import {
@@ -41,6 +41,35 @@ export function SectionSummary({
       </Heading>
       {count != null && <Badge>{formatNumber(count, locale)}</Badge>}
     </span>
+  );
+}
+
+/**
+ * SectionTitle is an overview section's name, with how many rows it holds on
+ * a quiet line under it. `count` is absent, not zero, while the section is not
+ * answered.
+ */
+export function SectionTitle({
+  title,
+  count,
+}: Readonly<{ title: string; count?: string }>) {
+  return (
+    <>
+      {title}
+      {count != null && <span className="co-section-count">{count}</span>}
+    </>
+  );
+}
+
+/** AllRowsLink opens the tab that holds every row of a section. */
+export function AllRowsLink({
+  label,
+  onOpen,
+}: Readonly<{ label: string; onOpen: () => void }>) {
+  return (
+    <Button variant="link" onClick={onOpen}>
+      {label}
+    </Button>
   );
 }
 

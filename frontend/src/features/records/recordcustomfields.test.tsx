@@ -207,6 +207,7 @@ it("keeps the edit verb in place, disabled, while another field saves", async ()
 });
 
 it("reads an unset money or address field as unset, with nothing to follow", async () => {
+  const user = userEvent.setup();
   catalog([budget, wiki]);
   render(
     <StoryProviders>
@@ -215,6 +216,10 @@ it("reads an unset money or address field as unset, with nothing to follow", asy
         record={{ id: "record1", version: 1, writable: true }}
       />
     </StoryProviders>,
+  );
+  // Unset fields fold behind one control until the reader asks for them.
+  await user.click(
+    await screen.findByRole("button", { name: /^Show \d+ empty fields?$/ }),
   );
   expect(
     (await screen.findByRole("button", { name: "Change Annual budget" }))
@@ -267,6 +272,9 @@ it.each(["company", "contact", "deal", "lead"] as const)(
           }}
         />
       </StoryProviders>,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /^Show \d+ empty fields?$/ }),
     );
     await user.click(
       await screen.findByRole("button", { name: "Change Customer tier" }),

@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -39,7 +39,8 @@ describe("CompanyRail", () => {
     );
   });
 
-  it("still draws every known row when the record carries no value for it", () => {
+  it("still draws every known row when the record carries no value for it", async () => {
+    const user = userEvent.setup();
     stub();
     const bare = {
       ...company,
@@ -52,11 +53,13 @@ describe("CompanyRail", () => {
       owner_id: null,
     };
     renderRail({ view: view({ company: bare }) });
-    // Every row's label still draws: an absent field is a fact about the
-    // record, not a reason to hide its row. Industry (InlineText) and Company
+    // The unset rows wait behind one link, and every one of them comes back
+    // when the reader opens it. Industry (InlineText) and Company
     // size (InlineChoice with `hideLabel`) draw no visible label of their own.
     // Both get it from FieldRow's label column only, so it is checked directly.
     // Address is six rows, one per part, and City stands in for the other five.
+    expect(screen.queryByText("Industry")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /empty field/ }));
     expect(screen.getByText("Industry")).toBeInTheDocument();
     expect(screen.getByText("Company size")).toBeInTheDocument();
     expect(screen.getByText("Address")).toBeInTheDocument();
@@ -367,24 +370,5 @@ describe("CompanyRail", () => {
         address: { city: "Stuttgart", country: "DE" },
       }),
     );
-  });
-
-  it("marks a withheld section restricted instead of drawing it empty", () => {
-    stub();
-    renderRail({ view: view({ sections_omitted: ["contacts"] }) });
-    expect(screen.getAllByText("Hidden for your role").length).toBeGreaterThan(
-      0,
-    );
-    // A withheld section carries no header link. A count would have nothing
-    // true to show, and an "Add" would write into a section the reader cannot
-    // see. Scoped to the Contacts panel: Deals shows its own "Add" when empty.
-    const contactsPanel = screen
-      .getByRole("heading", { name: "Key contacts" })
-      .closest<HTMLElement>("details");
-    expect(contactsPanel).not.toBeNull();
-    expect(
-      contactsPanel &&
-        within(contactsPanel).queryByRole("button", { name: /All \d|^Add$/ }),
-    ).toBeNull();
   });
 });

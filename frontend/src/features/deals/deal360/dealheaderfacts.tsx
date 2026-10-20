@@ -12,11 +12,8 @@
 import type { ReactNode } from "react";
 import type { components } from "../../../api/schema";
 import { EntityRef, rosterOwnerName } from "../../../components/entityref";
-import { Popover } from "../../../design-system/popover";
-import { provenanceOf } from "../../../design-system/provenanceof";
 import { FieldGuard } from "../../../design-system/rbac";
 import { Fact, RecordFacts } from "../../../design-system/recordfacts";
-import { ProvenanceTag } from "../../../design-system/trust";
 import { calendarDaysUntil } from "../../../format/daysuntil";
 import {
   formatDayMonth,
@@ -27,7 +24,7 @@ import { type Locale, translatePlural, useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { useMemberName } from "../../../lib/membernames";
 import { useRecordZone } from "../../../lib/recordzone";
-import { useViewerId } from "../../../lib/session";
+import "./dealheaderfacts.css";
 import { useInstallationSettings } from "../../../lib/uploadlimit";
 import {
   LostReasonFact,
@@ -102,37 +99,28 @@ export function DealSubtitle({
 }
 
 /**
- * DealIdentityFacts is the head's facts strip: what the deal is worth, where
- * it sits on the board, when it is due, whose deal it is, which account it
- * is on and how it reached Margince — the same six a rep asked for on every
- * other record's head. A partner and how a contract-less deal was won follow
- * when the deal carries either; they used to stand on the identity line for
- * the same reason DealDetails argues for the partner alone — a fact a
- * commission is computed from has to be visible on the record it came from.
+ * DealIdentityFacts is the head's facts line: what the deal is worth, when it
+ * is due, whose deal it is and which account it is on. Where it sits on the
+ * board is the 360's stage path, and how it reached Margince is with its
+ * fields (RecordOriginFacts). A partner and how a contract-less deal was won
+ * follow when the deal carries either. A fact a commission is computed from
+ * has to be visible on the record it came from.
  */
 export function DealIdentityFacts({
   deal,
-  stages,
   locale,
 }: Readonly<{
   deal: DealIdentity;
-  // The stages the page already sorted for the board, not a second read.
-  stages: readonly { id: string; name: string }[];
   locale: Locale;
 }>): ReactNode {
   const t = useT();
   const zone = useRecordZone();
-  const viewerId = useViewerId();
   // The installation's own reporting currency, read here rather than handed
   // down: only this cell converts, and an unnamed base is not a euro base.
   const baseCurrency = useInstallationSettings().data?.base_currency ?? null;
   // Named by id: an unowned deal carries no id and asks nothing.
   const ownerName = useMemberName(deal.owner_id);
   const masked = deal.masked_fields ?? [];
-  // An em dash rather than the stage id: a deal whose stage was archived out
-  // from under it has no row to name, and printing a UUID where a stage name
-  // goes reads as a fault.
-  const stage = stages.find((candidate) => candidate.id === deal.stage_id);
   return (
     <RecordFacts>
       <Fact label={t("deals.amount")}>
@@ -162,14 +150,13 @@ export function DealIdentityFacts({
           </span>
         )}
       </Fact>
-      <Fact label={t("deals.stage")}>{stage?.name ?? "—"}</Fact>
       {/* Always, date or none: when a deal lands is one of the facts a reader
           checks first, and a cell that disappears while nobody has said reads
           as a deal with no question outstanding. */}
-      <Fact label={t("deal.strip.close")}>
+      <Fact label={t("deal.strip.close")} named>
         <CloseReading deal={deal} locale={locale} zone={zone} />
       </Fact>
-      <Fact label={t("list.owner")}>
+      <Fact label={t("list.owner")} named>
         {rosterOwnerName(deal.owner_id, ownerName, t, t("co.pulse.unowned"))}
       </Fact>
       {masked.includes("company_id") ? (
@@ -183,23 +170,6 @@ export function DealIdentityFacts({
           </Fact>
         )
       )}
-      <Fact label={t("history.field.source")}>
-        <Popover
-          label={
-            <ProvenanceTag
-              provenance={provenanceOf(
-                deal.captured_by,
-                viewerId,
-                deal.author,
-                deal.source,
-                deal.imported_from,
-              )}
-            />
-          }
-        >
-          <p className="t-body">{deal.source || t("trust.sourceUnknown")}</p>
-        </Popover>
-      </Fact>
       {masked.includes("partner_company_id") ? (
         // No attribution word here: what the partner did is withheld WITH
         // the partner, so naming one would decide what a partner nobody

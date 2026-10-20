@@ -32,6 +32,9 @@ const (
 	// answers insufficient-sample instead of a number: five settled invoices
 	// is the floor at which a pattern is a pattern rather than an anecdote.
 	MinTimelinessSample = 5
+	// InvoicedMonths is how many calendar months the monthly series covers,
+	// the current one included.
+	InvoicedMonths = 12
 )
 
 // Invoice is one mirrored invoice, reduced to what the formulas read.
@@ -132,6 +135,37 @@ func netInvoicedBetween(
 		out.Records++
 	}
 	return out
+}
+
+// MonthInvoiced is FIN-FORM-1 over one calendar month.
+type MonthInvoiced struct {
+	// Month is the month's first day, a DATE at UTC midnight like IssuedOn.
+	Month time.Time
+	NetInvoiced
+}
+
+// NetInvoicedByMonth folds FIN-FORM-1 over the InvoicedMonths calendar months
+// ending with today's, oldest first, a quiet month included as a zero. today is
+// the installation's calendar day, and an invoice dated after it is a forecast.
+//
+// The second return is false on the FIN-AC-6 refusal in any month: one missing
+// bar would read as a month nothing was billed in.
+func NetInvoicedByMonth(invoices []Invoice, today time.Time) ([]MonthInvoiced, bool) {
+	first := time.Date(today.Year(), today.Month()-(InvoicedMonths-1), 1, 0, 0, 0, 0, time.UTC)
+	series := make([]MonthInvoiced, 0, InvoicedMonths)
+	for i := range InvoicedMonths {
+		from := first.AddDate(0, i, 0)
+		to := from.AddDate(0, 1, -1)
+		if to.After(today) {
+			to = today
+		}
+		net := netInvoicedBetween(invoices, from, to, daysBetween(from, to)+1)
+		if net.RateUnavailable {
+			return nil, false
+		}
+		series = append(series, MonthInvoiced{Month: from, NetInvoiced: net})
+	}
+	return series, true
 }
 
 // issuedInWindow answers whether one row belongs to FIN-FORM-1's positive

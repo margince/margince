@@ -73,15 +73,7 @@ func (s *Store) effectiveToday(ctx context.Context, tx pgx.Tx) (time.Time, error
 // rate sheet and the Value sort both judge "today" through it. So the rate in
 // force on the sheet is the rate the list converts at.
 func (s *Store) todayIn(ctx context.Context, tx pgx.Tx, zoneOf InstallationValue) (time.Time, error) {
-	tzName, err := zoneOf(ctx, tx)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("resolve the installation's timezone: %w", err)
-	}
-	loc, err := installationZone(tzName)
-	if err != nil {
-		return time.Time{}, err
-	}
-	return storekit.WorkspaceDay(s.clock(), loc), nil
+	return storekit.TodayIn(ctx, tx, zoneOf, s.clock())
 }
 
 // SetFxRate appends (or corrects, same installation-zone day) one effective-

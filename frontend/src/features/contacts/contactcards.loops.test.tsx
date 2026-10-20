@@ -95,14 +95,14 @@ describe("the commitments card's due status", () => {
     // The reported case: 23 hours past due read as "due yesterday" here while
     // every other surface called it overdue.
     renderDue(at(-23 * HOUR));
-    expect(screen.getByText("overdue by less than a day")).toBeTruthy();
+    expect(screen.getByText("Overdue by less than a day")).toBeTruthy();
     expect(screen.queryByText(/^due /)).toBeNull();
   });
 
   it("counts whole days only once a whole day has passed", () => {
     renderDue(at(-49 * HOUR));
     // Two whole days and one hour is two days late, never three.
-    expect(screen.getByText("overdue 2 days")).toBeTruthy();
+    expect(screen.getByText("Overdue 2 days")).toBeTruthy();
   });
 
   it("is not overdue at the instant it falls due", () => {
@@ -188,7 +188,7 @@ describe("open tasks are commitments too", () => {
 
     // One whole day, in the singular: the wording comes from the reader's own
     // plural rule rather than from one string with a count poured into it.
-    expect(screen.getByText("overdue 1 day")).toBeDefined();
+    expect(screen.getByText("Overdue 1 day")).toBeDefined();
   });
 
   it('keeps "You" on a task the reader holds themselves', async () => {

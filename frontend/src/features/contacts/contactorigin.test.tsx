@@ -6,9 +6,9 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { RecordOriginFacts } from "../../design-system/recordfacts";
 import { LocaleProvider } from "../../i18n";
 import { archivedContact } from "./contactarchived.fixtures";
-import { ContactFacts } from "./contactfacts";
 
 beforeEach(() => {
   vi.stubGlobal("fetch", () =>
@@ -33,7 +33,7 @@ function show(source: string) {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <ContactFacts contact={{ ...archivedContact, source }} />
+        <RecordOriginFacts record={{ ...archivedContact, source }} />
       </LocaleProvider>
     </QueryClientProvider>,
   );

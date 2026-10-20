@@ -438,7 +438,7 @@ describe("company view — where the record came from", () => {
 });
 
 describe("company view — the account's own tabs", () => {
-  it("keeps the rail summary beside the Contacts tab", async () => {
+  it("names a contact in the overview's Contacts section and on the Contacts tab", async () => {
     stub(
       view({
         contacts: {
@@ -469,15 +469,20 @@ describe("company view — the account's own tabs", () => {
       }),
     );
     renderCompany();
-    await screen.findByRole("complementary", { name: "Context" });
+    // The overview names the account's contacts in a section of its own.
+    const roster = (await screen.findAllByRole("heading"))
+      .find((heading) => heading.textContent?.startsWith("Contacts"))
+      ?.closest<HTMLElement>(".panel");
+    if (!roster) {
+      throw new Error("the overview draws no Contacts section");
+    }
+    expect(await within(roster).findByText("Christian Hagemeyer")).toBeTruthy();
 
+    // The tab is the roster in full, and the fields column keeps no copy.
     await userEvent.click(screen.getByRole("button", { name: /^Contacts/ }));
-    // Twice: the tab is the roster in full, and the rail's capped summary
-    // stands beside it as the reader's anchor across tabs. Both are checked on
-    // their own, so the test fails if either goes missing.
     const rail = await screen.findByRole("complementary", { name: "Context" });
-    expect(within(rail).getByText("Christian Hagemeyer")).toBeTruthy();
-    expect(screen.getAllByText("Christian Hagemeyer")).toHaveLength(2);
+    expect(await screen.findByText("Christian Hagemeyer")).toBeTruthy();
+    expect(within(rail).queryByText("Christian Hagemeyer")).toBeNull();
   });
 
   it("offers the four tabs the record page has, in order", async () => {

@@ -36,6 +36,7 @@ import type { MessageKey } from "../../../i18n/en";
 import { useRecordZone } from "../../../lib/recordzone";
 import { EXCHANGE_KINDS, type ExchangeKind, isExchange } from "./exchangekinds";
 import { isContactBy, lastContactAt, waitingSince } from "./lastcontact";
+import { stopColumn } from "./spine.timescale";
 import "./spine.css";
 
 /**
@@ -87,6 +88,7 @@ export type SpineSource = {
       // carries whether the words are this reader's: a withheld message names
       // itself and opens nothing.
       email_summary?: { display_status: string } | null;
+      content_state?: string | null;
       // Capture's own conversation id. What makes a thread a thread — a note
       // or a hand-logged call carries none, and those fall back to their
       // subject.
@@ -136,6 +138,9 @@ export type SpineCommercial = {
 type Stop = {
   key: string;
   tone: "past" | "gap" | "ahead" | "overdue" | "now";
+  // The instant the stop stands at, which places it on the thread's time
+  // scale. Absent for a stop with no one date (the folded earlier history).
+  at?: string;
   when: string;
   title: ReactNode;
   detail?: ReactNode;
@@ -189,11 +194,10 @@ export function RecordSpine({
   if (stops.length === 0) {
     return null;
   }
-  // The gap takes half again the width of the stops either side of it. It is
-  // the one stop with no record behind it, and on a horizontal axis the WIDTH
-  // is the waiting — a silence drawn the same width as the meeting before it
-  // says the two took the same amount of time.
-  const columns = stops.map(todayColumn).join(" ");
+  // Each stop is as wide as the time it covers (stopColumn). On a horizontal
+  // axis the width is the waiting. A silence drawn as wide as the meeting
+  // before it would say the two took the same amount of time.
+  const columns = stops.map(stopColumn).join(" ");
   return (
     <PanelBody className="co-spine">
       {/* The axis runs ACROSS, not down: a reader takes the account's shape —
@@ -231,31 +235,6 @@ export function RecordSpine({
       </div>
     </PanelBody>
   );
-}
-
-// The narrowest a stop may be drawn. A date is set on one line — broken across
-// two it reads as two moments — so under any less than this the dates run into
-// each other and the row becomes one smear of digits. At the floor the track
-// outgrows its card and the thread scrolls, which is what this axis already
-// does with more history than fits; crushing the stops is what it may not do.
-const STOP_FLOOR = "6.5rem";
-
-// How much of the axis a stop takes. The gap takes half again the stops either
-// side of it — on a horizontal axis the width IS the waiting — and today's
-// marker takes only its own label, because it is a line and not a span of
-// time.
-function todayColumn(stop: Stop): string {
-  if (stop.tone === "now") {
-    // Its label's width and not a share of the axis. `auto` reads the stop's
-    // MINIMUM contribution, which every stop declares as zero so a long
-    // subject cannot widen the thread — so once the track outgrew its card the
-    // marker was the one column that collapsed, and today vanished off an axis
-    // whose whole reading is what falls either side of it.
-    return "max-content";
-  }
-  return stop.tone === "gap"
-    ? `minmax(${STOP_FLOOR}, 1.5fr)`
-    : `minmax(${STOP_FLOOR}, 1fr)`;
 }
 
 type Ctx = {
@@ -317,6 +296,7 @@ function withToday(stops: readonly Stop[], ctx: Ctx): Stop[] {
   const marker: Stop = {
     key: "today",
     tone: "now",
+    at: ctx.asOf,
     // No date on the axis's own date row: the marker is not a moment the
     // record reached, it is where the reader is standing. Its word and its
     // date sit under the line instead, out of the row the record's own dates
@@ -359,6 +339,7 @@ function silence(view: SpineSource, ctx: Ctx): Stop | undefined {
   return {
     key: "silence",
     tone: "gap",
+    at: since,
     when: translatePlural(ctx.locale, "co.spine.days", days, {
       count: formatNumber(days, ctx.locale),
     }),
@@ -385,6 +366,7 @@ function aheadStops(view: SpineSource, ctx: Ctx): Stop[] {
     stops.push({
       key: `step-${step.activity_id}`,
       tone: step.overdue ? "overdue" : "ahead",
+      at: step.due_at,
       when: on(step.due_at, ctx),
       title: step.subject,
       detail: step.overdue ? ctx.t("co.spine.overdue") : undefined,
@@ -395,6 +377,7 @@ function aheadStops(view: SpineSource, ctx: Ctx): Stop[] {
     stops.push({
       key: "close",
       tone: "ahead",
+      at: close,
       when: on(close, ctx),
       title: ctx.t("co.spine.expectedClose"),
     });
@@ -465,6 +448,7 @@ function pastStops(view: SpineSource, ctx: Ctx): Stop[] {
           {
             key: "spoke",
             tone: "past",
+            at,
             when: on(at, ctx),
             title: ctx.t("co.spine.lastSpoke"),
           },
@@ -513,6 +497,7 @@ function unnamedLastWord(
   return {
     key: "spoke",
     tone: "past",
+    at: spoke,
     when: on(spoke, ctx),
     title: ctx.t("co.spine.lastSpoke"),
   };
@@ -584,6 +569,7 @@ function pastStop(conversation: Exchange, newest: boolean, ctx: Ctx): Stop {
   return {
     key: `said-${conversation.key}`,
     tone: "past",
+    at: conversation.at,
     when: on(conversation.at, ctx),
     title: newest ? ctx.t("co.spine.lastSpoke") : subject,
     // The newest stop's title is the label the gap below counts from, so its
@@ -613,7 +599,10 @@ function exchanges(view: SpineSource, ctx: Ctx): Exchange[] {
   const asOf = Date.parse(view.as_of);
   const conversations = new Map<string, Exchange>();
   for (const entry of view.activities?.data ?? []) {
-    const subject = bareSubject(entry.subject);
+    // A row whose content is withheld names nothing, whatever it still
+    // carries: the server blanks it, and this does not rely on that.
+    const subject =
+      entry.content_state === "withheld" ? "" : bareSubject(entry.subject);
     // `isExchange` again only to narrow the kind; `isContactBy` is the rule.
     if (!isExchange(entry.kind) || !isContactBy(entry, asOf) || !subject) {
       continue;

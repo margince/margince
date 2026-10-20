@@ -41,7 +41,7 @@ export {
   type SpineSource,
 } from "./spine";
 export { ThreadFailed } from "./threadfailed";
-export { timelineSpineSource } from "./timelinespine";
+export { spineTask, timelineSpineSource } from "./timelinespine";
 export { TimelineThread } from "./timelinethread";
 export { FoundMove, TodayPanel, TodoRow, WithheldNotice } from "./today";
 export {
@@ -50,6 +50,7 @@ export {
   type Signal,
   SignalStrip,
   type SignalTone,
+  SourcesPill,
   type StandingTone,
   VerdictHead,
 } from "./verdict";

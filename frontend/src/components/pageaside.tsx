@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { PanelRight } from "lucide-react";
+import { ChevronLeft, PanelRight } from "lucide-react";
 import {
   createContext,
   type ReactNode,
@@ -27,9 +27,10 @@ import { useHasUnsavedChanges } from "./unsaved";
  * remembered across routes and reloads.
  *
  * A screen with such a pane claims it through `usePageAside`, which answers
- * whether the pane is open; the screen passes its content to `RecordView` only
- * then, so a closed pane leaves no empty column and no empty landmark behind.
- * `PageAsideToggle` is the switch, for the tab row to carry.
+ * whether the pane is open. The screen hands `RecordView` its content only
+ * then, so a closed pane leaves no empty landmark behind.
+ * `PageAsideToggle` is the switch: on the pane itself (`pane`), or in a tab
+ * row for a page whose pane is not a record's.
  */
 
 type PageAsideState = {
@@ -117,6 +118,11 @@ export function useShowDetails(field: string): (() => void) | undefined {
   };
 }
 
+/** The field a reader was just sent to in the details pane, if any. */
+export function useDetailsFocusField(): string | null {
+  return useContext(PageAsideContext)?.focusField ?? null;
+}
+
 export function useDetailsFieldTarget(field: string) {
   const state = useContext(PageAsideContext);
   const target = useRef<HTMLSpanElement>(null);
@@ -153,22 +159,16 @@ export function usePageAside(): { open: boolean } {
 }
 
 /**
- * The control that folds the pane away and brings it back, for the tab row
- * to carry.
- *
- * It chooses what the page shows beside the work, so it stands with the
- * controls that choose what the work column shows rather than in the head
- * among the record's verbs, where it reads as one more thing to do to the
- * record instead of a way to see more of it. Every record page passes it as
- * its tab strip's `trailing`, and a record with a single body draws the strip
- * anyway: the row is where the switch lives, and a reader who has learned that
- * finds it in the same place on every record. Renders nothing when no screen
- * supplies a pane.
+ * The control that folds the pane away and brings it back. A record passes it
+ * to `RecordView` as `asideToggle` with `pane`, so it sits on the pane it
+ * folds; elsewhere it ends a tab row. Renders nothing when no screen supplies
+ * a pane.
  */
 export function PageAsideToggle({
   labels,
   quiet = false,
   prominent = false,
+  pane = false,
   controlled,
 }: Readonly<{
   // What the switch says in each state, naming what the pane holds. The
@@ -182,6 +182,9 @@ export function PageAsideToggle({
   // whole queue behind the day, where the switch is the main way on and not a
   // detail fold beside a row of tabs.
   prominent?: boolean;
+  // Drawn on the pane itself (RecordView's `asideToggle`): a quiet "hide" in
+  // its head while open, and a narrow strip naming the pane while folded.
+  pane?: boolean;
   controlled?: {
     open: boolean;
     labels: PaneWords;
@@ -209,6 +212,16 @@ export function PageAsideToggle({
       show: t("record.panel.showDetails"),
       hide: t("record.panel.hideDetails"),
     };
+  if (pane) {
+    return (
+      <PaneToggle
+        open={open}
+        words={words}
+        dirty={dirty}
+        onToggle={controlled?.onToggle ?? toggle}
+      />
+    );
+  }
   return (
     <Button
       className="record-details-toggle"
@@ -229,3 +242,47 @@ export function PageAsideToggle({
 /** The two things the switch can say: the verb that opens the pane and the
  *  verb that folds it, each naming what the pane holds. */
 export type PaneWords = Readonly<{ show: string; hide: string }>;
+
+// The switch as the pane draws it. Open, it is a quiet "hide" in the head;
+// folded, it is a strip with the pane's name set on its side.
+function PaneToggle({
+  open,
+  words,
+  dirty,
+  onToggle,
+}: Readonly<{
+  open: boolean;
+  words: PaneWords;
+  dirty: boolean;
+  onToggle: () => void;
+}>) {
+  const t = useT();
+  if (open) {
+    return (
+      <Button
+        className="record-details-toggle"
+        variant="link"
+        reason={dirty ? t("record.finishFieldEdit") : undefined}
+        aria-pressed
+        aria-label={words.hide}
+        onClick={onToggle}
+      >
+        {t("record.panel.hide")}
+      </Button>
+    );
+  }
+  return (
+    <Button
+      className="record-details-fold"
+      variant="ghost"
+      aria-pressed={false}
+      aria-label={words.show}
+      onClick={onToggle}
+    >
+      <ChevronLeft aria-hidden="true" />
+      <span className="record-details-fold-label">
+        {t("record.panel.fold")}
+      </span>
+    </Button>
+  );
+}

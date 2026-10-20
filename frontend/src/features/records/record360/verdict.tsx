@@ -20,10 +20,11 @@
 // question about a different record, and the day they grow a verdict they take
 // this one rather than a second shaped like it.
 
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Sparkles } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { Badge, Button } from "../../../design-system/atoms";
 import { PanelBody } from "../../../design-system/panel";
+import { Popover } from "../../../design-system/popover";
 import { formatNumber } from "../../../format/format";
 import { useLocale, usePlural, useT } from "../../../i18n";
 import "./record360.css";
@@ -178,16 +179,16 @@ export function Proof({
         aria-controls={panelId}
       >
         <Caret aria-hidden="true" />
-        {label}
+        {/* Counted, the count and its unit word are the whole label, so the
+            noun is said once and the figure still says what it counts. */}
         {count ? (
           <span>
             <span className="t-num">{formatNumber(items.length, locale)}</span>{" "}
-            {/* The unit as a word, not a bare figure. "What this rests on 2"
-                asks the reader to guess what was counted; the count is only
-                worth putting on a shut block if it says what it counts. */}
             {plural("record.restsOn.source", items.length)}
           </span>
-        ) : null}
+        ) : (
+          label
+        )}
       </Button>
       {open ? (
         <div className="r360-rests" id={panelId}>
@@ -200,6 +201,39 @@ export function Proof({
         </div>
       ) : null}
     </>
+  );
+}
+
+/**
+ * SourcesPill is the working behind a record's call, as one pill in the head
+ * of its 360. It says who reached the call and how many readings it rests on,
+ * and opens them as a list over the card. In the head rather than under the
+ * verdict, so the claim and its receipts are read together before the call.
+ * The verdict keeps its line to itself. `children` is the list it opens.
+ */
+export function SourcesPill({
+  count,
+  children,
+}: Readonly<{ count: number; children: ReactNode }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  if (count === 0) {
+    return null;
+  }
+  const sources = `${formatNumber(count, locale)} ${plural("record.restsOn.source", count)}`;
+  return (
+    <Popover
+      variant="aiQuiet"
+      label={
+        <>
+          <Sparkles aria-hidden="true" />
+          {t("record.sourcesPill", { sources })}
+        </>
+      }
+    >
+      <ul className="r360-sources-list">{children}</ul>
+    </Popover>
   );
 }
 

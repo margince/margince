@@ -23,6 +23,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -265,6 +266,9 @@ func (s *Store) fillFigures(
 	if life := NetInvoicedLifetime(invoices, now); !life.RateUnavailable {
 		out.NetInvoicedLifetime = money(life.AmountMinorBase, currency)
 	}
+	if err := s.fillMonthly(ctx, tx, invoices, currency, out); err != nil {
+		return err
+	}
 	if open := OpenBalanceAt(invoices, now); !open.RateUnavailable {
 		out.OpenBalance = money(open.OpenMinorBase, currency)
 		// Overdue is withheld once the relationship has ended, and open balance
@@ -293,6 +297,32 @@ func (s *Store) fillFigures(
 		out.PaymentBehaviour = paymentBehaviour(invoices, now)
 	}
 	return s.fillRecent(ctx, tx, companyID, conn.id, out)
+}
+
+// fillMonthly carries the twelve-month invoiced series, ending on the
+// installation's own calendar month rather than UTC's.
+func (s *Store) fillMonthly(
+	ctx context.Context, tx pgx.Tx, invoices []Invoice, currency string, out *crmcontracts.CompanyFinanceSummary,
+) error {
+	today, err := storekit.TodayIn(ctx, tx, s.timezone, s.now())
+	if err != nil {
+		return err
+	}
+	months, ok := NetInvoicedByMonth(invoices, today)
+	if !ok {
+		return nil
+	}
+	series := make([]crmcontracts.FinanceInvoicedMonth, 0, len(months))
+	for _, m := range months {
+		series = append(series, crmcontracts.FinanceInvoicedMonth{
+			Month:       m.Month.Format("2006-01"),
+			AmountMinor: m.AmountMinorBase,
+			Currency:    currency,
+			Count:       m.Records,
+		})
+	}
+	out.InvoicedByMonth = &series
+	return nil
 }
 
 // issueDate renders one invoice's issue date as the contract's date type.

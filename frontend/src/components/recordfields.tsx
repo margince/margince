@@ -12,11 +12,10 @@ import {
 } from "react";
 import { Button } from "../design-system/atoms";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
-import { InlineChoice } from "../design-system/inlinechoice";
-import { InlineEditVerb, InlineText } from "../design-system/inlinetext";
-import { OffsiteLink } from "../design-system/offsitelink";
+import { InlineEditVerb } from "../design-system/inlinetext";
 import { Panel, PanelBody } from "../design-system/panel";
-import { useLocale, useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, usePlural, useT } from "../i18n";
 import { derivedRecordKeys } from "../lib/activitykeys";
 import type { EntityKind } from "../lib/entity";
 import { sameEditValue } from "../lib/independentedit";
@@ -35,8 +34,9 @@ import {
   usePublishedValues,
 } from "./create";
 import { prefillFromRecord, prefillRowsFromRecord } from "./edit.prefill";
-import { useDetailsFieldTarget } from "./pageaside";
-import { groupValue, selectOptions } from "./recordfieldvalues";
+import { useDetailsFieldTarget, useDetailsFocusField } from "./pageaside";
+import { groupValue } from "./recordfieldvalues";
+import { RecordScalarField } from "./recordscalarfield";
 import { useUnsavedGuard } from "./unsaved";
 
 export type FieldRecord = Record<string, unknown> & {
@@ -92,6 +92,10 @@ type Props = {
 
 export function RecordFields(props: Readonly<Props>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const [showEmpty, setShowEmpty] = useState(false);
+  const focus = useDetailsFocusField();
   const groups = props.groups ?? [];
   const grouped = new Set(groups.flatMap((group) => group.keys));
   const sections = [
@@ -105,12 +109,28 @@ export function RecordFields(props: Readonly<Props>) {
       }))
       .filter((group) => group.fields.length > 0),
   ];
+  // An empty field waits behind one link rather than drawing a row of "Not
+  // set": the card then reads as what is known. A field a reader was just sent
+  // to is shown whether or not it is empty.
+  const empty = sections.filter(({ fields }) => sectionIsEmpty(fields, props));
+  const sentToEmpty = empty.some(({ fields }) =>
+    fields.some((field) => field.key === focus),
+  );
+  // Latched rather than derived: the request clears once the field has focus,
+  // and the row must not fold away under it.
+  if (sentToEmpty && !showEmpty) {
+    setShowEmpty(true);
+  }
+  const open = showEmpty || sentToEmpty;
+  const shown = open
+    ? sections
+    : sections.filter((section) => !empty.includes(section));
   return (
     <Panel title={props.title}>
       <PanelBody>
         {props.notice && <p>{props.notice}</p>}
         <FieldGrid>
-          {sections.map(({ label, fields }) => {
+          {shown.map(({ label, fields }) => {
             const [first] = fields;
             return first ? (
               <RecordField
@@ -124,9 +144,34 @@ export function RecordFields(props: Readonly<Props>) {
           })}
           {props.extraRows}
         </FieldGrid>
+        {empty.length > 0 && (
+          <Button variant="link" onClick={() => setShowEmpty(!open)}>
+            {open
+              ? t("record.hideEmptyFields")
+              : plural("record.showEmptyFields", empty.length, {
+                  count: formatNumber(empty.length, locale),
+                })}
+          </Button>
+        )}
       </PanelBody>
     </Panel>
   );
+}
+
+// Whether a row holds nothing a reader could read: no value, no rendered
+// reading, and not masked, since a masked field says it is withheld.
+function sectionIsEmpty(fields: readonly CreateField[], props: Props): boolean {
+  const record = rawRecord(props.record);
+  const values = prefillFromRecord([...fields], props.record);
+  return fields.every((field) => {
+    if (field.withheld || props.maskedFields?.includes(field.key)) return false;
+    if (props.renderValues?.[field.key]) return false;
+    const stored = record[field.key];
+    if (field.type === "repeatable") {
+      return !Array.isArray(stored) || stored.length === 0;
+    }
+    return !values[field.key]?.trim();
+  });
 }
 
 function RecordField({
@@ -325,98 +370,6 @@ function GroupReading({
     >
       {value || t("field.unset")}
     </Button>
-  );
-}
-
-function RecordScalarField({
-  field,
-  valueRef,
-  link,
-  rendered,
-  display,
-  mark,
-  label,
-  values,
-  editable,
-  canEdit,
-  reason,
-  editing,
-  onEditingChange,
-  onDirtyChange,
-  onSave,
-}: Readonly<{
-  field: CreateField;
-  valueRef: ReturnType<typeof useDetailsFieldTarget>;
-  link?: { href: string; label: string };
-  rendered?: ReactNode;
-  display?: string;
-  mark?: ReactNode;
-  label: string;
-  values: Record<string, string>;
-  editable: boolean;
-  canEdit: boolean;
-  reason?: string;
-  editing: boolean;
-  onEditingChange: (editing: boolean) => void;
-  onDirtyChange: (dirty: boolean) => void;
-  onSave: (value: string) => Promise<void>;
-}>) {
-  const t = useT();
-  return (
-    <FieldRow valueRef={valueRef} label={label}>
-      {field.type === "select" ? (
-        <InlineChoice
-          label={label}
-          hideLabel
-          value={values[field.key] ?? ""}
-          options={selectOptions(field, values, t)}
-          render={(value) =>
-            display && value === values[field.key]
-              ? display
-              : (selectOptions(field, values, t).find(
-                  (option) => option.value === value,
-                )?.label ?? value)
-          }
-          canEdit={canEdit}
-          readOnlyReason={reason}
-          onEditingChange={onEditingChange}
-          onDirtyChange={onDirtyChange}
-          onSave={onSave}
-        />
-      ) : (
-        <>
-          {!editing && rendered}
-          {(editable || !rendered) && (
-            <InlineText
-              label={label}
-              value={values[field.key] ?? ""}
-              display={display}
-              verb={Boolean(rendered)}
-              placeholder={t("field.unset")}
-              multiline={field.type === "textarea"}
-              type={
-                field.type === "number" ||
-                field.type === "date" ||
-                field.type === "email"
-                  ? field.type
-                  : "text"
-              }
-              maxLength={field.maxLength}
-              step={field.step ?? (field.type === "number" ? "any" : undefined)}
-              canEdit={canEdit}
-              readOnlyReason={reason}
-              onEditingChange={onEditingChange}
-              onDirtyChange={onDirtyChange}
-              onSave={onSave}
-            />
-          )}
-        </>
-      )}
-      {link && !editing && (
-        <OffsiteLink href={link.href}>{link.label}</OffsiteLink>
-      )}
-      {!editing && mark}
-    </FieldRow>
   );
 }
 

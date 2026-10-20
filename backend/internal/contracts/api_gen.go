@@ -29994,7 +29994,7 @@ type Company360 struct {
 		Page PageInfo            `json:"page"`
 	} `json:"contacts,omitempty"`
 
-	// Deals The account's open deals plus the two lifetime figures the header needs.
+	// Deals The account's open deals plus the lifetime figures the header needs.
 	Deals *Company360Deals `json:"deals,omitempty"`
 
 	// Health How the relationship stands, in the parts a reader can act on (AC-company-3).
@@ -30205,13 +30205,13 @@ type Company360Deal struct {
 	Stalled bool `json:"stalled"`
 
 	// Status Always `open` in the 360's `deals.data` — closed deals are reported by
-	// `won_lifetime` and `lost_count`, not listed. The full vocabulary is declared
+	// `won_lifetime`, `won_count` and `lost_count`, not listed. The full vocabulary is declared
 	// because this is the deal's own status field, not a filter echo.
 	Status Company360DealStatus `json:"status"`
 }
 
 // Company360DealStatus Always `open` in the 360's `deals.data` — closed deals are reported by
-// `won_lifetime` and `lost_count`, not listed. The full vocabulary is declared
+// `won_lifetime`, `won_count` and `lost_count`, not listed. The full vocabulary is declared
 // because this is the deal's own status field, not a filter echo.
 type Company360DealStatus string
 
@@ -30223,11 +30223,14 @@ type Company360DealRole struct {
 	Role string `json:"role"`
 }
 
-// Company360Deals The account's open deals plus the two lifetime figures the header needs.
+// Company360Deals The account's open deals plus the lifetime figures the header needs.
 type Company360Deals struct {
 	Data      []Company360Deal `json:"data"`
 	LostCount int              `json:"lost_count"`
 	Page      PageInfo         `json:"page"`
+
+	// WonCount How many won deals this account has, over the same deals `won_lifetime` sums. A deal whose amount is masked from the reader still counts here, as it does in `lost_count`: the count is about the deal's existence, not its size.
+	WonCount int `json:"won_count"`
 
 	// WonLifetime Every won deal on this account, converted at each deal's frozen close-time rate. Never a live re-conversion.
 	WonLifetime Money `json:"won_lifetime"`
@@ -31295,6 +31298,11 @@ type CompanyFinanceSummary struct {
 	// CoverageStart The issue date of the OLDEST invoice this connection has mirrored for the customer, and with `coverage_end` the period every figure on this card describes. Null when the mirror holds none.
 	// A different question from `last_synced_at`, which answers when we last looked. A card that has only the second can say the figures are fresh and not what period they are about — and a client rendering a window label must build it from these bounds rather than from a fixed string, or the heading and the numbers end up describing different months (FIN-AC-3).
 	CoverageStart *openapi_types.Date `json:"coverage_start,omitempty"`
+
+	// InvoicedByMonth Net invoiced per calendar month (the `net_invoiced` fold: issued minus credited, in the installation's base currency) for the twelve months ending with the current one, oldest first. "Current" is today's date in the installation's timezone. A credit note reduces the month of the invoice it credits, as it does in `net_invoiced`.
+	// Always twelve entries when present: a month with nothing invoiced is there with a zero amount and a zero count, so a chart never has to tell a quiet month from a missing one.
+	// Absent when the other figures are absent (no connection, unmapped, the first sync still running, or no invoices mirrored), and absent under the same FIN-AC-6 refusal: one invoice in the twelve months without a conversion rate withholds the whole series rather than one bar.
+	InvoicedByMonth *[]FinanceInvoicedMonth `json:"invoiced_by_month,omitempty"`
 
 	// LastSyncedAt When the last successful sync finished. Null when none has.
 	LastSyncedAt *time.Time `json:"last_synced_at,omitempty"`
@@ -36076,6 +36084,26 @@ type DealStatusCard struct {
 	// and the two must not have to agree for the reply to be reachable.
 	ReplyTo *openapi_types.UUID `json:"reply_to,omitempty"`
 
+	// StageEnteredAt When the deal last entered its current stage: the latest stage-history
+	// entry into it, or the deal's creation when it has never moved. The same
+	// instant the health score's stage-velocity factor counts from.
+	//
+	// Read fresh on every request, never from the cached card, so the time in
+	// stage a client derives from it is current.
+	StageEnteredAt time.Time `json:"stage_entered_at"`
+
+	// StageUsualDays How many days won deals of this pipeline usually spend in this stage: the
+	// median of their completed stays in it. The same measurement the health
+	// score's stage-velocity factor compares against.
+	//
+	// Null when there is no measurement to report: fewer than ten won deals
+	// carry a completed stay in this stage, or their median is under a day.
+	// The health score then compares against a fixed default, and that
+	// default is never sent here as if it had been measured.
+	//
+	// Read fresh on every request, like `stage_entered_at`.
+	StageUsualDays *float64 `json:"stage_usual_days"`
+
 	// Story What has happened and where that leaves things, in the order it
 	// happened. The section a reader with no memory of the deal starts at.
 	Story DealStatusCardSection `json:"story"`
@@ -37449,6 +37477,21 @@ type FinanceInvoice struct {
 
 // FinanceInvoiceStatus defines model for FinanceInvoice.Status.
 type FinanceInvoiceStatus string
+
+// FinanceInvoicedMonth One calendar month of a customer's net invoiced amount, in the installation's base currency.
+type FinanceInvoicedMonth struct {
+	// AmountMinor Issued minus credited for the invoices issued in the month, in minor units of `currency`. Zero for a month with nothing issued; negative only when credits against the month's invoices exceed them.
+	AmountMinor int64 `json:"amount_minor"`
+
+	// Count How many invoices were issued in the month. Credit notes are not counted.
+	Count int `json:"count"`
+
+	// Currency The installation's base currency, the same label `net_invoiced` carries.
+	Currency string `json:"currency"`
+
+	// Month The calendar month, as `YYYY-MM`.
+	Month string `json:"month"`
+}
 
 // FinanceLinkedCompany defines model for FinanceLinkedCompany.
 type FinanceLinkedCompany struct {

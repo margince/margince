@@ -88,6 +88,11 @@
   gap: var(--space-4);
   align-items: start;
 }
+/* Among an overview's cards the reading's own cards keep the grid's interval. */
+.record-sections .co-reading,
+.record-sections .co-reading-pair {
+  gap: var(--space-4);
+}
 /* What this account is worth to us. The panel is one reading in five parts —
    the verdict, the dimensions under it, the two sides of the argument, the
    labelled answers, the attribution — and a hairline between consecutive
@@ -137,13 +142,62 @@
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
-.co-deal-amount {
-  grid-column: 2;
-  grid-row: 1;
-}
-.co-deal-meta {
-  grid-column: 1 / -1;
+/* The overview's deal rows: the name over its close date, the stage, and the
+   amount at the end, on three tracks every row shares. */
+.co-deal-rows {
+  display: flex;
+  flex-direction: column;
   margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.co-deal-rows > li + li {
+  border-top: 1px solid var(--borderSubtle);
+}
+.co-deal-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 11rem 7rem;
+  gap: var(--space-1) var(--space-4);
+  align-items: center;
+  padding-block: var(--space-3);
+}
+.co-deal-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.co-deal-name > a {
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
+  text-decoration: none;
+}
+.co-deal-name > a:hover {
+  text-decoration: underline;
+}
+.co-deal-stage {
+  color: var(--textSecondary);
+}
+.co-deal-amount {
+  text-align: end;
+}
+.co-deal-won {
+  margin: var(--space-2) 0 0;
+}
+/* A section's count stands on a quiet line under its title. */
+.co-section-count {
+  display: block;
+  margin-block-start: var(--space-1);
+  font: var(--fontBody);
+  color: var(--textSecondary);
+}
+@container work (max-width: 40rem) {
+  .co-deal-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .co-deal-row > .stage-pips,
+  .co-deal-row > .co-deal-stage {
+    grid-row: 2;
+  }
 }
 
 /* A row's own line: the icon sits with the text rather than on its baseline. */
@@ -1483,7 +1537,14 @@
 /* The three rated dimensions under the verdict, as a row of readings the
    card's own body separates from the word above it. */
 .co-360-dims {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-6);
   padding-top: var(--space-3);
+}
+.co-360-dims > .co-360-readings {
+  flex: 1;
 }
 /* And no seam over them, which is the other half of the same point: the
    panel's rule between two bodies divides one section of a card from the next,
@@ -1927,4 +1988,33 @@
    records put there; a button on that baseline sits visibly low. */
 .co-name-control {
   align-self: center;
+}
+
+/* In the lead, the company's readings stand as one column beside the rings. */
+.record-sheet .record-hero .co-360-readings {
+  grid-template-columns: minmax(0, 1fr);
+  min-inline-size: 11rem;
+}
+.co-360-reading-why {
+  display: block;
+  margin-block-start: 2px; /* ds:ignore a caption under its reading, tighter than the scale's first rung */
+  font-weight: var(--fontWeightRegular);
+  color: var(--textSecondary);
+  max-inline-size: 30ch;
+}
+
+/* The record's next move leads its overview: the first row of Next names it
+   in the heading face, with room around it, and the rows under it are the
+   rest of the queue. */
+.record-sections .co-lead > .panel-row:first-of-type {
+  padding-block: var(
+    --space-4
+  ); /* ds:ignore the lead step is a headline row, given a headline's air */
+}
+.record-sections
+  .co-lead
+  > .panel-row:first-of-type
+  :is(.co-move-ask, .co-todo-title) {
+  font: var(--fontHeadingMedium);
+  color: var(--textPrimary);
 }
