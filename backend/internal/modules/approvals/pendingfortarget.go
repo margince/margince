@@ -74,7 +74,7 @@ func (s *Service) PendingForTarget(ctx context.Context, tx pgx.Tx, targetType st
 	now := s.now()
 	pending := statusPending
 	q, args := approvalPageQuery(ListInput{
-		Status: &pending, TargetType: &targetType, TargetID: &targetID, mutedFor: &p.UserID,
+		Status: &pending, TargetType: &targetType, TargetID: &targetID,
 	}, nil)
 	batch, err := collect(ctx, tx, q, args)
 	if err != nil {

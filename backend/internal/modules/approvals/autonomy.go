@@ -131,8 +131,8 @@ const closeDateCorrectionKind = "close_date_correction"
 
 var AutoApplyKinds = map[string]bool{
 	closeDateCorrectionKind:  true,
-	"company_name_promotion": true,
-	"lifecycle_change":       true,
+	kindCompanyNamePromotion: true,
+	kindLifecycleChange:      true,
 }
 
 // AdminGovernedAutoKinds are the kinds that may apply without asking on an
@@ -401,7 +401,7 @@ func (s *Service) SetAutoApply(ctx context.Context, kind string, on bool) ([]Kin
 			return err
 		}
 		if on && muted {
-			return apperrors.ErrConflict
+			return fmt.Errorf("restore this kind in your queue before enabling automatic changes: %w", apperrors.ErrConflict)
 		}
 		if err := writeAutonomyMode(ctx, tx, rep.UserID, kind, mode); err != nil {
 			return err

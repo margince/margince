@@ -10,16 +10,16 @@
   "totals": {
     "tools": 37,
     "resources": 9,
-    "tool_catalog_bytes": 125170,
+    "tool_catalog_bytes": 125431,
     "resource_catalog_bytes": 3588,
-    "approx_wire_tokens_total": 32189,
+    "approx_wire_tokens_total": 32254,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
-      "description_bytes": 32245,
-      "input_schema_bytes": 58824,
+      "description_bytes": 32375,
+      "input_schema_bytes": 58955,
       "output_schema_bytes": 25189,
-      "description_plus_input_schema_bytes": 91069
+      "description_plus_input_schema_bytes": 91330
     }
   },
   "tools": {
@@ -2892,7 +2892,7 @@
           "readOnlyHint": true,
           "title": "List what is waiting for a decision"
         },
-        "description": "The staged actions waiting for a human's decision: what was proposed and what each would do. It is where a proposal that is already waiting turns up — a message staged and unsent is not one that needs writing again. It lists what the colleague you act for could decide themselves; anything else is absent rather than refused. A proposal past its expiry reads as expired and can no longer be answered. Each item carries its one-line summary, not the change itself. read_approval opens one and shows what it holds; decide_approvals answers it. Keep the staged_action_id you mean to act on, the bundle_id when one act staged several, and next_cursor.",
+        "description": "The staged actions waiting for a human's decision: what was proposed and what each would do. It is where a proposal that is already waiting turns up — a message staged and unsent is not one that needs writing again. It lists what the colleague you act for could decide themselves; anything else is absent rather than refused. A proposal past its expiry reads as expired and can no longer be answered. Personal mutes hide eligible pending rows, so a bundle may be partial. Use include_muted for a complete authorized bundle review. Each item carries its one-line summary, not the change itself. read_approval opens one and shows what it holds; decide_approvals answers it. Keep the staged_action_id you mean to act on, the bundle_id when one act staged several, and next_cursor.",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2904,6 +2904,10 @@
             "cursor": {
               "description": "next_cursor from a previous page.",
               "type": "string"
+            },
+            "include_muted": {
+              "description": "Include your muted proposals for explicit review; visibility rules still apply.",
+              "type": "boolean"
             },
             "kind": {
               "description": "One staged action's kind, e.g. advance_deal.",

@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -46,6 +48,19 @@ func TestAPersonalMutePreservesAnotherReadersQueueAndTheSharedProposal(t *testin
 	if err != nil || len(rows) != 1 || rows[0].ID != id {
 		t.Fatalf("explicit review: %v, %v", rows, err)
 	}
+	proposal, err := e.svc.Get(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
+		targeted, readErr := e.svc.PendingForTarget(ctx, tx, *proposal.TargetType, *proposal.TargetID, 10)
+		if readErr == nil && len(targeted) != 1 {
+			t.Fatalf("target review lost muted proposal: %v", targeted)
+		}
+		return readErr
+	}); err != nil {
+		t.Fatal(err)
+	}
 	if status := e.statusOf(t, id); status != statusPending {
 		t.Fatalf("shared status = %s", status)
 	}
@@ -69,7 +84,7 @@ func TestAPersonalMutePreservesAnotherReadersQueueAndTheSharedProposal(t *testin
 		t.Fatalf("unmute restored automatic mode %s: %v", mode, err)
 	}
 	var verdicts int
-	if err := e.owner.QueryRow(context.Background(), `SELECT count(*) FROM audit_log WHERE entity_type = 'approval' AND entity_id = $1 AND action IN ('approve', 'reject', 'expire')`, id).Scan(&verdicts); err != nil {
+	if err := e.owner.QueryRow(context.Background(), `SELECT count(*) FROM audit_log WHERE entity_type = 'approval' AND entity_id = @id AND action IN ('approve', 'reject', 'expire')`, pgx.NamedArgs{"id": id}).Scan(&verdicts); err != nil {
 		t.Fatal(err)
 	}
 	if verdicts != 0 {
@@ -93,6 +108,10 @@ func TestMuteFilteringPrecedesPaginationAndNeverHidesPassportRows(t *testing.T) 
 	rows, _, err := e.svc.List(ctx, ListInput{Kind: new(countedKind), Limit: 1})
 	if err != nil || len(rows) != 1 || rows[0].ID != passportID {
 		t.Fatalf("passport row behind muted rows: %v, %v", rows, err)
+	}
+	rows, _, err = e.svc.List(passport, ListInput{Kind: new(countedKind), Limit: 1})
+	if err != nil || len(rows) != 1 || rows[0].ID != passportID {
+		t.Fatalf("passport reader preference parity: %v, %v", rows, err)
 	}
 	if _, err := e.svc.GetWire(ctx, visible); err != nil {
 		t.Fatalf("muted direct review refused: %v", err)
@@ -156,7 +175,7 @@ func TestASoleDecidersMutedProposalRemainsReachableAndExpiresNormally(t *testing
 		t.Fatalf("private proposal exposed to colleague: %v, %v", rows, err)
 	}
 	var expires time.Time
-	if err := e.owner.QueryRow(t.Context(), `SELECT expires_at FROM approval WHERE id = $1`, id).Scan(&expires); err != nil {
+	if err := e.owner.QueryRow(t.Context(), `SELECT expires_at FROM approval WHERE id = @id`, pgx.NamedArgs{"id": id}).Scan(&expires); err != nil {
 		t.Fatal(err)
 	}
 	e.svc.now = func() time.Time { return expires.Add(time.Second) }
@@ -166,6 +185,10 @@ func TestASoleDecidersMutedProposalRemainsReachableAndExpiresNormally(t *testing
 	}
 	if _, err := e.svc.ExpireDue(e.sweeping()); err != nil {
 		t.Fatal(err)
+	}
+	rows, _, err = e.svc.ListWire(reader, ListInput{IncludeMuted: true, Kind: new(kindDealFollowUp)})
+	if err != nil || len(rows) != 1 || rows[0].Status != "expired" {
+		t.Fatalf("swept history: %v, %v", rows, err)
 	}
 	if e.statusOf(t, id) != StatusExpired {
 		t.Fatal("muted proposal did not expire through the ordinary sweep")

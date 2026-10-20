@@ -104,7 +104,6 @@ function PreferenceReview({
           params: {
             query: {
               kind,
-              status: "pending",
               include_muted: true,
               cursor,
               limit: 20,

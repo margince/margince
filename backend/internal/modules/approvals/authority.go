@@ -272,7 +272,7 @@ var decisionGrants = map[string][]grantRequirement{
 	// Accepting a company_name_promotion proposal (PO-F-2a: one employee's
 	// signature naming their company, with nothing corroborating it) renames
 	// the company — the same update authority the name editor needs.
-	"company_name_promotion": {{tableCompany, principal.ActionUpdate}},
+	kindCompanyNamePromotion: {{tableCompany, principal.ActionUpdate}},
 	// Accepting a lifecycle_change proposal (the account-intelligence arc: the
 	// correspondence says the contract ended while the record still reads as
 	// live) moves the account's stage — the same update authority the header's
@@ -283,7 +283,7 @@ var decisionGrants = map[string][]grantRequirement{
 	// company editor could read model-derived correspondence and close a
 	// signal they have no standing to see — the ordinary triage path takes
 	// signal:update and EnsureSignalVisible for exactly that reason.
-	"lifecycle_change": {{tableCompany, principal.ActionUpdate}, {targetSignal, principal.ActionUpdate}},
+	kindLifecycleChange: {{tableCompany, principal.ActionUpdate}, {targetSignal, principal.ActionUpdate}},
 	// Confirming a nightly close-date correction (formulas §11 🟡 tier)
 	// releases an expected_close_date write onto the deal.
 	closeDateCorrectionKind: {{tableDeal, principal.ActionUpdate}},

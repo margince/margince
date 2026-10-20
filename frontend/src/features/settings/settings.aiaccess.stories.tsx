@@ -56,6 +56,7 @@ async function showRules({ canvasElement }: { canvasElement: HTMLElement }) {
   await userEvent.click(
     await canvas.findByRole("button", { name: "Agent rules" }),
   );
+  (await canvas.findByText("Personal approval mutes")).scrollIntoView();
 }
 export const PersonalReview: Story = { render: settings, play: showRules };
 export const PersonalReviewDark: Story = {

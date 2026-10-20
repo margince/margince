@@ -35,6 +35,7 @@ afterEach(() => {
 });
 
 it("shows the manual-policy consequence and sends only the reader's kind preference", async () => {
+  const user = userEvent.setup();
   const changes: unknown[] = [];
   vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
     const req = input instanceof Request ? input : new Request(String(input));
@@ -55,7 +56,7 @@ it("shows the manual-policy consequence and sends only the reader's kind prefere
       /Muting or restoring a kind turns off your automatic changes/,
     ),
   ).toBeTruthy();
-  await userEvent.click(await screen.findByRole("switch"));
+  await user.click(await screen.findByRole("switch"));
   await waitFor(() =>
     expect(changes).toEqual([{ kind: "close_date_correction", muted: true }]),
   );
@@ -63,6 +64,7 @@ it("shows the manual-policy consequence and sends only the reader's kind prefere
 });
 
 it("opens an explicit include-muted review without changing the preference", async () => {
+  const user = userEvent.setup();
   const reviews: URL[] = [];
   vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
     const req = input instanceof Request ? input : new Request(String(input));
@@ -76,11 +78,12 @@ it("opens an explicit include-muted review without changing the preference", asy
     return response({ data: [{ kind: "close_date_correction", muted: true }] });
   });
   mount();
-  await userEvent.click(
+  await user.click(
     await screen.findByRole("button", { name: "Review including muted" }),
   );
   await waitFor(() => expect(reviews).toHaveLength(1));
   expect(reviews[0].searchParams.get("include_muted")).toBe("true");
+  expect(reviews[0].searchParams.has("status")).toBe(false);
   expect(reviews[0].searchParams.get("kind")).toBe("close_date_correction");
   expect(
     screen.getByText(/Bundles in your ordinary queue can show fewer members/),

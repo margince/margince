@@ -55,22 +55,34 @@ func TestPersonalApprovalMutesAgreeAcrossHTTPToolsAndHomeCounts(t *testing.T) {
 			t.Fatal("tool lost continuation behind first row")
 		}
 		for _, include := range []bool{false, true} {
-			request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/approvals?include_muted=%t", include), nil).WithContext(e.Admin())
-			recorder := httptest.NewRecorder()
-			approvals.NewHandlers(svc).ListApprovals(recorder, request, crmcontracts.ListApprovalsParams{IncludeMuted: &include})
-			if recorder.Code != http.StatusOK {
-				t.Fatalf("HTTP status %d: %s", recorder.Code, recorder.Body.String())
-			}
-			var response crmcontracts.ApprovalListResponse
-			if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
-				t.Fatal(err)
-			}
 			expected := want
 			if include {
 				expected = 3
 			}
-			if len(response.Data) != expected {
-				t.Fatalf("HTTP count %d, want %d", len(response.Data), expected)
+			total := 0
+			var cursor *string
+			for range 4 {
+				request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/approvals?include_muted=%t", include), nil).WithContext(e.Admin())
+				recorder := httptest.NewRecorder()
+				approvals.NewHandlers(svc).ListApprovals(recorder, request, crmcontracts.ListApprovalsParams{IncludeMuted: &include, Limit: new(1), Cursor: cursor})
+				if recorder.Code != http.StatusOK {
+					t.Fatalf("HTTP status %d: %s", recorder.Code, recorder.Body.String())
+				}
+				var response crmcontracts.ApprovalListResponse
+				if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+					t.Fatal(err)
+				}
+				total += len(response.Data)
+				if !response.Page.HasMore {
+					break
+				}
+				if response.Page.NextCursor == nil || *response.Page.NextCursor == "" {
+					t.Fatal("HTTP continuation is missing")
+				}
+				cursor = response.Page.NextCursor
+			}
+			if total != expected {
+				t.Fatalf("HTTP paged count %d, want %d", total, expected)
 			}
 		}
 	}

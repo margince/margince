@@ -67,7 +67,7 @@ To make Margince ask before changing close dates, company names or lifecycle sta
 Also called: autopilot, auto-apply, stop the AI editing my records.
 
 ### How do I hide a kind of proposal from my own queue?
-Open **Settings → AI access → For developers → Agent rules → Personal approval mutes**.
+Open Settings → AI access → For developers → Agent rules → Personal approval mutes.
 Turn on a kind to hide it from your own queue. Other readers keep their proposals, and nobody has accepted or rejected anything.
 
 Both hiding and showing a kind turn off your automatic changes for that kind. Showing it again does not restore an old automatic choice.
