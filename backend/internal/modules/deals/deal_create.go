@@ -228,10 +228,10 @@ func ensureBirthLinksVisible(ctx context.Context, tx pgx.Tx, in CreateDealInput,
 	// than checked as a zero id.
 	var links []recordLink
 	if in.CompanyID != nil {
-		links = append(links, recordLink{filterCompanyID, linkEntityCompany, in.CompanyID.UUID})
+		links = append(links, recordLink{fieldCompanyID, linkEntityCompany, in.CompanyID.UUID})
 	}
 	if in.PartnerCompanyID != nil {
-		links = append(links, recordLink{filterPartnerCompanyID, linkEntityCompany, in.PartnerCompanyID.UUID})
+		links = append(links, recordLink{fieldPartnerCompanyID, linkEntityCompany, in.PartnerCompanyID.UUID})
 	}
 	for _, link := range links {
 		err := auth.EnsureLinkTarget(ctx, tx, link.entity, link.id)
@@ -270,6 +270,12 @@ type recordLink struct {
 const (
 	linkEntityCompany = "company"
 	linkEntityProject = "project"
+)
+
+// The body fields a refusal names for those links.
+const (
+	fieldCompanyID        = "company_id"
+	fieldPartnerCompanyID = "partner_company_id"
 )
 
 // clearedForBirth runs every gate a newborn deal must pass and answers the

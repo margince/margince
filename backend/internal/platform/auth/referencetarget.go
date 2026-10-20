@@ -20,8 +20,9 @@ import (
 // tells nobody which rows exist. The field is what a bare not-found lacks on a
 // body that carries several ids.
 //
-// The probe's not-found stays as the cause. An import row or an agent tool
-// still classifies it as not-found, because httperr reads the field first.
+// The probe's not-found stays as the cause. A caller that is not an HTTP
+// handler (an import row) still classifies it as not-found, because httperr
+// reads the field first and the MCP surface answers through the same mapping.
 type ReferenceNotFoundError struct {
 	Field string
 	Cause error
@@ -43,9 +44,10 @@ func (e *ReferenceNotFoundError) FieldFault() (field, code, message string) {
 // NameMissingReference turns a probe's not-found into ReferenceNotFoundError and
 // leaves every other answer alone, so a permission denial stays a denial.
 //
-// It is for a request body that names a record the write points at. A path id
-// keeps the bare not-found, because the caller addressed that record and has no
-// sibling field to confuse it with.
+// It is for a request body that names a record the write points at. A path id,
+// and the second address of an action on an addressed record (merge, relink,
+// tag apply, add to list, grant, upload), keep the bare not-found: the caller
+// addressed the record and has no sibling field to confuse it with.
 func NameMissingReference(field string, err error) error {
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return &ReferenceNotFoundError{Field: field, Cause: err}

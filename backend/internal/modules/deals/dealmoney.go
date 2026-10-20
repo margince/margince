@@ -48,8 +48,7 @@ func moneyPairError(amount, arr *int64, currency *string) error {
 		return &AmountCurrencyPairError{Missing: currencyField}
 	}
 	if amount != nil {
-		// One spelling of "a valid amount+currency" (values.Money), the same
-		// rule the schema CHECKs repeat.
+		// One spelling of "a valid amount+currency" (values.Money).
 		if _, err := values.NewMoney(*amount, *currency); err != nil {
 			return err
 		}

@@ -25,6 +25,10 @@ import (
 // CreateRelationshipInput is one edge to write: its kind, the endpoints that
 // kind anchors, and the optional facts an employment carries.
 type CreateRelationshipInput struct {
+	// ReferencesFromRequest says the caller typed the endpoint ids, so a miss
+	// is refused naming the field. A writer that derives them (an import row, a
+	// promotion) leaves it false.
+	ReferencesFromRequest bool
 	EmploymentStatus      *string
 	StartedPrecision      *string
 	EndedPrecision        *string
@@ -149,14 +153,14 @@ func writeRelationshipInTx(
 	// relationship on an archived contact.
 	if in.ContactID != nil {
 		if err := lockContactForAttach(ctx, tx, *in.ContactID); err != nil {
-			return out, err
+			return out, in.named(endContactColumn, err)
 		}
 	}
 	// The counterparty contact is an attach target exactly like the anchor: an
 	// archive racing this write must either refuse it or sweep the edge.
 	if in.CounterpartyContactID != nil {
 		if err := lockContactForAttach(ctx, tx, *in.CounterpartyContactID); err != nil {
-			return out, err
+			return out, in.named("counterparty_contact_id", err)
 		}
 	}
 	if err := ensureRelationshipEndpoints(ctx, tx, in); err != nil {
@@ -208,6 +212,15 @@ func lockEmploymentClocks(ctx context.Context, tx pgx.Tx, in CreateRelationshipI
 	return storekit.LockLastActivityTargets(ctx, tx, targets)
 }
 
+// named is the refusal for the endpoint in field: naming it when the caller
+// typed the ids, and the bare answer when a writer derived them.
+func (in CreateRelationshipInput) named(field string, err error) error {
+	if in.ReferencesFromRequest {
+		return auth.NameMissingReference(field, err)
+	}
+	return err
+}
+
 // ensureRelationshipEndpoints validates every supplied endpoint as a
 // client-supplied FK argument (H1): each named target must be visible
 // under the caller's row scope before the edge lands.
@@ -227,8 +240,8 @@ func ensureRelationshipEndpoints(ctx context.Context, tx pgx.Tx, in CreateRelati
 		if ref.id == nil {
 			continue
 		}
-		if err := auth.EnsureReferenceTarget(ctx, tx, ref.field, ref.table, *ref.id); err != nil {
-			return err
+		if err := auth.EnsureLinkTarget(ctx, tx, ref.table, *ref.id); err != nil {
+			return in.named(ref.field, err)
 		}
 	}
 	return nil
