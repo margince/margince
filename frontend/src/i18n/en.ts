@@ -4691,6 +4691,9 @@ export const en = {
     "Creates a new company unless one is picked from the list.",
   "create.dealName": "Deal name",
   "create.amount": "Value",
+  "create.amountNegative": "Enter an amount of zero or more.",
+  "create.referenceNotFound":
+    "This record no longer exists, or you cannot see it.",
   "create.currency": "Currency",
   "create.stage": "Stage",
   "create.relatedCompany": "Company",
