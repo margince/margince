@@ -8,6 +8,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"maps"
 	"testing"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -140,6 +142,17 @@ func TestSignalAnswerDoesNotRequireDecidingAProposalTheReaderCannotSee(t *testin
 	if _, shown := observed["suggestion_id"]; shown {
 		t.Fatal("hidden proposal reference disclosed")
 	}
+	denied := perms
+	denied.Objects = maps.Clone(perms.Objects)
+	signalGrant := denied.Objects["signal"]
+	signalGrant.Update = false
+	denied.Objects["signal"] = signalGrant
+	for _, id := range []ids.UUID{found[0].ID, ids.NewV7()} {
+		err := store.Resolve(e.As(e.AdminUser, nil, denied), id, assurance.Resolution{Outcome: assurance.OutcomeNotRelevant, Reason: "No current buyer need"}, e.now)
+		if !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Fatalf("ungranted resolution=%v", err)
+		}
+	}
 	if err := store.Resolve(reader, found[0].ID, assurance.Resolution{Outcome: assurance.OutcomeNotRelevant, Reason: "No current buyer need"}, e.now); err != nil {
 		t.Fatal(err)
 	}
@@ -152,5 +165,83 @@ func TestSignalAnswerDoesNotRequireDecidingAProposalTheReaderCannotSee(t *testin
 	}
 	if remaining := readSignalFindings(reader, t, e); len(remaining) != 0 {
 		t.Fatalf("dismissed evidence returned: %+v", remaining)
+	}
+}
+
+func TestFilingASignalRequiresPermissionToLinkAllOfItsEvidence(t *testing.T) {
+	e := setupScout(t)
+	company := e.SeedCompany(t, "Maple Studio", nil)
+	source, buyer := e.buyingEmail(t, company, e.daysAgo(2))
+	signal := e.signal(t, "new_opportunity", company, source, e.now, ids.Nil, buyer)
+	store := assurance.NewStore(InstallationDB(e.Pool)).WithSignalDecision(DecideAssuranceSignal)
+	scanner := assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig()).WithSignalSubjects(AssuranceSignalSubjects)
+	if _, err := scanner.Scan(e.system(), e.now, nil); err != nil {
+		t.Fatal(err)
+	}
+	found := readSignalFindings(e.signalReader(), t, e)
+	if len(found) != 1 {
+		t.Fatalf("findings=%d, want one", len(found))
+	}
+	companyID := ids.From[ids.CompanyKind](company)
+	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{Name: "Maple rollout", CompanyID: &companyID, PipelineID: e.pipeline, StageID: e.open, Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	perms := integration.AdminWithSignals
+	perms.Objects = maps.Clone(perms.Objects)
+	activityGrant := perms.Objects["activity"]
+	activityGrant.Update = false
+	perms.Objects["activity"] = activityGrant
+	reader := e.As(e.AdminUser, nil, perms)
+	dealID := ids.UUID(deal.Id)
+	err = store.Resolve(reader, found[0].ID, assurance.Resolution{Outcome: assurance.OutcomeFixedRecord, DealID: &dealID}, e.now)
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("filing without source update permission=%v", err)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id = $1 AND deal_id = $2`, source, dealID); got != 0 {
+		t.Fatalf("refused source links=%d", got)
+	}
+	if remaining := readSignalFindings(reader, t, e); len(remaining) != 1 || remaining[0].SubjectID != signal {
+		t.Fatalf("refused finding must remain actionable: %+v", remaining)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM signal WHERE id = $1 AND status = 'open'`, signal); got != 1 {
+		t.Fatal("refused filing settled its signal")
+	}
+}
+
+func TestAnUnreadableSignalCensusCannotClearFindingsOrClaimACompletePreview(t *testing.T) {
+	e := setupScout(t)
+	company := e.SeedCompany(t, "Maple Studio", nil)
+	source, buyer := e.buyingEmail(t, company, e.daysAgo(2))
+	e.signal(t, "new_opportunity", company, source, e.now, ids.Nil, buyer)
+	store := assurance.NewStore(InstallationDB(e.Pool))
+	scanner := assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig()).WithSignalSubjects(AssuranceSignalSubjects)
+	if _, err := scanner.Scan(e.system(), e.now, nil); err != nil {
+		t.Fatal(err)
+	}
+	for _, object := range []string{"company", "signal", "activity"} {
+		t.Run(object, func(t *testing.T) {
+			perms := integration.AdminWithSignals
+			perms.Objects = maps.Clone(perms.Objects)
+			delete(perms.Objects, object)
+			reader := e.As(e.AdminUser, nil, perms)
+			preview, err := scanner.Preview(reader, e.now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(preview.Counts) != 0 || preview.Readiness != assurance.ReadinessChecksIncomplete {
+				t.Fatalf("unreadable preview=%+v", preview)
+			}
+			run, err := scanner.Scan(reader, e.now, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if run.Status != assurance.StatusIncomplete || run.Cleared != 0 {
+				t.Fatalf("unreadable run=%+v", run)
+			}
+			if found := readSignalFindings(e.signalReader(), t, e); len(found) != 1 {
+				t.Fatalf("incomplete census changed findings: %+v", found)
+			}
+		})
 	}
 }

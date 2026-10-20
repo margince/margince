@@ -19,10 +19,13 @@ import (
 
 // AssuranceSignalSubjects supplies source-grounded requests to the shared assurance scan.
 func AssuranceSignalSubjects(ctx context.Context, tx pgx.Tx, now time.Time) ([]assurance.SignalSubject, error) {
-	if !auth.ReadGranted(ctx, "company") {
-		return nil, nil
-	}
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	if err := auth.Require(ctx, "signal", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	var args []any

@@ -16,6 +16,9 @@ func TestOpportunityBuyerRequiresAQuotedNeedAndAVerifiedParticipant(t *testing.T
 		t.Run(role, func(t *testing.T) {
 			thread := settledThread{Messages: []threadMessage{{ID: source, Body: "We need a platform migration.", Parties: []commitmentParty{{Ref: ref, Contact: &contact, Role: role}}}}}
 			event := extractedEvent{Kind: "new_opportunity", MessageID: source.String(), Quote: "We need a platform migration.", BuyerRef: ref, CommercialRole: "buyer"}
+			if reason := validateEventEvidence(event, thread); reason != "" {
+				t.Fatalf("verified external buyer rejected: %s", reason)
+			}
 			buyer, direction := opportunityBuyer(event, thread)
 			if buyer == nil || *buyer != contact || direction != "buyer" {
 				t.Fatalf("buyer = %v, role = %s", buyer, direction)
@@ -42,5 +45,23 @@ func TestCommercialIntermediariesCannotBecomeTheBuyer(t *testing.T) {
 		if buyer != nil || got != role {
 			t.Fatalf("%s attribution = %v/%s", role, buyer, got)
 		}
+	}
+}
+
+func TestOwnPurchaseCannotNameOurSeatAsTheCustomer(t *testing.T) {
+	seat, source := ids.NewV7(), ids.NewV7()
+	ref := "seat:" + seat.String()
+	body := "We need a migration platform for our own sales team. Your company would be our supplier for this project."
+	thread := settledThread{Messages: []threadMessage{{ID: source, Body: body, Parties: []commitmentParty{{Ref: ref, Seat: &seat, Role: "from"}}}}}
+	event := extractedEvent{Kind: extractKindOpportunity, MessageID: source.String(), Quote: body, BuyerRef: ref, CommercialRole: commercialRoleBuyer}
+	if reason := validateEventEvidence(event, thread); reason == "" {
+		t.Fatal("our own seat was accepted as an external buyer")
+	}
+	if buyer, role := opportunityBuyer(event, thread); buyer != nil || role != commercialRoleUnknown {
+		t.Fatalf("our own purchase attributed to buyer %v/%s", buyer, role)
+	}
+	event.CommercialRole, event.BuyerRef = commercialRoleSupplier, ""
+	if reason := validateEventEvidence(event, thread); reason != "" {
+		t.Fatalf("supplier context rejected: %s", reason)
 	}
 }

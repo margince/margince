@@ -6,6 +6,7 @@
 package compose
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 	"time"
@@ -30,11 +31,14 @@ func TestMailboxHistoryKeepsAQualifiedOpportunityAsHistoricalRecovery(t *testing
 	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{Kind: "employment", ContactID: &contactID, CompanyID: &companyID, Source: "manual"}); err != nil {
 		t.Fatal(err)
 	}
-	captureMailVia(t, e.Env, e.Rep1, "gmail", threadMail(seatAddress(t, e.Env, e.Rep1), "quiet-opportunity@buyer.test", "Mon, 15 Jun 2026 10:00:00 +0000", ""))
+	mail := threadMail(seatAddress(t, e.Env, e.Rep1), "quiet-opportunity@buyer.test", "Mon, 15 Jun 2026 10:00:00 +0000", "")
+	mail = bytes.ReplaceAll(mail, []byte("Text."), []byte("We need a platform migration. You agreed to send pricing."))
+	captureMailVia(t, e.Env, e.Rep1, "gmail", mail)
 	setBaseline(t, e.Env, e.Rep1, "gmail", "2026-10-01", "Europe/Berlin")
 	source := mailSource(t, e.Env, "quiet-opportunity@buyer.test")
-	if _, err := e.Activities.SetAudience(e.rep(e.Rep1, e.Team1), ids.From[ids.ActivityKind](source), activities.SetAudienceInput{Audience: "workspace"}); err != nil {
-		t.Fatal(err)
+	threadKey := e.WsScalar(t, `SELECT thread_key FROM activity WHERE id = $1`, source)
+	if outcome := decideThread(t, e.Env, e.Rep1, threadKey, true); !outcome.Shared {
+		t.Fatal("the importing owner could not share the historical source")
 	}
 	e.signal(t, "new_opportunity", company, source, e.now, ids.Nil, ids.UUID(buyer.Id))
 	if got := dispatchFor(t, e.Env, source, e.Rep1); got != CommitmentOutcome(activities.CommitmentHistorical) {

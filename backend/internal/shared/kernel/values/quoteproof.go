@@ -16,22 +16,24 @@ type QuoteProof struct {
 	SHA256 string `json:"sha256"`
 }
 
+// ProveQuote binds a quote to normalized source content without retaining its words.
 func ProveQuote(text, quote string) (QuoteProof, bool) {
 	text, quote = CollapseSpace(text), CollapseSpace(quote)
 	start := strings.Index(text, quote)
 	if quote == "" || start < 0 {
 		return QuoteProof{}, false
 	}
-	return QuoteProof{Start: start, End: start + len(quote), SHA256: quoteDigest(quote)}, true
+	return QuoteProof{Start: start, End: start + len(quote), SHA256: quoteDigest(text)}, true
 }
 
+// VerifyQuote reconstructs matching words; the caller must authorize the source first.
 func VerifyQuote(text string, proof QuoteProof) (string, bool) {
 	text = CollapseSpace(text)
 	if proof.Start < 0 || proof.End <= proof.Start || proof.End > len(text) {
 		return "", false
 	}
 	quote := text[proof.Start:proof.End]
-	if quoteDigest(quote) != proof.SHA256 {
+	if quoteDigest(text) != proof.SHA256 {
 		return "", false
 	}
 	return quote, true

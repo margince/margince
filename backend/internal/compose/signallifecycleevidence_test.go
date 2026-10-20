@@ -53,3 +53,25 @@ func TestRecordedLifecycleEvidenceKeepsSourceProofAndScope(t *testing.T) {
 		t.Fatalf("recorded evidence lost its source scope: %+v", evidence)
 	}
 }
+
+func TestUnscopedEventsCarryNoLifecycleClaim(t *testing.T) {
+	for _, scope := range []string{"", lifecycleScopeUnknown} {
+		event := extractedEvent{Kind: extractKindCommitment, LifecycleScope: scope}
+		if reason := validateLifecycleEvidence(event, settledThread{}); reason != "" {
+			t.Fatalf("neutral scope refused: %s", reason)
+		}
+		evidence := eventSignalEvidence(event, ids.NewV7(), settledThread{})
+		if evidence.LifecycleScope != "" || evidence.Workstream != "" || evidence.SourceQuote != nil {
+			t.Fatalf("neutral scope persisted: %+v", evidence)
+		}
+		event.Workstream = "invented engagement"
+		if reason := validateLifecycleEvidence(event, settledThread{}); reason == "" {
+			t.Fatal("unscoped engagement admitted")
+		}
+	}
+	for _, scope := range []string{lifecycleScopeCompany, lifecycleScopeWorkstream} {
+		if reason := validateLifecycleEvidence(extractedEvent{Kind: extractKindCommitment, LifecycleScope: scope}, settledThread{}); reason == "" {
+			t.Fatalf("substantive non-lifecycle scope admitted: %s", scope)
+		}
+	}
+}

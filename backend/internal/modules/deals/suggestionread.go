@@ -117,6 +117,7 @@ type Suggestion struct {
 	State       string
 	CompanyID   ids.UUID
 	CompanyName string
+	OwnerID     *ids.UUID
 	PipelineID  ids.UUID
 	StageID     ids.UUID
 	NameHint    string
@@ -159,12 +160,12 @@ type suggestionCursor struct {
 
 const suggestionColumns = `s.id, s.kind, s.state, s.company_id, c.display_name, s.pipeline_id,
 	       s.proposed_stage_id, s.name_hint, s.proposed_amount_minor, s.currency,
-	       s.proposed_close_date, s.confidence::float8, s.created_at`
+	       s.proposed_close_date, s.confidence::float8, s.created_at, c.owner_id`
 
 func scanSuggestion(row pgx.Row) (Suggestion, error) {
 	var s Suggestion
 	err := row.Scan(&s.ID, &s.Kind, &s.State, &s.CompanyID, &s.CompanyName, &s.PipelineID,
-		&s.StageID, &s.NameHint, &s.AmountMinor, &s.Currency, &s.CloseDate, &s.Confidence, &s.CreatedAt)
+		&s.StageID, &s.NameHint, &s.AmountMinor, &s.Currency, &s.CloseDate, &s.Confidence, &s.CreatedAt, &s.OwnerID)
 	return s, err
 }
 

@@ -36230,8 +36230,11 @@ type DealSuggestion struct {
 	Kind DealSuggestionKind `json:"kind"`
 
 	// NameHint Which evidence leads, as a code the client words in the reader's language. The proposed deal name is the company's name and this hint; nothing in a suggestion is text copied out of a message.
-	NameHint   DealSuggestionNameHint `json:"name_hint"`
-	PipelineId openapi_types.UUID     `json:"pipeline_id"`
+	NameHint DealSuggestionNameHint `json:"name_hint"`
+
+	// OwnerId The current company owner responsible for reviewing this suggestion.
+	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
+	PipelineId openapi_types.UUID  `json:"pipeline_id"`
 
 	// StageId The stage the deal would open in: the default pipeline's first open stage.
 	StageId openapi_types.UUID  `json:"stage_id"`
@@ -47977,7 +47980,7 @@ type SignalEvidence struct {
 	Snippet        string                        `json:"snippet"`
 	SourceId       *string                       `json:"source_id,omitempty"`
 
-	// SourceQuote A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the normalized quoted substring.
+	// SourceQuote A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message.
 	SourceQuote *SourceQuoteProof         `json:"source_quote,omitempty"`
 	SourceType  *SignalEvidenceSourceType `json:"source_type,omitempty"`
 
@@ -48240,7 +48243,7 @@ type SourceAuthor struct {
 	Via *string `json:"via,omitempty"`
 }
 
-// SourceQuoteProof A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the normalized quoted substring.
+// SourceQuoteProof A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message.
 type SourceQuoteProof struct {
 	End    int    `json:"end"`
 	Sha256 string `json:"sha256"`

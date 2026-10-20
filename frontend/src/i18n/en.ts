@@ -842,6 +842,8 @@ export const en = {
   "dealSuggestion.field.amount": "Amount",
   "dealSuggestion.field.currency": "Currency",
   "dealSuggestion.field.stage": "Stage",
+  "dealSuggestion.accountOwner": "Account owner",
+  "dealSuggestion.unassignedOwner": "Unassigned",
   "dealSuggestion.field.owner": "Owner",
   "dealSuggestion.ownerMe": "Me",
   "dealSuggestion.field.closeDate": "Expected close",
@@ -5745,6 +5747,7 @@ export const en = {
     "The link stops opening at once, for anyone who has it. A closed link cannot be reopened.",
   "analytics.frame": "As of {asOf} · {zone}",
   "review.unlinkedSignal": "Buying interest without a deal",
+  "review.signalNotRelevant": "Not relevant",
   "review.signalOccurred": "Source date: {date}",
   "review.uncertainBuyer":
     "Confirm who is buying and which company they represent before creating a deal.",

@@ -164,7 +164,9 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 		pass := askEveryRule(now, subjects, s.cfg)
 		out.EligibleSignals, err = s.askSignals(ctx, tx, now, &pass)
 		if err != nil {
-			return err
+			out.Status = StatusIncomplete
+			out.Readiness = ReadinessChecksIncomplete
+			return s.store.FinishRun(ctx, tx, runID, pass.eligible, 0, 0, out.Status, out.Readiness)
 		}
 		out.EligibleDeals = pass.eligible
 		out.Findings = len(pass.raised)

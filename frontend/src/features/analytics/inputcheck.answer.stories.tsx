@@ -49,11 +49,15 @@ function Answer({
     />
   );
 }
-function renderAnswer(historical: boolean, buyerVerified = true) {
+function renderAnswer(
+  historical: boolean,
+  buyerVerified = true,
+  mayAnswer = true,
+) {
   installFetchStub({
     "GET /me": meRoute({
       deal: ["read", "update"],
-      signal: ["read", "update"],
+      signal: mayAnswer ? ["read", "update"] : ["read"],
       forecast: ["read", "update"],
     }),
     "GET /signals/signal-one": () =>
@@ -80,4 +84,8 @@ export const HistoricalEvidence: Story = { render: () => renderAnswer(true) };
 
 export const BuyerNeedsConfirmation: Story = {
   render: () => renderAnswer(false, false),
+};
+
+export const ReadOnlySignal: Story = {
+  render: () => renderAnswer(false, true, false),
 };
