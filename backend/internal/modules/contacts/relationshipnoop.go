@@ -35,7 +35,7 @@ func patchRelationshipUnlessUnchanged(
 		}
 		return relationshipRow{}, false, err
 	}
-	_, moved := storekit.ChangedColumns(relationshipFieldImage(current), relationshipFieldImage(out))
+	_, moved := storekit.ChangedColumns(savedEdgeImage(current), savedEdgeImage(out))
 	if len(moved) > 0 {
 		if err := nested.Commit(ctx); err != nil {
 			return relationshipRow{}, false, fmt.Errorf("commit the relationship patch: %w", err)
@@ -62,4 +62,16 @@ func demoteAndPatchRelationship(
 		return relationshipRow{}, mapRelationshipConstraint(err, current.Kind)
 	}
 	return out, nil
+}
+
+// savedEdgeImage is what a save can change on an edge: the audited fields and
+// whose edge it is. A save by someone other than the author takes the edge over,
+// which is how confirming a suggested seat works, so it is a change even when no
+// field moves.
+//
+//craft:ignore naked-any the image is the schemaless column map storekit compares
+func savedEdgeImage(rel relationshipRow) map[string]any {
+	image := relationshipFieldImage(rel)
+	image["captured_by"] = rel.CapturedBy
+	return image
 }
