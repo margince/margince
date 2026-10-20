@@ -19,6 +19,7 @@ import (
 )
 
 const (
+	// LockKey serializes correction batches across worker replicas.
 	LockKey          int64 = 0x646174617461736b
 	transactionLimit       = 20 * time.Second
 	statementLimit         = 15 * time.Second
@@ -42,38 +43,9 @@ func (e *Engine) Execute(ctx context.Context) (Outcome, error) {
 	var picked *selection
 	var outcome Outcome
 	err := database.WithWorkspaceTx(batchCtx, e.pool, func(tx pgx.Tx) error {
-		locked, err := lockExecutor(batchCtx, tx)
-		if err != nil || !locked {
-			outcome.Busy = !locked && err == nil
-			return err
-		}
-		progress, err := readProgress(batchCtx, tx)
-		if err != nil {
-			return err
-		}
-		candidate, blocked := nextStep(e.tasks, progress, e.now())
-		if candidate != nil && blocked == "retry_wait" {
-			outcome.Wait = candidate.progress.NextAttemptAt.Sub(e.now())
-		}
-		if candidate == nil || blocked != "" {
-			return nil
-		}
-		missing, err := missingRequirements(batchCtx, tx, candidate.task)
-		if err != nil || len(missing) != 0 {
-			return err
-		}
-		picked = candidate
-		current, err := scanProgress(tx.QueryRow(batchCtx,
-			`SELECT `+progressColumns+` FROM data_task_run WHERE task_id = @task AND step = @step FOR UPDATE`,
-			pgx.NamedArgs{"task": candidate.task.ID, "step": candidate.step.Name}))
-		if err != nil {
-			return err
-		}
-		outcome.More = true
-		if current.Version != candidate.progress.Version {
-			return nil
-		}
-		return e.runBatch(batchCtx, tx, *picked)
+		var err error
+		outcome, picked, err = e.executeTx(batchCtx, tx)
+		return err
 	})
 	if err == nil || ctx.Err() != nil {
 		return outcome, nil
@@ -159,10 +131,10 @@ func (e *Engine) commitProgress(ctx context.Context, tx pgx.Tx, p Progress, out 
  last_progress_at = @now, updated_at = @now, version = version + 1
  WHERE task_id = @task AND step = @step AND version = @version`,
 		pgx.NamedArgs{
-			"revision": p.TaskVersion, "status": status, "cursor": out.Cursor,
-			"limit": p.BatchLimit, "scanned": p.Scanned + int64(out.Scanned), "changed": p.Changed + int64(out.Changed),
-			"batches": p.Batches + 1, "estimate": p.Estimate, "capped": p.EstimateCapped, "estimated": p.EstimatedAt,
-			"now": e.now(), "task": p.TaskID, "step": p.Step, "version": p.Version,
+			"revision": p.TaskVersion, paramStatus: status, "cursor": out.Cursor,
+			paramLimit: p.BatchLimit, "scanned": p.Scanned + int64(out.Scanned), "changed": p.Changed + int64(out.Changed),
+			"batches": p.Batches + 1, paramEstimate: p.Estimate, paramCapped: p.EstimateCapped, "estimated": p.EstimatedAt,
+			paramNow: e.now(), paramTask: p.TaskID, paramStep: p.Step, paramVersion: p.Version,
 		})
 	if err != nil {
 		return err
@@ -171,4 +143,41 @@ func (e *Engine) commitProgress(ctx context.Context, tx pgx.Tx, p Progress, out 
 		return fmt.Errorf("data task progress changed before commit")
 	}
 	return nil
+}
+
+func (e *Engine) executeTx(ctx context.Context, tx pgx.Tx) (Outcome, *selection, error) {
+	var outcome Outcome
+	var picked *selection
+	locked, err := lockExecutor(ctx, tx)
+	if err != nil || !locked {
+		outcome.Busy = !locked && err == nil
+		return outcome, picked, err
+	}
+	progress, err := readProgress(ctx, tx)
+	if err != nil {
+		return outcome, picked, err
+	}
+	candidate, blocked := nextStep(e.tasks, progress, e.now())
+	if candidate != nil && blocked == "retry_wait" {
+		outcome.Wait = candidate.progress.NextAttemptAt.Sub(e.now())
+	}
+	if candidate == nil || blocked != "" {
+		return outcome, picked, nil
+	}
+	missing, err := missingRequirements(ctx, tx, candidate.task)
+	if err != nil || len(missing) != 0 {
+		return outcome, picked, err
+	}
+	picked = candidate
+	current, err := scanProgress(tx.QueryRow(ctx,
+		`SELECT `+progressColumns+` FROM data_task_run WHERE task_id = @task AND step = @step FOR UPDATE`,
+		pgx.NamedArgs{paramTask: candidate.task.ID, paramStep: candidate.step.Name}))
+	if err != nil {
+		return outcome, picked, err
+	}
+	outcome.More = true
+	if current.Version != candidate.progress.Version {
+		return outcome, picked, nil
+	}
+	return outcome, picked, e.runBatch(ctx, tx, *picked)
 }

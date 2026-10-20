@@ -84,9 +84,7 @@ SELECT e.contact_id, e.id, 'art14', $4::timestamptz + interval '1 month', coales
 	return caseID
 }
 
-// heldRFC822 is a received message as its mailbox stores it: the provider's own
-// Received line on top, stamped `delivered`, and below it whatever the sender
-// wrote, including a Received line and a Date of their choosing.
+// heldRFC822 puts the provider arrival above the sender-controlled headers.
 func heldRFC822(delivered, claimed time.Time) string {
 	return "Delivered-To: rep@held.test\r\n" +
 		"Received: by 2002:a05:7300:1 with SMTP id x1;\r\n        " + delivered.Format(time.RFC1123Z) + " (UTC)\r\n" +
@@ -159,11 +157,142 @@ func TestHeldMailTaskClosesOnlyProvenHistoryAndReplaysSafely(t *testing.T) {
 		seat, connected); err != nil {
 		t.Fatal(err)
 	}
+	cases := heldMailCases(ctx, t, conn, seat, connected)
+
+	tasks := dataTaskCatalog(func() time.Time { return connected.Add(time.Hour) })
+	for i := range tasks[0].Steps {
+		tasks[0].Steps[i].Limit = 2
+		tasks[0].Steps[i].MinLimit = 1
+	}
+	engine, err := datatask.New(e.Pool, tasks, "test", func() time.Time { return connected.Add(time.Hour) }, func(context.Context, pgx.Tx, datatask.Progress) error { return nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Seed(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for batch := 0; batch < 100; batch++ {
+		if _, err := engine.Execute(ctx); err != nil {
+			t.Fatal(err)
+		}
+		progress, err := engine.List(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if progress[len(progress)-1].Status == datatask.Done {
+			break
+		}
+		if batch == 99 {
+			t.Fatalf("correction did not finish: %+v", progress)
+		}
+	}
+	assertHeldMailReplay(ctx, t, e, tasks)
+	for name, c := range cases {
+		if state, kind := heldCaseAndKind(ctx, t, conn, c.id); state != c.wantState || kind != c.wantKind {
+			t.Errorf("%s: case %q on a %q acquisition, want %q on %q", name, state, kind, c.wantState, c.wantKind)
+		}
+	}
+	var audited int
+	if err := conn.QueryRow(ctx, `
+		SELECT count(*) FROM audit_log
+		 WHERE entity_type = 'privacy_notice_case' AND entity_id = $1`, cases["received-before"].id).Scan(&audited); err != nil {
+		t.Fatal(err)
+	}
+	if audited != 1 {
+		t.Errorf("the settled duty was audited %d times, want once (a second run finds nothing owed)", audited)
+	}
+}
+
+func TestHeldMailDomainAndAuditRollBackWithItsProgress(t *testing.T) {
+	e := integration.Setup(t)
+	conn := integration.OwnerConn(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	connected := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	if _, err := conn.Exec(ctx, `INSERT INTO capture_connection(provider,user_id,status,created_at) VALUES('gmail',@user,'connected',@at)`, pgx.NamedArgs{"user": e.Rep1, "at": connected}); err != nil {
+		t.Fatal(err)
+	}
+	id := heldHistoryCase(ctx, t, conn, e.Rep1.String(), "rollback@held.test", "connector:gmail", "open", connected.Add(-time.Hour))
+	now := connected.Add(time.Hour)
+	tasks := dataTaskCatalog(func() time.Time { return now })
+	original := tasks[0].Steps[1].Batch
+	tasks[0].Steps[1].Batch = func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
+		out, err := original(ctx, tx, in)
+		if err != nil {
+			return out, err
+		}
+		return out, errors.New("transaction interrupted after domain writes")
+	}
+	engine, err := datatask.New(e.Pool, tasks, "test", func() time.Time { return now }, dataTaskFailureNotice(e.Pool))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Seed(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if _, err := engine.Execute(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if state, kind := heldCaseAndKind(ctx, t, conn, id); state != "open" || kind != "unknown_legacy" {
+		t.Fatalf("partial domain write: %s/%s", state, kind)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type IN ('privacy_notice_case','contact_acquisition_evidence')`); got != 0 {
+		t.Fatalf("audit escaped rollback: %d", got)
+	}
+	progress, err := engine.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if progress[1].Batches != 0 || progress[1].ConsecutiveFailures != 1 {
+		t.Fatalf("partial progress: %+v", progress[1])
+	}
+	now = now.Add(time.Hour)
+	resumed, err := newDataTaskEngine(e.Pool, "test", func() time.Time { return now })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := resumed.Execute(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if state, kind := heldCaseAndKind(ctx, t, conn, id); state != "exempt_with_reason" || kind != "mailbox_history" {
+		t.Fatalf("retry failed: %s/%s", state, kind)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type IN ('privacy_notice_case','contact_acquisition_evidence')`); got != 2 {
+		t.Fatalf("committed audit rows=%d", got)
+	}
+}
+
+func assertHeldMailReplay(ctx context.Context, t *testing.T, e *integration.Env, tasks []datatask.Task) {
+	t.Helper()
+	for _, step := range tasks[0].Steps {
+		in := datatask.BatchIn{Limit: 2, RunID: ids.NewV7()}
+		for {
+			var out datatask.BatchOut
+			err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error { var err error; out, err = step.Batch(ctx, tx, in); return err })
+			if err != nil {
+				t.Fatal(err)
+			}
+			if out.Changed != 0 {
+				t.Fatalf("replay changed %d records", out.Changed)
+			}
+			if out.Done {
+				break
+			}
+			in.Cursor = out.Cursor
+		}
+	}
+}
+
+type heldMailOutcome struct{ id, wantState, wantKind string }
+
+func heldMailCases(ctx context.Context, t *testing.T, conn *pgx.Conn, seat string, connected time.Time) map[string]heldMailOutcome {
+	t.Helper()
 	old := connected.AddDate(-2, 0, 0)
 	later := connected.Add(time.Hour)
 	const verdict = "agent:capture_counterparty_verdict"
 
-	cases := map[string]struct{ id, wantState, wantKind string }{
+	return map[string]heldMailOutcome{
 		// Verdict-derived acquisitions use the same sent-history evidence.
 		"verdict-sent": {
 			heldHistoryCase(ctx, t, conn, seat, "sent@held.test", verdict, "open", old),
@@ -277,124 +406,5 @@ func TestHeldMailTaskClosesOnlyProvenHistoryAndReplaysSafely(t *testing.T) {
 			heldHistoryCase(ctx, t, conn, seat, "done@held.test", verdict, "completed", old),
 			"completed", "mailbox_history",
 		},
-	}
-
-	tasks := dataTaskCatalog(func() time.Time { return connected.Add(time.Hour) })
-	for i := range tasks[0].Steps {
-		tasks[0].Steps[i].Limit = 2
-		tasks[0].Steps[i].MinLimit = 1
-	}
-	engine, err := datatask.New(e.Pool, tasks, "test", func() time.Time { return connected.Add(time.Hour) }, func(context.Context, pgx.Tx, datatask.Progress) error { return nil })
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := engine.Seed(ctx); err != nil {
-		t.Fatal(err)
-	}
-	for batch := 0; batch < 100; batch++ {
-		if _, err := engine.Execute(ctx); err != nil {
-			t.Fatal(err)
-		}
-		progress, err := engine.List(ctx)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if progress[len(progress)-1].Status == datatask.Done {
-			break
-		}
-		if batch == 99 {
-			t.Fatalf("correction did not finish: %+v", progress)
-		}
-	}
-	for _, step := range tasks[0].Steps {
-		in := datatask.BatchIn{Limit: 2, RunID: ids.NewV7()}
-		for {
-			var out datatask.BatchOut
-			err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error { var err error; out, err = step.Batch(ctx, tx, in); return err })
-			if err != nil {
-				t.Fatal(err)
-			}
-			if out.Changed != 0 {
-				t.Fatalf("replay changed %d records", out.Changed)
-			}
-			if out.Done {
-				break
-			}
-			in.Cursor = out.Cursor
-		}
-	}
-	for name, c := range cases {
-		if state, kind := heldCaseAndKind(ctx, t, conn, c.id); state != c.wantState || kind != c.wantKind {
-			t.Errorf("%s: case %q on a %q acquisition, want %q on %q", name, state, kind, c.wantState, c.wantKind)
-		}
-	}
-	var audited int
-	if err := conn.QueryRow(ctx, `
-		SELECT count(*) FROM audit_log
-		 WHERE entity_type = 'privacy_notice_case' AND entity_id = $1`, cases["received-before"].id).Scan(&audited); err != nil {
-		t.Fatal(err)
-	}
-	if audited != 1 {
-		t.Errorf("the settled duty was audited %d times, want once (a second run finds nothing owed)", audited)
-	}
-}
-
-func TestHeldMailDomainAndAuditRollBackWithItsProgress(t *testing.T) {
-	e := integration.Setup(t)
-	conn := integration.OwnerConn(t)
-	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	connected := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	if _, err := conn.Exec(ctx, `INSERT INTO capture_connection(provider,user_id,status,created_at) VALUES('gmail',@user,'connected',@at)`, pgx.NamedArgs{"user": e.Rep1, "at": connected}); err != nil {
-		t.Fatal(err)
-	}
-	id := heldHistoryCase(ctx, t, conn, e.Rep1.String(), "rollback@held.test", "connector:gmail", "open", connected.Add(-time.Hour))
-	now := connected.Add(time.Hour)
-	tasks := dataTaskCatalog(func() time.Time { return now })
-	original := tasks[0].Steps[1].Batch
-	tasks[0].Steps[1].Batch = func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-		out, err := original(ctx, tx, in)
-		if err != nil {
-			return out, err
-		}
-		return out, errors.New("transaction interrupted after domain writes")
-	}
-	engine, err := datatask.New(e.Pool, tasks, "test", func() time.Time { return now }, dataTaskFailureNotice(e.Pool))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := engine.Seed(ctx); err != nil {
-		t.Fatal(err)
-	}
-	for range 2 {
-		if _, err := engine.Execute(ctx); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if state, kind := heldCaseAndKind(ctx, t, conn, id); state != "open" || kind != "unknown_legacy" {
-		t.Fatalf("partial domain write: %s/%s", state, kind)
-	}
-	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type IN ('privacy_notice_case','contact_acquisition_evidence')`); got != 0 {
-		t.Fatalf("audit escaped rollback: %d", got)
-	}
-	progress, err := engine.List(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if progress[1].Batches != 0 || progress[1].ConsecutiveFailures != 1 {
-		t.Fatalf("partial progress: %+v", progress[1])
-	}
-	now = now.Add(time.Hour)
-	resumed, err := newDataTaskEngine(e.Pool, "test", func() time.Time { return now })
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := resumed.Execute(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if state, kind := heldCaseAndKind(ctx, t, conn, id); state != "exempt_with_reason" || kind != "mailbox_history" {
-		t.Fatalf("retry failed: %s/%s", state, kind)
-	}
-	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type IN ('privacy_notice_case','contact_acquisition_evidence')`); got != 2 {
-		t.Fatalf("committed audit rows=%d", got)
 	}
 }

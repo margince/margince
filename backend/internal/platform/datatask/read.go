@@ -48,11 +48,12 @@ func (e *Engine) describeProgress(ctx context.Context, tx pgx.Tx, stored map[str
 			}
 			p.Title = task.Title
 			if !complete(task, p) && next != nil {
-				if task.ID != next.task.ID || step.Name != next.step.Name {
+				switch {
+				case task.ID != next.task.ID || step.Name != next.step.Name:
 					p.BlockedReason, p.BlockedBy = "earlier_step", progressKey(next.task.ID, next.step.Name)
-				} else if blocked != "" {
+				case blocked != "":
 					p.BlockedReason = blocked
-				} else if len(missing) > 0 {
+				case len(missing) > 0:
 					p.BlockedReason, p.MissingPrerequisites = "missing_prerequisite", missing
 				}
 			}

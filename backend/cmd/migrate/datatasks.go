@@ -12,6 +12,8 @@ import (
 	"io"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -53,25 +55,9 @@ func runDataTasks(ctx context.Context, args []string, stdout, stderr io.Writer) 
 		return err
 	}
 	if *wait {
-		ticker := time.NewTicker(time.Second)
-		defer ticker.Stop()
-		for {
-			done, err := dataTasksFinished(progress)
-			if err != nil {
-				return err
-			}
-			if done {
-				break
-			}
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-ticker.C:
-			}
-			progress, err = compose.DataTaskOperation(ctx, pool, "status")
-			if err != nil {
-				return err
-			}
+		progress, err = waitForDataTasks(ctx, pool, progress)
+		if err != nil {
+			return err
 		}
 	}
 	return json.NewEncoder(stdout).Encode(compose.DataTaskProgressReport(progress))
@@ -91,4 +77,28 @@ func dataTasksFinished(progress []datatask.Progress) (bool, error) {
 		}
 	}
 	return done, nil
+}
+
+func waitForDataTasks(ctx context.Context, pool *pgxpool.Pool, progress []datatask.Progress) ([]datatask.Progress, error) {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for {
+		done, err := dataTasksFinished(progress)
+		if err != nil {
+			return nil, err
+		}
+		if done {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-ticker.C:
+		}
+		progress, err = compose.DataTaskOperation(ctx, pool, "status")
+		if err != nil {
+			return nil, err
+		}
+	}
+	return progress, nil
 }

@@ -19,16 +19,26 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// DataTaskRunArgs carries no record content; durable progress belongs to the ledger.
 type DataTaskRunArgs struct{}
 
-func (DataTaskRunArgs) Kind() string                 { return "data_task_run" }
-func (DataTaskRunArgs) FleetWide()                   {}
+// Kind preserves the queue identity across worker restarts.
+func (DataTaskRunArgs) Kind() string { return "data_task_run" }
+
+// FleetWide keeps the installation correction outside a user workspace queue.
+func (DataTaskRunArgs) FleetWide() {}
+
+// InsertOpts prevents parallel reconcilers from creating competing executors.
 func (DataTaskRunArgs) InsertOpts() river.InsertOpts { return *dataTaskInsertOpts() }
 
+// DataTaskReconcileArgs restores execution from the release catalog and durable ledger.
 type DataTaskReconcileArgs struct{}
 
+// Kind preserves the reconciliation queue identity.
 func (DataTaskReconcileArgs) Kind() string { return "data_task_reconcile" }
-func (DataTaskReconcileArgs) FleetWide()   {}
+
+// FleetWide seeds the installation ledger independently of individual seats.
+func (DataTaskReconcileArgs) FleetWide() {}
 
 func dataTaskInsertOpts() *river.InsertOpts {
 	return jobs.QueuedAs[DataTaskRunArgs](&river.InsertOpts{

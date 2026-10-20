@@ -70,11 +70,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	name := fs.String("name", "", "database name (recreate-db, drop-db, db-exists only)")
 	template := fs.String("template", "", "template database to copy (recreate-db only)")
 	var drill drillFlags
-	fs.StringVar(&drill.by, "by", "", "who runs the restore drill (drill-start only)")
-	fs.StringVar(&drill.restoredTo, "restored-to", "", "RFC 3339 point in time the backup restores to (drill-start only)")
-	fs.StringVar(&drill.drill, "drill", "", "drill id drill-start printed (drill-finish only)")
-	fs.StringVar(&drill.outcome, "outcome", "", "passed or failed (drill-finish only)")
-	fs.StringVar(&drill.note, "note", "", "what the drill checked, or why it failed (drill-start, drill-finish)")
+	addDrillFlags(fs, &drill)
 	// Bounds how long a single migration statement may HOLD its lock. Every
 	// migration file already bounds ACQUISITION with `SET LOCAL lock_timeout`
 	// (migrations/locktimeout_test.go requires it), and that is a different

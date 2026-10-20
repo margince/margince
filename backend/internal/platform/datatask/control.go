@@ -40,7 +40,7 @@ func (e *Engine) Control(ctx context.Context, taskID, stepName, action string, v
 		}
 		p, err := scanProgress(tx.QueryRow(ctx,
 			`SELECT `+progressColumns+` FROM data_task_run WHERE task_id = @task AND step = @step FOR UPDATE`,
-			pgx.NamedArgs{"task": taskID, "step": stepName}))
+			pgx.NamedArgs{paramTask: taskID, paramStep: stepName}))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -50,30 +50,10 @@ func (e *Engine) Control(ctx context.Context, taskID, stepName, action string, v
 		if p.Version != version || p.TaskVersion > task.Version {
 			return apperrors.ErrConflict
 		}
-		if action == "estimate" {
+		if action == paramEstimate {
 			return e.refreshEstimate(ctx, tx, task, step, p)
 		}
-		status, err := controlStatus(p.Status, action)
-		if err != nil {
-			return err
-		}
-		failures := p.ConsecutiveFailures
-		if action == "retry" {
-			failures = 0
-		}
-		tag, err := tx.Exec(ctx, `UPDATE data_task_run SET status = @status,
- consecutive_failures = @failures, next_attempt_at = NULL,
- last_error_class = CASE WHEN @action = 'retry' THEN NULL ELSE last_error_class END,
- updated_at = @now, version = version + 1
- WHERE task_id = @task AND step = @step AND version = @version`,
-			pgx.NamedArgs{"action": action, "status": status, "failures": failures, "now": e.now(), "task": taskID, "step": stepName, "version": version})
-		if err != nil {
-			return err
-		}
-		if tag.RowsAffected() != 1 {
-			return apperrors.ErrConflict
-		}
-		return logControl(ctx, tx, p, action)
+		return e.changeStatus(ctx, tx, p, action)
 	})
 	if storekit.IsLockTimeout(err) {
 		return apperrors.ErrConflict
@@ -129,18 +109,42 @@ func (e *Engine) refreshEstimate(ctx context.Context, tx pgx.Tx, task Task, step
 	tag, err := tx.Exec(ctx, `UPDATE data_task_run SET estimate = @estimate, estimate_capped = @capped,
  estimated_at = @now, updated_at = @now, version = version + 1
  WHERE task_id = @task AND step = @step AND version = @version`,
-		pgx.NamedArgs{"estimate": estimate, "capped": capped, "now": e.now(), "task": p.TaskID, "step": p.Step, "version": p.Version})
+		pgx.NamedArgs{paramEstimate: estimate, paramCapped: capped, paramNow: e.now(), paramTask: p.TaskID, paramStep: p.Step, paramVersion: p.Version})
 	if err != nil {
 		return err
 	}
 	if tag.RowsAffected() != 1 {
 		return apperrors.ErrConflict
 	}
-	return logControl(ctx, tx, p, "estimate")
+	return logControl(ctx, tx, p, paramEstimate)
 }
 
 func logControl(ctx context.Context, tx pgx.Tx, p Progress, action string) error {
 	_, err := storekit.LogSystem(ctx, tx, "data_task."+action,
-		map[string]any{"task": p.TaskID, "step": p.Step, "run_id": p.RunID, "version": p.Version})
+		map[string]any{paramTask: p.TaskID, paramStep: p.Step, "run_id": p.RunID, paramVersion: p.Version})
 	return err
+}
+
+func (e *Engine) changeStatus(ctx context.Context, tx pgx.Tx, p Progress, action string) error {
+	status, err := controlStatus(p.Status, action)
+	if err != nil {
+		return err
+	}
+	failures := p.ConsecutiveFailures
+	if action == "retry" {
+		failures = 0
+	}
+	tag, err := tx.Exec(ctx, `UPDATE data_task_run SET status = @status,
+ consecutive_failures = @failures, next_attempt_at = NULL,
+ last_error_class = CASE WHEN @action = 'retry' THEN NULL ELSE last_error_class END,
+ updated_at = @now, version = version + 1
+ WHERE task_id = @task AND step = @step AND version = @version`,
+		pgx.NamedArgs{"action": action, paramStatus: status, "failures": failures, paramNow: e.now(), paramTask: p.TaskID, paramStep: p.Step, paramVersion: p.Version})
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() != 1 {
+		return apperrors.ErrConflict
+	}
+	return logControl(ctx, tx, p, action)
 }

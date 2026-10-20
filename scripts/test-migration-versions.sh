@@ -313,6 +313,17 @@ adds_a_namespace() {
   printf -- '-- probe\n' > "$1/backend/migrations/extra/1799999999_new.down.sql"
 }
 
+removes_operator_datafix() {
+  local dir="$1"
+  mkdir -p "$dir/backend/migrations/datafix"
+  printf -- '-- operator script\n' > "$dir/backend/migrations/datafix/1799999999_correction.up.sql"
+  printf -- '-- operator script\n' > "$dir/backend/migrations/datafix/1799999999_correction.down.sql"
+  git -C "$dir" add backend/migrations/datafix || return 1
+  git -C "$dir" commit -qm 'operator correction fixture' || return 1
+  git -C "$dir" branch -f base HEAD || return 1
+  git -C "$dir" rm -q backend/migrations/datafix/1799999999_correction.up.sql backend/migrations/datafix/1799999999_correction.down.sql || return 1
+}
+
 # ---- the cases -----------------------------------------------------------
 
 expect "an untouched tree passes" \
@@ -356,6 +367,9 @@ expect "a declared rename that does not collapse is refused" \
 expect "a declared reset does not excuse a real collision" \
   1 declared collides             "is claimed by two different migrations"
 
+expect "removing an operator script does not remove a ledgered migration" \
+  0 plain removes_operator_datafix "OK: check-migration-versions"
+
 # ---- census --------------------------------------------------------------
 # TWO guards, because one of them cannot see the other's defect.
 #
@@ -368,7 +382,7 @@ expect "a declared reset does not excuse a real collision" \
 # So the total is also pinned. A literal here is not duplication of the case
 # list: it is the one fact the case list cannot state about itself, which is how
 # many of it there should be.
-expected_cases=16
+expected_cases=17
 
 declared_cases="$(grep -c '^expect "' "$SELF")"
 if [[ "$ran" -ne "$declared_cases" ]]; then

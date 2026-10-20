@@ -39,13 +39,13 @@ func StampHeldMailTx(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datat
 }
 
 // EstimateHeldMail bounds the rows inspected, not the number that will be parseable.
-func EstimateHeldMail(ctx context.Context, q datatask.Querier, cap int64) (int64, bool, error) {
+func EstimateHeldMail(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
 	if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {
 		return 0, false, err
 	}
 	var count int64
-	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT id FROM capture_import ORDER BY id LIMIT @cap) AS candidates`, pgx.NamedArgs{"cap": cap + 1}).Scan(&count)
-	return min(count, cap), count > cap, err
+	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT id FROM capture_import ORDER BY id LIMIT @cap) AS candidates`, pgx.NamedArgs{"cap": maximum + 1}).Scan(&count)
+	return min(count, maximum), count > maximum, err
 }
 
 const stampHeldMailSQL = `WITH held AS (

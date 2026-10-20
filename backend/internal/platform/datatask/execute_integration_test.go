@@ -70,7 +70,7 @@ func executorFixture(t *testing.T) (context.Context, *pgxpool.Pool, *Engine, *ti
 	return ctx, pool, engine, &now
 }
 
-func progressFor(t *testing.T, ctx context.Context, e *Engine) Progress {
+func progressFor(ctx context.Context, t *testing.T, e *Engine) Progress {
 	t.Helper()
 	rows, err := e.List(ctx)
 	if err != nil {
@@ -82,7 +82,7 @@ func progressFor(t *testing.T, ctx context.Context, e *Engine) Progress {
 	return rows[0]
 }
 
-func systemActions(t *testing.T, ctx context.Context, pool *pgxpool.Pool, action string) int {
+func systemActions(ctx context.Context, t *testing.T, pool *pgxpool.Pool, action string) int {
 	t.Helper()
 	var count int
 	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
@@ -95,16 +95,16 @@ func systemActions(t *testing.T, ctx context.Context, pool *pgxpool.Pool, action
 
 func TestBatchAndProgressRollBackTogether(t *testing.T) {
 	ctx, pool, e, now := executorFixture(t)
-	before := progressFor(t, ctx, e)
+	before := progressFor(ctx, t, e)
 	e.beforeCommit = func(context.Context, pgx.Tx) error { return errors.New("injected before commit") }
 	if _, err := e.Execute(ctx); err != nil {
 		t.Fatal(err)
 	}
-	after := progressFor(t, ctx, e)
+	after := progressFor(ctx, t, e)
 	if after.Batches != 0 || after.Changed != 0 || after.LastProgressAt != nil || after.ConsecutiveFailures != 1 {
 		t.Fatalf("partial progress: %+v", after)
 	}
-	if systemActions(t, ctx, pool, "data_task.probe") != 0 {
+	if systemActions(ctx, t, pool, "data_task.probe") != 0 {
 		t.Fatal("batch audit survived rollback")
 	}
 	e.beforeCommit = nil
@@ -112,17 +112,17 @@ func TestBatchAndProgressRollBackTogether(t *testing.T) {
 	if _, err := e.Execute(ctx); err != nil {
 		t.Fatal(err)
 	}
-	after = progressFor(t, ctx, e)
+	after = progressFor(ctx, t, e)
 	if after.Status != Done || after.Batches != 1 || after.Changed != 1 || after.ConsecutiveFailures != 0 || after.RunID != before.RunID {
 		t.Fatalf("retry=%+v", after)
 	}
-	if systemActions(t, ctx, pool, "data_task.probe") != 1 {
+	if systemActions(ctx, t, pool, "data_task.probe") != 1 {
 		t.Fatal("committed batch missing")
 	}
 	if err := e.Seed(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if got := progressFor(t, ctx, e); got.Version != after.Version || got.RunID != after.RunID {
+	if got := progressFor(ctx, t, e); got.Version != after.Version || got.RunID != after.RunID {
 		t.Fatal("reconcile overwrote progress")
 	}
 }
@@ -138,23 +138,23 @@ func TestFailuresHalveToFloorAndNotifyOnce(t *testing.T) {
 		}
 		*now = now.Add(time.Hour)
 	}
-	got := progressFor(t, ctx, e)
+	got := progressFor(ctx, t, e)
 	if got.Status != Failed || got.BatchLimit != 1 || got.ConsecutiveFailures != failureCap || got.LastProgressAt != nil || got.NextAttemptAt != nil {
 		t.Fatalf("failure=%+v", got)
 	}
-	if systemActions(t, ctx, pool, "data_task.notice") != 1 {
+	if systemActions(ctx, t, pool, "data_task.notice") != 1 {
 		t.Fatal("missing give-up notice")
 	}
 	if _, err := e.Execute(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if systemActions(t, ctx, pool, "data_task.notice") != 1 {
+	if systemActions(ctx, t, pool, "data_task.notice") != 1 {
 		t.Fatal("failed step notified twice")
 	}
 	if err := e.Control(ctx, got.TaskID, got.Step, "retry", got.Version); err != nil {
 		t.Fatal(err)
 	}
-	retry := progressFor(t, ctx, e)
+	retry := progressFor(ctx, t, e)
 	if retry.RunID != got.RunID || retry.ConsecutiveFailures != 0 || retry.Status != Pending || retry.LastErrorClass != nil {
 		t.Fatalf("retry=%+v", retry)
 	}
@@ -184,7 +184,7 @@ func TestConcurrentExecutorsAndSeedsShareOneLedger(t *testing.T) {
 	if err := <-first; err != nil {
 		t.Fatal(err)
 	}
-	if systemActions(t, ctx, pool, "data_task.probe") != 1 || progressFor(t, ctx, e).Batches != 1 {
+	if systemActions(ctx, t, pool, "data_task.probe") != 1 || progressFor(ctx, t, e).Batches != 1 {
 		t.Fatal("concurrent execution duplicated the batch")
 	}
 }
@@ -196,7 +196,7 @@ func TestCancellationDoesNotCountAsFailure(t *testing.T) {
 	if _, err := e.Execute(cancelled); err != nil {
 		t.Fatal(err)
 	}
-	got := progressFor(t, ctx, e)
+	got := progressFor(ctx, t, e)
 	if got.ConsecutiveFailures != 0 || got.Batches != 0 {
 		t.Fatalf("cancelled batch=%+v", got)
 	}
@@ -212,29 +212,29 @@ func TestVersionRestartAndMissingPrerequisite(t *testing.T) {
 	if _, err := e.Execute(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if got := progressFor(t, ctx, e); got.BlockedReason != "missing_prerequisite" || got.TaskVersion != 1 {
+	if got := progressFor(ctx, t, e); got.BlockedReason != "missing_prerequisite" || got.TaskVersion != 1 {
 		t.Fatalf("prerequisite=%+v", got)
 	}
 	e.tasks[0].Requires = nil
 	if _, err := e.Execute(ctx); err != nil {
 		t.Fatal(err)
 	}
-	got := progressFor(t, ctx, e)
-	if got.TaskVersion != 2 || got.Batches != 1 || got.Changed != 1 || systemActions(t, ctx, pool, "data_task.probe") != 2 {
+	got := progressFor(ctx, t, e)
+	if got.TaskVersion != 2 || got.Batches != 1 || got.Changed != 1 || systemActions(ctx, t, pool, "data_task.probe") != 2 {
 		t.Fatalf("version reset=%+v", got)
 	}
 	e.tasks[0].Version = 1
 	if _, err := e.Execute(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if got := progressFor(t, ctx, e); got.BlockedReason != "newer_release_required" {
+	if got := progressFor(ctx, t, e); got.BlockedReason != "newer_release_required" {
 		t.Fatal("old binary admitted newer cursor")
 	}
 }
 
 func TestConcurrentSeedingAndUnknownRowsPreserveProgress(t *testing.T) {
 	ctx, pool, e, _ := executorFixture(t)
-	before := progressFor(t, ctx, e)
+	before := progressFor(ctx, t, e)
 	errorsFound := make(chan error, 2)
 	for range 2 {
 		go func() { errorsFound <- e.Seed(ctx) }()
@@ -244,7 +244,7 @@ func TestConcurrentSeedingAndUnknownRowsPreserveProgress(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if got := progressFor(t, ctx, e); got.RunID != before.RunID || got.Version != before.Version {
+	if got := progressFor(ctx, t, e); got.RunID != before.RunID || got.Version != before.Version {
 		t.Fatal("reconciliation replaced existing progress")
 	}
 	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
@@ -257,7 +257,7 @@ func TestConcurrentSeedingAndUnknownRowsPreserveProgress(t *testing.T) {
 	if _, err := e.Execute(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if got := progressFor(t, ctx, e); got.Status != Done {
+	if got := progressFor(ctx, t, e); got.Status != Done {
 		t.Fatal("unknown task blocked known release work")
 	}
 	var version int
@@ -274,7 +274,7 @@ func TestConcurrentSeedingAndUnknownRowsPreserveProgress(t *testing.T) {
 
 func TestStaleFailureCannotOverwriteANewerOutcome(t *testing.T) {
 	ctx, _, e, _ := executorFixture(t)
-	old := progressFor(t, ctx, e)
+	old := progressFor(ctx, t, e)
 	if _, err := e.Execute(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -282,7 +282,7 @@ func TestStaleFailureCannotOverwriteANewerOutcome(t *testing.T) {
 	if err == nil {
 		t.Fatal("lost failure outcome was swallowed")
 	}
-	got := progressFor(t, ctx, e)
+	got := progressFor(ctx, t, e)
 	if got.Status != Done || got.ConsecutiveFailures != 0 || got.Batches != 1 {
 		t.Fatalf("stale failure overwrote success: %+v", got)
 	}
