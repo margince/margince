@@ -32,10 +32,19 @@ import { useUndoableRemoval } from "../../lib/undoableremoval";
 
 type RecordRef = Readonly<{ entityType: ListedRecordType; entityId: string }>;
 
-/** The block as a card of its own, for a record page's column. */
-export function RecordListsPanel({ entityType, entityId }: RecordRef) {
+/**
+ * The block as a card of its own, for a record page's column. The server
+ * answers no lists for an archived record, so `archived` leaves the card out
+ * instead of drawing a failure.
+ */
+export function RecordListsPanel({
+  entityType,
+  entityId,
+  archived = false,
+}: RecordRef & Readonly<{ archived?: boolean }>) {
   const t = useT();
-  if (!useListsAvailable()) {
+  const available = useListsAvailable();
+  if (!available || archived) {
     return null;
   }
   return (

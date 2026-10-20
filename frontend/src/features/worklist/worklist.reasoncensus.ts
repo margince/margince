@@ -53,6 +53,8 @@ export const KNOWN_REASONS = {
   no_reply_history: true,
   asks_nothing: true,
   addressed_elsewhere: true,
+  bcc_from_stranger: true,
+  link_off_sender: true,
   outcome_unrecorded: true,
   you_wrote_last: true,
   no_reply_days: true,

@@ -436,3 +436,53 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     expect(patchBody).toMatchObject({ owner_id: "u-42" });
   });
 });
+
+describe("LeadScreen — an archived lead does not ask for what the server refuses", () => {
+  function leadBackend(archivedAt: string | null) {
+    return stubFetchWithMe(
+      async (url) => {
+        if (url.includes("/score") || url.includes("/lists")) {
+          return jsonResponse(
+            { status: 404, code: "not_found", title: "Not found" },
+            404,
+          );
+        }
+        return jsonResponse({
+          ...lead,
+          status: "disqualified",
+          archived_at: archivedAt,
+        });
+      },
+      "u-9",
+      { data: [] },
+      { lists: true },
+    );
+  }
+
+  it("never reads the score breakdown or the lists and reports no failed section", async () => {
+    const { urls } = leadBackend("2026-07-13T00:00:00Z");
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() =>
+      expect(screen.getAllByText("Disqualified").length).toBeGreaterThan(0),
+    );
+    // The timeline is read in the same pass as the two refused reads, so it
+    // has been asked by the time it is seen.
+    await waitFor(() =>
+      expect(urls.some((url) => url.includes("/activities"))).toBe(true),
+    );
+
+    expect(urls.filter((url) => /\/(score|lists)/.test(url))).toEqual([]);
+    expect(screen.queryByText(en["lead.scoreFactorsFailed"])).toBeNull();
+  });
+
+  it("reads both for a live lead", async () => {
+    const { urls } = leadBackend(null);
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() => {
+      expect(urls.some((url) => url.includes("/score"))).toBe(true);
+      expect(urls.some((url) => url.includes("/lists"))).toBe(true);
+    });
+  });
+});
