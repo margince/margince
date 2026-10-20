@@ -20,15 +20,19 @@ import (
 )
 
 // UploadLegalEntityLogo implements POST /legal-entities/{id}/logo.
-func (h companyHandlers) UploadLegalEntityLogo(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+func (h companyHandlers) UploadLegalEntityLogo(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.UploadLegalEntityLogoParams) {
 	if h.store == nil || h.blob == nil {
 		httperr.NotImplemented(w, r, "uploadLegalEntityLogo")
 		return
 	}
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
 	entityID := ids.From[ids.LegalEntityKind](ids.UUID(id))
-	// Read first, as the company upload does: a missing entity is worth
-	// answering before an image is decoded.
-	if _, err := h.store.GetLegalEntity(r.Context(), entityID); err != nil {
+	// Every refusal the write would give comes before the upload is read. So a
+	// caller who may not change the logo leaves no bytes and no intent behind.
+	if err := h.store.EnsureLegalEntityLogoWritable(r.Context(), entityID, ifVersion); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -53,7 +57,7 @@ func (h companyHandlers) UploadLegalEntityLogo(w http.ResponseWriter, r *http.Re
 	}
 	// A refused write leaves the bytes for the ledger, for the reason
 	// uploadCompanyMark gives.
-	superseded, err := h.store.SetLegalEntityLogo(r.Context(), entityID, key)
+	superseded, err := h.store.SetLegalEntityLogo(r.Context(), entityID, key, ifVersion)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -63,13 +67,17 @@ func (h companyHandlers) UploadLegalEntityLogo(w http.ResponseWriter, r *http.Re
 }
 
 // DeleteLegalEntityLogo implements DELETE /legal-entities/{id}/logo.
-func (h companyHandlers) DeleteLegalEntityLogo(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+func (h companyHandlers) DeleteLegalEntityLogo(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.DeleteLegalEntityLogoParams) {
 	if h.store == nil {
 		httperr.NotImplemented(w, r, "deleteLegalEntityLogo")
 		return
 	}
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
 	entityID := ids.From[ids.LegalEntityKind](ids.UUID(id))
-	removed, err := h.store.ClearLegalEntityLogo(r.Context(), entityID)
+	removed, err := h.store.ClearLegalEntityLogo(r.Context(), entityID, ifVersion)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

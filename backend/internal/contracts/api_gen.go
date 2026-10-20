@@ -58436,9 +58436,39 @@ type UpdateLegalEntityParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// ArchiveLegalEntityParams defines parameters for ArchiveLegalEntity.
+type ArchiveLegalEntityParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// DeleteLegalEntityLogoParams defines parameters for DeleteLegalEntityLogo.
+type DeleteLegalEntityLogoParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // UploadLegalEntityLogoMultipartBody defines parameters for UploadLegalEntityLogo.
 type UploadLegalEntityLogoMultipartBody struct {
 	File openapi_types.File `json:"file"`
+}
+
+// UploadLegalEntityLogoParams defines parameters for UploadLegalEntityLogo.
+type UploadLegalEntityLogoParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
 // ListLegalReviewsParams defines parameters for ListLegalReviews.
@@ -75070,16 +75100,16 @@ type ServerInterface interface {
 	UpdateLegalEntity(w http.ResponseWriter, r *http.Request, id Id, params UpdateLegalEntityParams)
 	// Archive a legal entity nobody works for any more.
 	// (POST /legal-entities/{id}/archive)
-	ArchiveLegalEntity(w http.ResponseWriter, r *http.Request, id Id)
+	ArchiveLegalEntity(w http.ResponseWriter, r *http.Request, id Id, params ArchiveLegalEntityParams)
 	// Take a legal entity's logo off.
 	// (DELETE /legal-entities/{id}/logo)
-	DeleteLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id)
-	// Stream a legal entity's logo image.
-	// (GET /legal-entities/{id}/logo)
-	GetLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id)
+	DeleteLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id, params DeleteLegalEntityLogoParams)
 	// Replace a legal entity's logo with an uploaded image.
 	// (POST /legal-entities/{id}/logo)
-	UploadLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id)
+	UploadLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id, params UploadLegalEntityLogoParams)
+	// Stream a legal entity's logo image.
+	// (GET /legal-entities/{id}/logo/image)
+	GetLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id)
 	// The users assigned to this legal entity.
 	// (GET /legal-entities/{id}/members)
 	ListLegalEntityMembers(w http.ResponseWriter, r *http.Request, id Id)
@@ -79414,25 +79444,25 @@ func (_ Unimplemented) UpdateLegalEntity(w http.ResponseWriter, r *http.Request,
 
 // Archive a legal entity nobody works for any more.
 // (POST /legal-entities/{id}/archive)
-func (_ Unimplemented) ArchiveLegalEntity(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) ArchiveLegalEntity(w http.ResponseWriter, r *http.Request, id Id, params ArchiveLegalEntityParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Take a legal entity's logo off.
 // (DELETE /legal-entities/{id}/logo)
-func (_ Unimplemented) DeleteLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Stream a legal entity's logo image.
-// (GET /legal-entities/{id}/logo)
-func (_ Unimplemented) GetLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) DeleteLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id, params DeleteLegalEntityLogoParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Replace a legal entity's logo with an uploaded image.
 // (POST /legal-entities/{id}/logo)
-func (_ Unimplemented) UploadLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) UploadLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id, params UploadLegalEntityLogoParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Stream a legal entity's logo image.
+// (GET /legal-entities/{id}/logo/image)
+func (_ Unimplemented) GetLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -105018,8 +105048,32 @@ func (siw *ServerInterfaceWrapper) ArchiveLegalEntity(w http.ResponseWriter, r *
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ArchiveLegalEntityParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ArchiveLegalEntity(w, r, id)
+		siw.Handler.ArchiveLegalEntity(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -105050,8 +105104,88 @@ func (siw *ServerInterfaceWrapper) DeleteLegalEntityLogo(w http.ResponseWriter, 
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteLegalEntityLogoParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DeleteLegalEntityLogo(w, r, id)
+		siw.Handler.DeleteLegalEntityLogo(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadLegalEntityLogo operation middleware
+func (siw *ServerInterfaceWrapper) UploadLegalEntityLogo(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UploadLegalEntityLogoParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadLegalEntityLogo(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -105084,38 +105218,6 @@ func (siw *ServerInterfaceWrapper) GetLegalEntityLogo(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetLegalEntityLogo(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// UploadLegalEntityLogo operation middleware
-func (siw *ServerInterfaceWrapper) UploadLegalEntityLogo(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UploadLegalEntityLogo(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -120428,10 +120530,10 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/legal-entities/{id}/logo", wrapper.DeleteLegalEntityLogo)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/legal-entities/{id}/logo", wrapper.GetLegalEntityLogo)
+		r.Post(options.BaseURL+"/legal-entities/{id}/logo", wrapper.UploadLegalEntityLogo)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/legal-entities/{id}/logo", wrapper.UploadLegalEntityLogo)
+		r.Get(options.BaseURL+"/legal-entities/{id}/logo/image", wrapper.GetLegalEntityLogo)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/legal-entities/{id}/members", wrapper.ListLegalEntityMembers)

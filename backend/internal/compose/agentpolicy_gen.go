@@ -425,7 +425,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/leads/{id}/score":                                              {Op: "explainLeadScore", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/legal-entities":                                                {Op: "listLegalEntities", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/legal-entities/{id}":                                           {Op: "getLegalEntity", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"GET /v1/legal-entities/{id}/logo":                                      {Op: "getLegalEntityLogo", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/legal-entities/{id}/logo/image":                                {Op: "getLegalEntityLogo", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/legal-entities/{id}/members":                                   {Op: "listLegalEntityMembers", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/legal-reviews":                                                 {Op: "listLegalReviews", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/legal-reviews/settings":                                        {Op: "getLegalReviewSettings", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

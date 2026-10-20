@@ -54,19 +54,62 @@ func defaultEntity(t *testing.T, e *promoteConsentEnv) ids.LegalEntityID {
 	return id
 }
 
-// setupEntities resets the suite and removes the entities an earlier test
-// described. The reset keeps legal_entity, because its migration seeds the
-// default row and nothing re-creates it.
-func setupEntities(t *testing.T) *promoteConsentEnv {
-	t.Helper()
+// The test reset deletes the entities a test described. It returns the default
+// to its seeded state, so no test here depends on the order the suite ran in.
+func TestTheResetLeavesOnlyTheSeededDefault(t *testing.T) {
 	e := setupPromoteConsent(t)
-	if _, err := e.owner.Exec(context.Background(), `DELETE FROM legal_entity WHERE NOT is_default`); err != nil {
-		t.Fatalf("remove earlier entities: %v", err)
+	describeEntity(t, e)
+	if _, err := e.owner.Exec(context.Background(), `UPDATE legal_entity SET country = 'de' WHERE is_default`); err != nil {
+		t.Fatalf("set the default's country: %v", err)
 	}
-	return e
+	e = setupPromoteConsent(t)
+	var rows int
+	var country *string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT (SELECT count(*) FROM legal_entity), (SELECT country FROM legal_entity WHERE is_default)`).
+		Scan(&rows, &country); err != nil {
+		t.Fatalf("read the entities after a reset: %v", err)
+	}
+	if rows != 1 || country != nil {
+		t.Errorf("after a reset: %d entities and default country %v, want the seeded default alone", rows, country)
+	}
 }
 
-func describeEntity(t *testing.T, e *promoteConsentEnv, name string) LegalEntity {
+func TestNoEntityTakesTheCompanysName(t *testing.T) {
+	e := setupPromoteConsent(t)
+	admin := actingAs(e, "admin", entityAdmin)
+	if _, err := e.store.WithInstallationRenamer(ignoreInstallationName).SaveCompany(admin,
+		SaveCompanyInput{DisplayName: "Acme"}); err != nil {
+		t.Fatalf("save the company: %v", err)
+	}
+	_, err := e.store.CreateLegalEntity(admin, LegalEntityInput{
+		DisplayName: new("ACME"), LegalName: new("Acme GmbH"), Country: new("de"),
+	})
+	if refusal, ok := errors.AsType[*LegalEntityRefusal](err); !ok || refusal.code != codeNameTaken {
+		t.Errorf("an entity named after the company answered %v, want %s", err, codeNameTaken)
+	}
+	vienna := describeEntity(t, e)
+	_, err = e.store.UpdateLegalEntity(admin, vienna.ID, LegalEntityInput{DisplayName: new("acme")}, nil)
+	if refusal, ok := errors.AsType[*LegalEntityRefusal](err); !ok || refusal.code != codeNameTaken {
+		t.Errorf("renaming an entity to the company's name answered %v, want %s", err, codeNameTaken)
+	}
+}
+
+func TestArchiveRefusesAStaleVersion(t *testing.T) {
+	e := setupPromoteConsent(t)
+	admin := actingAs(e, "admin", entityAdmin)
+	vienna := describeEntity(t, e)
+	stale := vienna.Version - 1
+	if _, err := e.store.ArchiveLegalEntity(admin, vienna.ID, &stale); !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Errorf("archiving at a stale version answered %v, want version skew", err)
+	}
+	if _, err := e.store.ArchiveLegalEntity(admin, vienna.ID, &vienna.Version); err != nil {
+		t.Errorf("archiving at the current version: %v", err)
+	}
+}
+
+func describeEntity(t *testing.T, e *promoteConsentEnv) LegalEntity {
+	const name = "Wien"
 	t.Helper()
 	entity, err := e.store.CreateLegalEntity(actingAs(e, "admin", entityAdmin), LegalEntityInput{
 		DisplayName: new(name), LegalName: new(name + " GmbH"), Country: new("AT"),
@@ -78,7 +121,7 @@ func describeEntity(t *testing.T, e *promoteConsentEnv, name string) LegalEntity
 }
 
 func TestTheMigrationLeavesOneDefaultEntityThatCannotBeRetired(t *testing.T) {
-	e := setupEntities(t)
+	e := setupPromoteConsent(t)
 	ctx := context.Background()
 	var count int
 	if err := e.owner.QueryRow(ctx, `SELECT count(*) FROM legal_entity WHERE is_default`).Scan(&count); err != nil || count != 1 {
@@ -86,7 +129,7 @@ func TestTheMigrationLeavesOneDefaultEntityThatCannotBeRetired(t *testing.T) {
 	}
 	id := defaultEntity(t, e)
 
-	_, err := e.store.ArchiveLegalEntity(actingAs(e, "admin", entityAdmin), id)
+	_, err := e.store.ArchiveLegalEntity(actingAs(e, "admin", entityAdmin), id, nil)
 	if refusal, ok := errors.AsType[*LegalEntityRefusal](err); !ok || refusal.code != "legal_entity_default_is_permanent" {
 		t.Errorf("archiving the default answered %v, want the legal_entity_default_is_permanent refusal", err)
 	}
@@ -104,7 +147,7 @@ func TestTheMigrationLeavesOneDefaultEntityThatCannotBeRetired(t *testing.T) {
 }
 
 func TestAnEntityNeedsItsRequiredFieldsAndCleanValues(t *testing.T) {
-	e := setupEntities(t)
+	e := setupPromoteConsent(t)
 	admin := actingAs(e, "admin", entityAdmin)
 	for name, tc := range map[string]struct {
 		in   LegalEntityInput
@@ -149,10 +192,10 @@ func TestAnEntityNeedsItsRequiredFieldsAndCleanValues(t *testing.T) {
 }
 
 func TestAUserWorksForTheDefaultEntityUntilAssigned(t *testing.T) {
-	e := setupEntities(t)
+	e := setupPromoteConsent(t)
 	admin := actingAs(e, "admin", entityAdmin)
 	user := ids.From[ids.UserKind](e.user)
-	vienna := describeEntity(t, e, "Wien")
+	vienna := describeEntity(t, e)
 	resolve := func() ids.LegalEntityID {
 		var got ids.LegalEntityID
 		if err := e.store.tx(admin, func(tx pgx.Tx) (err error) {
@@ -172,7 +215,7 @@ func TestAUserWorksForTheDefaultEntityUntilAssigned(t *testing.T) {
 	if got := resolve(); got != vienna.ID {
 		t.Errorf("an assigned user resolves to %s, want their entity %s", got, vienna.ID)
 	}
-	if _, err := e.store.ArchiveLegalEntity(admin, vienna.ID); err == nil {
+	if _, err := e.store.ArchiveLegalEntity(admin, vienna.ID, nil); err == nil {
 		t.Error("an entity with a member was archived")
 	} else if refusal, ok := errors.AsType[*LegalEntityRefusal](err); !ok || refusal.code != "legal_entity_has_members" {
 		t.Errorf("archiving an entity with a member answered %v, want legal_entity_has_members", err)
@@ -184,7 +227,7 @@ func TestAUserWorksForTheDefaultEntityUntilAssigned(t *testing.T) {
 	if err := e.owner.QueryRow(context.Background(), `SELECT count(*) FROM legal_entity_member`).Scan(&rows); err != nil || rows != 0 {
 		t.Errorf("assignment rows after moving to the default = %d (%v), want none", rows, err)
 	}
-	if _, err := e.store.ArchiveLegalEntity(admin, vienna.ID); err != nil {
+	if _, err := e.store.ArchiveLegalEntity(admin, vienna.ID, nil); err != nil {
 		t.Errorf("archiving the emptied entity: %v", err)
 	}
 	if err := e.store.AssignLegalEntityMember(admin, vienna.ID, user); !errors.Is(err, apperrors.ErrNotFound) {
@@ -193,7 +236,7 @@ func TestAUserWorksForTheDefaultEntityUntilAssigned(t *testing.T) {
 }
 
 func TestARepReadsTheEntitiesAndChangesNone(t *testing.T) {
-	e := setupEntities(t)
+	e := setupPromoteConsent(t)
 	h := Handlers{store: e.store}
 	rep := actingAs(e, "rep", entityRep)
 
@@ -212,7 +255,7 @@ func TestARepReadsTheEntitiesAndChangesNone(t *testing.T) {
 	// Holding the entity grant is not enough to move a user: that is seat
 	// administration, and it asks user_admin as well.
 	entityOnly := actingAs(e, "manager", map[string]principal.ObjectGrant{legalEntityObject: {Read: true, Update: true}})
-	vienna := describeEntity(t, e, "Wien")
+	vienna := describeEntity(t, e)
 	err := e.store.AssignLegalEntityMember(entityOnly, vienna.ID, ids.From[ids.UserKind](e.user))
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("an assignment without user_admin answered %v, want permission denied", err)
@@ -220,9 +263,9 @@ func TestARepReadsTheEntitiesAndChangesNone(t *testing.T) {
 }
 
 func TestEveryEntityWriteCommitsItsAuditAndItsEvent(t *testing.T) {
-	e := setupEntities(t)
+	e := setupPromoteConsent(t)
 	admin := actingAs(e, "admin", entityAdmin)
-	vienna := describeEntity(t, e, "Wien")
+	vienna := describeEntity(t, e)
 	if _, err := e.store.UpdateLegalEntity(admin, vienna.ID, LegalEntityInput{
 		IBAN: new("DE89370400440532013000"), Imprint: new("Geschäftsführer: A. Example"),
 	}, &vienna.Version); err != nil {
@@ -237,7 +280,7 @@ func TestEveryEntityWriteCommitsItsAuditAndItsEvent(t *testing.T) {
 	if err := e.store.AssignLegalEntityMember(admin, defaultEntity(t, e), ids.From[ids.UserKind](e.user)); err != nil {
 		t.Fatalf("unassign: %v", err)
 	}
-	if _, err := e.store.ArchiveLegalEntity(admin, vienna.ID); err != nil {
+	if _, err := e.store.ArchiveLegalEntity(admin, vienna.ID, nil); err != nil {
 		t.Fatalf("archive: %v", err)
 	}
 	for action, eventType := range map[string]string{
@@ -274,7 +317,7 @@ func assertAuditAndEvent(t *testing.T, e *promoteConsentEnv, entity ids.UUID, ac
 }
 
 func TestTheDefaultEntityReadsTheAnchorCompany(t *testing.T) {
-	e := setupEntities(t)
+	e := setupPromoteConsent(t)
 	admin := actingAs(e, "admin", entityAdmin)
 	if _, err := e.store.WithInstallationRenamer(ignoreInstallationName).SaveCompany(admin, SaveCompanyInput{DisplayName: "Acme", Fields: map[string]*string{
 		fieldRegisteredAddress: new("Torstraße 1, 10119 Berlin"), fieldRegisterVat: new("DE123456789"),

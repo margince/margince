@@ -74,6 +74,9 @@ func (s *Store) CreateLegalEntity(ctx context.Context, in LegalEntityInput) (Leg
 	}
 	var out LegalEntity
 	err = s.tx(ctx, func(tx pgx.Tx) error {
+		if err := refuseTheDefaultsName(ctx, tx, after[companyNameColumn]); err != nil {
+			return err
+		}
 		_, err := tx.Exec(ctx, fmt.Sprintf(`INSERT INTO legal_entity (%s) VALUES (%s)`,
 			strings.Join(columns, ", "), storekit.Placeholders(args)), args...)
 		if storekit.IsUniqueViolation(err) {
@@ -123,6 +126,9 @@ func (s *Store) UpdateLegalEntity(ctx context.Context, id ids.LegalEntityID, in 
 		if p.Empty() {
 			out = before
 			return nil
+		}
+		if err := refuseTheDefaultsName(ctx, tx, p.After()[companyNameColumn]); err != nil {
+			return err
 		}
 		if err := p.ApplyLocked(ctx, tx, lock); storekit.IsUniqueViolation(err) {
 			return errNameTaken
@@ -175,7 +181,7 @@ func sameStored(stored, value *string) bool {
 
 // ArchiveLegalEntity retires an entity nobody works for any more. The default
 // entity and an entity with members are refused.
-func (s *Store) ArchiveLegalEntity(ctx context.Context, id ids.LegalEntityID) (LegalEntity, error) {
+func (s *Store) ArchiveLegalEntity(ctx context.Context, id ids.LegalEntityID, ifVersion *int64) (LegalEntity, error) {
 	if err := auth.Require(ctx, legalEntityObject, principal.ActionDelete); err != nil {
 		return LegalEntity{}, err
 	}
@@ -184,6 +190,9 @@ func (s *Store) ArchiveLegalEntity(ctx context.Context, id ids.LegalEntityID) (L
 		// The lock is what an assignment waits on too, so no user can join the
 		// entity between the count below and the archive.
 		if _, err := storekit.LockRow(ctx, tx, legalEntityTable, id.UUID, storekit.LiveOnly); err != nil {
+			return err
+		}
+		if err := storekit.EnsureIfMatch(ctx, tx, legalEntityTable, id.UUID, ifVersion); err != nil {
 			return err
 		}
 		before, err := readLegalEntity(ctx, tx, id)
@@ -202,7 +211,8 @@ func (s *Store) ArchiveLegalEntity(ctx context.Context, id ids.LegalEntityID) (L
 				fmt.Sprintf("%d users still work for this legal entity; move them to another entity first", before.MemberCount),
 			}
 		}
-		if _, err := tx.Exec(ctx, `UPDATE legal_entity SET archived_at = now() WHERE id = $1`, id); err != nil {
+		var args legalEntityArgs
+		if _, err := tx.Exec(ctx, `UPDATE legal_entity SET archived_at = now() WHERE id = `+args.add(id), args...); err != nil {
 			return fmt.Errorf("archive legal entity: %w", err)
 		}
 		auditID, err := storekit.Audit(ctx, tx, actionArchive, legalEntityObject, id.UUID, nil, nil)
@@ -216,6 +226,33 @@ func (s *Store) ArchiveLegalEntity(ctx context.Context, id ids.LegalEntityID) (L
 		return err
 	})
 	return out, err
+}
+
+// refuseTheDefaultsName refuses a name the default entity already answers to,
+// which is the anchor company's. uq_legal_entity_live_name cannot see it,
+// because the default stores no name, so the comparison here uses the index's
+// lower().
+//
+//craft:ignore naked-any a patch's after-image holds each column as the value it binds
+func refuseTheDefaultsName(ctx context.Context, tx pgx.Tx, name any) error {
+	proposed, ok := name.(*string)
+	if !ok || proposed == nil {
+		return nil
+	}
+	var anchor EntityIdentity
+	if err := mergeAnchorIdentity(ctx, tx, &anchor); err != nil || anchor.DisplayName == "" {
+		return err
+	}
+	var taken bool
+	var args legalEntityArgs
+	if err := tx.QueryRow(ctx, `SELECT lower(`+args.add(*proposed)+`) = lower(`+args.add(anchor.DisplayName)+`)`,
+		args...).Scan(&taken); err != nil {
+		return fmt.Errorf("compare a legal entity name with the company's: %w", err)
+	}
+	if taken {
+		return errNameTaken
+	}
+	return nil
 }
 
 func requiredFieldError(wire string) error {

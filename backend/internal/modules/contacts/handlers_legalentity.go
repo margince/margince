@@ -86,8 +86,12 @@ func (h Handlers) UpdateLegalEntity(w http.ResponseWriter, r *http.Request, id c
 }
 
 // ArchiveLegalEntity implements POST /legal-entities/{id}/archive.
-func (h Handlers) ArchiveLegalEntity(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	entity, err := h.store.ArchiveLegalEntity(r.Context(), pathID[ids.LegalEntityKind](id))
+func (h Handlers) ArchiveLegalEntity(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ArchiveLegalEntityParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	entity, err := h.store.ArchiveLegalEntity(r.Context(), pathID[ids.LegalEntityKind](id), ifVersion)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -166,7 +170,7 @@ func legalEntityLogoURL(e EntityIdentity) *string {
 	if e.LogoObjectKey == nil || *e.LogoObjectKey == "" {
 		return nil
 	}
-	path := fmt.Sprintf("/v1/legal-entities/%s/logo?v=%s", e.ID, logoRevisionDigest(*e.LogoObjectKey))
+	path := fmt.Sprintf("/v1/legal-entities/%s/logo/image?v=%s", e.ID, logoRevisionDigest(*e.LogoObjectKey))
 	return &path
 }
 

@@ -15321,8 +15321,9 @@ paths:
       summary: Describe a further legal entity.
       description: |
         Needs `legal_entity:create`, which only the admin role holds by default. `display_name`,
-        `legal_name` and `country` are required. A second live entity with the same
-        `display_name` is refused as 409 `legal_entity_name_taken`.
+        `legal_name` and `country` are required. A `display_name` another live entity already
+        has, ignoring case, is refused as 409 `legal_entity_name_taken`. The default entity
+        counts with the company's name.
       requestBody:
         required: true
         content:
@@ -15405,6 +15406,9 @@ paths:
         Needs `legal_entity:delete`. The default entity is refused as 409
         `legal_entity_default_is_permanent`. An entity that still has members is refused as
         409 `legal_entity_has_members`: move its users to another entity first.
+        A stale `If-Match` version is refused as 409 `version_skew`.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
       responses:
         '200':
           description: The archived entity.
@@ -15419,30 +15423,6 @@ paths:
   /legal-entities/{id}/logo:
     parameters:
       - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Companies]
-      operationId: getLegalEntityLogo
-      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
-      x-agent-access: human-only
-      summary: Stream a legal entity's logo image.
-      description: |
-        The bytes behind `LegalEntity.logo_url`, always this server's own PNG re-encode. 404
-        when the entity has no logo. The default entity's logo is the company's, served by
-        `GET /companies/{id}/logo`.
-      responses:
-        '200':
-          description: The normalized logo bytes.
-          content:
-            image/png:
-              schema: { type: string, format: binary }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '501':
-          description: The deployment has no object store configured, so no logo can be stored or served.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
     post:
       tags: [Companies]
       operationId: uploadLegalEntityLogo
@@ -15457,6 +15437,10 @@ paths:
 
         The default entity wears the company logo and is refused as 409
         `legal_entity_field_on_company_form`: upload it on the company form instead.
+        Both refusals, a missing grant and a stale `If-Match` version (409 `version_skew`)
+        are answered before the upload is read.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
       requestBody:
         required: true
         content:
@@ -15496,7 +15480,10 @@ paths:
       summary: Take a legal entity's logo off.
       description: |
         The stored object is collected. Removing a logo the entity never had is not an error.
-        The default entity is refused as 409 `legal_entity_field_on_company_form`.
+        The default entity is refused as 409 `legal_entity_field_on_company_form`, and a stale
+        `If-Match` version as 409 `version_skew`.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
       responses:
         '200':
           description: The entity, with no `logo_url`.
@@ -15507,6 +15494,35 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+
+  /legal-entities/{id}/logo/image:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Companies]
+      operationId: getLegalEntityLogo
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Stream a legal entity's logo image.
+      description: |
+        The bytes behind `LegalEntity.logo_url`, always this server's own PNG re-encode. It sits
+        apart from the upload, so a conditional upload takes its version from the entity. 404
+        when the entity has no logo. The default entity's logo is the company's, served by
+        `GET /companies/{id}/logo`.
+      responses:
+        '200':
+          description: The normalized logo bytes.
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '501':
+          description: The deployment has no object store configured, so no logo can be stored or served.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /legal-entities/{id}/members:
     parameters:

@@ -52,9 +52,10 @@ func (s *Store) ListLegalEntityMembers(ctx context.Context, id ids.LegalEntityID
 		if _, err := readLegalEntity(ctx, tx, id); err != nil {
 			return err
 		}
+		var args legalEntityArgs
 		rows, err := tx.Query(ctx,
 			`SELECT user_id, legal_entity_id, assigned_at FROM legal_entity_member
-			  WHERE legal_entity_id = $1 ORDER BY assigned_at, user_id`, id)
+			  WHERE legal_entity_id = `+args.add(id)+` ORDER BY assigned_at, user_id`, args...)
 		if err != nil {
 			return fmt.Errorf("list legal entity members: %w", err)
 		}
@@ -117,20 +118,23 @@ func (s *Store) AssignLegalEntityMember(ctx context.Context, id ids.LegalEntityI
 // default entity.
 func writeMembership(ctx context.Context, tx pgx.Tx, id ids.LegalEntityID, user ids.UserID, by string) error {
 	var isDefault bool
-	if err := tx.QueryRow(ctx, `SELECT is_default FROM legal_entity WHERE id = $1`, id).Scan(&isDefault); err != nil {
+	var read legalEntityArgs
+	if err := tx.QueryRow(ctx, `SELECT is_default FROM legal_entity WHERE id = `+read.add(id), read...).Scan(&isDefault); err != nil {
 		return fmt.Errorf("read the legal entity being assigned: %w", err)
 	}
 	if isDefault {
-		if _, err := tx.Exec(ctx, `DELETE FROM legal_entity_member WHERE user_id = $1`, user); err != nil {
+		var args legalEntityArgs
+		if _, err := tx.Exec(ctx, `DELETE FROM legal_entity_member WHERE user_id = `+args.add(user), args...); err != nil {
 			return fmt.Errorf("move a user to the default legal entity: %w", err)
 		}
 		return nil
 	}
+	values := []any{user, id, by}
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO legal_entity_member (user_id, legal_entity_id, assigned_by) VALUES ($1, $2, $3)
+		`INSERT INTO legal_entity_member (user_id, legal_entity_id, assigned_by) VALUES (`+storekit.Placeholders(values)+`)
 		 ON CONFLICT (user_id) DO UPDATE
 		    SET legal_entity_id = EXCLUDED.legal_entity_id, assigned_at = now(), assigned_by = EXCLUDED.assigned_by`,
-		user, id, by); err != nil {
+		values...); err != nil {
 		return fmt.Errorf("assign a user to a legal entity: %w", err)
 	}
 	return nil
@@ -138,7 +142,8 @@ func writeMembership(ctx context.Context, tx pgx.Tx, id ids.LegalEntityID, user 
 
 func requireUserExists(ctx context.Context, tx pgx.Tx, user ids.UserID) error {
 	var exists bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM app_user WHERE id = $1)`, user).Scan(&exists); err != nil {
+	var args legalEntityArgs
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM app_user WHERE id = `+args.add(user)+`)`, args...).Scan(&exists); err != nil {
 		return fmt.Errorf("check the user being assigned: %w", err)
 	}
 	if !exists {

@@ -70,6 +70,16 @@ type LegalEntity struct {
 	ArchivedAt  *time.Time
 }
 
+// legalEntityArgs collects one statement's arguments and answers each one's
+// placeholder, so a $N is derived from the list rather than typed.
+type legalEntityArgs []any
+
+//craft:ignore naked-any SQL values cross this boundary with their driver types intact
+func (a *legalEntityArgs) add(value any) string {
+	*a = append(*a, value)
+	return fmt.Sprintf("$%d", len(*a))
+}
+
 const legalEntityColumns = `id, is_default, coalesce(display_name, ''), legal_name,
 	address_line1, address_line2, address_postal_code, address_city, address_region,
 	vat_id, register_court, register_number, logo_object_key, country, default_language,
@@ -90,8 +100,9 @@ func scanLegalEntity(row pgx.Row) (LegalEntity, error) {
 // readLegalEntity reads one entity, archived or live, with the anchor merged
 // into the default.
 func readLegalEntity(ctx context.Context, tx pgx.Tx, id ids.LegalEntityID) (LegalEntity, error) {
+	var args legalEntityArgs
 	out, err := scanLegalEntity(tx.QueryRow(ctx,
-		`SELECT `+legalEntityColumns+` FROM legal_entity WHERE id = $1`, id))
+		`SELECT `+legalEntityColumns+` FROM legal_entity WHERE id = `+args.add(id), args...))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return LegalEntity{}, apperrors.ErrNotFound
 	}
@@ -133,10 +144,11 @@ func mergeAnchorIdentity(ctx context.Context, tx pgx.Tx, e *EntityIdentity) erro
 		return err
 	}
 	e.AnchorCompanyID = companyID
+	var args legalEntityArgs
 	if err := tx.QueryRow(ctx,
 		`SELECT display_name, address_line1, address_line2, address_postal_code,
 		        address_city, address_region, logo_object_key
-		   FROM company WHERE id = $1`, companyID).Scan(&e.DisplayName,
+		   FROM company WHERE id = `+args.add(companyID), args...).Scan(&e.DisplayName,
 		&e.Address.Line1, &e.Address.Line2, &e.Address.PostalCode, &e.Address.City,
 		&e.Address.Region, &e.LogoObjectKey); err != nil {
 		return fmt.Errorf("read the anchor company for the default legal entity: %w", err)
@@ -154,10 +166,12 @@ func mergeAnchorIdentity(ctx context.Context, tx pgx.Tx, e *EntityIdentity) erro
 // mergeAnchorRegister reads the three register facts the company form keeps as
 // profile fields rather than columns.
 func mergeAnchorRegister(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, e *EntityIdentity) error {
+	var args legalEntityArgs
 	rows, err := tx.Query(ctx,
 		`SELECT field, value FROM company_profile_field
-		  WHERE company_id = $1 AND field = ANY($2)`,
-		companyID, []string{fieldRegisterVat, fieldRegisterCourt, fieldRegisterNumber})
+		  WHERE company_id = `+args.add(companyID)+
+			` AND field = ANY(`+args.add([]string{fieldRegisterVat, fieldRegisterCourt, fieldRegisterNumber})+`)`,
+		args...)
 	if err != nil {
 		return fmt.Errorf("read the anchor company's register fields: %w", err)
 	}
@@ -181,10 +195,11 @@ func mergeAnchorRegister(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID
 // names, or the default entity when they have none.
 func UserLegalEntity(ctx context.Context, tx pgx.Tx, user ids.UserID) (ids.LegalEntityID, error) {
 	var id ids.LegalEntityID
+	var args legalEntityArgs
 	err := tx.QueryRow(ctx,
 		`SELECT coalesce(
-		    (SELECT legal_entity_id FROM legal_entity_member WHERE user_id = $1),
-		    (SELECT id FROM legal_entity WHERE is_default))`, user).Scan(&id)
+		    (SELECT legal_entity_id FROM legal_entity_member WHERE user_id = `+args.add(user)+`),
+		    (SELECT id FROM legal_entity WHERE is_default))`, args...).Scan(&id)
 	if err != nil {
 		return ids.LegalEntityID{}, fmt.Errorf("resolve the legal entity of a user: %w", err)
 	}
@@ -198,9 +213,10 @@ func (s *Store) ListLegalEntities(ctx context.Context, includeArchived bool) ([]
 	}
 	var out []LegalEntity
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var args legalEntityArgs
 		rows, err := tx.Query(ctx, `SELECT `+legalEntityColumns+` FROM legal_entity
-		  WHERE $1 OR archived_at IS NULL
-		  ORDER BY is_default DESC, lower(display_name), id`, includeArchived)
+		  WHERE `+args.add(includeArchived)+` OR archived_at IS NULL
+		  ORDER BY is_default DESC, lower(display_name), id`, args...)
 		if err != nil {
 			return fmt.Errorf("list legal entities: %w", err)
 		}

@@ -2267,20 +2267,20 @@ func (stubs) UpdateLegalEntity(w nethttp.ResponseWriter, r *nethttp.Request, id 
 	httperr.NotImplemented(w, r, "UpdateLegalEntity")
 }
 
-func (stubs) ArchiveLegalEntity(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+func (stubs) ArchiveLegalEntity(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ArchiveLegalEntityParams) {
 	httperr.NotImplemented(w, r, "ArchiveLegalEntity")
 }
 
-func (stubs) DeleteLegalEntityLogo(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+func (stubs) DeleteLegalEntityLogo(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.DeleteLegalEntityLogoParams) {
 	httperr.NotImplemented(w, r, "DeleteLegalEntityLogo")
+}
+
+func (stubs) UploadLegalEntityLogo(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UploadLegalEntityLogoParams) {
+	httperr.NotImplemented(w, r, "UploadLegalEntityLogo")
 }
 
 func (stubs) GetLegalEntityLogo(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetLegalEntityLogo")
-}
-
-func (stubs) UploadLegalEntityLogo(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "UploadLegalEntityLogo")
 }
 
 func (stubs) ListLegalEntityMembers(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
