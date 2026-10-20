@@ -262,9 +262,10 @@ function hasLines(rows: readonly MagicLine[] | undefined): boolean {
 function laneCountText(
   lane: MagicLane,
   rows: readonly MagicLine[],
+  coverageIncomplete: boolean,
   say: (base: PluralBase, count: number, floor: boolean) => string,
 ): string {
-  const full = fillsPage(lane, rows);
+  const full = coverageIncomplete || fillsPage(lane, rows);
   const figure = (base: PluralBase, of: readonly MagicLine[]) =>
     say(
       base,
@@ -330,10 +331,14 @@ function LaneSummary({
     return {
       lane,
       tone: LANE_TONE[lane],
-      text: laneCountText(lane, rows, (base, count, floor) =>
-        plural(base, count, {
-          count: floorFigure(formatNumber(count, locale), floor, count),
-        }),
+      text: laneCountText(
+        lane,
+        rows,
+        coverageIncomplete,
+        (base, count, floor) =>
+          plural(base, count, {
+            count: floorFigure(formatNumber(count, locale), floor, count),
+          }),
       ),
     };
   });

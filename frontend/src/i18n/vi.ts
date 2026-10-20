@@ -14096,7 +14096,7 @@ export const vi = {
   "worklist.because.promised": "bạn đã cam kết",
   "worklist.because.approved_and_failed": "đã duyệt nhưng không chạy",
   "worklist.because.account_termination":
-    "việc chấm dứt quan hệ khách hàng cần được quyết định",
+    "cần quyết định có chấm dứt quan hệ với khách hàng hay không",
   "worklist.because.blocks_customer_work": "khách hàng đang chờ việc này",
   "worklist.because.routine": "dọn dẹp thường lệ",
   "worklist.because.repeated_failure": "lỗi lặp lại",

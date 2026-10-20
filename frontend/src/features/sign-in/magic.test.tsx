@@ -200,6 +200,12 @@ describe("the receipt draws every lane it promises", () => {
     expect(screen.queryByText("Nothing done for you")).toBeNull();
   });
 
+  it("qualifies a nonempty summary when receipt coverage is withheld", async () => {
+    stub(receipt({ done: [line()], not_shown_count_withheld: true }));
+    renderMagic();
+    expect((await summary()).textContent).toContain("1+");
+  });
+
   it("says how much it left out, so five lines never imply five things happened", async () => {
     stub(
       receipt({
