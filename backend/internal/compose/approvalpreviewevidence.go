@@ -14,6 +14,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -38,12 +39,15 @@ func (r approvalPreviewReader) lifecycleEvidence(ctx context.Context, approval c
 		preview.State = previewIncompleteState
 		return nil //nolint:nilerr // Invalid stored proposals are presented as incomplete rather than failing the inbox.
 	}
-	if proposal.Evidence == nil {
+	if proposal.Evidence == nil || proposal.Evidence.SourceID.IsZero() {
 		preview.State = previewIncompleteState
 		return nil
 	}
 	var current lifecyclereview.Finding
 	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
+		if _, err := activities.ReadActivityContentTx(ctx, tx, ids.From[ids.ActivityKind](proposal.Evidence.SourceID), storekit.LiveOnly); err != nil {
+			return err
+		}
 		var readErr error
 		current, readErr = lifecyclereview.Reconcile(ctx, tx, proposal.CompanyID, r.now())
 		return readErr
@@ -56,10 +60,6 @@ func (r approvalPreviewReader) lifecycleEvidence(ctx context.Context, approval c
 		return err
 	}
 	setLifecyclePreviewContext(preview, current, proposal.Evidence)
-	if current.SourceID.IsZero() {
-		preview.State = previewUnavailableState
-		return nil
-	}
 	if !lifecyclereview.Matches(current, proposal.Evidence) {
 		if !current.SourceID.IsZero() {
 			evidence = append(evidence, crmcontracts.ApprovalEvidence{
