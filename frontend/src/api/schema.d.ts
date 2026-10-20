@@ -11210,17 +11210,9 @@ export interface paths {
         };
         /**
          * What is going wrong on this lead's team, and what it was judged against.
-         * @description The lead's own page. `/worklist/team` answers "who is carrying what" and routes to
-         *     a contact; this answers "what is going wrong", which is the question a lead opens
-         *     the page for and which counts structurally cannot answer — a board of three
-         *     numbers per teammate cannot say that one customer has waited past the target while
-         *     another rep's queue is merely long.
-         *
-         *     EVERY ROW NAMES ITS BASIS. `threshold` carries the policy state that decided the
-         *     row rather than a number invented for this reading, so a lead disputing it can see
-         *     the rule. The response-breach rows read the SAME lead-response policy the rep's own
-         *     queue reads, which is what stops the manager and the rep holding two rules that
-         *     agree today and drift tomorrow.
+         * @description Team exceptions identify material revenue risk, unassigned work and repeated
+         *     failures. Each row names the basis used by the shared Worklist classification.
+         *     Waiting-message age alone does not establish a breached response deadline.
          *
          *     Gated to the lead tier and read under the caller's visibility, like every figure on
          *     this surface. A rep gets 403 rather than an empty list: a refusal that answered
@@ -45522,7 +45514,7 @@ export interface components {
          *     NOT A COUNT. The team board answers "who is carrying what" and routes a lead to a
          *     contact; this answers "what is going wrong", which is a different question and the
          *     one a lead opens the page for. A board of three numbers per teammate cannot say
-         *     that one customer has been waiting past the target while another rep's queue is
+         *     that one deal carries material revenue risk while another rep's queue is
          *     merely long.
          *
          *     EVERY EXCEPTION NAMES ITS BASIS. `threshold` says what the row was judged against
@@ -45533,13 +45525,9 @@ export interface components {
          */
         TeamException: {
             /**
-             * @description Which condition this is. Four, and each is a thing a lead can DO something
-             *     about: talk to the contact, protect the revenue, give the work an owner, or fix
-             *     what keeps failing.
-             *
-             *     Capacity is deliberately absent. "This rep is overloaded" needs a configured
-             *     capacity to be a fact rather than an opinion, and this installation has none —
-             *     so the board's counts are offered as a reading and no exception claims it.
+             * @description Rows identify revenue_at_risk, unassigned or repeated_failure.
+             *     response_breached is reserved and is not returned. Waiting-message age alone
+             *     does not establish a response-policy breach.
              * @enum {string}
              */
             kind: "response_breached" | "revenue_at_risk" | "unassigned" | "repeated_failure";
@@ -45555,10 +45543,6 @@ export interface components {
             /**
              * @description The basis this row was judged against, in words a lead can check: the policy
              *     state that decided it rather than a number chosen for this reading.
-             *
-             *     A `response_breached` row names the lead-response policy's own state, which is
-             *     the same vocabulary the rep's queue uses — so the manager and the rep are
-             *     reading one rule rather than two that agree today.
              */
             threshold: string;
             /**
@@ -61385,6 +61369,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -61626,6 +61611,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -61686,6 +61672,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -61740,6 +61727,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -61831,6 +61819,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -61890,6 +61879,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -62062,6 +62052,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

@@ -19,10 +19,16 @@ type yamlLayer struct {
 	values map[string]*yaml.Node
 }
 
+// unknownKey is a key no program reads, and the line that writes it.
+type unknownKey struct {
+	key  string
+	line int
+}
+
 // readYAML flattens one file to setting keys. A key that names a setting is a
 // leaf: a struct or map setting keeps its whole node, and its sub-keys are
 // never reported unknown. A missing file is an empty layer.
-func readYAML(path string, known func(string) bool, bootstrapRoots map[string]bool) (yamlLayer, []string, error) {
+func readYAML(path string, names known) (yamlLayer, []unknownKey, error) {
 	layer := yamlLayer{path: path, values: map[string]*yaml.Node{}}
 	raw, err := os.ReadFile(path) // #nosec G304 -- the operator's own --config / --config-file path
 	if errors.Is(err, os.ErrNotExist) {
@@ -42,34 +48,35 @@ func readYAML(path string, known func(string) bool, bootstrapRoots map[string]bo
 	if root.Kind != yaml.MappingNode {
 		return layer, nil, fmt.Errorf("%s: the top level must be a mapping", path)
 	}
-	var unknown []string
+	var unknown []unknownKey
 	for i := 0; i+1 < len(root.Content); i += 2 {
 		name := root.Content[i].Value
-		if bootstrapRoots[name] {
+		if names.bootstrapRoots[name] {
 			continue
 		}
-		walk(name, root.Content[i+1], known, layer.values, &unknown)
+		walk(name, root.Content[i], root.Content[i+1], names, layer.values, &unknown)
 	}
-	slices.Sort(unknown)
+	slices.SortFunc(unknown, func(a, b unknownKey) int { return strings.Compare(a.key, b.key) })
 	return layer, unknown, nil
 }
 
 // walk skips a null: `key:` with nothing after it, or `key: null`, is how an
-// operator leaves a key unwritten without deleting it.
-func walk(key string, n *yaml.Node, known func(string) bool, out map[string]*yaml.Node, unknown *[]string) {
+// operator leaves a key unwritten without deleting it. A mapping under a name
+// that is no section is one unknown key, not one per leaf below it.
+func walk(key string, keyNode, n *yaml.Node, names known, out map[string]*yaml.Node, unknown *[]unknownKey) {
 	if n.Kind == yaml.ScalarNode && n.Tag == "!!null" {
 		return
 	}
-	if known(key) {
+	if names.keys[key] {
 		out[key] = n
 		return
 	}
-	if n.Kind != yaml.MappingNode {
-		*unknown = append(*unknown, key)
+	if n.Kind != yaml.MappingNode || !names.sections[key] {
+		*unknown = append(*unknown, unknownKey{key: key, line: keyNode.Line})
 		return
 	}
 	for i := 0; i+1 < len(n.Content); i += 2 {
-		walk(key+"."+n.Content[i].Value, n.Content[i+1], known, out, unknown)
+		walk(key+"."+n.Content[i].Value, n.Content[i], n.Content[i+1], names, out, unknown)
 	}
 }
 

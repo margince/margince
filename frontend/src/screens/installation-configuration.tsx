@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { api } from "../api/client";
-import type { components } from "../api/schema";
 import { Badge, EmptyState, SearchField } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
@@ -13,9 +9,14 @@ import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "../lib/problem";
+import { replaceDial, useUrlParams } from "../lib/urlstate";
+import {
+  CONFIGURATION_FILTER_PARAM,
+  type ConfigurationEntry as Entry,
+  matchesConfigurationFilter,
+  useConfiguration,
+} from "./configurationentries";
 
-type Entry = components["schemas"]["ConfigurationEntry"];
 type Source = Entry["origin"]["source"];
 
 const SOURCE_LABEL: Record<Source, MessageKey> = {
@@ -27,13 +28,6 @@ const SOURCE_LABEL: Record<Source, MessageKey> = {
   default: "configuration.source.default",
   unset: "configuration.source.unset",
 };
-
-function useConfiguration() {
-  return useQuery({
-    queryKey: ["installation-configuration"],
-    queryFn: async () => unwrap(await api.GET("/installation/configuration")),
-  });
-}
 
 function SourceCell({ entry }: Readonly<{ entry: Entry }>) {
   const t = useT();
@@ -133,19 +127,11 @@ function columns(t: Translator): DataTableColumn<Entry>[] {
   ];
 }
 
-function matching(entries: readonly Entry[], filter: string): Entry[] {
-  const needle = filter.trim().toLowerCase();
-  if (needle === "") {
-    return [...entries];
-  }
-  return entries.filter((entry) =>
-    [entry.key, entry.env].some((text) => text.toLowerCase().includes(needle)),
-  );
-}
-
 export function InstallationConfigurationPage() {
   const t = useT();
-  const [filter, setFilter] = useState("");
+  // In the address, so settings search can open the page on the setting it found.
+  const [params] = useUrlParams();
+  const filter = params.get(CONFIGURATION_FILTER_PARAM) ?? "";
   const query = useConfiguration();
 
   return (
@@ -155,13 +141,17 @@ export function InstallationConfigurationPage() {
       </PanelBody>
       <QueryGate query={query} pendingLabel={t("configuration.title")}>
         {(entries) => {
-          const shown = matching(entries, filter);
+          const shown = entries.filter((entry) =>
+            matchesConfigurationFilter(entry, filter),
+          );
           return (
             <>
               <PanelBody>
                 <SearchField
                   value={filter}
-                  onChange={(event) => setFilter(event.target.value)}
+                  onChange={(event) =>
+                    replaceDial(CONFIGURATION_FILTER_PARAM, event.target.value)
+                  }
                   placeholder={t("configuration.search")}
                   aria-label={t("configuration.search")}
                 />

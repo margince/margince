@@ -172,6 +172,7 @@ export const en = {
   "reporting.publishDraft": "Publish draft",
   "reporting.discardDraft": "Discard draft",
   "reporting.versions": "Versions",
+  "reporting.versionN": "Version {revision}",
   "reporting.savedBy": "Saved by",
   "reporting.revisionState.draft": "draft",
   "reporting.revisionState.published": "published",
@@ -739,7 +740,6 @@ export const en = {
   "home.change.stageUnknown": "Unknown stage",
   "home.change.unidentified": "Unknown",
   "home.change.by": "Changed by: {actor}",
-  "brief.focus.inQueue": "In the Worklist",
   "brief.focus.position": "{at} of {count}",
   "worklist.bandCount_one": "{count} item",
   "worklist.bandCount_other": "{count} items",
@@ -862,7 +862,6 @@ export const en = {
   "brief.week.supporting": "Metrics, forecast and observations",
   "brief.coverage.retry": "Refresh brief",
   "brief.reply.owed": "Customer awaiting your reply",
-  "brief.createdAt": "Brief created {when}",
   "brief.updatedAt": "Agenda updated {when}",
   "brief.changes.superseded":
     "This deal changed again. Open the deal to review its current state.",
@@ -4321,6 +4320,17 @@ export const en = {
   "brief.sentence.one": "First: {lead}",
   "brief.sentence.many": "First: {lead}. Then {rest}.",
   "brief.sentence.rest": "{count} more",
+  "brief.sentence.oneFor": "First, for {who}: {lead}",
+  "brief.sentence.manyFor": "First, for {who}: {lead}. Then {rest}.",
+  "brief.sentence.meeting": "Your next meeting is {meeting} at {time}.",
+  "brief.briefedAt": "Briefed by Margince at {time}",
+  "brief.first.title": "First",
+  "brief.first.then": "Then",
+  "brief.first.why": "Why first?",
+  "brief.intro.waiting": "Waiting on you",
+  "brief.intro.meetings": "Meetings today",
+  "brief.intro.emails": "Emails synced",
+  "brief.intro.skip": "Press any key or click to continue",
   // What the ORDER could not weigh, as against what scored low. A fragment
   // like the source lines it sits with, and it names no cause: the run says
   // which factor it lost, never why.
@@ -4343,7 +4353,6 @@ export const en = {
   "brief.week.andCarry": "{result} {carry}",
   "brief.week.quiet": "No completed work or deal movement recorded.",
 
-  "brief.feed.title": "Focus",
   // What is on screen out of what the day holds, on the panel's own line.
   "brief.feed.changedBadge_one": "1 changed",
   "brief.feed.changedBadge_other": "{count} changed",
@@ -13408,11 +13417,11 @@ export const en = {
     "Pick a field, how to compare it, and a value. Add more conditions as you go.",
   "filters.describeChanges": "Describe changes in plain words",
   // Named by the word the button shows, then what pressing it does (WCAG
-  // 2.5.3): {word} is filters.join.and or filters.join.or.
-  "filters.connector.matchAll":
-    "{word}: match all of these. Press to match any.",
-  "filters.connector.matchAny":
-    "{word}: match any of these. Press to match all.",
+  // 2.5.3). {word} is that word, and {other} is the word a press puts there.
+  "filters.connector.and":
+    "{word}: the conditions on both sides must match. Press for {other}.",
+  "filters.connector.or":
+    "{word}: a match on either side is enough. Press for {other}.",
   "filters.group.all": "All of these",
   "filters.group.any": "Any of these",
   "filters.addGroupToGroup": "Add nested group",

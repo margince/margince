@@ -35,8 +35,7 @@ func (l *laneSettings) load() (*config.Config, error) {
 	loaded, err := config.Load(l.reg, config.Sources{
 		Args:           l.given.Args(),
 		Environ:        config.Environ(),
-		KnownKey:       compose.AllSettingKeys,
-		KnownEnv:       compose.AllSettingEnvs,
+		Known:          compose.AllSettingNames(),
 		BootstrapRoots: deployconfig.Roots(),
 	})
 	if err != nil {

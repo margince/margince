@@ -1096,7 +1096,9 @@ test-disk-headroom:
 ## trap is armed for every `up` rather than only for a stack that claims a port,
 ## it follows TERM with KILL, and it spares a stack that was already up. The
 ## failure it replaces was an api or a Vite outliving the run on the PRIMARY
-## stack, which the next `make dev` reported as a port already in use.
+## stack, which the next `make dev` reported as a port already in use. It also
+## proves a process that dies during boot ends the readiness wait at once and
+## is reported with its own last log lines.
 test-dev-cleanup:
 	@./scripts/test-dev-cleanup.sh
 

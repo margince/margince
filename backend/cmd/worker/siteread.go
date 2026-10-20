@@ -64,7 +64,7 @@ func parseSiteReadFlags(args []string) (siteReadFlags, error) {
 	rest := args
 	for {
 		if err := fs.Parse(rest); err != nil {
-			return siteReadFlags{}, err
+			return siteReadFlags{}, config.FlagFault(fs, err)
 		}
 		rest = fs.Args()
 		if len(rest) == 0 {

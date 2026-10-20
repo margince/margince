@@ -15,15 +15,25 @@
       "additionalProperties": false,
       "properties": {
         "name": {
+          "description": "Name is the company's name until an admin saves the company profile.",
           "type": "string"
         },
         "base_currency": {
-          "type": "string"
+          "description": "BaseCurrency is the currency every amount is reported in, as a 3-letter ISO 4217 code in capitals, such as EUR.",
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
         },
         "base_language": {
-          "type": "string"
+          "description": "BaseLanguage is the language the installation writes in, one of those this build speaks.",
+          "type": "string",
+          "enum": [
+            "en",
+            "de",
+            "vi"
+          ]
         },
         "timezone": {
+          "description": "Timezone is the IANA zone the installation's calendar days are in, such as Europe/Berlin.",
           "type": "string"
         },
         "country": {

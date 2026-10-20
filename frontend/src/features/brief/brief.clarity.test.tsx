@@ -50,9 +50,18 @@ it("keeps the summary visible and puts informational updates after the prioritie
   expect(container.querySelector("#brief-today")?.textContent).not.toContain(
     "Northstar",
   );
+  // The update stands in the work column, after the priorities.
+  const today = container.querySelector("#brief-today");
+  const update = [
+    ...container.querySelectorAll(".brief-main > .panel, .brief-main .panel"),
+  ].find((panel) => panel.textContent?.includes("Northstar"));
+  expect(today).toBeTruthy();
+  expect(update).toBeTruthy();
   expect(
-    container.querySelector(".brief-followthrough")?.textContent,
-  ).toContain("Northstar");
+    today &&
+      update &&
+      today.compareDocumentPosition(update) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
   expect(container.textContent).toContain(
     "Qualified → Won · Changed by: Dana Weiss",
   );

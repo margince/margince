@@ -63,7 +63,8 @@ export function useDealSignals(dealId: string) {
   // The shared read, not a second useQuery over the same key. Three surfaces
   // ask this question and they agreed by luck while each spelled its own; see
   // deal360/usedealcoverage.tsx.
-  const { coverage, withheld, ready } = useDealCoverage(dealId);
+  // The chips are drawn only under a live deal's call.
+  const { coverage, withheld, ready } = useDealCoverage(dealId, true);
   const signals: Signal[] = withheld
     ? []
     : (coverage?.risks ?? []).map((risk) => ({

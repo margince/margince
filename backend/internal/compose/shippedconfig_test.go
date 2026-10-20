@@ -26,7 +26,7 @@ func loadShipped(t *testing.T, role config.Role, args ...string) *config.Config 
 		t.Fatal(err)
 	}
 	cfg, err := config.Load(reg, config.Sources{
-		Args: args, KnownKey: compose.AllSettingKeys, KnownEnv: compose.AllSettingEnvs, BootstrapRoots: deployconfig.Roots(),
+		Args: args, Known: compose.AllSettingNames(), BootstrapRoots: deployconfig.Roots(),
 	})
 	if err != nil {
 		t.Fatalf("%s: %v", role, err)

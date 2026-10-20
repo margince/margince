@@ -48570,7 +48570,7 @@ type TeamBoardMemberActivation string
 // NOT A COUNT. The team board answers "who is carrying what" and routes a lead to a
 // contact; this answers "what is going wrong", which is a different question and the
 // one a lead opens the page for. A board of three numbers per teammate cannot say
-// that one customer has been waiting past the target while another rep's queue is
+// that one deal carries material revenue risk while another rep's queue is
 // merely long.
 //
 // EVERY EXCEPTION NAMES ITS BASIS. `threshold` says what the row was judged against
@@ -48587,13 +48587,9 @@ type TeamException struct {
 	// subject and the clock instead.
 	Evidence *string `json:"evidence,omitempty"`
 
-	// Kind Which condition this is. Four, and each is a thing a lead can DO something
-	// about: talk to the contact, protect the revenue, give the work an owner, or fix
-	// what keeps failing.
-	//
-	// Capacity is deliberately absent. "This rep is overloaded" needs a configured
-	// capacity to be a fact rather than an opinion, and this installation has none —
-	// so the board's counts are offered as a reading and no exception claims it.
+	// Kind Rows identify revenue_at_risk, unassigned or repeated_failure.
+	// response_breached is reserved and is not returned. Waiting-message age alone
+	// does not establish a response-policy breach.
 	Kind TeamExceptionKind `json:"kind"`
 
 	// Owner Who this row answers to.
@@ -48624,20 +48620,12 @@ type TeamException struct {
 
 	// Threshold The basis this row was judged against, in words a lead can check: the policy
 	// state that decided it rather than a number chosen for this reading.
-	//
-	// A `response_breached` row names the lead-response policy's own state, which is
-	// the same vocabulary the rep's queue uses — so the manager and the rep are
-	// reading one rule rather than two that agree today.
 	Threshold string `json:"threshold"`
 }
 
-// TeamExceptionKind Which condition this is. Four, and each is a thing a lead can DO something
-// about: talk to the contact, protect the revenue, give the work an owner, or fix
-// what keeps failing.
-//
-// Capacity is deliberately absent. "This rep is overloaded" needs a configured
-// capacity to be a fact rather than an opinion, and this installation has none —
-// so the board's counts are offered as a reading and no exception claims it.
+// TeamExceptionKind Rows identify revenue_at_risk, unassigned or repeated_failure.
+// response_breached is reserved and is not returned. Waiting-message age alone
+// does not establish a response-policy breach.
 type TeamExceptionKind string
 
 // TeamExceptions What is going wrong on this lead's team, finite and caller-scoped.

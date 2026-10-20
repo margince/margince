@@ -58,7 +58,7 @@ function Served({
 export const AnswerIsOwed: Story = {
   render: () => (
     <Served replyTo="activity-1">
-      <DealEmailAside dealId={DEAL} />
+      <DealEmailAside dealId={DEAL} live />
     </Served>
   ),
 };
@@ -68,7 +68,7 @@ export const AnswerIsOwed: Story = {
 export const NothingToAnswer: Story = {
   render: () => (
     <Served replyTo={null}>
-      <DealEmailAside dealId={DEAL} />
+      <DealEmailAside dealId={DEAL} live />
     </Served>
   ),
 };

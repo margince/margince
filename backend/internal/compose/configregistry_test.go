@@ -4,6 +4,7 @@
 package compose_test
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -30,7 +31,8 @@ func TestAWorkerOnlyYAMLKeyIsKnownToTheAPI(t *testing.T) {
 	if _, inAPI := api.Lookup(key); inAPI {
 		t.Fatalf("%s is the api's own setting, so it proves nothing here", key)
 	}
-	if !compose.AllSettingKeys(key) || !compose.AllSettingEnvs(programsettings.JobDrainWindow.Env()) {
+	names := compose.AllSettingNames()
+	if !slices.Contains(names.Keys, key) || !slices.Contains(names.Envs, programsettings.JobDrainWindow.Env()) {
 		t.Fatal("the api would refuse a shared margince.yaml")
 	}
 }

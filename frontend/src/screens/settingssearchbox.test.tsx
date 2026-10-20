@@ -10,6 +10,10 @@ import { companyContextCapabilitiesQueryKey } from "../features/companies/compan
 import { LocaleProvider } from "../i18n";
 import * as router from "../lib/router";
 import { meFixture } from "../testing/mefixture";
+import {
+  configurationQueryKey,
+  type SettingName,
+} from "./configurationentries";
 import { SETTINGS_PAGES, type SettingsPage } from "./settingscatalog";
 import {
   COMPANY_CONTEXT_OFF,
@@ -20,21 +24,35 @@ import { SettingsSearchBox } from "./settingssearchbox";
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
+
+const SETTING_NAMES: readonly SettingName[] = [
+  {
+    key: "capture.auto_enrich_daily_cap",
+    env: "MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP",
+  },
+  { key: "http.port", env: "MARGINCE_HTTP_PORT" },
+];
 
 // The readonly array the box takes, not the 28-element tuple `SETTINGS_PAGES`
 // is: a case narrowing the reader's pages hands it a filtered subset. /me is
 // seeded rather than fetched, so the reader's role is settled before typing.
+// The installation's settings, seeded like /me; `null` leaves them unread.
 function mount(
   pages: readonly SettingsPage[] = SETTINGS_PAGES,
   roles: string[] = [],
   capabilities = COMPANY_CONTEXT_ON,
+  settings: readonly SettingName[] | null = SETTING_NAMES,
 ) {
   const client = new QueryClient({
     defaultOptions: { queries: { staleTime: Infinity } },
   });
   client.setQueryData(["me"], meFixture({ roles }));
   client.setQueryData(companyContextCapabilitiesQueryKey, capabilities);
+  if (settings !== null) {
+    client.setQueryData(configurationQueryKey, settings);
+  }
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
@@ -328,5 +346,64 @@ describe("the settings search box", () => {
       screen: "settings",
       id: "system-health",
     });
+  });
+});
+
+describe("the settings search box, by a setting's name", () => {
+  const configuration = () =>
+    screen.queryByRole("option", { name: /^Configuration/ });
+
+  it.each([
+    ["capture.auto_enrich_daily_cap", "capture.auto_enrich_daily_cap"],
+    ["MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP", "capture.auto_enrich_daily_cap"],
+  ])(
+    "offers Configuration for %j and opens it filtered",
+    async (query, key) => {
+      const user = userEvent.setup();
+      const navigate = vi
+        .spyOn(router, "navigate")
+        .mockImplementation(() => {});
+      mount();
+      await user.type(box(), query);
+
+      const hit = screen.getByRole("option", { name: /^Configuration/ });
+      expect(hit.querySelector(".t-caption")?.textContent).toBe(
+        `${key} · Installation`,
+      );
+      expect(hit.getAttribute("href")).toBe(
+        `#/settings/configuration?q=${query}`,
+      );
+      await user.click(hit);
+      expect(navigate).toHaveBeenCalledWith(
+        { screen: "settings", id: "configuration" },
+        new Map([["q", query]]),
+      );
+    },
+  );
+
+  it("offers Configuration for the variable prefix", async () => {
+    const user = userEvent.setup();
+    mount();
+    await user.type(box(), "MARGINCE_");
+
+    expect(configuration()?.getAttribute("href")).toBe(
+      "#/settings/configuration?q=MARGINCE_",
+    );
+  });
+
+  it("neither offers nor reads the settings for a reader without the grant", async () => {
+    const fetch = vi.fn(async () => new Response("[]"));
+    vi.stubGlobal("fetch", fetch);
+    const user = userEvent.setup();
+    mount(
+      SETTINGS_PAGES.filter((page) => page.id !== "configuration"),
+      [],
+      COMPANY_CONTEXT_ON,
+      null,
+    );
+    await user.type(box(), "MARGINCE_HTTP_PORT");
+
+    expect(configuration()).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

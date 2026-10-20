@@ -4,9 +4,11 @@
 The **Configuration** page lists every setting the installation reads, what its value is and where that value comes from. It is read-only. It sits in the **Governance** group of Settings, and only users who may change installation settings see it, which Admin and Ops do.
 
 ### What does the Configuration page show?
-Each row shows the **Key** of the setting, its **Value**, its **Source** and the **Environment variable** that sets it. Open a row to read what the setting does, its default, its type and the command-line flag that sets it.
+Each row shows the **Key** of the setting with the name that sets it under it, its **Value** and its **Source**. Open a row to read what the setting does, its default, its type and the command-line flag that sets it.
 
-Type in the filter box to narrow the list by key or by the name in the **Environment variable** column. If nothing matches, the page says so.
+Type in the filter box to narrow the list by key or by the name under it. If nothing matches, the page says so.
+
+You can also search for a setting by its name, such as `capture.auto_enrich_daily_cap` or `MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP`. Use the settings search or the command palette (⌘K or Ctrl+K). The search offers the **Configuration** page, and the page opens with the filter set to what you typed.
 
 ### Where does a value come from?
 The **Source** column says which of these set the value:

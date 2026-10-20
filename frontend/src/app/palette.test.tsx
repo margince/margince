@@ -816,13 +816,19 @@ describe("useBuiltinCommands", () => {
   function renderProbeWithCompany(opts: { roles: string[]; allow: GrantSpec }) {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input: RequestInfo | URL) =>
-        String(input instanceof Request ? input.url : input).endsWith(
-          "/company/context/capabilities",
-        )
-          ? jsonResponse(COMPANY_CONTEXT_ON)
-          : jsonResponse(meFixture({ roles: opts.roles, allow: opts.allow })),
-      ),
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.endsWith("/company/context/capabilities")) {
+          return jsonResponse(COMPANY_CONTEXT_ON);
+        }
+        // The installation writer may open Configuration, so search reads it.
+        if (url.endsWith("/installation/configuration")) {
+          return jsonResponse([]);
+        }
+        return jsonResponse(
+          meFixture({ roles: opts.roles, allow: opts.allow }),
+        );
+      }),
     );
     return render(<Probe />);
   }

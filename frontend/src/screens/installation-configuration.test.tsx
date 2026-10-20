@@ -69,6 +69,7 @@ function stubConfiguration(status = 200, body: unknown = ENTRIES) {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  window.location.hash = "";
 });
 
 function rowOf(key: string): HTMLElement {
@@ -246,6 +247,38 @@ it("narrows by key and by environment variable", async () => {
   await user.type(filter, "margince_company");
   await waitFor(() => expect(screen.queryByText("http.port")).toBeNull());
   expect(screen.getByText("company.name")).toBeInTheDocument();
+});
+
+// Settings search opens the page on the setting it found through the address.
+it("opens on the filter its address carries", async () => {
+  window.location.hash = "#/settings/configuration?q=MARGINCE_WORKER";
+  stubConfiguration();
+  render(<InstallationConfigurationPage />);
+
+  await screen.findByText("worker.concurrency");
+  expect(screen.queryByText("http.port")).toBeNull();
+  expect(
+    screen.getByRole("searchbox", {
+      name: "Filter by key or environment variable",
+    }),
+  ).toHaveValue("MARGINCE_WORKER");
+});
+
+it("keeps the filter in its address", async () => {
+  window.location.hash = "#/settings/configuration";
+  stubConfiguration();
+  const user = userEvent.setup();
+  render(<InstallationConfigurationPage />);
+
+  await screen.findByText("http.port");
+  await user.type(
+    screen.getByRole("searchbox", {
+      name: "Filter by key or environment variable",
+    }),
+    "http",
+  );
+  expect(window.location.hash).toBe("#/settings/configuration?q=http");
+  expect(screen.queryByText("worker.concurrency")).toBeNull();
 });
 
 it("says so when nothing matches", async () => {

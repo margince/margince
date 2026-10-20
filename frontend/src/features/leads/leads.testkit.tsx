@@ -7,6 +7,7 @@ import {
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
+import type { components } from "../../api/schema";
 import { RecordShell } from "../../app/testing/recordshell.testkit";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
@@ -190,6 +191,11 @@ export function stubFetchWithMe(
   // They decide whether the lead's address is the composer's or their mail
   // client's. None, unless a suite about writing to the lead says so.
   connectors: unknown = { data: [] },
+  // The settings surfaces this installation offers, for a suite about a card
+  // that draws only where one is on (the lists card).
+  settingsAvailability: Partial<
+    components["schemas"]["SettingsAvailability"]
+  > = {},
 ): { urls: string[] } {
   const urls: string[] = [];
   vi.stubGlobal(
@@ -201,11 +207,13 @@ export function stubFetchWithMe(
         return jsonResponse(connectors);
       }
       if (request.url.endsWith("/v1/me")) {
+        const me = meFixture({ allow: LEAD_GRANTS, settingsAvailability });
         return jsonResponse({
           user: { id: meId, display_name: "Me" },
           roles: ["rep"],
           teams: [],
-          authorization: meFixture({ allow: LEAD_GRANTS }).authorization,
+          authorization: me.authorization,
+          settings_availability: me.settings_availability,
         });
       }
       if (new URL(request.url).pathname.endsWith("/context")) {

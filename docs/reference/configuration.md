@@ -41,13 +41,14 @@ value stays a `$`, and no other variable is put in its place. When a name is on 
 **The loader's own names.** `--config`, `--config-file`, `--env-file` and `--config-trace` come only
 from a flag or the environment, and `MARGINCE_ENV` only from the environment. They choose the files,
 so a file cannot set them: a value for one in the `.env` file or a YAML file stops the boot.
+`--check-config` is a flag only, with no variable.
 
 **What stops the boot.** Margince lists every fault at once, so one restart fixes them all. A boot
 stops on any of these:
 
 - a flag it does not know;
-- a key in either YAML file that no program reads;
-- a value that fails the check of its setting;
+- a key in either YAML file that no program reads, a seed key included;
+- a value that fails the check of its setting or seed;
 - a required value that no source sets;
 - a `--config-file` that does not exist;
 - an old posture file beside the base file, such as `margince.dev.yaml` beside `margince.yaml`,
@@ -57,9 +58,18 @@ A base file that does not exist is not a fault, because an installation may run 
 variables alone. A `MARGINCE_*` variable that no program reads only logs a warning, with its name
 and never its value.
 
+An unknown key reads `config/margince.yaml: unknown key workspce (line 2); did you mean workspace?`.
+A section with a wrong name is one fault, not one for each key under it. A wrong flag, key or
+variable name gets the nearest real name when it is within two edits of it.
+
 **Trace mode.** `--config-trace`, or `MARGINCE_CONFIG_TRACE=true`, logs each source read, in the
 order above, with its path. Then it logs one line per setting with its value and where the value
 came from. A secret shows `<secret>` in place of its value.
+
+**Check mode.** `--check-config` on the api or the worker reads every source and the seeds as a boot
+does, then stops. It prints the trace and the variables no program reads to stdout and every fault
+to stderr. It exits 0 when the configuration is valid and 1 when it is not, and it needs no database
+or network. A stored setting with no boot source shows as unset, since the database is not read.
 
 **The Configuration page.** Settings → Configuration lists each setting with its value and its
 source. `GET /v1/installation/configuration` returns the same list, with `value: null` and
@@ -481,6 +491,7 @@ failures to stderr, with no logger you can set up.
 | `--config-file` | `MARGINCE_CONFIG_FILE` | — | a second YAML file, layered over the base file |
 | `--env-file` | `MARGINCE_ENV_FILE` | — | a `.env` file to read |
 | `--config-trace` | `MARGINCE_CONFIG_TRACE` | `false` | log each configuration source read and the origin of each setting; a secret shows by name only |
+| `--check-config` | (none) | `false` | check the configuration and exit, 0 when valid and 1 when not; see [Where a value comes from](#where-a-value-comes-from) |
 | (env-only) | `MARGINCE_PROVIDER_SURFE` | `live` | which licensed data provider adapter this process carries: `live` (default) the Surfe adapter, `offline` a fixed fake for a dev stack, `off` none. See [Licensed-data provider](#licensed-data-provider) |
 
 With `--inline-relay` (the default), a Redis Margince cannot reach fails the boot. Without a relay,
@@ -976,7 +987,7 @@ the api says so. Webhook retries need `cmd/worker`. See
 
 | Flag | Env | Default | Meaning |
 |---|---|---|---|
-| `--config`, `--config-file`, `--env-file`, `--config-trace` | as on the api | as on the api | the same files, read the same way; see [Where a value comes from](#where-a-value-comes-from). The worker reads the deployment file for the `ai.capture_payloads` setting the Surface-B runner follows. Capture applies to both the api and worker roles; the worker runs the source with the most content, the agent runs. A missing file starts with capture off. With capture on, the `ai_call_payload` / `content` retention window is the whole limit on what is kept: see [AI payload capture and its window](#ai-payload-capture-and-its-window-api-worker) before you pick one |
+| `--config`, `--config-file`, `--env-file`, `--config-trace`, `--check-config` | as on the api | as on the api | the same files, read the same way; see [Where a value comes from](#where-a-value-comes-from). The worker reads the deployment file for the `ai.capture_payloads` setting the Surface-B runner follows. Capture applies to both the api and worker roles; the worker runs the source with the most content, the agent runs. A missing file starts with capture off. With capture on, the `ai_call_payload` / `content` retention window is the whole limit on what is kept: see [AI payload capture and its window](#ai-payload-capture-and-its-window-api-worker) before you pick one |
 
 ### The operator surface of the worker
 
@@ -1712,6 +1723,10 @@ run `make dev` again.
 `make dev` also passes the tracked `config/margince.dev.yaml` as `--config-file` and `.env.local` as
 `--env-file` to the api and the worker. The script reads `.env.local` for its own choices and never
 exports it. So a value there shows `.env.local` as its source, and locks its control.
+
+The script's own defaults, such as `MARGINCE_PUBLIC_BASE_URL`, `MARGINCE_AI_FAKE` and the blobstore
+bucket, are exported only for a name that neither the environment nor `.env.local` sets. None of them
+is passed as a flag, because a flag outranks `.env.local`.
 
 `MARGINCE_ENV` names the posture, and no trust decision rests on it. Nothing that deletes data
 keys off it. `operations.allow_data_reset` arms the data reset. That is why the dev setting that

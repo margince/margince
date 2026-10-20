@@ -8,6 +8,10 @@ import {
 } from "../format/collate";
 import type { MessageKey } from "../i18n/en";
 import {
+  matchesConfigurationFilter,
+  type SettingName,
+} from "./configurationentries";
+import {
   groupHeadingKey,
   type SettingsPage,
   type SettingsPageId,
@@ -26,7 +30,9 @@ import {
  * disagree with the navigation beside it, and the disagreement a reader notices
  * is the one where search offers a page that then refuses them.
  *
- * It never calls an endpoint: the catalog is a short table, not a query.
+ * It never calls an endpoint: the catalog is a short table, not a query. The
+ * installation's setting names are the one list the server holds, and the
+ * caller passes them in.
  */
 
 // Old names and the nouns a reader types, in English: a translated query already
@@ -193,7 +199,16 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
   jurisdiction: ["country", "law", "legal", "pack", "deadline", "floor"],
   audit: ["trail", "log", "who", "history", "compliance"],
   "system-health": ["jobs", "queue", "reindex", "maintenance", "stuck"],
-  configuration: ["environment", "env", "flag", "yaml", "source", "locked"],
+  configuration: [
+    "environment",
+    "variable",
+    "env",
+    "env file",
+    "flag",
+    "yaml",
+    "source",
+    "locked",
+  ],
   extensions: ["units", "plugins", "modules", "extension"],
   reset: ["empty", "wipe", "delete everything", "danger"],
 };
@@ -258,7 +273,35 @@ export type SettingsHit = {
   group: string;
   /** The setting on the page that matched, when nothing above it did. */
   section: string | undefined;
+  /** What the page's filter opens on, when only a setting's name matched. */
+  filter?: string;
 };
+
+/** The page a setting's key or variable finds. */
+export const CONFIGURATION_PAGE: SettingsPageId = "configuration";
+
+/**
+ * How Configuration answers a query that names settings by key or variable:
+ * the filter it opens on, and the key matched when only one was.
+ *
+ * The page's own filter decides the match, so the page never opens empty.
+ */
+export function configurationFilterFor(
+  query: string,
+  settings: readonly SettingName[],
+): { filter: string; named: string | undefined } | undefined {
+  const filter = query.trim();
+  if (filter === "") {
+    return undefined;
+  }
+  const matched = settings.filter((setting) =>
+    matchesConfigurationFilter(setting, filter),
+  );
+  if (matched.length === 0) {
+    return undefined;
+  }
+  return { filter, named: matched.length === 1 ? matched[0]?.key : undefined };
+}
 
 /**
  * The pages matching `query`, best first.
@@ -267,12 +310,16 @@ export type SettingsHit = {
  * the sidebar would not. An empty query returns nothing rather than everything:
  * the sidebar is already the list of everything, and repeating it under a
  * search box would say the reader had searched for something.
+ *
+ * `settings` are the installation's setting names, empty for a reader who may
+ * not open Configuration.
  */
 export function settingsSearch(
   query: string,
   pages: readonly SettingsPage[],
   t: (key: MessageKey) => string,
   reader: SettingsSearchReader = NO_COMPANY_CONTEXT,
+  settings: readonly SettingName[] = [],
 ): readonly SettingsHit[] {
   // Split on whitespace, and every word must land somewhere. A reader types
   // "email signature" as one thought, but the two words live in different
@@ -309,6 +356,17 @@ export function settingsSearch(
         Math.floor(rank / 2) - named.length,
       );
       scored.push({ hit: { page, label, group, section }, rank });
+    } else if (page.id === CONFIGURATION_PAGE) {
+      const setting = configurationFilterFor(query, settings);
+      if (setting !== undefined) {
+        // Below every page whose own words matched: finite, so the sort can
+        // subtract it.
+        const { filter, named } = setting;
+        scored.push({
+          hit: { page, label, group, section: named, filter },
+          rank: Number.MAX_SAFE_INTEGER,
+        });
+      }
     }
   }
   return scored

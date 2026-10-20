@@ -151,7 +151,9 @@ func envExample(settings []setting, in envInputs) string {
 	required := in.required()
 	b.WriteString("\n# ---- loader ----\n")
 	for _, v := range in.loader {
-		writeEnvVar(&b, v.Doc, v.Env, "", required[v.Env])
+		if v.Env != "" {
+			writeEnvVar(&b, v.Doc, v.Env, "", required[v.Env])
+		}
 	}
 	settingEnvs := map[string]bool{}
 	for _, s := range settings {

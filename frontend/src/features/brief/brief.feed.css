@@ -28,77 +28,34 @@
   overflow-wrap: anywhere;
 }
 
-/* ── The triage ───────────────────────────────────────────────────────────
- * The card in hand takes the wider column and the queue stands beside it,
- * where the panel has the width for both; narrower, the queue drops under
- * the card. The section is what the split measures: the panel's own width,
- * not the window's, because the same panel is drawn in a work column and on
- * a page of its own. */
-#brief-today {
-  container-type: inline-size;
+/* ── The first section ────────────────────────────────────────────────────
+ * The page's one raised surface is the card in hand; the section around it is
+ * page ground, headed by its eyebrow, with the rest of the morning listed
+ * under the card. */
+.brief-first {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.brief-first-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+.brief-first-head > .t-eyebrow {
+  margin: 0;
+}
+.brief-first-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
 }
 .brief-triage {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-5);
-  padding: var(--padPanel);
-}
-@container (min-width: 56rem) {
-  .brief-triage {
-    grid-template-columns: minmax(0, 3fr) minmax(16rem, 2fr);
-  }
-}
-
-/* ── The stack under it ───────────────────────────────────────────────────
- * The work still behind the card, as the EDGES of two more cards peeking out
- * below it: the day has more in it, said by the shape of the thing being
- * answered rather than by another number. Two at most, and only as many as
- * there are rows behind — a stack of two over a day with one row left would
- * be furniture telling a lie.
- *
- * Pseudo-elements rather than card elements: they are the drawing of a depth,
- * with nothing to read, nothing to focus and nothing to announce. They carry
- * the card's own ground, hairline and corner from the same tokens `Card`
- * reads, so a stack cannot drift from the card it is under. */
-.brief-triage-stack {
-  position: relative;
-  min-width: 0;
-  /* THE CARD IS AS TALL AS WHAT IT HOLDS, and CENTRED in what the column has
-     left. Its height is never the queue's: a card stretched to a list grows
-     with the list, and one thing to answer beside a long day would be a card
-     of mostly air. Centred, the difference reads as room around the card
-     rather than as a hole under it. */
-  align-self: center;
-}
-.brief-triage-stack::before,
-.brief-triage-stack::after {
-  position: absolute;
-  inset-block: var(--space-4) calc(-1 * var(--space-2));
-  inset-inline: var(--space-3);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  background: var(--bgElevated);
-}
-.brief-triage-stack::after {
-  inset-block-end: calc(-1 * var(--space-4));
-  inset-inline: var(--space-6);
-}
-/* The card is LAST in the stack's paint order, which a positioned pseudo-
-   element after it in the tree would otherwise win: the deepest edge would
-   paint over the thing being answered. */
-.brief-triage-stack::before,
-.brief-triage-stack::after {
-  z-index: 0;
-}
-.brief-triage-stack[data-behind="1"]::before,
-.brief-triage-stack[data-behind="2"]::before,
-.brief-triage-stack[data-behind="2"]::after {
-  content: "";
-}
-/* The card stands over its own stack. */
-.brief-triage-stack > .brief-triage-lead {
-  position: relative;
-  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
 }
 
 /* ── The card in hand ─────────────────────────────────────────────────────
@@ -112,6 +69,17 @@
  * up off the stack. `--dur-move` because it is something arriving rather than
  * a control changing in place, and nothing moves at all for a reader who
  * asked for less motion. */
+/* The frame a queue press focuses; the ring shows only for the keyboard. */
+.brief-triage-frame {
+  border-radius: var(--r-md);
+}
+.brief-triage-frame:focus {
+  outline: none;
+}
+.brief-triage-frame:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
 @media (prefers-reduced-motion: no-preference) {
   .brief-triage-lead {
     animation: brief-card-off-the-stack var(--dur-move) var(--ease-out);
@@ -134,7 +102,7 @@
      grid. The record's own move card documents the same trap
      (company360.css). A row with no words leaves the fourth empty, and an
      empty auto row takes no height. */
-  grid-template-rows: auto auto auto auto auto;
+  grid-template-rows: auto auto auto auto auto auto;
   align-items: center;
   /* The card is the page's one thing to answer and is read rather than
      scanned, so its blocks stand apart: the name, the by-line, the words and
@@ -196,9 +164,13 @@
    on the leading edge, the answer on the trailing one. A column of them beside
    the work read as a toolbar and left the card's own words a strip; across the
    floor they are one line a reader finishes the card on. */
+.brief-triage-lead .brief-why {
+  grid-column: 1;
+  grid-row: 5;
+}
 .brief-triage-lead .worklist-row-acts {
   grid-column: 1 / -1;
-  grid-row: 5;
+  grid-row: 6;
   padding-block-start: var(--space-2);
 }
 /* The head says where the row stands and why, and the about line says whose
@@ -322,21 +294,6 @@
   outline-offset: -2px;
 }
 
-/* The row in hand: the accent wash, and the accent on its leading edge, the
-   same two marks the queue page puts on the row its pane is about. */
-.brief-focus-item-inhand,
-.brief-focus-item-inhand:hover {
-  background: var(--accentLight);
-}
-.brief-focus-item-inhand::before {
-  content: "";
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  inline-size: var(--space-1);
-  background: var(--accent);
-}
-
 /* The rank tile: a small square in the gutter so the order reads as a column
    of markers rather than as digits that happen to lead each name. Type comes
    from `t-label` and `t-num` on the element; this owns the box and the ink
@@ -354,10 +311,6 @@
   transition:
     background-color var(--dur-state) var(--ease-out),
     color var(--dur-state) var(--ease-out);
-}
-.brief-focus-item-inhand .brief-focus-rank {
-  background: var(--accent);
-  color: var(--textOnAccentControl);
 }
 
 .brief-focus-item-text {
@@ -379,17 +332,17 @@
   white-space: nowrap;
 }
 
-/* ── The panel's head ─────────────────────────────────────────────────────── */
-.brief-focus-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--gapActions);
+/* ── Why first ────────────────────────────────────────────────────────────── */
+.brief-why-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-inline-start: var(--space-5);
+  color: var(--textSecondary);
 }
 
 @media (max-width: 720px) {
-  .brief-triage {
-    padding: var(--space-4);
-  }
   /* ONE COLUMN below the fold: a column of verbs beside the work leaves the
      work a strip. A FLEX column and not a one-column grid, because below the
      fold the row wraps its parts in the swipe surface that answers the
@@ -406,17 +359,16 @@
   .brief-triage-about {
     order: 2;
   }
-  .brief-triage-lead .worklist-row > * {
+  .brief-triage-lead .worklist-row > *,
+  .brief-triage-lead .brief-why {
     order: 3;
+  }
+  .brief-triage-lead .worklist-row-acts {
+    order: 4;
   }
   /* ds:ignore the phone rung of the same one headline */
   .brief-triage-lead .worklist-row-title,
   .brief-triage-lead .emailentry__subject {
     font: var(--fontHeadingSmall);
-  }
-  /* The badges take their own line under the title on a phone rather than
-     squeezing it. */
-  .brief-focus-actions {
-    flex-wrap: wrap;
   }
 }

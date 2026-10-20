@@ -178,6 +178,7 @@ export const de = {
   "reporting.publishDraft": "Entwurf veröffentlichen",
   "reporting.discardDraft": "Entwurf verwerfen",
   "reporting.versions": "Versionen",
+  "reporting.versionN": "Version {revision}",
   "reporting.savedBy": "Gespeichert von",
   "reporting.revisionState.draft": "Entwurf",
   "reporting.revisionState.published": "veröffentlicht",
@@ -766,7 +767,6 @@ export const de = {
   "home.change.stageUnknown": "Unbekannte Phase",
   "home.change.unidentified": "Unbekannt",
   "home.change.by": "Geändert von: {actor}",
-  "brief.focus.inQueue": "In der Worklist",
   "brief.focus.position": "{at} von {count}",
   "worklist.bandCount_one": "{count} Eintrag",
   "worklist.bandCount_other": "{count} Einträge",
@@ -895,7 +895,6 @@ export const de = {
   "brief.week.supporting": "Kennzahlen, Prognose und Beobachtungen",
   "brief.coverage.retry": "Morgenbericht aktualisieren",
   "brief.reply.owed": "Kontakt wartet auf deine Antwort",
-  "brief.createdAt": "Morgenbericht erstellt am {when}",
   "brief.updatedAt": "Agenda aktualisiert am {when}",
   "brief.changes.superseded":
     "Dieser Deal wurde erneut geändert. Öffne den Deal, um seinen aktuellen Stand zu prüfen.",
@@ -4289,6 +4288,17 @@ export const de = {
   "brief.sentence.one": "Zuerst: {lead}",
   "brief.sentence.many": "Zuerst: {lead}. Danach {rest}.",
   "brief.sentence.rest": "{count} weitere",
+  "brief.sentence.oneFor": "Zuerst, für {who}: {lead}",
+  "brief.sentence.manyFor": "Zuerst, für {who}: {lead}. Danach {rest}.",
+  "brief.sentence.meeting": "Dein nächster Termin ist {meeting} um {time}.",
+  "brief.briefedAt": "Von Margince zusammengefasst um {time}",
+  "brief.first.title": "Zuerst",
+  "brief.first.then": "Danach",
+  "brief.first.why": "Warum zuerst?",
+  "brief.intro.waiting": "Wartet auf dich",
+  "brief.intro.meetings": "Termine heute",
+  "brief.intro.emails": "Synchronisierte E-Mails",
+  "brief.intro.skip": "Beliebige Taste drücken oder klicken, um fortzufahren",
   "brief.order.withheld":
     "In dieser Reihenfolge nicht berücksichtigt: {factors}",
   "brief.factor.warmth": "Beziehungsnähe",
@@ -4308,7 +4318,6 @@ export const de = {
   "brief.week.andCarry": "{result} {carry}",
   "brief.week.quiet": "Keine erledigte Arbeit und keine Deal-Bewegung erfasst.",
 
-  "brief.feed.title": "Fokus",
   "brief.feed.changedBadge_one": "1 geändert",
   "brief.feed.changedBadge_other": "{count} geändert",
   "brief.feed.loading": "Morgenbericht wird geladen…",
@@ -13418,10 +13427,9 @@ export const de = {
   "filters.start.buildBody":
     "Wähle ein Feld, wie es verglichen wird, und einen Wert. Füge nach und nach weitere Bedingungen hinzu.",
   "filters.describeChanges": "Änderungen in eigenen Worten beschreiben",
-  "filters.connector.matchAll":
-    "{word}: Alle davon müssen zutreffen. Drücke, damit eine reicht.",
-  "filters.connector.matchAny":
-    "{word}: Eine davon muss zutreffen. Drücke, damit alle zutreffen müssen.",
+  "filters.connector.and":
+    "{word}: Die Bedingungen auf beiden Seiten müssen zutreffen. Drücke für „{other}“.",
+  "filters.connector.or": "{word}: Eine Seite reicht. Drücke für „{other}“.",
   "filters.group.all": "Alle davon",
   "filters.group.any": "Mindestens eine davon",
   "filters.addGroupToGroup": "Untergruppe hinzufügen",

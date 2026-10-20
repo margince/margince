@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import type { SettingName } from "./configurationentries";
 import {
   SETTINGS_PAGES,
   type SettingsPage,
@@ -220,4 +221,74 @@ describe("settingsSearch over the settings a page draws", () => {
     expect(hit).toBeDefined();
     expect(hit?.section).toBeUndefined();
   });
+});
+
+// The names an operator holds from the docs, which only the server lists.
+const SETTING_NAMES: readonly SettingName[] = [
+  {
+    key: "capture.auto_enrich_daily_cap",
+    env: "MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP",
+  },
+  { key: "http.port", env: "MARGINCE_HTTP_PORT" },
+];
+
+describe("settingsSearch by a setting's name", () => {
+  function configurationHit(query: string, pages = ALL) {
+    return settingsSearch(query, pages, t, undefined, SETTING_NAMES).find(
+      (hit) => hit.page.id === "configuration",
+    );
+  }
+
+  it.each([
+    [
+      "capture.auto_enrich_daily_cap",
+      "capture.auto_enrich_daily_cap",
+      "capture.auto_enrich_daily_cap",
+    ],
+    [
+      "MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP",
+      "MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP",
+      "capture.auto_enrich_daily_cap",
+    ],
+    [" margince_http_port ", "margince_http_port", "http.port"],
+  ])("opens Configuration on %j filtered to it", (query, filter, named) => {
+    const hit = configurationHit(query);
+    expect(hit?.filter).toBe(filter);
+    expect(hit?.section).toBe(named);
+  });
+
+  // The prefix every variable shares names no one setting.
+  it("opens Configuration on the variable prefix and names no setting", () => {
+    const hit = configurationHit("MARGINCE_");
+    expect(hit?.filter).toBe("MARGINCE_");
+    expect(hit?.section).toBeUndefined();
+  });
+
+  it("ranks a setting's name below every page its words name", () => {
+    const hits = settingsSearch("capture", ALL, t, undefined, SETTING_NAMES);
+    expect(hits.at(-1)?.page.id).toBe("configuration");
+    expect(hits.at(-1)?.filter).toBe("capture");
+  });
+
+  it("opens Configuration unfiltered when its own words match", () => {
+    const hit = configurationHit("env");
+    expect(hit).toBeDefined();
+    expect(hit?.filter).toBeUndefined();
+  });
+
+  it("offers nothing for a name no setting holds", () => {
+    expect(configurationHit("capture.no_such_setting")).toBeUndefined();
+  });
+
+  it("never offers Configuration to a reader who may not open it", () => {
+    const pages = ALL.filter((page) => page.id !== "configuration");
+    expect(configurationHit("MARGINCE_HTTP_PORT", pages)).toBeUndefined();
+  });
+
+  it.each(["env file", "environment variable", "variable"])(
+    "finds Configuration by %j",
+    (query) => {
+      expect(ids(query)).toContain("configuration");
+    },
+  );
 });

@@ -28,8 +28,8 @@ API **refuses to start** with the gate on and no such value.
 
 The audience a token is checked against, and the resource that clients find, are deployment decisions.
 They never come from the `Host` of the request. So an installation that copies the example config cannot
-serve the surface unless someone asks for it: it fails on its first start. `make dev` always passes the flag, so the local
-stack works with no setup.
+serve the surface unless someone asks for it: it fails on its first start. `make dev` sets `MARGINCE_PUBLIC_BASE_URL` to
+the app's own origin when you have not set it, so the local stack works with no setup.
 
 ## Connect
 

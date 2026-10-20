@@ -206,13 +206,12 @@ export const DecisionApproved: Story = {
         within(canvasElement).queryByRole("button", { name: "Decide" }),
       ).toBeNull(),
     );
-    // The refreshed agenda still stands, counted rather than named: the panel
-    // head lost its sub slot, so the sentence that said how many rows it holds
-    // is gone from every catalog and asserting it would test nothing.
+    // The refreshed agenda still stands, counted rather than named: one row
+    // in hand on the card, and the one after it listed under it.
     await waitFor(() =>
       expect(
         canvasElement.querySelectorAll("#brief-today .brief-focus-list > li"),
-      ).toHaveLength(2),
+      ).toHaveLength(1),
     );
   },
 };

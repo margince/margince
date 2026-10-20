@@ -214,7 +214,7 @@ export function ReportVersions({
                   key: "revision",
                   header: t("reporting.versions"),
                   render: (revision) =>
-                    `${t("reporting.revision", {
+                    `${t("reporting.versionN", {
                       revision: formatNumber(revision.revision, locale),
                     })} · ${t(`reporting.revisionState.${revision.state}`)}`,
                 },

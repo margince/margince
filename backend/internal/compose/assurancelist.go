@@ -29,6 +29,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -124,17 +125,12 @@ func assuranceExceptionsOwnedBy(
 		SELECT `+exceptionColumns+`, d.name, d.owner_id
 		FROM assurance_exception e
 		JOIN deal d ON d.id = e.subject_id
+		`+findingPricedJoin+`
 		WHERE e.status = 'open'
 		  AND e.subject_kind = 'deal'
 		  AND d.archived_at IS NULL
 		  AND %s
-		ORDER BY
-		  -- Material first: the manager reading this before a call has minutes,
-		  -- and a high-severity finding on a large deal is what those minutes
-		  -- are for.
-		  CASE e.severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
-		  e.affected_minor DESC NULLS LAST,
-		  e.last_seen_at DESC, e.id`+bound, scopeClause)
+		ORDER BY `+findingRank+`, e.id`+bound, scopeClause)
 
 	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {
@@ -144,6 +140,19 @@ func assuranceExceptionsOwnedBy(
 
 	return pgx.CollectRows(rows, scanLabelledException)
 }
+
+// findingPricedJoin renames a finding's amount to the columns the deal
+// conversion reads, as alias `fa`. Every statement that orders by findingRank
+// joins it.
+const findingPricedJoin = `CROSS JOIN LATERAL (SELECT e.affected_minor AS amount_minor, e.currency,
+	                           NULL::bigint AS amount_minor_base) fa`
+
+// findingRank puts material findings first: high severity, then the larger
+// amount in the base currency at today's rate. Amounts in different currencies
+// compare as money, and one with no rate sorts after every priced one.
+var findingRank = `CASE e.severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
+	` + deals.BaseValueSQL("CURRENT_DATE", installationBaseCurrencySQL, "fa") + ` DESC NULLS LAST,
+	e.last_seen_at DESC`
 
 // exceptionColumns is the select list every read of a finding shares, aliased
 // `e`. Two readers exist — this one and bundleableFindings, which asks a

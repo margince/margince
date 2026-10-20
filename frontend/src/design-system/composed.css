@@ -280,6 +280,9 @@
      it the deal anchor would spread to the nearest positioned ancestor — the
      column, or the board — and swallow every card beside it. */
   position: relative;
+  /* Keeps the layers raised over that link inside the card; loose, they tie
+     the stuck column head's z-index and paint over it by coming later. */
+  isolation: isolate;
   /* The pane over the column's ground, not the elevated surface: a card lifts
      off the stage it sits in by being translucent white over it, which is the
      same separation every other pane in the product is drawn with.

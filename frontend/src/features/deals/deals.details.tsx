@@ -207,8 +207,12 @@ export function DealContext({
       <DealDetails deal={deal} meId={meId} />
       <RecordTeam recordType="deal" recordId={deal.id} readOnly={!canWrite} />
       <DealTagsSection deal={deal} />
-      <RecordListsPanel entityType="deal" entityId={deal.id} />
-      <DealEmailAside dealId={deal.id} />
+      <RecordListsPanel
+        entityType="deal"
+        entityId={deal.id}
+        archived={Boolean(deal.archived_at)}
+      />
+      <DealEmailAside dealId={deal.id} live={!deal.archived_at} />
     </>
   );
 }

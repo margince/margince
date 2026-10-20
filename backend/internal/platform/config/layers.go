@@ -54,7 +54,7 @@ func locate(flags flagValues, env map[string]string) (Files, bool, error) {
 }
 
 // readLayers returns the layers highest first, so the first candidate wins.
-func readLayers(reg *Registry, src Sources, flags flagValues, env map[string]string, files Files) ([]layer, []error, []string) {
+func readLayers(reg *Registry, src Sources, names known, flags flagValues, env map[string]string, files Files) ([]layer, []error, []string) {
 	flagLayer := textLayer(SourceFlag, "", flags.raw, reg.byFlag, func(name string) string { return "--" + name })
 	envLayer := textLayer(SourceEnv, "", env, reg.byEnv, nil)
 	envLayer.vars = env
@@ -73,12 +73,12 @@ func readLayers(reg *Registry, src Sources, flags flagValues, env map[string]str
 		add(envFileLayer(reg, src.ReadFile, files.EnvFile))
 	}
 	if files.ConfigFile != "" {
-		add(yamlFileLayer(SourceConfigFile, files.ConfigFile, src))
+		add(yamlFileLayer(SourceConfigFile, files.ConfigFile, names))
 	}
 	if files.Base == "" {
 		return layers, faults, trace
 	}
-	add(yamlFileLayer(SourceBaseFile, files.Base, src))
+	add(yamlFileLayer(SourceBaseFile, files.Base, names))
 	for _, path := range overlayBeside(files.Base) {
 		if !sameFile(path, files.ConfigFile) {
 			faults = append(faults, fmt.Errorf("%s: overlay files are no longer read; pass it with --config-file", path))
@@ -142,26 +142,26 @@ func envFileLayer(reg *Registry, readFile func(string) ([]byte, error), path str
 
 // yamlFileLayer refuses a missing --config-file, since an operator named it.
 // A missing base file is no fault: a system may run on flags and variables.
-func yamlFileLayer(source Source, path string, src Sources) (layer, []error) {
+func yamlFileLayer(source Source, path string, names known) (layer, []error) {
 	empty := layer{source: source, file: path}
 	if _, err := os.Stat(path); source == SourceConfigFile && errors.Is(err, fs.ErrNotExist) {
 		return empty, []error{fmt.Errorf("%s (%s): no such file", path, source)}
 	}
-	parsed, unknown, err := readYAML(path, src.KnownKey, src.BootstrapRoots)
+	parsed, unknown, err := readYAML(path, names)
 	if err != nil {
 		return empty, []error{err}
 	}
 	var faults []error
 	reported := map[string]bool{}
-	for _, key := range unknown {
-		root, _, _ := strings.Cut(key, ".")
-		why := readOnlyElsewhere(map[string]string{"env": envPosture, "config": envConfig}[root])
-		if why == "" {
-			why = "unknown key " + key
+	for _, u := range unknown {
+		root, _, _ := strings.Cut(u.key, ".")
+		fault := UnknownKeyFault(path, u.key, u.line, names.nearKey(u.key))
+		if why := readOnlyElsewhere(map[string]string{"env": envPosture, "config": envConfig}[root]); why != "" {
+			fault = fmt.Errorf("%s: %s", path, why)
 		}
-		if !reported[why] {
-			reported[why] = true
-			faults = append(faults, fmt.Errorf("%s: %s", path, why))
+		if !reported[fault.Error()] {
+			reported[fault.Error()] = true
+			faults = append(faults, fault)
 		}
 	}
 	l := layer{source: source, file: path, nodes: parsed.values, names: map[string]string{}}
