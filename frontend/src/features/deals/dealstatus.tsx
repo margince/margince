@@ -231,7 +231,8 @@ function Briefing({
   // request and the two cannot disagree about what is wrong with the deal.
   const coverage = useDealSignals(dealId);
   // The same shared read the signals come from, for the committee's ring.
-  const committee = useDealCoverage(dealId);
+  // The card answered, and the server answers it only for a live deal.
+  const committee = useDealCoverage(dealId, true);
   const because = card.verdict?.because.sentences ?? [];
   return (
     <>
