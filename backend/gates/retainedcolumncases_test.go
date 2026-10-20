@@ -392,6 +392,7 @@ func assertOrdinaryStatementsAreNotReported(t *testing.T, statements ...string) 
 }
 
 func TestUnclosedRetentionSQLCannotHideErasure(t *testing.T) {
+	t.Parallel()
 	const table, column = "activity", "counterparty_email"
 	for _, unreadable := range []string{
 		`/* unfinished UPDATE activity SET counterparty_email = NULL`,
