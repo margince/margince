@@ -4701,7 +4701,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
             "type": "string"
           },
           "commercial_role": {
-            "description": "The external counterparty’s source-established role relative to our company. Our own purchase makes them supplier. Relaying an unidentified company’s need without an established partner relationship is unknown, not partner.",
+            "description": "The external counterparty’s source-established role relative to our company. Our own purchase makes them supplier. Use unknown unless the source text establishes their specific role; relaying an unidentified company’s need alone does not establish a partner relationship.",
             "enum": [
               "buyer",
               "supplier",

@@ -80,7 +80,7 @@ func extractSchema() json.RawMessage {
 					"buyer_ref": schema.String().
 						Describe("Verified external contact: reference requesting our company’s work. Never an own seat: reference. Empty unless commercial_role is buyer."),
 					"commercial_role": schema.Enum(commercialRoleBuyer, commercialRoleSupplier, commercialRolePartner, commercialRoleProvider, commercialRoleUnknown).
-						Describe("The external counterparty’s source-established role relative to our company. Our own purchase makes them supplier. Relaying an unidentified company’s need without an established partner relationship is unknown, not partner."),
+						Describe("The external counterparty’s source-established role relative to our company. Our own purchase makes them supplier. Use unknown unless the source text establishes their specific role; relaying an unidentified company’s need alone does not establish a partner relationship."),
 					extractionConfidenceKey: schema.Number(),
 				},
 				paramKind, "message_id", "summary", claimQuoteKey, "due_date", "promiser_ref", extractionConfidenceKey,
