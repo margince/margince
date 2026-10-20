@@ -47,7 +47,7 @@ so a file cannot set them: a value for one in the `.env` file or a YAML file sto
 stops on any of these:
 
 - a flag it does not know;
-- a key in either YAML file that no program reads, a seed key among them;
+- a key in either YAML file that no program reads, a seed key included;
 - a value that fails the check of its setting or seed;
 - a required value that no source sets;
 - a `--config-file` that does not exist;
@@ -60,7 +60,7 @@ and never its value.
 
 An unknown key reads `config/margince.yaml: unknown key workspce (line 2); did you mean workspace?`.
 A section with a wrong name is one fault, not one for each key under it. A wrong flag, key or
-variable name gets the nearest real name when it is two edits or fewer away.
+variable name gets the nearest real name when it is within two edits of it.
 
 **Trace mode.** `--config-trace`, or `MARGINCE_CONFIG_TRACE=true`, logs each source read, in the
 order above, with its path. Then it logs one line per setting with its value and where the value

@@ -150,8 +150,7 @@ func (p PipelineSeed) validate() []fault {
 
 // problemOf drops the field a value parser names, since the fault names the key.
 func problemOf(err error) string {
-	var parse *values.ParseError
-	if errors.As(err, &parse) {
+	if parse, ok := errors.AsType[*values.ParseError](err); ok {
 		return parse.Message
 	}
 	return err.Error()

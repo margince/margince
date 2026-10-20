@@ -167,12 +167,13 @@ func decode(raw []byte) (Bootstrap, map[string]bool, []fault, error) {
 		}
 		faults = append(faults, shapeFaults(name, value, field)...)
 	}
-	doc := document{Bootstrap: Bootstrap{Version: 1}}
+	doc := document{Version: 1}
 	// The walk above names what a type error would, so a decode that trips on
 	// one of those keys adds nothing.
-	var typeErr *yaml.TypeError
-	if err := root.Decode(&doc); err != nil && !(errors.As(err, &typeErr) && len(faults) > 0) {
-		return Bootstrap{}, nil, nil, err
+	if err := root.Decode(&doc); err != nil {
+		if _, typeErr := errors.AsType[*yaml.TypeError](err); !typeErr || len(faults) == 0 {
+			return Bootstrap{}, nil, nil, err
+		}
 	}
 	return doc.Bootstrap, written, faults, nil
 }

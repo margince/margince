@@ -38,7 +38,7 @@ func UnknownKeyFault(file, key string, line int, near string) error {
 	return errors.New(msg)
 }
 
-// known is every name Load takes without a fault or a warning.
+// known holds the names Load takes without a fault or a warning.
 type known struct {
 	keys, envs map[string]bool
 	// sections are the dotted prefixes of the keys. A mapping under one may

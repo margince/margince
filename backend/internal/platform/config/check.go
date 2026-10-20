@@ -21,7 +21,7 @@ func CheckRequested(reg *Registry, args []string) bool {
 // reads to w. It returns every fault, or nil when the configuration holds. It
 // opens no database, so a stored setting with no boot source stays unset.
 func Check(w io.Writer, reg *Registry, src Sources) error {
-	cfg, faults := load(reg, src)
+	cfg, faults := loadSources(reg, src)
 	if cfg != nil {
 		lines := cfg.TraceLines()
 		for _, name := range cfg.warnings {

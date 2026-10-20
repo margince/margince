@@ -49,20 +49,25 @@ func shapeFaults(key string, n *yaml.Node, t reflect.Type) []fault {
 	case reflect.Struct:
 		return structFaults(key, n, t)
 	case reflect.Slice:
-		if n.Kind != yaml.SequenceNode {
-			return []fault{{key: key, line: n.Line, problem: "want a list"}}
-		}
-		var out []fault
-		for i, item := range n.Content {
-			out = append(out, shapeFaults(fmt.Sprintf("%s[%d]", key, i), item, t.Elem())...)
-		}
-		return out
+		return sliceFaults(key, n, t)
 	default:
 		if n.Kind != yaml.ScalarNode || n.Decode(reflect.New(t).Interface()) != nil {
 			return []fault{{key: key, line: n.Line, problem: scalarWant(t)}}
 		}
 		return nil
 	}
+}
+
+// sliceFaults names each item by its index, so a fault points at one entry.
+func sliceFaults(key string, n *yaml.Node, t reflect.Type) []fault {
+	if n.Kind != yaml.SequenceNode {
+		return []fault{{key: key, line: n.Line, problem: "want a list"}}
+	}
+	var out []fault
+	for i, item := range n.Content {
+		out = append(out, shapeFaults(fmt.Sprintf("%s[%d]", key, i), item, t.Elem())...)
+	}
+	return out
 }
 
 // structFaults reads a `<<:` merge as the keys it brings, as the decoder does.

@@ -52,16 +52,16 @@ type Config struct {
 // Load resolves every setting and returns all faults joined, so an operator
 // fixes a broken configuration in one pass instead of one boot per fault.
 func Load(reg *Registry, src Sources) (*Config, error) {
-	cfg, err := load(reg, src)
+	cfg, err := loadSources(reg, src)
 	if err != nil {
 		return nil, err
 	}
 	return cfg, nil
 }
 
-// load returns what it resolved beside the faults, for Check to trace. The
+// loadSources returns what it resolved beside the faults, for Check to trace. The
 // Config is nil only when the command line does not parse.
-func load(reg *Registry, src Sources) (*Config, error) {
+func loadSources(reg *Registry, src Sources) (*Config, error) {
 	names := knownNames(reg, src.Known, src.BootstrapRoots)
 	if src.ReadFile == nil {
 		src.ReadFile = os.ReadFile

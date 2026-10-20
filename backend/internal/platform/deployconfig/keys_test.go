@@ -68,7 +68,7 @@ func TestAKeyOfTheWrongKindIsAFault(t *testing.T) {
 		"bootstrap_admin: admin\n":                                 "bootstrap_admin in %s (base_file): want a mapping of keys (line 1)",
 		"seeds:\n  consent_purposes: marketing\n":                  "seeds.consent_purposes in %s (base_file): want a list (line 2)",
 		"seeds:\n  pipeline:\n    stages: [{probability: high}]\n": "seeds.pipeline.stages[0].probability in %s (base_file): want a whole number (line 3)",
-		"seeds:\n  pipeline:\n    stages: [{nmae: Won}]\n":         "%s: unknown key seeds.pipeline.stages[0].nmae (line 3); did you mean seeds.pipeline.stages[0].name?",
+		"seeds:\n  pipeline:\n    stages: [{nam: Won}]\n":          "%s: unknown key seeds.pipeline.stages[0].nam (line 3); did you mean seeds.pipeline.stages[0].name?",
 	} {
 		path := writeTemp(t, doc)
 		_, err := LoadBootstrap(path)
@@ -85,8 +85,8 @@ func TestAMergedKeyIsCheckedLikeAWrittenOne(t *testing.T) {
 	if boot, err := LoadBootstrap(ok); err != nil || boot.Workspace.Timezone != "Europe/Berlin" {
 		t.Fatalf("a merged workspace: boot %+v, err %v", boot.Workspace, err)
 	}
-	bad := writeTemp(t, "defaults: &d\n  nmae: Acme\nworkspace:\n  <<: *d\n")
-	if _, err := LoadBootstrap(bad); err == nil || !strings.Contains(err.Error(), "unknown key workspace.nmae") {
+	bad := writeTemp(t, "defaults: &d\n  nam: Acme\nworkspace:\n  <<: *d\n")
+	if _, err := LoadBootstrap(bad); err == nil || !strings.Contains(err.Error(), "unknown key workspace.nam") {
 		t.Fatalf("a misspelt merged key: %v", err)
 	}
 }
@@ -95,9 +95,9 @@ func TestAMergedKeyIsCheckedLikeAWrittenOne(t *testing.T) {
 // reports, and keeps the faults of the file it can.
 func TestFaultsLeaveAnUnparseableFileToTheSettingsLoader(t *testing.T) {
 	base := writeTemp(t, "workspace: [unclosed\n")
-	over := writeTemp(t, "workspace:\n  nmae: Acme\n")
+	over := writeTemp(t, "workspace:\n  nam: Acme\n")
 	faults := Faults(config.Files{Base: base, ConfigFile: over})
-	if len(faults) != 1 || !strings.Contains(faults[0].Error(), over+": unknown key workspace.nmae (line 2); did you mean workspace.name?") {
+	if len(faults) != 1 || !strings.Contains(faults[0].Error(), over+": unknown key workspace.nam (line 2); did you mean workspace.name?") {
 		t.Fatalf("faults %v, want only the config file's misspelling", faults)
 	}
 	if _, err := LoadBootstrapFiles(base, over); err == nil || !strings.Contains(err.Error(), base) {
