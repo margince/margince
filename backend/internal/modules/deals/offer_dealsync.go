@@ -98,8 +98,8 @@ func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 	// compared on its own terms. An unpriced deal and a priced one are different
 	// forecasts; so are two different prices; and re-pricing at the figure the
 	// deal already carries is neither.
-	// An offer's lines are non-negative, so its gross is too; asked anyway so
-	// this writer of the deal amount shares the sign rule with the others.
+	// An offer's lines are non-negative, so its gross is too. Asked anyway, so
+	// this writer shares the sign rule with the others.
 	if err := amountSetError(offer.GrossMinor); err != nil {
 		return nil, err
 	}

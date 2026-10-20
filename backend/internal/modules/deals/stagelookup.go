@@ -45,11 +45,11 @@ type liveStage struct {
 	winProbability int
 }
 
-// resolveLiveStage is the one answer to "may a deal in this pipeline stand in
-// this stage": StageGoneError for a stage nobody has or that is archived, and
-// 422 naming field for a live stage of another pipeline. Both the advance and
-// the create door ask it. A door whose caller typed the stage wraps the first
-// in auth.ReferenceNotFoundError, so one mistake earns one refusal.
+// resolveLiveStage answers whether a deal in this pipeline may stand in this
+// stage. A stage nobody has, or that is archived, is a StageGoneError. A live
+// stage of another pipeline is a 422 naming field. Both the advance and the
+// create door ask it, and a door whose caller typed the stage wraps the first
+// in auth.ReferenceNotFoundError.
 func resolveLiveStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, pipelineID ids.PipelineID, field string) (liveStage, error) {
 	var stage liveStage
 	var stagePipeline ids.PipelineID

@@ -212,8 +212,8 @@ func lockEmploymentClocks(ctx context.Context, tx pgx.Tx, in CreateRelationshipI
 	return storekit.LockLastActivityTargets(ctx, tx, targets)
 }
 
-// named is the refusal for the endpoint in field: naming it when the caller
-// typed the ids, and the bare answer when a writer derived them.
+// named names the endpoint field when the caller typed the ids. A writer that
+// derived them gets the bare answer.
 func (in CreateRelationshipInput) named(field string, err error) error {
 	if in.ReferencesFromRequest {
 		return auth.NameMissingReference(field, err)

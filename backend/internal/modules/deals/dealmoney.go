@@ -236,10 +236,9 @@ func (e *ArrCurrencyConflictError) FieldFault() (field, code, message string) {
 // amountSetError refuses a one-off amount below zero, for a write that SETS
 // the amount: a create, an edit that carries one, an accepted suggestion.
 //
-// Kept apart from moneyPairError on purpose. That rule answers on the
-// resulting row, so judging the sign there would also refuse an edit of the
-// name or owner on an older deal that already holds a negative amount, and
-// the refusal would read the amount back to a caller whose field mask hides it.
+// Apart from moneyPairError, which answers on the resulting row. Judging the
+// sign there would refuse a rename of an older deal that holds a negative
+// amount. It would also read a masked amount back to the caller.
 func amountSetError(amount *int64) error {
 	if amount != nil && *amount < 0 {
 		return &NegativeAmountError{}

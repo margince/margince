@@ -180,10 +180,9 @@ func mayAttach(ctx context.Context, tx pgx.Tx, link ActivityLinkInput) error {
 	return auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID)
 }
 
-// linkRefusal names the body field when the caller typed the links, so a
-// missing record answers 422 naming `links`. Links a system derived (a stored
-// proposal, an anchor's own) keep the bare not-found: naming a field the
-// caller never sent would point them at the wrong input.
+// linkRefusal names the body field when the caller typed the links. Links a
+// system derived (a stored proposal, an anchor's own) keep the bare
+// not-found, because the caller never sent that field.
 func linkRefusal(fromRequest bool, err error) error {
 	if fromRequest {
 		return auth.NameMissingReference("links", err)

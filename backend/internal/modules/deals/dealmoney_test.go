@@ -39,8 +39,8 @@ func TestADealAmountOfZeroOrMoreIsLegal(t *testing.T) {
 	}
 }
 
-// The pair rule answers on the resulting row, so it must not carry the sign
-// rule: an older deal that already holds a negative amount stays editable.
+// The pair rule answers on the resulting row, so it carries no sign rule.
+// An older deal that already holds a negative amount stays editable.
 func TestThePairRuleDoesNotJudgeTheSignOfAnAmountAlreadyOnTheRow(t *testing.T) {
 	eur, amount := "EUR", int64(-5)
 	if err := moneyPairError(&amount, nil, &eur); err != nil {

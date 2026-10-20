@@ -51,8 +51,8 @@ func SpokenAmount(amountMinor int64, currency string) string {
 	// the positive half: -9 500 000 EUR is not >= 1000, so it came out as the
 	// unabbreviated "€-95000" — the exact shape this function exists to keep
 	// out of a sentence, with the minus sign in the middle of the figure. A
-	// deal amount written before the sign rule can be negative, and the
-	// formatter renders whatever sign it is handed into a brief or a draft.
+	// deal amount written before the sign rule can be negative. The formatter
+	// renders whatever sign it is handed.
 	//
 	// Unsigned, and taken by the same wrap values.MajorUnits documents:
 	// negating math.MinInt64 as an int64 yields itself, so a magnitude taken

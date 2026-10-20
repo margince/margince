@@ -33,9 +33,8 @@ type CreateDealInput struct {
 	Name        string
 	AmountMinor *int64
 	// ReferencesFromRequest says the caller typed the ids this deal points at,
-	// so a miss is refused naming the field. A writer that derives them from a
-	// stored suggestion, a lead or an import row leaves it false: naming a
-	// field the caller never sent would point at the wrong input.
+	// so a miss is refused naming the field. A writer that derives them (a
+	// stored suggestion, a lead, an import row) leaves it false.
 	ReferencesFromRequest bool
 	// ExpectedArrMinor is the recurring half of the price, in the same
 	// currency as AmountMinor.

@@ -155,8 +155,8 @@ func TestAWriteNamingAMissingRecordIsA422NamingTheField(t *testing.T) {
 	}
 }
 
-// A record that does not exist and one the caller may not read must be told
-// apart by nothing in the answer, or the status enumerates rows.
+// A record that does not exist and one the caller may not read answer alike.
+// Otherwise the status would enumerate rows.
 func TestAMissingRecordAndAHiddenOneAnswerAlike(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)

@@ -14,9 +14,9 @@ import { throwProblem } from "../lib/problem";
 import { CreateAction } from "./create";
 import type { CreateField } from "./create.fields";
 
-// A 422 names the wire field. The form puts the refusal beside the input that
-// field belongs to, in the reader's language, and keeps the foot of the form
-// for refusals that have no input to stand beside.
+// A 422 names the wire field. The form puts the refusal beside the matching
+// input, in the reader's language. The foot of the form keeps the refusals
+// that have no input.
 
 afterEach(() => {
   cleanup();
