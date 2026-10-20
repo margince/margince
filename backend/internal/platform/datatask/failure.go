@@ -48,9 +48,9 @@ func (e *Engine) recordFailure(ctx context.Context, picked selection, cause erro
  consecutive_failures = @failures, last_error_class = @class, next_attempt_at = @next,
  updated_at = @now, version = version + 1 WHERE task_id = @task AND step = @step AND version = @version`,
 			pgx.NamedArgs{
-				"status": p.Status, "limit": p.BatchLimit, "failures": p.ConsecutiveFailures,
-				"class": p.LastErrorClass, "next": p.NextAttemptAt, "now": e.now(),
-				"task": p.TaskID, "step": p.Step, "version": p.Version,
+				paramStatus: p.Status, paramLimit: p.BatchLimit, "failures": p.ConsecutiveFailures,
+				"class": p.LastErrorClass, "next": p.NextAttemptAt, paramNow: e.now(),
+				paramTask: p.TaskID, paramStep: p.Step, paramVersion: p.Version,
 			})
 		if err != nil {
 			return err
@@ -59,7 +59,7 @@ func (e *Engine) recordFailure(ctx context.Context, picked selection, cause erro
 			return fmt.Errorf("data task failure outcome lost its version")
 		}
 		if _, err := storekit.LogSystem(ctx, tx, "data_task.batch_failed",
-			map[string]any{"task": p.TaskID, "step": p.Step, "run_id": p.RunID, "class": p.LastErrorClass}); err != nil {
+			map[string]any{paramTask: p.TaskID, paramStep: p.Step, "run_id": p.RunID, "class": p.LastErrorClass}); err != nil {
 			return err
 		}
 		if p.Status == Failed {

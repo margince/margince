@@ -13,7 +13,7 @@ import (
 // Provider provenance and the importing seat's first connection establish held correspondence.
 func writtenToBeforeConnectedTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 	var held bool
-	err := tx.QueryRow(ctx, "SELECT "+sentHistorySQL+" FROM (SELECT lower(trim(@email)) AS email) ce", pgx.NamedArgs{"email": email, "expanded": true}).Scan(&held)
+	err := tx.QueryRow(ctx, "SELECT "+sentHistorySQL+" FROM (SELECT lower(trim(@email)) AS email) ce", pgx.NamedArgs{historyEmailParam: email, historyExpandedParam: true}).Scan(&held)
 	if err != nil {
 		return false, fmt.Errorf("contacts: read correspondence history: %w", err)
 	}
@@ -22,7 +22,7 @@ func writtenToBeforeConnectedTx(ctx context.Context, tx pgx.Tx, email string) (b
 
 func receivedBeforeConnectedTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 	var held bool
-	err := tx.QueryRow(ctx, "SELECT "+receivedHistorySQL+" FROM (SELECT lower(trim(@email)) AS email) ce", pgx.NamedArgs{"email": email, "expanded": true}).Scan(&held)
+	err := tx.QueryRow(ctx, "SELECT "+receivedHistorySQL+" FROM (SELECT lower(trim(@email)) AS email) ce", pgx.NamedArgs{historyEmailParam: email, historyExpandedParam: true}).Scan(&held)
 	if err != nil {
 		return false, fmt.Errorf("contacts: read correspondence history: %w", err)
 	}
@@ -48,3 +48,8 @@ const receivedHistorySQL = `EXISTS (
  AND a.kind = 'email' AND (a.direction = 'inbound' OR (@expanded AND a.sent_by_colleague IS NOT NULL))
  AND NOT a.bulk_mail_attested AND a.archived_at IS NULL
  AND ci.provider_received_at < (SELECT min(cc.created_at) FROM capture_connection cc WHERE cc.user_id = ci.user_id))`
+
+const (
+	historyEmailParam    = "email"
+	historyExpandedParam = "expanded"
+)

@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// Ledger statuses distinguish unfinished work, operator holds and completed steps.
 const (
 	Pending = "pending"
 	Running = "running"
@@ -134,7 +135,7 @@ func (e *Engine) seedStep(ctx context.Context, tx pgx.Tx, task Task, step Step) 
 	p, err := scanProgress(tx.QueryRow(ctx, `INSERT INTO data_task_run
  (task_id,step,run_id,task_version,batch_limit,first_release)
  VALUES (@task,@step,@run,@revision,@limit,@release) ON CONFLICT(task_id,step) DO NOTHING
- RETURNING `+progressColumns, pgx.NamedArgs{"task": task.ID, "step": step.Name, "run": ids.NewV7(), "revision": task.Version, "limit": step.Limit, "release": e.release}))
+ RETURNING `+progressColumns, pgx.NamedArgs{paramTask: task.ID, paramStep: step.Name, "run": ids.NewV7(), "revision": task.Version, paramLimit: step.Limit, "release": e.release}))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}
@@ -153,6 +154,6 @@ func (e *Engine) seedStep(ctx context.Context, tx pgx.Tx, task Task, step Step) 
 		return fmt.Errorf("data task estimate exceeded its declared bound")
 	}
 	_, err = tx.Exec(ctx, `UPDATE data_task_run SET estimate=@estimate,estimate_capped=@capped,estimated_at=@now
- WHERE task_id=@task AND step=@step AND version=@version`, pgx.NamedArgs{"estimate": estimate, "capped": capped, "now": e.now(), "task": p.TaskID, "step": p.Step, "version": p.Version})
+ WHERE task_id=@task AND step=@step AND version=@version`, pgx.NamedArgs{paramEstimate: estimate, paramCapped: capped, paramNow: e.now(), paramTask: p.TaskID, paramStep: p.Step, paramVersion: p.Version})
 	return err
 }

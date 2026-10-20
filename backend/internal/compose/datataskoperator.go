@@ -24,7 +24,7 @@ func DataTaskOperation(ctx context.Context, pool *pgxpool.Pool, action string) (
 		if err := enqueueDataTaskReconcile(ctx, pool); err != nil {
 			return nil, err
 		}
-	} else if action != "status" && action != "estimate" {
+	} else if action != dataTaskStatusAction && action != "estimate" {
 		return nil, fmt.Errorf("choose data-tasks status, estimate or run")
 	}
 	progress, err := engine.List(ctx)
@@ -52,3 +52,5 @@ func enqueueDataTaskReconcile(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 	return inserter.Enqueue(ctx, DataTaskReconcileArgs{}, nil)
 }
+
+const dataTaskStatusAction = "status"
