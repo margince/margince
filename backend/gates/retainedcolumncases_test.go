@@ -339,38 +339,45 @@ func TestTheRetainedColumnCheckRefusesWhatItCannotRead(t *testing.T) {
 		}
 	})
 
-	// The quoting the split cannot track. Each form ends with the scan's
-	// `quoted` inverted against the truth, so the split cuts inside a string —
-	// and the fragment carrying the destructive assignment names no table. The
-	// gate refuses to read these rather than trusting a scan it has lost.
-	t.Run("quoting the split cannot track is refused, not guessed at", func(t *testing.T) {
+	t.Run("unclosed quoting is refused before the split", func(t *testing.T) {
 		for _, unreadable := range []string{
-			`UPDATE activity SET body = E'a\';b', counterparty_email = NULL WHERE id = $1`,
+			`/* unfinished UPDATE activity SET counterparty_email = NULL`,
+			`UPDATE activity SET body = E'a\';b, counterparty_email = NULL WHERE id = $1`,
+			`UPDATE activity SET body = $$unfinished, counterparty_email = NULL`,
+			`UPDATE activity SET body = NULL /* unfinished, counterparty_email = NULL`,
 		} {
-			if quotingBeyondTheSplit(unreadable) == "" {
-				t.Errorf("quoting the split cannot track went unreported: %q", unreadable)
+			if unclosedWriteSpan(unreadable) == "" {
+				t.Errorf("unclosed quoting went unreported: %q", unreadable)
 			}
-			// And it must be refused BEFORE the split, not survive it: read
-			// through, the fragment holding the destruction names no table.
 			if statementDestroying(sqlStatements(unreadable), table, column) != "" {
-				t.Errorf("the split read %q correctly by luck; the refusal above is what this case rests on", unreadable)
+				t.Errorf("unclosed span was treated as a complete assignment: %q", unreadable)
 			}
 		}
-		// Everything it CAN track is not refused, or the sweep's own statements
-		// would stop being read at all — and the last two are the expensive
-		// mistake: an E'' MENTIONED inside a value or a comment is not one, and
-		// a tripwire that refuses a statement it reads perfectly well is one
-		// somebody turns off.
 		for _, readable := range []string{
+			"settling the contact's notice cases: %w",
 			`UPDATE activity SET body = 'a;b', counterparty_email = NULL WHERE id = $1`,
+			`UPDATE activity SET body = E'a\';b', counterparty_email = NULL WHERE id = $1`,
 			`UPDATE activity SET body = NULL WHERE id = $1 AND kind = 'note'`,
 			`UPDATE contact SET note = 'she said ''no''' WHERE id = $1`,
 			"UPDATE activity SET body = $$a;b$$, counterparty_email = NULL WHERE id = $1",
 			`UPDATE contact SET note = 'E''s own note' WHERE id = $1`,
 			"UPDATE contact SET note = NULL -- not an E'scape\n WHERE id = $1",
 		} {
-			if form := quotingBeyondTheSplit(readable); form != "" {
-				t.Errorf("ordinary quoting was refused as %q: %s", form, readable)
+			if form := unclosedWriteSpan(readable); form != "" {
+				t.Errorf("closed quoting was refused as %q: %s", form, readable)
+			}
+		}
+		escaped := `UPDATE activity SET body = E'a\';b', counterparty_email = NULL WHERE id = $1`
+		if statementDestroying(sqlStatements(escaped), table, column) == "" {
+			t.Error("escaped string hid the later destructive assignment")
+		}
+		for _, adjacent := range []string{
+			`UPDATE activity SET body = 'x'E'a\';b', counterparty_email = NULL WHERE id = $1`,
+			`UPDATE activity SET body = "c"E'a\';b', counterparty_email = NULL WHERE id = $1`,
+			`UPDATE activity SET body = $$x$$E'a\';b', counterparty_email = NULL WHERE id = $1`,
+		} {
+			if unclosedWriteSpan(adjacent) != "" || statementDestroying(sqlStatements(adjacent), table, column) == "" {
+				t.Errorf("adjacent escape string hid the later assignment: %s", adjacent)
 			}
 		}
 	})

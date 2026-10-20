@@ -65,7 +65,7 @@ func identStart(c byte) bool {
 func SQLSpanAt(text string, pos int) (length int, closed bool) {
 	switch {
 	case text[pos] == '\'':
-		return quotedStringSpan(text, pos)
+		return quotedStringSpan(text, pos, escapeStringPrefix(text, pos))
 
 	case strings.HasPrefix(text[pos:], "--"):
 		if end := strings.IndexByte(text[pos:], '\n'); end >= 0 {
@@ -106,8 +106,7 @@ func blockCommentSpan(text string, pos int) (length int, closed bool) {
 	return len(text) - pos, false
 }
 
-func quotedStringSpan(text string, pos int) (int, bool) {
-	escaped := escapeStringPrefix(text, pos)
+func quotedStringSpan(text string, pos int, escaped bool) (int, bool) {
 	for i := pos + 1; i < len(text); i++ {
 		if escaped && text[i] == '\\' {
 			i++
@@ -125,10 +124,42 @@ func quotedStringSpan(text string, pos int) (int, bool) {
 }
 
 func escapeStringPrefix(text string, pos int) bool {
-	escaped := pos > 0 && (text[pos-1] == 'E' || text[pos-1] == 'e')
-	if escaped && pos > 1 {
-		before := text[pos-2]
-		escaped = !identStart(before) && (before < '0' || before > '9') && before != '$' && before != '"' && before != '\'' && before < 128
+	if !possibleEscapePrefix(text, pos) {
+		return false
 	}
-	return escaped
+	if pos < 2 || text[pos-2] != '$' {
+		return true
+	}
+	// Track completed dollar spans without recursively rescanning earlier strings.
+	dollarEnd := -1
+	for i := 0; i < pos-1; {
+		var length int
+		var closed bool
+		if text[i] == '\'' {
+			escaped := possibleEscapePrefix(text, i) && (i < 2 || text[i-2] != '$' || dollarEnd == i-1)
+			length, closed = quotedStringSpan(text, i, escaped)
+		} else {
+			length, closed = SQLSpanAt(text, i)
+		}
+		if length > 0 {
+			if text[i] == '$' && closed {
+				dollarEnd = i + length
+			}
+			i += length
+		} else {
+			i++
+		}
+	}
+	return dollarEnd == pos-1
+}
+
+func possibleEscapePrefix(text string, pos int) bool {
+	if pos == 0 || (text[pos-1] != 'E' && text[pos-1] != 'e') {
+		return false
+	}
+	if pos == 1 {
+		return true
+	}
+	before := text[pos-2]
+	return !identStart(before) && (before < '0' || before > '9') && before < 128
 }

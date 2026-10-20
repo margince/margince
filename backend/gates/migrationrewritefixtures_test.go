@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"testing"
 )
 
@@ -79,15 +80,16 @@ func TestRewriteCensusRefusesIncompleteSQLAndWaivers(t *testing.T) {
 			t.Fatalf("accepted incomplete waiver: %s", body)
 		}
 	}
-	waivers, err := rewriteWaivers("# comment\n1799999999_roles.up.sql | role | exactly six built in role documents")
-	if err != nil || len(waivers) != 1 || !slices.Equal(waivers["1799999999_roles.up.sql"].tables, []string{"role"}) {
+	name := rewriteFixtureName(t, "roles")
+	waivers, err := rewriteWaivers("# comment\n" + name + " | role | exactly six built in role documents")
+	if err != nil || len(waivers) != 1 || !slices.Equal(waivers[name].tables, []string{"role"}) {
 		t.Fatalf("valid waiver=%v err=%v", waivers, err)
 	}
 }
 
 func TestRewriteWaiversExpireWhenTheFileOrWrittenTableChanges(t *testing.T) {
 	t.Parallel()
-	const name = "1799999999_roles.up.sql"
+	name := rewriteFixtureName(t, "roles")
 	path := filepath.Join(t.TempDir(), name)
 	if err := os.WriteFile(path, []byte("UPDATE role SET name='ops';"), 0o600); err != nil {
 		t.Fatal(err)
@@ -99,7 +101,7 @@ func TestRewriteWaiversExpireWhenTheFileOrWrittenTableChanges(t *testing.T) {
 		{"unwaived", "", 1},
 		{"bounded", name + " | role | exactly six built in role documents", 0},
 		{"wrong table", name + " | contact | exactly six built in role documents", 1},
-		{"missing file", "1799999998_gone.up.sql | role | exactly six built in role documents", 2},
+		{"missing file", rewriteFixtureName(t, "gone") + " | role | exactly six built in role documents", 2},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			waivers, err := rewriteWaivers(tc.manifest)
@@ -112,4 +114,13 @@ func TestRewriteWaiversExpireWhenTheFileOrWrittenTableChanges(t *testing.T) {
 			}
 		})
 	}
+}
+
+func rewriteFixtureName(t *testing.T, name string) string {
+	t.Helper()
+	version, err := strconv.ParseInt(migrationRewriteBaseline, 10, 64)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strconv.FormatInt(version+1, 10) + "_" + name + ".up.sql"
 }

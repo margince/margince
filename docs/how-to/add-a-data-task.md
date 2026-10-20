@@ -65,7 +65,7 @@ Use a data task for an unbounded correction. For a small, finite catalog such as
 permissions, add one line to `backend/migrationrewrites.txt`:
 
 ```text
-1799999999_role_permissions.up.sql | role | exactly six built-in role documents
+<version>_role_permissions.up.sql | role | exactly six built-in role documents
 ```
 
 The first field is the complete migration filename. The second lists the written tables, separated

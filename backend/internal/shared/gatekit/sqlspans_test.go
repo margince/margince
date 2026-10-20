@@ -3,7 +3,19 @@
 
 package gatekit
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
+
+func TestDollarPrefixAfterManyIdentifierStrings(t *testing.T) {
+	prefix := strings.Repeat(`name$E'a' `, 64) + `$$last$$E`
+	text := prefix + `'a\'b'`
+	length, closed := SQLSpanAt(text, len(prefix))
+	if length != 6 || !closed {
+		t.Fatalf("final escape string: length=%d closed=%t", length, closed)
+	}
+}
 
 // Every shape a census reading SQL structure has to step over, and every
 // lookalike it must not. Each MISSED row hides the assignments after it from
@@ -27,6 +39,10 @@ func TestSQLSpanAt(t *testing.T) {
 		{name: "keyword final E does not enable escapes", text: `LIKE'a\'; DELETE FROM contact; SELECT 'x'`, pos: 4, length: 4, closed: true},
 		{name: "identifier final E does not enable escapes", text: `name'a\'; DELETE FROM contact; SELECT 'x'`, pos: 4, length: 4, closed: true},
 		{name: "escape strings retain doubled quotes", text: `E'it''s\' fine'`, pos: 1, length: 14, closed: true},
+		{name: "escape prefix after a quoted string", text: `'x'E'a\'b'`, pos: 4, length: 6, closed: true},
+		{name: "escape prefix after a quoted identifier", text: `"c"E'a\'b'`, pos: 4, length: 6, closed: true},
+		{name: "escape prefix after a dollar quote", text: `$$x$$E'a\'b'`, pos: 6, length: 6, closed: true},
+		{name: "dollar inside an identifier is not a prefix boundary", text: `name$E'a\'; DELETE FROM contact`, pos: 6, length: 4, closed: true},
 
 		{name: "an unterminated quote is reported", text: "x = 'never closed", pos: 4, length: 13, closed: false},
 		{name: "a dollar-quoted value", text: "x = $$a;b$$ , y", pos: 4, length: 7, closed: true},
