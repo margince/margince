@@ -14,20 +14,20 @@ import { useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { ReportingCharts } from "./reporting.charts";
 import { ReportingComparison } from "./reporting.comparison";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingExecutions } from "./reporting.executions";
 import { ReportingExportButton } from "./reporting.export";
 import {
   editionLabel,
-  editionStatus,
   executionLabel,
   type ReportAction,
   type ReportingEvidenceRef,
   type ReportingReport,
 } from "./reporting.model";
 import { useReportDetailQueries } from "./reporting.queries";
+import { PreviewAsSelect } from "./reporting.readerpreview";
+import { ReportResults } from "./reporting.results";
 import { SaveReportingDialog } from "./reporting.save";
 import { ReportingScheduleDialog } from "./reporting.schedule";
 import {
@@ -51,6 +51,8 @@ export function ReportingReportDetail({
   const [historyOpen, setHistoryOpen] = useState(false);
   // The draft revision shown in place of the published one, while previewed.
   const [previewRevision, setPreviewRevision] = useState<number>();
+  // The role the report is previewed as, in place of the caller's own view.
+  const [previewRole, setPreviewRole] = useState<string>();
   const previewDraft = previewRevision !== undefined;
   const [capturePending, setCapturePending] = useState<boolean | undefined>(
     undefined,
@@ -216,6 +218,9 @@ export function ReportingReportDetail({
                   }
                 />
               )}
+              {!editionId && (
+                <PreviewAsSelect role={previewRole} onChange={setPreviewRole} />
+              )}
               {evaluation && (
                 <ReportingExportButton
                   evaluation={evaluation}
@@ -270,41 +275,16 @@ export function ReportingReportDetail({
           {capturePending && (
             <p role="status">{t("reporting.capturePending")}</p>
           )}
-          {editionId ? (
-            <QueryGate query={edition} pendingLabel={t("reporting.frozen")}>
-              {(edition) => (
-                <>
-                  <p className="reporting-archive-banner" role="status">
-                    {t("reporting.frozen")} ·{" "}
-                    {formatDateTime(
-                      edition.captured_at,
-                      locale,
-                      edition.evaluation.context.timezone,
-                    )}{" "}
-                    · {editionStatus(edition, t)}
-                  </p>
-                  <ReportingCharts
-                    editionId={editionId}
-                    evaluation={edition.evaluation}
-                    onEvidence={setEvidence}
-                  />
-                </>
-              )}
-            </QueryGate>
-          ) : (
-            <QueryGate query={live} pendingLabel={t("reporting.live")}>
-              {(evaluation) => (
-                <>
-                  <p className="t-caption">{t("reporting.live")}</p>
-                  <ReportingCharts
-                    editionId={editionId}
-                    evaluation={evaluation}
-                    onEvidence={setEvidence}
-                  />
-                </>
-              )}
-            </QueryGate>
-          )}
+          <ReportResults
+            reportId={reportId}
+            editionId={editionId}
+            edition={edition}
+            live={live}
+            previewRole={previewRole}
+            previewRevision={previewRevision}
+            onEndPreview={() => setPreviewRole(undefined)}
+            onEvidence={setEvidence}
+          />
           <Disclosure
             summary={t("reporting.history")}
             open={historyOpen}

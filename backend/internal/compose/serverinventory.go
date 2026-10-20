@@ -48,6 +48,7 @@ import (
 type Server struct {
 	reportingHandlers
 	reportingExportHandlers
+	reportingReaderPreviewHandlers
 
 	authHandlers
 	contactsHandlers

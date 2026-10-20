@@ -12613,6 +12613,54 @@ paths:
       x-agent-access: human-only
       security:
       - cookieAuth: []
+  /analytics/reports/{id}/reader-preview:
+    parameters: *id016
+    get:
+      tags:
+      - Reports
+      operationId: previewReportingReportAsRole
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Evaluate a saved report as a seat holding one role would read it. Human-only.
+      description: |
+        The report evaluated under the caller's own permissions narrowed to the role's: an
+        object only where both grant it, the narrower row scope, and every field mask either
+        carries. So the preview never shows the caller anything their own access withholds.
+        It runs as the caller, so records private to another seat stay hidden here too.
+
+        Gated on `role_admin.read`, as the role matrix is: a preview under a role discloses
+        what that role may read. A refusal under the role (for example, a role that may not
+        read saved reports, or measure the report's scope) answers as it would for that seat.
+      parameters:
+      - name: role
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 64
+      - name: revision
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+      responses:
+        '200':
+          description: The report as the role reads it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingEvaluation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /analytics/reports/{id}/evaluation:
     parameters: *id016
     get:

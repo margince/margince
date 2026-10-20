@@ -223,6 +223,11 @@ export const en = {
   "reporting.draftPreviewing":
     "You are looking at the draft. Readers still see the published report.",
   "reporting.previewDraft": "Preview draft",
+  "reporting.previewAs": "Preview as",
+  "reporting.previewAsSelf": "Your own view",
+  "reporting.previewAsBanner":
+    "Preview as {role}: what a seat with this role and your teams reads of this report. Records private to someone else stay hidden here too.",
+  "reporting.endPreview": "End preview",
   "reporting.showPublished": "Show published report",
   "reporting.publishDraft": "Publish draft",
   "reporting.discardDraft": "Discard draft",

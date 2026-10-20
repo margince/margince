@@ -158,6 +158,52 @@ it("previews one chart before it is added, saving nothing", async () => {
   );
   expect(write).not.toHaveBeenCalled();
 });
+it("previews the report as a role for a seat that may read roles", async () => {
+  const user = userEvent.setup({ delay: null });
+  const routes = reportingStoryRoutes(reportingStoryEvaluation, true);
+  routes["GET /me"] = meRoute(
+    {
+      report_definition: ["read", "update"],
+      deal: ["read"],
+      pipeline: ["read"],
+      role_admin: ["read"],
+    },
+    { roles: ["admin"], seat: "full" },
+  );
+  routes["GET /roles"] = () =>
+    jsonResponse({ roles: [{ key: "rep", name: "Rep" }] });
+  const preview = vi.fn(() => jsonResponse(reportingStoryEvaluation));
+  routes["GET /analytics/reports/report/reader-preview"] = preview;
+  installFetchStub(routes);
+  render(
+    <StoryProviders>
+      <ReportingReportDetail reportId="report" />
+    </StoryProviders>,
+  );
+  await pickOption(
+    user,
+    await screen.findByRole("combobox", { name: "Preview as" }),
+    "Rep",
+  );
+  expect(
+    await screen.findByText(/Preview as Rep: what a seat with this role/),
+  ).toBeInTheDocument();
+  expect(preview).toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "End preview" }));
+  expect(screen.queryByText(/Preview as Rep/)).not.toBeInTheDocument();
+});
+it("offers no role preview to a seat that may not read roles", async () => {
+  installFetchStub(reportingStoryRoutes(reportingStoryEvaluation, true));
+  render(
+    <StoryProviders>
+      <ReportingReportDetail reportId="report" />
+    </StoryProviders>,
+  );
+  await screen.findByRole("heading", { name: "DACH operating review" });
+  expect(
+    screen.queryByRole("combobox", { name: "Preview as" }),
+  ).not.toBeInTheDocument();
+});
 it("shows the report's purpose under its name", async () => {
   const routes = reportingStoryRoutes(reportingStoryEvaluation, true);
   routes["GET /analytics/reports/report"] = () =>

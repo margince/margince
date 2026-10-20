@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -54,6 +55,21 @@ func (s *Service) PreviewAccess(ctx context.Context, actor Identity, role string
 		return err
 	})
 	return out, err
+}
+
+// RoleReach is what a seat holding only this role may do, for a preview of how
+// that role reads a page. Admin-only, as PreviewAccess is: the role matrix is
+// the installation's configuration, and a preview under a role discloses it.
+func (s *Service) RoleReach(ctx context.Context, role string) (principal.Permissions, error) {
+	if err := auth.Require(ctx, objectRoleAdmin, principal.ActionRead); err != nil {
+		return principal.Permissions{}, err
+	}
+	var out Access
+	err := s.db.Tx(ctx, func(tx pgx.Tx) (err error) {
+		out, err = accessFor(ctx, tx, []string{role}, nil)
+		return err
+	})
+	return out.Permissions, err
 }
 
 // UserAccess evaluates an existing member's roles and teams as they stand.

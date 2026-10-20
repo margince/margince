@@ -8187,6 +8187,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/reports/{id}/reader-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Evaluate a saved report as a seat holding one role would read it. Human-only.
+         * @description The report evaluated under the caller's own permissions narrowed to the role's: an
+         *     object only where both grant it, the narrower row scope, and every field mask either
+         *     carries. So the preview never shows the caller anything their own access withholds.
+         *     It runs as the caller, so records private to another seat stay hidden here too.
+         *
+         *     Gated on `role_admin.read`, as the role matrix is: a preview under a role discloses
+         *     what that role may read. A refusal under the role (for example, a role that may not
+         *     read saved reports, or measure the report's scope) answers as it would for that seat.
+         */
+        get: operations["previewReportingReportAsRole"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/reports/{id}/evaluation": {
         parameters: {
             query?: never;
@@ -61801,6 +61831,36 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewReportingReportAsRole: {
+        parameters: {
+            query: {
+                role: string;
+                revision?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The report as the role reads it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingEvaluation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };
