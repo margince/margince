@@ -1,8 +1,7 @@
 <!-- prose:plain -->
 # Home and the Worklist: how the day is ranked
 
-Home has one ranking engine behind three views: the Worklist, the Focus cards on Morning, and the weekly
-review. The server ranks every row once, by one fixed order of ranking steps. Focus is a
+Home has one ranking engine behind two views: the Worklist and the Focus cards on Morning. The server ranks every row once, by one fixed order of ranking steps. Focus is a
 cut of that same order, taken before the queue's filter and page limit, so no client can rank work on its
 own. Promises read from a conversation reach the queue through one dispatch rule.
 
