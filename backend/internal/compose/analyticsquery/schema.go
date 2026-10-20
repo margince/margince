@@ -49,8 +49,8 @@ type Field struct {
 	Coverage *Coverage
 }
 
-// Coverage counts the live records a reader can see, and how many of them
-// hold a value, so a grouping by a sparse field does not read as complete.
+// Coverage counts the live records a reader can see, and how many hold a value.
+// A grouping by a sparse field then does not read as complete.
 type Coverage struct {
 	Records   int
 	WithValue int

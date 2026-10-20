@@ -44,8 +44,8 @@ export const SETTING_TOAST = {
   reportable: { on: "cf.addedToReports", off: "cf.removedFromReports" },
 } as const;
 
-// Analytics groups deals by their own fields and their company's, and only by
-// a field with a closed set of values; the server refuses the rest.
+// Analytics groups deals by their own fields and their company's. It takes only
+// a field with a closed set of values, and the server refuses the rest.
 const REPORTED_OBJECTS: ReadonlySet<CfObject> = new Set(["deal", "company"]);
 
 function reportableField(object: CfObject, field: CustomField): boolean {

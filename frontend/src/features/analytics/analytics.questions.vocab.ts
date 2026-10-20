@@ -171,8 +171,8 @@ function customFieldLabel(t: Translate, field: CustomField): string {
 }
 
 /**
- * How many readable deals hold a value in each custom field the reader groups
- * by, so a grouping by a sparse field does not read as complete.
+ * How many readable deals hold a value in each custom field grouped by. A
+ * grouping by a sparse field then does not read as complete.
  */
 export function coverageLines(
   t: Translate,

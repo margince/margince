@@ -151,8 +151,8 @@ func TestAReportableDealFieldGroupsTheDealsThatHoldIt(t *testing.T) {
 	}
 }
 
-// Reports group deals by their own fields and their company's, so a contact
-// field cannot be opted in: the switch would claim an effect it does not have.
+// Reports group deals by their own fields and their company's. A contact field
+// cannot be opted in, since the switch would claim an effect it does not have.
 func TestOnlyADealOrCompanyFieldCanBeOptedIntoReporting(t *testing.T) {
 	e := integration.Setup(t)
 	catalog := customfields.NewService(e.Pool, integration.SchemaPool(t))

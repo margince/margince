@@ -83,14 +83,11 @@ func analyticsCatalog(ctx context.Context, tx pgx.Tx) (map[string]reportSpec, er
 }
 
 // withCustomDimensions copies a deal spec and adds each column as a dimension
-// and a filter. The maps are copied, never written in place: the prebuilt
-// catalog is shared by every request, and installations differ in their fields.
+// and a filter. The maps are copied: every request shares the prebuilt catalog.
 //
-// A deal field adds no row scope of its own, because the deal's scope already
-// bounds the values a reader reaches. A company field is an attribute of a
-// record with its own row scope, so it carries scopeVia to the company id, as
-// the size band does: a deal at a company the reader may not open drops out of
-// any answer that groups or filters by it.
+// A deal field needs no scope beyond the deal's own. A company field has its
+// company's row scope, so it carries scopeVia to the company id, as the size
+// band does. A deal at a company the reader may not open then leaves the answer.
 func withCustomDimensions(spec reportSpec, cols reportableColumns) reportSpec {
 	spec.dimensions = maps.Clone(spec.dimensions)
 	spec.filters = maps.Clone(spec.filters)
@@ -128,9 +125,9 @@ func withCustomDimensions(spec reportSpec, cols reportableColumns) reportSpec {
 	return spec
 }
 
-// companyFieldExpr reads one company column for the deal's company. A
+// companyFieldExpr reads one company column for the deal's company. The
 // subselect on the company's primary key matches at most one row, so the grain
-// stays one row per deal, and a deal with no company reads NULL.
+// stays one row per deal. A deal with no company reads NULL.
 func companyFieldExpr(column string) string {
 	return "(SELECT c." + pgx.Identifier{column}.Sanitize() + " FROM " + tableCompany +
 		" c WHERE c.id = " + colCompanyID + ")"
