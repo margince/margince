@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
+import { ArchiveAction } from "../../components/archive";
+import { CustomFieldsPanel } from "../../components/customfields.card";
 import {
   type ObjectCustomFields,
   useObjectCustomFields,
@@ -21,8 +23,6 @@ import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { NewDealAction } from "../companies/companyactions";
-import { ArchiveAction } from "../records/archive";
-import { CustomFieldsPanel } from "../records/customfields.card";
 import { RecordEmailVerb } from "../records/recordemail";
 import { useOwnerPicker } from "../records/recordreferences";
 import { RecordTeam } from "../records/recordteam";

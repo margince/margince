@@ -3,8 +3,12 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import {
+  jsonResponse,
+  PIPELINE_ADMIN,
+  render,
+} from "../../testing/settings.testkit";
 import { StageExitCriteria } from "./settings.exitcriteria";
-import { jsonResponse, PIPELINE_ADMIN, render } from "./settings.testkit";
 
 // The exit-criteria editor inside a stage's row. What a stage REQUIRES is
 // configuration; whether a deal has met it is evidence, and none of that

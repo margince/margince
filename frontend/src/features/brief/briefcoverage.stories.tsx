@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { ranked, readingsDay } from "../../testing/brief.fixtures";
 import { StoryProviders } from "../../testing/story-utils";
-import { ranked, readingsDay } from "./brief.fixtures";
 import { BriefCoverage } from "./briefcoverage";
 
 const meta: Meta<typeof BriefCoverage> = {

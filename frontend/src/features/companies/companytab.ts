@@ -5,7 +5,7 @@ import { keptWorklistReturn } from "../worklist/worklist.return";
 // The account record's tabs, and the ONE way to address one.
 //
 // They live apart from the page that draws them, as the contact's do in
-// features/contacts/contacttab.ts. `navigate` takes `id2` as a bare string, so
+// lib/contacttab.ts. `navigate` takes `id2` as a bare string, so
 // a call site that names a tab by hand keeps an id that a rename removed. The
 // router then falls back to Overview, and nothing says so. `companyTabRoute` is typed on `CompanyTab`, so
 // the next rename fails to compile instead.

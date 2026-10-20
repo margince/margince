@@ -15,12 +15,12 @@ import type { components } from "../../api/schema";
 import { formatDayFull, formatTimeRange } from "../../format/meetingtime";
 import { viewerZone } from "../../format/timezone";
 import { routeHash } from "../../lib/router";
+import { bookingInvitation } from "../../testing/book.testkit";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { bookingInvitation } from "./book.testkit";
 import { BookingMeetingScreen } from "./booking-meeting";
 
 type Invitation = components["schemas"]["MeetingInvitation"];

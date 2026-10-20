@@ -1,4 +1,6 @@
 import { type Dispatch, type SetStateAction, useMemo } from "react";
+import { admittedDealFilters } from "../../components/dealdials";
+import { searchCompanies } from "../../components/filterreference";
 import {
   LIST_PAGE_SIZES,
   type ListQuery,
@@ -15,9 +17,7 @@ import type { ListSelection } from "../../design-system/listtable";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { currentParams, replaceDial, useUrlParams } from "../../lib/urlstate";
-import { searchCompanies } from "../lists/filterreference";
 import { DealBulkBar } from "./dealbulk";
-import { admittedDealFilters } from "./dealdials";
 import type { Deal, Pipeline, Stage } from "./deals";
 import {
   DEAL_SCREEN_DIALS,

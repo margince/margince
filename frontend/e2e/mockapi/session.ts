@@ -6,9 +6,9 @@ import {
   agentClientList,
   GEMINI_CLIENT,
   PUBLISHED_CLIENT,
-} from "../../src/features/automations/agent-clients.fixtures";
-import { defaultAgentAllowances } from "../../src/features/automations/agentallowances.fixtures";
-import { defaultOperations } from "../../src/features/settings/operationsettings.fixtures";
+} from "../../src/testing/agent-clients.fixtures";
+import { defaultAgentAllowances } from "../../src/testing/agentallowances.fixtures";
+import { defaultOperations } from "../../src/testing/operationsettings.fixtures";
 import { meFixture } from "../../src/testing/mefixture";
 import { E2E_ADMIN_GRANTS } from "./fixtures";
 import { type Handler, notFound } from "./server";

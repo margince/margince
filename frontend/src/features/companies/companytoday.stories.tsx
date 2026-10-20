@@ -3,9 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { company360 } from "../../testing/company.fixtures";
 import { StoryProviders } from "../../testing/story-utils";
-import type { AccountScan } from "../capture/accountscan";
-import { company360 } from "./company.fixtures";
+import type { AccountScan } from "./accountscan";
 import {
   Company360Call,
   TodayOnThisAccount,

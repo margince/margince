@@ -28,8 +28,7 @@ import { useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite, useHoldsAdminRole } from "../../lib/capability";
-import { replaceDial, useUrlParams } from "../../lib/urlstate";
-import { useExtensions } from "../automations/extensions.queries";
+import { useExtensions } from "../../lib/extensions.queries";
 import {
   type Role,
   roleLabel,
@@ -37,7 +36,8 @@ import {
   roleRefusalOf,
   useCreateRole,
   useRoles,
-} from "./roles.queries";
+} from "../../lib/roles.queries";
+import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { RoleBadges, RoleDrawer } from "./roles-drawer";
 import "./roles-settings.css";
 

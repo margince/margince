@@ -3,19 +3,19 @@ import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
-import { meFixture } from "../../testing/mefixture";
-import type {
-  WeeklyPlan,
-  WeeklyPlanCommitment,
-} from "../worklist/weeklyplan.queries";
-import { PlanSection } from "./brief.plan";
 import {
   jsonResponse,
   type Routes,
   render,
   stubApi,
   writes,
-} from "./brief.testkit";
+} from "../../testing/brief.testkit";
+import { meFixture } from "../../testing/mefixture";
+import type {
+  WeeklyPlan,
+  WeeklyPlanCommitment,
+} from "../worklist/weeklyplan.queries";
+import { PlanSection } from "./brief.plan";
 
 // The week ahead. Everything this panel writes is staged first, so the tests
 // that matter most are the ones asserting nothing was sent.

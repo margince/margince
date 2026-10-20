@@ -12,16 +12,16 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { RecordShell } from "../../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../../i18n";
-import { CompanyScreen } from "./companies";
 import {
   company,
   company360,
   companyBackstop,
   jsonResponse,
-} from "./company.fixtures";
-import { stubFetch } from "./company.testkit";
+} from "../../testing/company.fixtures";
+import { stubFetch } from "../../testing/company.testkit";
+import { RecordShell } from "../../testing/recordshell.testkit";
+import { CompanyScreen } from "./companies";
 
 afterEach(() => {
   cleanup();

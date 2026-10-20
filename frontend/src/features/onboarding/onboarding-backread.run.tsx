@@ -4,8 +4,8 @@ import { Heading } from "../../design-system/heading";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { errorClassKey } from "../capture/connector-status";
-import { isLiveRun } from "../import/backfill-run";
+import { isLiveRun } from "../../lib/backfill-run";
+import { errorClassKey } from "../../lib/connector-status";
 import type { BackfillCounts, BackfillStatus } from "./onboarding-backread";
 
 // Declaration order is render order. Every entry names a persisted count on the

@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
+import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { InviteUserForm } from "./users-invite-form";
 
 // An address, a name, a role and the teams the member lands in, committed

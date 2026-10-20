@@ -8,7 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { day, renderWorklist, row } from "./worklist.testkit";
+import { day, renderWorklist, row } from "../../testing/worklist.testkit";
 import { WalkNotice } from "./worklist.walknotice";
 
 afterEach(cleanup);

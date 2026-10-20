@@ -1,12 +1,12 @@
 import type { components } from "../../../api/schema";
 import type { useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
+import { WON_REASON_LABELS, type WonReason } from "../../../lib/winreason";
 import {
   type ReviewTemplate,
   templateForOutcome,
   useReviewTemplates,
 } from "../outcomereview.queries";
-import { WON_REASON_LABELS, type WonReason } from "../winreason";
 import { OutcomeReviewModal } from "./outcomereviewmodal";
 
 type Deal = components["schemas"]["Deal"];

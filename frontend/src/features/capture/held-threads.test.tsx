@@ -18,9 +18,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { ConnectionOutcomesCard } from "../../screens/connection-outcomes";
 import { meFixture } from "../../testing/mefixture";
 import { linkedInReachFixture } from "../../testing/reachfixture";
+import { ConnectionOutcomesCard } from "./connection-outcomes";
 
 // What this card must never do is state a fact it does not have. A thread whose
 // opening message was erased has no subject; a thread nobody has judged has no

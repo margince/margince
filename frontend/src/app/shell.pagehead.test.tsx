@@ -6,13 +6,13 @@ import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PageHeadAction } from "../components/pageheadaction";
 import { navigate, useRoute } from "../lib/router";
-import { Shell } from "./shell";
 import {
   ignoreSearch,
   newClient,
   render,
   renderWith,
-} from "./testing/shellharness";
+} from "../testing/shellharness";
+import { Shell } from "./shell";
 
 // The chrome's own reads never answer: what is asked here is where the verb draws.
 beforeEach(() => {

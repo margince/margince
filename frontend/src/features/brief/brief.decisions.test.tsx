@@ -3,10 +3,10 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../../i18n/en";
+import { proposal } from "../../testing/brief.fixtures";
+import { render } from "../../testing/brief.testkit";
 import { deckItems } from "./brief";
 import { DecisionsSection } from "./brief.decisions";
-import { proposal } from "./brief.fixtures";
-import { render } from "./brief.testkit";
 
 // What is WAITING ON YOU, as a zone of the page.
 //

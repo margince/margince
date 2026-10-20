@@ -16,10 +16,10 @@ import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ListQuery } from "../../components/listquery";
 import { LocaleProvider } from "../../i18n";
+import { type SavedView, useSaveView } from "../../lib/savedviews.queries";
 import { meFixture } from "../../testing/mefixture";
 import { SaveViewAction } from "./savedviews";
 import { ManageViewsButton } from "./savedviews.manage";
-import { type SavedView, useSaveView } from "./savedviews.queries";
 
 // A saved view the reader no longer wants, or whose name no longer says what
 // it shows, used to be permanent: a tab can be pressed and nothing else. The

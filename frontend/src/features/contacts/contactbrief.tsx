@@ -1,6 +1,10 @@
 import { Handshake, Minus, TrendingDown, TrendingUp } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import {
+  interactionIcon,
+  useInteractionLabel,
+} from "../../components/interactionchrome";
 import { Avatar, Button } from "../../design-system/atoms";
 import { EmailEntry } from "../../design-system/emailentry";
 import { EmailReference } from "../../design-system/emailreference";
@@ -14,10 +18,6 @@ import {
 } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
-import {
-  interactionIcon,
-  useInteractionLabel,
-} from "../records/interactionchrome";
 import { SentenceList, WrittenBy } from "../records/record360";
 import {
   colleagueWords,

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AuthCardTitle, AuthExperience } from "../../components/auth-core";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { usePasswordReveal } from "../../design-system/passwordreveal";
 import { Select } from "../../design-system/select";
@@ -13,7 +14,6 @@ import {
   useT,
 } from "../../i18n";
 import { usePageTitle, Wordmark } from "./auth";
-import { AuthCardTitle, AuthExperience } from "./auth-core";
 import { isTooShort } from "./passwordrule";
 import "./auth.css";
 

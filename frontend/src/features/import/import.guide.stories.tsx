@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { formatFixture } from "../../testing/import.fixtures";
 import { StoryProviders } from "../../testing/story-utils";
-import { formatFixture } from "./import.fixtures";
 import { ColumnGuide, ColumnGuideButton } from "./import.guide";
 
 // What goes in one column, opened where the column is named. The words come

@@ -3,10 +3,10 @@ import { type RenderResult, render as rtlRender } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
 import type { components } from "../../api/schema";
-import { RecordShell } from "../../app/testing/recordshell.testkit";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
+import { RecordShell } from "../../testing/recordshell.testkit";
 
 export function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {

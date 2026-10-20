@@ -2,7 +2,7 @@
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { jsonResponse, renderSettings } from "./settings.testkit";
+import { jsonResponse, renderSettings } from "../../testing/settings.testkit";
 
 // The two entries one Connections tab became: the CONTACT's mailbox and network
 // on Connections, the INSTALLATION's outside wiring on Integrations. Each page

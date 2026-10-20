@@ -3,7 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
-import { jsonResponse, render, stubApi } from "./brief.testkit";
+import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
 import { BriefDeliveryPanel } from "./briefdelivery";
 
 afterEach(() => {

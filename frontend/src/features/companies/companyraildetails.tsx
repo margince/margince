@@ -17,7 +17,6 @@ import { useCanWriteRecord } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { invalidateCompany } from "../../lib/recordwritekeys";
 import { useRecordZone } from "../../lib/recordzone";
-import { derivedSource } from "../records/evidencesource";
 import {
   profileFieldsKey,
   useCompanyProfileFields,
@@ -25,6 +24,7 @@ import {
 import { CompanyDetails } from "./companydetails";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { VatMark } from "./companyvatmark";
+import { derivedSource } from "./evidencesource";
 
 // The rail's own Details grid (companyrail.tsx's DetailsGrid), split into
 // this file so the rail file stays under the 500-line ceiling: one panel

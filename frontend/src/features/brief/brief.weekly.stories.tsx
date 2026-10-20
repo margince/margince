@@ -6,13 +6,7 @@ import { type ReactNode, useState } from "react";
 import { userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useLocale, useT } from "../../i18n";
-import {
-  installFetchStub,
-  jsonResponse,
-  type RouteMap,
-  StoryProviders,
-} from "../../testing/story-utils";
-import { openAnalyticsSection } from "../analytics/analytics.address";
+import { openAnalyticsSection } from "../../lib/analytics.address";
 import {
   beforeHistoryWeeklyNumbers,
   firstWeek,
@@ -28,7 +22,13 @@ import {
   weeklyScorecard,
   wholeWeek,
   zeroWeekCounts,
-} from "./brief.fixtures";
+} from "../../testing/brief.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  type RouteMap,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { weeklyNumericStatus } from "./brief.numeric";
 import { OutlookPanel } from "./brief.waterfall";
 import { WeeklySection } from "./brief.weekly";

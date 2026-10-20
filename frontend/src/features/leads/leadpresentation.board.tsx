@@ -23,13 +23,13 @@ import {
   leadTerminalKey,
   leadWriteKeys,
 } from "../../lib/leadkeys";
+import { sourceLabelFor } from "../../lib/leadsources";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { openTaskCountLabel } from "./leadopentasks";
 import type { Lead } from "./leadpresentation";
 import { DisqualifyDialog } from "./leads.disqualify";
 import { QualifyDialog } from "./leads.qualify";
-import { sourceLabelFor } from "./leadsources";
 
 export function scoreTone(score: number): "success" | "warning" | undefined {
   if (score >= 60) return "success";

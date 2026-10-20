@@ -27,7 +27,6 @@ import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
-import { ProblemError, problemMessageOf, unwrap } from "../../lib/problem";
 import {
   DSR_KIND_LABEL,
   DSR_STATUS_LABEL,
@@ -37,7 +36,8 @@ import {
   isOverdue,
   isTerminal,
   nextStatuses,
-} from "./privacy.logic";
+} from "../../lib/privacy.logic";
+import { ProblemError, problemMessageOf, unwrap } from "../../lib/problem";
 import "./privacy.css";
 
 export type DataSubjectRequest = components["schemas"]["DataSubjectRequest"];

@@ -8,8 +8,8 @@ import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { jsonResponse, render } from "../../testing/settings.testkit";
 import { AiProviderKeysCard } from "../ai/ai-provider-keys";
-import { jsonResponse, render } from "../settings/settings.testkit";
 import { ProviderHealthCard } from "./providerhealth";
 
 // One endpoint feeds the System health card and the Providers list, so the two

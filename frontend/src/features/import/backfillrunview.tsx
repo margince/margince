@@ -12,8 +12,8 @@ import { formatNumber, formatPercent } from "../../format/format";
 import { formatSpan } from "../../format/now";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { isLiveRun } from "../../lib/backfill-run";
 import { progressFraction } from "../../lib/capture-progress";
-import { isLiveRun } from "./backfill-run";
 import "./backfill.css";
 
 // What a capture run LOOKS like while it runs and once it has stopped: the

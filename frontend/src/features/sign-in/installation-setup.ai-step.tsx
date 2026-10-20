@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { DEFAULT_VERTEX_LOCATION } from "../../components/vertex-location";
 import { Button, Field } from "../../design-system/atoms";
 import { ComboBox } from "../../design-system/combobox";
 import { StageActions } from "../../design-system/onboarding-stage";
@@ -14,10 +15,14 @@ import {
   useVendorCatalogue,
   type VendorCatalogue,
   vendorSuggestions,
-} from "../ai/ai-models";
+} from "../../lib/ai-models";
+import {
+  SETUP_PROVIDER_IDS,
+  SETUP_PROVIDERS,
+  type SetupProviderId,
+} from "../../lib/setup-providers";
 import { useSetProviderKey } from "../ai/ai-provider-key-hooks";
-import { ModelRatePlate } from "../ai/ai-rates";
-import { DEFAULT_VERTEX_LOCATION } from "../ai/vertex-location";
+import { ModelRatePlate } from "./ai-rates";
 import {
   AiKeyFields,
   choiceLabel,
@@ -25,11 +30,6 @@ import {
 } from "./installation-setup.ai-key";
 import { AiBindRefused } from "./installation-setup.notices";
 import { StepNeeds } from "./installation-setup.platform";
-import {
-  SETUP_PROVIDER_IDS,
-  SETUP_PROVIDERS,
-  type SetupProviderId,
-} from "./setup-providers";
 
 /**
  * A step's form, telling the stage above it when a write is in flight.

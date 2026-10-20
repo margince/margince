@@ -76,6 +76,27 @@ export const en = {
   "dataTasks.blocked.earlier_step": "An earlier step must finish first.",
   "dataTasks.blocked.missing_prerequisite":
     "Required updates must finish first.",
+  "dealSuggestion.linkedUnlinked":
+    "Evidence linked. Some evidence remains in place because permissions do not allow it to be moved.",
+  "dealSuggestion.searchExisting": "Search deals",
+  "dealSuggestion.existingDeal": "Existing deal",
+  "dealSuggestion.moreDeals": "Load more deals",
+  "dealSuggestion.noMatchingDeals": "No matching deals at this company.",
+  "dealSuggestion.changed":
+    "This suggestion is no longer available. Refresh the findings to see its current state.",
+  "dealSuggestion.linkExisting": "Link to existing deal",
+  "dealSuggestion.linked": "Evidence linked to the deal.",
+  "dealSuggestion.dismissTitle": "Dismiss deal suggestion",
+  "dealSuggestion.linkEffect":
+    "Attach the cited evidence to a deal at {company}; no new deal is created.",
+  "dealSuggestion.dismissEffect":
+    "Close this suggestion for {company} and record the reason.",
+  "dealSuggestion.dismissReason": "Reason",
+  "dealSuggestion.dismissReason.not_a_deal": "No buying interest",
+  "dealSuggestion.dismissReason.already_tracked": "Already tracked",
+  "dealSuggestion.dismissReason.wrong_company": "Wrong company",
+  "dealSuggestion.dismissReason.historical": "Historical activity",
+  "dealSuggestion.dismissReason.other": "Other reason",
   "approval.preview.nameUnavailable": "Name unavailable",
   "approval.preview.structured": "Structured value: {value}",
   "approval.preview.resolveConflict":
@@ -284,6 +305,10 @@ export const en = {
   "reporting.cardSection": "Section of {chart}",
   "reporting.removeCard": "Remove {chart}",
   "reporting.addChart": "Add chart",
+  "reporting.previewChart": "Preview",
+  "reporting.previewLoading": "Loading the preview…",
+  "reporting.previewEmpty":
+    "Nothing to draw for this report’s period and metrics yet. Add the chart anyway, or change the period under Customize report.",
   "reporting.chooseChart": "Chart to add",
   "reporting.exportCsv": "Export CSV",
   "reporting.captureContexts": "Record daily pipeline history",

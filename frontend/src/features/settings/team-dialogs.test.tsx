@@ -8,7 +8,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
-import { jsonResponse, render } from "./settings.testkit";
+import { jsonResponse, render } from "../../testing/settings.testkit";
 import { NewTeamAction, RenameTeamAction } from "./team-dialogs";
 
 // A team name is unique, and the 409 detail names the store, not the reader's

@@ -10,12 +10,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
+import { ArchiveAction } from "../../components/archive";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { ArchiveAction } from "../records/archive";
 
 type Pipeline = components["schemas"]["Pipeline"];
 

@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import type { SavedView } from "../../lib/savedviews.queries";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import type { SavedView } from "./savedviews.queries";
 import { DeleteViewAction, RenameViewAction } from "./viewactions";
 
 // One saved view's two verbs, each its own dialog: Rename opens on the name it

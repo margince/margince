@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { refusalFor } from "../../components/dealroom";
 import { useT } from "../../i18n";
 import {
   jsonResponse,
@@ -10,7 +11,6 @@ import {
   StoryProviders,
   stubWithSession,
 } from "../../testing/story-utils";
-import { refusalFor } from "./dealroom";
 import { DealRoomConversation } from "./dealroomconversation";
 
 // The seller's side of the document board: the documents in the room with

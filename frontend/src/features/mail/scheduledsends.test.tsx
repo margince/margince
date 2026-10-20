@@ -8,13 +8,13 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { ScheduledSendsScreen } from "./scheduledsends";
 import {
   allowedPreview,
   isPreviewDoor,
   previewedAddresses,
   refusedPreview,
-} from "./sendpermission.testkit";
+} from "../../testing/sendpermission.testkit";
+import { ScheduledSendsScreen } from "./scheduledsends";
 
 type Send = {
   id: string;

@@ -18,7 +18,7 @@ import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { useHoldsAdminRole } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { roleOptions, useAssignableRoles } from "./roles.queries";
+import { roleOptions, useAssignableRoles } from "../../lib/roles.queries";
 import { AccessPreviewPanel } from "./users-access";
 import "./users-admin.css";
 

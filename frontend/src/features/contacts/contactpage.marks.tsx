@@ -3,13 +3,13 @@ import { Badge } from "../../design-system/atoms";
 import { IdentityLine } from "../../design-system/identityline";
 import { useTooltip } from "../../design-system/tooltip";
 import { useLocale, useT } from "../../i18n";
+import { type ContactTab, contactTabRoute } from "../../lib/contacttab";
 import { revealOnceMounted } from "../../lib/reveal";
 import { RecordAccess } from "../records/recordaccess";
 import { navigateKeepingReturn } from "../worklist/worklist.return";
 import { BRIEF_ANCHOR } from "./contactoverview";
 import type { Contact360 } from "./contactpage";
 import { contactStanding, standingSentences } from "./contactrail";
-import { type ContactTab, contactTabRoute } from "./contacttab";
 
 // The marks under the name: the relationship's standing and who may read the
 // record. Standing is one badge for verdict and trend, absent when the touch

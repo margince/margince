@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { type Translator, useT } from "../../i18n";
-import { type AvailableModels, useModelProbe } from "./ai-models";
+import { type AvailableModels, useModelProbe } from "../../lib/ai-models";
 
 // Whether a Vertex lane's location serves its model, asked of Google while the
 // lane is edited rather than left to the save to discover.

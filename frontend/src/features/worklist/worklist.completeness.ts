@@ -9,7 +9,6 @@ import { floorFigure } from "../../format/figure";
 import { formatNumber } from "../../format/format";
 import { type Locale, translatePlural } from "../../i18n";
 import { unreadSources } from "../../lib/worklistcounts";
-import { type Represented, represented } from "../../lib/worklistunits";
 import type { T } from "./worklist.copy";
 import { countsUnder } from "./worklist.narrowing";
 import type {
@@ -17,6 +16,7 @@ import type {
   WorklistFilter,
   WorklistItem,
 } from "./worklist.queries";
+import { type Represented, represented } from "./worklistunits";
 
 type WorklistCount = Worklist["counts"][number];
 

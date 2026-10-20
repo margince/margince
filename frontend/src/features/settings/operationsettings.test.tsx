@@ -13,8 +13,8 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider, translate } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { defaultOperations } from "../../testing/operationsettings.fixtures";
 import { BackgroundSchedulesCard, SendPacingCard } from "./operationsettings";
-import { defaultOperations } from "./operationsettings.fixtures";
 
 // Settings → System health: how often each background pass runs and how fast
 // one mailbox sends. installation_settings:update changes them, and a value

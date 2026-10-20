@@ -6,9 +6,9 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { jsonResponse, render } from "../../testing/settings.testkit";
 import { DataTasksHealthCard } from "./datataskshealth";
 import { runningDataTask } from "./datataskshealth.fixtures";
-import { jsonResponse, render } from "./settings.testkit";
 
 function routes(
   data: unknown,

@@ -7,7 +7,6 @@ import { armHoverIntent } from "../../design-system/hoverintent-testing";
 import { translate } from "../../i18n";
 import type { Route } from "../../lib/router";
 import * as router from "../../lib/router";
-import { SettingsScreen } from "./settings";
 import {
   expectSnapshotResolved,
   labelOf,
@@ -17,7 +16,8 @@ import {
   renderNav,
   renderSettings,
   settingsNavBackend,
-} from "./settings.testkit";
+} from "../../testing/settings.testkit";
+import { SettingsScreen } from "./settings";
 import { settingsHref } from "./settingsrouting";
 
 // Addressing a settings page the rail did not offer.

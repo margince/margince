@@ -1,9 +1,9 @@
+import type { useInteractionLabel } from "../../components/interactionchrome";
 import { activityTimeline } from "../../design-system/activitytimeline";
 import type { RecordContact } from "../../design-system/participants";
 import { groupChronology } from "../../design-system/timelinegroups";
 import { formatDayMonth, formatTimeOfDay } from "../../format/format";
 import type { Locale, useT } from "../../i18n";
-import type { useInteractionLabel } from "../records/interactionchrome";
 import type {
   Activity,
   Contact360,

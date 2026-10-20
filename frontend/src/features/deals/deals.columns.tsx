@@ -1,4 +1,5 @@
 import { EntityRef, type OwnerNaming } from "../../components/entityref";
+import { ownerColumn, tagsColumn } from "../../components/recordlist";
 import { Badge } from "../../design-system/atoms";
 import { CellStrip, type ListColumn } from "../../design-system/listtable";
 import type { BoardMoneyColumn } from "../../design-system/pipelineboard";
@@ -6,7 +7,6 @@ import { FieldGuard } from "../../design-system/rbac";
 import { middayInstant } from "../../format/calendarday";
 import { formatDate, formatDuration, formatMoney } from "../../format/format";
 import type { Locale, useT } from "../../i18n";
-import { ownerColumn, tagsColumn } from "../records/recordlist";
 import { toBoardDeal } from "./boarddeal";
 import type { CompanyNaming } from "./dealcompanymarks";
 import { lastMailColumn } from "./dealmailaside";

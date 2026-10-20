@@ -5,11 +5,11 @@ import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { categoryNamesTogether } from "../capture/provider-categories";
+import { categoryNamesTogether } from "../../lib/provider-categories";
 import {
   canEnrichNow,
   useProviderConnections,
-} from "../capture/provider-status";
+} from "../../lib/provider-status";
 import { useContact360 } from "./contact360";
 import type { Contact, Profile } from "./contactprovider";
 import type { useEnrichRun } from "./contactprovider.run";

@@ -5,16 +5,20 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { translate } from "../../i18n";
 import { en } from "../../i18n/en";
-import { readingsDay, taskRow } from "../brief/brief.fixtures";
+import { readingsDay, taskRow } from "../../testing/brief.fixtures";
+import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
+import {
+  renderWorklist,
+  stub,
+  day as worklistDay,
+} from "../../testing/worklist.testkit";
 import { BriefQueue } from "../brief/brief.queue";
-import { jsonResponse, render, stubApi } from "../brief/brief.testkit";
 import { runContactMomentAction } from "../contacts/contactpage";
 import {
   keptWorklistReturn,
   WorklistReturnLink,
   withWorklistReturn,
 } from "./worklist.return";
-import { renderWorklist, stub, day as worklistDay } from "./worklist.testkit";
 
 afterEach(() => {
   cleanup();

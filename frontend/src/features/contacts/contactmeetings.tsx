@@ -25,8 +25,8 @@ import { useLocale, useT } from "../../i18n";
 import { useActivity } from "../../lib/activityread";
 import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
+import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
 import { useMe } from "../../lib/session";
-import { useSchedulingProfile } from "../booking/scheduling-profile-query";
 import { MeetingRow, NextMeetingCard } from "./contactmeetings.rows";
 import {
   type CopiedLink,

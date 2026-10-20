@@ -2,12 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { project360 } from "../../testing/projects.fixtures";
 import {
   installFetchStub,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { project360 } from "./projects.fixtures";
 import { ProjectDealsCard, StakeholdersCard } from "./projectsections";
 
 // The project page's cards that carry a badge per row: a deal's status (won in

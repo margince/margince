@@ -12,8 +12,8 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { derivedSource } from "../records/evidencesource";
 import { factsKey } from "./companyfactspanel";
+import { derivedSource } from "./evidencesource";
 
 type CompanyFact = components["schemas"]["CompanyFact"];
 type TechnicalEnrichLane = components["schemas"]["TechnicalEnrichLane"];

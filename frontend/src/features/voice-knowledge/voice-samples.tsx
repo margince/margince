@@ -25,7 +25,7 @@ import {
 import type { MessageKey } from "../../i18n/en";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { VOICE_MIN_WORDS } from "./voice-intake-core";
+import { VOICE_MIN_WORDS } from "../../lib/voice-intake-core";
 
 type VoiceCorpusSource = components["schemas"]["VoiceCorpusSource"];
 type VoiceCorpusSummary = components["schemas"]["VoiceCorpusSummary"];

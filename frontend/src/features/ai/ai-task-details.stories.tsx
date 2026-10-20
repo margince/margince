@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { feature } from "../../testing/ai-admin.testkit";
 import { StoryProviders } from "../../testing/story-utils";
-import { feature } from "./ai-admin.testkit";
 import { TaskDetails } from "./ai-task-details";
 
 // What a task row opens onto, here for a task that asks a decision model first:

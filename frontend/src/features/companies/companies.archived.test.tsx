@@ -3,9 +3,10 @@ import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { createQueryClient } from "../../app/queryclient";
-import { RecordShell } from "../../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { company, company360 } from "../../testing/company.fixtures";
+import { RecordShell } from "../../testing/recordshell.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -13,7 +14,6 @@ import {
   type RouteMap,
 } from "../../testing/story-utils";
 import { CompanyScreen } from "./companies";
-import { company, company360 } from "./company.fixtures";
 
 afterEach(() => {
   cleanup();

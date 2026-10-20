@@ -12,12 +12,12 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { reportingStoryReport } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { reportingStoryReport } from "./reporting.fixtures";
 import { ReportingReportDetail } from "./reporting.report";
 import {
   reportingStoryEvaluation,

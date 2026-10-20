@@ -2,10 +2,15 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
+import { readingsDay } from "../../testing/brief.fixtures";
+import {
+  fleetDeal,
+  jsonResponse,
+  render,
+  stubApi,
+} from "../../testing/brief.testkit";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { BriefScreen } from "./brief";
-import { readingsDay } from "./brief.fixtures";
-import { fleetDeal, jsonResponse, render, stubApi } from "./brief.testkit";
 
 // Context panels keep their own loading and failure states so a failed source
 // cannot erase an independently available answer.

@@ -29,7 +29,7 @@ import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
-import { searchByEntity } from "../records/relationshipcandidates";
+import { searchByEntity } from "../../lib/relationshipcandidates";
 import { domainReasonLabels } from "./worklist.domainreason";
 import { useMarkRowsDone } from "./worklist.donequeries";
 import { worklistKey } from "./worklist.queries";

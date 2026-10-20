@@ -8,7 +8,11 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { meetingRow, readingsDay, waitingEmailRow } from "./brief.fixtures";
+import {
+  meetingRow,
+  readingsDay,
+  waitingEmailRow,
+} from "../../testing/brief.fixtures";
 import { BriefGlance } from "./brief.glance";
 import type { BriefView } from "./brief.view";
 

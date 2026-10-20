@@ -10,7 +10,7 @@ import {
   readOn,
   renderHome,
   settingsNavBackend,
-} from "./settings.testkit";
+} from "../../testing/settings.testkit";
 
 // ONE page, ONE grant: which requirement opens each settings entry.
 //

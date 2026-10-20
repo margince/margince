@@ -7,7 +7,7 @@ import {
   row,
   stub,
   type WorklistItem,
-} from "./worklist.testkit";
+} from "../../testing/worklist.testkit";
 
 afterEach(() => {
   cleanup();

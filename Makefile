@@ -697,7 +697,7 @@ fe-typecheck-composed: composition
 	@[ -f build/composition-frontend/schema.d.ts ] || { echo "fe-typecheck-composed: pnpm gen:composed-types produced no schema.d.ts — the composed lane would silently typecheck against the committed contract" >&2; exit 1; }
 	cd frontend && pnpm exec tsc -p tsconfig.composed.json
 	# And the composed lane's TESTS, which no other project compiles: the app
-	# and node projects exclude src/screens/ext/ (it cannot typecheck there),
+	# and node projects do not include extensions/ (it cannot typecheck there),
 	# and tsconfig.composed.json excludes *.test.*. Without this line a unit
 	# screen's test fixtures are checked by nothing, since vitest transpiles
 	# without typechecking.

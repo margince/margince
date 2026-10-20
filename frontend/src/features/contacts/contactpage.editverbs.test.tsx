@@ -4,13 +4,13 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
-import { jsonResponse } from "../../testing/story-utils";
 import {
   mount,
   openRecordMenu,
   pressRecordVerb,
   view,
-} from "./contactpage.testkit";
+} from "../../testing/contactpage.testkit";
+import { jsonResponse } from "../../testing/story-utils";
 
 // The header's edit/merge/archive verbs, restored to the record page every
 // contact actually opens to — now rows of its overflow menu rather than

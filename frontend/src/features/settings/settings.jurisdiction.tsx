@@ -22,9 +22,9 @@ import { lockFor } from "../../format/settinglocks";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { DSR_KIND_LABEL } from "../../lib/privacy.logic";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
-import { DSR_KIND_LABEL } from "../privacy/privacy.logic";
 import {
   AUDIENCE_LABEL,
   DOCUMENT_KIND_LABEL,
