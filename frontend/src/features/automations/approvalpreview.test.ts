@@ -312,3 +312,67 @@ it("shows edited words and lifecycle choices without changing reference labels",
   expect(edited?.changes[2].after.text).toBe("prospect");
   expect(original.changes[1].after.text).toBe("Old reason");
 });
+
+it.each(LOCALES)("names a commitment's recipients in %s", (locale) => {
+  const rows = commercialPreviewDisplay(
+    {
+      ...preview,
+      changes: [
+        {
+          field: "summary",
+          before: { kind: "empty", text: "" },
+          after: { kind: "text", text: "Send the recording" },
+        },
+        {
+          field: "recipients",
+          before: { kind: "empty", text: "" },
+          after: { kind: "text", text: "Ines Huber, Morgan Recipient" },
+        },
+      ],
+    },
+    (key, params) => translate(locale, key, params),
+  );
+  expect(rows.find((row) => row.field === "recipients")).toMatchObject({
+    label: translate(locale, "worklist.recipients.label"),
+    comparison: { to: "Ines Huber, Morgan Recipient" },
+  });
+  expect(rows.find((row) => row.field === "summary")?.label).toBe(
+    translate(locale, "approval.field.step"),
+  );
+});
+
+it.each([true, false])(
+  "compares task reference identities (same=%s)",
+  (same) => {
+    const rows = commercialPreviewDisplay(
+      {
+        ...preview,
+        changes: [
+          {
+            field: "existing_task_id",
+            before: {
+              kind: "reference",
+              text: "Send the recording",
+              entity_type: "activity",
+              entity_id: "33333333-3333-4333-8333-333333333333",
+            },
+            after: {
+              kind: "reference",
+              text: "Send the recording",
+              entity_type: "activity",
+              entity_id: same
+                ? "33333333-3333-4333-8333-333333333333"
+                : "44444444-4444-4444-8444-444444444444",
+            },
+          },
+        ],
+      },
+      (key, params) => translate("en", key, params),
+    );
+    expect(
+      rows.find((row) => row.field === "existing_task_id")?.comparison,
+    ).toEqual(
+      same ? null : { from: "Send the recording", to: "Send the recording" },
+    );
+  },
+);

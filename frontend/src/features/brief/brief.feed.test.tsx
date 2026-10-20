@@ -300,12 +300,8 @@ it("names the account a row in hand is about", () => {
   expect(head?.querySelector("a")?.textContent).toBe("Nordwind");
 });
 
-// THE RANKED COLUMN NAMES ITS ROWS FROM THE CONTACT, not from a message.
-//
-// Read off `email_summary.counterparty`, the line named the sender of a
-// waiting message and left every other row anonymous — so a task the reader
-// owes somebody stood in the column with its reason and nobody's name, while
-// the same row in hand named them. The contact is the field every row carries.
+// The ranked column names its rows from the contact, not from a message. A
+// task carries a contact and no message, and must still show a name.
 it("names a task's contact in the ranked column", () => {
   stubApi({});
   const owed = {
@@ -330,9 +326,8 @@ it("names a task's contact in the ranked column", () => {
     />,
   );
 
-  // THE TASK'S OWN ROW in the column, not the card and not the waiting message
-  // above it: both of those named her before, and either would carry a
-  // page-wide query over a line that still said nothing.
+  // The task's own row in the column. The card and the waiting message both
+  // name the contact too, so a page-wide query would prove nothing.
   const column = container.querySelector(".brief-triage-queue");
   if (!(column instanceof HTMLElement)) throw new Error("no ranked column");
   const row = within(column).getByRole("button", {
@@ -341,13 +336,8 @@ it("names a task's contact in the ranked column", () => {
   expect(within(row).getByText(/Sonya Beck/)).toBeTruthy();
 });
 
-// A WAITING ROW IS STILL NAMED BY ITS SUBJECT, from the row's own `title`.
-//
-// The server puts a waiting message's subject there (classify.go), so the
-// column reads it like every other row rather than off `email_summary` — which
-// is what kept the ranked list from drawing a part of a message outside the
-// canonical row. The claim used to live in a helper's docblock with nothing
-// holding it; this is what holds it.
+// A waiting row is named by its subject, from the row's own `title`. The
+// server puts the subject there, so the column never reads `email_summary`.
 it("names a waiting row by its subject", () => {
   stubApi({});
   const { container } = render(

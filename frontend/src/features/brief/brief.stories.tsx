@@ -240,10 +240,8 @@ export const DigestAbsent: Story = {
   render: brief({ approvals: [...singles], digest: null }),
 };
 
-// The one place connector health reaches a reader without visiting Settings. A
-// degraded source is news — said in Settings' own vocabulary, with the way to
-// fix it — while a healthy one stays silent, as it does in every other frame
-// here: a permanent green row is noise.
+// Connector health outside Settings. A degraded source is said in Settings'
+// words with the way to fix it. A healthy one stays silent.
 export const ConnectorUnhealthy: Story = {
   render: brief({
     approvals: [...singles],
@@ -260,13 +258,10 @@ export const ConnectorUnhealthy: Story = {
   }),
 };
 
-// One read refused while the other four are healthy. That is the whole reason
-// this page fans out to five independent reads: the pipeline says the figure
-// could not be loaded — a refusal, not an absence — and the deck, the queue, the
-// digest and the quiet list are untouched beside it.
-/** The honest degrade: the week was measured and nobody narrated it. The
- *  numbers are all there, and the panel says the sentence is missing rather
- *  than letting the reader conclude there was nothing to say. */
+// One read refused while the other four load. The pipeline says its figure
+// could not be loaded, and the rest of the page is untouched.
+/** The week was measured but has no narration. The panel says the sentence
+ *  is missing, so the reader does not conclude there was nothing to say. */
 export const WeeklyWithoutItsSentence: Story = {
   render: brief({
     approvals: [],
@@ -294,9 +289,8 @@ export const OnePanelRefused: Story = {
   }),
 };
 
-// The other half of the same honesty: the figures ARRIVED, and a field mask kept
-// rows out of them. Saying so is the difference between a partial answer and a
-// wrong one.
+// The figures arrived, but a field mask kept rows out of them. Saying so keeps
+// a partial answer from reading as a wrong one.
 export const PipelinePartial: Story = {
   render: brief({
     approvals: [],
@@ -315,10 +309,8 @@ const otherPromise = {
   ),
   due_at: "2026-09-11T21:59:59Z",
 };
-// The row in hand is a customer's MESSAGE: the canonical email row names it —
-// who wrote, when, the subject at the headline rung, their own words under
-// it — and the verbs that answer it stand under the words. The queue beside
-// it holds the rest of the day; pressing a row puts it in hand instead.
+// The row in hand is a customer's message: who wrote, when, the subject and
+// their words, with the verbs under them. A press on a queued row swaps it in.
 const SixPrioritiesDay = readingsDay({}, [
   waitingEmailRow(),
   promise,
@@ -346,19 +338,6 @@ export const RowDetailsOpen: Story = {
       name: en["brief.focus.context"],
     });
   },
-};
-// The same morning read by a seat whose row scope REACHES A TEAM. The
-// Mine/Team dial is drawn from the worklist's own `scope_options`, so a seat
-// that reaches nobody else never sees it — which is why the frame above cannot
-// show it, and why this one exists.
-export const TeamSeat: Story = {
-  render: brief({
-    approvals: [],
-    day: {
-      ...SixPrioritiesDay,
-      scope_options: ["mine", "team"],
-    },
-  }),
 };
 export const TaskEvidence: Story = {
   render: brief({

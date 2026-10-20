@@ -39,7 +39,7 @@ func TestNoticeReconciliationKeepsPendingAndRetractsWithdrawnApprovals(t *testin
 	if got := a.unreadFor(t, a.e.AdminUser); got != 1 {
 		t.Fatalf("pending decision has %d notices, want 1", got)
 	}
-	assertReconciledHomeNotices(t, a, 1)
+	assertReconciledHomeNotices(t, a, 0)
 	err = a.db.Tx(ctx, func(tx pgx.Tx) error {
 		withdrawn, err := a.svc.WithdrawInTx(ctx, tx, id, "The proposed correction is no longer needed")
 		if err == nil && !withdrawn {

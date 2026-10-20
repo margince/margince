@@ -85,7 +85,9 @@ A bare reminder or reference to an absent promise, without stating who owes what
 Do not count both an original promise and a report of it as separate commitments.
 When later words explicitly renew the promise or its deadline, also give restated_message_id and
 restated_quote from that later message. Resolve its deadline against that later message date.
-Only a later message from the same side can renew a promise. A delivery, acknowledgement,
+Only a distinct later message from the same side can renew a promise.
+For an original promise, set restated_message_id and restated_quote to "". In a one-message
+conversation those fields must always be "": the original promise cannot renew itself. A delivery, acknowledgement,
 third-party report or quotation of earlier mail is not a renewal: leave both restated fields empty.
 An old promise with a still-current agreed future deadline can remain open. The promise's date
 is the source date, never extraction or import time.
@@ -130,11 +132,12 @@ func NewSignalExtractor(pool *pgxpool.Pool, brain completer, now func() time.Tim
 
 // extractedEvent is one material event as the model reports it.
 type extractedEvent struct {
-	Meaning     *commitmentMeaning `json:"commitment"`
-	PromiserRef string             `json:"promiser_ref"`
-	Kind        string             `json:"kind"`
-	MessageID   string             `json:"message_id"`
-	Summary     string             `json:"summary"`
+	Meaning       *commitmentMeaning `json:"commitment"`
+	PromiserRef   string             `json:"promiser_ref"`
+	RecipientRefs []string           `json:"recipient_refs,omitempty"`
+	Kind          string             `json:"kind"`
+	MessageID     string             `json:"message_id"`
+	Summary       string             `json:"summary"`
 	// Quote is the cited message's own words the event is stated in. For a
 	// commitment it is what a reader checks the promise against, and where the
 	// server finds the sentence that identifies it across readings.
@@ -415,9 +418,10 @@ func extractRequest(thread settledThread, lang string) model.Request {
 		prompt.WriteString(fence.WrapAttr("source_id", message.ID.String(), body) + "\n")
 	}
 	fmt.Fprintf(&prompt,
-		`Return JSON: { "events": [ { "kind", "message_id", "summary", "quote", "restated_message_id", "restated_quote", "due_date", "promiser_ref", "commitment", "confidence" } ] } — `+
+		`Return JSON: { "events": [ { "kind", "message_id", "summary", "quote", "restated_message_id", "restated_quote", "due_date", "promiser_ref", "recipient_refs", "commitment", "confidence" } ] } — `+
 			`at most %d, and an empty list when the conversation states none. `+
 			`"summary" is one plain sentence a colleague could act on. `+
+			commitmentRecipientsPrompt+
 			`"message_id" and any "restated_message_id" must be copied exactly from the cited message above, character for character. `+
 			`Never reconstruct an id or use a participant reference as a message id. `+
 			`"promiser_ref" is the verified participant reference for who made the quoted promise, `+

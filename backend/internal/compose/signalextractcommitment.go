@@ -55,6 +55,9 @@ func validateEventEvidence(event extractedEvent, thread settledThread) string {
 		if message.ID.String() != event.MessageID {
 			continue
 		}
+		if msg := validateCommitmentRecipients(event.RecipientRefs, message.Parties); msg != "" {
+			return msg
+		}
 		if event.PromiserRef != "" {
 			if _, found := referencedPromiser(event.PromiserRef, message.Parties); !found {
 				return "a commitment names a promiser outside its verified message participants"
@@ -201,6 +204,9 @@ func (x *SignalExtractor) emailCommitment(
 	}
 	verified := verifiedCommitmentParties(parties)
 	kind, party := attributeCommitment(&c, event.PromiserRef, verified)
+	if err := attributeCommitmentRecipients(&c, event.RecipientRefs, verified); err != nil {
+		return Commitment{}, false, err
+	}
 	c.NeedsConfirmation = message.Direction != connector.DirectionOutbound || !commitmentPartyHasRole(verified, event.PromiserRef, commitmentSenderRole)
 	c.Body = fmt.Sprintf("Promiser: %s. Commitment in the email %q, sent %s.", c.Party, message.Subject, message.At.Format(time.DateOnly))
 	c.Span = span

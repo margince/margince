@@ -185,7 +185,7 @@ func (h Handlers) replyAddresses(ctx context.Context, anchor ids.ActivityID) *[]
 // (DRAFT-AC-E-1). answering is the correspondence the draft replies into: its
 // text decides the language, and its shape decides whether there is a thread to
 // reply to at all.
-func DeterministicEmailDraft(answering DraftContext, intent string) (subject, body string) {
+func DeterministicEmailDraft(answering DraftContext) (subject, body string) {
 	lang := answering.language()
 	band := answering.Band
 
@@ -193,19 +193,14 @@ func DeterministicEmailDraft(answering DraftContext, intent string) (subject, bo
 	subject = draftfloor.Subject(lang, band, topic, answering.Threaded)
 
 	phrases := draftfloor.For(lang, band)
-	lines := []string{draftfloor.Greeting(lang, band, answering.Recipient), ""}
-	if phrases.Opener != "" {
-		lines = append(lines, phrases.Opener, "")
-	}
 	// The topic is the only substance this floor has, and dropping it would
 	// leave a draft that says nothing about what it is answering.
+	thread := ""
 	if topic != "" {
-		lines = append(lines, draftfloor.Fill(draftfloor.SubstanceFor(lang).Thread, topic), "")
+		thread = draftfloor.Fill(draftfloor.SubstanceFor(lang).Thread, topic)
 	}
-	if intent := strings.TrimSpace(intent); intent != "" {
-		lines = append(lines, intent, "")
-	}
-	return subject, strings.Join(append(lines, phrases.Ask), "\n")
+	greeting := draftfloor.Greeting(lang, band, answering.Recipient)
+	return subject, draftfloor.Body(lang, greeting, phrases.Opener, thread, phrases.Ask)
 }
 
 // DraftContext is what the floor knows about the correspondence it is writing

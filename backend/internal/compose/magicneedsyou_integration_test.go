@@ -212,7 +212,9 @@ func TestPersonalDecisionScopeAgreesAcrossHomeAndWorklist(t *testing.T) {
 
 func readWorklistHTTP(ctx context.Context, t *testing.T, service *attention.Service, params crmcontracts.GetWorklistParams) crmcontracts.Worklist {
 	t.Helper()
-	params.Limit = new(100)
+	if params.Limit == nil {
+		params.Limit = new(100)
+	}
 	response := httptest.NewRecorder()
 	attention.NewHandlers(service).GetWorklist(response, httptest.NewRequest(http.MethodGet, "/v1/worklist", nil).WithContext(ctx), params)
 	if response.Code != http.StatusOK {

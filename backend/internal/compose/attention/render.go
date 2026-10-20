@@ -324,6 +324,9 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		Subject: subjectOf(task.LinkType, task.LinkID),
 		Actions: []crmcontracts.AttentionItemActions{"complete", "snooze"},
 	}
+	if len(task.Recipients) > 0 {
+		item.PromiseRecipients = &task.Recipients
+	}
 	// Both verbs PATCH the task, so a reader who may not change it is offered
 	// neither.
 	if task.ReadOnly {

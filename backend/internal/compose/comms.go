@@ -116,7 +116,7 @@ func (c commsAdapter) DraftEmail(ctx context.Context, anchor ids.UUID, intent st
 	if err != nil {
 		return "", "", err
 	}
-	subject, body := c.store.FloorDraft(ctx, anchor, activity, intent)
+	subject, body := c.store.FloorDraft(ctx, anchor, activity)
 	return subject, body, nil
 }
 

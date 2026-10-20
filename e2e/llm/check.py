@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read a scenario, and judge one run of it against what the assistant said.
 
-Five things are checked per run, and all five must hold:
+Six things are checked per run, and all six must hold:
 
   must_call        Did it reach the tools it needed? An answer written from the
                    model's own memory, with Margince never asked, is a failure
@@ -17,6 +17,10 @@ Five things are checked per run, and all five must hold:
                    Did it keep out of a call what must not be sent? Each entry
                    is `tool~regex`, searched in every call's arguments: the
                    file's text pasted into log_activity, which no answer shows.
+  must_call_matching
+                   The other direction: some call to `tool` carries what
+                   `tool~regex` asks, when the target is named in free text
+                   rather than one argument's exact value.
   judge            Does the answer do what this sentence says? Each entry is a
                    criterion in plain words, decided by a model (judge.py).
 
@@ -554,6 +558,17 @@ def _sent_problems(calls, entry):
     return problems
 
 
+def _unmatched_problem(calls, entry):
+    """A problem line when no call to `tool` carries what `tool~regex` asks, or None."""
+    tool, sep, pattern = str(entry).partition("~")
+    if not sep or not tool or not pattern:
+        return f"must_call_matching entry {entry!r} is not tool~regex"
+    for name, arguments in calls:
+        if tool_matches([name], tool) and re.search(pattern, json.dumps(arguments, ensure_ascii=False), re.IGNORECASE):
+            return None
+    return f"never called {tool} carrying anything matching /{pattern}/"
+
+
 def check(scenario, transcript_path):
     called, said, calls = read_transcript(transcript_path)
     problems = []
@@ -588,6 +603,11 @@ def check(scenario, transcript_path):
 
     for entry in scenario.get("must_not_call_with", []):
         problems.extend(_sent_problems(calls, entry))
+
+    for entry in scenario.get("must_call_matching", []):
+        problem = _unmatched_problem(calls, entry)
+        if problem:
+            problems.append(problem)
 
     for pattern in scenario.get("must_mention", []):
         if not re.search(pattern, said, re.IGNORECASE):

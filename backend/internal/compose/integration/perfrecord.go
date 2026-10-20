@@ -156,13 +156,11 @@ type PerfRecord struct {
 // RecordingEnabled reports whether this run should leave a record.
 //
 // It exists for ONE caller. The PERF-3/PERF-7 tier harness carries only the
-// `integration` tag, so the standing CI lane runs it as a canary — and that lane
-// must not write into the working tree. A scheduled job quietly dirtying a
-// machine's numbers is how a published page ends up describing a runner nobody
-// can find, on a day nobody chose. `make bench-perf` sets it; CI does not.
+// `integration` tag, so the standing CI lane runs it as a canary. That lane
+// must not write into the working tree. `make bench-perf` sets it, by hand or
+// from the weekly job that proposes the record as a pull request.
 //
-// The by-hand bench targets need no such switch: nothing but a human runs them,
-// so a record is exactly what running one means.
+// The other bench targets need no such switch: running one means recording.
 func RecordingEnabled() bool { return os.Getenv("MARGINCE_BENCH_RECORD") == "1" }
 
 // WritePerfRecord stamps the run and writes its record. A failure here fails

@@ -47,11 +47,9 @@ export function BriefFeed({
   const { locale } = useLocale();
   const plural = usePlural();
   const [openEmail, setOpenEmail] = useState<string | null>(null);
-  // WHICH ROW IS IN HAND, by identity rather than by index: the queue is
-  // re-read every minute and a row that was answered leaves it, so an index
-  // would silently hand the reader the row that moved up into its place. A
-  // chosen row that has gone falls back to the day's own first — the row the
-  // page opens on, and the one the sentence over it names.
+  // The row in hand, by identity. The queue is re-read and answered rows
+  // leave it, so an index would hand over the row that moved up. A chosen
+  // row that has gone falls back to the day's first.
   const [chosen, setChosen] = useState<string | null>(null);
   const client = useQueryClient();
   const titleId = useId();

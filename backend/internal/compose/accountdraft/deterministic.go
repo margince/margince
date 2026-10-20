@@ -15,8 +15,6 @@ package accountdraft
 // handed, no claim about what the recipient thinks, no invented urgency.
 
 import (
-	"strings"
-
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
@@ -79,16 +77,9 @@ func projectTopic(project *ProjectIn) string {
 func deterministicBody(in Input) string {
 	phrases := draftfloor.For(in.Envelope.Lang(), in.Envelope.Band())
 
-	lines := []string{greeting(in), ""}
-	if phrases.Opener != "" {
-		lines = append(lines, phrases.Opener, "")
-	}
-	if subject := deterministicOpener(in); subject != "" {
-		lines = append(lines, subject, "")
-	}
 	// No sign-off: the composer knows who is signed in and adds their name,
 	// and a server that guessed would sometimes sign with the wrong one.
-	return strings.Join(append(lines, phrases.Ask), "\n")
+	return draftfloor.Body(in.Envelope.Lang(), greeting(in), phrases.Opener, deterministicOpener(in), phrases.Ask)
 }
 
 func greeting(in Input) string {

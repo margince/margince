@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// THE FOCUS PANEL'S INSIDE: the row in hand as a card, on the stack of what
-// is still behind it, and the ranked column beside it. The panel's own chrome
-// — its head, its states, its foot — is brief.feed.tsx; this is what stands
-// in its body.
+// The focus panel's body: the row in hand as a card, and the ranked column
+// beside it. The panel's head, states and foot are in brief.feed.tsx.
 
 import { useRef } from "react";
 import { Button, Card } from "../../design-system/atoms";
@@ -70,9 +68,8 @@ export function Triage({
       frame.focus();
     }
   };
-  // A meeting earns the door too. Its subject is the ACTIVITY rather than a
-  // contact, so `hasPane` answers no for it — and the row would stand with
-  // three verbs and no way through to the meeting they are about.
+  // A meeting gets the door too. Its subject is the activity, not a contact,
+  // so `hasPane` alone would leave it with no way through.
   const context =
     onContext &&
     (hasPane(lead) ||
@@ -83,15 +80,9 @@ export function Triage({
       {t("brief.focus.context")}
     </Button>
   ) : undefined;
-  // The head's facts, off the same helpers the row prints them with, so the
-  // card and the queue cannot describe one piece of work two ways. The
-  // reader's own pin is the queue's reason and not the focus projection's
-  // (`allowPin`).
-  // The head's facts, off the same helpers the row prints them with, so the
-  // card and the queue cannot describe one piece of work two ways. A message
-  // is dated by when it arrived, day and hour; everything else by its own
-  // clock. The reader's own pin is the queue's reason and not the focus
-  // projection's (`allowPin`).
+  // The head's facts come from the helpers the row uses, so the card and the
+  // queue agree. A message is dated by its arrival, the rest by its own clock.
+  // The reader's own pin is the queue's reason, not the card's.
   const arrived = lead.email_summary?.occurred_at;
   const when = arrived
     ? `${formatDayMonth(arrived, locale, zone)}, ${formatTimeOfDay(arrived, locale, zone)}`
@@ -99,11 +90,9 @@ export function Triage({
   const weighed = phrasedReasons(lead, when !== null).filter(
     (reason) => reason.kind !== "pinned",
   );
-  // The label is the ONE reason that carries a figure where one does —
-  // "Waiting 13 days" says more on its own than "they wrote last" — else the
-  // first weighed; the rest stay on the queue's row, where a reader who wants
-  // the whole case opens the fold. Sentence case, because it is a label and
-  // not a fragment of a line.
+  // The label is the first reason with a figure, else the first weighed:
+  // "Waiting 13 days" says more than "they wrote last". The rest stay on the
+  // queue's row.
   const strongest = weighed.find((reason) => reason.value) ?? weighed[0];
   const phrased = strongest ? reasonText(strongest, t, locale, zone) : null;
   // The reasons are written as fragments of a line ("waiting 13 days"); as a
@@ -268,11 +257,8 @@ function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
 }
 
 /**
- * The one line under a queued row's name: who it is with, and the first of
- * the reasons it is here — the same words the row itself prints, through the
- * same helpers, so the column and the row in hand cannot describe one piece
- * of work two ways. Null where the row has neither, and then no line is
- * drawn rather than an empty one.
+ * The line under a queued row's name: who it is with and its first reason,
+ * through the row's own helpers. Null when the row has neither.
  */
 function queueLine(
   item: WorklistItem,
@@ -280,12 +266,8 @@ function queueLine(
   locale: Locale,
   zone: string,
 ): string | null {
-  // The CONTACT the server put on the row, not the message's counterparty: a
-  // task or a meeting carries one and no message at all, so reading the
-  // message left those rows unnamed in the column while the row in hand named
-  // them. On a waiting message the two are the same contact — the backend puts
-  // the sender there — so this is the one field for every row, and the same
-  // one the row's own captions read (`aboutRecord`).
+  // The contact on the row, not the message's counterparty: a task or meeting
+  // has no message. On a waiting message the backend puts the sender here.
   const who = item.contact?.label ?? null;
   // The reader's own pin is the queue's reason and not the focus projection's,
   // for the reason the row in hand withholds it (`allowPin`).

@@ -63,7 +63,7 @@ does in this state.
 | `summarize` | Record summary | interactive | `cheap_cloud` → `premium` | answers from its own facts instead of failing | — |
 | `tag_suggest` | Tag suggestions | background | `local_small` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
 | `transcript` | Transcript reading | interactive | `cheap_cloud` → `premium` | not in use yet | — |
-| `transcript_propose` | Meeting follow-up extraction | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
+| `transcript_propose` | Meeting follow-up extraction | background | `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `voice_build` | Voice DNA build | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `weekly_learnings` | What last week taught | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `weekly_review` | Weekly review narrative | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |

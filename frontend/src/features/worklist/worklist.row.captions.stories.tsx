@@ -161,3 +161,42 @@ export const SupplierRequestDark: Story = {
   ...SupplierRequest,
   globals: { theme: "dark" },
 };
+
+export const SharedDeliverable: Story = {
+  args: {
+    item: {
+      id: "recording-task",
+      source: "task",
+      category: "tasks",
+      level: 2,
+      title: "Send the recording",
+      consequence: "task_slips",
+      because: [],
+      actions: ["open"],
+      promise_recipients: [
+        {
+          claim_id: "claim-ines",
+          contact_id: "ines",
+          display_name: "Ines Huber",
+          status: "done",
+        },
+        {
+          claim_id: "claim-morgan",
+          contact_id: "morgan",
+          display_name: "Morgan Recipient",
+          status: "open",
+        },
+      ],
+    },
+    position: 1,
+    owner: "",
+  },
+  render: (args) => {
+    stubRow();
+    return <WorklistRow {...args} />;
+  },
+};
+export const CompactSharedDeliverable: Story = {
+  ...SharedDeliverable,
+  args: { item: SharedDeliverable.args?.item, owner: "", density: "compact" },
+};

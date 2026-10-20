@@ -60,6 +60,9 @@ func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.A
 	if approval.Status != crmcontracts.ApprovalStatusPending {
 		return nil, nil //nolint:nilnil // Terminal and uncovered kinds have no preview; their existing decision gates apply.
 	}
+	if approval.Kind == CommitmentTaskKind {
+		return r.commitmentPreview(ctx, approval)
+	}
 	changes, covered, err := commercialChanges(approval)
 	if !covered {
 		return nil, nil //nolint:nilnil // Terminal and uncovered kinds have no preview; their existing decision gates apply.

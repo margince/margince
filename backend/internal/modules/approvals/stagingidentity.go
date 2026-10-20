@@ -291,6 +291,7 @@ func (s *Service) RejectedChangesForTx(ctx context.Context, tx pgx.Tx, kind stri
 
 // Offer is one proposal of a kind against a target, as staged.
 type Offer struct {
+	ID     ids.ApprovalID
 	Status string
 	Change json.RawMessage
 }
@@ -315,7 +316,7 @@ func (s *Service) OffersForTx(ctx context.Context, tx pgx.Tx, kind string, targe
 	// is exactly the one a human is about to reject, and leaving it unlocked
 	// would reopen the gap this closes.
 	rows, err := tx.Query(ctx, `
-		SELECT status, proposed_change, expires_at FROM approval
+		SELECT id, status, proposed_change, expires_at FROM approval
 		 WHERE kind = $1 AND target_entity_id = $2
 		 `+lockOrder+`
 		 FOR UPDATE`, kind, targetID)
@@ -328,10 +329,10 @@ func (s *Service) OffersForTx(ctx context.Context, tx pgx.Tx, kind string, targe
 	var out []Offer
 	for rows.Next() {
 		held := row{Kind: kind}
-		if err := rows.Scan(&held.Status, &held.ProposedChange, &held.ExpiresAt); err != nil {
+		if err := rows.Scan(&held.ID, &held.Status, &held.ProposedChange, &held.ExpiresAt); err != nil {
 			return nil, fmt.Errorf("read the offers for this proposal: %w", err)
 		}
-		out = append(out, Offer{Status: held.effectiveStatus(now), Change: held.ProposedChange})
+		out = append(out, Offer{ID: held.ID, Status: held.effectiveStatus(now), Change: held.ProposedChange})
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("read the offers for this proposal: %w", err)
