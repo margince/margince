@@ -105,18 +105,12 @@ func TestACompanyFieldGroupsDealsThroughTheirCompany(t *testing.T) {
 	}
 
 	filtered := askDeals(e.Admin(), t, e, analyticsquery.Query{
-		Entity: "deals-by-stage", GroupBy: []string{"stage_id"},
+		Entity: "deals-by-stage", GroupBy: []string{book.name},
 		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll}},
 		Filters:  []analyticsquery.Filter{{Field: book.name, Op: analyticsquery.OpEq, Value: "Gold"}},
 	})
-	total := 0
-	for _, count := range filtered {
-		var n int
-		fmt.Sscan(count, &n)
-		total += n
-	}
-	if total != 2 {
-		t.Errorf("deals filtered to Gold companies = %d, want 2 without the hidden company's", total)
+	if want := map[string]string{"Gold": "2"}; !maps.Equal(filtered, want) {
+		t.Errorf("deals filtered to Gold companies %v, want %v without the hidden company's", filtered, want)
 	}
 }
 
