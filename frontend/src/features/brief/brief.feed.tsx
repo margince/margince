@@ -47,10 +47,10 @@ export function BriefFeed({
   const { locale } = useLocale();
   const plural = usePlural();
   const [openEmail, setOpenEmail] = useState<string | null>(null);
-  // WHICH ROW IS IN HAND, by identity rather than by index: the queue is
+  // Which row is in hand, by identity rather than by index: the queue is
   // re-read every minute and a row that was answered leaves it, so an index
   // would silently hand the reader the row that moved up into its place. A
-  // chosen row that has gone falls back to the day's own first — the row the
+  // chosen row that has gone falls back to the day's own first, the row the
   // page opens on, and the one the sentence over it names.
   const [chosen, setChosen] = useState<string | null>(null);
   const client = useQueryClient();
@@ -66,20 +66,20 @@ export function BriefFeed({
   return (
     <section id="brief-today">
       <Panel
-        // INDIGO, the same band a record's own "what needs you today" pane
-        // wears: these rows are the agent's reading of the day — what it
-        // ranked and what it prepared — and indigo is the one claim the
-        // product makes about who did that. The accent would say "the page's
-        // lead", which is true and already said by where the panel sits.
+        // Indigo, the same band a record's own "what needs you today" pane
+        // wears. These rows are the agent's reading of the day: what it
+        // ranked and what it prepared. Indigo is the one claim the product
+        // makes about who did that. The accent would say "the page's lead",
+        // which is true and already said by where the panel sits.
         tone="ai"
         title={t(
           day?.scope === "team" ? "brief.feed.teamTitle" : "brief.feed.title",
         )}
         titleAction={
           <span className="brief-focus-actions">
-            {/* The panel offers the agent's verbs — the reply it drafted, the
-                step it prepared — so it wears the badge every panel that
-                offers an AI verb wears: what is OFFERED, beside the tone that
+            {/* The panel offers the agent's verbs, the reply it drafted, the
+                step it prepared, so it wears the badge every panel that
+                offers an AI verb wears: what is offered, beside the tone that
                 says who wrote the body. */}
             <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
             {changed && (
@@ -149,13 +149,13 @@ export function BriefFeed({
 }
 
 /**
- * The focus, ONE ROW AT A TIME: the row in hand drawn whole, and beside it
+ * The focus, one row at a time: the row in hand drawn whole, and beside it
  * the ranked queue it was taken from, each row a press that puts it in hand.
  *
  * A reader clears a morning by answering one thing and moving to the next,
  * and the page is shaped like that act: the work on the left at the row's
- * full density — its kind, the message, its reasons, what doing nothing
- * costs, and every verb that answers it — and on the right the order the
+ * full density, its kind, the message, its reasons, what doing nothing
+ * costs, and every verb that answers it, and on the right the order the
  * day put the rest in, so the reader always sees where they are in it. The
  * sentence over the page says "First: X. Then N more", and this is that
  * sentence drawn: X in hand, the N in a column.

@@ -59,7 +59,7 @@ type Frame = {
   /** What the pipeline report answers. A refusal is a state of its own. */
   pipeline?: () => Response;
   /** The morning as the worklist answers it. Stated rather than left to the
-   *  stub's fallback, because the fallback is a LIST page — `{data, page}` —
+   *  stub's fallback, because the fallback is a list page, `{data, page}`,
    *  and `/worklist` answers a `Worklist`, whose `queue` the walk reads to
    *  decide whether to ask for a second page. A fallback of the wrong envelope
    *  therefore did not render an empty Brief, it crashed every frame in this
@@ -206,9 +206,9 @@ export const DecisionApproved: Story = {
         within(canvasElement).queryByRole("button", { name: "Decide" }),
       ).toBeNull(),
     );
-    // The refreshed agenda still stands, counted rather than named: the panel
+    // The refreshed agenda still stands, counted rather than named. The panel
     // head lost its sub slot, so the sentence that said how many rows it holds
-    // is gone from every catalog and asserting it would test nothing.
+    // is gone from every catalog. Asserting it would test nothing.
     await waitFor(() =>
       expect(
         canvasElement.querySelectorAll("#brief-today .brief-focus-list > li"),
@@ -242,8 +242,8 @@ export const DigestAbsent: Story = {
 };
 
 // The one place connector health reaches a reader without visiting Settings. A
-// degraded source is news — said in Settings' own vocabulary, with the way to
-// fix it — while a healthy one stays silent, as it does in every other frame
+// degraded source is news, said in Settings' own vocabulary, with the way to
+// fix it, while a healthy one stays silent, as it does in every other frame
 // here: a permanent green row is noise.
 export const ConnectorUnhealthy: Story = {
   render: brief({
@@ -263,7 +263,7 @@ export const ConnectorUnhealthy: Story = {
 
 // One read refused while the other four are healthy. That is the whole reason
 // this page fans out to five independent reads: the pipeline says the figure
-// could not be loaded — a refusal, not an absence — and the deck, the queue, the
+// could not be loaded, a refusal, not an absence, and the deck, the queue, the
 // digest and the quiet list are untouched beside it.
 /** The honest degrade: the week was measured and nobody narrated it. The
  *  numbers are all there, and the panel says the sentence is missing rather
@@ -276,7 +276,7 @@ export const WeeklyWithoutItsSentence: Story = {
 };
 
 /** A pass that ran and found the week unremarkable. No sentence and no notice
- *  — the stamp is what makes this different from the state above. */
+ * The stamp is what makes this different from the state above. */
 export const WeeklyQuietlyNarrated: Story = {
   render: brief({
     approvals: [],
@@ -295,7 +295,7 @@ export const OnePanelRefused: Story = {
   }),
 };
 
-// The other half of the same honesty: the figures ARRIVED, and a field mask kept
+// The other half of the same honesty: the figures arrived, and a field mask kept
 // rows out of them. Saying so is the difference between a partial answer and a
 // wrong one.
 export const PipelinePartial: Story = {
@@ -316,9 +316,9 @@ const otherPromise = {
   ),
   due_at: "2026-09-11T21:59:59Z",
 };
-// The row in hand is a customer's MESSAGE: the canonical email row names it —
+// The row in hand is a customer's message: the canonical email row names it,
 // who wrote, when, the subject at the headline rung, their own words under
-// it — and the verbs that answer it stand under the words. The queue beside
+// it, and the verbs that answer it stand under the words. The queue beside
 // it holds the rest of the day; pressing a row puts it in hand instead.
 const SixPrioritiesDay = readingsDay({}, [
   waitingEmailRow(),
@@ -348,9 +348,9 @@ export const RowDetailsOpen: Story = {
     });
   },
 };
-// The same morning read by a seat whose row scope REACHES A TEAM. The
+// The same morning read by a seat whose row scope reaches a team. The
 // Mine/Team dial is drawn from the worklist's own `scope_options`, so a seat
-// that reaches nobody else never sees it — which is why the frame above cannot
+// that reaches nobody else never sees it, which is why the frame above cannot
 // show it, and why this one exists.
 export const TeamSeat: Story = {
   render: brief({

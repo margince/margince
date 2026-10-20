@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// THE FOCUS PANEL'S INSIDE: the row in hand as a card, on the stack of what
+// The focus panel's inside: the row in hand as a card, on the stack of what
 // is still behind it, and the ranked column beside it. The panel's own chrome
-// — its head, its states, its foot — is brief.feed.tsx; this is what stands
+// (its head, its states, its foot) is brief.feed.tsx. This is what stands
 // in its body.
 
 import { Avatar, Badge, Button, Card } from "../../design-system/atoms";
@@ -57,8 +57,8 @@ export function Triage({
   const { locale } = useLocale();
   const zone = viewerZone();
   const recordZone = useRecordZone();
-  // A meeting earns the door too. Its subject is the ACTIVITY rather than a
-  // contact, so `hasPane` answers no for it — and the row would stand with
+  // A meeting earns the door too. Its subject is the activity rather than a
+  // contact, so `hasPane` answers no for it, and the row would stand with
   // three verbs and no way through to the meeting they are about.
   const context =
     onContext &&
@@ -86,8 +86,8 @@ export function Triage({
   const weighed = phrasedReasons(lead, when !== null).filter(
     (reason) => reason.kind !== "pinned",
   );
-  // The label is the ONE reason that carries a figure where one does —
-  // "Waiting 13 days" says more on its own than "they wrote last" — else the
+  // The label is the one reason that carries a figure where one does,
+  // "Waiting 13 days" says more on its own than "they wrote last", else the
   // first weighed; the rest stay on the queue's row, where a reader who wants
   // the whole case opens the fold. Sentence case, because it is a label and
   // not a fragment of a line.
@@ -99,15 +99,14 @@ export function Triage({
   const label = phrased ? openingCase(phrased, locale) : t(eyebrowKeyFor(lead));
   return (
     <div className="brief-triage">
-      {/* THE ROW IN HAND IS A CARD on a STACK: one thing to answer, drawn
-          whole — its state on top, its name, whose it is, the work, the verbs
-          — over the edges of the work still behind it, so a reader sees the
-          day has more without reading the column beside it. The stack's
-          depth is what remains, at most two edges: a third reads as texture
-          rather than as a count, and the column names them all anyway.
+      {/* The row in hand is a card on a stack: one thing to answer, drawn
+          whole, with its state, name, owner, work and verbs. The edges of the
+          work still behind it show, so a reader sees the day has more without
+          reading the column beside it. The stack's depth is what remains, at
+          most two edges: a third reads as texture rather than as a count.
 
-          KEYED BY THE ROW, so pressing another one in the queue mounts a new
-          card and replays its arrival — the press has an answer on the card
+          Keyed by the row, so pressing another one in the queue mounts a new
+          card and replays its arrival. The press has an answer on the card
           itself, not only in the column that was pressed. */}
       <div
         className="brief-triage-stack"
@@ -144,9 +143,9 @@ export function Triage({
               )
             }
             context={details}
-            // The CARD around this row says whose it is, why it is here and
-            // where it stands in the day — each once and in its own place —
-            // and names and links the record it is about.
+            // The card around this row says whose it is, why it is here and
+            // where it stands in the day, each once and in its own place.
+            // It also names and links the record the row is about.
             framed
           />
         </Card>
@@ -196,12 +195,12 @@ export function Triage({
 }
 
 /**
- * WHOSE row this is, and how the silence runs in both directions — over the
+ * Whose row this is, and how the silence runs in both directions, over the
  * row, where a reader meets the relationship before the work.
  *
  * The record the row is about, linked, with the two moments a rep answering
  * it would otherwise open a second page for: when they last wrote, and when
- * we did. Which direction went last is the whole question — a customer we
+ * we did. Which direction went last is the whole question, a customer we
  * mailed yesterday is answered differently from one nobody has written to
  * since March. The moments come off the row itself (`rowTouch`), the pair
  * every queue row prints in the pane's words, so the row in hand and the
@@ -219,7 +218,7 @@ function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
   const href = contact?.label ? contactHref(contact) : subjectHref(item);
   if (!label || !href) return null;
   const touch = lastTouch(rowTouch(item), t, locale, viewerZone());
-  // Where the message sits — the team's inbox, the reader's own — in the
+  // Where the message sits, the team's inbox, the reader's own, in the
   // access badge's own words, as one more fact about whose row it is.
   const inbox = item.email_summary?.display_status;
   return (
@@ -242,7 +241,7 @@ function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
 
 /**
  * The one line under a queued row's name: who it is with, and the first of
- * the reasons it is here — the same words the row itself prints, through the
+ * the reasons it is here, the same words the row itself prints, through the
  * same helpers, so the column and the row in hand cannot describe one piece
  * of work two ways. Null where the row has neither, and then no line is
  * drawn rather than an empty one.
@@ -253,11 +252,11 @@ function queueLine(
   locale: Locale,
   zone: string,
 ): string | null {
-  // The CONTACT the server put on the row, not the message's counterparty: a
+  // The contact the server put on the row, not the message's counterparty: a
   // task or a meeting carries one and no message at all, so reading the
   // message left those rows unnamed in the column while the row in hand named
-  // them. On a waiting message the two are the same contact — the backend puts
-  // the sender there — so this is the one field for every row, and the same
+  // them. On a waiting message the two are the same contact, the backend puts
+  // the sender there, so this is the one field for every row, and the same
   // one the row's own captions read (`aboutRecord`).
   const who = item.contact?.label ?? null;
   // The reader's own pin is the queue's reason and not the focus projection's,
