@@ -17,7 +17,7 @@ import (
 )
 
 // Applied migrations are immutable; the ratchet starts after the task ledger exists.
-const migrationRewriteBaseline = "1792483286"
+const migrationRewriteBaseline = "1792499838"
 
 type rewriteToken struct {
 	text   string
