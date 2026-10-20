@@ -207,6 +207,7 @@ export const SETTINGS_SECTIONS = {
   ],
   audit: [],
   "system-health": [
+    "dataTasks.title",
     "settings.jobs",
     "settings.extIngest",
     "settings.providerHealth",

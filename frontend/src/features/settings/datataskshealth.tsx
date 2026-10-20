@@ -12,7 +12,7 @@ import { PanelBody } from "../../design-system/panel";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
-import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemCodeOf, unwrap } from "../../lib/problem";
@@ -93,14 +93,16 @@ function useDataTasks() {
   return { canSee, query };
 }
 
-function taskFacts(row: Progress, t: Translator, locale: Locale): Fact[] {
+function taskFacts(row: Progress, { t, plural, locale }: Words): Fact[] {
   const number = (value: number) => formatNumber(value, locale);
   const date = (value: string) => formatDateTime(value, locale, viewerZone());
   const estimate =
     row.estimate === undefined
       ? t("dataTasks.unknown")
       : row.estimate_capped
-        ? t("dataTasks.atLeast", { count: number(row.estimate) })
+        ? plural("dataTasks.atLeast", row.estimate, {
+            count: number(row.estimate),
+          })
         : number(row.estimate);
   const facts: Fact[] = [
     {
@@ -177,6 +179,7 @@ function taskActions(row: Progress, canChange: boolean): Control["action"][] {
 
 function TaskRow({ row }: Readonly<{ row: Progress }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const canChange = useCanWrite("data_task", "update");
   const client = useQueryClient();
@@ -221,16 +224,16 @@ function TaskRow({ row }: Readonly<{ row: Progress }>) {
             </p>
           )}
           {row.error_sentence && (
-            <p className="t-danger">
+            <ErrorLine standing>
               {row.error_sentence} {row.error_remedy}
-            </p>
+            </ErrorLine>
           )}
         </>
       }
       layout="stack"
       control={
         <>
-          <FactList facts={taskFacts(row, t, locale)} />
+          <FactList facts={taskFacts(row, { t, plural, locale })} />
           {actions.length > 0 && (
             <ActionRow>
               {actions.map((action) => (
