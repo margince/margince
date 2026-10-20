@@ -244,8 +244,8 @@ func (p Permissions) Rule(object string, a Action) string {
 
 // Within is the reach two policies share: a verb only where both allow it, the
 // narrower row scope, and every field mask either one carries. A preview of how
-// a role reads a page runs under the caller's own policy Within that role's, so
-// it never shows the caller anything their own policy withholds.
+// a role reads a page runs under the caller's policy Within the role's. It then
+// never shows the caller anything their own policy withholds.
 func (p Permissions) Within(other Permissions) Permissions {
 	out := Permissions{RoleKeys: other.RoleKeys, RowScope: p.RowScope, Objects: map[string]ObjectGrant{}}
 	if p.RowScope.Wider(other.RowScope) {
