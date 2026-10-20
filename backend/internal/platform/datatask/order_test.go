@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func testTask(id string) Task {
@@ -112,5 +114,12 @@ func TestBatchBoundRequiresScannedCursorProgress(t *testing.T) {
 		if err := validateBatch(in, out); err == nil {
 			t.Fatalf("invalid batch accepted: %+v", out)
 		}
+	}
+}
+
+func TestTaskActorKeepsTheTaskIdentity(t *testing.T) {
+	actor, ok := principal.Actor(Acting(t.Context(), "core/100_first"))
+	if !ok || actor.Type != principal.PrincipalSystem || actor.ID != "system:datatask:core/100_first" {
+		t.Fatalf("task actor=%+v, present=%v", actor, ok)
 	}
 }

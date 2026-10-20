@@ -171,7 +171,7 @@ func TestHeldMailTaskClosesOnlyProvenHistoryAndReplaysSafely(t *testing.T) {
 	if err := engine.Seed(ctx); err != nil {
 		t.Fatal(err)
 	}
-	for batch := 0; batch < 100; batch++ {
+	for batch := range 100 {
 		if _, err := engine.Execute(ctx); err != nil {
 			t.Fatal(err)
 		}

@@ -1,4 +1,3 @@
-<!-- prose:plain -->
 # Add a background data task
 
 Use a data task for a correction whose cost grows with stored records. Keep schema changes in

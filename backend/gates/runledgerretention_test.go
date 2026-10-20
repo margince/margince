@@ -34,6 +34,7 @@ import (
 // their history would be the wrong way to find that out. The register carries
 // what each table is and what deciding its window would cost.
 var runLedgerWindow = gatekit.Waive(map[string]string{
+	"data_task_run": "one durable row per release task step, bounded by the shipped catalog rather than execution count. Deleting a completed cursor would rerun a correction after restart; retirement requires an explicit minimum supported upgrade release.",
 	"runner_job": "River's own job table, which the installation reset also leaves alone: " +
 		"its runtime manages retention and truncating underneath a running worker is not ours to do",
 	"agent_run": "one row per agent execution, holding the outcome and the degrade reason. The " +

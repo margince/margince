@@ -90,7 +90,7 @@ func (w *dataTaskReconcileWorker) Work(ctx context.Context, _ *river.Job[DataTas
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	return reconcileDataTasks(ctx, engine)
+	return jobs.FaultContext(ctx, reconcileDataTasks(ctx, engine))
 }
 
 func reconcileDataTasks(ctx context.Context, engine *datatask.Engine) error {

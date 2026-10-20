@@ -24,7 +24,7 @@ const DefaultAITaskDir = ".tmp/aitask"
 var (
 	DataTasksPace = config.Define(config.Spec[time.Duration]{
 		Key: "data_tasks.pace", Env: "MARGINCE_DATA_TASKS_PACE", Flag: "data-tasks-pace", Type: config.Duration, Default: config.Some(time.Second), Validate: positiveWindow, Roles: workerOnly,
-		Doc: "Delay between committed background correction batches.",
+		Doc: "Delay between saved batches of data tasks.",
 	})
 	GmailPubsubTopic = config.Define(config.Spec[string]{
 		Key: "gmail_pubsub_topic", Env: "MARGINCE_GMAIL_PUBSUB_TOPIC", Flag: "gmail-pubsub-topic", Type: config.String, Roles: workerOnly,

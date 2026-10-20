@@ -803,7 +803,7 @@
       "additionalProperties": false,
       "properties": {
         "pace": {
-          "description": "Delay between committed background correction batches.",
+          "description": "Delay between saved batches of data tasks.",
           "type": [
             "string",
             "null"

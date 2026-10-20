@@ -14,7 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const failureCap = 5
@@ -23,7 +22,7 @@ func (e *Engine) recordFailure(ctx context.Context, picked selection, cause erro
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
 	p := picked.progress
-	ctx = storekit.WithBatch(principal.SystemActing(ctx, "system:datatask:"+p.TaskID), p.RunID)
+	ctx = storekit.WithBatch(Acting(ctx, p.TaskID), p.RunID)
 	fault := jobs.FaultContext(ctx, cause)
 	detail, known := jobs.VettedFailure("data_task_run", fault.Error())
 	p.LastErrorClass = nil

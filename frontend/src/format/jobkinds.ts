@@ -38,6 +38,8 @@ const JOB_KIND_NAME: Readonly<Record<string, MessageKey>> = {
   comms_scheduled_send_recovery: "jobs.kind.comms_scheduled_send_recovery",
   comms_send_email: "jobs.kind.comms_send_email",
   company_name_promotion: "jobs.kind.company_name_promotion",
+  data_task_run: "jobs.kind.data_task_run",
+  data_task_reconcile: "jobs.kind.data_task_reconcile",
   deal_scout: "jobs.kind.deal_scout",
   document_extract: "jobs.kind.document_extract",
   embed_drift_sweep: "jobs.kind.embed_drift_sweep",

@@ -19,8 +19,10 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -86,7 +88,7 @@ func TestDataTaskHTTPControlsRequireCurrentHumanAuthority(t *testing.T) {
 
 func TestDataTaskReadFailureNeverReturnsEmptyProgress(t *testing.T) {
 	e := integration.Setup(t)
-	pool, err := database.NewPool(t.Context(), os.Getenv("MARGINCE_TEST_APP_DSN"))
+	pool, err := testdb.OwnPool(t.Context(), os.Getenv("MARGINCE_TEST_APP_DSN"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +135,7 @@ func TestResumingCorrectionQueuesReconciliationImmediately(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	ctx := dataTaskReader(e)
-	engine, err := newDataTaskEngine(e.Pool, "test", time.Now)
+	engine, err := newDataTaskEngine(e.Pool, "test", func() time.Time { return clocktest.Now(t) })
 	if err != nil {
 		t.Fatal(err)
 	}

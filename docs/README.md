@@ -88,8 +88,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [add-an-rbac-object.md](how-to/add-an-rbac-object.md): add a new kind of record to RBAC.
 - [create-a-workflow.md](how-to/create-a-workflow.md): add a new starter workflow.
 - [apply-migrations.md](how-to/apply-migrations.md): write and run a database migration.
-- [add-a-data-task.md](how-to/add-a-data-task.md): register a bounded background correction.
-- [data-tasks.md](explanation/data-tasks.md): how correction progress survives upgrades and retries.
+- [add-a-data-task.md](how-to/add-a-data-task.md): add a data task.
+- [data-tasks.md](explanation/data-tasks.md): how a data task keeps its place.
 - [claim-a-red-main.md](how-to/claim-a-red-main.md): say that you fix a red `main` before you start.
 - [work-on-an-issue.md](how-to/work-on-an-issue.md): check that an issue is free, claim it, and release
   it when you stop.

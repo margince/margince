@@ -3395,15 +3395,16 @@ public.data_task_run.consecutive_failures integer NOT NULL gen=- def=0
 public.data_task_run.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.data_task_run.cursor jsonb gen=- def=-
 public.data_task_run.data_task_run_batch_limit_check CHECK ((batch_limit > 0))
-public.data_task_run.data_task_run_batches_check CHECK ((batches >= 0))
-public.data_task_run.data_task_run_changed_check CHECK ((changed >= 0))
+public.data_task_run.data_task_run_batches_check CHECK (((batches >= 0) AND (batches <= '9007199254740991'::bigint)))
+public.data_task_run.data_task_run_changed_check CHECK (((changed >= 0) AND (changed <= '9007199254740991'::bigint)))
 public.data_task_run.data_task_run_consecutive_failures_check CHECK ((consecutive_failures >= 0))
-public.data_task_run.data_task_run_estimate_check CHECK ((estimate >= 0))
+public.data_task_run.data_task_run_estimate_check CHECK (((estimate >= 0) AND (estimate <= '9007199254740991'::bigint)))
 public.data_task_run.data_task_run_pkey PRIMARY KEY (task_id, step)
 public.data_task_run.data_task_run_run_id_key UNIQUE (run_id)
-public.data_task_run.data_task_run_scanned_check CHECK ((scanned >= 0))
+public.data_task_run.data_task_run_scanned_check CHECK (((scanned >= 0) AND (scanned <= '9007199254740991'::bigint)))
 public.data_task_run.data_task_run_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'running'::text, 'paused'::text, 'done'::text, 'failed'::text])))
 public.data_task_run.data_task_run_task_version_check CHECK ((task_version > 0))
+public.data_task_run.data_task_run_version_check CHECK (((version >= 1) AND (version <= '9007199254740991'::bigint)))
 public.data_task_run.estimate bigint gen=- def=-
 public.data_task_run.estimate_capped boolean NOT NULL gen=- def=false
 public.data_task_run.estimated_at timestamp with time zone gen=- def=-
