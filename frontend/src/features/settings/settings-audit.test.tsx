@@ -7,8 +7,12 @@ import { SEARCH_DEBOUNCE_MS } from "../../components/listquery";
 import { pickOption } from "../../design-system/select-testing";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
+import {
+  auditEntry,
+  jsonResponse,
+  render,
+} from "../../testing/settings.testkit";
 import { steppedClock } from "../../testing/steppedclock";
-import { auditEntry, jsonResponse, render } from "./settings.testkit";
 import { AuditLogCard } from "./settings-audit";
 
 // The fixture entry's toggle, named by its action and entity.

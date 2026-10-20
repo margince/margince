@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { row } from "../../testing/worklist.testkit";
 import {
   destinationOf,
   reviewShortfall,
   reviewWork,
   sellerWork,
 } from "./worklist.destinations";
-import { row } from "./worklist.testkit";
 
 // Which screen a row belongs on, and the one case that must not go wrong.
 

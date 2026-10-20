@@ -2,11 +2,11 @@ import { useMutation } from "@tanstack/react-query";
 import { Lock, Mail } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
+import { AuthCardTitle, type AuthPhase } from "../../components/auth-core";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { usePasswordReveal } from "../../design-system/passwordreveal";
 import { useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { AuthCardTitle, type AuthPhase } from "./auth-core";
 import {
   type OidcProviders,
   ProviderButtons,

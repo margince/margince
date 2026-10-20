@@ -3,7 +3,7 @@
 
 import type { Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { coldFieldLabel } from "../settings/coldfieldlabels";
+import { coldFieldLabel } from "../../lib/coldfieldlabels";
 
 const PROFILE_FIELD_LABELS: Record<string, MessageKey> = {
   display_name: "co.profileField.display_name",

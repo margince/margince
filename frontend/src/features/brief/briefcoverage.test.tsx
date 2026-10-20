@@ -3,8 +3,8 @@ import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
-import { ranked, readingsDay } from "./brief.fixtures";
-import { render } from "./brief.testkit";
+import { ranked, readingsDay } from "../../testing/brief.fixtures";
+import { render } from "../../testing/brief.testkit";
 import { BriefCoverage } from "./briefcoverage";
 
 afterEach(cleanup);

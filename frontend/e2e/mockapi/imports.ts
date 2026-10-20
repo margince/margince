@@ -4,7 +4,7 @@
 import {
   formatFixture,
   recentRunsFixture,
-} from "../../src/features/import/import.fixtures";
+} from "../../src/testing/import.fixtures";
 import type {
   ImportProfile,
   ImportReport,

@@ -4,17 +4,17 @@ import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { RecordShell } from "../../app/testing/recordshell.testkit";
 import { meshOf, meshStyle } from "../../design-system/avatarmesh";
 import { LocaleProvider } from "../../i18n";
-import { CompaniesScreen, CompanyScreen } from "../companies/companies";
 import {
   company,
   company360,
   jsonResponse,
-} from "../companies/company.fixtures";
-import { stubFetch } from "../companies/company.testkit";
-import { mount, view } from "../contacts/contactpage.testkit";
+} from "../../testing/company.fixtures";
+import { stubFetch } from "../../testing/company.testkit";
+import { mount, view } from "../../testing/contactpage.testkit";
+import { RecordShell } from "../../testing/recordshell.testkit";
+import { CompaniesScreen, CompanyScreen } from "../companies/companies";
 import { WriteToHost } from "../settings/writetohost";
 
 // One record, one mark: the list a reader found it in, the card another record

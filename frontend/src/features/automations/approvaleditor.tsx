@@ -29,6 +29,7 @@ import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import type { Approval } from "../../lib/approvals.queries";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import {
   EDITABLE_FIELDS,
@@ -36,7 +37,6 @@ import {
   humanizeKind,
 } from "./approvalkind";
 import { useApprovalNames } from "./approvalresponsibility";
-import type { Approval } from "./approvals.queries";
 import "./approvalrow.css";
 import { QueryGate } from "../../design-system/querystates";
 import { unwrap } from "../../lib/problem";

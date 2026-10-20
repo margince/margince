@@ -15,12 +15,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
-import { ComposeModal } from "./compose";
 import {
   allowedPreview,
   isPreviewDoor,
   previewedAddresses,
-} from "./sendpermission.testkit";
+} from "../../testing/sendpermission.testkit";
+import { ComposeModal } from "./compose";
 
 // The head of the message: who it is to, and the two things a rep could not
 // reach from here before — a blind copy, and the paper the mail is about.

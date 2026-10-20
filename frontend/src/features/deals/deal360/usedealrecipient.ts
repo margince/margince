@@ -10,7 +10,7 @@
 // screen and the drafter read rather than choose again.
 
 import { useQuery } from "@tanstack/react-query";
-import { contactQuery } from "../../contacts/contact.queries";
+import { contactQuery } from "../../../lib/contact.queries";
 import { dealRecipientSeat } from "./dealrecipient";
 import type { useDealCoverage } from "./usedealcoverage";
 

@@ -12,7 +12,7 @@ import {
   row,
   stub,
   type Worklist,
-} from "./worklist.testkit";
+} from "../../testing/worklist.testkit";
 
 // What opens beside the queue, and — just as much — what does not.
 //

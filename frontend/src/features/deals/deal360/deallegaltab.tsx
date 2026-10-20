@@ -7,6 +7,7 @@
 
 import { useState } from "react";
 import type { components } from "../../../api/schema";
+import { LegalReviewStatusBadge } from "../../../components/legalreviewstatus";
 import {
   Button,
   EmptyState,
@@ -25,8 +26,6 @@ import { formatDateTime } from "../../../format/format";
 import { viewerZone } from "../../../format/timezone";
 import { useLocale, useT } from "../../../i18n";
 import { useCan, useCanWriteRecord } from "../../../lib/capability";
-import { problemMessageOf } from "../../../lib/problem";
-import { navigate } from "../../../lib/router";
 import {
   LEGAL_REVIEWS_SCREEN,
   type LegalReviewSummary,
@@ -34,8 +33,9 @@ import {
   useLegalReviewAvailable,
   useRequestLegalReview,
   useWithdrawLegalReview,
-} from "../../privacy/legalreviews.queries";
-import { LegalReviewStatusBadge } from "../../privacy/legalreviewstatus";
+} from "../../../lib/legalreviews.queries";
+import { problemMessageOf } from "../../../lib/problem";
+import { navigate } from "../../../lib/router";
 
 type Deal = components["schemas"]["Deal"];
 

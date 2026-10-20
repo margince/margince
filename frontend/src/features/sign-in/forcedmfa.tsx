@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId } from "react";
+import { AuthCardTitle, AuthExperience } from "../../components/auth-core";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ErrorLine } from "../../design-system/errorline";
@@ -9,7 +10,6 @@ import { useT } from "../../i18n";
 import { problemCodeOf } from "../../lib/problem";
 import { useLogout } from "../../lib/session";
 import { usePageTitle, Wordmark } from "./auth";
-import { AuthCardTitle, AuthExperience } from "./auth-core";
 import {
   MfaSetupActions,
   MfaSetupSteps,

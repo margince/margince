@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { components } from "../../api/schema";
-import type { Transport } from "../contacts/contacttransports";
+import type { Transport } from "../../lib/contacttransports";
 import type { ChosenFile } from "./composeattachments";
 import {
   type ComposeFields,

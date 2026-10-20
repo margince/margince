@@ -4,6 +4,10 @@
 import { Pencil, Trash2 } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import type { components } from "../../api/schema";
+import {
+  type ProviderHealthEntry,
+  ProviderHealthNotice,
+} from "../../components/ai-provider-health-notice";
 import { Badge, Button, Modal } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
@@ -14,19 +18,15 @@ import { formatDate } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { borrowedRows, useAiModelCatalogue } from "../../lib/ai-models";
+import type { ProviderUse } from "../../lib/ai-routing-query";
 import { useCan, useCanUpsert } from "../../lib/capability";
 import { ProviderRefreshLine } from "../settings/rate-catalogue-refresh";
 import { type BoundModel, PriceForm } from "../settings/rate-manual";
 import { RemovePriceDialog } from "../settings/rate-remove";
-import { borrowedRows, useAiModelCatalogue } from "./ai-models";
 import { usePriceSync } from "./ai-price-sync";
-import {
-  type ProviderHealthEntry,
-  ProviderHealthNotice,
-} from "./ai-provider-health-notice";
 import { pricingPageFor } from "./ai-provider-links";
 import { providerName } from "./ai-provider-names";
-import type { ProviderUse } from "./ai-routing-query";
 import { TierChips } from "./ai-terms";
 import "./ai-settings.css";
 

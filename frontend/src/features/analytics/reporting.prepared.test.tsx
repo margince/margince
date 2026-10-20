@@ -6,8 +6,8 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
+import { reportingStoryCatalog } from "../../testing/reporting.fixtures";
 import { installFetchStub, StoryProviders } from "../../testing/story-utils";
-import { reportingStoryCatalog } from "./reporting.fixtures";
 import { PREPARED_REPORTS, preparedSelection } from "./reporting.prepared";
 import { PreparedReports } from "./reporting.preparedpanel";
 import {

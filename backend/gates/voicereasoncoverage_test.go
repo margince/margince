@@ -53,7 +53,7 @@ func TestEveryVoiceReviewCodeHasAClientExplanation(t *testing.T) {
 		t.Fatal("voice reason catalog is empty")
 	}
 	assertVoiceReasonWriters(t, names)
-	source, err := os.ReadFile("../frontend/src/lib/voice-review-reason.ts")
+	source, err := os.ReadFile("../frontend/src/features/voice-knowledge/voice-review-reason.ts")
 	if err != nil {
 		t.Fatal(err)
 	}

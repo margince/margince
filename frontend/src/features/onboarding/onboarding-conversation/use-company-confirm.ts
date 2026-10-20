@@ -5,11 +5,11 @@ import { useCallback } from "react";
 import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import type { useT } from "../../../i18n";
-import { throwProblem } from "../../../lib/problem";
 import {
   companySaveMessage,
   storeCompany,
-} from "../../sign-in/installationcompany";
+} from "../../../lib/installationcompany";
+import { throwProblem } from "../../../lib/problem";
 import type { CompanyDraft, CompanyForm } from "../onboarding";
 import type { ConfirmRefusal } from "./artifact";
 import type { ClarifyAnswer } from "./company-proposal";

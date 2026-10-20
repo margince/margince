@@ -17,9 +17,9 @@ import { Switch } from "../../design-system/switch";
 import { useT } from "../../i18n";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
 import { useBookingCalendar } from "./booking-calendar-state";
 import { BookingBack } from "./booking-common";
-import { useSchedulingProfile } from "./scheduling-profile-query";
 import "./booking-profile.css";
 
 type Profile = components["schemas"]["SchedulingProfile"];

@@ -28,7 +28,7 @@ import { useCanWrite, useWriteRefusal } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { useUrlParams } from "../../lib/urlstate";
-import { LegalReviewSettingsCard } from "../privacy/legalreviewsettings";
+import { LegalReviewSettingsCard } from "./legalreviewsettings";
 import { SETTINGS_PIPELINES, usePipelineOrder } from "./settings.pipelineorder";
 import { MakeDefault, PipelineRetirement } from "./settings.pipelineverbs";
 import { StageLadderEditor } from "./settings.stages";

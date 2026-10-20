@@ -8,8 +8,8 @@ import {
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { expect } from "vitest";
-import { RecordShell } from "../../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../../i18n";
+import { RecordShell } from "../../testing/recordshell.testkit";
 import { WriteToHost } from "../settings/writetohost";
 
 // The page's context column belongs to the shell, and the record fills it

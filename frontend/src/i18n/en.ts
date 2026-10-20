@@ -724,6 +724,10 @@ export const en = {
   "reporting.cardSection": "Section of {chart}",
   "reporting.removeCard": "Remove {chart}",
   "reporting.addChart": "Add chart",
+  "reporting.previewChart": "Preview",
+  "reporting.previewLoading": "Loading the preview…",
+  "reporting.previewEmpty":
+    "Nothing to draw for this report’s period and metrics yet. Add the chart anyway, or change the period under Customize report.",
   "reporting.chooseChart": "Chart to add",
   "reporting.exportCsv": "Export CSV",
   "reporting.captureContexts": "Record daily pipeline history",

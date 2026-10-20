@@ -3,8 +3,8 @@ import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useRecordZone } from "../../lib/recordzone";
-import { useFinanceSummary } from "../projects/financesummary";
 import type { Grounding } from "../records/record360";
+import { useFinanceSummary } from "./financesummary";
 
 // A leaf for the small lookup tables the company page and its rail both need
 // to draw the same enums the same way. Neither company360.tsx nor

@@ -20,14 +20,14 @@ import {
   useT,
 } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
-import { problemMessageOf } from "../../lib/problem";
-import { useVocabGrants, vocabMenuColumn } from "../leads/leadvocab.rows";
 import {
   type AcquisitionSource,
   useAcquisitionSources,
   useCreateAcquisitionSource,
   useUpdateAcquisitionSource,
-} from "./acquisitionsources.queries";
+} from "../../lib/acquisitionsources.queries";
+import { problemMessageOf } from "../../lib/problem";
+import { useVocabGrants, vocabMenuColumn } from "../leads/leadvocab.rows";
 
 function sourceColumns({
   t,

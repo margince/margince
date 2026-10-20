@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { formatFixture } from "../../testing/import.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { formatFixture } from "./import.fixtures";
 import { TemplatePreview } from "./import.template";
 
 // The template before it is downloaded: every file in import order, each

@@ -13,7 +13,7 @@
 const TEST_ONLY_NAME = /\.(test|testkit|stories)\./;
 
 // A test-only module by LOCATION. A `testing/` directory holds the harnesses a
-// suite mounts (src/app/testing/shellharness.tsx renders the shell and exports
+// suite mounts (src/testing/shellharness.tsx renders the shell and exports
 // the queries its tests ask it) — the same thing the names above describe, said
 // by where the file sits, so a story for one would document nothing a reader
 // ships. Only a whole path segment counts, so `src/screens/testingground.tsx`

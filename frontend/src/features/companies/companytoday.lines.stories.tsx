@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { StoryProviders } from "../../testing/story-utils";
-import type { AccountScan } from "../capture/accountscan";
+import type { AccountScan } from "./accountscan";
 import { scanFoot } from "./companytoday.lines";
 
 function ScanReceipt({ reason }: Readonly<{ reason: string }>) {

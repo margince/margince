@@ -9,8 +9,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { RecordZoneProvider } from "../../lib/recordzone";
+import { project, project360 } from "../../testing/projects.fixtures";
 import { ProjectIdentityFacts } from "./projectheaderfacts";
-import { project, project360 } from "./projects.fixtures";
 
 // The head's facts strip: which account the work is for, when it is due and
 // how far off that is, and whose project it is.

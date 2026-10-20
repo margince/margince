@@ -8,8 +8,8 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { formatMoneyCompact, formatNumber } from "../../format/format";
 import { type Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { openAnalyticsSection } from "../../lib/analytics.address";
 import { unwrap } from "../../lib/problem";
-import { openAnalyticsSection } from "./analytics.address";
 import { rowCount, rowMoney } from "./analytics.cells";
 import { MEETING_STATUSES } from "./analytics.questions.values";
 

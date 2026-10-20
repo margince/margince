@@ -16,7 +16,6 @@ import {
 } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
-import { fiscalYearLabel } from "../../format/fiscalyear";
 import { identifierNumber, monthName } from "../../format/format";
 import { lockFor } from "../../format/settinglocks";
 import {
@@ -26,8 +25,9 @@ import {
   useLocale,
   useT,
 } from "../../i18n";
+import { useCurrencyNote } from "../../lib/installation-settings.currency";
+import { fiscalYearLabel } from "./fiscalyear";
 import type { EditedFact, InstallationSettings } from "./installation-settings";
-import { useCurrencyNote } from "./installation-settings.currency";
 import { RegionalSettingsFields } from "./installation-settings.regional";
 
 // The twelve months a fiscal year may start in, as the picker offers them.

@@ -9,7 +9,7 @@ import { RowOpen } from "../../design-system/rowopen";
 import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
-import { useProviderLabel } from "./channelproviders";
+import { useProviderLabel } from "../../lib/channelproviders";
 
 // Settings › Capture activity: one row per message in the window, each opening
 // the trace drawer that shows every step the pipeline took with it.

@@ -3,7 +3,7 @@
 
 import { expect, it } from "vitest";
 import { translate, translatePlural, type Words } from "../../i18n";
-import { reportingStoryEvaluation } from "./reporting.fixtures";
+import { reportingStoryEvaluation } from "../../testing/reporting.fixtures";
 import { writtenSummary } from "./reporting.written";
 
 const english: Words = {

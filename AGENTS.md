@@ -212,6 +212,10 @@ package name is not enough.
   `migrations/testdata/head_catalog.txt` in the same commit. Why the two past edits to shipped
   migrations are safe, and why no rule follows from them:
   [docs/how-to/apply-migrations.md](docs/how-to/apply-migrations.md).
+- **A large correction in a core migration**: use a data task to change many rows. A small table
+  can use a migration if `backend/migrationrewrites.txt` states its size and why the work fits when
+  the API starts. Keep each shipped task in the code for every supported upgrade. See
+  [docs/how-to/add-a-data-task.md](docs/how-to/add-a-data-task.md).
 - **The `database.WithWorkspaceTx` contract**: every tenant query goes through it, and no path
   reaches tenant data without it. `scripts/check-rls-store-path.sh` holds this. No table has
   row-level security: a unit table declares no `workspace_id` and no policy, and `extmigrategate`

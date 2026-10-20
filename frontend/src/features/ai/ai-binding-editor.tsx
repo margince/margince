@@ -5,6 +5,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useId, useState } from "react";
 import type { components } from "../../api/schema";
 import { useUnsavedGuard } from "../../components/unsaved";
+import {
+  savedVertexLocation,
+  VERTEX_PROVIDER,
+} from "../../components/vertex-location";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import {
@@ -16,11 +20,12 @@ import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { lockReasonOr, useRefusalId } from "../../format/settinglocks";
 import { useT } from "../../i18n";
+import { type ModelCatalogue, useAvailableModels } from "../../lib/ai-models";
+import { invalidateProviderHealth } from "../../lib/ai-provider-health";
+import { ROUTING_KEY, type RoutingRead } from "../../lib/ai-routing-query";
 import { problemMessageOf } from "../../lib/problem";
 import { isConflict, readLatest, writeSlice } from "./ai-binding-write";
 import { TierRecentCalls } from "./ai-call-figures";
-import { type ModelCatalogue, useAvailableModels } from "./ai-models";
-import { invalidateProviderHealth } from "./ai-provider-health";
 import {
   missingKey,
   reachableProviders,
@@ -33,14 +38,12 @@ import {
   openRouterPreset,
   PROVIDERS,
 } from "./ai-routing-fields";
-import { ROUTING_KEY, type RoutingRead } from "./ai-routing-query";
 import { type SliceValue, sameSlice, sliceOf } from "./ai-routing-slice";
 import {
   laneBrokered,
   ServingSection,
   servingBlocked,
 } from "./ai-serving-editor";
-import { savedVertexLocation, VERTEX_PROVIDER } from "./vertex-location";
 
 // One binding's editor: provider, model, and whatever else only that lane has.
 //

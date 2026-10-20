@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Approval } from "./approvals.queries";
+import type { Approval } from "../../lib/approvals.queries";
 import { stagedSendOf } from "./approvalsend";
 
 it.each([false, true])(

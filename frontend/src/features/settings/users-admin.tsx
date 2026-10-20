@@ -20,7 +20,10 @@ import "./users-admin.css";
 import { PageHeadAction } from "../../components/pageheadaction";
 import { useRoster } from "../../components/roster";
 import { useCan, useCanWrite } from "../../lib/capability";
-import { type AssignableRole, useAssignableRoles } from "./roles.queries";
+import {
+  type AssignableRole,
+  useAssignableRoles,
+} from "../../lib/roles.queries";
 import { usePageReadOnly } from "./settingsnav";
 import { InviteUserForm } from "./users-invite-form";
 import {

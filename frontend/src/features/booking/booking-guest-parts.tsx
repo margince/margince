@@ -22,14 +22,14 @@ import {
 } from "../../format/format";
 import { formatDayFull, formatTimeRange } from "../../format/meetingtime";
 import { useLocale, useT } from "../../i18n";
-import { navigate } from "../../lib/router";
-import { BookingZone } from "./booking-common";
-import type { GuestSlot } from "./booking-guest-month";
 import {
   PROVIDER_VIDEO_APP,
   VIDEO_APP_NAME,
   type VideoApp,
-} from "./booking-video";
+} from "../../lib/booking-video";
+import { navigate } from "../../lib/router";
+import { BookingZone } from "./booking-common";
+import type { GuestSlot } from "./booking-guest-month";
 
 /**
  * The app a booking's video link will come from, as the guest page names it.

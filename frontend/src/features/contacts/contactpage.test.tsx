@@ -10,6 +10,15 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
+import { CONTACT_TABS } from "../../lib/contacttab";
+import {
+  type Contact360,
+  type ContactConsentGuardEntry,
+  mount,
+  quietMoment,
+  recordHeader,
+  view,
+} from "../../testing/contactpage.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -18,15 +27,6 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ContactPageV2 } from "./contactpage";
-import {
-  type Contact360,
-  type ContactConsentGuardEntry,
-  mount,
-  quietMoment,
-  recordHeader,
-  view,
-} from "./contactpage.testkit";
-import { CONTACT_TABS } from "./contacttab";
 
 afterEach(() => {
   cleanup();

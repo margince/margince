@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { useCallback, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import type { PickedTag } from "../../components/bulktag";
+import { ContactsTagOffer, EmployerTagOffer } from "../../components/tagfollow";
 import { Button } from "../../design-system/atoms";
 import { useFocusHandoff } from "../../design-system/focushandoff";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -24,7 +25,6 @@ import {
   useRemoveTag,
   useRestoreTag,
 } from "../../lib/tags.queries";
-import { ContactsTagOffer, EmployerTagOffer } from "./tagfollow";
 import { AddTagPicker } from "./tagpicker";
 import "./tagspanel.css";
 import { useUndoableRemoval } from "../../lib/undoableremoval";

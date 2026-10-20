@@ -7,7 +7,7 @@ import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
-import { TeamPlanReview } from "../brief/brief.teamplan";
+import { TeamPlanReview } from "./brief.teamplan";
 import { useSetCommitmentState } from "./weeklyplan.queries";
 import type { WorklistItem } from "./worklist.queries";
 

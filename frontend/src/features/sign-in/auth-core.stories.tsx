@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { IdentityRegion } from "./auth-core";
+import { IdentityRegion } from "../../components/auth-core";
 import "./auth.css";
 import { StoryProviders } from "../../testing/story-utils";
 

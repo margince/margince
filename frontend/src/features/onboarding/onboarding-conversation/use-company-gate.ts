@@ -3,11 +3,11 @@ import { useCallback } from "react";
 import type { components } from "../../../api/schema";
 import type { useT } from "../../../i18n";
 import type { Locale } from "../../../i18n/locale";
+import { usePlatformDeclined } from "../../../lib/installation-setup.decline";
 import {
   outstandingStep,
   useInstallationSetup,
 } from "../../sign-in/installation-setup";
-import { usePlatformDeclined } from "../../sign-in/installation-setup.decline";
 import type { CompanyDraft } from "../onboarding";
 import { changeDraftField, normalizeUrl } from "../onboarding";
 import type {

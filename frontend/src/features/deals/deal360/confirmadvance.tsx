@@ -6,7 +6,11 @@ import { Select } from "../../../design-system/select";
 import { useT } from "../../../i18n";
 import { useAgentTierMap, verbTier } from "../../../lib/autonomy";
 import { problemFieldErrorsOf } from "../../../lib/problem";
-import { WON_REASON_LABELS, WON_REASONS, type WonReason } from "../winreason";
+import {
+  WON_REASON_LABELS,
+  WON_REASONS,
+  type WonReason,
+} from "../../../lib/winreason";
 import { closeReason, isSavedDeal } from "./closereviewoffer";
 import { CloseTasksQuestion, useCloseTasks } from "./closetasks";
 import "./deal360.css";

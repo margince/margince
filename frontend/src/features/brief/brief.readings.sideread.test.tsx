@@ -4,8 +4,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { readingsDay } from "../../testing/brief.fixtures";
 import type { Worklist } from "../worklist/worklist.queries";
-import { readingsDay } from "./brief.fixtures";
 import { BriefReadingsStrip } from "./brief.readings";
 
 // Urgent counts rows from every lane, so a lane that did not answer makes it a

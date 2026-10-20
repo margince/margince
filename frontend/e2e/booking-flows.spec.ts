@@ -6,7 +6,7 @@ import {
   bookingInvitation,
   bookingProfile,
   bookingSlots,
-} from "../src/features/booking/book.testkit";
+} from "../src/testing/book.testkit";
 import { copy } from "./copy";
 import { mockApi } from "./seed";
 import { openedAt } from "./waits";

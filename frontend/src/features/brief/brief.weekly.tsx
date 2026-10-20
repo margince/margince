@@ -22,10 +22,10 @@ import {
 } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { openAnalyticsSection } from "../../lib/analytics.address";
 import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
-import { openAnalyticsSection } from "../analytics/analytics.address";
 import {
   figureReading,
   type WeeklyFigure,

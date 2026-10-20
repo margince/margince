@@ -6,13 +6,13 @@ import { Button, Card, PendingBody } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
+import { labelOf, type PurposeView } from "../../lib/preferences.logic";
 import { throwProblem } from "../../lib/problem";
 import {
   explainPublicError,
   LinkInvalidError,
   RateLimitedError,
 } from "../settings/preferences";
-import { labelOf, type PurposeView } from "../settings/preferences.logic";
 import { PublicPage } from "./publicpage";
 import "../settings/preferences.css";
 

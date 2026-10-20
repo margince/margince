@@ -2,11 +2,11 @@
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { company, jsonResponse } from "../../testing/company.fixtures";
+import { stubFetch } from "../../testing/company.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { CompanyScreen } from "./companies";
 import { openProfile, openRecordMenu, render } from "./companies.testkit";
-import { company, jsonResponse } from "./company.fixtures";
-import { stubFetch } from "./company.testkit";
 import { companyEditFields, mapCompanyUpdate } from "./companyform";
 
 afterEach(() => {

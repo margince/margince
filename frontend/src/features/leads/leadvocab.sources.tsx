@@ -42,8 +42,6 @@ import {
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { Locale } from "../../i18n/locale";
-import { isOption } from "../../lib/options";
-import { problemMessageOf } from "../../lib/problem";
 import {
   type DiscoveredLeadSource,
   type LeadSource,
@@ -52,7 +50,9 @@ import {
   sourceKeyLabel,
   useLeadSources,
   useSourceMutations,
-} from "./leadsources";
+} from "../../lib/leadsources";
+import { isOption } from "../../lib/options";
+import { problemMessageOf } from "../../lib/problem";
 import {
   leadsColumn,
   useRemovalFocus,

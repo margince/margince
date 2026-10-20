@@ -14,14 +14,14 @@ import { QueryStates } from "../../design-system/querystates";
 import { Select, type SelectOption } from "../../design-system/select";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { unwrap } from "../../lib/problem";
-import { invalidateCompany } from "../../lib/recordwritekeys";
 import {
   type FactGroup,
   factCategoryLabelKey,
   factFieldLabelKey,
   listFacts,
-} from "../records/factview";
+} from "../../lib/factview";
+import { unwrap } from "../../lib/problem";
+import { invalidateCompany } from "../../lib/recordwritekeys";
 import { FactRow } from "./companyfactrow";
 import { isTechnicalFact } from "./companytechnical";
 import "./company360.css";

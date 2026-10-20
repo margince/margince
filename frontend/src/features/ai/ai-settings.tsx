@@ -4,9 +4,12 @@ import { formatNumber } from "../../format/format";
 import { formatElapsed, useNow } from "../../format/now";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import {
+  answersFromStandIn,
+  useProviderHealth,
+} from "../../lib/ai-provider-health";
+import { boundProviders, type RoutingRead } from "../../lib/ai-routing-query";
 import { useCan } from "../../lib/capability";
-import { answersFromStandIn, useProviderHealth } from "./ai-provider-health";
-import { boundProviders, type RoutingRead } from "./ai-routing-query";
 import { type LastCall, useLastCallAt } from "./aicalls";
 import "./ai-settings.css";
 

@@ -9,8 +9,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { day, renderWorklist } from "../../testing/worklist.testkit";
 import { TeamExceptionsPanel } from "./worklist.exceptions";
-import { day, renderWorklist } from "./worklist.testkit";
 
 afterEach(() => {
   cleanup();

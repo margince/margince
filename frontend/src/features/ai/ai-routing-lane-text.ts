@@ -8,7 +8,7 @@ import {
   type ModelCatalogue,
   type ModelLane,
   unreadablePrice,
-} from "./ai-models";
+} from "../../lib/ai-models";
 import { isOpenRouter } from "./ai-provider-links";
 import type { Lane } from "./ai-routing-lane";
 

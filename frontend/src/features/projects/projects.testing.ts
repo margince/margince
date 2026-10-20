@@ -3,9 +3,9 @@
 
 import { type Mock, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { emptyPage, jsonResponse } from "../../testing/company.fixtures";
 import { meFixture } from "../../testing/mefixture";
-import { emptyPage, jsonResponse } from "../companies/company.fixtures";
-import { COMPANY, project, project360 } from "./projects.fixtures";
+import { COMPANY, project, project360 } from "../../testing/projects.fixtures";
 
 type Project = components["schemas"]["Project"];
 type Project360 = components["schemas"]["Project360"];

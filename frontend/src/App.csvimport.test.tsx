@@ -11,9 +11,9 @@ import {
   ASYNC_UTIL_TIMEOUT_MS,
   SLOWEST_MEASURED_TEST_MS,
 } from "../vitest.budget";
-import { formatFixture } from "./features/import/import.fixtures";
 import { navigate } from "./lib/router";
 import { memoryStorage, renderApp, teardownApp } from "./testing/appharness";
+import { formatFixture } from "./testing/import.fixtures";
 import { meFixture } from "./testing/mefixture";
 
 // The run page's unsaved guard is the shell's own (App.tsx), which holds the

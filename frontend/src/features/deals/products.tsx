@@ -1,6 +1,7 @@
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
+import { ArchiveAction } from "../../components/archive";
 import { CreateAction, type CreateField } from "../../components/create";
 import { EditAction } from "../../components/edit";
 import {
@@ -24,8 +25,7 @@ import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
-import { billingOf, billingPatchOf } from "../projects/billingclassification";
-import { ArchiveAction } from "../records/archive";
+import { billingOf, billingPatchOf } from "./billingclassification";
 import "../lists/listsection.css";
 import { currencyOptions } from "../../format/currencychoices";
 import {

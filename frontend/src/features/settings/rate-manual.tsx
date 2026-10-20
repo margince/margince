@@ -17,17 +17,17 @@ import { Heading } from "../../design-system/heading";
 import { WriteRefused } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
 import { today } from "../../format/calendarday";
-import { PER_MTOK_PRICE } from "../../format/priceinput";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { problemMessageOf, unwrap } from "../../lib/problem";
-import type { ModelLane } from "../ai/ai-models";
+import type { ModelLane } from "../../lib/ai-models";
 import {
   offeredModels,
   useAiModelCatalogue,
   useAvailableModels,
-} from "../ai/ai-models";
+} from "../../lib/ai-models";
+import { problemMessageOf, unwrap } from "../../lib/problem";
 import { DECISION_PROVIDERS, PROVIDERS } from "../ai/ai-routing-fields";
+import { PER_MTOK_PRICE } from "./priceinput";
 import "./rates.css";
 
 type SheetRow = components["schemas"]["AiModelRate"];

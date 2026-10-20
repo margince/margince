@@ -20,13 +20,13 @@ import { useState } from "react";
 import { Button } from "../../design-system/atoms";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { intentAbout } from "../../lib/compose.intent";
 import {
   ChannelReplyAction,
   ComposeModal,
   RELINK_KINDS,
   type RelinkKind,
 } from "../mail/compose";
-import { intentAbout } from "../mail/compose.intent";
 import { phrasedReasons, reasonText } from "./worklist.copy";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
 

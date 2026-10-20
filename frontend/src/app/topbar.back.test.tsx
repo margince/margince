@@ -7,7 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { navigate, type Route, useRoute } from "../lib/router";
 import { sessionOnlyFetch } from "../testing/appharness";
-import { ignoreSearch, newClient, renderWith } from "./testing/shellharness";
+import { ignoreSearch, newClient, renderWith } from "../testing/shellharness";
 import { TopBar } from "./topbar";
 
 // The way back from a record. The installed app has no browser Back. The

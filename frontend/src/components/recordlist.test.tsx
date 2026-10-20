@@ -1,0 +1,110 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+import type { ListQuery, ListState } from "./listquery";
+import {
+  createdColumn,
+  mineEmptyNote,
+  ownerColumn,
+  standardViews,
+} from "./recordlist";
+
+const here = dirname(fileURLToPath(import.meta.url));
+
+// The record lists that share the Owner/Created columns and the standard
+// views. A fourth owner-scoped list joins this array, not the copy-paste.
+const RECORD_LISTS = [
+  "features/contacts/contacts.tsx",
+  "features/companies/companies.list.tsx",
+  "features/leads/leads.list.tsx",
+];
+
+describe("one record list, three record types", () => {
+  it("every record list takes Owner and Created from recordlist.tsx, never its own copy", () => {
+    // Three lists carried three copies of the Owner column, and a fix on two
+    // of them missed the third. A screen that spells its own
+    // `key: "owner"` reintroduces exactly that.
+    for (const file of RECORD_LISTS) {
+      const source = readFileSync(join(here, "..", file), "utf8");
+      expect(source, `${file} imports the shared columns`).toMatch(
+        /from "[./a-z]*\/recordlist"/,
+      );
+      expect(source, `${file} defines its own owner column`).not.toMatch(
+        /key:\s*"owner"/,
+      );
+      expect(source, `${file} defines its own created column`).not.toMatch(
+        /key:\s*"created"/,
+      );
+      expect(source, `${file} spells its own Mine view`).not.toMatch(
+        /label:\s*"list\.viewMine"/,
+      );
+    }
+  });
+
+  it("the standard views are All, and Mine only for a signed-in reader", () => {
+    const t = ((key: string) => key) as Parameters<typeof ownerColumn>[0];
+    expect(ownerColumn(t).sort).toBe("owner_id");
+    // The zone is what the column RENDERS its dates in; this line asserts what
+    // it SORTS on, which the zone cannot change. Any zone the column would
+    // accept states the same claim.
+    expect(createdColumn(t, "en", "Europe/Berlin").sort).toBe("created_at");
+    expect(standardViews(undefined).map((v) => v.label)).toEqual([
+      "list.viewAll",
+    ]);
+    expect(standardViews("u-1").map((v) => v.label)).toEqual([
+      "list.viewAll",
+      "list.viewMine",
+    ]);
+    expect(standardViews("u-1")[1]?.filters).toEqual({ owner_id: "u-1" });
+    expect(
+      standardViews("u-1", { sort: "", mineFirst: true }).map((view) => ({
+        label: view.label,
+        sort: view.sort,
+      })),
+    ).toEqual([
+      { label: "list.viewMine", sort: "" },
+      { label: "list.viewAll", sort: "" },
+    ]);
+  });
+});
+
+describe("the Mine empty note", () => {
+  const t = ((key: string) => key) as Parameters<typeof mineEmptyNote>[0]["t"];
+  const listOn = (query: Partial<ListQuery>): ListState<{ id: string }> => ({
+    rows: [],
+    query: {
+      q: "",
+      sort: "",
+      includeArchived: false,
+      perPage: 25,
+      filters: {},
+      ...query,
+    },
+    setQuery: () => {},
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: () => {},
+    hasMore: false,
+    loadMore: () => {},
+  });
+  const note = (query: Partial<ListQuery>) =>
+    mineEmptyNote({
+      t,
+      state: listOn(query),
+      viewerId: "u-1",
+      unit: "unit.deals",
+    });
+
+  it("names ownership when Mine is the only narrowing", () => {
+    expect(note({ filters: { owner_id: "u-1" } })).toBeDefined();
+  });
+
+  it("leaves a search or another filter to the table's own line", () => {
+    expect(note({ q: "acme", filters: { owner_id: "u-1" } })).toBeUndefined();
+    expect(
+      note({ filters: { owner_id: "u-1", stage_id: "s-1" } }),
+    ).toBeUndefined();
+  });
+});

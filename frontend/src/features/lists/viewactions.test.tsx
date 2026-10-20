@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { type SavedView, useSavedViews } from "./savedviews.queries";
+import { type SavedView, useSavedViews } from "../../lib/savedviews.queries";
 import { DeleteViewAction, RenameViewAction } from "./viewactions";
 
 // One saved view's Rename and Delete, each its own dialog, served to a caller

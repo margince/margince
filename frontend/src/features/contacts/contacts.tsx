@@ -9,6 +9,7 @@ import {
 } from "../../components/create";
 import { useObjectCustomFields } from "../../components/customfields.form";
 import { EntityRef } from "../../components/entityref";
+import { searchCompanies } from "../../components/filterreference";
 import {
   type ListPage,
   type ListQuery,
@@ -16,19 +17,6 @@ import {
   listFetchLimit,
   useListQuery,
 } from "../../components/listquery";
-import { Badge } from "../../design-system/atoms";
-import { Avatar } from "../../design-system/avatar";
-import { useToast } from "../../design-system/toast";
-import { normalizeProfileUrl } from "../../format/profileurl";
-import { useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
-import { useViewerId } from "../../lib/session";
-import { listQueryParams } from "../../lib/tagfilter";
-import { VCardImportAction, VCardImportPage } from "../import/vcard-import";
-import { searchCompanies } from "../lists/filterreference";
-import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import {
   createdColumn,
   lastActivityColumn,
@@ -37,8 +25,20 @@ import {
   standardViews,
   tagsColumn,
   useOwnerTagChips,
-} from "../records/recordlist";
+} from "../../components/recordlist";
+import { Badge } from "../../design-system/atoms";
+import { Avatar } from "../../design-system/avatar";
+import { useToast } from "../../design-system/toast";
+import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import { unwrap } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
+import { useViewerId } from "../../lib/session";
+import { listQueryParams } from "../../lib/tagfilter";
+import { VCardImportAction, VCardImportPage } from "../import/vcard-import";
+import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import { contactCreateFields, mapContactBody } from "./contactformfields";
+import { normalizeProfileUrl } from "./profileurl";
 
 // Contacts list + contact 360 (B-EP09.10a/b). Every row carries its
 // provenance chip (captured_by is server truth); the 360 renders the

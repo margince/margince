@@ -16,7 +16,7 @@ import {
   row,
   stub,
   stubWalk,
-} from "./worklist.testkit";
+} from "../../testing/worklist.testkit";
 
 const MORE = en["worklist.more"];
 

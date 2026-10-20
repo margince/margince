@@ -6,8 +6,8 @@ import { currencyOptions } from "../../format/currencychoices";
 import { toMinorUnits } from "../../format/minorunits";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { currencyBeside } from "../../lib/dealcurrency";
 import { unwrap } from "../../lib/problem";
-import { currencyBeside } from "../deals/dealcurrency";
 import { useProjectCreateForm } from "../projects/projects.create";
 
 // What a rep can START from the company page.

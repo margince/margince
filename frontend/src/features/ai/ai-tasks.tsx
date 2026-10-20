@@ -6,11 +6,11 @@ import { EmptyState } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { useT } from "../../i18n";
+import { useProviderHealth } from "../../lib/ai-provider-health";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { AiFeaturesWithheldPanel, useAiStatus } from "./ai-admin";
 import { AiFeatureTable } from "./ai-feature-table";
 import { useAiHealth } from "./ai-health";
-import { useProviderHealth } from "./ai-provider-health";
 import { TaskSheet } from "./ai-task-sheet";
 import { PanelTitle } from "./ai-terms";
 

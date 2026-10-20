@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
+import { missingCalendarWriteGrant } from "../../lib/connector-status";
 import { unwrap } from "../../lib/problem";
-import { missingCalendarWriteGrant } from "../capture/connector-status";
 import { useConnectors } from "../capture/connectors";
 
 export function useBookingCalendar(provider: string, loadCalendars = true) {

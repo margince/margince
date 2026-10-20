@@ -16,8 +16,8 @@ import { useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
-import { GroupRoleGrants } from "../../screens/group-role-grants";
 import { useOAuthApp, type Vendor } from "../automations/oauth-app";
+import { GroupRoleGrants } from "./group-role-grants";
 import { useMyMfa } from "./mfa.queries";
 import {
   AUTHENTICATION_POLICY_KEY,

@@ -3,6 +3,7 @@ import { Webhook } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { ArchiveAction } from "../../components/archive";
 import {
   Badge,
   Button,
@@ -18,7 +19,6 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemCode, throwProblem, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
-import { ArchiveAction } from "../records/archive";
 import { WebhookSubscriptionDrawer } from "./webhookdrawer";
 import "./webhooks.css";
 

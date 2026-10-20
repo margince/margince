@@ -10,8 +10,11 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import {
+  allowedPreview,
+  isPreviewDoor,
+} from "../../testing/sendpermission.testkit";
 import { ComposeModal } from "./compose";
-import { allowedPreview, isPreviewDoor } from "./sendpermission.testkit";
 
 // The composer warns about an address that is known not to arrive.
 //

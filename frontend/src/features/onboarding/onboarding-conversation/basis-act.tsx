@@ -11,10 +11,10 @@ import { QueryGate } from "../../../design-system/querystates";
 import { ordinalNumber } from "../../../format/format";
 import { useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
+import { useCurrencyNote } from "../../../lib/installation-settings.currency";
 import { problemFieldErrorsOf } from "../../../lib/problem";
 import { useInstallationSettings } from "../../../lib/uploadlimit";
 import { useUpdateInstallationSettings } from "../../sign-in/installation-settings";
-import { useCurrencyNote } from "../../sign-in/installation-settings.currency";
 import type {
   ConversationEvent,
   ConversationState,

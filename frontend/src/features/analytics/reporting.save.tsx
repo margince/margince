@@ -18,6 +18,7 @@ import { Modal } from "../../design-system/modal";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { throwProblem, unwrap } from "../../lib/problem";
+import { CardPreview } from "./reporting.cardpreview";
 import { ReportingFilters } from "./reporting.filters";
 import {
   blocksOf,
@@ -263,6 +264,12 @@ export function SaveReportingDialog({
                 layout={kept}
                 choices={cardChoices(kept, metricBlocks)}
                 onChange={setLayout}
+                preview={(choice) => (
+                  <CardPreview
+                    selection={{ ...selection, metrics }}
+                    choice={choice}
+                  />
+                )}
               />
             </Disclosure>
           </div>

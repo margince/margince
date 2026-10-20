@@ -6,7 +6,7 @@ import { Heading } from "../../../design-system/heading";
 import { formatNumber } from "../../../format/format";
 import { useLocale, usePluralKey, useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
-import { coldFieldLabel } from "../../settings/coldfieldlabels";
+import { coldFieldLabel } from "../../../lib/coldfieldlabels";
 import type { CompanyDraft, CompanyFieldName } from "../onboarding";
 import { REQUIRED_FIELDS } from "../onboarding";
 import { useFactSelection } from "../onboarding-facts";
