@@ -19,6 +19,8 @@ export type SubField = {
   // Granularity for a number input. Omitted means the browser's default of 1,
   // which rejects any fractional entry.
   step?: string;
+  // See CreateField.min.
+  min?: string;
 };
 
 export type CreateField = {
