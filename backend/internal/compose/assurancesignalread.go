@@ -60,7 +60,7 @@ func assuranceSignalExceptions(ctx context.Context, tx pgx.Tx, owners []ids.UUID
 	}
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
-	signalScope, err := auth.SignalScopeClause(ctx, "s", arg)
+	signalScope, err := auth.SignalScopeClause(ctx, "signal_subject", arg)
 	if err != nil {
 		return nil, err
 	}
@@ -98,11 +98,11 @@ func assuranceSignalExceptions(ctx context.Context, tx pgx.Tx, owners []ids.UUID
   SELECT 1 FROM deal_suggestion s WHERE s.id::text = e.observed->>'suggestion_id'
   AND s.state = 'open' AND `+suggestionScope+`) THEN e.observed ELSE e.observed - 'suggestion_id' END`, 1)
 	rows, err := tx.Query(ctx, `SELECT `+columns+`, c.display_name, c.owner_id
- FROM assurance_exception e JOIN signal s ON s.id = e.subject_id
- JOIN company c ON c.id = s.resolved_company_id
+ FROM assurance_exception e JOIN signal signal_subject ON signal_subject.id = e.subject_id
+ JOIN company c ON c.id = signal_subject.resolved_company_id
  WHERE e.subject_kind = 'signal' AND e.status = 'open'
- AND s.archived_at IS NULL AND c.archived_at IS NULL AND `+signalScope+`
- AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) cite
+ AND signal_subject.archived_at IS NULL AND c.archived_at IS NULL AND `+signalScope+`
+ AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(signal_subject.evidence) cite
   WHERE cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
    WHERE ca.id = `+storekit.CitedActivityID("cite")+` AND ca.archived_at IS NULL AND `+content+`))
  ORDER BY e.last_seen_at DESC, e.id`, args...)

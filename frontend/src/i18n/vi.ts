@@ -853,6 +853,8 @@ export const vi = {
   "dealSuggestion.field.amount": "Số tiền",
   "dealSuggestion.field.currency": "Loại tiền",
   "dealSuggestion.field.stage": "Giai đoạn",
+  "dealSuggestion.accountOwner": "Phụ trách công ty",
+  "dealSuggestion.unassignedOwner": "Chưa phân công",
   "dealSuggestion.field.owner": "Người chịu trách nhiệm",
   "dealSuggestion.ownerMe": "Tôi",
   "dealSuggestion.field.closeDate": "Ngày chốt dự kiến",
@@ -5460,9 +5462,10 @@ export const vi = {
     "Liên kết sẽ ngừng hoạt động ngay với bất kỳ ai có liên kết. Không thể mở lại liên kết đã đóng.",
   "analytics.frame": "Tính đến {asOf} · {zone}",
   "review.unlinkedSignal": "Nhu cầu mua chưa có cơ hội bán hàng",
+  "review.signalNotRelevant": "Không liên quan",
   "review.signalOccurred": "Ngày của nguồn: {date}",
   "review.uncertainBuyer":
-    "Xác nhận ai là người mua và họ đại diện cho công ty nào trước khi tạo thương vụ.",
+    "Xác nhận ai muốn mua và họ đại diện cho công ty nào trước khi tạo deal.",
   "review.historicalSignal":
     "Nguồn này đã cũ. Kiểm tra xem cơ hội còn hiện tại trước khi liên kết.",
   "review.title": "Kiểm tra trước khi đưa nhận định",

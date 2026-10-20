@@ -17,6 +17,9 @@ func TestQuoteProofChecksCurrentWordsWithoutRetainingThem(t *testing.T) {
 	if _, ok := VerifyQuote("Hallo. Wir verlängern den Pilot.", proof); ok {
 		t.Fatal("changed words satisfied the old proof")
 	}
+	if _, ok := VerifyQuote("Hallo. Wir beenden den Pilot. Actually, all services continue.", proof); ok {
+		t.Fatal("changed source context satisfied the old scope proof")
+	}
 	for _, invalid := range []QuoteProof{{Start: -1}, {Start: 0, End: 1000}, {Start: 0, End: 1, SHA256: "wrong"}} {
 		if _, ok := VerifyQuote("text", invalid); ok {
 			t.Fatalf("invalid proof admitted: %+v", invalid)

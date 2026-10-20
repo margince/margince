@@ -169,17 +169,24 @@ func (s *Store) Resolve(ctx context.Context, exceptionID ids.UUID, in Resolution
 
 // A suppressing answer requires write authority over its subject.
 func ensureAnswerable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID) error {
-	if err := auth.Require(ctx, subjectKindDeal, principal.ActionUpdate); err != nil {
-		if signalErr := auth.Require(ctx, subjectKindSignal, principal.ActionUpdate); signalErr != nil {
-			return err
-		}
+	kinds := make([]string, 0, 2)
+	dealErr := auth.Require(ctx, subjectKindDeal, principal.ActionUpdate)
+	if dealErr == nil {
+		kinds = append(kinds, subjectKindDeal)
 	}
+	if signalErr := auth.Require(ctx, subjectKindSignal, principal.ActionUpdate); signalErr == nil {
+		kinds = append(kinds, subjectKindSignal)
+	}
+	if len(kinds) == 0 {
+		return dealErr
+	}
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	query := fmt.Sprintf(`SELECT subject_kind, subject_id FROM assurance_exception
+ WHERE id = $%d AND status = 'open' AND subject_kind = ANY($%d) FOR UPDATE`, arg(exceptionID), arg(kinds))
 	var kind string
 	var subjectID ids.UUID
-	err := tx.QueryRow(ctx, `
-		SELECT subject_kind, subject_id FROM assurance_exception
-		WHERE id = $1 AND status = 'open'
-		FOR UPDATE`, exceptionID).Scan(&kind, &subjectID)
+	err := tx.QueryRow(ctx, query, args...).Scan(&kind, &subjectID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return apperrors.ErrNotFound
 	}

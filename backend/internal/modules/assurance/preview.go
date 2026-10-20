@@ -89,7 +89,7 @@ func (s *Scanner) Preview(ctx context.Context, now time.Time) (Preview, error) {
 		}
 		pass := askEveryRule(now, subjects, s.cfg)
 		if _, err := s.askSignals(ctx, tx, now, &pass); err != nil {
-			return err
+			return fmt.Errorf("%w: %w", errSubjectsUnreadable, err)
 		}
 		out.EligibleDeals = pass.eligible
 		out.Counts = countByType(pass.findings())

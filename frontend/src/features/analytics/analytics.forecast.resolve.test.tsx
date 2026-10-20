@@ -59,12 +59,14 @@ function show({
   findings = [FIRST, SECOND],
   dealActions = ["read", "update"],
   covered = false,
+  signalActions = ["read", "update"],
 }: {
   refuse?: { status: number; detail: string };
   hold?: Promise<void>;
   findings?: InputCheck[];
   dealActions?: ("read" | "update" | "create")[];
   covered?: boolean;
+  signalActions?: ("read" | "update")[];
 } = {}) {
   const posted: Posted[] = [];
   const reads = { assurance: 0 };
@@ -98,7 +100,7 @@ function show({
           meFixture({
             allow: {
               deal: dealActions,
-              signal: ["read", "update"],
+              signal: signalActions,
               forecast: ["read", "update"],
             },
           }),
@@ -389,7 +391,7 @@ it("keeps a newly qualified deal in the answer and files the signal only after c
   await user.click(await answerButton("Acme"));
   const answer = await screen.findByRole("dialog");
   await user.click(
-    await within(answer).findByRole("radio", { name: "Link to existing deal" }),
+    within(answer).getByRole("radio", { name: "Link to existing deal" }),
   );
   await user.click(
     await within(answer).findByRole("button", { name: "New deal" }),
@@ -405,7 +407,7 @@ it("keeps a newly qualified deal in the answer and files the signal only after c
     company_id: "company-one",
     name: "New support",
   });
-  const save = await within(answer).findByRole("button", {
+  const save = within(answer).getByRole("button", {
     name: "Save answer",
   });
   await waitFor(() => expect(save.hasAttribute("disabled")).toBe(false));
@@ -415,4 +417,31 @@ it("keeps a newly qualified deal in the answer and files the signal only after c
     outcome: "fixed_record",
     deal_id: "new-support",
   });
+});
+
+it("explains when a signal reader cannot answer the finding", async () => {
+  const user = userEvent.setup();
+  show({
+    signalActions: ["read"],
+    findings: [
+      {
+        ...FIRST,
+        type: "unlinked_signal",
+        subject_kind: "signal",
+        subject_id: "signal-one",
+        subject: { type: "company", id: "company-one", label: "Acme" },
+        claim: { company_id: "company-one" },
+      },
+    ],
+  });
+  await user.click(await answerButton("Acme"));
+  const sheet = await screen.findByRole("dialog");
+  expect(
+    await within(sheet).findByText(
+      /You do not have permission for this action/,
+    ),
+  ).toBeTruthy();
+  expect(
+    within(sheet).queryByRole("button", { name: "Save answer" }),
+  ).toBeNull();
 });

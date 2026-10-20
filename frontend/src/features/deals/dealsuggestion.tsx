@@ -11,6 +11,7 @@
 
 import { type ReactNode, useId, useState } from "react";
 import { useAssignableUserOptions } from "../../components/assigneepicker";
+import { EntityRef } from "../../components/entityref";
 import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
 import { DateInput, isISODate } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
@@ -82,12 +83,22 @@ export function DealSuggestionCard({
           />
           <ConfidenceMeter level={confidenceLevel(suggestion.confidence)} />
         </Row>
-        <p className="proposal-value">
+        <p>
           <span className="staged-value">{suggestedName(suggestion, t)}</span>
         </p>
         {suggestion.amount_minor != null && suggestion.currency && (
           <p className="dealsuggestion-amount t-caption">
             {formatMoney(suggestion.amount_minor, suggestion.currency, locale)}
+          </p>
+        )}
+        {!compact && (
+          <p className="t-caption">
+            {t("dealSuggestion.accountOwner")}:{" "}
+            {suggestion.owner_id ? (
+              <EntityRef kind="user" id={suggestion.owner_id} />
+            ) : (
+              t("dealSuggestion.unassignedOwner")
+            )}
           </p>
         )}
         {!compact && (
