@@ -124,7 +124,7 @@
    rule so the panel clips the outer ones, and a wrapped row keeps its rules. */
 .brief-report-tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
   margin-block-start: -1px; /* ds:ignore one rule's width, clipped by the panel */
   margin-inline-start: -1px; /* ds:ignore one rule's width, clipped by the panel */
 }
@@ -178,6 +178,11 @@
 }
 .brief-report-figure-line {
   display: block;
+}
+/* A badge beside text keeps its whole word; the text beside it wraps. */
+.brief-report-keep {
+  display: flex;
+  flex: none;
 }
 /* The change on last week, as a pill the width of its words. */
 .brief-report-figure-delta {

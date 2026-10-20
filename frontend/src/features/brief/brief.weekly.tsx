@@ -129,7 +129,9 @@ function WeeklyNarrative({ review }: Readonly<{ review: WeeklyReview }>) {
   }
   return (
     <Card as="div" className="brief-report-narrative">
-      <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+      <span className="brief-report-keep">
+        <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+      </span>
       <p>{review.narrative}</p>
     </Card>
   );
@@ -343,11 +345,13 @@ function ClosedDeals({
                   {formatDate(deal.occurred_at, locale, recordZone)}
                 </time>
               </span>
-              <Badge tone={deal.outcome === "won" ? "success" : "warning"}>
-                {deal.outcome === "won"
-                  ? t("brief.report.won")
-                  : t("brief.report.lost")}
-              </Badge>
+              <span className="brief-report-keep">
+                <Badge tone={deal.outcome === "won" ? "success" : "warning"}>
+                  {deal.outcome === "won"
+                    ? t("brief.report.won")
+                    : t("brief.report.lost")}
+                </Badge>
+              </span>
               <span
                 className="brief-report-deal-amount t-num"
                 data-outcome={deal.outcome}
