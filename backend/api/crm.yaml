@@ -5164,9 +5164,10 @@ paths:
       summary: Open Deal Scout suggestions the caller may see, newest first.
       description: |
         A suggestion proposes opening a deal for a company that has no open deal,
-        from evidence the scout found: a held meeting with somebody at the company,
-        the pair of `new_opportunity` and `commitment_made` signals within thirty
-        days, or a proposal or contract sent to it as a document. A suggestion is
+        from a verified buyer request paired with a commitment on the same matter.
+        Source dates must be within thirty days of each other. Meetings and sent
+        proposals corroborate that request; neither establishes buyer intent alone.
+        Historical or uncertain requests remain input checks for qualification. A suggestion is
         listed only to a reader who may read the company and EVERY piece of its
         evidence. Suggestions are never deals: no deal list, board total, forecast
         or report counts them.
@@ -5194,7 +5195,7 @@ paths:
       operationId: acceptDealSuggestion
       x-agent-access: human-only
       security: [ { cookieAuth: [] } ]
-      summary: Open the suggested deal, with the caller's corrections.
+      summary: Open the suggested deal or link the evidence to an existing deal.
       description: |
         Creates the deal on the company, files the evidence messages under it and
         acknowledges the signals that raised it, in one transaction. A message the
@@ -5206,7 +5207,10 @@ paths:
         or superseded, and `409 suggestion_superseded` when the company has an
         open deal by now: the suggestion is retired and no second deal is
         opened. A replay under the same Idempotency-Key answers the first
-        result.
+        result. Supplying `existing_deal_id` instead links the evidence to a live
+        deal on the same company, requiring update access to that deal. It cannot
+        be combined with corrections. Opening a new deal requires create access
+        and rechecks the buyer attribution and source evidence.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -5241,6 +5245,11 @@ paths:
         suggestion_decided` when the suggestion was already decided.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DismissDealSuggestionRequest' }
       responses:
         '200':
           description: The dismissed suggestion.
@@ -34507,6 +34516,7 @@ components:
       type: object
       description: 'The caller''s corrections. An omitted field keeps the suggestion''s value.'
       properties:
+        existing_deal_id: { type: string, format: uuid, description: 'Link this evidence to a live deal at the same company instead of creating one. Requires permission to update that deal; cannot be combined with corrections.' }
         name: { type: string, minLength: 1, description: 'Without one the deal is named after the company.' }
         amount_minor: { type: integer, format: int64, minimum: 0 }
         no_amount: { type: boolean, description: 'Open the deal with no amount, dropping the one the suggestion proposed. Refused together with amount_minor or currency.' }
@@ -34514,6 +34524,14 @@ components:
         stage_id: { type: string, format: uuid, description: 'Any open stage; the deal opens in that stage''s pipeline.' }
         owner_id: { type: string, format: uuid }
         close_date: { type: string, format: date, description: 'A date the caller chose. Without one the deal carries the suggestion''s date, marked provisional.' }
+      additionalProperties: false
+    DismissDealSuggestionRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          enum: [not_a_deal, already_tracked, wrong_company, historical, other]
+          description: The reason kept with the audited decision. Omitted means not_a_deal.
       additionalProperties: false
     DealSuggestionAcceptance:
       type: object
@@ -48152,13 +48170,39 @@ components:
         resolved_by: { type: [string, 'null'], format: uuid, description: 'The colleague who answered; null once their account is deleted.' }
         resolved_at: { type: string, format: date-time }
 
+    SourceQuoteProof:
+      type: object
+      description: A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the normalized quoted substring.
+      required: [start, end, sha256]
+      properties:
+        start: { type: integer, minimum: 0 }
+        end: { type: integer, minimum: 1 }
+        sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+      additionalProperties: false
     SignalEvidence:
       type: object
       required: [snippet]
       properties:
+        source_quote: { $ref: '#/components/schemas/SourceQuoteProof' }
+        buyer_contact_id:
+          type: string
+          format: uuid
+          description: The buyer identified among the cited source’s verified participants.
+        commercial_role:
+          type: string
+          enum: [buyer, supplier, partner, provider, unknown]
+          description: The commercial role supported by the cited source, independent of recipient order.
+
         snippet: { type: string }
         source_type: { type: [string, 'null'], enum: [activity, deal, signal, relationship, page, contract, null] }
         source_id: { type: [string, 'null'] }
+        lifecycle_scope:
+          type: string
+          enum: [company, workstream, unknown]
+          description: Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+        workstream:
+          type: string
+          description: The engagement named in the cited words, when present. Never inferred from the company name.
 
     RecordCommunicationContextRequest:
       type: object
@@ -50858,8 +50902,8 @@ components:
 
             `subject_kind` and `subject_id` stay: they are the durable fields, and a
             client that has them and not this still draws today's label. Null when the
-            read that found this exception could not name the record — which today
-            means it is not a deal, since only a deal's findings are returned at all.
+            read could not name the record. A signal finding opens its verified
+            company while retaining the signal as its durable review subject.
         severity: { type: string, enum: [low, medium, high] }
         affected_minor:
           type: integer
@@ -50890,6 +50934,11 @@ components:
       type: object
       required: [outcome]
       properties:
+        deal_id:
+          type: string
+          format: uuid
+          description: For fixed_record on an unlinked signal, file its source evidence on this deal at the same company and settle the signal in the same transaction.
+
         outcome:
           type: string
           enum: [fixed_record, added_evidence, value_correct, not_relevant, remind_later, reassign]

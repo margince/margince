@@ -16039,13 +16039,38 @@ components:
         note: {type: [string, 'null'], description: 'What they wrote about it, if anything.'}
         resolved_by: {type: [string, 'null'], format: uuid, description: 'The colleague who answered; null once their account is deleted.'}
         resolved_at: {type: string, format: date-time}
+    SourceQuoteProof:
+      type: object
+      description: A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the normalized quoted substring.
+      required: [start, end, sha256]
+      properties:
+        start: {type: integer, minimum: 0}
+        end: {type: integer, minimum: 1}
+        sha256: {type: string, pattern: '^[a-f0-9]{64}$'}
+      additionalProperties: false
     SignalEvidence:
       type: object
       required: [snippet]
       properties:
+        source_quote: {$ref: '#/components/schemas/SourceQuoteProof'}
+        buyer_contact_id:
+          type: string
+          format: uuid
+          description: The buyer identified among the cited source’s verified participants.
+        commercial_role:
+          type: string
+          enum: [buyer, supplier, partner, provider, unknown]
+          description: The commercial role supported by the cited source, independent of recipient order.
         snippet: {type: string}
         source_type: {type: [string, 'null'], enum: [activity, deal, signal, relationship, page, contract, null]}
         source_id: {type: [string, 'null']}
+        lifecycle_scope:
+          type: string
+          enum: [company, workstream, unknown]
+          description: Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+        workstream:
+          type: string
+          description: The engagement named in the cited words, when present. Never inferred from the company name.
     SignalListResponse:
       type: object
       required: [data, page]
