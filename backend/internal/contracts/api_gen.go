@@ -46181,7 +46181,8 @@ type ReportingSelection struct {
 	Interval    *ReportingWindow              `json:"interval,omitempty"`
 
 	// Layout Sections of cards, in reading order. Absent means one untitled section of
-	// full-width cards in `blocks` order.
+	// full-width cards in `blocks` order. A report holds at most 20 cards in total,
+	// counted across all its sections.
 	Layout      *[]ReportingSection           `json:"layout,omitempty"`
 	Metrics     []ReportingMetricID           `json:"metrics"`
 	Period      ReportingSelectionPeriod      `json:"period"`

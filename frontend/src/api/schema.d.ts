@@ -36480,7 +36480,8 @@ export interface components {
             blocks: components["schemas"]["ReportingBlockKind"][];
             /**
              * @description Sections of cards, in reading order. Absent means one untitled section of
-             *     full-width cards in `blocks` order.
+             *     full-width cards in `blocks` order. A report holds at most 20 cards in total,
+             *     counted across all its sections.
              */
             layout?: components["schemas"]["ReportingSection"][];
         };

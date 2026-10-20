@@ -207,7 +207,7 @@ export const de = {
   "reporting.cardWidth": "Breite von {chart}",
   "reporting.widthFull": "Volle Breite",
   "reporting.widthHalf": "Halbe Breite",
-  "reporting.cardSection": "Abschnitt von {chart}",
+  "reporting.cardSection": "Abschnitt für {chart}",
   "reporting.removeCard": "{chart} entfernen",
   "reporting.addChart": "Diagramm hinzufügen",
   "reporting.chooseChart": "Diagramm zum Hinzufügen",
