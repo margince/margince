@@ -139,6 +139,11 @@ it("saves Customer tier when a background logo update changed the company versio
   });
   render(<CompanyScreen id="o-1" />);
   const user = userEvent.setup();
+  // The unset tier is the custom-field panel's one empty field, folded until
+  // it is opened.
+  await user.click(
+    await screen.findByRole("button", { name: "Show 1 empty field" }),
+  );
   await user.click(
     await screen.findByRole("button", { name: "Change Customer tier" }),
   );

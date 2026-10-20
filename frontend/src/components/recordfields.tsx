@@ -14,6 +14,7 @@ import { Button } from "../design-system/atoms";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineEditVerb } from "../design-system/inlinetext";
 import { Panel, PanelBody } from "../design-system/panel";
+import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { derivedRecordKeys } from "../lib/activitykeys";
 import type { EntityKind } from "../lib/entity";
@@ -92,6 +93,7 @@ type Props = {
 export function RecordFields(props: Readonly<Props>) {
   const t = useT();
   const plural = usePlural();
+  const { locale } = useLocale();
   const [showEmpty, setShowEmpty] = useState(false);
   const focus = useDetailsFocusField();
   const groups = props.groups ?? [];
@@ -147,7 +149,7 @@ export function RecordFields(props: Readonly<Props>) {
             {open
               ? t("record.hideEmptyFields")
               : plural("record.showEmptyFields", empty.length, {
-                  count: String(empty.length),
+                  count: formatNumber(empty.length, locale),
                 })}
           </Button>
         )}
