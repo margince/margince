@@ -639,40 +639,18 @@
   padding-top: var(--space-3);
   border-top: 1px solid var(--borderSubtle);
 }
-/* On a sheet wide enough for the name beside the verbs, the compact head is a
-   grid: the two share the first row, and the facts and pills span the head
-   under them. Narrower, the verbs wrap under the name, as on a phone. */
-@container sheet (min-width: 56rem) {
-  .record-head-compact {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    column-gap: var(--space-4);
-    row-gap: 0;
-    align-items: start;
-  }
-  .record-head-compact > .avatar {
-    grid-row: 1 / span 3;
-  }
-  .record-head-compact .record-id {
-    display: contents;
-  }
-  .record-head-compact .record-name-row {
-    grid-column: 2;
-    grid-row: 1;
-    align-self: center;
-  }
-  .record-head-compact > :is(.record-actions-inline, .record-controls) {
-    grid-column: 3;
-    grid-row: 1;
-    align-self: center;
-  }
-  .record-head-compact > :is(.record-badges, .record-standing),
-  .record-head-compact .record-id > :is(.record-sub, .record-pulse) {
-    grid-column: 2 / -1;
-  }
-  .record-head-compact .record-sub {
-    margin-top: var(--space-2);
-  }
+/* The compact head lays out as the prototype does: the mark and the identity
+   at their natural width, the verbs at the far end, and the verbs wrapping
+   under the identity when both do not fit. The name keeps its line, rather
+   than giving its width to a row of buttons. */
+.record-head-compact {
+  row-gap: var(--space-4);
+}
+.record-head-compact .record-id {
+  flex: 0 1 auto;
+}
+.record-head-compact .record-sub {
+  margin-top: var(--space-2);
 }
 
 /* The record as one sheet: head, strip and the open tab's work on one raised
@@ -680,7 +658,6 @@
    page ground rather than as loose cards on it. Its fields stand beside it,
    off the sheet (recordview.tsx). */
 .record-sheet {
-  container: sheet / inline-size;
   --sheetInset: var(--space-8);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
