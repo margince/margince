@@ -12204,6 +12204,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/capture/domain-questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Review the calling reader’s undecided domains.
+         * @description Lists only the reader’s own domain questions, oldest first, with continuation and source evidence.
+         */
+        get: operations["listDomainQuestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/domain-questions/{domain}/keep": {
         parameters: {
             query?: never;
@@ -22351,6 +22371,21 @@ export interface components {
             /** @description Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts. */
             shared_posture_allowed?: boolean;
         };
+        DomainQuestionPage: {
+            data: components["schemas"]["DomainQuestion"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        DomainQuestion: {
+            domain: string;
+            reason_code: string;
+            /** Format: date-time */
+            asked_at: string;
+            deferred: boolean;
+            /** Format: date-time */
+            evidence_at?: string;
+            effective_url?: string;
+            redirect_chain?: string[];
+        };
         /**
          * @description One domain and where its company question stands. `suppressed` refuses it a company —
          *     a vendor or bulk sender the business does not sell to — while `admitted` is a human
@@ -22399,7 +22434,7 @@ export interface components {
              *       carries its stored sentence.
              * @enum {string}
              */
-            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "unknown";
+            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "reserved_domain" | "unknown";
             /** @description The reason as its author wrote it, in their words. Sent only with `reason_code` `stated`. */
             note?: string;
             /**
@@ -22421,7 +22456,7 @@ export interface components {
              *     to is a human's call rather than the machine's.
              * @enum {string}
              */
-            source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence" | "near_duplicate";
+            source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "reserved_domain";
             /**
              * Format: date-time
              * @description When the decision was recorded. For an `undecided` domain, when the row last moved.
@@ -44913,6 +44948,8 @@ export interface components {
              * @description The member explicitly asked to decide, independent of who has permission to approve.
              */
             readonly requested_decider_id?: string;
+            /** @description The domain question's reason code, rendered in the reader's language. */
+            domain_reason_code?: string;
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
             id: string;
@@ -46388,6 +46425,8 @@ export interface components {
             promise_recipients?: components["schemas"]["WorklistPromiseRecipient"][];
             /** @description The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access. */
             source_record?: components["schemas"]["AttentionSubject"];
+            /** @description The domain question's reason code, rendered in the reader's language. */
+            domain_reason_code?: string;
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
             id: string;
@@ -47119,7 +47158,7 @@ export interface components {
              *     urgency.
              * @enum {string}
              */
-            key: "likely_automated" | "company_match" | "uncertain_contact" | "duplicates" | "held_draft" | "system_incident";
+            key: "likely_automated" | "company_match" | "uncertain_contact" | "duplicates" | "held_draft" | "system_incident" | "domain_questions";
             /** @description How many decisions this row stands for. */
             count: number;
             /**
@@ -66752,6 +66791,43 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listDomainQuestions: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of personal domain questions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainQuestionPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     keepDomainQuestion: {
         parameters: {
             query?: never;
@@ -66762,7 +66838,17 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: uuid
+                     * @description Match to this visible, writable company instead of creating one.
+                     */
+                    company_id?: string;
+                };
+            };
+        };
         responses: {
             /** @description Where the domain stands now that it has an answer. */
             200: {

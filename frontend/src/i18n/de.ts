@@ -8488,6 +8488,31 @@ export const de = {
   "blockedDomains.source.verdict": "Modellergebnis",
   "blockedDomains.source.heuristic": "Heuristik",
   "blockedDomains.source.human": "Mensch",
+  "blockedDomains.source.reservedDomain":
+    "Reservierte Domain: Firmenerkennung pausiert",
+  "blockedDomains.source.forwardedIdentity":
+    "Eine andere Website antwortete. Firmenzuordnung prüfen.",
+  "worklist.domainReview.defer": "Zurückstellen",
+  "worklist.domainReview.restore": "Zur Prüfung zurückholen",
+  "worklist.domainReview.deferEffect":
+    "Zurückstellen entfernt diese Frage aus deiner Warteschlange, bis neue Belege eintreffen. Hier bleibt sie erreichbar.",
+  "worklist.domainReview.title": "Domains prüfen",
+  "worklist.domainReview.loading": "Domains werden geladen…",
+  "worklist.domainReview.empty": "Keine Domains zu prüfen.",
+  "worklist.domainReview.more": "Weitere laden",
+  "worklist.domainReview.forwarded": "Antwortende Website: {url}",
+  "worklist.domainReview.evidenceAt": "Neuester Beleg: {date}",
+  "worklist.domainReview.noEvidenceDate": "Datum des Belegs fehlt",
+  "worklist.domainReview.match": "Firma zuordnen",
+  "worklist.domainReview.matchEffect":
+    "Die Zuordnung verknüpft diese Domain und ihre erfassten Kontakte mit der gewählten Firma.",
+  "worklist.domainReview.create": "Firma erstellen",
+  "worklist.domainReview.retry": "Website erneut lesen",
+  "worklist.domainReview.exclude": "Domain ausschließen",
+  "worklist.domainReview.effects":
+    "Erstellen legt eine Firma an. Erneut lesen lässt die Identität offen. Ausschließen stoppt die Erfassung für deine Postfächer.",
+  "worklist.batch.domain_questions_one": "{count} Domain prüfen",
+  "worklist.batch.domain_questions_other": "{count} Domains prüfen",
   "blockedDomains.source.unevidenced":
     "Kein Unternehmen auf der Website genannt",
   "blockedDomains.source.staleEvidence": "Belegende E-Mails zu alt",

@@ -37,7 +37,8 @@ func markDispositionUnevidenced(ctx context.Context, tx pgx.Tx, domain, evidence
 		UPDATE company_domain_disposition
 		   SET pending_reason = 'unevidenced', evidence = NULLIF($2, ''),
 		       next_attempt_at = NULL, updated_at = now()
-		 WHERE domain = $1 AND status = $3`,
+		 WHERE domain = $1 AND status = $3
+ AND (pending_reason IS DISTINCT FROM 'unevidenced' OR evidence IS DISTINCT FROM NULLIF($2, ''))`,
 		domain, evidence, DomainPending); err != nil {
 		return fmt.Errorf("contacts: recording that %s evidenced no company: %w", domain, err)
 	}
@@ -89,7 +90,7 @@ func withholdForStaleEvidence(
 		       -- stop offering this domain until a message rearms it.
 		       next_attempt_at = NULL,
 		       updated_at = now()
-		 WHERE domain = $1 AND status = 'pending'`, in.Domain); err != nil {
+		 WHERE domain = $1 AND status = 'pending' AND pending_reason IS DISTINCT FROM 'stale_evidence'`, in.Domain); err != nil {
 		return false, fmt.Errorf("contacts: withholding %s for stale evidence: %w", in.Domain, err)
 	}
 	return true, nil
@@ -106,7 +107,7 @@ func withholdForStaleEvidence(
 func withholdForNearDuplicate(
 	ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput, rival CompanyCandidateScore,
 ) error {
-	evidence := fmt.Sprintf("%s resolved to %q, the name of more than one company already here (%q among them). "+
+	evidence := fmt.Sprintf("%s resolved to %q, a name already used by a company here (%q). "+
 		"Same company as one of them: add the domain to it. Different company: create this one.",
 		in.Domain, rival.CandidateValue, rival.IncumbentValue)
 	if _, err := tx.Exec(ctx, `
@@ -119,7 +120,7 @@ func withholdForNearDuplicate(
 		       -- mail rearms it.
 		       next_attempt_at = NULL,
 		       updated_at = now()
-		 WHERE domain = $1 AND status = 'pending'`,
+		 WHERE domain = $1 AND status = 'pending' AND (pending_reason IS DISTINCT FROM $2 OR evidence IS DISTINCT FROM $3)`,
 		in.Domain, PendingNearDuplicate, evidence); err != nil {
 		return fmt.Errorf("contacts: withholding %s for a name twin: %w", in.Domain, err)
 	}

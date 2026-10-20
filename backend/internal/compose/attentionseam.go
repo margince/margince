@@ -371,9 +371,11 @@ func (a attentionDomainQuestions) OpenDomainQuestions(ctx context.Context) ([]at
 	out := make([]attention.DomainQuestion, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, attention.DomainQuestion{
-			Domain:  row.Domain,
-			Reason:  row.Reason,
-			AskedAt: row.AskedAt,
+			Domain:     row.Domain,
+			Reason:     row.Reason,
+			ReasonCode: row.ReasonCode,
+			AskedAt:    row.AskedAt,
+			EvidenceAt: row.EvidenceAt,
 		})
 	}
 	return out, nil
@@ -436,4 +438,8 @@ func (a attentionSnapshots) Degradable(
 
 func (a attentionSnapshots) Detached(ctx context.Context) context.Context {
 	return database.Detached(ctx)
+}
+
+func (a attentionDomainQuestions) OwnsDomainQuestion(ctx context.Context, domain string) (bool, error) {
+	return a.store.OwnsDomainQuestion(ctx, domain)
 }

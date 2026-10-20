@@ -3309,14 +3309,16 @@ func (e BlockedDomainAdmission) Valid() bool {
 
 // Defines values for BlockedDomainReasonCode.
 const (
-	BlockedDomainReasonCodeBulkSender     BlockedDomainReasonCode = "bulk_sender"
-	BlockedDomainReasonCodeCompanyCreated BlockedDomainReasonCode = "company_created"
-	BlockedDomainReasonCodeKeptAsCompany  BlockedDomainReasonCode = "kept_as_company"
-	BlockedDomainReasonCodeNearDuplicate  BlockedDomainReasonCode = "near_duplicate"
-	BlockedDomainReasonCodeStaleEvidence  BlockedDomainReasonCode = "stale_evidence"
-	BlockedDomainReasonCodeStated         BlockedDomainReasonCode = "stated"
-	BlockedDomainReasonCodeUnevidenced    BlockedDomainReasonCode = "unevidenced"
-	BlockedDomainReasonCodeUnknown        BlockedDomainReasonCode = "unknown"
+	BlockedDomainReasonCodeBulkSender        BlockedDomainReasonCode = "bulk_sender"
+	BlockedDomainReasonCodeCompanyCreated    BlockedDomainReasonCode = "company_created"
+	BlockedDomainReasonCodeForwardedIdentity BlockedDomainReasonCode = "forwarded_identity"
+	BlockedDomainReasonCodeKeptAsCompany     BlockedDomainReasonCode = "kept_as_company"
+	BlockedDomainReasonCodeNearDuplicate     BlockedDomainReasonCode = "near_duplicate"
+	BlockedDomainReasonCodeReservedDomain    BlockedDomainReasonCode = "reserved_domain"
+	BlockedDomainReasonCodeStaleEvidence     BlockedDomainReasonCode = "stale_evidence"
+	BlockedDomainReasonCodeStated            BlockedDomainReasonCode = "stated"
+	BlockedDomainReasonCodeUnevidenced       BlockedDomainReasonCode = "unevidenced"
+	BlockedDomainReasonCodeUnknown           BlockedDomainReasonCode = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the BlockedDomainReasonCode enum.
@@ -3326,9 +3328,13 @@ func (e BlockedDomainReasonCode) Valid() bool {
 		return true
 	case BlockedDomainReasonCodeCompanyCreated:
 		return true
+	case BlockedDomainReasonCodeForwardedIdentity:
+		return true
 	case BlockedDomainReasonCodeKeptAsCompany:
 		return true
 	case BlockedDomainReasonCodeNearDuplicate:
+		return true
+	case BlockedDomainReasonCodeReservedDomain:
 		return true
 	case BlockedDomainReasonCodeStaleEvidence:
 		return true
@@ -3366,22 +3372,28 @@ func (e BlockedDomainSenderKind) Valid() bool {
 
 // Defines values for BlockedDomainSource.
 const (
-	BlockedDomainSourceHeuristic     BlockedDomainSource = "heuristic"
-	BlockedDomainSourceHuman         BlockedDomainSource = "human"
-	BlockedDomainSourceNearDuplicate BlockedDomainSource = "near_duplicate"
-	BlockedDomainSourceStaleEvidence BlockedDomainSource = "stale_evidence"
-	BlockedDomainSourceUnevidenced   BlockedDomainSource = "unevidenced"
-	BlockedDomainSourceVerdict       BlockedDomainSource = "verdict"
+	BlockedDomainSourceForwardedIdentity BlockedDomainSource = "forwarded_identity"
+	BlockedDomainSourceHeuristic         BlockedDomainSource = "heuristic"
+	BlockedDomainSourceHuman             BlockedDomainSource = "human"
+	BlockedDomainSourceNearDuplicate     BlockedDomainSource = "near_duplicate"
+	BlockedDomainSourceReservedDomain    BlockedDomainSource = "reserved_domain"
+	BlockedDomainSourceStaleEvidence     BlockedDomainSource = "stale_evidence"
+	BlockedDomainSourceUnevidenced       BlockedDomainSource = "unevidenced"
+	BlockedDomainSourceVerdict           BlockedDomainSource = "verdict"
 )
 
 // Valid indicates whether the value is a known member of the BlockedDomainSource enum.
 func (e BlockedDomainSource) Valid() bool {
 	switch e {
+	case BlockedDomainSourceForwardedIdentity:
+		return true
 	case BlockedDomainSourceHeuristic:
 		return true
 	case BlockedDomainSourceHuman:
 		return true
 	case BlockedDomainSourceNearDuplicate:
+		return true
+	case BlockedDomainSourceReservedDomain:
 		return true
 	case BlockedDomainSourceStaleEvidence:
 		return true
@@ -19597,6 +19609,7 @@ func (e WorklistBandBand) Valid() bool {
 // Defines values for WorklistBatchKey.
 const (
 	WorklistBatchKeyCompanyMatch     WorklistBatchKey = "company_match"
+	WorklistBatchKeyDomainQuestions  WorklistBatchKey = "domain_questions"
 	WorklistBatchKeyDuplicates       WorklistBatchKey = "duplicates"
 	WorklistBatchKeyHeldDraft        WorklistBatchKey = "held_draft"
 	WorklistBatchKeyLikelyAutomated  WorklistBatchKey = "likely_automated"
@@ -19608,6 +19621,8 @@ const (
 func (e WorklistBatchKey) Valid() bool {
 	switch e {
 	case WorklistBatchKeyCompanyMatch:
+		return true
+	case WorklistBatchKeyDomainQuestions:
 		return true
 	case WorklistBatchKeyDuplicates:
 		return true
@@ -27060,6 +27075,9 @@ type AttentionItem struct {
 	// Both now travel typed — `quiet_days` and `staged` below — and the client writes
 	// the sentence in the reader's own language.
 	Detail *string `json:"detail,omitempty"`
+
+	// DomainReasonCode The domain question's reason code, rendered in the reader's language.
+	DomainReasonCode *string `json:"domain_reason_code,omitempty"`
 
 	// DueAt When this is due (tasks), or when it lapses (approvals).
 	DueAt *time.Time `json:"due_at,omitempty"`
@@ -36388,6 +36406,23 @@ type DisqualifyLeadRequest struct {
 
 	// ReasonId An ACTIVE lead_disqualify_reason; 422 otherwise.
 	ReasonId *openapi_types.UUID `json:"reason_id,omitempty"`
+}
+
+// DomainQuestion defines model for DomainQuestion.
+type DomainQuestion struct {
+	AskedAt       time.Time  `json:"asked_at"`
+	Deferred      bool       `json:"deferred"`
+	Domain        string     `json:"domain"`
+	EffectiveUrl  *string    `json:"effective_url,omitempty"`
+	EvidenceAt    *time.Time `json:"evidence_at,omitempty"`
+	ReasonCode    string     `json:"reason_code"`
+	RedirectChain *[]string  `json:"redirect_chain,omitempty"`
+}
+
+// DomainQuestionPage defines model for DomainQuestionPage.
+type DomainQuestionPage struct {
+	Data []DomainQuestion `json:"data"`
+	Page PageInfo         `json:"page"`
 }
 
 // EmailAccess Who reads this message, and what this caller may do about that. `can_change` and
@@ -52397,6 +52432,9 @@ type WorklistItem struct {
 	// where it has none, a reason in `because` says why.
 	Dispositions *[]WorklistItemDispositions `json:"dispositions,omitempty"`
 
+	// DomainReasonCode The domain question's reason code, rendered in the reader's language.
+	DomainReasonCode *string `json:"domain_reason_code,omitempty"`
+
 	// DueAt When this is due, or when the meeting starts.
 	DueAt *time.Time `json:"due_at,omitempty"`
 
@@ -54436,6 +54474,28 @@ type ListWorkspaceCaptureActivityParams struct {
 type ListConsumerMailBaselineParams struct {
 	// Q Case-insensitive substring filter. Absent or empty lists from the top.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
+}
+
+// ListDomainQuestionsParams defines parameters for ListDomainQuestions.
+type ListDomainQuestionsParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// KeepDomainQuestionJSONBody defines parameters for KeepDomainQuestion.
+type KeepDomainQuestionJSONBody struct {
+	// CompanyId Match to this visible, writable company instead of creating one.
+	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
 }
 
 // PurgeCaptureExclusionParams defines parameters for PurgeCaptureExclusion.
@@ -60290,6 +60350,9 @@ type AddConsumerMailDomainJSONRequestBody = AddConsumerMailDomainRequest
 
 // CreateCaptureCounterpartyHoldJSONRequestBody defines body for CreateCaptureCounterpartyHold for application/json ContentType.
 type CreateCaptureCounterpartyHoldJSONRequestBody = CreateCaptureCounterpartyHoldRequest
+
+// KeepDomainQuestionJSONRequestBody defines body for KeepDomainQuestion for application/json ContentType.
+type KeepDomainQuestionJSONRequestBody KeepDomainQuestionJSONBody
 
 // CreateWorkspaceEmailDomainJSONRequestBody defines body for CreateWorkspaceEmailDomain for application/json ContentType.
 type CreateWorkspaceEmailDomainJSONRequestBody = CreateWorkspaceEmailDomainRequest
@@ -72855,6 +72918,9 @@ type ServerInterface interface {
 	// Lift a counterparty hold.
 	// (DELETE /capture/counterparty-holds/{id})
 	DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request, id Id)
+	// Review the calling reader’s undecided domains.
+	// (GET /capture/domain-questions)
+	ListDomainQuestions(w http.ResponseWriter, r *http.Request, params ListDomainQuestionsParams)
 	// Answer an open domain question by excluding the domain from your own capture.
 	// (POST /capture/domain-questions/{domain}/discard)
 	DiscardDomainQuestion(w http.ResponseWriter, r *http.Request, domain string)
@@ -76020,6 +76086,12 @@ func (_ Unimplemented) ShareCaptureCounterpartyHoldHistory(w http.ResponseWriter
 // Lift a counterparty hold.
 // (DELETE /capture/counterparty-holds/{id})
 func (_ Unimplemented) DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Review the calling reader’s undecided domains.
+// (GET /capture/domain-questions)
+func (_ Unimplemented) ListDomainQuestions(w http.ResponseWriter, r *http.Request, params ListDomainQuestionsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -87843,6 +87915,58 @@ func (siw *ServerInterfaceWrapper) DeleteCaptureCounterpartyHold(w http.Response
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteCaptureCounterpartyHold(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListDomainQuestions operation middleware
+func (siw *ServerInterfaceWrapper) ListDomainQuestions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDomainQuestionsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDomainQuestions(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -117286,6 +117410,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/capture/counterparty-holds/{id}", wrapper.DeleteCaptureCounterpartyHold)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/capture/domain-questions", wrapper.ListDomainQuestions)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/capture/domain-questions/{domain}/discard", wrapper.DiscardDomainQuestion)

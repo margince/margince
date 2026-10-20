@@ -67,6 +67,10 @@ func (w *siteDeepReadWorker) runTriage(ctx context.Context, args SiteDeepReadArg
 		return w.resolveUnreachable(ctx, said, args, claim, domain, siteReadWireStatusFailed, said.Say(domainEvidence.NothingRead))
 	}
 
+	if contacts.DomainIdentityForwarded(domain, seed.URL) {
+		return w.withholdForwardedTriage(ctx, said, args, claim, domain, seed.URL, []crawlPage{seed})
+	}
+
 	verdict, err := w.classifySeed(ctx, said, seed)
 	if err != nil {
 		if deferred, deferErr := w.deferForBudget(ctx, args.SiteReadID, err); deferred {
@@ -119,6 +123,9 @@ func (w *siteDeepReadWorker) readAndResolveTriage(ctx context.Context, said doma
 		w.log.WarnContext(ctx, "domain triage: the crawl failed",
 			"read", args.SiteReadID.String(), "domain", domain, "err", err)
 		return w.resolveUnreachable(ctx, said, args, claim, domain, siteReadWireStatusFailed, said.Say(domainEvidence.NothingRead))
+	}
+	if contacts.DomainIdentityForwarded(domain, crawl.SeedURL) {
+		return w.withholdForwardedTriage(ctx, said, args, claim, domain, crawl.SeedURL, crawl.Pages)
 	}
 	if deferred, deferErr := w.deferForBudget(ctx, args.SiteReadID, extraction.err); deferred {
 		return deferErr

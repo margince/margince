@@ -8550,6 +8550,31 @@ export const en = {
   "blockedDomains.source.verdict": "Model result",
   "blockedDomains.source.heuristic": "Heuristic",
   "blockedDomains.source.human": "Person",
+  "blockedDomains.source.reservedDomain":
+    "Reserved domain: company identification paused",
+  "blockedDomains.source.forwardedIdentity":
+    "Different site answered. Confirm the company match.",
+  "worklist.domainReview.defer": "Set aside",
+  "worklist.domainReview.restore": "Return to Review",
+  "worklist.domainReview.deferEffect":
+    "Set aside removes this question from your queue until new evidence arrives. You can still find it here.",
+  "worklist.domainReview.title": "Domain review",
+  "worklist.domainReview.loading": "Loading domains…",
+  "worklist.domainReview.empty": "No domains need review.",
+  "worklist.domainReview.more": "Load more",
+  "worklist.domainReview.forwarded": "Answering site: {url}",
+  "worklist.domainReview.evidenceAt": "Latest evidence: {date}",
+  "worklist.domainReview.noEvidenceDate": "Evidence date unavailable",
+  "worklist.domainReview.match": "Match company",
+  "worklist.domainReview.matchEffect":
+    "Matching links this domain and its captured contacts to the selected company.",
+  "worklist.domainReview.create": "Create company",
+  "worklist.domainReview.retry": "Retry site read",
+  "worklist.domainReview.exclude": "Exclude domain",
+  "worklist.domainReview.effects":
+    "Create adds a company. Retry keeps identity undecided. Exclude stops capture for your mailboxes.",
+  "worklist.batch.domain_questions_one": "Review {count} domain",
+  "worklist.batch.domain_questions_other": "Review {count} domains",
   "blockedDomains.source.unevidenced": "No company named on the site",
   "blockedDomains.source.staleEvidence": "Supporting mail too old",
   "blockedDomains.source.nearDuplicate": "Company name already exists",

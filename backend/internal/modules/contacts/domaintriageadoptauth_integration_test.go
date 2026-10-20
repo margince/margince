@@ -54,10 +54,11 @@ func TestAdoptingADomainDecidesTheRecordIsLiveUnderTheLock(t *testing.T) {
 	// frozen before its commit, so the test owns the moment it becomes visible.
 	holder, pid := e.holdArchivedCompany(ctx, t, ids.UUID(incumbent.Id))
 
+	companyID := ids.From[ids.CompanyKind](ids.UUID(incumbent.Id))
 	done := make(chan error, 1)
 	go func() {
 		_, err := e.store.ResolveDomainTriage(e.as(), ResolveDomainTriageInput{
-			Domain: "adoptauth-second.test", Status: DomainCompany, Source: DomainSourceSiteRead,
+			Domain: "adoptauth-second.test", Status: DomainCompany, Source: DomainSourceHuman, CompanyID: &companyID,
 			ReadID: readID, DossierName: "Adopt Auth GmbH", SeedURL: "https://adoptauth-second.test",
 		})
 		done <- err

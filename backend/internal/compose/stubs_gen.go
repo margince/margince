@@ -779,6 +779,10 @@ func (stubs) DeleteCaptureCounterpartyHold(w nethttp.ResponseWriter, r *nethttp.
 	httperr.NotImplemented(w, r, "DeleteCaptureCounterpartyHold")
 }
 
+func (stubs) ListDomainQuestions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListDomainQuestionsParams) {
+	httperr.NotImplemented(w, r, "ListDomainQuestions")
+}
+
 func (stubs) DiscardDomainQuestion(w nethttp.ResponseWriter, r *nethttp.Request, domain string) {
 	httperr.NotImplemented(w, r, "DiscardDomainQuestion")
 }

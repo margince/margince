@@ -29,6 +29,7 @@ import (
 // TestEverySourceOffersAWayOffTheList holds that each one does.
 var doneInPlace = map[crmcontracts.WorklistItemSource]bool{
 	crmcontracts.WorklistItemSourceAwaitingReply:       true,
+	crmcontracts.WorklistItemSourceDomainQuestion:      true,
 	crmcontracts.WorklistItemSourceMeetingFollowUp:     true,
 	crmcontracts.WorklistItemSourceDealAtRisk:          true,
 	crmcontracts.WorklistItemSourceMeeting:             true,
@@ -72,6 +73,9 @@ func offersDone(source crmcontracts.WorklistItemSource) bool {
 
 // dispositionsFor is what a row offers a reader who is putting it down.
 func dispositionsFor(row ranked, reader ids.UUID) []crmcontracts.WorklistItemDispositions {
+	if domainMaintenanceBatch(row) {
+		return nil
+	}
 	if row.item.Source == sourceWaiting {
 		return waitingDispositions(row, reader)
 	}
@@ -99,6 +103,23 @@ func (s *Service) MarkRowsDone(ctx context.Context, rows []RowRef) error {
 		}
 		missing[row] = true
 	}
+	if s.domainQuestions != nil {
+		for row := range missing {
+			if row.Source != string(sourceDomainQuestion) {
+				continue
+			}
+			visible, err := s.domainQuestions.OwnsDomainQuestion(ctx, row.RowID)
+			if err != nil {
+				return err
+			}
+			if visible {
+				delete(missing, row)
+			}
+		}
+	}
+	if len(missing) == 0 {
+		return s.marked.store.MarkDone(ctx, rows)
+	}
 	for _, scope := range scopeOptionsFor(ctx) {
 		if err := s.dropShown(ctx, scope, missing); err != nil {
 			return err
@@ -125,7 +146,9 @@ func (s *Service) dropShown(ctx context.Context, scope string, missing map[RowRe
 	probe := *s
 	probe.marked.probe = func(candidates []ranked) {
 		for _, row := range candidates {
-			delete(missing, refOf(row))
+			if !domainMaintenanceBatch(row) {
+				delete(missing, refOf(row))
+			}
 			for _, member := range row.members {
 				delete(missing, RowRef{Source: member.Source, RowID: member.RowID})
 			}
@@ -194,6 +217,9 @@ func cameBack(row ranked, doneAt, asOf time.Time, zone *time.Location) bool {
 	after := func(moment *time.Time) bool {
 		return moment != nil && moment.After(doneAt) && !moment.After(asOf)
 	}
+	if row.item.Source == crmcontracts.WorklistItemSourceDomainQuestion {
+		return after(&row.subjectMovedAt)
+	}
 	if after(row.item.OccurredAt) || after(&row.subjectMovedAt) || after(&row.newestMember) {
 		return true
 	}
@@ -205,4 +231,9 @@ func cameBack(row ranked, doneAt, asOf time.Time, zone *time.Location) bool {
 		return !deals.CloseIsOverdue(*due, doneAt, zone) && deals.CloseIsOverdue(*due, asOf, zone)
 	}
 	return after(due)
+}
+
+// A bounded maintenance group cannot dismiss unseen members; review defers each question.
+func domainMaintenanceBatch(row ranked) bool {
+	return row.item.Batch != nil && row.item.Batch.Key == "domain_questions"
 }

@@ -71,6 +71,8 @@ const REASON_LABEL: Record<
   unevidenced: "blockedDomains.source.unevidenced",
   stale_evidence: "blockedDomains.source.staleEvidence",
   near_duplicate: "blockedDomains.source.nearDuplicate",
+  forwarded_identity: "blockedDomains.source.forwardedIdentity",
+  reserved_domain: "blockedDomains.source.reservedDomain",
 };
 
 const BULK_LABEL: Record<

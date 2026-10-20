@@ -69,6 +69,7 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 		}
 		bounded[source] = len(*lane) >= bound
 	}
+	atCap("domain_question", day.DomainQuestions, DomainQuestionLimit)
 	// The health and receipt lanes share one bound.
 	atCap("failed_approval", day.DidNotRun, doneCap)
 	atCap("dsr", day.Dsr, doneCap)

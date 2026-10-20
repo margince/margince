@@ -18118,6 +18118,27 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /capture/domain-questions:
+    get:
+      tags: [Capture]
+      operationId: listDomainQuestions
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Review the calling reader’s undecided domains.
+      description: Lists only the reader’s own domain questions, oldest first, with continuation and source evidence.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: One page of personal domain questions.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DomainQuestionPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /capture/domain-questions/{domain}/keep:
     post:
       tags: [Capture]
@@ -18145,6 +18166,17 @@ paths:
           required: true
           schema: { type: string }
           description: 'The domain to keep; normalized to its registrable form.'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                company_id:
+                  type: string
+                  format: uuid
+                  description: Match to this visible, writable company instead of creating one.
       responses:
         '200':
           description: Where the domain stands now that it has an answer.
@@ -32753,6 +32785,28 @@ components:
         signature_enrich: { type: boolean, description: 'Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it.' }
         shared_posture_allowed: { type: boolean, description: 'Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.' }
 
+    DomainQuestionPage:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/DomainQuestion' }
+        page: { $ref: '#/components/schemas/PageInfo' }
+    DomainQuestion:
+      type: object
+      required: [domain, reason_code, asked_at, deferred]
+      properties:
+        domain: { type: string }
+        reason_code: { type: string }
+        asked_at: { type: string, format: date-time }
+        deferred: { type: boolean }
+        evidence_at: { type: string, format: date-time }
+        effective_url: { type: string }
+        redirect_chain:
+          type: array
+          items: { type: string }
+
     BlockedDomain:
       type: object
       description: |
@@ -32789,7 +32843,7 @@ components:
             words and shows `note` for a decision somebody explained.
         reason_code:
           type: string
-          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, unknown]
+          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, reserved_domain, unknown]
           description: |
             Why, as a code the client words in the reader's language.
 
@@ -32817,7 +32871,7 @@ components:
             a company the reader may not see stays withheld by both.
         source:
           type: string
-          enum: [verdict, heuristic, human, unevidenced, stale_evidence, near_duplicate]
+          enum: [verdict, heuristic, human, unevidenced, stale_evidence, near_duplicate, forwarded_identity, reserved_domain]
           description: |
             What decided it, or — for an `undecided` domain — what stopped the machine deciding.
             `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
@@ -60122,6 +60176,9 @@ components:
           format: uuid
           readOnly: true
           description: The member explicitly asked to decide, independent of who has permission to approve.
+        domain_reason_code:
+          type: string
+          description: The domain question's reason code, rendered in the reader's language.
         notice_origin: { $ref: '#/components/schemas/NoticeOrigin' }
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
@@ -61668,6 +61725,9 @@ components:
         source_record:
           allOf: [{ $ref: '#/components/schemas/AttentionSubject' }]
           description: The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access.
+        domain_reason_code:
+          type: string
+          description: The domain question's reason code, rendered in the reader's language.
         notice_origin: { $ref: '#/components/schemas/NoticeOrigin' }
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
@@ -62538,7 +62598,7 @@ components:
       properties:
         key:
           type: string
-          enum: [likely_automated, company_match, uncertain_contact, duplicates, held_draft, system_incident]
+          enum: [likely_automated, company_match, uncertain_contact, duplicates, held_draft, system_incident, domain_questions]
           description: |
             What the members have in common, which is also what makes them safe to answer
             together. `likely_automated` is mail from senders that are not contacts;

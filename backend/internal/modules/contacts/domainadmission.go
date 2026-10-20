@@ -234,9 +234,9 @@ func (s *Store) SuppressBulkSenderDomainTx(ctx context.Context, tx pgx.Tx, domai
 // flight, and never touches a SUPPRESSED domain: a refusal is not a question
 // waiting for evidence.
 func reopenWithheldDispositionTx(
-	ctx context.Context, tx pgx.Tx, domain string, ownerID ids.UUID, evidenceAt *time.Time,
+	ctx context.Context, tx pgx.Tx, domain string, ownerID ids.UUID, evidenceAt *time.Time, force bool,
 ) error {
-	if err := recordEvidenceAgeTx(ctx, tx, domain, evidenceAt); err != nil {
+	if err := recordDomainQuestionReader(ctx, tx, domain, ownerID, evidenceAt); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(ctx, `
@@ -244,17 +244,18 @@ func reopenWithheldDispositionTx(
 		   SET pending_reason = NULL,
 		       attempts = 0,
 		       next_attempt_at = now(),
-		       owner_id = COALESCE(owner_id, $2),
+		       owner_id = COALESCE(owner_id, @owner),
 		       updated_at = now()
-		 WHERE domain = $1
-		   AND status = $3
-		   AND admission IS DISTINCT FROM $4
+		 WHERE domain = @domain
+		   AND status = @pending
+		   AND admission IS DISTINCT FROM @suppressed
+           AND (@force OR (pending_reason IS DISTINCT FROM 'forwarded_identity' AND pending_reason IS DISTINCT FROM 'reserved_domain' AND (owner_id IS NULL OR (@evidence::timestamptz IS NOT NULL AND (last_evidence_at IS NULL OR @evidence > last_evidence_at)))))
 		   AND (pending_reason = 'unevidenced' OR pending_reason = 'stale_evidence'
 		        OR next_attempt_at IS NULL OR owner_id IS NULL)`,
-		domain, ownerID, DomainPending, DomainSuppressed); err != nil {
+		pgx.NamedArgs{"domain": domain, "owner": ownerID, "pending": DomainPending, "suppressed": DomainSuppressed, "force": force, "evidence": evidenceAt}); err != nil {
 		return fmt.Errorf("contacts: reopening the withheld question for %s: %w", domain, err)
 	}
-	return nil
+	return recordEvidenceAgeTx(ctx, tx, domain, evidenceAt)
 }
 
 // admitClaimedDomainTx lifts a standing refusal because a human deliberately

@@ -8275,6 +8275,31 @@ export const vi = {
   "blockedDomains.source.verdict": "Kết quả mô hình",
   "blockedDomains.source.heuristic": "Quy tắc suy đoán",
   "blockedDomains.source.human": "Thành viên",
+  "blockedDomains.source.reservedDomain":
+    "Tên miền dành riêng: tạm dừng nhận dạng công ty",
+  "blockedDomains.source.forwardedIdentity":
+    "Trang web khác đã phản hồi. Xác nhận công ty phù hợp.",
+  "worklist.domainReview.defer": "Để sau",
+  "worklist.domainReview.restore": "Đưa lại vào mục xem xét",
+  "worklist.domainReview.deferEffect":
+    "Để sau ẩn câu hỏi khỏi hàng đợi của bạn cho đến khi có bằng chứng mới. Bạn vẫn có thể tìm thấy câu hỏi tại đây.",
+  "worklist.domainReview.title": "Xem xét tên miền",
+  "worklist.domainReview.loading": "Đang tải tên miền…",
+  "worklist.domainReview.empty": "Không có tên miền cần xem xét.",
+  "worklist.domainReview.more": "Tải thêm",
+  "worklist.domainReview.forwarded": "Trang phản hồi: {url}",
+  "worklist.domainReview.evidenceAt": "Bằng chứng mới nhất: {date}",
+  "worklist.domainReview.noEvidenceDate": "Không có ngày bằng chứng",
+  "worklist.domainReview.match": "Ghép công ty",
+  "worklist.domainReview.matchEffect":
+    "Ghép sẽ liên kết tên miền và liên hệ đã ghi nhận với công ty đã chọn.",
+  "worklist.domainReview.create": "Tạo công ty",
+  "worklist.domainReview.retry": "Đọc lại trang",
+  "worklist.domainReview.exclude": "Loại tên miền",
+  "worklist.domainReview.effects":
+    "Tạo sẽ thêm công ty. Đọc lại giữ danh tính chưa xác định. Loại sẽ ngừng ghi nhận cho hộp thư của bạn.",
+  "worklist.batch.domain_questions_one": "Xem xét {count} tên miền",
+  "worklist.batch.domain_questions_other": "Xem xét {count} tên miền",
   "blockedDomains.source.unevidenced": "Trang web không nêu tên công ty nào",
   "blockedDomains.source.staleEvidence": "Email làm căn cứ đã quá cũ",
   "blockedDomains.source.nearDuplicate": "Tên công ty đã tồn tại",

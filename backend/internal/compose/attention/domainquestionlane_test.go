@@ -8,10 +8,12 @@ package attention
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 type stubDomainQuestions struct {
@@ -71,14 +73,14 @@ func TestADomainQuestionNamesTheDomainAndWhyItStopped(t *testing.T) {
 	}
 }
 
-// TestADomainQuestionOffersBothAnswersAndNoThirdOne is the verb contract.
+// TestADomainQuestionOffersAnswersAndRetry is the verb contract.
 //
 // Two verbs, and deliberately no `open`: the subject is a domain, which has no
 // page to open, so a third control would send the reader nowhere. Keeping the
 // list exact is what stops the row growing a verb the client cannot perform —
 // the defect the source/action census exists to catch, asserted here at the
 // lane rather than only across the whole queue.
-func TestADomainQuestionOffersBothAnswersAndNoThirdOne(t *testing.T) {
+func TestADomainQuestionOffersAnswersAndRetry(t *testing.T) {
 	t.Parallel()
 	svc := domainQuestionLaneService(&stubDomainQuestions{rows: []DomainQuestion{{
 		Domain: "botsync.co", Reason: "Nothing on the site named a company.", AskedAt: readInstant,
@@ -88,7 +90,7 @@ func TestADomainQuestionOffersBothAnswersAndNoThirdOne(t *testing.T) {
 		t.Fatalf("assembling: %v", err)
 	}
 	row := (*out.DomainQuestions)[0]
-	want := []crmcontracts.AttentionItemActions{"keep", "discard"}
+	want := []crmcontracts.AttentionItemActions{"keep", "discard", "reopen"}
 	if len(row.Actions) != len(want) {
 		t.Fatalf("actions = %v, want exactly %v", row.Actions, want)
 	}
@@ -117,5 +119,57 @@ func TestAnUnboundDomainQuestionLaneIsAbsentRatherThanEmpty(t *testing.T) {
 	if out.Counts.DomainQuestions != nil {
 		t.Errorf("an unbound lane reported a count of %v; absent carries no number",
 			out.Counts.DomainQuestions)
+	}
+}
+
+func TestDomainMaintenanceFoldsWithoutEnteringFocus(t *testing.T) {
+	for _, count := range []int{2, 3, 60, DomainQuestionLimit} {
+		rows := make([]ranked, 0, count)
+		for i := range count {
+			rows = append(rows, classifyDomainQuestion(domainQuestionItem(DomainQuestion{
+				Domain: fmt.Sprintf("company-%d.test", i), AskedAt: readInstant,
+			}), readInstant))
+		}
+		grouped := foldRoutineDecisionsBounded(rows, count == DomainQuestionLimit)
+		if count < batchFloor {
+			if len(grouped) != count {
+				t.Fatalf("small backlog changed size: %d", len(grouped))
+			}
+		} else {
+			if len(grouped) != 1 || grouped[0].item.Batch == nil || grouped[0].item.Batch.Key != "domain_questions" || grouped[0].item.Batch.Count != count {
+				t.Fatalf("%d questions did not form one maintenance group: %+v", count, grouped)
+			}
+			if count == DomainQuestionLimit && (grouped[0].item.Batch.AtLeast == nil || !*grouped[0].item.Batch.AtLeast) {
+				t.Fatal("bounded batch claimed a total")
+			}
+			if len(grouped[0].members) != count {
+				t.Fatal("batch lost the member identities")
+			}
+		}
+		for _, row := range append(rows, grouped...) {
+			if focusEligible(row, readInstant) {
+				t.Fatal("routine domain maintenance entered Focus")
+			}
+		}
+	}
+}
+
+func (s *stubDomainQuestions) OwnsDomainQuestion(_ context.Context, domain string) (bool, error) {
+	for _, row := range s.rows {
+		if row.Domain == domain {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func TestDomainMaintenanceGroupDefersThroughItsMembers(t *testing.T) {
+	group := ranked{item: crmcontracts.WorklistItem{Source: "batch", Batch: &crmcontracts.WorklistBatch{Key: "domain_questions", Count: 100}}}
+	if got := dispositionsFor(group, ids.UUID{}); len(got) != 0 {
+		t.Fatalf("bounded maintenance group offered a blanket disposition: %v", got)
+	}
+	member := ranked{item: crmcontracts.WorklistItem{Source: "domain_question"}}
+	if got := dispositionsFor(member, ids.UUID{}); len(got) != 1 {
+		t.Fatalf("individual question cannot be deferred: %v", got)
 	}
 }

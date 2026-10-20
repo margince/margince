@@ -107,8 +107,9 @@ var tableOwners = map[string]string{
 	// What a mail domain is allowed to create. It governs COMPANY
 	// creation, which contacts owns, so the verdict lives with the records it
 	// authorizes rather than with the capture path that asks the question.
-	"company_domain_disposition": "internal/modules/contacts",
-	"site_read":                  "internal/modules/contacts",
+	"company_domain_disposition":     "internal/modules/contacts",
+	"company_domain_question_reader": "internal/modules/contacts",
+	"site_read":                      "internal/modules/contacts",
 	// DH-DDL-1: the pair verdicts live with the ONE dedupe implementation.
 	"dedupe_candidate": "internal/modules/contacts",
 	// deals (incl. the E03 offer engine: rate-card + versioned offers)
