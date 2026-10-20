@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, X } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { IconAction } from "../../design-system/iconaction";
 import { Select } from "../../design-system/select";
@@ -32,10 +32,13 @@ export function LayoutEditor({
   layout,
   choices,
   onChange,
+  preview,
 }: Readonly<{
   layout: ReportingLayout;
   choices: readonly CardChoice[];
   onChange: (next: ReportingLayout) => void;
+  // Draws one chart before it is added; absent offers no preview.
+  preview?: (choice: CardChoice) => ReactNode;
 }>) {
   const t = useT();
   return (
@@ -85,7 +88,12 @@ export function LayoutEditor({
           )}
         </fieldset>
       ))}
-      <AddCard layout={layout} choices={choices} onChange={onChange} />
+      <AddCard
+        layout={layout}
+        choices={choices}
+        onChange={onChange}
+        preview={preview}
+      />
       <div>
         <Button
           variant="ghost"
@@ -178,13 +186,16 @@ function AddCard({
   layout,
   choices,
   onChange,
+  preview,
 }: Readonly<{
   layout: ReportingLayout;
   choices: readonly CardChoice[];
   onChange: (next: ReportingLayout) => void;
+  preview?: (choice: CardChoice) => ReactNode;
 }>) {
   const t = useT();
   const [picked, setPicked] = useState("");
+  const [previewing, setPreviewing] = useState(false);
   const keyOf = (choice: CardChoice) => `${choice.kind}:${choice.metric ?? ""}`;
   const choice = choices.find((candidate) => keyOf(candidate) === picked);
   if (choices.length === 0) return null;
@@ -204,18 +215,30 @@ function AddCard({
           />
         )}
       </Field>
-      <div>
+      <div className="actions">
+        {preview && (
+          <Button
+            variant="ghost"
+            disabled={!choice}
+            aria-expanded={previewing && !!choice}
+            onClick={() => setPreviewing(!previewing)}
+          >
+            {t("reporting.previewChart")}
+          </Button>
+        )}
         <Button
           disabled={!choice}
           onClick={() => {
             if (!choice) return;
             onChange(edit.addCard(layout, choice));
             setPicked("");
+            setPreviewing(false);
           }}
         >
           {t("reporting.addChart")}
         </Button>
       </div>
+      {preview && previewing && choice && preview(choice)}
     </div>
   );
 }

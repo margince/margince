@@ -256,6 +256,10 @@ export const de = {
   "reporting.cardSection": "Abschnitt für {chart}",
   "reporting.removeCard": "{chart} entfernen",
   "reporting.addChart": "Diagramm hinzufügen",
+  "reporting.previewChart": "Vorschau",
+  "reporting.previewLoading": "Vorschau wird geladen…",
+  "reporting.previewEmpty":
+    "Keine Werte für dieses Diagramm in diesem Zeitraum.",
   "reporting.chooseChart": "Diagramm zum Hinzufügen",
   "reporting.exportCsv": "CSV exportieren",
   "reporting.captureContexts": "Täglichen Pipeline-Verlauf speichern",

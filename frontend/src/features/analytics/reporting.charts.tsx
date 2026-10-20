@@ -109,7 +109,7 @@ function ChartSection({
 }
 
 // One chart in its panel, with the door to the records behind it.
-function ChartPanel({
+export function ChartPanel({
   chart,
   wide,
   evaluation,

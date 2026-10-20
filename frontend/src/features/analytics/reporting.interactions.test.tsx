@@ -115,6 +115,49 @@ it("draws a saved layout's sections under their titles", async () => {
     screen.queryByRole("heading", { name: "Sales won over time" }),
   ).not.toBeInTheDocument();
 });
+it("previews one chart before it is added, saving nothing", async () => {
+  const user = userEvent.setup({ delay: null });
+  const write = vi.fn(() => jsonResponse(reportingStoryReport));
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "PATCH /analytics/reports/report": write,
+  });
+  const fetch = vi.spyOn(globalThis, "fetch");
+  render(
+    <StoryProviders>
+      <SaveReportingDialog
+        selection={reportingStoryReport.selection}
+        report={reportingStoryReport}
+        onClose={() => {}}
+        onSaved={() => {}}
+      />
+    </StoryProviders>,
+  );
+  await user.click(
+    screen.getByText("Charts and order", { selector: ".disclosure-label" }),
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Remove Time in current stage" }),
+  );
+  await pickOption(
+    user,
+    screen.getByRole("combobox", { name: "Chart to add" }),
+    "Time in current stage",
+  );
+  await user.click(screen.getByRole("button", { name: "Preview" }));
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(([input]) => {
+        const url = input instanceof Request ? input.url : String(input);
+        return (
+          url.includes("/analytics/evaluate") &&
+          url.includes("blocks=stage_age")
+        );
+      }),
+    ).toBe(true),
+  );
+  expect(write).not.toHaveBeenCalled();
+});
 it("shows the report's purpose under its name", async () => {
   const routes = reportingStoryRoutes(reportingStoryEvaluation, true);
   routes["GET /analytics/reports/report"] = () =>
