@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// One line of the receipt, on one row: its mark in the clock's own colours,
-// what happened and the record it is about, then the undo where there is one
-// and the time, in columns the whole list shares. Who acted, why, and why a
-// change cannot be put back are the line's detail: on hover, and read out.
-
 import { Disclosure } from "../../design-system/atoms";
 import { PanelBody, PanelGroupHead } from "../../design-system/panel";
 import { providerName } from "../../format/connectorprovider";
@@ -122,12 +117,7 @@ function MagicLineRow({
   );
 }
 
-/**
- * Who acted, why, what it means, and for a done change that cannot be put
- * back, why not: true of the line and not needed to scan it, so it is the
- * row's tooltip and is read out rather than printed under every line. A key
- * this build predates says nothing, for the reason an unknown sentence does.
- */
+// Unknown detail keys cannot supply a trustworthy explanation.
 function lineDetail(line: MagicLine, t: ReturnType<typeof useT>): string[] {
   const by = line.actor.label ? magicByKey(line.actor.label.key) : null;
   const why = line.reason ? magicWhyKey(line.reason.key) : null;
