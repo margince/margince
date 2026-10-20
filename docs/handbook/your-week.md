@@ -15,10 +15,11 @@ and **Later week** step through the weeks that have a report. The report's numbe
 - **At a glance**: what Margince wrote about the week, and four figures with their change on the week
   before.
 - **Closed deals**: the deals won and lost, and what they were worth.
-- **Pipeline movement**: the deals that changed stage, and the forecast.
-- **Commitments**: your plan for this week.
+- **Pipeline movement**: the deals that changed stage, and one table of the forecast for the week,
+  month and quarter.
 - **Figures**: every figure beside the week before, and the scorecard.
 - **Observations**: what worked in the week and what did not, where Margince found something.
+- **The week ahead**: your plan for this week.
 
 A part with nothing in it is left out. The last line says when the next report comes.
 
@@ -56,10 +57,12 @@ The weekly review counts recorded work, and says plainly where the record is sho
 
 ### The scorecard
 
-**Leads and meetings**: leads moved on, recorded replies (with how many missed the target), meetings
-held (with booked and missed meetings under them).
+The **Weekly scorecard** is one table. Each row has a count and what the count rests on.
 
-**Deals** shows stage moves on and back, and the middle value of the days a deal spent in the stage
+For leads and meetings it shows leads moved on, how many replies missed the target, and meetings
+held (with booked and missed meetings beside them).
+
+For deals it shows stage moves on and back, and the middle value of the days a deal spent in the stage
 it left. It shows how many open deals have a next step, and how many have more than one contact. It
 shows how many have a close date that is not a guess. And it shows forecast moves up against moves
 down.
@@ -71,9 +74,9 @@ Two rows appear only when a count is not complete:
 
 Margince cannot count deals touched by a deletion for the week. It lists them on their own.
 
-### Observations to review
+### Observations
 
-**Observations to review** holds at most four observations. Each names the deals it was read from,
+**Observations** holds at most four observations. Each names the deals it was read from,
 and each has a tag: **Positive outcome**, **Unsuccessful outcome**, **Pattern**, or **Experiment**.
 
 Each carries a warning: the observations show links in recorded work, and do not show what made the

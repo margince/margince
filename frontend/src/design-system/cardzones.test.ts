@@ -50,10 +50,6 @@ const sourceRoot = join(frontendRoot, "src");
  */
 const notARecordZone = new Map<string, string>([
   [
-    "features/brief/brief.weekly.learnings.tsx",
-    "one learning of a list, titled by kind, inside the learnings panel's body",
-  ],
-  [
     "features/contacts/contactnetwork/edgedetail.tsx",
     "the selected node's detail in the relationship map's own panel slot, level 3 under the map's heading",
   ],

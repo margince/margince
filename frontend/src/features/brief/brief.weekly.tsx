@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useId } from "react";
 import { Badge, Button } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import {
@@ -53,12 +53,9 @@ type WeeklyReviewDealOutcome = WeeklyReview["deals"][number]["outcome"];
 
 export function WeeklySection({
   plan,
-  closing,
 }: Readonly<{
-  /** The week ahead's plan, which the report turns into after its outcomes. */
+  /** The week ahead's plan, the report's last chapter. */
   plan?: ReactNode;
-  /** The way into the Worklist, under the report's last line. */
-  closing?: ReactNode;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -112,7 +109,6 @@ export function WeeklySection({
               ),
             })}
           </p>
-          {closing}
         </footer>
       )}
     </article>
@@ -281,7 +277,7 @@ type ReportChapter = Readonly<{
 
 /**
  * The chapters this week has something to say in, in reading order: what
- * happened, then what the reader commits to, then the full record. A chapter
+ * happened, the full record, what it taught, then the week ahead. A chapter
  * with nothing in it is left out, and the numbers close up over the gap.
  */
 function reportChapters(
@@ -317,15 +313,6 @@ function reportChapters(
       title: "brief.report.chapter.movement",
       body: <Movement review={review} deals={moved} />,
     },
-    ...(plan
-      ? [
-          {
-            key: "commitments",
-            title: "brief.report.chapter.commitments" as const,
-            body: plan,
-          },
-        ]
-      : []),
     {
       key: "figures",
       title: "brief.report.chapter.figures",
@@ -333,9 +320,7 @@ function reportChapters(
         <>
           <FiguresTable review={review} figures={numeric.figures} />
           <WeeklyWorkings counts={review.counts} figures={numeric.figures} />
-          <div className="brief-report-flat">
-            <ScorecardPanel scorecard={review.scorecard} />
-          </div>
+          <ScorecardPanel scorecard={review.scorecard} />
           <FiguresFootnote partial={numeric.partial} basis={numeric.basis} />
         </>
       ),
@@ -345,11 +330,16 @@ function reportChapters(
           {
             key: "observations",
             title: "brief.report.chapter.observations" as const,
-            body: (
-              <div className="brief-report-flat">
-                <LearningsPanel learnings={learnings} />
-              </div>
-            ),
+            body: <LearningsPanel learnings={learnings} />,
+          },
+        ]
+      : []),
+    ...(plan
+      ? [
+          {
+            key: "commitments",
+            title: "brief.report.chapter.commitments" as const,
+            body: plan,
           },
         ]
       : []),
@@ -422,9 +412,6 @@ function Movement({
   deals,
 }: Readonly<{ review: WeeklyReview; deals: readonly Deal[] }>) {
   const { locale } = useLocale();
-  // Which horizon the outlook is showing. Per-reader and not persisted: it is a
-  // way of looking at one review, not a setting about the account.
-  const [horizon, setHorizon] = useState<string>("quarter");
   return (
     <>
       {deals.length > 0 && (
@@ -437,8 +424,6 @@ function Movement({
       <OutlookPanel
         outlook={review.outlook ?? []}
         locale={locale}
-        horizon={horizon}
-        onHorizon={setHorizon}
         onOpenForecast={() => openAnalyticsSection("forecast")}
       />
     </>

@@ -874,8 +874,6 @@ export const de = {
   "brief.plan.select":
     "Einen Deal, einen Lead, einen Kontakt, ein Unternehmen oder ein Projekt finden",
   "brief.plan.period": "Aktueller Plan · Woche vom {date}",
-  "brief.forecast.period":
-    "Prognosezeitraum: {start} bis {end}. Mit diesem Wochenrückblick gespeichert.",
   "brief.coverage.retry": "Morgenbericht aktualisieren",
   "brief.reply.owed": "Kontakt wartet auf deine Antwort",
   "brief.changes.superseded":
@@ -4205,7 +4203,6 @@ export const de = {
   "decision.status.expired": "Abgelaufen",
 
   "brief.panel.weekly": "Wochenrückblick",
-  "brief.weekly.learnings.title": "Zu prüfende Beobachtungen",
   "brief.weekly.learnings.worked": "Positives Ergebnis",
   "brief.weekly.learnings.didNotWork": "Erfolgloses Ergebnis",
   "brief.weekly.learnings.pattern": "Muster",
@@ -4214,8 +4211,7 @@ export const de = {
   "brief.weekly.learnings.insufficient":
     "Nicht genug erfasste Belege für aussagekräftige Beobachtungen.",
   "brief.weekly.scorecard.title": "Wochenbilanz",
-  "brief.weekly.scorecard.leadBlock": "Leads und Termine",
-  "brief.weekly.scorecard.dealBlock": "Deals",
+  "brief.weekly.scorecard.basis": "Grundlage",
   "brief.weekly.scorecard.advanced": "Lead-Fortschritte",
   "brief.weekly.scorecard.advancedBasis": "Je Schritt · nicht je Lead",
   "brief.weekly.scorecard.answeredInTarget": "Zielzeit überschritten",
@@ -4356,6 +4352,7 @@ export const de = {
   "brief.weekly.outlook.bestCaseDetail": "Enthält Commit",
   "brief.weekly.outlook.weighted": "Gewichteter Deal-Wert",
   "brief.weekly.outlook.landing": "Voraussichtliches Ergebnis",
+  "brief.weekly.outlook.open": "Prognose öffnen",
   "brief.weekly.outlook.measure.commit_evidence": "Aus Commit-Belegen",
   "brief.weekly.outlook.measure.weighted": "Aus gewichteten Deals",
   "brief.weekly.outlook.measure.manager_call":
@@ -4380,7 +4377,7 @@ export const de = {
   "brief.report.chapter.glance": "Auf einen Blick",
   "brief.report.chapter.closed": "Abschlüsse",
   "brief.report.chapter.movement": "Pipeline-Bewegung",
-  "brief.report.chapter.commitments": "Zusagen",
+  "brief.report.chapter.commitments": "Die kommende Woche",
   "brief.report.chapter.figures": "Kennzahlen",
   "brief.report.chapter.observations": "Beobachtungen",
   "brief.report.closedTotal": "Gewonnen {won} · Verloren {lost}",
@@ -4404,7 +4401,6 @@ export const de = {
   "brief.weekly.queueWorked": "Einträge im Morgenbericht",
   "brief.weekly.actedDismissed": "{acted} erledigt · {dismissed} ausgeblendet",
   "brief.weekly.sincePrior": "{delta} gegenüber der Woche vom {week}",
-  "brief.weekly.wonVsPrior": "{value} · {delta} gegenüber der Woche vom {week}",
   "brief.weekly.leadsAnswered": "Beantwortete Leads",
   "brief.weekly.ofRouted": "{answered} von {routed}",
   "brief.weekly.planCommitmentsKept": "Eingehaltene Zusagen",

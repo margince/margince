@@ -27,6 +27,7 @@ type Counts = WeeklyReview["counts"];
  *
  * `count` is what the change against the week before is taken on. `shown` is
  * how the figure reads, which for a share is "3 of 4" rather than the count.
+ * `none` marks a share with nothing to share out, which reads as words.
  */
 type WeekFigure = Readonly<{
   key: string;
@@ -34,6 +35,7 @@ type WeekFigure = Readonly<{
   figure: WeeklyFigure;
   count: (counts: Counts) => number | undefined;
   shown: (counts: Counts) => string;
+  none?: (counts: Counts) => boolean;
 }>;
 
 /**
@@ -63,6 +65,7 @@ function weekFigures(t: Translator, locale: Locale): readonly WeekFigure[] {
       label: t("brief.weekly.planCommitmentsKept"),
       figure: "commitments",
       count: (c) => c.commitments_kept,
+      none: (c) => c.commitments_due === 0,
       shown: (c) =>
         c.commitments_due === 0
           ? t("brief.weekly.noCommitments")
@@ -76,6 +79,7 @@ function weekFigures(t: Translator, locale: Locale): readonly WeekFigure[] {
       label: t("brief.weekly.leadsAnswered"),
       figure: "leads",
       count: (c) => c.leads_answered_in_target,
+      none: (c) => c.leads_routed === 0,
       shown: (c) =>
         c.leads_routed === 0
           ? t("brief.weekly.noLeads")
@@ -89,6 +93,7 @@ function weekFigures(t: Translator, locale: Locale): readonly WeekFigure[] {
       label: t("brief.weekly.meetingsHeld"),
       figure: "meetings",
       count: (c) => c.meetings_held,
+      none: (c) => c.meetings_held === 0,
       shown: (c) =>
         c.meetings_held === 0
           ? t("brief.weekly.noMeetings")
@@ -136,37 +141,10 @@ function change(
   return formatSignedNumber(now - before, locale);
 }
 
-// A closed week is comparable only to a priced prior week in the same currency.
-export function wonPace(
-  review: WeeklyReview,
-  locale: Locale,
-  t: Translator,
-  zone: string,
-): string | undefined {
-  const pipeline = review.pipeline;
-  if (pipeline === undefined) {
-    return undefined;
-  }
-  const value = formatMoney(pipeline.won_minor, pipeline.currency, locale);
-  const prior = review.prior;
-  const before = prior?.pipeline;
-  if (!prior || before === undefined || before.currency !== pipeline.currency) {
-    return value;
-  }
-  return t("brief.weekly.wonVsPrior", {
-    value,
-    week: formatDate(middayInstant(prior.local_week_start, zone), locale, zone),
-    delta: formatSignedMoney(
-      pipeline.won_minor - before.won_minor,
-      pipeline.currency,
-      locale,
-    ),
-  });
-}
-
 /**
  * The four figures the week is judged by, large, each with what it moved since
- * the week before. A figure its source did not measure says so instead.
+ * the week before. Only a count is drawn large: a figure with nothing to count
+ * shows a dash, and its words move to the caption, where they fit.
  */
 export function HeadlineFigures({
   review,
@@ -183,35 +161,92 @@ export function HeadlineFigures({
           week: formatDate(middayInstant(priorWeek, zone), locale, zone),
         })
       : undefined;
+  const pipeline = review.pipeline;
+  const wonValue = pipeline
+    ? formatMoney(pipeline.won_minor, pipeline.currency, locale)
+    : undefined;
   return (
     <dl className="brief-report-figures" data-testid="weekly-strip">
       {carried(review, t, locale)
         .filter((figure) => HEADLINE.includes(figure.key))
         .map((figure) => {
-          const detail =
-            figure.key === "won"
-              ? (wonPace(review, locale, t, zone) ??
-                since(change(figure, review, locale)))
-              : since(change(figure, review, locale));
+          const state = figures[figure.figure];
           const reading = figureReading(
-            figures[figure.figure],
-            { value: figure.shown(review.counts), detail },
+            state,
+            {
+              value: figure.shown(review.counts),
+              detail: since(change(figure, review, locale)),
+            },
             { t, locale, zone },
           );
+          const counted =
+            (state.kind === "measured" || state.kind === "partial") &&
+            !figure.none?.(review.counts);
+          const lines = counted
+            ? [figure.key === "won" ? wonValue : undefined, reading.detail]
+            : [reading.value, reading.detail];
           return (
             <div className="brief-report-figure" key={figure.key}>
               <dt>{figure.label}</dt>
               <dd className="brief-report-figure-value t-num">
-                {reading.value}
+                {counted ? reading.value : "—"}
               </dd>
-              {reading.detail && (
-                <dd className="t-caption">{reading.detail}</dd>
-              )}
+              {lines.filter(Boolean).map((line) => (
+                <dd className="t-caption" key={line}>
+                  {line}
+                </dd>
+              ))}
             </div>
           );
         })}
     </dl>
   );
+}
+
+type TableRow = Readonly<{
+  key: string;
+  label: string;
+  week: string;
+  prior: string;
+  change: string;
+}>;
+
+/**
+ * What the wins were worth, beside the week before. Only a prior week priced
+ * in the same currency is compared; any other comparison would be invented.
+ */
+function wonValueRow(
+  review: WeeklyReview,
+  figures: WeeklyFigures,
+  t: Translator,
+  locale: Locale,
+): TableRow | undefined {
+  const pipeline = review.pipeline;
+  if (pipeline === undefined) return undefined;
+  const before = review.prior?.pipeline;
+  const comparable =
+    before !== undefined && before.currency === pipeline.currency;
+  const measured = figures.won.kind === "measured";
+  return {
+    key: "wonValue",
+    label: t("brief.weekly.outlook.won"),
+    week: figureValue(
+      figures.won,
+      formatMoney(pipeline.won_minor, pipeline.currency, locale),
+      t,
+    ),
+    prior: comparable
+      ? formatMoney(before.won_minor, before.currency, locale)
+      : "—",
+    change:
+      comparable && measured
+        ? formatSignedMoney(
+            pipeline.won_minor - before.won_minor,
+            pipeline.currency,
+            locale,
+          )
+        : "—",
+  };
 }
 
 /** Every figure of the week beside the week before it, as one table. */
@@ -222,11 +257,23 @@ export function FiguresTable({
   const t = useT();
   const { locale } = useLocale();
   const prior = review.prior?.counts;
+  const counted: TableRow[] = carried(review, t, locale).map((figure) => ({
+    key: figure.key,
+    label: figure.label,
+    week: figureValue(figures[figure.figure], figure.shown(review.counts), t),
+    prior: prior ? figure.shown(prior) : "—",
+    change:
+      figures[figure.figure].kind === "measured"
+        ? (change(figure, review, locale) ?? "—")
+        : "—",
+  }));
+  const money = wonValueRow(review, figures, t, locale);
+  const rows = money ? [counted[0], money, ...counted.slice(1)] : counted;
   return (
     <DataTable
       label={t("brief.report.chapter.figures")}
-      rowKey={(row: WeekFigure) => row.key}
-      rows={[...carried(review, t, locale)]}
+      rowKey={(row: TableRow) => row.key}
+      rows={rows.filter((row): row is TableRow => row !== undefined)}
       columns={[
         {
           key: "figure",
@@ -238,23 +285,19 @@ export function FiguresTable({
           key: "week",
           header: t("brief.report.col.week"),
           align: "end",
-          render: (row) =>
-            figureValue(figures[row.figure], row.shown(review.counts), t),
+          render: (row) => row.week,
         },
         {
           key: "prior",
           header: t("brief.report.col.prior"),
           align: "end",
-          render: (row) => (prior ? row.shown(prior) : "—"),
+          render: (row) => row.prior,
         },
         {
           key: "change",
           header: t("brief.report.col.change"),
           align: "end",
-          render: (row) =>
-            figures[row.figure].kind === "measured"
-              ? (change(row, review, locale) ?? "—")
-              : "—",
+          render: (row) => row.change,
         },
       ]}
     />

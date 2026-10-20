@@ -700,7 +700,9 @@ describe("BriefScreen — figures whose source had not started", () => {
     if (!found) throw new Error(`no figure labelled ${label}`);
     return {
       value: found.querySelector(".brief-report-figure-value")?.textContent,
-      detail: found.querySelector(".t-caption")?.textContent,
+      details: [...found.querySelectorAll(".t-caption")].map(
+        (line) => line.textContent,
+      ),
     };
   };
   const figuresTable = () =>
@@ -718,11 +720,12 @@ describe("BriefScreen — figures whose source had not started", () => {
       numeric_summary: beforeHistoryWeeklyNumbers,
     });
 
+    // Nothing to count draws no figure large: a dash, and the words under it.
     const values = [
       ...strip.querySelectorAll(".brief-report-figure-value"),
     ].map((value) => value.textContent);
     expect(values).toHaveLength(4);
-    expect(new Set(values)).toEqual(new Set([en["brief.weekly.notRecorded"]]));
+    expect(new Set(values)).toEqual(new Set(["—"]));
     // Every figure in the table says the same, all seven of them.
     const weekCells = within(figuresTable())
       .getAllByRole("row")
@@ -732,9 +735,10 @@ describe("BriefScreen — figures whose source had not started", () => {
     expect(new Set(weekCells)).toEqual(
       new Set([en["brief.weekly.notRecorded"]]),
     );
-    expect(card(strip, en["brief.weekly.dealsWon"]).detail).toBe(
+    expect(card(strip, en["brief.weekly.dealsWon"]).details).toEqual([
+      en["brief.weekly.notRecorded"],
       recordedFrom("2026-09-21T09:00:00Z"),
-    );
+    ]);
     // The headline names the gap instead of reading the zeros as a quiet week.
     const glance = screen.getByTestId("brief-glance");
     expect(glance.textContent).toContain(en["brief.week.beforeHistory"]);
@@ -764,25 +768,39 @@ describe("BriefScreen — figures whose source had not started", () => {
 
     const won = card(strip, en["brief.weekly.dealsWon"]);
     expect(won.value).toBe("3");
-    // The money line stays, and the qualifier follows it on the same line.
-    expect(won.detail).toMatch(/^(12.500,00\s*€|€12,500\.00) · /);
-    expect(won.detail).toContain(
+    // The money line stays, and the qualifier follows it.
+    expect(won.details).toEqual([
+      expect.stringMatching(/^(12.500,00\s*€|€12,500\.00)$/),
       en["brief.weekly.partialFrom"].replace(
         "{date}",
         formatDateAbbrev("2026-09-10T08:00:00Z", "en", recordZone),
       ),
-    );
+    ]);
     expect(card(strip, en["brief.weekly.meetingsHeld"])).toEqual({
       value: "3 of 5",
-      detail: "Some meeting history predates confirmed outcomes.",
+      details: ["Some meeting history predates confirmed outcomes."],
     });
     expect(card(strip, en["brief.weekly.leadsAnswered"])).toEqual({
-      value: en["brief.weekly.notRecorded"],
-      detail: "No lead source in scope.",
+      value: "—",
+      details: [en["brief.weekly.notRecorded"], "No lead source in scope."],
     });
     expect(
       screen.getByText(en["brief.weekly.dealsMoved"]).nextSibling?.textContent,
     ).toBe(en["brief.weekly.partialValue"].replace("{value}", "0"));
+  });
+
+  // Only a count is drawn at headline size. A share with nothing to share out
+  // draws a dash and says why under it.
+  it("draws a dash, not words, for a share with nothing to count", async () => {
+    const strip = await mount({
+      ...review,
+      counts: { ...zeroWeekCounts, commitments_due: 0, commitments_kept: 0 },
+    });
+
+    expect(card(strip, en["brief.weekly.planCommitmentsKept"])).toEqual({
+      value: "—",
+      details: [en["brief.weekly.noCommitments"]],
+    });
   });
 
   it("draws a review frozen before coverage existed exactly as before", async () => {

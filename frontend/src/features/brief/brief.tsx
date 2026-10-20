@@ -151,7 +151,7 @@ function BriefBody({
     return (
       <div className="brief-weekly-page">
         {head}
-        <WeeklySection plan={<PlanSection />} closing={queueToggle} />
+        <WeeklySection plan={<PlanSection />} />
       </div>
     );
   return (

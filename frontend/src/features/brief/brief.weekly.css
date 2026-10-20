@@ -56,20 +56,27 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Two strips, one block: the lead block and the deal block are read one after
-   the other and touched without this. */
-.brief-weekly-scorecard {
+.brief-weekly-learnings {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
 }
-
-/* One lesson per card, and the cards are read one at a time — so they are
-   spaced as cards rather than run together into a single grey column. */
-.brief-weekly-learnings {
+/* One lesson per item, its kind first, divided by a rule as the deals are. */
+.brief-weekly-learning-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.brief-weekly-learning {
   display: flex;
   flex-direction: column;
-  gap: var(--gapCards);
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding-block: var(--space-4);
+  border-block-start: 1px solid var(--borderSubtle);
+}
+.brief-weekly-learning > p {
+  margin: 0;
 }
 
 /* The absence, as the prose it is: the body's own gutter is the interval. */
@@ -90,7 +97,7 @@
 
 /* ── The report ─────────────────────────────────────────────────────────────
  * One column at a reading width, so the week reads as a document rather than
- * a dashboard. A chapter sits on the page ground; the plan is the one card. */
+ * a dashboard. Chapters sit on the page ground; the plan is the one card. */
 .brief-weekly-page {
   max-width: 48rem;
   margin-inline: auto;
@@ -108,11 +115,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-12);
-}
-/* The scorecard and the lessons are a panel's groups, set here on the page
-   ground: with no box around them they keep no gutter of their own. */
-.brief-report-flat {
-  --padPanel: 0px;
 }
 /* Who wrote the report, when, and the way to another week, on one line. */
 .brief-report-byline {
@@ -156,7 +158,7 @@
 /* The headline figures: four across, large, each with what it moved. */
 .brief-report-figures {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
   gap: var(--space-6);
   margin: 0;
 }
@@ -182,6 +184,14 @@
 }
 .brief-report-footnote {
   margin: 0;
+}
+/* What a table row's figure rests on, under its name. */
+.brief-report-basis {
+  display: block;
+}
+.brief-report-actions {
+  display: flex;
+  gap: var(--gapActions);
 }
 .brief-report-closing {
   display: flex;

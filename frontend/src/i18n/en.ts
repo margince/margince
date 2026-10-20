@@ -842,8 +842,6 @@ export const en = {
   "worklist.untitled.meeting_follow_up": "Meeting",
   "brief.plan.select": "Find a deal, lead, contact, company or project",
   "brief.plan.period": "Current plan · week of {date}",
-  "brief.forecast.period":
-    "Forecast period: {start} to {end}. Saved with this weekly review.",
   "brief.coverage.retry": "Refresh brief",
   "brief.reply.owed": "Customer awaiting your reply",
   "brief.changes.superseded":
@@ -4235,7 +4233,6 @@ export const en = {
   // What the week TAUGHT, as against what it was. Every learning shows what it
   // rests on, because a claim about cause is one the reader cannot check
   // against anything else on the page.
-  "brief.weekly.learnings.title": "Observations to review",
   "brief.weekly.learnings.worked": "Positive outcome",
   "brief.weekly.learnings.didNotWork": "Unsuccessful outcome",
   "brief.weekly.learnings.pattern": "Pattern",
@@ -4250,8 +4247,7 @@ export const en = {
   // the funnel, and an empty row would read as failure at something nobody
   // asked of them.
   "brief.weekly.scorecard.title": "Weekly scorecard",
-  "brief.weekly.scorecard.leadBlock": "Leads and meetings",
-  "brief.weekly.scorecard.dealBlock": "Deals",
+  "brief.weekly.scorecard.basis": "Basis",
   "brief.weekly.scorecard.advanced": "Lead advances",
   "brief.weekly.scorecard.advancedBasis": "Per step · not per lead",
   "brief.weekly.scorecard.answeredInTarget": "Target breaches",
@@ -4395,6 +4391,7 @@ export const en = {
   "brief.weekly.outlook.bestCaseDetail": "Includes commit",
   "brief.weekly.outlook.weighted": "Weighted deal value",
   "brief.weekly.outlook.landing": "Projected landing",
+  "brief.weekly.outlook.open": "Open the forecast",
   "brief.weekly.outlook.measure.commit_evidence": "From commit evidence",
   "brief.weekly.outlook.measure.weighted": "From weighted deals",
   "brief.weekly.outlook.measure.manager_call": "From the manager call",
@@ -4418,7 +4415,7 @@ export const en = {
   "brief.report.chapter.glance": "At a glance",
   "brief.report.chapter.closed": "Closed deals",
   "brief.report.chapter.movement": "Pipeline movement",
-  "brief.report.chapter.commitments": "Commitments",
+  "brief.report.chapter.commitments": "The week ahead",
   "brief.report.chapter.figures": "Figures",
   "brief.report.chapter.observations": "Observations",
   "brief.report.closedTotal": "Won {won} · Lost {lost}",
@@ -4441,7 +4438,6 @@ export const en = {
   "brief.weekly.queueWorked": "Morning brief items",
   "brief.weekly.actedDismissed": "{acted} acted · {dismissed} dismissed",
   "brief.weekly.sincePrior": "{delta} compared with {week}",
-  "brief.weekly.wonVsPrior": "{value} · {delta} compared with {week}",
   "brief.weekly.leadsAnswered": "Leads answered",
   "brief.weekly.ofRouted": "{answered} of {routed}",
   "brief.weekly.planCommitmentsKept": "Commitments kept",

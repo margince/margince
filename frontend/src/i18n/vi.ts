@@ -853,8 +853,6 @@ export const vi = {
   "worklist.untitled.meeting_follow_up": "Cuộc họp",
   "brief.plan.select": "Tìm deal, lead, liên hệ, công ty hoặc dự án",
   "brief.plan.period": "Kế hoạch hiện tại · tuần từ {date}",
-  "brief.forecast.period":
-    "Kỳ dự báo: {start} đến {end}. Lưu cùng bản tổng kết tuần này.",
   "brief.coverage.retry": "Làm mới bản tin",
   "brief.reply.owed": "Khách hàng đang chờ bạn trả lời",
   "brief.changes.superseded":
@@ -4111,7 +4109,6 @@ export const vi = {
   "decision.status.expired": "Đã hết hạn",
 
   "brief.panel.weekly": "Tổng kết tuần",
-  "brief.weekly.learnings.title": "Nhận xét cần xem lại",
   "brief.weekly.learnings.worked": "Kết quả tích cực",
   "brief.weekly.learnings.didNotWork": "Kết quả không thành công",
   "brief.weekly.learnings.pattern": "Xu hướng",
@@ -4120,8 +4117,7 @@ export const vi = {
   "brief.weekly.learnings.insufficient":
     "Chưa đủ bằng chứng đã ghi nhận để đưa ra nhận xét hữu ích.",
   "brief.weekly.scorecard.title": "Bảng điểm tuần",
-  "brief.weekly.scorecard.leadBlock": "Lead và cuộc họp",
-  "brief.weekly.scorecard.dealBlock": "Deal",
+  "brief.weekly.scorecard.basis": "Cơ sở",
   "brief.weekly.scorecard.advanced": "Lượt lead tiến lên",
   "brief.weekly.scorecard.advancedBasis": "Theo bước · không theo lead",
   "brief.weekly.scorecard.answeredInTarget": "Trễ hạn mục tiêu",
@@ -4261,6 +4257,7 @@ export const vi = {
   "brief.weekly.outlook.bestCaseDetail": "Gồm Commit",
   "brief.weekly.outlook.weighted": "Giá trị deal có trọng số",
   "brief.weekly.outlook.landing": "Kết quả dự kiến",
+  "brief.weekly.outlook.open": "Mở dự báo",
   "brief.weekly.outlook.measure.commit_evidence": "Theo bằng chứng Commit",
   "brief.weekly.outlook.measure.weighted": "Theo deal có trọng số",
   "brief.weekly.outlook.measure.manager_call": "Theo nhận định của quản lý",
@@ -4284,7 +4281,7 @@ export const vi = {
   "brief.report.chapter.glance": "Tổng quan",
   "brief.report.chapter.closed": "Giao dịch đã chốt",
   "brief.report.chapter.movement": "Biến động pipeline",
-  "brief.report.chapter.commitments": "Cam kết",
+  "brief.report.chapter.commitments": "Tuần tới",
   "brief.report.chapter.figures": "Số liệu",
   "brief.report.chapter.observations": "Nhận xét",
   "brief.report.closedTotal": "Thắng {won} · Thua {lost}",
@@ -4308,7 +4305,6 @@ export const vi = {
   "brief.weekly.queueWorked": "Việc trong Bản tin sáng",
   "brief.weekly.actedDismissed": "{acted} đã xử lý · {dismissed} đã bỏ qua",
   "brief.weekly.sincePrior": "{delta} so với tuần từ {week}",
-  "brief.weekly.wonVsPrior": "{value} · {delta} so với tuần từ {week}",
   "brief.weekly.leadsAnswered": "Lead đã được phản hồi",
   "brief.weekly.ofRouted": "{answered} trên {routed}",
   "brief.weekly.planCommitmentsKept": "Cam kết đã hoàn thành",

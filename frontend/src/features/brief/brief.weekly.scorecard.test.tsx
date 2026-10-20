@@ -36,6 +36,15 @@ const dealBlock = {
   forecast_down: 1,
 };
 
+/** The cells of the row a measure is named in, as the reader reads them. */
+function rowOf(label: string): string[] {
+  const row = screen.getByText(label).closest("tr");
+  if (!row) throw new Error(`no row named ${label}`);
+  return [...row.querySelectorAll("td, th")].map(
+    (cell) => cell.textContent ?? "",
+  );
+}
+
 describe("the weekly scorecard", () => {
   it("draws nothing at all when the review carries no scorecard", () => {
     const { container } = render(<ScorecardPanel scorecard={undefined} />);
@@ -45,30 +54,21 @@ describe("the weekly scorecard", () => {
   it("omits the lead block rather than drawing a rep zeros they did not earn", () => {
     render(<ScorecardPanel scorecard={{ deal: dealBlock }} />);
     expect(
-      screen.queryByRole("region", {
-        name: en["brief.weekly.scorecard.leadBlock"],
-      }),
+      screen.queryByText(en["brief.weekly.scorecard.advanced"]),
     ).toBeNull();
-    // The deal block it DID send is still drawn: this is an omission, not a
-    // panel that gave up.
+    // The deal block it did send is still drawn: an omission, not a give-up.
     expect(
-      screen.getByRole("region", {
-        name: en["brief.weekly.scorecard.dealBlock"],
-      }),
+      screen.getByText(en["brief.weekly.scorecard.advances"]),
     ).toBeTruthy();
   });
 
   it("omits the deal block on its own terms too", () => {
     render(<ScorecardPanel scorecard={{ lead: leadBlock }} />);
     expect(
-      screen.queryByRole("region", {
-        name: en["brief.weekly.scorecard.dealBlock"],
-      }),
+      screen.queryByText(en["brief.weekly.scorecard.advances"]),
     ).toBeNull();
     expect(
-      screen.getByRole("region", {
-        name: en["brief.weekly.scorecard.leadBlock"],
-      }),
+      screen.getByText(en["brief.weekly.scorecard.advanced"]),
     ).toBeTruthy();
   });
 
@@ -116,9 +116,9 @@ describe("the weekly scorecard", () => {
     ).toBeGreaterThan(0);
   });
 
-  // A week with no open deal has no denominator, so the three coverage cards
-  // have nothing to be a share OF. "0 of 0 open deals" states a rate nobody
-  // could have scored, and the bar under it draws a share of nothing.
+  // A week with no open deal has no denominator, so the three coverage rows
+  // have nothing to be a share of. "0 of 0 open deals" states a rate nobody
+  // could have scored.
   it("says there were no open deals rather than scoring a share of none", () => {
     render(
       <ScorecardPanel
@@ -134,8 +134,8 @@ describe("the weekly scorecard", () => {
       />,
     );
 
-    // One arm for all three: the strip is read across, and three spellings of
-    // one absence would read as three different weeks.
+    // One arm for all three: three spellings of one absence would read as
+    // three different weeks.
     expect(
       screen.getAllByText(en["brief.weekly.scorecard.noOpen"]),
     ).toHaveLength(3);
@@ -144,24 +144,18 @@ describe("the weekly scorecard", () => {
         en["brief.weekly.scorecard.ofOpen"].replace("{total}", "0"),
       ),
     ).toBeNull();
-    expect(
-      screen.getByTestId("scorecard-deal").querySelector(".stat-card-meter"),
-    ).toBeNull();
   });
 
-  // THE BREACH IS THE READING. A card that led with the leads answered in
-  // target put the reassurance in the figure slot and left the week's one
-  // actionable number as a footnote.
-  it("leads the target card with the breaches, not with the answers", () => {
+  // The breach is the reading. Leading with the leads answered in target put
+  // the reassurance in the figure and the actionable number in a footnote.
+  it("leads the target row with the breaches, not with the answers", () => {
     render(<ScorecardPanel scorecard={{ lead: leadBlock }} />);
 
-    const card = screen
-      .getByText(en["brief.weekly.scorecard.answeredInTarget"])
-      .closest(".stat-card");
-    expect(card?.querySelector(".stat-card-value")?.textContent).toBe("3");
-    expect(card?.querySelector(".stat-card-detail")?.textContent).toBe(
+    expect(rowOf(en["brief.weekly.scorecard.answeredInTarget"])).toEqual([
+      en["brief.weekly.scorecard.answeredInTarget"],
+      "3",
       en["brief.weekly.scorecard.answeredDetail"].replace("{count}", "9"),
-    );
+    ]);
   });
 
   // Zero breaches is a finding, and "0 answered in target" would be its
@@ -172,13 +166,11 @@ describe("the weekly scorecard", () => {
       <ScorecardPanel scorecard={{ lead: { ...leadBlock, breached: 0 } }} />,
     );
 
-    const card = screen
-      .getByText(en["brief.weekly.scorecard.answeredInTarget"])
-      .closest(".stat-card");
-    expect(card?.querySelector(".stat-card-value")?.textContent).toBe("0");
-    expect(card?.querySelector(".stat-card-detail")?.textContent).toBe(
+    expect(rowOf(en["brief.weekly.scorecard.answeredInTarget"])).toEqual([
+      en["brief.weekly.scorecard.answeredInTarget"],
+      "0",
       en["brief.weekly.scorecard.allInTarget"],
-    );
+    ]);
   });
 
   it("says the meeting counts are a floor only when history is actually missing", () => {
