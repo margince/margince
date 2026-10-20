@@ -85,7 +85,7 @@ export const UnsupportedReceipt: Story = {
     lane: "done",
     title: "Activity",
     since: "2026-09-12T18:00:00Z",
-    zone: "UTC",
+    zone: viewerZone(),
     byDay: false,
     rows: [
       {
