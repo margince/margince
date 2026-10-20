@@ -4623,7 +4623,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `signal_extract` / `thread_events`
 
-`system 4,590 B (~1,147 tok)`: rules 4,318 B · boundary 272 B · after boundary 0 B · **cacheable 94%**
+`system 4,781 B (~1,195 tok)`: rules 4,509 B · boundary 272 B · after boundary 0 B · **cacheable 94%**
 
 <details><summary>system prompt</summary>
 
@@ -4670,6 +4670,8 @@ are respectively supplier, partner and provider, never the buyer. When buyer ide
 commercial direction is unclear use unknown and leave buyer_ref empty. Quote the current
 message’s words that establish the need. An explicit report of a named participant’s request
 can identify that participant as the buyer; their presence in Cc alone cannot.
+Use supplier, partner or provider only when the source establishes that specific relationship.
+Merely relaying an unidentified company’s need does not establish a partnership: use unknown.
 A meeting invitation alone establishes no buying intent.
 Reporting nothing is the correct answer for most conversations.
 LANGUAGE
@@ -4699,7 +4701,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
             "type": "string"
           },
           "commercial_role": {
-            "description": "The external counterparty’s role relative to our company. Our own purchase from them makes them supplier, not buyer.",
+            "description": "The external counterparty’s source-established role relative to our company. Our own purchase makes them supplier. Relaying an unidentified company’s need without an established partner relationship is unknown, not partner.",
             "enum": [
               "buyer",
               "supplier",
