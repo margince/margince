@@ -107,11 +107,7 @@ func blockCommentSpan(text string, pos int) (length int, closed bool) {
 }
 
 func quotedStringSpan(text string, pos int) (int, bool) {
-	escaped := pos > 0 && (text[pos-1] == 'E' || text[pos-1] == 'e')
-	if escaped && pos > 1 {
-		before := text[pos-2]
-		escaped = !(identStart(before) || before >= '0' && before <= '9' || before == '$' || before == '"' || before == '\'' || before >= 128)
-	}
+	escaped := escapeStringPrefix(text, pos)
 	for i := pos + 1; i < len(text); i++ {
 		if escaped && text[i] == '\\' {
 			i++
@@ -126,4 +122,13 @@ func quotedStringSpan(text string, pos int) (int, bool) {
 		}
 	}
 	return len(text) - pos, false
+}
+
+func escapeStringPrefix(text string, pos int) bool {
+	escaped := pos > 0 && (text[pos-1] == 'E' || text[pos-1] == 'e')
+	if escaped && pos > 1 {
+		before := text[pos-2]
+		escaped = !(identStart(before) || before >= '0' && before <= '9' || before == '$' || before == '"' || before == '\'' || before >= 128)
+	}
+	return escaped
 }
