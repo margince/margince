@@ -50,7 +50,7 @@ func TestTheUnplaceableCountReachesOnlyADiagnosticsSeat(t *testing.T) {
 	if diag.NotShownCountWithheld == nil || *diag.NotShownCountWithheld {
 		t.Fatal("diagnostics receipt must state its counts were read")
 	}
-	if count, ok := unknownEntityCount(diag); !ok || count < 1 {
+	if count, ok := unknownEntityCount(diag); !ok || count < 3 {
 		t.Fatalf("a diagnostics seat was not told of the unplaceable action: %+v", diag.NotShown)
 	}
 }
@@ -62,7 +62,9 @@ func seedUnplaceableMachineAction(t *testing.T, e *Env) {
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, occurred_at)
-			VALUES ('agent', 'agent:auto-apply', 'update', 'tag', $1, now())`, ids.NewV7())
+			VALUES ('agent', 'agent:auto-apply', 'update', 'tag', $1, now()),
+                   ('agent', 'agent:auto-apply', 'create', 'tag', $1, now()),
+                   ('agent', 'agent:auto-apply', 'archive', 'tag', $1, now())`, ids.NewV7())
 		return err
 	})
 	if err != nil {

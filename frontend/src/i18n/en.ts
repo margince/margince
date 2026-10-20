@@ -901,7 +901,7 @@ export const en = {
   "worklist.lead.lastTouch": "last activity {date}",
   "worklist.deal.omitted": "omitted from forecast",
   "worklist.deal.provisional": "forecast close {date} (unconfirmed)",
-  "brief.readings.riskBasis": "Face value · unpriced excluded",
+  "brief.readings.riskBasis": "Face value · not expected loss",
   "brief.digestNightly": "As of the nightly run",
   "magic.action.forecast_changed": "Adjusted forecast",
   "magic.why.forecast_review":

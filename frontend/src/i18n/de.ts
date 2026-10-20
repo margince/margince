@@ -939,7 +939,7 @@ export const de = {
   "worklist.deal.omitted": "nicht in der Prognose",
   "worklist.deal.provisional":
     "prognostizierter Abschluss {date} (unbestätigt)",
-  "brief.readings.riskBasis": "Nennwert · Deals ohne Preis nicht enthalten",
+  "brief.readings.riskBasis": "Nennwert · kein erwarteter Verlust",
   "brief.digestNightly": "Stand des nächtlichen Laufs",
   "magic.action.forecast_changed": "Prognose angepasst",
   "magic.why.forecast_review":

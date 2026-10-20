@@ -917,7 +917,7 @@ export const vi = {
   "worklist.deal.omitted": "không tính vào dự báo",
   "worklist.deal.provisional": "dự kiến chốt {date} (chưa xác nhận)",
   "brief.readings.riskBasis":
-    "Giá trị danh nghĩa · không tính deal chưa định giá",
+    "Giá trị danh nghĩa · không phải tổn thất dự kiến",
   "brief.digestNightly": "Tại thời điểm chạy ban đêm",
   "magic.action.forecast_changed": "Đã điều chỉnh dự báo",
   "magic.why.forecast_review":

@@ -179,7 +179,7 @@ func TestFocusPrioritizesOnlyAVerifiedAccountTerminationDecision(t *testing.T) {
 
 func TestFocusRequiresTerminationResponsibilityAndAnAvailableDecision(t *testing.T) {
 	for _, approval := range []crmcontracts.Approval{
-		{Kind: "lifecycle_change", Preview: &crmcontracts.ApprovalPreview{Version: 1, State: "ready"}},
+		{Kind: "lifecycle_change", Preview: &crmcontracts.ApprovalPreview{Version: 1, State: "ready", Changes: []crmcontracts.ApprovalPreviewChange{{Field: "lifecycle", After: crmcontracts.ApprovalPreviewValue{Kind: "enum", Text: "former_customer"}}}}},
 		{Kind: "lifecycle_change", RequestedDeciderId: new(crmcontracts.Approval{}.Id)},
 	} {
 		if focusEligible(classifyDecision(approvalItem(approval, nil), rankInstant), rankInstant) {

@@ -238,15 +238,17 @@ export function MagicPanel({
   );
 }
 
-// A lane off a payload this client cannot read is not an empty one: absent is
-// version skew, and only a list the server sent can say there is nothing in it.
 function doneCoverageIncomplete(receipt: MagicReceipt | undefined): boolean {
   return (
     receipt?.not_shown_count_withheld === true ||
-    (receipt?.not_shown?.length ?? 0) > 0
+    receipt?.not_shown?.some(
+      (item) => item.reason === "unknown_entity_type",
+    ) === true
   );
 }
 
+// A lane off a payload this client cannot read is not an empty one: absent is
+// version skew, and only a list the server sent can say there is nothing in it.
 function hasLines(rows: readonly MagicLine[] | undefined): boolean {
   return rowsOf(rows).length > 0;
 }
@@ -310,10 +312,11 @@ function LaneSummary({
   }
   const answers = LANES.map((lane) => {
     const rows = receipt[lane];
-    const countWithheld = lane === "done" && doneCoverageIncomplete(receipt);
+    const coverageIncomplete =
+      lane === "done" && doneCoverageIncomplete(receipt);
     if (
       !Array.isArray(rows) ||
-      (rows.length === 0 && (!canReportEmpty || countWithheld))
+      (rows.length === 0 && (!canReportEmpty || coverageIncomplete))
     ) {
       return {
         lane,

@@ -176,6 +176,21 @@ describe("the receipt draws every lane it promises", () => {
     expect(await screen.findByText("Nothing done for you")).toBeTruthy();
   });
 
+  it("keeps housekeeping separate from missing receipt coverage", async () => {
+    stub(receipt({ not_shown: [{ reason: "unadmitted_action", count: 12 }] }));
+    renderMagic();
+    expect(await screen.findByText("Nothing done for you")).toBeTruthy();
+  });
+
+  it("does not call an empty receipt clear when entity kinds cannot be placed", async () => {
+    stub(receipt({ not_shown: [{ reason: "unknown_entity_type", count: 2 }] }));
+    renderMagic();
+    expect(
+      await screen.findByText("Done for you: may be incomplete"),
+    ).toBeTruthy();
+    expect(screen.queryByText("Nothing done for you")).toBeNull();
+  });
+
   it("does not claim an empty receipt is complete when unsupported counts are withheld", async () => {
     stub(receipt({ not_shown_count_withheld: true }));
     renderMagic();

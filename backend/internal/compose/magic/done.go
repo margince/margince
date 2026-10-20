@@ -358,11 +358,6 @@ func admittedActions(bulk bool) []string {
 // it would serve a row this read cannot prove the reader may see — but it is
 // COUNTED, so the receipt can say how much it is not showing.
 //
-// Creates and archives are not counted. They are admitted for the records this
-// page places, and every other kind of row — a tag, a list membership, an
-// approval — is created and archived by the machinery as bookkeeping, which is
-// not a change to a record the reader keeps.
-//
 // The count is deliberately coarse: it does not name the types, because naming
 // them would say which kinds of record exist and were touched, which is a fact
 // about the installation rather than about this reader's work. Even coarse, it
@@ -381,7 +376,7 @@ func unplaceableSince(ctx context.Context, tx pgx.Tx, since time.Time) (int, err
 		   AND a.actor_type = ANY($%d)
 		   AND a.action = ANY($%d)
 		   AND NOT (a.entity_type = ANY($%d))`,
-		arg(since), arg(machineActors()), arg(admittedActions(false)), arg(placed))
+		arg(since), arg(machineActors()), arg(append(admittedActions(false), admittedActions(true)...)), arg(placed))
 	var count int
 	if err := tx.QueryRow(ctx, query, args...).Scan(&count); err != nil {
 		return 0, fmt.Errorf("count the machine actions this build cannot place: %w", err)
