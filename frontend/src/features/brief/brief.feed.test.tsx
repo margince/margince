@@ -335,10 +335,8 @@ it("names the account a row in hand is about, and which side wrote last", () => 
 
 // The ranked column names its rows from the contact, not from a message.
 //
-// Read off `email_summary.counterparty`, the line named the sender of a
-// waiting message and left every other row anonymous, so a task the reader
-// owes somebody stood in the column with its reason and nobody's name, while
-// the same row in hand named them. The contact is the field every row carries.
+// Read off `email_summary.counterparty`, the line left every row but a waiting
+// message anonymous. The contact is the field every row carries.
 it("names a task's contact in the ranked column", () => {
   stubApi({});
   const owed = {
@@ -363,9 +361,8 @@ it("names a task's contact in the ranked column", () => {
     />,
   );
 
-  // The task's own row in the column, not the card and not the waiting message
-  // above it: both of those named her before, and either would carry a
-  // page-wide query over a line that still said nothing.
+  // The task's own row in the column, not the card or the waiting message
+  // above it: both named her already, so a page-wide query would pass anyway.
   const column = container.querySelector(".brief-triage-queue");
   if (!(column instanceof HTMLElement)) throw new Error("no ranked column");
   const row = within(column).getByRole("button", {
@@ -377,10 +374,8 @@ it("names a task's contact in the ranked column", () => {
 // A waiting row is still named by its subject, from the row's own `title`.
 //
 // The server puts a waiting message's subject there (classify.go), so the
-// column reads it like every other row rather than off `email_summary`, which
-// is what kept the ranked list from drawing a part of a message outside the
-// canonical row. The claim used to live in a helper's docblock with nothing
-// holding it; this is what holds it.
+// column reads it like every other row. Reading `email_summary` would draw
+// part of a message outside the canonical row.
 it("names a waiting row by its subject", () => {
   stubApi({});
   const { container } = render(

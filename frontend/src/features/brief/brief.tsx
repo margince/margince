@@ -210,10 +210,8 @@ function PersonalMorning({
       ? "failed"
       : "ready";
   // A task and a meeting are both activities, and the door on either row
-  // opens the activity's own read: for a meeting, its subject and the
-  // calendar's excerpt of who was there and what it was about. The pane
-  // beside the queue draws only a contact, so a meeting sent there opened a
-  // frame with nothing in it.
+  // opens the activity's own read. The pane beside the queue draws only a
+  // contact, so a meeting sent there would open an empty frame.
   const opensActivity =
     context?.source === "task" || context?.source === "meeting_outcome";
   return (

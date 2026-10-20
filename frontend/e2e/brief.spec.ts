@@ -8,8 +8,8 @@ import { signIn } from "./waits";
  *
  * Behavioural tests (vitest) already prove the data flow: which rows render,
  * what a checkbox does not send, which absence draws which plate. What none of
- * them can see is that the readings strip came out as two stacked rows, that
- * the focus panel lost its full width, or that a panel spilled
+ * them can see is that the readings strip came out as two stacked rows. Nor
+ * can they see a focus panel that lost its full width, or a panel that spilled
  * sideways under a long German label. That is what this suite is for.
  *
  * Two describes, and the split is the same one company-record.spec.ts makes:
@@ -19,13 +19,11 @@ import { signIn } from "./waits";
  *     themes.
  *
  * Never pixel-equality and never the drawn English strings. The app renders
- * German, so a copy change must not fail a layout suite; assertions are
- * structural, or they are floors ("at least this prominent"), which is the
- * claim a layout actually makes.
+ * German, so a copy change must not fail a layout suite. Assertions are
+ * structural, or floors ("at least this prominent").
  *
  * It runs against a live stack because the states that have to look right are
- * data states. Without BASE_URL the suite skips itself loudly rather than
- * passing on an app it never loaded.
+ * data states. Without BASE_URL the suite skips itself loudly.
  */
 
 const BASE_URL = process.env.BASE_URL;
@@ -44,10 +42,8 @@ const SHOTS = process.env.E2E_BRIEF_SHOT_DIR ?? "/tmp/e2e-brief";
  * A string the app actually renders, read from the catalog the component reads.
  *
  * The app renders German. Writing the words here would put a second copy of
- * them in the tree, and a translator improving one would fail a layout suite,
- * which is why the rest of this file asserts structure. The two cases below
- * name copy because they are about a reader finding the page, and a heading
- * nobody can read is a defect no box measurement can see.
+ * them in the tree. The two cases below name copy because a heading nobody can
+ * read is a defect no box measurement can see.
  */
 function copy(key: MessageKey): string {
   return de[key];
@@ -60,15 +56,12 @@ const GLANCE = '[data-testid="brief-glance"]';
 /**
  * Open the Brief and wait for the page to have actually settled.
  *
- * Three waits, and the first two on their own are not enough. Brief fans out to
- * five independent reads, so a route that has arrived is still a column of
- * skeletons; the glance paints first, so anchoring there measures a page whose
- * work column is empty and whose readings are still fading in. The first
- * capture taken that way photographed exactly that.
+ * Brief fans out to five independent reads, so an arrived route is still a
+ * column of skeletons. The glance paints first, so anchoring only there
+ * measures a page whose work column is empty.
  *
- * So: the glance, then the work column having real content under it, then the
- * entry animations having finished, a box read mid-fade is where the element
- * passed through rather than where it rests.
+ * So: the glance, then the work column having real content, then the entry
+ * animations finished. A box read mid-fade is not where the element rests.
  */
 async function openBrief(page: Page) {
   await page.goto("/#/home", { waitUntil: "networkidle" });
@@ -81,9 +74,8 @@ async function openBrief(page: Page) {
  * Wait out the entry animations.
  *
  * The shell's core mark is excluded by name: its only motion is an opacity
- * transition that cannot move a box, and it is in flight more or less always,
- * so waiting on it would time out on every call. Excluded by name rather than
- * by giving up on the check, which would also excuse a panel still sliding in.
+ * transition that cannot move a box, and it is almost always in flight.
+ * Excluding by name keeps the check for a panel still sliding in.
  */
 /** Open the Brief on its weekly view, settled the same way the morning is. */
 async function openWeekly(page: Page) {
@@ -136,14 +128,11 @@ async function expectShellRendered(page: Page) {
  *
  * Not `document.body.scrollWidth`: the shell pins `.main` to `overflow: hidden`
  * and gives `.scroll` an `overflow-y: auto` that computes `overflow-x` to
- * `auto` with it, so wide content scrolls inside the page's own scroller and
- * the body never grows a pixel. A body read here would be structurally
- * incapable of failing.
+ * `auto` with it. Wide content scrolls inside `.scroll` and the body never
+ * grows, so a body read could not fail.
  *
- * A component that declares a horizontal scroll region of its own is not
- * measured: `.table-scroll` around a table too wide for a phone is the
- * sanctioned answer to wide content, and the reader panning the page is what
- * this forbids.
+ * A component with its own horizontal scroll region is not measured.
+ * `.table-scroll` around a wide table is sanctioned; panning the page is not.
  */
 async function pageOverflow(page: Page): Promise<string[]> {
   return page.evaluate(() => {
@@ -169,9 +158,8 @@ test.describe("the Brief — page shape", () => {
     await signIn(page);
   });
 
-  // Exactly one. The greeting is the page's heading, and the sentence under it
-  // would be tempting to mark up as a second, which is both a layout defect
-  // and an accessibility one, because a page with two h1s has no outline.
+  // Exactly one. The greeting is the page's heading; marking up the sentence
+  // under it as a second h1 leaves the page with no outline.
   test("carries exactly one h1", async ({ page }) => {
     await openBrief(page);
     await expectShellRendered(page);
@@ -219,9 +207,8 @@ test.describe("the Brief — page shape", () => {
   });
 
   // The strip is five slots on every morning, including a quiet one. A row that
-  // shrank when a reading had nothing in it would be compared against a fuller
-  // one and read as fewer questions asked, which is why the two slots the
-  // product cannot answer yet stay in the row and say what they have none of.
+  // shrank would read as fewer questions asked, so the two slots the product
+  // cannot answer yet stay in the row.
   test("the readings strip is five slots wide", async ({ page }) => {
     await openBrief(page);
     await expectShellRendered(page);
@@ -229,12 +216,7 @@ test.describe("the Brief — page shape", () => {
     await expect(page.locator(`${STRIP} > *`)).toHaveCount(5);
   });
 
-  // The retrospective is last, under the work. It is what a rep reads once on
-  // Monday, after the work waiting on them today; above either of those it puts
-  // last week ahead of this morning.
-  // The week lives behind the Weekly dial, not at the foot of the morning. It
-  // moved there when the dials shipped, and these two assertions kept opening
-  // the morning and waiting for a section that is no longer on it.
+  // The week lives behind the Weekly dial, not at the foot of the morning.
   //
   // Frozen past above, live future below: a rep decides what next week holds by
   // reading what this one did.
@@ -249,12 +231,10 @@ test.describe("the Brief — page shape", () => {
 
   // The weekly uses the full width, because it has no rail.
   //
-  // Every rail panel answers a question about today, so none of them belongs
-  // beside a week that closed. A grid track does not collapse when its item is
-  // missing, so leaving the aside shape in place would draw the weekly at
-  // seventy per cent width against a third of nothing, a column that reads as
-  // a rail which failed to load. Measured rather than asserted on a class,
-  // because the defect is a width a reader sees.
+  // Every rail panel answers a question about today, so none belongs beside a
+  // week that closed. A grid track does not collapse when its item is missing,
+  // so keeping the aside shape would draw the weekly at seventy per cent width
+  // beside an empty column. Measured, because the defect is a width a reader sees.
   test("gives the weekly the whole width", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await openWeekly(page);
@@ -283,9 +263,8 @@ test.describe("the Brief — page shape", () => {
   // The page a German reader arrives at is in German, and says what it is.
   //
   // Every other assertion here is geometry. A page rendering raw message keys
-  // would satisfy all of it: five boxes in a row is five boxes whether
-  // they read "Als Nächstes" or "brief.feed.title". One catalog read is what
-  // separates a rendered page from a rendered skeleton.
+  // would satisfy all of it. One catalog read separates a rendered page from a
+  // rendered skeleton.
   test("labels focus and view controls in German", async ({ page }) => {
     await openBrief(page);
     await expectShellRendered(page);
@@ -301,9 +280,8 @@ test.describe("the Brief — page shape", () => {
   // The dial pressed, not the address typed.
   //
   // openWeekly() navigates straight to ?view=weekly, which proves the address
-  // resolves and nothing about the control. A dial wired to the wrong writer,
-  // or to none, leaves every other test in this file green while the button a
-  // reader actually presses does nothing.
+  // resolves and nothing about the control. A dial wired to the wrong writer
+  // leaves every other test green.
   test("switches to the week when the dial is pressed", async ({ page }) => {
     await openBrief(page);
     await expectShellRendered(page);

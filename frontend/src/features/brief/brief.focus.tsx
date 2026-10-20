@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The focus panel's inside: the row in hand as a card, on the stack of what
-// is still behind it, and the ranked column beside it. The panel's own chrome
-// (its head, its states, its foot) is brief.feed.tsx. This is what stands
-// in its body.
+// The focus panel's inside: the row in hand as a card on a stack, and the
+// ranked column beside it. The panel's chrome (head, states, foot) is
+// brief.feed.tsx.
 
 import { Avatar, Badge, Button, Card } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
@@ -57,9 +56,8 @@ export function Triage({
   const { locale } = useLocale();
   const zone = viewerZone();
   const recordZone = useRecordZone();
-  // A meeting earns the door too. Its subject is the activity rather than a
-  // contact, so `hasPane` answers no for it, and the row would stand with
-  // three verbs and no way through to the meeting they are about.
+  // A meeting earns the door too. Its subject is the activity, not a contact,
+  // so `hasPane` answers no for it.
   const context =
     onContext &&
     (hasPane(lead) ||
@@ -71,14 +69,10 @@ export function Triage({
     </Button>
   ) : undefined;
   // The head's facts, off the same helpers the row prints them with, so the
-  // card and the queue cannot describe one piece of work two ways. The
-  // reader's own pin is the queue's reason and not the focus projection's
-  // (`allowPin`).
-  // The head's facts, off the same helpers the row prints them with, so the
   // card and the queue cannot describe one piece of work two ways. A message
-  // is dated by when it arrived, day and hour; everything else by its own
-  // clock. The reader's own pin is the queue's reason and not the focus
-  // projection's (`allowPin`).
+  // is dated by its arrival, day and hour; everything else by its own clock.
+  // The reader's own pin is the queue's reason, not the focus projection's
+  // (`allowPin`).
   const arrived = lead.email_summary?.occurred_at;
   const when = arrived
     ? `${formatDayMonth(arrived, locale, zone)}, ${formatTimeOfDay(arrived, locale, zone)}`
@@ -86,11 +80,8 @@ export function Triage({
   const weighed = phrasedReasons(lead, when !== null).filter(
     (reason) => reason.kind !== "pinned",
   );
-  // The label is the one reason that carries a figure where one does,
-  // "Waiting 13 days" says more on its own than "they wrote last", else the
-  // first weighed; the rest stay on the queue's row, where a reader who wants
-  // the whole case opens the fold. Sentence case, because it is a label and
-  // not a fragment of a line.
+  // The label is the reason that carries a figure ("Waiting 13 days"), else
+  // the first weighed. The rest stay on the queue's row, behind the fold.
   const strongest = weighed.find((reason) => reason.value) ?? weighed[0];
   const phrased = strongest ? reasonText(strongest, t, locale, zone) : null;
   // The reasons are written as fragments of a line ("waiting 13 days"); as a
@@ -99,24 +90,20 @@ export function Triage({
   const label = phrased ? openingCase(phrased, locale) : t(eyebrowKeyFor(lead));
   return (
     <div className="brief-triage">
-      {/* The row in hand is a card on a stack: one thing to answer, drawn
-          whole, with its state, name, owner, work and verbs. The edges of the
-          work still behind it show, so a reader sees the day has more without
-          reading the column beside it. The stack's depth is what remains, at
-          most two edges: a third reads as texture rather than as a count.
+      {/* The row in hand is a card on a stack. The edges of the work behind
+          it show, so a reader sees the day has more. Depth is what remains, at
+          most two edges: a third reads as texture, not a count.
 
-          Keyed by the row, so pressing another one in the queue mounts a new
-          card and replays its arrival. The press has an answer on the card
-          itself, not only in the column that was pressed. */}
+          Keyed by the row, so pressing another mounts a new card and replays
+          its arrival, an answer on the card as well as in the column. */}
       <div
         className="brief-triage-stack"
         data-behind={Math.min(rows.length - 1, 2)}
       >
         <Card as="article" className="brief-triage-lead" key={identity(lead)}>
           <div className="brief-triage-lead-head">
-            {/* Why it is here, as its label: the strongest reason the ranking
-              weighed, in the warning tone on a row the day put first; the kind
-              of work where the ranking gave none. Then the rest, quieter. */}
+            {/* Why it is here: the strongest reason the ranking weighed, in
+              the warning tone on a row the day put first; else the kind of work. */}
             <Badge tone={lead.band === "now" ? "warning" : undefined}>
               {label}
             </Badge>
@@ -144,8 +131,7 @@ export function Triage({
             }
             context={details}
             // The card around this row says whose it is, why it is here and
-            // where it stands in the day, each once and in its own place.
-            // It also names and links the record the row is about.
+            // where it stands in the day, and links the record it is about.
             framed
           />
         </Card>
@@ -198,14 +184,12 @@ export function Triage({
  * Whose row this is, and how the silence runs in both directions, over the
  * row, where a reader meets the relationship before the work.
  *
- * The record the row is about, linked, with the two moments a rep answering
- * it would otherwise open a second page for: when they last wrote, and when
- * we did. Which direction went last is the whole question, a customer we
- * mailed yesterday is answered differently from one nobody has written to
- * since March. The moments come off the row itself (`rowTouch`), the pair
- * every queue row prints in the pane's words, so the row in hand and the
- * pane cannot describe one relationship two ways. A contact's row and a
- * company's carry them; any other record is linked and no moments are claimed.
+ * The record the row is about, linked, with the two moments a rep would
+ * otherwise open a second page for: when they last wrote, and when we did.
+ * Which direction went last is the whole question. The moments come off the row
+ * itself (`rowTouch`), so the row and the pane cannot describe one
+ * relationship two ways. A contact's row and a company's carry them; any other
+ * record is linked with no moments.
  */
 function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
@@ -218,8 +202,8 @@ function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
   const href = contact?.label ? contactHref(contact) : subjectHref(item);
   if (!label || !href) return null;
   const touch = lastTouch(rowTouch(item), t, locale, viewerZone());
-  // Where the message sits, the team's inbox, the reader's own, in the
-  // access badge's own words, as one more fact about whose row it is.
+  // Where the message sits (team inbox or the reader's own), in the access
+  // badge's words.
   const inbox = item.email_summary?.display_status;
   return (
     <p className="t-caption brief-triage-about">
@@ -241,10 +225,9 @@ function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
 
 /**
  * The one line under a queued row's name: who it is with, and the first of
- * the reasons it is here, the same words the row itself prints, through the
- * same helpers, so the column and the row in hand cannot describe one piece
- * of work two ways. Null where the row has neither, and then no line is
- * drawn rather than an empty one.
+ * the reasons it is here. It uses the row's own helpers, so the column and the
+ * row in hand cannot describe one piece of work two ways. Null where the row
+ * has neither, so no empty line is drawn.
  */
 function queueLine(
   item: WorklistItem,
@@ -253,11 +236,9 @@ function queueLine(
   zone: string,
 ): string | null {
   // The contact the server put on the row, not the message's counterparty: a
-  // task or a meeting carries one and no message at all, so reading the
-  // message left those rows unnamed in the column while the row in hand named
-  // them. On a waiting message the two are the same contact, the backend puts
-  // the sender there, so this is the one field for every row, and the same
-  // one the row's own captions read (`aboutRecord`).
+  // task or a meeting carries a contact and no message. On a waiting message
+  // the two are the same, so this one field serves every row, as in the row's
+  // own captions (`aboutRecord`).
   const who = item.contact?.label ?? null;
   // The reader's own pin is the queue's reason and not the focus projection's,
   // for the reason the row in hand withholds it (`allowPin`).
