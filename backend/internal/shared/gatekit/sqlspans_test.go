@@ -23,19 +23,11 @@ func TestSQLSpanAt(t *testing.T) {
 		{name: "an escape string keeps its escaped quote inside the span", text: `E'it\'s UPDATE contact'`, pos: 1, length: 22, closed: true},
 		{name: "an escape at the end cannot close a string", text: `E'bad\'`, pos: 1, length: 6, closed: false},
 		{name: "a quoted value", text: "x = 'a, b' , y", pos: 4, length: 6, closed: true},
-		{
-			// A doubled '' is how SQL escapes one, and it needs no case in the
-			// scan: the first run ends AT the first of the pair, and the second
-			// of the pair opens a run that ends where the real close is. The
-			// two together cover the literal, which is what a caller stepping
-			// span by span sees.
-			name: "a doubled quote is two runs that meet",
-			text: "'it''s'", pos: 0, length: 4, closed: true,
-		},
-		{
-			name: "and the second of the pair closes where the value really ends",
-			text: "'it''s'", pos: 4, length: 3, closed: true,
-		},
+		{name: "doubled quotes stay in one span", text: "'it''s'", pos: 0, length: 7, closed: true},
+		{name: "keyword final E does not enable escapes", text: `LIKE'a\'; DELETE FROM contact; SELECT 'x'`, pos: 4, length: 4, closed: true},
+		{name: "identifier final E does not enable escapes", text: `name'a\'; DELETE FROM contact; SELECT 'x'`, pos: 4, length: 4, closed: true},
+		{name: "escape strings retain doubled quotes", text: `E'it''s\' fine'`, pos: 1, length: 14, closed: true},
+
 		{name: "an unterminated quote is reported", text: "x = 'never closed", pos: 4, length: 13, closed: false},
 		{name: "a dollar-quoted value", text: "x = $$a;b$$ , y", pos: 4, length: 7, closed: true},
 		{name: "a tagged dollar quote", text: "$tag$ where 'it' $tag$", pos: 0, length: 22, closed: true},

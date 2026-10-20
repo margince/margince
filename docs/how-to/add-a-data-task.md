@@ -56,9 +56,10 @@ step. Use System health to review the cause before resuming or retrying.
 
 Core migrations after the rewrite gate's pinned baseline cannot update or delete existing rows,
 merge records, or copy rows with `INSERT … SELECT` without a reviewed exception. A table created in
-that migration has no exemption: filling it still scans the source. Anonymous `DO` blocks, procedure calls, top-level `SELECT` statements and `TRUNCATE` need an
+that migration has no exemption: filling it still scans the source. Anonymous `DO` blocks, procedure calls, queries, bulk copy, materialized-view refresh and `TRUNCATE` need an
 exception too: they can change records without a visible row writer. The gate strips procedural
-bodies because creating a function does not execute it.
+bodies because creating a function does not execute it. A statement after trigger creation also
+needs review: even a small insert or schema change may then call a trigger that rewrites many rows.
 
 Use a data task for an unbounded correction. For a small, finite catalog such as built-in role
 permissions, add one line to `backend/migrationrewrites.txt`:

@@ -5,6 +5,8 @@
 
 package gates
 
+// A lexer that drops a statement can make a rewrite appear to be harmless DDL.
+
 import (
 	"os"
 	"path/filepath"
@@ -13,6 +15,7 @@ import (
 )
 
 func TestRewriteCensusReadsStatementsAndPreservesQuotedNames(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, sql string
 		want      []string
@@ -21,10 +24,23 @@ func TestRewriteCensusReadsStatementsAndPreservesQuotedNames(t *testing.T) {
 		{"quoted", `UPDATE "public"."Contact" SET name='x';`, []string{"public.Contact"}},
 		{"delete", `DELETE FROM ONLY public.contact WHERE id IS NOT NULL;`, []string{"public.contact"}},
 		{"copy", `CREATE TABLE archive(id uuid); INSERT INTO archive SELECT id FROM contact;`, []string{"archive"}},
-		{"cte", `WITH changed AS (UPDATE contact SET name='x' RETURNING id) SELECT * FROM changed;`, []string{"contact"}},
-		{"delete cte", `WITH removed AS (DELETE FROM contact RETURNING id) INSERT INTO archive SELECT id FROM removed;`, []string{"archive", "contact"}},
+		{"cte", `WITH changed AS (UPDATE contact SET name='x' RETURNING id) SELECT * FROM changed;`, []string{"*", "contact"}},
+		{"delete cte", `WITH removed AS (DELETE FROM contact RETURNING id) INSERT INTO archive SELECT id FROM removed;`, []string{"*", "archive", "contact"}},
 		{"merge", `MERGE INTO public.contact c USING incoming i ON c.id=i.id WHEN MATCHED THEN UPDATE SET name=i.name;`, []string{"public.contact"}},
 		{"conflict", `INSERT INTO role(key) VALUES('ops') ON CONFLICT(key) DO UPDATE SET key=excluded.key;`, []string{"role"}},
+		{"cte call", `WITH s AS (SELECT 1) SELECT setval('seq', 1);`, []string{"*"}},
+		{"parenthesized call", `(SELECT setval('seq', 1));`, []string{"*"}},
+		{"values call", `VALUES (setval('seq', 1));`, []string{"*"}},
+		{"create from query", `CREATE TEMP TABLE archived AS SELECT * FROM contact;`, []string{"*"}},
+		{"create from table", `CREATE TABLE archived AS TABLE contact;`, []string{"*"}},
+		{"materialized query", `CREATE MATERIALIZED VIEW archived AS SELECT * FROM contact;`, []string{"*"}},
+		{"ordinary view", `CREATE VIEW visible AS SELECT * FROM contact;`, nil},
+		{"bulk copy", `COPY contact FROM STDIN;`, []string{"*"}},
+		{"refresh", `REFRESH MATERIALIZED VIEW contact_summary;`, []string{"*"}},
+		{"trigger-named column", `CREATE TABLE role_copy(trigger text); INSERT INTO role_copy VALUES ('x');`, nil},
+		{"trigger execution", `CREATE TRIGGER change AFTER INSERT ON role EXECUTE FUNCTION f(); INSERT INTO role VALUES ('ops');`, []string{"*"}},
+		{"event trigger execution", `CREATE EVENT TRIGGER change ON ddl_command_end EXECUTE FUNCTION f(); CREATE TABLE role_copy(id uuid);`, []string{"*"}},
+		{"keyword escape confusion", `UPDATE role SET name='x' WHERE name LIKE'a\'; DELETE FROM contact; SELECT 'x';`, []string{"*", "contact", "role"}},
 		{"anonymous", `DO $body$ BEGIN UPDATE contact SET name='x'; END $body$;`, []string{"*"}},
 		{"anonymous dynamic", `DO $$ BEGIN EXECUTE 'DELETE FROM contact'; END $$;`, []string{"*"}},
 		{"procedure call", `CREATE PROCEDURE f() LANGUAGE sql AS $$ UPDATE contact SET name='x' $$; CALL f();`, []string{"*"}},
@@ -52,6 +68,7 @@ func TestRewriteCensusReadsStatementsAndPreservesQuotedNames(t *testing.T) {
 }
 
 func TestRewriteCensusRefusesIncompleteSQLAndWaivers(t *testing.T) {
+	t.Parallel()
 	for _, sql := range []string{`UPDATE "contact`, `SELECT 'unfinished`, `DO $x$ unfinished`, `/* unfinished`} {
 		if _, err := migrationRewrites(sql); err == nil {
 			t.Fatalf("accepted incomplete SQL: %s", sql)
@@ -69,6 +86,7 @@ func TestRewriteCensusRefusesIncompleteSQLAndWaivers(t *testing.T) {
 }
 
 func TestRewriteWaiversExpireWhenTheFileOrWrittenTableChanges(t *testing.T) {
+	t.Parallel()
 	const name = "1799999999_roles.up.sql"
 	path := filepath.Join(t.TempDir(), name)
 	if err := os.WriteFile(path, []byte("UPDATE role SET name='ops';"), 0o600); err != nil {

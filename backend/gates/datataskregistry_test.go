@@ -5,11 +5,16 @@
 
 package gates
 
+// Removing a released registration must fail even when its ID constant remains.
+
 import (
+	"archive/tar"
+	"bytes"
 	"errors"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -63,6 +68,7 @@ func removedTaskIDs(before, after []string) []string {
 }
 
 func TestReleasedDataTaskIDsStayInTheWorkerCatalog(t *testing.T) {
+	t.Parallel()
 	current := compose.DataTaskIDs()
 	if len(current) == 0 {
 		t.Fatal("empty worker task census")
@@ -74,32 +80,18 @@ func TestReleasedDataTaskIDsStayInTheWorkerCatalog(t *testing.T) {
 	if missing := removedTaskIDs(current, declared); len(missing) > 0 {
 		t.Fatalf("task source census misses worker IDs: %v; keep released IDs as static literals", missing)
 	}
-	paths, err := exec.Command("git", "-C", repoRoot, "grep", "-l", "-E", `core/[0-9]+_`, "origin/main", "--", "backend/internal/compose/*.go").Output()
-	var exit *exec.ExitError
-	if err != nil && (!errors.As(err, &exit) || exit.ExitCode() != 1) {
-		t.Fatalf("reading released task sources: %v", err)
+	released, err := releasedTaskLiterals()
+	if err != nil {
+		t.Fatal(err)
 	}
-	var released []string
-	for path := range strings.FieldsSeq(string(paths)) {
-		if strings.HasSuffix(path, "_test.go") {
-			continue
-		}
-		raw, err := exec.Command("git", "-C", repoRoot, "show", path).Output()
-		if err != nil {
-			t.Fatalf("reading %s: %v", path, err)
-		}
-		ids, err := sourceTaskIDs(string(raw))
-		if err != nil {
-			t.Fatalf("parsing %s: %v", path, err)
-		}
-		released = append(released, ids...)
-	}
+
 	if missing := removedTaskIDs(released, current); len(missing) > 0 {
 		t.Fatalf("released tasks removed from worker catalog: %v; task retirement requires a declared minimum upgrade-from release", missing)
 	}
 }
 
 func TestTaskCensusFindsConstantsButDoesNotReadCommentsOrRequires(t *testing.T) {
+	t.Parallel()
 	source := `package compose
  // core/100_comment
  const held = "core/200_held"
@@ -145,4 +137,34 @@ func currentTaskLiterals() ([]string, error) {
 		out = append(out, ids...)
 	}
 	return out, nil
+}
+
+func releasedTaskLiterals() ([]string, error) {
+	body, err := exec.Command("git", "-C", repoRoot, "archive", "origin/main", "backend/internal/compose").Output()
+	if err != nil {
+		return nil, err
+	}
+	archive := tar.NewReader(bytes.NewReader(body))
+	var out []string
+	for {
+		header, err := archive.Next()
+		if errors.Is(err, io.EOF) {
+			return out, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		if header.Typeflag != tar.TypeReg || !strings.HasSuffix(header.Name, ".go") || strings.HasSuffix(header.Name, "_test.go") {
+			continue
+		}
+		source, err := io.ReadAll(archive)
+		if err != nil {
+			return nil, err
+		}
+		ids, err := sourceTaskIDs(string(source))
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, ids...)
+	}
 }

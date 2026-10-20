@@ -249,7 +249,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contractproducers_test.go` | H2 | A field the contract promises and nobody writes is invisible. |
 | `contractrefs_test.go` | H3 | Every local $ref in api/crm.yaml resolves, and a dangling one fails with a readable message. |
 | `contributorwiring_test.go` | H1 | What a contributor arriving from outside is promised, in the files they meet on the way in. |
-| `datataskregistry_test.go` | H2 | _(no doc comment)_ |
+| `datataskregistry_test.go` | H2 | Removing a released registration must fail even when its ID constant remains. |
 | `datecolumncalendars_test.go` | H2 | Every `date` column states whose calendar it is a day in. |
 | `dealreaders_test.go` | H2 | `deal` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `dealtargettype_test.go` | H2 | Every deal-scoped staging names its target type through one constant. |
@@ -521,7 +521,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `mergegateclockbounds_test.go` | H2 | No test in the merge gate decides anything by reading a stopwatch. |
 | `metriclabelescaping_test.go` | H2 | A label value in the hand-rolled exposition is escaped by httpserver.Label, never by %q. |
 | `migrationrewrite_test.go` | H2 | Applied migrations are immutable; the ratchet starts after the task ledger exists. |
-| `migrationrewritefixtures_test.go` | H2 | _(no doc comment)_ |
+| `migrationrewritefixtures_test.go` | H2 | A lexer that drops a statement can make a rewrite appear to be harmless DDL. |
 | `migrationvalidatesplit_test.go` | H2 | A constraint is validated in a migration of its own, or the two-step buys nothing. |
 | `mintedv7_test.go` | H3 | A uuid this tree mints is a v7. |
 | `modulepoolsharing_test.go` | H2 | Module suites share the test process's pool per DSN rather than opening a pool per test. |

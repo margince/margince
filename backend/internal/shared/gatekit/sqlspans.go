@@ -51,10 +51,9 @@ func identStart(c byte) bool {
 //   - a semicolon inside a value or a comment splits one statement into two,
 //     and the fragment carrying the destruction names no table.
 //
-// A doubled ” inside a string needs no case of its own: the run ends at the
-// first quote, the next character opens a new run, and that one closes where
-// the real one does. Block comments NEST, which Postgres allows and a naive
-// scan to the first `*/` gets wrong.
+// Doubled quotes stay inside the string. Backslashes escape a character only
+// when a standalone E prefix selects PostgreSQL's escape-string grammar.
+// Block comments nest, so the scanner tracks their depth.
 //
 // A run that never closes is reported rather than swallowed, because swallowing
 // it steps over the whole remainder — the under-recognition direction, which
@@ -66,17 +65,8 @@ func identStart(c byte) bool {
 func SQLSpanAt(text string, pos int) (length int, closed bool) {
 	switch {
 	case text[pos] == '\'':
-		escaped := pos > 0 && (text[pos-1] == 'E' || text[pos-1] == 'e')
-		for i := pos + 1; i < len(text); i++ {
-			if escaped && text[i] == '\\' {
-				i++
-				continue
-			}
-			if text[i] == '\'' {
-				return i - pos + 1, true
-			}
-		}
-		return len(text) - pos, false
+		return quotedStringSpan(text, pos)
+
 	case strings.HasPrefix(text[pos:], "--"):
 		if end := strings.IndexByte(text[pos:], '\n'); end >= 0 {
 			return end + 1, true
@@ -111,6 +101,28 @@ func blockCommentSpan(text string, pos int) (length int, closed bool) {
 			if depth == 0 {
 				return i - pos + 1, true
 			}
+		}
+	}
+	return len(text) - pos, false
+}
+
+func quotedStringSpan(text string, pos int) (int, bool) {
+	escaped := pos > 0 && (text[pos-1] == 'E' || text[pos-1] == 'e')
+	if escaped && pos > 1 {
+		before := text[pos-2]
+		escaped = !(identStart(before) || before >= '0' && before <= '9' || before == '$' || before == '"' || before == '\'' || before >= 128)
+	}
+	for i := pos + 1; i < len(text); i++ {
+		if escaped && text[i] == '\\' {
+			i++
+			continue
+		}
+		if text[i] == '\'' {
+			if i+1 < len(text) && text[i+1] == '\'' {
+				i++
+				continue
+			}
+			return i - pos + 1, true
 		}
 	}
 	return len(text) - pos, false

@@ -95,11 +95,19 @@ func migrationRewrites(sql string) ([]string, error) {
 	}
 	found := map[string]bool{}
 	start := 0
+	triggerCreated := false
 	for i, token := range tokens {
 		if !token.quoted && token.text == ";" {
+			if triggerCreated && i > start {
+				found["*"] = true
+			}
+			triggerCreated = triggerCreated || createsTrigger(tokens[start:i])
 			collectRewrites(tokens[start:i], found)
 			start = i + 1
 		}
+	}
+	if triggerCreated && start < len(tokens) {
+		found["*"] = true
 	}
 	collectRewrites(tokens[start:], found)
 	out := make([]string, 0, len(found))
@@ -115,12 +123,13 @@ func collectRewrites(tokens []rewriteToken, found map[string]bool) {
 		return
 	}
 	insertTable := ""
+	storedResult := createsStoredResult(tokens)
 	for i, token := range tokens {
 		if token.quoted {
 			continue
 		}
 		switch token.text {
-		case "do", "call", "truncate":
+		case "do", "call", "truncate", "with", "values", "(", "copy", "refresh":
 			// Procedural calls and bulk removal need review even when their target is indirect.
 			if i == 0 {
 				found["*"] = true
@@ -133,11 +142,15 @@ func collectRewrites(tokens []rewriteToken, found map[string]bool) {
 				}
 			}
 		case "select":
-			if i == 0 {
+			if i == 0 || storedResult {
 				found["*"] = true
 			}
 			if insertTable != "" {
 				found[insertTable] = true
+			}
+		case "table":
+			if storedResult && i > 0 && tokens[i-1].text == "as" {
+				found["*"] = true
 			}
 		case "update":
 			if table := updatedTable(tokens, i, insertTable); table != "" {
@@ -199,6 +212,7 @@ func rewriteWaivers(body string) (map[string]rewriteWaiver, error) {
 }
 
 func TestCoreMigrationsKeepLargeCorrectionsInDataTasks(t *testing.T) {
+	t.Parallel()
 	raw, err := os.ReadFile("migrationrewrites.txt")
 	if err != nil {
 		t.Fatal(err)
@@ -253,4 +267,32 @@ func migrationRewriteErrors(files []string, waivers map[string]rewriteWaiver) ([
 		findings = append(findings, "stale migration rewrite waiver: "+file)
 	}
 	return findings, nil
+}
+
+func createsTrigger(tokens []rewriteToken) bool {
+	if len(tokens) < 2 || tokens[0].text != "create" {
+		return false
+	}
+	at := 1
+	if len(tokens) > 3 && tokens[at].text == "or" && tokens[at+1].text == "replace" {
+		at += 2
+	}
+	if tokens[at].text == "event" {
+		at++
+	}
+	return at < len(tokens) && !tokens[at].quoted && tokens[at].text == "trigger"
+}
+
+func createsStoredResult(tokens []rewriteToken) bool {
+	if len(tokens) < 2 || tokens[0].text != "create" {
+		return false
+	}
+	at := 1
+	for at < len(tokens) && slices.Contains([]string{"global", "local", "temp", "temporary", "unlogged"}, tokens[at].text) {
+		at++
+	}
+	if at >= len(tokens) || tokens[at].quoted {
+		return false
+	}
+	return tokens[at].text == "table" || tokens[at].text == "materialized" && at+1 < len(tokens) && tokens[at+1].text == "view"
 }
