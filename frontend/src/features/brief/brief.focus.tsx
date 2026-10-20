@@ -130,8 +130,8 @@ export function Triage({
               )
             }
             context={details}
-            // The card around this row says whose it is, why it is here and
-            // where it stands in the day, and links the record it is about.
+            // The card around this row says whose it is and why it is here.
+            // It also gives its place in the day and links the record.
             framed
           />
         </Card>
@@ -184,7 +184,7 @@ export function Triage({
  * Whose row this is, and how the silence runs in both directions, over the
  * row, where a reader meets the relationship before the work.
  *
- * The record the row is about, linked, with the two moments a rep would
+ * The record the row is about, linked. It carries the two moments a rep would
  * otherwise open a second page for: when they last wrote, and when we did.
  * Which direction went last is the whole question. The moments come off the row
  * itself (`rowTouch`), so the row and the pane cannot describe one

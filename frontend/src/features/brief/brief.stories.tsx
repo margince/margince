@@ -313,8 +313,8 @@ const otherPromise = {
   ),
   due_at: "2026-09-11T21:59:59Z",
 };
-// The row in hand is a customer's message, drawn as the canonical email row:
-// who wrote, when, the subject, their words and the verbs that answer it. The
+// The row in hand is a customer's message, drawn as the canonical email row.
+// It shows who wrote, when, the subject, their words and the verbs that answer it. The
 // queue beside it holds the rest of the day.
 const SixPrioritiesDay = readingsDay({}, [
   waitingEmailRow(),

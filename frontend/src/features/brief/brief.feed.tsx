@@ -47,7 +47,7 @@ export function BriefFeed({
   const { locale } = useLocale();
   const plural = usePlural();
   const [openEmail, setOpenEmail] = useState<string | null>(null);
-  // Which row is in hand, by identity rather than index: the queue is re-read
+  // Which row is in hand, by identity rather than index. The queue is re-read
   // every minute, so an index would hand over the row that moved up. A chosen
   // row that has gone falls back to the day's first.
   const [chosen, setChosen] = useState<string | null>(null);
@@ -142,8 +142,9 @@ export function BriefFeed({
 }
 
 /**
- * The focus, one row at a time: the row in hand drawn whole, and beside it
- * the ranked queue it was taken from, each row a press that puts it in hand.
+ * The focus, one row at a time. The row in hand is drawn whole, and beside it
+ * sits the ranked queue it was taken from. Each queue row is a press that puts
+ * it in hand.
  *
  * A reader clears a morning by answering one thing and moving to the next.
  * On the left is the row at full density: its kind, message, reasons, the cost

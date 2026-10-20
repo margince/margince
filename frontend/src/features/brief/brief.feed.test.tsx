@@ -362,7 +362,7 @@ it("names a task's contact in the ranked column", () => {
   );
 
   // The task's own row in the column, not the card or the waiting message
-  // above it: both named her already, so a page-wide query would pass anyway.
+  // above it. Both named her already, so a page-wide query would pass anyway.
   const column = container.querySelector(".brief-triage-queue");
   if (!(column instanceof HTMLElement)) throw new Error("no ranked column");
   const row = within(column).getByRole("button", {

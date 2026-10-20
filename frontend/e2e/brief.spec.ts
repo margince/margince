@@ -73,7 +73,7 @@ async function openBrief(page: Page) {
 /**
  * Wait out the entry animations.
  *
- * The shell's core mark is excluded by name: its only motion is an opacity
+ * The shell's core mark is excluded by name. Its only motion is an opacity
  * transition that cannot move a box, and it is almost always in flight.
  * Excluding by name keeps the check for a panel still sliding in.
  */
@@ -158,7 +158,7 @@ test.describe("the Brief — page shape", () => {
     await signIn(page);
   });
 
-  // Exactly one. The greeting is the page's heading; marking up the sentence
+  // One h1. The greeting is the page's heading; marking up the sentence
   // under it as a second h1 leaves the page with no outline.
   test("carries exactly one h1", async ({ page }) => {
     await openBrief(page);
@@ -232,8 +232,8 @@ test.describe("the Brief — page shape", () => {
   // The weekly uses the full width, because it has no rail.
   //
   // Every rail panel answers a question about today, so none belongs beside a
-  // week that closed. A grid track does not collapse when its item is missing,
-  // so keeping the aside shape would draw the weekly at seventy per cent width
+  // week that closed. A grid track does not collapse when its item is missing.
+  // Keeping the aside shape would draw the weekly at seventy per cent width
   // beside an empty column. Measured, because the defect is a width a reader sees.
   test("gives the weekly the whole width", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
