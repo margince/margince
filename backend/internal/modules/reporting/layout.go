@@ -16,7 +16,7 @@ var cardID = regexp.MustCompile(`^[a-z0-9-]{1,32}$`)
 
 // deriveLayoutBlocks sets Blocks from Layout: each kind once, in the order the
 // layout first names it. The evaluation still reads Blocks, and so does a
-// client that predates layouts, so the two cannot disagree.
+// client that predates layouts.
 func deriveLayoutBlocks(selection *crmcontracts.ReportingSelection) {
 	if selection.Layout == nil {
 		return
@@ -35,7 +35,7 @@ func deriveLayoutBlocks(selection *crmcontracts.ReportingSelection) {
 // Kinds the evaluation draws as one chart for the whole report. It merges the
 // two SDR series. Owner attainment shows bookings whenever bookings is
 // selected. A card cannot ask for one metric's chart of these.
-var oneChartKinds = []crmcontracts.ReportingBlockKind{"owner_attainment", "sdr_outcomes"}
+var oneChartKinds = []crmcontracts.ReportingBlockKind{reportingOwnerAttainment, "sdr_outcomes"}
 
 // metric_reading is the metric details table, which the page always draws
 // below the charts. It is never a chart, so no card can place it.
