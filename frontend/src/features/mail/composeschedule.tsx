@@ -44,6 +44,27 @@ export function schedulePresets(now: Date): readonly {
   ];
 }
 
+/**
+ * The picker's wall-clock text as the wire wants it: an instant plus the IANA
+ * zone it was chosen in.
+ *
+ * `new Date(...)` resolves the text in the rep's own zone. The zone name
+ * travels rather than an offset, which would freeze one day's DST rules. Empty
+ * means send now.
+ */
+export function scheduleFields(local: string): {
+  scheduled_at?: string;
+  scheduled_tz?: string;
+} {
+  if (local === "") return {};
+  const at = new Date(local);
+  if (Number.isNaN(at.getTime())) return {};
+  return {
+    scheduled_at: at.toISOString(),
+    scheduled_tz: viewerZone(),
+  };
+}
+
 // The hours a business message is actually scheduled for. Four, not a clock:
 // the choice is "start of the day, mid-morning, after lunch, end of the day",
 // and a rep who wants 11:47 is not a rep this control is for.

@@ -8,8 +8,7 @@ import { localDateTimeValue } from "../../format/calendarday";
 import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
-import { schedulePresets } from "./composeschedule";
-import { scheduleFields } from "./composesend";
+import { scheduleFields, schedulePresets } from "./composeschedule";
 import type { ScheduledSend } from "./scheduledqueue";
 
 /** The write: the row's identity and version travel with the new moment. */

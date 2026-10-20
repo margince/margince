@@ -251,17 +251,19 @@ Also called: send later, delayed send, timed email.
 
 ### How do I cancel or reschedule a scheduled email?
 To cancel or move a scheduled email in Margince, press the clock beside the bell in the top bar. Use **Reschedule** or **Withdraw** on the message.
-1. Press the clock, **Scheduled messages**. A number on it counts your waiting and held messages, and it turns amber when one is held. The toast shown after you set a send time links there too, and so does the command palette (⌘K or Ctrl+K, then "Scheduled messages").
+1. Press the clock, **Scheduled messages**. Its number counts waiting and held messages, and it changes colour when one is held.
 2. To move it, press **Reschedule**, then **Tomorrow morning**, **Tomorrow afternoon** or **Monday morning**. Or pick a time and press **Move to this time**. A toast offers **Undo**. Only the time can change.
 3. To cancel it, press **Withdraw**, then **Withdraw message** in "Withdraw this message?".
 Also called: unschedule, delete a scheduled email, change send time.
 
 The **Scheduled messages** page lists your messages that are set for later and
-not sent yet. Only you can see them. It has no sidebar row. Waiting messages
-sit on a timeline, one block for each day, in the order they go out, and a line
-above them counts down to the next one. **All**, **Held** and **Today** narrow
-the list. Held messages come first, under **Held for your action**. Messages
-already sent or withdrawn wait behind **Sent or withdrawn**.
+not sent yet. Only you can see them. It has no sidebar row. The toast after you
+set a send time links there, and so does the command palette (⌘K or Ctrl+K).
+
+Waiting messages sit on a timeline, one block for each day. A line above them
+counts down to the next one. **All**, **Held** and **Today** narrow the list.
+Held messages come first, under **Held for your action**. Messages already sent
+or withdrawn wait behind **Sent or withdrawn**.
 
 **Reschedule** changes the time only. Margince checked the text itself, so to
 change the text, withdraw the message and write it again. **Withdraw** warns
