@@ -12175,6 +12175,27 @@ func (e LicenseEntitlementState) Valid() bool {
 	}
 }
 
+// Defines values for LifecyclePreviewEvidenceScope.
+const (
+	LifecyclePreviewEvidenceScopeCompany    LifecyclePreviewEvidenceScope = "company"
+	LifecyclePreviewEvidenceScopeUnknown    LifecyclePreviewEvidenceScope = "unknown"
+	LifecyclePreviewEvidenceScopeWorkstream LifecyclePreviewEvidenceScope = "workstream"
+)
+
+// Valid indicates whether the value is a known member of the LifecyclePreviewEvidenceScope enum.
+func (e LifecyclePreviewEvidenceScope) Valid() bool {
+	switch e {
+	case LifecyclePreviewEvidenceScopeCompany:
+		return true
+	case LifecyclePreviewEvidenceScopeUnknown:
+		return true
+	case LifecyclePreviewEvidenceScopeWorkstream:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListEntityType.
 const (
 	ListEntityTypeCompany ListEntityType = "company"
@@ -26194,6 +26215,9 @@ type ApprovalPreview struct {
 
 	// Evidence Current evidence resolved with the reader's source permissions. An empty array replaces historical evidence.
 	Evidence *[]ApprovalEvidence `json:"evidence,omitempty"`
+
+	// LifecycleEvidence Current readable source and scope supporting a company lifecycle review.
+	LifecycleEvidence *LifecyclePreviewEvidence `json:"lifecycle_evidence,omitempty"`
 
 	// ReviewerReason Why this reader can answer the proposal, separate from its business reason.
 	ReviewerReason string `json:"reviewer_reason"`
@@ -40817,6 +40841,16 @@ type LicenseHolder struct {
 	// `acme-prod`. It tells two installations of one customer apart.
 	Subject string `json:"subject"`
 }
+
+// LifecyclePreviewEvidence Current readable source and scope supporting a company lifecycle review.
+type LifecyclePreviewEvidence struct {
+	OccurredAt time.Time                     `json:"occurred_at"`
+	Scope      LifecyclePreviewEvidenceScope `json:"scope"`
+	Workstream *string                       `json:"workstream,omitempty"`
+}
+
+// LifecyclePreviewEvidenceScope defines model for LifecyclePreviewEvidence.Scope.
+type LifecyclePreviewEvidenceScope string
 
 // LinkFinanceSourceCustomerRequest defines model for LinkFinanceSourceCustomerRequest.
 type LinkFinanceSourceCustomerRequest struct {
