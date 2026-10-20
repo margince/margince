@@ -5,6 +5,7 @@ package assurance
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -46,7 +47,7 @@ func (s *Store) applySignalDecision(ctx context.Context, tx pgx.Tx, exception id
 	}
 	if s.signalDecision == nil {
 		if in.DealID != nil {
-			return fmt.Errorf("assurance: signal decision is not wired")
+			return errors.New("assurance: signal decision is not wired")
 		}
 		return nil
 	}
