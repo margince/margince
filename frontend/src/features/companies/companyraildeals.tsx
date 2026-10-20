@@ -18,7 +18,9 @@ import { NewDealAction } from "./companyactions";
 import "./company360.css";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import {
+  AllRowsLink,
   RAIL_ROW_LIMIT,
+  SectionTitle,
   sectionAnswered,
   wholeCount,
 } from "./companyrailshared";
@@ -44,8 +46,6 @@ export function DealsSection({
   onTab: (tab: "deals") => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const plural = usePlural();
   const deals = view?.deals;
   const rows = rankedDeals(deals?.data ?? []);
   const count = wholeCount(deals);
@@ -65,37 +65,18 @@ export function DealsSection({
     deals &&
       ((deals.won_lifetime?.amount_minor ?? 0) > 0 || deals.lost_count > 0),
   );
-  const won =
-    deals && deals.won_count > 0
-      ? plural("co.deals.won", deals.won_count, {
-          count: formatNumber(deals.won_count, locale),
-          amount: formatMoneyOrAbsent(
-            deals.won_lifetime?.amount_minor,
-            deals.won_lifetime?.currency,
-            locale,
-          ),
-        })
-      : undefined;
   return (
     <Panel
       title={
-        <>
-          {t("co.rail.deals.title")}
-          {answered && count != null && (
-            <span className="co-section-count">
-              {formatNumber(count, locale)}
-            </span>
-          )}
-        </>
+        <SectionTitle
+          title={t("co.rail.deals.title")}
+          count={answered ? count : undefined}
+        />
       }
       titleAction={
-        state === "ready" && (
-          <Button variant="link" onClick={() => onTab("deals")}>
-            {count != null
-              ? t("co.rail.all", { count: formatNumber(count, locale) })
-              : t("co.rail.allUncounted")}
-          </Button>
-        )
+        state === "ready" ? (
+          <AllRowsLink count={count} onOpen={() => onTab("deals")} />
+        ) : undefined
       }
     >
       {state === "ready" ? (
@@ -110,7 +91,7 @@ export function DealsSection({
               </li>
             ))}
           </ul>
-          {won && <p className="co-deal-won t-caption">{won}</p>}
+          <WonToDate deals={deals} />
         </PanelBody>
       ) : (
         <PanelBody>
@@ -132,10 +113,32 @@ export function DealsSection({
               onTab={onTab}
             />
           )}
-          {won && <p className="co-deal-won t-caption">{won}</p>}
+          <WonToDate deals={deals} />
         </PanelBody>
       )}
     </Panel>
+  );
+}
+
+// What the account has won to date, under its open deals; nothing before the
+// first win.
+function WonToDate({ deals }: Readonly<{ deals: Company360["deals"] }>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  if (!deals || deals.won_count === 0) {
+    return null;
+  }
+  return (
+    <p className="co-deal-won t-caption">
+      {plural("co.deals.won", deals.won_count, {
+        count: formatNumber(deals.won_count, locale),
+        amount: formatMoneyOrAbsent(
+          deals.won_lifetime?.amount_minor,
+          deals.won_lifetime?.currency,
+          locale,
+        ),
+      })}
+    </p>
   );
 }
 

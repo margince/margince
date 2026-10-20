@@ -13,7 +13,7 @@ import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatDate } from "../../format/format";
 import { webUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
@@ -29,10 +29,12 @@ import { CompanyDetails } from "./companydetails";
 import { CompanyProfileDetails } from "./companyraildetails";
 import { ProjectsSection } from "./companyrailprojects";
 import {
+  AllRowsLink,
   contactRole,
   contactsSlice,
   RAIL_ROW_LIMIT,
   SectionSummary,
+  SectionTitle,
   sectionAnswered,
 } from "./companyrailshared";
 import { CompanyTriageSection } from "./companytriage";
@@ -234,7 +236,6 @@ export function ContactsSection({
   onTab: (tab: "contacts") => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
   // Already ranked: the server orders contacts by engagement, strength and id
   // (contacts.RankContacts) before it cuts to twenty-five. Re-sorting here
   // would be a second spelling of that rule.
@@ -243,23 +244,15 @@ export function ContactsSection({
   return (
     <Panel
       title={
-        <>
-          {t("co.rail.contacts.title")}
-          {answered && count != null && (
-            <span className="co-section-count">
-              {formatNumber(count, locale)}
-            </span>
-          )}
-        </>
+        <SectionTitle
+          title={t("co.rail.contacts.title")}
+          count={answered ? count : undefined}
+        />
       }
       titleAction={
-        state === "ready" && (
-          <Button variant="link" onClick={() => onTab("contacts")}>
-            {count != null
-              ? t("co.rail.all", { count: formatNumber(count, locale) })
-              : t("co.rail.allUncounted")}
-          </Button>
-        )
+        state === "ready" ? (
+          <AllRowsLink count={count} onOpen={() => onTab("contacts")} />
+        ) : undefined
       }
     >
       <PanelBody>

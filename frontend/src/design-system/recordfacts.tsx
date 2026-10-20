@@ -85,11 +85,11 @@ export function RecordOriginFacts({
   );
   return (
     <RecordFacts>
-      {record.created_at && (
+      {record.created_at ? (
         <Fact label={t("list.created")} named>
           {formatDateAbbrev(record.created_at, locale, zone)}
         </Fact>
-      )}
+      ) : null}
       {/* The tag names the KIND of source; the popover behind it answers
           WHICH one, which for a mailbox capture is a message id no reader
           should have to scan past. */}

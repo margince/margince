@@ -639,10 +639,10 @@
   padding-top: var(--space-3);
   border-top: 1px solid var(--borderSubtle);
 }
-/* Past a phone the compact head is a grid: the name and the verbs share the
-   first row, and the facts and pills under them span both columns. As flex
-   rows, the facts took only the width the verbs left and wrapped there. */
-@media (min-width: 721px) {
+/* On a sheet wide enough for the name beside the verbs, the compact head is a
+   grid: the two share the first row, and the facts and pills span the head
+   under them. Narrower, the verbs wrap under the name, as on a phone. */
+@container sheet (min-width: 56rem) {
   .record-head-compact {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
@@ -680,6 +680,7 @@
    page ground rather than as loose cards on it. Its fields stand beside it,
    off the sheet (recordview.tsx). */
 .record-sheet {
+  container: sheet / inline-size;
   --sheetInset: var(--space-8);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
@@ -765,8 +766,16 @@
      line under it is the seam the cards scroll beneath. */
   border-block-end: 1px solid var(--borderSubtle);
 }
+/* Inside the sheet the strip keeps the sheet's own width: the breakout it
+   takes on a bare work column would run it under the rail and the pane. */
 .record-sheet .record-tabs .recordtabs {
   margin-block-end: 0;
+  inline-size: auto;
+  margin-inline: 0;
+  padding-inline: 0;
+}
+.record-sheet .record-tabs .recordtabs-row {
+  padding-inline: 0;
 }
 /* Two sections side by side on the sheet stand a gutter apart wide enough for
    both bleeds (panel.css, `.record-sheet .panel`) with air left between them. */

@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { Badge } from "../../design-system/atoms";
+import { Badge, Button } from "../../design-system/atoms";
 import { EvidenceMark } from "../../design-system/evidencemark";
 import { Heading } from "../../design-system/heading";
 import {
@@ -11,7 +11,7 @@ import {
   sectionState,
 } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
-import { useLocale } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { roleOf } from "../capture/provider-status";
 
 // Small pieces the rail's own sections draw off — a leaf so companyrail.tsx
@@ -41,6 +41,41 @@ export function SectionSummary({
       </Heading>
       {count != null && <Badge>{formatNumber(count, locale)}</Badge>}
     </span>
+  );
+}
+
+/**
+ * SectionTitle is an overview section's name with how many rows it holds
+ * beside it. `count` is absent, not zero, while the section is not answered.
+ */
+export function SectionTitle({
+  title,
+  count,
+}: Readonly<{ title: string; count?: number }>) {
+  const { locale } = useLocale();
+  return (
+    <>
+      {title}
+      {count != null && (
+        <span className="co-section-count">{formatNumber(count, locale)}</span>
+      )}
+    </>
+  );
+}
+
+/** AllRowsLink opens the tab that holds every row of a section. */
+export function AllRowsLink({
+  count,
+  onOpen,
+}: Readonly<{ count?: number; onOpen: () => void }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return (
+    <Button variant="link" onClick={onOpen}>
+      {count != null
+        ? t("co.rail.all", { count: formatNumber(count, locale) })
+        : t("co.rail.allUncounted")}
+    </Button>
   );
 }
 

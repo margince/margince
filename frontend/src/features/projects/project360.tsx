@@ -200,7 +200,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       nameBadge={
         <>
           <PhaseBadge phase={project.phase} />
-          {project.key && <ProjectKeyChip projectKey={project.key} />}
+          {project.key ? <ProjectKeyChip projectKey={project.key} /> : null}
         </>
       }
       actions={
@@ -289,14 +289,14 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         projectId={project.id}
         correcting={healthEdit && healthEdit !== "new" ? healthEdit : undefined}
       />
-      {openTask && (
+      {openTask ? (
         <TaskDetailModal
           activityId={openTask}
           readOnly={!canUpdateTask}
           onClose={() => setOpenTask(null)}
           update={taskUpdate}
         />
-      )}
+      ) : null}
     </RecordView>
   );
 }

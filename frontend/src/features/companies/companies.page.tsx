@@ -204,11 +204,11 @@ export function CompanyPage({
               for the same reason, so the reason belongs to the page. Stated in
               each group, an archived account would say it twice once the menu
               opened. */}
-          {verbRefusal && (
+          {verbRefusal ? (
             <RecordRefusal id={archivedParagraphId}>
               {verbRefusal}
             </RecordRefusal>
-          )}
+          ) : null}
           <CompanyHeaderActions
             company={company}
             composerOpen={writingEmail}
