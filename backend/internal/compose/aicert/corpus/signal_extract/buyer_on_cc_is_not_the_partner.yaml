@@ -3,7 +3,7 @@ task: signal_extract
 site: thread_events
 source: hand_authored
 sanitized_by: hand_authored/codex
-fixture: [{"direction": "outbound", "subject": "Commercial context", "sent": "2026-09-07", "body": "Mira at Maple Studio needs a migration for her own team. Cedar is only coordinating the introduction. Mira, please confirm the scope.", "participants": [{"key": "seller", "kind": "seat", "role": "from", "name": "Linh Nguyen", "address": "linh@seller.test"}, {"key": "partner", "kind": "contact", "role": "to", "name": "Cedar Partner", "address": "cedar@partner.test"}, {"key": "buyer", "kind": "contact", "role": "cc", "name": "Mira", "address": "mira@maple.test"}]}]
+fixture: [{"direction": "outbound", "subject": "Maple platform migration", "sent": "2026-09-07", "body": "Hi Cedar,\n\nThank you for introducing Mira.\n\nMira, thanks for your request yesterday: \"We need your team to migrate our platform. Please prepare a proposal.\" Is Tuesday a good time to discuss the migration scope?\n\nBest,\nLinh", "participants": [{"key": "seller", "kind": "seat", "role": "from", "name": "Linh Nguyen", "address": "linh@seller.test"}, {"key": "partner", "kind": "contact", "role": "to", "name": "Cedar Partner", "address": "cedar@partner.test"}, {"key": "buyer", "kind": "contact", "role": "cc", "name": "Mira", "address": "mira@maple.test"}]}]
 expect:
   outcome: accepted
   answer: [{"kind": "new_opportunity", "message": 1, "buyer": "buyer", "commercial_role": "buyer"}]

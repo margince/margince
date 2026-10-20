@@ -57,6 +57,10 @@ function stub(allowDecide: boolean) {
             : { deal: ["read"], company: ["read"] },
         }),
       ),
+    "GET /users/names": () =>
+      jsonResponse({
+        data: [{ id: "account-owner", display_name: "Mira Chen" }],
+      }),
     "GET /deal-suggestions": () =>
       jsonResponse({ data: [suggestion], page: { has_more: false } }),
     "GET /pipelines": () =>
@@ -182,6 +186,19 @@ export const German: Story = {
     return (
       <StoryProviders locale="de">
         <DealSuggestionCard suggestion={suggestion} />
+      </StoryProviders>
+    );
+  },
+};
+
+export const WithAccountOwner: Story = {
+  render: () => {
+    stub(true);
+    return (
+      <StoryProviders>
+        <DealSuggestionCard
+          suggestion={{ ...suggestion, owner_id: "account-owner" }}
+        />
       </StoryProviders>
     );
   },

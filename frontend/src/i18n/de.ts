@@ -928,6 +928,8 @@ export const de = {
   "dealSuggestion.field.amount": "Betrag",
   "dealSuggestion.field.currency": "Währung",
   "dealSuggestion.field.stage": "Phase",
+  "dealSuggestion.accountOwner": "Für das Unternehmen zuständig",
+  "dealSuggestion.unassignedOwner": "Nicht zugewiesen",
   "dealSuggestion.field.owner": "Verantwortlich",
   "dealSuggestion.ownerMe": "Selbst",
   "dealSuggestion.field.closeDate": "Voraussichtlicher Abschluss",
@@ -5646,9 +5648,10 @@ export const de = {
     "Der Link funktioniert ab sofort für niemanden mehr, der ihn hat. Ein geschlossener Link lässt sich nicht wieder öffnen.",
   "analytics.frame": "Stand {asOf} · {zone}",
   "review.unlinkedSignal": "Kaufinteresse ohne Deal",
+  "review.signalNotRelevant": "Nicht relevant",
   "review.signalOccurred": "Datum der Quelle: {date}",
   "review.uncertainBuyer":
-    "Prüfe vor dem Anlegen eines Deals, wer kauft und welches Unternehmen die Person vertritt.",
+    "Prüfe vor dem Anlegen eines Deals, wer kauft und für welches Unternehmen.",
   "review.historicalSignal":
     "Diese Quelle ist alt. Prüfe vor dem Verknüpfen, ob das Kaufinteresse noch besteht.",
   "review.title": "Prüfungen vor der Einschätzung",

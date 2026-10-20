@@ -147,6 +147,10 @@ function stubBackend(opts: {
           })
         : jsonResponse({ ...suggestion, state: "dismissed" });
     }
+    if (path === "/users/names")
+      return jsonResponse({
+        data: [{ id: "account-owner", display_name: "Mira Chen" }],
+      });
     if (path === "/deal-suggestions") {
       return jsonResponse({
         data: opts.suggestions,
@@ -306,11 +310,23 @@ describe("what an acceptance sends", () => {
 });
 
 describe("a suggestion's card", () => {
+  it("names the account owner without claiming a proposed deal already has an owner", async () => {
+    vi.stubGlobal("fetch", stubBackend({ suggestions: [] }));
+    draw(
+      <DealSuggestionCard
+        suggestion={{ ...suggestion, owner_id: "account-owner" }}
+      />,
+    );
+    expect(screen.getByText(/Account owner:/)).toBeTruthy();
+    expect(await screen.findByText("Mira Chen")).toBeTruthy();
+  });
+
   it("names the deal, its amount and every piece of evidence", async () => {
     vi.stubGlobal("fetch", stubBackend({ suggestions: [] }));
     draw(<DealSuggestionCard suggestion={suggestion} />);
     expect(screen.getByText("Acme GmbH: proposal sent")).toBeTruthy();
     expect(screen.getByText("€12,500.00")).toBeTruthy();
+    expect(screen.getByText(/Unassigned/)).toBeTruthy();
     expect(screen.getByText("Sent: Angebot_2026.pdf")).toBeTruthy();
     expect(screen.getByText("Meeting held: Scoping workshop")).toBeTruthy();
     expect(

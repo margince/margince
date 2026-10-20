@@ -108,7 +108,7 @@ func SuggestionWire(s Suggestion) crmcontracts.DealSuggestion {
 	out := crmcontracts.DealSuggestion{
 		Id: openapi_types.UUID(s.ID), Kind: crmcontracts.DealSuggestionKind(s.Kind),
 		State: crmcontracts.DealSuggestionState(s.State), CompanyId: openapi_types.UUID(s.CompanyID),
-		CompanyName: s.CompanyName, PipelineId: openapi_types.UUID(s.PipelineID),
+		CompanyName: s.CompanyName, OwnerId: uuidPtr(s.OwnerID), PipelineId: openapi_types.UUID(s.PipelineID),
 		StageId: openapi_types.UUID(s.StageID), NameHint: crmcontracts.DealSuggestionNameHint(s.NameHint), AmountMinor: s.AmountMinor,
 		Currency: s.Currency, Confidence: float32(s.Confidence), CreatedAt: s.CreatedAt,
 		Evidence: make([]crmcontracts.DealSuggestionEvidence, 0, len(s.Evidence)),

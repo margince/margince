@@ -24032,6 +24032,11 @@ export interface components {
             /** Format: uuid */
             company_id: string;
             company_name: string;
+            /**
+             * Format: uuid
+             * @description The current company owner responsible for reviewing this suggestion.
+             */
+            owner_id?: string | null;
             /** Format: uuid */
             pipeline_id: string;
             /**
@@ -35580,7 +35585,7 @@ export interface components {
             /** Format: date-time */
             resolved_at: string;
         };
-        /** @description A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the normalized quoted substring. */
+        /** @description A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message. */
         SourceQuoteProof: {
             start: number;
             end: number;

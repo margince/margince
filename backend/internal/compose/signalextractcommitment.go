@@ -37,6 +37,9 @@ func validateEventEvidence(event extractedEvent, thread settledThread) string {
 	if reason := validateLifecycleEvidence(event, thread); reason != "" {
 		return reason
 	}
+	if reason := validateOpportunityBuyer(event, thread); reason != "" {
+		return reason
+	}
 	if reason := validateRestatedEvidence(event, thread); reason != "" {
 		return reason
 	}

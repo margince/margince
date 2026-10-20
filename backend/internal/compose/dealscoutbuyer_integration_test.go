@@ -44,7 +44,7 @@ func (e *scoutEnv) buyerPair(t *testing.T, company ids.UUID, at time.Time) {
 func TestMeetingsAndProposalsDoNotEstablishBuyerIntent(t *testing.T) {
 	e := setupScout(t)
 	e.now = time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
-	company := e.SeedCompany(t, "Maple Studio", nil)
+	company := e.SeedCompany(t, "Maple Studio", &e.Rep1)
 	contact := e.employee(t, "Mira Buyer", company)
 	e.meeting(e.Admin(), t, "Networking meeting", &contact, e.daysAgo(2))
 	e.document(t, e.email(t, "Proposal copy", "outbound", company, e.daysAgo(1)), "Proposal.pdf", "application/pdf")
@@ -54,6 +54,11 @@ func TestMeetingsAndProposalsDoNotEstablishBuyerIntent(t *testing.T) {
 	e.buyerPair(t, company, e.daysAgo(1))
 	if pass := e.pass(t); pass.Raised != 1 {
 		t.Fatalf("verified buyer request raised %d suggestions, want 1", pass.Raised)
+	}
+	suggestion := e.onlySuggestion(e.signalReader(), t, company)
+	wire := deals.SuggestionWire(suggestion)
+	if wire.OwnerId == nil || ids.UUID(*wire.OwnerId) != e.Rep1 {
+		t.Fatalf("review owner=%v, want the account owner", wire.OwnerId)
 	}
 }
 

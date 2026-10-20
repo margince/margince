@@ -325,7 +325,7 @@ func settleSignalTx(ctx context.Context, tx pgx.Tx, signalID ids.UUID, source, o
 	if _, err := storekit.Audit(ctx, tx, "update", "signal", signalID,
 		map[string]any{columnStatus: statusOpen},
 		map[string]any{columnStatus: outcome}); err != nil {
-		return false, fmt.Errorf("audit the acknowledgement: %w", err)
+		return false, fmt.Errorf("audit the signal decision: %w", err)
 	}
 	return true, nil
 }

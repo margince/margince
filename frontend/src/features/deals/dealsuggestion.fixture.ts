@@ -15,6 +15,12 @@ export const suggestion: DealSuggestion = {
   created_at: "2026-09-27T09:00:00Z",
   evidence: [
     {
+      kind: "signal",
+      signal_id: "01a0e9f1-0000-7000-8000-0000000000b1",
+      occurred_at: "2026-09-23T10:00:00Z",
+      title: "The buyer requested a platform migration proposal",
+    },
+    {
       kind: "attachment",
       attachment_id: "01a0e9f1-0000-7000-8000-0000000000a1",
       occurred_at: "2026-09-26T15:00:00Z",

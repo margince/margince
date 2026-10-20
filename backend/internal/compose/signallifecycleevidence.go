@@ -21,7 +21,7 @@ const (
 
 func validateLifecycleEvidence(event extractedEvent, thread settledThread) string {
 	if event.Kind != signalKindContractEnded {
-		if event.LifecycleScope != "" || event.Workstream != "" {
+		if (event.LifecycleScope != "" && event.LifecycleScope != lifecycleScopeUnknown) || event.Workstream != "" {
 			return "only a contract ending carries lifecycle scope"
 		}
 		return ""

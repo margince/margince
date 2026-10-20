@@ -34626,6 +34626,7 @@ components:
         state: { type: string, enum: [open, accepted, dismissed, superseded] }
         company_id: { type: string, format: uuid }
         company_name: { type: string }
+        owner_id: { type: [string, 'null'], format: uuid, description: 'The current company owner responsible for reviewing this suggestion.' }
         pipeline_id: { type: string, format: uuid }
         stage_id: { type: string, format: uuid, description: 'The stage the deal would open in: the default pipeline''s first open stage.' }
         name_hint:
@@ -48323,7 +48324,7 @@ components:
 
     SourceQuoteProof:
       type: object
-      description: A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the normalized quoted substring.
+      description: A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message.
       required: [start, end, sha256]
       properties:
         start: { type: integer, minimum: 0 }

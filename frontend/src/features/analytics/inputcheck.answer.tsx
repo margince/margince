@@ -42,6 +42,7 @@ export function InputCheckAnswerSheet({
   const [dealId, setDealId] = useState("");
   const [openedSource, setOpenedSource] = useState<string | null>(null);
   const mayLink = useCanWrite("deal", "update");
+  const mayAnswer = useCanWrite("signal", "update");
   const isSignal = check?.type === "unlinked_signal";
   const companyId = check?.claim?.company_id;
   const suggestionId = check?.observed?.suggestion_id;
@@ -75,7 +76,9 @@ export function InputCheckAnswerSheet({
       .map((outcome) =>
         outcome.value === "fixed_record"
           ? { ...outcome, label: t("dealSuggestion.linkExisting") }
-          : outcome,
+          : outcome.value === "not_relevant"
+            ? { ...outcome, label: t("review.signalNotRelevant") }
+            : outcome,
       ),
   };
   if (isSignal && typeof suggestionId === "string" && (mayCreate || mayLink)) {
@@ -87,7 +90,7 @@ export function InputCheckAnswerSheet({
         labelledBy={headingId}
         returnFocusTo={props.returnFocusTo}
       >
-        <Heading id={headingId} size="large">
+        <Heading id={headingId} size="large" className="modal-title">
           {labels.title}
         </Heading>
         <QueryGate query={suggestions} pendingLabel={t("stat.evidence")}>
@@ -100,7 +103,28 @@ export function InputCheckAnswerSheet({
             );
           }}
         </QueryGate>
-        <Button onClick={props.onClose}>{labels.cancel}</Button>
+        <div className="actions">
+          <Button onClick={props.onClose}>{labels.cancel}</Button>
+        </div>
+      </Modal>
+    );
+  }
+  if (isSignal && !mayAnswer) {
+    return (
+      <Modal
+        intent="form"
+        open={props.open}
+        labelledBy={headingId}
+        onClose={props.onClose}
+        returnFocusTo={props.returnFocusTo}
+      >
+        <Heading size="large" id={headingId} className="modal-title">
+          {labels.title}
+        </Heading>
+        <p>{t("common.permissionDenied")}</p>
+        <div className="actions">
+          <Button onClick={props.onClose}>{labels.cancel}</Button>
+        </div>
       </Modal>
     );
   }
