@@ -37,13 +37,9 @@ func (h dataTaskHandlers) ListDataTasks(w http.ResponseWriter, r *http.Request) 
 		httperr.Write(w, r, err)
 		return
 	}
-	out := make([]crmcontracts.DataTaskProgress, 0, len(progress))
-	for _, p := range progress {
-		out = append(out, dataTaskProgressWire(p))
-	}
 	httperr.WriteJSON(w, http.StatusOK, struct {
 		Data []crmcontracts.DataTaskProgress `json:"data"`
-	}{Data: out})
+	}{Data: DataTaskProgressReport(progress)})
 }
 
 func (h dataTaskHandlers) ControlDataTask(w http.ResponseWriter, r *http.Request) {
@@ -65,7 +61,22 @@ func (h dataTaskHandlers) ControlDataTask(w http.ResponseWriter, r *http.Request
 		httperr.Write(w, r, err)
 		return
 	}
+	if in.Action == "resume" || in.Action == "retry" {
+		if err := enqueueDataTaskReconcile(ctx, h.pool); err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// DataTaskProgressReport keeps the CLI and HTTP report on the same safe fields.
+func DataTaskProgressReport(progress []datatask.Progress) []crmcontracts.DataTaskProgress {
+	out := make([]crmcontracts.DataTaskProgress, 0, len(progress))
+	for _, p := range progress {
+		out = append(out, dataTaskProgressWire(p))
+	}
+	return out
 }
 
 func dataTaskProgressWire(p datatask.Progress) crmcontracts.DataTaskProgress {

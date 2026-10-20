@@ -31,7 +31,7 @@ func (e *Engine) Control(ctx context.Context, taskID, stepName, action string, v
 	if !exists {
 		return apperrors.ErrNotFound
 	}
-	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 		if err := database.BoundStatement(ctx, tx, statementLimit); err != nil {
 			return err
 		}
@@ -75,6 +75,10 @@ func (e *Engine) Control(ctx context.Context, taskID, stepName, action string, v
 		}
 		return logControl(ctx, tx, p, action)
 	})
+	if storekit.IsLockTimeout(err) {
+		return apperrors.ErrConflict
+	}
+	return err
 }
 
 func controlStatus(status, action string) (string, error) {

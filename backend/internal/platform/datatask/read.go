@@ -43,6 +43,9 @@ func (e *Engine) describeProgress(ctx context.Context, tx pgx.Tx, stored map[str
 			if !exists {
 				p = Progress{TaskID: task.ID, Step: step.Name, Status: Pending, TaskVersion: task.Version, BatchLimit: step.Limit}
 			}
+			if p.Status == Done && p.TaskVersion < task.Version {
+				p.Status = Pending
+			}
 			p.Title = task.Title
 			if !complete(task, p) && next != nil {
 				if task.ID != next.task.ID || step.Name != next.step.Name {

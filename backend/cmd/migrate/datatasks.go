@@ -74,12 +74,15 @@ func runDataTasks(ctx context.Context, args []string, stdout, stderr io.Writer) 
 			}
 		}
 	}
-	return json.NewEncoder(stdout).Encode(progress)
+	return json.NewEncoder(stdout).Encode(compose.DataTaskProgressReport(progress))
 }
 
 func dataTasksFinished(progress []datatask.Progress) (bool, error) {
 	done := true
 	for _, p := range progress {
+		if p.BlockedReason == "missing_prerequisite" || p.BlockedReason == "newer_release_required" {
+			return false, fmt.Errorf("correction %s step %s is blocked by %s; review System health", p.TaskID, p.Step, p.BlockedReason)
+		}
 		if p.Status == datatask.Failed || p.Status == datatask.Paused {
 			return false, fmt.Errorf("correction %s step %s is %s; review System health", p.TaskID, p.Step, p.Status)
 		}
