@@ -33,8 +33,9 @@ read its own `rem` against the size it was setting, and shrink the whole page.
 Everything inherits, so there is no size, line height, weight or neutral ink to pick where a component is used.
 `src/mcp-apps/view.css` carries the same shape for the views that stand alone.
 
-Every type token in `tokens.css` is one `font` shorthand in rem. It holds weight, size, line height
-and face in one value, so nobody can use half of a level. The weight in it is itself a token
+Every type token in `tokens.css` is one `font` shorthand in rem, apart from the display sizes below.
+A display size is a `clamp()` between two rem values, and its line height has no unit. A token holds
+weight, size, line height and face in one value, so nobody can use half of a level. The weight in it is itself a token
 (`var(--fontWeightBold)`). A `font` shorthand takes it, because the browser puts in the `var()`
 value before it checks the grammar of the shorthand.
 
@@ -65,6 +66,16 @@ beside its `font`, or the prose keeps the rhythm of the default.
 | `--fontHeadingSmall` | A title in a small component where space is tight. |
 | `--fontHeadingXSmall` | The same, tighter still: the title of a flag. |
 | `--fontHeadingXXSmall` | Use with care; it goes with Body S, as small print does. |
+
+Four more sizes are for the greeting on Home and nothing else. The display sizes scale with the
+window, because the greeting is the one line a reader sees whole when the page opens:
+
+| Token | For |
+|---|---|
+| `--fontDisplayXLarge` | The greeting that fills the window once a day. |
+| `--fontDisplayLarge` | The greeting at the head of Home. |
+| `--fontDisplayMedium` | A figure under the full-window greeting. |
+| `--fontLead` | The sentence under the greeting. Its line is tall enough to hold a large `RecordChip`. |
 
 **A heading's level comes from the structure.** A user of a screen reader moves through a page by
 `<h1>`–`<h6>`, and everyone else sees the page group by them. They run in order from the top down.
@@ -384,6 +395,7 @@ role, light beside dark), `elevation.stories.tsx`, `spacing.stories.tsx`, `motio
 |---|---|---|---|
 | `Badge` | A label a reader reads and never presses: a 20px pill in `--fontBodySmall`, sentence case, no dot by default. `variant`: `soft` (default, a tint with a hairline of the same tone) or `primary` (solid fill, for a count or the one status a reader must not miss). `tone` comes from `BADGE_TONES`: `default`, `accent`, `info` (also work still running), `success`, `warning`, `danger`, `ai` (an agent proposed it; it always draws `Sparkles`, see [Indigo says a machine did it](#indigo-says-a-machine-did-it)), `discovery` (something new). `icon` leads the label; `live` puts a dot that pulses there instead. Long labels are cut short; `wrap` wraps them instead. A small title over a section is `Eyebrow`; a chip you can click is a control, not a badge. `badge-spelling.test.ts` fails a pill built by hand or a `.badge` with a new style | `atoms.tsx` | ✅ |
 | `TagPill` | One tag as its word with a tone dot, built on the neutral soft `Badge`: a tag's colour carries no meaning, so it goes on the dot. An archived tag drops its dot and shows its archived words | `tagpill.tsx` | ✅ |
+| `RecordChip` | A record named inside a sentence, as a pill the reader presses: a contact or a company draws its `Avatar`, a meeting a clock. A press never opens a page. `size="large"` is the chip in a `--fontLead` sentence. The caller owns `pressed` and shows what the sentence was read from beside it, and a pressed chip takes the strongest neutral edge: the chip names a record, and no agent wrote the sentence it sits in. A record only named in a line, with a page to go to, stays an `.entity-link` | `recordchip.tsx` | ✅ |
 | `VisibilityBadge` / `VisibilityLine` | Who may read a thing, as one mark: an icon for the shape of the readers and a word, in six states: `team`, `workspace`, `participants`, `selected`, `private`, `withheld`. A message cut down to its record's reach says "Team"; a shared company or contact says "Shared". `private` reads "Private". Only `withheld` takes a tone. `opens` draws it as a `Popover` trigger (the access chip in the record header in `features/records/recordaccess.tsx`). `VisibilityLine` puts the verb that changes the state beside it | `visibility.tsx` | ✅ |
 | `RowTags` | A record row's tags as a strip of chips: two words then "+N", with the rest named in the title. It takes no input, stays on one line, and draws nothing for a row with no tags | `rowtags.tsx` | ✅ |
 | `RoleBadge` / `FieldGuard` | The role of a principal, and a withheld value that reads as withheld and not as missing | `rbac.tsx` | ✅ |

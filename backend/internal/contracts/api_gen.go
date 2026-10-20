@@ -2313,6 +2313,7 @@ const (
 	AttentionItemActionsKeep        AttentionItemActions = "keep"
 	AttentionItemActionsMerge       AttentionItemActions = "merge"
 	AttentionItemActionsOpen        AttentionItemActions = "open"
+	AttentionItemActionsReopen      AttentionItemActions = "reopen"
 	AttentionItemActionsReply       AttentionItemActions = "reply"
 	AttentionItemActionsRetry       AttentionItemActions = "retry"
 	AttentionItemActionsSetAside    AttentionItemActions = "set_aside"
@@ -2340,6 +2341,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsMerge:
 		return true
 	case AttentionItemActionsOpen:
+		return true
+	case AttentionItemActionsReopen:
 		return true
 	case AttentionItemActionsReply:
 		return true
@@ -3309,14 +3312,16 @@ func (e BlockedDomainAdmission) Valid() bool {
 
 // Defines values for BlockedDomainReasonCode.
 const (
-	BlockedDomainReasonCodeBulkSender     BlockedDomainReasonCode = "bulk_sender"
-	BlockedDomainReasonCodeCompanyCreated BlockedDomainReasonCode = "company_created"
-	BlockedDomainReasonCodeKeptAsCompany  BlockedDomainReasonCode = "kept_as_company"
-	BlockedDomainReasonCodeNearDuplicate  BlockedDomainReasonCode = "near_duplicate"
-	BlockedDomainReasonCodeStaleEvidence  BlockedDomainReasonCode = "stale_evidence"
-	BlockedDomainReasonCodeStated         BlockedDomainReasonCode = "stated"
-	BlockedDomainReasonCodeUnevidenced    BlockedDomainReasonCode = "unevidenced"
-	BlockedDomainReasonCodeUnknown        BlockedDomainReasonCode = "unknown"
+	BlockedDomainReasonCodeBulkSender        BlockedDomainReasonCode = "bulk_sender"
+	BlockedDomainReasonCodeCompanyCreated    BlockedDomainReasonCode = "company_created"
+	BlockedDomainReasonCodeForwardedIdentity BlockedDomainReasonCode = "forwarded_identity"
+	BlockedDomainReasonCodeKeptAsCompany     BlockedDomainReasonCode = "kept_as_company"
+	BlockedDomainReasonCodeNearDuplicate     BlockedDomainReasonCode = "near_duplicate"
+	BlockedDomainReasonCodeReservedDomain    BlockedDomainReasonCode = "reserved_domain"
+	BlockedDomainReasonCodeStaleEvidence     BlockedDomainReasonCode = "stale_evidence"
+	BlockedDomainReasonCodeStated            BlockedDomainReasonCode = "stated"
+	BlockedDomainReasonCodeUnevidenced       BlockedDomainReasonCode = "unevidenced"
+	BlockedDomainReasonCodeUnknown           BlockedDomainReasonCode = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the BlockedDomainReasonCode enum.
@@ -3326,9 +3331,13 @@ func (e BlockedDomainReasonCode) Valid() bool {
 		return true
 	case BlockedDomainReasonCodeCompanyCreated:
 		return true
+	case BlockedDomainReasonCodeForwardedIdentity:
+		return true
 	case BlockedDomainReasonCodeKeptAsCompany:
 		return true
 	case BlockedDomainReasonCodeNearDuplicate:
+		return true
+	case BlockedDomainReasonCodeReservedDomain:
 		return true
 	case BlockedDomainReasonCodeStaleEvidence:
 		return true
@@ -3366,22 +3375,28 @@ func (e BlockedDomainSenderKind) Valid() bool {
 
 // Defines values for BlockedDomainSource.
 const (
-	BlockedDomainSourceHeuristic     BlockedDomainSource = "heuristic"
-	BlockedDomainSourceHuman         BlockedDomainSource = "human"
-	BlockedDomainSourceNearDuplicate BlockedDomainSource = "near_duplicate"
-	BlockedDomainSourceStaleEvidence BlockedDomainSource = "stale_evidence"
-	BlockedDomainSourceUnevidenced   BlockedDomainSource = "unevidenced"
-	BlockedDomainSourceVerdict       BlockedDomainSource = "verdict"
+	BlockedDomainSourceForwardedIdentity BlockedDomainSource = "forwarded_identity"
+	BlockedDomainSourceHeuristic         BlockedDomainSource = "heuristic"
+	BlockedDomainSourceHuman             BlockedDomainSource = "human"
+	BlockedDomainSourceNearDuplicate     BlockedDomainSource = "near_duplicate"
+	BlockedDomainSourceReservedDomain    BlockedDomainSource = "reserved_domain"
+	BlockedDomainSourceStaleEvidence     BlockedDomainSource = "stale_evidence"
+	BlockedDomainSourceUnevidenced       BlockedDomainSource = "unevidenced"
+	BlockedDomainSourceVerdict           BlockedDomainSource = "verdict"
 )
 
 // Valid indicates whether the value is a known member of the BlockedDomainSource enum.
 func (e BlockedDomainSource) Valid() bool {
 	switch e {
+	case BlockedDomainSourceForwardedIdentity:
+		return true
 	case BlockedDomainSourceHeuristic:
 		return true
 	case BlockedDomainSourceHuman:
 		return true
 	case BlockedDomainSourceNearDuplicate:
+		return true
+	case BlockedDomainSourceReservedDomain:
 		return true
 	case BlockedDomainSourceStaleEvidence:
 		return true
@@ -19837,6 +19852,7 @@ func (e WorklistBandBand) Valid() bool {
 // Defines values for WorklistBatchKey.
 const (
 	WorklistBatchKeyCompanyMatch     WorklistBatchKey = "company_match"
+	WorklistBatchKeyDomainQuestions  WorklistBatchKey = "domain_questions"
 	WorklistBatchKeyDuplicates       WorklistBatchKey = "duplicates"
 	WorklistBatchKeyHeldDraft        WorklistBatchKey = "held_draft"
 	WorklistBatchKeyLikelyAutomated  WorklistBatchKey = "likely_automated"
@@ -19848,6 +19864,8 @@ const (
 func (e WorklistBatchKey) Valid() bool {
 	switch e {
 	case WorklistBatchKeyCompanyMatch:
+		return true
+	case WorklistBatchKeyDomainQuestions:
 		return true
 	case WorklistBatchKeyDuplicates:
 		return true
@@ -19989,6 +20007,7 @@ const (
 	WorklistItemActionsKeep        WorklistItemActions = "keep"
 	WorklistItemActionsMerge       WorklistItemActions = "merge"
 	WorklistItemActionsOpen        WorklistItemActions = "open"
+	WorklistItemActionsReopen      WorklistItemActions = "reopen"
 	WorklistItemActionsReply       WorklistItemActions = "reply"
 	WorklistItemActionsRetry       WorklistItemActions = "retry"
 	WorklistItemActionsSetAside    WorklistItemActions = "set_aside"
@@ -20016,6 +20035,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsMerge:
 		return true
 	case WorklistItemActionsOpen:
+		return true
+	case WorklistItemActionsReopen:
 		return true
 	case WorklistItemActionsReply:
 		return true
@@ -26364,6 +26385,18 @@ type ApprovalListResponse struct {
 	Page PageInfo   `json:"page"`
 }
 
+// ApprovalPreference defines model for ApprovalPreference.
+type ApprovalPreference struct {
+	// Kind A kind the server permits this reader to mute.
+	Kind  string `json:"kind"`
+	Muted bool   `json:"muted"`
+}
+
+// ApprovalPreferences defines model for ApprovalPreferences.
+type ApprovalPreferences struct {
+	Data []ApprovalPreference `json:"data"`
+}
+
 // ApprovalPreview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
 type ApprovalPreview struct {
 	Changes []ApprovalPreviewChange `json:"changes"`
@@ -26849,28 +26882,23 @@ type Attention struct {
 	// failure marks.
 	DidNotRun *[]AttentionItem `json:"did_not_run,omitempty"`
 
-	// DomainQuestions Domains the capture triage could not judge, whose mail belongs to THIS
-	// reader — the machine read the site, found nothing that named a company,
-	// and left the question open rather than inventing a record.
+	// DomainQuestions Up to 100 undecided domains whose captured mail belongs to this reader.
+	// Each item names the domain, its typed reason, and the permitted answer
+	// or retry actions. Forwarded identity requires an explicit company match.
+	// Discard excludes capture for this reader's mailboxes only. Deferral hides
+	// the reader's question until newer evidence arrives; the paged
+	// `/capture/domain-questions` review still includes deferred questions.
 	//
-	// Each card names the domain as `title` and why the machine stopped as
-	// `detail`. The two verbs are the whole answer a human owes: `keep` makes
-	// the company from the domain's own label, and `discard` writes a capture
-	// exclusion for this reader's mailboxes alone. Neither needs anything
-	// typed, which is why this lane can settle from a queue row where a
-	// free-text answer could not.
-	//
-	// OWNED, and that is the point of the lane. Every open question carries
-	// the mailbox owner whose mail raised it (`company_domain_disposition.owner_id`,
-	// stamped when the question opens), so it reaches the reader whose mail it
-	// is about rather than a shared pile nobody answers for. One installation's
-	// two colleagues may answer the same domain differently, and the exclusion
-	// a `discard` writes binds only the colleague who pressed it.
-	//
-	// Withheld — named in `lanes_omitted` — for a caller with no human behind
-	// it. Absent — not empty — on an installation whose feed does not read
-	// domain questions.
+	// Responsibility is recorded separately for each reader whose mail raised
+	// the question. A colleague's personal exclusion or deferral does not
+	// remove another reader's question. Callers with no human are withheld
+	// through `lanes_omitted`; an unbound reader leaves the lane absent.
 	DomainQuestions *[]AttentionItem `json:"domain_questions,omitempty"`
+
+	// DomainQuestionsMoreAvailable The domain question scan reached its limit. When true, its count is a
+	// lower bound; the paged domain review may contain further questions.
+	// Absent when the lane could not be read.
+	DomainQuestionsMoreAvailable *bool `json:"domain_questions_more_available,omitempty"`
 
 	// DoneForYou What the system did on its own, most recent first. Receipts, not questions.
 	DoneForYou []AttentionItem `json:"done_for_you"`
@@ -27133,7 +27161,7 @@ type AttentionCounts struct {
 	// DidNotRun How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report.
 	DidNotRun *int `json:"did_not_run,omitempty"`
 
-	// DomainQuestions How many open domain questions belong to this reader — the full count rather than a bounded page, because a reader with thirty must be told thirty and the lane offers no second page to find the rest by.
+	// DomainQuestions How many open domain questions the bounded reader returned. This is a lower bound when `domain_questions_more_available` is true. The paged domain review provides the remaining questions.
 	DomainQuestions *int `json:"domain_questions,omitempty"`
 
 	// Dsr How many unresolved data-subject requests this lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the soonest deadlines, which is the order the lane is in.
@@ -27237,12 +27265,11 @@ type AttentionItem struct {
 	// contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
 	// the read-only fallback for a receipt.
 	//
-	// `keep` and `discard` are an undecided domain's pair, and they always travel
-	// together: keeping it creates the company the triage withheld, discarding it stops
-	// the caller's OWN mailboxes capturing that domain. Neither carries a body, because
-	// a domain question has no field to fill in — which is what lets it be answered from
-	// a queue row. They route to `/capture/domain-questions/{domain}/…`, keyed on the
-	// domain because an open question is named by the domain rather than by a record id.
+	// Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
+	// company or matches the supplied `company_id`; forwarded identity requires an
+	// explicit match. Discarding stops the caller's own mailboxes capturing that
+	// domain. Reopening retries identification without settling identity. These verbs route
+	// to `/capture/domain-questions/{domain}/…`.
 	//
 	// `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
 	// to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
@@ -27324,6 +27351,9 @@ type AttentionItem struct {
 	// Both now travel typed — `quiet_days` and `staged` below — and the client writes
 	// the sentence in the reader's own language.
 	Detail *string `json:"detail,omitempty"`
+
+	// DomainReasonCode The domain question's reason code, rendered in the reader's language.
+	DomainReasonCode *string `json:"domain_reason_code,omitempty"`
 
 	// DueAt When this is due (tasks), or when it lapses (approvals).
 	DueAt *time.Time `json:"due_at,omitempty"`
@@ -36715,6 +36745,23 @@ type DisqualifyLeadRequest struct {
 
 	// ReasonId An ACTIVE lead_disqualify_reason; 422 otherwise.
 	ReasonId *openapi_types.UUID `json:"reason_id,omitempty"`
+}
+
+// DomainQuestion defines model for DomainQuestion.
+type DomainQuestion struct {
+	AskedAt       time.Time  `json:"asked_at"`
+	Deferred      bool       `json:"deferred"`
+	Domain        string     `json:"domain"`
+	EffectiveUrl  *string    `json:"effective_url,omitempty"`
+	EvidenceAt    *time.Time `json:"evidence_at,omitempty"`
+	ReasonCode    string     `json:"reason_code"`
+	RedirectChain *[]string  `json:"redirect_chain,omitempty"`
+}
+
+// DomainQuestionPage defines model for DomainQuestionPage.
+type DomainQuestionPage struct {
+	Data []DomainQuestion `json:"data"`
+	Page PageInfo         `json:"page"`
 }
 
 // EmailAccess Who reads this message, and what this caller may do about that. `can_change` and
@@ -52798,6 +52845,9 @@ type WorklistItem struct {
 	// where it has none, a reason in `because` says why.
 	Dispositions *[]WorklistItemDispositions `json:"dispositions,omitempty"`
 
+	// DomainReasonCode The domain question's reason code, rendered in the reader's language.
+	DomainReasonCode *string `json:"domain_reason_code,omitempty"`
+
 	// DueAt When this is due, or when the meeting starts.
 	DueAt *time.Time `json:"due_at,omitempty"`
 
@@ -54462,8 +54512,11 @@ type ListApprovalsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page.
-	Limit  *Limit                     `form:"limit,omitempty" json:"limit,omitempty"`
-	Status *ListApprovalsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// IncludeMuted Include the caller's muted pending proposals for explicit review; all existing visibility checks still apply. A filtered bundle can contain fewer members than its complete review.
+	IncludeMuted *bool                      `form:"include_muted,omitempty" json:"include_muted,omitempty"`
+	Status       *ListApprovalsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
 	// Kind Filter by proposal kind (e.g. coldstart, send_email, advance_deal, overnight).
 	Kind *string `form:"kind,omitempty" json:"kind,omitempty"`
@@ -54853,6 +54906,28 @@ type ListWorkspaceCaptureActivityParams struct {
 type ListConsumerMailBaselineParams struct {
 	// Q Case-insensitive substring filter. Absent or empty lists from the top.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
+}
+
+// ListDomainQuestionsParams defines parameters for ListDomainQuestions.
+type ListDomainQuestionsParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// KeepDomainQuestionJSONBody defines parameters for KeepDomainQuestion.
+type KeepDomainQuestionJSONBody struct {
+	// CompanyId Match to this visible, writable company instead of creating one.
+	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
 }
 
 // PurgeCaptureExclusionParams defines parameters for PurgeCaptureExclusion.
@@ -60717,6 +60792,9 @@ type AddConsumerMailDomainJSONRequestBody = AddConsumerMailDomainRequest
 // CreateCaptureCounterpartyHoldJSONRequestBody defines body for CreateCaptureCounterpartyHold for application/json ContentType.
 type CreateCaptureCounterpartyHoldJSONRequestBody = CreateCaptureCounterpartyHoldRequest
 
+// KeepDomainQuestionJSONRequestBody defines body for KeepDomainQuestion for application/json ContentType.
+type KeepDomainQuestionJSONRequestBody KeepDomainQuestionJSONBody
+
 // CreateWorkspaceEmailDomainJSONRequestBody defines body for CreateWorkspaceEmailDomain for application/json ContentType.
 type CreateWorkspaceEmailDomainJSONRequestBody = CreateWorkspaceEmailDomainRequest
 
@@ -61172,6 +61250,9 @@ type SaveMailDraftJSONRequestBody = MailDraftInput
 
 // SetMyAgentGrantJSONRequestBody defines body for SetMyAgentGrant for application/json ContentType.
 type SetMyAgentGrantJSONRequestBody = SetMyAgentGrantRequest
+
+// UpdateApprovalPreferenceJSONRequestBody defines body for UpdateApprovalPreference for application/json ContentType.
+type UpdateApprovalPreferenceJSONRequestBody = ApprovalPreference
 
 // SaveMyBriefDeliveryJSONRequestBody defines body for SaveMyBriefDelivery for application/json ContentType.
 type SaveMyBriefDeliveryJSONRequestBody = BriefDelivery
@@ -73296,6 +73377,9 @@ type ServerInterface interface {
 	// Lift a counterparty hold.
 	// (DELETE /capture/counterparty-holds/{id})
 	DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request, id Id)
+	// Review the calling reader’s undecided domains.
+	// (GET /capture/domain-questions)
+	ListDomainQuestions(w http.ResponseWriter, r *http.Request, params ListDomainQuestionsParams)
 	// Answer an open domain question by excluding the domain from your own capture.
 	// (POST /capture/domain-questions/{domain}/discard)
 	DiscardDomainQuestion(w http.ResponseWriter, r *http.Request, domain string)
@@ -74463,6 +74547,12 @@ type ServerInterface interface {
 	// What the AI is doing for THIS contact, right now and lately.
 	// (GET /me/ai-activity)
 	GetMyAiActivity(w http.ResponseWriter, r *http.Request, params GetMyAiActivityParams)
+	// Read the caller's personal approval queue preferences.
+	// (GET /me/approval-preferences)
+	ListApprovalPreferences(w http.ResponseWriter, r *http.Request)
+	// Mute or restore one kind in the caller's own queue.
+	// (PATCH /me/approval-preferences)
+	UpdateApprovalPreference(w http.ResponseWriter, r *http.Request)
 	// What the product may send you about your day and your week.
 	// (GET /me/brief-delivery)
 	GetMyBriefDelivery(w http.ResponseWriter, r *http.Request)
@@ -76485,6 +76575,12 @@ func (_ Unimplemented) ShareCaptureCounterpartyHoldHistory(w http.ResponseWriter
 // Lift a counterparty hold.
 // (DELETE /capture/counterparty-holds/{id})
 func (_ Unimplemented) DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Review the calling reader’s undecided domains.
+// (GET /capture/domain-questions)
+func (_ Unimplemented) ListDomainQuestions(w http.ResponseWriter, r *http.Request, params ListDomainQuestionsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -78819,6 +78915,18 @@ func (_ Unimplemented) SetMyAgentGrant(w http.ResponseWriter, r *http.Request, s
 // What the AI is doing for THIS contact, right now and lately.
 // (GET /me/ai-activity)
 func (_ Unimplemented) GetMyAiActivity(w http.ResponseWriter, r *http.Request, params GetMyAiActivityParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the caller's personal approval queue preferences.
+// (GET /me/approval-preferences)
+func (_ Unimplemented) ListApprovalPreferences(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mute or restore one kind in the caller's own queue.
+// (PATCH /me/approval-preferences)
+func (_ Unimplemented) UpdateApprovalPreference(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -86023,6 +86131,19 @@ func (siw *ServerInterfaceWrapper) ListApprovals(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// ------------- Optional query parameter "include_muted" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_muted", r.URL.Query(), &params.IncludeMuted, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_muted"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_muted", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "status" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -88388,6 +88509,58 @@ func (siw *ServerInterfaceWrapper) DeleteCaptureCounterpartyHold(w http.Response
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteCaptureCounterpartyHold(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListDomainQuestions operation middleware
+func (siw *ServerInterfaceWrapper) ListDomainQuestions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDomainQuestionsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDomainQuestions(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -104984,6 +105157,46 @@ func (siw *ServerInterfaceWrapper) GetMyAiActivity(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// ListApprovalPreferences operation middleware
+func (siw *ServerInterfaceWrapper) ListApprovalPreferences(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListApprovalPreferences(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateApprovalPreference operation middleware
+func (siw *ServerInterfaceWrapper) UpdateApprovalPreference(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateApprovalPreference(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMyBriefDelivery operation middleware
 func (siw *ServerInterfaceWrapper) GetMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
 
@@ -117845,6 +118058,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/capture/counterparty-holds/{id}", wrapper.DeleteCaptureCounterpartyHold)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/capture/domain-questions", wrapper.ListDomainQuestions)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/capture/domain-questions/{domain}/discard", wrapper.DiscardDomainQuestion)
 	})
 	r.Group(func(r chi.Router) {
@@ -119010,6 +119226,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/ai-activity", wrapper.GetMyAiActivity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/approval-preferences", wrapper.ListApprovalPreferences)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/me/approval-preferences", wrapper.UpdateApprovalPreference)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/brief-delivery", wrapper.GetMyBriefDelivery)

@@ -177,9 +177,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "filters.sentence.pendingValue",
   // Two phase names and an arrow.
   "project.history.moved",
-  "brief.digestPhaseChange",
   // Two relationship-band names and an arrow, on the contact strip's latest
-  // change. Same shape, same reason as the two above.
+  // change. Same shape, same reason as the one above.
   "contact.intro.change.buckets",
   // A filename and the server's own refusal, separated by a colon. It is one
   // line of a list whose heading says what the list is, and both halves arrive

@@ -4,11 +4,6 @@ import { REPORTING_FIXTURE_ZONE } from "../analytics/reporting.fixtures";
 
 import type { components } from "../../api/schema";
 import { jsonResponse } from "../../testing/story-utils";
-import {
-  teamWeekFigures,
-  tobiasFunnel,
-  tobiasPatterns,
-} from "../worklist/teamweekly.fixtures";
 import type { Deal, MorningBrief, MorningDigest } from "./brief.queries";
 
 // The fixtures every Brief story is built from — the whole page in
@@ -525,97 +520,6 @@ export const wholeWeek: WeeklyReview = {
   outlook: weeklyOutlook,
   scorecard: weeklyScorecard,
   learnings: weeklyLearnings,
-};
-
-export type TeamWeeklyReview = components["schemas"]["TeamWeeklyReview"];
-export type Team = components["schemas"]["Team"];
-
-/** The one team a lead reads, for the picker above the team's week. */
-export const team: Team = { id: "t-nord", name: "Nord" };
-
-/**
- * A team's week as it was measured when the week closed.
- *
- * Three reps with three different verdicts, because the agenda is an ORDER over
- * them and a fixture where everybody had the same week documents no ordering at
- * all. `agenda` is not optional on the wire, so it is spelled here rather than
- * left to a default the server never sends.
- */
-export const teamWeek: TeamWeeklyReview = {
-  id: "01a04000-0000-7000-8000-0000000000f1",
-  team_id: team.id,
-  team_name: team.name,
-  local_week_start: WEEK_START,
-  generated_at: "2026-07-06T06:00:00Z",
-  as_of: "2026-07-06T06:00:00Z",
-  reps_unread: 0,
-  counts: {
-    reps_counted: 3,
-    deals_won: 4,
-    deals_lost: 1,
-    deals_moved: 9,
-    leads_routed: 14,
-    leads_answered_in_target: 13,
-    leads_breached: 1,
-    meetings_held: 12,
-    meetings_with_next_step: 6,
-    commitments_due: 9,
-    commitments_kept: 7,
-  },
-  reps: [
-    {
-      user_id: "u-lena",
-      display_name: "Lena Fischer",
-      deals_won: 2,
-      leads_breached: 0,
-      meetings_held: 5,
-      commitments_due: 3,
-      commitments_kept: 3,
-      help_requested: 0,
-      focus_kind: "strong_week",
-      focus_label: "Fastest first response on the team",
-      patterns: [
-        { kind: "strong_week", label: "Fastest first response on the team" },
-      ],
-    },
-    {
-      user_id: "u-tobias",
-      display_name: "Tobias Kern",
-      deals_won: 1,
-      leads_breached: 1,
-      meetings_held: 4,
-      commitments_due: 4,
-      commitments_kept: 2,
-      help_requested: 1,
-      focus_kind: "help_requested",
-      focus_label: "Asked for help on the Hansa renewal",
-      patterns: tobiasPatterns,
-      funnel: tobiasFunnel,
-    },
-    {
-      user_id: "u-mira",
-      display_name: "Mira Sandoval",
-      deals_won: 1,
-      leads_breached: 0,
-      meetings_held: 3,
-      commitments_due: 2,
-      commitments_kept: 2,
-      help_requested: 0,
-      focus_kind: "meetings_without_next_step",
-      focus_label: "Three meetings closed without a next step",
-      patterns: [
-        {
-          kind: "meetings_without_next_step",
-          label: "Three meetings closed without a next step",
-        },
-      ],
-    },
-  ],
-  // Who is talked about first: the contact who asked for help, then the one
-  // whose meetings ended open, then the week that went well.
-  agenda: ["u-tobias", "u-mira", "u-lena"],
-  outlook: weeklyOutlook,
-  ...teamWeekFigures,
 };
 
 export type Worklist = components["schemas"]["Worklist"];

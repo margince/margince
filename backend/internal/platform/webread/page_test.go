@@ -136,6 +136,9 @@ func TestFetchPageReportsWhereARedirectedBodyCameFrom(t *testing.T) {
 	if page.FinalURL != srv.URL+"/new-home" {
 		t.Fatalf("Page.FinalURL = %q, want the redirect destination %q", page.FinalURL, srv.URL+"/new-home")
 	}
+	if want := []string{srv.URL + "/old-home", srv.URL + "/new-home"}; !reflect.DeepEqual(page.RedirectChain, want) {
+		t.Fatalf("redirect chain = %v, want %v", page.RedirectChain, want)
+	}
 	// Relative links resolve against where the body came from, not where it
 	// was asked for.
 	if want := []string{srv.URL + "/team"}; !reflect.DeepEqual(page.Links, want) {

@@ -285,3 +285,71 @@ func TestSetStampRidesTheUpdateWithoutEnteringTheAuditImages(t *testing.T) {
 		t.Fatal("a stamp must not appear in the before image")
 	}
 }
+
+// A save that carries the stored values is the empty patch, so the early return
+// every update path keeps fires. Empty asks what moved, not what was staged.
+func TestAPatchOfOnlyUnchangedValuesIsEmpty(t *testing.T) {
+	title := "Head of Sales"
+	p := NewPatch()
+	p.Set("title", &title, "Head of Sales")
+	p.Set("industry", "software", "software")
+	p.Set("score", 4, 4)
+	if !p.Empty() {
+		t.Fatalf("a patch re-sending every stored value reports non-empty; moved = %v", p.Moved())
+	}
+
+	p.Set("score", 4, 5)
+	if p.Empty() {
+		t.Error("a patch that moves one column reports empty")
+	}
+}
+
+// A pointer and the value it points at are one value to the database, so a
+// stored *string equals the string a request carries.
+func TestAStoredPointerEqualsTheValueItPointsAt(t *testing.T) {
+	stored := "Same"
+	p := NewPatch()
+	p.Set("title", &stored, "Same")
+	if _, moved := p.Moved()["title"]; moved {
+		t.Error("a *string holding the sent text is reported as moved")
+	}
+	var none *string
+	p.Set("note", none, "now set")
+	if _, moved := p.Moved()["note"]; !moved {
+		t.Error("filling a NULL column is not reported as moved")
+	}
+}
+
+// One instant spelled in two zones is one value, so a request carrying a stored
+// time back in another offset has changed nothing.
+func TestOneInstantInTwoZonesIsNotAChange(t *testing.T) {
+	stored := time.Date(2026, 12, 1, 9, 0, 0, 0, time.UTC)
+	sent := stored.In(time.FixedZone("plus-two", 2*60*60))
+	p := NewPatch()
+	p.Set("expires_at", &stored, &sent)
+	if !p.Empty() {
+		t.Error("the same instant in another zone is reported as moved")
+	}
+}
+
+// A column staged twice keeps the first before image, so a change that is put
+// back leaves the row where it began. That is a no-op too, and it must not be
+// written just because two assignments were recorded on the way.
+func TestAChangeThatIsPutBackIsEmpty(t *testing.T) {
+	p := NewPatch()
+	p.Set("status", "open", "closed")
+	p.Set("status", "open", "open")
+	if !p.Empty() {
+		t.Fatalf("a column set away and back reports non-empty; moved = %v", p.Moved())
+	}
+}
+
+// A stamp is derived from the edit, so a patch with nothing but stamps left
+// nothing for a user to have changed.
+func TestAStampAloneDoesNotMakeAPatchNonEmpty(t *testing.T) {
+	p := NewPatch()
+	p.SetStamp("name_source", "human")
+	if !p.Empty() {
+		t.Error("a patch holding only a derived stamp reports non-empty")
+	}
+}

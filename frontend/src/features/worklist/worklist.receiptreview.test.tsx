@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { formatDayMonth, formatTimeOfDay } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
+import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { BriefChanges } from "../brief/brief.changes";
 import { jsonResponse, render, stubApi, writes } from "../brief/brief.testkit";
@@ -63,11 +64,10 @@ it("draws no group at all when no change waits for a word", async () => {
         .map((query) => query.state.status),
     ).toEqual(["success"]),
   );
-  // The receipt's summary already answers for a quiet day, so an empty group
-  // would be a heading over nothing.
+  // An empty section would be a heading over nothing.
   expect(container.innerHTML).toBe("");
   expect(
-    screen.queryByRole("heading", { name: "Changes made for you" }),
+    screen.queryByRole("heading", { name: en["brief.changes.title"] }),
   ).toBeNull();
 });
 
@@ -89,7 +89,7 @@ it("dates a change from today by its hour and an older one by its day", async ()
       jsonResponse({ name: "PIM Rollout" }),
   });
   const { container } = render(<BriefChanges />);
-  await screen.findByRole("list", { name: "Changes made for you" });
+  await screen.findByRole("list", { name: en["brief.changes.title"] });
   const zone = viewerZone();
   expect(
     [...container.querySelectorAll("time")].map((time) => time.textContent),

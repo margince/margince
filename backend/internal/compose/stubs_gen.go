@@ -795,6 +795,10 @@ func (stubs) DeleteCaptureCounterpartyHold(w nethttp.ResponseWriter, r *nethttp.
 	httperr.NotImplemented(w, r, "DeleteCaptureCounterpartyHold")
 }
 
+func (stubs) ListDomainQuestions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListDomainQuestionsParams) {
+	httperr.NotImplemented(w, r, "ListDomainQuestions")
+}
+
 func (stubs) DiscardDomainQuestion(w nethttp.ResponseWriter, r *nethttp.Request, domain string) {
 	httperr.NotImplemented(w, r, "DiscardDomainQuestion")
 }
@@ -2349,6 +2353,14 @@ func (stubs) SetMyAgentGrant(w nethttp.ResponseWriter, r *nethttp.Request, spec 
 
 func (stubs) GetMyAiActivity(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetMyAiActivityParams) {
 	httperr.NotImplemented(w, r, "GetMyAiActivity")
+}
+
+func (stubs) ListApprovalPreferences(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListApprovalPreferences")
+}
+
+func (stubs) UpdateApprovalPreference(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UpdateApprovalPreference")
 }
 
 func (stubs) GetMyBriefDelivery(w nethttp.ResponseWriter, r *nethttp.Request) {

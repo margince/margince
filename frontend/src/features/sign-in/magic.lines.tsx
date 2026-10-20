@@ -23,9 +23,9 @@ import {
   magicUndoReasonKey,
   magicWhyKey,
 } from "./magic.keys";
+import { axisLabel, markKind } from "./magic.marks";
 import type { MagicLane, MagicLine } from "./magic.queries";
 import { LineRecordsOpener } from "./magic.records";
-import { axisLabel, markKind } from "./magic.timeline";
 import { MagicUndoButton, undoPress } from "./magic.undo";
 
 /**

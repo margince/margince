@@ -256,7 +256,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// it was written and nothing could set it, so the one control that says
 		// "I know, and I want this first anyway" did not exist.
 		WithPins(attentionPins{pool: pool, store: activities.NewStore(db)}).
-		WithDone(attentionPins{pool: pool, store: activities.NewStore(db)}).
+		WithDone(attentionPins{pool: pool, store: activities.NewStore(db).WithClock(now)}).
 		// One reader's walk, held still while they page it. Without it the
 		// cursor is an offset into a ranking rebuilt on every read, so the
 		// count above the queue climbs as work arrives behind somebody who is
@@ -371,9 +371,11 @@ func (a attentionDomainQuestions) OpenDomainQuestions(ctx context.Context) ([]at
 	out := make([]attention.DomainQuestion, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, attention.DomainQuestion{
-			Domain:  row.Domain,
-			Reason:  row.Reason,
-			AskedAt: row.AskedAt,
+			Domain:     row.Domain,
+			Reason:     row.Reason,
+			ReasonCode: row.ReasonCode,
+			AskedAt:    row.AskedAt,
+			EvidenceAt: row.EvidenceAt,
 		})
 	}
 	return out, nil
@@ -436,4 +438,8 @@ func (a attentionSnapshots) Degradable(
 
 func (a attentionSnapshots) Detached(ctx context.Context) context.Context {
 	return database.Detached(ctx)
+}
+
+func (a attentionDomainQuestions) OwnsDomainQuestion(ctx context.Context, domain string) (bool, error) {
+	return a.store.OwnsDomainQuestion(ctx, domain)
 }

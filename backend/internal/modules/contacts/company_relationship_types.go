@@ -220,13 +220,12 @@ func reconcileCompanyRelationshipTypes(
 }
 
 // ensureCompanyRelationshipType asserts one type without disturbing the others.
-// The partner upsert calls it to keep its half of the invariant, inside the
-// same transaction that writes the partner row — the classification flip it
-// replaces did exactly this, for exactly this reason.
+// The partner upsert calls it inside the transaction that writes the partner
+// row, to keep its half of the invariant. It reports whether it added the type.
 func ensureCompanyRelationshipType(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, relType, source, by string,
-) error {
-	_, err := tx.Exec(ctx,
+) (added bool, err error) {
+	tag, err := tx.Exec(ctx,
 		`INSERT INTO company_relationship_type
 		   (company_id, relationship_type, source, captured_by)
 		 SELECT $1, $2, $3, $4
@@ -235,9 +234,9 @@ func ensureCompanyRelationshipType(
 		   WHERE company_id = $1 AND relationship_type = $2 AND archived_at IS NULL)`,
 		companyID, relType, source, by)
 	if err != nil {
-		return fmt.Errorf("ensure relationship type %q: %w", relType, err)
+		return false, fmt.Errorf("ensure relationship type %q: %w", relType, err)
 	}
-	return nil
+	return tag.RowsAffected() == 1, nil
 }
 
 // moveCompanyRelationshipTypes re-homes the loser's types onto the survivor in a

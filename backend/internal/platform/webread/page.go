@@ -24,8 +24,9 @@ type Page struct {
 	// the server redirected, in which case it names the last hop. A crawler
 	// deciding what counts as on-site must judge by this one — the requested
 	// host may only forward.
-	FinalURL string
-	Text     string
+	FinalURL      string
+	RedirectChain []string
+	Text          string
 	// Sections keeps heading boundaries for callers attributing details to
 	// one of several entities on a page. Each section uses Text's reduction.
 	Sections []string
@@ -163,6 +164,7 @@ func (f *Fetcher) FetchPage(ctx context.Context, rawURL string) (Page, error) {
 	return Page{
 		URL:             rawURL,
 		FinalURL:        base.String(),
+		RedirectChain:   got.redirectChain,
 		Text:            StripTags(body),
 		Sections:        HeadingSections(body),
 		Links:           extractLinks(body, base),

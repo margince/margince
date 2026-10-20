@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatMoneyCompact } from "../../format/format";
 import { en } from "../../i18n/en";
 import { AnalyticsScreen, ForecastTile } from "./analytics";
+import { ForecastStrip } from "./analytics.pipeline";
 import { ownLensContext, render, reportsStub } from "./analytics.testkit";
 
 // What a reading says when it has no figure to say.
@@ -222,5 +223,72 @@ describe("the seat's own readings when the report answers with nothing", () => {
     ).toBeTruthy();
     expect(screen.queryByText(en["analytics.noBaseCurrency"])).toBeNull();
     expect(screen.queryByText(en["analytics.forecastNoAmount"])).toBeNull();
+  });
+});
+
+// Five tiles partition the whole pipeline into named buckets, and "which deals
+// are in commit" is the first question anyone asks of one. The door is what
+// makes the figure a way in rather than a dead end.
+describe("a forecast tile's door", () => {
+  it("opens the deals the category holds", () => {
+    render(
+      <ForecastTile
+        label="Commit"
+        amountMinor={120000}
+        currency="EUR"
+        locale="en"
+        dealsUrl="#/deals?forecast_category=commit"
+      />,
+    );
+
+    const door = screen.getByRole("link", { name: en["stat.open"] });
+    expect(door.getAttribute("href")).toBe("#/deals?forecast_category=commit");
+  });
+
+  // Through the strip, because the decision that matters is the strip's. It
+  // picks which categories get an address at all. A tile handed no url draws no
+  // door whatever the reason, so testing the tile alone would pass against a
+  // strip that addressed every category.
+  it("is drawn for a filterable category and withheld from a derived one", () => {
+    render(
+      <ForecastStrip
+        baseCurrency="EUR"
+        locale="en"
+        rows={[
+          { forecast_category: "commit", raw_minor: 120000, deal_count: 2 },
+          { forecast_category: "slipped", raw_minor: 90000, deal_count: 1 },
+        ]}
+      />,
+    );
+
+    const doors = screen
+      .getAllByRole("link", { name: en["stat.open"] })
+      .map((door) => door.getAttribute("href"));
+
+    // The four the wire's union holds, and `slipped` is absent. The strip draws
+    // a slot per category whether a row came back for it or not. A category
+    // with no figure still has somewhere to go.
+    expect(doors).toEqual([
+      "#/deals?forecast_category=commit",
+      "#/deals?forecast_category=best_case",
+      "#/deals?forecast_category=pipeline",
+      "#/deals?forecast_category=omitted",
+    ]);
+  });
+
+  // A tile whose set no query parameter names draws none. A door onto a wider
+  // set would promise more than it delivers, which the deals address module
+  // refuses.
+  it("is absent on a tile with nowhere to go", () => {
+    render(
+      <ForecastTile
+        label="Slipped"
+        amountMinor={120000}
+        currency="EUR"
+        locale="en"
+      />,
+    );
+
+    expect(screen.queryByRole("link", { name: en["stat.open"] })).toBeNull();
   });
 });

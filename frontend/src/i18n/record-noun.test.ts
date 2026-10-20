@@ -44,7 +44,6 @@ const RECORD_TYPE_NAME_KEYS = [
   "backfill.statContacts",
   "ob.digest.contacts",
   "ob.conv.triage.contactsLabel",
-  "brief.digestContacts",
   "unit.contacts",
   "create.contact",
   "merge.contact",

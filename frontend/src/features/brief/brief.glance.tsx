@@ -1,10 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
+import { Badge } from "../../design-system/atoms";
+import { EmailReference } from "../../design-system/emailreference";
 import { Heading } from "../../design-system/heading";
+import { RecordChip } from "../../design-system/recordchip";
 import { middayInstant } from "../../format/calendarday";
-import { formatDate, formatDayLong, hourInZone } from "../../format/format";
+import {
+  formatDate,
+  formatDayLong,
+  formatTimeOfDay,
+  hourInZone,
+} from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -14,6 +22,7 @@ import type { WeeklyReview } from "./brief.queries";
 import {
   type BriefSentence,
   briefSentence,
+  meetingSentence,
   sentenceParts,
 } from "./brief.sentence";
 import type { BriefView } from "./brief.view";
@@ -51,6 +60,37 @@ function anonGreetingKey(hour: number): MessageKey {
   return "brief.glance.nightAnon";
 }
 
+/** The greeting for the reader at this hour, by name where one is known. */
+export function greetingText(
+  firstName: string | null,
+  hour: number,
+  t: (key: MessageKey, values?: Record<string, string>) => string,
+): string {
+  return firstName
+    ? t(greetingKey(hour), { name: firstName })
+    : t(anonGreetingKey(hour));
+}
+
+/**
+ * The greeting with the reader's name in the accent ink. The name is found in
+ * the translated line rather than spliced in, so each language keeps its own
+ * word order around it.
+ */
+export function Greeting({
+  text,
+  firstName,
+}: Readonly<{ text: string; firstName: string | null }>) {
+  const at = firstName ? text.lastIndexOf(firstName) : -1;
+  if (!firstName || at < 0) return text;
+  return (
+    <>
+      {text.slice(0, at)}
+      <span className="greeting-name">{firstName}</span>
+      {text.slice(at + firstName.length)}
+    </>
+  );
+}
+
 export type GlanceFacts = Readonly<{
   /** The reader's own name, or null while `/me` is still in flight. */
   firstName: string | null;
@@ -67,7 +107,12 @@ export type GlanceFacts = Readonly<{
    *  from the ranked queue, the weekly's from the counts the week was frozen
    *  with. Neither can describe the other. */
   view: BriefView;
-  scope?: "mine" | "team";
+  /** When the agent wrote the morning brief, for the provenance badge. Only
+   *  the reader's own morning carries one. */
+  briefedAt?: string;
+  /** The page's controls, on one line with the date over the greeting. Absent,
+   *  the date stands alone over it. */
+  controls?: ReactNode;
 }>;
 
 export type GlanceProps = GlanceFacts;
@@ -93,20 +138,59 @@ function showToday(): void {
  * a string with the holes already filled has nowhere to put a link and a
  * sentence assembled from clauses would produce German in English word order.
  */
-function GlanceSentence({ sentence }: Readonly<{ sentence: BriefSentence }>) {
+function GlanceSentence({
+  sentence,
+  meeting,
+}: Readonly<{ sentence: BriefSentence; meeting: BriefSentence | null }>) {
   const t = useT();
-  const parts = sentenceParts(t(sentence.key));
+  const [opened, setOpened] = useState<Opened>(null);
+  const chips: Chips = {
+    opened,
+    press: (name) => setOpened(opened === name ? null : name),
+  };
+  const words = (clause: BriefSentence) =>
+    sentenceParts(t(clause.key)).map((part) =>
+      part.kind === "text" ? part.text : filled(part.name, clause, t, chips),
+    );
+  const source =
+    opened === "who"
+      ? sentence.who?.source
+      : opened === "meeting"
+        ? meeting?.meeting?.source
+        : undefined;
   return (
-    <p className="glance-sentence" data-testid="glance-sentence">
-      {/* A template's own words go in as STRINGS rather than wrapped in spans:
-          only the filled holes are elements, and a hole's name is its identity
-          — `lead`, `consequence`, `rest` appear once each. */}
-      {parts.map((part) =>
-        part.kind === "text" ? part.text : filled(part.name, sentence, t),
+    <>
+      <p className="glance-sentence" data-testid="glance-sentence">
+        {/* A template's own words go in as STRINGS rather than wrapped in spans:
+            only the filled holes are elements, and a hole's name is its
+            identity — each appears once. */}
+        {words(sentence)}
+        {meeting && <> {words(meeting)}</>}
+      </p>
+      {source && (
+        <p className="glance-quote" role="note">
+          {source.kind === "email" ? (
+            <EmailReference
+              subject={source.subject}
+              occurredAt={source.occurredAt}
+              withheld={source.withheld}
+            />
+          ) : (
+            <>
+              <span className="glance-quote-from">{source.from}</span> ·{" "}
+              {source.text}
+            </>
+          )}
+        </p>
       )}
-    </p>
+    </>
   );
 }
+
+/** Which chip in the sentence has its source open. */
+type Opened = "who" | "meeting" | null;
+
+type Chips = Readonly<{ opened: Opened; press: (name: Opened) => void }>;
 
 /**
  * What goes in one hole of the sentence.
@@ -119,10 +203,31 @@ function filled(
   name: string,
   sentence: BriefSentence,
   t: (key: MessageKey, values?: Record<string, string>) => string,
+  chips: Chips,
 ): ReactNode {
   const value = sentence.values[name];
   if (value === undefined) {
     return `{${name}}`;
+  }
+  const record =
+    name === "who"
+      ? sentence.who
+      : name === "meeting"
+        ? sentence.meeting
+        : undefined;
+  if (record?.source) {
+    const opened = name === "who" ? "who" : "meeting";
+    return (
+      <RecordChip
+        key={name}
+        kind={name === "who" ? "contact" : "meeting"}
+        label={record.label}
+        identity={record.id}
+        pressed={chips.opened === opened}
+        onPress={() => chips.press(opened)}
+        size="large"
+      />
+    );
   }
   if (name === "lead" && sentence.leadHref !== undefined) {
     return (
@@ -161,7 +266,8 @@ export function BriefGlance({
   day,
   week,
   view,
-  scope = "mine",
+  briefedAt,
+  controls,
 }: GlanceProps) {
   const t = useT();
   const hour = hourInZone(now, viewerZone());
@@ -170,33 +276,42 @@ export function BriefGlance({
   const greeting =
     view === "weekly"
       ? t("brief.panel.weekly")
-      : firstName
-        ? t(greetingKey(hour), { name: firstName })
-        : t(anonGreetingKey(hour));
-  const sentence = glanceSentence({ view, scope, day, week }, t, locale);
+      : greetingText(firstName, hour, t);
+  const sentence = glanceSentence({ view, day, week }, t, locale);
+  const meeting =
+    view === "morning" ? meetingSentence(day, now, t, locale) : null;
   const date = view === "morning" ? now.toISOString() : week?.local_week_start;
   return (
     <header className="glance arrive" data-testid="brief-glance">
       <Heading size="xlarge" className="glance-greeting t-display">
-        {greeting}
+        {view === "weekly" ? (
+          greeting
+        ) : (
+          <Greeting text={greeting} firstName={firstName} />
+        )}
       </Heading>
       {date && (
-        <p className="t-eyebrow glance-date">
-          <time dateTime={date}>
-            {/* The morning names its day the way a page over a greeting does
-                — the weekday and the month written out — because a reader
-                arriving at their desk asks "what day is it" before "what is
-                the date". The weekly keeps the numeric form: it names a
-                week's start, which is a date a reader compares, not a day
-                they are in. */}
-            {view === "weekly"
-              ? formatDate(middayInstant(date, recordZone), locale, recordZone)
-              : formatDayLong(date, locale, viewerZone())}
-          </time>
-        </p>
+        <div className="glance-topline">
+          <p className="t-eyebrow glance-date">
+            <time dateTime={date}>
+              {/* The morning names its day the way a page over a greeting
+                  does — the weekday and the month written out. The weekly
+                  keeps the numeric form: it names a week's start, which is a
+                  date a reader compares, not a day they are in. */}
+              {view === "weekly"
+                ? formatDate(
+                    middayInstant(date, recordZone),
+                    locale,
+                    recordZone,
+                  )
+                : formatDayLong(date, locale, viewerZone())}
+            </time>
+          </p>
+          {controls}
+        </div>
       )}
       {sentence ? (
-        <GlanceSentence sentence={sentence} />
+        <GlanceSentence sentence={sentence} meeting={meeting} />
       ) : (
         // Neither view could compose a sentence: the queue or the week has not
         // arrived, or the read failed. The fallback names the view rather than
@@ -207,25 +322,30 @@ export function BriefGlance({
         // ONE FACE either way. It is the same slot the composed sentence fills,
         // and drawn as a caption it read as a footnote where the composed one
         // read as the page's opening.
-        <p className="glance-sentence">{t(introKey(view, scope))}</p>
+        <p className="glance-sentence">{t(introKey(view))}</p>
+      )}
+      {briefedAt && (
+        <p className="glance-briefed">
+          <Badge tone="ai">
+            {t("brief.briefedAt", {
+              time: formatTimeOfDay(briefedAt, locale, viewerZone()),
+            })}
+          </Badge>
+        </p>
       )}
     </header>
   );
 }
 
 function glanceSentence(
-  facts: Pick<GlanceFacts, "view" | "scope" | "day" | "week">,
+  facts: Pick<GlanceFacts, "view" | "day" | "week">,
   t: ReturnType<typeof useT>,
   locale: ReturnType<typeof useLocale>["locale"],
 ) {
   if (facts.view === "morning") return briefSentence(facts.day, t, locale);
-  return facts.scope === "team" ? null : weekSentence(facts.week, t, locale);
+  return weekSentence(facts.week, t, locale);
 }
 
-function introKey(view: BriefView, scope: "mine" | "team"): MessageKey {
-  if (view === "weekly")
-    return scope === "team"
-      ? "brief.glance.introTeamWeekly"
-      : "brief.glance.introWeekly";
-  return scope === "team" ? "brief.glance.introTeam" : "brief.glance.intro";
+function introKey(view: BriefView): MessageKey {
+  return view === "weekly" ? "brief.glance.introWeekly" : "brief.glance.intro";
 }

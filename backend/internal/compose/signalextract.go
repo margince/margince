@@ -110,6 +110,8 @@ are respectively supplier, partner and provider, never the buyer. When buyer ide
 commercial direction is unclear use unknown and leave buyer_ref empty. Quote the current
 message’s words that establish the need. An explicit report of a named participant’s request
 can identify that participant as the buyer; their presence in Cc alone cannot.
+Use supplier, partner or provider only when the source establishes that specific relationship.
+Merely relaying an unidentified company’s need does not establish a partnership: use unknown.
 A meeting invitation alone establishes no buying intent.
 Reporting nothing is the correct answer for most conversations.`
 

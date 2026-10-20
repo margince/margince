@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -130,6 +131,8 @@ const statusPending = "pending"
 // every type of that id, so the transport refuses a half-reference and one
 // never reaches here.
 type ListInput struct {
+	IncludeMuted bool
+	mutedFor     *ids.UUID
 	// RequestedForReader narrows personal attention before pagination.
 	RequestedForReader bool
 	RequestedForOwners []ids.UUID
@@ -200,6 +203,9 @@ func (s *Service) List(ctx context.Context, in ListInput) ([]row, storekit.Page,
 		return nil, storekit.Page{}, err
 	}
 	p, _ := principal.Actor(ctx)
+	if !in.IncludeMuted && !p.UserID.IsZero() {
+		in.mutedFor = &p.UserID
+	}
 	if in.FailedForDecider {
 		if p.UserID.IsZero() {
 			return nil, storekit.Page{}, apperrors.ErrPermissionDenied
@@ -336,6 +342,9 @@ func listForTarget(ctx context.Context, tx pgx.Tx, p principal.Principal, in Lis
 // and the record page together instead of drifting between copies.
 func approvalWhere(in ListInput, from *keysetStart, arg func(any) int) string {
 	var terms []string
+	if in.mutedFor != nil {
+		terms = append(terms, fmt.Sprintf("(status <> 'pending' OR passport_id IS NOT NULL OR NOT (kind = ANY($%d)) OR NOT EXISTS (SELECT 1 FROM approval_preference pref WHERE pref.user_id = $%d AND pref.kind = approval.kind AND pref.muted))", arg(muteableKinds()), arg(*in.mutedFor)))
+	}
 	if in.Status != nil {
 		terms = append(terms, fmt.Sprintf("status = $%d", arg(*in.Status)))
 	}

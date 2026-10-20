@@ -118,8 +118,7 @@
 /* A week's figures may be words ("Not recorded") and a basis may carry a date,
    so the row takes as many equal cards as a word-sized figure fits, leaves no
    last card stretched under the rest, and lets the basis run a third line.
-   The team's week wears the same class. At 40rem and under, the strip's own
-   row fold stands. */
+   At 40rem and under, the strip's own row fold stands. */
 @container (width > 40rem) {
   .brief-weekly-strip .stat-strip {
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));

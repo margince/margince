@@ -18,15 +18,19 @@ package compose
 // their gates, their normalization and their audited writes.
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -64,9 +68,20 @@ func (h domainQuestionHandlers) KeepDomainQuestion(w http.ResponseWriter, r *htt
 			"expected a domain name like example.com; a full email address or a URL is not one"))
 		return
 	}
+	var input crmcontracts.KeepDomainQuestionJSONRequestBody
+	if err := httperr.DecodeOrRefusal(w, r, &input); err != nil && !errors.Is(err, io.EOF) {
+		httperr.Write(w, r, err)
+		return
+	}
+	var companyID *ids.CompanyID
+	if input.CompanyId != nil {
+		typed := ids.From[ids.CompanyKind](ids.UUID(*input.CompanyId))
+		companyID = &typed
+	}
 	res, err := h.contacts.ResolveDomainTriage(r.Context(), contacts.ResolveDomainTriageInput{
-		Domain: base,
-		Status: contacts.DomainCompany,
+		Domain:    base,
+		CompanyID: companyID,
+		Status:    contacts.DomainCompany,
 		// HUMAN, not heuristic: a colleague looked at the domain and said it is
 		// a company. The triage reads this too — a human answer is not withheld
 		// for stale evidence, because a human is exactly who that withholding

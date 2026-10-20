@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -64,6 +65,10 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 // lead is told through. An empty lane refuses every site lead, which is right
 // for the services that only stage.
 func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *approvals.Service {
+	captureConfig := CaptureConfig{}
+	if loaded := config.Bound(); loaded != nil {
+		captureConfig = CaptureConfigFromDeploy(loaded, slog.Default())
+	}
 	svc := NewApprovalsService(InstallationDB(pool)).
 		WithUndoableRelease(undoableAgentRelease(activities.FilingsStayUndoable))
 	store := newCounterpartyStore(pool)
@@ -71,9 +76,9 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 	svc.WithEffect(enrichProposalKind, scrapeAcceptEffect(svc, store))
 	svc.WithEffect(deepReadProposalKind, deepReadAcceptEffect(svc, store))
 	svc.WithEffect(siteLeadProposalKind,
-		siteLeadAcceptEffect(svc, newCaptureSink(pool, CaptureConfig{}), pool, notices))
+		siteLeadAcceptEffect(svc, newCaptureSink(pool, captureConfig), pool, notices))
 	svc.WithPrecheck(siteLeadProposalKind, siteLeadPrecheck(notices))
-	svc.WithEffect(counterpartyProposalKind, counterpartyAcceptEffect(svc, store, newConnectorTagFiler(pool), capture.NewPendingStore(InstallationDB(pool)), newDomainTriageTrigger(pool, slog.Default())))
+	svc.WithEffect(counterpartyProposalKind, counterpartyAcceptEffect(svc, store, newConnectorTagFiler(pool), capture.NewPendingStore(InstallationDB(pool)), newDomainTriageTrigger(pool, slog.Default(), captureConfig.SkipReservedDomainProposals)))
 	svc.WithEffect(companyNameProposalKind, companyNameAcceptEffect(svc, store))
 	svc.WithEffect(captureCollisionKind, captureCollisionAcceptEffect(svc, store))
 	svc.WithEffect(linkedInMatchKind, linkedInMatchAcceptEffect(svc))

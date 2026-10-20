@@ -91,6 +91,7 @@ type DecidedMember struct {
 // ApprovalQuery is the listing's filter. Status defaults to pending at the
 // seam, not here, so both doors onto the inbox default alike.
 type ApprovalQuery struct {
+	IncludeMuted     bool
 	Status           string
 	Kind             string
 	TargetEntityType string
@@ -141,6 +142,7 @@ const listApprovalsToolName = "list_approvals"
 type listApprovalsTool struct{ inbox ApprovalInbox }
 
 type listApprovalsArgs struct {
+	IncludeMuted     bool     `json:"include_muted"`
 	Status           string   `json:"status"`
 	Kind             string   `json:"kind"`
 	TargetEntityType string   `json:"target_entity_type"`
@@ -158,6 +160,7 @@ func (t listApprovalsTool) Spec() mcp.ToolSpec {
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "listApprovals",
 		InputSchema: schema(`{"type":"object","properties":{
+			"include_muted":{"type":"boolean","description":"Include your muted proposals for explicit review; visibility rules still apply."},
 			"status":{"type":"string","enum":["pending","approved","rejected"],"description":"Defaults to pending — what is still waiting."},
 			"kind":{"type":"string","description":"One staged action's kind, e.g. advance_deal."},
 			"target_entity_type":{"type":"string","description":"With target_entity_id, the approvals staged against one record."},

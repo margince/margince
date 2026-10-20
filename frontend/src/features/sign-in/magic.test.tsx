@@ -1,12 +1,6 @@
 /** @vitest-environment happy-dom */
 import { QueryClient } from "@tanstack/react-query";
-import {
-  cleanup,
-  fireEvent,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDateTime } from "../../format/format";
@@ -32,10 +26,6 @@ afterEach(() => {
 // asks of it, so a lane is found whether or not it is open.
 function lane(name: string): Promise<HTMLElement> {
   return screen.findByRole("list", { name, hidden: true });
-}
-
-function summary(): Promise<HTMLElement> {
-  return screen.findByRole("list", { name: "Summary" });
 }
 
 describe("the receipt draws every lane it promises", () => {
@@ -110,7 +100,7 @@ describe("the receipt draws every lane it promises", () => {
     ]);
   });
 
-  it("answers every lane in the summary and draws a group only for lines", async () => {
+  it("draws a group only for a lane with lines in it", async () => {
     stub(
       receipt({
         done: [line(), line({ id: "00000000-0000-7000-8000-000000000009" })],
@@ -119,40 +109,32 @@ describe("the receipt draws every lane it promises", () => {
     );
     renderMagic();
     expect(
-      Array.from((await summary()).children).map((item) => item.textContent),
-    ).toEqual([
-      "Nothing waiting on you",
-      "Nothing failed",
-      "Every source healthy",
-      "2 done for you",
-    ]);
-    // A clear lane is said once, in the summary, rather than as a heading
-    // standing over nothing.
+      await screen.findByRole("heading", { name: "Done for you" }),
+    ).toBeTruthy();
+    // A clear lane draws nothing, rather than a heading over nothing.
     expect(
       screen.queryByRole("heading", { name: "Waiting on you" }),
     ).toBeNull();
     expect(screen.queryByRole("list", { name: "Waiting on you" })).toBeNull();
-    expect(screen.getByRole("heading", { name: "Done for you" })).toBeTruthy();
   });
 
-  it("titles the section by its window and says when that window began", async () => {
-    stub(receipt());
+  it("names the section and leaves its window to the server", async () => {
+    stub(receipt({ done: [line()] }));
     renderMagic();
     expect(
-      await screen.findByRole("heading", { name: "Since your last brief" }),
+      await screen.findByRole("region", { name: "Since your last brief" }),
     ).toBeTruthy();
-    expect(
-      await screen.findByText(
-        `What Margince did since ${formatDateTime("2026-09-12T08:00:00Z", "en", viewerZone())}.`,
-      ),
-    ).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Last 30 days" }));
-    expect(
-      screen.getByRole("heading", { name: "The last 30 days" }),
-    ).toBeTruthy();
+    const reads = vi
+      .mocked(fetch)
+      .mock.calls.map(([input]) =>
+        String(input instanceof Request ? input.url : input),
+      )
+      .filter((url) => url.split("?")[0].endsWith("/magic"));
+    expect(reads).toHaveLength(1);
+    expect(reads[0]).not.toContain("since=");
   });
 
-  it("names a withheld source and claims nothing clear while one is named", async () => {
+  it("names a withheld source", async () => {
     stub(
       receipt({
         sources_unavailable: [{ source: "approval", reason: "withheld" }],
@@ -162,12 +144,20 @@ describe("the receipt draws every lane it promises", () => {
     expect(
       await screen.findByText("Source not available to you: Proposals"),
     ).toBeTruthy();
-    // The lane the refusal belongs to is EMPTY, and saying so would report a
-    // clear queue over an answer nobody could read.
-    expect(screen.queryByText("Nothing waiting on you")).toBeNull();
-    expect(
-      within(await summary()).getByText("Waiting on you: may be incomplete"),
-    ).toBeTruthy();
+  });
+
+  // A quiet window draws nothing: four empty lanes would be a section saying
+  // nothing beside the sections that have news.
+  it("draws nothing over a quiet window", async () => {
+    stub(receipt());
+    const { container } = renderMagic();
+    await waitFor(() =>
+      expect(vi.mocked(fetch).mock.calls.length).toBeGreaterThan(0),
+    );
+    await waitFor(() =>
+      expect(container.querySelector("[aria-busy='true']")).toBeNull(),
+    );
+    expect(container.querySelector(".brief-section")).toBeNull();
   });
 
   it("says how much it left out, so five lines never imply five things happened", async () => {
@@ -552,48 +542,18 @@ describe("the receipt draws every lane it promises", () => {
 
   // A RESPONSE THIS CLIENT DID NOT EXPECT MUST NOT TAKE THE PAGE DOWN.
   //
-  // The panel sits on Home beside every other section, so a field read off a
-  // shape the server did not send throws inside the shell's render and costs a
-  // reader the whole screen, not one card. Version skew is the ordinary way
-  // that happens.
-  it("draws without a count rather than throwing on a receipt it cannot read", async () => {
+  // The section sits on Home beside every other section. A field read off a
+  // shape the server did not send throws inside the shell's render, and costs
+  // a reader the whole screen. Version skew is the ordinary way that happens.
+  it("draws nothing rather than throwing on a receipt it cannot read", async () => {
     stub({ data: [] } as unknown as ReturnType<typeof receipt>);
-    renderMagic();
-    // Every lane says it cannot be counted: absent is version skew, and only a
-    // list the server sent can say there is nothing in it.
-    expect(
-      Array.from((await summary()).children).map((item) => item.textContent),
-    ).toEqual([
-      "Waiting on you: may be incomplete",
-      "Could not be finished: may be incomplete",
-      "Needs restoring: may be incomplete",
-      "Done for you: may be incomplete",
-    ]);
-  });
-});
-
-describe("the reader chooses how far back the page looks", () => {
-  // The default window is the server's own: since the last brief. A reader
-  // back from a weekend, or looking at what an import set off, needs more,
-  // and without a choice the page reported "nothing" about work it had done.
-  it("leaves since to the server by default and asks for 7 days when chosen", async () => {
-    stub(receipt());
-    renderMagic();
-    const fetched = vi.mocked(fetch);
-    const magicReads = () =>
-      fetched.mock.calls
-        .map(([input]) => String(input instanceof Request ? input.url : input))
-        .filter((url) => url.split("?")[0].endsWith("/magic"));
-    await waitFor(() => expect(magicReads().length).toBe(1));
-    expect(magicReads()[0]).not.toContain("since=");
-
-    fireEvent.click(screen.getByRole("button", { name: "Last 7 days" }));
-    await waitFor(() => expect(magicReads().length).toBe(2));
-    const since = new URL(magicReads()[1], "http://x").searchParams.get(
-      "since",
+    const { container } = renderMagic();
+    await waitFor(() =>
+      expect(vi.mocked(fetch).mock.calls.length).toBeGreaterThan(0),
     );
-    expect(since).toBeTruthy();
-    const days = (Date.now() - Date.parse(since ?? "")) / 86_400_000;
-    expect(Math.round(days)).toBe(7);
+    await waitFor(() =>
+      expect(container.querySelector("[aria-busy='true']")).toBeNull(),
+    );
+    expect(container.querySelector(".brief-section")).toBeNull();
   });
 });

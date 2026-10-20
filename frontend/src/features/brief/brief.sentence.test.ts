@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { UTC_ZONE } from "../../format/timezone";
 import { de } from "../../i18n/de";
 import type { MessageKey } from "../../i18n/en";
 import { en } from "../../i18n/en";
 import { vi } from "../../i18n/vi";
 import { itemTitle, rowHref } from "../worklist/worklist.copy";
 import type { Worklist, WorklistItem } from "../worklist/worklist.queries";
+import { meetingRow, waitingEmailRow } from "./brief.fixtures";
 import {
   briefSentence,
   leadOf,
+  meetingSentence,
   sentenceParts,
   waitingRows,
 } from "./brief.sentence";
@@ -281,4 +284,96 @@ it("counts actionable rows and keeps informational updates out of the headline",
   ).toBe("brief.sentence.clear");
   expect(waitingRows(day([{ ...notice, urgent: true }]))).toHaveLength(1);
   expect(waitingRows(day([{ ...notice, level: 0 }]))).toHaveLength(1);
+});
+
+describe("the contact and the meeting the sentence names", () => {
+  it("names the lead's contact as the one it is for, citing their message", () => {
+    const lead = waitingEmailRow();
+    const sentence = briefSentence(day([lead]), t, "en", UTC_ZONE);
+    expect(sentence?.key).toBe("brief.sentence.oneFor");
+    expect(sentence?.who).toEqual({
+      id: "contact-sonya",
+      label: "Sonya Beck",
+      source: {
+        kind: "email",
+        subject: lead.email_summary?.subject,
+        occurredAt: "3 Sept",
+        withheld: false,
+      },
+    });
+    // The chip names the same contact the card under the sentence draws.
+    expect(sentence?.values.who).toBe(lead.contact?.label);
+  });
+
+  it("cites a message this reader may not read as withheld", () => {
+    const lead = waitingEmailRow();
+    const email = lead.email_summary;
+    if (!email) throw new Error("the waiting row carries its message");
+    const withheld = {
+      ...lead,
+      email_summary: { ...email, display_status: "withheld" as const },
+    };
+    const sentence = briefSentence(day([withheld]), t, "en", UTC_ZONE);
+    expect(sentence?.who?.source).toMatchObject({ withheld: true });
+  });
+
+  it("keeps the plain opening where the lead names no contact", () => {
+    const sentence = briefSentence(
+      day([item(), item({ id: "i2" })]),
+      t,
+      "en",
+      UTC_ZONE,
+    );
+    expect(sentence?.key).toBe("brief.sentence.many");
+    expect(sentence?.who).toBeUndefined();
+  });
+
+  it("names the next meeting still ahead, never one already started", () => {
+    const now = new Date("2026-09-03T10:00:00Z");
+    const queue = [
+      meetingRow("early", true, "2026-09-03T09:30:00Z"),
+      meetingRow("next", false, "2026-09-03T15:00:00Z"),
+    ];
+    const clause = meetingSentence(day(queue), now, t, "en", UTC_ZONE);
+    expect(clause?.key).toBe("brief.sentence.meeting");
+    expect(clause?.meeting?.id).toBe("next");
+    expect(clause?.values.time).toBe("15:00");
+    expect(clause?.meeting?.source).toEqual({
+      kind: "note",
+      from: "15:00",
+      text: en["worklist.needsPrep"],
+    });
+  });
+
+  it("names the earliest meeting ahead, whatever its rank", () => {
+    const now = new Date("2026-09-03T10:00:00Z");
+    const queue = [
+      meetingRow("late", true, "2026-09-03T16:00:00Z"),
+      meetingRow("soon", false, "2026-09-03T11:00:00Z"),
+    ];
+    const clause = meetingSentence(day(queue), now, t, "en", UTC_ZONE);
+    expect(clause?.meeting?.id).toBe("soon");
+  });
+
+  it("says nothing of meetings once the day's last one has begun", () => {
+    const now = new Date("2026-09-03T16:00:00Z");
+    const queue = [meetingRow("only", true, "2026-09-03T15:00:00Z")];
+    expect(meetingSentence(day(queue), now, t, "en", UTC_ZONE)).toBeNull();
+  });
+
+  it("gives every catalog each hole the composed sentences fill", () => {
+    const holes: Record<string, readonly string[]> = {
+      "brief.sentence.oneFor": ["who", "lead"],
+      "brief.sentence.manyFor": ["who", "lead", "rest"],
+      "brief.sentence.meeting": ["meeting", "time"],
+    };
+    for (const catalog of [en, de, vi]) {
+      for (const [key, names] of Object.entries(holes)) {
+        const slots = sentenceParts(catalog[key as MessageKey])
+          .filter((part) => part.kind === "slot")
+          .map((part) => (part.kind === "slot" ? part.name : ""));
+        expect(slots.sort()).toEqual([...names].sort());
+      }
+    }
+  });
 });

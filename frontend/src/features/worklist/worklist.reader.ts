@@ -7,6 +7,7 @@ import {
   HUMAN_ACTOR_PREFIX,
   isAuditActorType,
 } from "../settings/audit";
+import { domainReasonLabels } from "./worklist.domainreason";
 import type { WorklistItem } from "./worklist.queries";
 
 type Viewer = Readonly<{ id: string; display_name: string }>;
@@ -39,6 +40,10 @@ export function noticeDetail(
   viewer: Viewer | undefined,
   t: Translator,
 ): string | undefined {
+  if (item.source === "domain_question" && item.domain_reason_code) {
+    const label = domainReasonLabels[item.domain_reason_code];
+    return label ? t(label) : item.detail;
+  }
   if (item.source !== "notice") return item.detail;
   const origin = item.notice_origin;
   if (!origin)

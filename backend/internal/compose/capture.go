@@ -242,7 +242,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 	ensurer := contactsEnsurer{
 		store:  newCounterpartyStore(pool),
 		pool:   pool,
-		triage: newDomainTriageTrigger(pool, cfg.logger()),
+		triage: newDomainTriageTrigger(pool, cfg.logger(), cfg.SkipReservedDomainProposals),
 		log:    cfg.logger(),
 	}
 	// Acting on a message the owner deleted at the provider destroys attachment

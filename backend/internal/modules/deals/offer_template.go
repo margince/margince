@@ -312,12 +312,10 @@ type UpdateOfferTemplateInput struct {
 }
 
 // UpdateOfferTemplate is a full-replace PUT (unlike Product's
-// merge-PATCH): every writable field is always supplied and always
-// written, so the patch is never empty — a PUT that repeats the current
-// state still bumps version and writes an audit row, honestly recording
-// that a write happened. Re-validates the two live-row conflicts against
-// the state the row WOULD carry after the replace, before anything is
-// written.
+// merge-PATCH): every writable field is always supplied. A PUT that repeats
+// the stored state changes nothing: no version, no audit row. Re-validates the
+// two live-row conflicts against the state the row would carry after the
+// replace, before anything is written.
 func (s *Store) UpdateOfferTemplate(ctx context.Context, id ids.OfferTemplateID, in UpdateOfferTemplateInput) (crmcontracts.OfferTemplate, error) {
 	if err := auth.Require(ctx, "offer_template", principal.ActionUpdate); err != nil {
 		return crmcontracts.OfferTemplate{}, err
@@ -333,6 +331,11 @@ func (s *Store) UpdateOfferTemplate(ctx context.Context, id ids.OfferTemplateID,
 
 	var out crmcontracts.OfferTemplate
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		// Locked before the read: the empty-patch answer and a write without
+		// an If-Match both decide from the row as it stands when this lands.
+		if _, err := storekit.LockRow(ctx, tx, "offer_template", id.UUID, storekit.LiveOnly); err != nil {
+			return err
+		}
 		current, err := readOfferTemplate(ctx, tx, id, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -350,6 +353,13 @@ func (s *Store) UpdateOfferTemplate(ctx context.Context, id ids.OfferTemplateID,
 		p.Set("locale", current.Locale, locale)
 		p.Set(offerTemplateIsDefaultField, current.IsDefault, in.IsDefault)
 		p.Set("layout", current.Layout, layout)
+		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, "offer_template", id.UUID, in.IfVersion); err != nil {
+				return err
+			}
+			out = current
+			return nil
+		}
 		if err := p.ApplyGuarded(ctx, tx, "offer_template", id.UUID, in.IfVersion); err != nil {
 			if conflict := offerTemplateUniqueViolation(err, locale); conflict != nil {
 				return conflict

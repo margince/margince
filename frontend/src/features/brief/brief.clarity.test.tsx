@@ -11,7 +11,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("keeps the summary visible and puts informational updates after the priorities", async () => {
+it("keeps the summary visible and leaves informational notices to the Worklist", async () => {
   const task = taskRow("task-one", "Send the promised comparison");
   const notice = {
     ...taskRow("notice-one", "Northstar"),
@@ -47,16 +47,7 @@ it("keeps the summary visible and puts informational updates after the prioritie
   });
   expect(summary.closest("details")).toBeNull();
   expect(summary.closest(".brief-overview")).toBeTruthy();
-  expect(container.querySelector("#brief-today")?.textContent).not.toContain(
-    "Northstar",
-  );
-  expect(
-    container.querySelector(".brief-followthrough")?.textContent,
-  ).toContain("Northstar");
-  expect(container.textContent).toContain(
-    "Qualified → Won · Changed by: Dana Weiss",
-  );
-  expect(container.textContent).not.toContain("Obsolete delivery text");
-  expect(container.textContent).toContain("Agenda updated");
+  // A notice is read on the Worklist; Home keeps to the day's priorities.
+  expect(container.textContent).not.toContain("Northstar");
   expect(container.textContent).not.toContain("Some work may be missing");
 });

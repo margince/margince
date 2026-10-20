@@ -109,7 +109,7 @@ func NewCounterpartyVerdictEngine(
 		approvals:  NewApprovalsService(InstallationDB(pool)),
 		eraser:     privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision).WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))),
 		brain:      brain,
-		triage:     newDomainTriageTrigger(pool, log),
+		triage:     newDomainTriageTrigger(pool, log, lists.SkipReservedDomainProposals),
 		tagFiler:   newConnectorTagFiler(pool),
 		transactional: capture.NewTransactionalList(
 			lists.TransactionalExtra, lists.TransactionalNever),

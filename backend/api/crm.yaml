@@ -18229,6 +18229,27 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /capture/domain-questions:
+    get:
+      tags: [Capture]
+      operationId: listDomainQuestions
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Review the calling reader’s undecided domains.
+      description: Lists only the reader’s own domain questions, oldest first, with continuation and source evidence.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: One page of personal domain questions.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DomainQuestionPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /capture/domain-questions/{domain}/keep:
     post:
       tags: [Capture]
@@ -18256,6 +18277,17 @@ paths:
           required: true
           schema: { type: string }
           description: 'The domain to keep; normalized to its registrable form.'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                company_id:
+                  type: string
+                  format: uuid
+                  description: Match to this visible, writable company instead of creating one.
       responses:
         '200':
           description: Where the domain stands now that it has an answer.
@@ -19407,6 +19439,8 @@ paths:
         and leaves everything already applied where it is — this is a setting, not an
         undo.
 
+        A muted kind cannot be turned on automatically; restore its queue preference first (409).
+
         Human session only, and writes the caller's own row: an agent never widens the
         authority of the contact it acts for.
       requestBody:
@@ -19420,6 +19454,49 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AutonomySettings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /me/approval-preferences:
+    get:
+      tags: [Approvals]
+      operationId: listApprovalPreferences
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Read the caller's personal approval queue preferences.
+      responses:
+        '200':
+          description: One preference per kind that can be muted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApprovalPreferences' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    patch:
+      tags: [Approvals]
+      operationId: updateApprovalPreference
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Mute or restore one kind in the caller's own queue.
+      description: |
+        Changes presentation only. Shared proposals remain pending for other readers and
+        expire normally. Passport-bearing rows, sends, bookings and merges cannot be hidden.
+        Both mute and unmute set this caller's automatic-change policy to manual; no previous
+        automatic setting is restored. Muted proposals remain reachable through include_muted.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApprovalPreference' }
+      responses:
+        '200':
+          description: The caller's preferences after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApprovalPreferences' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -19443,6 +19520,10 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
+        - name: include_muted
+          in: query
+          schema: { type: boolean, default: false }
+          description: Include the caller's muted pending proposals for explicit review; all existing visibility checks still apply. A filtered bundle can contain fewer members than its complete review.
         - name: status
           in: query
           schema: { type: string, enum: [pending, approved, rejected] }
@@ -32864,6 +32945,28 @@ components:
         signature_enrich: { type: boolean, description: 'Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it.' }
         shared_posture_allowed: { type: boolean, description: 'Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.' }
 
+    DomainQuestionPage:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/DomainQuestion' }
+        page: { $ref: '#/components/schemas/PageInfo' }
+    DomainQuestion:
+      type: object
+      required: [domain, reason_code, asked_at, deferred]
+      properties:
+        domain: { type: string }
+        reason_code: { type: string }
+        asked_at: { type: string, format: date-time }
+        deferred: { type: boolean }
+        evidence_at: { type: string, format: date-time }
+        effective_url: { type: string }
+        redirect_chain:
+          type: array
+          items: { type: string }
+
     BlockedDomain:
       type: object
       description: |
@@ -32900,7 +33003,7 @@ components:
             words and shows `note` for a decision somebody explained.
         reason_code:
           type: string
-          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, unknown]
+          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, reserved_domain, unknown]
           description: |
             Why, as a code the client words in the reader's language.
 
@@ -32928,7 +33031,7 @@ components:
             a company the reader may not see stays withheld by both.
         source:
           type: string
-          enum: [verdict, heuristic, human, unevidenced, stale_evidence, near_duplicate]
+          enum: [verdict, heuristic, human, unevidenced, stale_evidence, near_duplicate, forwarded_identity, reserved_domain]
           description: |
             What decided it, or — for an `undecided` domain — what stopped the machine deciding.
             `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
@@ -55484,6 +55587,24 @@ components:
         data: { type: array, items: { $ref: '#/components/schemas/Approval' } }
         page: { $ref: '#/components/schemas/PageInfo' }
 
+    ApprovalPreference:
+      type: object
+      additionalProperties: false
+      required: [kind, muted]
+      properties:
+        kind:
+          type: string
+          description: A kind the server permits this reader to mute.
+        muted:
+          type: boolean
+    ApprovalPreferences:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ApprovalPreference' }
+
     AutonomySettings:
       type: object
       description: |
@@ -60021,27 +60142,23 @@ components:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
           description: |
-            Domains the capture triage could not judge, whose mail belongs to THIS
-            reader — the machine read the site, found nothing that named a company,
-            and left the question open rather than inventing a record.
+            Up to 100 undecided domains whose captured mail belongs to this reader.
+            Each item names the domain, its typed reason, and the permitted answer
+            or retry actions. Forwarded identity requires an explicit company match.
+            Discard excludes capture for this reader's mailboxes only. Deferral hides
+            the reader's question until newer evidence arrives; the paged
+            `/capture/domain-questions` review still includes deferred questions.
 
-            Each card names the domain as `title` and why the machine stopped as
-            `detail`. The two verbs are the whole answer a human owes: `keep` makes
-            the company from the domain's own label, and `discard` writes a capture
-            exclusion for this reader's mailboxes alone. Neither needs anything
-            typed, which is why this lane can settle from a queue row where a
-            free-text answer could not.
-
-            OWNED, and that is the point of the lane. Every open question carries
-            the mailbox owner whose mail raised it (`company_domain_disposition.owner_id`,
-            stamped when the question opens), so it reaches the reader whose mail it
-            is about rather than a shared pile nobody answers for. One installation's
-            two colleagues may answer the same domain differently, and the exclusion
-            a `discard` writes binds only the colleague who pressed it.
-
-            Withheld — named in `lanes_omitted` — for a caller with no human behind
-            it. Absent — not empty — on an installation whose feed does not read
-            domain questions.
+            Responsibility is recorded separately for each reader whose mail raised
+            the question. A colleague's personal exclusion or deferral does not
+            remove another reader's question. Callers with no human are withheld
+            through `lanes_omitted`; an unbound reader leaves the lane absent.
+        domain_questions_more_available:
+          type: boolean
+          description: |
+            The domain question scan reached its limit. When true, its count is a
+            lower bound; the paged domain review may contain further questions.
+            Absent when the lane could not be read.
         ai_work_health:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
@@ -60280,9 +60397,9 @@ components:
           type: integer
           minimum: 0
           description: >-
-            How many open domain questions belong to this reader — the full count
-            rather than a bounded page, because a reader with thirty must be told
-            thirty and the lane offers no second page to find the rest by.
+            How many open domain questions the bounded reader returned. This is a
+            lower bound when `domain_questions_more_available` is true. The paged
+            domain review provides the remaining questions.
         ai_work_health:
           type: integer
           minimum: 0
@@ -60371,6 +60488,9 @@ components:
           format: uuid
           readOnly: true
           description: The member explicitly asked to decide, independent of who has permission to approve.
+        domain_reason_code:
+          type: string
+          description: The domain question's reason code, rendered in the reader's language.
         notice_origin: { $ref: '#/components/schemas/NoticeOrigin' }
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
@@ -60550,18 +60670,17 @@ components:
             telling and so has to carry the way back with it.
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, discard] }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, discard, reopen] }
           description: |
             What this item offers. `decide` and `merge` mean the verb is irreversible and a
             contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
             the read-only fallback for a receipt.
 
-            `keep` and `discard` are an undecided domain's pair, and they always travel
-            together: keeping it creates the company the triage withheld, discarding it stops
-            the caller's OWN mailboxes capturing that domain. Neither carries a body, because
-            a domain question has no field to fill in — which is what lets it be answered from
-            a queue row. They route to `/capture/domain-questions/{domain}/…`, keyed on the
-            domain because an open question is named by the domain rather than by a record id.
+            Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
+            company or matches the supplied `company_id`; forwarded identity requires an
+            explicit match. Discarding stops the caller's own mailboxes capturing that
+            domain. Reopening retries identification without settling identity. These verbs route
+            to `/capture/domain-questions/{domain}/…`.
 
             `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
             to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
@@ -61917,6 +62036,9 @@ components:
         source_record:
           allOf: [{ $ref: '#/components/schemas/AttentionSubject' }]
           description: The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access.
+        domain_reason_code:
+          type: string
+          description: The domain question's reason code, rendered in the reader's language.
         notice_origin: { $ref: '#/components/schemas/NoticeOrigin' }
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
@@ -62115,7 +62237,7 @@ components:
             telling and so has to carry the way back with it.
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, discard] }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, discard, reopen] }
           description: 'What this item offers, routed to the endpoint that owns the verb.'
         band:
           type: string
@@ -62787,7 +62909,7 @@ components:
       properties:
         key:
           type: string
-          enum: [likely_automated, company_match, uncertain_contact, duplicates, held_draft, system_incident]
+          enum: [likely_automated, company_match, uncertain_contact, duplicates, held_draft, system_incident, domain_questions]
           description: |
             What the members have in common, which is also what makes them safe to answer
             together. `likely_automated` is mail from senders that are not contacts;

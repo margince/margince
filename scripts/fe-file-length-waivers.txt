@@ -13,10 +13,5 @@
 # lines its rewritten paths added, and by nothing else. Its PR body lists each
 # raise.
 # Format: <frozen-line-count> <path>
-1134 frontend/src/features/records/record360/spine.test.tsx
-659 frontend/src/features/records/record360/citations.tsx
-773 frontend/src/features/records/record360/spine.tsx
-541 frontend/src/features/records/relationships.tsx
-892 frontend/src/features/records/share.tsx
 
 # The build scripts, frozen when the gate learned to read them.

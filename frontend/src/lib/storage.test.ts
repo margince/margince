@@ -108,6 +108,7 @@ describe("a stored value", () => {
       "margince.worklist.drawerWide",
       "margince.table.widths.v2.*",
       "margince.agent.faults-seen",
+      "margince.brief.introShown",
       "margince.leads.segregationNoteDismissed",
       "margince.first-run.platform-declined:*",
       "ob.connect.oauthAttempt",

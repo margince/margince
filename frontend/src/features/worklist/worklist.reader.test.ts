@@ -118,3 +118,19 @@ it("dates the original change, not its later delivery", () => {
     ),
   ).toBe("07/09/2026, 12:00");
 });
+
+it("renders domain maintenance reasons in the reader's language", () => {
+  const question = {
+    ...task,
+    source: "domain_question" as const,
+    domain_reason_code: "forwarded_identity",
+    detail: "Stored fallback prose",
+  };
+  for (const language of ["en", "de", "vi"] as const) {
+    expect(
+      noticeDetail(question, viewer, (key, values) =>
+        translate(language, key, values),
+      ),
+    ).toBe(translate(language, "blockedDomains.source.forwardedIdentity"));
+  }
+});

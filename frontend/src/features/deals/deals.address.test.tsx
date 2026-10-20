@@ -156,6 +156,7 @@ const SAMPLE: Record<DealDial, string> = {
   stage_id: "s1",
   company_id: "c-nw",
   status: "lost",
+  forecast_category: "commit",
 };
 
 describe("a deals link", () => {

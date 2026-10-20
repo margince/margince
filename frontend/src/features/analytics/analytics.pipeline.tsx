@@ -9,6 +9,7 @@ import {
 } from "../../format/format";
 import { type Locale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { forecastCategoryFilter } from "../deals/dealdials";
 import { dealsFilteredBy } from "../deals/dealsaddress";
 import {
   BarFigure,
@@ -80,6 +81,7 @@ export function ForecastTile({
   currency,
   locale,
   explainUrl,
+  dealsUrl,
 }: Readonly<{
   label: string;
   // Both halves are nullable and neither absence has a substitute. A category
@@ -103,6 +105,11 @@ export function ForecastTile({
   locale: Locale;
   // The category row's own handle; a tile with none draws no trigger.
   explainUrl?: string | null;
+  // Where the category's deals are, for the categories the deals endpoint can
+  // narrow by. A tile with none draws no door. That is the answer for `slipped`
+  // and for the uncategorised slot. Both name a set no query parameter selects,
+  // and a door onto a wider set would promise more than it delivers.
+  dealsUrl?: string;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -121,6 +128,7 @@ export function ForecastTile({
         narrow="row"
         label={label}
         source={source}
+        href={dealsUrl}
         value={
           dealCount == null ? t("analytics.forecastNoFigure") : deals(dealCount)
         }
@@ -156,10 +164,25 @@ export function ForecastTile({
       narrow="row"
       label={label}
       source={source}
+      href={dealsUrl}
       value={formatMoneyCompact(amountMinor, currency, locale)}
       detail={parts.join(" · ") || undefined}
     />
   );
+}
+
+// Where a category's deals are, or nothing when the endpoint cannot narrow to
+// it.
+//
+// `forecastCategoryFilter` is the decider rather than a list here. A value the
+// wire adds reaches this door the moment the deals dial accepts it. It answers
+// nothing for `slipped`, which the report derives rather than stores. It
+// answers nothing for the uncategorised slot, whose deals carry no category.
+function forecastDealsUrl(key: string): string | undefined {
+  const narrowable = forecastCategoryFilter(key);
+  return narrowable
+    ? dealsFilteredBy("forecast_category", narrowable)
+    : undefined;
 }
 
 // The wire allows a deal to carry no forecast category, and the five named ones
@@ -212,6 +235,7 @@ export function ForecastStrip({
             return (
               <ForecastTile
                 key={category.key}
+                dealsUrl={forecastDealsUrl(category.key)}
                 label={t(category.labelKey)}
                 amountMinor={row ? rowMoney(row, "raw_minor") : null}
                 weightedMinor={row ? rowMoney(row, "weighted_minor") : null}

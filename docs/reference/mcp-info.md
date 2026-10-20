@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 122.2 KB |
+| Tool catalog | 122.5 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 32189 |
+| Approx. wire tokens | 32254 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 24.6 KB | 20% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 31.5 KB | 25% | Yes, every step |
-| Input schemas | 57.4 KB | 46% | Yes, every step |
+| Descriptions (incl. governance clause) | 31.6 KB | 25% | Yes, every step |
+| Input schemas | 57.6 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 7% | Partly |
-| **Description + input schema** | **88.9 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **89.2 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -74,7 +74,7 @@ descriptions and input schemas are what each step pays for.
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
 | [`find_records`](#find_records) | Find records | yes |  | 1697 |
-| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 336 |
+| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
 | [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 834 |
@@ -3309,9 +3309,10 @@ The staged actions waiting for a human's decision: what was proposed and what ea
 where a proposal that is already waiting turns up — a message staged and unsent is not one that
 needs writing again. It lists what the colleague you act for could decide themselves; anything else
 is absent rather than refused. A proposal past its expiry reads as expired and can no longer be
-answered. Each item carries its one-line summary, not the change itself. read_approval opens one and
-shows what it holds; decide_approvals answers it. Keep the staged_action_id you mean to act on, the
-bundle_id when one act staged several, and next_cursor.
+answered. Personal mutes hide eligible pending rows, so a bundle may be partial. Use include_muted
+for a complete authorized bundle review. Each item carries its one-line summary, not the change
+itself. read_approval opens one and shows what it holds; decide_approvals answers it. Keep the
+staged_action_id you mean to act on, the bundle_id when one act staged several, and next_cursor.
 ```
 
 <details><summary>Input schema</summary>
@@ -3328,6 +3329,10 @@ bundle_id when one act staged several, and next_cursor.
     "cursor": {
       "description": "next_cursor from a previous page.",
       "type": "string"
+    },
+    "include_muted": {
+      "description": "Include your muted proposals for explicit review; visibility rules still apply.",
+      "type": "boolean"
     },
     "kind": {
       "description": "One staged action's kind, e.g. advance_deal.",
