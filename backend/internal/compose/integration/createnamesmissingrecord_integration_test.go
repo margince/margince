@@ -81,7 +81,8 @@ func TestAWriteNamingAMissingRecordIsA422NamingTheField(t *testing.T) {
 			"parent_company_id", "reference_not_found",
 		},
 		"company edit, parent": {
-			"PATCH", "/v1/companies/" + company, AnyMap{"parent_company_id": absentRecordID},
+			"PATCH", "/v1/companies/" + company,
+			AnyMap{"parent_company_id": absentRecordID},
 			"parent_company_id", "reference_not_found",
 		},
 		"deal create, company":               {"POST", "/v1/deals", deal(AnyMap{"company_id": absentRecordID}), "company_id", "reference_not_found"},
@@ -115,19 +116,23 @@ func TestAWriteNamingAMissingRecordIsA422NamingTheField(t *testing.T) {
 			"links", "reference_not_found",
 		},
 		"project create, company": {
-			"POST", "/v1/projects", AnyMap{"name": "Orphan", "company_id": absentRecordID, "source": "manual"},
+			"POST", "/v1/projects",
+			AnyMap{"name": "Orphan", "company_id": absentRecordID, "source": "manual"},
 			"company_id", "reference_not_found",
 		},
 		"contract create, company": {
-			"POST", "/v1/contracts", AnyMap{"company_id": absentRecordID, "title": "MSA", "value_basis": "total"},
+			"POST", "/v1/contracts",
+			AnyMap{"company_id": absentRecordID, "title": "MSA", "value_basis": "total"},
 			"company_id", "reference_not_found",
 		},
 		"contract create, deal": {
-			"POST", "/v1/contracts", AnyMap{"company_id": company, "deal_id": absentRecordID, "title": "MSA", "value_basis": "total"},
+			"POST", "/v1/contracts",
+			AnyMap{"company_id": company, "deal_id": absentRecordID, "title": "MSA", "value_basis": "total"},
 			"deal_id", "reference_not_found",
 		},
 		"contract edit, project": {
-			"PATCH", "/v1/contracts/" + contractID, AnyMap{"project_id": absentRecordID},
+			"PATCH", "/v1/contracts/" + contractID,
+			AnyMap{"project_id": absentRecordID},
 			"project_id", "reference_not_found",
 		},
 		"relationship create, contact": {
@@ -179,7 +184,7 @@ func TestAMissingRecordAndAHiddenOneAnswerAlike(t *testing.T) {
 	if missing.Status != http.StatusUnprocessableEntity {
 		t.Fatalf("a missing company → %d, want 422", missing.Status)
 	}
-	if !reflect.DeepEqual(missing, refused) {
+	if !sameAnswer(missing, refused) {
 		t.Fatalf("a missing company answers %+v and a hidden one %+v, want the same answer", missing, refused)
 	}
 
@@ -193,7 +198,7 @@ func TestAMissingRecordAndAHiddenOneAnswerAlike(t *testing.T) {
 		}
 		return fault
 	}
-	if missing, refused := parentAnswer(ids.NewV7()), parentAnswer(hidden); !reflect.DeepEqual(missing, refused) {
+	if missing, refused := parentAnswer(ids.NewV7()), parentAnswer(hidden); !sameAnswer(missing, refused) {
 		t.Fatalf("a missing parent answers %+v and a hidden one %+v, want the same answer", missing, refused)
 	}
 }
@@ -212,6 +217,13 @@ func TestADerivedIDThatIsGoneIsNotNamedAsTheCallersField(t *testing.T) {
 	if !ok || fault.Status != http.StatusNotFound {
 		t.Fatalf("a derived company that is gone → %+v (%v), want the bare 404", fault, err)
 	}
+}
+
+// sameAnswer compares what a caller can read of a refusal: its status, code,
+// sentence and per-field breakdown.
+func sameAnswer(a, b httperr.Fault) bool {
+	return a.Status == b.Status && a.Code == b.Code && a.Detail == b.Detail &&
+		reflect.DeepEqual(a.Fields, b.Fields)
 }
 
 func ptrCompany(id ids.UUID) *ids.CompanyID {
