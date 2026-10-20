@@ -20,7 +20,7 @@ import "./imap-connect-form.css";
 // redirect to bounce through, so the standing connect (Task 1's `{imap:{...}}`
 // shape) IS the whole act. The typed client only, hitting the same standing
 // `/connectors/imap/connect` onboarding's ImapConnectPanel
-// (onboarding-connect-panels.tsx) posts to.
+// (onboarding-connect-panels.imap.tsx) posts to.
 //
 // Two surfaces render the form: Settings, in a dialog, and the first-run
 // platform step, inline. ImapMailboxForm is the one form; ImapConnectForm is
@@ -52,8 +52,8 @@ function inRange(value: number, { min, max }: Range): boolean {
 // every other failure reads the way failures read everywhere else. Neither
 // sentence ever echoes the submitted host — the server doesn't send it back
 // either, so there is nothing here to leak. Exported so the onboarding IMAP
-// panel (onboarding-connect-panels.tsx) reads the same two sentences off the
-// same server codes, rather than growing its own copy of this mapping.
+// panel (onboarding-connect-panels.imap.tsx) reads the same two sentences off the
+// same server codes. It keeps no copy of this mapping of its own.
 export function imapErrorMessage(
   error: unknown,
   t: (key: MessageKey) => string,

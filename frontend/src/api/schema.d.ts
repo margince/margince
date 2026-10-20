@@ -14445,8 +14445,11 @@ export interface paths {
         };
         /**
          * List the installation's retention policies (admin/ops).
-         * @description The storage-limitation ladder as data (UC-GDPR-09, DM-SEED-1..6): one row per scope, one
-         *     action per row, ladders composing as separate rows at increasing `retain_days`.
+         * @description The storage-limitation ladder as data (UC-GDPR-09): one row per scope, one action per row,
+         *     ladders composing as separate rows at increasing `retain_days`. A new installation is
+         *     seeded with rows that archive, or erase only a second copy or derived data; a scope with
+         *     no row, such as `activity/transcript` or `contact/no_consent_no_deal`, acts only once an
+         *     admin authors it.
          *
          *     `suppressed_by_posture` reports a row the retain-only posture is currently overriding, so
          *     the surface can say WHY an enabled policy is not acting instead of leaving it
@@ -36555,6 +36558,8 @@ export interface components {
         };
         ReportingReportInput: {
             name: string;
+            /** @description What the report is for, in the author's words. Blank text clears it. Left out of an update, the stored one is kept. */
+            description?: string;
             /** @enum {string} */
             audience: "private" | "team" | "workspace";
             /** Format: uuid */
@@ -36578,6 +36583,8 @@ export interface components {
             /** Format: uuid */
             owner_id: string;
             name: string;
+            /** @description What the report is for, in the author's words. Absent when none was given. */
+            description?: string;
             /** @enum {string} */
             audience: "private" | "team" | "workspace";
             /** Format: uuid */

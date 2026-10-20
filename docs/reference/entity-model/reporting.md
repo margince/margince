@@ -6,13 +6,14 @@ The 10 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 ## report_definition
 
-10 columns · primary key `(id)` · referenced by 2 foreign keys
+11 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid` | yes | Primary key. |
 | `audience` | `text` | yes | One of `private`, `team`, `workspace`. |
 | `audience_team_id` | `uuid` |  | Points at `team.id`. |
+| `description` | `text` |  |  |
 | `draft_revision` | `bigint` |  |  |
 | `name` | `text` | yes |  |
 | `owner_id` | `uuid` | yes | Points at `app_user.id`. |

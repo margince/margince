@@ -160,6 +160,16 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Changed
 
+- **A new installation's retention rules destroy no record because of its
+  age.** Stored message originals are erased after 90 days (was 730). Call
+  transcripts and contacts with no consent and no deal start with no rule:
+  transcripts are archived with all other activity after 1095 days, and a
+  contact's data is destroyed only by an erasure request. An admin can still
+  add either rule. On an existing installation, an upgrade turns off the
+  transcript-erase and contact-anonymize rules where they still hold the
+  starting values; a rule an admin changed stays as it is. The originals'
+  window there stays as set, because a shorter one would erase originals on
+  the next pass that no admin chose to erase.
 - **Settings → Agents is now Settings → AI access, and it starts with
   connecting your AI tool.** The **Connect your AI tool** card asks **Which AI
   do you use?** (Claude, ChatGPT, Microsoft Copilot or Gemini) and **Whose plan

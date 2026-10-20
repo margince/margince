@@ -58,6 +58,10 @@ it("saves the full selected graph layout and context", async () => {
     await screen.findByRole("textbox", { name: "Report name" }),
     "Friday review",
   );
+  await user.type(
+    screen.getByRole("textbox", { name: "Purpose" }),
+    "For the Friday call.",
+  );
   expect(
     screen.queryByRole("combobox", { name: "Metrics" }),
   ).not.toBeInTheDocument();
@@ -69,10 +73,29 @@ it("saves the full selected graph layout and context", async () => {
   expect(write).toHaveBeenCalledWith(
     expect.objectContaining({
       name: "Friday review",
+      description: "For the Friday call.",
       audience: "private",
       selection: reportingStoryEvaluation.selection,
     }),
   );
+});
+it("shows the report's purpose under its name", async () => {
+  const routes = reportingStoryRoutes(reportingStoryEvaluation, true);
+  routes["GET /analytics/reports/report"] = () =>
+    jsonResponse({
+      ...reportingStoryReport,
+      description: "What the board reads on Mondays.",
+    });
+  installFetchStub(routes);
+  render(
+    <StoryProviders>
+      <ReportingReportDetail reportId="report" />
+    </StoryProviders>,
+  );
+  await screen.findByRole("heading", { name: "DACH operating review" });
+  expect(
+    screen.getByText("What the board reads on Mondays."),
+  ).toBeInTheDocument();
 });
 it("opens keyboard-selected evidence with its receipt and restores focus", async () => {
   const user = userEvent.setup({ delay: null });

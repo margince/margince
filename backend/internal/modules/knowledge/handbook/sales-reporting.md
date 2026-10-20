@@ -44,7 +44,7 @@ Open **Definitions** to see how each number is worked out, the rules for credit,
 
 ## How do I save or share a report?
 
-Choose **Save report**, name it and choose **Visible to**. Use **Customize report** to change numbers, graphs or their order. The saved report keeps its graphs, their order, scope, pipeline and time span rules. Open it from **Reports** to see its values of today. Copy a report to keep a setup of its own; editing creates a new version.
+Choose **Save report**, name it and choose **Visible to**. A **Purpose** tells readers what the report is for and shows under its name. Use **Customize report** to change numbers, graphs or their order. The saved report keeps its graphs, their order, scope, pipeline and time span rules. Open it from **Reports** to see its values of today. Copy a report to keep a setup of its own; editing creates a new version.
 
 To change a shared report without readers seeing it half done, choose **Save as draft** in **Edit report**. Readers keep the published report. Use **Preview draft** to see it, then **Publish draft** or **Discard draft**. While a draft is open, edits go into it.
 

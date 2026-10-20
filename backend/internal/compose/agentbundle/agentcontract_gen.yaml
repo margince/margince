@@ -17079,6 +17079,9 @@ components:
           format: uuid
         name:
           type: string
+        description:
+          type: string
+          description: What the report is for, in the author's words. Absent when none was given.
         audience:
           type: string
           enum:

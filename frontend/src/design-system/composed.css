@@ -1276,7 +1276,7 @@
   gap: 2px;
 }
 
-/* Partner detail's longer field list (partners.tsx PartnerDetail) wraps
+/* Partner detail's longer field list (partners.form.tsx PartnerDetail) wraps
  * unevenly in .firmo's flex-wrap layout — a two-column definition grid reads
  * cleaner for a taller, denser field set. */
 .detail-grid {

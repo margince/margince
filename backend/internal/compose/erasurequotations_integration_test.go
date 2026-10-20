@@ -224,9 +224,10 @@ func TestErasureLeavesTheQuotationOfAMeetingItMayNotDestroy(t *testing.T) {
 	}
 }
 
-// The other engine. A transcript ages out on its own schedule (365 days,
-// DM-SEED), with no subject and no request behind it — and the sweep visits one
-// exactly once, because its selector requires a body and the action removes it.
+// The other engine. Under an authored activity/transcript policy (365 days in
+// the fixture), a transcript ages out with no subject and no request behind it.
+// The sweep visits one once, because its selector requires a body and the
+// action removes it.
 // A quotation left behind here is never revisited by anything.
 func TestRetentionErasingATranscriptEmptiesTheProposalQuotingIt(t *testing.T) {
 	e := integration.Setup(t)

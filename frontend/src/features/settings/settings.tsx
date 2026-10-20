@@ -1,18 +1,7 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useState } from "react";
-import { api } from "../../api/client";
-import type { operations } from "../../api/schema";
-import { Button, TextInput } from "../../design-system/atoms";
+import { type ReactNode, useEffect } from "react";
 import { Callout } from "../../design-system/callout";
-import { ConfirmModal } from "../../design-system/confirmmodal";
-import { Panel, PanelBody } from "../../design-system/panel";
-import { SettingList, SettingRow } from "../../design-system/settingrow";
-import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
-import { useCanWrite } from "../../lib/capability";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useT } from "../../i18n";
 import { navigateReplacing, type Route } from "../../lib/router";
-import { useMe } from "../../lib/session";
 import { ConnectionOutcomesCard } from "../../screens/connection-outcomes";
 import { AiBudgetCard } from "../ai/ai-admin";
 import { ModelPricesCard } from "../ai/ai-price-sync";
@@ -83,6 +72,7 @@ import { UsersAdminCard } from "./users-admin";
 import { WebhooksCard } from "./webhooks";
 import "./settings.css";
 
+import { ResetDataCard } from "./settings.reset";
 import { readsOnly, type SettingsPageId } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
 import {
@@ -450,156 +440,5 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
         {tabContent(active.id, route)}
       </div>
     </div>
-  );
-}
-
-// The danger-zone reset action: wipes the installation back to its first-boot
-// state. Double-gated client-side — `system_reset:delete` AND the server-driven
-// `data_reset_available` flag on /me (never VITE_UI_PREVIEW_RESET, which is the
-// unrelated password-reset link) — so the affordance is invisible unless the
-// deployment armed the capability; the server gates the endpoint on that same
-// value and 404s it otherwise, regardless of what this card renders.
-//
-// Two conditions of different kinds, and it needs both: the grant says this
-// reader may wipe an installation that permits wiping, the flag says whether
-// this one does. The compiled default is false in every posture.
-//
-// The GRANT, not the admin role. compose/datareset.go asks
-// auth.Require(system_reset, delete) — it read auth.RequireAdmin while no
-// object named the verb, and this comment outlived that. A role edited to carry
-// the verb reaches the control and one that lost it does not, which the role
-// name could not say either way. The page above it now asks the same thing, so
-// a reader who gets here can use it. The company's name
-// is not carried on MeResponse, so this never fetches or compares it
-// client-side: the input just has to be non-empty to enable the confirm
-// button, and the server is the sole judge of whether the typed text actually
-// matches (a mismatch comes back as a 422, surfaced verbatim in the dialog).
-// The full reset response — derived from the generated operation type
-// (T6: no `as`, no hand-duplicated field list) so a wire change that adds or
-// renames a counter fails typecheck here instead of silently going unshown.
-type ResetSummary =
-  operations["resetData"]["responses"][200]["content"]["application/json"];
-
-function ResetDataCard() {
-  const t = useT();
-  const { locale } = useLocale();
-  const me = useMe();
-  // `system_reset:delete`, which is what POST /admin/reset-data asks for
-  // (compose/datareset.go). The literal admin role guarded it while no object
-  // named the verb; one does now, so a role edited to carry it reaches the
-  // control and one that lost it does not — which the role name could not say.
-  //
-  // `useCanWrite`: the reset is a POST, and a read seat is refused every
-  // mutation by the seat ceiling above RBAC (identity/admission.go) whatever
-  // its grants say. Offering the danger zone to one would be a button that
-  // types the workspace name and then 403s.
-  const canSee = useCanWrite("system_reset", "delete");
-  const workspaceName = me.data?.workspace_name ?? "";
-  const [open, setOpen] = useState(false);
-  const [typed, setTyped] = useState("");
-  // What the last reset actually cleared — null until one has run, so the
-  // danger zone stays quiet on first render rather than implying a result
-  // nobody triggered.
-  const [summary, setSummary] = useState<ResetSummary | null>(null);
-  const queryClient = useQueryClient();
-
-  const reset = useMutation({
-    mutationFn: async () => {
-      // The summary always describes the latest attempt, never a prior one:
-      // clearing here means a retry's error can never leave a previous
-      // success sitting on screen, and an in-flight retry shows no summary.
-      setSummary(null);
-      return unwrap(
-        await api.POST("/admin/reset-data", {
-          body: { confirmation: typed },
-        }),
-      );
-    },
-    onSuccess: (data) => {
-      setOpen(false);
-      setTyped("");
-      setSummary(data ?? null);
-      // A reset wipes every domain table for the workspace — every cached
-      // list/detail query is stale, not just the ones this card knows about.
-      queryClient.invalidateQueries();
-    },
-  });
-
-  if (!canSee || !me.data?.data_reset_available) {
-    return null;
-  }
-
-  return (
-    <Panel
-      title={t("settings.dangerZone")}
-      // The one card that announces its own danger: the red border is what
-      // separates a destructive surface from the ordinary settings around it.
-      className="settings-danger"
-    >
-      <SettingList bleed="settings">
-        {/* This button and the dialog's confirm share the screen, so each is
-            named for its own act. */}
-        <SettingRow
-          label={t("settings.resetDataLabel")}
-          description={t("settings.resetDataDesc")}
-          control={
-            <Button variant="danger" onClick={() => setOpen(true)}>
-              {t("settings.resetDataButton")}
-            </Button>
-          }
-        />
-      </SettingList>
-      {summary && (
-        <PanelBody>
-          <p className="t-caption settings-danger-result" role="status">
-            {t("settings.resetDataResult", {
-              tables: formatNumber(summary.tables_cleared, locale),
-              jobs: formatNumber(summary.jobs_deleted, locale),
-              streams: formatNumber(summary.streams_purged, locale),
-              keys: formatNumber(summary.cache_keys_deleted, locale),
-              objects: formatNumber(summary.objects_deleted, locale),
-            })}
-          </p>
-          {summary.drain_timed_out && (
-            // ds:ignore a warning in --warningText, not a refusal
-            <p className="settings-danger-warning" role="alert">
-              {t("settings.resetDataDrainWarning")}
-            </p>
-          )}
-        </PanelBody>
-      )}
-      <ConfirmModal
-        open={open}
-        onClose={() => {
-          setOpen(false);
-          setTyped("");
-          reset.reset();
-        }}
-        title={t("settings.resetDataConfirmTitle")}
-        confirmLabel={t("settings.resetDataConfirmButton")}
-        confirmVariant="danger"
-        // The typed confirmation gates whether the reset may START; the input
-        // is still editable while it runs, and a reader who clears it mid-write
-        // would otherwise re-arm the gate on a control that is already going.
-        confirmDisabled={!reset.isPending && typed.trim() === ""}
-        onConfirm={() => reset.mutate()}
-        pending={reset.isPending}
-        error={reset.error ? problemMessageOf(reset.error, t) : null}
-      >
-        <p>{t("settings.resetDataConfirmBody")}</p>
-        {workspaceName ? (
-          <p>
-            {t("settings.resetDataConfirmName")}{" "}
-            {/* userSelect:all lets one click select the whole name to copy */}
-            <code style={{ userSelect: "all" }}>{workspaceName}</code>
-          </p>
-        ) : null}
-        <TextInput
-          aria-label={t("settings.resetDataConfirmLabel")}
-          value={typed}
-          onChange={(event) => setTyped(event.target.value)}
-        />
-      </ConfirmModal>
-    </Panel>
   );
 }

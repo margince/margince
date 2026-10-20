@@ -10,6 +10,7 @@ import {
   Checkbox,
   Disclosure,
   Field,
+  Textarea,
   TextInput,
 } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
@@ -45,6 +46,7 @@ export function SaveReportingDialog({
   const queryClient = useQueryClient();
   const [customizing, setCustomizing] = useState(!!report);
   const [name, setName] = useState(report?.name ?? "");
+  const [description, setDescription] = useState(report?.description ?? "");
   const [audience, setAudience] = useState<"private" | "team" | "workspace">(
     report?.audience ?? "private",
   );
@@ -128,12 +130,17 @@ export function SaveReportingDialog({
       asDraft,
       body: {
         name,
+        description,
         audience,
         audience_team_id: audience === "team" ? selection.scope.id : undefined,
         selection: { ...selection, metrics, blocks: selectedBlocks },
       },
     });
-  const metadataChanged = renamedOrReshared(report, name, audience);
+  const metadataChanged = renamedOrReshared(report, {
+    name,
+    description,
+    audience,
+  });
   const incomplete =
     write.isPending || !name.trim() || unsaveable(selection, metrics);
   return (
@@ -158,6 +165,17 @@ export function SaveReportingDialog({
               disabled={draftOpen}
               onChange={(event) => setName(event.target.value)}
               maxLength={160}
+            />
+          )}
+        </Field>
+        <Field label={t("reporting.description")}>
+          {(field) => (
+            <Textarea
+              {...field}
+              value={description}
+              disabled={draftOpen}
+              onChange={(event) => setDescription(event.target.value)}
+              rows={3}
             />
           )}
         </Field>
@@ -306,16 +324,17 @@ export function SaveReportingDialog({
   );
 }
 
-// A draft holds charts alone, so a renamed or re-shared report is saved
-// directly rather than lost in a draft.
+// A draft holds charts alone, so a renamed, redescribed or re-shared report is
+// saved directly rather than lost in a draft.
 function renamedOrReshared(
   report: ReportingReport | undefined,
-  name: string,
-  audience: string,
+  typed: Readonly<{ name: string; description: string; audience: string }>,
 ): boolean {
   return (
     report !== undefined &&
-    (name.trim() !== report.name || audience !== report.audience)
+    (typed.name.trim() !== report.name ||
+      typed.description.trim() !== (report.description ?? "") ||
+      typed.audience !== report.audience)
   );
 }
 
