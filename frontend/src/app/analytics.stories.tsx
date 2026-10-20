@@ -22,7 +22,9 @@ export const ComposedScreen: Story = {
     installReports();
     return (
       <StoryProviders>
-        <AnalyticsScreen />
+        <Suspense fallback={null}>
+          <AnalyticsScreen />
+        </Suspense>
       </StoryProviders>
     );
   },
