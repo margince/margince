@@ -118,7 +118,12 @@ CREATE TABLE legal_entity_member (
 
 CREATE INDEX idx_legal_entity_member_entity ON legal_entity_member (legal_entity_id);
 
-WITH inserted AS (
+-- The audit row is written only where an installation already exists, as
+-- 1791994619 does: an empty database being built for a fresh installation has
+-- no history yet to record the entity in, and stays empty of audit rows.
+WITH installation AS (
+  SELECT id FROM workspace WHERE archived_at IS NULL ORDER BY created_at LIMIT 1
+), inserted AS (
   INSERT INTO legal_entity (is_default, captured_by)
   VALUES (true, 'system:migration')
   RETURNING id
@@ -126,7 +131,8 @@ WITH inserted AS (
 INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, before, after)
 SELECT 'system', 'migration', 'create', 'legal_entity', inserted.id,
        NULL, jsonb_build_object('is_default', true)
-  FROM inserted;
+  FROM inserted
+ WHERE EXISTS (SELECT 1 FROM installation);
 
 -- Admin describes and archives the entities; every other system role reads
 -- them, because every seat's offers and pages will carry one. Presence-guarded:
