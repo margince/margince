@@ -266,8 +266,8 @@ fi
 # message, so only a MEASURED breach is reported as one.
 if [[ "${PERF_RESULT:-}" = "failure" ]] && [[ "${PERF_OUTCOME:-}" != "breach" ]]; then
   report "the weekly PERF-3/PERF-7 run could not complete" "priority: normal,area: ci-tests,bug" \
-"\`make bench-perf-check\` failed on the weekly run of \`main\` WITHOUT reaching a
-budget verdict: $RUN_URL
+"\`make bench-perf BENCH_PERF_TIER=smb\` failed on the weekly run of \`main\` WITHOUT
+reaching a budget verdict: $RUN_URL
 
 No budget is known to be breaching, and none is known to hold — the lane did not
 get far enough to say. The step separates the two outcomes precisely so this
@@ -279,8 +279,9 @@ outran \`go test\`'s 20m budget (which would have printed a goroutine dump — i
 the job was killed at 30m instead, the runner was slower than the budget assumes
 and the two timeouts need re-deriving, not raising).
 
-Reproduce with \`make db-up && make bench-perf-check\`. The published budgets
-page is untouched either way: this lane never sets MARGINCE_BENCH_RECORD."\
+Reproduce with \`make db-up && make bench-perf-check\`. No record reached the
+tree: a record is proposed as a pull request, and this run measured nothing to
+propose."\
     || unreported=1
 elif [[ "${PERF_RESULT:-}" = "success" ]] || [[ "${PERF_OUTCOME:-}" = "breach" ]]; then
   # A MEASURED BREACH IS PROOF THE LANE RAN, which is the only thing this
@@ -291,7 +292,7 @@ fi
 
 if [[ "${PERF_OUTCOME:-}" = "breach" ]]; then
   report "a PERF-3/PERF-7 budget is breaching on main" "priority: normal,area: ci-tests,bug" \
-"\`make bench-perf-check\` failed on the weekly run of \`main\`: $RUN_URL
+"\`make bench-perf BENCH_PERF_TIER=smb\` failed on the weekly run of \`main\`: $RUN_URL
 
 This alarm runs the SMB tier only, and that shapes what the finding means: SMB
 is the corpus most installations look like, while the PERF-7 SLO binds at
@@ -299,10 +300,9 @@ mid-market. So a breach here is worse than it sounds — the SMALLER corpus is
 already over a bound the larger one has to meet. Mid-market is not measured by
 any schedule; run \`make bench-perf\` by hand to see it.
 
-No record was written — this lane never sets \`MARGINCE_BENCH_RECORD\`, so the
-published page still shows the last number a human measured. Reproduce with
-\`make db-up && make bench-perf-check\`, and publish a new number with
-\`make bench-perf\` only once the breach is understood.
+The breach is recorded, and the run proposes the record as a pull request. Merge
+it only once the breach is understood; until then the published page shows the
+last record a maintainer merged. Reproduce with \`make db-up && make bench-perf-check\`.
 
 This budget carried no merge gate: PERF-3/PERF-7 left the integration lane
 because a mid-market SLO gated on an SMB corpus renders \`inconclusive\`, never
@@ -319,7 +319,7 @@ fi
 # is present exactly when a number was measured.
 if [[ "${MOBILE_RESULT:-}" = "failure" ]] && [[ "${MOBILE_OUTCOME:-}" != "breach" ]]; then
   report "the weekly MOBILE-AC-2 run could not complete" "priority: normal,area: ci-tests,bug" \
-"\`make bench-mobile-check\` failed on the weekly run of \`main\` WITHOUT reaching a
+"\`make bench-mobile\` failed on the weekly run of \`main\` WITHOUT reaching a
 budget verdict: $RUN_URL
 
 No p95 was measured, so nothing is known about PERF-1's perceived budget either
@@ -330,8 +330,8 @@ Likely causes, in the order they occur: \`pnpm install --frozen-lockfile\` found
 the lockfile out of date, \`pnpm build\` failed, the Chromium download failed, or
 the preview server on :4317 never came up.
 
-Reproduce with \`make bench-mobile-check\`. The published budgets page is
-untouched either way: this lane clears MARGINCE_BENCH_RECORD."\
+Reproduce with \`make bench-mobile-check\`. No record reached the tree: this
+run measured nothing to propose."\
     || unreported=1
 elif [[ "${MOBILE_RESULT:-}" = "success" ]] || [[ "${MOBILE_OUTCOME:-}" = "breach" ]]; then
   # Same split, same reason: a measured p95 means the lane completed, whatever
@@ -341,7 +341,7 @@ fi
 
 if [[ "${MOBILE_OUTCOME:-}" = "breach" ]]; then
   report "PERF-1's perceived budget is breaching on main" "priority: normal,area: ci-tests,bug" \
-"\`make bench-mobile-check\` measured a p95 over the 300 ms perceived budget on
+"\`make bench-mobile\` measured a p95 over the 300 ms perceived budget on
 the weekly run of \`main\`: $RUN_URL
 
 The measured number is in the job log, on the \`perfbench [fast-3g/390px]\` line.
@@ -357,9 +357,9 @@ it measured the machine. This lane runs 20 samples against 4.6x headroom, so
 contention should not reach it — if it does, the honest answer is to take the
 lane out again rather than to widen the budget it exists to hold.
 
-No record was written — this lane clears \`MARGINCE_BENCH_RECORD\`, so the
-published page still shows the last number a human measured. Publish a new one
-with \`make bench-mobile\` only once the breach is understood."\
+The breach is recorded, and the run proposes the record as a pull request. Merge
+it only once the breach is understood; until then the published page shows the
+last record a maintainer merged."\
     || unreported=1
 elif [[ "${MOBILE_RESULT:-}" = "success" ]]; then
   resolve "PERF-1's perceived budget is breaching on main"
@@ -749,18 +749,39 @@ Three things this is NOT, each of which has looked like a regression before:
 There is no standing failure to dismiss this against. Case 6 — asked about past
 account-manager changes, the assistant repeating a note's wrong month in its own
 voice — was the one, and it was fixed: it passed 3 of 3 on \`claude-opus-5\`.
-This job now drives \`claude-sonnet-5-5\` over the claude CLI, on a stack
-whose search ranks by word overlap (no embedding key reaches the runner). No
-committed verdict was measured that way: the coverage page's numbers come from
-the neutral bridge on a semantic search. So a failure here is not yet a
-REGRESSION — re-run the case locally on a semantic stack (the how-to's section
-2) before calling it one, and read this run's transcript for what differed.
+This job drives \`claude-sonnet-5-5\` over the claude CLI, on a stack whose
+search ranks by word overlap (no embedding key reaches the runner), and its
+verdicts say \`search: lexical\`. A failure here is not yet a REGRESSION:
+re-run the case locally on a semantic stack (the how-to's section 2) before
+calling it one, and read this run's transcript for what differed. The run
+proposes its verdicts as a pull request; do not merge a lexical failure over a
+semantic pass until you know which one is true.
 
 Nothing else is standing either. Every scenario in this lane is expected to pass,
 and this issue means one did not."\
     || unreported=1
 elif [[ "${LLM_RESULT:-}" = "success" ]]; then
   resolve "a use case is failing when driven by a real model"
+fi
+
+# The weekly records pull request. Rendering and proposing are two jobs, and
+# either failing means a measurement was taken and nobody was asked to publish it.
+if [[ "${RECORDS_RESULT:-}" = "failure" ]] || [[ "${RECORDS_PR_RESULT:-}" = "failure" ]]; then
+  report "the weekly records pull request could not be opened" "priority: normal,area: ci-tests,bug" \
+"The weekly measurements recorded, but no pull request proposes the records: $RUN_URL
+
+The \`records\` job renders the pages the records feed (\`make perfdoc\` and the
+MCP tool coverage generator) and hands over a patch; \`records-pr\` commits it on
+a \`bench/scheduled-*\` branch and opens the pull request. The job log names the
+step that failed.
+
+If the branch was pushed and only \`gh pr create\` failed, the repository may not
+let GitHub Actions open pull requests (Settings, Actions, General). Open the pull
+request from the branch by hand. The patch is kept on the run as
+\`scheduled-records\` for 30 days."\
+    || unreported=1
+elif [[ "${RECORDS_PR_RESULT:-}" = "success" ]]; then
+  resolve "the weekly records pull request could not be opened"
 fi
 
 # --- merge-attest.yml -----------------------------------------------------------

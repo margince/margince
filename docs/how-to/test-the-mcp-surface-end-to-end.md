@@ -343,6 +343,7 @@ verdicts you want to publish, then generate the page again:
 cd backend && go test ./internal/compose/ -run TestTheMCPToolCoverageIsPublished -update-mcp-tool-coverage
 ```
 
+The weekly scheduled run opens a pull request with its own verdicts, which say `search: lexical`.
 `make check` fails while the page and the committed verdicts do not agree. Delete a
 verdict you do not want to publish, such as a degraded run, or a run to try something.
 Do not leave it next to the others without a commit.

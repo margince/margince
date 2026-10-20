@@ -35,6 +35,11 @@ not a pass. The job is not required, so a vendor that is down blocks no merge.
 `make fe-uat` renders only the stories the diff reaches, so a story that fails on `main` stays hidden until
 some change reaches it.
 
+Once a week `scheduled.yml` also measures the PERF budgets and the use cases a model drives, and
+records the results. It never writes them to `main`. It opens one pull request with the
+records and the pages they feed, and a record is published when a maintainer merges that pull request. See
+[the workflows beside the merge gate](../reference/ci-workflows.md#scheduledyml).
+
 **The merge queue is not turned on.** Each active ruleset on `main` requires the `ci` check, and none
 holds a merge queue rule. So no `merge_group` run happens, and a pull request's own run, scoped to its diff, is
 the merge verdict. `ci.yml` still handles `merge_group`. The sections below that describe the queue
