@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { suggestion } from "../../testing/dealsuggestion.fixture";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
 import { DealSuggestionAnswerDialog } from "./dealsuggestion.answer";
-import { suggestion } from "./dealsuggestion.fixture";
 
 const meta = {
   title: "Records/Deals/Suggestion answer",

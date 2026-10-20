@@ -16,9 +16,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
-import { meFixture } from "../../testing/mefixture";
 import { jsonResponse } from "../../testing/company.fixtures";
-import { suggestion } from "../deals/dealsuggestion.fixture";
+import { suggestion } from "../../testing/dealsuggestion.fixture";
+import { meFixture } from "../../testing/mefixture";
+import { ReviewActionsProvider } from "../../testing/reviewactions";
 import { ForecastReview } from "./analytics.forecast.review";
 
 // Answering a finding from the forecast review.
@@ -154,7 +155,9 @@ function show({
       }
     >
       <LocaleProvider initial="en">
-        <ForecastReview />
+        <ReviewActionsProvider>
+          <ForecastReview />
+        </ReviewActionsProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
