@@ -64,14 +64,12 @@ func RecordTagTypesServed() []string {
 
 // RecordTagsFor reads the tags on one record.
 //
-// Two gates, in this order. The RECORD's own read permission and row scope
-// come first, so a caller naming a record outside their scope gets not-found
-// whatever their tag grants say — existence stays hidden. Only then does the
-// vocabulary grant decide whether the words themselves come back.
+// The record's own read permission and row scope come first, so a record
+// outside the caller's scope is not-found whatever their tag grants say. Only
+// then does the vocabulary grant decide whether the words come back.
 //
-// An archived record answers not-found, as the record's lists and applying a
-// tag do: archiving takes the assignments off, so an empty list would claim the
-// record carried no tags.
+// An archived record is not-found, as its lists are. Archiving takes its tags
+// off, and an empty list would claim it never had any.
 func (s *Store) RecordTagsFor(ctx context.Context, entityType string, entityID ids.UUID) (RecordTags, error) {
 	if !recordTagTypes[entityType] {
 		return RecordTags{}, &BadInputError{
@@ -113,8 +111,8 @@ func (s *Store) RecordTagsFor(ctx context.Context, entityType string, entityID i
 }
 
 // recordLive answers not-found for an id no live row holds. EnsureReadable
-// asks nothing of a caller whose row scope is empty, and an empty panel for a
-// record that does not exist would state a fact about it.
+// asks nothing of a caller with an empty row scope.
+// An empty panel would then state a fact about a record that is not there.
 func recordLive(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) error {
 	var exists bool
 	query := fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $1 AND archived_at IS NULL)`,

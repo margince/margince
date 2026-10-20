@@ -16,11 +16,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Archiving a record drops its tag assignments, so an empty tag list on an
-// archived record would say "this record has no tags" when the truth is "its
-// tags were taken off with it". The siblings (the record's lists, applying a
-// tag) answer not-found for the same state; the tag read answers it the same
-// way rather than reporting a fact nobody established.
+// Archiving drops a record's tag assignments. An empty list would then say the
+// record has no tags, when its tags were taken off with it.
+// The record's lists and applying a tag answer not-found for that state, and
+// the tag read answers the same.
 func TestRecordTagsOfAnArchivedRecordAnswerNotFoundLikeItsSiblings(t *testing.T) {
 	e := Setup(t)
 	store := collections.NewStore(e.DB())

@@ -86,8 +86,8 @@ describe("the tags panel", () => {
     expect(await screen.findByText(en["tags.emptyTitle"])).toBeInTheDocument();
   });
 
-  // Archiving takes a record's tags off, so "no tags" would be a claim nobody
-  // established, and the server refuses the read; the panel stays out of it.
+  // Archiving takes a record's tags off, so "no tags" would be a false claim.
+  // The server refuses the read, and the panel stays out of it.
   it("draws nothing and asks nothing for an archived record", async () => {
     const asked: string[] = [];
     installFetchStub({

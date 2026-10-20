@@ -11,16 +11,13 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 )
 
-// A consent route is human-only when it holds or changes a person's decision,
-// and a read tool when it names the workspace's vocabulary. The contract is the
-// one place that says which: the policy table, the read_view list and the
-// published tool catalog all derive from it, so this test reads the table and
-// keeps no list of its own.
+// A consent route is human-only when it holds or changes a person's decision.
+// It is a read tool when it names the workspace's vocabulary.
+// The contract says which, and the policy table derives from it, so this test
+// reads the table and keeps no list of its own.
 //
-// The purposes catalog (listConsentPurposes) is configuration, a handful of
-// keys and labels set up once. An agent needs it to name a purpose on the
-// send tools, and it holds no one's consent. Its writes stay human-only
-// (TestGovernanceOperationsAreHumanOnly).
+// The purposes catalog is configuration and holds no one's consent. An agent
+// reads it to name a purpose on the send tools. Its writes stay human-only.
 func TestConsentRoutesSplitByWhoseDecisionTheyHold(t *testing.T) {
 	const personConsent = "/v1/contacts/{id}/consent"
 	seen := 0
