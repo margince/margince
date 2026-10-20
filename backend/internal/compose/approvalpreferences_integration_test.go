@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
@@ -36,8 +37,33 @@ func TestPersonalApprovalMutesAgreeAcrossHTTPToolsAndHomeCounts(t *testing.T) {
 		}
 	}
 	for _, muted := range []bool{false, true, false} {
-		if _, err := svc.SetApprovalPreference(e.Admin(), deals.CloseDateCorrectionKind, muted); err != nil {
+		request := httptest.NewRequest(http.MethodPatch, "/me/approval-preferences", strings.NewReader(fmt.Sprintf(`{"kind":"close_date_correction","muted":%t}`, muted))).WithContext(e.Admin())
+		recorder := httptest.NewRecorder()
+		approvals.NewHandlers(svc).UpdateApprovalPreference(recorder, request)
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("set personal preference: %d %s", recorder.Code, recorder.Body.String())
+		}
+		request = httptest.NewRequest(http.MethodGet, "/me/approval-preferences", nil).WithContext(e.Admin())
+		recorder = httptest.NewRecorder()
+		approvals.NewHandlers(svc).ListApprovalPreferences(recorder, request)
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("read personal preference: %d %s", recorder.Code, recorder.Body.String())
+		}
+		var preferences crmcontracts.ApprovalPreferences
+		if err := json.Unmarshal(recorder.Body.Bytes(), &preferences); err != nil {
 			t.Fatal(err)
+		}
+		found := false
+		for _, preference := range preferences.Data {
+			if preference.Kind == deals.CloseDateCorrectionKind {
+				found = true
+				if preference.Muted != muted {
+					t.Fatalf("preference=%+v, want muted=%t", preference, muted)
+				}
+			}
+		}
+		if !found {
+			t.Fatal("personal preference missing from HTTP list")
 		}
 		want := 3
 		if muted {

@@ -89,3 +89,83 @@ it("opens an explicit include-muted review without changing the preference", asy
     screen.getByText(/Bundles in your ordinary queue can show fewer members/),
   ).toBeTruthy();
 });
+
+it("keeps the current preference when saving fails and shows the server explanation", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+    const request =
+      input instanceof Request ? input : new Request(String(input));
+    if (request.url.endsWith("/me")) return response(meFixture({}));
+    if (request.method === "PATCH")
+      return response(
+        {
+          title: "Conflict",
+          status: 409,
+          detail: "Preference changed in another session.",
+          code: "conflict",
+        },
+        409,
+      );
+    return response({
+      data: [{ kind: "close_date_correction", muted: false }],
+    });
+  });
+  mount();
+  await user.click(await screen.findByRole("switch"));
+  expect(
+    await screen.findByText("Preference changed in another session."),
+  ).toBeTruthy();
+  expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("false");
+});
+
+it("pages explicit muted history, returns to the first page, and closes review", async () => {
+  const user = userEvent.setup();
+  const cursors: (string | null)[] = [];
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+    const request =
+      input instanceof Request ? input : new Request(String(input));
+    expect(request.method).toBe("GET");
+    const url = new URL(request.url);
+    if (url.pathname.endsWith("/me")) return response(meFixture({}));
+    if (url.pathname.endsWith("/approvals")) {
+      expect(url.searchParams.get("include_muted")).toBe("true");
+      expect(url.searchParams.get("kind")).toBe("close_date_correction");
+      const next = url.searchParams.has("cursor");
+      cursors.push(url.searchParams.get("cursor"));
+      return response({
+        data: [
+          {
+            id: next ? "approved-second" : "approved-first",
+            kind: "close_date_correction",
+            status: "approved",
+            summary: next ? "Second reviewed date" : "First reviewed date",
+            proposed_by: "system:close-date",
+            created_at: "2026-08-20T09:00:00Z",
+            proposed_change: {
+              expected_close_date: "2026-11-15",
+              basis: "Buyer confirmed timing",
+            },
+          },
+        ],
+        page: next
+          ? { has_more: false }
+          : { has_more: true, next_cursor: "older-reviews" },
+      });
+    }
+    return response({ data: [{ kind: "close_date_correction", muted: true }] });
+  });
+  mount();
+  await user.click(
+    await screen.findByRole("button", { name: "Review including muted" }),
+  );
+  expect(await screen.findByText("First reviewed date")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Next page" }));
+  expect(await screen.findByText("Second reviewed date")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Next page" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "First page" }));
+  expect(await screen.findByText("First reviewed date")).toBeTruthy();
+  expect(cursors.slice(0, 2)).toEqual([null, "older-reviews"]);
+  await user.click(screen.getByRole("button", { name: "Close review" }));
+  expect(screen.queryByText("First reviewed date")).toBeNull();
+  expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("true");
+});
