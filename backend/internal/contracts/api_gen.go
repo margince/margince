@@ -20268,6 +20268,7 @@ const (
 	WorklistReasonKindAddressedElsewhere WorklistReasonKind = "addressed_elsewhere"
 	WorklistReasonKindApprovedAndFailed  WorklistReasonKind = "approved_and_failed"
 	WorklistReasonKindAsksNothing        WorklistReasonKind = "asks_nothing"
+	WorklistReasonKindBccFromStranger    WorklistReasonKind = "bcc_from_stranger"
 	WorklistReasonKindBelowMaterial      WorklistReasonKind = "below_material"
 	WorklistReasonKindBlocksCustomerWork WorklistReasonKind = "blocks_customer_work"
 	WorklistReasonKindBuyerWroteLast     WorklistReasonKind = "buyer_wrote_last"
@@ -20278,6 +20279,7 @@ const (
 	WorklistReasonKindExpectedRevenue    WorklistReasonKind = "expected_revenue"
 	WorklistReasonKindFirstAsked         WorklistReasonKind = "first_asked"
 	WorklistReasonKindLegalDeadline      WorklistReasonKind = "legal_deadline"
+	WorklistReasonKindLinkOffSender      WorklistReasonKind = "link_off_sender"
 	WorklistReasonKindMaterial           WorklistReasonKind = "material"
 	WorklistReasonKindMeetingBooked      WorklistReasonKind = "meeting_booked"
 	WorklistReasonKindMeetingSoon        WorklistReasonKind = "meeting_soon"
@@ -20316,6 +20318,8 @@ func (e WorklistReasonKind) Valid() bool {
 		return true
 	case WorklistReasonKindAsksNothing:
 		return true
+	case WorklistReasonKindBccFromStranger:
+		return true
 	case WorklistReasonKindBelowMaterial:
 		return true
 	case WorklistReasonKindBlocksCustomerWork:
@@ -20335,6 +20339,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindFirstAsked:
 		return true
 	case WorklistReasonKindLegalDeadline:
+		return true
+	case WorklistReasonKindLinkOffSender:
 		return true
 	case WorklistReasonKindMaterial:
 		return true
@@ -52779,7 +52785,7 @@ type WorklistReadings struct {
 // product ships three languages and a sentence composed here would reach a German
 // reader in English.
 type WorklistReason struct {
-	// Kind Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it.
+	// Kind Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender's request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.
 	Kind WorklistReasonKind `json:"kind"`
 
 	// Value A typed comparator value — a date, an amount, a count of days, or nothing. Typed
@@ -52788,7 +52794,7 @@ type WorklistReason struct {
 	Value *WorklistValue `json:"value,omitempty"`
 }
 
-// WorklistReasonKind Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it.
+// WorklistReasonKind Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender's request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.
 type WorklistReasonKind string
 
 // WorklistSourceUnavailable A source that did not contribute, and why. `withheld` means the caller may not

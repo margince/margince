@@ -129,6 +129,12 @@ type WaitingReply struct {
 	OwnerID ids.UUID
 	// OwnerKnown distinguishes a readable unassigned record from a withheld owner.
 	OwnerKnown bool
+	// SenderWasStranger, BccOnly and ForeignLink are what capture judged about
+	// the mail (strangerMailSQL); false where it judged nothing. BccOnly also
+	// holds that this reader is named in neither To nor Cc.
+	SenderWasStranger bool
+	BccOnly           bool
+	ForeignLink       bool
 }
 
 // WaitingScanCap bounds the work one read does. Beyond this the answer is
@@ -474,7 +480,7 @@ func scanWaitingReply(record pgx.Row) (WaitingReply, error) {
 		&row.ContactID, &row.CompanyID, &row.DealID,
 		&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
 		&row.Engaged, &row.OwnerID, &row.OwnerKnown, &row.Threaded, &row.ThreadKey, &row.ChannelProvider,
-		&row.MeetingBookedAt)
+		&row.MeetingBookedAt, &row.SenderWasStranger, &row.BccOnly, &row.ForeignLink)
 	if !row.OwnerKnown {
 		row.OwnerID = ids.Nil
 	}

@@ -89,6 +89,11 @@ type Message struct {
 	// files were dropped never reads as a message with no files (DOC-AC-12).
 	parts     []Part
 	partDrops []PartDrop
+	// openRecipients holds the To and Cc addresses, the owner's own included, and
+	// linkHosts where the body's links lead: the evidence capture.MailEnvelope carries.
+	openRecipients []string
+	linkHosts      []string
+	listMail       bool
 }
 
 // AttestSentByOwner returns a copy carrying the provider's own attestation
@@ -150,7 +155,8 @@ func Parse(raw []byte, owner string) (Message, error) {
 	from := firstAddress(fromList)
 	to := firstAddress(toList)
 
-	body, parts, drops, calendar := extractText(reader)
+	walked := extractText(reader)
+	body, parts, drops, calendar := walked.text, walked.parts, walked.drops, walked.calendar
 	hasCalendarPart := calendar.present
 
 	ownerLower := strings.ToLower(strings.TrimSpace(owner))
@@ -208,6 +214,9 @@ func Parse(raw []byte, owner string) (Message, error) {
 		listUnsubscribe:  hasListUnsubscribe(header.Values("List-Unsubscribe"), viaGroup),
 		participants:     otherParties(toList, ccList, bccList, ownerLower, participantExclusion(counterparty, calendarNotice)),
 		addresses:        allAddresses(fromList, toList, ccList, bccList),
+		openRecipients:   allAddresses(toList, ccList),
+		linkHosts:        walked.links,
+		listMail:         viaGroup || header.Get("List-Id") != "" || header.Get("List-Unsubscribe") != "",
 		parts:            parts,
 		partDrops:        drops,
 	}, nil
@@ -404,6 +413,7 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 			Direction:       m.direction,
 			HasCalendarPart: m.hasCalendarPart,
 			CalendarMethod:  m.calendarMethod,
+			Envelope:        m.envelope(),
 		},
 		Source:               source,
 		CapturedBy:           "connector:" + connectorName,
@@ -418,6 +428,17 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 		Parts:                m.recordParts(),
 		PartDrops:            m.recordDrops(),
 	}
+}
+
+// envelope is what this message says about how it was addressed and where its
+// links lead. Only a list message is left without one: a list's To names the
+// list, so the owner's absence from it says nothing about a Bcc.
+// listMail is set by any List-* header or a Google Group relay.
+func (m Message) envelope() *capture.MailEnvelope {
+	if m.listMail {
+		return nil
+	}
+	return &capture.MailEnvelope{OpenRecipients: m.openRecipients, LinkHosts: m.linkHosts}
 }
 
 // domainOf returns the lowercased domain part of an address, or "" if the
@@ -452,44 +473,4 @@ func orDash(s string) string {
 		return "-"
 	}
 	return s
-}
-
-// recordParts hands the collected files to the seam.
-//
-// The two shapes stay separate types, and the line between them is a stage
-// rather than an owner: mailmap.Part is a candidate MID-WALK, which is why the
-// collector can still refuse one, and connector.Part is a file that already
-// cleared every bound. The copy below is where that transition is made, so a
-// part cannot reach the seam without passing through it.
-//
-// This is NOT the "second spelling" that pkg/extension/files.go rules out. That
-// rule is about two producers each declaring their own file type and therefore
-// their own bounds; here there is one producer, one set of bounds, and one
-// published file type at the seam that every producer shares.
-func (m Message) recordParts() []connector.Part {
-	if len(m.parts) == 0 {
-		return nil
-	}
-	out := make([]connector.Part, 0, len(m.parts))
-	for _, part := range m.parts {
-		out = append(out, connector.Part{
-			Ordinal:      part.Ordinal,
-			Filename:     part.Filename,
-			ContentType:  part.ContentType,
-			DeclaredType: part.DeclaredType,
-			Body:         part.Body,
-		})
-	}
-	return out
-}
-
-func (m Message) recordDrops() []connector.PartDrop {
-	if len(m.partDrops) == 0 {
-		return nil
-	}
-	out := make([]connector.PartDrop, 0, len(m.partDrops))
-	for _, drop := range m.partDrops {
-		out = append(out, connector.PartDrop{Reason: drop.Reason, Count: drop.Count})
-	}
-	return out
 }

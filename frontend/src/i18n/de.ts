@@ -14351,6 +14351,10 @@ export const de = {
   "worklist.because.no_reply_history": "keine bisherigen Antworten",
   "worklist.because.asks_nothing": "fordert nichts an",
   "worklist.because.addressed_elsewhere": "an jemand anderen im Team gerichtet",
+  "worklist.because.bcc_from_stranger":
+    "in Bcc an dich, von jemandem, mit dem du noch nicht geschrieben hast",
+  "worklist.because.link_off_sender":
+    "der Link führt auf eine andere Website als die Absendedomain",
   "worklist.because.read_only": "du kannst das lesen, aber nicht ändern",
   "worklist.above.pin":
     "Steht über dem nächsten Eintrag, da du diesen Eintrag angeheftet hast.",

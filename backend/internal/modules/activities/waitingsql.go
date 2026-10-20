@@ -200,7 +200,8 @@ var waitingRepliesSQL = `
 	       -- Which conversation, so a caller can show one card per
 	       -- conversation; '' for a message that belongs to none.
 	       coalesce(a.thread_key, ''), coalesce(a.channel_provider, ''),
-	       ` + bookedMeetingSQL("$%[1]d", "%[19]s") + `
+	       ` + bookedMeetingSQL("$%[1]d", "%[19]s") + `,
+	       ` + strangerMailSQL + `
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	  -- Who wrote. The sender participant is where capture records the address,

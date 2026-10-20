@@ -40,6 +40,8 @@ type owedMail struct {
 	// spoofed leaves out the provider's word that the seat sent it: a message
 	// whose From merely names the seat's own address.
 	spoofed bool
+	// html is an HTML body sent instead of the plain one.
+	html string
 }
 
 func (m owedMail) raw() []byte {
@@ -54,6 +56,10 @@ func (m owedMail) raw() []byte {
 		"Message-ID: <"+m.messageID+">")
 	if m.inReplyTo != "" {
 		lines = append(lines, "In-Reply-To: <"+m.inReplyTo+">", "References: <"+m.inReplyTo+">")
+	}
+	if m.html != "" {
+		lines = append(lines, "Content-Type: text/html; charset=utf-8", "", m.html, "")
+		return []byte(strings.Join(lines, "\r\n"))
 	}
 	lines = append(lines, "Content-Type: text/plain; charset=utf-8", "", "Text.", "")
 	return []byte(strings.Join(lines, "\r\n"))

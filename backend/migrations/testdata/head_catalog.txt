@@ -51,6 +51,7 @@ public.activity.archived_at timestamp with time zone gen=- def=-
 public.activity.assignee_id uuid gen=- def=-
 public.activity.audience text NOT NULL gen=- def='workspace'::text
 public.activity.audience_reason text gen=- def=-
+public.activity.bcc_only boolean gen=- def=-
 public.activity.body text gen=- def=-
 public.activity.booking_interval_exact boolean NOT NULL gen=- def=false
 public.activity.bulk_mail_attested boolean NOT NULL gen=- def=false
@@ -69,6 +70,7 @@ public.activity.direction text gen=- def=-
 public.activity.done_at timestamp with time zone gen=- def=-
 public.activity.due_at timestamp with time zone gen=- def=-
 public.activity.duration_seconds integer gen=- def=-
+public.activity.foreign_link boolean gen=- def=-
 public.activity.has_calendar_part boolean NOT NULL gen=- def=false
 public.activity.host_user_id uuid gen=- def=-
 public.activity.id uuid NOT NULL gen=- def=uuidv7()
@@ -96,6 +98,7 @@ public.activity.restricted_until timestamp with time zone gen=- def=-
 public.activity.retention_class text gen=- def=-
 public.activity.retention_class_at timestamp with time zone gen=- def=-
 public.activity.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(subject, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(subject, ''::text))), 'A'::"char")) || setweight(to_tsvector(activity_ts_config(language), f_unaccent(((COALESCE(subject, ''::text) || ' '::text) || COALESCE(body, ''::text)))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(body, ''::text))), 'C'::"char"))
+public.activity.sender_was_stranger boolean gen=- def=-
 public.activity.sent_by_colleague uuid gen=- def=-
 public.activity.source text NOT NULL gen=- def=-
 public.activity.source_activity_id uuid gen=- def=-

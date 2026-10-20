@@ -6,7 +6,7 @@ The 28 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-60 columns · primary key `(id)` · referenced by 38 foreign keys
+63 columns · primary key `(id)` · referenced by 38 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -14,6 +14,7 @@ The 28 tables owned by `activities`, as the migrations build them. [Back to the 
 | `assignee_id` | `uuid` |  | Task only. |
 | `audience` | `text`, default `'workspace'::text` | yes | Who may read this activity's CONTENT once the row is discoverable at all. |
 | `audience_reason` | `text` |  | Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). |
+| `bcc_only` | `boolean` |  |  |
 | `body` | `text` |  |  |
 | `booking_interval_exact` | `boolean`, default `false` | yes |  |
 | `bulk_mail_attested` | `boolean`, default `false` | yes | This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. |
@@ -30,6 +31,7 @@ The 28 tables owned by `activities`, as the migrations build them. [Back to the 
 | `done_at` | `timestamp with time zone` |  |  |
 | `due_at` | `timestamp with time zone` |  | Task only. |
 | `duration_seconds` | `integer` |  | Meeting/call only. |
+| `foreign_link` | `boolean` |  |  |
 | `has_calendar_part` | `boolean`, default `false` | yes |  |
 | `host_user_id` | `uuid` |  | Meeting only: the member of this company who held it. |
 | `is_done` | `boolean`, default `false` | yes | Task only. |
@@ -54,6 +56,7 @@ The 28 tables owned by `activities`, as the migrations build them. [Back to the 
 | `restricted_until` | `timestamp with time zone` |  |  |
 | `retention_class` | `text` |  |  |
 | `retention_class_at` | `timestamp with time zone` |  |  |
+| `sender_was_stranger` | `boolean` |  |  |
 | `sent_by_colleague` | `uuid` |  | Points at `app_user.id`. |
 | `source_activity_id` | `uuid` |  | The conversation or note this task follows from, whether added by a human or read from a conversation. |
 | `source_author_id` | `uuid` |  | Points at `app_user.id`. |

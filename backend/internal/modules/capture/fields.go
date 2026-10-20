@@ -50,6 +50,24 @@ type ActivityFields struct {
 	// SentByColleague is the live seat who wrote a mail this mailbox holds a
 	// copy of (asSentByColleagueTx); zero for every other record.
 	SentByColleague ids.UUID
+
+	// Envelope is what the mail parser read about addressing and links; nil
+	// for anything not parsed from a mail, and for list mail.
+	Envelope *MailEnvelope
+
+	// judged is what the sink concluded from Envelope. Unexported so no
+	// connector can state the conclusion for it.
+	judged envelopeFacts
+}
+
+// MailEnvelope is what one mail's headers and body say, before any judgement.
+type MailEnvelope struct {
+	// OpenRecipients holds the To and Cc addresses, the mailbox owner's included.
+	// Empty for a mail sent to undisclosed recipients.
+	OpenRecipients []string
+	// LinkHosts are the hosts the body's web links lead to, with a known
+	// redirect wrapper already unwrapped.
+	LinkHosts []string
 }
 
 // LeadFields is a captured prospect bound for the lead pool — never
