@@ -377,6 +377,9 @@ func partsAndRetirement(ctx context.Context, t *testing.T, registry *agents.Regi
 // listed here and then made reachable fails as loudly as one that was never
 // covered, so the list cannot quietly outlive its reason.
 var unreachableInThisLane = gatekit.Waive(map[string]string{
+	"draft_report": "a reporting write needs a seat that may write, and this lane's human carries no seat type; " +
+		"TestDraftReportSavesTheSameDraftOnEitherDoor (reportdraftdoors_integration_test.go) calls it on the served MCP surface " +
+		"under a real passport, and the agents package's encoder-agreement test holds its declared schema",
 	"read_view": "runs a route through the API server's router, and this lane's registry is built with no server; " +
 		"TestReadViewAnswersAsItsRoutes (readviewdoors_integration_test.go) calls it on the served MCP surface and compares it to the route",
 	"relink_thread": "refused for an assistant at every destination and however it is called, so it has no answer to hold to a schema; " +

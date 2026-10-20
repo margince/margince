@@ -14,4 +14,5 @@ const (
 	reportingPending       = "pending"
 	reportingSuspended     = "suspended"
 	reportingTeam          = "team"
+	reportingPrivate       = "private"
 )

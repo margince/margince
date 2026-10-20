@@ -29,11 +29,11 @@
     }
   ],
   "catalog": {
-    "tools": 37,
+    "tools": 38,
     "system_frame_tokens": 597,
-    "tokens": 21862,
-    "median_tool_tokens": 474,
-    "mean_tool_tokens": 590
+    "tokens": 22296,
+    "median_tool_tokens": 454,
+    "mean_tool_tokens": 586
   },
   "agents": [
     {
@@ -46,7 +46,7 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 37,
+      "of_served_tools": 38,
       "tokens": 4001,
       "listing_tokens": 1988,
       "step_schema_tokens": 1416,
@@ -67,7 +67,7 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 37,
+      "of_served_tools": 38,
       "tokens": 6050,
       "listing_tokens": 3204,
       "step_schema_tokens": 2249,
@@ -158,6 +158,10 @@
     {
       "name": "schedule_meeting",
       "tokens": 474
+    },
+    {
+      "name": "draft_report",
+      "tokens": 434
     },
     {
       "name": "decide_approvals",

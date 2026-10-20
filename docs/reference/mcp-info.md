@@ -13,11 +13,11 @@ input and output schema in folds below it. What a tool may do and whether a huma
 
 | | |
 |---|---:|
-| Tools | 37 |
+| Tools | 38 |
 | Resources | 9 |
-| Tool catalog | 122.2 KB |
+| Tool catalog | 126.6 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 32189 |
+| Approx. wire tokens | 33302 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 24.6 KB | 20% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 31.5 KB | 25% | Yes, every step |
-| Input schemas | 57.4 KB | 46% | Yes, every step |
-| _Names, annotations, punctuation_ | 8.7 KB | 7% | Partly |
-| **Description + input schema** | **88.9 KB** | **72%** | **the recurring cost** |
+| Output schemas | 26.8 KB | 21% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 32.3 KB | 25% | Yes, every step |
+| Input schemas | 58.5 KB | 46% | Yes, every step |
+| _Names, annotations, punctuation_ | 8.9 KB | 7% | Partly |
+| **Description + input schema** | **90.8 KB** | **71%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -55,7 +55,7 @@ descriptions and input schemas are what each step pays for.
 - [`ui://margince/approval.html`](#approval_view): Waiting for a decision
 - [`ui://margince/field-conflict.html`](#field_conflict_view): Edited by hand
 
-### Tools (37)
+### Tools (38)
 
 | Tool | What it is for | Read-only | View | Prompt tokens |
 |---|---|:-:|---|---:|
@@ -72,6 +72,7 @@ descriptions and input schemas are what each step pays for.
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 643 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
+| [`draft_report`](#draft_report) | Draft a saved report |  |  | 434 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
 | [`find_records`](#find_records) | Find records | yes |  | 1697 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 336 |
@@ -2792,6 +2793,357 @@ immediately; requires passport scope "draft".)
   },
   "required": [
     "for"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### draft_report
+
+**Draft a saved report**
+
+```text
+PREPARE a saved report's charts for a human to review: the metrics and graphs of a dashboard, saved
+as a draft of a report they edit, or as a new report only they see. Nothing a reader sees changes: a
+draft waits for a human to publish it in Analytics, and a new report is private. Metrics and graphs
+come from read_reports with kind=standard's catalog, and anything else is refused. It never changes
+who sees a report, its name, or its schedule. Use read_reports with kind=standard with mode catalog
+for the metric and graph IDs, and read_analytics with step=query for a custom grouping. Publish,
+share and schedule a report in Analytics. Keep the returned report id and draft_revision; preview
+the draft with read_reports with kind=standard mode report_evaluation at that revision. (Runs
+immediately; requires passport scope "write".)
+```
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "description": "A `pipeline_id` or `stage_id` used in a plan comes from the workspace's pipeline list.",
+  "properties": {
+    "idempotency_key": {
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "report_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "selection": {
+      "properties": {
+        "blocks": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "close_window": {
+          "type": "string"
+        },
+        "interval": {
+          "properties": {
+            "end_at": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "start_at": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          "required": [
+            "end_at",
+            "start_at"
+          ],
+          "type": "object"
+        },
+        "metrics": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "period": {
+          "type": "string"
+        },
+        "pipeline_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "scope": {
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        "target_basis": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "blocks",
+        "close_window",
+        "metrics",
+        "period",
+        "scope",
+        "target_basis"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "selection"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "archived_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "audience": {
+          "type": "string"
+        },
+        "audience_team_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "cadence": {
+          "type": "string"
+        },
+        "can_manage": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "draft_revision": {
+          "type": "integer"
+        },
+        "edition_count": {
+          "type": "integer"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "last_status": {
+          "type": "string"
+        },
+        "latest_captured_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "next_due_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "owner_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "paused_schedule_count": {
+          "type": "integer"
+        },
+        "revision": {
+          "type": "integer"
+        },
+        "selection": {
+          "properties": {
+            "blocks": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "close_window": {
+              "type": "string"
+            },
+            "interval": {
+              "properties": {
+                "end_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "start_at": {
+                  "format": "date-time",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "end_at",
+                "start_at"
+              ],
+              "type": "object"
+            },
+            "metrics": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "period": {
+              "type": "string"
+            },
+            "pipeline_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "scope": {
+              "properties": {
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "type": "object"
+            },
+            "target_basis": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "blocks",
+            "close_window",
+            "metrics",
+            "period",
+            "scope",
+            "target_basis"
+          ],
+          "type": "object"
+        },
+        "version": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "audience",
+        "created_at",
+        "id",
+        "name",
+        "owner_id",
+        "revision",
+        "selection",
+        "version"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
   ],
   "type": "object"
 }

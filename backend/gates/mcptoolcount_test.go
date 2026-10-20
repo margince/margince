@@ -98,7 +98,11 @@ const clientToolCeiling = 100
 //
 // Routers that may front actions of different tiers then bring it to 37: one
 // per family of verbs (find_records, read_context, change_state and the rest).
-const publishedToolCeiling = 37
+//
+// draft_report raises it to 38. An agent prepares a saved report for a human to
+// publish, and no router takes a write-scope report verb. The user keeps 62 of
+// the client's 100 slots for other servers.
+const publishedToolCeiling = 38
 
 type mcpInfoFile struct {
 	Totals struct {

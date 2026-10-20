@@ -74,6 +74,7 @@ Open the row to see each action, the verb it runs and its tier, for example `mer
 | `commit_import` | 🟢 | `write` | no | Commit an import |
 | `create_record` | 🟢 | `write` | no | Create a record |
 | `decide_approvals` | 🟢 | `write` | no | 🔀 Approve or reject staged actions <details><summary>actions</summary>`bundle` (`decide_approval_bundle`, 🟢) `one` (`decide_approval`, 🟢)</details> |
+| `draft_report` | 🟢 | `write` | no | Save a draft on a saved report, or a new report only its human sees |
 | `preview_import` | 🟢 | `write` | no | Preview an import |
 | `resolve_duplicates` | 🟢 | `write` | no | 🔀 Merge two records, or keep both <details><summary>actions</summary>`dismiss` (`decide_duplicate`, 🟢) `merge` (`merge_records`, 🟢)</details> |
 | `update_record` | 🟢 | `write` | no | Update a record |

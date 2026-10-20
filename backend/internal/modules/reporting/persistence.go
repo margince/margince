@@ -70,6 +70,12 @@ func requireReadWrite(ctx context.Context, object string, action principal.Actio
 	if !ok || actor.Type != principal.PrincipalHuman || !actor.SeatType.CanMutate() {
 		return apperrors.ErrPermissionDenied
 	}
+	return requireGrants(ctx, object, action)
+}
+
+// requireGrants asks for read on object as well as action, since every
+// reporting write answers with the record it wrote.
+func requireGrants(ctx context.Context, object string, action principal.Action) error {
 	if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
 		return err
 	}
