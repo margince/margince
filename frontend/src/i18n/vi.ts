@@ -14,11 +14,16 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "homeRepair.withdraw": "Rút đề xuất tự động",
+  "homeRepair.reason.duplicate": "Một đề xuất đang chờ giống hệt vẫn còn.",
+  "homeRepair.tasks": "Công việc",
+  "homeRepair.proposals": "Đề xuất",
+  "homeRepair.kind": "Công việc cần xem xét",
   "homeRepair.preserved": "Được giữ lại hoặc bỏ qua",
   "homeRepair.preservedNote":
     "Bao gồm công việc được giữ lại để xem xét và các bản ghi đã thay đổi sau khi xem trước. Xem trước lần nữa để kiểm tra những gì còn lại.",
 
-  "homeRepair.inspect": "Xem công việc",
+  "homeRepair.inspect": "Xem chi tiết",
   "dataTasks.blocked.review_required":
     "Xem xét các thay đổi được đề xuất trước khi bắt đầu.",
   "homeRepair.archive": "Lưu trữ lời nhắc tự động",
@@ -37,14 +42,14 @@ export const vi = {
     "Yêu cầu gốc đã quá thời hạn chờ; lưu trữ không đánh dấu yêu cầu là đã trả lời.",
   "homeRepair.reason.current":
     "Công việc này vẫn đáp ứng các quy tắc hiện tại.",
-  "homeRepair.unnamed": "Không xem được chi tiết công việc",
+  "homeRepair.unnamed": "Không có chi tiết",
   "homeRepair.explain":
-    "Xem xét tối đa 25 công việc mỗi lần. Chỉ lời nhắc tự động chưa chỉnh sửa và được xác minh là lỗi thời mới được lưu trữ. Công việc khác được giữ lại; không đánh dấu công việc nào là hoàn thành.",
-  "homeRepair.preview": "Xem trước công việc",
+    "Xem xét tối đa 25 mục mỗi lần. Có thể lưu trữ lời nhắc tự động đã cũ và rút các đề xuất trùng lặp hoặc đã cũ. Công việc do người dùng xử lý được giữ lại; không mục nào được đánh dấu hoàn thành.",
+  "homeRepair.preview": "Xem trước các mục",
   "homeRepair.next": "Xem trang tiếp theo",
   "homeRepair.summary":
-    "Lời nhắc tự động sẽ được lưu trữ trên trang này: {count}.",
-  "homeRepair.apply": "Lưu trữ {count} lời nhắc đã xem xét",
+    "Lưu trữ {archive} lời nhắc; rút {withdraw} đề xuất. Giữ {review} mục để xem xét và {keep} mục công việc hiện tại.",
+  "homeRepair.apply": "Áp dụng {count} thay đổi đã xem xét",
   "homeRepair.started":
     "Lượt xử lý đã xem xét đang chờ chạy. Tiến độ hiển thị ở trên.",
 

@@ -33,10 +33,14 @@ func (h dataTaskHandlers) PreviewHomeRepair(w http.ResponseWriter, r *http.Reque
 	if in.After != nil {
 		after = ids.UUID(*in.After)
 	}
+	source := "task"
+	if in.Source != nil {
+		source = string(*in.Source)
+	}
 	var review datatask.ReviewRequest
 	err := InstallationDB(h.pool).Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		review, err = previewHomeRepairAfterTx(ctx, tx, after, in.Limit, h.now())
+		review, err = previewHomeRepairSourceTx(ctx, tx, source, after, in.Limit, h.now())
 		return err
 	})
 	if err != nil {
@@ -89,7 +93,24 @@ func homeRepairReviewWire(review datatask.ReviewRequest) (crmcontracts.HomeRepai
 	}
 	out := crmcontracts.HomeRepairReview{AsOf: review.AsOf, Digest: review.Digest, Limit: review.Limit, RuleVersion: review.RuleVersion, Tasks: make([]crmcontracts.HomeRepairTask, 0, len(scope.Tasks))}
 	for _, task := range scope.Tasks {
-		out.Tasks = append(out.Tasks, crmcontracts.HomeRepairTask{Id: openapi_types.UUID(task.ID), Version: task.Version, Action: crmcontracts.HomeRepairTaskAction(task.Action), Reason: task.Reason})
+		item := crmcontracts.HomeRepairTask{Id: openapi_types.UUID(task.ID), Version: task.Version, Action: crmcontracts.HomeRepairTaskAction(task.Action), Reason: task.Reason}
+		if task.Source != "" {
+			item.Source = new(crmcontracts.HomeRepairTaskSource(task.Source))
+		}
+		if task.Snapshot != "" {
+			item.Snapshot = &task.Snapshot
+		}
+		out.Tasks = append(out.Tasks, item)
+		switch task.Action {
+		case repairArchiveReminder:
+			out.Counts.Archive++
+		case repairWithdrawProposal:
+			out.Counts.Withdraw++
+		case repairHumanReview:
+			out.Counts.Review++
+		case repairLeaveCurrent:
+			out.Counts.Keep++
+		}
 	}
 	return out, nil
 }
@@ -97,7 +118,14 @@ func homeRepairReviewWire(review datatask.ReviewRequest) (crmcontracts.HomeRepai
 func homeRepairReviewInput(in crmcontracts.HomeRepairReview) (datatask.ReviewRequest, error) {
 	scope := homeRepairScope{Tasks: make([]homeRepairTaskRef, 0, len(in.Tasks))}
 	for _, task := range in.Tasks {
-		scope.Tasks = append(scope.Tasks, homeRepairTaskRef{ID: ids.UUID(task.Id), Version: task.Version, Action: homeRepairAction(task.Action), Reason: task.Reason})
+		item := homeRepairTaskRef{ID: ids.UUID(task.Id), Version: task.Version, Action: homeRepairAction(task.Action), Reason: task.Reason}
+		if task.Source != nil {
+			item.Source = string(*task.Source)
+		}
+		if task.Snapshot != nil {
+			item.Snapshot = *task.Snapshot
+		}
+		scope.Tasks = append(scope.Tasks, item)
 	}
 	encoded, err := json.Marshal(scope)
 	return datatask.ReviewRequest{Scope: encoded, Digest: in.Digest, Limit: in.Limit, RuleVersion: in.RuleVersion, AsOf: in.AsOf}, err

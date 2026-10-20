@@ -3,11 +3,17 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "homeRepair.withdraw": "Withdraw automatic proposal",
+  "homeRepair.reason.duplicate":
+    "An identical pending proposal remains available.",
+  "homeRepair.tasks": "Tasks",
+  "homeRepair.proposals": "Proposals",
+  "homeRepair.kind": "Work to review",
   "homeRepair.preserved": "Preserved or skipped",
   "homeRepair.preservedNote":
     "Includes work kept for review and records changed since the preview. Preview again to inspect what remains.",
 
-  "homeRepair.inspect": "Inspect task",
+  "homeRepair.inspect": "Inspect",
   "dataTasks.blocked.review_required":
     "Review the proposed changes before starting.",
   "homeRepair.archive": "Archive automatic reminder",
@@ -28,13 +34,14 @@ export const en = {
     "The original request is past the waiting horizon; archiving does not mark it answered.",
   "homeRepair.reason.current":
     "The current admission rules still allow this work.",
-  "homeRepair.unnamed": "Task details unavailable",
+  "homeRepair.unnamed": "Details unavailable",
   "homeRepair.explain":
-    "Review up to 25 tasks at a time. Only untouched automatic reminders proven obsolete will be archived. Other work stays available; nothing is marked completed.",
-  "homeRepair.preview": "Preview tasks",
+    "Review up to 25 items at a time. Obsolete automatic reminders can be archived and duplicate or obsolete proposals withdrawn. Human work is preserved; nothing is marked completed.",
+  "homeRepair.preview": "Preview items",
   "homeRepair.next": "Review next page",
-  "homeRepair.summary": "Automatic reminders to archive on this page: {count}.",
-  "homeRepair.apply": "Archive {count} reviewed reminders",
+  "homeRepair.summary":
+    "Archive {archive} reminders; withdraw {withdraw} proposals. Keep {review} for review and {keep} as current work.",
+  "homeRepair.apply": "Apply {count} reviewed changes",
   "homeRepair.started":
     "The reviewed run is queued. Its progress appears above.",
 

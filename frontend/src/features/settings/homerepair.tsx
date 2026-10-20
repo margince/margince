@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ActionRow } from "../../design-system/actionrow";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
+import { FilterPills } from "../../design-system/filterpills";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
@@ -15,11 +16,13 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useActivity } from "../../lib/activityread";
 import { unwrap } from "../../lib/problem";
+import { ApprovalDetailModal } from "../automations/approvaleditor";
 import { OpenActivityDrawer } from "../voice-knowledge/activitydrawer";
 
 type Review = components["schemas"]["HomeRepairReview"];
 type Task = components["schemas"]["HomeRepairTask"];
 const actionLabels: Record<Task["action"], MessageKey> = {
+  withdraw_proposal: "homeRepair.withdraw",
   archive_automatic_reminder: "homeRepair.archive",
   human_review: "homeRepair.keepReview",
   leave_current: "homeRepair.keepCurrent",
@@ -32,6 +35,7 @@ const reasonLabels: Record<string, MessageKey> = {
   before_mailbox_history_baseline: "homeRepair.reason.baseline",
   meeting_cancelled: "homeRepair.reason.cancelled",
   request_past_waiting_horizon: "homeRepair.reason.requestAge",
+  duplicate_pending_proposal: "homeRepair.reason.duplicate",
   current_work: "homeRepair.reason.current",
 };
 
@@ -41,21 +45,11 @@ function RepairTask({ task }: Readonly<{ task: Task }>) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <SettingRow
+      <RepairItemRow
+        task={task}
         label={activity.data?.subject || t("homeRepair.unnamed")}
-        description={t(
-          reasonLabels[task.reason] ?? "homeRepair.reason.unverified",
-        )}
-        control={
-          <Button
-            variant="ghost"
-            disabled={!activity.data}
-            onClick={() => setOpen(true)}
-          >
-            {t("homeRepair.inspect")}
-          </Button>
-        }
-        value={t(actionLabels[task.action] ?? "homeRepair.keepReview")}
+        disabled={!activity.data}
+        onInspect={() => setOpen(true)}
       />
       {open && (
         <OpenActivityDrawer
@@ -69,6 +63,61 @@ function RepairTask({ task }: Readonly<{ task: Task }>) {
   );
 }
 
+function RepairItemRow({
+  task,
+  label,
+  disabled,
+  onInspect,
+}: Readonly<{
+  task: Task;
+  label: string;
+  disabled: boolean;
+  onInspect: () => void;
+}>) {
+  const t = useT();
+  return (
+    <SettingRow
+      label={label}
+      description={t(
+        reasonLabels[task.reason] ?? "homeRepair.reason.unverified",
+      )}
+      control={
+        <Button variant="ghost" disabled={disabled} onClick={onInspect}>
+          {t("homeRepair.inspect")}
+        </Button>
+      }
+      value={t(actionLabels[task.action] ?? "homeRepair.keepReview")}
+    />
+  );
+}
+
+function RepairApproval({ task }: Readonly<{ task: Task }>) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const detail = useQuery({
+    queryKey: ["approval", task.id],
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/approvals/{id}", { params: { path: { id: task.id } } }),
+      ),
+  });
+  return (
+    <>
+      <RepairItemRow
+        task={task}
+        label={detail.data?.summary || t("homeRepair.unnamed")}
+        disabled={!detail.data}
+        onInspect={() => setOpen(true)}
+      />
+      <ApprovalDetailModal
+        approvalId={task.id}
+        open={open}
+        onClose={() => setOpen(false)}
+      />
+    </>
+  );
+}
+
 export function HomeRepairControls({
   version,
   canActivate,
@@ -76,11 +125,18 @@ export function HomeRepairControls({
   const t = useT();
   const { locale } = useLocale();
   const client = useQueryClient();
+  const [source, setSource] = useState<"task" | "approval">("task");
   const preview = useMutation({
-    mutationFn: async (after?: string) =>
+    mutationFn: async ({
+      after,
+      source,
+    }: {
+      after?: string;
+      source: "task" | "approval";
+    }) =>
       unwrap(
         await api.POST("/admin/home-repair/preview", {
-          body: { limit: 25, after },
+          body: { limit: 25, after, source },
         }),
       ),
   });
@@ -96,13 +152,26 @@ export function HomeRepairControls({
       await client.invalidateQueries({ queryKey: ["admin", "data-tasks"] });
     },
   });
-  const review = preview.data;
-  const archiveCount =
-    review?.tasks.filter((task) => task.action === "archive_automatic_reminder")
-      .length ?? 0;
+  const review =
+    preview.variables?.source === source ? preview.data : undefined;
+  const changeCount =
+    (review?.counts.archive ?? 0) + (review?.counts.withdraw ?? 0);
   return (
     <>
       <p>{t("homeRepair.explain")}</p>
+      <FilterPills
+        value={source}
+        pills={[
+          { value: "task", label: t("homeRepair.tasks") },
+          { value: "approval", label: t("homeRepair.proposals") },
+        ]}
+        label={t("homeRepair.kind")}
+        onChange={(next) => {
+          setSource(next);
+          preview.reset();
+          activate.reset();
+        }}
+      />
       {version < 1 && <p>{t("dataTasks.blocked.waiting_for_worker")}</p>}
       <ActionRow>
         <Button
@@ -111,7 +180,7 @@ export function HomeRepairControls({
           disabled={activate.isPending}
           onClick={() => {
             activate.reset();
-            preview.mutate(undefined);
+            preview.mutate({ source });
           }}
         >
           {t("homeRepair.preview")}
@@ -122,7 +191,7 @@ export function HomeRepairControls({
             disabled={preview.isPending || activate.isPending}
             onClick={() => {
               activate.reset();
-              preview.mutate(review.tasks.at(-1)?.id);
+              preview.mutate({ source, after: review.tasks.at(-1)?.id });
             }}
           >
             {t("homeRepair.next")}
@@ -134,15 +203,22 @@ export function HomeRepairControls({
         <>
           <p>
             {t("homeRepair.summary", {
-              count: formatNumber(archiveCount, locale),
+              archive: formatNumber(review.counts.archive, locale),
+              withdraw: formatNumber(review.counts.withdraw, locale),
+              review: formatNumber(review.counts.review, locale),
+              keep: formatNumber(review.counts.keep, locale),
             })}
           </p>
           <SettingList>
-            {review.tasks.map((task) => (
-              <RepairTask key={task.id} task={task} />
-            ))}
+            {review.tasks.map((task) =>
+              task.source === "approval" ? (
+                <RepairApproval key={task.id} task={task} />
+              ) : (
+                <RepairTask key={task.id} task={task} />
+              ),
+            )}
           </SettingList>
-          {canActivate && archiveCount > 0 && (
+          {canActivate && changeCount > 0 && (
             <ActionRow>
               <Button
                 pending={activate.isPending}
@@ -150,7 +226,7 @@ export function HomeRepairControls({
                 onClick={() => activate.mutate(review)}
               >
                 {t("homeRepair.apply", {
-                  count: formatNumber(archiveCount, locale),
+                  count: formatNumber(changeCount, locale),
                 })}
               </Button>
             </ActionRow>

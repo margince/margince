@@ -38501,6 +38501,7 @@ export interface components {
         };
         HomeRepairReview: {
             tasks: components["schemas"]["HomeRepairTask"][];
+            counts: components["schemas"]["HomeRepairCounts"];
             digest: string;
             rule_version: string;
             limit: number;
@@ -38510,11 +38511,20 @@ export interface components {
         HomeRepairTask: {
             /** Format: uuid */
             id: string;
+            /** @enum {string} */
+            source?: "task" | "approval";
+            snapshot?: string;
             /** Format: int64 */
             version: number;
             /** @enum {string} */
-            action: "archive_automatic_reminder" | "human_review" | "leave_current";
+            action: "archive_automatic_reminder" | "withdraw_proposal" | "human_review" | "leave_current";
             reason: string;
+        };
+        HomeRepairCounts: {
+            archive: number;
+            withdraw: number;
+            review: number;
+            keep: number;
         };
         DataTaskControl: {
             task_id: string;
@@ -48484,6 +48494,11 @@ export interface operations {
                     limit: number;
                     /** Format: uuid */
                     after?: string;
+                    /**
+                     * @default task
+                     * @enum {string}
+                     */
+                    source?: "task" | "approval";
                 };
             };
         };

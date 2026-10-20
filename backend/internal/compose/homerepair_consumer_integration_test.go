@@ -76,7 +76,7 @@ func runReviewedRepair(t *testing.T, change string) {
 	if review.Limit != 1 {
 		t.Fatalf("reviewed rows=%d", review.Limit)
 	}
-	task := homeRepairDataTask(e.Pool)
+	task := homeRepairDataTask(e.Pool, func() time.Time { return now })
 	engine, err := datatask.New(e.Pool, []datatask.Task{task}, "test", func() time.Time { return now }, func(context.Context, pgx.Tx, datatask.Progress) error { return nil })
 	if err != nil {
 		t.Fatal(err)

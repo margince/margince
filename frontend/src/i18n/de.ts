@@ -5,11 +5,17 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de = {
+  "homeRepair.withdraw": "Automatischen Vorschlag zurückziehen",
+  "homeRepair.reason.duplicate":
+    "Ein identischer offener Vorschlag bleibt verfügbar.",
+  "homeRepair.tasks": "Aufgaben",
+  "homeRepair.proposals": "Vorschläge",
+  "homeRepair.kind": "Zu prüfende Arbeit",
   "homeRepair.preserved": "Behalten oder übersprungen",
   "homeRepair.preservedNote":
     "Enthält zur Prüfung behaltene und seit der Vorschau geänderte Aufgaben. Prüfen Sie erneut, was übrig bleibt.",
 
-  "homeRepair.inspect": "Aufgabe ansehen",
+  "homeRepair.inspect": "Prüfen",
   "dataTasks.blocked.review_required":
     "Prüfen Sie die vorgeschlagenen Änderungen vor dem Start.",
   "homeRepair.archive": "Automatische Erinnerung archivieren",
@@ -29,14 +35,14 @@ export const de = {
     "Die ursprüngliche Anfrage liegt außerhalb des Wartezeitraums. Archivieren markiert sie nicht als beantwortet.",
   "homeRepair.reason.current":
     "Die aktuellen Regeln lassen diese Aufgabe weiterhin zu.",
-  "homeRepair.unnamed": "Aufgabendetails nicht verfügbar",
+  "homeRepair.unnamed": "Details nicht verfügbar",
   "homeRepair.explain":
-    "Prüfen Sie bis zu 25 Aufgaben auf einmal. Nur nachweislich überholte, unveränderte automatische Erinnerungen werden archiviert. Andere Aufgaben bleiben erhalten; keine wird als erledigt markiert.",
-  "homeRepair.preview": "Aufgaben prüfen",
+    "Prüfe bis zu 25 Einträge gleichzeitig. Veraltete automatische Erinnerungen können archiviert und doppelte oder veraltete Vorschläge zurückgezogen werden. Menschlich bearbeitete Aufgaben bleiben erhalten; nichts wird als erledigt markiert.",
+  "homeRepair.preview": "Einträge prüfen",
   "homeRepair.next": "Nächste Seite prüfen",
   "homeRepair.summary":
-    "Zu archivierende automatische Erinnerungen auf dieser Seite: {count}.",
-  "homeRepair.apply": "{count} geprüfte Erinnerungen archivieren",
+    "{archive} Erinnerungen archivieren; {withdraw} Vorschläge zurückziehen. {review} zur Prüfung und {keep} als aktuelle Arbeit behalten.",
+  "homeRepair.apply": "{count} geprüfte Änderungen anwenden",
   "homeRepair.started":
     "Der geprüfte Lauf ist vorgemerkt. Der Fortschritt erscheint oben.",
 

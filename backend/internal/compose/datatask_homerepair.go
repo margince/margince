@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -24,18 +25,18 @@ import (
 
 const homeRepairTaskID = "core/1792486503_home_attention_repair"
 
-func homeRepairDataTask(pool *pgxpool.Pool) datatask.Task {
+func homeRepairDataTask(pool *pgxpool.Pool, now func() time.Time) datatask.Task {
 	return datatask.Task{ID: homeRepairTaskID, Version: 1, Title: "Review automatic Home work", Manual: true, ReviewVersion: homeRepairVersion,
 		Requires: []string{"core/1792486503"}, Review: validateHomeRepairTx,
 		Steps: []datatask.Step{{Name: "reviewed_tasks", Limit: 50, MinLimit: 1, Audit: datatask.AuditPolicy{PerRecord: true},
 			Estimate: func(context.Context, datatask.Querier, int64) (int64, bool, error) { return 0, false, nil },
 			Batch: func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-				return applyHomeRepairBatch(ctx, tx, pool, in)
+				return applyHomeRepairBatch(ctx, tx, pool, in, now())
 			},
 		}}}
 }
 
-func applyHomeRepairBatch(ctx context.Context, tx pgx.Tx, pool *pgxpool.Pool, in datatask.BatchIn) (datatask.BatchOut, error) {
+func applyHomeRepairBatch(ctx context.Context, tx pgx.Tx, pool *pgxpool.Pool, in datatask.BatchIn, asOf time.Time) (datatask.BatchOut, error) {
 	if in.Activation == nil {
 		return datatask.BatchOut{}, apperrors.ErrPermissionDenied
 	}
@@ -49,12 +50,6 @@ func applyHomeRepairBatch(ctx context.Context, tx pgx.Tx, pool *pgxpool.Pool, in
 	}
 	ctx = principal.WithActor(ctx, actor)
 	if err := auth.Require(ctx, "data_task", principal.ActionUpdate); err != nil {
-		return datatask.BatchOut{}, err
-	}
-	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-		return datatask.BatchOut{}, err
-	}
-	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
 		return datatask.BatchOut{}, err
 	}
 	var scope homeRepairScope
@@ -72,9 +67,11 @@ func applyHomeRepairBatch(ctx context.Context, tx pgx.Tx, pool *pgxpool.Pool, in
 	}
 	end := min(offset+in.Limit, len(scope.Tasks))
 	store := activities.NewStore(InstallationDB(pool))
+	activation := *in.Activation
+	activation.AsOf = asOf
 	changed := 0
 	for _, expected := range scope.Tasks[offset:end] {
-		wrote, err := applyHomeRepairTask(ctx, tx, store, expected, *in.Activation, in.RunID)
+		wrote, err := applyHomeRepairItem(ctx, tx, store, expected, activation, in.RunID)
 		if err != nil {
 			return datatask.BatchOut{}, err
 		}
@@ -84,6 +81,16 @@ func applyHomeRepairBatch(ctx context.Context, tx pgx.Tx, pool *pgxpool.Pool, in
 	}
 	cursor, err := json.Marshal(end)
 	return datatask.BatchOut{Cursor: cursor, Scanned: end - offset, Changed: changed, Done: end == len(scope.Tasks)}, err
+}
+
+func applyHomeRepairItem(ctx context.Context, tx pgx.Tx, store *activities.Store, expected homeRepairTaskRef, activation datatask.Activation, runID ids.UUID) (bool, error) {
+	if expected.Source == "approval" {
+		return applyHomeRepairProposal(ctx, tx, expected, activation, runID)
+	}
+	if expected.Source != "" && expected.Source != "task" {
+		return false, apperrors.ErrInvalidArgument
+	}
+	return applyHomeRepairTask(ctx, tx, store, expected, activation, runID)
 }
 
 func applyHomeRepairTask(ctx context.Context, tx pgx.Tx, store *activities.Store, expected homeRepairTaskRef, activation datatask.Activation, runID ids.UUID) (bool, error) {
@@ -114,6 +121,6 @@ func applyHomeRepairTask(ctx context.Context, tx pgx.Tx, store *activities.Store
 }
 
 func recordHomeRepairSkip(ctx context.Context, tx pgx.Tx, expected homeRepairTaskRef, reason, version string, runID ids.UUID) error {
-	_, err := storekit.LogSystem(ctx, tx, "home_repair.skipped", map[string]any{"run_id": runID, "activity_id": expected.ID, "reason": reason, "rule_version": version})
+	_, err := storekit.LogSystem(ctx, tx, "home_repair.skipped", map[string]any{"run_id": runID, "record_id": expected.ID, "source": expected.Source, "reason": reason, "rule_version": version})
 	return err
 }

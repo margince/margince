@@ -10785,6 +10785,7 @@ const (
 	HomeRepairTaskActionArchiveAutomaticReminder HomeRepairTaskAction = "archive_automatic_reminder"
 	HomeRepairTaskActionHumanReview              HomeRepairTaskAction = "human_review"
 	HomeRepairTaskActionLeaveCurrent             HomeRepairTaskAction = "leave_current"
+	HomeRepairTaskActionWithdrawProposal         HomeRepairTaskAction = "withdraw_proposal"
 )
 
 // Valid indicates whether the value is a known member of the HomeRepairTaskAction enum.
@@ -10795,6 +10796,26 @@ func (e HomeRepairTaskAction) Valid() bool {
 	case HomeRepairTaskActionHumanReview:
 		return true
 	case HomeRepairTaskActionLeaveCurrent:
+		return true
+	case HomeRepairTaskActionWithdrawProposal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HomeRepairTaskSource.
+const (
+	HomeRepairTaskSourceApproval HomeRepairTaskSource = "approval"
+	HomeRepairTaskSourceTask     HomeRepairTaskSource = "task"
+)
+
+// Valid indicates whether the value is a known member of the HomeRepairTaskSource enum.
+func (e HomeRepairTaskSource) Valid() bool {
+	switch e {
+	case HomeRepairTaskSourceApproval:
+		return true
+	case HomeRepairTaskSourceTask:
 		return true
 	default:
 		return false
@@ -20953,6 +20974,24 @@ func (e RelinkActivityJSONBodyEntityType) Valid() bool {
 	case RelinkActivityJSONBodyEntityTypeLead:
 		return true
 	case RelinkActivityJSONBodyEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PreviewHomeRepairJSONBodySource.
+const (
+	PreviewHomeRepairJSONBodySourceApproval PreviewHomeRepairJSONBodySource = "approval"
+	PreviewHomeRepairJSONBodySourceTask     PreviewHomeRepairJSONBodySource = "task"
+)
+
+// Valid indicates whether the value is a known member of the PreviewHomeRepairJSONBodySource enum.
+func (e PreviewHomeRepairJSONBodySource) Valid() bool {
+	switch e {
+	case PreviewHomeRepairJSONBodySourceApproval:
+		return true
+	case PreviewHomeRepairJSONBodySourceTask:
 		return true
 	default:
 		return false
@@ -38354,9 +38393,18 @@ type HistoryEdge struct {
 // HistoryEdgeOtherEntityType defines model for HistoryEdge.OtherEntityType.
 type HistoryEdgeOtherEntityType string
 
+// HomeRepairCounts defines model for HomeRepairCounts.
+type HomeRepairCounts struct {
+	Archive  int `json:"archive"`
+	Keep     int `json:"keep"`
+	Review   int `json:"review"`
+	Withdraw int `json:"withdraw"`
+}
+
 // HomeRepairReview defines model for HomeRepairReview.
 type HomeRepairReview struct {
 	AsOf        time.Time        `json:"as_of"`
+	Counts      HomeRepairCounts `json:"counts"`
 	Digest      string           `json:"digest"`
 	Limit       int              `json:"limit"`
 	RuleVersion string           `json:"rule_version"`
@@ -38365,14 +38413,19 @@ type HomeRepairReview struct {
 
 // HomeRepairTask defines model for HomeRepairTask.
 type HomeRepairTask struct {
-	Action  HomeRepairTaskAction `json:"action"`
-	Id      openapi_types.UUID   `json:"id"`
-	Reason  string               `json:"reason"`
-	Version int64                `json:"version"`
+	Action   HomeRepairTaskAction  `json:"action"`
+	Id       openapi_types.UUID    `json:"id"`
+	Reason   string                `json:"reason"`
+	Snapshot *string               `json:"snapshot,omitempty"`
+	Source   *HomeRepairTaskSource `json:"source,omitempty"`
+	Version  int64                 `json:"version"`
 }
 
 // HomeRepairTaskAction defines model for HomeRepairTask.Action.
 type HomeRepairTaskAction string
+
+// HomeRepairTaskSource defines model for HomeRepairTask.Source.
+type HomeRepairTaskSource string
 
 // ImportColumn One column of the uploaded file, described well enough to map it without opening the file elsewhere.
 type ImportColumn struct {
@@ -53937,9 +53990,13 @@ type ActivateHomeRepairJSONBody struct {
 
 // PreviewHomeRepairJSONBody defines parameters for PreviewHomeRepair.
 type PreviewHomeRepairJSONBody struct {
-	After *openapi_types.UUID `json:"after,omitempty"`
-	Limit int                 `json:"limit"`
+	After  *openapi_types.UUID              `json:"after,omitempty"`
+	Limit  int                              `json:"limit"`
+	Source *PreviewHomeRepairJSONBodySource `json:"source,omitempty"`
 }
+
+// PreviewHomeRepairJSONBodySource defines parameters for PreviewHomeRepair.
+type PreviewHomeRepairJSONBodySource string
 
 // ResetDataJSONBody defines parameters for ResetData.
 type ResetDataJSONBody struct {

@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -309,6 +310,10 @@ func (o Offer) Approved() bool { return o.Status == approvalStatusApproved }
 // OffersForTx reads the offers of this kind against this target, LOCKED, for
 // a caller that must not act around one still waiting as well as one refused.
 func (s *Service) OffersForTx(ctx context.Context, tx pgx.Tx, kind string, targetID ids.UUID) ([]Offer, error) {
+	return offersAtTx(ctx, tx, kind, targetID, s.now())
+}
+
+func offersAtTx(ctx context.Context, tx pgx.Tx, kind string, targetID ids.UUID, now time.Time) ([]Offer, error) {
 	if err := storekit.LockWriteIdentity(ctx, tx, "approval_offers", kind+":"+targetID.String()); err != nil {
 		return nil, err
 	}
@@ -325,7 +330,6 @@ func (s *Service) OffersForTx(ctx context.Context, tx pgx.Tx, kind string, targe
 	}
 	defer rows.Close()
 
-	now := s.now()
 	var out []Offer
 	for rows.Next() {
 		held := row{Kind: kind}

@@ -18,9 +18,10 @@ import (
 type homeRepairAction string
 
 const (
-	repairArchiveReminder homeRepairAction = "archive_automatic_reminder"
-	repairHumanReview     homeRepairAction = "human_review"
-	repairLeaveCurrent    homeRepairAction = "leave_current"
+	repairWithdrawProposal homeRepairAction = "withdraw_proposal"
+	repairArchiveReminder  homeRepairAction = "archive_automatic_reminder"
+	repairHumanReview      homeRepairAction = "human_review"
+	repairLeaveCurrent     homeRepairAction = "leave_current"
 )
 
 type homeRepairTaskDecision struct {
@@ -71,23 +72,9 @@ func homeRepairTaskDecisionTx(ctx context.Context, tx pgx.Tx, task activities.Ho
 		decision.Reason = "source_rule_not_verified"
 		return decision, nil
 	}
-	reason, err := commitmentAdmissionForDue(ctx, tx, Commitment{
+	var err error
+	decision.Action, decision.Reason, err = homeRepairCommitmentAdmissionTx(ctx, tx, Commitment{
 		SourceActivityID: *task.SourceID, Seat: task.AssigneeID, AsOf: asOf,
-	}, task.DueAt)
-	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
-		decision.Reason = string(activities.CommitmentSourceUnavailable)
-		return decision, nil
-	}
-	if err != nil {
-		return decision, err
-	}
-	decision.Reason = string(reason)
-	switch reason {
-	case activities.CommitmentCurrent:
-		decision.Action = repairLeaveCurrent
-		decision.Reason = "current_work"
-	case activities.CommitmentHistorical, activities.CommitmentBeforeBaseline, activities.CommitmentMeetingCancelled:
-		decision.Action = repairArchiveReminder
-	}
-	return decision, nil
+	}, task.DueAt, repairArchiveReminder)
+	return decision, err
 }

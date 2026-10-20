@@ -4,6 +4,7 @@
 package approvals
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -96,4 +97,37 @@ func repairProposal(ctx context.Context, tx pgx.Tx, candidate row) (RepairPropos
 	err = tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM audit_log WHERE entity_type='approval' AND entity_id=@id AND action='create' AND actor_type IN ('system','agent'))
  AND NOT EXISTS (SELECT 1 FROM audit_log WHERE entity_type='approval' AND entity_id=@id AND actor_type='human')`, pgx.NamedArgs{"id": candidate.ID}).Scan(&item.Pristine)
 	return item, err
+}
+
+// DuplicateRepairProposalTx retains the oldest identical pending offer under the staging lock.
+func DuplicateRepairProposalTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, asOf time.Time) (bool, error) {
+	if _, err := RepairProposalTx(ctx, tx, id, asOf, false); err != nil {
+		return false, err
+	}
+	candidate, err := get(ctx, tx, id)
+	if err != nil || candidate.TargetID == nil {
+		return false, err
+	}
+	offers, err := offersAtTx(ctx, tx, candidate.Kind, *candidate.TargetID, asOf)
+	if err != nil {
+		return false, err
+	}
+	for _, offer := range offers {
+		if offer.Pending() && bytes.Equal(offer.Change, candidate.ProposedChange) {
+			return offer.ID != candidate.ID, nil
+		}
+	}
+	return false, nil
+}
+
+// WithdrawReviewedTx preserves an edited or decided proposal after the review was made.
+func WithdrawReviewedTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, snapshot, reason string, asOf time.Time) (bool, error) {
+	proposal, err := RepairProposalTx(ctx, tx, id, asOf, true)
+	if err != nil {
+		return false, err
+	}
+	if !proposal.Pristine || proposal.Snapshot != snapshot {
+		return false, apperrors.ErrConflict
+	}
+	return withdrawInTx(ctx, tx, id, reason)
 }

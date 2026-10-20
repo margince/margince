@@ -782,6 +782,7 @@ paths:
               properties:
                 limit: {type: integer, minimum: 1, maximum: 1000}
                 after: {type: string, format: uuid}
+                source: {type: string, enum: [task, approval], default: task}
       responses:
         '200':
           description: Exact reviewed identities, dispositions and rule version. Use the last identity to read the next page.
@@ -52723,12 +52724,13 @@ components:
     HomeRepairReview:
       type: object
       additionalProperties: false
-      required: [tasks, digest, rule_version, limit, as_of]
+      required: [tasks, digest, rule_version, limit, as_of, counts]
       properties:
         tasks:
           type: array
           maxItems: 1000
           items: {$ref: '#/components/schemas/HomeRepairTask'}
+        counts: {$ref: '#/components/schemas/HomeRepairCounts'}
         digest: {type: string, minLength: 64, maxLength: 64}
         rule_version: {type: string}
         limit: {type: integer, minimum: 0, maximum: 1000}
@@ -52739,11 +52741,23 @@ components:
       required: [id, version, action, reason]
       properties:
         id: {type: string, format: uuid}
+        source: {type: string, enum: [task, approval]}
+        snapshot: {type: string, minLength: 64, maxLength: 64}
         version: {type: integer, format: int64}
         action:
           type: string
-          enum: [archive_automatic_reminder, human_review, leave_current]
+          enum: [archive_automatic_reminder, withdraw_proposal, human_review, leave_current]
         reason: {type: string}
+
+    HomeRepairCounts:
+      type: object
+      additionalProperties: false
+      required: [archive, withdraw, review, keep]
+      properties:
+        archive: {type: integer, minimum: 0}
+        withdraw: {type: integer, minimum: 0}
+        review: {type: integer, minimum: 0}
+        keep: {type: integer, minimum: 0}
 
     DataTaskControl:
       type: object
