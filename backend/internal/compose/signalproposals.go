@@ -40,6 +40,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -163,13 +164,14 @@ func readContradictions(ctx context.Context, tx pgx.Tx, now time.Time) ([]contra
 	// ended in three conversations is not three questions — staging once per
 	// signal made each pass supersede the last, leaving whichever row happened
 	// to be first standing and the rest never asked about at all.
-	rows, err := tx.Query(ctx, `
+	args := []any{lifecyclereview.LiveStages()}
+	rows, err := tx.Query(ctx, storekit.SQLf(`
 		SELECT DISTINCT ON (o.id) o.id, o.lifecycle, s.id, s.summary
 		  FROM signal s
 		  JOIN company o ON o.id = s.resolved_company_id AND o.archived_at IS NULL
 		 WHERE s.kind = '`+signalKindContractEnded+`' AND s.status = 'open'
-		   AND s.archived_at IS NULL
-		 ORDER BY o.id, s.detected_at DESC, s.id DESC`)
+		   AND s.archived_at IS NULL AND o.lifecycle = ANY($%d)
+		 ORDER BY o.id, s.detected_at DESC, s.id DESC`, len(args)), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +202,7 @@ func readContradictions(ctx context.Context, tx pgx.Tx, now time.Time) ([]contra
 			return nil, err
 		}
 		if lifecyclereview.Actionable(finding) {
-			account.SignalID, account.Summary = finding.SignalID, finding.Quote
+			account.SignalID, account.Summary = finding.SignalID, finding.Summary
 			account.Finding = finding
 			kept = append(kept, account)
 		}
@@ -227,7 +229,7 @@ func (p *SignalProposer) offerStageChange(ctx context.Context, said approvalSumm
 		CurrentStage:  account.Stage,
 		ProposedStage: lifecycleEnded,
 		SignalID:      account.SignalID,
-		Because:       account.Summary,
+		Because:       approvals.SanitizeSummary(account.Summary),
 	})
 	if err != nil {
 		return false, fmt.Errorf("compose: encoding the lifecycle proposal: %w", err)
@@ -242,7 +244,7 @@ func (p *SignalProposer) offerStageChange(ctx context.Context, said approvalSumm
 		TargetID:       account.CompanyID.UUID,
 		Summary:        fmt.Sprintf(said.contractEndedMove, account.Stage, lifecycleEnded),
 		JoinPending:    true,
-		Evidence:       []approvals.Evidence{{Snippet: account.Finding.Quote, SourceType: "activity", SourceID: account.Finding.SourceID}},
+		Evidence:       []approvals.Evidence{{Snippet: approvals.SanitizeSummary(account.Summary), SourceType: "signal", SourceID: account.SignalID}},
 	})
 	if err != nil {
 		return false, err

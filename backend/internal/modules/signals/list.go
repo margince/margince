@@ -123,7 +123,7 @@ func ListSignalsTx(ctx context.Context, tx pgx.Tx, in ListSignalsInput) ([]crmco
 	return signals, page, nil
 }
 
-// The company lock holds new references; these row locks hold existing evidence.
+// The company lock holds new references. Existing signals can reopen or change kind, so all are locked.
 func LockCompanySignalsTx(ctx context.Context, tx pgx.Tx, company ids.CompanyID) error {
 	if err := auth.Require(ctx, "signal", principal.ActionRead); err != nil {
 		return err
@@ -134,4 +134,32 @@ func LockCompanySignalsTx(ctx context.Context, tx pgx.Tx, company ids.CompanyID)
 	args := []any{company}
 	_, err := tx.Exec(ctx, `SELECT s.id FROM signal s WHERE `+OfCompanyWhere(len(args))+` ORDER BY s.id FOR UPDATE`, args...)
 	return err
+}
+
+// Completeness reports no private contents, but prevents a partial read from proving an account-wide claim.
+// CompanySignalsCompleteTx withholds certainty when a visible account contains private signals.
+func CompanySignalsCompleteTx(ctx context.Context, tx pgx.Tx, company ids.CompanyID, kind string) (bool, error) {
+	if err := auth.Require(ctx, "signal", principal.ActionRead); err != nil {
+		return false, err
+	}
+	if err := auth.EnsureLinkTarget(ctx, tx, "company", company.UUID); err != nil {
+		return false, err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	companyPos, kindPos := arg(company), arg(kind)
+	scope, err := auth.SignalScopeClause(ctx, "s", arg)
+	if err != nil {
+		return false, err
+	}
+	if scope == "" {
+		return true, nil
+	}
+	query := storekit.SQLf(`SELECT coalesce(bool_and(coalesce((%s), false)), true) FROM signal s
+ WHERE %s AND s.kind = $%d AND s.status = 'open' AND s.archived_at IS NULL`, scope, OfCompanyWhere(companyPos), kindPos)
+	var complete bool
+	if err := tx.QueryRow(ctx, query, args...).Scan(&complete); err != nil {
+		return false, err
+	}
+	return complete, nil
 }

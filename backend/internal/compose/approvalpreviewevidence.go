@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -101,12 +102,20 @@ func (r approvalPreviewReader) signalActivityEvidence(ctx context.Context, signa
 		if err != nil {
 			return nil, apperrors.ErrInvalidArgument
 		}
-		sourceType := crmcontracts.ApprovalEvidenceSourceType(recordTypeActivity)
-		item := crmcontracts.ApprovalEvidence{EvidenceSnippet: citation.Snippet, SourceType: &sourceType, SourceId: new(openapi_types.UUID(id))}
-		current, err := r.currentCitation(ctx, item)
+		source, err := r.activities.GetActivityContent(ctx, ids.From[ids.ActivityKind](id), storekit.LiveOnly)
 		if err != nil {
 			return nil, err
 		}
+		if citation.SourceQuote == nil || source.Body == nil {
+			return nil, apperrors.ErrVersionSkew
+		}
+		proof := values.QuoteProof{Start: citation.SourceQuote.Start, End: citation.SourceQuote.End, SHA256: citation.SourceQuote.Sha256}
+		quote, valid := values.VerifyQuote(textlang.CurrentMessage(*source.Body), proof)
+		if !valid {
+			return nil, apperrors.ErrVersionSkew
+		}
+		sourceType := crmcontracts.ApprovalEvidenceSourceType(recordTypeActivity)
+		current := crmcontracts.ApprovalEvidence{EvidenceSnippet: approvals.SanitizeSummary(quote), SourceType: &sourceType, SourceId: new(openapi_types.UUID(id))}
 		out = append(out, current)
 	}
 	return out, nil

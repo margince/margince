@@ -6,7 +6,7 @@ package lifecyclereview
 import (
 	"context"
 	"errors"
-	"strings"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 type Finding struct {
@@ -29,14 +30,17 @@ type Finding struct {
 	SourceID       ids.UUID  `json:"source_id"`
 	SourceVersion  int64     `json:"source_version"`
 	OccurredAt     time.Time `json:"occurred_at"`
-	Quote          string    `json:"quote"`
+	Quote          string    `json:"-"`
+	Summary        string    `json:"-"`
+	QuoteDigest    string    `json:"quote_digest"`
 	Scope          string    `json:"scope"`
 	Workstream     string    `json:"workstream,omitempty"`
 }
 
-func LiveStage(stage string) bool {
-	return stage == "prospect" || stage == "opportunity" || stage == "customer"
-}
+// LiveStages keeps conflict cards and proposal scans on the same account boundary.
+func LiveStages() []string { return []string{"prospect", "opportunity", "customer"} }
+
+func LiveStage(stage string) bool { return slices.Contains(LiveStages(), stage) }
 
 func Revalidate(ctx context.Context, tx pgx.Tx, company ids.CompanyID, signalID ids.UUID, shown *Finding, now time.Time) error {
 	current, err := Read(ctx, tx, company, signalID)
@@ -63,7 +67,7 @@ func Matches(current Finding, shown *Finding) bool {
 	return shown != nil && Actionable(current) && !shown.Incomplete && shown.Scope == current.Scope &&
 		!current.SourceID.IsZero() && current.SignalID == shown.SignalID && current.SignalVersion == shown.SignalVersion &&
 		current.SourceID == shown.SourceID && current.SourceVersion == shown.SourceVersion &&
-		current.Quote == shown.Quote && current.Workstream == shown.Workstream && current.OccurredAt.Equal(shown.OccurredAt)
+		current.QuoteDigest != "" && current.QuoteDigest == shown.QuoteDigest && current.Workstream == shown.Workstream && current.OccurredAt.Equal(shown.OccurredAt)
 }
 
 // Read binds a signal's scope to words its reader can still open.
@@ -76,7 +80,7 @@ func Read(ctx context.Context, tx pgx.Tx, company ids.CompanyID, signalID ids.UU
 }
 
 func readSignalFinding(ctx context.Context, tx pgx.Tx, company ids.CompanyID, signal crmcontracts.Signal) (Finding, error) {
-	finding := Finding{SignalID: ids.UUID(signal.Id), Scope: "unknown"}
+	finding := Finding{SignalID: ids.UUID(signal.Id), Scope: "unknown", Summary: signal.Summary}
 	if signal.Kind != "contract_ended" || signal.Status != "open" ||
 		signal.ResolvedCompanyId == nil || ids.UUID(*signal.ResolvedCompanyId) != company.UUID {
 		return finding, nil
@@ -85,7 +89,7 @@ func readSignalFinding(ctx context.Context, tx pgx.Tx, company ids.CompanyID, si
 		finding.SignalVersion = *signal.Version
 	}
 	for _, evidence := range signal.Evidence {
-		if evidence.SourceType == nil || *evidence.SourceType != "activity" || evidence.SourceId == nil || strings.TrimSpace(evidence.Snippet) == "" {
+		if evidence.SourceType == nil || *evidence.SourceType != "activity" || evidence.SourceId == nil || evidence.SourceQuote == nil {
 			continue
 		}
 		source, err := ids.Parse(*evidence.SourceId)
@@ -99,10 +103,16 @@ func readSignalFinding(ctx context.Context, tx pgx.Tx, company ids.CompanyID, si
 		if err != nil {
 			return finding, err
 		}
-		if activity.Body == nil || !strings.Contains(textlang.CurrentMessage(*activity.Body), evidence.Snippet) {
+		if activity.Body == nil {
 			continue
 		}
-		finding.SourceID, finding.OccurredAt, finding.Quote = source, activity.OccurredAt, evidence.Snippet
+		proof := values.QuoteProof{Start: evidence.SourceQuote.Start, End: evidence.SourceQuote.End, SHA256: evidence.SourceQuote.Sha256}
+		quote, verified := values.VerifyQuote(textlang.CurrentMessage(*activity.Body), proof)
+		if !verified {
+			continue
+		}
+		finding.SourceID, finding.OccurredAt, finding.Quote = source, activity.OccurredAt, quote
+		finding.QuoteDigest = proof.SHA256
 		if activity.Version != nil {
 			finding.SourceVersion = *activity.Version
 		}

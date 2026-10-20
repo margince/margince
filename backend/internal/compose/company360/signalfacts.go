@@ -103,7 +103,7 @@ func readSignalFacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, no
 		if err != nil {
 			return signalFacts{}, err
 		}
-		facts.ContractEnded = true
+		facts.ContractEnded = lifecyclereview.Actionable(finding)
 		if endedSaid != nil {
 			facts.ContractEndedSaid = *endedSaid
 		}

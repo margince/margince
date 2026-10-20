@@ -57,9 +57,12 @@ func TestChangedSourceCannotReleaseACompanyTermination(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := e.Activities.UpdateActivity(e.Admin(), ids.From[ids.ActivityKind](source), activities.UpdateActivityInput{
-		Body: new("Only the Atlas pilot is ending. Support continues."),
+		Body: new("We are ending all business with your company. Correction: only the Atlas pilot is ending; support continues."),
 	}); err != nil {
 		t.Fatal(err)
+	}
+	if proposePass(t, e) != 0 {
+		t.Fatal("changed source context re-staged the old account scope")
 	}
 	after, err := svc.GetWire(reader, proposalID)
 	if err != nil || after.Preview == nil || after.Preview.State != previewStaleState {
@@ -146,6 +149,9 @@ func TestAnActiveAgreementPreventsEndingTheAccount(t *testing.T) {
 			view, err := svc.GetWire(reader, proposal)
 			if err != nil || view.Preview == nil || view.Preview.State != previewStaleState {
 				t.Fatalf("new agreement did not invalidate preview: %+v, %v", view.Preview, err)
+			}
+			if view.Preview.Evidence == nil || len(*view.Preview.Evidence) == 0 || (*view.Preview.Evidence)[0].SourceId == nil {
+				t.Fatal("stale preview lost the currently authorized source citation")
 			}
 			conflicts := view.Preview.Conflicts
 			if conflicts == nil || len(*conflicts) != 1 || (*conflicts)[0].Kind != "active_contract" || !(*conflicts)[0].BlocksApproval {
