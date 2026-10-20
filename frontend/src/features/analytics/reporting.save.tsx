@@ -244,6 +244,9 @@ export function SaveReportingDialog({
                 <Checkbox
                   key={metric}
                   label={metricLabel(metric, t)}
+                  // Which charts a metric brings is in the catalog, so the
+                  // choice waits for it rather than keep cards it cannot judge.
+                  disabled={catalog.data === undefined}
                   checked={metrics.includes(metric)}
                   onChange={(event) =>
                     setMetrics(

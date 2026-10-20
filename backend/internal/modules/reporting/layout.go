@@ -32,6 +32,15 @@ func deriveLayoutBlocks(selection *crmcontracts.ReportingSelection) {
 	selection.Blocks = blocks
 }
 
+// Kinds the evaluation draws as one chart for the whole report: it merges the
+// two SDR series, and owner attainment shows bookings whenever bookings is
+// selected. A card cannot ask for one metric's chart of these.
+var oneChartKinds = []crmcontracts.ReportingBlockKind{"owner_attainment", "sdr_outcomes"}
+
+// metric_reading is the metric details table, which the page always draws
+// below the charts. It is never a chart, so no card can place it.
+const unplacedKind crmcontracts.ReportingBlockKind = "metric_reading"
+
 // cardTarget is what one card draws. Two cards with one target draw the same
 // chart twice, which no reader asked for.
 type cardTarget struct {
@@ -80,12 +89,18 @@ func validateLayout(
 	return nil
 }
 
-// cardTargetOf checks that a card names a chart some selected metric has, and,
-// when it names a metric, that this metric is selected and has that chart.
+// cardTargetOf checks that a card names a chart some selected metric has. A
+// card that names a metric needs that metric selected and holding the chart.
 func cardTargetOf(
 	card crmcontracts.ReportingCard,
 	metricBlocks map[crmcontracts.ReportingMetricID][]crmcontracts.ReportingBlockKind,
 ) (cardTarget, error) {
+	if card.Kind == unplacedKind {
+		return cardTarget{}, refuse("selection.layout", "invalid", "the metric details table is not a card")
+	}
+	if card.Metric != nil && slices.Contains(oneChartKinds, card.Kind) {
+		return cardTarget{}, refuse("selection.layout", "invalid", "this chart covers every selected metric, so place it without one")
+	}
 	if card.Metric != nil {
 		if !slices.Contains(metricBlocks[*card.Metric], card.Kind) {
 			return cardTarget{}, refuse("selection.layout", "invalid", "place a chart of a selected metric that has it")

@@ -23,7 +23,7 @@ func card(id string, kind crmcontracts.ReportingBlockKind, metric crmcontracts.R
 // Two selected metrics that both have a trend chart, and one that has a stage
 // chart.
 var layoutMetrics = map[crmcontracts.ReportingMetricID][]crmcontracts.ReportingBlockKind{
-	"bookings_won":  {"bookings_trend", "owner_attainment"},
+	"bookings_won":  {"bookings_trend", "owner_attainment", "metric_reading"},
 	"open_pipeline": {"bookings_trend", "stage_distribution"},
 }
 
@@ -61,6 +61,8 @@ func TestALayoutRefusesWhatItCannotDraw(t *testing.T) {
 		{"a kind no metric has", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{card("a", "sdr_outcomes", "")}}}},
 		{"a metric without that kind", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{card("a", "stage_distribution", "bookings_won")}}}},
 		{"the same chart twice", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{card("a", "bookings_trend", "bookings_won"), card("b", "bookings_trend", "bookings_won")}}}},
+		{"the metric details table", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{card("a", "metric_reading", "")}}}},
+		{"one metric's owner attainment", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{card("a", "owner_attainment", "bookings_won")}}}},
 		{"a kind for every metric beside one metric's", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{card("a", "bookings_trend", "bookings_won"), card("b", "bookings_trend", "")}}}},
 	}
 	for _, c := range cases {

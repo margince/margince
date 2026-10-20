@@ -8,16 +8,31 @@ type BlockKind = Card["kind"];
 type MetricId = components["schemas"]["ReportingMetricID"];
 export type ReportingLayout = Section[];
 
+// Mirrors the reporting service's oneChartKinds and unplacedKind (layout.go):
+// two kinds the evaluation draws once for the whole report, and the metric
+// details table, which the page always draws below the charts.
+const ONE_CHART_KINDS: ReadonlySet<BlockKind> = new Set([
+  "owner_attainment",
+  "sdr_outcomes",
+]);
+const UNPLACED_KIND: BlockKind = "metric_reading";
+
+/** The service's limits, so the editor offers no step it would refuse. */
+export const MAX_SECTIONS = 8;
+export const MAX_CARDS = 20;
+
 /** A selection's layout, or one untitled section of full cards in block order. */
 export function layoutOf(selection: Selection): ReportingLayout {
   if (selection.layout) return selection.layout;
   return [
     {
-      cards: selection.blocks.map((kind) => ({
-        id: kind.replaceAll("_", "-"),
-        kind,
-        width: "full",
-      })),
+      cards: selection.blocks
+        .filter((kind) => kind !== UNPLACED_KIND)
+        .map((kind) => ({
+          id: kind.replaceAll("_", "-"),
+          kind,
+          width: "full",
+        })),
     },
   ];
 }
@@ -61,14 +76,22 @@ export function cardChoices(
 ): CardChoice[] {
   const placed = layout.flatMap((section) => section.cards);
   const choices: CardChoice[] = [];
-  const kinds = [...new Set([...metricBlocks.values()].flat())];
+  if (placed.length >= MAX_CARDS) return [];
+  const kinds = [...new Set([...metricBlocks.values()].flat())].filter(
+    (kind) => kind !== UNPLACED_KIND,
+  );
   for (const kind of kinds) {
     const owners = [...metricBlocks].filter(([, blocks]) =>
       blocks.includes(kind),
     );
     const sameKind = placed.filter((card) => card.kind === kind);
     if (sameKind.length === 0) choices.push({ kind });
-    if (owners.length < 2 || sameKind.some((card) => !card.metric)) continue;
+    if (
+      owners.length < 2 ||
+      ONE_CHART_KINDS.has(kind) ||
+      sameKind.some((card) => !card.metric)
+    )
+      continue;
     for (const [metric] of owners) {
       if (!sameKind.some((card) => card.metric === metric))
         choices.push({ kind, metric });

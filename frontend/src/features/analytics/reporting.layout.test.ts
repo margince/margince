@@ -90,6 +90,43 @@ describe("a report's layout", () => {
     ]);
   });
 
+  it("offers no metric details card and no one-metric chart of a kind drawn once", () => {
+    const metricBlocks = new Map<
+      components["schemas"]["ReportingMetricID"],
+      components["schemas"]["ReportingBlockKind"][]
+    >([
+      ["bookings_won", ["owner_attainment", "metric_reading"]],
+      ["qualified_pipeline_created", ["owner_attainment"]],
+    ]);
+    expect(cardChoices([{ cards: [] }], metricBlocks)).toEqual([
+      { kind: "owner_attainment" },
+    ]);
+  });
+
+  it("offers nothing once twenty cards are placed", () => {
+    const full: ReportingLayout = [
+      {
+        cards: Array.from({ length: 20 }, (_, n) => ({
+          id: `card-${n}`,
+          kind: "stage_age" as const,
+          width: "half" as const,
+        })),
+      },
+    ];
+    const metricBlocks = new Map<
+      components["schemas"]["ReportingMetricID"],
+      components["schemas"]["ReportingBlockKind"][]
+    >([["bookings_won", ["bookings_trend"]]]);
+    expect(cardChoices(full, metricBlocks)).toEqual([]);
+  });
+
+  it("leaves the metric details table out of an old report's cards", () => {
+    const layout = layoutOf({
+      blocks: ["metric_reading", "stage_age"],
+    } as components["schemas"]["ReportingSelection"]);
+    expect(layout[0]?.cards.map((card) => card.kind)).toEqual(["stage_age"]);
+  });
+
   it("moves a removed section's cards to the section before it", () => {
     expect(
       layoutEdits.removeSection(twoSections, 1)[0]?.cards.map((c) => c.id),

@@ -7,6 +7,7 @@ import { type Translator, useT } from "../../i18n";
 import {
   type CardChoice,
   layoutEdits as edit,
+  MAX_SECTIONS,
   type ReportingLayout,
 } from "./reporting.layout";
 import { blockLabel, metricLabel } from "./reporting.model";
@@ -83,6 +84,7 @@ export function LayoutEditor({
       <div>
         <Button
           variant="ghost"
+          disabled={layout.length >= MAX_SECTIONS}
           onClick={() => onChange(edit.addSection(layout))}
         >
           {t("reporting.addSection")}
