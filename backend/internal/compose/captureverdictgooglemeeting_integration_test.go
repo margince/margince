@@ -79,8 +79,8 @@ func (o *owedEnv) settledAsRoleMailbox(t *testing.T) {
 
 // A sender types its own From, so the rule reads Gmail's authentication of
 // it. A forged notes mail is judged like any other, and a noise answer it
-// earns does not reach the genuine notes that follow.
-func TestAForgedNotesMailIsJudgedAndItsNoiseSparesTheGenuineOnes(t *testing.T) {
+// earns does not reach the authenticated notes that follow.
+func TestAForgedNotesMailIsJudgedAndItsNoiseSparesAuthenticatedNotes(t *testing.T) {
 	o := setupOwed(t)
 	forged := o.notesMail(t, false)
 
@@ -93,18 +93,18 @@ func TestAForgedNotesMailIsJudgedAndItsNoiseSparesTheGenuineOnes(t *testing.T) {
 		t.Fatal("a forged notes mail took the exemption; the From alone decided it")
 	}
 
-	genuine := o.notesMail(t, true)
+	authentic := o.notesMail(t, true)
 	again := o.judgeAsNoise(t)
 
-	if !o.visible(t, genuine) {
+	if !o.visible(t, authentic) {
 		t.Fatal("a stored noise verdict hid Google's authenticated meeting notes")
 	}
 	if again.calls != 0 {
-		t.Fatalf("the genuine notes mail reached the model (%d calls)", again.calls)
+		t.Fatalf("the authenticated notes mail reached the model (%d calls)", again.calls)
 	}
 	// Asked again rather than filed under the stored noise answer.
 	o.settledAsRoleMailbox(t)
 	if o.visible(t, forged) {
-		t.Fatal("settling the genuine sender released the forged mail")
+		t.Fatal("settling the authenticated sender released the forged mail")
 	}
 }

@@ -55,15 +55,11 @@ func googleMeetingMailTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID, em
 	return authenticated, nil
 }
 
-// googleMeetingMailSpared is the noiseMailScope clause that keeps a model's
-// noise verdict off authenticated Google meeting mail, including a verdict
-// stored before this rule existed. A seat's own keep_out (p.machine false)
-// still reaches it.
-//
-// The addresses are formatted in as literals because the scope is one fragment
-// shared by queries with different placeholder numbering. They are the
-// constants above, never request input; TestGoogleMeetingSendersAreSQLSafe
-// holds them to the characters an address literal can carry.
+// googleMeetingMailSpared keeps a model's noise verdict, stored ones included,
+// off authenticated Google meeting mail; a seat's keep_out (p.machine false)
+// still reaches it. The addresses are literals because the scope is shared by
+// queries with different placeholder numbering. TestGoogleMeetingSendersAreSQLSafe
+// holds them to characters a literal can carry.
 func googleMeetingMailSpared() string {
 	quoted := make([]string, len(googleMeetingSenders))
 	for i, address := range googleMeetingSenders {

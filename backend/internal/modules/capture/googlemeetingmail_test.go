@@ -31,9 +31,9 @@ func TestGoogleMeetingMailNeedsTheListedAddressAndItsAuthentication(t *testing.T
 	}
 }
 
-// googleMeetingMailSpared formats the addresses into SQL, so each one must be
-// stored in the folded form activity.counterparty_email holds and carry no
-// character that could end the literal.
+// googleMeetingMailSpared formats the addresses into SQL. Each one must be in
+// the folded form activity.counterparty_email holds, with no character that
+// could end the literal.
 func TestGoogleMeetingSendersAreSQLSafe(t *testing.T) {
 	safe := regexp.MustCompile(`^[a-z0-9.-]+@google\.com$`)
 	for _, address := range googleMeetingSenders {
