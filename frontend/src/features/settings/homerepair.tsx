@@ -18,10 +18,7 @@ import type { MessageKey } from "../../i18n/en";
 import { useActivity } from "../../lib/activityread";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
-import { ApprovalDetailModal } from "../automations/approvaleditor";
-import { DealSuggestionCard, suggestedName } from "../deals/dealsuggestion";
-import { useDealSuggestion } from "../deals/dealsuggestions.queries";
-import { OpenActivityDrawer } from "../voice-knowledge/activitydrawer";
+import { useReviewActions } from "../../lib/reviewactions";
 
 type Review = components["schemas"]["HomeRepairReview"];
 type Task = components["schemas"]["HomeRepairTask"];
@@ -35,6 +32,7 @@ const actionLabels: Record<Task["action"], MessageKey> = {
 };
 export const HOME_REPAIR_REASON_LABELS: Record<string, MessageKey> = {
   classification_not_attempted: "homeRepair.reason.classificationNotAttempted",
+  classification_declined: "homeRepair.reason.classificationDeclined",
   classification_uncertain: "homeRepair.reason.classificationUncertain",
   human_changed_or_provenance_missing:
     "homeRepair.reason.classificationAdopted",
@@ -66,19 +64,19 @@ export const HOME_REPAIR_REASON_LABELS: Record<string, MessageKey> = {
 function RepairTask({ task }: Readonly<{ task: Task }>) {
   const t = useT();
   const activity = useActivity(task.id);
+  const actions = useReviewActions();
   const [open, setOpen] = useState(false);
   return (
     <>
       <RepairItemRow
         task={task}
         label={activity.data?.subject || t("homeRepair.unnamed")}
-        disabled={!activity.data}
+        disabled={!activity.data || !actions}
         onInspect={() => setOpen(true)}
       />
-      {open && (
-        <OpenActivityDrawer
+      {open && actions && (
+        <actions.OpenActivityDrawer
           activityId={task.id}
-          activity={activity.data}
           zone={viewerZone()}
           onClose={() => setOpen(false)}
         />
@@ -107,16 +105,8 @@ function RepairItemRow({
         task.after_verdict &&
         task.before_verdict !== task.after_verdict
           ? t("homeRepair.classificationChange", {
-              before: t(
-                task.before_verdict === "asks_us"
-                  ? "homeRepair.asks"
-                  : "homeRepair.informs",
-              ),
-              after: t(
-                task.after_verdict === "asks_us"
-                  ? "homeRepair.asks"
-                  : "homeRepair.informs",
-              ),
+              before: t(verdictLabel(task.before_verdict)),
+              after: t(verdictLabel(task.after_verdict)),
             })
           : t(
               HOME_REPAIR_REASON_LABELS[task.reason] ??
@@ -135,6 +125,7 @@ function RepairItemRow({
 
 function RepairApproval({ task }: Readonly<{ task: Task }>) {
   const t = useT();
+  const actions = useReviewActions();
   const [open, setOpen] = useState(false);
   const detail = useQuery({
     queryKey: ["approval", task.id],
@@ -148,14 +139,16 @@ function RepairApproval({ task }: Readonly<{ task: Task }>) {
       <RepairItemRow
         task={task}
         label={detail.data?.summary || t("homeRepair.unnamed")}
-        disabled={!detail.data}
+        disabled={!detail.data || !actions}
         onInspect={() => setOpen(true)}
       />
-      <ApprovalDetailModal
-        approvalId={task.id}
-        open={open}
-        onClose={() => setOpen(false)}
-      />
+      {actions && (
+        <actions.ApprovalDetailModal
+          approvalId={task.id}
+          open={open}
+          onClose={() => setOpen(false)}
+        />
+      )}
     </>
   );
 }
@@ -164,34 +157,43 @@ function RepairSuggestion({ task }: Readonly<{ task: Task }>) {
   const t = useT();
   const heading = useId();
   const [open, setOpen] = useState(false);
-  const detail = useDealSuggestion(task.id);
-  const suggestion = detail.error ? undefined : detail.data;
-  const label = suggestion
-    ? suggestedName(suggestion, t)
-    : t("homeRepair.unnamed");
-  return (
-    <>
+  const actions = useReviewActions();
+  if (!actions)
+    return (
       <RepairItemRow
         task={task}
-        label={label}
-        disabled={!suggestion}
+        label={t("homeRepair.unnamed")}
+        disabled
         onInspect={() => setOpen(true)}
       />
-      <ErrorLine error={detail.error} />
-      {open && suggestion && (
-        <Modal
-          open
-          onClose={() => setOpen(false)}
-          labelledBy={heading}
-          intent="form"
-        >
-          <Heading size="large" id={heading} className="modal-title">
-            {label}
-          </Heading>
-          <DealSuggestionCard suggestion={suggestion} />
-        </Modal>
+    );
+  return (
+    <actions.DealSuggestionReader id={task.id}>
+      {({ suggestion, label, error }) => (
+        <>
+          <RepairItemRow
+            task={task}
+            label={label || t("homeRepair.unnamed")}
+            disabled={!suggestion}
+            onInspect={() => setOpen(true)}
+          />
+          <ErrorLine error={error} />
+          {open && suggestion && (
+            <Modal
+              open
+              onClose={() => setOpen(false)}
+              labelledBy={heading}
+              intent="form"
+            >
+              <Heading size="large" id={heading} className="modal-title">
+                {label}
+              </Heading>
+              <actions.DealSuggestionCard suggestion={suggestion} />
+            </Modal>
+          )}
+        </>
       )}
-    </>
+    </actions.DealSuggestionReader>
   );
 }
 
@@ -204,9 +206,17 @@ export function HomeRepairControls({
   const client = useQueryClient();
   const plural = usePlural();
   const mayRetireSuggestions = useCanWrite("deal", "create");
+  const mayReclassify = useCanWrite("activity", "update");
+  const mayArchiveTasks = useCanWrite("activity", "delete");
   const [source, setSource] = useState<
     "task" | "approval" | "suggestion" | "verdict"
   >("task");
+  const sourcePermission = {
+    task: mayArchiveTasks,
+    approval: true,
+    suggestion: mayRetireSuggestions,
+    verdict: mayReclassify,
+  }[source];
   const preview = useMutation({
     mutationFn: async ({
       after,
@@ -311,27 +321,37 @@ export function HomeRepairControls({
               ),
             )}
           </SettingList>
-          {canActivate && source === "suggestion" && !mayRetireSuggestions && (
-            <p>{t("homeRepair.suggestionPermission")}</p>
+          {canActivate && !sourcePermission && (
+            <p>{t(permissionLabel(source))}</p>
           )}
-          {canActivate &&
-            (source !== "suggestion" || mayRetireSuggestions) &&
-            changeCount > 0 && (
-              <ActionRow>
-                <Button
-                  pending={activate.isPending}
-                  disabled={preview.isPending || version < 1}
-                  onClick={() => activate.mutate(review)}
-                >
-                  {plural("homeRepair.apply", changeCount, {
-                    count: formatNumber(changeCount, locale),
-                  })}
-                </Button>
-              </ActionRow>
-            )}
+          {canActivate && sourcePermission && changeCount > 0 && (
+            <ActionRow>
+              <Button
+                pending={activate.isPending}
+                disabled={preview.isPending || version < 1}
+                onClick={() => activate.mutate(review)}
+              >
+                {plural("homeRepair.apply", changeCount, {
+                  count: formatNumber(changeCount, locale),
+                })}
+              </Button>
+            </ActionRow>
+          )}
         </>
       )}
       {activate.isSuccess && <p>{t("homeRepair.started")}</p>}
     </>
   );
+}
+
+function verdictLabel(verdict: string) {
+  if (verdict === "asks_us") return "homeRepair.asks";
+  if (verdict === "informs_us") return "homeRepair.informs";
+  return "homeRepair.reason.unverified";
+}
+
+function permissionLabel(source: string): MessageKey {
+  if (source === "verdict") return "homeRepair.classificationPermission";
+  if (source === "task") return "homeRepair.taskPermission";
+  return "homeRepair.suggestionPermission";
 }

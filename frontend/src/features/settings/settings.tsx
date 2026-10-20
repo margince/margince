@@ -2,6 +2,11 @@ import { type ReactNode, useEffect } from "react";
 import { CaptureSettingsCard } from "../../components/capture-settings";
 import { Callout } from "../../design-system/callout";
 import { useT } from "../../i18n";
+import {
+  type ReviewActions,
+  ReviewActionsContext,
+  useReviewActions,
+} from "../../lib/reviewactions";
 import { navigateReplacing, type Route } from "../../lib/router";
 import { AiBudgetCard } from "../ai/ai-admin";
 import { ModelPricesCard } from "../ai/ai-price-sync";
@@ -334,7 +339,11 @@ function IntegrationsTab() {
  * groups moved its bookmark too. `settingsRouteTarget` still answers every
  * address the product minted, rewriting it once on arrival.
  */
-export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
+export function SettingsScreen({
+  route,
+  reviewActions,
+}: Readonly<{ route: Route; reviewActions?: ReviewActions }>) {
+  const inheritedReviewActions = useReviewActions();
   const t = useT();
   const target = settingsRouteTarget(route);
   const visible = useVisibleSettingsPages();
@@ -434,7 +443,9 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
             {t("settings.readOnlyPage")}
           </Callout>
         )}
-        {tabContent(active.id, route)}
+        <ReviewActionsContext value={reviewActions ?? inheritedReviewActions}>
+          {tabContent(active.id, route)}
+        </ReviewActionsContext>
       </div>
     </div>
   );

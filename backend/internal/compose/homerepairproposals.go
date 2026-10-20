@@ -19,7 +19,7 @@ import (
 )
 
 func homeRepairProposalDecisionTx(ctx context.Context, tx pgx.Tx, proposal approvals.RepairProposal, asOf time.Time, forDecision bool) (homeRepairTaskRef, error) {
-	item := homeRepairTaskRef{ID: proposal.ID.UUID, Source: "approval", Snapshot: proposal.Snapshot, Action: repairHumanReview, Reason: "source_rule_not_verified"}
+	item := homeRepairTaskRef{ID: proposal.ID.UUID, Source: repairSourceApproval, Snapshot: proposal.Snapshot, Action: repairHumanReview, Reason: "source_rule_not_verified"}
 	if !proposal.Pristine {
 		item.Reason = "human_adoption_not_excluded"
 		return item, nil
@@ -48,7 +48,7 @@ func homeRepairProposalDecisionTx(ctx context.Context, tx pgx.Tx, proposal appro
 
 func homeRepairCommitmentProposalTx(ctx context.Context, tx pgx.Tx, proposal approvals.RepairProposal, item homeRepairTaskRef, asOf time.Time, forDecision bool) (homeRepairTaskRef, error) {
 	var staged CommitmentTaskProposal
-	if err := json.Unmarshal(proposal.Change, &staged); err != nil || staged.SourceActivityID.IsZero() || proposal.TargetID == nil || staged.SourceActivityID != *proposal.TargetID {
+	if !decodeRepairCommitment(proposal, &staged) {
 		return item, nil
 	}
 	var due *time.Time
@@ -109,10 +109,14 @@ func homeRepairCommitmentAdmissionTx(ctx context.Context, tx pgx.Tx, commitment 
 	}
 	switch reason {
 	case activities.CommitmentCurrent:
-		return repairLeaveCurrent, "current_work", nil
+		return repairLeaveCurrent, repairCurrentWork, nil
 	case activities.CommitmentHistorical, activities.CommitmentBeforeBaseline, activities.CommitmentMeetingCancelled:
 		return retire, string(reason), nil
 	default:
 		return repairHumanReview, string(reason), nil
 	}
+}
+
+func decodeRepairCommitment(proposal approvals.RepairProposal, staged *CommitmentTaskProposal) bool {
+	return json.Unmarshal(proposal.Change, staged) == nil && !staged.SourceActivityID.IsZero() && proposal.TargetID != nil && staged.SourceActivityID == *proposal.TargetID
 }

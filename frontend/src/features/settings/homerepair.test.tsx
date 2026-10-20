@@ -5,8 +5,9 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { suggestion } from "../../testing/dealsuggestion.fixture";
 import { meFixture } from "../../testing/mefixture";
-import { suggestion } from "../deals/dealsuggestion.fixture";
+import { jsonResponse, render } from "../../testing/settings.testkit";
 import { HomeRepairControls } from "./homerepair";
 import {
   classificationRepairReview,
@@ -14,13 +15,14 @@ import {
   repairReview as review,
   suggestionRepairReview,
 } from "./homerepair.fixtures";
-import { jsonResponse, render } from "./settings.testkit";
 
 function serve(
   status = 204,
   payload = review,
   previews: unknown[] = [],
   mayRetire = true,
+  mayReclassify = true,
+  mayArchive = true,
 ) {
   const writes: unknown[] = [];
   vi.stubGlobal(
@@ -30,7 +32,16 @@ function serve(
       if (request.url.endsWith("/me")) {
         return jsonResponse(
           meFixture({
-            allow: { deal: mayRetire ? ["read", "create"] : ["read"] },
+            allow: {
+              deal: mayRetire ? ["read", "create"] : ["read"],
+              activity: mayArchive
+                ? mayReclassify
+                  ? ["read", "update", "delete"]
+                  : ["read", "delete"]
+                : mayReclassify
+                  ? ["read", "update"]
+                  : ["read"],
+            },
           }),
         );
       }
@@ -199,4 +210,33 @@ it("shows the exact classification change and submits its server review token", 
     ]),
   );
   expect(previews).toEqual([{ limit: 25, source: "verdict" }]);
+});
+
+it("preserves read-only classification review without offering a refused write", async () => {
+  serve(204, classificationRepairReview, [], true, false);
+  render(<HomeRepairControls version={7} canActivate />);
+  fireEvent.click(screen.getByRole("button", { name: "Message results" }));
+  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
+  expect(
+    await screen.findByText(
+      "Activity editing permission is required to change message results.",
+    ),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Apply 1 reviewed change" }),
+  ).not.toBeInTheDocument();
+});
+
+it("keeps task review readable without offering an unauthorized archive", async () => {
+  serve(204, review, [], true, true, false);
+  render(<HomeRepairControls version={7} canActivate />);
+  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
+  expect(
+    await screen.findByText(
+      "Activity archive permission is required to archive reviewed tasks.",
+    ),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: /Apply .* reviewed change/ }),
+  ).not.toBeInTheDocument();
 });

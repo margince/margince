@@ -4,8 +4,9 @@
 package activities
 
 import (
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // Events describe requested fields; audit images describe the persisted row.

@@ -25,6 +25,11 @@ import (
 
 const homeRepairTaskID = "core/1792501453_home_attention_repair"
 
+const (
+	repairRunID       = "run_id"
+	repairSourceField = "source"
+)
+
 func homeRepairDataTask(pool *pgxpool.Pool, now func() time.Time) datatask.Task {
 	return datatask.Task{
 		ID: homeRepairTaskID, Version: 1, Title: "Review automatic Home work", Manual: true, ReviewVersion: homeRepairVersion,
@@ -87,16 +92,16 @@ func applyHomeRepairBatch(ctx context.Context, tx pgx.Tx, pool *pgxpool.Pool, in
 }
 
 func applyHomeRepairItem(ctx context.Context, tx pgx.Tx, store *activities.Store, expected homeRepairTaskRef, activation datatask.Activation, runID ids.UUID) (bool, error) {
-	if expected.Source == "verdict" {
+	if expected.Source == repairSourceVerdict {
 		return applyHomeRepairVerdict(ctx, tx, expected, activation, runID)
 	}
-	if expected.Source == "suggestion" {
+	if expected.Source == repairSourceSuggestion {
 		return applyHomeRepairSuggestion(ctx, tx, expected, activation, runID)
 	}
-	if expected.Source == "approval" {
+	if expected.Source == repairSourceApproval {
 		return applyHomeRepairProposal(ctx, tx, expected, activation, runID)
 	}
-	if expected.Source != "" && expected.Source != "task" {
+	if expected.Source != "" && expected.Source != repairSourceTask {
 		return false, apperrors.ErrInvalidArgument
 	}
 	return applyHomeRepairTask(ctx, tx, store, expected, activation, runID)
@@ -130,6 +135,6 @@ func applyHomeRepairTask(ctx context.Context, tx pgx.Tx, store *activities.Store
 }
 
 func recordHomeRepairSkip(ctx context.Context, tx pgx.Tx, expected homeRepairTaskRef, reason, version string, runID ids.UUID) error {
-	_, err := storekit.LogSystem(ctx, tx, "home_repair.skipped", map[string]any{"run_id": runID, "record_id": expected.ID, "source": expected.Source, "reason": reason, "rule_version": version})
+	_, err := storekit.LogSystem(ctx, tx, "home_repair.skipped", map[string]any{repairRunID: runID, repairRecordID: expected.ID, repairSourceField: expected.Source, "reason": reason, "rule_version": version})
 	return err
 }

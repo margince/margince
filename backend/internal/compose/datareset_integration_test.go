@@ -59,7 +59,14 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 		t.Fatalf("sweep: %v", err)
 	}
 
-	if got := e.WsCount(t, "SELECT count(*) FROM data_task_run"); got != 2 {
+	expectedSteps := 0
+	for _, task := range dataTaskCatalog(e.Pool, func() time.Time { return clocktest.Now(t) }) {
+		expectedSteps += len(task.Steps)
+	}
+	if expectedSteps == 0 {
+		t.Fatal("correction catalog is empty")
+	}
+	if got := e.WsCount(t, "SELECT count(*) FROM data_task_run"); got != expectedSteps {
 		t.Fatalf("reset erased correction progress: %d", got)
 	}
 	if got := e.WsCount(t, "SELECT count(*) FROM contact"); got != 0 {

@@ -20,6 +20,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+const paramOperator = "operator"
+
 // SealReviewTx binds nondeterministic predictions to their reader until activation.
 func SealReviewTx(ctx context.Context, tx pgx.Tx, taskID string, review ReviewRequest, now time.Time) (string, error) {
 	actor, ok := principal.Actor(ctx)
@@ -29,7 +31,7 @@ func SealReviewTx(ctx context.Context, tx pgx.Tx, taskID string, review ReviewRe
 	if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {
 		return "", err
 	}
-	if !ValidTaskID(taskID) || review.Limit < 1 || review.Limit > 1000 || len(review.Scope) > 262144 || !json.Valid(review.Scope) || review.AsOf.IsZero() || review.AsOf.After(now) || review.Digest == "" || review.PreviewToken != "" {
+	if !validSealedReview(taskID, review, now) {
 		return "", apperrors.ErrInvalidArgument
 	}
 	if err := purgeExpiredReviews(ctx, tx, now); err != nil {
@@ -43,10 +45,10 @@ func SealReviewTx(ctx context.Context, tx pgx.Tx, taskID string, review ReviewRe
 	hash := sha256.Sum256([]byte(token))
 	expires := now.Add(15 * time.Minute)
 	if _, err := tx.Exec(ctx, `INSERT INTO data_task_review(token_hash,task_id,operator,review,expires_at,created_at)
- VALUES(@hash,@task,@operator,@review,@expires,@now)`, pgx.NamedArgs{"hash": hash[:], "task": taskID, "operator": actor.ID, "review": review, "expires": expires, "now": now}); err != nil {
+ VALUES(@hash,@task,@operator,@review,@expires,@now)`, pgx.NamedArgs{"hash": hash[:], paramTask: taskID, paramOperator: actor.ID, "review": review, "expires": expires, paramNow: now}); err != nil {
 		return "", err
 	}
-	if _, err := storekit.LogSystem(ctx, tx, "data_task.review_issued", map[string]any{"task_id": taskID, "operator": actor.ID, "expires_at": expires}); err != nil {
+	if _, err := storekit.LogSystem(ctx, tx, "data_task.review_issued", map[string]any{"task_id": taskID, paramOperator: actor.ID, "expires_at": expires}); err != nil {
 		return "", err
 	}
 	return token, nil
@@ -58,7 +60,7 @@ func consumeReview(ctx context.Context, tx pgx.Tx, taskID, operator string, revi
 	var consumed int
 	err := tx.QueryRow(ctx, `DELETE FROM data_task_review WHERE token_hash=@hash AND task_id=@task
  AND operator=@operator AND expires_at>@now AND review=@review::jsonb RETURNING 1`,
-		pgx.NamedArgs{"hash": hash[:], "task": taskID, "operator": operator, "now": now, "review": review}).Scan(&consumed)
+		pgx.NamedArgs{"hash": hash[:], paramTask: taskID, paramOperator: operator, paramNow: now, "review": review}).Scan(&consumed)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ReviewRequest{}, apperrors.ErrConflict
 	}
@@ -71,6 +73,10 @@ func consumeReview(ctx context.Context, tx pgx.Tx, taskID, operator string, revi
 
 func purgeExpiredReviews(ctx context.Context, tx pgx.Tx, now time.Time) error {
 	_, err := tx.Exec(ctx, `DELETE FROM data_task_review WHERE token_hash IN
- (SELECT token_hash FROM data_task_review WHERE expires_at<=@now ORDER BY expires_at LIMIT 1000)`, pgx.NamedArgs{"now": now})
+ (SELECT token_hash FROM data_task_review WHERE expires_at<=@now ORDER BY expires_at LIMIT 1000)`, pgx.NamedArgs{paramNow: now})
 	return err
+}
+
+func validSealedReview(taskID string, review ReviewRequest, now time.Time) bool {
+	return ValidTaskID(taskID) && review.Limit >= 1 && review.Limit <= 1000 && len(review.Scope) <= 262144 && json.Valid(review.Scope) && !review.AsOf.IsZero() && !review.AsOf.After(now) && review.Digest != "" && review.PreviewToken == ""
 }

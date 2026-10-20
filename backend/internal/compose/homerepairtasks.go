@@ -62,7 +62,7 @@ func homeRepairTaskDecisionTx(ctx context.Context, tx pgx.Tx, task activities.Ho
 		if err != nil {
 			return decision, err
 		}
-		decision.Action, decision.Reason = repairLeaveCurrent, "current_work"
+		decision.Action, decision.Reason = repairLeaveCurrent, repairCurrentWork
 		if past {
 			decision.Action, decision.Reason = repairArchiveReminder, "request_past_waiting_horizon"
 		}

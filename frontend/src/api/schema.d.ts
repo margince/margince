@@ -387,6 +387,10 @@ export interface paths {
         /**
          * Review a bounded page of automatic Home work.
          * @description Requires data_task:read and each record's content permissions. This operation changes no work.
+         *     Classification review uses the ordinary model check and holds its proposed results for fifteen minutes.
+         *     Classification pages contain at most 25 records; suggestion and proposal pages contain at most 200.
+         *     Other pages accept up to 1000 records, but activation also limits the encoded selection to 256 KiB.
+         *     The application reviews 25 records per page.
          */
         post: operations["previewHomeRepair"];
         delete?: never;

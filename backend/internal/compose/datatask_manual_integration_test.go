@@ -24,9 +24,11 @@ import (
 func TestReviewedDataTaskRequiresActivationAndPreservesItsPreviousRun(t *testing.T) {
 	e := integration.Setup(t)
 	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	task := datatask.Task{ID: "core/100_reviewed", Version: 1, Title: "Reviewed correction", Manual: true, ReviewVersion: "rules-1",
+	task := datatask.Task{
+		ID: "core/100_reviewed", Version: 1, Title: "Reviewed correction", Manual: true, ReviewVersion: "rules-1",
 		Review: func(context.Context, pgx.Tx, datatask.ReviewRequest) (string, error) { return "reviewed-digest", nil },
-		Steps: []datatask.Step{{Name: "repair", Limit: 2, MinLimit: 1, Audit: datatask.AuditPolicy{PerRecord: true},
+		Steps: []datatask.Step{{
+			Name: "repair", Limit: 2, MinLimit: 1, Audit: datatask.AuditPolicy{PerRecord: true},
 			Estimate: func(context.Context, datatask.Querier, int64) (int64, bool, error) { return 10, false, nil },
 			Batch: func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
 				if in.Activation == nil || in.Activation.Operator != "human:"+e.AdminUser.String() {

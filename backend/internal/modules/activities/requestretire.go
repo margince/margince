@@ -36,7 +36,7 @@ func (s *Store) retireAgedReminders(ctx context.Context, tx pgx.Tx, asOf time.Ti
 		 ORDER BY request.occurred_at, reminder.id
 		 LIMIT @limit
 		 FOR UPDATE OF reminder SKIP LOCKED`,
-		pgx.NamedArgs{"source": EmailRequestTaskSource, "actor": OwedVerdictCapturedBy, "cutoff": cutoff, "limit": agedReminderBatch})
+		pgx.NamedArgs{paramRepairSource: EmailRequestTaskSource, "actor": OwedVerdictCapturedBy, "cutoff": cutoff, "limit": agedReminderBatch})
 	if err != nil {
 		return fmt.Errorf("activities: reading reminders past the waiting horizon: %w", err)
 	}

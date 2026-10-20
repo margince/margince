@@ -19,7 +19,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-const reviewPredictionUncertain = "uncertain"
+const (
+	reviewPredictionUncertain = "uncertain"
+	reviewPredictionDeclined  = "declined"
+)
 
 const repairReclassifyMessage homeRepairAction = "reclassify_message"
 
@@ -78,7 +81,7 @@ func (c *OwedClassifier) reviewedVerdictPredictions(ctx context.Context, candida
 			return true, nil
 		},
 		decline: func(_ context.Context, msg owedCandidate, _ error) error {
-			predictions[msg.ID] = reviewPredictionUncertain
+			predictions[msg.ID] = reviewPredictionDeclined
 			return nil
 		},
 	}
@@ -96,7 +99,7 @@ func (c *OwedClassifier) reviewedVerdictPredictions(ctx context.Context, candida
 }
 
 func homeRepairVerdictRef(candidate activities.OwedReviewCandidate, predicted string) homeRepairTaskRef {
-	item := homeRepairTaskRef{Source: "verdict", ID: candidate.Candidate.ID, Version: candidate.Version, Snapshot: candidate.Snapshot, BeforeVerdict: candidate.Verdict, Action: repairHumanReview, Reason: "classification_uncertain"}
+	item := homeRepairTaskRef{Source: repairSourceVerdict, ID: candidate.Candidate.ID, Version: candidate.Version, Snapshot: candidate.Snapshot, BeforeVerdict: candidate.Verdict, Action: repairHumanReview, Reason: "classification_uncertain"}
 	if !candidate.Pristine {
 		item.Reason = "human_changed_or_provenance_missing"
 		return item
@@ -107,6 +110,10 @@ func homeRepairVerdictRef(candidate activities.OwedReviewCandidate, predicted st
 	}
 	if predicted == "" {
 		item.Reason = "classification_not_attempted"
+		return item
+	}
+	if predicted == reviewPredictionDeclined {
+		item.Reason = "classification_declined"
 		return item
 	}
 	if predicted == reviewPredictionUncertain {
@@ -138,6 +145,9 @@ func validateHomeRepairVerdictTx(ctx context.Context, tx pgx.Tx, expected homeRe
 	if prediction == "" && expected.Reason == "classification_uncertain" {
 		prediction = reviewPredictionUncertain
 	}
+	if prediction == "" && expected.Reason == "classification_declined" {
+		prediction = reviewPredictionDeclined
+	}
 	if actual := homeRepairVerdictRef(candidate, prediction); actual != expected {
 		return apperrors.ErrConflict
 	}
@@ -165,7 +175,7 @@ func applyHomeRepairVerdict(ctx context.Context, tx pgx.Tx, expected homeRepairT
 		return err
 	})
 	if errors.Is(err, apperrors.ErrConflict) || errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
-		return false, recordHomeRepairSkip(ctx, tx, expected, "classification_write_refused", activation.RuleVersion, runID)
+		return false, recordHomeRepairSkip(ctx, tx, expected, classificationSkipReason(err), activation.RuleVersion, runID)
 	}
 	return wrote, err
 }

@@ -1,12 +1,31 @@
-import type { ReactNode } from "react";
+import { type ComponentProps, lazy, type ReactNode, Suspense } from "react";
 import { QueryGate } from "../design-system/querystates";
-import { NewDealAction } from "../features/companies/companyactions";
+import { ApprovalDetailModal } from "../features/automations/approvaleditor";
 import { CompanyDealPicker } from "../features/deals/companydealpicker";
-import { DealSuggestionCard } from "../features/deals/dealsuggestion";
-import { useDealSuggestions } from "../features/deals/dealsuggestions.queries";
+import {
+  DealSuggestionCard,
+  suggestedName,
+} from "../features/deals/dealsuggestion";
+import {
+  useDealSuggestion,
+  useDealSuggestions,
+} from "../features/deals/dealsuggestions.queries";
 import { OpenActivityDrawer } from "../features/voice-knowledge/activitydrawer";
 import { useT } from "../i18n";
 import { type ReviewActions, ReviewActionsContext } from "../lib/reviewactions";
+
+const NewDealAction = lazy(() =>
+  import("../features/companies/companyactions").then((module) => ({
+    default: module.NewDealAction,
+  })),
+);
+function ComposedNewDealAction(props: ComponentProps<typeof NewDealAction>) {
+  return (
+    <Suspense fallback={null}>
+      <NewDealAction {...props} />
+    </Suspense>
+  );
+}
 
 function CoveredDealSuggestion({
   companyId,
@@ -36,8 +55,25 @@ function CoveredDealSuggestion({
   );
 }
 
-const actions: ReviewActions = {
-  NewDealAction,
+const DealSuggestionReader: ReviewActions["DealSuggestionReader"] = ({
+  id,
+  children,
+}) => {
+  const t = useT();
+  const detail = useDealSuggestion(id);
+  const suggestion = detail.error ? undefined : detail.data;
+  return children({
+    suggestion,
+    label: suggestion ? suggestedName(suggestion, t) : undefined,
+    error: detail.error,
+  });
+};
+
+export const reviewActions: ReviewActions = {
+  DealSuggestionReader,
+  DealSuggestionCard,
+  ApprovalDetailModal,
+  NewDealAction: ComposedNewDealAction,
   CompanyDealPicker,
   CoveredDealSuggestion,
   OpenActivityDrawer,
@@ -47,6 +83,8 @@ export function ReviewActionsProvider({
   children,
 }: Readonly<{ children: ReactNode }>) {
   return (
-    <ReviewActionsContext value={actions}>{children}</ReviewActionsContext>
+    <ReviewActionsContext value={reviewActions}>
+      {children}
+    </ReviewActionsContext>
   );
 }

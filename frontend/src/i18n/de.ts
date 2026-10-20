@@ -5,6 +5,10 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de = {
+  "homeRepair.taskPermission":
+    "Zum Archivieren geprüfter Aufgaben brauchst du die Berechtigung, Aktivitäten zu archivieren.",
+  "homeRepair.classificationPermission":
+    "Zum Ändern von Nachrichtenergebnissen ist die Berechtigung zum Bearbeiten von Aktivitäten erforderlich.",
   "homeRepair.reason.classificationNotAttempted":
     "Es liegt keine abgeschlossene Prüfung vor. Prüfe erneut, sobald die Einordnung verfügbar ist.",
   "homeRepair.reclassify": "Nachricht neu einordnen",
@@ -13,6 +17,8 @@ export const de = {
   "homeRepair.informs": "Nur Information",
   "homeRepair.classificationChange":
     "Aktuell: {before}. Vorgeschlagen: {after}.",
+  "homeRepair.reason.classificationDeclined":
+    "Die Klassifizierung hat diese Nachricht nicht bewertet. Prüfe sie selbst.",
   "homeRepair.reason.classificationUncertain":
     "Die neue Prüfung ist unsicher. Prüfe die Nachricht, bevor du das Ergebnis änderst.",
   "homeRepair.reason.classificationAdopted":

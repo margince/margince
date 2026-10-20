@@ -3,13 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { suggestion } from "../../testing/dealsuggestion.fixture";
+import { ReviewActionsProvider } from "../../testing/reviewactions";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { suggestion } from "../deals/dealsuggestion.fixture";
 import { HomeRepairControls } from "./homerepair";
 import {
   classificationRepairReview,
@@ -27,14 +28,24 @@ function example(
     installFetchStub({
       "GET /me": meRoute({
         data_task: ["read", "update"],
-        activity: ["read", "delete"],
+        activity: ["read", "update", "delete"],
         deal: ["read", "create"],
       }),
-      "GET /approvals/*": () =>
-        jsonResponse({ summary: "Prepare the account review" }),
-      "GET /activities/*": () =>
-        jsonResponse({ subject: "Prepare the account review" }),
-      "GET /deal-suggestions/*": () => jsonResponse(suggestion),
+      ...Object.fromEntries(
+        preview.tasks.map((task) => [
+          `GET /${task.source === "suggestion" ? "deal-suggestions" : task.source === "approval" ? "approvals" : "activities"}/${task.id}`,
+          () =>
+            jsonResponse(
+              task.source === "suggestion"
+                ? suggestion
+                : {
+                    id: task.id,
+                    subject: "Prepare the account review",
+                    summary: "Prepare the account review",
+                  },
+            ),
+        ]),
+      ),
       "POST /admin/home-repair/preview": () => jsonResponse(preview),
       "POST /admin/home-repair/activate": () =>
         refused
@@ -43,7 +54,9 @@ function example(
     });
     return (
       <StoryProviders>
-        <HomeRepairControls version={7} canActivate={canActivate} />
+        <ReviewActionsProvider>
+          <HomeRepairControls version={7} canActivate={canActivate} />
+        </ReviewActionsProvider>
       </StoryProviders>
     );
   };
@@ -153,6 +166,10 @@ export const MessageClassification: Story = {
         "Current: Requests action. Proposed: Information only.",
       ),
     ).toBeInTheDocument();
+    await expect(
+      await canvas.findByText("Prepare the account review"),
+    ).toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "Inspect" })).toBeEnabled();
     await expect(
       canvas.getByRole("button", { name: "Apply 1 reviewed change" }),
     ).toBeInTheDocument();

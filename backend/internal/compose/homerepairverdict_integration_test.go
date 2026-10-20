@@ -63,8 +63,9 @@ func runReviewedClassification(t *testing.T, change string) {
 			t.Fatal(err)
 		}
 	}
-	classifier := NewOwedClassifier(e.Pool, brain, func() time.Time { return now }, slog.Default())
-	handler := dataTaskHandlers{pool: e.Pool, clock: func() time.Time { return now }, classifier: classifier}
+	server := &Server{dataTaskHandlers: dataTaskHandlers{pool: e.Pool, clock: func() time.Time { return now }}, log: slog.Default()}
+	WithHomeRepairClassifier(brain)(server, e.Pool)
+	handler := server.dataTaskHandlers
 	response := httptest.NewRecorder()
 	handler.PreviewHomeRepair(response, httptest.NewRequest(http.MethodPost, "/v1/admin/home-repair/preview", bytes.NewBufferString(`{"source":"verdict","limit":25}`)).WithContext(operator))
 	if response.Code != http.StatusOK {

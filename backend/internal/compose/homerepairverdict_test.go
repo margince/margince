@@ -51,6 +51,7 @@ func TestClassificationReviewDistinguishesMissingChecksFromUncertainty(t *testin
 	}{
 		{"", "classification_not_attempted", repairHumanReview},
 		{reviewPredictionUncertain, "classification_uncertain", repairHumanReview},
+		{reviewPredictionDeclined, "classification_declined", repairHumanReview},
 		{activities.OwedVerdictAsksUs, "classification_current", repairLeaveCurrent},
 		{activities.OwedVerdictInformsUs, "classification_changed", repairReclassifyMessage},
 	} {

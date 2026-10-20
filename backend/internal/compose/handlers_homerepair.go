@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -30,7 +31,7 @@ func (h dataTaskHandlers) PreviewHomeRepair(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	timeout := healthReadTimeout
-	if in.Source != nil && string(*in.Source) == "verdict" {
+	if in.Source != nil && string(*in.Source) == repairSourceVerdict {
 		timeout = 2 * time.Minute
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), timeout)
@@ -39,13 +40,13 @@ func (h dataTaskHandlers) PreviewHomeRepair(w http.ResponseWriter, r *http.Reque
 	if in.After != nil {
 		after = ids.UUID(*in.After)
 	}
-	source := "task"
+	source := repairSourceTask
 	if in.Source != nil {
 		source = string(*in.Source)
 	}
 	var review datatask.ReviewRequest
 	var err error
-	if source == "verdict" {
+	if source == repairSourceVerdict {
 		classifier := h.classifier
 		if classifier == nil {
 			classifier = NewOwedClassifier(h.pool, nil, h.now, slog.Default())
@@ -60,7 +61,7 @@ func (h dataTaskHandlers) PreviewHomeRepair(w http.ResponseWriter, r *http.Reque
 	}
 
 	if err != nil {
-		httperr.Write(w, r, err)
+		modelfailure.Write(w, r, err)
 		return
 	}
 	out, err := homeRepairReviewWire(review)

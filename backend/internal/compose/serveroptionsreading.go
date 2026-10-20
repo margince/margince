@@ -58,6 +58,6 @@ func WithBrief(brain completer) Option {
 // WithHomeRepairClassifier uses the ordinary verdict lane for reviewed corrections.
 func WithHomeRepairClassifier(brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.dataTaskHandlers.classifier = NewOwedClassifier(pool, brain, s.dataTaskHandlers.now, s.log)
+		s.classifier = NewOwedClassifier(pool, brain, s.dataTaskHandlers.now, s.log)
 	}
 }

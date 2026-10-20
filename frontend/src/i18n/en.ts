@@ -3,6 +3,10 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "homeRepair.taskPermission":
+    "Activity archive permission is required to archive reviewed tasks.",
+  "homeRepair.classificationPermission":
+    "Activity editing permission is required to change message results.",
   "homeRepair.reason.classificationNotAttempted":
     "No completed check is available. Preview again when classification is available.",
   "homeRepair.reclassify": "Reclassify message",
@@ -10,6 +14,8 @@ export const en = {
   "homeRepair.asks": "Requests action",
   "homeRepair.informs": "Information only",
   "homeRepair.classificationChange": "Current: {before}. Proposed: {after}.",
+  "homeRepair.reason.classificationDeclined":
+    "The classifier declined to assess this message. Review it yourself.",
   "homeRepair.reason.classificationUncertain":
     "The new check is uncertain. Review the message before changing its result.",
   "homeRepair.reason.classificationAdopted":

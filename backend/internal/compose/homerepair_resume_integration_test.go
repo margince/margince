@@ -94,7 +94,7 @@ func TestReviewedHomeRepairResumesItsExactPageAfterARolledBackTail(t *testing.T)
 	if _, err := engine.Execute(system); err != nil {
 		t.Fatal(err)
 	}
-	assertRepairProgress(t, engine, operator, 2, 2, datatask.Running)
+	assertRepairProgress(operator, t, engine, 2, 2, datatask.Running)
 	failing := task
 	failing.Steps = append([]datatask.Step(nil), task.Steps...)
 	batch := task.Steps[0].Batch
@@ -116,7 +116,7 @@ func TestReviewedHomeRepairResumesItsExactPageAfterARolledBackTail(t *testing.T)
 	if _, err := resumed.Execute(system); err != nil {
 		t.Fatal(err)
 	}
-	assertRepairProgress(t, resumed, operator, 3, 3, datatask.Done)
+	assertRepairProgress(operator, t, resumed, 3, 3, datatask.Done)
 	if _, err := resumed.Execute(system); err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +128,7 @@ func TestReviewedHomeRepairResumesItsExactPageAfterARolledBackTail(t *testing.T)
 	}
 }
 
-func assertRepairProgress(t *testing.T, engine *datatask.Engine, ctx context.Context, scanned, changed int64, status string) {
+func assertRepairProgress(ctx context.Context, t *testing.T, engine *datatask.Engine, scanned, changed int64, status string) {
 	t.Helper()
 	progress, err := engine.List(ctx)
 	if err != nil {

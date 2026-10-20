@@ -412,6 +412,9 @@ func rulesetStaleSQL(col, param string) string {
 // SetOwedVerdict retains the ordinary ruleset and read-time compare-and-swap.
 // readAt must be the database read timestamp so a slow prediction cannot replace a newer verdict.
 func (s *Store) SetOwedVerdict(ctx context.Context, id ids.UUID, verdict, ruleset string, readAt time.Time) (applied bool, err error) {
+	if err := validateOwedVerdictWrite(ctx, verdict, ruleset); err != nil {
+		return false, err
+	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var writeErr error
 		applied, writeErr = setOwedVerdictTx(ctx, tx, id, verdict, ruleset, readAt, nil)
@@ -421,13 +424,7 @@ func (s *Store) SetOwedVerdict(ctx context.Context, id ids.UUID, verdict, rulese
 }
 
 func setOwedVerdictTx(ctx context.Context, tx pgx.Tx, id ids.UUID, verdict, ruleset string, readAt time.Time, evidence map[string]any) (bool, error) {
-	if verdict != OwedVerdictAsksUs && verdict != OwedVerdictInformsUs {
-		return false, apperrors.ErrInvalidArgument
-	}
-	if ruleset == "" {
-		return false, errRulesetUnnamed
-	}
-	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+	if err := validateOwedVerdictWrite(ctx, verdict, ruleset); err != nil {
 		return false, err
 	}
 	var before, beforeRules *string
@@ -457,4 +454,18 @@ func setOwedVerdictTx(ctx context.Context, tx pgx.Tx, id ids.UUID, verdict, rule
 func humanReviewedOwedSQL(alias string) string {
 	return storekit.SQLf(`EXISTS(SELECT 1 FROM audit_log reviewed WHERE reviewed.entity_type='activity'
  AND reviewed.entity_id=%s.id AND reviewed.actor_type='human' AND reviewed.after ? 'owed_verdict' AND reviewed.evidence->>'reviewed_classification'='true')`, alias)
+}
+
+func validateOwedVerdictWrite(ctx context.Context, verdict, ruleset string) error {
+	if verdict != OwedVerdictAsksUs && verdict != OwedVerdictInformsUs {
+		return apperrors.ErrInvalidArgument
+	}
+	if ruleset == "" {
+		return errRulesetUnnamed
+	}
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return err
+	}
+
+	return nil
 }

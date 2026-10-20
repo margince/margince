@@ -30,14 +30,16 @@ type HomeRepairTask struct {
 	Pristine     bool
 }
 
+const paramRepairSource = "source"
+
 // HomeRepairTasksTx keeps preview and repair on the same bounded, stable task order.
 func HomeRepairTasksTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]HomeRepairTask, error) {
-	return homeRepairTasksTx(ctx, tx, after, nil, limit)
+	return readHomeRepairTasksTx(ctx, tx, after, nil, limit)
 }
 
 // HomeRepairTaskTx applies the same content and eligibility scope to a reviewed identity.
 func HomeRepairTaskTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (HomeRepairTask, error) {
-	rows, err := homeRepairTasksTx(ctx, tx, ids.Nil, &id, 1)
+	rows, err := readHomeRepairTasksTx(ctx, tx, ids.Nil, &id, 1)
 	if err != nil {
 		return HomeRepairTask{}, err
 	}
@@ -47,7 +49,7 @@ func HomeRepairTaskTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (HomeRepairTa
 	return rows[0], nil
 }
 
-func homeRepairTasksTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact *ids.UUID, limit int) ([]HomeRepairTask, error) {
+func readHomeRepairTasksTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact *ids.UUID, limit int) ([]HomeRepairTask, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -105,7 +107,7 @@ func RequestReminderPastHorizonTx(ctx context.Context, tx pgx.Tx, task HomeRepai
 	if forDecision {
 		query += " FOR UPDATE"
 	}
-	if err := tx.QueryRow(ctx, query, pgx.NamedArgs{"source": *task.SourceID}).Scan(&occurredAt); err != nil {
+	if err := tx.QueryRow(ctx, query, pgx.NamedArgs{paramRepairSource: *task.SourceID}).Scan(&occurredAt); err != nil {
 		return false, fmt.Errorf("activities: reading reminder source age: %w", err)
 	}
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, *task.SourceID); err != nil {

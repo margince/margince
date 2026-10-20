@@ -23,7 +23,7 @@ func homeRepairSuggestionRef(repair deals.SuggestionRepair) homeRepairTaskRef {
 	} else if repair.Reason != deals.RepairReasonCurrentWork {
 		action = repairHumanReview
 	}
-	return homeRepairTaskRef{Source: "suggestion", ID: repair.ID, Version: repair.Version, Action: action, Reason: repair.Reason}
+	return homeRepairTaskRef{Source: repairSourceSuggestion, ID: repair.ID, Version: repair.Version, Action: action, Reason: repair.Reason}
 }
 
 func previewHomeRepairSuggestionsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int, asOf time.Time) (datatask.ReviewRequest, error) {

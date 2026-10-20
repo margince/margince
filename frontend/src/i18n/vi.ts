@@ -14,6 +14,10 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "homeRepair.taskPermission":
+    "Cần quyền lưu trữ hoạt động để lưu trữ các công việc đã xem xét.",
+  "homeRepair.classificationPermission":
+    "Cần quyền chỉnh sửa hoạt động để đổi kết quả tin nhắn.",
   "homeRepair.reason.classificationNotAttempted":
     "Chưa có lần kiểm tra hoàn tất. Xem trước lại khi có thể phân loại.",
   "homeRepair.reclassify": "Phân loại lại",
@@ -21,6 +25,8 @@ export const vi = {
   "homeRepair.asks": "Yêu cầu hành động",
   "homeRepair.informs": "Chỉ cung cấp thông tin",
   "homeRepair.classificationChange": "Hiện tại: {before}. Đề xuất: {after}.",
+  "homeRepair.reason.classificationDeclined":
+    "Bộ phân loại từ chối đánh giá tin nhắn này. Hãy tự xem xét.",
   "homeRepair.reason.classificationUncertain":
     "Lần kiểm tra mới chưa chắc chắn. Xem xét tin nhắn trước khi đổi kết quả.",
   "homeRepair.reason.classificationAdopted":

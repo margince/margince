@@ -15,7 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func assertRepairDecisionProjection(t *testing.T, e *integration.Env, ctx context.Context, at time.Time, want int) {
+func assertRepairDecisionProjection(ctx context.Context, t *testing.T, e *integration.Env, at time.Time, want int) {
 	t.Helper()
 	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return at })
 	home, err := feed.Assemble(ctx)

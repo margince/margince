@@ -16,13 +16,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
+const repairScopeUnknown = "unknown"
+
 func homeRepairLifecycleProposalTx(ctx context.Context, tx pgx.Tx, proposal approvals.RepairProposal, item homeRepairTaskRef, asOf time.Time, forDecision bool) (homeRepairTaskRef, error) {
 	var staged lifecycleProposal
-	if err := json.Unmarshal(proposal.Change, &staged); err != nil || staged.Evidence == nil ||
-		proposal.TargetID == nil || proposal.TargetType == nil || *proposal.TargetType != "company" ||
-		staged.CompanyID.UUID != *proposal.TargetID || staged.SignalID != staged.Evidence.SignalID {
+	if !decodeRepairLifecycle(proposal, &staged) {
 		return item, nil
 	}
+
 	reconcile := lifecyclereview.Reconcile
 	if forDecision {
 		reconcile = lifecyclereview.ReconcileForDecision
@@ -35,7 +36,7 @@ func homeRepairLifecycleProposalTx(ctx context.Context, tx pgx.Tx, proposal appr
 	if err != nil {
 		return item, err
 	}
-	if current.Incomplete || current.SourceID.IsZero() || current.Scope == "unknown" {
+	if current.Incomplete || current.SourceID.IsZero() || current.Scope == repairScopeUnknown {
 		return item, nil
 	}
 	switch {
@@ -46,7 +47,13 @@ func homeRepairLifecycleProposalTx(ctx context.Context, tx pgx.Tx, proposal appr
 	case !lifecyclereview.Matches(current, staged.Evidence):
 		item.Action, item.Reason = repairWithdrawProposal, "lifecycle_evidence_changed"
 	default:
-		item.Action, item.Reason = repairLeaveCurrent, "current_work"
+		item.Action, item.Reason = repairLeaveCurrent, repairCurrentWork
 	}
 	return item, nil
+}
+
+func decodeRepairLifecycle(proposal approvals.RepairProposal, staged *lifecycleProposal) bool {
+	return json.Unmarshal(proposal.Change, staged) == nil && staged.Evidence != nil &&
+		proposal.TargetID != nil && proposal.TargetType != nil && *proposal.TargetType == string(recordTypeCompany) &&
+		staged.CompanyID.UUID == *proposal.TargetID && staged.SignalID == staged.Evidence.SignalID
 }

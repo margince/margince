@@ -160,5 +160,4 @@ func (e *Engine) estimateStep(ctx context.Context, tx pgx.Tx, task Task, step St
 		return int64(p.Activation.Limit), false, nil
 	}
 	return step.Estimate(ctx, tx, estimateCap)
-
 }

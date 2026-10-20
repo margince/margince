@@ -26,6 +26,15 @@ import (
 
 var homeRepairVersion = "2:" + activities.CommitmentAdmissionVersion + ":" + deals.SuggestionRepairVersion + ":" + lifecyclereview.RuleVersion + ":" + owedverdict.Ruleset
 
+const (
+	repairSourceTask       = "task"
+	repairSourceApproval   = "approval"
+	repairSourceSuggestion = "suggestion"
+	repairSourceVerdict    = "verdict"
+	repairCurrentWork      = "current_work"
+	repairRecordID         = "record_id"
+)
+
 type homeRepairScope struct {
 	Tasks []homeRepairTaskRef `json:"tasks"`
 }
@@ -42,18 +51,18 @@ type homeRepairTaskRef struct {
 }
 
 func previewHomeRepairAfterTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int, asOf time.Time) (datatask.ReviewRequest, error) {
-	return previewHomeRepairSourceTx(ctx, tx, "task", after, limit, asOf)
+	return previewHomeRepairSourceTx(ctx, tx, repairSourceTask, after, limit, asOf)
 }
 
 func previewHomeRepairSourceTx(ctx context.Context, tx pgx.Tx, source string, after ids.UUID, limit int, asOf time.Time) (datatask.ReviewRequest, error) {
 	if limit < 1 || limit > 1000 {
 		return datatask.ReviewRequest{}, apperrors.ErrInvalidArgument
 	}
-	if source == "suggestion" {
+	if source == repairSourceSuggestion {
 		return previewHomeRepairSuggestionsTx(ctx, tx, after, limit, asOf)
 	}
 	scope := homeRepairScope{Tasks: make([]homeRepairTaskRef, 0, limit)}
-	if source == "approval" {
+	if source == repairSourceApproval {
 		proposals, err := approvals.RepairPageTx(ctx, tx, after, limit, asOf)
 		if err != nil {
 			return datatask.ReviewRequest{}, err
@@ -67,7 +76,7 @@ func previewHomeRepairSourceTx(ctx context.Context, tx pgx.Tx, source string, af
 		}
 		return homeRepairReview(scope, asOf)
 	}
-	if source != "task" {
+	if source != repairSourceTask {
 		return datatask.ReviewRequest{}, apperrors.ErrInvalidArgument
 	}
 	for len(scope.Tasks) < limit {
@@ -130,44 +139,45 @@ func validateHomeRepairTx(ctx context.Context, tx pgx.Tx, review datatask.Review
 			return "", apperrors.ErrInvalidArgument
 		}
 		seen[expected.ID] = true
-		if expected.Source == "verdict" {
-			if !review.Trusted {
-				return "", apperrors.ErrPermissionDenied
-			}
-			if err := validateHomeRepairVerdictTx(ctx, tx, expected); err != nil {
-				return "", err
-			}
-			continue
-		}
-		if expected.Source == "suggestion" {
-			if err := validateHomeRepairSuggestionTx(ctx, tx, expected, review.AsOf); err != nil {
-				return "", err
-			}
-			continue
-		}
-		if expected.Source == "approval" {
-			if err := validateHomeRepairProposalTx(ctx, tx, expected, review.AsOf, false); err != nil {
-				return "", err
-			}
-			continue
-		}
-		if expected.Source != "" && expected.Source != "task" {
-			return "", apperrors.ErrInvalidArgument
-		}
-		if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
+		if err := validateHomeRepairItemTx(ctx, tx, expected, review); err != nil {
 			return "", err
-		}
-		task, err := activities.HomeRepairTaskTx(ctx, tx, expected.ID)
-		if err != nil {
-			return "", err
-		}
-		decision, err := homeRepairTaskDecisionTx(ctx, tx, task, review.AsOf, true)
-		if err != nil {
-			return "", err
-		}
-		if task.Version != expected.Version || decision.Action != expected.Action || decision.Reason != expected.Reason {
-			return "", apperrors.ErrConflict
 		}
 	}
 	return homeRepairDigest(review)
+}
+
+func validateHomeRepairItemTx(ctx context.Context, tx pgx.Tx, expected homeRepairTaskRef, review datatask.ReviewRequest) error {
+	if expected.Source == repairSourceVerdict {
+		if !review.Trusted {
+			return apperrors.ErrPermissionDenied
+		}
+		if err := validateHomeRepairVerdictTx(ctx, tx, expected); err != nil {
+			return err
+		}
+		return nil
+	}
+	if expected.Source == repairSourceSuggestion {
+		return validateHomeRepairSuggestionTx(ctx, tx, expected, review.AsOf)
+	}
+	if expected.Source == repairSourceApproval {
+		return validateHomeRepairProposalTx(ctx, tx, expected, review.AsOf, false)
+	}
+	if expected.Source != "" && expected.Source != repairSourceTask {
+		return apperrors.ErrInvalidArgument
+	}
+	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
+		return err
+	}
+	task, err := activities.HomeRepairTaskTx(ctx, tx, expected.ID)
+	if err != nil {
+		return err
+	}
+	decision, err := homeRepairTaskDecisionTx(ctx, tx, task, review.AsOf, true)
+	if err != nil {
+		return err
+	}
+	if task.Version != expected.Version || decision.Action != expected.Action || decision.Reason != expected.Reason {
+		return apperrors.ErrConflict
+	}
+	return nil
 }
