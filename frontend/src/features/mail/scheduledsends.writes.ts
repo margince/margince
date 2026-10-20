@@ -22,7 +22,7 @@ export function useQueueWrites(readerZone: string, onWithdrawn: () => void) {
 
   const move = useMutation({
     mutationFn: async ({ id, version, at, tz }: Move) => {
-      unwrap(
+      return unwrap(
         await api.PATCH("/scheduled-sends/{id}", {
           // Through `ifMatch`, not a hand-written header: it is the one spelling of
           // the precondition. `src/api/if-match-coverage.test.ts` reads the AST for
@@ -56,28 +56,23 @@ export function useQueueWrites(readerZone: string, onWithdrawn: () => void) {
   });
 
   // A move is confirmed by a toast with an undo, not by a dialog.
-  // The undo is a second write, so it reads the refreshed list for its version.
-  // The version the row was drawn with is already spent.
+  // The undo is a second write, so it carries the version the move returned.
+  // That keeps it from overwriting a move another surface made in between.
   const moveWithUndo = (input: Move, send: ScheduledSend) => {
     move.mutate(input, {
-      onSuccess: () => {
+      onSuccess: (moved) => {
         toast.show(
           t("sched.moved", {
             when: formatDateTime(input.at, locale, readerZone),
           }),
           {
             action: undoAction(t("sched.undo"), () => {
-              const current = queryClient
-                .getQueryData<ScheduledSend[]>(["scheduled-sends"])
-                ?.find((row) => row.id === send.id);
-              if (current) {
-                move.mutate({
-                  id: send.id,
-                  version: current.version,
-                  at: send.scheduled_at,
-                  tz: send.scheduled_tz,
-                });
-              }
+              move.mutate({
+                id: send.id,
+                version: moved.version,
+                at: send.scheduled_at,
+                tz: send.scheduled_tz,
+              });
             }),
           },
         );

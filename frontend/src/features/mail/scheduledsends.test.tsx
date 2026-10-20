@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { ScheduledSendsScreen } from "./scheduledsends";
 import {
@@ -105,8 +106,15 @@ function mount(rows: Send[], preview: PreviewFor = allowedPreview) {
         body,
         ifMatch: headers.get("If-Match"),
       });
-      if (method === "PATCH" || url.pathname.endsWith("/cancel")) {
+      if (url.pathname.endsWith("/cancel")) {
         return new Response(null, { status: 204 });
+      }
+      if (method === "PATCH") {
+        const moved = rows.find((row) => url.pathname.endsWith(row.id));
+        return new Response(
+          JSON.stringify({ ...moved, version: (moved?.version ?? 0) + 1 }),
+          { headers: { "Content-Type": "application/json" } },
+        );
       }
       if (isPreviewDoor(url.pathname)) {
         return new Response(JSON.stringify(preview(previewedAddresses(body))), {
@@ -124,7 +132,10 @@ function mount(rows: Send[], preview: PreviewFor = allowedPreview) {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <ScheduledSendsScreen />
+        <ToastProvider>
+          <ScheduledSendsScreen />
+          <ToastRegion />
+        </ToastProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -290,6 +301,23 @@ it("pins a move to the version the row was drawn from", async () => {
   expect(patch?.body).toEqual({
     scheduled_at: new Date("2026-09-02T08:30").toISOString(),
     scheduled_tz: readerZone,
+  });
+});
+
+// Undo is a second write. It carries the version the move returned, so it
+// cannot overwrite a move another surface made in between.
+it("undoes a move against the version the move returned", async () => {
+  const user = userEvent.setup();
+  const { calls } = mount([WAITING]);
+  await user.click(await screen.findByRole("button", { name: /Reschedule: / }));
+  await user.click(screen.getByRole("button", { name: /Tomorrow morning/ }));
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  const patches = calls.filter((call) => call.method === "PATCH");
+  expect(patches).toHaveLength(2);
+  expect(patches[1]?.ifMatch).toBe("4");
+  expect(patches[1]?.body).toEqual({
+    scheduled_at: WAITING.scheduled_at,
+    scheduled_tz: WAITING.scheduled_tz,
   });
 });
 
