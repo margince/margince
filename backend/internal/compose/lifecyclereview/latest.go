@@ -38,11 +38,6 @@ func BlockingReason(finding Finding) string {
 	}
 }
 
-// Unknown source dates and unread pages cannot prove which account evidence is newest.
-func Latest(ctx context.Context, tx pgx.Tx, company ids.CompanyID) (Finding, error) {
-	return latest(ctx, tx, company, false)
-}
-
 func latest(ctx context.Context, tx pgx.Tx, company ids.CompanyID, lock bool) (Finding, error) {
 	if lock {
 		if err := signals.LockCompanySignalsTx(ctx, tx, company); err != nil {
@@ -61,7 +56,11 @@ func latest(ctx context.Context, tx pgx.Tx, company ids.CompanyID, lock bool) (F
 		}
 	}
 	latest := Finding{Scope: "unknown"}
-	incomplete := page.HasMore
+	complete, err := signals.CompanySignalsCompleteTx(ctx, tx, company, "contract_ended")
+	if err != nil {
+		return Finding{}, err
+	}
+	incomplete := page.HasMore || !complete
 	ambiguous := false
 	for _, record := range records {
 		finding, err := readSignalFinding(ctx, tx, company, record)

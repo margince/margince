@@ -6,6 +6,7 @@
 package company360
 
 import (
+	"maps"
 	"testing"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func TestLifecycleConflictCitesTheSourceInsteadOfTheExtractionDate(t *testing.T) {
@@ -25,21 +28,30 @@ func TestLifecycleConflictCitesTheSourceInsteadOfTheExtractionDate(t *testing.T)
 	quote := "We are ending all business with your company."
 	source, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "note", Body: &quote, OccurredAt: &occurred, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "company", EntityID: company.UUID}},
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	proof, ok := values.ProveQuote(quote, quote)
+	if !ok {
+		t.Fatal("fixture quote not grounded")
 	}
 	if err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
 		_, err := signals.RecordDerived(e.Admin(), tx, signals.DerivedSignal{
 			Kind: "contract_ended", CompanyID: company.UUID, Summary: "The account relationship ended.",
 			Severity: "warn", Fingerprint: "cedar-company-termination",
-			Evidence: []signals.DerivedEvidence{{ActivityID: ids.UUID(source.Id), Snippet: quote, LifecycleScope: "company"}},
+			Evidence: []signals.DerivedEvidence{{ActivityID: ids.UUID(source.Id), Snippet: "The account relationship ended.", SourceQuote: &proof, LifecycleScope: "company"}},
 		}, occurred.Add(10*24*time.Hour))
 		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
-	view, err := company360Service(e).Assemble(e.As(e.Rep1, []ids.UUID{e.Team1}, company360SignalPerms), company)
+	perms := company360SignalPerms
+	perms.Objects = maps.Clone(perms.Objects)
+	perms.Objects["contract"] = principal.ObjectGrant{Read: true}
+	perms.Objects["project"] = principal.ObjectGrant{Read: true}
+	view, err := company360Service(e).Assemble(e.As(e.Rep1, []ids.UUID{e.Team1}, perms), company)
 	if err != nil {
 		t.Fatal(err)
 	}
