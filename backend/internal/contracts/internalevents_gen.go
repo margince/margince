@@ -172,8 +172,8 @@ type InternalEventLegalEntityCreated struct {
 	DisplayName string `json:"display_name"`
 }
 
-// InternalEventLegalEntityMemberAssigned A user now works for this legal entity. previous_legal_entity_id is the entity they worked for before, the default entity included.
-type InternalEventLegalEntityMemberAssigned struct {
+// InternalEventLegalEntityMemberAdded A user now works for this legal entity. previous_legal_entity_id is the entity they worked for before, the default entity included.
+type InternalEventLegalEntityMemberAdded struct {
 	PreviousLegalEntityId openapi_types.UUID `json:"previous_legal_entity_id"`
 	UserId                openapi_types.UUID `json:"user_id"`
 }
@@ -278,11 +278,9 @@ func (InternalEventLegalEntityCreated) EventType() string { return "legal_entity
 
 func (InternalEventLegalEntityCreated) EntityType() string { return "legal_entity" }
 
-func (InternalEventLegalEntityMemberAssigned) EventType() string {
-	return "legal_entity.member_assigned"
-}
+func (InternalEventLegalEntityMemberAdded) EventType() string { return "legal_entity.member_added" }
 
-func (InternalEventLegalEntityMemberAssigned) EntityType() string { return "legal_entity" }
+func (InternalEventLegalEntityMemberAdded) EntityType() string { return "legal_entity" }
 
 func (InternalEventLegalEntityUpdated) EventType() string { return "legal_entity.updated" }
 

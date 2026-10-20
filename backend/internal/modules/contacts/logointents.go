@@ -27,6 +27,9 @@ func (s *Store) RecordLogoIntent(ctx context.Context, base string) error {
 	return storedobjects.NewLedger(s.db).Record(ctx, storedobjects.KindLogo, base+trimmedLogoSuffix)
 }
 
+// columnLogoKey is the wide mark's column, named alike on every table that carries one.
+const columnLogoKey = "logo_object_key"
+
 // LogoKeyColumns is every column that may hold a mark's key, by table.
 //
 // ALL OF THEM, because a reference check that misses one calls a live mark
@@ -40,9 +43,9 @@ func (s *Store) RecordLogoIntent(ctx context.Context, base string) error {
 // — it reads the committed schema and fails both ways: a mark column this list omits,
 // and a column named here that the schema does not have.
 var LogoKeyColumns = map[string][]string{
-	companyEntity:  {"logo_object_key", "logo_icon_object_key"},
-	"site_read":    {"logo_object_key", "logo_icon_object_key"},
-	"legal_entity": {"logo_object_key"},
+	companyEntity:  {columnLogoKey, "logo_icon_object_key"},
+	"site_read":    {columnLogoKey, "logo_icon_object_key"},
+	"legal_entity": {columnLogoKey},
 }
 
 // markTableClauses spells each table's read as a LITERAL, so `FROM company` appears

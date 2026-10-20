@@ -35,15 +35,15 @@ var pipelineEventTypes = map[string]struct{}{
 	"meeting_proposal.updated":   {},
 	// A legal entity's bank details and imprint are installation configuration
 	// read through the legal_entity grant; the internal consumers re-read it.
-	"legal_entity.created":         {},
-	"legal_entity.updated":         {},
-	"legal_entity.archived":        {},
-	"legal_entity.member_assigned": {},
-	"capture.received":             {},
-	"capture.normalized":           {},
-	"capture.failed":               {},
-	"capture.skipped":              {},
-	"ai_task.state_changed":        {},
+	"legal_entity.created":      {},
+	"legal_entity.updated":      {},
+	"legal_entity.archived":     {},
+	"legal_entity.member_added": {},
+	"capture.received":          {},
+	"capture.normalized":        {},
+	"capture.failed":            {},
+	"capture.skipped":           {},
+	"ai_task.state_changed":     {},
 	// A Brief open names no record it could hand a consumer: the subject is the
 	// READING, not the run, and the run is the reader's own queue. Entity-less
 	// is also what keeps it off the subscribable set — see its schema in

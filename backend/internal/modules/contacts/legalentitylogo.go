@@ -24,8 +24,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-var errDefaultEntityLogo = &LegalEntityRefusal{codeFieldOnCompanyForm,
-	"the default legal entity wears the company logo; change it on the company form"}
+var errDefaultEntityLogo = &LegalEntityRefusal{
+	codeFieldOnCompanyForm,
+	"the default legal entity wears the company logo; change it on the company form",
+}
 
 // SetLegalEntityLogo points an entity at uploaded bytes and hands back the key
 // they replaced.
@@ -69,7 +71,7 @@ func (s *Store) writeLegalEntityLogo(ctx context.Context, id ids.LegalEntityID, 
 			}
 		}
 		auditID, err := storekit.Audit(ctx, tx, actionUpdate, legalEntityObject, id.UUID,
-			map[string]any{"logo_object_key": superseded}, map[string]any{"logo_object_key": objectKey})
+			map[string]any{columnLogoKey: superseded}, map[string]any{columnLogoKey: objectKey})
 		if err != nil {
 			return err
 		}

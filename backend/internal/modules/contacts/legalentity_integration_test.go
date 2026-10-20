@@ -66,12 +66,10 @@ func setupEntities(t *testing.T) *promoteConsentEnv {
 	return e
 }
 
-func strp(s string) *string { return &s }
-
 func describeEntity(t *testing.T, e *promoteConsentEnv, name string) LegalEntity {
 	t.Helper()
 	entity, err := e.store.CreateLegalEntity(actingAs(e, "admin", entityAdmin), LegalEntityInput{
-		DisplayName: strp(name), LegalName: strp(name + " GmbH"), Country: strp("AT"),
+		DisplayName: new(name), LegalName: new(name + " GmbH"), Country: new("AT"),
 	})
 	if err != nil {
 		t.Fatalf("create %s: %v", name, err)
@@ -112,28 +110,36 @@ func TestAnEntityNeedsItsRequiredFieldsAndCleanValues(t *testing.T) {
 		in   LegalEntityInput
 		code string
 	}{
-		"no legal name": {LegalEntityInput{DisplayName: strp("Wien"), Country: strp("at")}, codeRequired},
-		"no country":    {LegalEntityInput{DisplayName: strp("Wien"), LegalName: strp("Wien GmbH")}, codeRequired},
-		"unknown country": {LegalEntityInput{DisplayName: strp("Wien"), LegalName: strp("Wien GmbH"),
-			Country: strp("uk")}, "invalid_country"},
-		"bad check digits": {LegalEntityInput{DisplayName: strp("Wien"), LegalName: strp("Wien GmbH"),
-			Country: strp("at"), IBAN: strp("DE89 3704 0044 0532 0130 01")}, "invalid_iban"},
+		"no legal name": {LegalEntityInput{DisplayName: new("Wien"), Country: new("at")}, codeRequired},
+		"no country":    {LegalEntityInput{DisplayName: new("Wien"), LegalName: new("Wien GmbH")}, codeRequired},
+		"unknown country": {LegalEntityInput{
+			DisplayName: new("Wien"), LegalName: new("Wien GmbH"),
+			Country: new("uk"),
+		}, "invalid_country"},
+		"bad check digits": {LegalEntityInput{
+			DisplayName: new("Wien"), LegalName: new("Wien GmbH"),
+			Country: new("at"), IBAN: new("DE89 3704 0044 0532 0130 01"),
+		}, "invalid_iban"},
 	} {
 		_, err := e.store.CreateLegalEntity(admin, tc.in)
 		if parse, ok := errors.AsType[*values.ParseError](err); !ok || parse.Code != tc.code {
 			t.Errorf("%s: err = %v, want a %s refusal", name, err, tc.code)
 		}
 	}
-	created, err := e.store.CreateLegalEntity(admin, LegalEntityInput{DisplayName: strp("Wien"),
-		LegalName: strp("Wien GmbH"), Country: strp("AT"), IBAN: strp("de89 3704 0044 0532 0130 00")})
+	created, err := e.store.CreateLegalEntity(admin, LegalEntityInput{
+		DisplayName: new("Wien"),
+		LegalName:   new("Wien GmbH"), Country: new("AT"), IBAN: new("de89 3704 0044 0532 0130 00"),
+	})
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
 	if *created.Country != "at" || *created.IBAN != "DE89370400440532013000" {
 		t.Errorf("stored country %q and IBAN %q, want at and the IBAN without spaces", *created.Country, *created.IBAN)
 	}
-	if _, err := e.store.CreateLegalEntity(admin, LegalEntityInput{DisplayName: strp("wien"),
-		LegalName: strp("Other GmbH"), Country: strp("at")}); !errors.Is(err, apperrors.ErrConflict) {
+	if _, err := e.store.CreateLegalEntity(admin, LegalEntityInput{
+		DisplayName: new("wien"),
+		LegalName:   new("Other GmbH"), Country: new("at"),
+	}); !errors.Is(err, apperrors.ErrConflict) {
 		t.Errorf("a second live entity named wien answered %v, want a conflict", err)
 	}
 	cleared := ""
@@ -218,11 +224,11 @@ func TestEveryEntityWriteCommitsItsAuditAndItsEvent(t *testing.T) {
 	admin := actingAs(e, "admin", entityAdmin)
 	vienna := describeEntity(t, e, "Wien")
 	if _, err := e.store.UpdateLegalEntity(admin, vienna.ID, LegalEntityInput{
-		IBAN: strp("DE89370400440532013000"), Imprint: strp("Geschäftsführer: A. Example"),
+		IBAN: new("DE89370400440532013000"), Imprint: new("Geschäftsführer: A. Example"),
 	}, &vienna.Version); err != nil {
 		t.Fatalf("update: %v", err)
 	}
-	if _, err := e.store.UpdateLegalEntity(admin, vienna.ID, LegalEntityInput{Imprint: strp("x")}, &vienna.Version); !errors.Is(err, apperrors.ErrVersionSkew) {
+	if _, err := e.store.UpdateLegalEntity(admin, vienna.ID, LegalEntityInput{Imprint: new("x")}, &vienna.Version); !errors.Is(err, apperrors.ErrVersionSkew) {
 		t.Errorf("an update at a stale version answered %v, want version skew", err)
 	}
 	if err := e.store.AssignLegalEntityMember(admin, vienna.ID, ids.From[ids.UserKind](e.user)); err != nil {
@@ -239,8 +245,8 @@ func TestEveryEntityWriteCommitsItsAuditAndItsEvent(t *testing.T) {
 	} {
 		assertAuditAndEvent(t, e, vienna.ID.UUID, action, eventType, 1)
 	}
-	assertAuditAndEvent(t, e, vienna.ID.UUID, "assign", "legal_entity.member_assigned", 1)
-	assertAuditAndEvent(t, e, defaultEntity(t, e).UUID, "assign", "legal_entity.member_assigned", 1)
+	assertAuditAndEvent(t, e, vienna.ID.UUID, "assign", "legal_entity.member_added", 1)
+	assertAuditAndEvent(t, e, defaultEntity(t, e).UUID, "assign", "legal_entity.member_added", 1)
 
 	var payload string
 	if err := e.owner.QueryRow(context.Background(),
@@ -271,7 +277,7 @@ func TestTheDefaultEntityReadsTheAnchorCompany(t *testing.T) {
 	e := setupEntities(t)
 	admin := actingAs(e, "admin", entityAdmin)
 	if _, err := e.store.WithInstallationRenamer(ignoreInstallationName).SaveCompany(admin, SaveCompanyInput{DisplayName: "Acme", Fields: map[string]*string{
-		fieldRegisteredAddress: strp("Torstraße 1, 10119 Berlin"), fieldRegisterVat: strp("DE123456789"),
+		fieldRegisteredAddress: new("Torstraße 1, 10119 Berlin"), fieldRegisterVat: new("DE123456789"),
 	}}); err != nil {
 		t.Fatalf("save the company: %v", err)
 	}
@@ -286,11 +292,11 @@ func TestTheDefaultEntityReadsTheAnchorCompany(t *testing.T) {
 		identity.Address.Line1 == nil || *identity.Address.Line1 != "Torstraße 1, 10119 Berlin" || identity.AnchorCompanyID.IsZero() {
 		t.Errorf("the default entity resolves to %+v, want the anchor's name, address and VAT ID", identity)
 	}
-	_, err := e.store.UpdateLegalEntity(admin, identity.ID, LegalEntityInput{DisplayName: strp("Other")}, nil)
+	_, err := e.store.UpdateLegalEntity(admin, identity.ID, LegalEntityInput{DisplayName: new("Other")}, nil)
 	if parse, ok := errors.AsType[*values.ParseError](err); !ok || parse.Code != codeFieldOnCompanyForm {
 		t.Errorf("renaming the default entity answered %v, want %s", err, codeFieldOnCompanyForm)
 	}
-	updated, err := e.store.UpdateLegalEntity(admin, identity.ID, LegalEntityInput{Country: strp("de")}, nil)
+	updated, err := e.store.UpdateLegalEntity(admin, identity.ID, LegalEntityInput{Country: new("de")}, nil)
 	if err != nil || updated.Country == nil || *updated.Country != "de" || updated.DisplayName != "Acme" {
 		t.Errorf("setting the default entity's own country gave %+v (%v), want de beside the anchor's name", updated, err)
 	}

@@ -193,15 +193,15 @@ var catalog = map[string]struct {
 	"booking_page.updated": {identityStreamEntity, 1},
 	// The legal entities the installation trades as, on the identity stream
 	// because an entity is installation configuration a user is assigned to.
-	"legal_entity.created":         {identityStreamEntity, 1},
-	"legal_entity.updated":         {identityStreamEntity, 1},
-	"legal_entity.archived":        {identityStreamEntity, 1},
-	"legal_entity.member_assigned": {identityStreamEntity, 1},
-	"meeting_proposal.updated":     {activityStreamEntity, 1},
-	"meeting_invitation.updated":   {activityStreamEntity, 1},
-	"activity.captured":            {activityStreamEntity, 1},
-	"activity.updated":             {activityStreamEntity, 1},
-	"activity.archived":            {activityStreamEntity, 1},
+	"legal_entity.created":       {identityStreamEntity, 1},
+	"legal_entity.updated":       {identityStreamEntity, 1},
+	"legal_entity.archived":      {identityStreamEntity, 1},
+	"legal_entity.member_added":  {identityStreamEntity, 1},
+	"meeting_proposal.updated":   {activityStreamEntity, 1},
+	"meeting_invitation.updated": {activityStreamEntity, 1},
+	"activity.captured":          {activityStreamEntity, 1},
+	"activity.updated":           {activityStreamEntity, 1},
+	"activity.archived":          {activityStreamEntity, 1},
 	// A file's own kind is not a stream §4.1 defines, so the attachment family
 	// rides the activity stream, the table belongs to the activities module,
 	// and a file that arrives with captured mail is already filed on an

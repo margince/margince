@@ -51,9 +51,9 @@ components:
       x-entity-type: legal_entity
       description: An administrator archived a legal entity nobody worked for any more.
       properties: {}
-    InternalEventLegalEntityMemberAssigned:
+    InternalEventLegalEntityMemberAdded:
       type: object
-      x-event-type: legal_entity.member_assigned
+      x-event-type: legal_entity.member_added
       x-entity-type: legal_entity
       description: >-
         A user now works for this legal entity. previous_legal_entity_id is the

@@ -28,6 +28,12 @@ import (
 // user works for is administering them, so an assignment asks it too.
 const userAdminObject = "user_admin"
 
+// An assignment's audit images name the user and the entity they work for.
+const (
+	auditKeyUser   = "user_id"
+	auditKeyEntity = "legal_entity_id"
+)
+
 // LegalEntityMember is one assignment row.
 type LegalEntityMember struct {
 	UserID        ids.UserID
@@ -70,7 +76,7 @@ func (s *Store) AssignLegalEntityMember(ctx context.Context, id ids.LegalEntityI
 			return err
 		}
 	}
-	if err := httperr.RequireBodyID("user_id", user.UUID); err != nil {
+	if err := httperr.RequireBodyID(auditKeyUser, user.UUID); err != nil {
 		return err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -93,15 +99,15 @@ func (s *Store) AssignLegalEntityMember(ctx context.Context, id ids.LegalEntityI
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, actionAssign, legalEntityObject, id.UUID,
-			map[string]any{"user_id": user, "legal_entity_id": previous},
-			map[string]any{"user_id": user, "legal_entity_id": id})
+			map[string]any{auditKeyUser: user, auditKeyEntity: previous},
+			map[string]any{auditKeyUser: user, auditKeyEntity: id})
 		if err != nil {
 			return err
 		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.InternalEventLegalEntityMemberAssigned{
+		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.InternalEventLegalEntityMemberAdded{
 			UserId: openapi_types.UUID(user.UUID), PreviousLegalEntityId: openapi_types.UUID(previous.UUID),
 		}); err != nil {
-			return fmt.Errorf("emit legal_entity.member_assigned: %w", err)
+			return fmt.Errorf("emit legal_entity.member_added: %w", err)
 		}
 		return nil
 	})
@@ -136,7 +142,7 @@ func requireUserExists(ctx context.Context, tx pgx.Tx, user ids.UserID) error {
 		return fmt.Errorf("check the user being assigned: %w", err)
 	}
 	if !exists {
-		return &values.ParseError{Field: "user_id", Code: "unknown_user", Message: "user_id names no user"}
+		return &values.ParseError{Field: auditKeyUser, Code: "unknown_user", Message: "user_id names no user"}
 	}
 	return nil
 }

@@ -41,8 +41,10 @@ func (e *LegalEntityRefusal) MessageFault() (code, message string) { return e.co
 // Unwrap answers 409: the entity's state, not the request, is what refuses.
 func (e *LegalEntityRefusal) Unwrap() error { return apperrors.ErrConflict }
 
-var errNameTaken = &LegalEntityRefusal{codeNameTaken,
-	"another live legal entity already has this name; choose a different one"}
+var errNameTaken = &LegalEntityRefusal{
+	codeNameTaken,
+	"another live legal entity already has this name; choose a different one",
+}
 
 // CreateLegalEntity describes a further entity. display_name, legal_name and
 // country are required.
@@ -144,18 +146,19 @@ func (s *Store) UpdateLegalEntity(ctx context.Context, id ids.LegalEntityID, in 
 // legalEntityPatch builds the change and names the fields it moves, in the
 // contract's spelling, sorted so the event reads the same on every run.
 func legalEntityPatch(before LegalEntity, in LegalEntityInput) (*storekit.Patch, []string, error) {
-	current := before.storedValues()
+	current := before.asInput().fields()
 	p := storekit.NewPatch()
 	var changed []string
-	for _, field := range in.fields() {
+	for i, field := range in.fields() {
 		value, sent, err := field.cleaned(before.IsDefault)
 		if err != nil {
 			return nil, nil, err
 		}
-		if !sent || sameStored(current[field.column], value) {
+		stored := current[i].value
+		if !sent || sameStored(stored, value) {
 			continue
 		}
-		p.Set(field.column, current[field.column], value)
+		p.Set(field.column, stored, value)
 		changed = append(changed, field.wire)
 	}
 	sort.Strings(changed)
@@ -169,20 +172,6 @@ func sameStored(stored *string, value any) bool {
 	}
 	text, ok := value.(string)
 	return ok && text == *stored
-}
-
-// storedValues is each patchable column's current value. On the default
-// entity the anchor-held ones are the anchor's, which no patch reaches.
-func (e LegalEntity) storedValues() map[string]*string {
-	name, a := e.DisplayName, e.Address
-	return map[string]*string{
-		"display_name": &name, "legal_name": e.LegalName,
-		"address_line1": a.Line1, "address_line2": a.Line2, "address_postal_code": a.PostalCode,
-		"address_city": a.City, "address_region": a.Region,
-		"vat_id": e.VatID, "register_court": e.RegisterCourt, "register_number": e.RegisterNumber,
-		"country": e.Country, "default_language": e.DefaultLanguage,
-		"bank_account_holder": e.BankAccountHolder, "iban": e.IBAN, "bic": e.BIC, "imprint": e.Imprint,
-	}
 }
 
 // ArchiveLegalEntity retires an entity nobody works for any more. The default
@@ -203,12 +192,16 @@ func (s *Store) ArchiveLegalEntity(ctx context.Context, id ids.LegalEntityID) (L
 			return err
 		}
 		if before.IsDefault {
-			return &LegalEntityRefusal{"legal_entity_default_is_permanent",
-				"the default legal entity cannot be archived; it is the one every unassigned user works for"}
+			return &LegalEntityRefusal{
+				"legal_entity_default_is_permanent",
+				"the default legal entity cannot be archived; it is the one every unassigned user works for",
+			}
 		}
 		if before.MemberCount > 0 {
-			return &LegalEntityRefusal{"legal_entity_has_members",
-				fmt.Sprintf("%d users still work for this legal entity; move them to another entity first", before.MemberCount)}
+			return &LegalEntityRefusal{
+				"legal_entity_has_members",
+				fmt.Sprintf("%d users still work for this legal entity; move them to another entity first", before.MemberCount),
+			}
 		}
 		if _, err := tx.Exec(ctx, `UPDATE legal_entity SET archived_at = now() WHERE id = $1`, id); err != nil {
 			return fmt.Errorf("archive legal entity: %w", err)
