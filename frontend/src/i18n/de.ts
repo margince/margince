@@ -6188,7 +6188,8 @@ export const de = {
   "agentClients.methods.deploymentOff":
     "Die Systemadministration hat diesen Weg in der Konfiguration der Installation deaktiviert.",
   "agentClients.methods.admin": "Von Admins registrierte Clients",
-  "agentClients.methods.adminHint": "Direkt unter „MCP-Clients“ registriert.",
+  "agentClients.methods.adminHint":
+    "Direkt unter „MCP-Clients“ registriert. Das Tool muss das Client-Secret senden.",
   "agentClients.methods.alwaysOn": "Immer aktiv",
   "agentClients.methods.readOnly": "Nur Admins können das ändern.",
   "agentClients.title": "MCP-Clients",
@@ -6209,7 +6210,6 @@ export const de = {
   "agentClients.col.lastUsed": "Zuletzt verwendet",
   "agentClients.col.state": "Status",
   "agentClients.by.admin": "Von einem Admin",
-  "agentClients.by.adminSecret": "Von einem Admin · Secret",
   "agentClients.by.dcr": "Selbst registriert",
   "agentClients.by.cimd": "Veröffentlichte Identität",
   "agentClients.rotate.open": "Secret erneuern…",
@@ -6234,20 +6234,11 @@ export const de = {
     "Erscheint auf dem Anmeldebildschirm und in der Client-Liste.",
   "agentClients.register.redirects": "Weiterleitungs-URIs",
   "agentClients.register.redirectsHint":
-    "Die Callback-Adressen, die das Tool angibt. Drücke nach jeder Adresse die Eingabetaste.",
-  "agentClients.register.secretQuestion": "Braucht das Tool ein Client-Secret?",
-  "agentClients.register.secretYes": "Ja",
-  "agentClients.register.secretYesHint":
-    "Gemini Enterprise, Copilot Studio „Manual“",
-  "agentClients.register.secretNo": "Nein",
-  "agentClients.register.secretNoHint":
-    "Claude, Codex oder ChatGPT mit eigenem Client",
+    "Wohin das Tool nach der Anmeldung zurückleitet. Wähle ein Tool aus der Liste oder gib eine Adresse ein und drücke die Eingabetaste.",
   "agentClients.register.submit": "Client registrieren",
   "agentClients.register.needName": "Gib dem Client einen Namen.",
   "agentClients.register.needRedirect":
     "Füge mindestens eine Weiterleitungs-URI hinzu.",
-  "agentClients.register.needSecretAnswer":
-    "Wähle, ob das Tool ein Client-Secret braucht.",
   "agentClients.register.nameInvalid":
     "Verwende einen Namen mit 1 bis 120 Zeichen.",
   "agentClients.register.redirectInvalid":

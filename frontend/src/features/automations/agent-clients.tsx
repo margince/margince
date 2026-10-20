@@ -17,7 +17,7 @@ import { useLastSubject } from "../../design-system/presence";
 import { LoadMoreButton, QueryStates } from "../../design-system/querystates";
 import { formatDate, formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
-import { type Translator, useLocale, usePlural, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf } from "../../lib/problem";
@@ -43,35 +43,25 @@ type Rights = Readonly<{ update: boolean; delete: boolean }>;
 // to compile here instead of falling through.
 const REGISTRATION: Record<
   AgentClient["registered_by"],
-  Readonly<{ byHand: boolean; label: MessageKey; deleteBody: MessageKey }>
+  Readonly<{ label: MessageKey; deleteBody: MessageKey }>
 > = {
   admin: {
-    byHand: true,
     label: "agentClients.by.admin",
     deleteBody: "agentClients.delete.bodyAdmin",
   },
   dcr: {
-    byHand: false,
     label: "agentClients.by.dcr",
     deleteBody: "agentClients.delete.bodyDcr",
   },
   cimd: {
-    byHand: false,
     label: "agentClients.by.cimd",
     deleteBody: "agentClients.delete.bodyCimd",
   },
 };
 
-function registeredByLabel(client: AgentClient, t: Translator): string {
-  const { byHand, label } = REGISTRATION[client.registered_by];
-  return t(
-    byHand && client.confidential ? "agentClients.by.adminSecret" : label,
-  );
-}
-
 // A rotate needs a secret to replace; only a client registered by hand holds one.
 function rotates(client: AgentClient): boolean {
-  return REGISTRATION[client.registered_by].byHand && client.confidential;
+  return client.confidential;
 }
 
 function RowVerbs({
@@ -146,7 +136,9 @@ function useColumns(
     {
       key: "registered",
       header: t("agentClients.col.registered"),
-      render: (client) => <Badge>{registeredByLabel(client, t)}</Badge>,
+      render: (client) => (
+        <Badge>{t(REGISTRATION[client.registered_by].label)}</Badge>
+      ),
     },
     {
       key: "users",

@@ -118,7 +118,8 @@ transport stay in the build (`compose/mcpedge.go`).
 tries a client it was given first, then a metadata document, then dynamic registration:
 
 - **A client an admin registered** (`created_via = 'admin'`), made in Settings → **MCP** → **MCP
-  clients**. Margince mints the `client_id`. With a secret, the secret is stored as a SHA-256 digest and shown once.
+  clients**. Margince mints the `client_id` and always a secret, which the client must send. The secret is stored as a
+  SHA-256 digest and shown once. A tool that cannot send a secret uses one of the two automatic ways below.
 - **A Client ID Metadata Document (CIMD)**, the newer automatic way. The `client_id` is an `https` URL with a path,
   which leads to a JSON document that states its own `client_id`, `client_name` and `redirect_uris`.
   - When this server gets it, it **does not follow redirects**, since a redirect is a second URL the caller picked.

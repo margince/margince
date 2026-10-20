@@ -38,7 +38,7 @@ const (
 	agentClientTierSort = "tier"
 )
 
-var errNoSecretToRotate = fmt.Errorf("%w: this client has no secret to rotate; only a client an admin registered with a secret has one", apperrors.ErrConflict)
+var errNoSecretToRotate = fmt.Errorf("%w: this client has no secret to rotate; only a client an admin registered has one; one that registered itself or publishes a metadata document is public", apperrors.ErrConflict)
 
 // AgentClient is one OAuth client as the admin list shows it. It carries no
 // secret and no digest of one.
@@ -59,7 +59,6 @@ type AgentClient struct {
 type RegisterAgentClientInput struct {
 	Name         string
 	RedirectURIs []string
-	Confidential bool
 }
 
 // InvalidAgentClientFieldError maps to 422 naming Field.
@@ -187,9 +186,10 @@ func agentClientPage(listed []listedClient, limit int) ([]AgentClient, storekit.
 	return clients, storekit.Page{NextCursor: next, HasMore: true}, nil
 }
 
-// RegisterAgentClient mints a client an admin types in, and its secret when it
-// is confidential. The raw secret is returned here once and stored only as a
-// digest; neither reaches the audit row.
+// RegisterAgentClient mints a client an admin types in, always with a secret:
+// a tool that cannot send one connects through DCR or CIMD instead. The raw
+// secret is returned here once and stored only as a digest; neither reaches
+// the audit row.
 func (s *Service) RegisterAgentClient(ctx context.Context, actor Identity, in RegisterAgentClientInput) (AgentClient, string, error) {
 	ctx, err := admit(ctx, actor, agentClientObject, principal.ActionCreate)
 	if err != nil {
@@ -203,14 +203,9 @@ func (s *Service) RegisterAgentClient(ctx context.Context, actor Identity, in Re
 	if err != nil {
 		return AgentClient{}, "", err
 	}
-	var secret string
-	var hash *string
-	if in.Confidential {
-		raw, digest, err := bearer.Mint()
-		if err != nil {
-			return AgentClient{}, "", err
-		}
-		secret, hash = raw, &digest
+	secret, hash, err := bearer.Mint()
+	if err != nil {
+		return AgentClient{}, "", err
 	}
 	var client AgentClient
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -221,7 +216,7 @@ func (s *Service) RegisterAgentClient(ctx context.Context, actor Identity, in Re
 			return err
 		}
 		if _, err := storekit.Audit(ctx, tx, "create", agentClientAuditEntity, id, nil, map[string]any{
-			"client_name": name, agentClientFieldURIs: uris, "confidential": in.Confidential,
+			"client_name": name, agentClientFieldURIs: uris,
 		}); err != nil {
 			return err
 		}
@@ -264,7 +259,7 @@ func validAgentClientInput(in RegisterAgentClientInput) (string, []string, error
 	return name, uris, nil
 }
 
-// RotateAgentClientSecret replaces a confidential client's secret. The old one
+// RotateAgentClientSecret replaces an admin-registered client's secret. The old one
 // stops at once; grants and refresh tokens stay, renewing with the new secret.
 func (s *Service) RotateAgentClientSecret(ctx context.Context, actor Identity, id ids.UUID) (string, error) {
 	ctx, err := admit(ctx, actor, agentClientObject, principal.ActionUpdate)

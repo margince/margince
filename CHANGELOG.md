@@ -20,9 +20,10 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
   and `CaptureConnection.history_baseline` shows it. Changing or clearing the
   date completes and deletes nothing.
 - **Gemini through work or school can connect.** An admin registers an AI
-  tool's OAuth client on a new Settings → **MCP** page,
-  with a client secret when the tool asks for one (Gemini Enterprise, Copilot
-  Studio "Manual"). The secret is shown once and stored as a hash. The same list
+  tool's OAuth client on a new Settings → **MCP** page, for a tool such as
+  Gemini Enterprise or Copilot Studio "Manual". Each such client gets a client
+  secret, which the tool must send. The secret is shown once and stored as a
+  hash. The same list
   shows every client, including the ones tools registered themselves, and an
   admin can disable, enable, rotate or delete each one. Two switches, and
   `mcp.client_registration` in the deployment file, turn off self-registration

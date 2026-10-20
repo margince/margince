@@ -5,11 +5,12 @@
 
 package agentaccess
 
-// Clients an admin registers by hand, the secret they may carry, and the
+// Clients an admin registers by hand, the secret each one carries, and the
 // switches over the two automatic methods, end to end over HTTP. The
 // self-registered client every existing connection uses is tested beside them.
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -35,16 +36,16 @@ type registeredClient struct {
 
 // registerAdminClient registers a client through the admin route and points
 // the env's flows at it, so authorize and exchange run as that client.
-func (o *oauthEnv) registerAdminClient(t *testing.T, confidential bool) registeredClient {
+func (o *oauthEnv) registerAdminClient(t *testing.T) registeredClient {
 	t.Helper()
 	var out registeredClient
 	if status := o.Call(t, "POST", "/v1/installation/agent-clients", integration.AnyMap{
-		"name": "Gemini Enterprise", "redirect_uris": []string{oauthRedirect}, "confidential": confidential,
+		"name": "Gemini Enterprise", "redirect_uris": []string{oauthRedirect},
 	}, nil, &out); status != http.StatusCreated {
 		t.Fatalf("register → %d %+v", status, out)
 	}
-	if confidential == (out.ClientSecret == "") {
-		t.Fatalf("confidential=%v but client_secret=%q", confidential, out.ClientSecret)
+	if out.ClientSecret == "" || !out.Client.Confidential {
+		t.Fatalf("an admin-registered client came back without a secret: %+v", out)
 	}
 	o.clientID = out.Client.ClientID
 	return out
@@ -88,7 +89,7 @@ func (o *oauthEnv) codeForm(code string) url.Values {
 
 func TestAClientWithASecretConnectsAndRenewsOnlyWithIt(t *testing.T) {
 	o := setupOAuth(t)
-	client := o.registerAdminClient(t, true)
+	client := o.registerAdminClient(t)
 	code := o.authorize(t, url.Values{"scope": {"read write offline_access"}})
 
 	// The failed attempts come first: client authentication runs before the
@@ -167,7 +168,8 @@ func TestASelfRegisteredClientStillConnectsWithNoSecret(t *testing.T) {
 
 func TestRotatingASecretCutsTheOldOneAndKeepsTheConnection(t *testing.T) {
 	o := setupOAuth(t)
-	client := o.registerAdminClient(t, true)
+	selfRegistered := o.clientID
+	client := o.registerAdminClient(t)
 	code := o.authorize(t, url.Values{"scope": {"read offline_access"}})
 	_, body, _ := o.postTokenWith(t, "/oauth/token", o.codeForm(code), basicAuth(o.clientID, client.ClientSecret))
 	refresh := body["refresh_token"].(string)
@@ -186,20 +188,24 @@ func TestRotatingASecretCutsTheOldOneAndKeepsTheConnection(t *testing.T) {
 		t.Fatalf("the new secret renews the same connection → %d %v", status, body)
 	}
 
-	public := o.registerAdminClient(t, false)
+	var publicRow string
+	if err := o.Owner.QueryRow(context.Background(),
+		`SELECT id FROM oauth_client WHERE client_id = $1`, selfRegistered).Scan(&publicRow); err != nil {
+		t.Fatal(err)
+	}
 	var problem struct {
 		Code string `json:"code"`
 	}
-	if status := o.Call(t, "POST", "/v1/installation/agent-clients/"+public.Client.ID+"/secret", nil, nil, &problem); status != http.StatusConflict {
+	if status := o.Call(t, "POST", "/v1/installation/agent-clients/"+publicRow+"/secret", nil, nil, &problem); status != http.StatusConflict {
 		t.Fatalf("rotating a public client → %d %+v, want 409", status, problem)
 	}
 }
 
 func TestDisableBlocksLiveTokensAndEnableBringsThemBack(t *testing.T) {
 	o := setupOAuth(t)
-	client := o.registerAdminClient(t, false)
+	client := o.registerAdminClient(t)
 	code := o.authorize(t, nil)
-	_, body, _ := o.postTokenWith(t, "/oauth/token", o.codeForm(code), nil)
+	_, body, _ := o.postTokenWith(t, "/oauth/token", o.codeForm(code), basicAuth(o.clientID, client.ClientSecret))
 	token := body["access_token"].(string)
 
 	path := "/v1/installation/agent-clients/" + client.Client.ID
@@ -221,9 +227,9 @@ func TestDisableBlocksLiveTokensAndEnableBringsThemBack(t *testing.T) {
 
 func TestDeletingAClientEndsEveryConnectionUnderIt(t *testing.T) {
 	o := setupOAuth(t)
-	client := o.registerAdminClient(t, false)
+	client := o.registerAdminClient(t)
 	code := o.authorize(t, url.Values{"scope": {"read offline_access"}})
-	_, body, _ := o.postTokenWith(t, "/oauth/token", o.codeForm(code), nil)
+	_, body, _ := o.postTokenWith(t, "/oauth/token", o.codeForm(code), basicAuth(o.clientID, client.ClientSecret))
 
 	if status := o.Call(t, "DELETE", "/v1/installation/agent-clients/"+client.Client.ID, nil, nil, nil); status != http.StatusNoContent {
 		t.Fatalf("delete → %d", status)
@@ -297,13 +303,13 @@ func TestSwitchesStopNewSignInsAndNeverARenewal(t *testing.T) {
 	}
 
 	// A client an admin registers is not one of the switched methods.
-	o.registerAdminClient(t, false)
+	o.registerAdminClient(t)
 	o.authorize(t, nil)
 }
 
 func TestTheSecretIsInNoAuditRowAndNoListResponse(t *testing.T) {
 	o := setupOAuth(t)
-	client := o.registerAdminClient(t, true)
+	client := o.registerAdminClient(t)
 	var rotated struct {
 		ClientSecret string `json:"client_secret"`
 	}
@@ -327,7 +333,7 @@ func TestTheSecretIsInNoAuditRowAndNoListResponse(t *testing.T) {
 // RFC 7009: a confidential client's token is handed back only by that client.
 func TestOnlyTheConfidentialClientItselfRevokesItsToken(t *testing.T) {
 	o := setupOAuth(t)
-	client := o.registerAdminClient(t, true)
+	client := o.registerAdminClient(t)
 	code := o.authorize(t, nil)
 	_, body, _ := o.postTokenWith(t, "/oauth/token", o.codeForm(code), basicAuth(o.clientID, client.ClientSecret))
 	token := body["access_token"].(string)
@@ -377,7 +383,7 @@ func TestTheClientListRefusesRedirectsItCannotServe(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			if status := o.Call(t, "POST", "/v1/installation/agent-clients", integration.AnyMap{
-				"name": "x", "redirect_uris": uris, "confidential": false,
+				"name": "x", "redirect_uris": uris,
 			}, nil, nil); status != http.StatusUnprocessableEntity {
 				t.Errorf("register with %v → %d, want 422", uris, status)
 			}

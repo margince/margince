@@ -50,16 +50,13 @@ async function openDialog(user: User) {
 async function fill(
   user: User,
   dialog: HTMLElement,
-  answers: Readonly<{ name: string; redirect: string; secret: "Yes" | "No" }>,
+  answers: Readonly<{ name: string; redirect: string }>,
 ) {
   const form = within(dialog);
   await user.type(form.getByRole("textbox", { name: /Name/ }), answers.name);
   await user.type(
     form.getByRole("combobox", { name: /Redirect URIs/ }),
     `${answers.redirect}{Enter}`,
-  );
-  await user.click(
-    form.getByRole("radio", { name: new RegExp(`^${answers.secret}`) }),
   );
 }
 
@@ -89,7 +86,6 @@ describe("Register a client", () => {
     await fill(user, dialog, {
       name: "Gemini Enterprise",
       redirect: GEMINI_REDIRECT,
-      secret: "Yes",
     });
     await user.click(
       within(dialog).getByRole("button", { name: "Register client" }),
@@ -101,7 +97,6 @@ describe("Register a client", () => {
     ).toEqual({
       name: "Gemini Enterprise",
       redirect_uris: [GEMINI_REDIRECT],
-      confidential: true,
     });
     const value = (name: string) =>
       screen.getByRole("textbox", { name }).textContent;
@@ -129,31 +124,6 @@ describe("Register a client", () => {
     expect(screen.queryByText(SECRET)).toBeNull();
   });
 
-  it("shows a client without a secret no secret, warning or Gemini steps", async () => {
-    const user = userEvent.setup();
-    const calls = registering(() =>
-      json({ client: { ...GEMINI_CLIENT, confidential: false } }, 201),
-    );
-    renderWithClient(<AgentClientsCard />);
-    const dialog = await openDialog(user);
-    await fill(user, dialog, {
-      name: "My Claude client",
-      redirect: "https://claude.ai/api/mcp/auth_callback",
-      secret: "No",
-    });
-    await user.click(
-      within(dialog).getByRole("button", { name: "Register client" }),
-    );
-    expect(await screen.findByText("Client registered")).toBeTruthy();
-    expect(
-      calls.find((call) => call.key === "POST /installation/agent-clients")
-        ?.body,
-    ).toMatchObject({ confidential: false });
-    expect(screen.queryByRole("textbox", { name: "Client secret" })).toBeNull();
-    expect(screen.queryByText("Copy the secret now")).toBeNull();
-    expect(screen.queryByText("In Gemini Enterprise")).toBeNull();
-  });
-
   it("puts a refused redirect URI on its own field, in words", async () => {
     const user = userEvent.setup();
     registering(() =>
@@ -164,7 +134,6 @@ describe("Register a client", () => {
     await fill(user, dialog, {
       name: "Tool",
       redirect: "http://evil.test/cb",
-      secret: "No",
     });
     await user.click(
       within(dialog).getByRole("button", { name: "Register client" }),
@@ -206,7 +175,6 @@ describe("Register a client", () => {
     await fill(user, dialog, {
       name: "Tool",
       redirect: GEMINI_REDIRECT,
-      secret: "Yes",
     });
     await user.click(
       within(dialog).getByRole("button", { name: "Register client" }),
@@ -238,7 +206,6 @@ describe("Register a client", () => {
     await fill(user, dialog, {
       name: "Tool",
       redirect: GEMINI_REDIRECT,
-      secret: "Yes",
     });
     await user.click(
       within(dialog).getByRole("button", { name: "Register client" }),
@@ -258,7 +225,6 @@ describe("Register a client", () => {
     await fill(user, dialog, {
       name: "Tool",
       redirect: GEMINI_REDIRECT,
-      secret: "Yes",
     });
     await user.click(
       within(dialog).getByRole("button", { name: "Register client" }),
@@ -267,7 +233,7 @@ describe("Register a client", () => {
     expect(screen.queryByText("Client registered")).toBeNull();
   });
 
-  it("refuses to send until every question has an answer, and says which", async () => {
+  it("refuses to send until the name and a redirect URI are given, and says which", async () => {
     const user = userEvent.setup();
     const calls = registering();
     renderWithClient(<AgentClientsCard />);
@@ -276,18 +242,18 @@ describe("Register a client", () => {
     expect(form.getByText("Give the client a name.")).toBeTruthy();
     await user.type(form.getByRole("textbox", { name: /Name/ }), "Tool");
     expect(form.getByText("Add at least one redirect URI.")).toBeTruthy();
+    await user.click(form.getByRole("button", { name: /Register client/ }));
+    expect(calls.some((call) => call.key.startsWith("POST"))).toBe(false);
     await user.type(
       form.getByRole("combobox", { name: /Redirect URIs/ }),
       `${GEMINI_REDIRECT}{Enter}`,
     );
-    expect(
-      form.getByText("Choose whether the tool needs a client secret."),
-    ).toBeTruthy();
     await user.click(form.getByRole("button", { name: /Register client/ }));
-    expect(calls.some((call) => call.key.startsWith("POST"))).toBe(false);
+    expect(await screen.findByText("Client registered")).toBeTruthy();
   });
 
-  it("offers the callbacks of tools that bring their own client", async () => {
+  // Codex sends no secret, so it connects on its own and is not offered here.
+  it("lists the tools' callbacks as soon as the empty field is focused", async () => {
     const user = userEvent.setup();
     registering();
     renderWithClient(<AgentClientsCard />);
@@ -296,8 +262,17 @@ describe("Register a client", () => {
       within(dialog).getByRole("combobox", { name: /Redirect URIs/ }),
     );
     const list = await screen.findByRole("listbox");
-    expect(within(list).getByText(/Gemini Enterprise/)).toBeTruthy();
-    expect(within(list).getByText(/Claude Code/)).toBeTruthy();
+    for (const tool of [
+      "Claude",
+      "Claude Code",
+      "ChatGPT",
+      "Gemini Enterprise",
+    ]) {
+      expect(within(list).getByText(tool)).toBeTruthy();
+    }
+    expect(within(list).queryByText("Codex")).toBeNull();
+    await user.click(within(list).getByText("Claude Code"));
+    expect(within(dialog).getByText("http://localhost/callback")).toBeTruthy();
   });
 
   it("leaves the addresses out while the connector is off, and says so", async () => {
@@ -321,7 +296,6 @@ describe("Register a client", () => {
     await fill(user, dialog, {
       name: "Gemini Enterprise",
       redirect: GEMINI_REDIRECT,
-      secret: "Yes",
     });
     await user.click(
       within(dialog).getByRole("button", { name: "Register client" }),
@@ -343,7 +317,6 @@ describe("Register a client", () => {
     await fill(user, dialog, {
       name: "Gemini Enterprise",
       redirect: GEMINI_REDIRECT,
-      secret: "Yes",
     });
     await user.click(
       within(dialog).getByRole("button", { name: "Register client" }),

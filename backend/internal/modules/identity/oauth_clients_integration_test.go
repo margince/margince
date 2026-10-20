@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/bearer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -51,7 +52,7 @@ func TestEveryAgentClientOperationRefusesWhoeverLacksItsVerb(t *testing.T) {
 	e := setupCIMD(t, "agent-client-rbac")
 	admin := e.actorWith(t, fullAgentClientGrant)
 	registered, _, err := e.svc.RegisterAgentClient(e.ctx, admin, RegisterAgentClientInput{
-		Name: "Gemini", RedirectURIs: []string{"https://vertexaisearch.cloud.google.com/oauth-redirect"}, Confidential: true,
+		Name: "Gemini", RedirectURIs: []string{"https://vertexaisearch.cloud.google.com/oauth-redirect"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -83,6 +84,32 @@ func TestEveryAgentClientOperationRefusesWhoeverLacksItsVerb(t *testing.T) {
 	listed, _, err := e.svc.ListAgentClients(e.ctx, ops, nil, nil)
 	if err != nil || !slices.ContainsFunc(listed, func(c AgentClient) bool { return c.ID == registered.ID }) {
 		t.Errorf("list with read → %v %v, want the registered client", listed, err)
+	}
+}
+
+// A tool that cannot send a secret connects through DCR or CIMD. So every
+// client an admin registers has one, kept only as its digest.
+func TestAnAdminRegisteredClientAlwaysGetsASecretStoredAsItsDigest(t *testing.T) {
+	e := setupCIMD(t, "agent-client-secret")
+	admin := e.actorWith(t, fullAgentClientGrant)
+	client, secret, err := e.svc.RegisterAgentClient(e.ctx, admin, RegisterAgentClientInput{
+		Name: "Claude", RedirectURIs: []string{"https://claude.ai/api/mcp/auth_callback"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret == "" || !client.Confidential {
+		t.Fatalf("secret %q, confidential %v: want a secret on every admin-registered client", secret, client.Confidential)
+	}
+	var stored *string
+	err = database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
+		return tx.QueryRow(e.ctx, `SELECT client_secret_hash FROM oauth_client WHERE id = $1`, client.ID).Scan(&stored)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stored == nil || *stored != bearer.Digest(secret) {
+		t.Errorf("stored hash %v, want the digest of the secret returned", stored)
 	}
 }
 

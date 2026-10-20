@@ -45075,9 +45075,6 @@ type RefusedRecipientSubjectKind string
 
 // RegisterAgentClientRequest defines model for RegisterAgentClientRequest.
 type RegisterAgentClientRequest struct {
-	// Confidential Mint a client secret. Gemini Enterprise and Copilot Studio "Manual" need one.
-	Confidential bool `json:"confidential"`
-
 	// Name Shown on the consent screen and in the client list.
 	Name string `json:"name"`
 
@@ -45090,8 +45087,8 @@ type RegisteredAgentClient struct {
 	// Client One OAuth client an AI tool signs users in through. Never carries a secret.
 	Client AgentClient `json:"client"`
 
-	// ClientSecret The secret, present only when confidential. Shown once and never again.
-	ClientSecret *string `json:"client_secret,omitempty"`
+	// ClientSecret The secret the tool sends at the token endpoint. Shown once and never again.
+	ClientSecret string `json:"client_secret"`
 
 	// Scopes Every scope the tool may ask for, space separated, as discovery lists them.
 	Scopes string `json:"scopes"`

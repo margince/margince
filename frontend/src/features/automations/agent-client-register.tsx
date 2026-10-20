@@ -4,7 +4,6 @@
 import { type FormEvent, useId, useState } from "react";
 import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
-import { ChoiceList } from "../../design-system/choicelist";
 import {
   CopyableText,
   useClipboardCopy,
@@ -24,12 +23,11 @@ import "./agent-clients.css";
 
 const NAME_MAX = 120;
 
-// Callbacks of tools that bring their own client, so an admin picks rather
+// Callbacks of tools that can send a client secret, so an admin picks rather
 // than types. The product names are the vendors' own, in every language.
 const REDIRECT_PRESETS = [
   { value: "https://claude.ai/api/mcp/auth_callback", hint: "Claude" },
   { value: "http://localhost/callback", hint: "Claude Code" },
-  { value: "http://127.0.0.1/callback", hint: "Codex" },
   {
     value: "https://chatgpt.com/connector_platform_oauth_redirect",
     hint: "ChatGPT",
@@ -46,8 +44,6 @@ const FIELD_PROBLEM_COPY: Readonly<Record<string, MessageKey>> = {
   invalid_redirect_uri: "agentClients.register.redirectInvalid",
   redirect_uri_count: "agentClients.register.redirectCount",
 };
-
-type NeedsSecret = "yes" | "no";
 
 function useFieldProblem(error: unknown) {
   const t = useT();
@@ -101,12 +97,11 @@ function RegisterForm({
   const fieldProblem = useFieldProblem(register.error);
   const [name, setName] = useState("");
   const [redirects, setRedirects] = useState<readonly string[]>([]);
-  const [needsSecret, setNeedsSecret] = useState<NeedsSecret | "">("");
   const nameProblem = fieldProblem("name");
   const redirectProblem = fieldProblem("redirect_uris");
   const otherProblem =
     register.error && !nameProblem && !redirectProblem ? register.error : null;
-  const missing = missingAnswer(name, redirects, needsSecret);
+  const missing = missingAnswer(name, redirects);
   // An edit answers the server's refusal, so the refusal stops showing.
   function edited<T>(set: (value: T) => void) {
     return (value: T) => {
@@ -119,15 +114,11 @@ function RegisterForm({
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (register.isPending || missing !== undefined || needsSecret === "") {
+    if (register.isPending || missing !== undefined) {
       return;
     }
     register.mutate(
-      {
-        name: name.trim(),
-        redirect_uris: [...redirects],
-        confidential: needsSecret === "yes",
-      },
+      { name: name.trim(), redirect_uris: [...redirects] },
       { onSuccess: onRegistered },
     );
   };
@@ -174,23 +165,6 @@ function RegisterForm({
             />
           )}
         </Field>
-        <ChoiceList<NeedsSecret>
-          legend={t("agentClients.register.secretQuestion")}
-          value={needsSecret}
-          onChange={edited(setNeedsSecret)}
-          choices={[
-            {
-              value: "yes",
-              label: t("agentClients.register.secretYes"),
-              description: t("agentClients.register.secretYesHint"),
-            },
-            {
-              value: "no",
-              label: t("agentClients.register.secretNo"),
-              description: t("agentClients.register.secretNoHint"),
-            },
-          ]}
-        />
         <ErrorLine error={otherProblem} />
       </form>
       <div className="actions">
@@ -214,7 +188,6 @@ function RegisterForm({
 function missingAnswer(
   name: string,
   redirects: readonly string[],
-  needsSecret: NeedsSecret | "",
 ): MessageKey | undefined {
   if (name.trim() === "") {
     return "agentClients.register.needName";
@@ -222,16 +195,13 @@ function missingAnswer(
   if (redirects.length === 0) {
     return "agentClients.register.needRedirect";
   }
-  if (needsSecret === "") {
-    return "agentClients.register.needSecretAnswer";
-  }
   return undefined;
 }
 
 /**
- * What a tool's admin pastes in, with the secret when there is one. Shown
- * after a register and after a rotate; the secret lives only in the caller's
- * state, which ends when the dialog closes.
+ * What a tool's admin pastes in, the secret included. Shown after a register
+ * and after a rotate; the secret lives only in the caller's state, which ends
+ * when the dialog closes.
  */
 export function AgentClientValuesDialog({
   titleKey,
@@ -242,7 +212,7 @@ export function AgentClientValuesDialog({
 }: Readonly<{
   titleKey: MessageKey;
   clientId: string;
-  secret?: string;
+  secret: string;
   scopes: string;
   onClose: () => void;
 }>) {
@@ -255,9 +225,7 @@ export function AgentClientValuesDialog({
   const [current, setCurrent] = useState<MessageKey | null>(null);
   const values: { label: MessageKey; text: string }[] = [
     { label: "agentClients.value.clientId", text: clientId },
-    ...(secret === undefined
-      ? []
-      : [{ label: "agentClients.value.secret" as const, text: secret }]),
+    { label: "agentClients.value.secret", text: secret },
     ...(issuer === null || mcpUrl === null
       ? []
       : [
@@ -282,15 +250,13 @@ export function AgentClientValuesDialog({
         {t(titleKey)}
       </Heading>
       <div className="form-stack">
-        {secret !== undefined && (
-          <Callout
-            tone="warning"
-            kind="standing"
-            title={t("agentClients.result.secretOnceTitle")}
-          >
-            {t("agentClients.result.secretOnceBody")}
-          </Callout>
-        )}
+        <Callout
+          tone="warning"
+          kind="standing"
+          title={t("agentClients.result.secretOnceTitle")}
+        >
+          {t("agentClients.result.secretOnceBody")}
+        </Callout>
         {values.map((value) => (
           <CopyValue
             key={value.label}
@@ -305,7 +271,7 @@ export function AgentClientValuesDialog({
             {t("agents.connectorOffDetail")}
           </Callout>
         )}
-        {secret !== undefined && mcpUrl !== null && <GeminiSteps />}
+        {mcpUrl !== null && <GeminiSteps />}
       </div>
       <div className="actions">
         <Button variant="primary" onClick={onClose}>

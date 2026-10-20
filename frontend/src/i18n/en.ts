@@ -6289,7 +6289,8 @@ export const en = {
   "agentClients.methods.deploymentOff":
     "Whoever runs this installation turned this off in its configuration.",
   "agentClients.methods.admin": "Clients an admin registers",
-  "agentClients.methods.adminHint": "Registered by hand under MCP clients.",
+  "agentClients.methods.adminHint":
+    "Registered by hand under MCP clients. The tool must send the client secret.",
   "agentClients.methods.alwaysOn": "Always on",
   "agentClients.methods.readOnly": "Only an admin can change these.",
   "agentClients.title": "MCP clients",
@@ -6310,7 +6311,6 @@ export const en = {
   "agentClients.col.lastUsed": "Last used",
   "agentClients.col.state": "State",
   "agentClients.by.admin": "By an admin",
-  "agentClients.by.adminSecret": "By an admin · secret",
   "agentClients.by.dcr": "Registered itself",
   "agentClients.by.cimd": "Published identity",
   "agentClients.rotate.open": "Rotate secret…",
@@ -6335,19 +6335,10 @@ export const en = {
     "Shown on the sign-in screen and in the client list.",
   "agentClients.register.redirects": "Redirect URIs",
   "agentClients.register.redirectsHint":
-    "The callback addresses the tool names. Press Enter after each one.",
-  "agentClients.register.secretQuestion": "Does the tool need a client secret?",
-  "agentClients.register.secretYes": "Yes",
-  "agentClients.register.secretYesHint":
-    "Gemini Enterprise, Copilot Studio “Manual”",
-  "agentClients.register.secretNo": "No",
-  "agentClients.register.secretNoHint":
-    "Claude, Codex or ChatGPT with your own client",
+    "Where the tool sends users back after sign-in. Pick a tool from the list, or type an address and press Enter.",
   "agentClients.register.submit": "Register client",
   "agentClients.register.needName": "Give the client a name.",
   "agentClients.register.needRedirect": "Add at least one redirect URI.",
-  "agentClients.register.needSecretAnswer":
-    "Choose whether the tool needs a client secret.",
   "agentClients.register.nameInvalid": "Use a name of 1 to 120 characters.",
   "agentClients.register.redirectInvalid":
     "Use https, or http on localhost or 127.0.0.1, with no fragment.",

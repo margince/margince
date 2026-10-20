@@ -107,32 +107,35 @@ client ID and a client secret. An admin makes them in Settings → **MCP** → *
 **Register a client**:
 
 1. Give the client a name. The consent screen shows it.
-2. Add the redirect URI the tool sends users back to. It must match to the character.
-3. Choose whether the tool needs a client secret.
-4. Copy the values Margince shows into the tool. Margince shows the secret once, and stores only a hash of it.
+2. Add the redirect URI the tool sends users back to. It must match to the character. The field offers the callbacks
+   of Claude, Claude Code, ChatGPT and Gemini Enterprise as soon as it opens.
+3. Copy the values Margince shows into the tool. Margince shows the secret once, and stores only a hash of it.
+
+A client an admin registers always has a secret, and the tool must send it. A tool that cannot send a secret, such as
+Codex, which takes only a client ID, connects through a published identity or by registering itself instead.
 
 | Tool | Redirect URI |
 |---|---|
 | Gemini Enterprise | `https://vertexaisearch.cloud.google.com/oauth-redirect` |
 | Claude (web and app) | `https://claude.ai/api/mcp/auth_callback` |
 | ChatGPT | `https://chatgpt.com/connector_platform_oauth_redirect` |
-| Claude Code, Codex | `http://localhost/callback` or `http://127.0.0.1/callback`; the port is ignored |
+| Claude Code | `http://localhost/callback` or `http://127.0.0.1/callback`; the port is ignored |
 | Copilot Studio | the URL it shows after you create the connection |
 
 The values to paste:
 
-- the client ID, and the secret when there is one;
+- the client ID and the client secret;
 - the URL the tool opens to sign a user in, `<public-base-url>/oauth/authorize`;
 - the token URL, `<public-base-url>/oauth/token`, which also gives the tool new tokens later;
 - the scopes `read draft write send enrich offline_access`, with a space between each one. Without `offline_access` the
   tool gets no refresh token, and the user signs in again when the token runs out;
 - the MCP server URL, `<public-base-url>/mcp`.
 
-Every sign-in still needs PKCE `S256`, a secret or not. In Gemini Enterprise, turn on PKCE if the form offers it. After
+Every sign-in still needs PKCE `S256`, as well as the secret. In Gemini Enterprise, turn on PKCE if the form offers it. After
 **Verify Auth**, choose **Continue**, pick a **Multi-region** location, name the data connector, and choose **Add**. Gemini adds the connection turned off,
 so turn it on before the team connects.
 
-A client with a secret sends it to `/oauth/token` and `/oauth/revoke`, either in the `Authorization` header
+The tool sends the secret to `/oauth/token` and `/oauth/revoke`, either in the `Authorization` header
 (`client_secret_basic`) or in the form (`client_secret_post`), never both. A wrong or missing secret gets
 `401 invalid_client`. To replace a lost secret, choose **Rotate secret** in the client's menu. The old one stops at
 once. The connections go on once the tool has the new one.

@@ -70,18 +70,16 @@ func (h Handlers) RegisterAgentClient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	client, secret, err := h.svc.RegisterAgentClient(r.Context(), actor, RegisterAgentClientInput{
-		Name: req.Name, RedirectURIs: req.RedirectUris, Confidential: req.Confidential,
+		Name: req.Name, RedirectURIs: req.RedirectUris,
 	})
 	if err != nil {
 		writeAgentClientError(w, r, err)
 		return
 	}
 	body := crmcontracts.RegisteredAgentClient{
-		Client: wireAgentClient(client),
-		Scopes: agentClientScopes(),
-	}
-	if secret != "" {
-		body.ClientSecret = &secret
+		Client:       wireAgentClient(client),
+		Scopes:       agentClientScopes(),
+		ClientSecret: secret,
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	httperr.WriteJSON(w, http.StatusCreated, body)

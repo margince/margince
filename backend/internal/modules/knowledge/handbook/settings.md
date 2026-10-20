@@ -239,8 +239,8 @@ The MCP page in Settings (group **AI**) holds which AI tools may connect to Marg
 ### How do I let Gemini through work or school connect?
 To let Gemini through work or school connect to Margince, register it as a client on Settings → **MCP**.
 1. Under **MCP clients**, choose **Register a client**.
-2. Name it, add `https://vertexaisearch.cloud.google.com/oauth-redirect`, and choose that it needs a client secret.
-3. Copy each value Margince shows into the Gemini form, since it shows the secret only once.
+2. Name it, pick **Gemini Enterprise** from the list under **Redirect URIs**, and choose **Register client**.
+3. Copy each value Margince shows into the Gemini form, since it shows the client secret only once.
 4. In Gemini, turn on PKCE if the form offers it, choose **Verify Auth**, then **Continue**.
 5. Pick a **Multi-region** location, name the data connector, and choose **Add**.
 6. Turn the connection on, since Gemini adds it turned off.

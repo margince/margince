@@ -6030,7 +6030,8 @@ export const vi = {
   "agentClients.methods.deploymentOff":
     "Bên vận hành bản cài đặt này đã tắt cách này trong cấu hình.",
   "agentClients.methods.admin": "Ứng dụng do quản trị viên đăng ký",
-  "agentClients.methods.adminHint": "Đăng ký trực tiếp trong mục MCP client.",
+  "agentClients.methods.adminHint":
+    "Đăng ký trực tiếp trong mục MCP client. Công cụ phải gửi khóa bí mật của client.",
   "agentClients.methods.alwaysOn": "Luôn bật",
   "agentClients.methods.readOnly":
     "Chỉ quản trị viên mới có thể thay đổi các mục này.",
@@ -6052,7 +6053,6 @@ export const vi = {
   "agentClients.col.lastUsed": "Dùng lần cuối",
   "agentClients.col.state": "Trạng thái",
   "agentClients.by.admin": "Do quản trị viên",
-  "agentClients.by.adminSecret": "Do quản trị viên · khóa bí mật",
   "agentClients.by.dcr": "Tự đăng ký",
   "agentClients.by.cimd": "Danh tính công khai",
   "agentClients.rotate.open": "Đổi khóa bí mật…",
@@ -6077,19 +6077,10 @@ export const vi = {
     "Hiển thị trên màn hình đăng nhập và trong danh sách ứng dụng.",
   "agentClients.register.redirects": "URI chuyển hướng",
   "agentClients.register.redirectsHint":
-    "Các địa chỉ callback mà công cụ cung cấp. Nhấn Enter sau mỗi địa chỉ.",
-  "agentClients.register.secretQuestion": "Công cụ có cần khóa bí mật không?",
-  "agentClients.register.secretYes": "Có",
-  "agentClients.register.secretYesHint":
-    "Dành cho Gemini Enterprise, Copilot Studio “Manual”",
-  "agentClients.register.secretNo": "Không",
-  "agentClients.register.secretNoHint":
-    "Claude, Codex hoặc ChatGPT với ứng dụng riêng",
+    "Nơi công cụ chuyển về sau khi đăng nhập. Chọn một công cụ trong danh sách, hoặc nhập địa chỉ rồi nhấn Enter.",
   "agentClients.register.submit": "Đăng ký ứng dụng",
   "agentClients.register.needName": "Nhập tên cho ứng dụng.",
   "agentClients.register.needRedirect": "Thêm ít nhất một URI chuyển hướng.",
-  "agentClients.register.needSecretAnswer":
-    "Chọn xem công cụ có cần khóa bí mật không.",
   "agentClients.register.nameInvalid": "Dùng tên dài từ 1 đến 120 ký tự.",
   "agentClients.register.redirectInvalid":
     "Dùng https, hoặc http trên localhost hay 127.0.0.1, không có phân đoạn sau dấu #.",

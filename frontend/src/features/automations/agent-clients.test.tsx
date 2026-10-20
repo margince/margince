@@ -42,7 +42,7 @@ describe("MCP clients", () => {
     await screen.findByText("Gemini Enterprise");
     const gemini = within(row(GEMINI_CLIENT));
     expect(gemini.getByText("mc_7f3a9d2c41e8")).toBeTruthy();
-    expect(gemini.getByText("By an admin · secret")).toBeTruthy();
+    expect(gemini.getByText("By an admin")).toBeTruthy();
     expect(gemini.getByText("12")).toBeTruthy();
     expect(gemini.queryByText("Disabled")).toBeNull();
     const old = within(row(SELF_REGISTERED_CLIENT));

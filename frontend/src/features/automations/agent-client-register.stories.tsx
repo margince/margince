@@ -34,7 +34,7 @@ function stub(connector: "on" | "off" = "on") {
   });
 }
 
-/** The form: a name, the callbacks, and whether the tool needs a secret. */
+/** The form: a name and the callbacks. */
 export const Form: Story = {
   render: () => {
     stub();
@@ -46,9 +46,9 @@ export const Form: Story = {
   },
 };
 
-/** The result for a tool that needs a secret: the warning, every value to
- * paste, and the Gemini Enterprise steps. */
-export const ResultWithSecret: Story = {
+/** The result: the secret's warning, every value to paste, and the Gemini
+ * Enterprise steps. */
+export const Result: Story = {
   render: () => {
     stub();
     return (
@@ -57,23 +57,6 @@ export const ResultWithSecret: Story = {
           titleKey="agentClients.result.title"
           clientId={GEMINI_CLIENT.client_id}
           secret="mcs_4f0c9a1e7b2d48a6b3c5d7e9f1a2b3c4"
-          scopes={AGENT_CLIENT_SCOPES}
-          onClose={() => undefined}
-        />
-      </StoryProviders>
-    );
-  },
-};
-
-/** A public client: no secret, so no warning and no Gemini steps. */
-export const ResultWithoutSecret: Story = {
-  render: () => {
-    stub();
-    return (
-      <StoryProviders>
-        <AgentClientValuesDialog
-          titleKey="agentClients.result.title"
-          clientId="mc_claude_own"
           scopes={AGENT_CLIENT_SCOPES}
           onClose={() => undefined}
         />
@@ -101,7 +84,7 @@ export const ResultConnectorOff: Story = {
 };
 
 /** In dark, because the warning and the code blocks are derived values. */
-export const ResultWithSecretDark: Story = {
+export const ResultDark: Story = {
   globals: { theme: "dark" },
-  render: ResultWithSecret.render,
+  render: Result.render,
 };

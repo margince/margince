@@ -11584,9 +11584,10 @@ export interface paths {
         /**
          * Register an AI tool's OAuth client by hand (admin).
          * @description For a tool that cannot register itself, such as Gemini Enterprise or Copilot Studio
-         *     "Manual". Margince mints the client ID. With `confidential` it also mints a client secret,
-         *     returned in this response **once**: only its digest is stored, so it can never be shown
-         *     again. Lost, it is rotated.
+         *     "Manual". Margince mints the client ID and a client secret, and the tool must send the secret
+         *     at the token endpoint. The secret is returned in this response **once**: only its digest is
+         *     stored, so it can never be shown again. Lost, it is rotated. A tool that cannot send a
+         *     secret connects through dynamic registration or a metadata document instead.
          *
          *     Redirect URIs match exactly: https anywhere, or http on a loopback host, where the port is
          *     ignored. Every sign-in through the client still needs PKCE S256 and the human's consent.
@@ -41069,15 +41070,13 @@ export interface components {
             name: string;
             /** @description Exact callback URLs. https, or http on localhost or 127.0.0.1, where the port is ignored. */
             redirect_uris: string[];
-            /** @description Mint a client secret. Gemini Enterprise and Copilot Studio "Manual" need one. */
-            confidential: boolean;
         };
         RegisteredAgentClient: {
             client: components["schemas"]["AgentClient"];
             /** @description Every scope the tool may ask for, space separated, as discovery lists them. */
             scopes: string;
-            /** @description The secret, present only when confidential. Shown once and never again. */
-            client_secret?: string;
+            /** @description The secret the tool sends at the token endpoint. Shown once and never again. */
+            client_secret: string;
         };
         UpdateAgentClientRequest: {
             disabled: boolean;
@@ -66053,7 +66052,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Registered. `client_secret` is present only for a confidential client. */
+            /** @description Registered, with the client secret shown this once. */
             201: {
                 headers: {
                     [name: string]: unknown;
