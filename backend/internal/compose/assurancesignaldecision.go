@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // DecideAssuranceSignal settles the cited matter through its owning writers.
@@ -42,7 +41,7 @@ func DecideAssuranceSignal(ctx context.Context, tx pgx.Tx, signal ids.UUID, in a
 	if err := auth.EnsureVisible(ctx, tx, "company", company); err != nil {
 		return err
 	}
-	suggestions, err := coveredSuggestions(ctx, tx, signal, principal.ActionUpdate)
+	suggestions, err := coveredSuggestions(ctx, tx, signal, true)
 	if err != nil {
 		return err
 	}
@@ -77,8 +76,7 @@ func linkSignalSources(ctx context.Context, tx pgx.Tx, signal, deal ids.UUID, su
 	}
 	for _, suggestion := range suggestions {
 		if _, err := deals.LinkSuggestionTx(ctx, tx, suggestion, deal, effects); err != nil {
-			var decided *deals.SuggestionDecidedError
-			if !errors.As(err, &decided) {
+			if _, decided := errors.AsType[*deals.SuggestionDecidedError](err); !decided {
 				return err
 			}
 		}
@@ -87,14 +85,13 @@ func linkSignalSources(ctx context.Context, tx pgx.Tx, signal, deal ids.UUID, su
 }
 
 func dismissCoveredSuggestion(ctx context.Context, tx pgx.Tx, signal ids.UUID) error {
-	suggestions, err := coveredSuggestions(ctx, tx, signal, principal.ActionCreate)
+	suggestions, err := coveredSuggestions(ctx, tx, signal, false)
 	if err != nil {
 		return err
 	}
 	for _, suggestion := range suggestions {
 		if _, err := deals.DismissSuggestionTx(ctx, tx, suggestion, "not_a_deal"); err != nil {
-			var decided *deals.SuggestionDecidedError
-			if !errors.As(err, &decided) {
+			if _, decided := errors.AsType[*deals.SuggestionDecidedError](err); !decided {
 				return err
 			}
 		}
@@ -102,8 +99,8 @@ func dismissCoveredSuggestion(ctx context.Context, tx pgx.Tx, signal ids.UUID) e
 	return nil
 }
 
-func coveredSuggestions(ctx context.Context, tx pgx.Tx, signal ids.UUID, action principal.Action) ([]ids.UUID, error) {
-	if err := auth.Require(ctx, "deal", action); err != nil {
+func coveredSuggestions(ctx context.Context, tx pgx.Tx, signal ids.UUID, linkExisting bool) ([]ids.UUID, error) {
+	if err := deals.RequireSuggestionDecision(ctx, linkExisting); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return nil, nil
 		}

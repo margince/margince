@@ -489,7 +489,6 @@ internal/modules/search/queryvocab.go#const block at const OpEq
 internal/modules/signals/audiencerescope.go#const block at const rescopeImageArchivedAt
 internal/modules/signals/derived.go#const block at const columnStatus
 internal/modules/signals/derived.go#type DerivedSignal.PrivateTo
-internal/modules/signals/signal.go#func OfCompanyWhere
 internal/modules/signals/warmroom.go#func RankRouteIn
 internal/modules/signals/warmroom.go#func RouteInEdges
 internal/modules/webhooks/store.go#const fieldEventTypes

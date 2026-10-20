@@ -133,11 +133,7 @@ type SuggestionAcceptance struct {
 // AcceptSuggestion opens the proposed deal and records the decision, in one
 // transaction.
 func (s *Store) AcceptSuggestion(ctx context.Context, id ids.UUID, in AcceptSuggestionInput) (SuggestionAcceptance, error) {
-	action := principal.ActionCreate
-	if in.ExistingDealID != nil {
-		action = principal.ActionUpdate
-	}
-	if err := auth.Require(ctx, "deal", action); err != nil {
+	if err := RequireSuggestionDecision(ctx, in.ExistingDealID != nil); err != nil {
 		return SuggestionAcceptance{}, err
 	}
 	if s.suggestionEffects == nil {
@@ -225,7 +221,7 @@ func (s *Store) DismissSuggestion(ctx context.Context, id ids.UUID, reasons ...s
 
 // DismissSuggestionTx lets a related review share the reasoned dismissal transaction.
 func DismissSuggestionTx(ctx context.Context, tx pgx.Tx, id ids.UUID, reasons ...string) (Suggestion, error) {
-	if err := auth.Require(ctx, "deal", principal.ActionCreate); err != nil {
+	if err := RequireSuggestionDecision(ctx, false); err != nil {
 		return Suggestion{}, err
 	}
 	current, err := openSuggestionForDecision(ctx, tx, id)

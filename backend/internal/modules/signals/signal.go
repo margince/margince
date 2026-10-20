@@ -207,9 +207,7 @@ type ListSignalsInput struct {
 	IncludeArchived bool
 }
 
-// OfCompanyWhere is the ONE spelling of "this signal belongs to this
-// account", for a query that aliases signal as s. companyPos is the bind position
-// carrying the company id; both arms read the same one.
+// OfCompanyWhere includes resolved and directly filed company signals.
 //
 // Two arms, because a signal reaches a company two ways: the resolver
 // stamps resolved_company_id on the item it attributed, and a signal created
@@ -219,10 +217,8 @@ type ListSignalsInput struct {
 // A deal-subject signal belongs to its DEAL, even when the resolver attributed
 // it to this account, so the resolved arm excludes it.
 //
-// Exported because the signal list is not its only reader: the company view's
-// connections card cites the account's active signal, and a second spelling
-// would let the card name a signal the account's own signal list refuses to
-// show — or miss one it does.
+// The company connections card shares this scope so it cannot cite a signal
+// that the account’s signal list hides.
 func OfCompanyWhere(companyPos int) string {
 	return storekit.SQLf(
 		`((s.entity_type IS DISTINCT FROM 'deal' AND s.resolved_company_id = $%[1]d)

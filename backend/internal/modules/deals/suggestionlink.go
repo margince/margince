@@ -36,7 +36,7 @@ func (s *Store) linkSuggestionTx(ctx context.Context, tx pgx.Tx, current Suggest
 
 // LinkSuggestionTx settles a covered proposal alongside its signal review.
 func LinkSuggestionTx(ctx context.Context, tx pgx.Tx, suggestion, deal ids.UUID, effects SuggestionEffects) (SuggestionAcceptance, error) {
-	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
+	if err := RequireSuggestionDecision(ctx, true); err != nil {
 		return SuggestionAcceptance{}, err
 	}
 	current, err := openSuggestionForDecision(ctx, tx, suggestion)
