@@ -28,6 +28,7 @@ import (
 
 func TestReviewedRepairArchivesHistoricalWorkWithoutRecreatingIt(t *testing.T) {
 	t.Run("untouched automatic work", func(t *testing.T) { runReviewedRepair(t, "unchanged") })
+	t.Run("selected audience creation", func(t *testing.T) { runReviewedRepair(t, "selected") })
 	t.Run("human edit after review", func(t *testing.T) { runReviewedRepair(t, "edited") })
 	t.Run("source access changes after review", func(t *testing.T) { runReviewedRepair(t, "hidden") })
 }
@@ -43,6 +44,9 @@ func runReviewedRepair(t *testing.T, change string) {
 	}
 	sourceID := ids.UUID(source.Id)
 	commitment := Commitment{Meaning: openCommitmentMeaning("", body), AsOf: old.Add(time.Hour), ReadMessages: []ids.UUID{sourceID}, Extractor: signalScanActor, SourceActivityID: sourceID, Summary: "Prepare the account review", Quote: body, Seat: &e.Rep1, Confidence: 0.95, Locator: commitmentLocator(sourceID, claimKindOurs, e.Rep1.String(), body), Body: body}
+	if change == "selected" {
+		commitment.PrivateTo = &e.Rep1
+	}
 	dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
 	if err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
 		outcome, _, err := dispatcher.DispatchTx(principal.SystemActing(e.Admin(), "system:repair-fixture"), tx, commitment, ids.NewV7())
@@ -52,6 +56,9 @@ func runReviewedRepair(t *testing.T, change string) {
 		return err
 	}); err != nil {
 		t.Fatal(err)
+	}
+	if change == "selected" && e.WsCount(t, "SELECT count(*) FROM activity WHERE kind='task' AND audience='selected' AND version=2") != 1 {
+		t.Fatal("fixture did not exercise selected-audience creation version")
 	}
 	permissions := integration.AdminPerms
 	permissions.Objects = maps.Clone(permissions.Objects)
@@ -110,7 +117,7 @@ func runReviewedRepair(t *testing.T, change string) {
 		}
 	}
 	expectedChanges := int64(1)
-	if change != "unchanged" {
+	if change == "edited" || change == "hidden" {
 		expectedChanges = 0
 	}
 	if _, err := engine.Execute(system); err != nil {
