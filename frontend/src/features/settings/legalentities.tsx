@@ -25,7 +25,7 @@ import {
 } from "./legalentities.queries";
 
 // The companies this installation trades as. With one entity the card lists
-// the default alone, named after the company above it, so an installation that
+// the default alone, named after the company above it. An installation that
 // never adds a second one sees what it always had.
 export function LegalEntitiesCard() {
   const t = useT();
@@ -124,7 +124,7 @@ function NewEntityDialog({ onClose }: Readonly<{ onClose: () => void }>) {
       onClose={onClose}
       fieldCount={3}
       form={
-        <form id={formId} onSubmit={submit} className="stack">
+        <form id={formId} onSubmit={submit} className="form-stack">
           <TextField
             label={t("legalEntities.displayName")}
             value={form.display_name}

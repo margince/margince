@@ -57,7 +57,7 @@ function story(allow: Parameters<typeof meRoute>[0], rows: object[]) {
 }
 
 const meta = {
-  title: "Settings/Company/Legal entities",
+  title: "Settings/Company/Company profile/Legal entities",
   component: LegalEntitiesCard,
 } satisfies Meta<typeof LegalEntitiesCard>;
 export default meta;

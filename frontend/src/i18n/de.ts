@@ -4529,7 +4529,8 @@ export const de = {
     "Die Gegenseite hat geschrieben, und niemand hat geantwortet.",
   "deal.timeline.empty": "Noch keine Aktivität zu diesem Deal.",
   "legalEntities.title": "Gesellschaften",
-  "legalEntities.sub": "Die Firmen, unter denen ihr auftretet. Wer keiner zugeordnet ist, arbeitet für die Standardgesellschaft. Sie übernimmt Namen, Adresse und Logo vom Unternehmen oben.",
+  "legalEntities.sub":
+    "Die Gesellschaften, unter denen ihr auftretet. Wer keiner zugeordnet ist, arbeitet für die Standardgesellschaft. Diese übernimmt Namen, Adresse und Logo vom Unternehmen oben.",
   "legalEntities.loading": "Gesellschaften werden geladen…",
   "legalEntities.addOpen": "Neue Gesellschaft",
   "legalEntities.addTitle": "Neue Gesellschaft",
@@ -11381,6 +11382,7 @@ export const de = {
   "roles.object.offer_template": "Angebotsvorlagen",
   "roles.object.contract": "Verträge",
   "roles.object.legal_review": "Rechtsprüfungen",
+  "roles.object.legal_entity": "Gesellschaften",
   "roles.object.commission": "Provisionen",
   "roles.object.deal_room": "Deal Rooms",
   "roles.object.forecast": "Prognosen",

@@ -166,12 +166,11 @@ func legalEntityPatch(before LegalEntity, in LegalEntityInput) (*storekit.Patch,
 }
 
 // sameStored compares a stored column with the value a patch would write.
-func sameStored(stored *string, value any) bool {
-	if stored == nil {
-		return value == nil
+func sameStored(stored, value *string) bool {
+	if stored == nil || value == nil {
+		return stored == value
 	}
-	text, ok := value.(string)
-	return ok && text == *stored
+	return *stored == *value
 }
 
 // ArchiveLegalEntity retires an entity nobody works for any more. The default

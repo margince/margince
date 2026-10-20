@@ -97,7 +97,7 @@ func (e LegalEntity) asInput() LegalEntityInput {
 
 // cleaned is the value to store for a sent field: nil clears the column. sent
 // reports whether the submission named the field at all.
-func (f entityField) cleaned(isDefault bool) (value any, sent bool, err error) {
+func (f entityField) cleaned(isDefault bool) (value *string, sent bool, err error) {
 	if f.value == nil {
 		return nil, false, nil
 	}
@@ -122,7 +122,7 @@ func (f entityField) cleaned(isDefault bool) (value any, sent bool, err error) {
 	if utf8.RuneCountInString(text) > f.limit {
 		return nil, true, &values.ParseError{Field: f.wire, Code: codeTooLong, Message: f.wire + " is too long"}
 	}
-	return text, true, nil
+	return &text, true, nil
 }
 
 var entityLanguageShape = regexp.MustCompile(`^[a-z]{2}$`)
@@ -154,9 +154,9 @@ var (
 	bicShape  = regexp.MustCompile(`^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$`)
 )
 
-// cleanIBAN removes the spaces a reader types and refuses a number whose check
-// digits do not match (ISO 13616 mod 97), which catches a mistyped digit
-// before it reaches an offer.
+// cleanIBAN removes the spaces a reader types. It refuses a number whose check
+// digits do not match (ISO 13616 mod 97), so a mistyped digit never reaches an
+// offer.
 func cleanIBAN(raw string) (string, error) {
 	iban := strings.ToUpper(strings.Join(strings.Fields(raw), ""))
 	if !ibanShape.MatchString(iban) || !ibanChecksumHolds(iban) {

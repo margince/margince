@@ -121,6 +121,7 @@ export const CORE_OBJECTS: Readonly<Record<CoreRbacObject, CoreObjectName>> = {
     area: "company",
     label: "roles.object.installation_settings",
   },
+  legal_entity: { area: "company", label: "roles.object.legal_entity" },
   authentication_policy: {
     area: "company",
     label: "roles.object.authentication_policy",

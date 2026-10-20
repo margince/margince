@@ -154,8 +154,8 @@ func LegalEntityWire(e LegalEntity) crmcontracts.LegalEntity {
 }
 
 // legalEntityLogoURL is the company's logo URL on the default entity, and the
-// entity's own endpoint on every other, with the same digest token LogoURL
-// uses so a replaced logo takes a new URL.
+// entity's own endpoint on every other. It carries LogoURL's digest token, so a
+// replaced logo takes a new URL.
 func legalEntityLogoURL(e EntityIdentity) *string {
 	if e.IsDefault {
 		if e.AnchorCompanyID.IsZero() {

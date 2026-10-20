@@ -5,9 +5,9 @@
 
 package contacts
 
-// The legal entities against Postgres: the default the migration leaves, the
-// refusals the contract names, which entity a user resolves to, and the write
-// shape every entity write commits.
+// The legal entities against Postgres. The suite covers the migration's default,
+// the refusals the contract names and which entity a user resolves to. It also
+// covers the write shape every entity write commits.
 
 import (
 	"context"
@@ -55,8 +55,8 @@ func defaultEntity(t *testing.T, e *promoteConsentEnv) ids.LegalEntityID {
 }
 
 // setupEntities resets the suite and removes the entities an earlier test
-// described: the reset keeps legal_entity, because the default row is seeded
-// by its migration and nothing re-creates it.
+// described. The reset keeps legal_entity, because its migration seeds the
+// default row and nothing re-creates it.
 func setupEntities(t *testing.T) *promoteConsentEnv {
 	t.Helper()
 	e := setupPromoteConsent(t)

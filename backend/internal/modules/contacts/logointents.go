@@ -32,10 +32,10 @@ const columnLogoKey = "logo_object_key"
 
 // LogoKeyColumns is every column that may hold a mark's key, by table.
 //
-// ALL OF THEM, because a reference check that misses one calls a live mark
-// unreferenced and the sweep then deletes the bytes behind somebody's logo. A company
-// carries a wide mark and an icon, a site read carries the pair it resolved before any
-// company adopted them, and a legal entity carries its own wide mark.
+// Every one, because a check that misses one calls a live mark unreferenced, and
+// the sweep then deletes the bytes behind somebody's logo. A company carries a wide
+// mark and an icon. A site read carries the pair it resolved before a company adopted
+// them. A legal entity carries its own wide mark.
 //
 // The query below is built from this list, so the columns are named once.
 //

@@ -6,9 +6,9 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { unwrap } from "../../lib/problem";
 
-// The legal entities the installation trades as. The default entity carries
-// the anchor company's name and logo, read by the server, so this list is the
-// one place a screen learns what each entity is called.
+// The legal entities the installation trades as. The server reads the
+// default entity's name and logo from the anchor company. So this list is where
+// a screen learns what each entity is called.
 
 export type LegalEntity = components["schemas"]["LegalEntity"];
 export type CreateLegalEntity =

@@ -14,8 +14,8 @@ import (
 )
 
 // An assignment body that left out user_id decodes to the zero UUID. The store
-// refuses it by name before it opens a transaction, so the caller hears which
-// field is missing instead of a not-found for a user they never named.
+// refuses it by name before it opens a transaction. So the caller hears which
+// field is missing, not a not-found for a user they never named.
 func TestEveryRequiredLegalEntityBodyIDIsNamedWhenAbsent(t *testing.T) {
 	ctx := principal.WithActor(principal.WithCorrelationID(context.Background(), ids.NewV7()), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),

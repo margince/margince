@@ -5,7 +5,7 @@ package compose
 
 // The transport for a legal entity's logo. It takes the company logo's decode,
 // storage and collection unchanged, so an entity's mark is refused and stored
-// by exactly the rules the company's is.
+// by the rules the company's is.
 
 import (
 	"errors"

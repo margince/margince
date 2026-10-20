@@ -7,9 +7,9 @@ package contacts
 // other module reads an entity's identity through.
 //
 // The default entity is the anchor company seen as an issuer. It stores none of
-// the anchor's fields (legal_entity_default_reads_the_anchor holds that), so the
-// company form stays their only editor and an installation with one entity
-// behaves exactly as it did before entities existed.
+// the anchor's fields, which legal_entity_default_reads_the_anchor holds. So the
+// company form stays their only editor, and an installation with one entity
+// behaves as it did before entities existed.
 
 import (
 	"context"
@@ -107,9 +107,9 @@ func readLegalEntity(ctx context.Context, tx pgx.Tx, id ids.LegalEntityID) (Lega
 // ResolveEntityIdentity resolves one entity's identity inside the caller's
 // transaction, with the default entity's fields read from the anchor company.
 //
-// No grant is asked, for the reason ConfirmedIssuerLegalName gives: what the
-// installation calls itself on its own documents is a fact every seat already
-// reads off them. An archived entity still resolves, because a document issued
+// No grant is asked, for the reason ConfirmedIssuerLegalName gives. What the
+// installation calls itself on its own documents, every seat already reads off
+// them. An archived entity still resolves, because a document issued
 // under it still names it.
 func ResolveEntityIdentity(ctx context.Context, tx pgx.Tx, id ids.LegalEntityID) (EntityIdentity, error) {
 	entity, err := readLegalEntity(ctx, tx, id)

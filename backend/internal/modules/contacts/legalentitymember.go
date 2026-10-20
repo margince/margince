@@ -4,7 +4,7 @@
 package contacts
 
 // Which legal entity a user works for. A user with no row works for the
-// default entity, so moving somebody to the default removes their row: two
+// default entity, so moving somebody to the default removes their row. Two
 // spellings of "the default" would be two answers a reader has to reconcile.
 
 import (

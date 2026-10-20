@@ -4416,7 +4416,8 @@ export const vi = {
   "deal.pulse.wroteUnknown": "Họ đã gửi thư và chưa ai trả lời.",
   "deal.timeline.empty": "Chưa có hoạt động nào trên deal này.",
   "legalEntities.title": "Pháp nhân",
-  "legalEntities.sub": "Các công ty mà bạn giao dịch dưới tên đó. Đồng nghiệp chưa được gán sẽ làm việc cho pháp nhân mặc định, vốn lấy tên, địa chỉ và logo từ công ty ở trên.",
+  "legalEntities.sub":
+    "Các công ty mà bạn giao dịch dưới tên đó. Đồng nghiệp chưa được gán sẽ làm việc cho pháp nhân mặc định, vốn lấy tên, địa chỉ và logo từ công ty ở trên.",
   "legalEntities.loading": "Đang tải pháp nhân…",
   "legalEntities.addOpen": "Pháp nhân mới",
   "legalEntities.addTitle": "Pháp nhân mới",
@@ -11084,6 +11085,7 @@ export const vi = {
   "roles.object.offer_template": "Mẫu báo giá",
   "roles.object.contract": "Hợp đồng",
   "roles.object.legal_review": "Rà soát pháp lý",
+  "roles.object.legal_entity": "Pháp nhân",
   "roles.object.commission": "Hoa hồng",
   "roles.object.deal_room": "Deal Room",
   "roles.object.forecast": "Dự báo",

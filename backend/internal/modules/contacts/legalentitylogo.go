@@ -64,7 +64,7 @@ func (s *Store) writeLegalEntityLogo(ctx context.Context, id ids.LegalEntityID, 
 			return fmt.Errorf("write the legal entity logo: %w", err)
 		}
 		// Cleared on this transaction, so the ledger stops treating the key as
-		// an orphan exactly when the column that names it commits.
+		// an orphan when the column that names it commits.
 		if objectKey != nil {
 			if err := storedobjects.Clear(ctx, tx, *objectKey); err != nil {
 				return err

@@ -4521,7 +4521,8 @@ export const en = {
   "deal.pulse.wroteUnknown": "They wrote and no one has replied.",
   "deal.timeline.empty": "No activity on this deal yet.",
   "legalEntities.title": "Legal entities",
-  "legalEntities.sub": "The companies you trade as. A colleague you have not assigned works for the default, which takes its name, address and logo from the company above.",
+  "legalEntities.sub":
+    "The companies you trade as. A colleague you have not assigned works for the default, which takes its name, address and logo from the company above.",
   "legalEntities.loading": "Loading legal entities…",
   "legalEntities.addOpen": "New legal entity",
   "legalEntities.addTitle": "New legal entity",
@@ -11405,6 +11406,7 @@ export const en = {
   "roles.object.offer_template": "Offer templates",
   "roles.object.contract": "Contracts",
   "roles.object.legal_review": "Legal reviews",
+  "roles.object.legal_entity": "Legal entities",
   "roles.object.commission": "Commissions",
   "roles.object.deal_room": "Deal Rooms",
   "roles.object.forecast": "Forecasts",
