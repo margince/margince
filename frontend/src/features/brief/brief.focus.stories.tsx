@@ -4,7 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
-import { Eyebrow } from "../../design-system/eyebrow";
+import { Badge } from "../../design-system/atoms";
+import { Panel } from "../../design-system/panel";
 import { en } from "../../i18n/en";
 import {
   installFetchStub,
@@ -77,21 +78,26 @@ function Chosen({
     return null;
   }
   return (
-    <section id="brief-today" className="brief-first">
-      {/* The section's own head, because the card is judged against it: the
-          same eyebrow the Brief draws over this. */}
-      <div className="brief-first-head">
-        <Eyebrow as="h2">{en["brief.first.title"]}</Eyebrow>
-      </div>
-      <Triage
-        rows={rows}
-        at={at}
-        lead={lead}
-        onChoose={(item) => setAt(rows.indexOf(item))}
-        onOpenEmail={() => undefined}
-        onContext={() => undefined}
-      />
-    </section>
+    <div id="brief-today">
+      {/* The panel's own band, because the card is judged against it: INDIGO,
+          the colour this house gives what an agent proposed, with the tag that
+          says so — the same band and tag the Brief draws around this. */}
+      <Panel
+        tone="ai"
+        className="brief-focus-panel"
+        title={en["brief.feed.title"]}
+        titleAction={<Badge tone="ai">{en["co.assistant.aiTag"]}</Badge>}
+      >
+        <Triage
+          rows={rows}
+          at={at}
+          lead={lead}
+          onChoose={(item) => setAt(rows.indexOf(item))}
+          onOpenEmail={() => undefined}
+          onContext={() => undefined}
+        />
+      </Panel>
+    </div>
   );
 }
 
@@ -130,7 +136,7 @@ export const AccountInHand: Story = {
   ]),
 };
 
-/** The last row of a short day: the one before it is listed under the card. */
+/** The last row of a short day: one behind it, so the stack is one edge deep. */
 export const NothingBehindIt: Story = {
   render: panel([waitingEmailRow(), taskRow("one", "Call the buyer")], 1),
 };

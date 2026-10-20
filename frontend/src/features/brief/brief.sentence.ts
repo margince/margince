@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { formatDayMonth, formatTimeOfDay } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import type { Locale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { isUnprepared, itemTitle, rowHref } from "../worklist/worklist.copy";
+import { itemTitle, rowHref } from "../worklist/worklist.copy";
 import type { Worklist, WorklistItem } from "../worklist/worklist.queries";
-import { scheduledMeetings } from "./brief.facts";
 import { laneUnread } from "./brief.readings.honesty";
 
 // The Brief's opening sentence, composed from the rows the page is showing.
@@ -38,30 +35,6 @@ export type BriefSentence = Readonly<{
    * sentence and the row below it cannot send a reader to two places.
    */
   leadHref?: string;
-  /** Whom the lead is for, drawn as a chip where the row names a contact. */
-  who?: SentenceRecord;
-  /** The next meeting, drawn as a chip in the meeting clause. */
-  meeting?: SentenceRecord;
-}>;
-
-/**
- * What a chip opens under the sentence: where its words came from. A message
- * is cited, never quoted, so its audience rule travels with it.
- */
-export type ChipSource =
-  | Readonly<{
-      kind: "email";
-      subject: string | null | undefined;
-      occurredAt: string;
-      withheld: boolean;
-    }>
-  | Readonly<{ kind: "note"; from: string; text: string }>;
-
-/** A record the sentence names as a chip, and what pressing it shows. */
-export type SentenceRecord = Readonly<{
-  id: string;
-  label: string;
-  source?: ChipSource;
 }>;
 
 /** One run of a sentence template: its own words, or a hole to fill. */
@@ -119,7 +92,6 @@ export function briefSentence(
   day: Worklist | undefined,
   t: (key: MessageKey, values?: Record<string, string>) => string,
   locale: Locale,
-  zone: string = viewerZone(),
 ): BriefSentence | null {
   if (!day?.focus) {
     return null;
@@ -149,83 +121,17 @@ export function briefSentence(
   // by. A second rule for where the lead goes would let the sentence open a
   // record the row under it does not.
   const leadHref = rowHref(lead);
-  const who = whoOf(lead, locale, zone);
-  const single = waiting.length === NAMED || partial;
-  if (who) {
-    values.who = who.label;
+  if (waiting.length === NAMED || partial) {
     return {
-      key: single ? "brief.sentence.oneFor" : "brief.sentence.manyFor",
+      key: "brief.sentence.one",
       values,
       leadHref,
-      who,
     };
   }
   return {
-    key: single ? "brief.sentence.one" : "brief.sentence.many",
+    key: "brief.sentence.many",
     values,
     leadHref,
-  };
-}
-
-/**
- * The contact a lead is for, citing the message they last sent.
- *
- * It is the contact the server put on the row, the one the card under the
- * sentence names. So the chip and the card cannot name two contacts.
- */
-function whoOf(
-  lead: WorklistItem,
-  locale: Locale,
-  zone: string,
-): SentenceRecord | undefined {
-  const contact = lead.contact;
-  if (!contact?.label) return undefined;
-  const email = lead.email_summary;
-  const source: ChipSource | undefined = email?.occurred_at
-    ? {
-        kind: "email",
-        subject: email.subject,
-        occurredAt: formatDayMonth(email.occurred_at, locale, zone),
-        withheld: email.display_status === "withheld",
-      }
-    : undefined;
-  return { id: contact.id, label: contact.label, source };
-}
-
-/**
- * The clause that names the next meeting still ahead today, or null.
- *
- * Read off the same meeting rows the schedule draws (`scheduledMeetings`), so
- * the sentence cannot name a meeting the Today list does not show.
- */
-export function meetingSentence(
-  day: Worklist | undefined,
-  now: Date,
-  t: (key: MessageKey, values?: Record<string, string>) => string,
-  locale: Locale,
-  zone: string = viewerZone(),
-): BriefSentence | null {
-  // The queue is in rank order, so the next meeting is the earliest start.
-  const next = scheduledMeetings(day)
-    .filter((item) => item.due_at && Date.parse(item.due_at) >= now.getTime())
-    .sort((a, b) => Date.parse(a.due_at ?? "") - Date.parse(b.due_at ?? ""))[0];
-  if (!next?.due_at) return null;
-  const label = itemTitle(next, t, locale);
-  const time = formatTimeOfDay(next.due_at, locale, zone);
-  const text = [
-    next.contact?.label,
-    isUnprepared(next) ? t("worklist.needsPrep") : undefined,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  return {
-    key: "brief.sentence.meeting",
-    values: { meeting: label, time },
-    meeting: {
-      id: next.id,
-      label,
-      source: text ? { kind: "note", from: time, text } : undefined,
-    },
   };
 }
 

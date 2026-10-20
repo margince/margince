@@ -751,6 +751,7 @@ export const vi = {
   "home.change.stageUnknown": "Không rõ giai đoạn",
   "home.change.unidentified": "Không rõ",
   "home.change.by": "Người đổi: {actor}",
+  "brief.focus.inQueue": "Trong Danh sách công việc",
   "brief.focus.position": "{at} / {count}",
   "worklist.bandCount_one": "{count} việc",
   "worklist.bandCount_other": "{count} việc",
@@ -874,6 +875,7 @@ export const vi = {
   "brief.week.supporting": "Chỉ số, dự báo và nhận xét",
   "brief.coverage.retry": "Làm mới bản tin",
   "brief.reply.owed": "Khách hàng đang chờ bạn trả lời",
+  "brief.createdAt": "Bản tin tạo lúc {when}",
   "brief.updatedAt": "Lịch trình cập nhật lúc {when}",
   "brief.changes.superseded":
     "Deal này lại vừa thay đổi. Mở deal để xem lại trạng thái hiện tại.",
@@ -4192,18 +4194,6 @@ export const vi = {
   "brief.sentence.one": "Trước tiên: {lead}",
   "brief.sentence.many": "Trước tiên: {lead}. Sau đó là {rest}.",
   "brief.sentence.rest": "{count} việc nữa",
-  "brief.sentence.oneFor": "Trước tiên, cho {who}: {lead}",
-  "brief.sentence.manyFor": "Trước tiên, cho {who}: {lead}. Sau đó là {rest}.",
-  "brief.sentence.meeting":
-    "Cuộc họp tiếp theo của bạn là {meeting} lúc {time}.",
-  "brief.briefedAt": "Margince tóm tắt lúc {time}",
-  "brief.first.title": "Trước tiên",
-  "brief.first.then": "Sau đó",
-  "brief.first.why": "Vì sao mục này được ưu tiên?",
-  "brief.intro.waiting": "Đang chờ bạn",
-  "brief.intro.meetings": "Cuộc họp hôm nay",
-  "brief.intro.emails": "Email đã đồng bộ",
-  "brief.intro.skip": "Nhấn phím bất kỳ hoặc bấm để tiếp tục",
   "brief.order.withheld": "Thứ tự này chưa tính: {factors}",
   "brief.factor.warmth": "mức độ thân thiết của quan hệ",
   "brief.factor.unknown": "một yếu tố mà phiên bản này không thể gọi tên",
@@ -4223,6 +4213,7 @@ export const vi = {
   "brief.week.quiet":
     "Chưa ghi nhận công việc hoàn tất hay biến động deal nào.",
 
+  "brief.feed.title": "Ưu tiên",
   "brief.feed.changedBadge_one": "1 đã thay đổi",
   "brief.feed.changedBadge_other": "{count} đã thay đổi",
   "brief.feed.loading": "Đang tải Bản tin sáng…",

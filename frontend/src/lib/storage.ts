@@ -45,12 +45,6 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "seat",
   },
-  // The local day Home's greeting last played on, so it plays once a day.
-  briefIntroShown: {
-    name: "margince.brief.introShown",
-    area: "local",
-    lifetime: "seat",
-  },
   segregationNoteDismissed: {
     name: "margince.leads.segregationNoteDismissed",
     area: "local",

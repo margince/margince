@@ -179,25 +179,18 @@ test.describe("the Brief — page shape", () => {
     await expect(page.locator("main h1")).toHaveCount(1);
   });
 
-  // The brief and the work in one column, the readings beside it in the rail.
-  test("puts the work under the brief and the readings in the rail", async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 1280, height: 800 });
+  test("puts focus before readings and follow-through", async ({ page }) => {
     await openBrief(page);
     await expectShellRendered(page);
 
-    expect(await topOf(page.locator(GLANCE))).toBeLessThan(
-      await topOf(page.locator(FOCUS)),
+    const glance = await topOf(page.locator(GLANCE));
+    const focus = await topOf(page.locator(FOCUS));
+    const strip = await topOf(page.locator(STRIP));
+    expect(glance).toBeLessThan(focus);
+    expect(focus).toBeLessThan(strip);
+    expect(strip).toBeLessThan(
+      await topOf(page.locator(".brief-followthrough")),
     );
-    await expect(page.locator(`.brief-rail ${STRIP}`)).toHaveCount(1);
-    await expect(page.locator(`.brief-main ${FOCUS}`)).toHaveCount(1);
-    const main = await page.locator(".brief-main").boundingBox();
-    const rail = await page.locator(".brief-rail").boundingBox();
-    if (!main || !rail) {
-      throw new Error("the desktop Brief columns have no measurable boxes");
-    }
-    expect(rail.x).toBeGreaterThanOrEqual(main.x + main.width);
   });
 
   test("orders the greeting above the date above the sentence", async ({
@@ -289,16 +282,16 @@ test.describe("the Brief — page shape", () => {
 
   // The page a German reader arrives at is in German, and says what it is.
   //
-  // Every other assertion here is geometry, and a page of raw message keys
-  // would pass it. Five boxes in a row are five boxes whether they read
-  // "Zuerst" or "brief.first.title". One catalog read is what separates a
-  // rendered page from a rendered skeleton.
+  // Every other assertion here is geometry, which a page rendering raw message
+  // KEYS would satisfy completely — five boxes in a row is five boxes whether
+  // they read "Als Nächstes" or "brief.feed.title". One catalog read is what
+  // separates a rendered page from a rendered skeleton.
   test("labels focus and view controls in German", async ({ page }) => {
     await openBrief(page);
     await expectShellRendered(page);
 
     await expect(
-      page.getByRole("heading", { name: copy("brief.first.title") }),
+      page.getByRole("heading", { name: copy("brief.feed.title") }),
     ).toBeVisible();
     await expect(
       page.getByRole("group", { name: copy("brief.view.label") }),
@@ -356,14 +349,17 @@ test.describe("the Brief — nothing pans", () => {
     });
   }
 
-  // One column on a phone: the rail's readings follow the work.
-  test("keeps the readings below the work at 390", async ({ page }) => {
+  test("keeps follow-through below focus and readings at 390", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await openBrief(page);
     await expectShellRendered(page);
 
-    expect(await topOf(page.locator(FOCUS))).toBeLessThan(
-      await topOf(page.locator(STRIP)),
+    const strip = await topOf(page.locator(STRIP));
+    expect(await topOf(page.locator(FOCUS))).toBeLessThan(strip);
+    expect(strip).toBeLessThan(
+      await topOf(page.locator(".brief-followthrough")),
     );
   });
 
@@ -378,7 +374,7 @@ test.describe("the Brief — nothing pans", () => {
       await expectShellRendered(page);
 
       expect(await topOf(page.locator(GLANCE))).toBeLessThan(
-        await topOf(page.locator(FOCUS)),
+        await topOf(page.locator(STRIP)),
       );
       expect(await pageOverflow(page)).toEqual([]);
     });

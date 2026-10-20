@@ -34,6 +34,7 @@
    child and every slot arrived at once. */
 .arrive,
 .brief-readings .stat-strip > *,
+.brief-wrap > #brief-today,
 .brief-main > *,
 .brief-rail > * {
   animation: brief-arrive var(--dur-enter) var(--ease-out) both;
@@ -42,6 +43,9 @@
    morning is for, then the day's five readings under it, then the
    follow-through. A delay keyed to the old order left the readings landing
    before the panel they now sit beneath. */
+.brief-wrap > #brief-today {
+  animation-delay: var(--dur-tap);
+}
 .brief-readings .stat-strip > *:nth-child(1) {
   animation-delay: var(--dur-move);
 }
@@ -72,6 +76,7 @@
 @media (prefers-reduced-motion: reduce) {
   .arrive,
   .brief-readings .stat-strip > *,
+  .brief-wrap > #brief-today,
   .brief-main > *,
   .brief-rail > * {
     animation: none;
@@ -165,23 +170,6 @@
   font-size: inherit;
 }
 
-/* The line a pressed chip opens under the sentence: what it was read from.
-   Neutral, because the sentence is composed here and no agent wrote it. */
-.glance-quote {
-  margin: 0;
-  padding-inline-start: var(--space-3);
-  border-inline-start: 2px solid var(--borderStrong);
-  color: var(--textSecondary);
-  max-width: 62ch;
-}
-.glance-quote-from {
-  color: var(--textPrimary);
-  font-weight: var(--fontWeightMedium);
-}
-.glance-briefed {
-  margin: var(--space-1) 0 0;
-}
-
 /* The controls: the two dials, and under them the way into the whole queue.
    A column at the far edge, on the greeting's top line, so a reader scanning
    the head meets the greeting first and the controls where the hand expects
@@ -235,6 +223,8 @@
  * them — the schedule as the day's line, and the night. `PageZones` draws the
  * grid. The interval over each is the register change from the block before
  * it, one rung wider than any gap inside either register. */
+.brief-wrap > #brief-today,
+.brief-followthrough,
 .brief-head + #brief-weekly {
   margin-top: var(--space-6);
 }
@@ -247,34 +237,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-}
-
-/* ── The morning ───────────────────────────────────────────────────────────
- * The brief and the work in one column, read top to bottom with a section's
- * air between each block, and the figures and the day's meetings beside it.
- * The controls stand on the line over the greeting, so the greeting and its
- * sentence read without the controls cutting across them. */
-.brief-morning > .brief-main {
-  gap: var(--space-8);
-}
-.brief-morning .brief-head {
-  flex-direction: column;
-  align-items: stretch;
-  padding-block: 0;
-}
-.brief-morning .glance-sentence {
-  -webkit-line-clamp: 4;
-  line-clamp: 4;
-}
-.brief-morning .brief-overview {
-  margin: 0;
-}
-@media (min-width: 1200px) {
-  .brief-morning > .brief-rail {
-    position: sticky;
-    top: var(--space-6);
-    align-self: start;
-  }
 }
 
 /* ── The context rail ─────────────────────────────────────────────────────

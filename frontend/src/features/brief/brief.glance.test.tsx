@@ -1,14 +1,8 @@
 /** @vitest-environment happy-dom */
-import {
-  cleanup,
-  render as rtlRender,
-  screen,
-  within,
-} from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { meetingRow, readingsDay, waitingEmailRow } from "./brief.fixtures";
+import { readingsDay } from "./brief.fixtures";
 import { BriefGlance } from "./brief.glance";
 import type { BriefView } from "./brief.view";
 
@@ -158,63 +152,3 @@ describe("BriefGlance — the weekly's sentence comes from the closed week", () 
 });
 
 // ── The opening block is two lines, and one of them is a control ──
-
-describe("BriefGlance — the chips in the morning's sentence", () => {
-  function renderMorning(briefedAt?: string) {
-    const lead = waitingEmailRow();
-    const day = readingsDay({}, [
-      lead,
-      meetingRow("next", false, "2026-09-03T15:00:00Z"),
-    ]);
-    rtlRender(
-      <LocaleProvider initial="en">
-        <BriefGlance
-          view="morning"
-          firstName="Ada"
-          now={new Date("2026-09-03T08:00:00Z")}
-          day={{
-            ...day,
-            focus: { items: [lead], total: 1, urgent_remaining: 0 },
-          }}
-          week={undefined}
-          briefedAt={briefedAt}
-        />
-      </LocaleProvider>,
-    );
-    return lead;
-  }
-
-  it("opens what a chip was read from, and closes it on a second press", async () => {
-    const user = userEvent.setup();
-    const lead = renderMorning();
-    const chip = screen.getByRole("button", { name: "Sonya Beck" });
-    expect(chip.getAttribute("aria-pressed")).toBe("false");
-    expect(screen.queryByRole("note")).toBeNull();
-    await user.click(chip);
-    expect(chip.getAttribute("aria-pressed")).toBe("true");
-    // Cited by its subject, never quoted: the preview is the message itself.
-    const note = screen.getByRole("note").textContent ?? "";
-    expect(note).toContain(lead.email_summary?.subject ?? "");
-    expect(note).not.toContain(lead.email_summary?.preview ?? "");
-    await user.click(chip);
-    expect(screen.queryByRole("note")).toBeNull();
-  });
-
-  it("names the next meeting as a chip in the same sentence", () => {
-    renderMorning();
-    const sentence = screen.getByTestId("glance-sentence");
-    expect(
-      within(sentence).getByRole("button", {
-        name: "Weber GmbH · quarterly review",
-      }),
-    ).toBeTruthy();
-  });
-
-  it("says the agent wrote the brief only when it was given the run", () => {
-    renderMorning("2026-09-03T05:30:00Z");
-    expect(screen.getByText(/^Briefed by Margince at /)).toBeTruthy();
-    cleanup();
-    renderMorning();
-    expect(screen.queryByText(/^Briefed by Margince at /)).toBeNull();
-  });
-});

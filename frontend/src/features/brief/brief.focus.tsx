@@ -6,9 +6,7 @@
 // — its head, its states, its foot — is brief.feed.tsx; this is what stands
 // in its body.
 
-import { useRef } from "react";
 import { Avatar, Badge, Button, Card } from "../../design-system/atoms";
-import { Disclosure } from "../../design-system/disclosure";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { openingCase } from "../../format/collate";
 import {
@@ -20,9 +18,7 @@ import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
-import { consequenceText } from "../worklist/worklist.connection";
 import {
-  comparisonText,
   itemTitle,
   phrasedReasons,
   reasonText,
@@ -61,15 +57,6 @@ export function Triage({
   const { locale } = useLocale();
   const zone = viewerZone();
   const recordZone = useRecordZone();
-  // A press removes the pressed button from the list. Focus follows it onto
-  // the card it brought in hand; a first render takes no focus.
-  const pressed = useRef(false);
-  const takeFocus = (frame: HTMLDivElement | null) => {
-    if (frame && pressed.current) {
-      pressed.current = false;
-      frame.focus();
-    }
-  };
   // A meeting earns the door too. Its subject is the ACTIVITY rather than a
   // contact, so `hasPane` answers no for it — and the row would stand with
   // three verbs and no way through to the meeting they are about.
@@ -112,19 +99,25 @@ export function Triage({
   const label = phrased ? openingCase(phrased, locale) : t(eyebrowKeyFor(lead));
   return (
     <div className="brief-triage">
-      {/* Keyed by the row, so pressing another one in the list mounts a new
-          card and replays its arrival. The press is answered on the card. */}
+      {/* THE ROW IN HAND IS A CARD on a STACK: one thing to answer, drawn
+          whole — its state on top, its name, whose it is, the work, the verbs
+          — over the edges of the work still behind it, so a reader sees the
+          day has more without reading the column beside it. The stack's
+          depth is what remains, at most two edges: a third reads as texture
+          rather than as a count, and the column names them all anyway.
+
+          KEYED BY THE ROW, so pressing another one in the queue mounts a new
+          card and replays its arrival — the press has an answer on the card
+          itself, not only in the column that was pressed. */}
       <div
-        ref={takeFocus}
-        tabIndex={-1}
-        className="brief-triage-frame"
-        key={identity(lead)}
+        className="brief-triage-stack"
+        data-behind={Math.min(rows.length - 1, 2)}
       >
-        <Card as="article" className="brief-triage-lead">
+        <Card as="article" className="brief-triage-lead" key={identity(lead)}>
           <div className="brief-triage-lead-head">
             {/* Why it is here, as its label: the strongest reason the ranking
-              weighed, in the warning tone on a row the day put first; the
-              kind of work where the ranking gave none. */}
+              weighed, in the warning tone on a row the day put first; the kind
+              of work where the ranking gave none. Then the rest, quieter. */}
             <Badge tone={lead.band === "now" ? "warning" : undefined}>
               {label}
             </Badge>
@@ -151,99 +144,54 @@ export function Triage({
               )
             }
             context={details}
-            // The card around this row says whose it is, why it is here and
-            // where it stands in the day. Each is said once, in its own place.
+            // The CARD around this row says whose it is, why it is here and
+            // where it stands in the day — each once and in its own place —
+            // and names and links the record it is about.
             framed
           />
-          <WhyFirst item={lead} />
         </Card>
       </div>
-      {rows.length > 1 && (
-        <div className="brief-triage-queue">
-          <Eyebrow as="h3" className="brief-triage-queue-head">
-            {t("brief.first.then")}
-          </Eyebrow>
-          {/* An ordered list, so the order reaches a screen reader as the
-              claim it is; the tile states the rank for everybody else. */}
-          <ol className="brief-focus-list">
-            {rows.map((item, index) =>
-              index === at ? null : (
-                <li key={identity(item)}>
-                  <QueueEntry
-                    item={item}
-                    rank={index + 1}
-                    onChoose={() => {
-                      pressed.current = true;
-                      onChoose(item);
-                    }}
-                  />
-                </li>
-              ),
-            )}
-          </ol>
-        </div>
-      )}
+      <div className="brief-triage-queue">
+        <Eyebrow as="h3" className="brief-triage-queue-head">
+          {t("brief.focus.inQueue")}
+        </Eyebrow>
+        {/* An ordered list, so the order reaches a screen reader as the
+            claim it is; the tile states the rank for everybody else. */}
+        <ol className="brief-focus-list">
+          {rows.map((item, index) => {
+            const line = queueLine(item, t, locale, zone);
+            return (
+              <li key={identity(item)}>
+                <button
+                  type="button"
+                  className={
+                    index === at
+                      ? "brief-focus-item brief-focus-item-inhand"
+                      : "brief-focus-item"
+                  }
+                  aria-pressed={index === at}
+                  onClick={() => onChoose(item)}
+                >
+                  <span className="brief-focus-rank t-label t-num">
+                    {formatNumber(index + 1, locale)}
+                  </span>
+                  <span className="brief-focus-item-text">
+                    <span className="t-body brief-focus-item-title">
+                      {itemTitle(item, t, locale)}
+                    </span>
+                    {line && (
+                      <span className="t-caption brief-focus-item-line">
+                        {line}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
     </div>
-  );
-}
-
-/** One row still waiting behind the card; a press puts it in hand. */
-function QueueEntry({
-  item,
-  rank,
-  onChoose,
-}: Readonly<{ item: WorklistItem; rank: number; onChoose: () => void }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const line = queueLine(item, t, locale, viewerZone());
-  return (
-    <button type="button" className="brief-focus-item" onClick={onChoose}>
-      <span className="brief-focus-rank t-label t-num">
-        {formatNumber(rank, locale)}
-      </span>
-      <span className="brief-focus-item-text">
-        <span className="t-body brief-focus-item-title">
-          {itemTitle(item, t, locale)}
-        </span>
-        {line && (
-          <span className="t-caption brief-focus-item-line">{line}</span>
-        )}
-      </span>
-    </button>
-  );
-}
-
-/**
- * The whole case for the row in hand, folded. It holds every reason the
- * ranking weighed, why it beat the row under it, and what doing nothing costs.
- *
- * The same sentences the Worklist's rows print, through the same helpers, so
- * the card and the queue cannot argue one row two ways. Nothing to fold, no
- * fold.
- */
-function WhyFirst({ item }: Readonly<{ item: WorklistItem }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = viewerZone();
-  const lines = [
-    ...phrasedReasons(item, false)
-      .filter((reason) => reason.kind !== "pinned")
-      .map((reason) => reasonText(reason, t, locale, zone)),
-    // A pin is the reader's own order in the queue, not the brief's reason.
-    item.above_next?.comparator === "pin"
-      ? null
-      : comparisonText(item.above_next, t, locale, zone),
-    consequenceText(item, t),
-  ].filter((line): line is string => line !== null && line !== "");
-  if (lines.length === 0) return null;
-  return (
-    <Disclosure className="brief-why" summary={t("brief.first.why")}>
-      <ul className="brief-why-list">
-        {lines.map((line) => (
-          <li key={line}>{line}</li>
-        ))}
-      </ul>
-    </Disclosure>
   );
 }
 
