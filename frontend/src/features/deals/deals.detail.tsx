@@ -54,9 +54,9 @@ const DEAL_TABS = ["overview", "room", "files", "legal", "history"] as const;
 
 type DealTab = (typeof DEAL_TABS)[number];
 
-// The tabs this deal offers. The legal reviews of an archived deal are
-// refused by the server, so the tab is left out there, and a reader who had it
-// open lands on the overview.
+// The tabs this deal offers. The server refuses the legal reviews of an
+// archived deal, so the tab is left out there. A reader who had it open lands
+// on the overview.
 function tabsOf(deal: Deal, legalReview: boolean): readonly DealTab[] {
   return DEAL_TABS.filter(
     (each) => each !== "legal" || (legalReview && !deal.archived_at),
@@ -145,7 +145,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // requests for facts the page already holds.
   //
   // The server answers neither the deal's status nor its coverage once it is
-  // archived, so they are asked for only after the deal has said it is live.
+  // archived. So they are asked for only after the deal has said it is live.
   const live = dealQuery.isSuccess && !dealQuery.data.archived_at;
   const statusQuery = useDealStatusCard(id, live);
   const coverageRead = useDealCoverage(id, live);

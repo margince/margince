@@ -7,9 +7,9 @@ import { unwrap } from "../../lib/problem";
 type Lead = components["schemas"]["Lead"];
 
 /**
- * The lead's score breakdown. Every reader of it shares this read, which does
- * not run for an archived lead: the server refuses the breakdown there, and a
- * reader of the hook would only draw a section that failed to load.
+ * The lead's score breakdown. Every reader of it shares this read. It does not
+ * run for an archived lead, because the server refuses the breakdown there.
+ * A reader would only draw a section that failed to load.
  */
 export function useLeadScore(lead: Pick<Lead, "id" | "archived_at">) {
   return useQuery({
