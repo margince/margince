@@ -175,17 +175,12 @@ func TestAWebhookSubscriptionSavedAsItAlreadyIsChangesNothing(t *testing.T) {
 	}
 	path := "/v1/webhook-subscriptions/" + created.Subscription.ID
 
-	var paused struct {
-		Subscription versionedWire `json:"subscription"`
-	}
+	var paused versionedWire
 	if status := e.Call(t, "PATCH", path, AnyMap{"state": "paused"},
 		map[string]string{"If-Match": strconv.FormatInt(created.Subscription.Version, 10)}, &paused); status != http.StatusOK {
 		t.Fatalf("pausing -> %d", status)
 	}
-	version := paused.Subscription.Version
-	if version == 0 {
-		version = created.Subscription.Version + 1
-	}
+	version := paused.Version
 	assertSaveChangesNothing(t, e, "PATCH", path, AnyMap{"state": "paused"}, created.Subscription.ID, version)
 }
 

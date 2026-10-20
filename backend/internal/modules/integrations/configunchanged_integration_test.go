@@ -64,3 +64,29 @@ func TestAConfigurationSaveOfTheStoredSettingsChangesNothing(t *testing.T) {
 		t.Errorf("a real change wrote %d audit row(s), want 1", got-before)
 	}
 }
+
+// A save that resends the pool budgets already stored is compared with the
+// stored budgets, so it changes nothing either.
+func TestAConfigurationSaveOfTheStoredBudgetsChangesNothing(t *testing.T) {
+	e := setupRuns(t, runsConfig{ceilings: map[string]int{"email": 10}})
+	actor, ok := principal.Actor(e.ctx)
+	if !ok {
+		t.Fatal("the runs environment has no actor")
+	}
+	actor.Permissions.Objects["integrations"] = principal.ObjectGrant{Read: true, Update: true}
+	ctx := principal.WithActor(e.ctx, actor)
+
+	standing, err := e.store.Get(ctx, "surfe")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ceiling := 10
+	budgets := []PoolBudget{{Pool: "email", MonthlyCeiling: &ceiling}}
+	answer, err := e.store.UpdateConfig(ctx, "surfe", ConfigPatch{Budgets: &budgets}, standing.Version)
+	if err != nil {
+		t.Fatalf("saving the stored budgets: %v", err)
+	}
+	if answer.Version != standing.Version {
+		t.Errorf("a save of the stored budgets answered version %d, want the unchanged %d", answer.Version, standing.Version)
+	}
+}

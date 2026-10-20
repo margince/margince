@@ -212,14 +212,38 @@ func (s *Store) presentConnection(
 	}
 	c.Spend = spend
 	c.Catalog = catalogOf(d)
-	backlog, err := s.backlogInTx(ctx, tx, c.Provider)
-	if err != nil && ctx.Err() != nil {
+	backlog, found, err := s.optionalBacklog(ctx, tx, c.Provider)
+	if err != nil {
 		return Connection{}, err
 	}
-	if err == nil {
+	if found {
 		c.Backlog = &backlog
 	}
 	return c, nil
+}
+
+// optionalBacklog reads the backlog in its own savepoint. A statement that
+// fails aborts the whole transaction unless it is rolled back to a savepoint,
+// so ignoring the error without one would break every later read and the commit.
+func (s *Store) optionalBacklog(ctx context.Context, tx pgx.Tx, name string) (BacklogCount, bool, error) {
+	nested, err := tx.Begin(ctx)
+	if err != nil {
+		return BacklogCount{}, false, fmt.Errorf("integrations: opening the backlog read: %w", err)
+	}
+	backlog, readErr := s.backlogInTx(ctx, nested, name)
+	if readErr == nil {
+		if err := nested.Commit(ctx); err != nil {
+			return BacklogCount{}, false, fmt.Errorf("integrations: closing the backlog read: %w", err)
+		}
+		return backlog, true, nil
+	}
+	if err := nested.Rollback(ctx); err != nil {
+		return BacklogCount{}, false, errors.Join(readErr, err)
+	}
+	if ctx.Err() != nil {
+		return BacklogCount{}, false, readErr
+	}
+	return BacklogCount{}, false, nil
 }
 
 // presentAfterWrite is presentConnection for the answer to a write. The write

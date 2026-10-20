@@ -85,6 +85,13 @@ func (s *Store) UpdateConfig(ctx context.Context, name string, patch ConfigPatch
 		if ifMatch != 0 && current.Version != ifMatch {
 			return apperrors.ErrVersionSkew
 		}
+		// readOne leaves the pool budgets out, and a save that resends them has
+		// to be compared with what is stored.
+		shown, err := s.loadConnections(ctx, tx)
+		if err != nil {
+			return err
+		}
+		current.Budgets = shown[name].Budgets
 
 		merged := applyPatch(current, patch)
 		if err := desc.ValidateSelection(merged.Preset, categoriesFrom(merged.Categories)); err != nil {
@@ -103,12 +110,11 @@ func (s *Store) UpdateConfig(ctx context.Context, name string, patch ConfigPatch
 			if err := s.writeConfig(ctx, tx, name, current, merged, patch.Budgets != nil); err != nil {
 				return err
 			}
+			if shown, err = s.loadConnections(ctx, tx); err != nil {
+				return err
+			}
 		}
-		conns, err := s.loadConnections(ctx, tx)
-		if err != nil {
-			return err
-		}
-		out, err = s.presentAfterWrite(ctx, tx, conns[name], desc)
+		out, err = s.presentAfterWrite(ctx, tx, shown[name], desc)
 		return err
 	})
 	if err != nil {
