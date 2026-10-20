@@ -165,7 +165,7 @@ func TestReconciliationQueuesCompletedCorrectionsAtANewerCodeVersion(t *testing.
 		t.Fatal(err)
 	}
 	e.WsExec(t, `UPDATE data_task_run SET status='done'`)
-	tasks := dataTaskCatalog(func() time.Time { return clocktest.Now(t) })
+	tasks := dataTaskCatalog(e.Pool, func() time.Time { return clocktest.Now(t) })
 	tasks[0].Version++
 	upgraded, err := datatask.New(e.Pool, tasks, "test", func() time.Time { return clocktest.Now(t) }, dataTaskFailureNotice(e.Pool))
 	if err != nil {

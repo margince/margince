@@ -19,7 +19,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-type dataTaskHandlers struct{ pool *pgxpool.Pool }
+type dataTaskHandlers struct {
+	pool  *pgxpool.Pool
+	clock func() time.Time
+}
+
+func (h dataTaskHandlers) now() time.Time {
+	if h.clock != nil {
+		return h.clock()
+	}
+	return time.Now()
+}
 
 func (h dataTaskHandlers) ListDataTasks(w http.ResponseWriter, r *http.Request) {
 	if !admitOperator(w, r, "data_task", principal.ActionRead) {
@@ -27,7 +37,7 @@ func (h dataTaskHandlers) ListDataTasks(w http.ResponseWriter, r *http.Request) 
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), healthReadTimeout)
 	defer cancel()
-	engine, err := newDataTaskEngine(h.pool, buildinfo.ReleaseVersion, time.Now)
+	engine, err := newDataTaskEngine(h.pool, buildinfo.ReleaseVersion, h.now)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -52,7 +62,7 @@ func (h dataTaskHandlers) ControlDataTask(w http.ResponseWriter, r *http.Request
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), healthReadTimeout)
 	defer cancel()
-	engine, err := newDataTaskEngine(h.pool, buildinfo.ReleaseVersion, time.Now)
+	engine, err := newDataTaskEngine(h.pool, buildinfo.ReleaseVersion, h.now)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -86,6 +96,10 @@ func dataTaskProgressWire(p datatask.Progress) crmcontracts.DataTaskProgress {
 		Scanned: p.Scanned, Changed: p.Changed, Batches: p.Batches, Estimate: p.Estimate, EstimateCapped: p.EstimateCapped,
 		EstimatedAt: p.EstimatedAt, ConsecutiveFailures: p.ConsecutiveFailures, LastErrorClass: p.LastErrorClass,
 		NextAttemptAt: p.NextAttemptAt, LastProgressAt: p.LastProgressAt, MissingPrerequisites: append([]string{}, p.MissingPrerequisites...),
+	}
+	if p.TaskID == homeRepairTaskID {
+		kind := crmcontracts.DataTaskProgressReviewKind("home_attention")
+		out.ReviewKind = &kind
 	}
 	if !p.RunID.IsZero() {
 		run := openapi_types.UUID(p.RunID)

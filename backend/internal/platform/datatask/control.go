@@ -102,7 +102,7 @@ func (e *Engine) refreshEstimate(ctx context.Context, tx pgx.Tx, task Task, step
 	if err := database.BoundStatement(ctx, tx, statementLimit); err != nil {
 		return err
 	}
-	estimate, capped, err := step.Estimate(ctx, tx, estimateCap)
+	estimate, capped, err := e.estimateStep(ctx, tx, task, step, p)
 	if err != nil {
 		return err
 	}
@@ -150,4 +150,15 @@ func (e *Engine) changeStatus(ctx context.Context, tx pgx.Tx, p Progress, action
 		return apperrors.ErrConflict
 	}
 	return logControl(ctx, tx, p, action)
+}
+
+func (e *Engine) estimateStep(ctx context.Context, tx pgx.Tx, task Task, step Step, p Progress) (int64, bool, error) {
+	if task.Manual {
+		if !task.hasCurrentReview(p) {
+			return 0, false, apperrors.ErrConflict
+		}
+		return int64(p.Activation.Limit), false, nil
+	}
+	return step.Estimate(ctx, tx, estimateCap)
+
 }

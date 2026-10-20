@@ -47,7 +47,7 @@ func (e *Engine) describeProgress(ctx context.Context, tx pgx.Tx, stored map[str
 				p.Status = Pending
 			}
 			p.Title = task.Title
-			if task.Manual && (p.Activation == nil || p.Activation.RuleVersion != task.ReviewVersion || p.TaskVersion != task.Version) {
+			if task.Manual && !task.hasCurrentReview(p) {
 				p.BlockedReason = ReviewRequired
 				out = append(out, p)
 				continue

@@ -5,6 +5,39 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de = {
+  "homeRepair.preserved": "Behalten oder übersprungen",
+  "homeRepair.preservedNote":
+    "Enthält zur Prüfung behaltene und seit der Vorschau geänderte Aufgaben. Prüfen Sie erneut, was übrig bleibt.",
+
+  "homeRepair.inspect": "Aufgabe ansehen",
+  "dataTasks.blocked.review_required":
+    "Prüfen Sie die vorgeschlagenen Änderungen vor dem Start.",
+  "homeRepair.archive": "Automatische Erinnerung archivieren",
+  "homeRepair.keepReview": "Zur persönlichen Prüfung behalten",
+  "homeRepair.keepCurrent": "Aktuelle Aufgabe behalten",
+  "homeRepair.reason.adopted":
+    "Diese Aufgabe wurde möglicherweise von einer Person erstellt, bearbeitet oder angeheftet.",
+  "homeRepair.reason.unverified":
+    "Die verfügbaren Belege rechtfertigen keine automatische Änderung.",
+  "homeRepair.reason.unavailable":
+    "Die Quelle kann mit Ihrem aktuellen Zugriff nicht geprüft werden.",
+  "homeRepair.reason.historical": "Historische Quelle ohne aktuelle Frist.",
+  "homeRepair.reason.baseline":
+    "Die Quelle liegt vor dem gewählten Beginn des Postfachverlaufs.",
+  "homeRepair.reason.cancelled": "Der zugrunde liegende Termin wurde abgesagt.",
+  "homeRepair.reason.current":
+    "Die aktuellen Regeln lassen diese Aufgabe weiterhin zu.",
+  "homeRepair.unnamed": "Aufgabendetails nicht verfügbar",
+  "homeRepair.explain":
+    "Prüfen Sie bis zu 25 Aufgaben auf einmal. Nur nachweislich überholte, unveränderte automatische Erinnerungen werden archiviert. Andere Aufgaben bleiben erhalten; keine wird als erledigt markiert.",
+  "homeRepair.preview": "Aufgaben prüfen",
+  "homeRepair.next": "Nächste Seite prüfen",
+  "homeRepair.summary":
+    "Zu archivierende automatische Erinnerungen auf dieser Seite: {count}.",
+  "homeRepair.apply": "{count} geprüfte Erinnerungen archivieren",
+  "homeRepair.started":
+    "Der geprüfte Lauf ist vorgemerkt. Der Fortschritt erscheint oben.",
+
   "dataTasks.unknownState":
     "Aktualisiere die Anwendung, um diesen Status zu verwalten.",
   "dataTasks.blockedBy": "Wartet auf: {name}",

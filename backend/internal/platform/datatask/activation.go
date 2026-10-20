@@ -6,6 +6,7 @@ package datatask
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -62,6 +63,9 @@ func (e *Engine) Activate(ctx context.Context, taskID, stepName string, version 
 	ctx, cancel := context.WithTimeout(ctx, transactionLimit)
 	defer cancel()
 	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		if err := database.BoundStatement(ctx, tx, statementLimit); err != nil {
+			return err
+		}
 		locked, err := lockExecutor(ctx, tx)
 		if err != nil {
 			return err
@@ -71,13 +75,23 @@ func (e *Engine) Activate(ctx context.Context, taskID, stepName string, version 
 		}
 		p, err := scanProgress(tx.QueryRow(ctx, `SELECT `+progressColumns+` FROM data_task_run
  WHERE task_id=@task AND step=@step FOR UPDATE`, pgx.NamedArgs{"task": taskID, "step": stepName}))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
 		if err != nil {
 			return err
 		}
-		if p.Version != version {
+		if p.Version != version || p.TaskVersion > task.Version {
 			return apperrors.ErrConflict
 		}
-		if p.Activation != nil && p.Activation.RuleVersion == task.ReviewVersion && p.Status != Done && p.Status != Paused && p.Status != Failed {
+		if task.hasCurrentReview(p) && p.Status != Done && p.Status != Paused && p.Status != Failed {
+			return apperrors.ErrConflict
+		}
+		missing, err := missingRequirements(ctx, tx, task)
+		if err != nil {
+			return err
+		}
+		if len(missing) > 0 {
 			return apperrors.ErrConflict
 		}
 		digest, err := task.Review(ctx, tx, review)
@@ -111,4 +125,8 @@ func (e *Engine) replaceManualRun(ctx context.Context, tx pgx.Tx, task Task, ste
 	}
 	p.RunID = runID
 	return logControl(ctx, tx, p, "activate")
+}
+
+func (task Task) hasCurrentReview(p Progress) bool {
+	return p.Activation != nil && p.TaskVersion == task.Version && p.Activation.RuleVersion == task.ReviewVersion
 }

@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -37,7 +36,7 @@ func (h dataTaskHandlers) PreviewHomeRepair(w http.ResponseWriter, r *http.Reque
 	var review datatask.ReviewRequest
 	err := InstallationDB(h.pool).Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		review, err = previewHomeRepairAfterTx(ctx, tx, after, in.Limit, time.Now())
+		review, err = previewHomeRepairAfterTx(ctx, tx, after, in.Limit, h.now())
 		return err
 	})
 	if err != nil {
@@ -67,12 +66,16 @@ func (h dataTaskHandlers) ActivateHomeRepair(w http.ResponseWriter, r *http.Requ
 		httperr.Write(w, r, err)
 		return
 	}
-	engine, err := newDataTaskEngine(h.pool, buildinfo.ReleaseVersion, time.Now)
+	engine, err := newDataTaskEngine(h.pool, buildinfo.ReleaseVersion, h.now)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 	if err := engine.Activate(ctx, homeRepairTaskID, "reviewed_tasks", in.Version, review); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	if err := enqueueDataTaskReconcile(ctx, h.pool); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

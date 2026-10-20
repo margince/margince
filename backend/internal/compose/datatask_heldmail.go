@@ -15,9 +15,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 )
 
-// dataTaskCatalog keeps reads safe during partial progress: capture treats an unknown provider date as no evidence.
-func dataTaskCatalog(now func() time.Time) []datatask.Task {
-	return []datatask.Task{{
+// Capture treats an unknown provider date as no evidence during partial progress.
+func heldMailDataTask(now func() time.Time) datatask.Task {
+	return datatask.Task{
 		ID: "core/1790871111_mail_already_held_owes_no_notice", Version: 1,
 		Title: "Correcting privacy notices for older mail", Requires: []string{"core/1790871110"},
 		Steps: []datatask.Step{
@@ -41,5 +41,5 @@ func dataTaskCatalog(now func() time.Time) []datatask.Task {
 				},
 			},
 		},
-	}}
+	}
 }

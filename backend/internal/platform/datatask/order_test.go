@@ -136,7 +136,22 @@ func TestUnactivatedManualWorkDoesNotHoldAutomaticCorrections(t *testing.T) {
 		}
 	}
 	stored := map[string]Progress{progressKey(manual.ID, "first"): {TaskVersion: 1, Status: Pending, Activation: &Activation{ReviewRequest: ReviewRequest{RuleVersion: "rules-0"}}}}
-	if _, block := nextStep([]Task{manual, automatic}, stored, now); block != "review_required" {
-		t.Fatalf("changed rules resumed without review: %s", block)
+	if got, _ := nextStep([]Task{manual, automatic}, stored, now); got == nil || got.task.ID != automatic.ID {
+		t.Fatal("changed rules blocked automatic work")
+	}
+}
+
+func TestChangedManualRulesRequireAnotherReview(t *testing.T) {
+	task := testTask("core/100_manual")
+	task.Manual, task.ReviewVersion = true, "rules-2"
+	key := progressKey(task.ID, "first")
+	for _, revision := range []struct {
+		task int
+		rule string
+	}{{1, "rules-1"}, {2, "rules-2"}} {
+		stored := map[string]Progress{key: {TaskVersion: revision.task, Status: Running, Activation: &Activation{ReviewRequest: ReviewRequest{RuleVersion: revision.rule}}}}
+		if got, _ := nextStep([]Task{task}, stored, time.Time{}); got != nil {
+			t.Fatal("changed review continued")
+		}
 	}
 }

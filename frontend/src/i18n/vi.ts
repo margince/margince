@@ -14,6 +14,38 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "homeRepair.preserved": "Được giữ lại hoặc bỏ qua",
+  "homeRepair.preservedNote":
+    "Bao gồm công việc được giữ lại để xem xét và các bản ghi đã thay đổi sau khi xem trước. Xem trước lần nữa để kiểm tra những gì còn lại.",
+
+  "homeRepair.inspect": "Xem công việc",
+  "dataTasks.blocked.review_required":
+    "Xem xét các thay đổi được đề xuất trước khi bắt đầu.",
+  "homeRepair.archive": "Lưu trữ lời nhắc tự động",
+  "homeRepair.keepReview": "Giữ lại để xem xét",
+  "homeRepair.keepCurrent": "Giữ công việc hiện tại",
+  "homeRepair.reason.adopted":
+    "Công việc này có thể đã được người dùng tạo, sửa hoặc ghim.",
+  "homeRepair.reason.unverified":
+    "Bằng chứng hiện có chưa đủ để thay đổi tự động.",
+  "homeRepair.reason.unavailable":
+    "Quyền truy cập hiện tại không cho phép kiểm tra nguồn.",
+  "homeRepair.reason.historical": "Nguồn cũ không có thời hạn hiện tại.",
+  "homeRepair.reason.baseline": "Nguồn có trước mốc lịch sử hộp thư đã chọn.",
+  "homeRepair.reason.cancelled": "Cuộc họp nguồn đã bị hủy.",
+  "homeRepair.reason.current":
+    "Công việc này vẫn đáp ứng các quy tắc hiện tại.",
+  "homeRepair.unnamed": "Không xem được chi tiết công việc",
+  "homeRepair.explain":
+    "Xem xét tối đa 25 công việc mỗi lần. Chỉ lời nhắc tự động chưa chỉnh sửa và được xác minh là lỗi thời mới được lưu trữ. Công việc khác được giữ lại; không đánh dấu công việc nào là hoàn thành.",
+  "homeRepair.preview": "Xem trước công việc",
+  "homeRepair.next": "Xem trang tiếp theo",
+  "homeRepair.summary":
+    "Lời nhắc tự động sẽ được lưu trữ trên trang này: {count}.",
+  "homeRepair.apply": "Lưu trữ {count} lời nhắc đã xem xét",
+  "homeRepair.started":
+    "Lượt xử lý đã xem xét đang chờ chạy. Tiến độ hiển thị ở trên.",
+
   "dataTasks.unknownState": "Cập nhật ứng dụng để quản lý trạng thái này.",
   "dataTasks.blockedBy": "Đang chờ: {name}",
   "roles.object.data_task": "Cập nhật dữ liệu",

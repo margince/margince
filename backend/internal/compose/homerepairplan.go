@@ -13,9 +13,11 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const homeRepairVersion = "1:" + activities.CommitmentAdmissionVersion
@@ -73,6 +75,9 @@ func homeRepairDigest(review datatask.ReviewRequest) (string, error) {
 }
 
 func validateHomeRepairTx(ctx context.Context, tx pgx.Tx, review datatask.ReviewRequest) (string, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
+		return "", err
+	}
 	var scope homeRepairScope
 	if err := json.Unmarshal(review.Scope, &scope); err != nil {
 		return "", apperrors.ErrInvalidArgument

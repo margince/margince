@@ -8752,6 +8752,21 @@ func (e DataTaskProgressBlockedReason) Valid() bool {
 	}
 }
 
+// Defines values for DataTaskProgressReviewKind.
+const (
+	DataTaskProgressReviewKindHomeAttention DataTaskProgressReviewKind = "home_attention"
+)
+
+// Valid indicates whether the value is a known member of the DataTaskProgressReviewKind enum.
+func (e DataTaskProgressReviewKind) Valid() bool {
+	switch e {
+	case DataTaskProgressReviewKindHomeAttention:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DataTaskProgressStatus.
 const (
 	DataTaskProgressStatusDone    DataTaskProgressStatus = "done"
@@ -35465,26 +35480,30 @@ type DataTaskProgress struct {
 	ErrorSentence       *string                        `json:"error_sentence,omitempty"`
 
 	// Estimate Bounded count of rows to inspect; absent means unknown, not zero.
-	Estimate             *int64                 `json:"estimate,omitempty"`
-	EstimateCapped       bool                   `json:"estimate_capped"`
-	EstimatedAt          *time.Time             `json:"estimated_at,omitempty"`
-	FirstRelease         *string                `json:"first_release,omitempty"`
-	LastErrorClass       *string                `json:"last_error_class,omitempty"`
-	LastProgressAt       *time.Time             `json:"last_progress_at,omitempty"`
-	MissingPrerequisites []string               `json:"missing_prerequisites"`
-	NextAttemptAt        *time.Time             `json:"next_attempt_at,omitempty"`
-	RunId                *openapi_types.UUID    `json:"run_id,omitempty"`
-	Scanned              int64                  `json:"scanned"`
-	Status               DataTaskProgressStatus `json:"status"`
-	Step                 string                 `json:"step"`
-	TaskId               string                 `json:"task_id"`
-	TaskVersion          int                    `json:"task_version"`
-	Title                string                 `json:"title"`
-	Version              int64                  `json:"version"`
+	Estimate             *int64                      `json:"estimate,omitempty"`
+	EstimateCapped       bool                        `json:"estimate_capped"`
+	EstimatedAt          *time.Time                  `json:"estimated_at,omitempty"`
+	FirstRelease         *string                     `json:"first_release,omitempty"`
+	LastErrorClass       *string                     `json:"last_error_class,omitempty"`
+	LastProgressAt       *time.Time                  `json:"last_progress_at,omitempty"`
+	MissingPrerequisites []string                    `json:"missing_prerequisites"`
+	NextAttemptAt        *time.Time                  `json:"next_attempt_at,omitempty"`
+	ReviewKind           *DataTaskProgressReviewKind `json:"review_kind,omitempty"`
+	RunId                *openapi_types.UUID         `json:"run_id,omitempty"`
+	Scanned              int64                       `json:"scanned"`
+	Status               DataTaskProgressStatus      `json:"status"`
+	Step                 string                      `json:"step"`
+	TaskId               string                      `json:"task_id"`
+	TaskVersion          int                         `json:"task_version"`
+	Title                string                      `json:"title"`
+	Version              int64                       `json:"version"`
 }
 
 // DataTaskProgressBlockedReason defines model for DataTaskProgress.BlockedReason.
 type DataTaskProgressBlockedReason string
+
+// DataTaskProgressReviewKind defines model for DataTaskProgress.ReviewKind.
+type DataTaskProgressReviewKind string
 
 // DataTaskProgressStatus defines model for DataTaskProgress.Status.
 type DataTaskProgressStatus string

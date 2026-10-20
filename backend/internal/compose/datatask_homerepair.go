@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -50,6 +51,12 @@ func applyHomeRepairBatch(ctx context.Context, tx pgx.Tx, pool *pgxpool.Pool, in
 	if err := auth.Require(ctx, "data_task", principal.ActionUpdate); err != nil {
 		return datatask.BatchOut{}, err
 	}
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return datatask.BatchOut{}, err
+	}
+	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
+		return datatask.BatchOut{}, err
+	}
 	var scope homeRepairScope
 	if err := json.Unmarshal(in.Activation.Scope, &scope); err != nil {
 		return datatask.BatchOut{}, err
@@ -67,7 +74,7 @@ func applyHomeRepairBatch(ctx context.Context, tx pgx.Tx, pool *pgxpool.Pool, in
 	store := activities.NewStore(InstallationDB(pool))
 	changed := 0
 	for _, expected := range scope.Tasks[offset:end] {
-		wrote, err := applyHomeRepairTask(ctx, tx, store, expected, *in.Activation)
+		wrote, err := applyHomeRepairTask(ctx, tx, store, expected, *in.Activation, in.RunID)
 		if err != nil {
 			return datatask.BatchOut{}, err
 		}
@@ -79,10 +86,10 @@ func applyHomeRepairBatch(ctx context.Context, tx pgx.Tx, pool *pgxpool.Pool, in
 	return datatask.BatchOut{Cursor: cursor, Scanned: end - offset, Changed: changed, Done: end == len(scope.Tasks)}, err
 }
 
-func applyHomeRepairTask(ctx context.Context, tx pgx.Tx, store *activities.Store, expected homeRepairTaskRef, activation datatask.Activation) (bool, error) {
+func applyHomeRepairTask(ctx context.Context, tx pgx.Tx, store *activities.Store, expected homeRepairTaskRef, activation datatask.Activation, runID ids.UUID) (bool, error) {
 	task, err := activities.HomeRepairTaskTx(ctx, tx, expected.ID)
 	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
-		return false, recordHomeRepairSkip(ctx, tx, expected, "source_or_task_unavailable", activation.RuleVersion)
+		return false, recordHomeRepairSkip(ctx, tx, expected, "source_or_task_unavailable", activation.RuleVersion, runID)
 	}
 	if err != nil {
 		return false, err
@@ -92,16 +99,21 @@ func applyHomeRepairTask(ctx context.Context, tx pgx.Tx, store *activities.Store
 		return false, err
 	}
 	if task.Version != expected.Version || decision.Action != expected.Action || decision.Reason != expected.Reason {
-		return false, recordHomeRepairSkip(ctx, tx, expected, "changed_since_review", activation.RuleVersion)
+		return false, recordHomeRepairSkip(ctx, tx, expected, "changed_since_review", activation.RuleVersion, runID)
 	}
 	if decision.Action != repairArchiveReminder {
-		return false, recordHomeRepairSkip(ctx, tx, expected, decision.Reason, activation.RuleVersion)
+		return false, recordHomeRepairSkip(ctx, tx, expected, decision.Reason, activation.RuleVersion, runID)
 	}
-	err = store.ArchiveActivityTx(ctx, tx, task.ID, &expected.Version, activities.OnlyPristineAutomaticTask(), activities.WithArchiveReason(decision.Reason, activation.RuleVersion))
+	err = pgx.BeginFunc(ctx, tx, func(savepoint pgx.Tx) error {
+		return store.ArchiveActivityTx(ctx, savepoint, task.ID, &expected.Version, activities.OnlyPristineAutomaticTask(), activities.WithArchiveReason(decision.Reason, activation.RuleVersion))
+	})
+	if errors.Is(err, apperrors.ErrConflict) || errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrRetentionHold) || errors.Is(err, apperrors.ErrNotFound) {
+		return false, recordHomeRepairSkip(ctx, tx, expected, "write_refused_since_review", activation.RuleVersion, runID)
+	}
 	return err == nil, err
 }
 
-func recordHomeRepairSkip(ctx context.Context, tx pgx.Tx, expected homeRepairTaskRef, reason, version string) error {
-	_, err := storekit.LogSystem(ctx, tx, "home_repair.skipped", map[string]any{"activity_id": expected.ID, "reason": reason, "rule_version": version})
+func recordHomeRepairSkip(ctx context.Context, tx pgx.Tx, expected homeRepairTaskRef, reason, version string, runID ids.UUID) error {
+	_, err := storekit.LogSystem(ctx, tx, "home_repair.skipped", map[string]any{"run_id": runID, "activity_id": expected.ID, "reason": reason, "rule_version": version})
 	return err
 }

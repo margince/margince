@@ -375,6 +375,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/home-repair/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review a bounded page of automatic Home work.
+         * @description Requires data_task:read and each record's content permissions. This operation changes no work.
+         */
+        post: operations["previewHomeRepair"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/home-repair/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activate exactly the reviewed automatic Home work.
+         * @description Requires data_task:update. The review expires after fifteen minutes; changed records or rules require another preview.
+         */
+        post: operations["activateHomeRepair"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/job-health": {
         parameters: {
             query?: never;
@@ -38459,6 +38499,23 @@ export interface components {
             /** Format: date-time */
             last_refused_at?: string;
         };
+        HomeRepairReview: {
+            tasks: components["schemas"]["HomeRepairTask"][];
+            digest: string;
+            rule_version: string;
+            limit: number;
+            /** Format: date-time */
+            as_of: string;
+        };
+        HomeRepairTask: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            version: number;
+            /** @enum {string} */
+            action: "archive_automatic_reminder" | "human_review" | "leave_current";
+            reason: string;
+        };
         DataTaskControl: {
             task_id: string;
             step: string;
@@ -38468,6 +38525,8 @@ export interface components {
             version: number;
         };
         DataTaskProgress: {
+            /** @enum {string} */
+            review_kind?: "home_attention";
             task_id: string;
             title: string;
             step: string;
@@ -38503,7 +38562,7 @@ export interface components {
             last_progress_at?: string;
             first_release?: string;
             /** @enum {string} */
-            blocked_reason?: "waiting_for_worker" | "newer_release_required" | "paused" | "failed" | "retry_wait" | "earlier_step" | "missing_prerequisite";
+            blocked_reason?: "waiting_for_worker" | "newer_release_required" | "paused" | "failed" | "retry_wait" | "earlier_step" | "missing_prerequisite" | "review_required";
             blocked_by?: string;
             missing_prerequisites: string[];
         };
@@ -48399,6 +48458,68 @@ export interface operations {
         };
         responses: {
             /** @description The correction control was recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewHomeRepair: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    limit: number;
+                    /** Format: uuid */
+                    after?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Exact reviewed identities, dispositions and rule version. Use the last identity to read the next page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeRepairReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    activateHomeRepair: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: int64 */
+                    version: number;
+                    review: components["schemas"]["HomeRepairReview"];
+                };
+            };
+        };
+        responses: {
+            /** @description The bounded reviewed run was activated. */
             204: {
                 headers: {
                     [name: string]: unknown;

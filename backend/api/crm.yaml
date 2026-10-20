@@ -52760,6 +52760,7 @@ components:
       additionalProperties: false
       required: [task_id, title, step, task_version, status, version, batch_limit, scanned, changed, batches, estimate_capped, consecutive_failures, missing_prerequisites]
       properties:
+        review_kind: {type: string, enum: [home_attention]}
         task_id: {type: string}
         title: {type: string}
         step: {type: string}

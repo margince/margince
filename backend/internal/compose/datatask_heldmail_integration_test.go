@@ -159,7 +159,7 @@ func TestHeldMailTaskClosesOnlyProvenHistoryAndReplaysSafely(t *testing.T) {
 	}
 	cases := heldMailCases(ctx, t, conn, seat, connected)
 
-	tasks := dataTaskCatalog(func() time.Time { return connected.Add(time.Hour) })
+	tasks := dataTaskCatalog(e.Pool, func() time.Time { return connected.Add(time.Hour) })
 	for i := range tasks[0].Steps {
 		tasks[0].Steps[i].Limit = 2
 		tasks[0].Steps[i].MinLimit = 1
@@ -213,7 +213,7 @@ func TestHeldMailDomainAndAuditRollBackWithItsProgress(t *testing.T) {
 	}
 	id := heldHistoryCase(ctx, t, conn, e.Rep1.String(), "rollback@held.test", "connector:gmail", "open", connected.Add(-time.Hour))
 	now := connected.Add(time.Hour)
-	tasks := dataTaskCatalog(func() time.Time { return now })
+	tasks := dataTaskCatalog(e.Pool, func() time.Time { return now })
 	original := tasks[0].Steps[1].Batch
 	tasks[0].Steps[1].Batch = func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
 		out, err := original(ctx, tx, in)

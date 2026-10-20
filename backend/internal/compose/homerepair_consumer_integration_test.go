@@ -6,14 +6,19 @@
 package compose
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"maps"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/datatask"
@@ -22,6 +27,11 @@ import (
 )
 
 func TestReviewedRepairArchivesHistoricalWorkWithoutRecreatingIt(t *testing.T) {
+	t.Run("untouched automatic work", func(t *testing.T) { runReviewedRepair(t, false) })
+	t.Run("human edit after review", func(t *testing.T) { runReviewedRepair(t, true) })
+}
+
+func runReviewedRepair(t *testing.T, editAfterReview bool) {
 	e := integration.Setup(t)
 	now := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
 	old := now.AddDate(0, 0, -90)
@@ -48,12 +58,18 @@ func TestReviewedRepairArchivesHistoricalWorkWithoutRecreatingIt(t *testing.T) {
 	operator := e.As(e.AdminUser, nil, permissions)
 	e.GrantRole(t, e.AdminUser, "admin")
 	e.WsExec(t, `UPDATE role SET permissions=jsonb_set(permissions,'{objects,data_task}','{"read":true,"update":true,"create":false,"delete":false}'::jsonb) WHERE key='admin'`)
-	var review datatask.ReviewRequest
-	if err := e.DB().Tx(operator, func(tx pgx.Tx) error {
-		var err error
-		review, err = previewHomeRepairTx(operator, tx, 10, now)
-		return err
-	}); err != nil {
+	h := dataTaskHandlers{pool: e.Pool, clock: func() time.Time { return now }}
+	response := httptest.NewRecorder()
+	h.PreviewHomeRepair(response, httptest.NewRequest(http.MethodPost, "/v1/admin/home-repair/preview", bytes.NewBufferString(`{"limit":10}`)).WithContext(operator))
+	if response.Code != http.StatusOK {
+		t.Fatalf("preview: %d %s", response.Code, response.Body.String())
+	}
+	var wire crmcontracts.HomeRepairReview
+	if err := json.Unmarshal(response.Body.Bytes(), &wire); err != nil {
+		t.Fatal(err)
+	}
+	review, err := homeRepairReviewInput(wire)
+	if err != nil {
 		t.Fatal(err)
 	}
 	if review.Limit != 1 {
@@ -68,8 +84,28 @@ func TestReviewedRepairArchivesHistoricalWorkWithoutRecreatingIt(t *testing.T) {
 	if err := engine.Seed(system); err != nil {
 		t.Fatal(err)
 	}
-	if err := engine.Activate(operator, task.ID, "reviewed_tasks", 1, review); err != nil {
+	activationBody, err := json.Marshal(crmcontracts.ActivateHomeRepairJSONBody{Version: 1, Review: wire})
+	if err != nil {
 		t.Fatal(err)
+	}
+	response = httptest.NewRecorder()
+	h.ActivateHomeRepair(response, httptest.NewRequest(http.MethodPost, "/v1/admin/home-repair/activate", bytes.NewReader(activationBody)).WithContext(operator))
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("activation: %d %s", response.Code, response.Body.String())
+	}
+
+	if editAfterReview {
+		var scope homeRepairScope
+		if err := json.Unmarshal(review.Scope, &scope); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := e.Activities.UpdateActivity(operator, ids.From[ids.ActivityKind](scope.Tasks[0].ID), activities.UpdateActivityInput{Subject: new("Keep this personal follow-up"), IfVersion: &scope.Tasks[0].Version}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	expectedChanges := int64(1)
+	if editAfterReview {
+		expectedChanges = 0
 	}
 	if _, err := engine.Execute(system); err != nil {
 		t.Fatal(err)
@@ -78,14 +114,17 @@ func TestReviewedRepairArchivesHistoricalWorkWithoutRecreatingIt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(progress) != 1 || progress[0].Changed != 1 || progress[0].Status != datatask.Done {
+	if len(progress) != 1 || progress[0].Changed != expectedChanges || progress[0].Status != datatask.Done {
 		t.Fatalf("repair progress=%+v", progress)
 	}
-	if e.WsCount(t, "SELECT count(*) FROM activity WHERE kind='task' AND archived_at IS NOT NULL AND NOT is_done") != 1 {
-		t.Fatal("repair did not archive without fulfillment")
+	if e.WsCount(t, "SELECT count(*) FROM activity WHERE kind='task' AND archived_at IS NOT NULL AND NOT is_done") != int(expectedChanges) {
+		t.Fatal("repair did not preserve human changes or archive automatic work")
 	}
-	if e.WsCount(t, "SELECT count(*) FROM audit_log WHERE entity_type='activity' AND action='archive' AND evidence->>'rule_version' IS NOT NULL AND before ? 'archived_at' AND after ? 'archived_at'") != 1 {
+	if e.WsCount(t, "SELECT count(*) FROM audit_log WHERE entity_type='activity' AND action='archive' AND evidence->>'rule_version' IS NOT NULL AND before ? 'archived_at' AND after ? 'archived_at'") != int(expectedChanges) {
 		t.Fatal("repair omitted reasoned before/after evidence")
+	}
+	if editAfterReview && e.WsCount(t, "SELECT count(*) FROM system_log WHERE action='home_repair.skipped' AND detail->>'reason'='changed_since_review'") != 1 {
+		t.Fatal("concurrent edit was not reported")
 	}
 	commitment.AsOf = now
 	if err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {

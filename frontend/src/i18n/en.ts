@@ -3,6 +3,39 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "homeRepair.preserved": "Preserved or skipped",
+  "homeRepair.preservedNote":
+    "Includes work kept for review and records changed since the preview. Preview again to inspect what remains.",
+
+  "homeRepair.inspect": "Inspect task",
+  "dataTasks.blocked.review_required":
+    "Review the proposed changes before starting.",
+  "homeRepair.archive": "Archive automatic reminder",
+  "homeRepair.keepReview": "Keep for human review",
+  "homeRepair.keepCurrent": "Keep current work",
+  "homeRepair.reason.adopted":
+    "A human may have created, edited or pinned this work.",
+  "homeRepair.reason.unverified":
+    "The available evidence does not justify an automatic change.",
+  "homeRepair.reason.unavailable":
+    "The source cannot be checked with your current access.",
+  "homeRepair.reason.historical":
+    "Historical source without a current deadline.",
+  "homeRepair.reason.baseline":
+    "The source predates the mailbox history baseline.",
+  "homeRepair.reason.cancelled": "The source meeting was cancelled.",
+  "homeRepair.reason.current":
+    "The current admission rules still allow this work.",
+  "homeRepair.unnamed": "Task details unavailable",
+  "homeRepair.explain":
+    "Review up to 25 tasks at a time. Only untouched automatic reminders proven obsolete will be archived. Other work stays available; nothing is marked completed.",
+  "homeRepair.preview": "Preview tasks",
+  "homeRepair.next": "Review next page",
+  "homeRepair.summary": "Automatic reminders to archive on this page: {count}.",
+  "homeRepair.apply": "Archive {count} reviewed reminders",
+  "homeRepair.started":
+    "The reviewed run is queued. Its progress appears above.",
+
   "dataTasks.unknownState": "Update the application to manage this state.",
   "dataTasks.blockedBy": "Waiting for: {name}",
   "roles.object.data_task": "Data updates",

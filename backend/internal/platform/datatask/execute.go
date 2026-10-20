@@ -72,7 +72,7 @@ func lockExecutor(ctx context.Context, tx pgx.Tx) (bool, error) {
 
 func (e *Engine) runBatch(ctx context.Context, tx pgx.Tx, picked selection) error {
 	p := picked.progress
-	if picked.task.Manual && (p.Activation == nil || p.Activation.RuleVersion != picked.task.ReviewVersion || p.TaskVersion != picked.task.Version) {
+	if picked.task.Manual && !picked.task.hasCurrentReview(p) {
 		return fmt.Errorf("manual data task requires a current reviewed activation")
 	}
 	if p.Activation != nil {
@@ -88,12 +88,8 @@ func (e *Engine) runBatch(ctx context.Context, tx pgx.Tx, picked selection) erro
 		p.BatchLimit = picked.step.Limit
 		p.TaskVersion = picked.task.Version
 	}
-	if p.Estimate == nil && p.Activation != nil {
-		estimate, at := int64(p.Activation.Limit), e.now()
-		p.Estimate, p.EstimatedAt = &estimate, &at
-	}
 	if p.Estimate == nil {
-		estimate, capped, err := picked.step.Estimate(ctx, tx, estimateCap)
+		estimate, capped, err := e.estimateStep(ctx, tx, picked.task, picked.step, p)
 		if err != nil {
 			return err
 		}
