@@ -472,7 +472,7 @@
 
 /* In the rail a company is a row, not a card: the panel is already its frame. */
 .pe-rail .company-card {
-  padding: var(--space-2) 0;
+  padding: var(--space-2) 0; /* ds:ignore a row in the rail, flush with the panel that frames it */
   border: 0;
   border-radius: 0;
   background: none;
@@ -1165,7 +1165,6 @@
   padding-block-end: var(--space-1);
   white-space: nowrap;
   font-weight: var(--fontWeightBold);
-  white-space: nowrap;
 }
 .record-sheet .pe-brief .co-spine-now-word::after {
   content: " · ";

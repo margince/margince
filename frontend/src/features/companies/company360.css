@@ -2018,7 +2018,9 @@
    in the heading face, with room around it, and the rows under it are the
    rest of the queue. */
 .record-sections .co-lead > .panel-row:first-of-type {
-  padding-block: var(--space-4);
+  padding-block: var(
+    --space-4
+  ); /* ds:ignore the lead step is a headline row, given a headline's air */
 }
 .record-sections
   .co-lead

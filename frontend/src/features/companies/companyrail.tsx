@@ -45,29 +45,10 @@ import { CompanyTriageSection } from "./companytriage";
 import "./company360.css";
 import { ListsSection } from "./companyraillists";
 
-// The record page's LEFT rail (mockup State A): the account's context,
-// beside the work rather than under it. Passed to RecordView's `rail` slot,
-// so it takes the wider of the two rail shares (page-zones-rail: 3fr/7fr)
-// rather than the narrower `aside` share a right-hand column would get.
-//
-// Drawn as separate panels, each answering one question about the account:
-// its details and tags, its registration, its team, its open deals, its
-// projects, its contacts, its hold, in the order a reader works down the
-// column, rather than the disclosures the rail used to fold into one card: a
-// hairline inside a panel reads as one story about that panel's own subject, and a
-// panel's own edge is what tells a reader they have moved on to a different
-// one. Tags file under Details rather than in their own panel: a tag is a
-// fact about the account, on the same card as the rest of them.
-//
-// Health moved to the readings row above the tabs, so it is not repeated
-// here — two copies of the same verdict is a value the reader has to
-// reconcile. "Our team on this account" and "Leads from this company" are
-// not drawn: neither has a field or an endpoint behind it yet.
-//
-// The rail is not rendered while the composer is open. That is the page's
-// decision rather than this component's: the drawer opens over the page as
-// its own overlay, and the rail standing behind it would only be two things
-// competing for the same glance.
+// The record page's fields column: what the account is. It holds the details
+// and custom fields, their origin, the registration and the lists. Each has a
+// panel of its own, because a panel's edge tells a reader the question changed.
+// How the account is looked after stands on Profile (CompanyFiling below).
 
 type Company = components["schemas"]["Company"];
 type Company360 = components["schemas"]["Company360"];
