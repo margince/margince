@@ -24,6 +24,11 @@ import (
 // carries them all. A set equal to the stored rows is rolled back and leaves
 // the version alone. The comparison is of the rows read back, so it needs no
 // copy of the normalisation the replace applies.
+//
+// The replaces stay in this function, under its own write check, because the
+// write-authority gate follows calls and not closures passed in.
+//
+//nolint:cyclop // one savepoint around three replaces; splitting it would move the writes out from under the check.
 func applyContactReplaceSets(
 	ctx context.Context, tx pgx.Tx, id ids.ContactID, current crmcontracts.Contact, in UpdateContactInput,
 	active []fieldcatalog.Column,
