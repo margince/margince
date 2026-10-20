@@ -142,7 +142,7 @@
   }
 
   .scheduledsends-side {
-    align-items: stretch;
+    align-items: flex-start;
   }
 
   .scheduledsends-verbs {

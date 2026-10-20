@@ -172,7 +172,6 @@ export function ScheduledSendsScreen() {
                   <SectionHeader title={t("sched.group.waiting")} />
                   <SurfaceState
                     loadingLabel={t("sched.group.waiting")}
-                    label={t("sched.group.waiting")}
                     state={days.length === 0 ? "empty" : "ready"}
                     emptyLabel={t(
                       view === "today"
