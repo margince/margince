@@ -261,10 +261,7 @@ it("saves edited layout order, metric selection and team audience", async () => 
     }),
   );
   await user.click(
-    within(screen.getByRole("group", { name: "Charts and order" })).getByRole(
-      "checkbox",
-      { name: "Time in current stage" },
-    ),
+    screen.getByRole("button", { name: "Remove Time in current stage" }),
   );
   await user.click(screen.getByRole("button", { name: "Save report" }));
   await waitFor(() => expect(saved).toHaveBeenCalledOnce());
@@ -274,6 +271,15 @@ it("saves edited layout order, metric selection and team audience", async () => 
       audience_team_id: reportingStoryReport.selection.scope.id,
       selection: expect.objectContaining({
         blocks: ["stage_distribution", "bookings_trend", "owner_attainment"],
+        layout: [
+          {
+            cards: [
+              expect.objectContaining({ kind: "stage_distribution" }),
+              expect.objectContaining({ kind: "bookings_trend" }),
+              expect.objectContaining({ kind: "owner_attainment" }),
+            ],
+          },
+        ],
       }),
     }),
   );

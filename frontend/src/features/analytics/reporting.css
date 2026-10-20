@@ -69,6 +69,15 @@
   gap: var(--space-5);
   padding: var(--padPanel);
 }
+/* A section's heading sits over its own grid; sections stack with the gap the
+   cards use between them. */
+.reporting-section {
+  display: grid;
+  gap: var(--space-3);
+}
+.reporting-section + .reporting-section {
+  margin-top: var(--gapCards);
+}
 .reporting-panel-wide {
   grid-column: 1 / -1;
 }

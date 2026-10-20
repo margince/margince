@@ -20,6 +20,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { layoutOf } from "./reporting.layout";
 import { ReportingOverview } from "./reporting.overview";
 import { ReportingReportDetail } from "./reporting.report";
 import { SaveReportingDialog } from "./reporting.save";
@@ -75,9 +76,44 @@ it("saves the full selected graph layout and context", async () => {
       name: "Friday review",
       description: "For the Friday call.",
       audience: "private",
-      selection: reportingStoryEvaluation.selection,
+      selection: {
+        ...reportingStoryEvaluation.selection,
+        layout: layoutOf(reportingStoryEvaluation.selection),
+      },
     }),
   );
+});
+it("draws a saved layout's sections under their titles", async () => {
+  const laidOutEvaluation = {
+    ...reportingStoryEvaluation,
+    selection: {
+      ...reportingStoryEvaluation.selection,
+      layout: [
+        {
+          title: "Where deals stand",
+          cards: [
+            {
+              id: "stages",
+              kind: "stage_distribution" as const,
+              width: "half" as const,
+            },
+          ],
+        },
+      ],
+    },
+  };
+  installFetchStub(reportingStoryRoutes(laidOutEvaluation, true));
+  render(
+    <StoryProviders>
+      <ReportingReportDetail reportId="report" />
+    </StoryProviders>,
+  );
+  expect(
+    await screen.findByRole("heading", { name: "Where deals stand" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Sales won over time" }),
+  ).not.toBeInTheDocument();
 });
 it("shows the report's purpose under its name", async () => {
   const routes = reportingStoryRoutes(reportingStoryEvaluation, true);
