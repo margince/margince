@@ -1210,7 +1210,7 @@ export const de = {
   "scheduling.providerChanged":
     "Dein gespeicherter Kalenderanbieter ist nicht verfügbar. Beim Speichern wird der hier angezeigte verbundene Kalender verwendet.",
   "scheduling.calendarUnavailable":
-    "Es können keine Zeiten angezeigt werden, weil der Kalender der organisierenden Person nicht gelesen werden konnte. Die organisierende Person kann den in den Termineinstellungen gewählten Kalender prüfen; alle anderen versuchen es später erneut.",
+    "Der Kalender der organisierenden Person konnte nicht gelesen werden, deshalb wurde nichts angeboten oder geändert. Die organisierende Person kann den in den Termineinstellungen gewählten Kalender prüfen.",
   "scheduling.windowHorizon":
     "Dieses Datum liegt außerhalb des Buchungszeitraums der organisierenden Person. Wähle ein früheres Datum.",
   "scheduling.windowNotice":

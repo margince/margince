@@ -147,6 +147,11 @@ func graphInstant(at scheduledTime) (time.Time, error) {
 }
 
 func (a *httpAPI) Busy(ctx context.Context, token, calendar string, from, to time.Time) ([]connector.CalendarInterval, error) {
+	busy, err := a.readBusy(ctx, token, calendar, from, to)
+	return busy, connector.CalendarReadFailed(calendar, err)
+}
+
+func (a *httpAPI) readBusy(ctx context.Context, token, calendar string, from, to time.Time) ([]connector.CalendarInterval, error) {
 	query := url.Values{"startDateTime": {from.Format(time.RFC3339)}, "endDateTime": {to.Format(time.RFC3339)}, "$top": {"100"}, "$select": {"id,start,end,isAllDay,isCancelled,showAs,responseStatus"}}
 	next := a.base + calendarPath(calendar) + "/calendarView?" + query.Encode()
 	busy := []connector.CalendarInterval{}

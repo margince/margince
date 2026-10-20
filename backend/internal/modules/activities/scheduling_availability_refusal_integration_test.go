@@ -7,6 +7,7 @@ package activities
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -26,7 +27,11 @@ func TestAvailabilityWithoutAUsableCalendarIsRefusedAtEveryDoor(t *testing.T) {
 	}{
 		"check":      {func(c *invitationCalendar) { c.checkErr = connector.ErrAuthRejected }, http.StatusUnprocessableEntity},
 		"busy":       {func(c *invitationCalendar) { c.busyErr = connector.ErrAuthRejected }, http.StatusUnprocessableEntity},
-		"unreadable": {func(c *invitationCalendar) { c.busyErr = errors.New("calendar: incomplete availability") }, http.StatusBadGateway},
+		"unreadable": {func(c *invitationCalendar) { c.busyErr = connector.NewCalendarUnavailable("primary", "notFound", nil) }, http.StatusBadGateway},
+		"unreached": {func(c *invitationCalendar) {
+			c.busyErr = fmt.Errorf("calendar: provider status 503: %w", connector.ErrUnreachable)
+		}, http.StatusBadGateway},
+		"our fault": {func(c *invitationCalendar) { c.busyErr = errors.New("keyvault: key resolution failed") }, http.StatusInternalServerError},
 	} {
 		f := newInvitationFixture(t)
 		hostName := "Test Host"

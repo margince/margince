@@ -4,6 +4,8 @@
 package connector
 
 import (
+	"context"
+	"errors"
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -36,6 +38,22 @@ func NewCalendarUnavailable(calendar, reason string, cause error) *CalendarUnava
 	return &CalendarUnavailableError{Calendar: calendar, Reason: MachineReason(reason), Cause: cause}
 }
 
+// CalendarReadFailed classifies a failure out of a provider's busy-time answer.
+// A shape the connector cannot trust (an unreadable body, an interval that ends
+// before it starts, a page chain that never ends) becomes the calendar's fault.
+// A refused credential, an unreachable provider and a cancelled request keep
+// their own classes, because the caller already acts on each of them.
+func CalendarReadFailed(calendar string, err error) error {
+	if err == nil || errors.Is(err, ErrAuthRejected) || errors.Is(err, ErrUnreachable) ||
+		errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return err
+	}
+	if _, already := errors.AsType[*CalendarUnavailableError](err); already {
+		return err
+	}
+	return NewCalendarUnavailable(calendar, "", err)
+}
+
 func (e *CalendarUnavailableError) Error() string {
 	text := fmt.Sprintf("calendar: selected calendar %q could not be checked", e.Calendar)
 	if e.Reason != "" {
@@ -59,6 +77,6 @@ func (e *CalendarUnavailableError) Is(target error) bool {
 // MessageFault gives both readers a sentence they can use. The visitor learns
 // why no times appear, and the host learns where the fix is.
 func (e *CalendarUnavailableError) MessageFault() (code, message string) {
-	return CalendarUnavailableCode, "No times can be offered because the host's selected calendar could not be read. " +
-		"The host can check the calendar chosen in scheduling settings, and anyone else can try again later."
+	return CalendarUnavailableCode, "The host's selected calendar could not be read, so nothing was offered or changed. " +
+		"The host can check the calendar chosen in meeting settings."
 }

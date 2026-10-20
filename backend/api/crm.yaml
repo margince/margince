@@ -7598,6 +7598,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
     delete:
       tags: [Activities]
       operationId: archiveActivity
@@ -8927,6 +8928,7 @@ paths:
                   id: { type: string, format: uuid }
                   url: { type: string }
                   expires_at: { type: string, format: date-time }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
         default:
           description: The operation could not be completed.
           content:
@@ -8980,6 +8982,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MeetingInvitation' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
         default:
           description: The operation could not be completed.
           content:
@@ -9109,6 +9112,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/MeetingInvitation' }
         '422': { $ref: '#/components/responses/ValidationError' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
   /scheduling/invitations/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -9294,6 +9298,7 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
 
   # ---- Public booking (feedback/14 — B-EP09.14 book.html) ----
   # Deviation from the spec source (recorded in this batch's decision file):
@@ -9413,6 +9418,7 @@ paths:
                       mail follows.
         '409': { description: 'Slot no longer available (`code: slot_taken`).', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
         '422': { $ref: '#/components/responses/ValidationError' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
 
 
   # ---- Deal Room buyer edge ----
@@ -31093,10 +31099,11 @@ components:
               value: { type: 'https://errors.gradion.com/setting_locked_by_boot_source', title: Conflict, status: 409, code: setting_locked_by_boot_source, detail: 'capture.auto_enrich_daily_cap is set by env MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP; change it there' }
     CalendarUnavailable:
       description: |
-        The host's selected calendar could not be read (`code: calendar_unavailable`), so no times
-        are offered rather than times that may double-book the host. The `detail` points the host at
-        the calendar chosen in scheduling settings; the calendar and the provider's reason are in
-        the server log only. Asking again can succeed once the calendar answers.
+        The host's selected calendar could not be read (`code: calendar_unavailable`). A read offers
+        no times and a write changes nothing, because either would rest on a partial picture of the
+        host's diary. The `detail` points the host at the calendar chosen in meeting settings; the
+        calendar and the provider's reason are in the server log only. It clears once the host
+        repairs the calendar or the provider answers again.
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }

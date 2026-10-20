@@ -13,21 +13,26 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// calendarReadFailure turns a provider's failure to report a calendar's
-// occupancy into one answer for every reader of busy time. The booking page,
-// the proposal page, the assistant tool and the reschedule check all read it
-// through calendarBusy, so their verdicts cannot differ.
+// calendarReadFailure gives a provider's failure to report a calendar's
+// occupancy one answer for every reader of busy time. The booking page, the
+// proposal page, the assistant tool, the reschedule check and the writes that
+// re-check the slot all read it through calendarBusy, so their verdicts agree.
 //
-// A refused credential, a permission refusal and a caller who left are not the
-// calendar's fault, so they keep their own answers. Any other failure leaves
-// the host's diary unknown, and availability fails closed on it.
+// Only a failure that came from the provider is the calendar's fault: the
+// connector's own classification, or a provider that could not be reached.
+// Everything else (a database error, a missing connector, a refused
+// credential, a caller who left) passes through, so it keeps its status and
+// its error-level log line.
 func calendarReadFailure(ctx context.Context, host ids.UserID, provider, calendar string, err error) error {
-	if ctx.Err() != nil || errors.Is(err, connector.ErrAuthRejected) || errors.Is(err, apperrors.ErrPermissionDenied) {
+	if ctx.Err() != nil {
 		return err
 	}
 	unavailable, ok := errors.AsType[*connector.CalendarUnavailableError](err)
 	if !ok {
-		unavailable = connector.NewCalendarUnavailable(calendar, "", err)
+		if !errors.Is(err, connector.ErrUnreachable) || errors.Is(err, connector.ErrAuthRejected) || errors.Is(err, apperrors.ErrPermissionDenied) {
+			return err
+		}
+		unavailable = connector.NewCalendarUnavailable(calendar, "unreachable", err)
 	}
 	// Warn, not error: the host repairs their own diary, and nothing failed in
 	// this process. The line lets an operator tell a deleted calendar from a

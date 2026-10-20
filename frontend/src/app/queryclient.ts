@@ -156,11 +156,17 @@ export function retryQuery(failureCount: number, error: Error): boolean {
   // minute — is very likely still running. Retrying twice more starts up to
   // three of them, and the reader is told in the same breath that the first
   // may still be working. Their own retry is a decision; this one is not.
-  const gaveUpWaiting = problemCodeOf(error) === "gateway_unavailable";
+  const code = problemCodeOf(error);
+  // An unreadable host calendar is settled until the host repairs it, and every
+  // repeat is another provider call and another warn line, from an anonymous
+  // page as often as from the host's own.
+  const needsTheHost = code === "calendar_unavailable";
+  const gaveUpWaiting = code === "gateway_unavailable";
   return (
     status !== null &&
     status >= 500 &&
     !gaveUpWaiting &&
+    !needsTheHost &&
     !SETTLED_SERVER_REFUSALS.has(status) &&
     failureCount < MAX_RETRIES
   );

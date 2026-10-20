@@ -2617,6 +2617,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
+        '502': {$ref: '#/components/responses/CalendarUnavailable'}
       description: |-
         Update an activity (e.g. complete a task).
 
@@ -3075,6 +3076,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/MeetingInvitation'}
         '422': {$ref: '#/components/responses/ValidationError'}
+        '502': {$ref: '#/components/responses/CalendarUnavailable'}
       description: |-
         Reserve a meeting and request a calendar-native invitation.
 
@@ -3217,6 +3219,7 @@ paths:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
+        '502': {$ref: '#/components/responses/CalendarUnavailable'}
   /automations/catalog:
     get:
       tags: [Automations]
@@ -8134,10 +8137,11 @@ components:
               value: {type: 'https://errors.gradion.com/version_skew', title: Version conflict, status: 409, code: version_skew, detail: The resource changed since your last read; re-read and retry.}
     CalendarUnavailable:
       description: |-
-        The host's selected calendar could not be read (`code: calendar_unavailable`), so no times
-        are offered rather than times that may double-book the host. The `detail` points the host at
-        the calendar chosen in scheduling settings; the calendar and the provider's reason are in
-        the server log only. Asking again can succeed once the calendar answers.
+        The host's selected calendar could not be read (`code: calendar_unavailable`). A read offers
+        no times and a write changes nothing, because either would rest on a partial picture of the
+        host's diary. The `detail` points the host at the calendar chosen in meeting settings; the
+        calendar and the provider's reason are in the server log only. It clears once the host
+        repairs the calendar or the provider answers again.
       content:
         application/problem+json:
           schema: {$ref: '#/components/schemas/Problem'}

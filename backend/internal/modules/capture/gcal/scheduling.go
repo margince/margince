@@ -83,6 +83,11 @@ type busyCalendar struct {
 }
 
 func (a *httpAPI) Busy(ctx context.Context, token, calendar string, from, to time.Time) ([]connector.CalendarInterval, error) {
+	busy, err := a.readBusy(ctx, token, calendar, from, to)
+	return busy, connector.CalendarReadFailed(calendar, err)
+}
+
+func (a *httpAPI) readBusy(ctx context.Context, token, calendar string, from, to time.Time) ([]connector.CalendarInterval, error) {
 	var result struct {
 		Calendars map[string]busyCalendar `json:"calendars"`
 	}

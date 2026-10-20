@@ -1186,7 +1186,7 @@ export const vi = {
   "scheduling.providerChanged":
     "Nhà cung cấp lịch đã lưu không khả dụng. Khi lưu sẽ dùng lịch đã kết nối hiển thị ở đây.",
   "scheduling.calendarUnavailable":
-    "Không thể hiển thị khung giờ vì không đọc được lịch của người chủ trì. Người chủ trì có thể kiểm tra lịch đã chọn trong cài đặt cuộc họp; những người khác hãy thử lại sau.",
+    "Không đọc được lịch của người chủ trì nên chưa có gì được đề xuất hay thay đổi. Người chủ trì có thể kiểm tra lịch đã chọn trong cài đặt cuộc họp.",
   "scheduling.windowHorizon":
     "Ngày này nằm ngoài khoảng đặt lịch của người chủ trì. Chọn ngày sớm hơn.",
   "scheduling.windowNotice":

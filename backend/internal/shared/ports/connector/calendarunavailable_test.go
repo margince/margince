@@ -4,6 +4,7 @@
 package connector
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -26,6 +27,33 @@ func TestAnUnavailableCalendarIsTheSharedNoUsableAnswerAndKeepsItsCause(t *testi
 	bare := NewCalendarUnavailable("primary", "", nil)
 	if strings.Contains(bare.Error(), "()") || bare.Unwrap() != nil {
 		t.Errorf("a failure the provider did not name rendered as %q", bare.Error())
+	}
+}
+
+func TestOnlyAnUnusableProviderAnswerBecomesAnUnavailableCalendar(t *testing.T) {
+	already := NewCalendarUnavailable("a", "notFound", nil)
+	for name, tc := range map[string]struct {
+		err         error
+		unavailable bool
+	}{
+		"an unreadable body":     {errors.New("calendar: invalid response"), true},
+		"a refused credential":   {ErrAuthRejected, false},
+		"an unreachable service": {ErrUnreachable, false},
+		"a cancelled request":    {context.Canceled, false},
+		"a deadline":             {context.DeadlineExceeded, false},
+		"already classified":     {already, true},
+	} {
+		got := CalendarReadFailed("a", tc.err)
+		_, is := errors.AsType[*CalendarUnavailableError](got)
+		if is != tc.unavailable || (!tc.unavailable && got != tc.err) {
+			t.Errorf("%s → %v (unavailable=%v), want unavailable=%v", name, got, is, tc.unavailable)
+		}
+	}
+	if CalendarReadFailed("a", nil) != nil {
+		t.Error("no failure was invented")
+	}
+	if got := CalendarReadFailed("a", already); got != error(already) {
+		t.Error("an already classified failure was wrapped a second time")
 	}
 }
 

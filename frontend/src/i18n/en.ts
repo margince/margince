@@ -1173,7 +1173,7 @@ export const en = {
   "scheduling.providerChanged":
     "Your saved calendar provider is unavailable. Saving will use the connected calendar shown here.",
   "scheduling.calendarUnavailable":
-    "No times can be shown because the host’s calendar could not be read. The host can check the calendar chosen in meeting settings; anyone else can try again later.",
+    "The host’s calendar could not be read, so nothing was offered or changed. The host can check the calendar chosen in meeting settings.",
   "scheduling.windowHorizon":
     "This date is beyond the host’s booking window. Choose an earlier date.",
   "scheduling.windowNotice":

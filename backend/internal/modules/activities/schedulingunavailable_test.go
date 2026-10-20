@@ -21,7 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-const sentenceForTheHost = "calendar chosen in scheduling settings"
+const sentenceForTheHost = "calendar chosen in meeting settings"
 
 // However the provider fails to describe the calendar, the answer names the
 // calendar as the problem. The log names which calendar and why. The test goes
@@ -38,9 +38,8 @@ func TestAnUnreadableCalendarIsAnswered502NamingTheCalendarAndLogsWhy(t *testing
 	}{
 		"the provider names an error": {connector.NewCalendarUnavailable("team@example.test", "notFound", nil), "notFound"},
 		"the provider leaves it out":  {connector.NewCalendarUnavailable("team@example.test", "omitted", nil), "omitted"},
-		"an incomplete answer":        {errors.New("calendar: incomplete availability"), ""},
-		"a malformed interval":        {errors.New("calendar: invalid busy interval"), ""},
-		"an unreachable provider":     {fmt.Errorf("calendar: provider status 503: %w", connector.ErrUnreachable), ""},
+		"an interval that ends early": {connector.NewCalendarUnavailable("team@example.test", "invalid_interval", errors.New("scheduling: invalid provider interval")), "invalid_interval"},
+		"an unreachable provider":     {fmt.Errorf("calendar: provider status 503: %w", connector.ErrUnreachable), "unreachable"},
 	} {
 		logged.Reset()
 		err := calendarReadFailure(context.Background(), ids.New[ids.UserKind](), "gcal", "team@example.test", tc.err)
@@ -95,6 +94,40 @@ func TestACalendarReadFailureThatIsNotTheCalendarsKeepsItsOwnAnswer(t *testing.T
 		}
 		if _, rewritten := errors.AsType[*connector.CalendarUnavailableError](got); rewritten {
 			t.Errorf("%s was reported as an unreadable calendar", name)
+		}
+	}
+}
+
+// A fault of this installation is not the host's calendar. It keeps its own
+// status and its error-level line, so an operator hunting a broken install
+// does not have to rule out a diary first.
+func TestAFaultOfThisInstallIsNotBlamedOnTheHostsCalendar(t *testing.T) {
+	var logged bytes.Buffer
+	restore := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn})))
+	t.Cleanup(func() { slog.SetDefault(restore) })
+
+	for name, tc := range map[string]struct {
+		err        error
+		wantStatus int
+	}{
+		"a record that is gone":       {fmt.Errorf("registry: %w", apperrors.ErrNotFound), http.StatusNotFound},
+		"a state conflict":            {fmt.Errorf("registry: %w", apperrors.ErrConflict), http.StatusConflict},
+		"a connector never set up":    {errors.New("connector: not configured"), http.StatusInternalServerError},
+		"a key the vault cannot give": {errors.New("keyvault: key resolution failed"), http.StatusInternalServerError},
+	} {
+		logged.Reset()
+		got := calendarReadFailure(context.Background(), ids.New[ids.UserKind](), "gcal", "primary", tc.err)
+		if got != tc.err {
+			t.Errorf("%s was rewritten as %v", name, got)
+		}
+		rec := httptest.NewRecorder()
+		httperr.Write(rec, httptest.NewRequest(http.MethodGet, "/v1/availability", nil), got)
+		if rec.Code != tc.wantStatus || strings.Contains(rec.Body.String(), connector.CalendarUnavailableCode) {
+			t.Errorf("%s answered %d %s, want %d without the calendar code", name, rec.Code, rec.Body.String(), tc.wantStatus)
+		}
+		if strings.Contains(logged.String(), "selected calendar could not be checked") {
+			t.Errorf("%s was logged as an unreadable calendar: %s", name, logged.String())
 		}
 	}
 }

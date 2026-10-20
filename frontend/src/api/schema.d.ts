@@ -48412,10 +48412,11 @@ export interface components {
             };
         };
         /**
-         * @description The host's selected calendar could not be read (`code: calendar_unavailable`), so no times
-         *     are offered rather than times that may double-book the host. The `detail` points the host at
-         *     the calendar chosen in scheduling settings; the calendar and the provider's reason are in
-         *     the server log only. Asking again can succeed once the calendar answers.
+         * @description The host's selected calendar could not be read (`code: calendar_unavailable`). A read offers
+         *     no times and a write changes nothing, because either would rest on a partial picture of the
+         *     host's diary. The `detail` points the host at the calendar chosen in meeting settings; the
+         *     calendar and the provider's reason are in the server log only. It clears once the host
+         *     repairs the calendar or the provider answers again.
          */
         CalendarUnavailable: {
             headers: {
@@ -56729,6 +56730,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
+            502: components["responses"]["CalendarUnavailable"];
         };
     };
     getEmailPresentation: {
@@ -58201,6 +58203,7 @@ export interface operations {
                     };
                 };
             };
+            502: components["responses"]["CalendarUnavailable"];
             /** @description The operation could not be completed. */
             default: {
                 headers: {
@@ -58276,6 +58279,7 @@ export interface operations {
                     "application/json": components["schemas"]["MeetingInvitation"];
                 };
             };
+            502: components["responses"]["CalendarUnavailable"];
             /** @description The operation could not be completed. */
             default: {
                 headers: {
@@ -58476,6 +58480,7 @@ export interface operations {
                 };
             };
             422: components["responses"]["ValidationError"];
+            502: components["responses"]["CalendarUnavailable"];
             /** @description The operation could not be completed. */
             default: {
                 headers: {
@@ -58721,6 +58726,7 @@ export interface operations {
                 };
             };
             422: components["responses"]["ValidationError"];
+            502: components["responses"]["CalendarUnavailable"];
         };
     };
     getPublicAvailability: {
@@ -58870,6 +58876,7 @@ export interface operations {
                 };
             };
             422: components["responses"]["ValidationError"];
+            502: components["responses"]["CalendarUnavailable"];
         };
     };
     peekDealRoomCredential: {
