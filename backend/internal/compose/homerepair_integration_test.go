@@ -20,7 +20,7 @@ import (
 )
 
 func TestReviewedRepairArchivesOnlyProvenUntouchedAutomaticWork(t *testing.T) {
-	for _, state := range []string{"pristine", "human_created", "edited", "missing_creation_proof", "pinned"} {
+	for _, state := range []string{"pristine", "human_created", "edited", "reopened", "missing_creation_proof", "pinned"} {
 		t.Run(state, func(t *testing.T) {
 			e := integration.Setup(t)
 			ctx := principal.SystemActing(e.Admin(), "system:repair-fixture")
@@ -44,6 +44,12 @@ func TestReviewedRepairArchivesOnlyProvenUntouchedAutomaticWork(t *testing.T) {
 			case "edited":
 				if _, err := e.Activities.UpdateActivity(e.Admin(), id, activities.UpdateActivityInput{Subject: new("My revised plan")}); err != nil {
 					t.Fatal(err)
+				}
+			case "reopened":
+				for _, done := range []bool{true, false} {
+					if _, err := e.Activities.UpdateActivity(e.Admin(), id, activities.UpdateActivityInput{IsDone: &done}); err != nil {
+						t.Fatal(err)
+					}
 				}
 			case "missing_creation_proof":
 				legacyID := ids.NewV7()
