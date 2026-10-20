@@ -21,11 +21,8 @@
 1725 frontend/src/features/onboarding/onboarding-facts.test.tsx
 610 frontend/src/features/settings/settings.tsx
 508 frontend/src/features/onboarding/onboarding-backread.tsx
-554 frontend/src/features/projects/project360.tsx
 614 frontend/src/features/onboarding/onboarding-connect-panels.tsx
-615 frontend/src/features/projects/partners.tsx
 659 frontend/src/features/records/record360/citations.tsx
-530 frontend/src/features/projects/contractform.tsx
 774 frontend/src/features/onboarding/onboarding-conversation/connect-scene.tsx
 773 frontend/src/features/records/record360/spine.tsx
 541 frontend/src/features/records/relationships.tsx

@@ -1,28 +1,23 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import type { components } from "../../api/schema";
-// The installation read every form shares: one query, one key, so the currency
-// this form writes is the same fact the settings screen shows.
 import { CustomFieldControls } from "../../components/customfieldcontrols";
 import { useObjectCustomFields } from "../../components/customfields.form";
-import { Button, Field, Modal } from "../../design-system/atoms";
+import { Button, Modal } from "../../design-system/atoms";
 import {
   DrawerBody,
   DrawerFoot,
   DrawerHead,
 } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
-import { FileDropzoneControl } from "../../design-system/filedropzone";
 import { Heading } from "../../design-system/heading";
-import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
-import {
-  ACCEPTED_ATTACHMENT_ATTR,
-  uploadAttachment,
-} from "../../lib/attachmentupload";
+import { uploadAttachment } from "../../lib/attachmentupload";
+// The installation read every form shares: one query, one key, so the currency
+// this form writes is the same fact the settings screen shows.
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useSeededCustomFields } from "./contractcustomseed";
-import { paperState, useContractPaper } from "./contractpaper";
+import { SignedFileField } from "./contractform.signedfile";
 import { contractTermsBody } from "./contracttermsbody";
 import { ContractTermsFields } from "./contracttermsfields";
 import { createContract, patchContract } from "./contractwrites";
@@ -38,7 +33,10 @@ import { createContract, patchContract } from "./contractwrites";
 // and leaves that state through its own transition, so a correction to a term
 // can never silently activate a contract.
 
+export { SignedFileField } from "./contractform.signedfile";
+
 type Contract = components["schemas"]["Contract"];
+
 export type ValueBasis = NonNullable<
   components["schemas"]["CreateContractRequest"]["value_basis"]
 >;
@@ -351,119 +349,6 @@ export function pricedIn(
     return draft;
   }
   return { ...draft, currency: baseCurrency ?? "" };
-}
-
-/**
- * SignedFileField shows the paper already on file and takes a new one by
- * drag-and-drop or by clicking.
- *
- * IT LISTS WHAT IS ALREADY THERE, because a form that only offers an upload
- * says, to anyone reading it, that there is nothing yet. Somebody opening an
- * agreement to check its terms wants the signed PDF, and the edit form is where
- * they land when they click the row — so a filed document that can only be
- * reached from somewhere else is a document they will conclude does not exist.
- *
- * AND IT NEVER SAYS THAT WHEN IT DOES NOT KNOW. A read still in flight, one
- * that failed, and one a grant refused are each a state where the answer is
- * unknown — and rendering a bare drop zone in any of them makes the same false
- * claim this field exists to stop, just later and more convincingly. Reading
- * documents needs its own grant, so a reader who cannot have them is told they
- * are withheld rather than shown an empty field about a contract that has
- * paper.
- *
- * AND IT NEVER PRESENTS A PAGE AS A LIST. The documents endpoint paginates, so
- * an agreement with more filed paper than one page holds is `partial` and says
- * how much is missing — never a truncated list under a field that reads as
- * complete.
- *
- * The picker takes BOTH gestures, not one: dropping is what a reader reaches
- * for with a PDF already in front of them, and clicking is what works from a
- * keyboard and on a phone. A drop zone with no real input behind it is
- * unreachable for anyone not using a mouse, which is why the input is present
- * and merely made invisible.
- */
-export function SignedFileField({
-  companyId,
-  contractID,
-  file,
-  onPick,
-}: Readonly<{
-  companyId: string;
-  contractID?: string;
-  file?: File;
-  onPick: (file: File) => void;
-}>) {
-  const t = useT();
-  const filed = useContractPaper(companyId, contractID);
-
-  const paper = filed.data;
-  const onFile = paper?.documents ?? [];
-  const state = paperState(Boolean(contractID), filed, paper);
-  // A drop zone always shows: uploading does not depend on being able to READ
-  // what is already filed, and withholding the only way to attach paper would
-  // punish the reader for a grant they do not have. What changes is whether
-  // anything above it claims to be the full picture — `empty` is the one state
-  // that does, and the only one whose picker says "drop a file here".
-
-  return (
-    <Field label={t("contracts.form.file")} hint={t("contracts.form.fileHint")}>
-      {(props) => (
-        <>
-          {/* Each filed document, downloadable by name — and when the answer
-              is not known, the reason instead. `empty` renders nothing here
-              because the drop zone below already says the field is waiting for
-              a file; two sentences saying the same absence is noise.
-
-              `ready` and `partial` draw the same links; `partial` adds what is
-              missing UNDER them, which is where a count about a list belongs. */}
-          {state === "empty" ? null : (
-            <SurfaceState
-              loadingLabel={t("contracts.form.file")}
-              state={state}
-              emptyLabel=""
-              detail={{
-                onRetry: () => void filed.refetch(),
-                remaining: paper?.remaining,
-              }}
-            >
-              {onFile.map((doc) => (
-                // `.link-button`, not the row link: a row title is a link
-                // because of where it sits, but in a form a plain-coloured line
-                // reads as a value somebody typed. This one has to look like the
-                // download it is.
-                <a
-                  key={doc.id}
-                  className="link-button"
-                  href={`/v1/attachments/${doc.id}`}
-                  download={doc.filename}
-                >
-                  {doc.title || doc.filename}
-                </a>
-              ))}
-            </SurfaceState>
-          )}
-          {/* The zone is the design-system control, and this field owns the
-              `Field` around it so the filed paper above can sit under the same
-              label. `fileAdd` whenever this field is not asserting that nothing
-              is filed — either because paper IS filed (an agreement can carry
-              an amendment beside its original) or because the read did not come
-              back, where "drop a file here" would quietly restate the absence
-              the panel above just declined to claim. */}
-          <FileDropzoneControl
-            control={props}
-            file={file}
-            onPick={onPick}
-            accept={ACCEPTED_ATTACHMENT_ATTR}
-            emptyLabel={t(
-              state !== "empty"
-                ? "contracts.form.fileAdd"
-                : "contracts.form.fileEmpty",
-            )}
-          />
-        </>
-      )}
-    </Field>
-  );
 }
 
 // What the form refuses before the server has to.
