@@ -16,6 +16,7 @@ import (
 	"maps"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -184,15 +185,16 @@ func (e *scoutEnv) twinsOf(t *testing.T, company ids.UUID) []ids.UUID {
 // meetingDraft adds a buyer request while retaining the shared meeting used by duplicate checks.
 func (e *scoutEnv) meetingDraft(t *testing.T, company, meeting ids.UUID) deals.SuggestionDraft {
 	t.Helper()
-	source, buyer := e.buyingEmail(t, company, e.daysAgo(3))
+	at := e.daysAgo(3).Truncate(time.Microsecond)
+	source, buyer := e.buyingEmail(t, company, at)
 	opportunity := e.signal(t, "new_opportunity", company, source, e.now, ids.Nil, buyer)
 	commitment := e.signal(t, "commitment_made", company, source, e.now, ids.Nil)
 	return deals.SuggestionDraft{
 		CompanyID: company, NameHint: deals.HintOpportunitySignaled, Confidence: 0.8,
 		Evidence: []deals.SuggestionEvidence{
 			{Kind: deals.EvidenceMeeting, ActivityID: &meeting, OccurredAt: e.daysAgo(3)},
-			{Kind: deals.EvidenceSignal, SignalID: &opportunity, OccurredAt: e.daysAgo(3)},
-			{Kind: deals.EvidenceSignal, SignalID: &commitment, OccurredAt: e.daysAgo(3)},
+			{Kind: deals.EvidenceSignal, SignalID: &opportunity, OccurredAt: at},
+			{Kind: deals.EvidenceSignal, SignalID: &commitment, OccurredAt: at},
 		},
 		DuplicateOf: e.twinsOf(t, company),
 	}
@@ -374,6 +376,7 @@ func TestAnArchivedTwinNoLongerPairsTheLiveCompany(t *testing.T) {
 // first's evidence lock, then finds its suggestion and writes nothing.
 func TestTwinsRecordedAtOnceRaiseOneSuggestion(t *testing.T) {
 	e := setupScout(t)
+	e.now = e.now.Truncate(time.Second).Add(123456789 * time.Nanosecond)
 	named := e.SeedCompany(t, "Northwind Traders", nil)
 	twin := e.SeedCompany(t, "NORTHWIND TRADERS", nil)
 	dana := e.employee(t, "Dana Buyer", named)
@@ -502,6 +505,7 @@ func TestAReviewerAnsweringAPairWaitsForTheScoutActingOnIt(t *testing.T) {
 // pass, though no older open suggestion claims it.
 func TestAScoutPassWithdrawsATwinOfADismissedSuggestion(t *testing.T) {
 	e := setupScout(t)
+	e.now = e.now.Truncate(time.Second).Add(123456789 * time.Nanosecond)
 	named := e.SeedCompany(t, "Northwind Traders", nil)
 	twin := e.SeedCompany(t, "NORTHWIND TRADERS", nil)
 	dana := e.employee(t, "Dana Buyer", named)
