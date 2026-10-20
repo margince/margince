@@ -14,7 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Delivery is work owed; pursuing an opportunity alone proves no active engagement.
+// CompanyDeliveryTx treats delivery as work owed, excluding opportunities alone.
 func CompanyDeliveryTx(ctx context.Context, tx pgx.Tx, company ids.CompanyID, lock bool) (active, complete bool, err error) {
 	if err := auth.EnsureLinkTarget(ctx, tx, "company", company.UUID); err != nil {
 		return false, false, err

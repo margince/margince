@@ -16,11 +16,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// Reconcile keeps ongoing agreements and delivery from becoming account endings.
 func Reconcile(ctx context.Context, tx pgx.Tx, company ids.CompanyID, now time.Time) (Finding, error) {
-	return reconcile(ctx, tx, company, now, false)
+	return reconcileContinuity(ctx, tx, company, now, false)
 }
 
-func reconcile(ctx context.Context, tx pgx.Tx, company ids.CompanyID, now time.Time, lock bool) (Finding, error) {
+func reconcileContinuity(ctx context.Context, tx pgx.Tx, company ids.CompanyID, now time.Time, lock bool) (Finding, error) {
 	finding, err := latest(ctx, tx, company, lock)
 	if finding.OccurredAt.After(now) {
 		finding.Incomplete = true

@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
+// Finding binds an account-ending claim to visible source and continuity evidence.
 type Finding struct {
 	ActiveDelivery bool      `json:"active_delivery,omitempty"`
 	ActiveContract bool      `json:"active_contract,omitempty"`
@@ -41,8 +42,10 @@ type Finding struct {
 // LiveStages keeps conflict cards and proposal scans on the same account boundary.
 func LiveStages() []string { return []string{"prospect", "opportunity", "customer"} }
 
+// LiveStage includes accounts whose ending still needs review.
 func LiveStage(stage string) bool { return slices.Contains(LiveStages(), stage) }
 
+// Revalidate refuses changed evidence before a lifecycle decision commits.
 func Revalidate(ctx context.Context, tx pgx.Tx, company ids.CompanyID, signalID ids.UUID, shown *Finding, now time.Time) error {
 	current, err := Read(ctx, tx, company, signalID)
 	if err != nil {
@@ -54,7 +57,7 @@ func Revalidate(ctx context.Context, tx pgx.Tx, company ids.CompanyID, signalID 
 	if _, err := contacts.LockCompanyTx(ctx, tx, company); err != nil {
 		return err
 	}
-	current, err = reconcile(ctx, tx, company, now, true)
+	current, err = reconcileContinuity(ctx, tx, company, now, true)
 	if err != nil {
 		return err
 	}
@@ -64,6 +67,7 @@ func Revalidate(ctx context.Context, tx pgx.Tx, company ids.CompanyID, signalID 
 	return nil
 }
 
+// Matches requires the same source and scope shown to the reviewer.
 func Matches(current Finding, shown *Finding) bool {
 	return shown != nil && Actionable(current) && !shown.Incomplete && shown.Scope == current.Scope &&
 		!current.SourceID.IsZero() && current.SignalID == shown.SignalID && current.SignalVersion == shown.SignalVersion &&
@@ -75,13 +79,13 @@ func Matches(current Finding, shown *Finding) bool {
 func Read(ctx context.Context, tx pgx.Tx, company ids.CompanyID, signalID ids.UUID) (Finding, error) {
 	signal, err := signals.ReadSignalTx(ctx, tx, ids.From[ids.SignalKind](signalID), storekit.LiveOnly)
 	if err != nil {
-		return Finding{SignalID: signalID, Scope: "unknown"}, err
+		return Finding{SignalID: signalID, Scope: scopeUnknown}, err
 	}
 	return readSignalFinding(ctx, tx, company, signal)
 }
 
 func readSignalFinding(ctx context.Context, tx pgx.Tx, company ids.CompanyID, signal crmcontracts.Signal) (Finding, error) {
-	finding := Finding{SignalID: ids.UUID(signal.Id), Scope: "unknown", Summary: signal.Summary}
+	finding := Finding{SignalID: ids.UUID(signal.Id), Scope: scopeUnknown, Summary: signal.Summary}
 	if signal.Kind != "contract_ended" || signal.Status != "open" ||
 		signal.ResolvedCompanyId == nil || ids.UUID(*signal.ResolvedCompanyId) != company.UUID {
 		return finding, nil
@@ -89,6 +93,10 @@ func readSignalFinding(ctx context.Context, tx pgx.Tx, company ids.CompanyID, si
 	if signal.Version != nil {
 		finding.SignalVersion = *signal.Version
 	}
+	return readSignalSources(ctx, tx, signal, finding)
+}
+
+func readSignalSources(ctx context.Context, tx pgx.Tx, signal crmcontracts.Signal, finding Finding) (Finding, error) {
 	for _, evidence := range signal.Evidence {
 		if evidence.SourceType == nil || *evidence.SourceType != "activity" || evidence.SourceId == nil || evidence.SourceQuote == nil {
 			continue

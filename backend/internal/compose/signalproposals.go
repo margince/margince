@@ -244,7 +244,7 @@ func (p *SignalProposer) offerStageChange(ctx context.Context, said approvalSumm
 		TargetID:       account.CompanyID.UUID,
 		Summary:        fmt.Sprintf(said.contractEndedMove, account.Stage, lifecycleEnded),
 		JoinPending:    true,
-		Evidence:       []approvals.Evidence{{Snippet: approvals.SanitizeSummary(account.Summary), SourceType: "signal", SourceID: account.SignalID}},
+		Evidence:       []approvals.Evidence{{Snippet: approvals.SanitizeSummary(account.Summary), SourceType: tableSignal, SourceID: account.SignalID}},
 	})
 	if err != nil {
 		return false, err

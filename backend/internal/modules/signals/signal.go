@@ -190,6 +190,7 @@ func (s *Store) GetSignal(ctx context.Context, id ids.SignalID, archived storeki
 	return out, err
 }
 
+// ReadSignalTx applies signal and source visibility within the caller transaction.
 func ReadSignalTx(ctx context.Context, tx pgx.Tx, id ids.SignalID, archived storekit.ArchivedFilter) (crmcontracts.Signal, error) {
 	if err := auth.Require(ctx, "signal", principal.ActionRead); err != nil {
 		return crmcontracts.Signal{}, err

@@ -7,22 +7,26 @@ import (
 	"context"
 	"slices"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
-
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/signals"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-const sourceReadLimit = 100
+const (
+	sourceReadLimit = 100
+	scopeUnknown    = "unknown"
+)
 
+// Actionable requires complete account-wide evidence without continuing work.
 func Actionable(finding Finding) bool {
 	return BlockingReason(finding) == ""
 }
 
+// BlockingReason explains why an account-ending proposal cannot be approved.
 func BlockingReason(finding Finding) string {
 	switch {
 	case finding.Incomplete || finding.SourceID.IsZero():
@@ -55,12 +59,15 @@ func latest(ctx context.Context, tx pgx.Tx, company ids.CompanyID, lock bool) (F
 			return Finding{}, err
 		}
 	}
-	latest := Finding{Scope: "unknown"}
 	complete, err := signals.CompanySignalsCompleteTx(ctx, tx, company, "contract_ended")
 	if err != nil {
 		return Finding{}, err
 	}
-	incomplete := page.HasMore || !complete
+	return latestFinding(ctx, tx, company, records, page.HasMore || !complete)
+}
+
+func latestFinding(ctx context.Context, tx pgx.Tx, company ids.CompanyID, records []crmcontracts.Signal, incomplete bool) (Finding, error) {
+	latest := Finding{Scope: scopeUnknown}
 	ambiguous := false
 	for _, record := range records {
 		finding, err := readSignalFinding(ctx, tx, company, record)

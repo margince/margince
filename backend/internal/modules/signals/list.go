@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// ListSignalsInput scopes the visible signal page.
 type ListSignalsInput struct {
 	Cursor          *string
 	Limit           *int
@@ -27,7 +28,7 @@ type ListSignalsInput struct {
 	IncludeArchived bool
 }
 
-// Direct company subjects and resolved contacts belong to the account.
+// OfCompanyWhere includes direct company subjects and resolved contacts.
 // Deal-subject signals stay with their deal, even when resolved onto this company.
 func OfCompanyWhere(companyPos int) string {
 	return storekit.SQLf(
@@ -35,6 +36,7 @@ func OfCompanyWhere(companyPos int) string {
 		  OR (s.entity_type = 'company' AND s.entity_id = $%[1]d))`, companyPos)
 }
 
+// ListSignals applies row visibility before returning evidence.
 func (s *Store) ListSignals(ctx context.Context, in ListSignalsInput) ([]crmcontracts.Signal, storekit.Page, error) {
 	if err := auth.Require(ctx, "signal", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
@@ -49,43 +51,16 @@ func (s *Store) ListSignals(ctx context.Context, in ListSignalsInput) ([]crmcont
 	return records, page, err
 }
 
+// ListSignalsTx shares the visible signal reader with transactional callers.
 func ListSignalsTx(ctx context.Context, tx pgx.Tx, in ListSignalsInput) ([]crmcontracts.Signal, storekit.Page, error) {
 	if err := auth.Require(ctx, "signal", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	limit := storekit.ClampLimit(in.Limit)
 
-	where := []string{"1=1"}
-	args := []any{}
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	if !in.IncludeArchived {
-		where = append(where, "s.archived_at IS NULL")
-	}
-	if in.Status != nil {
-		where = append(where, storekit.SQLf("s.status = $%d", arg(*in.Status)))
-	}
-	if in.Kind != nil {
-		where = append(where, storekit.SQLf("s.kind = $%d", arg(*in.Kind)))
-	}
-	if in.ResolutionState != nil {
-		where = append(where, storekit.SQLf("s.resolution_state = $%d", arg(*in.ResolutionState)))
-	}
-	if in.CompanyID != nil {
-		where = append(where, OfCompanyWhere(arg(*in.CompanyID)))
-	}
-	scope, err := auth.SignalScopeClause(ctx, "s", arg)
+	where, args, err := signalListFilters(ctx, in)
 	if err != nil {
 		return nil, storekit.Page{}, err
-	}
-	if scope != "" {
-		where = append(where, scope)
-	}
-	if in.Cursor != nil && *in.Cursor != "" {
-		c, err := storekit.DecodeCursor(*in.Cursor)
-		if err != nil {
-			return nil, storekit.Page{}, err
-		}
-		where = append(where, storekit.SQLf("(s.created_at, s.id) < ($%d, $%d)", arg(c.CreatedAt), arg(c.ID)))
 	}
 
 	var signals []crmcontracts.Signal
@@ -123,7 +98,7 @@ func ListSignalsTx(ctx context.Context, tx pgx.Tx, in ListSignalsInput) ([]crmco
 	return signals, page, nil
 }
 
-// The company lock holds new references. Existing signals can reopen or change kind, so all are locked.
+// LockCompanySignalsTx holds existing signals against reopening or changing kind.
 func LockCompanySignalsTx(ctx context.Context, tx pgx.Tx, company ids.CompanyID) error {
 	if err := auth.Require(ctx, "signal", principal.ActionRead); err != nil {
 		return err
@@ -136,7 +111,7 @@ func LockCompanySignalsTx(ctx context.Context, tx pgx.Tx, company ids.CompanyID)
 	return err
 }
 
-// Completeness reports no private contents, but prevents a partial read from proving an account-wide claim.
+// CompanySignalsCompleteTx prevents partial visibility from proving an account-wide claim.
 // CompanySignalsCompleteTx withholds certainty when a visible account contains private signals.
 func CompanySignalsCompleteTx(ctx context.Context, tx pgx.Tx, company ids.CompanyID, kind string) (bool, error) {
 	if err := auth.Require(ctx, "signal", principal.ActionRead); err != nil {
@@ -162,4 +137,41 @@ func CompanySignalsCompleteTx(ctx context.Context, tx pgx.Tx, company ids.Compan
 		return false, err
 	}
 	return complete, nil
+}
+
+func signalListFilters(ctx context.Context, in ListSignalsInput) ([]string, []any, error) {
+	where := []string{"1=1"}
+	args := []any{}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	if !in.IncludeArchived {
+		where = append(where, "s.archived_at IS NULL")
+	}
+	if in.Status != nil {
+		where = append(where, storekit.SQLf("s.status = $%d", arg(*in.Status)))
+	}
+	if in.Kind != nil {
+		where = append(where, storekit.SQLf("s.kind = $%d", arg(*in.Kind)))
+	}
+	if in.ResolutionState != nil {
+		where = append(where, storekit.SQLf("s.resolution_state = $%d", arg(*in.ResolutionState)))
+	}
+	if in.CompanyID != nil {
+		where = append(where, OfCompanyWhere(arg(*in.CompanyID)))
+	}
+	scope, err := auth.SignalScopeClause(ctx, "s", arg)
+	if err != nil {
+		return nil, nil, err
+	}
+	if scope != "" {
+		where = append(where, scope)
+	}
+	if in.Cursor != nil && *in.Cursor != "" {
+		c, err := storekit.DecodeCursor(*in.Cursor)
+		if err != nil {
+			return nil, nil, err
+		}
+		where = append(where, storekit.SQLf("(s.created_at, s.id) < ($%d, $%d)", arg(c.CreatedAt), arg(c.ID)))
+	}
+
+	return where, args, nil
 }
