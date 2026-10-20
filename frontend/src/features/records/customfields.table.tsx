@@ -25,7 +25,7 @@ import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { CfObject, CfType } from "../../lib/customfields.logic";
 import { useRecordZone } from "../../lib/recordzone";
-import { AuditEntryLine } from "../../screens/audit";
+import { AuditEntryLine } from "../settings/audit";
 import { objectLabels } from "./customfields.labels";
 import "./customfields.css";
 

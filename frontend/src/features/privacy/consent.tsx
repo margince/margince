@@ -18,7 +18,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWriteRecord } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
-import { humanizeToken } from "../../screens/audit";
+import { humanizeToken } from "../settings/audit";
 import "./consent.css";
 import { stable } from "../../format/collate";
 

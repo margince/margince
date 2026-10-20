@@ -10,7 +10,6 @@ import {
   waitFor,
   within,
 } from "storybook/test";
-import { RequestsPanel } from "../../screens/settings.privacy";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   jsonResponse,
@@ -18,6 +17,7 @@ import {
   StoryProviders,
   stubWithSession,
 } from "../../testing/story-utils";
+import { RequestsPanel } from "../settings/settings.privacy";
 
 // The DSR inbox: the open form, a request worked in its drawer, and fulfilling
 // an erasure. A legal-hold 409 never carries a retention date; nor does a story.

@@ -4,11 +4,11 @@ import { Avatar } from "../design-system/atoms";
 import { CompanyLogo } from "../design-system/companylogo";
 import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
+import { useSettingsSection } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import type { Route } from "../lib/router";
 import { useMe } from "../lib/session";
 import { usePhoneViewport } from "../lib/viewport";
-import { useSettingsSection } from "../screens/settingsnav";
 import { AgentRail } from "./agentrail";
 import { BetaBadge } from "./betabadge";
 import { currentClaim, MOBILE_PRIMARY, NAV, type NavSection } from "./nav";
@@ -359,7 +359,7 @@ export function WorkspaceRail({
  * The rail on a settings route, carrying the settings level.
  *
  * Which settings entries exist for a principal is a grant question. Grants
- * belong to the screen whose cards ask for them (screens/settings.tsx); the
+ * belong to the screen whose cards ask for them (features/settings/settings.tsx); the
  * shell only ever receives a finished section. Mounted on that route alone, so
  * no other screen pays for the visibility probes the hook makes.
  */

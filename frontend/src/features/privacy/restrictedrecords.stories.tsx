@@ -3,7 +3,6 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
-import { RequestsPanel } from "../../screens/settings.privacy";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -11,6 +10,7 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
+import { RequestsPanel } from "../settings/settings.privacy";
 
 // Settings → Privacy → Requests → Held. A held record is named by its
 // transactions and its deadline. The empty lane says every erasure completed.

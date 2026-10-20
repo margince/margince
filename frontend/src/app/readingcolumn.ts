@@ -1,6 +1,6 @@
 import { useDeferredValue } from "react";
+import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import type { Route } from "../lib/router";
-import { SETTINGS_SCREEN } from "../screens/settingsnav";
 import {
   GRIDDED_RECORD_SCREENS,
   GRIDDED_SCREENS,

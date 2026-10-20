@@ -11,10 +11,10 @@ import {
   explainPublicError,
   LinkInvalidError,
   RateLimitedError,
-} from "../../screens/preferences";
-import { labelOf, type PurposeView } from "../../screens/preferences.logic";
+} from "../settings/preferences";
+import { labelOf, type PurposeView } from "../settings/preferences.logic";
 import { PublicPage } from "./publicpage";
-import "../../screens/preferences.css";
+import "../settings/preferences.css";
 
 // The human unsubscribe page: where the VISIBLE "Unsubscribe" link in an
 // outgoing message lands.

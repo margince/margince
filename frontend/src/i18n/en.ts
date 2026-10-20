@@ -13873,9 +13873,9 @@ export const en = {
   "filters.exportCsv": "Export CSV",
   "filters.exportJson": "Export JSON",
 
-  // The release gate (src/screens/releaseskew.tsx). It renders instead of the
-  // app when this bundle and the api come from different releases, so the copy
-  // has two readers at once: the colleague who just wants in, and the operator who
+  // The release gate (src/features/settings/releaseskew.tsx). It renders instead of the
+  // app when this bundle and the api come from different releases. So the copy
+  // has two readers at once: the colleague who wants in, and the operator who
   // has to fix it. The first sentence is for the first, the last for the second.
   "release.skewTitle": "App and server versions differ",
   "release.skewBody":

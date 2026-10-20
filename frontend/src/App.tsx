@@ -17,6 +17,11 @@ import {
 import { Shell, useRoute } from "./app/shell";
 import { useJourneyProgress } from "./features/onboarding/onboarding-journey";
 import {
+  ReleaseSkewScreen,
+  useSkewedApiRelease,
+} from "./features/settings/releaseskew";
+import { WriteToHost } from "./features/settings/writetohost";
+import {
   type AuthNotice,
   AuthScreen,
   AvailabilityScreen,
@@ -33,8 +38,6 @@ import { SPA_RELEASE } from "./lib/release";
 import { navigateReplacing, type Screen } from "./lib/router";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
 import { ConfinedAccountScreen, useProbeAnswer } from "./screens/confinement";
-import { ReleaseSkewScreen, useSkewedApiRelease } from "./screens/releaseskew";
-import { WriteToHost } from "./screens/writetohost";
 
 // The anonymous public surfaces render without a session — their slug in the
 // path is the whole address (security: [] in the contract).

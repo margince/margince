@@ -46,7 +46,7 @@ export const BookingScreen = lazy(
 
 export const ClientSurfaceScreen = lazy(
   routed(() =>
-    import("./screens/client").then((m) => ({
+    import("./features/settings/client").then((m) => ({
       default: m.ClientSurfaceScreen,
     })),
   ),
@@ -176,7 +176,7 @@ export const BuyerRoomScreen = lazy(() =>
 
 export const PreferenceCenterScreen = lazy(
   routed(() =>
-    import("./screens/preferences").then((m) => ({
+    import("./features/settings/preferences").then((m) => ({
       default: m.PreferenceCenterScreen,
     })),
   ),
@@ -238,7 +238,9 @@ export const SearchRoute = lazy(
 
 export const SettingsScreen = lazy(
   routed(() =>
-    import("./screens/settings").then((m) => ({ default: m.SettingsScreen })),
+    import("./features/settings/settings").then((m) => ({
+      default: m.SettingsScreen,
+    })),
   ),
 );
 

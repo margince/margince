@@ -27,7 +27,7 @@ import {
 import { formatNumber } from "../../../format/format";
 import { type Locale, useLocale, usePluralKey, useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
-import { coldFieldLabel } from "../../../screens/coldfieldlabels";
+import { coldFieldLabel } from "../../settings/coldfieldlabels";
 import type { CompanyDraft, CompanyFieldName } from "../onboarding";
 import { normalizeUrl, REQUIRED_FIELDS } from "../onboarding";
 import {

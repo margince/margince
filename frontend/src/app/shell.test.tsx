@@ -323,7 +323,7 @@ describe("PageTitle", () => {
 describe("Section switcher (the page title at phone width)", () => {
   const deepRoute: Route = { screen: "settings", id: "deep" };
   // The row a section publishes in the group that carries the section's own
-  // name — settings puts its Overview there (screens/settingsnav.tsx).
+  // name: settings puts its Overview there (features/settings/settingsnav.tsx).
   const OVERVIEW = {
     id: "home",
     labelKey: "settings.home",

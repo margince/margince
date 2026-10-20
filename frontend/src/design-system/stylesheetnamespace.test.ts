@@ -31,7 +31,7 @@ const namespaces = [
   { prefix: "askai-", home: "features/ai/ai.css" },
   { prefix: "auth-", home: "features/sign-in/auth.css" },
   { prefix: "book-", home: "features/booking/book.css" },
-  { prefix: "clientsurface-", home: "screens/client.css" },
+  { prefix: "clientsurface-", home: "features/settings/client.css" },
   {
     prefix: "companydeepread-",
     home: "features/companies/companydeepread.css",

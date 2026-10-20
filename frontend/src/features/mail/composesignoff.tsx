@@ -9,7 +9,7 @@ import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
 import { useMe } from "../../lib/session";
-import { settingsHref } from "../../screens/settingsrouting";
+import { settingsHref } from "../settings/settingsrouting";
 import { SignatureHtml } from "./signaturehtml";
 
 type SignOff = components["schemas"]["EmailSignOff"];

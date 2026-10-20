@@ -11,8 +11,8 @@ import type { components } from "../../api/schema";
 import { RecordShell } from "../../app/testing/recordshell.testkit";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
-import { WriteToHost } from "../../screens/writetohost";
 import { meFixture } from "../../testing/mefixture";
+import { WriteToHost } from "../settings/writetohost";
 
 // Edit, Share and Disqualify live behind the header's overflow trigger, whose
 // panel mounts on the first open. So a test wanting one opens the menu first.

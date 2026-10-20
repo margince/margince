@@ -19,7 +19,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useRecordZone } from "../../lib/recordzone";
 import "./connected-agents.css";
-import "../../screens/settings-agents.css";
+import "../settings/settings-agents.css";
 import { PassportUsageLine, usePassportUsageDetail } from "./agentusage";
 import { usePassportRevoke } from "./passport-revoke";
 import { usePassports } from "./passports.queries";

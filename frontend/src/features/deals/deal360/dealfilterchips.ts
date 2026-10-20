@@ -2,7 +2,7 @@ import type { FilterSpec } from "../../../components/listquery";
 import {
   type AcquisitionSource,
   acquisitionFilterOptions,
-} from "../../../screens/acquisitionsources.queries";
+} from "../../settings/acquisitionsources.queries";
 import { DEAL_STATUS_LABEL, DEAL_STATUS_VALUES } from "../dealdials";
 import { MOTION_OPTIONS, PRIORITY_OPTIONS } from "./dealcommercialfields";
 

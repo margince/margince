@@ -7,7 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { jsonResponse, render } from "../../screens/settings.testkit";
+import { jsonResponse, render } from "../settings/settings.testkit";
 import { CompanyTriageSection } from "./companytriage";
 
 const COMPANY = "0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e14";

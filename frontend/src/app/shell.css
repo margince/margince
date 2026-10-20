@@ -257,7 +257,7 @@
 }
 /* Except where the page's body is the settings stack, which takes a narrower
    measure than the page's — so there the page's measure IS that stack's, read
-   from the one token both sheets read (--settingsColumn, screens/settings.css).
+   from the one token both sheets read (--settingsColumn, features/settings/settings.css).
    Plus the gutter on each side, because that is padding these boxes carry and
    the stack inside them does not.
 
