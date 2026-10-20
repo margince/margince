@@ -439,7 +439,7 @@ func TestASignatureLinkedinAColleagueSavedUnchangedIsStillUndone(t *testing.T) {
 }
 
 // A title a colleague saved again, unchanged, after a site read filled it is a
-// save that changed nothing, so it writes no trail and the fill stays undoable.
+// save that changed nothing. It writes no trail, so the fill stays undoable.
 func TestASiteReadTitleAColleagueSavedAgainUnchangedIsStillUndone(t *testing.T) {
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Sara Site", nil)

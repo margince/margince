@@ -5,7 +5,6 @@ package contacts
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -40,26 +39,21 @@ func writePartner(
 		in.CompanyID).Scan(&wasLive); err != nil {
 		return partnerWrite{}, fmt.Errorf("read whether the partner is live: %w", err)
 	}
-	nested, err := tx.Begin(ctx)
-	if err != nil {
-		return partnerWrite{}, fmt.Errorf("open the partner write: %w", err)
-	}
-	staged, promoted, err := stagePartner(ctx, nested, in, fit, capturedBy, standing)
-	if err != nil {
-		if rbErr := nested.Rollback(ctx); rbErr != nil {
-			return partnerWrite{}, errors.Join(err, rbErr)
+	var staged partnerWrite
+	landed, err := storekit.Savepoint(ctx, tx, func(nested pgx.Tx) (bool, error) {
+		var promoted bool
+		var err error
+		if staged, promoted, err = stagePartner(ctx, nested, in, fit, capturedBy, standing); err != nil {
+			return false, err
 		}
+		return len(staged.after) > 0 || promoted || !wasLive, nil
+	})
+	if err != nil {
 		return partnerWrite{}, err
 	}
-	if len(staged.after) > 0 || promoted || !wasLive {
-		if err := nested.Commit(ctx); err != nil {
-			return partnerWrite{}, fmt.Errorf("commit the partner write: %w", err)
-		}
+	if landed {
 		staged.landed = true
 		return staged, nil
-	}
-	if err := nested.Rollback(ctx); err != nil {
-		return partnerWrite{}, fmt.Errorf("withdraw the partner write that changed nothing: %w", err)
 	}
 	standingRow, err := scanPartner(tx.QueryRow(ctx,
 		`SELECT `+partnerColumns+` FROM partner WHERE company_id = $1`, in.CompanyID))

@@ -5,7 +5,6 @@ package contacts
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -31,12 +30,9 @@ func applyContactReplaceSets(
 	if in.Social == nil && in.Emails == nil && in.Phones == nil {
 		return false, nil
 	}
-	nested, err := tx.Begin(ctx)
-	if err != nil {
-		return false, fmt.Errorf("open the contact replace-sets: %w", err)
-	}
-	moved, err := replaceContactSetsAndCompare(ctx, nested, id, current, in, active)
-	return closeContactSetsSavepoint(ctx, nested, moved, err)
+	return storekit.Savepoint(ctx, tx, func(nested pgx.Tx) (bool, error) {
+		return replaceContactSetsAndCompare(ctx, nested, id, current, in, active)
+	})
 }
 
 // replaceContactSetsAndCompare runs the replaces and reads the contact back.
@@ -78,27 +74,6 @@ func replaceContactSets(ctx context.Context, tx pgx.Tx, id ids.ContactID, in Upd
 		return err
 	}
 	return replaceContactPhones(ctx, tx, id, in.Source, by, in.Phones)
-}
-
-// closeContactSetsSavepoint keeps the savepoint when the sets moved something
-// and withdraws it otherwise, so a failure to withdraw is never swallowed.
-func closeContactSetsSavepoint(ctx context.Context, nested pgx.Tx, moved bool, cause error) (bool, error) {
-	if cause != nil {
-		if rbErr := nested.Rollback(ctx); rbErr != nil {
-			return false, errors.Join(cause, rbErr)
-		}
-		return false, cause
-	}
-	if !moved {
-		if err := nested.Rollback(ctx); err != nil {
-			return false, fmt.Errorf("withdraw the replace-sets that changed nothing: %w", err)
-		}
-		return false, nil
-	}
-	if err := nested.Commit(ctx); err != nil {
-		return false, fmt.Errorf("commit the contact replace-sets: %w", err)
-	}
-	return true, nil
 }
 
 // contactSetsImage holds what a replace-set can change, without the row ids and

@@ -5,8 +5,6 @@ package contacts
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -24,28 +22,19 @@ import (
 func patchRelationshipUnlessUnchanged(
 	ctx context.Context, tx pgx.Tx, current relationshipRow, id ids.UUID, in UpdateRelationshipInput, capturedBy string,
 ) (relationshipRow, bool, error) {
-	nested, err := tx.Begin(ctx)
-	if err != nil {
-		return relationshipRow{}, false, fmt.Errorf("open the relationship patch: %w", err)
-	}
-	out, err := demoteAndPatchRelationship(ctx, nested, current, id, in, capturedBy)
-	if err != nil {
-		if rbErr := nested.Rollback(ctx); rbErr != nil {
-			return relationshipRow{}, false, errors.Join(err, rbErr)
+	var out relationshipRow
+	changed, err := storekit.Savepoint(ctx, tx, func(nested pgx.Tx) (bool, error) {
+		var err error
+		if out, err = demoteAndPatchRelationship(ctx, nested, current, id, in, capturedBy); err != nil {
+			return false, err
 		}
-		return relationshipRow{}, false, err
+		_, moved := storekit.ChangedColumns(savedEdgeImage(current), savedEdgeImage(out))
+		return len(moved) > 0, nil
+	})
+	if err != nil || !changed {
+		return current, false, err
 	}
-	_, moved := storekit.ChangedColumns(savedEdgeImage(current), savedEdgeImage(out))
-	if len(moved) > 0 {
-		if err := nested.Commit(ctx); err != nil {
-			return relationshipRow{}, false, fmt.Errorf("commit the relationship patch: %w", err)
-		}
-		return out, true, nil
-	}
-	if err := nested.Rollback(ctx); err != nil {
-		return relationshipRow{}, false, fmt.Errorf("withdraw the relationship patch that changed nothing: %w", err)
-	}
-	return current, false, nil
+	return out, true, nil
 }
 
 // demoteAndPatchRelationship is the two statements of a relationship edit. Its
@@ -65,8 +54,8 @@ func demoteAndPatchRelationship(
 }
 
 // savedEdgeImage is what a save can change on an edge: the audited fields and
-// whose edge it is. A save by someone other than the author takes the edge over,
-// which is how confirming a suggested seat works, so it is a change even when no
+// whose edge it is. A save by someone other than the author takes the edge over.
+// That is how confirming a suggested seat works, so it is a change even when no
 // field moves.
 //
 //craft:ignore naked-any the image is the schemaless column map storekit compares

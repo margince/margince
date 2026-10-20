@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -222,28 +223,19 @@ func (s *Store) presentConnection(
 	return c, nil
 }
 
-// optionalBacklog reads the backlog in its own savepoint. A statement that
-// fails aborts the whole transaction unless it is rolled back to a savepoint,
-// so ignoring the error without one would break every later read and the commit.
+// optionalBacklog reads the backlog in its own savepoint. A failed statement
+// aborts the whole transaction unless it is rolled back to a savepoint. Ignoring
+// the error without one would break every later read and the commit.
 func (s *Store) optionalBacklog(ctx context.Context, tx pgx.Tx, name string) (BacklogCount, bool, error) {
-	nested, err := tx.Begin(ctx)
-	if err != nil {
-		return BacklogCount{}, false, fmt.Errorf("integrations: opening the backlog read: %w", err)
-	}
-	backlog, readErr := s.backlogInTx(ctx, nested, name)
-	if readErr == nil {
-		if err := nested.Commit(ctx); err != nil {
-			return BacklogCount{}, false, fmt.Errorf("integrations: closing the backlog read: %w", err)
+	var backlog BacklogCount
+	found, err := storekit.Savepoint(ctx, tx, func(nested pgx.Tx) (bool, error) {
+		var readErr error
+		if backlog, readErr = s.backlogInTx(ctx, nested, name); readErr != nil && ctx.Err() != nil {
+			return false, readErr
 		}
-		return backlog, true, nil
-	}
-	if err := nested.Rollback(ctx); err != nil {
-		return BacklogCount{}, false, errors.Join(readErr, err)
-	}
-	if ctx.Err() != nil {
-		return BacklogCount{}, false, readErr
-	}
-	return BacklogCount{}, false, nil
+		return readErr == nil, nil
+	})
+	return backlog, found, err
 }
 
 // presentAfterWrite is presentConnection for the answer to a write. The write
@@ -253,25 +245,22 @@ func (s *Store) optionalBacklog(ctx context.Context, tx pgx.Tx, name string) (Ba
 func (s *Store) presentAfterWrite(
 	ctx context.Context, tx pgx.Tx, c Connection, d provider.Descriptor,
 ) (Connection, error) {
-	nested, err := tx.Begin(ctx)
-	if err != nil {
-		return Connection{}, fmt.Errorf("integrations: opening the card read: %w", err)
-	}
-	shown, readErr := s.presentConnection(ctx, nested, c, d)
-	if readErr == nil {
-		if err := nested.Commit(ctx); err != nil {
-			return Connection{}, fmt.Errorf("integrations: closing the card read: %w", err)
+	shown := c
+	read, err := storekit.Savepoint(ctx, tx, func(nested pgx.Tx) (bool, error) {
+		var readErr error
+		if shown, readErr = s.presentConnection(ctx, nested, c, d); readErr != nil && ctx.Err() != nil {
+			return false, readErr
 		}
-		return shown, nil
+		return readErr == nil, nil
+	})
+	if err != nil {
+		return Connection{}, err
 	}
-	if err := nested.Rollback(ctx); err != nil {
-		return Connection{}, errors.Join(readErr, err)
+	if !read {
+		c.Catalog = catalogOf(d)
+		return c, nil
 	}
-	if ctx.Err() != nil {
-		return Connection{}, readErr
-	}
-	c.Catalog = catalogOf(d)
-	return c, nil
+	return shown, nil
 }
 
 // List returns every registered provider's connection state, including the
