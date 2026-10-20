@@ -49,7 +49,7 @@ func opportunityBuyer(event extractedEvent, thread settledThread) (*ids.UUID, st
 }
 
 func validateOpportunityBuyer(event extractedEvent, thread settledThread) string {
-	if event.Kind != extractKindOpportunity || event.CommercialRole != commercialRoleBuyer {
+	if event.Kind != extractKindOpportunity || event.CommercialRole != commercialRoleBuyer || event.BuyerRef == "" {
 		return ""
 	}
 	if buyer, _ := opportunityBuyer(event, thread); buyer == nil {
