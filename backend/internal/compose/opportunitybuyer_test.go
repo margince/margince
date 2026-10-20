@@ -65,3 +65,23 @@ func TestOwnPurchaseCannotNameOurSeatAsTheCustomer(t *testing.T) {
 		t.Fatalf("supplier context rejected: %s", reason)
 	}
 }
+
+func TestUnresolvedBuyerDoesNotDiscardAnIndependentCommitment(t *testing.T) {
+	source := ids.NewV7()
+	need, promise := "We need a quote for our new warehouse.", "I will send our current volumes."
+	thread := settledThread{Messages: []threadMessage{{ID: source, Body: need + " " + promise}}}
+	events := []extractedEvent{
+		{Kind: extractKindOpportunity, MessageID: source.String(), Summary: need, Quote: need, CommercialRole: commercialRoleBuyer, Confidence: 0.9},
+		{Kind: extractKindCommitment, MessageID: source.String(), Summary: promise, Quote: promise, Meaning: &commitmentMeaning{State: "open", DeadlinePrecision: "none"}, Confidence: 0.9},
+	}
+	if reason := validateExtractPayload(extractPayload{Events: &events}, thread); reason != "" {
+		t.Fatalf("unresolved buyer discarded supported events: %s", reason)
+	}
+	if buyer, role := opportunityBuyer(events[0], thread); buyer != nil || role != commercialRoleUnknown {
+		t.Fatalf("unresolved identity admitted as customer: %v/%s", buyer, role)
+	}
+	events[0].BuyerRef = "contact:" + ids.NewV7().String()
+	if reason := validateEventEvidence(events[0], thread); reason == "" {
+		t.Fatal("fabricated explicit buyer reference accepted")
+	}
+}
