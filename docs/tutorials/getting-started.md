@@ -126,5 +126,6 @@ missing, and it never skips.
   notice, confirm links and password reset need the SMTP relay of the install.
   This stack does not have one yet
   ([how-to/set-up-outbound-mail.md](../how-to/set-up-outbound-mail.md)).
+- Change a setting and check it: [how-to/change-a-setting.md](../how-to/change-a-setting.md).
 - Every setting: [reference/configuration.md](../reference/configuration.md).
 - Why the code has the shape it has: [explanation/architecture.md](../explanation/architecture.md).

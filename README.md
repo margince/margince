@@ -36,7 +36,8 @@ Stop it with `make dev-stop`. Without step 3 the app starts empty, the way a new
 first admin password is then in `config/margince-admin-password`, and the app asks you to change it.
 
 Each git worktree gets its own database and ports, so two copies can run at the same time.
-[docs/reference/make-targets.md](docs/reference/make-targets.md) lists every command.
+[docs/reference/make-targets.md](docs/reference/make-targets.md) lists every command. To change a
+setting, read [docs/how-to/change-a-setting.md](docs/how-to/change-a-setting.md).
 
 ## Work on the code
 
