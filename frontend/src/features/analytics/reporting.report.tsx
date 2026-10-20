@@ -221,7 +221,8 @@ export function ReportingReportDetail({
               {!editionId && (
                 <PreviewAsSelect role={previewRole} onChange={setPreviewRole} />
               )}
-              {evaluation && (
+              {/* A role preview's figures are not the caller's, so no export. */}
+              {evaluation && !previewRole && (
                 <ReportingExportButton
                   evaluation={evaluation}
                   editionId={editionId}

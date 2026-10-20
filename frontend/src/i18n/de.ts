@@ -237,6 +237,8 @@ export const de = {
   "reporting.previewAsBanner":
     "Vorschau als {role}: was ein Platz mit dieser Rolle und denselben Teams von diesem Bericht liest. Private Datensätze anderer bleiben auch hier verborgen.",
   "reporting.endPreview": "Vorschau beenden",
+  "reporting.previewNoRecords":
+    "In der Vorschau öffnen sich keine Datensätze. Nach dem Ende der Vorschau öffnen sie sich mit dem eigenen Zugriff.",
   "reporting.showPublished": "Veröffentlichte Fassung zeigen",
   "reporting.publishDraft": "Entwurf veröffentlichen",
   "reporting.discardDraft": "Entwurf verwerfen",

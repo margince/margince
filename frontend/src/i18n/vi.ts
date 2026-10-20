@@ -243,6 +243,8 @@ export const vi = {
   "reporting.previewAsBanner":
     "Xem trước với vai trò {role}: những gì một tài khoản có vai trò này và cùng các nhóm đọc được trong báo cáo này. Bản ghi riêng tư của tài khoản khác vẫn bị ẩn ở đây.",
   "reporting.endPreview": "Kết thúc xem trước",
+  "reporting.previewNoRecords":
+    "Bản xem trước không mở bản ghi. Kết thúc xem trước để mở chúng với quyền truy cập của bạn.",
   "reporting.showPublished": "Hiện bản đã công bố",
   "reporting.publishDraft": "Công bố bản nháp",
   "reporting.discardDraft": "Bỏ bản nháp",

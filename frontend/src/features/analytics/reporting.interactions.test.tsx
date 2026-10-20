@@ -189,7 +189,13 @@ it("previews the report as a role for a seat that may read roles", async () => {
     await screen.findByText(/Preview as Rep: what a seat with this role/),
   ).toBeInTheDocument();
   expect(preview).toHaveBeenCalled();
+  expect(
+    screen.queryByRole("button", { name: /Export CSV/ }),
+  ).not.toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "End preview" }));
+  expect(
+    await screen.findByRole("button", { name: /Export CSV/ }),
+  ).toBeInTheDocument();
   expect(screen.queryByText(/Preview as Rep/)).not.toBeInTheDocument();
 });
 it("offers no role preview to a seat that may not read roles", async () => {

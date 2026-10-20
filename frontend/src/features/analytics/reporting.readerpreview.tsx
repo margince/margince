@@ -9,8 +9,6 @@ import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useRoles } from "../settings/roles.queries";
 import { ReportingCharts } from "./reporting.charts";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
-import type { ReportingEvidenceRef } from "./reporting.model";
 
 /**
  * Which role the report is previewed as, offered to a seat that may read the
@@ -57,7 +55,9 @@ export function ReaderPreview({
   const t = useT();
   const roles = useRoles(true);
   const name = roles.data?.find((candidate) => candidate.key === role)?.name;
-  const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
+  // Records open under the caller's own access, which is not the preview's,
+  // so a chart's records are not offered here.
+  const [askedForRecords, setAskedForRecords] = useState(false);
   const preview = useQuery({
     queryKey: [
       "reporting-reader-preview",
@@ -83,14 +83,13 @@ export function ReaderPreview({
       <QueryGate query={preview} pendingLabel={t("reporting.previewLoading")}>
         {(evaluation) => (
           <>
-            <ReportingCharts evaluation={evaluation} onEvidence={setEvidence} />
-            {evidence && (
-              <ReportingEvidenceDrawer
-                evaluation={evaluation}
-                reference={evidence}
-                onClose={() => setEvidence(null)}
-              />
+            {askedForRecords && (
+              <p role="status">{t("reporting.previewNoRecords")}</p>
             )}
+            <ReportingCharts
+              evaluation={evaluation}
+              onEvidence={() => setAskedForRecords(true)}
+            />
           </>
         )}
       </QueryGate>
