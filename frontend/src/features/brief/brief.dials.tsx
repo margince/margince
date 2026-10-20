@@ -7,8 +7,7 @@ import { type BriefAddress, type BriefView, VIEWS } from "./brief.view";
 
 import "./brief.dials.css";
 
-// The one dial above the page: the day or the week. Home has no switch for
-// the team's view; a lead opens it by its address (`?scope=team`).
+// The one dial above the page: the day or the week.
 export function BriefDials({
   address,
   onChange,

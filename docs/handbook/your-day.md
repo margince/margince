@@ -150,8 +150,8 @@ meeting. Press a name to see where it comes from. A badge says when Margince mad
   tasks due later never do. A quiet day says "No immediate priorities. The full Worklist is available."
 - **Show Worklist**, under the list: the whole list, with its own filters and pages, and work that
   is not due yet. Notices that only tell you something, such as a stage change, are read there.
-- **Since your last brief**: what Margince did since your last brief, what waits on you and what
-  needs restoring.
+- **Since your last brief**: what Margince did since your last brief, what waits on you, what it
+  could not finish and what needs restoring.
 - Beside them: **Numbers**, **Upcoming meetings**, **Waiting for your word**.
 A greeting covers the page on the day's first visit, once per browser, unless your settings turn
 motion off. It shows the date, the emails synced overnight, and how many items wait, how many are
