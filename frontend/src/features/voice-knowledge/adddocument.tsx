@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import {
-  type QueryKey,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -23,7 +19,6 @@ import { foldForMatch } from "../../format/collate";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { activityFileStaleKeys } from "../../lib/activitykeys";
 import {
   ACCEPTED_ATTACHMENT_ATTR,
   type AttachmentParent,
@@ -56,9 +51,12 @@ import {
 // Why the question is only asked on an account: deals hang off a company, so an
 // account can offer its own deals as filing targets. A contact sits on deals at
 // companies they may not work for, so its library files against the contact.
+import { staleAfterUpload, uploadRefusal } from "./adddocument.upload";
 
 type Attachment = components["schemas"]["Attachment"];
+
 type Category = NonNullable<Attachment["category"]>;
+
 type DealPage = components["schemas"]["DealListResponse"];
 
 const CATEGORY_KEYS: Record<Category, MessageKey> = {
@@ -449,69 +447,4 @@ export function AddDocumentDialog({
       </div>
     </Modal>
   );
-}
-
-/**
- * What a landed upload makes stale, per anchor. Each library is read under its
- * own key. The contact 360 carries no attachments, so it is not refetched.
- */
-function staleAfterUpload(anchor: DocumentAnchor): readonly QueryKey[] {
-  if (anchor.record === "contact") {
-    return [["attachments", "contact", anchor.id]];
-  }
-  if (anchor.record === "activity") return activityFileStaleKeys(anchor.id);
-  if (anchor.record === "deal") {
-    return [
-      ["deal-documents", anchor.id],
-      ["deal-attachments", anchor.id],
-    ];
-  }
-  return [
-    ["companyDocuments", anchor.id],
-    ["company360", anchor.id],
-  ];
-}
-
-// Why the upload cannot be offered, in the order the reader can act on: a
-// missing file is theirs to fix and a missing grant is not. A request already
-// in flight is NOT one of these — it is a wait rather than a refusal, so it is
-// the button's `pending`, which swallows the second press that would land a
-// second copy of the document without taking the control away from the reader.
-function uploadRefusal({
-  file,
-  parent,
-  permitted,
-  maxBytes,
-}: Readonly<{
-  file: File | undefined;
-  parent: AttachmentParent | null;
-  permitted: boolean;
-  maxBytes: number | undefined;
-}>): MessageKey | null {
-  if (!permitted) {
-    return "docs.add.errRefused";
-  }
-  if (!file) {
-    return "docs.add.errNoFile";
-  }
-  // "A deal" chosen and none picked. Named as its own refusal rather than left
-  // to fall back on the account: a document filed somewhere the reader did not
-  // choose is worse than one not filed at all, and only a deal's documents can
-  // be read for deal fields.
-  if (!parent) {
-    return "docs.add.errNoDeal";
-  }
-  // Only when the server has SAID what it accepts. An unanswered installation
-  // read leaves the upload to be refused where it always was — sending a file
-  // that turns out to be too large costs a wasted request, while guessing a
-  // limit refuses one the installation would have taken.
-  //
-  // Compared against the file alone, though the ceiling bounds the whole
-  // request. The few hundred bytes of part framing mean a file within that
-  // distance of the limit still reaches the server's own refusal, which names
-  // the same number this message does.
-  if (maxBytes !== undefined && file.size > maxBytes) {
-    return "docs.add.errTooLarge";
-  }
-  return null;
 }
