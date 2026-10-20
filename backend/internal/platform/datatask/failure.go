@@ -6,7 +6,6 @@ package datatask
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -55,7 +54,7 @@ func (e *Engine) recordFailure(ctx context.Context, picked selection, cause erro
 			return err
 		}
 		if tag.RowsAffected() != 1 {
-			return fmt.Errorf("data task failure outcome lost its version")
+			return errors.New("data task failure outcome lost its version")
 		}
 		if _, err := storekit.LogSystem(ctx, tx, "data_task.batch_failed",
 			map[string]any{paramTask: p.TaskID, paramStep: p.Step, "run_id": p.RunID, "class": p.LastErrorClass}); err != nil {
