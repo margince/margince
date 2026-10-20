@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -36,5 +37,34 @@ func TestCorrectionMetricsPreserveUnknownProgress(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "margince_data_task_read_success 0") || strings.Contains(out.String(), "margince_data_task_steps{") {
 		t.Fatal("failed read reported empty work")
+	}
+}
+
+func TestCorrectionMetricsPropagateEveryFailedWrite(t *testing.T) {
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	progress := []datatask.Progress{{TaskID: "core/100_probe", Step: "first", Status: datatask.Done, LastProgressAt: &now}}
+	refused := errors.New("reader disconnected")
+	for _, render := range []func(io.Writer) error{
+		func(w io.Writer) error { return writeDataTaskRead(w, true) },
+		func(w io.Writer) error { return writeDataTaskMetrics(w, progress, now) },
+	} {
+		succeeded := false
+		for n := range 32 {
+			writer := &failingWriter{failOn: n, err: refused}
+			err := render(writer)
+			if err == nil {
+				if writer.writes > n {
+					t.Fatalf("write %d was refused but the report succeeded", n)
+				}
+				succeeded = true
+				break
+			}
+			if !errors.Is(err, refused) {
+				t.Fatalf("write %d lost its cause: %v", n, err)
+			}
+		}
+		if !succeeded {
+			t.Fatal("writer sweep did not reach the end of the report")
+		}
 	}
 }
