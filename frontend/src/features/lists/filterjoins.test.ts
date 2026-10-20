@@ -9,6 +9,8 @@ import {
   decode,
   encode,
   type Group,
+  isGroup,
+  type Node,
   newGroup,
   newLeaf,
   resetIDsForTest,
@@ -114,11 +116,84 @@ describe("a row stored as a group", () => {
       newGroup("or", [country(), newGroup("and", [staff(), city()])]),
       newGroup("and", [country(), newGroup("or", [staff(), city()])]),
       newGroup("or", [country()]),
+      newGroup("or", [country(), staff(), newGroup("and", [city()])]),
       newGroup("and", []),
     ];
     for (const tree of trees) {
       expect(fromRow(rowOf(tree), tree.id, tree.join)).toEqual(tree);
     }
+  });
+});
+
+describe("group ids through a flip", () => {
+  function groupIDs(node: Node): string[] {
+    return isGroup(node) ? [node.id, ...node.children.flatMap(groupIDs)] : [];
+  }
+
+  it("leaves a one-condition all-of group untouched when a word beside it flips", () => {
+    const single = newGroup("and", [city()]);
+    const tree = newGroup("or", [country(), staff(), single]);
+    const flipped = flipConnector(tree, tree.id, 0).tree;
+    expect(flipped.children).toHaveLength(2);
+    expect(flipped.children[1]).toBe(single);
+  });
+
+  // A four-condition run, split at each of its three words.
+  it.each([
+    [0, [1, 3]],
+    [1, [2, 2]],
+    [2, [3, 1]],
+  ])(
+    "splits a run at word %i and keeps its id on the longest part",
+    (at, sizes) => {
+      const run = newGroup("and", [
+        country(),
+        staff(),
+        city(),
+        newLeaf("email", "exists", true),
+      ]);
+      const tree = newGroup("or", [run, newLeaf("full_name", "eq", "x")]);
+      const flipped = flipConnector(tree, tree.id, at).tree;
+
+      const parts = flipped.children.slice(0, 2);
+      expect(
+        parts.map((part) => (isGroup(part) ? part.children.length : 1)),
+      ).toEqual(sizes);
+      const longest = parts.find(
+        (part) => isGroup(part) && part.children.length === Math.max(...sizes),
+      );
+      expect(longest?.id).toBe(run.id);
+      const ids = groupIDs(flipped);
+      expect(new Set(ids).size).toBe(ids.length);
+    },
+  );
+
+  it("gives the id to the longer part when both parts stay runs", () => {
+    const run = newGroup("and", [
+      country(),
+      staff(),
+      city(),
+      newLeaf("email", "exists", true),
+      newLeaf("full_name", "eq", "x"),
+    ]);
+    const tree = newGroup("or", [run, newLeaf("owner_id", "eq", "u1")]);
+    const [shorter, longer] = flipConnector(tree, tree.id, 1).tree.children;
+    expect(longer?.id).toBe(run.id);
+    expect(shorter?.id).not.toBe(run.id);
+  });
+
+  it("keeps one id when two runs merge into one", () => {
+    const first = newGroup("and", [country(), staff()]);
+    const second = newGroup("and", [city(), newLeaf("email", "exists", true)]);
+    const tree = newGroup("or", [
+      first,
+      second,
+      newLeaf("full_name", "eq", "x"),
+    ]);
+    const flipped = flipConnector(tree, tree.id, 1).tree;
+    expect(flipped.children[0]?.id).toBe(first.id);
+    const ids = groupIDs(flipped);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });
 

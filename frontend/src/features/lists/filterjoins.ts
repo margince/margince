@@ -18,8 +18,8 @@ export type Join = Group["join"];
 
 /**
  * A group read as one line: its conditions, and the word after each but the
- * last. `runs` names the stored all-of group each "and" run came from, by its
- * first condition, so a regrouped row keeps the ids React keys on.
+ * last. `runs` maps each condition read from an "and" run to the stored
+ * all-of group it came from. A regrouped row then keeps the ids React keys on.
  */
 export type Row = Readonly<{
   items: readonly Node[];
@@ -29,7 +29,7 @@ export type Row = Readonly<{
 
 /**
  * Whether a child is an "and" run of its parent's row. An all-of group with
- * nothing in it stays a group of its own: it has no conditions to read inline.
+ * fewer than two conditions has no "and" to read inline, so it stays a group.
  */
 export function isRun(child: Node, parent: Group): boolean {
   return runItems(child, parent) !== null;
@@ -39,7 +39,7 @@ function runItems(child: Node, parent: Group): readonly Node[] | null {
   return parent.join === "or" &&
     isGroup(child) &&
     child.join === "and" &&
-    child.children.length > 0
+    child.children.length > 1
     ? child.children
     : null;
 }
@@ -65,9 +65,7 @@ export function rowOf(group: Group): Row {
       return;
     }
     run.forEach((item, at) => {
-      if (at === 0) {
-        runs[item.id] = child.id;
-      }
+      runs[item.id] = child.id;
       if (at > 0) {
         joins.push("and");
       }
@@ -87,22 +85,48 @@ export function fromRow(row: Row, id: string, fallback: Join = "and"): Group {
     const join = row.joins.length === 0 ? fallback : "and";
     return { id, join, children: runs[0] ?? [] };
   }
+  const kept = keptRunIDs(runs, row.runs ?? {});
   return {
     id,
     join: "or",
-    children: runs.flatMap((run): Node[] => {
+    children: runs.map((run, at): Node => {
       const [first] = run;
-      if (first === undefined || run.length === 1) {
-        return run;
+      if (first !== undefined && run.length === 1) {
+        return first;
       }
-      const kept = row.runs?.[first.id];
-      return [
-        kept === undefined
-          ? newGroup("and", run)
-          : { id: kept, join: "and", children: run },
-      ];
+      const old = kept.get(at);
+      return old === undefined
+        ? newGroup("and", run)
+        : { id: old, join: "and", children: run };
     }),
   };
+}
+
+/**
+ * Which new run keeps which old run id, by run index. The longest run goes
+ * first, so a split run's id stays with its largest part. Each old id goes to
+ * one run at most, so no two groups share an id.
+ */
+function keptRunIDs(
+  runs: readonly (readonly Node[])[],
+  sources: Readonly<Record<string, string>>,
+): Map<number, string> {
+  const order = runs
+    .map((run, at) => ({ run, at }))
+    .filter(({ run }) => run.length > 1)
+    .sort((a, b) => b.run.length - a.run.length || a.at - b.at);
+  const used = new Set<string>();
+  const kept = new Map<number, string>();
+  for (const { run, at } of order) {
+    const old = run
+      .map((item) => sources[item.id])
+      .find((source) => source !== undefined && !used.has(source));
+    if (old !== undefined) {
+      used.add(old);
+      kept.set(at, old);
+    }
+  }
+  return kept;
 }
 
 function splitRuns(row: Row): Node[][] {
