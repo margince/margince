@@ -9,10 +9,9 @@ import (
 	"errors"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/margince/margince/backend/internal/compose/lifecyclereview"
-
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/lifecyclereview"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"

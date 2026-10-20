@@ -101,28 +101,7 @@ func prepareContinuityChange(t *testing.T, e *integration.Env, company ids.UUID,
 	t.Helper()
 	account := ids.From[ids.CompanyKind](company)
 	if strings.HasSuffix(kind, "contract") {
-		var agreement ids.ContractID
-		create := func(ctx context.Context) error {
-			row, err := e.Contracts.CreateContract(ctx, contracts.CreateContractInput{CompanyID: account, Title: "Ongoing support", ValueBasis: contracts.BasisTotal, Source: "manual"})
-			if err == nil {
-				agreement = ids.From[ids.ContractKind](ids.UUID(row.Id))
-			}
-			return err
-		}
-		if kind == "contract" {
-			if err := create(e.Admin()); err != nil {
-				t.Fatal(err)
-			}
-		}
-		return func(ctx context.Context) error {
-			if agreement.IsZero() {
-				if err := create(ctx); err != nil {
-					return err
-				}
-			}
-			_, err := e.Contracts.ChangeStatus(ctx, agreement, contracts.StatusActive, nil)
-			return err
-		}
+		return prepareContractContinuityChange(t, e, account, kind)
 	}
 	var project ids.ProjectID
 	create := func(ctx context.Context) error {
@@ -144,6 +123,32 @@ func prepareContinuityChange(t *testing.T, e *integration.Env, company ids.UUID,
 			}
 		}
 		_, err := e.Projects.AdvanceProjectPhase(ctx, project, projects.AdvanceProjectPhaseInput{ToPhase: projects.PhaseDelivering})
+		return err
+	}
+}
+
+func prepareContractContinuityChange(t *testing.T, e *integration.Env, account ids.CompanyID, kind string) func(context.Context) error {
+	t.Helper()
+	var agreement ids.ContractID
+	create := func(ctx context.Context) error {
+		row, err := e.Contracts.CreateContract(ctx, contracts.CreateContractInput{CompanyID: account, Title: "Ongoing support", ValueBasis: contracts.BasisTotal, Source: "manual"})
+		if err == nil {
+			agreement = ids.From[ids.ContractKind](ids.UUID(row.Id))
+		}
+		return err
+	}
+	if kind == "contract" {
+		if err := create(e.Admin()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return func(ctx context.Context) error {
+		if agreement.IsZero() {
+			if err := create(ctx); err != nil {
+				return err
+			}
+		}
+		_, err := e.Contracts.ChangeStatus(ctx, agreement, contracts.StatusActive, nil)
 		return err
 	}
 }

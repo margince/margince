@@ -15,7 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// An incomplete account read cannot prove that every agreement has ended.
+// CompanyContinuityTx cannot prove an ending from an incomplete account read.
 func CompanyContinuityTx(ctx context.Context, tx pgx.Tx, company ids.CompanyID, day time.Time, lock bool) (active, complete bool, err error) {
 	if err := auth.EnsureLinkTarget(ctx, tx, companyTable, company.UUID); err != nil {
 		return false, false, err
