@@ -85,7 +85,7 @@ func TestNoticeReconciliationDoesNotRestoreErasedProposalEvidence(t *testing.T) 
 		Evidence: []approvals.Evidence{{Snippet: quotedTranscriptLine, SourceType: transcriptTargetType, SourceID: activity}},
 	})
 	a.deliver(t, staged)
-	assertReconciledHomeNotices(t, a, 1)
+	assertReconciledHomeNotices(t, a, 0)
 	ctx := principal.SystemActing(a.e.Admin(), approvalNoticeRetractActor)
 	if err := privacy.NewEraser(a.db).EraseContact(a.e.Admin(), subject.UUID, "Subject requested erasure"); err != nil {
 		t.Fatal(err)
@@ -130,7 +130,7 @@ func TestRepeatedSubjectErasureRecordsEachNoticeOnce(t *testing.T) {
 		DiffHash:       "contact-title", Summary: "Update contact title",
 	})
 	a.deliver(t, staged)
-	assertReconciledHomeNotices(t, a, 1)
+	assertReconciledHomeNotices(t, a, 0)
 	for range 2 {
 		if err := privacy.NewEraser(a.db).EraseContact(a.e.Admin(), subject, "Subject requested erasure"); err != nil {
 			t.Fatal(err)

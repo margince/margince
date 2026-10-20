@@ -4532,24 +4532,26 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `request_settlement` / `request_settle`
 
-`system 3,806 B (~951 tok)`: rules 3,529 B · boundary 277 B · after boundary 0 B · **cacheable 92%**
+`system 4,416 B (~1,104 tok)`: rules 4,139 B · boundary 277 B · after boundary 0 B · **cacheable 93%**
 
 <details><summary>system prompt</summary>
 
 ```
-You judge whether OUR OWN reply settled what THEIR message asked of us.
+You judge whether later evidence settled what THEIR message asked of us.
 You are given one email conversation per id, oldest first. The first message is the request. Messages are marked "from them" (the customer) or "from us" (this workspace).
 Some entries are our answers from outside the email thread, marked as such: "from us, separate email" is our own mail to them with the same subject; "from us, call logged" is a call we logged with them, and its text is our notes; "from us, meeting held" is a meeting that took place with them, and its text is our notes. Judge them as you judge a reply: by what they show we did.
 A held meeting settles a request to meet or talk: the meeting is the answer. For any other ask, a call or meeting settles it only when its notes show the ask was answered or delivered. Notes that promise a next step are still_owed. Notes about other matters leave the ask untouched: that is still_owed, naming the ask, because nothing we did addressed it. unsure stays for a reply to the ask itself that is too thin to tell.
 
 For EACH conversation emit exactly one verdict:
-"settled" — our words answered the question, declined it, delivered what was asked, agreed a time, or handed it to a named colleague. Nothing is left for us to do.
-"still_owed" — we replied and our words leave something outstanding: we said we would do it, or we answered one of two asks, or they re-asked after us.
-"unsure" — we replied and the words do not decide it either way. A bare acknowledgement like "Ok." might mean the thing went out in the same breath, or might mean the request was only noted, and the conversation does not say which. Answer unsure rather than asserting an obligation the words do not support; the request stays owed under unsure either way, so nothing is lost by saying you cannot tell.
+"settled" — the evidence shows the request was answered, declined, delivered, scheduled, handed to a named colleague, or explicitly confirmed complete by the same correspondent. Nothing is left for us to do.
+"still_owed" — the evidence leaves something outstanding: we said we would do it, or we answered one of two asks, or they re-asked after us.
+"unsure" — the words do not establish whether this request is complete. A bare acknowledgement like "Ok." might mean the thing went out in the same breath, or might mean the request was only noted, and the conversation does not say which. Answer unsure rather than asserting an obligation the words do not support; the request stays owed under unsure either way, so nothing is lost by saying you cannot tell.
 
 still_owed and unsure are not the same answer. still_owed is for a reply whose words SHOW work left — a promise to come back, one of two asks answered. unsure is for a reply too thin to tell either way.
 
-Judge OUR words, not theirs. A reply that DEFERS — "thanks, I will check", "let me come back to you", "I will clarify with the team and get back" — is still_owed: it names a next move of ours and does not make it.
+Our reply may settle the request. A later message from the same correspondent may also explicitly confirm that the requested action is complete.
+For a signature request, completion must refer to the same document or envelope identifier stated in the request and confirm completion of our required signing step. Another document, another signer's progress, or a merely sent/viewed document does not settle our request. Matching subjects alone prove nothing. If the identity or completion is unclear, answer unsure. Judge each request independently even when several requests share one conversation.
+A reply that DEFERS — "thanks, I will check", "let me come back to you", "I will clarify with the team and get back" — is still_owed: it names a next move of ours and does not make it.
 A reply too bare to defer OR deliver is unsure, not still_owed. "Ok." to "please send the documents" might mean they went in the same breath and might mean the ask was merely seen; a deferral says which, and a bare token does not. The line is whether OUR words name a next move of ours: if they do, still_owed; if they are too thin to say, unsure.
 A calendar acceptance settles a scheduling request: agreeing a time IS the answer to "when can we talk".
 Declining settles it too. So does handing it to a colleague by name: the ask has left our desk either way, and a reader owed nothing should not be told they owe something.
@@ -4621,7 +4623,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `signal_extract` / `thread_events`
 
-`system 2,903 B (~725 tok)`: rules 2,631 B · boundary 272 B · after boundary 0 B · **cacheable 90%**
+`system 3,091 B (~772 tok)`: rules 2,819 B · boundary 272 B · after boundary 0 B · **cacheable 91%**
 
 <details><summary>system prompt</summary>
 
@@ -4643,7 +4645,9 @@ A bare reminder or reference to an absent promise, without stating who owes what
 Do not count both an original promise and a report of it as separate commitments.
 When later words explicitly renew the promise or its deadline, also give restated_message_id and
 restated_quote from that later message. Resolve its deadline against that later message date.
-Only a later message from the same side can renew a promise. A delivery, acknowledgement,
+Only a distinct later message from the same side can renew a promise.
+For an original promise, set restated_message_id and restated_quote to "". In a one-message
+conversation those fields must always be "": the original promise cannot renew itself. A delivery, acknowledgement,
 third-party report or quotation of earlier mail is not a renewal: leave both restated fields empty.
 An old promise with a still-current agreed future deadline can remain open. The promise's date
 is the source date, never extraction or import time.
@@ -4732,6 +4736,12 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
           },
           "quote": {
             "type": "string"
+          },
+          "recipient_refs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "restated_message_id": {
             "type": "string"
@@ -5658,6 +5668,12 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
           "promiser_ref": {
             "type": "string"
           },
+          "recipient_refs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "source_lines": {
             "items": {
               "type": "integer"
@@ -5672,6 +5688,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
           "summary",
           "owner",
           "promiser_ref",
+          "recipient_refs",
           "due_date",
           "source_lines",
           "confidence",

@@ -197,8 +197,9 @@ export function approvalAcceptLabel(
   fallback: string,
   locale: Locale,
   count = 1,
+  genericAction = false,
 ): string {
-  if (kind !== "commitment_task") return fallback;
+  if (kind !== "commitment_task" || genericAction) return fallback;
   return plural("approval.commitment.createTask", count, {
     count: formatNumber(count, locale),
   });

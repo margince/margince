@@ -6,7 +6,7 @@ The 28 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-62 columns · primary key `(id)` · referenced by 38 foreign keys
+63 columns · primary key `(id)` · referenced by 38 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -33,6 +33,7 @@ The 28 tables owned by `activities`, as the migrations build them. [Back to the 
 | `foreign_link` | `boolean` |  |  |
 | `has_calendar_part` | `boolean`, default `false` | yes |  |
 | `host_user_id` | `uuid` |  | Meeting only: the member of this company who held it. |
+| `inbound_sender_authenticated` | `boolean`, default `false` | yes |  |
 | `is_done` | `boolean`, default `false` | yes | Task only. |
 | `kind` | `text` | yes | Points at `activity_kind.kind`. |
 | `language` | `text` |  | What language this message is written in, read from its own text when it was captured. |

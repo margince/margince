@@ -61,6 +61,7 @@ const certSentDefault = "2026-09-07"
 
 // signalExtractExpectation identifies an event, its cited message and verified promiser.
 type signalExtractExpectation struct {
+	Recipients      []string           `json:"recipients,omitempty"`
 	Meaning         *commitmentMeaning `json:"meaning,omitempty"`
 	Optional        bool               `json:"optional,omitempty"`
 	Kind            string             `json:"kind"`
@@ -141,6 +142,9 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 			due = *want[i].DueDate
 		}
 		if err := validateExpectedMeaning(want[i].Optional, want[i].Meaning, due, thread.Messages[want[i].Message-1].Body); err != nil {
+			return nil, err
+		}
+		if err := validateExpectedRecipients(want[i].Recipients, references[want[i].Message-1]); err != nil {
 			return nil, err
 		}
 		if want[i].Promiser == "" {
@@ -320,6 +324,9 @@ func (c *signalExtractCase) disagreements(payload extractPayload) []string {
 		for _, event := range payload.events() {
 			if event.Kind != expected.Kind || position[event.MessageID] != expected.Message {
 				continue
+			}
+			if c.promiserKeys[event.PromiserRef] == expected.Promiser && !expectedRecipientsMatch(expected.Recipients, event.RecipientRefs, c.promiserKeys) {
+				out = append(out, "the recipients do not match the quoted promise")
 			}
 			if !expectedMeaningMatches(expected.Meaning, event.Meaning) {
 				out = append(out, "the commitment meaning does not match the source")

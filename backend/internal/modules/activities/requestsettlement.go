@@ -3,29 +3,8 @@
 
 package activities
 
-// Whether our own reply settled the request an inbound message made.
-//
-// owed_verdict answers a question about ONE message: does it ask the recipient
-// side for something. It is written once, from that message alone, and nothing
-// revisits it — which is right for what it says and wrong for what a reader
-// then sees, because a request answered within the hour still reads as owed a
-// week later. The missing half is not a better verdict on the inbound mail. It
-// is a second question, asked of the THREAD, and only askable once we have
-// written back.
-//
-// TWO THINGS THIS DELIBERATELY DOES NOT DO.
-//
-// It does not settle on the existence of a reply. "Thanks, I will check" is a
-// reply and discharges nothing, and the two integration tests that pin that
-// behaviour stay green under this file: the judgement is a model's, and with no
-// model configured nothing here runs at all. What changes is that a reply is
-// now EVIDENCE the question is asked over, where before it was invisible.
-//
-// It does not reopen. A settled request whose task a human has reopened is
-// theirs again — ApplySettlement skips a task that moved underneath it rather
-// than retrying, which is the opposite of the follow-up completer beside it and
-// is the whole difference between a machine finishing work and a machine
-// overruling somebody.
+// Settlement judges later conversation evidence against one request, never merely the presence
+// of a reply. Applying a verdict preserves human edits and never reopens completed work.
 
 import (
 	"context"
@@ -46,8 +25,7 @@ import (
 // what writes it and a third spelling would be refused by the database after a
 // model call has already been paid for.
 const (
-	// RequestSettled: our words answered, declined, delivered, booked, or
-	// handed the ask to somebody else. Nothing is left for us to do.
+	// RequestSettled means the evidence establishes that nothing remains owed on this request.
 	RequestSettled = "settled"
 	// RequestStillOwed: we replied and left something undone. Remaining names
 	// it in the reader's own seat.
@@ -80,13 +58,11 @@ const (
 // a human's own work.
 const OwedVerdictCapturedBy = "system:owed_verdict"
 
-// RepliedRequest is one request the workspace has since written back on, as the
-// settlement pass consumes it.
+// RepliedRequest is a request with later evidence for the settlement pass.
 type RepliedRequest struct {
 	RequestID ids.UUID
 	// NewestAnswerID is the newest answer the judgement is reached over: our
-	// reply, our same-subject mail off the thread, or a call or meeting with
-	// the sender. It is the watermark written beside the verdict, and a later
+	// reply, a correspondent confirmation, our off-thread mail, or a call or meeting. It is the watermark written beside the verdict, and a later
 	// answer re-arms the question.
 	NewestAnswerID ids.UUID
 	// TaskID is the email_request reminder minted from this request, when one
@@ -100,6 +76,7 @@ type RepliedRequest struct {
 	// one a human accepted. Only a machine-minted, undated task may be retitled
 	// — a human's own subject and deadline are theirs.
 	TaskMachineMinted bool
+	TaskHumanReopened bool
 	// CounterpartyEmail is who this request was with. Carried out of the
 	// selection so the conversation read can bind to the same correspondent
 	// this statement matched on, rather than reading the column a second time:
@@ -144,7 +121,8 @@ var repliedRequestsSQL = outstandingRequestSQL + `
 // settlement model may be shown.
 func settlementAnswersSQL() string {
 	return `SELECT reply.id, reply.occurred_at FROM activity reply
-   WHERE ` + ourOutboundInThisThread("reply", "a") + `
+   WHERE (` + ourOutboundInThisThread("reply", "a") + `
+     OR (` + correspondentInThisThread("reply", "a") + ` AND ` + CapturedInboundSQL("reply") + `))
      AND reply.audience = 'workspace' AND reply.restricted_at IS NULL
      AND reply.occurred_at <= $1
      AND (reply.occurred_at, reply.id) > (a.occurred_at, a.id)
@@ -203,15 +181,16 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 			       -- without it the machine could overwrite the title somebody
 			       -- had just typed.
 			       coalesce(task.captured_by = $2 AND task.due_at IS NULL
-			                AND task.subject IS NOT DISTINCT FROM a.subject, false)
+			                AND task.subject IS NOT DISTINCT FROM a.subject, false),
+                   `+humanReopenedTaskSQL("task")+`
 			  FROM activity a
-			  CROSS JOIN LATERAL (`+newestAnswerRow+`) latest
+			  CROSS JOIN LATERAL (%s) latest
 			  LEFT JOIN activity task
 			    ON task.source_system = '%s' AND task.source_activity_id = a.id
 			   AND task.archived_at IS NULL AND task.is_done = false
 			 WHERE %s
 			 ORDER BY latest.occurred_at DESC, latest.id DESC, a.id DESC
-			 LIMIT $3`, EmailRequestTaskSource, repliedRequestsSQL),
+			 LIMIT $3`, newestAnswerRow, EmailRequestTaskSource, repliedRequestsSQL),
 			asOf, OwedVerdictCapturedBy, limit)
 		if err != nil {
 			return fmt.Errorf("activities: reading answered requests: %w", err)
@@ -220,7 +199,7 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 		for rows.Next() {
 			var r RepliedRequest
 			if err := rows.Scan(&r.RequestID, &r.CounterpartyEmail, &r.NewestAnswerID,
-				&r.TaskID, &r.TaskVersion, &r.TaskMachineMinted); err != nil {
+				&r.TaskID, &r.TaskVersion, &r.TaskMachineMinted, &r.TaskHumanReopened); err != nil {
 				return err
 			}
 			out = append(out, r)
@@ -462,6 +441,9 @@ func applySettlement(ctx context.Context, tx pgx.Tx, in RequestSettlementInput) 
 // because a human accepting a request uses the same builder and may keep the
 // same title.
 func settlementPatch(in RequestSettlementInput) (UpdateActivityInput, bool) {
+	if in.Request.TaskHumanReopened {
+		return UpdateActivityInput{}, false
+	}
 	switch in.Verdict {
 	case RequestSettled:
 		done := true

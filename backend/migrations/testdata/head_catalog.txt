@@ -73,6 +73,7 @@ public.activity.foreign_link boolean gen=- def=-
 public.activity.has_calendar_part boolean NOT NULL gen=- def=false
 public.activity.host_user_id uuid gen=- def=-
 public.activity.id uuid NOT NULL gen=- def=uuidv7()
+public.activity.inbound_sender_authenticated boolean NOT NULL gen=- def=false
 public.activity.is_done boolean NOT NULL gen=- def=false
 public.activity.kind text NOT NULL gen=- def=-
 public.activity.language text gen=- def=-

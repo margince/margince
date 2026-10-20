@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -202,19 +203,48 @@ func (s *Store) SetClaimTaskTx(ctx context.Context, tx pgx.Tx, claimID, taskID i
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
 		return err
 	}
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return err
+	}
+	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, taskID); err != nil {
+		return err
+	}
+	if _, err := storekit.LockRow(ctx, tx, "activity", taskID, storekit.LiveOnly); err != nil {
+		return err
+	}
+	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, taskID); err != nil {
+		return err
+	}
 	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claimID, storekit.LiveOnly); err != nil {
 		return err
 	}
 	var contactID ids.UUID
+	var currentTask *ids.UUID
 	var status string
-	err := tx.QueryRow(ctx, `
-		UPDATE conversation_claim SET task_activity_id = $2
-		 WHERE id = $1 AND task_activity_id IS NULL
-		RETURNING contact_id, status`, claimID, taskID).Scan(&contactID, &status)
-	if errors.Is(err, pgx.ErrNoRows) {
+	if err := tx.QueryRow(ctx, `SELECT contact_id, task_activity_id, status FROM conversation_claim WHERE id = $1`, claimID).Scan(&contactID, &currentTask, &status); err != nil {
+		return fmt.Errorf("read claim task relation: %w", err)
+	}
+	if err := auth.EnsureWritableLive(ctx, tx, "contact", contactID); err != nil {
+		return err
+	}
+	if err := ensureClaimContentVisible(ctx, tx, claimID); err != nil {
+		return err
+	}
+	if currentTask != nil {
 		return nil
 	}
+	var done bool
+	err := tx.QueryRow(ctx, `SELECT is_done FROM activity WHERE id = $1 AND kind = 'task'`, taskID).Scan(&done)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return apperrors.ErrNotFound
+	}
 	if err != nil {
+		return fmt.Errorf("read recipient task status: %w", err)
+	}
+	if done && status == claimStatusOpen {
+		return apperrors.ErrConflict
+	}
+	if _, err := tx.Exec(ctx, `UPDATE conversation_claim SET task_activity_id = $2 WHERE id = $1`, claimID, taskID); err != nil {
 		return fmt.Errorf("link the claim to its task: %w", err)
 	}
 	auditID, err := storekit.Audit(ctx, tx, "update", "contact", contactID,

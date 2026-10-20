@@ -266,7 +266,14 @@ func (s *Service) operationalLanes(
 				// it — aging out unseen would undo the transport's one
 				// promise.
 				unread, err := s.notices.Unread(ctx, doneCap)
-				return renderEach(unread, noticeItem), err
+				if err != nil {
+					return nil, err
+				}
+				kept, err := s.noticesWithoutDecisions(ctx, unread)
+				if err == nil {
+					out.NoticesMoreAvailable = new(len(unread) >= doneCap)
+				}
+				return renderEach(kept, noticeItem), err
 			},
 			into: &out.Notices, count: &out.Counts.Notices,
 		},

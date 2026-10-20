@@ -20206,6 +20206,27 @@ func (e WorklistOwnerKind) Valid() bool {
 	}
 }
 
+// Defines values for WorklistPromiseRecipientStatus.
+const (
+	WorklistPromiseRecipientStatusDismissed WorklistPromiseRecipientStatus = "dismissed"
+	WorklistPromiseRecipientStatusDone      WorklistPromiseRecipientStatus = "done"
+	WorklistPromiseRecipientStatusOpen      WorklistPromiseRecipientStatus = "open"
+)
+
+// Valid indicates whether the value is a known member of the WorklistPromiseRecipientStatus enum.
+func (e WorklistPromiseRecipientStatus) Valid() bool {
+	switch e {
+	case WorklistPromiseRecipientStatusDismissed:
+		return true
+	case WorklistPromiseRecipientStatusDone:
+		return true
+	case WorklistPromiseRecipientStatusOpen:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistReachSource.
 const (
 	WorklistReachSourceAiWorkHealth        WorklistReachSource = "ai_work_health"
@@ -26705,6 +26726,12 @@ type Attention struct {
 	// not read notices.
 	Notices *[]AttentionItem `json:"notices,omitempty"`
 
+	// NoticesMoreAvailable The unread notice scan reached its limit before equivalent decision
+	// announcements were folded. When true, an empty notices array does
+	// not prove that no other notices remain. Absent when notices could
+	// not be read. Counts describe the returned items, not the unread total.
+	NoticesMoreAvailable *bool `json:"notices_more_available,omitempty"`
+
 	// Planned Work already agreed: overdue first, then due today.
 	Planned []AttentionItem `json:"planned"`
 
@@ -27079,6 +27106,9 @@ type AttentionItem struct {
 	// BOTH sides — the queue's own both-sides-visible rule decides that, and an
 	// item the reader may not fully see is not offered as a decision at all.
 	Pair *AttentionPair `json:"pair,omitempty"`
+
+	// PromiseRecipients Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable.
+	PromiseRecipients *[]WorklistPromiseRecipient `json:"promise_recipients,omitempty"`
 
 	// QuietDays How many days a deal or a relationship has been idle, where the producing lane
 	// measures one. Sent by `deal_at_risk` and `relationship_decay`.
@@ -52467,6 +52497,9 @@ type WorklistItem struct {
 	// rather than a gap: a dedupe pair genuinely asks the reader to choose.
 	PrimaryAction *WorklistItemPrimaryAction `json:"primary_action,omitempty"`
 
+	// PromiseRecipients Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable.
+	PromiseRecipients *[]WorklistPromiseRecipient `json:"promise_recipients,omitempty"`
+
 	// Recipients Everyone a `meeting_follow_up` row's follow-up goes to: the contacts the meeting
 	// is filed under, then the attendees its calendar entry resolved to a contact this
 	// caller may read. Best first, each once; `contact` is the first of them. Sent on
@@ -52787,6 +52820,17 @@ type WorklistPlanCoverageMember struct {
 	// UserId Whose plan this entry is about.
 	UserId openapi_types.UUID `json:"user_id"`
 }
+
+// WorklistPromiseRecipient A visible recipient's own claim on a shared deliverable. Other recipients may be outside the reader's scope.
+type WorklistPromiseRecipient struct {
+	ClaimId     openapi_types.UUID             `json:"claim_id"`
+	ContactId   openapi_types.UUID             `json:"contact_id"`
+	DisplayName string                         `json:"display_name"`
+	Status      WorklistPromiseRecipientStatus `json:"status"`
+}
+
+// WorklistPromiseRecipientStatus defines model for WorklistPromiseRecipient.Status.
+type WorklistPromiseRecipientStatus string
 
 // WorklistReach What one source contributed, in numbers that say what they counted.
 //

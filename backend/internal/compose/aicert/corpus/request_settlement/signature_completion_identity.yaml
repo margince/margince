@@ -1,0 +1,51 @@
+name: signature_completion_requires_the_matching_document
+task: request_settlement
+site: request_settle
+source: hand_authored
+sanitized_by: hand_authored
+fixture:
+  - messages:
+      - direction: inbound
+        subject: Signature requested
+        body: Please sign envelope ALPHA-104, the services agreement.
+      - direction: inbound
+        subject: Signature completed
+        body: Envelope ALPHA-104 is fully signed by all required parties. Your signing is complete.
+  - messages:
+      - direction: inbound
+        subject: Signature requested
+        body: Please sign envelope BETA-205, the services agreement.
+      - direction: inbound
+        subject: Signature requested
+        body: Envelope ALPHA-104 is fully signed by all required parties.
+  - messages:
+      - direction: inbound
+        subject: Signature requested
+        body: Please sign the services agreement.
+      - direction: inbound
+        subject: Signature completed
+        body: A services agreement has been signed.
+  - messages:
+      - direction: inbound
+        subject: Signature requested
+        body: Please sign envelope ALPHA-104, the services agreement.
+      - direction: inbound
+        subject: Signature progress
+        body: The other signer has signed envelope ALPHA-104. Your signature is still required.
+expect:
+  outcome: accepted
+  answer:
+    - verdict: settled
+    - verdict: still_owed
+    - verdict: unsure
+    - verdict: still_owed
+  rubric: >
+    Only the first request is settled. The second completion names a different
+    envelope and leaves BETA-205 outstanding. The third supplies no identity
+    that establishes which agreement was signed, so it is unsure. The fourth
+    explicitly leaves our signature outstanding. Shared subjects and another
+    signer's progress must never close our request.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

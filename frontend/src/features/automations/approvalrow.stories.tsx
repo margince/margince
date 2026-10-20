@@ -312,3 +312,50 @@ export const StaleCommercialDecision: Story = {
     />
   ),
 };
+
+export const AdditionalRecipient: Story = {
+  render: () => (
+    <Row
+      subject={approval({
+        kind: "commitment_task",
+        summary: "Send the recording",
+        proposed_change: {
+          summary: "Send the recording",
+          existing_task_id: "33333333-3333-4333-8333-333333333333",
+        },
+        preview: {
+          version: 1,
+          state: "ready",
+          reviewer_reason: "record_authority",
+          effects: ["attach_task_recipients"],
+          changes: [
+            {
+              field: "existing_task_id",
+              before: {
+                kind: "reference",
+                text: "Human wording for the recording",
+                entity_type: "activity",
+                entity_id: "33333333-3333-4333-8333-333333333333",
+              },
+              after: {
+                kind: "reference",
+                text: "Human wording for the recording",
+                entity_type: "activity",
+                entity_id: "33333333-3333-4333-8333-333333333333",
+              },
+            },
+            {
+              field: "recipients",
+              before: { kind: "empty", text: "" },
+              after: { kind: "text", text: "Pat Buyer" },
+            },
+          ],
+        },
+      })}
+    />
+  ),
+};
+export const AdditionalRecipientDark: Story = {
+  ...AdditionalRecipient,
+  globals: { theme: "dark" },
+};

@@ -351,6 +351,8 @@ export function ApprovalRow({
               : "brief.approval.approve",
           ),
           locale,
+          1,
+          typeof approval.proposed_change?.existing_task_id === "string",
         ),
       }}
       decided={decided}
@@ -392,6 +394,8 @@ export function ApprovalRow({
               plural,
               t("decision.approveEdited"),
               locale,
+              1,
+              typeof approval.proposed_change?.existing_task_id === "string",
             )}
             fields={strings}
             draft={draft}

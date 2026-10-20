@@ -16,6 +16,9 @@ export const de = {
   "approval.preview.effects": "Weitere Änderungen",
   "approval.preview.correspondence":
     "Verknüpfte Korrespondenz als Geschäftsbriefe einordnen.",
+  "approval.preview.attachRecipients":
+    "Diese Kontakte mit der bestehenden Aufgabe verknüpfen.",
+  "approval.preview.existingTask": "Bestehende Aufgabe",
   "approval.preview.delivery":
     "Bei berechtigten verknüpften Projekten die Umsetzung starten.",
   "approval.preview.minorUnits":
@@ -2645,7 +2648,7 @@ export const de = {
   "approval.field.to_stage": "Nach",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus Transkript erstellen",
-  "approval.kind.commitment_task": "Aufgabe für eine Zusage erstellen",
+  "approval.kind.commitment_task": "Aufgabenzusage",
   "approval.kind.fx_rate_proposal": "Wechselkurse aktualisieren",
   "approval.kind.disqualify_lead": "Lead disqualifizieren",
   "approval.kind.demote_lead": "Lead-Qualifizierung zurücknehmen",
@@ -14541,6 +14544,10 @@ export const de = {
   "worklist.untitled.dedupe_candidate": "Mögliche doppelte Datensätze",
   "worklist.untitled.task": "Aufgabe ohne Titel",
   "worklist.untitled.brief_item": "Zu prüfender Deal",
+  "worklist.recipients.label": "Empfangende",
+  "worklist.recipients.open": "Steht noch aus",
+  "worklist.recipients.done": "Erledigt",
+  "worklist.recipients.dismissed": "Verworfen",
   "worklist.untitled.conversation_claim": "Deine Zusage",
   "worklist.untitled.customer_waiting": "Kontakt wartet auf Antwort",
   "worklist.untitled.lead_response": "Lead ohne Titel",

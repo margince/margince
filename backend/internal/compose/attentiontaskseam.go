@@ -10,17 +10,26 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	"github.com/margince/margince/backend/internal/compose/attention"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // attentionTasks reads open tasks through the activities store. A task is an
 // activity of kind `task`, so this is the same read the task queue makes.
-type attentionTasks struct{ store *activities.Store }
+type attentionTasks struct {
+	store  *activities.Store
+	claims *contacts.Store
+}
 
 // openTasksDueBy is the ONE narrowing the lane's page and its count share.
 //
@@ -132,6 +141,33 @@ func (t attentionTasks) markReadOnly(ctx context.Context, tasks []attention.Task
 	}
 	for i := range tasks {
 		tasks[i].ReadOnly = !writable[tasks[i].ID]
+	}
+	return t.withRecipients(ctx, tasks, named)
+}
+
+func (t attentionTasks) withRecipients(ctx context.Context, tasks []attention.Task, named []ids.UUID) ([]attention.Task, error) {
+	if t.claims == nil {
+		return tasks, nil
+	}
+	claims, err := t.claims.ClaimsOnTasks(ctx, named)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return tasks, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	recipients := make(map[ids.UUID][]crmcontracts.WorklistPromiseRecipient)
+	for _, claim := range claims {
+		if claim.Task == nil {
+			continue
+		}
+		recipients[*claim.Task] = append(recipients[*claim.Task], crmcontracts.WorklistPromiseRecipient{
+			ClaimId: openapi_types.UUID(claim.ID), ContactId: openapi_types.UUID(claim.Contact), DisplayName: claim.DisplayName,
+			Status: crmcontracts.WorklistPromiseRecipientStatus(claim.Status),
+		})
+	}
+	for i := range tasks {
+		tasks[i].Recipients = recipients[tasks[i].ID]
 	}
 	return tasks, nil
 }
