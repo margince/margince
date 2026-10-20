@@ -236,7 +236,10 @@ function HeadlineTile({
     count !== undefined;
   const delta = counted ? difference(figure, review) : undefined;
   const pipeline = figure.key === "won" ? review.pipeline : undefined;
-  const lines = counted ? [reading.detail] : [reading.value, reading.detail];
+  // Counted, the reading's qualifier goes under the figure; not counted, its
+  // words do, then the reason.
+  const first = counted ? reading.detail : reading.value;
+  const second = counted ? undefined : reading.detail;
   return (
     <div className="brief-report-tile">
       <span className="brief-report-tile-label">{figure.label}</span>
@@ -267,11 +270,12 @@ function HeadlineTile({
           />
         </span>
       )}
-      {lines.filter(Boolean).map((line) => (
-        <span className="brief-report-figure-line t-caption" key={line}>
-          {line}
-        </span>
-      ))}
+      {first && (
+        <span className="brief-report-figure-line t-caption">{first}</span>
+      )}
+      {second && (
+        <span className="brief-report-figure-line t-caption">{second}</span>
+      )}
       {delta !== undefined && (
         <span className="brief-report-figure-delta">
           <Badge tone={deltaTone(delta)}>

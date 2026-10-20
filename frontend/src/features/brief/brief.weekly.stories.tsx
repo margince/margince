@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useLocale, useT } from "../../i18n";
@@ -114,25 +114,15 @@ function InTheWeeksPanel({ children }: Readonly<{ children: ReactNode }>) {
   return <Panel title={t("brief.panel.weekly")}>{children}</Panel>;
 }
 
-/**
- * The outlook with its dial live.
- *
- * `OutlookPanel` holds no horizon of its own — the two surfaces that draw it
- * (this one and the team's week) each keep their own, so a reader who turns one
- * does not turn the other — which means a frame has to hold it or the control
- * would be a control that cannot move.
- */
+/** The forecast table, a column per period the review froze. */
 function OutlookFrame({
   outlook,
 }: Readonly<{ outlook: NonNullable<WeeklyReview["outlook"]> }>) {
   const { locale } = useLocale();
-  const [horizon, setHorizon] = useState("quarter");
   return (
     <OutlookPanel
       outlook={outlook}
       locale={locale}
-      horizon={horizon}
-      onHorizon={setHorizon}
       onOpenForecast={() => openAnalyticsSection("forecast")}
     />
   );
