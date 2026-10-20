@@ -13610,7 +13610,7 @@ export const vi = {
   "sched.day.tomorrow": "Ngày mai",
   "sched.group.closedCount_one": "Đã gửi hoặc đã thu hồi ({count})",
   "sched.group.closedCount_other": "Đã gửi hoặc đã thu hồi ({count})",
-  "sched.moved": "Đã đổi sang {when}.",
+  "sched.moved": "Đã đổi tin nhắn sang {when}",
   "sched.undo": "Hoàn tác",
   "sched.moveFor": "Đổi giờ gửi: {subject}",
   "sched.withdrawFor": "Thu hồi: {subject}",

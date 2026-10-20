@@ -32,6 +32,8 @@ export function useScheduledSends() {
       return unwrap(await api.GET("/scheduled-sends", {}), t);
     },
     staleTime: 60_000,
+    // A message can be held while the rep is on another page.
+    refetchInterval: 60_000,
   });
 }
 

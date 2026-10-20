@@ -13946,7 +13946,7 @@ export const en = {
   "sched.day.tomorrow": "Tomorrow",
   "sched.group.closedCount_one": "Sent or withdrawn ({count})",
   "sched.group.closedCount_other": "Sent or withdrawn ({count})",
-  "sched.moved": "Moved to {when}.",
+  "sched.moved": "Message moved to {when}",
   "sched.undo": "Undo",
   "sched.moveFor": "Reschedule: {subject}",
   "sched.withdrawFor": "Withdraw: {subject}",

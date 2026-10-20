@@ -319,6 +319,7 @@ export function useComposeSend({
       // A scheduled send may need undoing, so the toast opens the queue. An
       // `open` verb keeps it until dismissed, door and all.
       if (result.scheduled) {
+        queryClient.invalidateQueries({ queryKey: ["scheduled-sends"] });
         toast.show(t("compose.scheduledQueued"), {
           action: {
             kind: "open",

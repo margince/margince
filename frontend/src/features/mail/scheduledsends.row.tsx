@@ -103,9 +103,10 @@ function Moment({
   const t = useT();
   const { locale } = useLocale();
   const zone = renderZone(send.scheduled_tz, readerZone);
-  const when = timeOnly
-    ? formatTimeOfDay(send.scheduled_at, locale, zone)
-    : formatDateTime(send.scheduled_at, locale, zone);
+  const when =
+    timeOnly && zone === readerZone
+      ? formatTimeOfDay(send.scheduled_at, locale, zone)
+      : formatDateTime(send.scheduled_at, locale, zone);
   return (
     <span className="scheduledsends-moment">
       {when}

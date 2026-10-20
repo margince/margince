@@ -13,7 +13,13 @@ import { scheduleFields } from "./composesend";
 import type { ScheduledSend } from "./scheduledqueue";
 
 /** The write: the row's identity and version travel with the new moment. */
-export type Move = Readonly<{ id: string; version: number; at: string }>;
+export type Move = Readonly<{
+  id: string;
+  version: number;
+  at: string;
+  /** The zone to store; the reader's own when absent. */
+  tz?: string;
+}>;
 
 /**
  * Rescheduling in one press: the composer's own three moments, and a picker.

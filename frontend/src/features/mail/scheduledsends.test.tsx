@@ -227,6 +227,14 @@ it("names the zone a moment was picked in when it is not the reader's", async ()
   expect(await screen.findByText(new RegExp(`in ${OTHER_ZONE}`))).toBeTruthy();
 });
 
+// A row under a day heading is read on the reader's calendar. In another zone
+// the same instant can sit on a different date, so the row keeps its date.
+it("keeps the date on a row picked in another zone", async () => {
+  mount([{ ...WAITING, scheduled_tz: OTHER_ZONE }]);
+  const moment = await screen.findByText(new RegExp(`in ${OTHER_ZONE}`));
+  expect(moment.parentElement?.textContent).toMatch(/\d{2}\/\d{2}\/\d{4}/);
+});
+
 it("stays silent about the zone when it is the reader's own", async () => {
   mount([WAITING]);
   await screen.findByText("The renewal quote");

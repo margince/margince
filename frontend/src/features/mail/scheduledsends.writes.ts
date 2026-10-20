@@ -21,7 +21,7 @@ export function useQueueWrites(readerZone: string, onWithdrawn: () => void) {
   const queryClient = useQueryClient();
 
   const move = useMutation({
-    mutationFn: async ({ id, version, at }: Move) => {
+    mutationFn: async ({ id, version, at, tz }: Move) => {
       unwrap(
         await api.PATCH("/scheduled-sends/{id}", {
           // Through `ifMatch`, not a hand-written header: it is the one spelling of
@@ -31,7 +31,7 @@ export function useQueueWrites(readerZone: string, onWithdrawn: () => void) {
           // The zone travels as a name beside the instant. So a message scheduled
           // across a DST boundary arrives at the wall time the rep meant, not an
           // hour either side.
-          body: { scheduled_at: at, scheduled_tz: readerZone },
+          body: { scheduled_at: at, scheduled_tz: tz ?? readerZone },
         }),
         t,
       );
@@ -75,6 +75,7 @@ export function useQueueWrites(readerZone: string, onWithdrawn: () => void) {
                   id: send.id,
                   version: current.version,
                   at: send.scheduled_at,
+                  tz: send.scheduled_tz,
                 });
               }
             }),
