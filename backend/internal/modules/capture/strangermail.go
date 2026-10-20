@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/captureorigin"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -94,6 +95,10 @@ func (s SelfSet) namesSeat(address string) bool {
 // senderWasStrangerTx reports whether, strictly before `before`, the sender
 // was no live contact and the workspace had never written to them. A later
 // contact or reply must not make an earlier mail look known.
+//
+// A contact capture minted from mail does not count: a stranger's first mail
+// would otherwise make their second one known. A human's, an import's or an
+// agent's contact does.
 func senderWasStrangerTx(ctx context.Context, tx pgx.Tx, sender string, before time.Time) (bool, error) {
 	spellings := addressSpellings(sender)
 	var contact bool
@@ -101,8 +106,9 @@ func senderWasStrangerTx(ctx context.Context, tx pgx.Tx, sender string, before t
 		SELECT EXISTS (
 		  SELECT 1 FROM contact_email pe JOIN contact p ON p.id = pe.contact_id
 		   WHERE pe.email = ANY($1::text[]) AND pe.archived_at IS NULL
-		     AND p.archived_at IS NULL AND p.merged_into_id IS NULL AND p.created_at < $2)`,
-		spellings, before).Scan(&contact)
+		     AND p.archived_at IS NULL AND p.merged_into_id IS NULL AND p.created_at < $2
+		     AND NOT (`+captureorigin.ContactSQL("$3", "$4", "$5")+`))`,
+		spellings, before, captureorigin.VerdictActor, captureorigin.AcceptActor, captureorigin.VCardSource).Scan(&contact)
 	if err != nil {
 		return false, fmt.Errorf("capture: asking whether a sender is a contact: %w", err)
 	}

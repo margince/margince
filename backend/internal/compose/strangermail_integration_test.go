@@ -265,6 +265,20 @@ func TestWhoCountsAsAStrangerIsJudgedAtTheMailsArrival(t *testing.T) {
 		t.Error("a live contact's mail was recorded as a stranger's")
 	}
 
+	// A contact capture minted from the sender's first mail leaves them a stranger.
+	if _, err := o.e.Contacts.CreateContact(threadConnectorCtx(o.e, o.owner), contacts.CreateContactInput{
+		FullName: "Rae Repeat", Source: "gmail",
+		Emails: []contacts.ContactEmailInput{{Email: "rae@example.com", EmailType: "work", IsPrimary: true}},
+	}); err != nil {
+		t.Fatalf("minting the contact as capture does: %v", err)
+	}
+	if n := o.count(t, `SELECT count(*) FROM contact WHERE full_name = 'Rae Repeat' AND captured_by LIKE 'connector:%'`); n != 1 {
+		t.Fatal("the minted contact does not carry capture's provenance; the case needs it")
+	}
+	if second := o.requestFrom(t, o.strangerMail("rae@example.com", "Again", o.now.Add(time.Hour))); !o.strangerFact(t, second) {
+		t.Error("a contact capture minted from a stranger's mail made their next mail known")
+	}
+
 	eightDaysAgo := o.now.Add(-8 * 24 * time.Hour)
 	o.contact(t, "Lou Later", "lou@example.com")
 	if laterContact := o.requestFrom(t, o.strangerMail("lou@example.com", "First note", eightDaysAgo)); !o.strangerFact(t, laterContact) {
