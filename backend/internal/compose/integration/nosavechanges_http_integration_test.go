@@ -202,3 +202,43 @@ func TestADealRoomExpirySetToItsStoredValueChangesNothing(t *testing.T) {
 	assertSaveChangesNothing(t, e, "PUT", "/v1/deal-rooms/"+roomID+"/expiry",
 		AnyMap{"expires_at": "2027-01-15T12:00:00+02:00"}, roomID, set.Version)
 }
+
+// The forms send every field and every replace-set on every save, so a save of
+// an untouched record carries the lot.
+func TestTheFullFormPayloadOfAnUntouchedRecordChangesNothing(t *testing.T) {
+	e := setupRelationships(t)
+
+	var contact versionedWire
+	form := AnyMap{
+		"full_name": "Edge Contact", "first_name": "Edge", "last_name": "Contact", "title": "Head of Sales",
+		"social": AnyMap{"linkedin": "https://www.linkedin.com/in/edge"},
+		"emails": []AnyMap{
+			{"email": "edge@example.test", "email_type": "work", "is_primary": true, "position": 0},
+			{"email": "edge.home@example.test", "email_type": "personal", "is_primary": false, "position": 1},
+		},
+		"phones": []AnyMap{{"phone": "+4930123456", "phone_type": "mobile", "is_primary": true, "position": 0}},
+	}
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+e.contactID, form,
+		map[string]string{"If-Match": "1"}, &contact); status != http.StatusOK {
+		t.Fatalf("filling in the contact form -> %d", status)
+	}
+	t.Run("contact", func(t *testing.T) {
+		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/contacts/"+e.contactID, form, e.contactID, contact.Version)
+	})
+
+	var company versionedWire
+	companyForm := AnyMap{
+		"display_name": "Edge Company", "legal_name": "Edge Company GmbH", "industry": "Software",
+		"description":        "Builds edges",
+		"domains":            []AnyMap{{"domain": "edge.example", "is_primary": true}, {"domain": "edge.test", "is_primary": false}},
+		"relationship_types": []string{"customer", "investor"},
+		"address":            AnyMap{"city": "Berlin", "country": "DE"},
+	}
+	if status := e.Call(t, "PATCH", "/v1/companies/"+e.companyID, companyForm,
+		map[string]string{"If-Match": "1"}, &company); status != http.StatusOK {
+		t.Fatalf("filling in the company form -> %d", status)
+	}
+	t.Run("company", func(t *testing.T) {
+		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/companies/"+e.companyID, companyForm, e.companyID, company.Version)
+	})
+}
