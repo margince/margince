@@ -236,6 +236,7 @@ var retired = gatekit.Waive(map[string]string{
 	// the pages about colleagues with a licence, and it is the one surface in
 	// this tree where the plural still means the humans who work here.
 	"frontend/src/features/settings/settingscatalog.ts":              "the seats settings group",
+	"frontend/src/features/settings/settingscatalog.business.ts":     "the seats settings group",
 	"frontend/src/app/shell.stories.tsx":                             "the seats settings group",
 	"frontend/src/features/settings/settings-chrome.test.tsx":        "the seats settings group",
 	"frontend/src/features/settings/license.stories.tsx":             "a page under the seats settings group",

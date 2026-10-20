@@ -122,8 +122,8 @@ function useStamp(stamps: readonly (string | undefined)[]): string | undefined {
 }
 
 /**
- * The system health page. Extracted from settings.tsx, which is frozen at its
- * length, for the reason the privacy lanes were.
+ * The system health page, in a `settings.<page>.tsx` companion as the privacy
+ * lanes are, so settings.tsx stays the dispatch.
  */
 export function SystemHealthPage() {
   const t = useT();
