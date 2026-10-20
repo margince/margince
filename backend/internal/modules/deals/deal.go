@@ -315,6 +315,11 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	if err := moneyPairError(resultingAmount, resultingArr, resultingCurrency); err != nil {
 		return err
 	}
+	if _, amountSet := after[amountField]; amountSet {
+		if err := amountSetError(resultingAmount); err != nil {
+			return err
+		}
+	}
 
 	// Keyed on what the PATCH carries for the MONEY, not on what the request
 	// supplied and not on the forecast fields at large: a request that re-sent

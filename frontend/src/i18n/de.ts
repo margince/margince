@@ -6575,6 +6575,8 @@ export const de = {
     "Dieser Import läuft bereits. Er endet von selbst und diese Seite aktualisiert sich.",
   "import.reason.undo_failed":
     "Der Datensatz konnte nicht zurückgenommen werden.",
+  "import.reason.amount_negative":
+    "„{value}“ liegt unter null, und der Betrag eines Deals darf das nicht sein.",
   "import.reason.author_too_long":
     "Die Angabe, wer den Eintrag erstellt hat, ist länger als {max} Zeichen.",
   "import.reason.cannot_create":

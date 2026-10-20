@@ -48,9 +48,6 @@ func moneyPairError(amount, arr *int64, currency *string) error {
 		return &AmountCurrencyPairError{Missing: currencyField}
 	}
 	if amount != nil {
-		if *amount < 0 {
-			return &NegativeAmountError{}
-		}
 		// One spelling of "a valid amount+currency" (values.Money), the same
 		// rule the schema CHECKs repeat.
 		if _, err := values.NewMoney(*amount, *currency); err != nil {
@@ -235,6 +232,20 @@ func (e *ArrCurrencyConflictError) Error() string {
 // them to undo the change they meant to make.
 func (e *ArrCurrencyConflictError) FieldFault() (field, code, message string) {
 	return arrField, "arr_currency_conflict", e.Error()
+}
+
+// amountSetError refuses a one-off amount below zero, for a write that SETS
+// the amount: a create, an edit that carries one, an accepted suggestion.
+//
+// Kept apart from moneyPairError on purpose. That rule answers on the
+// resulting row, so judging the sign there would also refuse an edit of the
+// name or owner on an older deal that already holds a negative amount, and
+// the refusal would read the amount back to a caller whose field mask hides it.
+func amountSetError(amount *int64) error {
+	if amount != nil && *amount < 0 {
+		return &NegativeAmountError{}
+	}
+	return nil
 }
 
 // NegativeAmountError refuses a one-off amount below zero. A negative deal

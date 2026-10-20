@@ -157,6 +157,9 @@ func (s *Store) readyDealCreate(ctx context.Context, in CreateDealInput) (bornDe
 	if err := moneyPairError(in.AmountMinor, in.ExpectedArrMinor, in.Currency); err != nil {
 		return bornDeal{}, err
 	}
+	if err := amountSetError(in.AmountMinor); err != nil {
+		return bornDeal{}, err
+	}
 	attribution, err := birthAttribution(in)
 	if err != nil {
 		return bornDeal{}, err

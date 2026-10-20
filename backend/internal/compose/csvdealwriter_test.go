@@ -21,6 +21,7 @@ func TestEveryRefusalTheStoreGivesADealRowIsASkipNotAFailedRun(t *testing.T) {
 		want migration.ReasonCode
 	}{
 		"a past close date":               {&deals.PastCloseDateError{}, migration.ReasonCloseDatePast},
+		"an amount below zero":            {&deals.NegativeAmountError{}, migration.ReasonAmountNegative},
 		"another pipeline":                {&deals.StagePipelineMismatchError{}, migration.ReasonDealPipelineFixed},
 		"no lost reason":                  {&deals.LostReasonRequiredError{}, migration.ReasonLostReasonMissing},
 		"no exchange rate":                {&deals.MissingFxRateError{From: "VND", To: "EUR"}, migration.ReasonFxRateMissing},

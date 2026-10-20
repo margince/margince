@@ -13,13 +13,12 @@ type fieldFaulter interface {
 }
 
 func TestADealAmountBelowZeroIsRefusedAtTheAmountField(t *testing.T) {
-	eur := "EUR"
 	for name, amount := range map[string]int64{"one below": -1, "far below": -500000} {
 		t.Run(name, func(t *testing.T) {
-			err := moneyPairError(&amount, nil, &eur)
+			err := amountSetError(&amount)
 			var fault fieldFaulter
 			if !errors.As(err, &fault) {
-				t.Fatalf("moneyPairError(%d) = %v, want a field fault", amount, err)
+				t.Fatalf("amountSetError(%d) = %v, want a field fault", amount, err)
 			}
 			field, code, _ := fault.FieldFault()
 			if field != amountField || code != "amount_negative" {
@@ -30,10 +29,21 @@ func TestADealAmountBelowZeroIsRefusedAtTheAmountField(t *testing.T) {
 }
 
 func TestADealAmountOfZeroOrMoreIsLegal(t *testing.T) {
-	eur := "EUR"
 	for _, amount := range []int64{0, 1, 99999} {
-		if err := moneyPairError(&amount, nil, &eur); err != nil {
-			t.Fatalf("moneyPairError(%d) = %v, want nil", amount, err)
+		if err := amountSetError(&amount); err != nil {
+			t.Fatalf("amountSetError(%d) = %v, want nil", amount, err)
 		}
+	}
+	if err := amountSetError(nil); err != nil {
+		t.Fatalf("amountSetError(nil) = %v, a cleared amount sets nothing below zero", err)
+	}
+}
+
+// The pair rule answers on the resulting row, so it must not carry the sign
+// rule: an older deal that already holds a negative amount stays editable.
+func TestThePairRuleDoesNotJudgeTheSignOfAnAmountAlreadyOnTheRow(t *testing.T) {
+	eur, amount := "EUR", int64(-5)
+	if err := moneyPairError(&amount, nil, &eur); err != nil {
+		t.Fatalf("moneyPairError(-5, EUR) = %v, want nil", err)
 	}
 }

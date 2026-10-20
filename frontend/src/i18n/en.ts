@@ -6660,6 +6660,8 @@ export const en = {
   "import.reason.run_in_flight":
     "This import is already running. It finishes on its own and this page updates.",
   "import.reason.undo_failed": "The record could not be undone.",
+  "import.reason.amount_negative":
+    "“{value}” is below zero, and a deal’s amount cannot be.",
   "import.reason.author_too_long": "Author is longer than {max} characters.",
   "import.reason.cannot_create":
     "You cannot create {plural}, so the {plural} file is skipped.",

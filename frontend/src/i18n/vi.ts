@@ -6401,6 +6401,8 @@ export const vi = {
   "import.reason.run_in_flight":
     "Lần nhập này đang chạy. Nó tự hoàn tất và trang này tự cập nhật.",
   "import.reason.undo_failed": "Không thể hoàn tác bản ghi này.",
+  "import.reason.amount_negative":
+    "“{value}” nhỏ hơn 0, mà số tiền của deal thì không được âm.",
   "import.reason.author_too_long": "Tác giả dài hơn {max} ký tự.",
   "import.reason.cannot_create":
     "Bạn không có quyền tạo {plural} nên tệp {plural} bị bỏ qua.",

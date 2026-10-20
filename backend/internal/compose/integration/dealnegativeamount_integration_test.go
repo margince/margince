@@ -15,6 +15,8 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func namesAmountNegative(problem problemBody) bool {
@@ -74,4 +76,32 @@ func TestNoDoorLetsADealBeNegative(t *testing.T) {
 			t.Fatalf("the refused acceptance must leave the suggestion open: %d %+v", status, list)
 		}
 	})
+}
+
+// The sign rule judges the amount a write SETS. A deal that already holds a
+// negative amount stays editable on every other field.
+func TestADealAlreadyBelowZeroStaysEditableOnOtherFields(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	id := e.SeedDeal(t, "Older deal", pipeline, open, nil)
+	e.WsExec(t, `UPDATE deal SET amount_minor = -5, currency = 'EUR' WHERE id = $1`, id)
+
+	renamed := "Renamed"
+	dealID := ids.From[ids.DealKind](id)
+	got, err := e.Deals.UpdateDeal(e.Admin(), dealID, deals.UpdateDealInput{Name: &renamed})
+	if err != nil {
+		t.Fatalf("renaming a deal that holds a negative amount: %v", err)
+	}
+	if got.Name != renamed || got.AmountMinor == nil || *got.AmountMinor != -5 {
+		t.Fatalf("after the rename = %q amount %v, want the new name and the amount untouched", got.Name, got.AmountMinor)
+	}
+
+	same := int64(-5)
+	if _, err := e.Deals.UpdateDeal(e.Admin(), dealID, deals.UpdateDealInput{AmountMinor: &same}); err != nil {
+		t.Fatalf("re-sending the amount the deal already holds sets nothing: %v", err)
+	}
+	lower := int64(-6)
+	if _, err := e.Deals.UpdateDeal(e.Admin(), dealID, deals.UpdateDealInput{AmountMinor: &lower}); err == nil {
+		t.Fatal("moving a deal's amount to another negative figure must be refused")
+	}
 }
