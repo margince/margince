@@ -1,1 +1,1 @@
-export { ReviewActionsProvider } from "../app/reviewactions";
+export { ReviewActionsProvider } from "../App.reviewactions";
