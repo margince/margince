@@ -19,7 +19,8 @@ type poolPolicy struct {
 }
 
 // policyImage renders the settings a configuration save can change. Categories
-// and pools are sorted because the request carries them as a map.
+// and pools are sorted because the request carries them as a map. A pool row
+// with neither limit set carries no policy, so a request may leave it out.
 //
 //craft:ignore naked-any the image is the schemaless column map storekit compares
 func policyImage(c currentConfig) map[string]any {
@@ -27,6 +28,9 @@ func policyImage(c currentConfig) map[string]any {
 	slices.Sort(categories)
 	pools := make([]poolPolicy, 0, len(c.Budgets))
 	for _, b := range c.Budgets {
+		if b.MonthlyCeiling == nil && b.PauseBelowBalance == nil {
+			continue
+		}
 		pools = append(pools, poolPolicy{Pool: b.Pool, MonthlyCeiling: b.MonthlyCeiling, PauseBelowBalance: b.PauseBelowBalance})
 	}
 	slices.SortFunc(pools, func(a, b poolPolicy) int { return cmp.Compare(a.Pool, b.Pool) })

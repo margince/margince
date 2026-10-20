@@ -22,7 +22,7 @@ func TestAPolicyIsTheSameWhateverOrderAndBalanceItCarries(t *testing.T) {
 	}
 	sent := currentConfig{
 		Mode: "on_demand", Preset: "basic", Categories: []string{"phone", "email"},
-		Budgets: []PoolBudget{{Pool: "b"}, {Pool: "a", MonthlyCeiling: &ceiling, PauseBelowBalance: &pause}},
+		Budgets: []PoolBudget{{Pool: "a", MonthlyCeiling: &ceiling, PauseBelowBalance: &pause}},
 	}
 	if !configurationUnchanged(stored, sent) {
 		t.Error("the same policy in another order, without the reported balance, reads as changed")
