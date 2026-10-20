@@ -296,7 +296,7 @@ The old parts stay in two places, both by design:
 - **On the staging surfaces**, whose job is to set a proposal beside what is
   stored. The first is the approvals lane of the Worklist (`features/worklist/worklist.tsx`,
   `features/automations/approvalrow.tsx`). Then the confirm step of onboarding
-  (`features/onboarding/onboarding-conversation/confirm-card.tsx`,
+  (`features/onboarding/onboarding-conversation/confirm-card.row.tsx`,
   `features/onboarding/onboarding-company-form.tsx`) and the Company-context settings
   screen. Last are the record surfaces that show a single line about where a
   value comes from (`contacts.tsx`, `leads.tsx`, `consent.tsx`, `history.tsx`).

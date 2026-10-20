@@ -2,12 +2,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FINDING_EXPAND_EVENT, jumpToFindings } from "./entries";
 
-// The jump's actual contract, independent of any one row's own markup: a
-// collapsed row that wants its control focused (not merely scrolled to)
-// opts in by listening for `FINDING_EXPAND_EVENT` on its own
-// `[data-finding-id]` element and mounting its input in response —
-// confirm-card.tsx's FieldRow is the one caller that needs this today, but
-// nothing here depends on its internals.
+// The jump's contract, independent of any one row's own markup: a
+// collapsed row that wants its control focused (not merely scrolled to) opts
+// in. It listens for `FINDING_EXPAND_EVENT` on its own `[data-finding-id]`
+// element and mounts its input in response. confirm-card.row.tsx's FieldRow is
+// the one caller that needs this, but nothing here depends on its internals.
 
 function findingRow(id: string): HTMLLIElement {
   const row = document.createElement("li");

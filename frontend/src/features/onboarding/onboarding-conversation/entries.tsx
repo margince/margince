@@ -67,13 +67,12 @@ export function RevealText({ text }: Readonly<{ text: string }>) {
 // Matches the pulse animation length in conversation.css.
 const JUMP_PULSE_MS = 1600;
 
-// The contract a collapsed row opts into: dispatched at the exact element
-// carrying `data-finding-id` before this function looks for anything to
-// focus inside it, so a row that renders its control only once expanded
-// (confirm-card.tsx's FieldRow) gets the chance to open first. A row that
-// never listens — settled rows, a contact or fact entry with nothing to
-// edit — simply ignores it, and the fallback below still focuses the row
-// itself.
+// The contract a collapsed row opts into. It is dispatched at the element
+// carrying `data-finding-id` before this function looks for anything to focus
+// inside it. So a row that renders its control only once expanded
+// (confirm-card.row.tsx's FieldRow) gets the chance to open first. A row that
+// never listens ignores it: settled rows, or a contact or fact entry with
+// nothing to edit. The fallback below still focuses the row itself.
 export const FINDING_EXPAND_EVENT = "ob:expand-finding";
 
 // How long this function is willing to wait for a row's control to appear
