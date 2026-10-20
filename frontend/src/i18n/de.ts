@@ -178,6 +178,7 @@ export const de = {
   "reporting.publishDraft": "Entwurf veröffentlichen",
   "reporting.discardDraft": "Entwurf verwerfen",
   "reporting.versions": "Versionen",
+  "reporting.versionN": "Version {revision}",
   "reporting.savedBy": "Gespeichert von",
   "reporting.revisionState.draft": "Entwurf",
   "reporting.revisionState.published": "veröffentlicht",

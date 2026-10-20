@@ -172,6 +172,7 @@ export const en = {
   "reporting.publishDraft": "Publish draft",
   "reporting.discardDraft": "Discard draft",
   "reporting.versions": "Versions",
+  "reporting.versionN": "Version {revision}",
   "reporting.savedBy": "Saved by",
   "reporting.revisionState.draft": "draft",
   "reporting.revisionState.published": "published",

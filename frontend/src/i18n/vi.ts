@@ -186,6 +186,7 @@ export const vi = {
   "reporting.publishDraft": "Công bố bản nháp",
   "reporting.discardDraft": "Bỏ bản nháp",
   "reporting.versions": "Các phiên bản",
+  "reporting.versionN": "Phiên bản {revision}",
   "reporting.savedBy": "Lưu bởi",
   "reporting.revisionState.draft": "bản nháp",
   "reporting.revisionState.published": "đã công bố",
