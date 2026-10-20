@@ -1,8 +1,4 @@
 import type { ReactNode } from "react";
-import {
-  type ReviewActions,
-  ReviewActionsContext,
-} from "../components/reviewactions";
 import { QueryGate } from "../design-system/querystates";
 import { NewDealAction } from "../features/companies/companyactions";
 import { CompanyDealPicker } from "../features/deals/companydealpicker";
@@ -10,6 +6,7 @@ import { DealSuggestionCard } from "../features/deals/dealsuggestion";
 import { useDealSuggestions } from "../features/deals/dealsuggestions.queries";
 import { OpenActivityDrawer } from "../features/voice-knowledge/activitydrawer";
 import { useT } from "../i18n";
+import { type ReviewActions, ReviewActionsContext } from "../lib/reviewactions";
 
 function CoveredDealSuggestion({
   companyId,
