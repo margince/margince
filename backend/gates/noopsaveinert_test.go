@@ -23,6 +23,10 @@ package gates
 
 import (
 	"go/ast"
+	"go/parser"
+	"go/token"
+	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -121,8 +125,13 @@ func fileReachesTheClientUpdateSeam(path string, file *ast.File) bool {
 }
 
 // reachesSeamAndAsks reads one function, closures included: the update body of
-// most stores is the closure handed to the transaction runner.
+// most stores is the closure handed to the transaction runner. A patch counts as
+// asked only when the same variable was asked Empty or Moved earlier in the
+// source than the call that applies it, so an unrelated method of that name, or
+// a question asked after the write, does not satisfy the census.
 func reachesSeamAndAsks(fn *ast.FuncDecl) (reaches, asks bool) {
+	asked := map[string]token.Pos{}
+	var seams []*ast.CallExpr
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
 		call, isCall := n.(*ast.CallExpr)
 		if !isCall {
@@ -130,16 +139,171 @@ func reachesSeamAndAsks(fn *ast.FuncDecl) (reaches, asks bool) {
 		}
 		switch {
 		case calledMethodIn(call, clientUpdateSeams):
-			reaches = true
+			seams = append(seams, call)
 		case calledMethodIn(call, emptinessQuestions):
-			asks = true
+			if name := patchVariable(call); name != "" {
+				if first, seen := asked[name]; !seen || call.Pos() < first {
+					asked[name] = call.Pos()
+				}
+			}
 		}
 		return true
 	})
-	return reaches, asks
+	if len(seams) == 0 {
+		return false, false
+	}
+	for _, seam := range seams {
+		first, seen := asked[patchVariable(seam)]
+		if !seen || first > seam.Pos() {
+			return true, false
+		}
+	}
+	return true, true
+}
+
+// patchVariable is the variable a method is called on, or empty when the
+// receiver is not a plain variable.
+func patchVariable(call *ast.CallExpr) string {
+	selector, isSelector := call.Fun.(*ast.SelectorExpr)
+	if !isSelector {
+		return ""
+	}
+	ident, isIdent := selector.X.(*ast.Ident)
+	if !isIdent {
+		return ""
+	}
+	return ident.Name
 }
 
 func calledMethodIn(call *ast.CallExpr, names map[string]bool) bool {
 	selector, isSelector := call.Fun.(*ast.SelectorExpr)
 	return isSelector && names[selector.Sel.Name]
+}
+
+const noOpProbeFile = "internal/compose/integration/nosavechanges_http_integration_test.go"
+
+// unprobedSaveRoutes ratifies the versioned save routes no HTTP probe sends a
+// save of the stored values yet, keyed by `METHOD path`. The follow-up names
+// them all, so the register shrinks as each is probed or ruled out.
+var unprobedSaveRoutes = gatekit.Waive(map[string]string{
+	"PATCH /activities/{id}/audience":                 "margince#8133 probes it",
+	"PATCH /companies/{id}/facts/{factKey}":           "margince#8133 probes it",
+	"PATCH /companies/{id}/profile-fields/{field}":    "margince#8133 probes it",
+	"PATCH /contracts/{id}":                           "margince#8133 probes it",
+	"PATCH /custom-fields/{id}":                       "margince#8133 probes it",
+	"PATCH /deal-rooms/{id}":                          "margince#8133 probes it",
+	"PATCH /deal-rooms/{id}/documents/{documentId}":   "margince#8133 probes it",
+	"PATCH /provider-connections/{provider}":          "held by TestAConfigurationSaveOfTheStoredSettingsChangesNothing at the store, which needs a registered provider the HTTP harness lacks",
+	"PATCH /roles/{key}":                              "margince#8133 probes it",
+	"PATCH /roles/{key}/objects/{object}":             "margince#8133 probes it",
+	"PATCH /scheduled-sends/{id}":                     "margince#8133 probes it",
+	"PATCH /signals/{id}":                             "margince#8133 probes it",
+	"PATCH /stages/{id}":                              "margince#8133 probes it",
+	"PATCH /stages/{id}/exit-criteria/{criterion_id}": "margince#8133 probes it",
+	"PATCH /views/{id}":                               "margince#8133 probes it",
+	"PATCH /voice-profiles/{id}":                      "margince#8133 probes it",
+	"PATCH /voice-profiles/{id}/sources/{sourceId}":   "margince#8133 probes it",
+	"PATCH /automations/{id}":                         "held by the automation store tests at the store; margince#8133 adds the HTTP probe",
+	"PATCH /offers/{id}":                              "margince#8133 probes it",
+	"PATCH /projects/{id}":                            "margince#8133 probes it",
+	"PUT /mail-drafts":                                "margince#8133 probes it",
+	"PUT /pipelines/{id}/stage-order":                 "margince#8133 probes it",
+})
+
+// TestEveryVersionedSaveRouteIsProbedForANoOp derives the client save routes
+// from the contract: every PATCH or PUT taking If-Match. Each is probed by an
+// HTTP test that re-sends its record's own values, or is ratified above. The
+// probe table is read from the integration file so a probe cannot be listed
+// without a test of that name existing.
+func TestEveryVersionedSaveRouteIsProbedForANoOp(t *testing.T) {
+	t.Parallel()
+	defer unprobedSaveRoutes.AssertAllMatched(t)
+
+	probed := noOpProbedRoutesFromSource(t)
+	contract := map[string]bool{}
+	for _, route := range conditionalOperations(t, ifMatchContractDocument(t)) {
+		if strings.HasPrefix(route, "PATCH ") || strings.HasPrefix(route, "PUT ") {
+			contract[route] = true
+		}
+	}
+	if len(contract) < 30 {
+		t.Fatalf("found %d versioned save route(s) in the contract, want at least 30: the census has stopped "+
+			"finding them", len(contract))
+	}
+	var routes []string
+	for route := range contract {
+		routes = append(routes, route)
+	}
+	sort.Strings(routes)
+	for _, route := range routes {
+		if _, ok := probed[route]; ok {
+			continue
+		}
+		if !unprobedSaveRoutes.Waived(t, route) {
+			t.Errorf("%s: no HTTP probe sends it a save of the values its record holds.\n"+
+				"\tAdd it to noOpProbedRoutes in %s with the test that probes it, or ratify it in "+
+				"unprobedSaveRoutes with why a repeat save cannot move the version.", route, noOpProbeFile)
+		}
+	}
+	for route := range probed {
+		if !contract[route] {
+			t.Errorf("%s is probed but the contract has no such versioned route: correct the table", route)
+		}
+	}
+}
+
+// noOpProbedRoutesFromSource reads the probe table out of the integration test
+// file, and checks each value names a test function declared beside it.
+func noOpProbedRoutesFromSource(t *testing.T) map[string]string {
+	t.Helper()
+	file, err := parser.ParseFile(token.NewFileSet(), noOpProbeFile, nil, 0)
+	if err != nil {
+		t.Fatalf("reading the probe table: %v", err)
+	}
+	declared := map[string]bool{}
+	for _, decl := range file.Decls {
+		if fn, ok := decl.(*ast.FuncDecl); ok {
+			declared[fn.Name.Name] = true
+		}
+	}
+	out := map[string]string{}
+	ast.Inspect(file, func(n ast.Node) bool {
+		spec, ok := n.(*ast.ValueSpec)
+		if !ok || len(spec.Names) != 1 || spec.Names[0].Name != "noOpProbedRoutes" || len(spec.Values) != 1 {
+			return true
+		}
+		table, ok := spec.Values[0].(*ast.CompositeLit)
+		if !ok {
+			return true
+		}
+		for _, element := range table.Elts {
+			pair, ok := element.(*ast.KeyValueExpr)
+			if !ok {
+				continue
+			}
+			route, routeErr := stringLiteralOf(pair.Key)
+			test, testErr := stringLiteralOf(pair.Value)
+			if routeErr != nil || testErr != nil {
+				t.Errorf("the probe table holds an entry that is not a pair of string literals")
+				continue
+			}
+			if !declared[test] {
+				t.Errorf("%s names %s, which %s does not declare", route, test, noOpProbeFile)
+			}
+			out[route] = test
+		}
+		return false
+	})
+	if len(out) == 0 {
+		t.Fatalf("%s declares no noOpProbedRoutes table, or it is empty", noOpProbeFile)
+	}
+	return out
+}
+
+func stringLiteralOf(expr ast.Expr) (string, error) {
+	lit, ok := expr.(*ast.BasicLit)
+	if !ok || lit.Kind != token.STRING {
+		return "", strconv.ErrSyntax
+	}
+	return strconv.Unquote(lit.Value)
 }

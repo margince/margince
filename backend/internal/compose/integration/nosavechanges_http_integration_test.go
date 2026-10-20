@@ -203,6 +203,78 @@ func TestADealRoomExpirySetToItsStoredValueChangesNothing(t *testing.T) {
 		AnyMap{"expires_at": "2027-01-15T12:00:00+02:00"}, roomID, set.Version)
 }
 
+// noOpProbedRoutes names the test that sends each listed route a save of the
+// values its record already holds. The gate that reads it derives the routes from
+// the contract, so a new versioned PATCH or PUT has to join this table or be
+// ratified there with a reason.
+//
+// gatekit:fixture the routes an HTTP probe covers and the test that probes each, expected data checked against the contract
+var noOpProbedRoutes = map[string]string{
+	"PATCH /contacts/{id}":              "TestTheFullFormPayloadOfAnUntouchedRecordChangesNothing",
+	"PATCH /companies/{id}":             "TestTheFullFormPayloadOfAnUntouchedRecordChangesNothing",
+	"PUT /companies/{id}/partner":       "TestASaveOfTheStoredValuesChangesNothing",
+	"PATCH /relationships/{id}":         "TestASaveOfTheStoredValuesChangesNothing",
+	"PATCH /tags/{id}":                  "TestASaveOfTheStoredValuesChangesNothing",
+	"PATCH /webhook-subscriptions/{id}": "TestAWebhookSubscriptionSavedAsItAlreadyIsChangesNothing",
+	"PUT /deal-rooms/{id}/expiry":       "TestADealRoomExpirySetToItsStoredValueChangesNothing",
+	"PUT /offer-templates/{id}":         "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /products/{id}":              "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /activities/{id}":            "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /leads/{id}":                 "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /deals/{id}":                 "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
+}
+
+func TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing(t *testing.T) {
+	e := setupRelationships(t)
+
+	t.Run("offer template", func(t *testing.T) {
+		var tpl versionedWire
+		body := AnyMap{"name": "Standard", "locale": "en-US", "is_default": false, "layout": AnyMap{"footer": "Thanks"}}
+		if status := e.Call(t, "POST", "/v1/offer-templates", body, nil, &tpl); status != http.StatusCreated {
+			t.Fatalf("creating the template -> %d", status)
+		}
+		assertSaveChangesNothing(t, e.AppEnv, "PUT", "/v1/offer-templates/"+tpl.ID, body, tpl.ID, tpl.Version)
+	})
+	t.Run("product", func(t *testing.T) {
+		var product versionedWire
+		body := AnyMap{"name": "Seat", "currency": "EUR", "unit_price_minor": 1000, "default_tax_rate": 19, "source": "manual"}
+		if status := e.Call(t, "POST", "/v1/products", body, nil, &product); status != http.StatusCreated {
+			t.Fatalf("creating the product -> %d", status)
+		}
+		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/products/"+product.ID,
+			AnyMap{"name": "Seat", "currency": "EUR", "unit_price_minor": 1000, "default_tax_rate": 19.0}, product.ID, product.Version)
+	})
+	t.Run("activity", func(t *testing.T) {
+		var note versionedWire
+		if status := e.Call(t, "POST", "/v1/activities", AnyMap{
+			"kind": "note", "source": "manual", "subject": "Call recap", "body": "We agreed on Friday.",
+			"links": []AnyMap{{"entity_type": "contact", "entity_id": e.contactID}},
+		}, nil, &note); status != http.StatusCreated {
+			t.Fatalf("logging the note -> %d", status)
+		}
+		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/activities/"+note.ID,
+			AnyMap{"subject": "Call recap", "body": "We agreed on Friday."}, note.ID, note.Version)
+	})
+	t.Run("lead", func(t *testing.T) {
+		var lead versionedWire
+		if status := e.Call(t, "POST", "/v1/leads", AnyMap{"full_name": "Probe Lead", "source": "manual"}, nil, &lead); status != http.StatusCreated {
+			t.Fatalf("creating the lead -> %d", status)
+		}
+		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/leads/"+lead.ID,
+			AnyMap{"full_name": "Probe Lead"}, lead.ID, lead.Version)
+	})
+	t.Run("deal", func(t *testing.T) {
+		stages := apptest.DiscoverSeededPipeline(t, e.AppEnv)
+		dealID := apptest.CreateOpenDeal(t, e.AppEnv, stages)
+		var deal versionedWire
+		if status := e.Call(t, "GET", "/v1/deals/"+dealID, nil, nil, &deal); status != http.StatusOK {
+			t.Fatalf("reading the deal -> %d", status)
+		}
+		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/deals/"+dealID,
+			AnyMap{"name": "Acme rollout", "amount_minor": 250_000_00, "currency": "EUR"}, dealID, deal.Version)
+	})
+}
+
 // The forms send every field and every replace-set on every save, so a save of
 // an untouched record carries the lot.
 func TestTheFullFormPayloadOfAnUntouchedRecordChangesNothing(t *testing.T) {

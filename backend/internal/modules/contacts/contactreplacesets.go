@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -30,18 +31,45 @@ func applyContactReplaceSets(
 	if in.Social == nil && in.Emails == nil && in.Phones == nil {
 		return false, nil
 	}
+	if err := auth.EnsureChangeable(ctx, tx, "contact", id.UUID); err != nil {
+		return false, err
+	}
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return false, err
+	}
 	nested, err := tx.Begin(ctx)
 	if err != nil {
 		return false, fmt.Errorf("open the contact replace-sets: %w", err)
 	}
-	changed, err := replaceAndCompare(ctx, nested, id, current, in, active)
+	moved, err := func() (bool, error) {
+		if in.Social != nil {
+			if err := replaceContactSocial(ctx, nested, workspaceID(ctx), id, in.Social); err != nil {
+				return false, err
+			}
+		}
+		if in.Emails != nil || in.Phones != nil {
+			if err := replaceContactEmails(ctx, nested, workspaceID(ctx), id, in.Source, by, in.Emails); err != nil {
+				return false, err
+			}
+			if err := replaceContactPhones(ctx, nested, id, in.Source, by, in.Phones); err != nil {
+				return false, err
+			}
+		}
+		after, err := readContact(ctx, nested, id, storekit.LiveOnly, active)
+		if err != nil {
+			return false, fmt.Errorf("read the contact after its replace-sets: %w", err)
+		}
+		_, differs := storekit.ChangedColumns(contactSetsImage(current), contactSetsImage(after))
+		return len(differs) > 0, nil
+	}()
 	if err != nil {
 		if rbErr := nested.Rollback(ctx); rbErr != nil {
 			return false, errors.Join(err, rbErr)
 		}
 		return false, err
 	}
-	if !changed {
+	if !moved {
 		if err := nested.Rollback(ctx); err != nil {
 			return false, fmt.Errorf("withdraw the replace-sets that changed nothing: %w", err)
 		}
@@ -51,35 +79,6 @@ func applyContactReplaceSets(
 		return false, fmt.Errorf("commit the contact replace-sets: %w", err)
 	}
 	return true, nil
-}
-
-func replaceAndCompare(
-	ctx context.Context, tx pgx.Tx, id ids.ContactID, current crmcontracts.Contact, in UpdateContactInput,
-	active []fieldcatalog.Column,
-) (bool, error) {
-	if in.Social != nil {
-		if err := replaceContactSocial(ctx, tx, workspaceID(ctx), id, in.Social); err != nil {
-			return false, err
-		}
-	}
-	if in.Emails != nil || in.Phones != nil {
-		by, err := storekit.CapturedBy(ctx)
-		if err != nil {
-			return false, err
-		}
-		if err := replaceContactEmails(ctx, tx, workspaceID(ctx), id, in.Source, by, in.Emails); err != nil {
-			return false, err
-		}
-		if err := replaceContactPhones(ctx, tx, id, in.Source, by, in.Phones); err != nil {
-			return false, err
-		}
-	}
-	after, err := readContact(ctx, tx, id, storekit.LiveOnly, active)
-	if err != nil {
-		return false, fmt.Errorf("read the contact after its replace-sets: %w", err)
-	}
-	_, moved := storekit.ChangedColumns(contactSetsImage(current), contactSetsImage(after))
-	return len(moved) > 0, nil
 }
 
 // contactSetsImage holds what a replace-set can change, without the row ids and
