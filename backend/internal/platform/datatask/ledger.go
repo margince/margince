@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -69,7 +68,7 @@ func New(pool *pgxpool.Pool, tasks []Task, release string, now func() time.Time,
 	notifyFailed func(context.Context, pgx.Tx, Progress) error,
 ) (*Engine, error) {
 	if pool == nil || now == nil || notifyFailed == nil {
-		return nil, fmt.Errorf("data task executor requires a database, clock and failure notice writer")
+		return nil, errors.New("data task executor requires a database, clock and failure notice writer")
 	}
 	catalog, err := Catalog(tasks)
 	if err != nil {
@@ -151,7 +150,7 @@ func (e *Engine) seedStep(ctx context.Context, tx pgx.Tx, task Task, step Step) 
 		return err
 	}
 	if estimate < 0 || estimate > estimateCap {
-		return fmt.Errorf("data task estimate exceeded its declared bound")
+		return errors.New("data task estimate exceeded its declared bound")
 	}
 	_, err = tx.Exec(ctx, `UPDATE data_task_run SET estimate=@estimate,estimate_capped=@capped,estimated_at=@now
  WHERE task_id=@task AND step=@step AND version=@version`, pgx.NamedArgs{paramEstimate: estimate, paramCapped: capped, paramNow: e.now(), paramTask: p.TaskID, paramStep: p.Step, paramVersion: p.Version})

@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -108,13 +107,13 @@ func (e *Engine) runBatch(ctx context.Context, tx pgx.Tx, picked selection) erro
 
 func validateBatch(in Progress, out BatchOut) error {
 	if out.Scanned < 0 || out.Changed < 0 || out.Changed > out.Scanned || out.Scanned > in.BatchLimit {
-		return fmt.Errorf("data task batch exceeded its declared bound")
+		return errors.New("data task batch exceeded its declared bound")
 	}
 	if len(out.Cursor) > 0 && !json.Valid(out.Cursor) {
-		return fmt.Errorf("data task cursor must be JSON")
+		return errors.New("data task cursor must be JSON")
 	}
 	if !out.Done && (out.Scanned == 0 || len(out.Cursor) == 0 || bytes.Equal(in.Cursor, out.Cursor)) {
-		return fmt.Errorf("data task batch made no cursor progress")
+		return errors.New("data task batch made no cursor progress")
 	}
 	return nil
 }
@@ -140,7 +139,7 @@ func (e *Engine) commitProgress(ctx context.Context, tx pgx.Tx, p Progress, out 
 		return err
 	}
 	if tag.RowsAffected() != 1 {
-		return fmt.Errorf("data task progress changed before commit")
+		return errors.New("data task progress changed before commit")
 	}
 	return nil
 }
