@@ -5522,7 +5522,8 @@ export const de = {
   "analytics.q.filters": "Filter",
   "analytics.q.groupBy": "Gruppieren nach",
   "analytics.q.companyField": "{label} (Unternehmen)",
-  "analytics.q.fieldCoverage": "{label} hat einen Wert bei {count} von {total} lesbaren Deals.",
+  "analytics.q.fieldCoverage":
+    "{label} hat einen Wert bei {count} von {total} lesbaren Deals.",
   "analytics.q.limited_one":
     "Nur die erste Gruppe wird angezeigt. Füge einen Filter hinzu, um die Frage einzugrenzen.",
   "analytics.q.limited_other":

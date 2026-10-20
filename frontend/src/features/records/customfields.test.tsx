@@ -953,9 +953,7 @@ describe("the reporting setting on the field table", () => {
     wrap(
       <FieldTable
         object="company"
-        fields={[
-          field({ object: "company", label: "Tier", type: "picklist" }),
-        ]}
+        fields={[field({ object: "company", label: "Tier", type: "picklist" })]}
         canEdit
         meUserId="u1"
         onRename={() => {}}

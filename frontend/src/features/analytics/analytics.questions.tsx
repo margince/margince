@@ -313,7 +313,10 @@ function SavedQuestion({
   });
   // A run asked before a field was renamed reads under today's name; a field
   // no longer reportable falls back to its column name.
-  const fieldLabels = customLabels(t, useAnalyticsSchema().data?.entities ?? []);
+  const fieldLabels = customLabels(
+    t,
+    useAnalyticsSchema().data?.entities ?? [],
+  );
   const link = `${globalThis.location.origin}${globalThis.location.pathname}${routeHash(
     { screen: "analytics", id: "questions", id2: runId },
   )}`;
