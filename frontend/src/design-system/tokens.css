@@ -550,7 +550,9 @@
 
   /* Type. Every size, leading and paragraph spacing below is rem, on the
      browser's own 1rem = 16px, so a reader who enlarges that moves the whole
-     document rather than the parts that were typed in px. `--fontBody` and
+     document rather than the parts that were typed in px. The display sizes
+     are the one exception: a clamp() between two rem values, with a line
+     height that has no unit. `--fontBody` and
      `--paragraphSpacing` are the pair app.css declares on `body`; every other
      level is chosen by the context it is used in. */
 

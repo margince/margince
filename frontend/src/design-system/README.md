@@ -33,8 +33,9 @@ read its own `rem` against the size it was setting, and shrink the whole page.
 Everything inherits, so there is no size, line height, weight or neutral ink to pick where a component is used.
 `src/mcp-apps/view.css` carries the same shape for the views that stand alone.
 
-Every type token in `tokens.css` is one `font` shorthand in rem. It holds weight, size, line height
-and face in one value, so nobody can use half of a level. The weight in it is itself a token
+Every type token in `tokens.css` is one `font` shorthand in rem, apart from the display sizes below:
+their size is a `clamp()` between two rem values, and their line height has no unit. It holds weight,
+size, line height and face in one value, so nobody can use half of a level. The weight in it is itself a token
 (`var(--fontWeightBold)`). A `font` shorthand takes it, because the browser puts in the `var()`
 value before it checks the grammar of the shorthand.
 
