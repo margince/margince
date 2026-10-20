@@ -83,8 +83,8 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 			if err := storekit.EnsureIfMatch(ctx, tx, projectObject, id.UUID, in.IfVersion); err != nil {
 				return err
 			}
-			out = current
-			return nil
+			out, err = s.maskProjectForCaller(ctx, tx, current)
+			return err
 		}
 		if err := p.ApplyGuarded(ctx, tx, projectObject, id.UUID, in.IfVersion); err != nil {
 			if constraint, ok := storekit.CheckViolation(err); ok {
