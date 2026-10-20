@@ -14015,7 +14015,7 @@ export const vi = {
   "worklist.because.bcc_from_stranger":
     "gửi Bcc cho bạn từ một địa chỉ bạn chưa từng trao đổi thư",
   "worklist.because.link_off_sender":
-    "liên kết dẫn đến một trang khác với trang của bên gửi",
+    "liên kết dẫn đến một trang web khác với trang web của bên gửi",
   "worklist.because.read_only": "bạn có thể xem nhưng không thể thay đổi",
   "worklist.above.pin": "Xếp trên việc kế tiếp vì bạn đã ghim.",
   "worklist.above.level": "Xếp trên việc kế tiếp vì khẩn cấp hơn.",
