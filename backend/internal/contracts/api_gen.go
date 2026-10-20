@@ -8724,6 +8724,7 @@ const (
 	DataTaskProgressBlockedReasonNewerReleaseRequired DataTaskProgressBlockedReason = "newer_release_required"
 	DataTaskProgressBlockedReasonPaused               DataTaskProgressBlockedReason = "paused"
 	DataTaskProgressBlockedReasonRetryWait            DataTaskProgressBlockedReason = "retry_wait"
+	DataTaskProgressBlockedReasonReviewRequired       DataTaskProgressBlockedReason = "review_required"
 	DataTaskProgressBlockedReasonWaitingForWorker     DataTaskProgressBlockedReason = "waiting_for_worker"
 )
 
@@ -8741,6 +8742,8 @@ func (e DataTaskProgressBlockedReason) Valid() bool {
 	case DataTaskProgressBlockedReasonPaused:
 		return true
 	case DataTaskProgressBlockedReasonRetryWait:
+		return true
+	case DataTaskProgressBlockedReasonReviewRequired:
 		return true
 	case DataTaskProgressBlockedReasonWaitingForWorker:
 		return true
@@ -10756,6 +10759,27 @@ func (e HistoryEdgeOtherEntityType) Valid() bool {
 	case HistoryEdgeOtherEntityTypeDeal:
 		return true
 	case HistoryEdgeOtherEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HomeRepairTaskAction.
+const (
+	HomeRepairTaskActionArchiveAutomaticReminder HomeRepairTaskAction = "archive_automatic_reminder"
+	HomeRepairTaskActionHumanReview              HomeRepairTaskAction = "human_review"
+	HomeRepairTaskActionLeaveCurrent             HomeRepairTaskAction = "leave_current"
+)
+
+// Valid indicates whether the value is a known member of the HomeRepairTaskAction enum.
+func (e HomeRepairTaskAction) Valid() bool {
+	switch e {
+	case HomeRepairTaskActionArchiveAutomaticReminder:
+		return true
+	case HomeRepairTaskActionHumanReview:
+		return true
+	case HomeRepairTaskActionLeaveCurrent:
 		return true
 	default:
 		return false
@@ -38311,6 +38335,26 @@ type HistoryEdge struct {
 // HistoryEdgeOtherEntityType defines model for HistoryEdge.OtherEntityType.
 type HistoryEdgeOtherEntityType string
 
+// HomeRepairReview defines model for HomeRepairReview.
+type HomeRepairReview struct {
+	AsOf        time.Time        `json:"as_of"`
+	Digest      string           `json:"digest"`
+	Limit       int              `json:"limit"`
+	RuleVersion string           `json:"rule_version"`
+	Tasks       []HomeRepairTask `json:"tasks"`
+}
+
+// HomeRepairTask defines model for HomeRepairTask.
+type HomeRepairTask struct {
+	Action  HomeRepairTaskAction `json:"action"`
+	Id      openapi_types.UUID   `json:"id"`
+	Reason  string               `json:"reason"`
+	Version int64                `json:"version"`
+}
+
+// HomeRepairTaskAction defines model for HomeRepairTask.Action.
+type HomeRepairTaskAction string
+
 // ImportColumn One column of the uploaded file, described well enough to map it without opening the file elsewhere.
 type ImportColumn struct {
 	// FillRate Non-empty values ÷ rows profiled. A column at 0.02 is usually a mapping mistake waiting to happen, and the number is the only way to see that before committing.
@@ -53866,6 +53910,18 @@ type SendMessageParams struct {
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
+// ActivateHomeRepairJSONBody defines parameters for ActivateHomeRepair.
+type ActivateHomeRepairJSONBody struct {
+	Review  HomeRepairReview `json:"review"`
+	Version int64            `json:"version"`
+}
+
+// PreviewHomeRepairJSONBody defines parameters for PreviewHomeRepair.
+type PreviewHomeRepairJSONBody struct {
+	After *openapi_types.UUID `json:"after,omitempty"`
+	Limit int                 `json:"limit"`
+}
+
 // ResetDataJSONBody defines parameters for ResetData.
 type ResetDataJSONBody struct {
 	// Confirmation Must equal the company name exactly.
@@ -60268,6 +60324,12 @@ type UpdateActivityReviewTemplateJSONRequestBody = UpdateActivityReviewTemplateR
 
 // ControlDataTaskJSONRequestBody defines body for ControlDataTask for application/json ContentType.
 type ControlDataTaskJSONRequestBody = DataTaskControl
+
+// ActivateHomeRepairJSONRequestBody defines body for ActivateHomeRepair for application/json ContentType.
+type ActivateHomeRepairJSONRequestBody ActivateHomeRepairJSONBody
+
+// PreviewHomeRepairJSONRequestBody defines body for PreviewHomeRepair for application/json ContentType.
+type PreviewHomeRepairJSONRequestBody PreviewHomeRepairJSONBody
 
 // ResetDataJSONRequestBody defines body for ResetData for application/json ContentType.
 type ResetDataJSONRequestBody ResetDataJSONBody
@@ -72530,6 +72592,12 @@ type ServerInterface interface {
 	// Which composed units are handing the core records it cannot express.
 	// (GET /admin/extension-ingest-health)
 	GetExtensionIngestHealth(w http.ResponseWriter, r *http.Request)
+	// Activate exactly the reviewed automatic Home work.
+	// (POST /admin/home-repair/activate)
+	ActivateHomeRepair(w http.ResponseWriter, r *http.Request)
+	// Review a bounded page of automatic Home work.
+	// (POST /admin/home-repair/preview)
+	PreviewHomeRepair(w http.ResponseWriter, r *http.Request)
 	// What the background system is holding, and whose work failed.
 	// (GET /admin/job-health)
 	GetJobHealth(w http.ResponseWriter, r *http.Request)
@@ -75242,6 +75310,18 @@ func (_ Unimplemented) ControlDataTask(w http.ResponseWriter, r *http.Request) {
 // Which composed units are handing the core records it cannot express.
 // (GET /admin/extension-ingest-health)
 func (_ Unimplemented) GetExtensionIngestHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Activate exactly the reviewed automatic Home work.
+// (POST /admin/home-repair/activate)
+func (_ Unimplemented) ActivateHomeRepair(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Review a bounded page of automatic Home work.
+// (POST /admin/home-repair/preview)
+func (_ Unimplemented) PreviewHomeRepair(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -81888,6 +81968,46 @@ func (siw *ServerInterfaceWrapper) GetExtensionIngestHealth(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetExtensionIngestHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ActivateHomeRepair operation middleware
+func (siw *ServerInterfaceWrapper) ActivateHomeRepair(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ActivateHomeRepair(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewHomeRepair operation middleware
+func (siw *ServerInterfaceWrapper) PreviewHomeRepair(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewHomeRepair(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -117019,6 +117139,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/extension-ingest-health", wrapper.GetExtensionIngestHealth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/home-repair/activate", wrapper.ActivateHomeRepair)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/home-repair/preview", wrapper.PreviewHomeRepair)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/job-health", wrapper.GetJobHealth)

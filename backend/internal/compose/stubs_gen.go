@@ -167,6 +167,14 @@ func (stubs) GetExtensionIngestHealth(w nethttp.ResponseWriter, r *nethttp.Reque
 	httperr.NotImplemented(w, r, "GetExtensionIngestHealth")
 }
 
+func (stubs) ActivateHomeRepair(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ActivateHomeRepair")
+}
+
+func (stubs) PreviewHomeRepair(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewHomeRepair")
+}
+
 func (stubs) GetJobHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetJobHealth")
 }

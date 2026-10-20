@@ -615,6 +615,8 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/activities/{id}/send-message":                                 {Op: "sendMessage", Access: "tool", Tool: "send_message", RecordType: "activity", Tier: "auto_execute", Scope: "send"},
 	"POST /v1/activities/{id}/transcript-proposals":                         {Op: "readTranscriptForNextSteps", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/admin/data-tasks/control":                                     {Op: "controlDataTask", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/admin/home-repair/activate":                                   {Op: "activateHomeRepair", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/admin/home-repair/preview":                                    {Op: "previewHomeRepair", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/admin/reporting/pause":                                        {Op: "pauseReportingSchedules", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/admin/reset-data":                                             {Op: "resetData", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/ai-model-rates":                                               {Op: "setAiModelRate", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

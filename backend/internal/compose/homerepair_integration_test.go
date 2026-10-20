@@ -78,7 +78,7 @@ func TestReviewedRepairArchivesOnlyProvenUntouchedAutomaticWork(t *testing.T) {
 			}
 			version := candidates[0].Version
 			err = e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
-				return e.Activities.ArchiveActivityTx(e.Admin(), tx, id, &version, activities.OnlyPristineAutomaticTask(), activities.WithArchiveReason("historical_automatic_work"))
+				return e.Activities.ArchiveActivityTx(e.Admin(), tx, id, &version, activities.OnlyPristineAutomaticTask(), activities.WithArchiveReason("historical_automatic_work", homeRepairVersion))
 			})
 			if state != "pristine" {
 				if !errors.Is(err, apperrors.ErrConflict) {

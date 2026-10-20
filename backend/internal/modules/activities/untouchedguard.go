@@ -28,6 +28,7 @@ type archiveOptions struct {
 	untouchedSince *time.Time
 	pristineTask   bool
 	reason         string
+	ruleVersion    string
 }
 
 // NotTouchedByHumanSince refuses the archive when a colleague has acted on the
@@ -42,8 +43,8 @@ func OnlyPristineAutomaticTask() ArchiveOption {
 }
 
 // WithArchiveReason keeps a reviewed correction's reason beside the ordinary archive audit.
-func WithArchiveReason(reason string) ArchiveOption {
-	return func(o *archiveOptions) { o.reason = reason }
+func WithArchiveReason(reason, ruleVersion string) ArchiveOption {
+	return func(o *archiveOptions) { o.reason, o.ruleVersion = reason, ruleVersion }
 }
 
 func collectArchiveOptions(opts []ArchiveOption) archiveOptions {

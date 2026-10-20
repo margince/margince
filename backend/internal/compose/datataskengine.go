@@ -17,7 +17,7 @@ import (
 )
 
 func newDataTaskEngine(pool *pgxpool.Pool, release string, now func() time.Time) (*datatask.Engine, error) {
-	return datatask.New(pool, dataTaskCatalog(now), release, now, dataTaskFailureNotice(pool))
+	return datatask.New(pool, append(dataTaskCatalog(now), homeRepairDataTask(pool)), release, now, dataTaskFailureNotice(pool))
 }
 
 func dataTaskFailureNotice(pool *pgxpool.Pool) func(context.Context, pgx.Tx, datatask.Progress) error {

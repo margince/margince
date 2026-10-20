@@ -763,6 +763,62 @@ paths:
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
 
+  /admin/home-repair/preview:
+    post:
+      tags: [Identity]
+      operationId: previewHomeRepair
+      security: [{cookieAuth: []}]
+      x-agent-access: human-only
+      summary: Review a bounded page of automatic Home work.
+      description: Requires data_task:read and each record's content permissions. This operation changes no work.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [limit]
+              properties:
+                limit: {type: integer, minimum: 1, maximum: 1000}
+                after: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Exact reviewed identities, dispositions and rule version. Use the last identity to read the next page.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/HomeRepairReview'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /admin/home-repair/activate:
+    post:
+      tags: [Identity]
+      operationId: activateHomeRepair
+      security: [{cookieAuth: []}]
+      x-agent-access: human-only
+      summary: Activate exactly the reviewed automatic Home work.
+      description: Requires data_task:update. The review expires after fifteen minutes; changed records or rules require another preview.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [version, review]
+              properties:
+                version: {type: integer, format: int64, minimum: 1}
+                review: {$ref: '#/components/schemas/HomeRepairReview'}
+      responses:
+        '204': {description: The bounded reviewed run was activated.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /admin/job-health:
     get:
       tags: [Identity]
@@ -52664,6 +52720,31 @@ components:
         refused: { type: integer, description: Records this check refused in the window. }
         last_refused_at: { type: string, format: date-time }
 
+    HomeRepairReview:
+      type: object
+      additionalProperties: false
+      required: [tasks, digest, rule_version, limit, as_of]
+      properties:
+        tasks:
+          type: array
+          maxItems: 1000
+          items: {$ref: '#/components/schemas/HomeRepairTask'}
+        digest: {type: string, minLength: 64, maxLength: 64}
+        rule_version: {type: string}
+        limit: {type: integer, minimum: 0, maximum: 1000}
+        as_of: {type: string, format: date-time}
+    HomeRepairTask:
+      type: object
+      additionalProperties: false
+      required: [id, version, action, reason]
+      properties:
+        id: {type: string, format: uuid}
+        version: {type: integer, format: int64}
+        action:
+          type: string
+          enum: [archive_automatic_reminder, human_review, leave_current]
+        reason: {type: string}
+
     DataTaskControl:
       type: object
       additionalProperties: false
@@ -52706,7 +52787,7 @@ components:
         first_release: {type: string}
         blocked_reason:
           type: string
-          enum: [waiting_for_worker, newer_release_required, paused, failed, retry_wait, earlier_step, missing_prerequisite]
+          enum: [waiting_for_worker, newer_release_required, paused, failed, retry_wait, earlier_step, missing_prerequisite, review_required]
         blocked_by: {type: string}
         missing_prerequisites:
           type: array

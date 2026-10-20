@@ -51,6 +51,7 @@ type Progress struct {
 	BlockedReason        string
 	BlockedBy            string
 	MissingPrerequisites []string
+	Activation           *Activation
 }
 
 // Engine shares one ledger between worker execution and operator controls.
@@ -79,13 +80,13 @@ func New(pool *pgxpool.Pool, tasks []Task, release string, now func() time.Time,
 
 const progressColumns = `task_id, step, run_id, task_version, status, cursor, batch_limit,
  scanned, changed, batches, estimate, estimate_capped, estimated_at, consecutive_failures,
- last_error_class, next_attempt_at, last_progress_at, first_release, version`
+ last_error_class, next_attempt_at, last_progress_at, first_release, version, activation`
 
 func scanProgress(row pgx.Row) (Progress, error) {
 	var p Progress
 	err := row.Scan(&p.TaskID, &p.Step, &p.RunID, &p.TaskVersion, &p.Status, &p.Cursor, &p.BatchLimit,
 		&p.Scanned, &p.Changed, &p.Batches, &p.Estimate, &p.EstimateCapped, &p.EstimatedAt,
-		&p.ConsecutiveFailures, &p.LastErrorClass, &p.NextAttemptAt, &p.LastProgressAt, &p.FirstRelease, &p.Version)
+		&p.ConsecutiveFailures, &p.LastErrorClass, &p.NextAttemptAt, &p.LastProgressAt, &p.FirstRelease, &p.Version, &p.Activation)
 	return p, err
 }
 
@@ -140,6 +141,9 @@ func (e *Engine) seedStep(ctx context.Context, tx pgx.Tx, task Task, step Step) 
 	}
 	if err != nil {
 		return err
+	}
+	if task.Manual {
+		return nil
 	}
 	missing, err := missingRequirements(ctx, tx, task)
 	if err != nil || len(missing) > 0 {

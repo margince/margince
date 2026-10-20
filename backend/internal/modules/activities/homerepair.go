@@ -11,6 +11,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -29,6 +30,22 @@ type HomeRepairTask struct {
 
 // HomeRepairTasksTx keeps preview and repair on the same bounded, stable task order.
 func HomeRepairTasksTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]HomeRepairTask, error) {
+	return homeRepairTasksTx(ctx, tx, after, nil, limit)
+}
+
+// HomeRepairTaskTx applies the same content and eligibility scope to a reviewed identity.
+func HomeRepairTaskTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (HomeRepairTask, error) {
+	rows, err := homeRepairTasksTx(ctx, tx, ids.Nil, &id, 1)
+	if err != nil {
+		return HomeRepairTask{}, err
+	}
+	if len(rows) == 0 {
+		return HomeRepairTask{}, apperrors.ErrNotFound
+	}
+	return rows[0], nil
+}
+
+func homeRepairTasksTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact *ids.UUID, limit int) ([]HomeRepairTask, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -38,10 +55,11 @@ func HomeRepairTasksTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int
 	if err != nil {
 		return nil, err
 	}
+	exactArg := arg(exact)
 	query := storekit.SQLf(`SELECT a.id,a.version,a.source_activity_id,coalesce(a.source_system,''),coalesce(a.source_id,''),a.assignee_id,a.due_at,
  %s FROM activity a WHERE a.kind='task' AND NOT a.is_done AND a.archived_at IS NULL
- AND a.id > $%d AND (%s) AND (a.source_system=ANY($%d) OR %s)
- ORDER BY a.id LIMIT $%d`, pristineRepairTaskSQL("a"), arg(after), scope,
+ AND ($%d::uuid IS NULL OR a.id=$%d) AND a.id > $%d AND (%s) AND (a.source_system=ANY($%d) OR %s)
+ ORDER BY a.id LIMIT $%d`, pristineRepairTaskSQL("a"), exactArg, exactArg, arg(after), scope,
 		arg([]string{CommitmentTaskSource, EmailRequestTaskSource}), SystemMintedExpr("a"), arg(storekit.ClampLimit(&limit)))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {

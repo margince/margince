@@ -102,6 +102,9 @@ func reconcileDataTasks(ctx context.Context, engine *datatask.Engine) error {
 		return jobs.FaultContext(ctx, err)
 	}
 	for _, p := range progress {
+		if p.AwaitingReview() {
+			continue
+		}
 		if p.Status == datatask.Pending || p.Status == datatask.Running {
 			client, err := river.ClientFromContextSafely[pgx.Tx](ctx)
 			if err != nil {

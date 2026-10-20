@@ -123,3 +123,20 @@ func TestTaskActorKeepsTheTaskIdentity(t *testing.T) {
 		t.Fatalf("task actor=%+v, present=%v", actor, ok)
 	}
 }
+
+func TestUnactivatedManualWorkDoesNotHoldAutomaticCorrections(t *testing.T) {
+	manual, automatic := testTask("core/100_manual"), testTask("core/200_automatic")
+	manual.Manual, manual.ReviewVersion = true, "rules-1"
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	for _, status := range []string{Pending, Paused, Failed} {
+		stored := map[string]Progress{progressKey(manual.ID, "first"): {TaskVersion: 1, Status: status}}
+		got, _ := nextStep([]Task{manual, automatic}, stored, now)
+		if got == nil || got.task.ID != automatic.ID {
+			t.Fatalf("unactivated %s held automatic work", status)
+		}
+	}
+	stored := map[string]Progress{progressKey(manual.ID, "first"): {TaskVersion: 1, Status: Pending, Activation: &Activation{ReviewRequest: ReviewRequest{RuleVersion: "rules-0"}}}}
+	if _, block := nextStep([]Task{manual, automatic}, stored, now); block != "review_required" {
+		t.Fatalf("changed rules resumed without review: %s", block)
+	}
+}

@@ -70,6 +70,7 @@ func homeRepairTaskDecisionTx(ctx context.Context, tx pgx.Tx, task activities.Ho
 	switch reason {
 	case activities.CommitmentCurrent:
 		decision.Action = repairLeaveCurrent
+		decision.Reason = "current_work"
 	case activities.CommitmentHistorical, activities.CommitmentBeforeBaseline, activities.CommitmentMeetingCancelled:
 		decision.Action = repairArchiveReminder
 	}

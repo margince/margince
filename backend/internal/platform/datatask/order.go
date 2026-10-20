@@ -22,12 +22,18 @@ func nextStep(tasks []Task, progress map[string]Progress, now time.Time) (*selec
 	for _, task := range tasks {
 		for _, step := range task.Steps {
 			p, exists := progress[progressKey(task.ID, step.Name)]
+			if task.Manual && p.Activation == nil {
+				continue
+			}
 			if complete(task, p) {
 				continue
 			}
 			candidate := &selection{task: task, step: step, progress: p}
 			if !exists {
 				return candidate, "waiting_for_worker"
+			}
+			if task.Manual && (p.TaskVersion != task.Version || p.Activation.RuleVersion != task.ReviewVersion) {
+				return candidate, ReviewRequired
 			}
 			if p.TaskVersion > task.Version {
 				return candidate, "newer_release_required"

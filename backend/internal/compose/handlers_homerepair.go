@@ -1,0 +1,101 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package compose
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/buildinfo"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+func (h dataTaskHandlers) PreviewHomeRepair(w http.ResponseWriter, r *http.Request) {
+	if !admitOperator(w, r, "data_task", principal.ActionRead) {
+		return
+	}
+	var in crmcontracts.PreviewHomeRepairJSONBody
+	if !httperr.Decode(w, r, &in) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), healthReadTimeout)
+	defer cancel()
+	after := ids.Nil
+	if in.After != nil {
+		after = ids.UUID(*in.After)
+	}
+	var review datatask.ReviewRequest
+	err := InstallationDB(h.pool).Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		review, err = previewHomeRepairAfterTx(ctx, tx, after, in.Limit, time.Now())
+		return err
+	})
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out, err := homeRepairReviewWire(review)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+func (h dataTaskHandlers) ActivateHomeRepair(w http.ResponseWriter, r *http.Request) {
+	if !admitOperator(w, r, "data_task", principal.ActionUpdate) {
+		return
+	}
+	var in crmcontracts.ActivateHomeRepairJSONBody
+	if !httperr.Decode(w, r, &in) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), healthReadTimeout)
+	defer cancel()
+	review, err := homeRepairReviewInput(in.Review)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	engine, err := newDataTaskEngine(h.pool, buildinfo.ReleaseVersion, time.Now)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	if err := engine.Activate(ctx, homeRepairTaskID, "reviewed_tasks", in.Version, review); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func homeRepairReviewWire(review datatask.ReviewRequest) (crmcontracts.HomeRepairReview, error) {
+	var scope homeRepairScope
+	if err := json.Unmarshal(review.Scope, &scope); err != nil {
+		return crmcontracts.HomeRepairReview{}, err
+	}
+	out := crmcontracts.HomeRepairReview{AsOf: review.AsOf, Digest: review.Digest, Limit: review.Limit, RuleVersion: review.RuleVersion, Tasks: make([]crmcontracts.HomeRepairTask, 0, len(scope.Tasks))}
+	for _, task := range scope.Tasks {
+		out.Tasks = append(out.Tasks, crmcontracts.HomeRepairTask{Id: openapi_types.UUID(task.ID), Version: task.Version, Action: crmcontracts.HomeRepairTaskAction(task.Action), Reason: task.Reason})
+	}
+	return out, nil
+}
+
+func homeRepairReviewInput(in crmcontracts.HomeRepairReview) (datatask.ReviewRequest, error) {
+	scope := homeRepairScope{Tasks: make([]homeRepairTaskRef, 0, len(in.Tasks))}
+	for _, task := range in.Tasks {
+		scope.Tasks = append(scope.Tasks, homeRepairTaskRef{ID: ids.UUID(task.Id), Version: task.Version, Action: homeRepairAction(task.Action), Reason: task.Reason})
+	}
+	encoded, err := json.Marshal(scope)
+	return datatask.ReviewRequest{Scope: encoded, Digest: in.Digest, Limit: in.Limit, RuleVersion: in.RuleVersion, AsOf: in.AsOf}, err
+}

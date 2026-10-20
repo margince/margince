@@ -43,10 +43,15 @@ func (e *Engine) describeProgress(ctx context.Context, tx pgx.Tx, stored map[str
 			if !exists {
 				p = Progress{TaskID: task.ID, Step: step.Name, Status: Pending, TaskVersion: task.Version, BatchLimit: step.Limit}
 			}
-			if p.Status == Done && p.TaskVersion < task.Version {
+			if !task.Manual && p.Status == Done && p.TaskVersion < task.Version {
 				p.Status = Pending
 			}
 			p.Title = task.Title
+			if task.Manual && (p.Activation == nil || p.Activation.RuleVersion != task.ReviewVersion || p.TaskVersion != task.Version) {
+				p.BlockedReason = ReviewRequired
+				out = append(out, p)
+				continue
+			}
 			if !complete(task, p) && next != nil {
 				switch {
 				case task.ID != next.task.ID || step.Name != next.step.Name:
