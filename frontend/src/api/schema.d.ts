@@ -36610,18 +36610,26 @@ export interface components {
          * @enum {string}
          */
         ReportingCardKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "question";
+        /**
+         * @description A custom analytics question a card asks. Present exactly when the card's `kind` is
+         *     `question`. The page asks it through `/analytics/query` for each reader, under their
+         *     own grants and over the report's scope. Every reader of the report receives it, so it
+         *     carries no filters (a filter value can name a record a reader may not open), no scope
+         *     and no save. A sent edition does not keep its answer.
+         */
+        ReportingCardQuestion: {
+            /** @description The population, by name. */
+            entity: string;
+            group_by?: string[];
+            measures: components["schemas"]["AnalyticsMeasure"][];
+            /** @description The rows the card shows; 100 when absent. */
+            limit?: number;
+        };
         ReportingCard: {
             /** @description A short id the client mints. Unique within the report, so one chart kind can be placed twice. */
             id: string;
             kind: components["schemas"]["ReportingCardKind"];
-            /**
-             * @description Present exactly when `kind` is `question`. The page asks it through `/analytics/query`
-             *     for each reader, under their own grants and over the report's scope, so it carries no
-             *     `scope_kind`, `scope_id` or `save` of its own. Every reader of the report receives the
-             *     question, so it carries no `filters` either: a filter value can name a record a reader
-             *     may not open. `limit` is 1 to 1000. A sent edition does not keep its answer.
-             */
-            question?: components["schemas"]["AnalyticsQuery"];
+            question?: components["schemas"]["ReportingCardQuestion"];
             /** @description The one metric this card draws. Absent draws the kind for every selected metric that has it. */
             metric?: components["schemas"]["ReportingMetricID"];
             /**

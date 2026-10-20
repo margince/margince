@@ -6,9 +6,7 @@
 package compose
 
 import (
-	"encoding/json"
 	"slices"
-	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -63,7 +61,11 @@ func TestASavedReportKeepsItsLayout(t *testing.T) {
 // to ask.
 func TestASavedReportKeepsItsQuestionCard(t *testing.T) {
 	f := reportingBusiness(t)
-	question := json.RawMessage(`{"entity":"deals-by-stage","group_by":["owner_id"],"measures":[{"fn":"count"}]}`)
+	question := crmcontracts.ReportingCardQuestion{
+		Entity:   "deals-by-stage",
+		GroupBy:  &[]string{"owner_id"},
+		Measures: []crmcontracts.AnalyticsMeasure{{Fn: "count"}},
+	}
 	layout := []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{
 		{Id: "stages", Kind: "stage_distribution", Width: crmcontracts.ReportingCardWidthHalf},
 		{Id: "by-owner", Kind: "question", Question: &question, Width: crmcontracts.ReportingCardWidthHalf},
@@ -84,7 +86,7 @@ func TestASavedReportKeepsItsQuestionCard(t *testing.T) {
 		t.Fatal(err)
 	}
 	cards := (*evaluation.Selection.Layout)[0].Cards
-	if cards[1].Question == nil || !strings.Contains(string(*cards[1].Question), `"deals-by-stage"`) {
+	if cards[1].Question == nil || cards[1].Question.Entity != "deals-by-stage" {
 		t.Fatalf("the evaluation's layout carries %+v, want the question card as saved", cards[1])
 	}
 }

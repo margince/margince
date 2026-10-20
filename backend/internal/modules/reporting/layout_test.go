@@ -4,14 +4,12 @@
 package reporting
 
 import (
-	"encoding/json"
 	"errors"
 	"os"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
-
-	"gopkg.in/yaml.v3"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
@@ -69,11 +67,8 @@ func TestALayoutRefusesWhatItCannotDraw(t *testing.T) {
 		{"one metric's owner attainment", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{card("a", "owner_attainment", "bookings_won")}}}},
 		{"a question card with no question", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{card("q", "question", "")}}}},
 		{"a chart card carrying a question", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{withQuestion(card("q", "stage_distribution", ""), wonByOwner())}}}},
-		{"a question naming its own scope", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{withQuestion(card("q", "question", ""), scoped(wonByOwner()))}}}},
-		{"a question with a key the engine does not know", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{rawQuestion(card("q", "question", ""), `{"entity":"deals-by-stage","measures":[{"fn":"count"}],"sql":"x"}`)}}}},
-		{"a question with a filter", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{rawQuestion(card("q", "question", ""), `{"entity":"deals-by-stage","measures":[{"fn":"count"}],"filters":[{"field":"company_id","op":"eq","value":"0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b"}]}`)}}}},
-		{"a question with no rows", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{rawQuestion(card("q", "question", ""), `{"entity":"deals-by-stage","measures":[{"fn":"count"}],"limit":0}`)}}}},
-		{"a question with no measure", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{withQuestion(card("q", "question", ""), crmcontracts.AnalyticsQuery{Entity: "deals-by-stage"})}}}},
+		{"a question with no rows", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{withQuestion(card("q", "question", ""), noRows())}}}},
+		{"a question with no measure", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{withQuestion(card("q", "question", ""), crmcontracts.ReportingCardQuestion{Entity: "deals-by-stage"})}}}},
 		{"a kind for every metric beside one metric's", []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{card("a", "bookings_trend", "bookings_won"), card("b", "bookings_trend", "")}}}},
 	}
 	for _, c := range cases {
@@ -86,27 +81,23 @@ func TestALayoutRefusesWhatItCannotDraw(t *testing.T) {
 	}
 }
 
-func wonByOwner() crmcontracts.AnalyticsQuery {
-	return crmcontracts.AnalyticsQuery{
+func wonByOwner() crmcontracts.ReportingCardQuestion {
+	return crmcontracts.ReportingCardQuestion{
 		Entity:   "deals-by-stage",
 		GroupBy:  &[]string{"owner_id"},
 		Measures: []crmcontracts.AnalyticsMeasure{{Fn: "count"}},
 	}
 }
 
-func scoped(q crmcontracts.AnalyticsQuery) crmcontracts.AnalyticsQuery {
-	kind := "team"
-	q.ScopeKind = &kind
+func noRows() crmcontracts.ReportingCardQuestion {
+	q := wonByOwner()
+	zero := 0
+	q.Limit = &zero
 	return q
 }
 
-func withQuestion(c crmcontracts.ReportingCard, q crmcontracts.AnalyticsQuery) crmcontracts.ReportingCard {
-	raw, err := json.Marshal(q)
-	if err != nil {
-		panic(err)
-	}
-	doc := json.RawMessage(raw)
-	c.Question = &doc
+func withQuestion(c crmcontracts.ReportingCard, q crmcontracts.ReportingCardQuestion) crmcontracts.ReportingCard {
+	c.Question = &q
 	return c
 }
 
@@ -127,6 +118,21 @@ func TestAQuestionCardAddsNoBlock(t *testing.T) {
 	}
 }
 
+// enumOf reads one string enum out of crm.yaml as it is written there: the
+// schema's `- value` lines up to the next schema.
+func enumOf(t *testing.T, contract, schema string) []string {
+	t.Helper()
+	block := regexp.MustCompile(`(?s)\n    ` + schema + `:\n(.*?)\n    [A-Za-z]+:\n`).FindStringSubmatch(contract)
+	if block == nil {
+		t.Fatalf("the contract has no %s schema", schema)
+	}
+	var values []string
+	for _, line := range regexp.MustCompile(`(?m)^      - ([a-z_]+)$`).FindAllStringSubmatch(block[1], -1) {
+		values = append(values, line[1])
+	}
+	return values
+}
+
 // The card kinds are the chart kinds and question, declared twice in crm.yaml
 // because a question is not a block. This reads both declarations, so a chart
 // kind added to one and not the other fails here.
@@ -135,28 +141,13 @@ func TestTheCardKindsAreTheChartKindsAndQuestion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
-	var contract struct {
-		Components struct {
-			Schemas map[string]struct {
-				Enum []string `yaml:"enum"`
-			} `yaml:"schemas"`
-		} `yaml:"components"`
-	}
-	if err := yaml.Unmarshal(raw, &contract); err != nil {
-		t.Fatal(err)
-	}
-	blocks := contract.Components.Schemas["ReportingBlockKind"].Enum
-	cards := contract.Components.Schemas["ReportingCardKind"].Enum
+	contract := "\n" + string(raw)
+	blocks := enumOf(t, contract, "ReportingBlockKind")
+	cards := enumOf(t, contract, "ReportingCardKind")
 	if len(blocks) == 0 {
 		t.Fatal("the contract lists no chart kinds, so the comparison proved nothing")
 	}
 	if want := append(slices.Clone(blocks), string(questionKind)); !slices.Equal(cards, want) {
 		t.Errorf("card kinds %v, want the chart kinds and question %v", cards, want)
 	}
-}
-
-func rawQuestion(c crmcontracts.ReportingCard, raw string) crmcontracts.ReportingCard {
-	doc := json.RawMessage(raw)
-	c.Question = &doc
-	return c
 }

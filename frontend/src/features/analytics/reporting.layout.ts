@@ -38,14 +38,19 @@ export function layoutOf(selection: Selection): ReportingLayout {
 }
 
 /**
- * The question a saved question's run asked, ready for a card: the report's
- * scope replaces its own, and a card never saves a run.
+ * The question a saved custom report asked, as a card keeps it: its population,
+ * groupings, measures and row limit. The report's scope replaces the run's own,
+ * and a card never saves a run or carries a filter.
  */
 export function cardQuestion(
-  asked: NonNullable<Card["question"]>,
+  asked: components["schemas"]["AnalyticsQuery"],
 ): NonNullable<Card["question"]> {
-  const { scope_kind, scope_id, save, ...question } = asked;
-  return question;
+  return {
+    entity: asked.entity,
+    group_by: asked.group_by,
+    measures: asked.measures,
+    limit: asked.limit,
+  };
 }
 
 /** A saved question's run id, read from its link or typed alone. */

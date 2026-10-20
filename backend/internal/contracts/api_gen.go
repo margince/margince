@@ -46058,12 +46058,12 @@ type ReportingCard struct {
 	Kind   ReportingCardKind  `json:"kind"`
 	Metric *ReportingMetricID `json:"metric,omitempty"`
 
-	// Question Present exactly when `kind` is `question`. The page asks it through `/analytics/query`
-	// for each reader, under their own grants and over the report's scope, so it carries no
-	// `scope_kind`, `scope_id` or `save` of its own. Every reader of the report receives the
-	// question, so it carries no `filters` either: a filter value can name a record a reader
-	// may not open. `limit` is 1 to 1000. A sent edition does not keep its answer.
-	Question *json.RawMessage `json:"question,omitempty"`
+	// Question A custom analytics question a card asks. Present exactly when the card's `kind` is
+	// `question`. The page asks it through `/analytics/query` for each reader, under their
+	// own grants and over the report's scope. Every reader of the report receives it, so it
+	// carries no filters (a filter value can name a record a reader may not open), no scope
+	// and no save. A sent edition does not keep its answer.
+	Question *ReportingCardQuestion `json:"question,omitempty"`
 
 	// Width `half` shares a row with the next half card. A chart that needs the whole width draws full regardless.
 	Width ReportingCardWidth `json:"width"`
@@ -46074,6 +46074,21 @@ type ReportingCardWidth string
 
 // ReportingCardKind A chart kind, or `question`, a custom analytics question the card asks for each reader.
 type ReportingCardKind string
+
+// ReportingCardQuestion A custom analytics question a card asks. Present exactly when the card's `kind` is
+// `question`. The page asks it through `/analytics/query` for each reader, under their
+// own grants and over the report's scope. Every reader of the report receives it, so it
+// carries no filters (a filter value can name a record a reader may not open), no scope
+// and no save. A sent edition does not keep its answer.
+type ReportingCardQuestion struct {
+	// Entity The population, by name.
+	Entity  string    `json:"entity"`
+	GroupBy *[]string `json:"group_by,omitempty"`
+
+	// Limit The rows the card shows; 100 when absent.
+	Limit    *int               `json:"limit,omitempty"`
+	Measures []AnalyticsMeasure `json:"measures"`
+}
 
 // ReportingCatalog defines model for ReportingCatalog.
 type ReportingCatalog struct {

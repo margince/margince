@@ -4,8 +4,6 @@
 package reporting
 
 import (
-	"bytes"
-	"encoding/json"
 	"regexp"
 	"slices"
 	"unicode/utf8"
@@ -148,44 +146,25 @@ func overlaps(placed map[cardTarget]bool, target cardTarget) bool {
 	return false
 }
 
-// maxQuestionBytes bounds the analytics question a card stores, which is a
-// plan of names rather than data.
-const maxQuestionBytes = 4096
-
 // maxQuestionRows bounds the rows a question card shows, below the engine's own
 // cap so the card's "first N rows" line is the true count.
 const maxQuestionRows = 1000
 
-// validateQuestionCard checks the shape of a card's analytics question. The
-// population is the report's scope and the reader's grants, so the question
-// names neither. It is asked afresh for each reader rather than saved.
-// Whether its fields exist is the analytics engine's to answer when asked.
+// validateQuestionCard checks a card's analytics question. Its shape leaves out
+// filters, scope and save: every reader receives the question, and it is asked
+// afresh for each of them. Whether its fields exist is the analytics engine's to
+// answer when asked.
 func validateQuestionCard(card crmcontracts.ReportingCard) error {
-	if card.Kind != questionKind || card.Question == nil {
-		return refuse("selection.layout", "invalid", "a question card carries its question, and only a question card does")
-	}
-	if card.Metric != nil {
-		return refuse("selection.layout", "invalid", "a question card names no metric")
-	}
-	if len(*card.Question) > maxQuestionBytes {
-		return refuse("selection.layout", "out_of_range", "keep a card's question under four kilobytes")
-	}
-	var question crmcontracts.AnalyticsQuery
-	decoder := json.NewDecoder(bytes.NewReader(*card.Question))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&question); err != nil {
-		return refuse("selection.layout", "invalid", "a card's question is an analytics question")
-	}
+	question := card.Question
 	switch {
-	case !values.HasVisibleText(question.Entity) || len(question.Measures) == 0:
-		return refuse("selection.layout", "invalid", "a question names its population and at least one measure")
-	case question.ScopeKind != nil || question.ScopeId != nil || question.Save != nil:
-		return refuse("selection.layout", "invalid", "a question card takes the report's scope and is never saved on its own")
-	case question.Filters != nil && len(*question.Filters) > 0:
-		// Every reader of the report receives the card's question. A filter value
-		// (a company's id, a contact's name) would reach a reader who may not
-		// open that record. The report's scope narrows the card instead.
-		return refuse("selection.layout", "invalid", "a question card takes no filters; the report's scope narrows it")
+	case card.Kind != questionKind || question == nil:
+		return refuse("selection.layout", "invalid", "a question card carries its question, and only a question card does")
+	case card.Metric != nil:
+		return refuse("selection.layout", "invalid", "a question card names no metric")
+	case !values.HasVisibleText(question.Entity) || len(question.Measures) == 0 || len(question.Measures) > 8:
+		return refuse("selection.layout", "invalid", "a question names its population and one to eight measures")
+	case question.GroupBy != nil && len(*question.GroupBy) > 4:
+		return refuse("selection.layout", "out_of_range", "group a question card by at most four fields")
 	case question.Limit != nil && (*question.Limit < 1 || *question.Limit > maxQuestionRows):
 		return refuse("selection.layout", "out_of_range", "show between one and a thousand rows on a question card")
 	}
