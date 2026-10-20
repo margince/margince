@@ -325,9 +325,9 @@ System health and Reset data sit in the **Governance** group, and Data import in
 
 ### Review automatic Home work
 
-In **Data updates**, choose tasks, approval proposals or deal suggestions, then open **Preview
-items**. Each item shows its name, proposed action and reason. **Inspect** opens the evidence you
-can read. Only work you can currently inspect is included. Use **Review next page** to continue.
+In **Data updates**, choose tasks, approval proposals or deal suggestions, then open
+**Preview items**. Each item shows its name, proposed action and reason. **Inspect** opens the
+evidence you can read. Only work you can currently inspect is included. Use **Review next page** to continue.
 
 **Apply reviewed changes** starts the reviewed page. The button names how many changes it will
 make. The preview counts reminders to archive, proposals to withdraw and deal suggestions to retire
