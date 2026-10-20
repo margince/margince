@@ -9,16 +9,16 @@ import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select, type SelectOption } from "../design-system/select";
-import { useSaveSignInPolicy } from "../features/sign-in/sign-in-policy";
-import type { FieldLock } from "../format/settinglocks";
-import { useT } from "../i18n";
-import { problemMessageOf } from "../lib/problem";
 import {
   type AssignableRole,
   roleLabel,
   roleOptions,
   useAssignableRoles,
-} from "./roles.queries";
+} from "../features/settings/roles.queries";
+import { useSaveSignInPolicy } from "../features/sign-in/sign-in-policy";
+import type { FieldLock } from "../format/settinglocks";
+import { useT } from "../i18n";
+import { problemMessageOf } from "../lib/problem";
 
 // The server refuses a larger map; mirrored here so the refusal reaches the
 // admin before a request does.

@@ -15,7 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/approvalsubject"
+	"github.com/margince/margince/backend/internal/platform/captureorigin"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -23,8 +23,8 @@ import (
 // sender has been judged. compose stamps its verdict and accept writes with
 // these, so the origin test below and the writers cannot spell them apart.
 const (
-	CaptureVerdictActor = "agent:capture_counterparty_verdict"
-	CaptureAcceptActor  = "agent:" + approvalsubject.KindCounterparty
+	CaptureVerdictActor = captureorigin.VerdictActor
+	CaptureAcceptActor  = captureorigin.AcceptActor
 )
 
 // DisplayNameRepairActor is the principal the nightly participant_backfill job
@@ -57,7 +57,7 @@ func displayNameIsCapturesGuessTx(ctx context.Context, tx pgx.Tx, contactID ids.
 // captureGuessedDisplayNamesTx is the one statement that says whether a
 // contact's display name may be replaced, for one contact (only) or for a page.
 //
-// Origin is capturedOriginSQL, which the mailbox purge reads too.
+// Origin is captureorigin.ContactSQL, which the mailbox purge reads too.
 //
 // Any later audit row naming full_name protects the name, unless capture or the
 // repair wrote it. A human or an agent chose it, by update or by restore.
@@ -79,7 +79,7 @@ func captureGuessedDisplayNamesTx(
 		       SELECT btrim(coalesce($7::text, p.first_name, '')) AS first,
 		              btrim(coalesce($8::text, p.last_name, '')) AS last) n
 		 WHERE ($1::uuid IS NULL OR p.id = $1)
-		   AND `+capturedOriginSQL("$2", "$3", "$4")+`
+		   AND `+captureorigin.ContactSQL("$2", "$3", "$4")+`
 		   AND (NOT $5 OR (n.first <> '' AND n.last <> ''))
 		   AND NOT (n.first <> '' AND n.last <> ''
 		            AND strpos(lower(p.full_name), lower(n.first)) > 0

@@ -237,3 +237,29 @@ func TestTheSettingsPatchStillChangesSignInProvidersUntilItIsSplit(t *testing.T)
 			"this test and the note in the endpoint description; the split is then complete", err)
 	}
 }
+
+// Ops writes installation_settings but only reads agent_client. So the
+// installation patch must not let ops turn a registration method back on,
+// and an admin's grant does.
+func TestTheRegistrationSwitchesAskTheirOwnGrant(t *testing.T) {
+	e := SetupSearch(t)
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
+	off := false
+
+	opsish := e.authPolicyCtx(map[string]principal.ObjectGrant{
+		"installation_settings": {Read: true, Update: true},
+		"agent_client":          {Read: true},
+	})
+	if _, err := store.UpdateInstallation(opsish, identity.InstallationPatch{DynamicClientRegistration: &off}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("ops switching self-registration → %v, want permission denied", err)
+	}
+	adminish := e.authPolicyCtx(map[string]principal.ObjectGrant{
+		"installation_settings": {Read: true, Update: true},
+		"agent_client":          {Read: true, Update: true},
+	})
+	if _, err := store.UpdateInstallation(adminish, identity.InstallationPatch{
+		DynamicClientRegistration: &off, MetadataDocumentClients: &off,
+	}); err != nil {
+		t.Fatalf("admin switching both methods off → %v", err)
+	}
+}

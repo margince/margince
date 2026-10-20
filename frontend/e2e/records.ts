@@ -19,7 +19,7 @@ import type { Screen } from "../src/lib/router";
  * takes down Playwright's transform before a single spec is collected.
  *
  * Pure data, therefore, and no import that reaches a React screen or a
- * stylesheet — the constraint `src/screens/settingscatalog.ts` states for the
+ * stylesheet: the constraint `src/features/settings/settingscatalog.ts` states for the
  * same reason. The `Screen` import above is type-only and erases.
  */
 export type RecordPage = {

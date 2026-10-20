@@ -5,7 +5,6 @@ package compose
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -14,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -79,7 +79,7 @@ func (a reportingAuthority) ValidateFramework(ctx context.Context, tx pgx.Tx, in
 	pipelines := map[openapi_types.UUID]bool{}
 	for _, qualification := range in.Qualification {
 		if pipelines[qualification.PipelineId] || len(qualification.StageIds) == 0 {
-			return fmt.Errorf("choose distinct pipelines and at least one qualifying stage: %w", apperrors.ErrInvalidArgument)
+			return httperr.Validation("qualification", "invalid", "choose distinct pipelines and at least one qualifying stage")
 		}
 		pipelines[qualification.PipelineId] = true
 		if err := reportingPipeline(ctx, tx, &qualification.PipelineId); err != nil {
@@ -88,7 +88,7 @@ func (a reportingAuthority) ValidateFramework(ctx context.Context, tx pgx.Tx, in
 		stages := map[openapi_types.UUID]bool{}
 		for _, stage := range qualification.StageIds {
 			if stages[stage] {
-				return apperrors.ErrInvalidArgument
+				return httperr.Validation("qualification", "duplicate", "choose each qualifying stage once")
 			}
 			stages[stage] = true
 			var b reportingBindings
@@ -105,7 +105,7 @@ func (a reportingAuthority) ValidateFramework(ctx context.Context, tx pgx.Tx, in
 	contexts := map[string]bool{}
 	for _, capture := range in.CaptureContexts {
 		if capture.Scope.Kind != "team" && capture.Scope.Kind != ScopeKindWorkspace {
-			return fmt.Errorf("capture a fixed team or company scope: %w", apperrors.ErrInvalidArgument)
+			return httperr.Validation("capture_contexts", "invalid", "capture a fixed team or company scope")
 		}
 		if _, err := a.Scope(ctx, tx, capture.Scope, true); err != nil {
 			return err
@@ -115,7 +115,7 @@ func (a reportingAuthority) ValidateFramework(ctx context.Context, tx pgx.Tx, in
 		}
 		key := reportingCaptureKey(capture)
 		if contexts[key] {
-			return fmt.Errorf("choose each capture context once: %w", apperrors.ErrInvalidArgument)
+			return httperr.Validation("capture_contexts", "duplicate", "choose each capture context once")
 		}
 		contexts[key] = true
 	}

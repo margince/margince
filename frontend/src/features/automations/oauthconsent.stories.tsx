@@ -131,3 +131,13 @@ export const StaleConsent: Story = {
     404,
   ),
 };
+
+// The admin turned off the way this tool connects. Like the other refusals it
+// renders without the consent-request read.
+export const MethodOff: Story = {
+  render: story(
+    consentHash({ error: "method_off" }),
+    { title: "Not Found", status: 404 },
+    404,
+  ),
+};

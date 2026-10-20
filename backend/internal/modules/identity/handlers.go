@@ -172,6 +172,10 @@ type Handlers struct {
 	// because a Settings-configured Google app can change after boot without
 	// a restart. Nil reports no providers.
 	oidcProvidersEnabledFn func(context.Context) ([]OIDCProviderConfig, error)
+	// registrationDeployment and registrationSwitches decide which automatic
+	// client registration methods are on (oauth_registrationsettings.go).
+	registrationDeployment *RegistrationMethods
+	registrationSwitches   AdminRegistrationSwitches
 	// capabilitiesPerIP bounds the ANONYMOUS capabilities probe, which reaches
 	// the database once the provider policy is wired: a pool connection, a
 	// transaction and a row per request, for a caller with no cookie and no

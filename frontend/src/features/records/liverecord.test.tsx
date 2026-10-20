@@ -135,7 +135,7 @@ describe("a record the reader has open", () => {
   }
 
   it("re-reads the deal's obligations while its cached prose stays server governed", async () => {
-    const { paths } = mount(() => useDealStatusCard("d-1"));
+    const { paths } = mount(() => useDealStatusCard("d-1", true));
     await advance(0);
     await advance(LIVE_RECORD_MS);
     expect(paths).toEqual(["/v1/deals/d-1/status", "/v1/deals/d-1/status"]);

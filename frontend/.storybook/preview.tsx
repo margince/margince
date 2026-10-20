@@ -29,7 +29,7 @@ import "../src/design-system/atoms.css";
 // renders one card on its own never reaches it. Unloaded, that commit band had
 // no interval above it, so every settings-card story understated exactly the
 // spacing those stories exist to check.
-import "../src/screens/settings.css";
+import "../src/features/settings/settings.css";
 
 // Theme decorator — sets data-theme on <html>, the same mechanism the shell
 // uses (src/app/shell.tsx), so a story previews in light and dark.

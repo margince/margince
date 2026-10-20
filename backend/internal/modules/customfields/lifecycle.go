@@ -185,11 +185,13 @@ func (p FieldPatch) auditDiff(was, now lockedField) (before, after map[string]an
 	return before, after
 }
 
-// reportable is the fields a report can group by: a deal's, since reports
-// group deals alone by custom fields. One value per record keeps a total from
-// counting a record twice, which rules out a multiselect.
+// reportable is the fields a report can group by: a deal's, and a company's,
+// which deal reports reach through the deal's company. The migration CHECK
+// custom_field_reportable_type_check states the same rule. One value per record
+// keeps a total from counting a record twice, which rules out a multiselect.
 func reportable(f lockedField) bool {
-	return f.Object == string(datasource.EntityDeal) && (f.Type == TypePicklist || f.Type == TypeBoolean)
+	return (f.Object == string(datasource.EntityDeal) || f.Object == string(datasource.EntityCompany)) &&
+		(f.Type == TypePicklist || f.Type == TypeBoolean)
 }
 
 // Retire flips status to retired (CUSTOM-FIELDS-WIRE-4/AC-13): the field

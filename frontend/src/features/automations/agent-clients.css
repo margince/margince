@@ -1,0 +1,40 @@
+/* The name cell is a focus target for the row a confirm acted on. */
+.agentclient-name {
+  display: block;
+  min-inline-size: 0;
+}
+
+.agentclient-name:focus-visible {
+  outline: var(--focus-ring);
+}
+
+/* One value to paste into a tool: its name, then the text beside its copy. */
+.agentclient-value {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.agentclient-value-label {
+  margin: 0;
+}
+
+.agentclient-value-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.agentclient-value-row > .code-block {
+  flex: 1 1 16rem;
+  min-inline-size: 0;
+}
+
+.agentclient-steps {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.agentclient-steps ol {
+  margin: 0;
+}

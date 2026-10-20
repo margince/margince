@@ -38,13 +38,13 @@ import {
   type GrantMatrixRow,
   type GrantMatrixSection,
   grantOf,
-} from "../../screens/grantmatrix";
+} from "../settings/grantmatrix";
 import {
   ROLES_KEY,
   type Role,
   useRoles,
   useSetRoleGrant,
-} from "../../screens/roles.queries";
+} from "../settings/roles.queries";
 import {
   EXTENSIONS_KEY,
   type ExtensionUnit,

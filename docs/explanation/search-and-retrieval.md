@@ -321,7 +321,7 @@ build works is the smaller cost.
 
 Entities pending under a matching identity are not the banner's business either. The drift sweep is
 already fixing them, and a banner about drift the system is repairing makes an admin stop reading
-the banner. The pending count lives in the settings card (`frontend/src/screens/embedreindex.tsx`)
+the banner. The pending count lives in the settings card (`frontend/src/features/settings/embedreindex.tsx`)
 instead. The banner's own status read is gated in the client on `embedding_reindex:read`, the same
 grant the server checks. It asks *before* it sends a query that could only 403.
 
@@ -415,7 +415,7 @@ projection, which has its own rules for how it stays current; see
 | Readiness line | `internal/compose/embedreadyz.go` |
 | Context graph walk | `internal/modules/search/graph.go`, `handlers_context.go` |
 | Retrieval seam | `internal/shared/ports/retrieval` ← `internal/modules/search/retriever.go` |
-| SPA surfaces | `frontend/src/app/embedreindexbanner.tsx` (advisory banner) · `frontend/src/screens/embedreindex.tsx` (settings card, preview/confirm/rebuild) |
+| SPA surfaces | `frontend/src/app/embedreindexbanner.tsx` (advisory banner) · `frontend/src/features/settings/embedreindex.tsx` (settings card, preview/confirm/rebuild) |
 
 ## Where to go next
 

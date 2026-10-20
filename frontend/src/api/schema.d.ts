@@ -11551,6 +11551,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/installation/agent-clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The OAuth clients AI tools sign users in through, and which automatic methods are on.
+         * @description Every client that may start a sign-in: the ones an admin registered, the ones that
+         *     registered themselves (DCR) and the ones that identify with a published metadata document
+         *     (CIMD). Clients an admin registered and clients with a live connection come first; the rest
+         *     page after them. A deleted client is not listed. No secret and no secret digest is ever
+         *     returned.
+         *
+         *     `registration` reports each automatic method three ways: whether the deployment file allows
+         *     it, whether the admin's switch is on, and the effective answer, which is both.
+         *
+         *     Needs `agent_client` read (admin, management and ops by default).
+         */
+        get: operations["listAgentClients"];
+        put?: never;
+        /**
+         * Register an AI tool's OAuth client by hand (admin).
+         * @description For a tool that cannot register itself, such as Gemini Enterprise or Copilot Studio
+         *     "Manual". Margince mints the client ID and a client secret, and the tool must send the secret
+         *     at the token endpoint. The secret is returned in this response **once**: only its digest is
+         *     stored, so it can never be shown again. Lost, it is rotated. A tool that cannot send a
+         *     secret connects through dynamic registration or a metadata document instead.
+         *
+         *     Redirect URIs match exactly: https anywhere, or http on a loopback host, where the port is
+         *     ignored. Every sign-in through the client still needs PKCE S256 and the human's consent.
+         *
+         *     Audit-only write (no event stream, EVT-NOEVT-3). The audit row never holds the secret.
+         */
+        post: operations["registerAgentClient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/installation/agent-clients/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The client's row id. Not its `client_id`, which for a CIMD client is a URL. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a client and end every connection it holds (admin).
+         * @description Every grant under the client is revoked, with its refresh tokens and access tokens. A
+         *     client an admin registered is gone for good. A self-registered client is gone too, but the
+         *     tool can register again. A CIMD client comes back the next time someone connects the tool,
+         *     because its ID is the vendor's URL: to keep a tool out, disable it.
+         */
+        delete: operations["deleteAgentClient"];
+        options?: never;
+        head?: never;
+        /**
+         * Disable or enable a client (admin).
+         * @description A disabled client is refused everywhere at once: sign-in, token exchange, renewal and every
+         *     live access token issued under it. Enabling it brings those connections back. Unlike
+         *     delete, disabling a CIMD client also stops Margince fetching its document.
+         *
+         *     Audit-only write (no event stream, EVT-NOEVT-3).
+         */
+        patch: operations["updateAgentClient"];
+        trace?: never;
+    };
+    "/installation/agent-clients/{id}/secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The client's row id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replace a confidential client's secret (admin).
+         * @description The old secret stops working at once. Connections stay: access tokens already issued keep
+         *     working until they expire, and the tool renews with the new secret once an admin pastes it.
+         *     Only a client an admin registered with a secret has one to rotate.
+         *
+         *     Audit-only write (no event stream, EVT-NOEVT-3). The audit row never holds the secret.
+         */
+        post: operations["rotateAgentClientSecret"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/installation/oauth-apps/{provider}": {
         parameters: {
             query?: never;
@@ -21090,6 +21193,18 @@ export interface components {
              *     unchanged.
              */
             require_mfa?: boolean;
+            /**
+             * @description Let AI tools register their own OAuth client (DCR). Off stops new sign-ins through a
+             *     self-registered client and answers `/oauth/register` with 404; connections already made
+             *     keep renewing. Needs `agent_client` update. The deployment file can hold it off.
+             */
+            dynamic_client_registration?: boolean;
+            /**
+             * @description Accept a client ID that is the URL of the tool's published metadata document (CIMD).
+             *     Off stops new sign-ins through such a client; connections already made keep renewing.
+             *     Needs `agent_client` update. The deployment file can hold it off.
+             */
+            metadata_document_clients?: boolean;
             /**
              * @description Directory groups that GRANT roles at corporate sign-in. Each key is a group
              *     exactly as the IdP spells it in the ID token's `groups` claim; each value is
@@ -37574,6 +37689,21 @@ export interface components {
             /** @description The name an administrator gave the field. */
             label: string;
             /**
+             * @description The record the field belongs to. A company field is read through the deal's company,
+             *     and a deal whose company the caller may not open drops out of an answer that groups
+             *     or filters by it.
+             * @enum {string}
+             */
+            object: "deal" | "company";
+            /** @description How many live deals the caller can read when the schema was served. */
+            records: number;
+            /**
+             * @description How many of those `records` hold a value in this field. A company field counts a deal
+             *     only when the caller may open its company. A grouping by a field with few values
+             *     leaves most deals in the empty group.
+             */
+            with_value: number;
+            /**
              * @description The value shape. A picklist holds one of `options`; a boolean holds yes or no.
              * @enum {string}
              */
@@ -37940,7 +38070,7 @@ export interface components {
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "seat_usage" | "team_oversight" | "team_lead" | "report_definition" | "sales_target" | "reporting_framework" | "report_schedule" | "report_edition" | "reporting_credit" | "legal_review";
+        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "agent_client" | "seat_usage" | "team_oversight" | "team_lead" | "report_definition" | "sales_target" | "reporting_framework" | "report_schedule" | "report_edition" | "reporting_credit" | "legal_review";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -40898,6 +41028,71 @@ export interface components {
         TeamListResponse: {
             data: components["schemas"]["Team"][];
             page: components["schemas"]["PageInfo"];
+        };
+        /** @description One OAuth client an AI tool signs users in through. Never carries a secret. */
+        AgentClient: {
+            /** Format: uuid */
+            id: string;
+            /** @description What the tool sends as `client_id`. For a CIMD client it is the document's URL. */
+            client_id: string;
+            client_name: string;
+            redirect_uris: string[];
+            /**
+             * @description How the client came to exist. `dcr` registered itself; `cimd` is a published metadata document.
+             * @enum {string}
+             */
+            registered_by: "admin" | "dcr" | "cimd";
+            /** @description True when the client authenticates at the token endpoint with a secret. */
+            confidential: boolean;
+            disabled: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** @description How many users hold a live connection through this client. */
+            connected_users: number;
+            /**
+             * Format: date-time
+             * @description The last time any of its connections called Margince; null when none has.
+             */
+            last_used_at?: string | null;
+        };
+        AgentClientMethod: {
+            /** @description Whether tools may use this method now. True only when both the deployment and the admin allow it. */
+            enabled: boolean;
+            /** @description The admin's switch, written through `PATCH /installation/settings`. */
+            setting: boolean;
+            /** @description False when the deployment file turns the method off; the admin's switch then cannot turn it on. */
+            deployment_allows: boolean;
+        };
+        AgentClientRegistration: {
+            dynamic: components["schemas"]["AgentClientMethod"];
+            metadata_document: components["schemas"]["AgentClientMethod"];
+        };
+        AgentClientListResponse: {
+            data: components["schemas"]["AgentClient"][];
+            page: components["schemas"]["PageInfo"];
+            registration: components["schemas"]["AgentClientRegistration"];
+        };
+        RegisterAgentClientRequest: {
+            /** @description Shown on the consent screen and in the client list. */
+            name: string;
+            /** @description Exact callback URLs. https, or http on localhost or 127.0.0.1, where the port is ignored. */
+            redirect_uris: string[];
+        };
+        RegisteredAgentClient: {
+            client: components["schemas"]["AgentClient"];
+            /** @description Every scope the tool may ask for, space separated, as discovery lists them. */
+            scopes: string;
+            /** @description The secret the tool sends at the token endpoint. Shown once and never again. */
+            client_secret: string;
+        };
+        UpdateAgentClientRequest: {
+            disabled: boolean;
+        };
+        AgentClientSecret: {
+            /** @description The new secret, shown once. */
+            client_secret: string;
+            /** @description Every scope the tool may ask for, space separated, as discovery lists them. */
+            scopes: string;
         };
         /**
          * @description One recipient's half of a refusal, as the engine gave it. The ADDRESS is here because a
@@ -46739,10 +46934,10 @@ export interface components {
          */
         WorklistReason: {
             /**
-             * @description Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it.
+             * @description Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender's request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "non_buyer_request" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_booked" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded" | "you_wrote_last" | "no_reply_days" | "met_days_ago" | "nothing_sent_since" | "no_attendee_on_file" | "read_only";
+            kind: "pinned" | "buyer_wrote_last" | "non_buyer_request" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_booked" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "bcc_from_stranger" | "link_off_sender" | "outcome_unrecorded" | "you_wrote_last" | "no_reply_days" | "met_days_ago" | "nothing_sent_since" | "no_attendee_on_file" | "read_only";
             value?: components["schemas"]["WorklistValue"];
         };
         /**
@@ -61189,6 +61384,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -61430,6 +61626,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -61490,6 +61687,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -61544,6 +61742,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -61635,6 +61834,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -61694,6 +61894,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -61866,6 +62067,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -65804,6 +66006,152 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+        };
+    };
+    listAgentClients: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of clients, and the method switches. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentClientListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    registerAgentClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterAgentClientRequest"];
+            };
+        };
+        responses: {
+            /** @description Registered, with the client secret shown this once. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegisteredAgentClient"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    deleteAgentClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The client's row id. Not its `client_id`, which for a CIMD client is a URL. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted, and every connection ended. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateAgentClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The client's row id. Not its `client_id`, which for a CIMD client is a URL. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAgentClientRequest"];
+            };
+        };
+        responses: {
+            /** @description The client after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentClient"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    rotateAgentClientSecret: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The client's row id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The new secret, shown once. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentClientSecret"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     getOauthApp: {

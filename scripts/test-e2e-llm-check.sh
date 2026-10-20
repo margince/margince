@@ -976,7 +976,7 @@ judges "$c30" case30 announces-the-coinage-as-a-list 1 "$c30_coinage" "!$c30_abs
 c7="case7-ask-for-a-number.yaml"
 c7_counts="the judge says NO to: Criterion 1."
 c7_denial="the judge says NO to: Criterion 3."
-judges "$c7" case7 counts-the-directions-in-german 0 "!the judge says NO"
+judges "$c7" case7 counts-the-meetings-in-german 0 "!the judge says NO"
 judges "$c7" case7 answers-with-a-rough-split 0 "!the judge says NO"
 # The vocabulary handed back in place of the number. This is the fixture for the
 # regex that was DELETED rather than replaced: an answer that recites the
@@ -988,6 +988,9 @@ judges "$c7" case7 hands-back-the-vocabulary 1 "$c7_counts" "!$c7_denial"
 # asserted, so one of them quietly ceasing to fire would go red here.
 judges "$c7" case7 denies-the-breakdown-in-german 1 "$c7_denial" "$c7_counts"
 judges "$c7" case7 calls-it-a-limitation-of-the-crm 1 "$c7_denial" "$c7_counts"
+# Two numbers that are not the seeded ones. The lane restores the seed before
+# every run, so the counts are fixed and a made-up pair fails criterion 1.
+judges "$c7" case7 makes-up-the-counts 1 "$c7_counts" "!$c7_denial"
 
 # CASE 41 — the open commitment was a name alternation, the false all-clear a
 # negation-guarded claim pattern that had already been spared an exception clause

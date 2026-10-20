@@ -222,11 +222,11 @@ type Server struct {
 	// configured — the route is absent otherwise, never open.
 	graphPush http.Handler
 
-	// mcpConnectorEnabled is the remote-connector deployment gate, set by
-	// WithMCPConnector from the deployment file. It governs the connector as
-	// ONE group — transport, authorization server, both discovery documents —
-	// and routes.go, where the group is mounted, carries why.
-	mcpConnectorEnabled bool
+	// mcpConnectorEnabled is the connector's deployment gate (WithMCPConnector): transport, authorization
+	// server and both discovery documents as one group, for the reason routes.go gives.
+	// clientRegistrationLimit is the same file's limit on automatic client registration; nil allows both.
+	mcpConnectorEnabled     bool
+	clientRegistrationLimit *identity.RegistrationMethods
 	// appViews holds the MCP App documents this api is serving. Nil for the
 	// worker and for an api that composed no views — see mcpappviews.go.
 	appViews *apps.Provider

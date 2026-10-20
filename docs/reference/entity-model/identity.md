@@ -269,13 +269,14 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## oauth_client
 
-10 columns · primary key `(id)` · referenced by 1 foreign key
+11 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `client_id` | `text` | yes |  |
 | `client_name` | `text` | yes |  |
+| `client_secret_hash` | `text` |  |  |
 | `created_via` | `text`, default `'dcr'::text` | yes | One of `dcr`, `admin`, `cimd`. |
 | `deleted_at` | `timestamp with time zone` |  |  |
 | `disabled_at` | `timestamp with time zone` |  |  |
@@ -288,6 +289,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `oauth_client_client_id_key`: `UNIQUE (client_id)`
 - `oauth_client_created_via_check`: `CHECK ((created_via = ANY (ARRAY['dcr', 'admin', 'cimd'])))`
+- `oauth_client_secret_is_admin_only`: `CHECK (((client_secret_hash IS NULL) OR (created_via = 'admin')))`
 
 **Indexes**
 

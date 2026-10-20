@@ -44,6 +44,16 @@ type Field struct {
 	// of values. Offered, not enforced: a record may still hold a choice an
 	// administrator has since removed.
 	Options []string
+	// Coverage is how many records hold a value in a field the installation
+	// defined. Nil where nobody counted, which every question run leaves it.
+	Coverage *Coverage
+}
+
+// Coverage counts the live records a reader can see, and how many hold a value.
+// A grouping by a sparse field then does not read as complete.
+type Coverage struct {
+	Records   int
+	WithValue int
 }
 
 // ColumnShape is what a column holds — named for the COLUMN because the

@@ -6,12 +6,12 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { meFixture } from "../../testing/mefixture";
+import { tableRowCells } from "../../testing/tablerow.testkit";
 // The settings harness, rather than a fourth copy of the same twenty lines:
 // this card is a settings card, and `render` there already provides the two
 // providers every one of them needs.
-import { jsonResponse, render } from "../../screens/settings.testkit";
-import { meFixture } from "../../testing/mefixture";
-import { tableRowCells } from "../../testing/tablerow.testkit";
+import { jsonResponse, render } from "../settings/settings.testkit";
 import { ExtensionIngestHealthCard } from "./extingesthealth";
 
 // One composed unit with a title and its copy, so the lookup runs as composed.

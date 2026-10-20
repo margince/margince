@@ -34,6 +34,8 @@ type cimdEnv struct {
 	ctx  context.Context //nolint:containedctx // the workspace binding every query here needs, held so each test does not rebuild it
 	docs *httptest.Server
 	body func(url string) string
+	// adminEmail pins the installation's first admin by the one column that names it.
+	adminEmail string
 }
 
 // setupCIMD stands up an installation and a TLS document server, and points the
@@ -73,8 +75,9 @@ func setupCIMD(t *testing.T, slug string) *cimdEnv {
 	// test, so there is no installation singleton to resolve.
 	svc := NewServiceFor(database.BindTo(pool, wsID)).WithConfig(unlockedConfig(t, pool))
 	e := &cimdEnv{
-		svc: svc,
-		ctx: principal.WithWorkspaceID(context.Background(), wsID.UUID),
+		svc:        svc,
+		adminEmail: "admin@" + slug + ".test",
+		ctx:        principal.WithWorkspaceID(context.Background(), wsID.UUID),
 		body: func(url string) string {
 			return `{"client_id":"` + url + `","client_name":"Metadata Client",` +
 				`"redirect_uris":["http://127.0.0.1:9876/callback"]}`

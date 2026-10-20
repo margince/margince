@@ -6,7 +6,7 @@ The 28 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-60 columns · primary key `(id)` · referenced by 38 foreign keys
+62 columns · primary key `(id)` · referenced by 38 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -30,6 +30,7 @@ The 28 tables owned by `activities`, as the migrations build them. [Back to the 
 | `done_at` | `timestamp with time zone` |  |  |
 | `due_at` | `timestamp with time zone` |  | Task only. |
 | `duration_seconds` | `integer` |  | Meeting/call only. |
+| `foreign_link` | `boolean` |  |  |
 | `has_calendar_part` | `boolean`, default `false` | yes |  |
 | `host_user_id` | `uuid` |  | Meeting only: the member of this company who held it. |
 | `is_done` | `boolean`, default `false` | yes | Task only. |
@@ -54,6 +55,7 @@ The 28 tables owned by `activities`, as the migrations build them. [Back to the 
 | `restricted_until` | `timestamp with time zone` |  |  |
 | `retention_class` | `text` |  |  |
 | `retention_class_at` | `timestamp with time zone` |  |  |
+| `sender_was_stranger` | `boolean` |  |  |
 | `sent_by_colleague` | `uuid` |  | Points at `app_user.id`. |
 | `source_activity_id` | `uuid` |  | The conversation or note this task follows from, whether added by a human or read from a conversation. |
 | `source_author_id` | `uuid` |  | Points at `app_user.id`. |

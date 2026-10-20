@@ -11,7 +11,7 @@ import {
 import { formatDate } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { humanizeToken } from "../../screens/audit";
+import { humanizeToken } from "../settings/audit";
 
 export type NoticeAcquisition = NonNullable<
   components["schemas"]["NoticeAcquisition"]

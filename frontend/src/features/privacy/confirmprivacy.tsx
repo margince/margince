@@ -12,7 +12,7 @@ import { formatDate } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { labelOf } from "../../screens/preferences.logic";
+import { labelOf } from "../settings/preferences.logic";
 
 type PrivacyInformationPage = components["schemas"]["PrivacyInformationPage"];
 

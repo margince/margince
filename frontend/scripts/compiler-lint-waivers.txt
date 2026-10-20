@@ -79,7 +79,7 @@
 3 react-hooks/set-state-in-effect src/features/projects/contractlifecycle.tsx
 1 react-hooks/set-state-in-effect src/features/voice-knowledge/corpusask.tsx
 3 react-hooks/refs src/features/deals/deal360/outcomereviewmodal.tsx
-1 react-hooks/set-state-in-effect src/screens/embedreindex.tsx
+1 react-hooks/set-state-in-effect src/features/settings/embedreindex.tsx
 3 react-hooks/refs src/features/lists/filtereditor.tsx
 1 react-hooks/refs src/features/lists/filterlistedit.tsx
 1 react-hooks/set-state-in-effect src/features/lists/filterslibrary.tsx
@@ -105,11 +105,11 @@
 2 react-hooks/refs src/features/onboarding/onboarding-gate.tsx
 1 react-hooks/set-state-in-effect src/features/onboarding/onboarding-ignition.tsx
 2 react-hooks/refs src/features/mail/openemaildrawer.tsx
-1 react-hooks/set-state-in-effect src/screens/preferences.tsx
+1 react-hooks/set-state-in-effect src/features/settings/preferences.tsx
 1 react-hooks/refs src/features/privacy/privacy.caselink.ts
 1 react-hooks/refs src/features/projects/projecthealthmodal.tsx
 1 react-hooks/set-state-in-effect src/features/projects/projecthealthmodal.tsx
-1 react-hooks/set-state-in-effect src/screens/rate-manual.tsx
+1 react-hooks/set-state-in-effect src/features/settings/rate-manual.tsx
 1 react-hooks/set-state-in-effect src/features/records/recordaccess.tsx
 1 react-hooks/refs src/features/records/recordteamassign.tsx
 1 react-hooks/set-state-in-effect src/features/records/recordteamassign.tsx

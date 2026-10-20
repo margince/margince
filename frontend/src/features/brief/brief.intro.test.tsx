@@ -12,7 +12,8 @@ import { render, stubApi } from "./brief.testkit";
 // The morning's greeting plays once a local day, over a day that has been
 // read. It never plays under reduced motion, and any key or press ends it.
 
-const NOW = new Date("2026-09-03T08:00:00Z");
+// Eight in the morning on the viewer's own clock, which the greeting reads.
+const NOW = new Date(2026, 8, 3, 8, 0, 0);
 const TODAY = dayInZone(NOW.getTime(), viewerZone());
 const SKIP = en["brief.intro.skip"];
 // The curtain is named by everything it says, the way out included.

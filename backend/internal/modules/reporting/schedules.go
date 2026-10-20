@@ -70,7 +70,7 @@ func (s *Service) validateSchedule(ctx context.Context, tx pgx.Tx, report crmcon
 			return err
 		}
 		if !configured {
-			return invalid("configure report edition retention before enabling a schedule")
+			return refuse("enabled", "retention_unconfigured", "configure report edition retention before enabling a schedule")
 		}
 	}
 	if report.ArchivedAt != nil {
@@ -84,7 +84,7 @@ func (s *Service) validateSchedule(ctx context.Context, tx pgx.Tx, report crmcon
 		return err
 	}
 	if selection.Scope.Kind == "managed_teams" {
-		return invalid("choose one fixed team, owner or company for a schedule")
+		return refuse("report_revision", "invalid", "choose one fixed team, owner or company for a schedule")
 	}
 	if _, err := s.authority.Scope(ctx, tx, selection.Scope, true); err != nil {
 		return err
@@ -123,7 +123,7 @@ func (s *Service) CreateSchedule(ctx context.Context, reportID ids.UUID, in crmc
 			return err
 		}
 		if count >= 20 {
-			return invalid("a report supports at most twenty schedules")
+			return refuse("report_id", "limit_reached", "a report supports at most twenty schedules")
 		}
 		calendar, err := s.calendar(ctx, tx)
 		if err != nil {

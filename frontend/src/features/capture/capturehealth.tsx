@@ -28,7 +28,7 @@ import {
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
-import { HealthCard } from "../../screens/healthcard";
+import { HealthCard } from "../settings/healthcard";
 
 // GET /admin/capture-health — whether mailbox capture keeps up with its own
 // questions, for an administrator who may not see the mail itself.

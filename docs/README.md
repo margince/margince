@@ -117,6 +117,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   cloud model provider.
 - [recover-after-a-provider-outage.md](how-to/recover-after-a-provider-outage.md): what to do after a
   model provider goes down.
+- [back-up-an-installation.md](how-to/back-up-an-installation.md): which data to copy, when, and who does
+  which part.
 - [run-a-restore-drill.md](how-to/run-a-restore-drill.md): test that a copy of your data can be
   used, and record the time it takes.
 - [certify-an-ai-model.md](how-to/certify-an-ai-model.md): test a model against a task before you use it
@@ -297,6 +299,8 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 ### Run it in production
 
 - [deploy-margince.md](how-to/deploy-margince.md): run Margince on your own servers.
+- [change-a-setting.md](how-to/change-a-setting.md): change a setting, check it before a start, and see
+  where each value comes from.
 - [self-hosting.md](explanation/self-hosting.md): why it runs the way it does, and what it does when
   something fails.
 - [deployment.md](deployment.md): the old page, now a pointer to the two above.

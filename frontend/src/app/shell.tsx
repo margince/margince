@@ -8,12 +8,12 @@ import {
 } from "react";
 import { PageAsideProvider } from "../components/pageaside";
 import { PageHeadSlot } from "../components/pageheadaction";
+import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
 import { routeHash, useRoute } from "../lib/router";
 import { useScrollMemory } from "../lib/scrollmemory";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
-import { SETTINGS_SCREEN } from "../screens/settingsnav";
 import { AgentEdge } from "./agent-edge";
 import { CaptureChip } from "./capture-chip";
 import { ConnectivityBanner } from "./connectivitybanner";

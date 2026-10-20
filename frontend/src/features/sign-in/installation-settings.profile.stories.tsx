@@ -4,10 +4,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { DateFormatsProvider } from "../../app/dateformats";
-import { defaultOperations } from "../../screens/operationsettings.fixtures";
 import { StoryProviders } from "../../testing/story-utils";
 import { REPORTING_FIXTURE_ZONE } from "../analytics/reporting.fixtures";
 import { defaultAgentAllowances } from "../automations/agentallowances.fixtures";
+import { defaultOperations } from "../settings/operationsettings.fixtures";
 import type { InstallationSettings } from "./installation-settings";
 import { InstallationProfileDialog } from "./installation-settings.profile";
 

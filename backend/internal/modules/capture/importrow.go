@@ -34,11 +34,13 @@ import (
 // table exists for, and it reaches this code through the replay path, where the
 // activity already exists and nothing else is written.
 //
-// Recapture fills missing transport timestamps and adds a new delivering
-// connector without resetting the import posture or the verdict a later step wrote.
+// Recapture fills missing transport timestamps and a missing Bcc fact, and adds
+// a new delivering connector. It never resets the posture, the verdict or a Bcc
+// fact already judged.
 func recordImportTx(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	ownerUserID ids.UUID, provider string, birth birthDecision, receivedAt, sourceAt time.Time,
+	bccOnly *bool,
 ) error {
 	if ownerUserID == ids.Nil {
 		// No identifiable seat behind this capture. Nothing to attribute the
@@ -63,17 +65,21 @@ func recordImportTx(
 	arg := func(value any) int { args = append(args, value); return len(args) }
 	query := fmt.Sprintf(`
 		INSERT INTO capture_import (activity_id, user_id, posture_at_import, verdict_status, verdict_reason, verdict_reasons,
-		                            provider_received_at, source_occurred_at, delivered_by)
+		                            provider_received_at, source_occurred_at, delivered_by, bcc_only)
 		VALUES ($%[1]d, $%[2]d, NULLIF($%[3]d, ''), NULLIF($%[4]d, ''), NULLIF($%[5]d, ''), $%[6]d, $%[7]d, $%[8]d,
-		        ARRAY(SELECT c.provider || ':' || c.generation FROM capture_connection c WHERE c.user_id = $%[2]d AND c.provider = $%[9]d))
+		        ARRAY(SELECT c.provider || ':' || c.generation FROM capture_connection c WHERE c.user_id = $%[2]d AND c.provider = $%[9]d),
+		        $%[10]d)
 		ON CONFLICT (activity_id, user_id) DO UPDATE SET
 		 provider_received_at = coalesce(capture_import.provider_received_at, EXCLUDED.provider_received_at),
 		 source_occurred_at = coalesce(capture_import.source_occurred_at, EXCLUDED.source_occurred_at),
-		 delivered_by = ARRAY(SELECT DISTINCT unnest(capture_import.delivered_by || EXCLUDED.delivered_by) ORDER BY 1)
+		 delivered_by = ARRAY(SELECT DISTINCT unnest(capture_import.delivered_by || EXCLUDED.delivered_by) ORDER BY 1),
+		 bcc_only = coalesce(capture_import.bcc_only, EXCLUDED.bcc_only)
 		WHERE (capture_import.provider_received_at IS NULL AND EXCLUDED.provider_received_at IS NOT NULL)
 		   OR (capture_import.source_occurred_at IS NULL AND EXCLUDED.source_occurred_at IS NOT NULL)
+		   OR (capture_import.bcc_only IS NULL AND EXCLUDED.bcc_only IS NOT NULL)
 		   OR NOT (EXCLUDED.delivered_by <@ capture_import.delivered_by)`,
-		arg(activityID), arg(ownerUserID), arg(birth.posture), arg(birth.verdictStatus), arg(birth.reason), arg(birth.reasons), arg(received), arg(occurred), arg(provider))
+		arg(activityID), arg(ownerUserID), arg(birth.posture), arg(birth.verdictStatus), arg(birth.reason), arg(birth.reasons), arg(received), arg(occurred), arg(provider),
+		arg(bccOnly))
 	if _, err := tx.Exec(ctx, query, args...); err != nil {
 		return fmt.Errorf("capture: recording the import of %s: %w", activityID, err)
 	}
@@ -157,7 +163,8 @@ func (s *Sink) recordThisImport(
 	if original, ok := rec.Fields.(ActivityFields); ok && original.Kind == kindEmail {
 		sourceAt = original.OccurredAt
 	}
-	if err := recordImportTx(ctx, tx, id, owner, deliveringConnector(ctx), birth, rec.ProviderReceivedAt, sourceAt); err != nil {
+	if err := recordImportTx(ctx, tx, id, owner, deliveringConnector(ctx), birth, rec.ProviderReceivedAt, sourceAt,
+		fields.judged.bccOnly); err != nil {
 		return err
 	}
 	if err := stampMessageEnds(ctx, tx, id, owner, fields, rec.Counterparty); err != nil {

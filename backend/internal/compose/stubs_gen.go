@@ -1987,6 +1987,26 @@ func (stubs) ValidateImportRun(w nethttp.ResponseWriter, r *nethttp.Request, id 
 	httperr.NotImplemented(w, r, "ValidateImportRun")
 }
 
+func (stubs) ListAgentClients(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListAgentClientsParams) {
+	httperr.NotImplemented(w, r, "ListAgentClients")
+}
+
+func (stubs) RegisterAgentClient(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "RegisterAgentClient")
+}
+
+func (stubs) DeleteAgentClient(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "DeleteAgentClient")
+}
+
+func (stubs) UpdateAgentClient(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "UpdateAgentClient")
+}
+
+func (stubs) RotateAgentClientSecret(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "RotateAgentClientSecret")
+}
+
 func (stubs) GetAuthenticationPolicy(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAuthenticationPolicy")
 }

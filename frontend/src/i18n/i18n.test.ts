@@ -17,9 +17,10 @@ import { vi as viCatalog } from "./vi";
 // name" from "missed translation" at a glance — an addition to any group
 // must be defensible on the same grounds as its neighbours.
 const KEPT_IN_ENGLISH = new Set<string>([
-  // Product names, an example address and an example header name.
+  // Product and protocol names, an example address and an example header name.
   "webhooks.body.preset.slack",
   "webhooks.body.preset.teams",
+  "settings.tab.mcp",
   "webhooks.eventGroup.voice_dna",
   "webhooks.field.targetUrlPlaceholder",
   "webhooks.headers.namePlaceholder",

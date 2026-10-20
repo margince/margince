@@ -1500,6 +1500,35 @@ if [[ "$(lane_psql "SELECT count(*) FROM forecast_snapshot WHERE trigger = 'dail
   freeze_forecast
 fi
 
+# --- CASE 7: meetings in two standings, above the privacy floor --------------
+#
+# run_analytics_query withholds a group of fewer than five records, and then one
+# more group so the total cannot give the first one away. So each standing needs
+# five or more, and so do the tasks, which group as "no standing". With case 23's
+# two bookings and case 59's signing, the seed holds 6 held and 8 booked
+# meetings; case 7's judge checks those two numbers. Filed on Henning Voss:
+# without a host they leave case 23's calendar as it is. The tasks are done
+# weeks ago, so no list of open or late work shows them.
+if [[ "$(lane_psql "SELECT count(*) FROM activity WHERE subject LIKE 'Abstimmung Nordholz %'")" -eq 0 ]]; then
+  for n in 1 2 3 4 5; do
+    body="$(printf '{"due_at":"%s","subject":"Protokoll Abstimmung Nordholz %s","links":[{"entity_type":"contact","entity_id":"%s"}]}' \
+      "$(days_ago $((n * 7 + 30)))" "$n" "$henning")"
+    task="$(create_or_die "/tasks" "$body" "task $n for Nordholz")"
+    code="$(status_of PATCH "/activities/$task" '{"is_done":true}')"
+    [[ "$code" = "200" ]] || { echo "completing task $n for Nordholz answered HTTP $code" >&2; exit 1; }
+  done
+  for n in 1 2 3 4 5; do
+    body="$(printf '{"kind":"meeting","meeting_status":"held","occurred_at":"%s","subject":"Abstimmung Nordholz %s","links":[{"entity_type":"contact","entity_id":"%s"}]}' \
+      "$(days_ago $((n * 7)))" "$n" "$henning")"
+    create_or_die "/activities" "$body" "held meeting $n with Nordholz" >/dev/null
+  done
+  for n in 6 7 8 9 10 11; do
+    body="$(printf '{"kind":"meeting","meeting_status":"booked","occurred_at":"%sT14:00:00Z","subject":"Abstimmung Nordholz %s","links":[{"entity_type":"contact","entity_id":"%s"}]}' \
+      "$(days_ahead $((n * 3)))" "$n" "$henning")"
+    create_or_die "/activities" "$body" "booked meeting $n with Nordholz" >/dev/null
+  done
+fi
+
 # --- CASE 59: a signed contract to file on the meeting it was signed in -------
 #
 # THE PROJECT IS THE DOOR TO THE CONTRACT. An agent reads contracts only through

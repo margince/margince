@@ -983,6 +983,7 @@ export const de = {
   "systemJob.domain_triage": "Vorprüfung von Websites",
   "systemJob.employment_import_worker": "Import des Werdegangs",
   "systemJob.enabled_oidc_providers_read": "Lesen der Anmeldeanbieter",
+  "systemJob.client_registration_read": "Lesen der Registrierung von KI-Tools",
   "systemJob.erasure_replay": "Erneute Löschung nach einer Wiederherstellung",
   "systemJob.extension_inventory": "Bestandsaufnahme der Erweiterungen",
   "systemJob.extraction_activity_reannounce":
@@ -5395,6 +5396,11 @@ export const de = {
   "analytics.q.filterN": "Filter {n}",
   "analytics.q.filters": "Filter",
   "analytics.q.groupBy": "Gruppieren nach",
+  "analytics.q.companyField": "{label} (Unternehmen)",
+  "analytics.q.fieldCoverage_one":
+    "{label} hat einen Wert bei {held} von {count} lesbaren Deal.",
+  "analytics.q.fieldCoverage_other":
+    "{label} hat einen Wert bei {held} von {count} lesbaren Deals.",
   "analytics.q.limited_one":
     "Nur die erste Gruppe wird angezeigt. Füge einen Filter hinzu, um die Frage einzugrenzen.",
   "analytics.q.limited_other":
@@ -6051,7 +6057,107 @@ export const de = {
   "agents.connectorOff":
     "KI-Tools können sich noch nicht mit Margince verbinden.",
   "agents.connectorOffDetail":
-    "Admins oder Operations können das einschalten. Bis dahin funktionieren Passports weiterhin für Skripte.",
+    "Die Systemadministration aktiviert das in der Konfiguration dieser Installation. Bis dahin funktionieren Passports weiterhin für Skripte.",
+  "agentClients.methods.title": "Wie sich MCP-Clients verbinden dürfen",
+  "agentClients.methods.sub":
+    "Wenn du einen Weg deaktivierst, sind darüber keine neuen Anmeldungen mehr möglich. Bestehende Verbindungen werden weiterhin erneuert.",
+  "agentClients.methods.saveFailed": "Die Änderung wurde nicht gespeichert",
+  "agentClients.methods.published":
+    "Veröffentlichte Identität eines Tools akzeptieren",
+  "agentClients.methods.publishedHint":
+    "Die ID des Tools ist eine Webadresse auf der Website des Herstellers. Claude, Codex und ChatGPT nutzen diesen Weg zuerst.",
+  "agentClients.methods.publishedSpec":
+    "Spezifikation: Client ID Metadata Documents (CIMD)",
+  "agentClients.methods.dynamic": "Selbstregistrierung von Tools zulassen",
+  "agentClients.methods.dynamicHint":
+    "Der ältere Weg. Jedes Tool kann sich selbst hinzufügen, daher wächst die Client-Liste mit der Zeit.",
+  "agentClients.methods.dynamicSpec":
+    "Spezifikation: Dynamic Client Registration (DCR)",
+  "agentClients.methods.deploymentOff":
+    "Die Systemadministration hat diesen Weg in der Konfiguration der Installation deaktiviert.",
+  "agentClients.methods.admin": "Von Admins registrierte Clients",
+  "agentClients.methods.adminHint":
+    "Direkt unter „MCP-Clients“ registriert. Das Tool muss das Client-Secret senden.",
+  "agentClients.methods.alwaysOn": "Immer aktiv",
+  "agentClients.methods.readOnly": "Nur Admins können das ändern.",
+  "agentClients.title": "MCP-Clients",
+  "agentClients.sub":
+    "Jeder Client, über den sich ein KI-Tool anmeldet, und wie er entstanden ist.",
+  "agentClients.empty": "Noch kein MCP-Client.",
+  "agentClients.readOnly": "Nur Admins können MCP-Clients ändern.",
+  "agentClients.toggleFailed": "Der Client wurde nicht geändert",
+  "agentClients.enable": "Aktivieren",
+  "agentClients.disable": "Deaktivieren",
+  "agentClients.disabled": "Deaktiviert",
+  "agentClients.neverUsed": "Nie",
+  "agentClients.usersFolded_one": "Nutzende: {count}",
+  "agentClients.usersFolded_other": "Nutzende: {count}",
+  "agentClients.col.client": "Client",
+  "agentClients.col.registered": "Herkunft",
+  "agentClients.col.users": "Nutzende",
+  "agentClients.col.lastUsed": "Zuletzt verwendet",
+  "agentClients.col.state": "Status",
+  "agentClients.by.admin": "Von einem Admin",
+  "agentClients.by.dcr": "Selbst registriert",
+  "agentClients.by.cimd": "Veröffentlichte Identität",
+  "agentClients.rotate.open": "Secret erneuern…",
+  "agentClients.rotate.title": "Secret von {client} erneuern?",
+  "agentClients.rotate.confirm": "Secret erneuern",
+  "agentClients.rotate.body":
+    "Das aktuelle Secret funktioniert ab sofort nicht mehr. Füge das neue im Tool ein, damit seine Verbindungen weiterhin erneuert werden.",
+  "agentClients.rotate.resultTitle": "Neues Client-Secret",
+  "agentClients.delete.open": "Löschen…",
+  "agentClients.delete.title": "{client} löschen?",
+  "agentClients.delete.confirm": "Client löschen",
+  "agentClients.delete.bodyAdmin":
+    "Jede Verbindung über {client} endet. Der Client ist endgültig gelöscht.",
+  "agentClients.delete.bodyDcr":
+    "Jede Verbindung über {client} endet. Das Tool kann sich erneut selbst registrieren. Um solche Tools fernzuhalten, deaktiviere „Selbstregistrierung von Tools zulassen“.",
+  "agentClients.delete.bodyCimd":
+    "Jede Verbindung über {client} endet. Das Tool kommt zurück, sobald es jemand erneut verbindet. Um es fernzuhalten, deaktiviere es stattdessen.",
+  "agentClients.register.open": "Client registrieren",
+  "agentClients.register.title": "Client registrieren",
+  "agentClients.register.name": "Name",
+  "agentClients.register.nameHint":
+    "Erscheint auf dem Anmeldebildschirm und in der Client-Liste.",
+  "agentClients.register.redirects": "Weiterleitungs-URIs",
+  "agentClients.register.redirectsHint":
+    "Wohin das Tool nach der Anmeldung zurückleitet. Wähle ein Tool aus der Liste oder gib eine Adresse ein und drücke die Eingabetaste.",
+  "agentClients.register.submit": "Client registrieren",
+  "agentClients.register.needName": "Gib dem Client einen Namen.",
+  "agentClients.register.needRedirect":
+    "Füge mindestens eine Weiterleitungs-URI hinzu.",
+  "agentClients.register.nameInvalid":
+    "Verwende einen Namen mit 1 bis 120 Zeichen.",
+  "agentClients.register.redirectInvalid":
+    "Verwende https oder http auf localhost oder 127.0.0.1, ohne Fragment.",
+  "agentClients.register.redirectCount":
+    "Füge 1 bis 10 Weiterleitungs-URIs hinzu.",
+  "agentClients.result.title": "Client registriert",
+  "agentClients.result.secretOnceTitle": "Kopiere das Secret jetzt",
+  "agentClients.result.secretOnceBody":
+    "Margince speichert davon nur einen Fingerabdruck und kann es nicht erneut anzeigen. Verloren? Erneuere das Secret.",
+  "agentClients.result.done": "Fertig",
+  "agentClients.value.clientId": "Client-ID",
+  "agentClients.value.secret": "Client-Secret",
+  "agentClients.value.authorize": "Autorisierungs-URL",
+  "agentClients.value.token": "Token-URL, auch zum Erneuern",
+  "agentClients.value.scopes": "Scopes",
+  "agentClients.value.mcpUrl": "MCP-Server-URL",
+  "agentClients.value.copy": "Kopieren",
+  "agentClients.value.copied": "Kopiert",
+  "agentClients.value.copyNamed": "{value} kopieren",
+  "agentClients.value.copiedNamed": "{value} kopiert",
+  "agentClients.value.copyRemedy": "Markiere den Wert und kopiere ihn selbst.",
+  "agentClients.gemini.title": "In Gemini Enterprise",
+  "agentClients.gemini.step1":
+    "Öffne „Manage team“, dann „Connected apps“, und wähle „Add MCP Server“. Füge die MCP-Server-URL ein, nenne den Server Margince, wähle „Next“ und dann „OAuth 2.0“.",
+  "agentClients.gemini.step2":
+    "Füge die Werte oben ein. Bietet das Formular PKCE an, aktiviere es: Margince setzt das voraus.",
+  "agentClients.gemini.step3":
+    "Wähle „Verify Auth“, melde dich mit deinem eigenen Konto bei Margince an und wähle dann „Continue“.",
+  "agentClients.gemini.step4":
+    "Wähle einen Multi-Region-Standort, gib dem Datenconnector einen Namen und wähle „Add“. Gemini legt ihn deaktiviert an, also aktiviere ihn für dein Team.",
   "aiAccess.connect.title": "Verbinde dein KI-Tool",
   "aiAccess.connect.sub":
     "Dauert etwa eine Minute. Du meldest dich einmal an, danach bleibt die Verbindung bestehen.",
@@ -6125,8 +6231,20 @@ export const de = {
     "Wenn er fragt, melde dich bei Margince an und wähle Autorisieren. Fertig.",
   "aiAccess.copilot.ownUnavailable":
     "Copilot außerhalb der Arbeit kann sich nicht mit anderen Apps verbinden. Nutze Copilot über die Arbeit oder eine andere KI aus dieser Liste.",
-  "aiAccess.gemini.companyUnavailable":
-    "Gemini über Arbeit oder Schule kann sich noch nicht mit Margince verbinden.",
+  "aiAccess.gemini.adminLine":
+    "Dein Gemini-Enterprise-Admin fügt Margince einmal für dein Unternehmen hinzu.",
+  "aiAccess.gemini.admin1":
+    "Lass dir von einem Margince-Admin eine Client-ID und ein Secret geben. Unter Einstellungen → MCP → MCP-Clients wählt der Admin „Client registrieren“, gibt an, dass das Tool ein Secret braucht, und fügt die Weiterleitungs-URI https://vertexaisearch.cloud.google.com/oauth-redirect hinzu.",
+  "aiAccess.gemini.admin2":
+    "Öffne in Gemini Enterprise „Manage team“, dann „Connected apps“, und wähle „Add MCP Server“.",
+  "aiAccess.gemini.admin3":
+    "Füge die Margince-Adresse oben als Server-URL ein, nenne den Server Margince und wähle „Next“. Wähle „OAuth 2.0“ und füge dann die Autorisierungs-URL, die Token-URL, die Client-ID und das Client-Secret vom Margince-Admin ein. Margince zeigt jeden Wert, wenn es den Client registriert.",
+  "aiAccess.gemini.admin4":
+    "Trage die Scopes ein, die dir der Margince-Admin gegeben hat, aktiviere PKCE, falls das Formular es anbietet, und wähle dann „Verify Auth“ und „Continue“.",
+  "aiAccess.gemini.admin5":
+    "Wähle einen Multi-Region-Standort, gib dem Datenconnector einen Namen und wähle „Add“. Gemini legt ihn deaktiviert an, also aktiviere ihn für dein Team.",
+  "aiAccess.gemini.connect":
+    "Öffne in Gemini „Connected apps“ und wähle „Connect“ neben Margince.",
   "aiAccess.gemini.openApps":
     "Öffne auf gemini.google.com „Settings“ und dann „Connected Apps“.",
   "aiAccess.gemini.addApp":
@@ -9592,6 +9710,8 @@ export const de = {
   "settings.page.automations.sub": "Regeln, die automatisch laufen.",
   "settings.page.usage.sub":
     "KI-Kosten dieses Monats im Verhältnis zum Kontingent.",
+  "settings.page.mcp.sub":
+    "Welche KI-Tools sich über MCP mit Margince verbinden dürfen und wie.",
   "settings.page.model-calls.sub": "Jede Modellanfrage und ihre Antwort.",
   "settings.page.privacy.sub":
     "Betroffenenanfragen, Einwilligungszwecke und Aufbewahrung von Datensätzen.",
@@ -9638,6 +9758,7 @@ export const de = {
   "settings.tab.models": "KI-Modelle",
   "settings.tab.automations": "Automatisierungen",
   "settings.tab.usage": "KI-Nutzung",
+  "settings.tab.mcp": "MCP",
   "settings.tab.model-calls": "KI-Aufrufprotokoll",
   "settings.tab.audit": "Audit-Log",
   "settings.tab.system-health": "Systemzustand",
@@ -10489,6 +10610,7 @@ export const de = {
   "roles.object.installation_settings": "Unternehmensprofil",
   "roles.object.authentication_policy": "Anmeldemethoden",
   "roles.object.oauth_application": "OAuth-Apps",
+  "roles.object.agent_client": "MCP-Clients",
   "roles.object.privacy_request": "Datenschutzanfragen",
   "roles.object.consent_config": "Einwilligungszwecke",
   "roles.object.communication_exception": "Versandausnahmen",
@@ -12478,6 +12600,11 @@ export const de = {
     "Diese Verbindungsanfrage konnte nicht abgeschlossen werden",
   "consent.invalidBody":
     "Diese Installation autorisiert die Anfrage in dieser Form nicht. Die App ist hier möglicherweise nicht mehr registriert. Gehe zurück zur App, die du verbinden wolltest, und beginne von vorn.",
+  "consent.methodOffTitle": "Dieses KI-Tool kann sich nicht verbinden",
+  "consent.methodOffTool": "Tool: {client}",
+  "consent.methodOffReturn": "Würde zurückkehren zu: {host}",
+  "consent.methodOffBody":
+    "Dein Admin hat diesen Weg, KI-Tools zu verbinden, deaktiviert. Frage nach, ob dieses Tool zugelassen oder für dein Unternehmen registriert werden kann.",
   "contact.enriched.title": "Angereicherte Angaben",
   "contact.confirm.title_one": "{count} Angabe zu bestätigen",
   "contact.confirm.title_other": "{count} Angaben zu bestätigen",
@@ -14225,6 +14352,10 @@ export const de = {
   "worklist.because.no_reply_history": "keine bisherigen Antworten",
   "worklist.because.asks_nothing": "fordert nichts an",
   "worklist.because.addressed_elsewhere": "an jemand anderen im Team gerichtet",
+  "worklist.because.bcc_from_stranger":
+    "in Bcc an dich, von jemandem, mit dem du noch nicht geschrieben hast",
+  "worklist.because.link_off_sender":
+    "der Link führt auf eine andere Website als die Absendedomain",
   "worklist.because.read_only": "du kannst das lesen, aber nicht ändern",
   "worklist.above.pin":
     "Steht über dem nächsten Eintrag, da du diesen Eintrag angeheftet hast.",

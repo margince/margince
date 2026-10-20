@@ -351,12 +351,13 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_import
 
-11 columns · primary key `(id)` · referenced by 0 foreign keys
+12 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
+| `bcc_only` | `boolean` |  |  |
 | `delivered_by` | `text[]`, default `'{}'::text[]` | yes |  |
 | `imported_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `posture_at_import` | `text` |  | One of `shared`, `classified`, `held`. |

@@ -263,6 +263,7 @@ var (
 			"consent_config":        {Create: true, Read: true, Update: true, Delete: true},
 			"authentication_policy": {Read: true, Update: true},
 			"oauth_application":     {Create: true, Read: true, Update: true, Delete: true},
+			"agent_client":          {Create: true, Read: true, Update: true, Delete: true},
 			"seat_usage":            {Read: true},
 			"team_oversight":        {Read: true},
 			"team_lead":             {Create: true, Read: true},
@@ -285,16 +286,17 @@ var (
 // ops authentication_policy.update, which the seed grants read-only.
 func withoutGovernance(objects map[string]principal.ObjectGrant) map[string]principal.ObjectGrant {
 	out := maps.Clone(objects)
-	// Two objects ops holds NARROWER rather than not at all, so they are
+	// Objects ops holds NARROWER rather than not at all, so they are
 	// overwritten instead of deleted.
 	//
 	// role_admin is read: an operator answering "why can this colleague not see
 	// that" needs the policy in front of them, and changing it stays with admin.
-	// authentication_policy is read for the same shape of reason — ops sees which
-	// sign-in providers the installation offers; deciding who may enter it is
+	// authentication_policy and agent_client are read for the same shape of
+	// reason: ops sees how users and AI tools may sign in; deciding that is
 	// admin's.
 	out["role_admin"] = principal.ObjectGrant{Read: true}
 	out["authentication_policy"] = principal.ObjectGrant{Read: true}
+	out["agent_client"] = principal.ObjectGrant{Read: true}
 	for _, object := range []string{"report_definition", "sales_target", "reporting_framework", "report_schedule", "report_edition", "reporting_credit"} {
 		out[object] = principal.ObjectGrant{Read: true}
 	}

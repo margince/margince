@@ -1,8 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+import { SETTINGS_PAGES } from "../src/features/settings/settingscatalog";
 import { de } from "../src/i18n/de";
 import { en, type MessageKey } from "../src/i18n/en";
-import { SETTINGS_PAGES } from "../src/screens/settingscatalog";
 import { meFixture } from "../src/testing/mefixture";
 import { copy } from "./copy";
 import { anna, mockApi } from "./seed";
@@ -159,7 +159,7 @@ const CORE_SCREENS = [
   "analytics",
   "settings",
   // Settings is many pages behind one route (SETTINGS_PAGES in
-  // screens/settingscatalog.ts), and a bare `settings` resolves to Account —
+  // features/settings/settingscatalog.ts), and a bare `settings` resolves to Account,
   // the shortest of them. Sweeping that alone and calling settings covered is
   // how the widest page in the product went unmeasured: `fields` carries two
   // full list surfaces with their own toolbars, `integrations` four

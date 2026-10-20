@@ -20,12 +20,12 @@ import { translatePlural, useLocale, useT } from "../../i18n";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
-import { useAcquisitionSources } from "../../screens/acquisitionsources.queries";
 import { searchCompanyTargets } from "../companies/companyform";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import { LegalReviewQueueLink } from "../privacy/legalreviews";
 import { mineEmptyNote, standardViews } from "../records/recordlist";
 import { useOwnerPicker } from "../records/recordreferences";
+import { useAcquisitionSources } from "../settings/acquisitionsources.queries";
 import {
   type ClosedDeal,
   CloseReviewOffer,

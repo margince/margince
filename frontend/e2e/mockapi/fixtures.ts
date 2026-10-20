@@ -94,6 +94,8 @@ export const E2E_ADMIN_GRANTS: GrantSpec = {
   // Read alone: the page opens on it, and the sign-in card's write checks
   // `installation_settings:update`, which this fixture holds.
   authentication_policy: ["read"],
+  // The MCP page opens on it, and the sweep measures the admin's controls.
+  agent_client: ["create", "read", "update", "delete"],
   // `license:read` above opens the Seats page, so the card never reads this.
   // It is the grant a Management seat has instead of the licence.
   seat_usage: ["read"],

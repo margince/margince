@@ -15,9 +15,9 @@ import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanUpsert } from "../../lib/capability";
-import { ProviderRefreshLine } from "../../screens/rate-catalogue-refresh";
-import { type BoundModel, PriceForm } from "../../screens/rate-manual";
-import { RemovePriceDialog } from "../../screens/rate-remove";
+import { ProviderRefreshLine } from "../settings/rate-catalogue-refresh";
+import { type BoundModel, PriceForm } from "../settings/rate-manual";
+import { RemovePriceDialog } from "../settings/rate-remove";
 import { borrowedRows, useAiModelCatalogue } from "./ai-models";
 import { usePriceSync } from "./ai-price-sync";
 import {

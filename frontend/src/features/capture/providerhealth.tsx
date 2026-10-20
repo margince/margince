@@ -5,10 +5,10 @@ import { EmptyState } from "../../design-system/atoms";
 import { PanelBody, PanelRow } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
-import { HealthCard } from "../../screens/healthcard";
 import { useProviderHealth } from "../ai/ai-provider-health";
 import { ProviderHealthNotice } from "../ai/ai-provider-health-notice";
 import { providerName } from "../ai/ai-provider-names";
+import { HealthCard } from "../settings/healthcard";
 import "../ai/ai-settings.css";
 
 // Settings → System health: every AI provider that is not answering. The

@@ -13,8 +13,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
-import { RequestsPanel } from "../../screens/settings.privacy";
 import { meFixture } from "../../testing/mefixture";
+import { RequestsPanel } from "../settings/settings.privacy";
 import { dueAtOf, earlierDueTooLate } from "./privacy.deadline";
 
 // The deadline of a manual subject request. The server computes it and the form

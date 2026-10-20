@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -57,6 +58,22 @@ func (e *revocationEnv) connectOAuthWith(
 	t *testing.T, consenter Identity, clientName string,
 ) connectFixture {
 	t.Helper()
+	out := connectFixture{clientID: e.registerOAuthClient(t, clientName)}
+	ctx := e.wsCtx(consenter)
+	if err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out.grantID, out.refresh, err = issueGrant(ctx, tx, consentInput(consenter, out.clientID))
+		return err
+	}); err != nil {
+		t.Fatalf("issuing the grant: %v", err)
+	}
+	return out
+}
+
+// registerOAuthClient registers a client with no connection under it yet and
+// returns its client_id.
+func (e *revocationEnv) registerOAuthClient(t *testing.T, clientName string) string {
+	t.Helper()
 	// The full id, not a prefix: consecutive v7 ids share their leading bytes
 	// within a millisecond, and every attempt in this suite registers its own
 	// client.
@@ -67,21 +84,14 @@ func (e *revocationEnv) connectOAuthWith(
 		clientID, clientName); err != nil {
 		t.Fatalf("registering the client: %v", err)
 	}
+	return clientID
+}
 
-	var out connectFixture
-	out.clientID = clientID
-	ctx := e.wsCtx(consenter)
-	if err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		out.grantID, out.refresh, err = issueGrant(ctx, tx, issueGrantInput{
-			WorkspaceID: consenter.WorkspaceID, UserID: consenter.UserID, ClientID: clientID,
-			Scopes: []string{"read"}, RefreshAllowed: true,
-		})
-		return err
-	}); err != nil {
-		t.Fatalf("issuing the grant: %v", err)
+func consentInput(consenter Identity, clientID string) issueGrantInput {
+	return issueGrantInput{
+		WorkspaceID: consenter.WorkspaceID, UserID: consenter.UserID, ClientID: clientID,
+		Scopes: []string{"read"}, RefreshAllowed: true,
 	}
-	return out
 }
 
 // TestARevokeRacingARotationNeverDeadlocksOrLeavesACredentialLive fires the
@@ -209,6 +219,146 @@ func TestRevokingAPassportARotationAlreadyReplacedStillEndsTheConnection(t *test
 		t.Fatalf("revoking the replaced passport: %v", err)
 	}
 	e.assertNothingLiveUnder(t, fixture.grantID, "after revoking a replaced passport")
+}
+
+// An admin deleting a client while a consent to it commits queues on the client
+// row, the lock both take first. The connection the consent made then dies too.
+func TestDeletingAClientWhileAConsentCommitsEndsTheConnectionItMade(t *testing.T) {
+	e := setupRevocationEnv(t, "client-delete-behind-consent")
+	clientID := e.registerOAuthClient(t, "deleted mid-consent")
+	rowID := e.oauthClientRowID(t, clientID)
+	var grantID ids.UUID
+	consent := e.holdOpen(t, func(ctx context.Context, tx pgx.Tx) error {
+		var err error
+		grantID, _, err = issueGrant(ctx, tx, consentInput(e.admin, clientID))
+		return err
+	})
+
+	deleted := make(chan error, 1)
+	returned := make(chan struct{})
+	go func() {
+		defer close(returned)
+		deleted <- e.svc.DeleteAgentClient(e.wsCtx(e.admin), e.admin, rowID)
+	}()
+	e.awaitQueuedBehind(t, consent.pid, returned, "the delete")
+	consent.release()
+
+	if err := <-consent.done; err != nil {
+		t.Fatalf("the consent failed on the interleaving: %v", err)
+	}
+	if err := <-deleted; err != nil {
+		t.Fatalf("the delete failed on the interleaving: %v", err)
+	}
+	e.assertNothingLiveUnder(t, grantID, "after a delete queued behind the consent")
+}
+
+// The other order: the delete holds the client row. The consent queued behind
+// it finds the client gone and is refused the way a spent code is.
+func TestAConsentQueuedBehindAClientDeleteIsRefused(t *testing.T) {
+	e := setupRevocationEnv(t, "consent-behind-client-delete")
+	clientID := e.registerOAuthClient(t, "deleted before consent")
+	rowID := e.oauthClientRowID(t, clientID)
+	deletion := e.holdOpen(t, func(ctx context.Context, tx pgx.Tx) error {
+		return revokeClientTx(ctx, tx, rowID)
+	})
+
+	consented := make(chan error, 1)
+	returned := make(chan struct{})
+	ctx := e.wsCtx(e.admin)
+	go func() {
+		defer close(returned)
+		consented <- e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
+			_, _, err := issueGrant(ctx, tx, consentInput(e.admin, clientID))
+			return err
+		})
+	}()
+	e.awaitQueuedBehind(t, deletion.pid, returned, "the consent")
+	deletion.release()
+
+	if err := <-deletion.done; err != nil {
+		t.Fatalf("the delete failed on the interleaving: %v", err)
+	}
+	if err := <-consented; !errors.Is(err, errCodeSpent) {
+		t.Fatalf("a consent queued behind the delete → %v, want the spent-code refusal", err)
+	}
+	var grants int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM oauth_grant WHERE client_id = $1`, clientID).Scan(&grants); err != nil {
+		t.Fatalf("counting the grants: %v", err)
+	}
+	if grants != 0 {
+		t.Fatalf("a deleted client gained %d grant(s)", grants)
+	}
+}
+
+// heldTx is a transaction kept open, with every lock it took, until release.
+// pid is its backend, so a probe can ask who queues behind it.
+type heldTx struct {
+	pid     int32
+	release func()
+	done    <-chan error
+}
+
+// holdOpen runs work as the admin and holds its transaction open. Release is
+// also a cleanup, so a test that fails mid-race never strands the locks.
+func (e *revocationEnv) holdOpen(t *testing.T, work func(context.Context, pgx.Tx) error) heldTx {
+	t.Helper()
+	ctx := e.wsCtx(e.admin)
+	held := make(chan int32, 1)
+	release := make(chan struct{})
+	done := make(chan error, 1)
+	go func() {
+		done <- e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
+			if err := work(ctx, tx); err != nil {
+				return err
+			}
+			var pid int32
+			if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
+				return err
+			}
+			held <- pid
+			<-release
+			return nil
+		})
+	}()
+	var once sync.Once
+	releaseOnce := func() { once.Do(func() { close(release) }) }
+	t.Cleanup(releaseOnce)
+	select {
+	case pid := <-held:
+		return heldTx{pid: pid, release: releaseOnce, done: done}
+	case err := <-done:
+		t.Fatalf("the held transaction ended before it held anything: %v", err)
+		return heldTx{}
+	}
+}
+
+// awaitQueuedBehind returns once some backend waits on a lock pid holds. A
+// deadlock never gets here: Postgres aborts one side, and the racer returns.
+func (e *revocationEnv) awaitQueuedBehind(t *testing.T, pid int32, racerReturned <-chan struct{}, racer string) {
+	t.Helper()
+	testdb.WaitForContention(t, racerReturned,
+		racer+" finished while the other side held the client row: it never queued on the lock both take first",
+		racer+" never queued behind the client row the other side held",
+		func(ctx context.Context) (bool, error) {
+			if _, err := e.owner.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+				return false, err
+			}
+			var queued bool
+			err := e.owner.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_stat_activity a
+				  WHERE $1 = ANY (pg_blocking_pids(a.pid)))`, pid).Scan(&queued)
+			return queued, err
+		})
+}
+
+func (e *revocationEnv) oauthClientRowID(t *testing.T, clientID string) ids.UUID {
+	t.Helper()
+	var id ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT id FROM oauth_client WHERE client_id = $1`, clientID).Scan(&id); err != nil {
+		t.Fatalf("reading the client row: %v", err)
+	}
+	return id
 }
 
 // mintUnderGrant issues the credential a code exchange would have minted

@@ -17,7 +17,7 @@ import {
   explainPublicError,
   LinkInvalidError,
   RateLimitedError,
-} from "../../screens/preferences";
+} from "../settings/preferences";
 import {
   CORRECTABLE,
   type CorrectableField,
@@ -26,7 +26,7 @@ import {
 import { PrivacyNotice } from "./confirmprivacy";
 import { RequestReceipts, type RightsCaseReceipt } from "./confirmreceipts";
 import { SubscriptionConfirm } from "./confirmsubscription";
-import "../../screens/preferences.css";
+import "../settings/preferences.css";
 import "./confirm.css";
 
 // The public, anonymous confirm-your-details page: what a contact lands on from

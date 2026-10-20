@@ -279,6 +279,10 @@ const (
 	// connector is issued against. Split from objCaptureSettings, which every
 	// sales role holds, because a client secret is not a capture setting.
 	objOauthApplication = "oauth_application"
+	// The OAuth clients an AI tool signs a user in through, with Margince as
+	// the authorization server: the opposite direction to oauth_application.
+	// Registering one admits a new app to the installation.
+	objAgentClient = "agent_client"
 	// How many seats are used against how many are held. Non-commercial by
 	// construction: the licensee, the entitlement and the contract terms stay
 	// on objLicense, so Management can plan headcount without reading them.
@@ -325,6 +329,7 @@ func AdministrationObjects() []string {
 		objConsentConfig,
 		objAuthenticationPolicy,
 		objOauthApplication,
+		objAgentClient,
 		objSeatUsage,
 	}
 }
