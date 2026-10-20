@@ -83,7 +83,8 @@ const ENTRIES = [
   },
 ];
 
-function page() {
+function page(hash = "#/settings/configuration") {
+  globalThis.location.hash = hash;
   installFetchStub({
     "GET /me": meRoute({ installation_settings: ["read", "update"] }),
     "GET /installation/configuration": () => jsonResponse(ENTRIES),
@@ -103,7 +104,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  render: page,
+  render: () => page(),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findByText("http.port");
@@ -114,5 +115,18 @@ export const Default: Story = {
 
 export const Dark: Story = {
   globals: { theme: "dark" },
-  render: page,
+  render: () => page(),
+};
+
+// Opened from settings search on a variable: the filter comes in the address.
+export const FilteredFromSearch: Story = {
+  render: () => page("#/settings/configuration?q=MARGINCE_HTTP_PORT"),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText("http.port");
+    await expect(canvas.queryByText("worker.concurrency")).toBeNull();
+    await expect(canvas.getByRole("searchbox")).toHaveValue(
+      "MARGINCE_HTTP_PORT",
+    );
+  },
 };

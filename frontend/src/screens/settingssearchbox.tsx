@@ -6,11 +6,27 @@ import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { useCompanyContextShown } from "../features/companies/companycontextreach";
 import { useT } from "../i18n";
 import { isImeCommit } from "../lib/imecommit";
-import { navigate } from "../lib/router";
+import { navigate, routeHash } from "../lib/router";
+import { hashWithParams, NO_URL_PARAMS, type UrlParams } from "../lib/urlstate";
+import {
+  CONFIGURATION_FILTER_PARAM,
+  useConfiguration,
+} from "./configurationentries";
 import type { SettingsPage } from "./settingscatalog";
 import { PAGE_ICONS } from "./settingsnavicons";
 import { settingsHref } from "./settingsrouting";
-import { settingsSearch } from "./settingssearch";
+import {
+  CONFIGURATION_PAGE,
+  type SettingsHit,
+  settingsSearch,
+} from "./settingssearch";
+
+// The dials a hit opens its page with: the filter, when a setting's name found it.
+function hitDials(hit: SettingsHit): UrlParams {
+  return hit.filter === undefined
+    ? NO_URL_PARAMS
+    : new Map([[CONFIGURATION_FILTER_PARAM, hit.filter]]);
+}
 
 /**
  * Finding a settings page by typing.
@@ -76,7 +92,17 @@ export function SettingsSearchBox({
   }, [active]);
 
   const seesCompanyContext = useCompanyContextShown();
-  const hits = settingsSearch(typed, pages, t, { seesCompanyContext });
+  // Asked only of a reader who may open Configuration, and only once they type.
+  const configuration = useConfiguration(
+    typed.trim() !== "" && pages.some((page) => page.id === CONFIGURATION_PAGE),
+  );
+  const hits = settingsSearch(
+    typed,
+    pages,
+    t,
+    { seesCompanyContext },
+    configuration.data,
+  );
   // Whether the popup is ON SCREEN, which is what `aria-expanded` must report.
   // It was `hits.length > 0`, so a query matching nothing rendered a visible
   // popup while the combobox told assistive technology it was collapsed.
@@ -116,7 +142,12 @@ export function SettingsSearchBox({
     // has just arrived at.
     setTyped("");
     setActive(-1);
-    navigate(settingsHref(hit.page.id));
+    const dials = hitDials(hit);
+    if (dials.size === 0) {
+      navigate(settingsHref(hit.page.id));
+    } else {
+      navigate(settingsHref(hit.page.id), dials);
+    }
     onPick?.();
   }
 
@@ -216,7 +247,10 @@ export function SettingsSearchBox({
                       ? "settingssearch-hit active"
                       : "settingssearch-hit"
                   }
-                  href={`#/settings/${hit.page.id}`}
+                  href={hashWithParams(
+                    routeHash(settingsHref(hit.page.id)),
+                    hitDials(hit),
+                  )}
                   onMouseDown={(event) => {
                     // Focus stays in the box; nothing is opened here.
                     event.preventDefault();

@@ -6,6 +6,7 @@ import { expect, userEvent, within } from "storybook/test";
 import { en } from "../i18n/en";
 import {
   installFetchStub,
+  jsonResponse,
   meRoute,
   StoryProviders,
 } from "../testing/story-utils";
@@ -13,10 +14,17 @@ import { SETTINGS_PAGES } from "./settingscatalog";
 import { SettingsSearchBox } from "./settingssearchbox";
 import "../app/shell.css";
 
+// The installation's settings, which Configuration answers to by name.
+const SETTING_NAMES = [
+  { key: "http.port", env: "MARGINCE_HTTP_PORT" },
+  { key: "worker.concurrency", env: "MARGINCE_WORKER_CONCURRENCY" },
+];
+
 // The box the settings rail and the phone overview carry, over every page.
 function Box() {
   installFetchStub({
     "GET /me": meRoute({}, { roles: ["admin"], seat: "full" }),
+    "GET /installation/configuration": () => jsonResponse(SETTING_NAMES),
   });
   return (
     <StoryProviders>
@@ -103,6 +111,32 @@ export const SectionHit: Story = {
 
 export const SectionHitDark: Story = {
   ...SectionHit,
+  globals: { theme: "dark" },
+};
+
+// A setting's variable finds Configuration, which opens filtered to it.
+export const SettingNameHit: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(
+      await canvas.findByRole("combobox", {
+        name: en["settings.search.label"],
+      }),
+      "MARGINCE_HTTP_PORT",
+    );
+    const hit = await canvas.findByRole("option", {
+      name: new RegExp(en["settings.tab.configuration"]),
+    });
+    await expect(hit).toHaveTextContent("http.port");
+    await expect(hit).toHaveAttribute(
+      "href",
+      "#/settings/configuration?q=MARGINCE_HTTP_PORT",
+    );
+  },
+};
+
+export const SettingNameHitDark: Story = {
+  ...SettingNameHit,
   globals: { theme: "dark" },
 };
 
