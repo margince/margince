@@ -91,8 +91,11 @@ func (s *Service) PublishFramework(ctx context.Context, version int64, in crmcon
 }
 
 func validateFrameworkInput(in crmcontracts.ReportingFrameworkInput) error {
-	if !values.HasVisibleText(in.Reason) || utf8.RuneCountInString(in.Reason) > 1000 {
-		return refuse("reason", "invalid", "supply a reason of at most 1000 characters")
+	if !values.HasVisibleText(in.Reason) {
+		return refuse("reason", "invalid", "supply a reason")
+	}
+	if utf8.RuneCountInString(in.Reason) > 1000 {
+		return refuse("reason", "too_long", "a reason holds at most 1000 characters")
 	}
 	if len(in.CaptureContexts) > 20 {
 		return refuse("capture_contexts", "out_of_range", "supply at most twenty capture contexts")

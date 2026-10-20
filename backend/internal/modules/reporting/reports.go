@@ -162,6 +162,9 @@ func (s *Service) validateRevision(ctx context.Context, tx pgx.Tx, selection *cr
 	}
 	interval, err := Interval(*selection, calendar, s.now())
 	if err != nil {
+		if _, custom := errors.AsType[intervalError](err); custom {
+			return refusedField("selection.interval", err)
+		}
 		return refusedField("selection.period", err)
 	}
 	if _, err := TargetWindow(interval, string(selection.TargetBasis), calendar); err != nil {
@@ -178,8 +181,11 @@ func (s *Service) validateSelection(ctx context.Context, selection crmcontracts.
 	if err != nil {
 		return err
 	}
-	if len(selection.Metrics) == 0 || len(selection.Metrics) > 8 || len(selection.Blocks) > 20 {
+	if len(selection.Metrics) == 0 || len(selection.Metrics) > 8 {
 		return refuse("selection.metrics", "out_of_range", "choose between one and eight supported metrics")
+	}
+	if len(selection.Blocks) > 20 {
+		return refuse("selection.blocks", "out_of_range", "choose at most twenty charts")
 	}
 	seen := map[crmcontracts.ReportingMetricID]bool{}
 	allowed := map[crmcontracts.ReportingBlockKind]bool{}

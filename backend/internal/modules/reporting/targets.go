@@ -249,6 +249,8 @@ func refuseIdentityChange(before crmcontracts.ReportingTarget, in crmcontracts.R
 		return refuse("scope", "immutable", message)
 	case !sameID(before.Definition.PipelineId, in.PipelineId):
 		return refuse("pipeline_id", "immutable", message)
+	case before.Definition.PeriodKind != in.PeriodKind:
+		return refuse("period_kind", "immutable", message)
 	case !interval.StartAt.Equal(before.Interval.StartAt) || !interval.EndAt.Equal(before.Interval.EndAt):
 		return refuse("period_start", "immutable", message)
 	}

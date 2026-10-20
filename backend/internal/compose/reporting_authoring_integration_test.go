@@ -8,6 +8,7 @@ package compose
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"testing"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -32,6 +33,7 @@ func TestReportingFrameworkRejectsAmbiguousQualificationAndCaptureScopes(t *test
 		change func(*crmcontracts.ReportingFrameworkInput)
 	}{
 		{"no reason", "reason", func(in *crmcontracts.ReportingFrameworkInput) { in.Reason = "" }},
+		{"long reason", "reason", func(in *crmcontracts.ReportingFrameworkInput) { in.Reason = strings.Repeat("r", 1001) }},
 		{"unknown template", "template", func(in *crmcontracts.ReportingFrameworkInput) { in.Template = "unknown" }},
 		{"too many captures", "capture_contexts", func(in *crmcontracts.ReportingFrameworkInput) {
 			in.CaptureContexts = make([]crmcontracts.ReportingCaptureContext, 21)

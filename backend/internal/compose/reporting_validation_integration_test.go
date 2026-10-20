@@ -36,6 +36,10 @@ func TestReportingRejectsInvalidDefinitionsWithoutSavingPartialReports(t *testin
 		{"unrelated chart", "selection.blocks", func(in *crmcontracts.ReportingReportInput) {
 			in.Selection.Blocks = []crmcontracts.ReportingBlockKind{"forecast_support"}
 		}},
+		{"custom period without an interval", "selection.interval", func(in *crmcontracts.ReportingReportInput) { in.Selection.Period = "custom" }},
+		{"too many charts", "selection.blocks", func(in *crmcontracts.ReportingReportInput) {
+			in.Selection.Blocks = make([]crmcontracts.ReportingBlockKind, 21)
+		}},
 		{"invalid close window", "selection.close_window", func(in *crmcontracts.ReportingReportInput) { in.Selection.CloseWindow = "unknown" }},
 		{"invalid period", "selection.period", func(in *crmcontracts.ReportingReportInput) { in.Selection.Period = "unknown" }},
 		{"invalid target basis", "selection.target_basis", func(in *crmcontracts.ReportingReportInput) { in.Selection.TargetBasis = "unknown" }},
