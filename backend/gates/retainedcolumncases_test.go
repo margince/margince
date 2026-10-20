@@ -339,49 +339,6 @@ func TestTheRetainedColumnCheckRefusesWhatItCannotRead(t *testing.T) {
 		}
 	})
 
-	t.Run("unclosed quoting is refused before the split", func(t *testing.T) {
-		for _, unreadable := range []string{
-			`/* unfinished UPDATE activity SET counterparty_email = NULL`,
-			`UPDATE activity SET body = E'a\';b, counterparty_email = NULL WHERE id = $1`,
-			`UPDATE activity SET body = $$unfinished, counterparty_email = NULL`,
-			`UPDATE activity SET body = NULL /* unfinished, counterparty_email = NULL`,
-		} {
-			if unclosedWriteSpan(unreadable) == "" {
-				t.Errorf("unclosed quoting went unreported: %q", unreadable)
-			}
-			if statementDestroying(sqlStatements(unreadable), table, column) != "" {
-				t.Errorf("unclosed span was treated as a complete assignment: %q", unreadable)
-			}
-		}
-		for _, readable := range []string{
-			"settling the contact's notice cases: %w",
-			`UPDATE activity SET body = 'a;b', counterparty_email = NULL WHERE id = $1`,
-			`UPDATE activity SET body = E'a\';b', counterparty_email = NULL WHERE id = $1`,
-			`UPDATE activity SET body = NULL WHERE id = $1 AND kind = 'note'`,
-			`UPDATE contact SET note = 'she said ''no''' WHERE id = $1`,
-			"UPDATE activity SET body = $$a;b$$, counterparty_email = NULL WHERE id = $1",
-			`UPDATE contact SET note = 'E''s own note' WHERE id = $1`,
-			"UPDATE contact SET note = NULL -- not an E'scape\n WHERE id = $1",
-		} {
-			if form := unclosedWriteSpan(readable); form != "" {
-				t.Errorf("closed quoting was refused as %q: %s", form, readable)
-			}
-		}
-		escaped := `UPDATE activity SET body = E'a\';b', counterparty_email = NULL WHERE id = $1`
-		if statementDestroying(sqlStatements(escaped), table, column) == "" {
-			t.Error("escaped string hid the later destructive assignment")
-		}
-		for _, adjacent := range []string{
-			`UPDATE activity SET body = 'x'E'a\';b', counterparty_email = NULL WHERE id = $1`,
-			`UPDATE activity SET body = "c"E'a\';b', counterparty_email = NULL WHERE id = $1`,
-			`UPDATE activity SET body = $$x$$E'a\';b', counterparty_email = NULL WHERE id = $1`,
-		} {
-			if unclosedWriteSpan(adjacent) != "" || statementDestroying(sqlStatements(adjacent), table, column) == "" {
-				t.Errorf("adjacent escape string hid the later assignment: %s", adjacent)
-			}
-		}
-	})
-
 	// Two statements in one Go literal, the second destroying. Read whole, the
 	// first statement's SET clause answers for both.
 	t.Run("a second statement in the same literal", func(t *testing.T) {
@@ -430,6 +387,50 @@ func assertOrdinaryStatementsAreNotReported(t *testing.T, statements ...string) 
 	for _, ordinary := range statements {
 		if got := assembledSetTarget([]string{collapsedSQL(ordinary)}); got != "" {
 			t.Errorf("an ordinary statement was reported as assembled: %q", got)
+		}
+	}
+}
+
+func TestUnclosedRetentionSQLCannotHideErasure(t *testing.T) {
+	const table, column = "activity", "counterparty_email"
+	for _, unreadable := range []string{
+		`/* unfinished UPDATE activity SET counterparty_email = NULL`,
+		`UPDATE activity SET body = E'a\';b, counterparty_email = NULL WHERE id = $1`,
+		`UPDATE activity SET body = $$unfinished, counterparty_email = NULL`,
+		`UPDATE activity SET body = NULL /* unfinished, counterparty_email = NULL`,
+	} {
+		if unclosedWriteSpan(unreadable) == "" {
+			t.Errorf("unclosed quoting went unreported: %q", unreadable)
+		}
+		if statementDestroying(sqlStatements(unreadable), table, column) != "" {
+			t.Errorf("unclosed span was treated as a complete assignment: %q", unreadable)
+		}
+	}
+	for _, readable := range []string{
+		"settling the contact's notice cases: %w",
+		`UPDATE activity SET body = 'a;b', counterparty_email = NULL WHERE id = $1`,
+		`UPDATE activity SET body = E'a\';b', counterparty_email = NULL WHERE id = $1`,
+		`UPDATE activity SET body = NULL WHERE id = $1 AND kind = 'note'`,
+		`UPDATE contact SET note = 'she said ''no''' WHERE id = $1`,
+		"UPDATE activity SET body = $$a;b$$, counterparty_email = NULL WHERE id = $1",
+		`UPDATE contact SET note = 'E''s own note' WHERE id = $1`,
+		"UPDATE contact SET note = NULL -- not an E'scape\n WHERE id = $1",
+	} {
+		if form := unclosedWriteSpan(readable); form != "" {
+			t.Errorf("closed quoting was refused as %q: %s", form, readable)
+		}
+	}
+	escaped := `UPDATE activity SET body = E'a\';b', counterparty_email = NULL WHERE id = $1`
+	if statementDestroying(sqlStatements(escaped), table, column) == "" {
+		t.Error("escaped string hid the later destructive assignment")
+	}
+	for _, adjacent := range []string{
+		`UPDATE activity SET body = 'x'E'a\';b', counterparty_email = NULL WHERE id = $1`,
+		`UPDATE activity SET body = "c"E'a\';b', counterparty_email = NULL WHERE id = $1`,
+		`UPDATE activity SET body = $$x$$E'a\';b', counterparty_email = NULL WHERE id = $1`,
+	} {
+		if unclosedWriteSpan(adjacent) != "" || statementDestroying(sqlStatements(adjacent), table, column) == "" {
+			t.Errorf("adjacent escape string hid the later assignment: %s", adjacent)
 		}
 	}
 }
