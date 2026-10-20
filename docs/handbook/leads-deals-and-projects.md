@@ -41,7 +41,7 @@ A lead has five statuses. The first three are open, the last two are final.
 | **Qualified** | A contact now exists for this lead |
 | **Disqualified** | Closed, with a reason |
 
-Contacted and engaged can be set by captured activity or by hand. The record tells you which.
+Captured activity sets Contacted and Engaged automatically. You can also set them by hand; the record tells you which.
 
 You may move an open lead to any open step, forward or back, on its **Lead
 status** ladder. Margince itself only ever moves it forward.
@@ -365,9 +365,9 @@ A project always has at least one company. Trying to remove the last one is
 refused: "A project keeps at least one company; add another before taking this
 one off." A company with deals still on the project cannot be removed either.
 
-Companies on a project have roles: **Customer, Partner, Subcontractor**. These are labels only; a project can have several customers or none.
+Companies on a project can be a customer, partner or subcontractor. These are labels only; a project can have several customers or none.
 
-Stakeholder roles: **Champion, Economic buyer, Blocker, Influencer, User, Sponsor, Project lead, Delivery lead, Subject-matter expert.**
+Stakeholder roles: champion, economic buyer, blocker, influencer, user, sponsor, project lead, delivery lead, subject-matter expert.
 
 You can add someone from either end. The project's own Stakeholders card adds,
 removes and changes roles, and so does the contact's page. The contact page
