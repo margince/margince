@@ -896,13 +896,14 @@ log_as() { # role — tag each line of stdin and append to $log
 # wait_ready url timeout_s pid — 0 once the url answers 2xx (a 401/500/503 is
 # not ready), 2 as soon as pid has exited, 1 when the time runs out. A process
 # that refused its config at boot will never answer, so waiting out the timeout
-# for it only delays its reason.
+# for it only delays its reason. The process is asked first: an old server still
+# holding the port can answer 2xx for a launch that has already died.
 wait_ready() {
   local url="$1" timeout="$2" pid="$3"
   for _ in $(seq 1 "$timeout"); do
+    kill -0 "$pid" 2>/dev/null || return 2
     code=$(curl -s -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || true)
     [[ "$code" =~ ^2[0-9]{2}$ ]] && return 0
-    kill -0 "$pid" 2>/dev/null || return 2
     sleep 1
   done
   return 1

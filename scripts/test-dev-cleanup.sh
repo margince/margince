@@ -722,6 +722,25 @@ wait_ready "http://127.0.0.1:1/readyz" 1 "$slow_pid" || status=$?
 check 1 "$status" "a process still alive but not ready keeps the timeout answer"
 kill "$slow_pid" 2>/dev/null || true
 wait "$slow_pid" 2>/dev/null || true
+
+# A server that is not the launched process answers 2xx on the probed address,
+# as an old stack still holding the port would, while the launch has died.
+port="$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')"
+python3 -m http.server "$port" --bind 127.0.0.1 --directory "$boot_dir" >/dev/null 2>&1 &
+stale_server=$!
+remember "$stale_server"
+for _ in $(seq 1 50); do
+    curl -s -o /dev/null "http://127.0.0.1:${port}/" && break
+    sleep 0.1
+done
+bash -c 'exit 0' &
+dead_pid=$!
+wait "$dead_pid" 2>/dev/null || true
+status=0
+wait_ready "http://127.0.0.1:${port}/" 5 "$dead_pid" || status=$?
+check 2 "$status" "a launch that died is reported as exited even when another server answers its port"
+kill "$stale_server" 2>/dev/null || true
+wait "$stale_server" 2>/dev/null || true
 rm -rf "$boot_dir"
 
 if [[ "$failures" -gt 0 ]]; then
