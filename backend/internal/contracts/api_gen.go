@@ -54259,6 +54259,9 @@ type ToolIdempotencyKey = string
 // VoiceProfileVersionNumber defines model for VoiceProfileVersionNumber.
 type VoiceProfileVersionNumber = int
 
+// CalendarUnavailable RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type CalendarUnavailable = Problem
+
 // Conflict RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type Conflict = Problem
 

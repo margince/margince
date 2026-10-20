@@ -8845,6 +8845,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MeetingAvailability' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
         default:
           description: The operation could not be completed.
           content:
@@ -8866,6 +8867,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MeetingAvailability' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
         default:
           description: The operation could not be completed.
           content:
@@ -8999,6 +9001,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MeetingAvailability' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
         default:
           description: The operation could not be completed.
           content:
@@ -9213,6 +9216,7 @@ paths:
                       same field with the same values — the two surfaces do not get to disagree
                       about what an answer means.
         '422': { $ref: '#/components/responses/ValidationError' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
 
   /bookings:
     post:
@@ -9338,6 +9342,7 @@ paths:
                       does not help, since the walk starts at `from` either way. Declared because a
                       capped list read as complete is how a caller concludes there is no later opening.
         '404': { $ref: '#/components/responses/NotFound' }
+        '502': { $ref: '#/components/responses/CalendarUnavailable' }
 
   /public/booking/{host_slug}:
     parameters:
@@ -31086,6 +31091,15 @@ components:
           examples:
             locked:
               value: { type: 'https://errors.gradion.com/setting_locked_by_boot_source', title: Conflict, status: 409, code: setting_locked_by_boot_source, detail: 'capture.auto_enrich_daily_cap is set by env MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP; change it there' }
+    CalendarUnavailable:
+      description: |
+        The host's selected calendar could not be read (`code: calendar_unavailable`), so no times
+        are offered rather than times that may double-book the host. The `detail` points the host at
+        the calendar chosen in scheduling settings; the calendar and the provider's reason are in
+        the server log only. Asking again can succeed once the calendar answers.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
     ValidationError:
       description: Request failed validation (RFC 7807 with field-level `details.errors`).
       content:

@@ -14,6 +14,7 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["provider_out_of_credit", "common.providerOutOfCredit"],
   ["provider_unauthorized", "common.providerUnauthorized"],
   ["provider_unavailable", "common.providerUnavailable"],
+  ["calendar_unavailable", "scheduling.calendarUnavailable"],
   ["permission_denied", "common.permissionDenied"],
   ["seat_tier_insufficient", "common.seatReadOnly"],
   // The server's skew detail is English, worded for API and agent readers.

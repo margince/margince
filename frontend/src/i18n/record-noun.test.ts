@@ -184,6 +184,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // The meeting host is a human, not the CRM contact record type.
     "scheduling.windowHorizon",
     "scheduling.windowLimits",
+    "scheduling.calendarUnavailable",
     "scheduling.guestRecovery",
     "scheduling.deliveryUnknown",
     "scheduling.personalGuest",
@@ -324,6 +325,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // The meeting host is a human, not the CRM contact record type.
     "scheduling.windowHorizon",
     "scheduling.windowLimits",
+    "scheduling.calendarUnavailable",
     "scheduling.guestRecovery",
     "scheduling.deliveryUnknown",
     "scheduling.personalGuest",

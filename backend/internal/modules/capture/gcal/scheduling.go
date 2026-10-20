@@ -91,8 +91,11 @@ func (a *httpAPI) Busy(ctx context.Context, token, calendar string, from, to tim
 		return nil, err
 	}
 	found, ok := result.Calendars[calendar]
-	if !ok || len(found.Errors) != 0 {
-		return nil, errors.New("calendar: selected calendar could not be checked")
+	if !ok {
+		return nil, connector.NewCalendarUnavailable(calendar, "omitted", nil)
+	}
+	if len(found.Errors) != 0 {
+		return nil, connector.NewCalendarUnavailable(calendar, found.Errors[0].Reason, nil)
 	}
 	// Read only occupancy metadata, so rescheduling can exclude its own event.
 	return a.eventBusy(ctx, token, calendar, from, to)

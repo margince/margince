@@ -48411,6 +48411,20 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /**
+         * @description The host's selected calendar could not be read (`code: calendar_unavailable`), so no times
+         *     are offered rather than times that may double-book the host. The `detail` points the host at
+         *     the calendar chosen in scheduling settings; the calendar and the provider's reason are in
+         *     the server log only. Asking again can succeed once the calendar answers.
+         */
+        CalendarUnavailable: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
         /** @description Request failed validation (RFC 7807 with field-level `details.errors`). */
         ValidationError: {
             headers: {
@@ -58056,6 +58070,7 @@ export interface operations {
                     "application/json": components["schemas"]["MeetingAvailability"];
                 };
             };
+            502: components["responses"]["CalendarUnavailable"];
             /** @description The operation could not be completed. */
             default: {
                 headers: {
@@ -58090,6 +58105,7 @@ export interface operations {
                     "application/json": components["schemas"]["MeetingAvailability"];
                 };
             };
+            502: components["responses"]["CalendarUnavailable"];
             /** @description The operation could not be completed. */
             default: {
                 headers: {
@@ -58294,6 +58310,7 @@ export interface operations {
                     "application/json": components["schemas"]["MeetingAvailability"];
                 };
             };
+            502: components["responses"]["CalendarUnavailable"];
             /** @description The operation could not be completed. */
             default: {
                 headers: {
@@ -58598,6 +58615,7 @@ export interface operations {
                 };
             };
             422: components["responses"]["ValidationError"];
+            502: components["responses"]["CalendarUnavailable"];
         };
     };
     bookMeeting: {
@@ -58746,6 +58764,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            502: components["responses"]["CalendarUnavailable"];
         };
     };
     bookPublicMeeting: {

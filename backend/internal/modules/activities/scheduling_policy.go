@@ -50,7 +50,7 @@ func (s *Store) calendarBusy(ctx context.Context, host ids.UserID, p crmcontract
 		seen[calendar] = true
 		intervals, err := s.calendar.Busy(ctx, host, string(p.Provider), calendar, from.Add(-buffer), to.Add(buffer))
 		if err != nil {
-			return nil, err
+			return nil, calendarReadFailure(ctx, host, string(p.Provider), calendar, err)
 		}
 		for _, interval := range intervals {
 			if exclude != "" && calendar == p.CalendarId && interval.EventID == exclude {

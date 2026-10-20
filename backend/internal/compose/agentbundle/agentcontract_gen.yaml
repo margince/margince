@@ -3146,6 +3146,7 @@ paths:
                     description: |-
                       What these slots were computed FROM, which decides what an empty window means.
         '422': {$ref: '#/components/responses/ValidationError'}
+        '502': {$ref: '#/components/responses/CalendarUnavailable'}
   /bookings:
     post:
       tags: [Activities, AI]
@@ -8131,6 +8132,15 @@ components:
           examples:
             skew:
               value: {type: 'https://errors.gradion.com/version_skew', title: Version conflict, status: 409, code: version_skew, detail: The resource changed since your last read; re-read and retry.}
+    CalendarUnavailable:
+      description: |-
+        The host's selected calendar could not be read (`code: calendar_unavailable`), so no times
+        are offered rather than times that may double-book the host. The `detail` points the host at
+        the calendar chosen in scheduling settings; the calendar and the provider's reason are in
+        the server log only. Asking again can succeed once the calendar answers.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
     ValidationError:
       description: Request failed validation (RFC 7807 with field-level `details.errors`).
       content:
