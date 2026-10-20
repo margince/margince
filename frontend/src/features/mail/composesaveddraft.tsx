@@ -15,7 +15,6 @@ import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { paragraphsFrom } from "../../design-system/richtext";
 import { type Toast, useOwnToast, useToast } from "../../design-system/toast";
-import { replySubject } from "../../format/replysubject";
 import { useT } from "../../i18n";
 import {
   problemCodeOf,
@@ -24,6 +23,7 @@ import {
 } from "../../lib/problem";
 import { stripEveryKeyTag } from "../projects/projectrecord";
 import type { RelinkKind } from "./composerelink";
+import { replySubject } from "./replysubject";
 
 // The rep's own unsent message, kept on the server so closing the composer does
 // not lose it. Not the AI draft (`composedraftband.tsx`): that one is words a

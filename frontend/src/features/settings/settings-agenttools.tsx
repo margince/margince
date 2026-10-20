@@ -25,8 +25,8 @@ import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { AutonomyDot } from "../../design-system/trust";
 import { useT } from "../../i18n";
 import { dotTier } from "../../lib/autonomy";
+import { usePassports } from "../../lib/passports.queries";
 import { unwrap } from "../../lib/problem";
-import { usePassports } from "../automations/passports.queries";
 import "./settings-agents.css";
 
 type AgentTool = components["schemas"]["AgentTool"];

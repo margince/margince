@@ -40,7 +40,7 @@ import {
 } from "./dealsuggestions.queries";
 import "./dealsuggestion.css";
 import { currencyOptions } from "../../format/currencychoices";
-import { usePipelines } from "./pipelines.queries";
+import { usePipelines } from "../../lib/pipelines.queries";
 
 function confidenceLevel(confidence: number): ConfidenceLevel {
   if (confidence >= 0.8) {

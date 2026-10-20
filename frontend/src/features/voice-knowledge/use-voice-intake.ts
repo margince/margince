@@ -1,9 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { components } from "../../api/schema";
-import { isAcceptedCorpusFile } from "./voice-corpus-file";
-import type { IntakeOutcome, RefusalReason } from "./voice-intake-core";
-import { intakeFile, intakeTranscript } from "./voice-intake-core";
+import { isAcceptedCorpusFile } from "../../lib/voice-corpus-file";
+import type { IntakeOutcome, RefusalReason } from "../../lib/voice-intake-core";
+import { intakeFile, intakeTranscript } from "../../lib/voice-intake-core";
 
 // The Settings side of the shared voice-corpus intake: the same core the
 // onboarding act runs on, adapted to a surface that reads its corpus from the

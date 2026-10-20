@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { readingsDay } from "../../testing/brief.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -10,7 +11,6 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
-import { readingsDay } from "./brief.fixtures";
 import { BriefDeliveryPanel } from "./briefdelivery";
 
 function story(delivery: Record<string, string>, routes: RouteMap = {}) {

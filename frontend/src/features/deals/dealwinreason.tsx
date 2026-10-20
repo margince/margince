@@ -4,7 +4,7 @@
 import type { components } from "../../api/schema";
 import { IdentityFact } from "../../design-system/identityline";
 import { useT } from "../../i18n";
-import { WON_REASON_LABELS } from "./winreason";
+import { WON_REASON_LABELS } from "../../lib/winreason";
 import "./dealstatus.css";
 
 type Deal = components["schemas"]["Deal"];

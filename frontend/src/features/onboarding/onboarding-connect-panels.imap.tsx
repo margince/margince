@@ -8,12 +8,12 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../../api/client";
+import { CaptureNotice } from "../../components/capture-notice";
 import { Button, Disclosure, Field } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { CaptureNotice } from "../capture/capture-notice";
 import { imapErrorMessage } from "../capture/imap-connect-form";
-import { ConnectPostureStep } from "../settings/connect-posture";
+import { ConnectPostureStep } from "./connect-posture";
 
 // The failure banner the connect panels share.
 export function ConnectWarn({ title, body }: { title: string; body: string }) {

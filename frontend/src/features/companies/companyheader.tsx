@@ -3,7 +3,10 @@ import { useId } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
+import { AddToShortlistAction } from "../../components/addtoshortlist";
+import { ArchiveAction } from "../../components/archive";
 import { rosterOwnerName, useRoster } from "../../components/entityref";
+import { MergeAction } from "../../components/merge";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { useT } from "../../i18n";
@@ -12,14 +15,11 @@ import {
   useCanWriteRecord,
   useRecordWriteRefusal,
 } from "../../lib/capability";
+import { useClaimRecord } from "../../lib/claimrecord";
 import { useMemberName } from "../../lib/membernames";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
-import { MergeAction } from "../import/merge";
-import { AddToShortlistAction } from "../lists/addtoshortlist";
-import { ArchiveAction } from "../records/archive";
-import { useClaimRecord } from "../records/claimrecord";
 import { ShareAction } from "../records/share";
 import { DecisionsChip } from "./companyapprovals";
 import { patchCompanyField, searchCompanyTargets } from "./companyform";

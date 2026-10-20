@@ -10,7 +10,7 @@ import {
   partlyRecordedWeeklyNumbers,
   sharedWeeklyNumbers,
   unavailableWeeklyNumbers,
-} from "./brief.fixtures";
+} from "../../testing/brief.fixtures";
 import {
   beforeRecordedHistory,
   figureReading,

@@ -9,9 +9,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import { ConnectionOutcomesCard } from "../../screens/connection-outcomes";
 import { meFixture } from "../../testing/mefixture";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
+import { ConnectionOutcomesCard } from "../capture/connection-outcomes";
 
 // Which accounts a member's imported network reaches. The figures ARE the
 // answer: how many connections resolved to each account, and how many of those

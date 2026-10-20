@@ -10,16 +10,16 @@ import { RecordTabs } from "../../design-system/recordtabs";
 import { useRecordTimeline } from "../../design-system/recordtimeline";
 import { RecordView } from "../../design-system/recordview";
 import { useLocale, useT } from "../../i18n";
+import { usePendingApprovals } from "../../lib/approvals.queries";
 import { useRecordWriteRefusal } from "../../lib/capability";
+import { useLegalReviewAvailable } from "../../lib/legalreviews.queries";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { scrollPageToTop } from "../../lib/reveal";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
-import { usePendingApprovals } from "../automations/approvals.queries";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
-import { useLegalReviewAvailable } from "../privacy/legalreviews.queries";
 import { TimelineThread } from "../records/record360";
 import { WorklistReturnLink } from "../worklist/worklist.return";
 import {

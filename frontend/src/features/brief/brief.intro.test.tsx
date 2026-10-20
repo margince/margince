@@ -5,9 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { dayInZone, viewerZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import { readStored, removeStored, STORAGE_KEYS } from "../../lib/storage";
-import { readingsDay } from "./brief.fixtures";
+import { readingsDay } from "../../testing/brief.fixtures";
+import { render, stubApi } from "../../testing/brief.testkit";
 import { BriefIntro, LEAVE_MS, SHOW_MS } from "./brief.intro";
-import { render, stubApi } from "./brief.testkit";
 
 // The morning's greeting plays once a local day, over a day that has been
 // read. It never plays under reduced motion, and any key or press ends it.

@@ -8,10 +8,8 @@ import type { components } from "../../api/schema";
 import { AccountMenu } from "../../app/account";
 import { pickOption } from "../../design-system/select-testing";
 import { LOCALES, localeNameKey, translate } from "../../i18n";
+import { allowance } from "../../testing/ai-admin.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { allowance } from "../ai/ai-admin.testkit";
-import { SIGN_OFF_QUERY } from "../mail/composesignoff";
-import { SettingsScreen, tabContent } from "./settings";
 import {
   auditEntry,
   IDLE_JOB_HEALTH,
@@ -20,7 +18,9 @@ import {
   render,
   renderSettings,
   settingsBackend,
-} from "./settings.testkit";
+} from "../../testing/settings.testkit";
+import { SIGN_OFF_QUERY } from "../mail/composesignoff";
+import { SettingsScreen, tabContent } from "./settings";
 import { AuditLogCard } from "./settings-audit";
 import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
 import { settingsHref } from "./settingsrouting";

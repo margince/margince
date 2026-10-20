@@ -12,6 +12,12 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Added
 
+- Background data corrections run in bounded worker batches, with durable progress, pause,
+  resume and retry in System health. The first correction recognizes provable older mailbox
+  history and closes the related outstanding privacy notices. Schema upgrades do not wait for
+  the correction. A migration rewrite guard and an append-only task registry check keep future
+  corrections on the same path.
+
 - A mailbox can set a date its automatic commitment suggestions start from.
   Mail that mailbox delivered on an earlier local day suggests no automatic
   commitments for its owner; the mail stays captured and searchable, and the

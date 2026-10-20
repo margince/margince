@@ -8,19 +8,19 @@ import { en } from "../../i18n/en";
 import { announceAddressChanged } from "../../lib/router";
 import { removeStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import {
-  installFetchStub,
-  jsonResponse,
-  meRoute,
-  StoryProviders,
-} from "../../testing/story-utils";
-import {
   leadRow,
   meetingRow,
   readingsDay,
   taskRow,
   type Worklist,
   waitingEmailRow,
-} from "./brief.fixtures";
+} from "../../testing/brief.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { BriefQueue } from "./brief.queue";
 
 function QueueFrame({ day }: Readonly<{ day?: Worklist }>) {

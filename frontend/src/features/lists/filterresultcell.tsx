@@ -18,9 +18,12 @@ import {
   readingOf,
   usableName,
 } from "../../components/entityref.queries";
+import {
+  type Reference,
+  useReferenceOptions,
+} from "../../components/filterreference";
 import { useT } from "../../i18n";
 import { useMemberName } from "../../lib/membernames";
-import { type Reference, useReferenceOptions } from "./filterreference";
 
 type CellProps = Readonly<{ id: string }>;
 

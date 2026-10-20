@@ -13,7 +13,7 @@ import { FieldDiff } from "../../design-system/trust";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { coldFieldLabel } from "../settings/coldfieldlabels";
+import { coldFieldLabel } from "../../lib/coldfieldlabels";
 import type {
   CompanyInput,
   Comparison,

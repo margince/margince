@@ -1,6 +1,6 @@
+import { AuthCardTitle, AuthExperience } from "../../components/auth-core";
 import { useT } from "../../i18n";
 import { usePageTitle, Wordmark } from "./auth";
-import { AuthCardTitle, AuthExperience } from "./auth-core";
 import { ChangePasswordCard } from "./passwordcard";
 import "./auth.css";
 

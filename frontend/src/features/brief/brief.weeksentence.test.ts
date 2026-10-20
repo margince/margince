@@ -7,7 +7,7 @@ import { en } from "../../i18n/en";
 import {
   beforeHistoryWeeklyNumbers,
   sharedWeeklyNumbers,
-} from "./brief.fixtures";
+} from "../../testing/brief.fixtures";
 import type { WeeklyReview } from "./brief.queries";
 import { weekSentence } from "./brief.weeksentence";
 

@@ -3,6 +3,7 @@
 
 import { type ReactNode, useRef } from "react";
 import type { components } from "../../api/schema";
+import { ProjectContractRow } from "../../components/contractterms";
 import { EntityRef } from "../../components/entityref";
 import { Badge } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
@@ -23,7 +24,6 @@ import type { MessageKey } from "../../i18n/en";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { projectRoleLabel } from "../records/record360";
-import { ProjectContractRow } from "./contractterms";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
 import {
   AddProjectStakeholder,

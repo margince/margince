@@ -6,6 +6,7 @@
 // form that answers it. Both need the legal_review grant.
 
 import { useState } from "react";
+import { LegalReviewStatusBadge } from "../../components/legalreviewstatus";
 import {
   Button,
   EmptyState,
@@ -27,9 +28,6 @@ import { formatDateTime, formatMoneyOrAbsent } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
-import { navigate } from "../../lib/router";
-import { useMe } from "../../lib/session";
-import { calendarDayLabel, LegalReviewPack } from "./legalreviewpack";
 import {
   LEGAL_REVIEWS_SCREEN,
   type LegalReview,
@@ -40,8 +38,10 @@ import {
   useLegalReview,
   useLegalReviewAvailable,
   useLegalReviewQueue,
-} from "./legalreviews.queries";
-import { LegalReviewStatusBadge } from "./legalreviewstatus";
+} from "../../lib/legalreviews.queries";
+import { navigate } from "../../lib/router";
+import { useMe } from "../../lib/session";
+import { calendarDayLabel, LegalReviewPack } from "./legalreviewpack";
 
 /** The door from the deals page, for a reader who reviews. */
 export function LegalReviewQueueLink() {

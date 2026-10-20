@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { AuthCardTitle } from "../../components/auth-core";
 import { Button } from "../../design-system/atoms";
 import {
   ProviderMark,
   providerBrandName,
 } from "../../design-system/provider-mark";
 import { useT } from "../../i18n";
-import { AuthCardTitle } from "./auth-core";
 import "./auth.css";
 
 // The federated half of the sign-in surface: the provider block, the divider

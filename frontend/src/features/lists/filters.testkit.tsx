@@ -18,9 +18,9 @@ import { LocaleProvider } from "../../i18n";
 import type { FilterResource, FilterVocabulary } from "../../lib/filterdata";
 import type { List } from "../../lib/lists.queries";
 import { useHash } from "../../lib/router";
+import type { SavedView } from "../../lib/savedviews.queries";
 import { visitAnswer } from "../../testing/lists.fixtures";
 import { meFixture } from "../../testing/mefixture";
-import type { SavedView } from "./savedviews.queries";
 
 export type Sent = Readonly<{
   method: string;

@@ -9,7 +9,7 @@ import {
   jsonResponse,
   renderWorklist,
   row,
-} from "../worklist/worklist.testkit";
+} from "../../testing/worklist.testkit";
 
 afterEach(() => {
   cleanup();

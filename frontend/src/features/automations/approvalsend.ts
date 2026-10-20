@@ -1,6 +1,6 @@
 import type { components } from "../../api/schema";
+import type { Approval } from "../../lib/approvals.queries";
 import { RELINK_KINDS, type RelinkKind } from "../mail/compose";
-import type { Approval } from "./approvals.queries";
 
 // The message a staged proposal would send, read back out of the proposal.
 //

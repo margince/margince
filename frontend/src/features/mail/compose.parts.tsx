@@ -1,3 +1,4 @@
+import { SendMark } from "../../components/sendpermission";
 import { Button, Field } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { RichText } from "../../design-system/richtext";
@@ -28,7 +29,6 @@ import { SignOffPreview } from "./composesignoff";
 import type { useTargetFiles } from "./composetarget";
 import { ConversationChoices, ThreadPane } from "./composethread";
 import type { VoiceDraft } from "./composevoicedraft";
-import { SendMark } from "./sendpermission";
 
 // sharedUnsubscribeAhead predicts the sharedUnsubscribe refusal (refusalOf).
 // A marketing send's unsubscribe link is one addressee's consent record, so a

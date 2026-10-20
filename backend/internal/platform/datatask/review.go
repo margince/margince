@@ -29,7 +29,7 @@ func SealReviewTx(ctx context.Context, tx pgx.Tx, taskID string, review ReviewRe
 	if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {
 		return "", err
 	}
-	if !taskIDPattern.MatchString(taskID) || review.Limit < 1 || review.Limit > 1000 || len(review.Scope) > 262144 || !json.Valid(review.Scope) || review.AsOf.IsZero() || review.AsOf.After(now) || review.Digest == "" || review.PreviewToken != "" {
+	if !ValidTaskID(taskID) || review.Limit < 1 || review.Limit > 1000 || len(review.Scope) > 262144 || !json.Valid(review.Scope) || review.AsOf.IsZero() || review.AsOf.After(now) || review.Digest == "" || review.PreviewToken != "" {
 		return "", apperrors.ErrInvalidArgument
 	}
 	if err := purgeExpiredReviews(ctx, tx, now); err != nil {

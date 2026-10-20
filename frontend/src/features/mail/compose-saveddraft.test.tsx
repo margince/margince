@@ -23,13 +23,13 @@ import {
   useToast,
 } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
-import { ComposeModal } from "./compose";
-import { useSavedDraft } from "./composesaveddraft";
 import {
   allowedPreview,
   isPreviewDoor,
   previewedAddresses,
-} from "./sendpermission.testkit";
+} from "../../testing/sendpermission.testkit";
+import { ComposeModal } from "./compose";
+import { useSavedDraft } from "./composesaveddraft";
 
 // The rep's own unsent message, kept by the server: what the composer reads
 // back when it opens, writes when it closes, and hands the send to discard.

@@ -11,7 +11,7 @@ import { SurfaceState } from "../../../design-system/surfacestate";
 import { formatDate } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { useRecordZone } from "../../../lib/recordzone";
-import { changeSentence } from "../../records/relationshipchange";
+import { changeSentence } from "../relationshipchange";
 
 type RelationshipMoments = Pick<
   components["schemas"]["Contact360"],

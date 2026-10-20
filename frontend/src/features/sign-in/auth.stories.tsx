@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { AuthExperience } from "../../components/auth-core";
 import type { Locale } from "../../i18n";
 import {
   installFetchStub,
@@ -8,7 +9,6 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { AuthScreen, AvailabilityScreen } from "./auth";
-import { AuthExperience } from "./auth-core";
 import { ProviderButtons } from "./auth-providers";
 import { MfaForm } from "./auth-signin";
 

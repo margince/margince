@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { bookingProfile } from "../../testing/book.testkit";
 import { jsonResponse } from "../../testing/story-utils";
 import { bookingFrame } from "./book.storykit";
-import { bookingProfile } from "./book.testkit";
 import { BookingProfileScreen } from "./booking-profile";
 
 import "./book.css";

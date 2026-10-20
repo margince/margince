@@ -154,7 +154,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The preview must use the card's supplied date formatter and zone in every locale, independent of the test machine's zone.",
   },
   {
-    file: "features/analytics/reporting.fixtures.ts",
+    file: "testing/reporting.fixtures.ts",
     why: "The report API fixture carries the installation timezone so schedule and frozen-period rendering remain independent of the browser zone.",
   },
   {
@@ -166,7 +166,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The admin guide dates a calendar day; a viewer at UTC+14 is where a day handled as an instant would print the next one.",
   },
   {
-    file: "features/booking/book.testkit.ts",
+    file: "testing/book.testkit.ts",
     why: "The booking API fixture supplies the host’s effective working-hours timezone independently of the viewer’s zone, so the form can show the actual calendar policy.",
   },
   {
@@ -235,7 +235,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Same fixture, same reason as the suite above: the story answers /me/working-hours the way the SERVER does, and a contact who has chosen no zone is answered with the installation's — so the fixture names one. The card draws the name it is handed and the story asserts no instant, while a zone read off the runner would make the catalog frame describe whichever machine built it.",
   },
   {
-    file: "features/settings/settings.testkit.tsx",
+    file: "testing/settings.testkit.tsx",
     why: "The stub answers /me/working-hours with the SERVER's answer, and a contact who has chosen no zone is answered with the installation's — so the fixture has to name one, the way the analytics frames above do. Reading the runner's zone would make the fixture describe whichever machine ran it, and the card under it renders the name it is given.",
   },
   {
@@ -319,7 +319,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The timeline's from/to filter cuts a picked day at the INSTALLATION's boundaries; asserting that against the fallback would agree with itself whichever zone the code read, so the suite names a zone that is not the fallback.",
   },
   {
-    file: "features/records/recordlist.test.tsx",
+    file: "components/recordlist.test.tsx",
     why: "createdColumn now takes the zone it renders dates in; this suite asserts what the column SORTS on, so it hands over a named zone to satisfy the signature and the zone itself carries none of the claim.",
   },
   {
@@ -368,7 +368,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "monthName reads a UTC-minted date back in UTC to name a month. The zone is not a rendering choice: the instant is midnight on the 1st, so any reader's clock behind UTC lands on the previous month, and this returned December for January in America/New_York.",
   },
   {
-    file: "format/fiscalyear.test.ts",
+    file: "features/sign-in/fiscalyear.test.ts",
     why: "Proves that trap is real before proving monthName avoids it — reading the same UTC instant on a named western clock, which is the only way to show it lands in the previous month.",
   },
   {
@@ -468,7 +468,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Installation-settings fixture backing the contact-files read.",
   },
   {
-    file: "features/privacy/privacy.logic.test.ts",
+    file: "lib/privacy.logic.test.ts",
     why: "endOfDayInZone is a zone-taking function and is proven by naming one.",
   },
   {

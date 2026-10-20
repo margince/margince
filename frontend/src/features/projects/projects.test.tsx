@@ -14,9 +14,9 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { jsonResponse } from "../companies/company.fixtures";
+import { jsonResponse } from "../../testing/company.fixtures";
+import { COMPANY, project } from "../../testing/projects.fixtures";
 import { ProjectsScreen } from "./projects";
-import { COMPANY, project } from "./projects.fixtures";
 import { projectsBackend } from "./projects.testing";
 
 // The projects list: rows from GET /projects, the phase dial sent to the

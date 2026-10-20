@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 )
 
@@ -39,5 +40,28 @@ func TestRepairDigestUsesTheExecutedTypedScope(t *testing.T) {
 	}
 	if changed == expected {
 		t.Fatal("different executed outcome retained the digest")
+	}
+}
+
+func TestClassificationReviewDistinguishesMissingChecksFromUncertainty(t *testing.T) {
+	candidate := activities.OwedReviewCandidate{Verdict: activities.OwedVerdictAsksUs, Pristine: true, ContextReadable: true}
+	for _, test := range []struct {
+		prediction, reason string
+		action             homeRepairAction
+	}{
+		{"", "classification_not_attempted", repairHumanReview},
+		{reviewPredictionUncertain, "classification_uncertain", repairHumanReview},
+		{activities.OwedVerdictAsksUs, "classification_current", repairLeaveCurrent},
+		{activities.OwedVerdictInformsUs, "classification_changed", repairReclassifyMessage},
+	} {
+		t.Run(test.reason, func(t *testing.T) {
+			result := homeRepairVerdictRef(candidate, test.prediction)
+			if result.Reason != test.reason || result.Action != test.action {
+				t.Fatalf("result=%+v", result)
+			}
+			if test.action == repairHumanReview && result.AfterVerdict != "" {
+				t.Fatal("unresolved result became an accepted verdict")
+			}
+		})
 	}
 }

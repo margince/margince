@@ -2,8 +2,11 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  agentClientList,
+  BOTH_METHODS_ON,
+} from "../../testing/agent-clients.fixtures";
 import { AgentClientMethodsCard } from "./agent-client-methods";
-import { agentClientList, BOTH_METHODS_ON } from "./agent-clients.fixtures";
 import { json, renderWithClient, serve } from "./agent-clients.testkit";
 
 afterEach(() => {

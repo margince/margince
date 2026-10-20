@@ -1,0 +1,3 @@
+# Core rewrites after the pinned baseline require review of their finite scope.
+# migration filename | table names, separated by commas | why these rows are small and bounded
+# An anonymous DO block uses * because its procedural body executes during startup.

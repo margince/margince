@@ -3,6 +3,7 @@ import { DoorOpen, UserX } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { RoomStateBadge, STATE_LABELS } from "../../components/dealroom";
 import { Button } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
@@ -12,7 +13,6 @@ import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { RoomStateBadge, STATE_LABELS } from "../deals/dealroom";
 import { participantsKey } from "../deals/dealroomaccess";
 
 // The rooms a contact can still enter, on the contact's own page. An admin

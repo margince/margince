@@ -4,9 +4,9 @@ import { de } from "../../i18n/de";
 import type { MessageKey } from "../../i18n/en";
 import { en } from "../../i18n/en";
 import { vi } from "../../i18n/vi";
+import { meetingRow, waitingEmailRow } from "../../testing/brief.fixtures";
 import { itemTitle, rowHref } from "../worklist/worklist.copy";
 import type { Worklist, WorklistItem } from "../worklist/worklist.queries";
-import { meetingRow, waitingEmailRow } from "./brief.fixtures";
 import {
   briefSentence,
   leadOf,

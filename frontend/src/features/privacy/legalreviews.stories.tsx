@@ -4,20 +4,20 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import {
-  jsonResponse,
-  permissionDenied,
-  StoryProviders,
-  stubWithSession,
-} from "../../testing/story-utils";
-import { LegalReviewsRoute } from "./legalreviews";
-import {
   legalOn,
   queueItem,
   REVIEW_ID,
   review,
   VIEWER_ID,
-} from "./legalreviews.fixtures";
-import { LegalReviewSettingsCard } from "./legalreviewsettings";
+} from "../../testing/legalreviews.fixtures";
+import {
+  jsonResponse,
+  permissionDenied,
+  StoryProviders,
+  stubWithSession,
+} from "../../testing/story-utils";
+import { LegalReviewSettingsCard } from "../settings/legalreviewsettings";
+import { LegalReviewsRoute } from "./legalreviews";
 
 // The reviewer's side: the queue, one review's pack and answer, and the
 // installation switch.

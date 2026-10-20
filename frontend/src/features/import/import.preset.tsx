@@ -4,7 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Callout } from "../../design-system/callout";
 import { useT } from "../../i18n";
-import { contactQuery } from "../contacts/contact.queries";
+import { contactQuery } from "../../lib/contact.queries";
 
 /**
  * Where a file of activities goes, said before the reader chooses anything.

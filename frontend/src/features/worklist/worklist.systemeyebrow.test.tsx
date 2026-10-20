@@ -6,7 +6,7 @@ import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Locale } from "../../i18n";
 import { en } from "../../i18n/en";
-import { day, renderWorklist, row, stub } from "./worklist.testkit";
+import { day, renderWorklist, row, stub } from "../../testing/worklist.testkit";
 
 // A system row says WHICH thing is broken.
 //

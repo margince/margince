@@ -5,11 +5,16 @@ import { afterEach, expect, it, vi } from "vitest";
 import { formatDayMonth, formatTimeOfDay } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
+import {
+  jsonResponse,
+  render,
+  stubApi,
+  writes,
+} from "../../testing/brief.testkit";
 import { meFixture } from "../../testing/mefixture";
+import { automaticStageReceipt } from "../../testing/worklist.receiptreview.fixtures";
 import { BriefChanges } from "../brief/brief.changes";
-import { jsonResponse, render, stubApi, writes } from "../brief/brief.testkit";
 import { ReceiptReview } from "./worklist.receiptreview";
-import { automaticStageReceipt } from "./worklist.receiptreview.fixtures";
 
 afterEach(() => {
   cleanup();

@@ -8,8 +8,8 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { jsonResponse, render } from "../../testing/settings.testkit";
 import { InstallationConfigurationPage } from "./installation-configuration";
-import { jsonResponse, render } from "./settings.testkit";
 
 type Entry = components["schemas"]["ConfigurationEntry"];
 

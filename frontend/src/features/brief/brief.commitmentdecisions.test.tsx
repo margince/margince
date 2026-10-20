@@ -3,9 +3,8 @@ import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
-import { usePendingApprovals } from "../automations/approvals.queries";
-import { DecisionsSection } from "./brief.decisions";
-import { deckItems } from "./brief.decisions.items";
+import { usePendingApprovals } from "../../lib/approvals.queries";
+import { deckItems } from "../../lib/brief.decisions.items";
 import {
   jsonResponse,
   pendingPage,
@@ -13,7 +12,8 @@ import {
   render,
   stubApi,
   writes,
-} from "./brief.testkit";
+} from "../../testing/brief.testkit";
+import { DecisionsSection } from "./brief.decisions";
 
 afterEach(() => {
   cleanup();

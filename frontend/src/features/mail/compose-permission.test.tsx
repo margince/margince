@@ -12,13 +12,13 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import { ComposeModal } from "./compose";
 import {
   allowedPreview,
   isPreviewDoor,
   previewedAddresses,
   refusedPreview,
-} from "./sendpermission.testkit";
+} from "../../testing/sendpermission.testkit";
+import { ComposeModal } from "./compose";
 
 // The composer asks the engine whether the message may go, and says so where
 // the rep is writing it.

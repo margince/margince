@@ -75,7 +75,7 @@ func Catalog(tasks []Task) ([]Task, error) {
 	out := slices.Clone(tasks)
 	slices.SortFunc(out, func(a, b Task) int { return cmp.Compare(a.ID, b.ID) })
 	for i, task := range out {
-		if !taskIDPattern.MatchString(task.ID) || task.Version < 1 || task.Title == "" || len(task.Steps) == 0 {
+		if !ValidTaskID(task.ID) || task.Version < 1 || task.Title == "" || len(task.Steps) == 0 {
 			return nil, fmt.Errorf("data task registration is incomplete: %q", task.ID)
 		}
 		if i > 0 && out[i-1].ID == task.ID {
@@ -112,3 +112,6 @@ func validateSteps(task Task) error {
 	}
 	return nil
 }
+
+// ValidTaskID shares the registration grammar with release-history checks.
+func ValidTaskID(id string) bool { return taskIDPattern.MatchString(id) }

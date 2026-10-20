@@ -1,9 +1,4 @@
 import {
-  jsonResponse,
-  meRoute,
-  type RouteMap,
-} from "../../testing/story-utils";
-import {
   interval,
   REPORTING_FIXTURE_ZONE,
   reportingStoryCatalog,
@@ -11,7 +6,12 @@ import {
   reportingStoryFramework,
   reportingStoryReport,
   reportingStoryScope,
-} from "./reporting.fixtures";
+} from "../../testing/reporting.fixtures";
+import {
+  jsonResponse,
+  meRoute,
+  type RouteMap,
+} from "../../testing/story-utils";
 
 export {
   reportingStoryCatalog,
@@ -19,7 +19,7 @@ export {
   reportingStoryFramework,
   reportingStoryReport,
   reportingStoryScope,
-} from "./reporting.fixtures";
+} from "../../testing/reporting.fixtures";
 export function reportingStoryRoutes(
   evaluation = reportingStoryEvaluation,
   readOnly = false,

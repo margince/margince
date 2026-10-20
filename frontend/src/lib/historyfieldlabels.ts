@@ -11,7 +11,7 @@ import type { MessageKey } from "../i18n/en";
 //
 // It is its own map rather than a reuse of the three that already exist,
 // because none of them is about this subject. `COLD_FIELD_LABELS`
-// (features/settings/coldfieldlabels.ts) names the enrichment vocabulary.
+// (lib/coldfieldlabels.ts) names the enrichment vocabulary.
 // `PROFILE_FIELD_LABELS` (features/companies/companies.profile.tsx) names company profile facts,
 // and today.merge's map names the fields a merge compares. This one names the
 // columns a record's UPDATE writes. `historyfieldlabels.test.ts` derives that

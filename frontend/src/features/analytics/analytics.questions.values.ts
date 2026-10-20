@@ -7,11 +7,11 @@
 // no screen names yet keeps its wire spelling rather than gaining a new word
 // here.
 
+import { dealStatusLabel } from "../../components/dealdials";
 import { isMessageKey, type useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { dealStatusLabel } from "../deals/dealdials";
+import { sourceKeyLabel } from "../../lib/leadsources";
 import { LEAD_STATUS_FILTER_OPTIONS } from "../leads/leadpresentation";
-import { sourceKeyLabel } from "../leads/leadsources";
 import { isProjectPhase, PHASE_LABEL } from "../projects/projects.form";
 
 // forecast_category dimension values (report.go's forecastCategoryExpr):

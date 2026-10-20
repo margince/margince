@@ -5,6 +5,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -13,7 +14,6 @@ import {
 } from "../../testing/story-utils";
 import { AnalyticsScreen } from "./analytics";
 import { render } from "./analytics.testkit";
-import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
 
 afterEach(() => {

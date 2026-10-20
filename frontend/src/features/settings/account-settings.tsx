@@ -26,12 +26,12 @@ import { useLogout, useMe } from "../../lib/session";
 import { setThemeChoice, THEME_CHOICES, useThemeChoice } from "../../lib/theme";
 import { MfaSettingRow } from "../sign-in/mfacard";
 import { PasswordSettingRow } from "../sign-in/passwordcard";
-import { ThisDevicePanel } from "../sign-in/thisdevice";
 import {
   DisplayNameSettingRow,
   GreetingNameSettingRow,
 } from "./settings-names";
 import { SignatureSettingRow } from "./settingssignaturerow";
+import { ThisDevicePanel } from "./thisdevice";
 
 export function AccountSettings() {
   return (

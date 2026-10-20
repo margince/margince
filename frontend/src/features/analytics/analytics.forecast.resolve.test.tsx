@@ -17,7 +17,7 @@ import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
-import { jsonResponse } from "../companies/company.fixtures";
+import { jsonResponse } from "../../testing/company.fixtures";
 import { suggestion } from "../deals/dealsuggestion.fixture";
 import { ForecastReview } from "./analytics.forecast.review";
 

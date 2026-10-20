@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { focusManager } from "@tanstack/react-query";
 import { expect, userEvent, within } from "storybook/test";
+import { allowance, feature, status } from "../../testing/ai-admin.testkit";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -11,7 +12,6 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { AiBudgetCard } from "./ai-admin";
-import { allowance, feature, status } from "./ai-admin.testkit";
 
 function story(
   band: "normal" | "degraded" | "queued",

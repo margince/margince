@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { wholeCount } from "../../components/companyrailshared";
 import { PageAsideToggle } from "../../components/pageaside";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
@@ -17,7 +18,6 @@ import {
   RELATIONSHIP_TYPE_LABELS,
   SIZE_BAND_OPTIONS,
 } from "./companylookups";
-import { wholeCount } from "./companyrailshared";
 import {
   COMPANY_TABS,
   type CompanyTab,

@@ -5,9 +5,9 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../../i18n/en";
+import { project360 } from "../../testing/projects.fixtures";
 import { StoryProviders } from "../../testing/story-utils";
 import { RollupsStrip } from "./projectreadings";
-import { project360 } from "./projects.fixtures";
 
 // The project's readings plate states ONE reading per fact. The activity feed
 // was answered twice — how much is filed, and when the last of it landed —

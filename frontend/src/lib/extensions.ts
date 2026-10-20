@@ -29,11 +29,10 @@ export type { ExtensionDescriptor, ExtensionVerbDescriptor };
 /**
  * The screens an installation composes, keyed by unit name.
  *
- * The type lives HERE, beside the descriptor registry, and not next to either
- * implementation of it: both lanes' modules import it, and one of those modules
- * (`src/screens/ext/`) is outside the vanilla TypeScript program entirely — a
- * type imported from there would pull the whole excluded directory back into
- * it.
+ * The type lives here, beside the descriptor registry, not next to either
+ * implementation of it. Both lanes' modules import it. A unit's frontend under
+ * `extensions/` is outside the vanilla TypeScript program, and a type
+ * imported from there would pull that directory into it.
  *
  * A component, not a rendered node: React needs a stable type to mount, and a
  * registry of pre-rendered elements would build every unit's screen on every

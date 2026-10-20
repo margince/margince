@@ -4,7 +4,7 @@ import type { MessageKey } from "../../i18n/en";
 import { DEAL_COVERAGE_KEY } from "../../lib/activitykeys";
 import type { EntityKind } from "../../lib/entity";
 import { unwrap } from "../../lib/problem";
-import type { RelationshipEntity } from "./relationshipcandidates";
+import type { RelationshipEntity } from "../../lib/relationshipcandidates";
 import type {
   CreatableRelationshipKind,
   CreateRelationshipRequest,

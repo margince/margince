@@ -4,11 +4,11 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../../i18n/en";
-import { waitingEmailRow } from "../brief/brief.fixtures";
-import { render } from "../brief/brief.testkit";
+import { waitingEmailRow } from "../../testing/brief.fixtures";
+import { render } from "../../testing/brief.testkit";
+import { findRowMenu } from "../../testing/worklist.testkit";
 import type { WorklistItem } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
-import { findRowMenu } from "./worklist.testkit";
 
 // The row at LIST DENSITY.
 //

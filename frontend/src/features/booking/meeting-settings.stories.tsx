@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { jsonResponse, meRoute } from "../../testing/story-utils";
-import { bookingFrame } from "./book.storykit";
 import {
   bookingConnection,
   bookingHours,
   bookingProfile,
-} from "./book.testkit";
+} from "../../testing/book.testkit";
+import { jsonResponse, meRoute } from "../../testing/story-utils";
+import { bookingFrame } from "./book.storykit";
 import { MeetingSettings } from "./meeting-settings";
 
 const meta: Meta<typeof MeetingSettings> = {

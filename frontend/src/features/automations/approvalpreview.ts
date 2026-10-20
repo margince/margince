@@ -1,9 +1,9 @@
 import type { components } from "../../api/schema";
+import { DEAL_STATUS_LABEL } from "../../components/dealdials";
 import { formatMoneyOrAbsent } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
-import { DEAL_STATUS_LABEL } from "../deals/dealdials";
-import { WON_REASON_LABELS } from "../deals/winreason";
+import { WON_REASON_LABELS } from "../../lib/winreason";
 import type { ResolvedDisplayField } from "./approvaldisplay.types";
 import { COMPANY_LIFECYCLE_LABELS } from "./approvalkind";
 

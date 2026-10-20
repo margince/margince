@@ -11,6 +11,7 @@ import { endModelCall, modelCallsInFlight } from "../api/model-inflight";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
+import { stubPhoneViewport } from "../testing/shellharness";
 import {
   AGENT_EDGE_STILL,
   clearAgentEdge,
@@ -32,7 +33,6 @@ import {
   stubAgentRailApi,
 } from "./agentrail.testkit";
 import { VOCABULARY } from "./agentrail-copy";
-import { stubPhoneViewport } from "./testing/shellharness";
 
 afterEach(() => {
   cleanup();

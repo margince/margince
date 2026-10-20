@@ -4,6 +4,7 @@
 import { createContext, type ReactNode, useContext } from "react";
 import { RecordBack } from "../../design-system/recordview";
 import { useT } from "../../i18n";
+import { type ContactTab, contactTabRoute } from "../../lib/contacttab";
 import {
   navigate,
   parseHash,
@@ -18,7 +19,6 @@ import {
   type UrlParams,
   useUrlParams,
 } from "../../lib/urlstate";
-import { type ContactTab, contactTabRoute } from "../contacts/contacttab";
 import { WORKLIST_FILTER_PARAM } from "./worklist.header";
 
 // The way back from a record to the Worklist drawer it was opened from.

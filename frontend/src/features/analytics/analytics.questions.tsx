@@ -15,10 +15,13 @@ import { Stack } from "../../design-system/stack";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatMoneyOrAbsent } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import {
+  openAnalyticsSection,
+  openSavedQuestion,
+} from "../../lib/analytics.address";
 import { ANALYTICS_SCHEMA_KEY } from "../../lib/analyticskeys";
 import { unwrap } from "../../lib/problem";
 import { routeHash, useRoute } from "../../lib/router";
-import { openAnalyticsSection, openSavedQuestion } from "./analytics.address";
 import {
   type AnalyticsContext,
   type AnalyticsScope,

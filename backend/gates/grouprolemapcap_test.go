@@ -29,7 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
-const frontendGroupGrants = "../frontend/src/screens/group-role-grants.tsx"
+const frontendGroupGrants = "../frontend/src/features/sign-in/group-role-grants.tsx"
 
 // tsGroupGrantCap reads the browser's own ceiling.
 //

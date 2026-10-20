@@ -4,8 +4,12 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import {
+  IDLE_JOB_HEALTH,
+  jsonResponse,
+  render,
+} from "../../testing/settings.testkit";
 import { SettingsScreen } from "./settings";
-import { IDLE_JOB_HEALTH, jsonResponse, render } from "./settings.testkit";
 import { settingsHref } from "./settingsrouting";
 
 // The danger zone on the Maintenance entry. Reset data is the one control on

@@ -12,13 +12,13 @@ import { routeHash } from "../../lib/router";
 // sibling having loaded the stylesheet first is not something it can assume.
 import "../../design-system/recordcard.css";
 import "./company360.css";
-import { NewProjectAction } from "./companyactions";
-import { useCompanyReadOnlyReason } from "./companyheader";
 import {
   RAIL_ROW_LIMIT,
   SectionSummary,
   sectionAnswered,
-} from "./companyrailshared";
+} from "../../components/companyrailshared";
+import { NewProjectAction } from "./companyactions";
+import { useCompanyReadOnlyReason } from "./companyheader";
 import "./companyrailprojects.css";
 import { PhaseBadge } from "../projects/projects";
 import type { ProjectPhase } from "../projects/projects.form";

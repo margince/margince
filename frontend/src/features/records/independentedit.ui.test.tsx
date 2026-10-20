@@ -11,16 +11,16 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { RecordShell } from "../../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../../i18n";
-import { meFixture } from "../../testing/mefixture";
-import { CompanyScreen } from "../companies/companies";
 import {
   company,
   emptyPage,
   jsonResponse,
-} from "../companies/company.fixtures";
-import { stubFetch } from "../companies/company.testkit";
+} from "../../testing/company.fixtures";
+import { stubFetch } from "../../testing/company.testkit";
+import { meFixture } from "../../testing/mefixture";
+import { RecordShell } from "../../testing/recordshell.testkit";
+import { CompanyScreen } from "../companies/companies";
 import { ContactDetails } from "../contacts/contactdetails";
 import { DealScreen } from "../deals/deals";
 

@@ -2,7 +2,11 @@ import { Lock } from "lucide-react";
 
 import { Badge, Checkbox } from "../../design-system/atoms";
 import type { useT } from "../../i18n";
-import { labelOf, type PurposeView, stateLineKey } from "./preferences.logic";
+import {
+  labelOf,
+  type PurposeView,
+  stateLineKey,
+} from "../../lib/preferences.logic";
 
 // One purpose, as a row the subject can stage a change on.
 //

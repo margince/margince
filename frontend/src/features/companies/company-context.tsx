@@ -11,18 +11,18 @@ import { usePublishSelection } from "../../app/attention";
 import { useUnsavedGuard } from "../../components/unsaved";
 import { useT } from "../../i18n";
 import { useCanUpsert, useHoldsAdminRole } from "../../lib/capability";
-import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
-import { useMe } from "../../lib/session";
+import {
+  companyContextShown,
+  useCompanyContextCapabilities,
+} from "../../lib/companycontextreach";
 import {
   companySaveMessage,
   storeCompany,
   useCompany,
-} from "../sign-in/installationcompany";
+} from "../../lib/installationcompany";
+import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
+import { useMe } from "../../lib/session";
 import { CompanyFactsCard } from "./companycontextfacts";
-import {
-  companyContextShown,
-  useCompanyContextCapabilities,
-} from "./companycontextreach";
 import { CompanyMark } from "./companymark";
 import "./company-context.css";
 import {

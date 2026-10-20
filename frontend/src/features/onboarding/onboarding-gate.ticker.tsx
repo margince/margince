@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { factFieldLabelKey } from "../records/factview";
+import { factFieldLabelKey } from "../../lib/factview";
 import { skipReasonText } from "./onboarding";
 import type {
   CompanySiteReadFact,

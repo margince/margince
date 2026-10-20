@@ -18,13 +18,13 @@ import { NewDealAction } from "./companyactions";
 // either stylesheet first is not something it can assume.
 import "../../design-system/recordcard.css";
 import "./company360.css";
-import { useCompanyReadOnlyReason } from "./companyheader";
 import {
   RAIL_ROW_LIMIT,
   SectionSummary,
   sectionAnswered,
   wholeCount,
-} from "./companyrailshared";
+} from "../../components/companyrailshared";
+import { useCompanyReadOnlyReason } from "./companyheader";
 
 // The account's open pipeline at a glance. Extracted from companyrail.tsx so
 // that file stays under the length cap; the rail imports it and mounts it in

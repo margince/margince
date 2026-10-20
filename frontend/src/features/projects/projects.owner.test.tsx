@@ -14,10 +14,10 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { jsonResponse } from "../../testing/company.fixtures";
 import { meFixture } from "../../testing/mefixture";
-import { jsonResponse } from "../companies/company.fixtures";
+import { project } from "../../testing/projects.fixtures";
 import { ProjectsScreen } from "./projects";
-import { project } from "./projects.fixtures";
 import { projectsBackend } from "./projects.testing";
 
 // The New project dialog's Owner: who it offers, what it sends, and what it

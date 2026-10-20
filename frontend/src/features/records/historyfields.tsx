@@ -6,6 +6,7 @@ import {
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
+import { ResolvedPassportChip } from "../../components/passportchip";
 import {
   Button,
   Card,
@@ -27,7 +28,6 @@ import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
-import { ResolvedPassportChip } from "../automations/passportchip";
 import {
   type ActorFacet,
   distinctFields,

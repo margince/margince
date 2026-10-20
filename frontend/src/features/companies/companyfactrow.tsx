@@ -15,12 +15,12 @@ import { PanelRow } from "../../design-system/panel";
 import { provenanceLabel } from "../../design-system/trust";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { factFieldLabelKey } from "../../lib/factview";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { derivedSource } from "../records/evidencesource";
 import { EvidenceVerdict, factClaim } from "../records/evidenceverdict";
-import { factFieldLabelKey } from "../records/factview";
 import { settleFacts } from "./companyfactspanel";
+import { derivedSource } from "./evidencesource";
 import "./company360.css";
 
 type CompanyFact = components["schemas"]["CompanyFact"];

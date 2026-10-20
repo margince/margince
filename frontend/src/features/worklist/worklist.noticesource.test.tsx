@@ -17,7 +17,7 @@ import {
   renderWorklist,
   row,
   type WorklistItem,
-} from "./worklist.testkit";
+} from "../../testing/worklist.testkit";
 
 afterEach(() => {
   cleanup();

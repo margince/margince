@@ -158,7 +158,7 @@ func TestTheExclusionShapesAreReadAsWritten(t *testing.T) {
 	}{
 		{"**/*.png", "docs/evidence/extension-tier/01-screen.png", true},
 		{"**/*.wasm.module", "backend/internal/platform/licensecheck/module/licensecheck.wasm.module", true},
-		{"**/*.png", "frontend/src/screens/testdata/proposal.docx", false},
+		{"**/*.png", "frontend/src/testing/testdata/proposal.docx", false},
 		{"backend/migrations/**", "backend/migrations/core/0001.sql", true},
 		{"backend/migrations/**", "backend/migrationsfoo/0001.sql", false},
 		{".coderabbit.yaml", ".coderabbit.yaml", true},

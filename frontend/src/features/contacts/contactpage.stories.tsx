@@ -4,11 +4,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../../api/schema";
+import type { ContactTab } from "../../lib/contacttab";
 import { ContactDealsTab } from "./contactdeals";
 import { ContactMeetingsTab } from "./contactmeetings";
 import { ContactPageV2 } from "./contactpage";
 import { providerCompletedProfile } from "./contactprovider.fixtures";
-import type { ContactTab } from "./contacttab";
 import { ContactTimelineTab } from "./contacttabs";
 import { ContactToday } from "./contacttoday";
 import "./contact360.css";
