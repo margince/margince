@@ -9,6 +9,7 @@ import {
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { ActionRow } from "../../design-system/actionrow";
 import {
   Button,
   EmptyState,
@@ -172,7 +173,7 @@ function DomainReviewRow({ row }: Readonly<{ row: DomainQuestion }>) {
         />
         <p className="t-caption">{t("worklist.domainReview.matchEffect")}</p>
         <ErrorLine error={answer.error ?? defer.error} />
-        <div className="form-actions">
+        <ActionRow>
           <Button
             pending={defer.isPending}
             onClick={() =>
@@ -232,7 +233,7 @@ function DomainReviewRow({ row }: Readonly<{ row: DomainQuestion }>) {
           >
             {t("worklist.domainReview.exclude")}
           </Button>
-        </div>
+        </ActionRow>
         <p className="t-caption">{t("worklist.domainReview.effects")}</p>
         <p className="t-caption">{t("worklist.domainReview.deferEffect")}</p>
       </PanelBody>

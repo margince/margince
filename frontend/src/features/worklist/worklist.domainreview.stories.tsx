@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -41,15 +42,19 @@ function review(initialRows: Question[]) {
   return () => {
     let rows = initialRows;
     installFetchStub({
+      "GET /me": () =>
+        jsonResponse(
+          meFixture({ allow: { company: ["read", "update", "create"] } }),
+        ),
       "GET /capture/domain-questions": () =>
         jsonResponse({ data: rows, page: { has_more: false } }),
       "PUT /worklist/done": () => {
         rows = rows.map((row) => ({ ...row, deferred: true }));
-        return jsonResponse(null, 204);
+        return new Response(null, { status: 204 });
       },
       "POST /worklist/done/undo": () => {
         rows = rows.map((row) => ({ ...row, deferred: false }));
-        return jsonResponse(null, 204);
+        return new Response(null, { status: 204 });
       },
     });
     return (
@@ -93,7 +98,7 @@ export const ForwardedIdentityNeedsAMatch: Story = {
   ),
   play: async () => {
     const body = within(document.body);
-    await expect(body.findByText("alias.example")).resolves.toBeVisible();
+    await waitFor(() => expect(body.getByText("alias.example")).toBeVisible());
     await expect(
       body.queryByRole("button", { name: "Create company" }),
     ).not.toBeInTheDocument();

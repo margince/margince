@@ -7,6 +7,7 @@ package compose
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -71,5 +72,37 @@ func TestTriageForwardedAliasesRemainSeparateOpenQuestions(t *testing.T) {
 	}
 	if len(questions) != 2 {
 		t.Fatalf("questions=%d, want each alias separately", len(questions))
+	}
+}
+
+func TestTriageSameDomainRedirectStillClassifiesTheRequestedIdentity(t *testing.T) {
+	e := integration.Setup(t)
+	args := openTriageQuestion(t, e, triageTestDomain, "person@"+triageTestDomain, "Personal Owner")
+	site := &fakeSite{pages: map[string]fakeSitePage{seedURL: {text: readable("Personal Owner private homepage."), finalURL: "https://www." + triageTestDomain + "/"}}}
+	extract := &triageBrainFake{verdict: `{}`}
+	triage := &triageBrainFake{verdict: `{"kind":"personal","confidence":0.99}`}
+	worker := newTriageTestWorker(e, site, extract, triage)
+	if err := worker.run(e.As(e.Rep1, nil, integration.AdminPerms), args); err != nil {
+		t.Fatal(err)
+	}
+	status, readStatus, companies := triageState(t, e, triageTestDomain)
+	if status != contacts.DomainPersonal || readStatus != "cancelled" || companies != 0 || triage.calls != 1 {
+		t.Fatalf("status=%s read=%s companies=%d classifications=%d", status, readStatus, companies, triage.calls)
+	}
+}
+
+func TestTriageRedirectFailureRemainsAnUncertainQuestion(t *testing.T) {
+	e := integration.Setup(t)
+	args := openTriageQuestion(t, e, triageTestDomain, "sender@"+triageTestDomain, "Sender")
+	site := &fakeSite{pageErrors: map[string][]error{seedURL: {errors.New("redirect loop")}}}
+	extract := &triageBrainFake{verdict: `{}`}
+	triage := &triageBrainFake{verdict: `{"kind":"company","confidence":0.99}`}
+	worker := newTriageTestWorker(e, site, extract, triage)
+	if err := worker.run(e.As(e.Rep1, nil, integration.AdminPerms), args); err != nil {
+		t.Fatal(err)
+	}
+	status, readStatus, companies := triageState(t, e, triageTestDomain)
+	if status != contacts.DomainPending || readStatus != "failed" || companies != 0 || triage.calls != 0 || extract.calls != 0 {
+		t.Fatalf("status=%s read=%s companies=%d classifications=%d extractions=%d", status, readStatus, companies, triage.calls, extract.calls)
 	}
 }

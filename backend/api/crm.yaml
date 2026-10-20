@@ -60364,12 +60364,10 @@ components:
             contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
             the read-only fallback for a receipt.
 
-            `keep` and `discard` are an undecided domain's pair, and they always travel
-            together: keeping it creates the company the triage withheld, discarding it stops
-            the caller's OWN mailboxes capturing that domain. Neither carries a body, because
-            a domain question has no field to fill in — which is what lets it be answered from
-            a queue row. They route to `/capture/domain-questions/{domain}/…`, keyed on the
-            domain because an open question is named by the domain rather than by a record id.
+            Domain questions offer `keep` and `discard` where allowed. Keeping creates a
+            company or matches the supplied `company_id`; forwarded identity requires an
+            explicit match. Discarding stops the caller's own mailboxes capturing that
+            domain. These verbs route to `/capture/domain-questions/{domain}/…`.
 
             `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
             to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes

@@ -6,7 +6,12 @@
 package contacts
 
 import (
+	"encoding/json"
+	"errors"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"time"
 )
 
@@ -55,4 +60,48 @@ func TestForwardedBindingReviewUsesStoredDossierEvidence(t *testing.T) {
 		t.Fatalf("private binding leaked through rows or cursor: rows=%+v cursor=%q", hidden, cursor)
 	}
 
+}
+
+func TestForwardedIdentityRequiresExplicitMatchAndKeepsProvenance(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	target := e.resolveSiteVerdict(ctx, t, "target@destination.test", "destination.test", "Destination Company")
+	domain := "alias.test"
+	e.openTriageFirst(ctx, t, "sender@"+domain, "Sender", domain)
+	readID := e.startTriageRead(ctx, t, domain)
+	proof := DomainForwardEvidence{ReadID: readID, RequestedDomain: domain, EffectiveURL: "https://destination.test/", RedirectChain: []string{"https://alias.test/", "https://destination.test/"}}
+	if err := e.store.WithholdForwardedDomain(ctx, proof); err != nil {
+		t.Fatal(err)
+	}
+	input := ResolveDomainTriageInput{Domain: domain, Status: DomainCompany, Source: DomainSourceHuman}
+	if _, err := e.store.ResolveDomainTriage(ctx, input); !errors.Is(err, apperrors.ErrInvalidArgument) {
+		t.Fatalf("unmatched keep = %v", err)
+	}
+	input.CompanyID = target.CompanyID
+	matched, err := e.store.ResolveDomainTriage(ctx, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if matched.CompanyCreated || matched.CompanyID == nil || *matched.CompanyID != *target.CompanyID {
+		t.Fatalf("explicit match = %+v", matched)
+	}
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		row, known, err := readDispositionTx(ctx, tx, domain)
+		if err != nil {
+			return err
+		}
+		if !known || row.SiteReadID == nil || *row.SiteReadID != readID {
+			t.Fatalf("read provenance = %+v", row)
+		}
+		var stored DomainForwardEvidence
+		if err := json.Unmarshal([]byte(row.Evidence), &stored); err != nil {
+			return err
+		}
+		if stored.EffectiveURL != proof.EffectiveURL || len(stored.RedirectChain) != 2 {
+			t.Fatalf("redirect provenance = %+v", stored)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
 }
