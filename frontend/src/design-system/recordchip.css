@@ -2,6 +2,8 @@
  * line box, so a chip never spreads the lines of the sentence it sits in. */
 .record-chip {
   display: inline-flex;
+  /* A long name shortens with an ellipsis rather than overflowing the line. */
+  max-width: 100%;
   align-items: center;
   gap: var(--space-2);
   vertical-align: baseline;
