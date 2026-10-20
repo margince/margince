@@ -24,11 +24,6 @@ import (
 // carries them all. A set equal to the stored rows is rolled back and leaves
 // the version alone. The comparison is of the rows read back, so it needs no
 // copy of the normalisation the replace applies.
-//
-// The replaces stay in this function, under its own write check, because the
-// write-authority gate follows calls and not closures passed in.
-//
-//nolint:cyclop // one savepoint around three replaces; splitting it would move the writes out from under the check.
 func applyContactReplaceSets(
 	ctx context.Context, tx pgx.Tx, id ids.ContactID, current crmcontracts.Contact, in UpdateContactInput,
 	active []fieldcatalog.Column,
@@ -36,43 +31,63 @@ func applyContactReplaceSets(
 	if in.Social == nil && in.Emails == nil && in.Phones == nil {
 		return false, nil
 	}
-	if err := auth.EnsureChangeable(ctx, tx, "contact", id.UUID); err != nil {
-		return false, err
-	}
-	by, err := storekit.CapturedBy(ctx)
-	if err != nil {
-		return false, err
-	}
 	nested, err := tx.Begin(ctx)
 	if err != nil {
 		return false, fmt.Errorf("open the contact replace-sets: %w", err)
 	}
-	moved, err := func() (bool, error) {
-		if in.Social != nil {
-			if err := replaceContactSocial(ctx, nested, workspaceID(ctx), id, in.Social); err != nil {
-				return false, err
-			}
-		}
-		if in.Emails != nil || in.Phones != nil {
-			if err := replaceContactEmails(ctx, nested, workspaceID(ctx), id, in.Source, by, in.Emails); err != nil {
-				return false, err
-			}
-			if err := replaceContactPhones(ctx, nested, id, in.Source, by, in.Phones); err != nil {
-				return false, err
-			}
-		}
-		after, err := readContact(ctx, nested, id, storekit.LiveOnly, active)
-		if err != nil {
-			return false, fmt.Errorf("read the contact after its replace-sets: %w", err)
-		}
-		_, differs := storekit.ChangedColumns(contactSetsImage(current), contactSetsImage(after))
-		return len(differs) > 0, nil
-	}()
-	if err != nil {
-		if rbErr := nested.Rollback(ctx); rbErr != nil {
-			return false, errors.Join(err, rbErr)
-		}
+	moved, err := replaceContactSetsAndCompare(ctx, nested, id, current, in, active)
+	return closeContactSetsSavepoint(ctx, nested, moved, err)
+}
+
+// replaceContactSetsAndCompare runs the replaces and reads the contact back.
+func replaceContactSetsAndCompare(
+	ctx context.Context, tx pgx.Tx, id ids.ContactID, current crmcontracts.Contact, in UpdateContactInput,
+	active []fieldcatalog.Column,
+) (bool, error) {
+	if err := replaceContactSets(ctx, tx, id, in); err != nil {
 		return false, err
+	}
+	after, err := readContact(ctx, tx, id, storekit.LiveOnly, active)
+	if err != nil {
+		return false, fmt.Errorf("read the contact after its replace-sets: %w", err)
+	}
+	_, differs := storekit.ChangedColumns(contactSetsImage(current), contactSetsImage(after))
+	return len(differs) > 0, nil
+}
+
+// replaceContactSets writes each set the update carries. It takes the write
+// check itself, so the writes below it never run on a row the caller may not
+// change.
+func replaceContactSets(ctx context.Context, tx pgx.Tx, id ids.ContactID, in UpdateContactInput) error {
+	if err := auth.EnsureChangeable(ctx, tx, "contact", id.UUID); err != nil {
+		return err
+	}
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return err
+	}
+	if in.Social != nil {
+		if err := replaceContactSocial(ctx, tx, workspaceID(ctx), id, in.Social); err != nil {
+			return err
+		}
+	}
+	if in.Emails == nil && in.Phones == nil {
+		return nil
+	}
+	if err := replaceContactEmails(ctx, tx, workspaceID(ctx), id, in.Source, by, in.Emails); err != nil {
+		return err
+	}
+	return replaceContactPhones(ctx, tx, id, in.Source, by, in.Phones)
+}
+
+// closeContactSetsSavepoint keeps the savepoint when the sets moved something
+// and withdraws it otherwise, so a failure to withdraw is never swallowed.
+func closeContactSetsSavepoint(ctx context.Context, nested pgx.Tx, moved bool, cause error) (bool, error) {
+	if cause != nil {
+		if rbErr := nested.Rollback(ctx); rbErr != nil {
+			return false, errors.Join(cause, rbErr)
+		}
+		return false, cause
 	}
 	if !moved {
 		if err := nested.Rollback(ctx); err != nil {
