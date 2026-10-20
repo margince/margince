@@ -36,7 +36,7 @@ function CoveredDealSuggestion({
   );
 }
 
-const actions: ReviewActions = {
+export const reviewActions: ReviewActions = {
   NewDealAction,
   CompanyDealPicker,
   CoveredDealSuggestion,
@@ -47,6 +47,8 @@ export function ReviewActionsProvider({
   children,
 }: Readonly<{ children: ReactNode }>) {
   return (
-    <ReviewActionsContext value={actions}>{children}</ReviewActionsContext>
+    <ReviewActionsContext value={reviewActions}>
+      {children}
+    </ReviewActionsContext>
   );
 }
