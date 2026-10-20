@@ -421,9 +421,11 @@ and `min-width: 0`. A page never scrolls to the side; the thing that is too wide
   because to qualify is the whole job of the record. The **more** button (a 36px square with an
   outline and the three dots) holds Archive, Share, Merge and the rest. The **Details** control sits
   in the head of the details panel.
-- **Details panel**: a white card 340px wide (280px up to 1360px) on the right of the sheet, with its own "Hide details"
-  control in its head. Folded, it is a narrow white strip with "Details" set on its side and an
-  arrow that opens it again. It holds Ask, and the fields as label and value rows. A
+- **Details panel**: a white card on the right of the sheet, 340px wide (280px up to 1360px). Its
+  own "Hide details" control sits in its head. Folded, it is a narrow white strip with "Details" set on its side and an
+  arrow that opens it again.
+
+  It holds Ask, and the fields as label and value rows. A
   value a machine read has the evidence underline, and an empty one has a lighter "Add …". It also
   holds the short lists that tell what the record is (contacts, seats, tags, the Deal Room, documents).
   The current product keeps its context column there, so a rep's hand does not move.
