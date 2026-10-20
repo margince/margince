@@ -694,6 +694,22 @@
   --asideFoldW: var(--space-12);
   column-gap: var(--space-6);
 }
+/* On a narrower desktop the card keeps a label's measure, and the sheet and
+   its tabs a smaller inset, so the tabs still fit on the sheet beside it. */
+@media (max-width: 1360px) {
+  .page-zones.record-zones {
+    --asideOpenW: 280px;
+  }
+  .record-zones .record-sheet {
+    --sheetInset: var(--space-6);
+  }
+  .record-zones .record-sheet .recordtabs-tab {
+    padding-inline: var(--space-2);
+  }
+  .record-zones .record-sheet .recordtabs-tab:first-child {
+    padding-inline-start: 0;
+  }
+}
 .page-zones.record-zones[data-aside="closed"]:not(
     :has(> .page-zones-aside-fold)
   )

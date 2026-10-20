@@ -61,10 +61,9 @@ async function openRecord(page: Page, route: string, options?: MockApiOptions) {
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 }
 
-// The details switch: in the pane's head while it is open, the strip it folds
-// to while it is closed, and the tab row's own on a phone that draws a drawer.
-// `aria-pressed` names it structurally; the word on it is copy this suite does
-// not pin.
+// The details switch: in the pane's head while it is open, and the strip it
+// folds to while closed. A phone draws a drawer, and its switch is in the tab
+// row. `aria-pressed` names it; the word on it is copy this suite does not pin.
 function detailsSwitch(page: Page) {
   return page.locator(
     ".record-aside-head button[aria-pressed], .page-zones-aside-fold button[aria-pressed], .recordtabs-trailing button[aria-pressed]",
@@ -202,9 +201,8 @@ test.describe("the record's rhythm", () => {
     const head = await present(page, ".record-head");
     const tabs = await present(page, "[data-testid='record-tabs']");
     const band = await edge(page, ".record-band");
-    // The head, the strip and the band open the record's sheet, so the
-    // content is the first block on it after the band, or after the strip on a
-    // record that draws no band.
+    // The head, the strip and the band open the record's sheet. The content
+    // is the first block after the band, or after the strip when none is drawn.
     const columns = await present(
       page,
       band ? ".record-band + *" : "[data-testid='record-tabs'] + *",
