@@ -23,7 +23,12 @@ export const me: Handler = ({ json }, { options }) => {
       401,
     );
   }
-  const fixture = meFixture({ allow: E2E_ADMIN_GRANTS });
+  const fixture = meFixture({
+    allow:
+      options.dataTasks === "withheld"
+        ? { ...E2E_ADMIN_GRANTS, data_task: [] }
+        : E2E_ADMIN_GRANTS,
+  });
   return json({
     ...fixture,
     // Armed, so the sweep opens `settings/reset`. Rendering the danger zone

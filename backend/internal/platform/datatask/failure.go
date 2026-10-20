@@ -25,7 +25,7 @@ func (e *Engine) recordFailure(ctx context.Context, picked selection, cause erro
 	p := picked.progress
 	ctx = storekit.WithBatch(principal.SystemActing(ctx, "system:datatask:"+p.TaskID), p.RunID)
 	fault := jobs.FaultContext(ctx, cause)
-	detail, known := jobs.VettedFailure("", fault.Error())
+	detail, known := jobs.VettedFailure("data_task_run", fault.Error())
 	p.LastErrorClass = nil
 	if known {
 		p.LastErrorClass = &detail.Class

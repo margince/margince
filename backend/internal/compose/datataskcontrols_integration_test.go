@@ -128,3 +128,34 @@ func TestCorrectionFailureNoticeUsesCurrentOperatorGrants(t *testing.T) {
 		t.Fatal("revoked operator received a notice")
 	}
 }
+
+func TestResumingCorrectionQueuesReconciliationImmediately(t *testing.T) {
+	e := integration.Setup(t)
+	integration.ApplyRiverSchema(t)
+	ctx := dataTaskReader(e)
+	engine, err := newDataTaskEngine(e.Pool, "test", time.Now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Seed(principal.SystemActing(ctx, "system:test")); err != nil {
+		t.Fatal(err)
+	}
+	e.WsExec(t, `UPDATE data_task_run SET status='paused' WHERE step='stamp_provider_received_at'`)
+	progress, err := engine.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := progress[0]
+	body, err := json.Marshal(crmcontracts.DataTaskControl{TaskId: p.TaskID, Step: p.Step, Action: "resume", Version: p.Version})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	dataTaskHandlers{pool: e.Pool}.ControlDataTask(rec, httptest.NewRequest(http.MethodPost, "/v1/admin/data-tasks/control", strings.NewReader(string(body))).WithContext(ctx))
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("resume=%d %s", rec.Code, rec.Body.String())
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM river_job WHERE kind='data_task_reconcile'`); got != 1 {
+		t.Fatalf("resume jobs=%d", got)
+	}
+}

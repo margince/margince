@@ -5,6 +5,51 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de = {
+  "dataTasks.unknownState":
+    "Aktualisiere die Anwendung, um diesen Status zu verwalten.",
+  "dataTasks.blockedBy": "Wartet auf: {name}",
+  "roles.object.data_task": "Datenaktualisierungen",
+  "dataTasks.title": "Datenaktualisierungen",
+  "dataTasks.sub":
+    "Gespeicherte Datensätze werden in kleinen Paketen aktualisiert. Bereits gespeicherte Änderungen bleiben bei einer Pause erhalten.",
+  "dataTasks.withheld":
+    "Zum Lesen der Datenaktualisierungen ist eine Berechtigung erforderlich. Wende dich an einen Admin, um Zugriff zu erhalten.",
+  "dataTasks.empty": "Keine Datenaktualisierungen registriert.",
+  "dataTasks.unknown": "Nicht geschätzt",
+  "dataTasks.atLeast": "Mindestens {count}",
+  "dataTasks.scanned": "Geprüfte Zeilen",
+  "dataTasks.changed": "Geänderte Zeilen",
+  "dataTasks.estimate": "Geschätzte zu prüfende Zeilen",
+  "dataTasks.batchLimit": "Zeilen pro Paket",
+  "dataTasks.batches": "Gespeicherte Pakete",
+  "dataTasks.lastProgress": "Letzter Fortschritt",
+  "dataTasks.notStarted": "Nicht gestartet",
+  "dataTasks.nextAttempt": "Nächster Versuch",
+  "dataTasks.release": "Erste Version",
+  "dataTasks.run": "Lauf-ID",
+  "dataTasks.step": "Schritt: {step}",
+  "dataTasks.prerequisites": "Zuerst erforderlich: {names}",
+  "dataTasks.status.pending": "Ausstehend",
+  "dataTasks.status.running": "Läuft",
+  "dataTasks.status.paused": "Pausiert",
+  "dataTasks.status.done": "Abgeschlossen",
+  "dataTasks.status.failed": "Fehlgeschlagen",
+  "dataTasks.action.pause": "Pausieren",
+  "dataTasks.action.resume": "Fortsetzen",
+  "dataTasks.action.retry": "Erneut versuchen",
+  "dataTasks.action.estimate": "Zeilen schätzen",
+  "dataTasks.blocked.waiting_for_worker":
+    "Wartet auf einen Hintergrundprozess.",
+  "dataTasks.blocked.newer_release_required":
+    "Eine neuere Version ist erforderlich. Aktualisiere die Anwendung, bevor du fortfährst.",
+  "dataTasks.blocked.paused": "An der gespeicherten Position pausiert.",
+  "dataTasks.blocked.failed":
+    "Nach wiederholten Fehlern gestoppt. Prüfe den Fehler vor einem neuen Versuch.",
+  "dataTasks.blocked.retry_wait": "Wartet auf den nächsten Versuch.",
+  "dataTasks.blocked.earlier_step":
+    "Ein vorheriger Schritt muss zuerst abgeschlossen werden.",
+  "dataTasks.blocked.missing_prerequisite":
+    "Erforderliche Aktualisierungen müssen zuerst abgeschlossen werden.",
   "approval.preview.nameUnavailable": "Name nicht verfügbar",
   "approval.preview.structured": "Strukturierter Wert: {value}",
   "approval.preview.resolveConflict":

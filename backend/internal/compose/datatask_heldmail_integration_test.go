@@ -7,6 +7,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -163,7 +164,7 @@ func TestHeldMailTaskClosesOnlyProvenHistoryAndReplaysSafely(t *testing.T) {
 	const verdict = "agent:capture_counterparty_verdict"
 
 	cases := map[string]struct{ id, wantState, wantKind string }{
-		// (a) Migration 1790844232 looked at connector:* only.
+		// Verdict-derived acquisitions use the same sent-history evidence.
 		"verdict-sent": {
 			heldHistoryCase(ctx, t, conn, seat, "sent@held.test", verdict, "open", old),
 			"exempt_with_reason", "mailbox_history",
@@ -255,10 +256,20 @@ func TestHeldMailTaskClosesOnlyProvenHistoryAndReplaysSafely(t *testing.T) {
 				heldReceivedMail{headerDate: old, payload: `{"encoding": "base64", "data": "not*base64"}`}),
 			"open", "unknown_legacy",
 		},
-		// A blocked duty closes too, and the rollback puts its reason back.
+		// Outstanding duties close regardless of delivery or assignment state.
 		"blocked-before": {
 			heldReceivedCase(ctx, t, conn, seat, "blocked@held.test", verdict,
 				heldReceivedMail{headerDate: old, providerAt: &old, state: "blocked"}),
+			"exempt_with_reason", "mailbox_history",
+		},
+		"assigned-before": {
+			heldReceivedCase(ctx, t, conn, seat, "assigned@held.test", verdict,
+				heldReceivedMail{headerDate: old, providerAt: &old, state: "assigned"}),
+			"exempt_with_reason", "mailbox_history",
+		},
+		"delivery-failed-before": {
+			heldReceivedCase(ctx, t, conn, seat, "delivery-failed@held.test", verdict,
+				heldReceivedMail{headerDate: old, providerAt: &old, state: "delivery_failed"}),
 			"exempt_with_reason", "mailbox_history",
 		},
 		// A finished duty keeps its ground; only the acquisition changes.
@@ -325,5 +336,65 @@ func TestHeldMailTaskClosesOnlyProvenHistoryAndReplaysSafely(t *testing.T) {
 	}
 	if audited != 1 {
 		t.Errorf("the settled duty was audited %d times, want once (a second run finds nothing owed)", audited)
+	}
+}
+
+func TestHeldMailDomainAndAuditRollBackWithItsProgress(t *testing.T) {
+	e := integration.Setup(t)
+	conn := integration.OwnerConn(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	connected := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	if _, err := conn.Exec(ctx, `INSERT INTO capture_connection(provider,user_id,status,created_at) VALUES('gmail',@user,'connected',@at)`, pgx.NamedArgs{"user": e.Rep1, "at": connected}); err != nil {
+		t.Fatal(err)
+	}
+	id := heldHistoryCase(ctx, t, conn, e.Rep1.String(), "rollback@held.test", "connector:gmail", "open", connected.Add(-time.Hour))
+	now := connected.Add(time.Hour)
+	tasks := dataTaskCatalog(func() time.Time { return now })
+	original := tasks[0].Steps[1].Batch
+	tasks[0].Steps[1].Batch = func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
+		out, err := original(ctx, tx, in)
+		if err != nil {
+			return out, err
+		}
+		return out, errors.New("transaction interrupted after domain writes")
+	}
+	engine, err := datatask.New(e.Pool, tasks, "test", func() time.Time { return now }, dataTaskFailureNotice(e.Pool))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Seed(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if _, err := engine.Execute(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if state, kind := heldCaseAndKind(ctx, t, conn, id); state != "open" || kind != "unknown_legacy" {
+		t.Fatalf("partial domain write: %s/%s", state, kind)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type IN ('privacy_notice_case','contact_acquisition_evidence')`); got != 0 {
+		t.Fatalf("audit escaped rollback: %d", got)
+	}
+	progress, err := engine.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if progress[1].Batches != 0 || progress[1].ConsecutiveFailures != 1 {
+		t.Fatalf("partial progress: %+v", progress[1])
+	}
+	now = now.Add(time.Hour)
+	resumed, err := newDataTaskEngine(e.Pool, "test", func() time.Time { return now })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := resumed.Execute(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if state, kind := heldCaseAndKind(ctx, t, conn, id); state != "exempt_with_reason" || kind != "mailbox_history" {
+		t.Fatalf("retry failed: %s/%s", state, kind)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type IN ('privacy_notice_case','contact_acquisition_evidence')`); got != 2 {
+		t.Fatalf("committed audit rows=%d", got)
 	}
 }

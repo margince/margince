@@ -14,6 +14,7 @@ import {
   useExtensionIngestHealth,
 } from "../capture/extingesthealth";
 import { ProviderHealthCard } from "../capture/providerhealth";
+import { DataTasksHealthCard } from "./datataskshealth";
 import {
   EmbedReindexCard,
   useEmbedReindexAvailable,
@@ -159,6 +160,7 @@ export function SystemHealthPage() {
       {readings.providers.panel && <ProviderHealthCard />}
       <CaptureHealthCard />
       <RecoveryHealthCard />
+      <DataTasksHealthCard />
       {/* The values the background work runs on, under the readings of what
           it is doing. */}
       <BackgroundSchedulesCard />

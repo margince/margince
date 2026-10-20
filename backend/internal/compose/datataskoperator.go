@@ -21,11 +21,7 @@ func DataTaskOperation(ctx context.Context, pool *pgxpool.Pool, action string) (
 		return nil, err
 	}
 	if action == "run" {
-		inserter, err := jobs.NewInserter(pool, slog.Default())
-		if err != nil {
-			return nil, err
-		}
-		if err := inserter.Enqueue(ctx, DataTaskReconcileArgs{}, nil); err != nil {
+		if err := enqueueDataTaskReconcile(ctx, pool); err != nil {
 			return nil, err
 		}
 	} else if action != "status" && action != "estimate" {
@@ -47,4 +43,12 @@ func DataTaskOperation(ctx context.Context, pool *pgxpool.Pool, action string) (
 		return engine.List(ctx)
 	}
 	return progress, nil
+}
+
+func enqueueDataTaskReconcile(ctx context.Context, pool *pgxpool.Pool) error {
+	inserter, err := jobs.NewInserter(pool, slog.Default())
+	if err != nil {
+		return err
+	}
+	return inserter.Enqueue(ctx, DataTaskReconcileArgs{}, nil)
 }

@@ -37,8 +37,8 @@ func RelabelHeldMailTx(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) ([]i
  WHERE id = ANY(@ids) AND kind = 'unknown_legacy'
  AND (starts_with(e.captured_by, 'connector:') OR e.captured_by = 'agent:capture_counterparty_verdict')
  AND EXISTS (SELECT 1 FROM contact_email ce WHERE ce.contact_id = e.contact_id AND ce.archived_at IS NULL
- AND (`+sentHistorySQL("ce.email", false)+` OR `+receivedHistorySQL("ce.email", false)+`))
- RETURNING e.id`, pgx.NamedArgs{"ids": scanned})
+ AND (`+sentHistorySQL+` OR `+receivedHistorySQL+`))
+ RETURNING e.id`, pgx.NamedArgs{"ids": scanned, "expanded": false})
 	if err != nil {
 		return nil, datatask.BatchOut{}, err
 	}

@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -79,6 +80,10 @@ func (w *dataTaskReconcileWorker) Work(ctx context.Context, _ *river.Job[DataTas
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
+	return reconcileDataTasks(ctx, engine)
+}
+
+func reconcileDataTasks(ctx context.Context, engine *datatask.Engine) error {
 	if err := engine.Seed(ctx); err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
@@ -100,11 +105,14 @@ func (w *dataTaskReconcileWorker) Work(ctx context.Context, _ *river.Job[DataTas
 }
 
 func dataTaskJobEngine(ctx context.Context, pool *pgxpool.Pool) (context.Context, *datatask.Engine, error) {
-	ctx, err := installationJobCtx(ctx, identity.NewService(pool))
+	bound, err := installationJobCtx(ctx, identity.NewService(pool))
 	if err != nil {
 		return ctx, nil, err
 	}
-	ctx = principal.SystemActing(ctx, "system:datatask")
+	ctx = principal.SystemActing(bound, "system:datatask")
+	if _, ok := principal.CorrelationID(ctx); !ok {
+		ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	}
 	engine, err := newDataTaskEngine(pool, buildinfo.ReleaseVersion, time.Now)
 	return ctx, engine, err
 }
