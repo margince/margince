@@ -13,8 +13,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { holdExits } from "../design-system/presence-testing";
+import { COMPANY_CONTEXT_ON } from "../features/settings/settingspages.fixtures";
 import { LocaleProvider } from "../i18n";
-import { COMPANY_CONTEXT_ON } from "../screens/settingspages.fixtures";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
 import { CREATE_ID } from "./nav";
@@ -816,13 +816,19 @@ describe("useBuiltinCommands", () => {
   function renderProbeWithCompany(opts: { roles: string[]; allow: GrantSpec }) {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input: RequestInfo | URL) =>
-        String(input instanceof Request ? input.url : input).endsWith(
-          "/company/context/capabilities",
-        )
-          ? jsonResponse(COMPANY_CONTEXT_ON)
-          : jsonResponse(meFixture({ roles: opts.roles, allow: opts.allow })),
-      ),
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.endsWith("/company/context/capabilities")) {
+          return jsonResponse(COMPANY_CONTEXT_ON);
+        }
+        // The installation writer may open Configuration, so search reads it.
+        if (url.endsWith("/installation/configuration")) {
+          return jsonResponse([]);
+        }
+        return jsonResponse(
+          meFixture({ roles: opts.roles, allow: opts.allow }),
+        );
+      }),
     );
     return render(<Probe />);
   }

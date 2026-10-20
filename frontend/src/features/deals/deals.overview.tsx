@@ -254,14 +254,21 @@ export function DealOverviewPane({
           briefing names, then what is on the table beside who is in the room
           (the deal's two sides), then what the customer committed to. */}
       <RecordReading>
-        <DealStatusCardPanel
-          dealId={deal.id}
-          dealName={deal.name}
-          pulse={pulse}
-          spine={spine}
-          path={path}
-          onOpenEmail={onOpenEmail}
-        />
+        {/* The call and the committee are read from endpoints the server
+            refuses for an archived deal. The thread the call holds is the
+            page's own timeline, so it stands alone. */}
+        {deal.archived_at ? (
+          spine
+        ) : (
+          <DealStatusCardPanel
+            dealId={deal.id}
+            dealName={deal.name}
+            pulse={pulse}
+            spine={spine}
+            path={path}
+            onOpenEmail={onOpenEmail}
+          />
+        )}
         <DealApprovals approvals={dealApprovals} decide={onDecide} />
         <RecordReadingPair>
           {/* The money reading's door scrolls here; the id is the strip's own
@@ -276,13 +283,15 @@ export function DealOverviewPane({
               onCreate={onCreateOffer}
             />
           </div>
-          <DealCommitteeCard
-            dealId={deal.id}
-            coverage={coverage.coverage}
-            withheld={coverage.withheld}
-            pending={coverage.pending}
-            refusedReasonId={refusedReasonId}
-          />
+          {!deal.archived_at && (
+            <DealCommitteeCard
+              dealId={deal.id}
+              coverage={coverage.coverage}
+              withheld={coverage.withheld}
+              pending={coverage.pending}
+              refusedReasonId={refusedReasonId}
+            />
+          )}
         </RecordReadingPair>
         <DealWatchCard dealId={deal.id} onOpenEmail={onOpenEmail} />
       </RecordReading>
@@ -301,6 +310,7 @@ export function DealOverviewPane({
         dealId={deal.id}
         status={deal.status}
         closingOccurrenceId={deal.closing_occurrence_id}
+        archived={Boolean(deal.archived_at)}
       />
       {/* Neither the related-evidence panel nor the inline log form stands
           here any more. The evidence it listed — recent touches, open tasks,

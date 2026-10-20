@@ -616,6 +616,27 @@ func (e AdvanceProjectPhaseRequestToPhase) Valid() bool {
 	}
 }
 
+// Defines values for AgentClientRegisteredBy.
+const (
+	AgentClientRegisteredByAdmin AgentClientRegisteredBy = "admin"
+	AgentClientRegisteredByCimd  AgentClientRegisteredBy = "cimd"
+	AgentClientRegisteredByDcr   AgentClientRegisteredBy = "dcr"
+)
+
+// Valid indicates whether the value is a known member of the AgentClientRegisteredBy enum.
+func (e AgentClientRegisteredBy) Valid() bool {
+	switch e {
+	case AgentClientRegisteredByAdmin:
+		return true
+	case AgentClientRegisteredByCimd:
+		return true
+	case AgentClientRegisteredByDcr:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AgentToolTier.
 const (
 	AgentToolTierAutoExecute          AgentToolTier = "auto_execute"
@@ -1417,6 +1438,24 @@ func (e AiUsageBudgetBand) Valid() bool {
 	case AiUsageBudgetBandNormal:
 		return true
 	case AiUsageBudgetBandQueued:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AnalyticsCustomFieldObject.
+const (
+	AnalyticsCustomFieldObjectCompany AnalyticsCustomFieldObject = "company"
+	AnalyticsCustomFieldObjectDeal    AnalyticsCustomFieldObject = "deal"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsCustomFieldObject enum.
+func (e AnalyticsCustomFieldObject) Valid() bool {
+	switch e {
+	case AnalyticsCustomFieldObjectCompany:
+		return true
+	case AnalyticsCustomFieldObjectDeal:
 		return true
 	default:
 		return false
@@ -20167,6 +20206,27 @@ func (e WorklistOwnerKind) Valid() bool {
 	}
 }
 
+// Defines values for WorklistPromiseRecipientStatus.
+const (
+	WorklistPromiseRecipientStatusDismissed WorklistPromiseRecipientStatus = "dismissed"
+	WorklistPromiseRecipientStatusDone      WorklistPromiseRecipientStatus = "done"
+	WorklistPromiseRecipientStatusOpen      WorklistPromiseRecipientStatus = "open"
+)
+
+// Valid indicates whether the value is a known member of the WorklistPromiseRecipientStatus enum.
+func (e WorklistPromiseRecipientStatus) Valid() bool {
+	switch e {
+	case WorklistPromiseRecipientStatusDismissed:
+		return true
+	case WorklistPromiseRecipientStatusDone:
+		return true
+	case WorklistPromiseRecipientStatusOpen:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistReachSource.
 const (
 	WorklistReachSourceAiWorkHealth        WorklistReachSource = "ai_work_health"
@@ -20268,6 +20328,7 @@ const (
 	WorklistReasonKindAddressedElsewhere WorklistReasonKind = "addressed_elsewhere"
 	WorklistReasonKindApprovedAndFailed  WorklistReasonKind = "approved_and_failed"
 	WorklistReasonKindAsksNothing        WorklistReasonKind = "asks_nothing"
+	WorklistReasonKindBccFromStranger    WorklistReasonKind = "bcc_from_stranger"
 	WorklistReasonKindBelowMaterial      WorklistReasonKind = "below_material"
 	WorklistReasonKindBlocksCustomerWork WorklistReasonKind = "blocks_customer_work"
 	WorklistReasonKindBuyerWroteLast     WorklistReasonKind = "buyer_wrote_last"
@@ -20278,6 +20339,7 @@ const (
 	WorklistReasonKindExpectedRevenue    WorklistReasonKind = "expected_revenue"
 	WorklistReasonKindFirstAsked         WorklistReasonKind = "first_asked"
 	WorklistReasonKindLegalDeadline      WorklistReasonKind = "legal_deadline"
+	WorklistReasonKindLinkOffSender      WorklistReasonKind = "link_off_sender"
 	WorklistReasonKindMaterial           WorklistReasonKind = "material"
 	WorklistReasonKindMeetingBooked      WorklistReasonKind = "meeting_booked"
 	WorklistReasonKindMeetingSoon        WorklistReasonKind = "meeting_soon"
@@ -20316,6 +20378,8 @@ func (e WorklistReasonKind) Valid() bool {
 		return true
 	case WorklistReasonKindAsksNothing:
 		return true
+	case WorklistReasonKindBccFromStranger:
+		return true
 	case WorklistReasonKindBelowMaterial:
 		return true
 	case WorklistReasonKindBlocksCustomerWork:
@@ -20335,6 +20399,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindFirstAsked:
 		return true
 	case WorklistReasonKindLegalDeadline:
+		return true
+	case WorklistReasonKindLinkOffSender:
 		return true
 	case WorklistReasonKindMaterial:
 		return true
@@ -23866,6 +23932,66 @@ type AgentAssembledContext struct {
 	Sections []AgentContextSection `json:"sections"`
 }
 
+// AgentClient One OAuth client an AI tool signs users in through. Never carries a secret.
+type AgentClient struct {
+	// ClientId What the tool sends as `client_id`. For a CIMD client it is the document's URL.
+	ClientId   string `json:"client_id"`
+	ClientName string `json:"client_name"`
+
+	// Confidential True when the client authenticates at the token endpoint with a secret.
+	Confidential bool `json:"confidential"`
+
+	// ConnectedUsers How many users hold a live connection through this client.
+	ConnectedUsers int                `json:"connected_users"`
+	CreatedAt      time.Time          `json:"created_at"`
+	Disabled       bool               `json:"disabled"`
+	Id             openapi_types.UUID `json:"id"`
+
+	// LastUsedAt The last time any of its connections called Margince; null when none has.
+	LastUsedAt   *time.Time `json:"last_used_at,omitempty"`
+	RedirectUris []string   `json:"redirect_uris"`
+
+	// RegisteredBy How the client came to exist. `dcr` registered itself; `cimd` is a published metadata document.
+	RegisteredBy AgentClientRegisteredBy `json:"registered_by"`
+}
+
+// AgentClientRegisteredBy How the client came to exist. `dcr` registered itself; `cimd` is a published metadata document.
+type AgentClientRegisteredBy string
+
+// AgentClientListResponse defines model for AgentClientListResponse.
+type AgentClientListResponse struct {
+	Data         []AgentClient           `json:"data"`
+	Page         PageInfo                `json:"page"`
+	Registration AgentClientRegistration `json:"registration"`
+}
+
+// AgentClientMethod defines model for AgentClientMethod.
+type AgentClientMethod struct {
+	// DeploymentAllows False when the deployment file turns the method off; the admin's switch then cannot turn it on.
+	DeploymentAllows bool `json:"deployment_allows"`
+
+	// Enabled Whether tools may use this method now. True only when both the deployment and the admin allow it.
+	Enabled bool `json:"enabled"`
+
+	// Setting The admin's switch, written through `PATCH /installation/settings`.
+	Setting bool `json:"setting"`
+}
+
+// AgentClientRegistration defines model for AgentClientRegistration.
+type AgentClientRegistration struct {
+	Dynamic          AgentClientMethod `json:"dynamic"`
+	MetadataDocument AgentClientMethod `json:"metadata_document"`
+}
+
+// AgentClientSecret defines model for AgentClientSecret.
+type AgentClientSecret struct {
+	// ClientSecret The new secret, shown once.
+	ClientSecret string `json:"client_secret"`
+
+	// Scopes Every scope the tool may ask for, space separated, as discovery lists them.
+	Scopes string `json:"scopes"`
+}
+
 // AgentCommitment One open promise: a task, or a promise read from a conversation, with when it is due.
 type AgentCommitment struct {
 	About            []AgentCommitmentSubject `json:"about"`
@@ -25564,13 +25690,31 @@ type AnalyticsCustomField struct {
 	// Name The field as `group_by` and a filter name it.
 	Name string `json:"name"`
 
+	// Object The record the field belongs to. A company field is read through the deal's company,
+	// and a deal whose company the caller may not open drops out of an answer that groups
+	// or filters by it.
+	Object AnalyticsCustomFieldObject `json:"object"`
+
 	// Options The choices a picklist offers today, empty for a boolean. A record may still hold a
 	// choice an administrator has since removed.
 	Options []string `json:"options"`
 
+	// Records How many live deals the caller can read when the schema was served.
+	Records int `json:"records"`
+
 	// Type The value shape. A picklist holds one of `options`; a boolean holds yes or no.
 	Type AnalyticsCustomFieldType `json:"type"`
+
+	// WithValue How many of those `records` hold a value in this field. A company field counts a deal
+	// only when the caller may open its company. A grouping by a field with few values
+	// leaves most deals in the empty group.
+	WithValue int `json:"with_value"`
 }
+
+// AnalyticsCustomFieldObject The record the field belongs to. A company field is read through the deal's company,
+// and a deal whose company the caller may not open drops out of an answer that groups
+// or filters by it.
+type AnalyticsCustomFieldObject string
 
 // AnalyticsCustomFieldType The value shape. A picklist holds one of `options`; a boolean holds yes or no.
 type AnalyticsCustomFieldType string
@@ -26582,6 +26726,12 @@ type Attention struct {
 	// not read notices.
 	Notices *[]AttentionItem `json:"notices,omitempty"`
 
+	// NoticesMoreAvailable The unread notice scan reached its limit before equivalent decision
+	// announcements were folded. When true, an empty notices array does
+	// not prove that no other notices remain. Absent when notices could
+	// not be read. Counts describe the returned items, not the unread total.
+	NoticesMoreAvailable *bool `json:"notices_more_available,omitempty"`
+
 	// Planned Work already agreed: overdue first, then due today.
 	Planned []AttentionItem `json:"planned"`
 
@@ -26956,6 +27106,9 @@ type AttentionItem struct {
 	// BOTH sides — the queue's own both-sides-visible rule decides that, and an
 	// item the reader may not fully see is not offered as a decision at all.
 	Pair *AttentionPair `json:"pair,omitempty"`
+
+	// PromiseRecipients Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable.
+	PromiseRecipients *[]WorklistPromiseRecipient `json:"promise_recipients,omitempty"`
 
 	// QuietDays How many days a deal or a relationship has been idle, where the producing lane
 	// measures one. Sent by `deal_at_risk` and `relationship_decay`.
@@ -45035,6 +45188,27 @@ type RefusedRecipient struct {
 // RefusedRecipientSubjectKind defines model for RefusedRecipient.SubjectKind.
 type RefusedRecipientSubjectKind string
 
+// RegisterAgentClientRequest defines model for RegisterAgentClientRequest.
+type RegisterAgentClientRequest struct {
+	// Name Shown on the consent screen and in the client list.
+	Name string `json:"name"`
+
+	// RedirectUris Exact callback URLs. https, or http on localhost or 127.0.0.1, where the port is ignored.
+	RedirectUris []string `json:"redirect_uris"`
+}
+
+// RegisteredAgentClient defines model for RegisteredAgentClient.
+type RegisteredAgentClient struct {
+	// Client One OAuth client an AI tool signs users in through. Never carries a secret.
+	Client AgentClient `json:"client"`
+
+	// ClientSecret The secret the tool sends at the token endpoint. Shown once and never again.
+	ClientSecret string `json:"client_secret"`
+
+	// Scopes Every scope the tool may ask for, space separated, as discovery lists them.
+	Scopes string `json:"scopes"`
+}
+
 // RejectCompanyRequest defines model for RejectCompanyRequest.
 type RejectCompanyRequest struct {
 	// Reason Why this is not a company. Required: the refusal outlives the record, and the next
@@ -49158,6 +49332,11 @@ type UpdateActivityReviewTemplateRequest struct {
 	Version int64 `json:"version"`
 }
 
+// UpdateAgentClientRequest defines model for UpdateAgentClientRequest.
+type UpdateAgentClientRequest struct {
+	Disabled bool `json:"disabled"`
+}
+
 // UpdateAttachmentMetadataRequest A sparse patch. An absent field is untouched; `title` and `supersedes_id` accept
 // null to clear, because clearing either is an edit a human makes deliberately.
 type UpdateAttachmentMetadataRequest struct {
@@ -49698,6 +49877,11 @@ type UpdateInstallationSettingsRequest struct {
 	// asking for a hand until the rows retire.
 	DeadWorkBannerHours *int `json:"dead_work_banner_hours,omitempty"`
 
+	// DynamicClientRegistration Let AI tools register their own OAuth client (DCR). Off stops new sign-ins through a
+	// self-registered client and answers `/oauth/register` with 404; connections already made
+	// keep renewing. Needs `agent_client` update. The deployment file can hold it off.
+	DynamicClientRegistration *bool `json:"dynamic_client_registration,omitempty"`
+
 	// EnabledOidcProviders The provider keys the login screen may offer, of those this deployment configured.
 	// Sending a key the deployment has no credentials for enables nothing: the effective
 	// list is the intersection, so this can only ever narrow what is possible.
@@ -49739,6 +49923,11 @@ type UpdateInstallationSettingsRequest struct {
 
 	// GraphWatchScanIntervalSeconds Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes.
 	GraphWatchScanIntervalSeconds *int `json:"graph_watch_scan_interval_seconds,omitempty"`
+
+	// MetadataDocumentClients Accept a client ID that is the URL of the tool's published metadata document (CIMD).
+	// Off stops new sign-ins through such a client; connections already made keep renewing.
+	// Needs `agent_client` update. The deployment file can hold it off.
+	MetadataDocumentClients *bool `json:"metadata_document_clients,omitempty"`
 
 	// Name Accepted only when it equals the stored name, so an older client that resends the whole
 	// form still saves. Any other value is refused with `422 set_on_company_profile`: the
@@ -52351,6 +52540,9 @@ type WorklistItem struct {
 	// rather than a gap: a dedupe pair genuinely asks the reader to choose.
 	PrimaryAction *WorklistItemPrimaryAction `json:"primary_action,omitempty"`
 
+	// PromiseRecipients Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable.
+	PromiseRecipients *[]WorklistPromiseRecipient `json:"promise_recipients,omitempty"`
+
 	// Recipients Everyone a `meeting_follow_up` row's follow-up goes to: the contacts the meeting
 	// is filed under, then the attendees its calendar entry resolved to a contact this
 	// caller may read. Best first, each once; `contact` is the first of them. Sent on
@@ -52672,6 +52864,17 @@ type WorklistPlanCoverageMember struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
+// WorklistPromiseRecipient A visible recipient's own claim on a shared deliverable. Other recipients may be outside the reader's scope.
+type WorklistPromiseRecipient struct {
+	ClaimId     openapi_types.UUID             `json:"claim_id"`
+	ContactId   openapi_types.UUID             `json:"contact_id"`
+	DisplayName string                         `json:"display_name"`
+	Status      WorklistPromiseRecipientStatus `json:"status"`
+}
+
+// WorklistPromiseRecipientStatus defines model for WorklistPromiseRecipient.Status.
+type WorklistPromiseRecipientStatus string
+
 // WorklistReach What one source contributed, in numbers that say what they counted.
 //
 // `considered` is how many candidates were read and ranked. It is NOT a total: when
@@ -52822,7 +53025,7 @@ type WorklistReadings struct {
 // product ships three languages and a sentence composed here would reach a German
 // reader in English.
 type WorklistReason struct {
-	// Kind Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it.
+	// Kind Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender's request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.
 	Kind WorklistReasonKind `json:"kind"`
 
 	// Value A typed comparator value — a date, an amount, a count of days, or nothing. Typed
@@ -52831,7 +53034,7 @@ type WorklistReason struct {
 	Value *WorklistValue `json:"value,omitempty"`
 }
 
-// WorklistReasonKind Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it.
+// WorklistReasonKind Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender's request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.
 type WorklistReasonKind string
 
 // WorklistSourceUnavailable A source that did not contribute, and why. `withheld` means the caller may not
@@ -56775,6 +56978,22 @@ type DownloadImportProblemsParams struct {
 // DownloadImportProblemsParamsLang defines parameters for DownloadImportProblems.
 type DownloadImportProblemsParamsLang string
 
+// ListAgentClientsParams defines parameters for ListAgentClients.
+type ListAgentClientsParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // CreateCorpusJSONBody defines parameters for CreateCorpus.
 type CreateCorpusJSONBody struct {
 	DefaultAsk     *bool    `json:"default_ask,omitempty"`
@@ -60456,6 +60675,12 @@ type ApproveImportRunJSONRequestBody = ApproveImportRunRequest
 
 // ValidateImportRunJSONRequestBody defines body for ValidateImportRun for application/json ContentType.
 type ValidateImportRunJSONRequestBody = ImportRunVersion
+
+// RegisterAgentClientJSONRequestBody defines body for RegisterAgentClient for application/json ContentType.
+type RegisterAgentClientJSONRequestBody = RegisterAgentClientRequest
+
+// UpdateAgentClientJSONRequestBody defines body for UpdateAgentClient for application/json ContentType.
+type UpdateAgentClientJSONRequestBody = UpdateAgentClientRequest
 
 // SetOauthAppJSONRequestBody defines body for SetOauthApp for application/json ContentType.
 type SetOauthAppJSONRequestBody = ConnectorAppInput
@@ -73573,6 +73798,21 @@ type ServerInterface interface {
 	// Test a draft import run against the estate.
 	// (POST /imports/{id}/validate)
 	ValidateImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// The OAuth clients AI tools sign users in through, and which automatic methods are on.
+	// (GET /installation/agent-clients)
+	ListAgentClients(w http.ResponseWriter, r *http.Request, params ListAgentClientsParams)
+	// Register an AI tool's OAuth client by hand (admin).
+	// (POST /installation/agent-clients)
+	RegisterAgentClient(w http.ResponseWriter, r *http.Request)
+	// Delete a client and end every connection it holds (admin).
+	// (DELETE /installation/agent-clients/{id})
+	DeleteAgentClient(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Disable or enable a client (admin).
+	// (PATCH /installation/agent-clients/{id})
+	UpdateAgentClient(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Replace a confidential client's secret (admin).
+	// (POST /installation/agent-clients/{id}/secret)
+	RotateAgentClientSecret(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Which sign-in methods this installation offers.
 	// (GET /installation/authentication-policy)
 	GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request)
@@ -77629,6 +77869,36 @@ func (_ Unimplemented) UndoImportRun(w http.ResponseWriter, r *http.Request, id 
 // Test a draft import run against the estate.
 // (POST /imports/{id}/validate)
 func (_ Unimplemented) ValidateImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The OAuth clients AI tools sign users in through, and which automatic methods are on.
+// (GET /installation/agent-clients)
+func (_ Unimplemented) ListAgentClients(w http.ResponseWriter, r *http.Request, params ListAgentClientsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Register an AI tool's OAuth client by hand (admin).
+// (POST /installation/agent-clients)
+func (_ Unimplemented) RegisterAgentClient(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete a client and end every connection it holds (admin).
+// (DELETE /installation/agent-clients/{id})
+func (_ Unimplemented) DeleteAgentClient(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Disable or enable a client (admin).
+// (PATCH /installation/agent-clients/{id})
+func (_ Unimplemented) UpdateAgentClient(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace a confidential client's secret (admin).
+// (POST /installation/agent-clients/{id}/secret)
+func (_ Unimplemented) RotateAgentClientSecret(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -100819,6 +101089,174 @@ func (siw *ServerInterfaceWrapper) ValidateImportRun(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// ListAgentClients operation middleware
+func (siw *ServerInterfaceWrapper) ListAgentClients(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAgentClientsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAgentClients(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RegisterAgentClient operation middleware
+func (siw *ServerInterfaceWrapper) RegisterAgentClient(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RegisterAgentClient(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAgentClient operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAgentClient(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAgentClient(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateAgentClient operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAgentClient(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateAgentClient(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RotateAgentClientSecret operation middleware
+func (siw *ServerInterfaceWrapper) RotateAgentClientSecret(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RotateAgentClientSecret(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetAuthenticationPolicy operation middleware
 func (siw *ServerInterfaceWrapper) GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request) {
 
@@ -117791,6 +118229,21 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/imports/{id}/validate", wrapper.ValidateImportRun)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/agent-clients", wrapper.ListAgentClients)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/installation/agent-clients", wrapper.RegisterAgentClient)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/installation/agent-clients/{id}", wrapper.DeleteAgentClient)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/installation/agent-clients/{id}", wrapper.UpdateAgentClient)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/installation/agent-clients/{id}/secret", wrapper.RotateAgentClientSecret)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/authentication-policy", wrapper.GetAuthenticationPolicy)

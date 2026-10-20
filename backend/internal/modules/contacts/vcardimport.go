@@ -29,6 +29,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/captureorigin"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -36,7 +37,7 @@ import (
 )
 
 // vcardSource is the provenance every row this import writes carries.
-const vcardSource = "vcard_import"
+const vcardSource = captureorigin.VCardSource
 
 // vcardFieldStated marks a field this import answered. The image says WHICH
 // field moved and never what it moved to: audit_log is append-only, and this

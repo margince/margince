@@ -237,10 +237,10 @@ function verbDestination(
 // "Draft the reply" — the most-pressed control on a waiting row — read as a
 // caption beside them, and the row had two visual grammars for one question.
 //
-// The atom's own classes rather than a face of this screen's: `Button` renders
-// a `<button>` and takes no `href`, so there is no component to reach for, and
-// the alternative is a second spelling of the ghost button in worklist.css.
-// `screens/client.tsx` reaches the same conclusion the same way.
+// The atom's own classes rather than a face of this screen's. `Button` renders
+// a `<button>` and takes no `href`, so there is no component to reach for.
+// The alternative is a second spelling of the ghost button in worklist.css.
+// `features/settings/client.tsx` reaches the same conclusion the same way.
 const NAVIGATING_VERB = "btn btn-ghost";
 // The move the product worked out, as an anchor in the agent's own chrome:
 // the same `ai` face `Button` draws, for the reason given where it is drawn.

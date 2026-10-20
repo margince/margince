@@ -29,6 +29,7 @@ import { useRowSource } from "./worklist.noticesource";
 import { lastTouch } from "./worklist.pane";
 import type { WorklistItem } from "./worklist.queries";
 import { noticeDetail, readerTask } from "./worklist.reader";
+import { PromiseRecipients } from "./worklist.recipients";
 import { useDrawerDials, withWorklistReturn } from "./worklist.return";
 import {
   aboutRecord,
@@ -290,6 +291,7 @@ export function WorklistRow({
               badged={badged}
             />
           )}
+          <PromiseRecipients recipients={item.promise_recipients} />
         </div>
         {/* Every verb on one right-aligned line, the row's menu last. Under the
             work where the card has no column to spare for it, beside the work

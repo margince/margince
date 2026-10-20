@@ -172,7 +172,7 @@ func analyticsVocabularyText(ctx context.Context, db *database.DB) (string, erro
 	if db != nil {
 		if err := db.Tx(ctx, func(tx pgx.Tx) error {
 			var err error
-			schema, _, err = AnalyticsSchemaIn(ctx, tx)
+			schema, err = AnalyticsSchemaWithCoverage(ctx, tx)
 			return err
 		}); err != nil {
 			return "", err

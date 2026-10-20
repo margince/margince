@@ -42,8 +42,7 @@ func withEnv(t *testing.T, environ []string) *config.Config {
 	}
 	cfg, err := config.Load(reg, config.Sources{
 		Environ:  environ,
-		KnownKey: compose.AllSettingKeys,
-		KnownEnv: compose.AllSettingEnvs,
+		Known:    compose.AllSettingNames(),
 		ReadFile: func(string) ([]byte, error) { return nil, fs.ErrNotExist },
 	})
 	if err != nil {

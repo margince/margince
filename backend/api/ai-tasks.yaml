@@ -214,7 +214,7 @@ tasks:
   transcript_propose:
     display_name: "Meeting follow-up extraction"
     summary: "Reads next steps and commitments out of a meeting transcript."
-    ladder: [cheap_cloud, premium]
+    ladder: [premium]
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped

@@ -5,13 +5,14 @@ Margince publishes two recovery targets: lose at most one hour of data, and be b
 record is the evidence that a restore meets them. The record lives in the `restore_drill` table of the live
 installation, owned by the `continuity` module (`backend/internal/modules/continuity`).
 
-Margince ships no backup or restore tool. The steps below that copy data use your own tool. The steps that record
+Margince ships no backup or restore tool. What to back up, and how often, is in
+[back-up-an-installation.md](back-up-an-installation.md). The steps below that copy data use your own tool. The steps that record
 the drill use `margince-migrate`, the same binary that runs migrations and `reset-password`, under the owner DSN.
 
 ## Before you start
 
 - Pick the backup and the point in time it restores to. With point-in-time recovery, this is the time you ask
-  the tool for. With a nightly dump, it is the time the dump started.
+  the tool for. With a dump, it is the time the dump started.
 - Prepare a spare database and a spare place in the object store. Do not restore over the live installation. A
   restore rolls back every table in the database it lands in, `restore_drill` included, so a drill restored over
   the live database deletes its own record.

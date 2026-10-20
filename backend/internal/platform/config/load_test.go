@@ -163,14 +163,14 @@ func TestAnUnknownNamespacedVariableOnlyWarns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if w := cfg.Warnings(); len(w) != 1 || w[0] != ns+"LOG_LVL" {
+	if w := cfg.Warnings(); len(w) != 1 || w[0] != ns+"LOG_LVL (did you mean "+ns+"LOG_LEVEL?)" {
 		t.Fatalf("warnings %v", w)
 	}
 }
 
 func TestAVariableAnotherProgramReadsDoesNotWarn(t *testing.T) {
 	reg, src := sources(t, fixture{env: []string{ns + "OTHER=x"}}, level)
-	src.KnownEnv = func(name string) bool { return name == ns+"OTHER" }
+	src.Known = config.Names{Envs: []string{ns + "OTHER"}}
 	cfg, err := config.Load(reg, src)
 	if err != nil {
 		t.Fatal(err)

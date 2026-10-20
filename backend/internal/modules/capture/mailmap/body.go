@@ -14,13 +14,14 @@ import (
 	"github.com/emersion/go-message/mail"
 )
 
-// extractText returns the message's plain-text body and the files it carried.
+// extractText returns the message's plain-text body, its link hosts and the
+// files it carried.
 //
 // It prefers a text/plain part, rendering text/html to text only when no plain
 // part exists, so an HTML-only newsletter still yields readable text. Attachment parts are collected on the SAME walk: a MIME reader
 // is single-pass, so a second walk would mean holding or re-parsing the whole
 // message to find files this one already stepped over.
-func extractText(reader *mail.Reader) (string, []Part, []PartDrop, calendarPart) {
+func extractText(reader *mail.Reader) walkedBody {
 	var plain, html string
 	var calendar calendarPart
 	files := newCollector()
@@ -61,7 +62,22 @@ func extractText(reader *mail.Reader) (string, []Part, []PartDrop, calendarPart)
 	// Everything the sender named has had its claim on the bounds; what was
 	// held back takes what is left.
 	files.settle()
-	return bodyText(plain, html), files.parts, files.drops(), calendar
+	links, linksCut := linkHosts(plain, html)
+	return walkedBody{
+		text: bodyText(plain, html), links: links, linksCut: linksCut,
+		parts: files.parts, drops: files.drops(), calendar: calendar,
+	}
+}
+
+// walkedBody is what one walk over a message's parts found: the text, the
+// hosts its links lead to, its files and its calendar payload.
+type walkedBody struct {
+	text     string
+	links    []string
+	linksCut bool
+	parts    []Part
+	drops    []PartDrop
+	calendar calendarPart
 }
 
 func bodyText(plain, html string) string {

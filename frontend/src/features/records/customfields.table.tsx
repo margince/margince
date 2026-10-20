@@ -25,7 +25,7 @@ import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { CfObject, CfType } from "../../lib/customfields.logic";
 import { useRecordZone } from "../../lib/recordzone";
-import { AuditEntryLine } from "../../screens/audit";
+import { AuditEntryLine } from "../settings/audit";
 import { objectLabels } from "./customfields.labels";
 import "./customfields.css";
 
@@ -44,11 +44,14 @@ export const SETTING_TOAST = {
   reportable: { on: "cf.addedToReports", off: "cf.removedFromReports" },
 } as const;
 
-// Analytics groups deals alone by the installation's own fields, and only by a
-// field with a closed set of values; the server refuses the rest.
+// Analytics groups deals by their own fields and their company's. It takes only
+// a field with a closed set of values, and the server refuses the rest.
+const REPORTED_OBJECTS: ReadonlySet<CfObject> = new Set(["deal", "company"]);
+
 function reportableField(object: CfObject, field: CustomField): boolean {
   return (
-    object === "deal" && (field.type === "picklist" || field.type === "boolean")
+    REPORTED_OBJECTS.has(object) &&
+    (field.type === "picklist" || field.type === "boolean")
   );
 }
 
@@ -126,7 +129,7 @@ export function FieldTable({
         />
       ),
     },
-    ...(object === "deal"
+    ...(REPORTED_OBJECTS.has(object)
       ? [
           {
             key: "inReports",

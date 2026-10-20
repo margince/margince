@@ -59,7 +59,7 @@ var profileVocabularyScreens = []struct {
 	omits map[string]string
 }{
 	{
-		file:   "../frontend/src/screens/coldfieldlabels.ts",
+		file:   "../frontend/src/features/settings/coldfieldlabels.ts",
 		opens:  "const COLD_FIELD_LABELS: Record<string, MessageKey> = {",
 		closes: "};",
 		why:    "the field renders as its own column name with the underscores spaced out",

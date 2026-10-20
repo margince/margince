@@ -140,11 +140,11 @@ func TestAMisspelledVariableReachesTheBootReport(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
-	if !slices.Contains(loaded.Warnings(), misspelled) {
-		t.Errorf("warnings = %v; the misspelling never reached the boot report", loaded.Warnings())
+	if !slices.Contains(loaded.Warnings(), misspelled+" (did you mean "+programsettings.Redis.Env()+"?)") {
+		t.Errorf("warnings = %v; the misspelling never reached the boot report with the name it meant", loaded.Warnings())
 	}
 	for _, read := range []string{"MARGINCE_DSN", "MARGINCE_METRICS_TOKEN"} {
-		if slices.Contains(loaded.Warnings(), read) {
+		if slices.ContainsFunc(loaded.Warnings(), func(w string) bool { return strings.HasPrefix(w, read+" ") || w == read }) {
 			t.Errorf("%s is read by a program and was reported as unread", read)
 		}
 	}

@@ -3,9 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import {
+  SETTINGS_SCREEN,
+  useSettingsSection,
+} from "../features/settings/settingsnav";
 import { en } from "../i18n/en";
 import type { Route } from "../lib/router";
-import { SETTINGS_SCREEN, useSettingsSection } from "../screens/settingsnav";
 import {
   installFetchStub,
   meRoute,

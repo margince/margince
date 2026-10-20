@@ -251,14 +251,14 @@ func TestTheFloorGreetsTheRecipientOrNobody(t *testing.T) {
 		Body:      "Hallo, ich wollte kurz nachfragen, ob das Angebot so passt und wann wir sprechen koennen.",
 		Threaded:  true,
 	}
-	_, body := DeterministicEmailDraft(named, "")
+	_, body := DeterministicEmailDraft(named)
 	if !strings.HasPrefix(body, "Hallo Marek,") {
 		t.Errorf("a known recipient should be greeted by name, got %q", firstLineOf(body))
 	}
 
 	anonymous := named
 	anonymous.Recipient = ""
-	_, body = DeterministicEmailDraft(anonymous, "")
+	_, body = DeterministicEmailDraft(anonymous)
 	if strings.Contains(firstLineOf(body), "Marek") {
 		t.Errorf("with no recipient the greeting must name nobody, got %q", firstLineOf(body))
 	}

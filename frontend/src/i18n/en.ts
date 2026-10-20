@@ -14,6 +14,9 @@ export const en = {
   "approval.preview.effects": "Also changes",
   "approval.preview.correspondence":
     "Classify linked correspondence as business records.",
+  "approval.preview.attachRecipients":
+    "Link these recipients to the existing task.",
+  "approval.preview.existingTask": "Existing task",
   "approval.preview.delivery": "Start delivery on eligible linked projects.",
   "approval.preview.minorUnits": "{amount} {currency} minor units",
   "approval.preview.empty": "Not set",
@@ -984,6 +987,7 @@ export const en = {
   "systemJob.domain_triage": "Website triage",
   "systemJob.employment_import_worker": "Employment history import",
   "systemJob.enabled_oidc_providers_read": "Sign-in provider read",
+  "systemJob.client_registration_read": "AI tool registration read",
   "systemJob.erasure_replay": "Erasure replay after a restore",
   "systemJob.extension_inventory": "Extension inventory",
   "systemJob.extraction_activity_reannounce": "Extracted activity repair",
@@ -2690,7 +2694,7 @@ export const en = {
   "approval.field.from_stage": "From",
   "approval.field.to_stage": "To",
   "approval.kind.transcript_proposal": "Add next step from transcript",
-  "approval.kind.commitment_task": "Add commitment task",
+  "approval.kind.commitment_task": "Task commitment",
   "approval.kind.fx_rate_proposal": "Update exchange rates",
   "approval.kind.disqualify_lead": "Disqualify lead",
   "approval.kind.demote_lead": "Reverse lead qualification",
@@ -5590,6 +5594,11 @@ export const en = {
   "analytics.q.filterN": "Filter {n}",
   "analytics.q.filters": "Filters",
   "analytics.q.groupBy": "Group by",
+  "analytics.q.companyField": "{label} (company)",
+  "analytics.q.fieldCoverage_one":
+    "{label} has a value on {held} of {count} deal you can read.",
+  "analytics.q.fieldCoverage_other":
+    "{label} has a value on {held} of {count} deals you can read.",
   "analytics.q.limited_one":
     "Only the first group is shown. Add a filter to narrow the question.",
   "analytics.q.limited_other":
@@ -6293,7 +6302,102 @@ export const en = {
     "Antigravity has no add command. Put the block below in ~/.gemini/config/mcp_config.json, then open its agent settings, “Customizations”, and choose “Authenticate” next to margince.",
   "agents.connectorOff": "AI tools cannot connect to Margince yet.",
   "agents.connectorOffDetail":
-    "An administrator or operations user can turn this on. Until then, passports still work for scripts.",
+    "Whoever runs this installation turns this on in its configuration. Until then, passports still work for scripts.",
+  "agentClients.methods.title": "How MCP clients may connect",
+  "agentClients.methods.sub":
+    "Turning a way off stops new sign-ins through it. Connections that already work keep renewing.",
+  "agentClients.methods.saveFailed": "The change was not saved",
+  "agentClients.methods.published": "Accept a tool’s published identity",
+  "agentClients.methods.publishedHint":
+    "The tool’s ID is a web address on its maker’s site. Claude, Codex and ChatGPT use this first.",
+  "agentClients.methods.publishedSpec":
+    "Spec: Client ID Metadata Documents (CIMD)",
+  "agentClients.methods.dynamic": "Let tools register themselves",
+  "agentClients.methods.dynamicHint":
+    "The older way. Any tool can add itself, so the client list grows over time.",
+  "agentClients.methods.dynamicSpec": "Spec: Dynamic Client Registration (DCR)",
+  "agentClients.methods.deploymentOff":
+    "Whoever runs this installation turned this off in its configuration.",
+  "agentClients.methods.admin": "Clients an admin registers",
+  "agentClients.methods.adminHint":
+    "Registered by hand under MCP clients. The tool must send the client secret.",
+  "agentClients.methods.alwaysOn": "Always on",
+  "agentClients.methods.readOnly": "Only an admin can change these.",
+  "agentClients.title": "MCP clients",
+  "agentClients.sub":
+    "Each client an AI tool signs in through, and how it came to exist.",
+  "agentClients.empty": "No MCP client yet.",
+  "agentClients.readOnly": "Only an admin can change MCP clients.",
+  "agentClients.toggleFailed": "The client was not changed",
+  "agentClients.enable": "Enable",
+  "agentClients.disable": "Disable",
+  "agentClients.disabled": "Disabled",
+  "agentClients.neverUsed": "Never",
+  "agentClients.usersFolded_one": "{count} user",
+  "agentClients.usersFolded_other": "{count} users",
+  "agentClients.col.client": "Client",
+  "agentClients.col.registered": "How it registered",
+  "agentClients.col.users": "Users",
+  "agentClients.col.lastUsed": "Last used",
+  "agentClients.col.state": "State",
+  "agentClients.by.admin": "By an admin",
+  "agentClients.by.dcr": "Registered itself",
+  "agentClients.by.cimd": "Published identity",
+  "agentClients.rotate.open": "Rotate secret…",
+  "agentClients.rotate.title": "Rotate the secret of {client}?",
+  "agentClients.rotate.confirm": "Rotate secret",
+  "agentClients.rotate.body":
+    "The current secret stops working at once. Paste the new one into the tool so its connections keep renewing.",
+  "agentClients.rotate.resultTitle": "New client secret",
+  "agentClients.delete.open": "Delete…",
+  "agentClients.delete.title": "Delete {client}?",
+  "agentClients.delete.confirm": "Delete client",
+  "agentClients.delete.bodyAdmin":
+    "Every connection through {client} ends. The client is gone for good.",
+  "agentClients.delete.bodyDcr":
+    "Every connection through {client} ends. The tool can register itself again. To keep tools that register themselves out, turn off “Let tools register themselves”.",
+  "agentClients.delete.bodyCimd":
+    "Every connection through {client} ends. The tool comes back the next time someone connects it. To keep it out, disable it instead.",
+  "agentClients.register.open": "Register a client",
+  "agentClients.register.title": "Register a client",
+  "agentClients.register.name": "Name",
+  "agentClients.register.nameHint":
+    "Shown on the sign-in screen and in the client list.",
+  "agentClients.register.redirects": "Redirect URIs",
+  "agentClients.register.redirectsHint":
+    "Where the tool sends users back after sign-in. Pick a tool from the list, or type an address and press Enter.",
+  "agentClients.register.submit": "Register client",
+  "agentClients.register.needName": "Give the client a name.",
+  "agentClients.register.needRedirect": "Add at least one redirect URI.",
+  "agentClients.register.nameInvalid": "Use a name of 1 to 120 characters.",
+  "agentClients.register.redirectInvalid":
+    "Use https, or http on localhost or 127.0.0.1, with no fragment.",
+  "agentClients.register.redirectCount": "Add 1 to 10 redirect URIs.",
+  "agentClients.result.title": "Client registered",
+  "agentClients.result.secretOnceTitle": "Copy the secret now",
+  "agentClients.result.secretOnceBody":
+    "Margince keeps only a fingerprint of it and cannot show it again. Lost it? Rotate the secret.",
+  "agentClients.result.done": "Done",
+  "agentClients.value.clientId": "Client ID",
+  "agentClients.value.secret": "Client secret",
+  "agentClients.value.authorize": "Authorization URL",
+  "agentClients.value.token": "Token URL, also for refresh",
+  "agentClients.value.scopes": "Scopes",
+  "agentClients.value.mcpUrl": "MCP server URL",
+  "agentClients.value.copy": "Copy",
+  "agentClients.value.copied": "Copied",
+  "agentClients.value.copyNamed": "Copy {value}",
+  "agentClients.value.copiedNamed": "Copied {value}",
+  "agentClients.value.copyRemedy": "Select the value and copy it by hand.",
+  "agentClients.gemini.title": "In Gemini Enterprise",
+  "agentClients.gemini.step1":
+    "Open “Manage team”, then “Connected apps”, and choose “Add MCP Server”. Paste the MCP server URL, name it Margince, choose “Next”, then “OAuth 2.0”.",
+  "agentClients.gemini.step2":
+    "Paste the values above. If the form offers PKCE, turn it on: Margince requires it.",
+  "agentClients.gemini.step3":
+    "Choose “Verify Auth”, sign in to Margince as yourself, then choose “Continue”.",
+  "agentClients.gemini.step4":
+    "Choose a multi-region location, name the data connector and choose “Add”. Gemini adds it turned off, so turn it on for your team.",
   "aiAccess.connect.title": "Connect your AI tool",
   "aiAccess.connect.sub":
     "Takes about a minute. You sign in once, and it stays connected.",
@@ -6365,8 +6469,20 @@ export const en = {
     "When it asks, sign in to Margince and choose Authorize. Done.",
   "aiAccess.copilot.ownUnavailable":
     "Copilot outside work cannot connect to other apps. Use Copilot through work, or another AI on this list.",
-  "aiAccess.gemini.companyUnavailable":
-    "Gemini through work or school cannot connect to Margince yet.",
+  "aiAccess.gemini.adminLine":
+    "Your Gemini Enterprise admin adds Margince once for your company.",
+  "aiAccess.gemini.admin1":
+    "Ask a Margince admin for a client ID and secret. In Settings → MCP → MCP clients, they choose “Register a client”, answer that the tool needs a secret, and add the redirect URI https://vertexaisearch.cloud.google.com/oauth-redirect.",
+  "aiAccess.gemini.admin2":
+    "In Gemini Enterprise, open “Manage team”, then “Connected apps”, and choose “Add MCP Server”.",
+  "aiAccess.gemini.admin3":
+    "Paste the Margince address above as the server URL, name it Margince and choose “Next”. Choose “OAuth 2.0”, then paste the authorization URL, token URL, client ID and client secret the Margince admin gave you. Margince shows each one when it registers the client.",
+  "aiAccess.gemini.admin4":
+    "Enter the scopes the Margince admin gave you, turn on PKCE if the form offers it, then choose “Verify Auth” and “Continue”.",
+  "aiAccess.gemini.admin5":
+    "Choose a multi-region location, name the data connector and choose “Add”. Gemini adds it turned off, so turn it on for your team.",
+  "aiAccess.gemini.connect":
+    "In Gemini, open “Connected apps” and choose “Connect” next to Margince.",
   "aiAccess.gemini.openApps":
     "On gemini.google.com, open “Settings”, then “Connected Apps”.",
   "aiAccess.gemini.addApp": "Choose “Add a custom app” and paste this address:",
@@ -9814,6 +9930,8 @@ export const en = {
     "Which provider handles each kind of work, and whether it is available.",
   "settings.page.automations.sub": "Rules that run automatically.",
   "settings.page.usage.sub": "AI spend this month against the allowance.",
+  "settings.page.mcp.sub":
+    "Which AI tools may connect to Margince over MCP, and how.",
   "settings.page.model-calls.sub": "Each model request and its response.",
   "settings.page.privacy.sub":
     "Data subject requests, consent purposes and record retention.",
@@ -9859,6 +9977,7 @@ export const en = {
   "settings.tab.models": "AI models",
   "settings.tab.automations": "Automations",
   "settings.tab.usage": "AI usage",
+  "settings.tab.mcp": "MCP",
   "settings.tab.model-calls": "AI call log",
   "settings.tab.audit": "Audit log",
   "settings.tab.system-health": "System health",
@@ -10681,6 +10800,7 @@ export const en = {
   "roles.object.installation_settings": "Company profile",
   "roles.object.authentication_policy": "Sign-in methods",
   "roles.object.oauth_application": "OAuth apps",
+  "roles.object.agent_client": "MCP clients",
   "roles.object.privacy_request": "Privacy requests",
   "roles.object.consent_config": "Consent purposes",
   "roles.object.communication_exception": "Send exceptions",
@@ -12597,6 +12717,11 @@ export const en = {
   "consent.invalidTitle": "This connection request could not be completed",
   "consent.invalidBody":
     "This installation will not authorize the request as it stands; the app may no longer be registered here. Return to the app you were connecting and start again.",
+  "consent.methodOffTitle": "This AI tool cannot connect",
+  "consent.methodOffTool": "Tool: {client}",
+  "consent.methodOffReturn": "Would return to: {host}",
+  "consent.methodOffBody":
+    "Your admin has turned off this way of connecting AI tools. Ask them to let this tool connect, or to register it for your company.",
   "contact.enriched.title": "Enriched details",
   "contact.confirm.title_one": "{count} detail to confirm",
   "contact.confirm.title_other": "{count} details to confirm",
@@ -13778,9 +13903,9 @@ export const en = {
   "filters.exportCsv": "Export CSV",
   "filters.exportJson": "Export JSON",
 
-  // The release gate (src/screens/releaseskew.tsx). It renders instead of the
-  // app when this bundle and the api come from different releases, so the copy
-  // has two readers at once: the colleague who just wants in, and the operator who
+  // The release gate (src/features/settings/releaseskew.tsx). It renders instead of the
+  // app when this bundle and the api come from different releases. So the copy
+  // has two readers at once: the colleague who wants in, and the operator who
   // has to fix it. The first sentence is for the first, the last for the second.
   "release.skewTitle": "App and server versions differ",
   "release.skewBody":
@@ -14365,6 +14490,10 @@ export const en = {
   "worklist.because.no_reply_history": "no reply history",
   "worklist.because.asks_nothing": "asks for nothing",
   "worklist.because.addressed_elsewhere": "addressed to a colleague",
+  "worklist.because.bcc_from_stranger":
+    "sent to you by Bcc from someone you have not written with",
+  "worklist.because.link_off_sender":
+    "its link leads to a different site than the sender’s",
   "worklist.because.read_only": "you can read this but not change it",
   "worklist.above.pin": "Ranked above the next item because you pinned it.",
   "worklist.above.level":
@@ -14416,6 +14545,10 @@ export const en = {
   "worklist.untitled.dedupe_candidate": "Possible duplicate records",
   "worklist.untitled.task": "Untitled task",
   "worklist.untitled.brief_item": "Deal to review",
+  "worklist.recipients.label": "Recipients",
+  "worklist.recipients.open": "Still waiting",
+  "worklist.recipients.done": "Done",
+  "worklist.recipients.dismissed": "Dismissed",
   "worklist.untitled.conversation_claim": "Commitment you made",
   "worklist.untitled.customer_waiting": "Customer awaiting reply",
   "worklist.untitled.lead_response": "Untitled lead",

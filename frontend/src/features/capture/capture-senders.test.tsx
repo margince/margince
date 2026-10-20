@@ -12,10 +12,10 @@ import { viewerZone } from "../../format/timezone";
 import { translate, translatePlural } from "../../i18n";
 import { en } from "../../i18n/en";
 import { ConnectionOutcomesCard } from "../../screens/connection-outcomes";
-import { jsonResponse, render } from "../../screens/settings.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { linkedInReachFixture } from "../../testing/reachfixture";
 import { openRowMenu } from "../../testing/tablerow.testkit";
+import { jsonResponse, render } from "../settings/settings.testkit";
 
 type Sent = { method: string; path: string; body: unknown };
 

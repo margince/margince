@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/editdistance"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -195,31 +196,8 @@ func voiceTokenSimilarity(a, b []string) float64 {
 	if longest == 0 {
 		return 1
 	}
-	ratio := 1 - float64(voiceTokenDistance(a, b))/float64(longest)
+	ratio := 1 - float64(editdistance.Levenshtein(a, b))/float64(longest)
 	// The distance never exceeds the longer side, so this states the
 	// column CHECK's [0,1] bound rather than repairing an overflow.
 	return min(1, max(0, ratio))
-}
-
-// voiceTokenDistance is Levenshtein distance over whole tokens, carrying
-// two rows instead of the whole matrix — a mail body is short, but the
-// matrix is still needless.
-func voiceTokenDistance(a, b []string) int {
-	previous := make([]int, len(b)+1)
-	current := make([]int, len(b)+1)
-	for j := range previous {
-		previous[j] = j
-	}
-	for i := 1; i <= len(a); i++ {
-		current[0] = i
-		for j := 1; j <= len(b); j++ {
-			substitution := previous[j-1]
-			if a[i-1] != b[j-1] {
-				substitution++
-			}
-			current[j] = min(previous[j]+1, current[j-1]+1, substitution)
-		}
-		previous, current = current, previous
-	}
-	return previous[len(b)]
 }

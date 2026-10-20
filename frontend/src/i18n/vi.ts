@@ -25,6 +25,9 @@ export const vi = {
   "approval.preview.effects": "Thay đổi kèm theo",
   "approval.preview.correspondence":
     "Phân loại thư từ liên quan là hồ sơ kinh doanh.",
+  "approval.preview.attachRecipients":
+    "Liên kết các liên hệ nhận với công việc hiện có.",
+  "approval.preview.existingTask": "Công việc hiện có",
   "approval.preview.delivery":
     "Bắt đầu triển khai các dự án liên quan đủ điều kiện.",
   "approval.preview.minorUnits":
@@ -987,6 +990,7 @@ export const vi = {
   "systemJob.domain_triage": "Phân loại trang web",
   "systemJob.employment_import_worker": "Nhập lịch sử công tác",
   "systemJob.enabled_oidc_providers_read": "Đọc nhà cung cấp đăng nhập",
+  "systemJob.client_registration_read": "Đọc cách đăng ký công cụ AI",
   "systemJob.erasure_replay": "Xóa lại dữ liệu sau khi khôi phục",
   "systemJob.extension_inventory": "Kiểm kê tiện ích mở rộng",
   "systemJob.extraction_activity_reannounce": "Sửa hoạt động đã trích xuất",
@@ -2593,7 +2597,7 @@ export const vi = {
   "approval.field.from_stage": "Từ",
   "approval.field.to_stage": "Đến",
   "approval.kind.transcript_proposal": "Thêm bước tiếp theo từ bản chép lời",
-  "approval.kind.commitment_task": "Thêm việc cần làm cho cam kết",
+  "approval.kind.commitment_task": "Cam kết công việc",
   "approval.kind.fx_rate_proposal": "Cập nhật tỷ giá",
   "approval.kind.disqualify_lead": "Loại lead",
   "approval.kind.demote_lead": "Hủy xác nhận lead đủ điều kiện",
@@ -5406,6 +5410,11 @@ export const vi = {
   "analytics.q.filterN": "Bộ lọc {n}",
   "analytics.q.filters": "Bộ lọc",
   "analytics.q.groupBy": "Nhóm theo",
+  "analytics.q.companyField": "{label} (công ty)",
+  "analytics.q.fieldCoverage_one":
+    "{label} có giá trị ở {held} trên {count} deal có thể xem.",
+  "analytics.q.fieldCoverage_other":
+    "{label} có giá trị ở {held} trên {count} deal có thể xem.",
   "analytics.q.limited_one":
     "Chỉ hiển thị 1 nhóm đầu tiên. Thêm bộ lọc để thu hẹp câu hỏi.",
   "analytics.q.limited_other":
@@ -6033,7 +6042,103 @@ export const vi = {
     "Antigravity không có lệnh add. Thêm khối bên dưới vào ~/.gemini/config/mcp_config.json, rồi mở cài đặt agent, “Customizations”, và chọn “Authenticate” bên cạnh margince.",
   "agents.connectorOff": "Công cụ AI chưa thể kết nối với Margince.",
   "agents.connectorOffDetail":
-    "Quản trị viên hoặc thành viên Vận hành có thể bật tính năng này. Trong lúc chờ, passport vẫn dùng được cho script.",
+    "Bên vận hành bản cài đặt này bật tính năng này trong cấu hình. Trong lúc chờ, passport vẫn dùng được cho script.",
+  "agentClients.methods.title": "Cách MCP client được phép kết nối",
+  "agentClients.methods.sub":
+    "Khi tắt một cách, sẽ không có lượt đăng nhập mới nào qua cách đó. Các kết nối đang hoạt động vẫn tiếp tục được gia hạn.",
+  "agentClients.methods.saveFailed": "Không thể lưu thay đổi",
+  "agentClients.methods.published": "Chấp nhận danh tính công khai của công cụ",
+  "agentClients.methods.publishedHint":
+    "ID của công cụ là một địa chỉ web trên trang của nhà sản xuất. Claude, Codex và ChatGPT ưu tiên cách này.",
+  "agentClients.methods.publishedSpec":
+    "Đặc tả: Tài liệu siêu dữ liệu Client ID (CIMD)",
+  "agentClients.methods.dynamic": "Cho phép công cụ tự đăng ký",
+  "agentClients.methods.dynamicHint":
+    "Cách cũ hơn. Bất kỳ công cụ nào cũng có thể tự thêm vào, nên danh sách ứng dụng dài dần theo thời gian.",
+  "agentClients.methods.dynamicSpec": "Đặc tả: Đăng ký client động (DCR)",
+  "agentClients.methods.deploymentOff":
+    "Bên vận hành bản cài đặt này đã tắt cách này trong cấu hình.",
+  "agentClients.methods.admin": "Ứng dụng do quản trị viên đăng ký",
+  "agentClients.methods.adminHint":
+    "Đăng ký trực tiếp trong mục MCP client. Công cụ phải gửi khóa bí mật của client.",
+  "agentClients.methods.alwaysOn": "Luôn bật",
+  "agentClients.methods.readOnly":
+    "Chỉ quản trị viên mới có thể thay đổi các mục này.",
+  "agentClients.title": "MCP client",
+  "agentClients.sub":
+    "Mỗi ứng dụng mà công cụ AI dùng để đăng nhập, và cách ứng dụng đó được tạo.",
+  "agentClients.empty": "Chưa có MCP client nào.",
+  "agentClients.readOnly": "Chỉ quản trị viên mới có thể thay đổi MCP client.",
+  "agentClients.toggleFailed": "Không thể thay đổi ứng dụng",
+  "agentClients.enable": "Bật",
+  "agentClients.disable": "Tắt",
+  "agentClients.disabled": "Đã tắt",
+  "agentClients.neverUsed": "Chưa dùng",
+  "agentClients.usersFolded_one": "{count} thành viên",
+  "agentClients.usersFolded_other": "{count} thành viên",
+  "agentClients.col.client": "Ứng dụng",
+  "agentClients.col.registered": "Cách đăng ký",
+  "agentClients.col.users": "Thành viên",
+  "agentClients.col.lastUsed": "Dùng lần cuối",
+  "agentClients.col.state": "Trạng thái",
+  "agentClients.by.admin": "Do quản trị viên",
+  "agentClients.by.dcr": "Tự đăng ký",
+  "agentClients.by.cimd": "Danh tính công khai",
+  "agentClients.rotate.open": "Đổi khóa bí mật…",
+  "agentClients.rotate.title": "Đổi khóa bí mật của {client}?",
+  "agentClients.rotate.confirm": "Đổi khóa bí mật",
+  "agentClients.rotate.body":
+    "Khóa bí mật hiện tại ngừng hoạt động ngay. Dán khóa mới vào công cụ để các kết nối tiếp tục được gia hạn.",
+  "agentClients.rotate.resultTitle": "Khóa bí mật mới",
+  "agentClients.delete.open": "Xóa…",
+  "agentClients.delete.title": "Xóa {client}?",
+  "agentClients.delete.confirm": "Xóa ứng dụng",
+  "agentClients.delete.bodyAdmin":
+    "Mọi kết nối qua {client} sẽ kết thúc. Ứng dụng bị xóa vĩnh viễn.",
+  "agentClients.delete.bodyDcr":
+    "Mọi kết nối qua {client} sẽ kết thúc. Công cụ có thể tự đăng ký lại. Để chặn các công cụ tự đăng ký, hãy tắt “Cho phép công cụ tự đăng ký”.",
+  "agentClients.delete.bodyCimd":
+    "Mọi kết nối qua {client} sẽ kết thúc. Công cụ sẽ quay lại ở lần kết nối tiếp theo. Để chặn hẳn, hãy tắt ứng dụng thay vì xóa.",
+  "agentClients.register.open": "Đăng ký ứng dụng",
+  "agentClients.register.title": "Đăng ký ứng dụng",
+  "agentClients.register.name": "Tên",
+  "agentClients.register.nameHint":
+    "Hiển thị trên màn hình đăng nhập và trong danh sách ứng dụng.",
+  "agentClients.register.redirects": "URI chuyển hướng",
+  "agentClients.register.redirectsHint":
+    "Nơi công cụ chuyển về sau khi đăng nhập. Chọn một công cụ trong danh sách, hoặc nhập địa chỉ rồi nhấn Enter.",
+  "agentClients.register.submit": "Đăng ký ứng dụng",
+  "agentClients.register.needName": "Nhập tên cho ứng dụng.",
+  "agentClients.register.needRedirect": "Thêm ít nhất một URI chuyển hướng.",
+  "agentClients.register.nameInvalid": "Dùng tên dài từ 1 đến 120 ký tự.",
+  "agentClients.register.redirectInvalid":
+    "Dùng https, hoặc http trên localhost hay 127.0.0.1, không có phân đoạn sau dấu #.",
+  "agentClients.register.redirectCount": "Thêm từ 1 đến 10 URI chuyển hướng.",
+  "agentClients.result.title": "Đã đăng ký ứng dụng",
+  "agentClients.result.secretOnceTitle": "Sao chép khóa bí mật ngay",
+  "agentClients.result.secretOnceBody":
+    "Margince chỉ giữ dấu vân tay của khóa và không thể hiển thị lại. Bị mất? Đổi khóa bí mật.",
+  "agentClients.result.done": "Xong",
+  "agentClients.value.clientId": "Mã ứng dụng (Client ID)",
+  "agentClients.value.secret": "Khóa bí mật (client secret)",
+  "agentClients.value.authorize": "URL ủy quyền",
+  "agentClients.value.token": "URL token, cũng dùng để gia hạn",
+  "agentClients.value.scopes": "Phạm vi quyền",
+  "agentClients.value.mcpUrl": "URL máy chủ MCP",
+  "agentClients.value.copy": "Sao chép",
+  "agentClients.value.copied": "Đã sao chép",
+  "agentClients.value.copyNamed": "Sao chép {value}",
+  "agentClients.value.copiedNamed": "Đã sao chép {value}",
+  "agentClients.value.copyRemedy": "Chọn giá trị và tự sao chép.",
+  "agentClients.gemini.title": "Trong Gemini Enterprise",
+  "agentClients.gemini.step1":
+    "Mở “Manage team”, rồi “Connected apps”, và chọn “Add MCP Server”. Dán URL máy chủ MCP, đặt tên là Margince, chọn “Next”, rồi “OAuth 2.0”.",
+  "agentClients.gemini.step2":
+    "Dán các giá trị ở trên. Nếu biểu mẫu có tùy chọn PKCE, hãy bật nó: Margince bắt buộc điều này.",
+  "agentClients.gemini.step3":
+    "Chọn “Verify Auth”, đăng nhập Margince bằng tài khoản của chính bạn, rồi chọn “Continue”.",
+  "agentClients.gemini.step4":
+    "Chọn một vị trí đa vùng, đặt tên cho trình kết nối dữ liệu và chọn “Add”. Gemini thêm nó ở trạng thái tắt, nên hãy bật nó cho nhóm của bạn.",
   "aiAccess.connect.title": "Kết nối công cụ AI của bạn",
   "aiAccess.connect.sub":
     "Mất khoảng một phút. Bạn đăng nhập một lần và kết nối được giữ nguyên.",
@@ -6106,8 +6211,20 @@ export const vi = {
     "Khi được hỏi, đăng nhập Margince và chọn Cấp quyền. Xong.",
   "aiAccess.copilot.ownUnavailable":
     "Copilot ngoài công việc không kết nối được với ứng dụng khác. Hãy dùng Copilot qua công ty, hoặc một AI khác trong danh sách này.",
-  "aiAccess.gemini.companyUnavailable":
-    "Gemini qua công ty hoặc trường học chưa kết nối được với Margince.",
+  "aiAccess.gemini.adminLine":
+    "Quản trị viên Gemini Enterprise thêm Margince một lần cho cả công ty.",
+  "aiAccess.gemini.admin1":
+    "Đề nghị quản trị viên Margince cấp Client ID và khóa bí mật. Trong Cài đặt, mục MCP, phần MCP client, họ chọn “Đăng ký ứng dụng”, trả lời rằng công cụ cần khóa bí mật và thêm URI chuyển hướng https://vertexaisearch.cloud.google.com/oauth-redirect.",
+  "aiAccess.gemini.admin2":
+    "Trong Gemini Enterprise, mở “Manage team”, rồi “Connected apps”, và chọn “Add MCP Server”.",
+  "aiAccess.gemini.admin3":
+    "Dán địa chỉ Margince ở trên làm URL máy chủ, đặt tên là Margince và chọn “Next”. Chọn “OAuth 2.0”, rồi dán URL ủy quyền, URL token, Client ID và khóa bí mật mà quản trị viên Margince đã cấp. Margince hiển thị từng giá trị khi đăng ký ứng dụng.",
+  "aiAccess.gemini.admin4":
+    "Nhập các phạm vi quyền mà quản trị viên Margince đã đưa cho bạn, bật PKCE nếu biểu mẫu có tùy chọn này, rồi chọn “Verify Auth” và “Continue”.",
+  "aiAccess.gemini.admin5":
+    "Chọn một vị trí đa vùng, đặt tên cho trình kết nối dữ liệu và chọn “Add”. Gemini thêm nó ở trạng thái tắt, nên hãy bật nó cho nhóm của bạn.",
+  "aiAccess.gemini.connect":
+    "Trong Gemini, mở “Connected apps” và chọn “Connect” bên cạnh Margince.",
   "aiAccess.gemini.openApps":
     "Trên gemini.google.com, mở “Settings”, rồi “Connected Apps”.",
   "aiAccess.gemini.addApp": "Chọn “Add a custom app” và dán địa chỉ này:",
@@ -9479,6 +9596,8 @@ export const vi = {
     "Nhà cung cấp nào xử lý từng loại việc, và nhà cung cấp đó có khả dụng không.",
   "settings.page.automations.sub": "Quy tắc chạy tự động.",
   "settings.page.usage.sub": "Chi phí AI tháng này so với hạn mức.",
+  "settings.page.mcp.sub":
+    "Những công cụ AI nào được kết nối với Margince qua MCP, và bằng cách nào.",
   "settings.page.model-calls.sub":
     "Từng yêu cầu gửi đến mô hình và phản hồi tương ứng.",
   "settings.page.privacy.sub":
@@ -9527,6 +9646,7 @@ export const vi = {
   "settings.tab.models": "Mô hình AI",
   "settings.tab.automations": "Tự động hóa",
   "settings.tab.usage": "Mức sử dụng AI",
+  "settings.tab.mcp": "MCP",
   "settings.tab.model-calls": "Nhật ký lượt gọi AI",
   "settings.tab.audit": "Nhật ký hoạt động",
   "settings.tab.system-health": "Tình trạng hệ thống",
@@ -10353,6 +10473,7 @@ export const vi = {
   "roles.object.installation_settings": "Hồ sơ công ty",
   "roles.object.authentication_policy": "Phương thức đăng nhập",
   "roles.object.oauth_application": "Ứng dụng OAuth",
+  "roles.object.agent_client": "MCP client",
   "roles.object.privacy_request": "Yêu cầu về quyền riêng tư",
   "roles.object.consent_config": "Mục đích xin sự đồng ý",
   "roles.object.communication_exception": "Ngoại lệ khi gửi",
@@ -12308,6 +12429,11 @@ export const vi = {
   "consent.invalidTitle": "Không thể hoàn tất yêu cầu kết nối này",
   "consent.invalidBody":
     "Bản cài đặt này sẽ không cấp quyền cho yêu cầu ở dạng hiện tại; có thể ứng dụng không còn được đăng ký ở đây. Quay lại ứng dụng đang kết nối và bắt đầu lại.",
+  "consent.methodOffTitle": "Công cụ AI này không thể kết nối",
+  "consent.methodOffTool": "Công cụ: {client}",
+  "consent.methodOffReturn": "Sẽ quay về: {host}",
+  "consent.methodOffBody":
+    "Quản trị viên đã tắt cách kết nối công cụ AI này. Liên hệ quản trị viên để cho phép công cụ này kết nối, hoặc để đăng ký công cụ cho công ty.",
   "contact.enriched.title": "Thông tin đã bổ sung",
   "contact.confirm.title_one": "{count} thông tin cần xác nhận",
   "contact.confirm.title_other": "{count} thông tin cần xác nhận",
@@ -14033,6 +14159,10 @@ export const vi = {
   "worklist.because.no_reply_history": "chưa có lịch sử trả lời",
   "worklist.because.asks_nothing": "không yêu cầu gì",
   "worklist.because.addressed_elsewhere": "gửi cho đồng nghiệp",
+  "worklist.because.bcc_from_stranger":
+    "gửi Bcc cho bạn từ một địa chỉ bạn chưa từng trao đổi thư",
+  "worklist.because.link_off_sender":
+    "liên kết dẫn đến một trang web khác với trang web của bên gửi",
   "worklist.because.read_only": "bạn có thể xem nhưng không thể thay đổi",
   "worklist.above.pin": "Xếp trên việc kế tiếp vì bạn đã ghim.",
   "worklist.above.level": "Xếp trên việc kế tiếp vì khẩn cấp hơn.",
@@ -14084,6 +14214,10 @@ export const vi = {
   "worklist.untitled.dedupe_candidate": "Hồ sơ có thể trùng",
   "worklist.untitled.task": "Việc cần làm chưa có tiêu đề",
   "worklist.untitled.brief_item": "Deal cần xem lại",
+  "worklist.recipients.label": "Liên hệ nhận",
+  "worklist.recipients.open": "Đang chờ",
+  "worklist.recipients.done": "Đã hoàn tất",
+  "worklist.recipients.dismissed": "Đã loại bỏ",
   "worklist.untitled.conversation_claim": "Cam kết của bạn",
   "worklist.untitled.customer_waiting": "Khách hàng chờ trả lời",
   "worklist.untitled.lead_response": "Lead chưa có tên",

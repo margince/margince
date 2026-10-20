@@ -13,8 +13,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { objectLabel } from "../../format/rbacobjects";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { rolesKey } from "../../screens/roles.queries";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { rolesKey } from "../settings/roles.queries";
 import { ExtensionAccessCard } from "./extension-access";
 
 // The extension-access card renders the composed unit inventory and one

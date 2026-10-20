@@ -37,7 +37,7 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 
 - `custom_field_currency_check`: `CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$')))`
 - `custom_field_object_check`: `CHECK ((object = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'contract'])))`
-- `custom_field_reportable_type_check`: `CHECK (((NOT reportable) OR ((object = 'deal') AND (type = ANY (ARRAY['picklist', 'boolean'])))))`
+- `custom_field_reportable_type_check`: `CHECK (((NOT reportable) OR ((object = ANY (ARRAY['deal', 'company'])) AND (type = ANY (ARRAY['picklist', 'boolean'])))))`
 - `custom_field_status_check`: `CHECK ((status = ANY (ARRAY['active', 'retired'])))`
 - `custom_field_type_check`: `CHECK ((type = ANY (ARRAY['text', 'number', 'date', 'currency', 'picklist', 'multiselect', 'boolean'])))`
 - `custom_field_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`

@@ -96,7 +96,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	statementTimeout := fs.Duration("statement-timeout", defaultStatementCeiling,
 		"ceiling on a single migration statement, and on the wait for the migration lock; 0 removes it")
 	if err := fs.Parse(args[1:]); err != nil {
-		return err
+		return config.FlagFault(fs, err)
 	}
 	resolved, err := dsn.resolve(config.Environ())
 	if err != nil {

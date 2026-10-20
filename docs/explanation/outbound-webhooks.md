@@ -516,7 +516,7 @@ installation secret. It answers a mapped 503 that names the missing capability.
 ## 9. The Settings → Integrations UI
 
 The whole config surface, and the surface for looking at deliveries, can be reached from the web
-app, not only by `curl`. Settings → **Integrations** (`frontend/src/screens/webhooks.tsx`) shows
+app, not only by `curl`. Settings → **Integrations** (`frontend/src/features/settings/webhooks.tsx`) shows
 `WebhooksCard`. It makes every REST call that the config surface (§1) and the delivery surface (§4)
 offer:
 
@@ -600,7 +600,7 @@ but no buttons that change data.
 | The code that generates the payloads | `backend/tools/gen-payloads/` → `internal/contracts/publicevents_gen.go` |
 | The typed emit seam (compile-time payload↔event binding) | `internal/platform/database/storekit/storekit.go` (`EmitEvent`, `EmitEventForEntity`) |
 | The whole-catalog fitness gate (full cover, nothing left over, versions, delivery can resolve) | `backend/gates/publicevents_test.go` |
-| The Settings → Integrations UI (§9) | `frontend/src/screens/webhooks.tsx` |
+| The Settings → Integrations UI (§9) | `frontend/src/features/settings/webhooks.tsx` |
 | The generated frontend event type copy | `frontend/src/api/public-events.ts` |
 
 ## Where to go next

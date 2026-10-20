@@ -22,7 +22,7 @@ import { WriteRefused } from "../../design-system/querystates";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { coldFieldLabel } from "../../screens/coldfieldlabels";
+import { coldFieldLabel } from "../settings/coldfieldlabels";
 import {
   companySaveMessage,
   storeCompany,

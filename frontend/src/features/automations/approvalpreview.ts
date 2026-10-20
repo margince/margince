@@ -98,7 +98,9 @@ export function commercialPreviewDisplay(
         ? t("approval.preview.correspondence")
         : effect === "start_project_delivery"
           ? t("approval.preview.delivery")
-          : effect,
+          : effect === "attach_task_recipients"
+            ? t("approval.preview.attachRecipients")
+            : effect,
     comparison: null,
   }));
   const changes = preview.changes.map((change) => {
@@ -110,11 +112,19 @@ export function commercialPreviewDisplay(
       formatDay,
     );
     const to = previewValue(change.after, change.field, t, locale, formatDay);
+    const sameReference =
+      change.before.kind === "reference" &&
+      change.after.kind === "reference" &&
+      change.before.entity_id !== undefined &&
+      change.before.entity_id === change.after.entity_id &&
+      change.before.entity_type === change.after.entity_type;
     return {
       field: change.field,
       label: previewFieldLabel(change.field, t),
-      value: t("approval.preview.change", { before: from, after: to }),
-      comparison: { from, to },
+      value: sameReference
+        ? to
+        : t("approval.preview.change", { before: from, after: to }),
+      comparison: sameReference ? null : { from, to },
     };
   });
   return [
@@ -167,6 +177,14 @@ export function editedCommercialPreview(
 
 function previewFieldLabel(field: string, t: Translator): string {
   switch (field) {
+    case "existing_task_id":
+      return t("approval.preview.existingTask");
+    case "recipients":
+      return t("worklist.recipients.label");
+    case "summary":
+      return t("approval.field.step");
+    case "due_date":
+      return t("approval.field.due_date");
     case "stage_id":
       return t("deals.stage");
     case "won_without_contract_reason":

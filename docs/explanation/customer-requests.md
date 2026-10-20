@@ -26,11 +26,16 @@ A later email proves a reply was sent; it does not prove the request was handled
 itself settles nothing. `"Thanks, I will check"` is a reply and closes nothing. So short notes back,
 replies about something else and newer inbound messages all leave a confirmed request standing.
 
-A reply does start a model reading of the thread. Once the workspace has written back, the settle pass
-hands the conversation to a model. It sends the request and everything after it, each message marked as
-from them or from us. It asks what our own reply did: `settled`, `still_owed`, or `unsure` below the
-confidence floor. A request nobody has answered is never judged. With no model set up for the task, a
-request stays owed until someone completes its reminder.
+A reply starts a model reading of the thread. Later inbound mail from the same sender can also start that reading.
+Capture must hold proof from the receiving server that the sender passed its checks.
+For Gmail, that proof is a `DMARC` pass for the domain of the sender from `mx.google.com`.
+Other transports and older rows without proof cannot end a request through inbound mail alone. Capture still works without this proof.
+
+The settle pass asks whether the evidence completes the exact request: `settled`, `still_owed`, or
+`unsure` below the confidence floor. A signature notice must name the requested document; matching
+subjects alone prove nothing. The model receives the request and eligible later evidence, marked as
+from them or from us. With no eligible evidence or no model, the request stays owed until someone
+completes its reminder.
 
 A `settled` verdict completes the reminder linked to the evidence, through the ordinary activity writer.
 So it carries the audit row and the event that a human who completes it by hand would carry. `still_owed` may

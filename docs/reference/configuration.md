@@ -7,7 +7,7 @@ a boot error, and so is a value its setting does not take.
 
 A limit an admin changes while the product runs is a setting, not configuration. The daily cap on
 automatic web page reads, the limits per read and how often Margince reads a mailbox are on
-Settings → Capture rules. How long a connector access token lasts is on Settings → Sign-in and apps. How often
+Settings → Capture rules. How long a connector access token lasts is on Settings → MCP. How often
 each scheduled run starts, how early Margince renews a mail subscription and how fast one mailbox
 sends are on Settings → System health. Each applies on its next use with no restart; a running
 worker checks the schedules again every minute.
@@ -41,13 +41,14 @@ value stays a `$`, and no other variable is put in its place. When a name is on 
 **The loader's own names.** `--config`, `--config-file`, `--env-file` and `--config-trace` come only
 from a flag or the environment, and `MARGINCE_ENV` only from the environment. They choose the files,
 so a file cannot set them: a value for one in the `.env` file or a YAML file stops the boot.
+`--check-config` is a flag only, with no variable.
 
 **What stops the boot.** Margince lists every fault at once, so one restart fixes them all. A boot
 stops on any of these:
 
 - a flag it does not know;
-- a key in either YAML file that no program reads;
-- a value that fails the check of its setting;
+- a key in either YAML file that no program reads, a seed key included;
+- a value that fails the check of its setting or seed;
 - a required value that no source sets;
 - a `--config-file` that does not exist;
 - an old posture file beside the base file, such as `margince.dev.yaml` beside `margince.yaml`,
@@ -57,9 +58,18 @@ A base file that does not exist is not a fault, because an installation may run 
 variables alone. A `MARGINCE_*` variable that no program reads only logs a warning, with its name
 and never its value.
 
+An unknown key reads `config/margince.yaml: unknown key workspce (line 2); did you mean workspace?`.
+A section with a wrong name is one fault, not one for each key under it. A wrong flag, key or
+variable name gets the nearest real name when it is within two edits of it.
+
 **Trace mode.** `--config-trace`, or `MARGINCE_CONFIG_TRACE=true`, logs each source read, in the
 order above, with its path. Then it logs one line per setting with its value and where the value
 came from. A secret shows `<secret>` in place of its value.
+
+**Check mode.** `--check-config` on the api or the worker reads every source and the seeds as a boot
+does, then stops. It prints the trace and the variables no program reads to stdout and every fault
+to stderr. It exits 0 when the configuration is valid and 1 when it is not, and it needs no database
+or network. A stored setting with no boot source shows as unset, since the database is not read.
 
 **The Configuration page.** Settings → Configuration lists each setting with its value and its
 source. `GET /v1/installation/configuration` returns the same list, with `value: null` and
@@ -315,6 +325,8 @@ admin can also change under Settings.
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
 | `identity.enabled_oidc_providers` | `MARGINCE_IDENTITY_ENABLED_OIDC_PROVIDERS` | — | `list<string>`, stored | — | api, worker | The sign-in providers offered, as a list of provider keys; unset offers every provider the deployment set up. |
+| `identity.oauth_dynamic_registration` | `MARGINCE_IDENTITY_OAUTH_DYNAMIC_REGISTRATION` | — | `bool`, stored | `true` | api, worker | AI tools may register their own OAuth client (DCR) for new sign-ins. |
+| `identity.oauth_metadata_documents` | `MARGINCE_IDENTITY_OAUTH_METADATA_DOCUMENTS` | — | `bool`, stored | `true` | api, worker | AI tools may sign in with a client ID that is the URL of their metadata document (CIMD). |
 | `identity.oidc_group_role_map` | `MARGINCE_IDENTITY_OIDC_GROUP_ROLE_MAP` | — | `map<string,string>`, stored | — | api, worker | The role each directory group grants at sign-in, as group:role pairs; it only grants, and never removes a role. |
 | `identity.require_mfa` | `MARGINCE_IDENTITY_REQUIRE_MFA` | — | `bool`, stored | `false` | api, worker | Every member must use two-step sign-in. |
 | `identity.require_sso` | `MARGINCE_IDENTITY_REQUIRE_SSO` | — | `bool`, stored | `false` | api, worker | Members other than admins sign in only through a sign-in provider. |
@@ -375,6 +387,8 @@ admin can also change under Settings.
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
+| `mcp.client_registration.dynamic` | `MARGINCE_MCP_CLIENT_REGISTRATION_DYNAMIC` | — | `bool` | `true` | api | Let AI tools register their own OAuth client at `/oauth/register` (DCR); false keeps it off whatever the admin's switch in Settings > MCP says. |
+| `mcp.client_registration.metadata_document` | `MARGINCE_MCP_CLIENT_REGISTRATION_METADATA_DOCUMENT` | — | `bool` | `true` | api | Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings > MCP says. |
 | `mcp.connector_enabled` | `MARGINCE_MCP_CONNECTOR_ENABLED` | — | `bool` | `false` | api | Serve `/mcp` and the OAuth authorization server to outside agent clients; needs `--public-base-url`. |
 
 ### `operations`
@@ -477,6 +491,7 @@ failures to stderr, with no logger you can set up.
 | `--config-file` | `MARGINCE_CONFIG_FILE` | — | a second YAML file, layered over the base file |
 | `--env-file` | `MARGINCE_ENV_FILE` | — | a `.env` file to read |
 | `--config-trace` | `MARGINCE_CONFIG_TRACE` | `false` | log each configuration source read and the origin of each setting; a secret shows by name only |
+| `--check-config` | (none) | `false` | check the configuration and exit, 0 when valid and 1 when not; see [Where a value comes from](#where-a-value-comes-from) |
 | (env-only) | `MARGINCE_PROVIDER_SURFE` | `live` | which licensed data provider adapter this process carries: `live` (default) the Surfe adapter, `offline` a fixed fake for a dev stack, `off` none. See [Licensed-data provider](#licensed-data-provider) |
 
 With `--inline-relay` (the default), a Redis Margince cannot reach fails the boot. Without a relay,
@@ -711,6 +726,10 @@ Served next to `/v1`:
     endpoint.
   - The example config that ships declares the gate on, so a `make dev` stack serves the connector
     with no edit. The boot error keeps that a local help only.
+  - `mcp.client_registration.dynamic` and `mcp.client_registration.metadata_document` (both default
+    `true`) set which automatic ways a tool may use to get a client ID: dynamic registration and a
+    metadata document. `false` holds that way off whatever the admin's switch under **MCP**
+    says; `true` leaves it to the switch. Clients an admin registers are always allowed.
 
   Both discovery documents list `scopes_supported`, derived from the closed set of passport words.
   The protected resource names the record verbs (`read`, `draft`, `write`, `send`, `enrich`). The
@@ -968,7 +987,7 @@ the api says so. Webhook retries need `cmd/worker`. See
 
 | Flag | Env | Default | Meaning |
 |---|---|---|---|
-| `--config`, `--config-file`, `--env-file`, `--config-trace` | as on the api | as on the api | the same files, read the same way; see [Where a value comes from](#where-a-value-comes-from). The worker reads the deployment file for the `ai.capture_payloads` setting the Surface-B runner follows. Capture applies to both the api and worker roles; the worker runs the source with the most content, the agent runs. A missing file starts with capture off. With capture on, the `ai_call_payload` / `content` retention window is the whole limit on what is kept: see [AI payload capture and its window](#ai-payload-capture-and-its-window-api-worker) before you pick one |
+| `--config`, `--config-file`, `--env-file`, `--config-trace`, `--check-config` | as on the api | as on the api | the same files, read the same way; see [Where a value comes from](#where-a-value-comes-from). The worker reads the deployment file for the `ai.capture_payloads` setting the Surface-B runner follows. Capture applies to both the api and worker roles; the worker runs the source with the most content, the agent runs. A missing file starts with capture off. With capture on, the `ai_call_payload` / `content` retention window is the whole limit on what is kept: see [AI payload capture and its window](#ai-payload-capture-and-its-window-api-worker) before you pick one |
 
 ### The operator surface of the worker
 
@@ -1530,7 +1549,7 @@ the container gets. The scripts read the values below from it too, without expor
 | `MARGINCE_VERTEX_SA_FILE` | — | `ai` package smoke test (`-tags livesmoke`) | path to a Google service account key file for the live Vertex smoke test; the run fails, and does not skip, without it. It is separate from `GEMINI_VERTEX_SA_JSON`, which the **runtime** reads, and which holds what is in the file, not a path. |
 | `MARGINCE_SURFE_LIVE_KEY` | — | `make vendor-live` (`-tags vendorlive`) | a Surfe API key for the live `GET /v1/credits` check; the run fails, and does not skip, without it. The scheduled job fills it from the repository secret `SURFE_LIVE_KEY`. |
 | `MARGINCE_BENCH_TIER` | — | `make bench-perf` | the PERF-3/PERF-7 seed tier the perfbench suite builds: `smb` (default) or `mid_market`. A value it does not know fails the bench with a clear error. |
-| `MARGINCE_BENCH_RECORD` | — | `make bench-perf` | set to `1` to let the PERF-3/PERF-7 tier harness write its record into `docs/reference/perfbench/`, which `make perfdoc` turns into the published budgets page. Off by default, because a scheduled job runs the same suite weekly (`make bench-perf-check`), and a machine must never write its own numbers into the tree. The `bench-record`/`bench-capture`/`bench-mobile` targets, run by hand, need no switch, since only a human runs them. |
+| `MARGINCE_BENCH_RECORD` | — | `make bench-perf` | set to `1` to let the PERF-3/PERF-7 tier harness write its record into `docs/reference/perfbench/`, which `make perfdoc` turns into the published budgets page. Off by default, because the standing integration lane runs the same suite and must not write into the tree. `make bench-perf-check` clears it. The weekly scheduled job sets it through `make bench-perf` and offers the record as a pull request. `make bench-mobile` sets it for `perf-mobile.spec.ts` too. The `bench-record`/`bench-capture` targets need no switch, since running one means recording. |
 | `MARGINCE_BENCH_DAILY_SCALE` | `1` | `make bench-daily` | multiplies every count in the daily-use test data. It is a positive number; `0.05` suits a development run. A value other than `1` writes the record to the git-ignored `docs/reference/perfbench/dev/`, marked `development scale N`. `make perfdoc` never reads that folder, so the record never passes as the mid-market tier. A value that is not a positive number fails the bench. |
 | `MARGINCE_HOME` | — | desktop launcher | sets the installation folder the launcher works from. Unset, it uses the folder of the running program, which is where the launcher sits inside a shipped folder. To set it lets a dev stack run from a staging tree that is not shipped. Everything else the launcher touches comes from it: `data/` with the database and the blobs, `margince.yaml`, `margince.env`, and the `runtime/` that can be replaced. |
 
@@ -1704,6 +1723,10 @@ run `make dev` again.
 `make dev` also passes the tracked `config/margince.dev.yaml` as `--config-file` and `.env.local` as
 `--env-file` to the api and the worker. The script reads `.env.local` for its own choices and never
 exports it. So a value there shows `.env.local` as its source, and locks its control.
+
+The script's own defaults, such as `MARGINCE_PUBLIC_BASE_URL`, `MARGINCE_AI_FAKE` and the blobstore
+bucket, are exported only for a name that neither the environment nor `.env.local` sets. None of them
+is passed as a flag, because a flag outranks `.env.local`.
 
 `MARGINCE_ENV` names the posture, and no trust decision rests on it. Nothing that deletes data
 keys off it. `operations.allow_data_reset` arms the data reset. That is why the dev setting that

@@ -156,6 +156,7 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 // judgement it states.
 type waitingDemotions struct {
 	stale, unproven, elsewhere, informational, booked bool
+	strangerBcc, strangerLink                         bool
 }
 
 // demotionsOf judges one wait against every demotion the lane knows.
@@ -171,7 +172,12 @@ type waitingDemotions struct {
 // the lane's own rules wake the row as plain waiting when that meeting is
 // canceled, a no-show, or over without being held.
 func demotionsOf(waiting WaitingCustomer, days int) waitingDemotions {
+	// A first-time sender's Bcc or foreign-link mail is routine even with an
+	// asks-us verdict. Such mail is written to earn that verdict.
+	firstTime := waiting.SenderWasStranger && !waiting.Engaged && !waiting.HasOpenDeal
 	return waitingDemotions{
+		strangerBcc:   firstTime && waiting.BccOnly,
+		strangerLink:  firstTime && waiting.ForeignLink,
 		stale:         days > waitingStaleDays,
 		unproven:      !waiting.Engaged && !waiting.HasOpenDeal && !waiting.ConfirmedRequest,
 		elsewhere:     waiting.AddressedElsewhere,
@@ -196,6 +202,9 @@ func waitingLevel(waiting WaitingCustomer, d waitingDemotions) int {
 		}
 	}
 	if d.unproven || d.elsewhere || d.informational || waiting.ActionUnconfirmed || waiting.NonBuyer || d.booked {
+		level = levelRoutine
+	}
+	if d.strangerBcc || d.strangerLink {
 		level = levelRoutine
 	}
 	return level
@@ -228,6 +237,12 @@ func waitingBecause(waiting WaitingCustomer, days int, d waitingDemotions) []crm
 	}
 	if d.informational {
 		because = append(because, reason("asks_nothing", nil))
+	}
+	if d.strangerBcc {
+		because = append(because, reason("bcc_from_stranger", nil))
+	}
+	if d.strangerLink {
+		because = append(because, reason("link_off_sender", nil))
 	}
 	return because
 }

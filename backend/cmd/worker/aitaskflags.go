@@ -94,7 +94,7 @@ func parseAITaskFlags(args []string) (aiTaskFlags, error) {
 	var positionals []string
 	for {
 		if err := fs.Parse(rest); err != nil {
-			return aiTaskFlags{}, err
+			return aiTaskFlags{}, config.FlagFault(fs, err)
 		}
 		rest = fs.Args()
 		if len(rest) == 0 {

@@ -7,7 +7,7 @@ import { QueryStates } from "../../design-system/querystates";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
-import { humanizeToken } from "../../screens/audit";
+import { humanizeToken } from "../settings/audit";
 import { CAPABILITIES, CAPABILITY_LABELS } from "./dealroomcapability";
 import "./dealroomaccess.css";
 import { SurfaceState } from "../../design-system/surfacestate";

@@ -20,8 +20,7 @@ func bootConfigForTest(t *testing.T, role config.Role, environ ...string) *confi
 	}
 	cfg, err := config.Load(reg, config.Sources{
 		Environ:  environ,
-		KnownKey: AllSettingKeys,
-		KnownEnv: AllSettingEnvs,
+		Known:    AllSettingNames(),
 		ReadFile: func(string) ([]byte, error) { return nil, fs.ErrNotExist },
 	})
 	if err != nil {

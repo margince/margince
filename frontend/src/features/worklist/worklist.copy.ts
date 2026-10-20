@@ -9,13 +9,13 @@ import { isMessageKey, translatePlural } from "../../i18n";
 import { aiTaskLabel } from "../../lib/ai-task-label";
 import { ENTITY, recordRoute } from "../../lib/entity";
 import { routeHash } from "../../lib/router";
-import { settingsHref } from "../../screens/settingsrouting";
 import {
   BRIEF_PARAM,
   COMPOSE_PARAM,
   THREAD_PARAM,
 } from "../contacts/contactpage.address";
 import { caseHref } from "../privacy/privacy.caselink";
+import { settingsHref } from "../settings/settingsrouting";
 import { connectionName, connectionTitleKey } from "./worklist.connection";
 import { nonBuyerRequest } from "./worklist.eyebrow";
 import type { Worklist, WorklistItem } from "./worklist.queries";

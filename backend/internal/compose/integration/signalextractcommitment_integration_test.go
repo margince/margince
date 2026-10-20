@@ -369,18 +369,39 @@ func TestACurrentQuotedPromiseSurvivesALongSignature(t *testing.T) {
 	}
 }
 
-func captureCommitmentMessage(t *testing.T, e *Env, contact ids.UUID, key, subject, body, direction string, at time.Time) ids.UUID {
+type commitmentMailRecipient struct {
+	contact ids.UUID
+	role    string
+}
+
+func commitmentMailAddress(t *testing.T, e *Env, contact ids.UUID) string {
 	t.Helper()
-	owner, buyer := "rep@workspace.example", "buyer-"+contact.String()+"@buyer.example"
-	if _, err := e.Contacts.UpdateContact(e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms), ids.From[ids.ContactKind](contact), contacts.UpdateContactInput{Emails: []contacts.ContactEmailInput{{Email: buyer, EmailType: "work", IsPrimary: true}}}); err != nil {
+	address := "buyer-" + contact.String() + "@buyer.example"
+	if _, err := e.Contacts.UpdateContact(e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms), ids.From[ids.ContactKind](contact), contacts.UpdateContactInput{Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}}}); err != nil {
 		t.Fatal(err)
 	}
+	return address
+}
+
+func captureCommitmentMessage(t *testing.T, e *Env, contact ids.UUID, key, subject, body, direction string, at time.Time, recipients ...commitmentMailRecipient) ids.UUID {
+	t.Helper()
+	owner, buyer := "rep@workspace.example", commitmentMailAddress(t, e, contact)
 	e.WsExec(t, `INSERT INTO capture_connection (user_id,provider,status,credential_ref,account_label) VALUES ($1,'gmail','connected','vault:test',$2) ON CONFLICT (user_id,provider) DO UPDATE SET account_label=$2`, e.Rep1, owner)
 	from, to := buyer, owner
 	if direction == "outbound" {
 		from, to = owner, buyer
 	}
-	raw := []byte(fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nDate: %s\r\nMessage-ID: <%s@buyer.example>\r\nReferences: <%s>\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n%s", from, to, subject, at.Format(time.RFC1123Z), ids.NewV7(), key, body))
+	var headers, toAddresses strings.Builder
+	toAddresses.WriteString(to)
+	for _, recipient := range recipients {
+		address := commitmentMailAddress(t, e, recipient.contact)
+		if recipient.role == "cc" {
+			headers.WriteString("Cc: " + address + "\r\n")
+		} else {
+			toAddresses.WriteString(", " + address)
+		}
+	}
+	raw := []byte(headers.String() + fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nDate: %s\r\nMessage-ID: <%s@buyer.example>\r\nReferences: <%s>\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n%s", from, toAddresses.String(), subject, at.Format(time.RFC1123Z), ids.NewV7(), key, body))
 	message, err := mailmap.Parse(raw, owner)
 	if err != nil {
 		t.Fatal(err)

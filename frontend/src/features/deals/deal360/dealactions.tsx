@@ -49,7 +49,7 @@ function DealEmailVerb({
 }: Readonly<{ deal: Deal; disabledReasonId?: string }>) {
   // The same coverage read the readings band and the coverage card already
   // make, served from one cache entry — so asking here costs no request.
-  const coverage = useDealCoverage(deal.id);
+  const coverage = useDealCoverage(deal.id, !deal.archived_at);
   const recordAddress = useDealRecipientAddress(coverage);
   return (
     <RecordEmailVerb

@@ -362,7 +362,7 @@ func valueShape(op FilterOp) string {
 // a caller looking for a narrowing the entity does offer, under a name the
 // list did not carry.
 func unknownFilterField(entity Entity, name string) error {
-	if strings.HasPrefix(name, datasource.CustomFieldPrefix) {
+	if isCustomFieldName(name) {
 		return customFieldNotInReports(entity, name)
 	}
 	return &RefusalError{
@@ -373,7 +373,7 @@ func unknownFilterField(entity Entity, name string) error {
 }
 
 func unknownField(entity Entity, name string, kind FieldKind) error {
-	if strings.HasPrefix(name, datasource.CustomFieldPrefix) {
+	if isCustomFieldName(name) {
 		return customFieldNotInReports(entity, name)
 	}
 	return &RefusalError{
@@ -381,6 +381,16 @@ func unknownField(entity Entity, name string, kind FieldKind) error {
 		Message: fmt.Sprintf("no field named %s on %s", httperr.QuoteCaller(name), entity.Name),
 		Suggest: fmt.Sprintf("available: %s", strings.Join(entity.FieldNames(kind), ", ")),
 	}
+}
+
+// CompanyCustomFieldPrefix starts the name of a company's custom field on a
+// deal population, so it cannot collide with a deal field of the same column.
+const CompanyCustomFieldPrefix = "company_" + datasource.CustomFieldPrefix
+
+// isCustomFieldName says whether a name is spelled as a deal's or a company's
+// custom field, which is what earns the refusal below.
+func isCustomFieldName(name string) bool {
+	return strings.HasPrefix(name, datasource.CustomFieldPrefix) || strings.HasPrefix(name, CompanyCustomFieldPrefix)
 }
 
 // customFieldNotInReports refuses a custom field the vocabulary does not

@@ -17,11 +17,10 @@ import (
 type Sources struct {
 	Args    []string
 	Environ []string
-	// KnownKey and KnownEnv admit every program's names, so a key or variable
-	// a sibling program reads is neither a fault nor a warning here. Nil means
-	// this registry's own names.
-	KnownKey       func(key string) bool
-	KnownEnv       func(name string) bool
+	// Known holds every program's names, so a key or variable a sibling
+	// program reads is neither a fault nor a warning here. This registry's own
+	// names are always known.
+	Known          Names
 	BootstrapRoots map[string]bool
 	ReadFile       func(path string) ([]byte, error)
 	// Faults checks what reads two settings. It runs even when a setting
@@ -53,7 +52,20 @@ type Config struct {
 // Load resolves every setting and returns all faults joined, so an operator
 // fixes a broken configuration in one pass instead of one boot per fault.
 func Load(reg *Registry, src Sources) (*Config, error) {
-	src = withDefaults(reg, src)
+	cfg, err := loadSources(reg, src)
+	if err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+// loadSources returns what it resolved beside the faults, for Check to trace. The
+// Config is nil only when the command line does not parse.
+func loadSources(reg *Registry, src Sources) (*Config, error) {
+	names := knownNames(reg, src.Known, src.BootstrapRoots)
+	if src.ReadFile == nil {
+		src.ReadFile = os.ReadFile
+	}
 	env := environMap(src.Environ)
 	flags, err := parseFlags(reg, src.Args)
 	if err != nil {
@@ -64,7 +76,7 @@ func Load(reg *Registry, src Sources) (*Config, error) {
 	if err != nil {
 		faults = append(faults, err)
 	}
-	layers, layerFaults, trace := readLayers(reg, src, flags, env, files)
+	layers, layerFaults, trace := readLayers(reg, src, names, flags, env, files)
 	faults = append(faults, layerFaults...)
 	cfg := &Config{reg: reg, values: map[string]resolved{}, files: files, trace: trace, tracing: tracing}
 	getenv := func(name string) (string, bool) {
@@ -79,32 +91,11 @@ func Load(reg *Registry, src Sources) (*Config, error) {
 		}
 		cfg.values[s.Key()] = r
 	}
-	cfg.warnings = undeclared(src.KnownEnv, layers)
+	cfg.warnings = undeclared(names, layers)
 	if src.Faults != nil {
 		faults = append(faults, src.Faults(cfg)...)
 	}
-	if err := errors.Join(faults...); err != nil {
-		return nil, err
-	}
-	return cfg, nil
-}
-
-func withDefaults(reg *Registry, src Sources) Sources {
-	if src.KnownKey == nil {
-		src.KnownKey = func(key string) bool {
-			_, ok := reg.byKey[key]
-			return ok
-		}
-	}
-	others := src.KnownEnv
-	src.KnownEnv = func(name string) bool {
-		_, ok := reg.byEnv[name]
-		return ok || (others != nil && others(name))
-	}
-	if src.ReadFile == nil {
-		src.ReadFile = os.ReadFile
-	}
-	return src
+	return cfg, errors.Join(faults...)
 }
 
 // environMap keeps the last of a repeated name, as os.Getenv does.
@@ -122,7 +113,8 @@ func environMap(environ []string) map[string]string {
 // A program reads the posture this way before Load, for its Faults hook.
 func EnvironValue(environ []string, name string) string { return environMap(environ)[name] }
 
-// Warnings names the MARGINCE_* variables that no program reads, never their values.
+// Warnings names the MARGINCE_* variables that no program reads, each with the
+// name it likely meant, and never their values.
 func (c *Config) Warnings() []string { return c.warnings }
 
 // Files are the paths Load read.

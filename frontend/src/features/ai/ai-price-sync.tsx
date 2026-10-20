@@ -21,9 +21,9 @@ import {
   RefreshModelPricesButton,
   RefreshSummary,
   useRefreshModelPrices,
-} from "../../screens/rate-catalogue-refresh";
-import { ModelPriceDialog } from "../../screens/rate-manual";
-import { ModelPriceSheet } from "../../screens/rates";
+} from "../settings/rate-catalogue-refresh";
+import { ModelPriceDialog } from "../settings/rate-manual";
+import { ModelPriceSheet } from "../settings/rates";
 import { providerName } from "./ai-provider-names";
 import "./ai-settings.css";
 

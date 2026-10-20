@@ -4,7 +4,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { DateFormatsProvider } from "../../app/dateformats";
-import { defaultOperations } from "../../screens/operationsettings.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -12,6 +11,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { defaultAgentAllowances } from "../automations/agentallowances.fixtures";
+import { defaultOperations } from "../settings/operationsettings.fixtures";
 import { InstallationSettingsCard } from "./installation-settings";
 
 // Settings → Admin settings → General → Installation. Two surfaces in one card:

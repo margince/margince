@@ -182,6 +182,10 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	// refusal names the setting and quotes the group or role it refused —
 	// the same division of labour as the fiscal month above.
 	patch.OidcGroupRoleMap = req.OidcGroupRoleMap
+	// Each switch checks agent_client per field (settings.SetRawTx), so the
+	// installation patch gate alone does not let ops turn a method back on.
+	patch.DynamicClientRegistration = req.DynamicClientRegistration
+	patch.MetadataDocumentClients = req.MetadataDocumentClients
 	// Each entry's validator holds its range and names the field it refuses.
 	patch.Operations = identity.OperationPatch{
 		AgentRunnerIntervalSeconds:       req.AgentRunnerIntervalSeconds,

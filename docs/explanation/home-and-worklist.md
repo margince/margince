@@ -1,8 +1,7 @@
 <!-- prose:plain -->
 # Home and the Worklist: how the day is ranked
 
-Home has one ranking engine behind three views: the Worklist, the Focus cards on Morning, and the weekly
-review. The server ranks every row once, by one fixed order of ranking steps. Focus is a
+Home has one ranking engine behind two views: the Worklist and the Focus cards on Morning. The server ranks every row once, by one fixed order of ranking steps. Focus is a
 cut of that same order, taken before the queue's filter and page limit, so no client can rank work on its
 own. Promises read from a conversation reach the queue through one dispatch rule.
 
@@ -139,7 +138,25 @@ Partial delivery leaves the original promise open. A repeated promise keeps the 
 A stated renewal records its message and source time. It can update the deadline on an open automatic task and its claim; human changes and completed or archived tasks keep their state.
 The dispatcher locks the original source before applying a renewal. An older renewing message cannot replace a newer one, even when a later pass reads it.
 
-The signal reader uses the `premium` tier by default. Its current certification passes the renewal corpus; the cheaper binding does not meet the quality threshold.
+Completion follows the stored source and the quoted clause's key. Pending task proposals end only after every recipient claim for that promise is done or dismissed.
+A completed commitment task can end its proposal when no contact claim exists. A blank key proves no link.
+
+One promise to several known recipients creates one task with a claim for each recipient. Home and Worklist show each visible recipient and their status. Different asks keep separate tasks.
+A later reading that leaves out a recipient does not remove an existing claim. A human can dismiss a claim that is no longer owed.
+
+A later recipient joins automatic work directly when no human has changed it. A task a human accepted or changed needs approval to attach that recipient.
+That approval names the existing task and changes no task fields.
+
+Automatic completion counts all claims for the promise, including recipients whose attachment needs approval. Completing one recipient's claim cannot complete work still owed to another recipient.
+
+Completion events use the original member's current access. A task completion read later checks the task again and leaves reopened work alone.
+The notice worker removes notices for proposals that ended; the source and audit stay available under their access rules.
+
+The day folds an approval's notice into its decision before counting or paging. The approval engine checks ownership and access by identifier, even beyond the loaded decision page.
+Titles and target records prove no link. A notice keeps its place when no pending decision is in scope.
+`notices_more_available` keeps the original scan bound after folding; Worklist derives its notice coverage from that same field.
+
+Signal and transcript readers use the `premium` tier by default. Their certification cases check meaning, ownership and recipient attribution.
 Each reading uses tokens at that tier. Work waits in the queue when the budget runs out.
 
 The task threshold applies only after the meaning of the promise admits work. A soft offer cannot become a task through confidence alone.
@@ -150,7 +167,7 @@ from the model's text. A new reading that words the summary another way still fi
 covers archived tasks, refused proposals and dismissed claims, so none of them comes back.
 
 `commitmentsettle.go` keeps a promise and its task in step, as consumer group `cg:commitment-settle`. A task
-marked done settles its open claims, and a claim settled as done completes its task. Each side does nothing
+marked done settles its readable open claims. A claim settled as done completes its task only when no recipient claim stays open. Each side does nothing
 when the other is already done, so the pair cannot loop. Opening the task again leaves the claim kept, and
 dismissing a claim leaves the task alone: a kept promise that was reopened was still kept. The write runs
 as the human behind the event, so it cannot settle a claim or a task that human may not change.

@@ -3,37 +3,9 @@
 
 package compose
 
-// A commitment and the task it became settle together.
-//
-//   activity.updated, a task marked done     → its open claims settle as done
-//   conversation_claim.changed, now done     → its task is completed
-//
-// THE TRIGGER IS THE EVENT, NOT THE WRITER, as stageevidencetrigger states:
-// every path that ticks a task or settles a claim reaches the outbox through
-// the write shape, so each lands here without knowing this consumer exists.
-// The two halves live in two modules that may not import each other, which
-// is why the edge sits in compose.
-//
-// WHOSE RIGHT IT IS. The write runs as whoever caused the event: a human as
-// themselves, an agent or connector as the human it acts for. So the stores'
-// own gates ask about that human inside the write's transaction — ticking a
-// task you hold must not settle a claim on a contact you may not update, nor
-// one quoted from a conversation you may no longer read, and settling a claim
-// must not complete a task you may not change. The event the write emits names
-// the same human, so a settlement it causes in turn is held to their rights
-// too. An agent acting for nobody settles nothing; the product acting for
-// nobody is followed, because its own passes are what the rules above govern.
-//
-// A HISTORY REPLAYED IS NOT RE-ENACTED. A new group starts at the stream's
-// beginning, so a claim settled long ago arrives as news. A task changed after
-// that settlement — reopened, most likely — is not completed again.
-//
-// Each reaction is a no-op when the other side is already done, so the pair
-// cannot loop: completing the task emits activity.updated, which finds the
-// claim already done and writes nothing. Reopening a task leaves its claim
-// done, and dismissing a claim leaves its task alone: a commitment kept and
-// then reopened is still a commitment that was kept, and a claim a reader
-// judged was never made says nothing about whether the work happened.
+// Events naming a human run with that human's current authority. Audited
+// settlement times keep replay from completing a task someone reopened later.
+// Dismissal retires proposals without claiming their tasks were performed.
 
 import (
 	"context"
@@ -47,8 +19,11 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -62,21 +37,26 @@ const commitmentSettleActor = "system:commitment-settle"
 const eventClaimChanged = "conversation_claim.changed"
 
 // claimStatusDone is the settled status both sides agree on.
-const claimStatusDone = "done"
+const (
+	claimStatusDone      = "done"
+	claimStatusDismissed = "dismissed"
+)
 
-// CommitmentSettleTrigger keeps a commitment and its task settled together.
+// CommitmentSettleTrigger retires work from settled promises.
 type CommitmentSettleTrigger struct {
-	claims   *contacts.Store
-	tasks    *activities.Store
-	identity *identity.Service
-	log      *slog.Logger
+	db        *database.DB
+	approvals *approvals.Service
+	claims    *contacts.Store
+	tasks     *activities.Store
+	identity  *identity.Service
+	log       *slog.Logger
 }
 
 // NewCommitmentSettleTrigger builds the consumer over the installation's stores.
 func NewCommitmentSettleTrigger(pool *pgxpool.Pool, log *slog.Logger) *CommitmentSettleTrigger {
 	db := InstallationDB(pool)
 	return &CommitmentSettleTrigger{
-		claims: contacts.NewStore(db), tasks: activities.NewStore(db),
+		db: db, approvals: NewApprovalsService(db), claims: contacts.NewStore(db), tasks: activities.NewStore(db),
 		identity: identity.NewService(pool), log: log,
 	}
 }
@@ -98,10 +78,10 @@ func (t *CommitmentSettleTrigger) HandleEvent(ctx context.Context, env events.En
 		return t.settleClaimsOf(ctx, env.Actor, env.Entity.ID)
 	case eventClaimChanged:
 		var payload crmcontracts.PublicEventConversationClaimChanged
-		if !readSettlePayload(ctx, t.log, env, &payload) || payload.Status != claimStatusDone {
+		if !readSettlePayload(ctx, t.log, env, &payload) || (payload.Status != claimStatusDone && payload.Status != claimStatusDismissed) {
 			return nil
 		}
-		return t.completeTaskOf(ctx, env.Actor, ids.UUID(payload.ClaimId), env.Trace.AuditLogID)
+		return t.applyClaimSettlement(ctx, env.Actor, ids.UUID(payload.ClaimId), env.Trace.AuditLogID)
 	}
 	return nil
 }
@@ -113,37 +93,61 @@ func (t *CommitmentSettleTrigger) settleClaimsOf(ctx context.Context, by events.
 	if err != nil || !ok {
 		return err
 	}
-	claims, err := t.claims.OpenClaimsOnTask(ctx, taskID)
+	task, err := t.tasks.GetActivity(asThem, ids.From[ids.ActivityKind](taskID), storekit.IncludeArchived)
+	if refused(err) {
+		t.log.WarnContext(ctx, "completed commitment task no longer readable", "task", taskID, "err", err)
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if task.Kind != bulkParamTask || task.IsDone == nil || !*task.IsDone {
+		return nil
+	}
+	claims, err := t.claims.OpenClaimsOnTask(asThem, taskID)
+	if refused(err) {
+		t.log.WarnContext(ctx, "completed task's commitments no longer readable", "task", taskID, "err", err)
+		return nil
+	}
 	if err != nil {
 		return err
 	}
 	for _, claim := range claims {
 		if err := t.claims.SettleConversationClaim(asThem, claim.ID, claimStatusDone); err != nil {
 			if refused(err) {
+				t.log.WarnContext(ctx, "commitment claim settlement refused", "claim", claim.ID, "err", err)
 				continue
 			}
 			return err
 		}
 	}
-	return nil
+	return t.withdrawCompletedTaskOffers(asThem, task)
 }
 
-// completeTaskOf completes the task a claim settled as done became, as
-// whoever settled the claim; a task they may not change stays as it is.
-func (t *CommitmentSettleTrigger) completeTaskOf(ctx context.Context, by events.Actor, claimID, settlement ids.UUID) error {
-	task, status, settledAt, err := t.claims.ClaimTask(ctx, claimID, settlement)
-	if err != nil || task == nil || status != claimStatusDone {
-		return err
-	}
+// A dismissed promise retires its proposal without claiming its task was done.
+func (t *CommitmentSettleTrigger) applyClaimSettlement(ctx context.Context, by events.Actor, claimID, settlement ids.UUID) error {
 	asThem, ok, err := t.actingAs(ctx, by)
 	if err != nil || !ok {
 		return err
 	}
-	_, err = t.tasks.CompleteTask(asThem, ids.From[ids.ActivityKind](*task), settledAt)
+	settled, err := t.claims.ReadClaimSettlement(asThem, claimID, settlement)
 	if refused(err) {
+		t.log.WarnContext(ctx, "commitment settlement no longer readable", "claim", claimID, "err", err)
 		return nil
 	}
-	return err
+	if err != nil || settled == nil || (settled.Status != claimStatusDone && settled.Status != claimStatusDismissed) {
+		return err
+	}
+	if settled.Status == claimStatusDone && settled.TaskID != nil {
+		if _, err := t.completeSettledClaimTask(asThem, *settled); err != nil {
+			if refused(err) {
+				t.log.WarnContext(ctx, "commitment task completion refused", "claim", claimID, "err", err)
+				return nil
+			}
+			return err
+		}
+	}
+	return t.withdrawSettledOffers(asThem, settledCommitmentIdentity{sourceID: settled.SourceID, locator: settled.Locator, claimID: &claimID, status: settled.Status, settlementID: settlement})
 }
 
 // actingAs is the context the write runs under: the human behind the event,

@@ -21,7 +21,7 @@ import {
   IMPORT_RUN_SUBPAGE,
   IMPORT_TEMPLATE_SUBPAGE,
   settingsHref,
-} from "../../screens/settingsrouting";
+} from "../settings/settingsrouting";
 import { ImportDropzone } from "./import.files";
 import { ImportRefusal, UndoConfirm } from "./import.notices";
 import { IMPORT_TEMPLATE_HREF, TemplatePreview } from "./import.template";

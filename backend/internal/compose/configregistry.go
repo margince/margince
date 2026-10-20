@@ -87,21 +87,14 @@ func ProgramRegistries() map[config.Role]*config.Registry {
 	return out
 }
 
-type settingNames struct{ keys, envs map[string]bool }
-
-// everyName is built once: Load asks it about each key and variable it meets.
-var everyName = sync.OnceValue(func() settingNames {
-	names := settingNames{keys: map[string]bool{}, envs: map[string]bool{}}
+// AllSettingNames is Sources.Known for every program: a margince.yaml shared by
+// the api and the worker carries keys only one of them reads. Built once, as
+// every Load reads it.
+var AllSettingNames = sync.OnceValue(func() config.Names {
+	var names config.Names
 	for _, s := range allSettings() {
-		names.keys[s.Key()] = true
-		names.envs[s.Env()] = true
+		names.Keys = append(names.Keys, s.Key())
+		names.Envs = append(names.Envs, s.Env())
 	}
 	return names
 })
-
-// AllSettingKeys is Sources.KnownKey for every program: a margince.yaml shared
-// by the api and the worker carries keys only one of them reads.
-func AllSettingKeys(key string) bool { return everyName().keys[key] }
-
-// AllSettingEnvs is Sources.KnownEnv for every program, for the same reason.
-func AllSettingEnvs(name string) bool { return everyName().envs[name] }

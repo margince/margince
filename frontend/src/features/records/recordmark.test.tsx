@@ -7,7 +7,6 @@ import type { components } from "../../api/schema";
 import { RecordShell } from "../../app/testing/recordshell.testkit";
 import { meshOf, meshStyle } from "../../design-system/avatarmesh";
 import { LocaleProvider } from "../../i18n";
-import { WriteToHost } from "../../screens/writetohost";
 import { CompaniesScreen, CompanyScreen } from "../companies/companies";
 import {
   company,
@@ -16,6 +15,7 @@ import {
 } from "../companies/company.fixtures";
 import { stubFetch } from "../companies/company.testkit";
 import { mount, view } from "../contacts/contactpage.testkit";
+import { WriteToHost } from "../settings/writetohost";
 
 // One record, one mark: the list a reader found it in, the card another record
 // lists it on, its own page and a message it sent all key the chip on the

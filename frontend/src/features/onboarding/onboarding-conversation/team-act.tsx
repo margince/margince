@@ -9,11 +9,11 @@ import { useMe } from "../../../lib/session";
 import {
   type InvitedMember,
   InviteUserForm,
-} from "../../../screens/users-invite-form";
+} from "../../settings/users-invite-form";
 import {
   PasswordLinkModal,
   usePasswordLink,
-} from "../../../screens/users-password-link";
+} from "../../settings/users-password-link";
 import { EMPTY_DRAFT } from "../onboarding";
 import type {
   ConversationEvent,

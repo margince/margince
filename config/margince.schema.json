@@ -15,15 +15,25 @@
       "additionalProperties": false,
       "properties": {
         "name": {
+          "description": "Name is the company's name until an admin saves the company profile.",
           "type": "string"
         },
         "base_currency": {
-          "type": "string"
+          "description": "BaseCurrency is the currency every amount is reported in, as a 3-letter ISO 4217 code in capitals, such as EUR.",
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
         },
         "base_language": {
-          "type": "string"
+          "description": "BaseLanguage is the language the installation writes in, one of those this build speaks.",
+          "type": "string",
+          "enum": [
+            "en",
+            "de",
+            "vi"
+          ]
         },
         "timezone": {
+          "description": "Timezone is the IANA zone the installation's calendar days are in, such as Europe/Berlin.",
           "type": "string"
         },
         "country": {
@@ -1038,6 +1048,22 @@
             "type": "string"
           }
         },
+        "oauth_dynamic_registration": {
+          "description": "AI tools may register their own OAuth client (DCR) for new sign-ins.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
+        },
+        "oauth_metadata_documents": {
+          "description": "AI tools may sign in with a client ID that is the URL of their metadata document (CIMD).",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
+        },
         "oidc_group_role_map": {
           "description": "The role each directory group grants at sign-in, as group:role pairs; it only grants, and never removes a role.",
           "type": [
@@ -1465,6 +1491,31 @@
       ],
       "additionalProperties": false,
       "properties": {
+        "client_registration": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "dynamic": {
+              "description": "Let AI tools register their own OAuth client at /oauth/register (DCR); false keeps it off whatever the admin's switch in Settings \u003e MCP says.",
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "default": true
+            },
+            "metadata_document": {
+              "description": "Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings \u003e MCP says.",
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "default": true
+            }
+          }
+        },
         "connector_enabled": {
           "description": "Serve /mcp and the OAuth authorization server to outside agent clients; needs --public-base-url.",
           "type": [

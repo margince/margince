@@ -206,10 +206,10 @@ frontend/src/design-system/recordtimeline.ts migration 0038
 frontend/src/features/companies/companyevidence.stories.tsx migration 0099
 frontend/src/features/records/relationships.test.tsx migration 0007
 frontend/src/features/records/relationships.tsx migration 0007
-frontend/src/screens/embedreindex.stories.tsx migration 0115
-frontend/src/screens/embedreindex.test.tsx migration 0115
-frontend/src/screens/embedreindex.tsx migration 0115
-frontend/src/screens/settings-nav.test.tsx migration 0261
+frontend/src/features/settings/embedreindex.stories.tsx migration 0115
+frontend/src/features/settings/embedreindex.test.tsx migration 0115
+frontend/src/features/settings/embedreindex.tsx migration 0115
+frontend/src/features/settings/settings-nav.test.tsx migration 0261
 scripts/lib-testdb.sh migration 0015
 scripts/test-migration-versions.sh core 0002
 scripts/test-migration-versions.sh core 0003

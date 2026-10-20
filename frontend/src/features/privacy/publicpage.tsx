@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Logomark } from "../../design-system/logomark";
 import { useT } from "../../i18n";
 import { usePublicLocale } from "./publiclocale";
-import "../../screens/preferences.css";
+import "../settings/preferences.css";
 
 /**
  * The frame both public pages sit in.

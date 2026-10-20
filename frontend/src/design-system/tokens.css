@@ -460,7 +460,7 @@
      the eye and still leaves a settings table room for its columns.
 
      A token rather than a number in one sheet, because TWO sheets read it: the
-     stack takes it as its width (screens/settings.css) and the shell takes it
+     stack takes it as its width (features/settings/settings.css) and the shell takes it
      as the width of the page's NAME above that stack (app/shell.css). A name
      that began anywhere but where its page begins is the page disagreeing with
      itself, and two spellings of one measure is how that happens.

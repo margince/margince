@@ -25,12 +25,28 @@ func TestEveryLoaderVarIsReservedAndDocumented(t *testing.T) {
 		t.Fatal("the loader reads no variable of its own; this test checks nothing")
 	}
 	for _, v := range vars {
-		s := config.Define(config.Spec[string]{Key: "x", Env: v.Env, Type: config.String, Doc: "d"})
-		if _, err := config.NewRegistry([]config.Any{s}); err == nil {
-			t.Errorf("%s is read by the loader and was accepted as a setting", v.Env)
+		if v.Env != "" {
+			s := config.Define(config.Spec[string]{Key: "x", Env: v.Env, Type: config.String, Doc: "d"})
+			if _, err := config.NewRegistry([]config.Any{s}); err == nil {
+				t.Errorf("%s is read by the loader and was accepted as a setting", v.Env)
+			}
+		}
+		if v.Flag != "" {
+			s := config.Define(config.Spec[string]{Key: "x", Env: "X", Flag: v.Flag, Type: config.String, Doc: "d"})
+			if _, err := config.NewRegistry([]config.Any{s}); err == nil {
+				t.Errorf("--%s is read by the loader and was accepted as a setting", v.Flag)
+			}
 		}
 		if v.Flag != "" && !strings.Contains(usage.String(), v.Doc) {
 			t.Errorf("--%s shows no doc in the usage text:\n%s", v.Flag, usage.String())
 		}
+	}
+}
+
+// A setting with no flag is not the loader's: an empty name reserves nothing.
+func TestASettingWithNoFlagIsNotReserved(t *testing.T) {
+	s := config.Define(config.Spec[string]{Key: "x", Env: "X", Type: config.String, Doc: "d"})
+	if _, err := config.NewRegistry([]config.Any{s}); err != nil {
+		t.Fatalf("a setting with no flag was refused: %v", err)
 	}
 }

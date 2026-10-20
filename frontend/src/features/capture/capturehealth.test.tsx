@@ -8,9 +8,9 @@ import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { translate } from "../../i18n";
-import { jsonResponse, render } from "../../screens/settings.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { tableRowCells } from "../../testing/tablerow.testkit";
+import { jsonResponse, render } from "../settings/settings.testkit";
 import { CaptureHealthCard, sweepWarning } from "./capturehealth";
 
 type Health = components["schemas"]["CaptureHealth"];

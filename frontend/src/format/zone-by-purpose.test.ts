@@ -238,7 +238,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Same fixture, same reason as the suite above: the story answers /me/working-hours the way the SERVER does, and a contact who has chosen no zone is answered with the installation's — so the fixture names one. The card draws the name it is handed and the story asserts no instant, while a zone read off the runner would make the catalog frame describe whichever machine built it.",
   },
   {
-    file: "screens/settings.testkit.tsx",
+    file: "features/settings/settings.testkit.tsx",
     why: "The stub answers /me/working-hours with the SERVER's answer, and a contact who has chosen no zone is answered with the installation's — so the fixture has to name one, the way the analytics frames above do. Reading the runner's zone would make the fixture describe whichever machine ran it, and the card under it renders the name it is given.",
   },
   {
@@ -402,7 +402,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Installation-settings fixture: the company timezone the document form reads back.",
   },
   {
-    file: "screens/audit.test.tsx",
+    file: "features/settings/audit.test.tsx",
     why: "Pins an audit line to the company's clock by reading it from a zone whose calendar day is already the next one — a claim that needs both the zone pretended in and the day compared against.",
   },
   {
@@ -502,7 +502,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Same pair, asserted: the row must state the picked zone when it differs from the reader's.",
   },
   {
-    file: "screens/users-admin.stories.tsx",
+    file: "features/settings/users-admin.stories.tsx",
     why: "Installation-settings fixtures backing the users-admin story rows.",
   },
 ];

@@ -6,13 +6,13 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { RecordOriginFacts } from "../../design-system/recordfacts";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
-import { useAcquisitionSources } from "../../screens/acquisitionsources.queries";
 import { TagsPanel } from "../lists/tagspanel";
 import { RecordCustomFields } from "../records/recordcustomfields";
 import { saveRecordEdit } from "../records/recordedit";
 import { RecordListsPanel } from "../records/recordlists";
 import { useOwnerPicker, useRecordOwners } from "../records/recordreferences";
 import { RecordTeam } from "../records/recordteam";
+import { useAcquisitionSources } from "../settings/acquisitionsources.queries";
 import { DealEmailAside } from "./dealemail";
 import {
   NEW_PROJECT_OWNER,
@@ -217,8 +217,12 @@ export function DealContext({
       </Panel>
       <RecordTeam recordType="deal" recordId={deal.id} readOnly={!canWrite} />
       <DealTagsSection deal={deal} />
-      <RecordListsPanel entityType="deal" entityId={deal.id} />
-      <DealEmailAside dealId={deal.id} />
+      <RecordListsPanel
+        entityType="deal"
+        entityId={deal.id}
+        archived={Boolean(deal.archived_at)}
+      />
+      <DealEmailAside dealId={deal.id} live={!deal.archived_at} />
     </>
   );
 }

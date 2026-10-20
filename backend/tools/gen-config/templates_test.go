@@ -48,7 +48,7 @@ func TestEveryDefaultTheExampleWritesLoads(t *testing.T) {
 	for _, role := range slices.Sorted(maps.Keys(regs)) {
 		cfg, err := config.Load(regs[role], config.Sources{
 			Args: []string{"--config", path}, Environ: []string{},
-			KnownKey: compose.AllSettingKeys, KnownEnv: compose.AllSettingEnvs, BootstrapRoots: deployconfig.Roots(),
+			Known: compose.AllSettingNames(), BootstrapRoots: deployconfig.Roots(),
 		})
 		if err != nil {
 			t.Errorf("%s: the example's defaults do not load: %v", role, err)

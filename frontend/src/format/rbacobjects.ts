@@ -129,6 +129,10 @@ export const CORE_OBJECTS: Readonly<Record<CoreRbacObject, CoreObjectName>> = {
     area: "company",
     label: "roles.object.oauth_application",
   },
+  agent_client: {
+    area: "company",
+    label: "roles.object.agent_client",
+  },
 
   privacy_request: {
     area: "governance",

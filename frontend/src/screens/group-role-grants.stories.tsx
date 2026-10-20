@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { SEEDED_ASSIGNABLE_ROLES } from "../features/settings/roles.testkit";
 import { en } from "../i18n/en";
 import {
   installFetchStub,
@@ -12,7 +13,6 @@ import {
   StoryProviders,
 } from "../testing/story-utils";
 import { GroupRoleGrants } from "./group-role-grants";
-import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 
 function story(
   initial: Record<string, string>,

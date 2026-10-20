@@ -12358,6 +12358,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
         '422':
           $ref: '#/components/responses/ValidationError'
       parameters: &id018
@@ -12648,6 +12650,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationError'
       x-agent-access: human-only
@@ -12700,6 +12704,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
         '422':
           $ref: '#/components/responses/ValidationError'
       parameters: *id018
@@ -12752,6 +12758,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
         '422':
           $ref: '#/components/responses/ValidationError'
       parameters: *id018
@@ -12836,6 +12844,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
         '422':
           $ref: '#/components/responses/ValidationError'
       parameters: *id018
@@ -12893,6 +12903,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationError'
       parameters:
@@ -13073,6 +13085,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationError'
       x-agent-access: human-only
@@ -17268,6 +17282,146 @@ paths:
               schema: { $ref: '#/components/schemas/InstallationSetup' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+  /installation/agent-clients:
+    get:
+      tags: [Identity]
+      operationId: listAgentClients
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: The OAuth clients AI tools sign users in through, and which automatic methods are on.
+      description: |
+        Every client that may start a sign-in: the ones an admin registered, the ones that
+        registered themselves (DCR) and the ones that identify with a published metadata document
+        (CIMD). Clients an admin registered and clients with a live connection come first; the rest
+        page after them. A deleted client is not listed. No secret and no secret digest is ever
+        returned.
+
+        `registration` reports each automatic method three ways: whether the deployment file allows
+        it, whether the admin's switch is on, and the effective answer, which is both.
+
+        Needs `agent_client` read (admin, management and ops by default).
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of clients, and the method switches.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentClientListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Identity]
+      operationId: registerAgentClient
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Register an AI tool's OAuth client by hand (admin).
+      description: |
+        For a tool that cannot register itself, such as Gemini Enterprise or Copilot Studio
+        "Manual". Margince mints the client ID and a client secret, and the tool must send the secret
+        at the token endpoint. The secret is returned in this response **once**: only its digest is
+        stored, so it can never be shown again. Lost, it is rotated. A tool that cannot send a
+        secret connects through dynamic registration or a metadata document instead.
+
+        Redirect URIs match exactly: https anywhere, or http on a loopback host, where the port is
+        ignored. Every sign-in through the client still needs PKCE S256 and the human's consent.
+
+        Audit-only write (no event stream, EVT-NOEVT-3). The audit row never holds the secret.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterAgentClientRequest' }
+      responses:
+        '201':
+          description: Registered, with the client secret shown this once.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RegisteredAgentClient' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /installation/agent-clients/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The client's row id. Not its `client_id`, which for a CIMD client is a URL.
+        schema: { type: string, format: uuid }
+    patch:
+      tags: [Identity]
+      operationId: updateAgentClient
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Disable or enable a client (admin).
+      description: |
+        A disabled client is refused everywhere at once: sign-in, token exchange, renewal and every
+        live access token issued under it. Enabling it brings those connections back. Unlike
+        delete, disabling a CIMD client also stops Margince fetching its document.
+
+        Audit-only write (no event stream, EVT-NOEVT-3).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateAgentClientRequest' }
+      responses:
+        '200':
+          description: The client after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentClient' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Identity]
+      operationId: deleteAgentClient
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Delete a client and end every connection it holds (admin).
+      description: |
+        Every grant under the client is revoked, with its refresh tokens and access tokens. A
+        client an admin registered is gone for good. A self-registered client is gone too, but the
+        tool can register again. A CIMD client comes back the next time someone connects the tool,
+        because its ID is the vendor's URL: to keep a tool out, disable it.
+      responses:
+        '204': { description: 'Deleted, and every connection ended.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /installation/agent-clients/{id}/secret:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The client's row id.
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Identity]
+      operationId: rotateAgentClientSecret
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Replace a confidential client's secret (admin).
+      description: |
+        The old secret stops working at once. Connections stay: access tokens already issued keep
+        working until they expire, and the tool renews with the new secret once an admin pastes it.
+        Only a client an admin registered with a secret has one to rotate.
+
+        Audit-only write (no event stream, EVT-NOEVT-3). The audit row never holds the secret.
+      responses:
+        '200':
+          description: The new secret, shown once.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentClientSecret' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
   /installation/oauth-apps/{provider}:
     parameters:
       - name: provider
@@ -31000,6 +31154,18 @@ components:
             Make a second factor mandatory: a member without a confirmed authenticator is
             confined to the MFA enrolment routes until they set one up. Omit to leave the policy
             unchanged.
+        dynamic_client_registration:
+          type: boolean
+          description: |
+            Let AI tools register their own OAuth client (DCR). Off stops new sign-ins through a
+            self-registered client and answers `/oauth/register` with 404; connections already made
+            keep renewing. Needs `agent_client` update. The deployment file can hold it off.
+        metadata_document_clients:
+          type: boolean
+          description: |
+            Accept a client ID that is the URL of the tool's published metadata document (CIMD).
+            Off stops new sign-ins through such a client; connections already made keep renewing.
+            Needs `agent_client` update. The deployment file can hold it off.
         oidc_group_role_map:
           type: object
           maxProperties: 64
@@ -51273,10 +51439,26 @@ components:
       additionalProperties: false
     AnalyticsCustomField:
       type: object
-      required: [name, label, type, options]
+      required: [name, label, type, options, object, records, with_value]
       properties:
         name: { type: string, description: "The field as `group_by` and a filter name it." }
         label: { type: string, description: "The name an administrator gave the field." }
+        object:
+          type: string
+          enum: [deal, company]
+          description: |
+            The record the field belongs to. A company field is read through the deal's company,
+            and a deal whose company the caller may not open drops out of an answer that groups
+            or filters by it.
+        records:
+          type: integer
+          description: How many live deals the caller can read when the schema was served.
+        with_value:
+          type: integer
+          description: |
+            How many of those `records` hold a value in this field. A company field counts a deal
+            only when the caller may open its company. A grouping by a field with few values
+            leaves most deals in the empty group.
         type:
           type: string
           enum: [picklist, boolean]
@@ -51904,7 +52086,7 @@ components:
          knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage,
          user_admin, role_admin, team_admin, privacy_request, audit_log, job_health,
          extension_access, system_reset, ai_diagnostics, consent_config, communication_exception,
-         authentication_policy, oauth_application, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit, legal_review]
+         authentication_policy, oauth_application, agent_client, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit, legal_review]
 
     RbacAction:
       type: string
@@ -54993,7 +55175,7 @@ components:
           description: Additional business effects released by this approval. Other proposals remain separate decisions.
           items:
             type: string
-            x-extensible-enum: [classify_correspondence, start_project_delivery]
+            x-extensible-enum: [classify_correspondence, start_project_delivery, attach_task_recipients]
         evidence:
           type: array
           description: Current evidence resolved with the reader's source permissions. An empty array replaces historical evidence.
@@ -55799,6 +55981,102 @@ components:
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/Team' } }
         page: { $ref: '#/components/schemas/PageInfo' }
+
+    AgentClient:
+      type: object
+      description: One OAuth client an AI tool signs users in through. Never carries a secret.
+      required: [id, client_id, client_name, redirect_uris, registered_by, confidential, disabled, created_at, connected_users]
+      properties:
+        id: { type: string, format: uuid }
+        client_id:
+          type: string
+          description: What the tool sends as `client_id`. For a CIMD client it is the document's URL.
+        client_name: { type: string }
+        redirect_uris: { type: array, items: { type: string } }
+        registered_by:
+          type: string
+          enum: [admin, dcr, cimd]
+          description: How the client came to exist. `dcr` registered itself; `cimd` is a published metadata document.
+        confidential:
+          type: boolean
+          description: True when the client authenticates at the token endpoint with a secret.
+        disabled: { type: boolean }
+        created_at: { type: string, format: date-time }
+        connected_users:
+          type: integer
+          minimum: 0
+          description: How many users hold a live connection through this client.
+        last_used_at:
+          type: [string, 'null']
+          format: date-time
+          description: The last time any of its connections called Margince; null when none has.
+    AgentClientMethod:
+      type: object
+      required: [enabled, setting, deployment_allows]
+      properties:
+        enabled:
+          type: boolean
+          description: Whether tools may use this method now. True only when both the deployment and the admin allow it.
+        setting:
+          type: boolean
+          description: The admin's switch, written through `PATCH /installation/settings`.
+        deployment_allows:
+          type: boolean
+          description: False when the deployment file turns the method off; the admin's switch then cannot turn it on.
+    AgentClientRegistration:
+      type: object
+      required: [dynamic, metadata_document]
+      properties:
+        dynamic: { $ref: '#/components/schemas/AgentClientMethod' }
+        metadata_document: { $ref: '#/components/schemas/AgentClientMethod' }
+    AgentClientListResponse:
+      type: object
+      required: [data, page, registration]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/AgentClient' } }
+        page: { $ref: '#/components/schemas/PageInfo' }
+        registration: { $ref: '#/components/schemas/AgentClientRegistration' }
+    RegisterAgentClientRequest:
+      type: object
+      additionalProperties: false
+      required: [name, redirect_uris]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          description: Shown on the consent screen and in the client list.
+        redirect_uris:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items: { type: string, maxLength: 2048 }
+          description: Exact callback URLs. https, or http on localhost or 127.0.0.1, where the port is ignored.
+    RegisteredAgentClient:
+      type: object
+      required: [client, scopes, client_secret]
+      properties:
+        client: { $ref: '#/components/schemas/AgentClient' }
+        scopes:
+          type: string
+          description: Every scope the tool may ask for, space separated, as discovery lists them.
+        client_secret:
+          type: string
+          description: The secret the tool sends at the token endpoint. Shown once and never again.
+    UpdateAgentClientRequest:
+      type: object
+      additionalProperties: false
+      required: [disabled]
+      properties:
+        disabled: { type: boolean }
+    AgentClientSecret:
+      type: object
+      required: [client_secret, scopes]
+      properties:
+        client_secret: { type: string, description: 'The new secret, shown once.' }
+        scopes:
+          type: string
+          description: Every scope the tool may ask for, space separated, as discovery lists them.
 
     RefusedRecipient:
       type: object
@@ -59681,6 +59959,13 @@ components:
             Withheld — named in `lanes_omitted` — for a caller with no human
             behind it. Absent — not empty — on an installation whose feed does
             not read notices.
+        notices_more_available:
+          type: boolean
+          description: |
+            The unread notice scan reached its limit before equivalent decision
+            announcements were folded. When true, an empty notices array does
+            not prove that no other notices remain. Absent when notices could
+            not be read. Counts describe the returned items, not the unread total.
         introductions:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
@@ -59875,6 +60160,16 @@ components:
         on_behalf_of: { type: string, format: uuid }
         on_behalf_of_name: { type: string }
         occurred_at: { type: string, format: date-time }
+    WorklistPromiseRecipient:
+      type: object
+      description: A visible recipient's own claim on a shared deliverable. Other recipients may be outside the reader's scope.
+      required: [claim_id, contact_id, display_name, status]
+      properties:
+        claim_id: { type: string, format: uuid }
+        contact_id: { type: string, format: uuid }
+        display_name: { type: string }
+        status: { type: string, enum: [open, done, dismissed] }
+
     AttentionItem:
       type: object
       description: |
@@ -59884,6 +60179,10 @@ components:
         adds none.
       required: [id, source, actions]
       properties:
+        promise_recipients:
+          type: array
+          description: Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable.
+          items: { $ref: '#/components/schemas/WorklistPromiseRecipient' }
         source_record:
           allOf: [{ $ref: '#/components/schemas/AttentionSubject' }]
           description: The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access.
@@ -61431,6 +61730,10 @@ components:
         browser does not.
       required: [id, source, category, level, actions, because, consequence]
       properties:
+        promise_recipients:
+          type: array
+          description: Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable.
+          items: { $ref: '#/components/schemas/WorklistPromiseRecipient' }
         source_record:
           allOf: [{ $ref: '#/components/schemas/AttentionSubject' }]
           description: The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access.
@@ -62159,8 +62462,8 @@ components:
       properties:
         kind:
           type: string
-          enum: [pinned, buyer_wrote_last, non_buyer_request, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_booked, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded, you_wrote_last, no_reply_days, met_days_ago, nothing_sent_since, no_attendee_on_file, read_only]
-          description: 'Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it.'
+          enum: [pinned, buyer_wrote_last, non_buyer_request, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_booked, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, bcc_from_stranger, link_off_sender, outcome_unrecorded, you_wrote_last, no_reply_days, met_days_ago, nothing_sent_since, no_attendee_on_file, read_only]
+          description: 'Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender''s request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.'
         value: { $ref: '#/components/schemas/WorklistValue' }
 
     WorklistComparison:

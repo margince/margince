@@ -393,8 +393,7 @@ test("MOBILE-AC-2: record open holds the 300ms perceived budget on Fast-3G at 39
  * Whether this run publishes its numbers, read from the same variable the Go
  * bench suites read (`RecordingEnabled`, backend/internal/compose/integration/
  * perfrecord.go). One spelling across both languages, because the rule is one
- * rule: a record is a human's to publish, and a scheduled job is exactly the
- * machine that must not write one.
+ * rule: only a recording target writes a record, and a check target never does.
  *
  * `=== "1"` rather than "set and non-empty", so a target can CLEAR the variable
  * to mean it — `MARGINCE_BENCH_RECORD=` in a check target has to beat whatever

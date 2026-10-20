@@ -96,6 +96,11 @@ type InstallationPatch struct {
 	// group grants anything — so the two cannot be collapsed, exactly like
 	// EnabledOidcProviders above.
 	OidcGroupRoleMap *map[string]string
+	// DynamicClientRegistration and MetadataDocumentClients turn the two
+	// automatic ways an AI tool gets a client ID on or off. A nil pointer
+	// leaves the switch unchanged.
+	DynamicClientRegistration *bool
+	MetadataDocumentClients   *bool
 	// Country selects the jurisdiction pack. "" selects none. A change runs
 	// the store's country-change hook in the same transaction.
 	Country *string
@@ -364,6 +369,14 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
+	dynamic, err := encodeStoredField(DynamicClientRegistration, in.DynamicClientRegistration)
+	if err != nil {
+		return nil, err
+	}
+	metadataDocuments, err := encodeStoredField(MetadataDocumentClients, in.MetadataDocumentClients)
+	if err != nil {
+		return nil, err
+	}
 	operations, err := in.Operations.writes()
 	if err != nil {
 		return nil, err
@@ -372,7 +385,7 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
-	fields := []pendingWrite{name, zone, currency, language, fiscal, bannerHours, tokenTTL, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap, country}
+	fields := []pendingWrite{name, zone, currency, language, fiscal, bannerHours, tokenTTL, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap, country, dynamic, metadataDocuments}
 	return append(append(fields, operations...), allowances...), nil
 }
 

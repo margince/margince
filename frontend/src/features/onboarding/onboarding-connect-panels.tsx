@@ -18,10 +18,10 @@ import {
   STORAGE_KEYS,
   writeStored,
 } from "../../lib/storage";
-import { ConnectPostureStep } from "../../screens/connect-posture";
 import { CaptureNotice } from "../capture/capture-notice";
 import { useConnectors } from "../capture/connectors";
 import { imapErrorMessage } from "../capture/imap-connect-form";
+import { ConnectPostureStep } from "../settings/connect-posture";
 import { OnboardingBackread } from "./onboarding-backread";
 
 // The provider connect panels: real inbox capture, one panel per provider.

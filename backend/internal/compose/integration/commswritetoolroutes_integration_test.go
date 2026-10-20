@@ -36,8 +36,8 @@ func TestDraftEmailAnswersAsItsRouteDoes(t *testing.T) {
 	drafted := sameRecords[sharedDraft](t, "draft",
 		d.restStatus(t, "POST", "/v1/activities/"+mail+"/draft-email", AnyMap{"intent": "Quote by Friday"}, http.StatusOK),
 		d.tool(t, "draft_email", map[string]any{"activity_id": mail, "intent": "Quote by Friday"}))
-	if drafted.Subject != "Re: Quote?" || !strings.Contains(drafted.Body, "Quote by Friday") || !strings.Contains(drafted.Body, "Hi Pat") {
-		t.Errorf("the draft is %+v, want a reply to the thread carrying the intent", drafted)
+	if drafted.Subject != "Re: Quote?" || strings.Contains(drafted.Body, "Quote by Friday") || !strings.Contains(drafted.Body, "Hi Pat") {
+		t.Errorf("the draft is %+v, want a reply to the thread that leaves the steering out", drafted)
 	}
 }
 

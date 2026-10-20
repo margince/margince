@@ -30,8 +30,8 @@ import {
   explainPublicError,
   LinkInvalidError,
   RateLimitedError,
-} from "../../screens/preferences";
-import { labelOf } from "../../screens/preferences.logic";
+} from "../settings/preferences";
+import { labelOf } from "../settings/preferences.logic";
 
 type SubscriptionPage = components["schemas"]["SubscriptionConfirmationPage"];
 

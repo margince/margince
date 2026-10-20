@@ -12,20 +12,24 @@ import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
 import { usePresence } from "../design-system/presence";
 import { useCompanyContextShown } from "../features/companies/companycontextreach";
 import { SCHEDULED_SCREEN } from "../features/mail/scheduledsends";
+import { useVisibleSettingsPages } from "../features/settings/settingsnav";
+import { settingsHref } from "../features/settings/settingsrouting";
+import { settingsPageKeywords } from "../features/settings/settingssearch";
 import { holdsEveryWord, searchWords } from "../format/collate";
 import { useLocale, useT } from "../i18n";
 import { isImeCommit } from "../lib/imecommit";
 import { navigate, type Route } from "../lib/router";
-import { openAsk } from "../lib/urlstate";
-import { useVisibleSettingsPages } from "../screens/settingsnav";
-import { settingsHref } from "../screens/settingsrouting";
-import { settingsPageKeywords } from "../screens/settingssearch";
+import { openAsk, type UrlParams } from "../lib/urlstate";
 import {
   CUSTOM_SCREEN,
   customPaletteScreens,
   resolveCustomLabel,
 } from "./custom";
 import { CREATE_ID, NAV } from "./nav";
+import {
+  settingsCommandId,
+  useConfigurationCommand,
+} from "./paletteconfiguration";
 import { PaletteRow } from "./paletterow";
 import { SEARCH_PENDING_DELAY_MS, useSearchCommands } from "./palettesearch";
 
@@ -58,6 +62,8 @@ export type Command = {
   // instead of leaving it — asking does that, and a route it never follows
   // would be a claim about where the reader ends up that is simply untrue.
   route?: Route;
+  // How the page at `route` opens narrowed: the query half of the address.
+  dials?: UrlParams;
 };
 
 /** The commands whose label, subtitle and keywords hold every query word. */
@@ -137,7 +143,7 @@ export function useBuiltinCommands(): Command[] {
     // an ungated command would be a shortcut to a refusal.
     // Only the admin half has a predicate; the `you` half is every reader's.
     const settingsScreens: Command[] = visible.map((page) => ({
-      id: `screen:settings-${page.id}`,
+      id: settingsCommandId(page.id),
       label: t(`settings.tab.${page.id}`),
       keywords: [
         page.id,
@@ -227,10 +233,12 @@ export function CommandPalette({
     }
   }, [open]);
 
-  const filtered = useMemo(
+  const matched = useMemo(
     () => matchingCommands(commands, query),
     [commands, query],
   );
+  const setting = useConfigurationCommand(query, commands, matched);
+  const filtered = setting ? [...matched, setting] : matched;
 
   // RS-1: live record hits from /search, plus a "see all" row that lands
   // on the full results screen. Row order: builtin matches, then see-all,
@@ -264,7 +272,7 @@ export function CommandPalette({
       return;
     }
     if (command.route) {
-      navigate(command.route);
+      navigate(command.route, command.dials);
     }
   };
 

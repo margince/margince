@@ -491,6 +491,50 @@ func TestResetKeepsTheDeploymentCredentialsSealedBeforeIt(t *testing.T) {
 	}
 }
 
+// An AI tool's connection survives a reset as its passport does. A kept
+// passport holds a RESTRICT key onto its grant, so a swept grant stops the
+// whole sweep.
+func TestAResetKeepsAConnectedAITool(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `INSERT INTO oauth_client (client_id, client_name, redirect_uris, created_via)
+			VALUES ('reset-kept', 'Gemini', ARRAY['https://x.example/cb'], 'admin')`); err != nil {
+			return err
+		}
+		var grantID ids.UUID
+		if err := tx.QueryRow(ctx, `INSERT INTO oauth_grant (client_id, user_id, scopes)
+			VALUES ('reset-kept', $1, ARRAY['read']) RETURNING id`, e.AdminUser).Scan(&grantID); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `INSERT INTO oauth_refresh_token (grant_id, token_hash, expires_at)
+			VALUES ($1, 'reset-refresh', now() + interval '1 day')`, grantID); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `INSERT INTO passport (token_hash, granted_by, on_behalf_of, scopes, expires_at, oauth_grant_id)
+			VALUES ('reset-passport', $1, $1, ARRAY['read'], now() + interval '1 hour', $2)`, e.AdminUser, grantID); err != nil {
+			return err
+		}
+		tables, err := resetTargetTables(ctx, tx)
+		if err != nil {
+			return err
+		}
+		return sweepWorkspaceData(ctx, tx, tables)
+	})
+	if err != nil {
+		t.Fatalf("a reset with a connected AI tool: %v", err)
+	}
+	for table, query := range map[string]string{
+		"oauth_client":        `SELECT count(*) FROM oauth_client WHERE client_id = 'reset-kept'`,
+		"oauth_grant":         `SELECT count(*) FROM oauth_grant WHERE client_id = 'reset-kept'`,
+		"oauth_refresh_token": `SELECT count(*) FROM oauth_refresh_token WHERE token_hash = 'reset-refresh'`,
+	} {
+		if got := e.WsCount(t, query); got != 1 {
+			t.Errorf("%s rows after a reset = %d, want the connection kept", table, got)
+		}
+	}
+}
+
 // A provider key and a connector app's secret are sealed settings too, and
 // their rows survive a reset. Their blobs must survive with them: the purge
 // reads every sealed setting's ref, or it deletes credentials the installation

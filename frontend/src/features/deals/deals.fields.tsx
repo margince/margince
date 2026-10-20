@@ -4,10 +4,10 @@ import type { CreateField } from "../../components/create";
 import { currencyOptions } from "../../format/currencychoices";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
-import type { AcquisitionSource } from "../../screens/acquisitionsources.queries";
 import { searchCompanyTargets } from "../companies/companyform";
 import type { ProjectOwnerPicker } from "../projects/projectownerfield";
 import type { Project } from "../projects/projects.form";
+import type { AcquisitionSource } from "../settings/acquisitionsources.queries";
 import {
   dealCommercialFields,
   MOTION_OPTIONS,

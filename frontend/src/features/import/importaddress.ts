@@ -8,10 +8,7 @@ import {
   replaceParams,
   useUrlParams,
 } from "../../lib/urlstate";
-import {
-  IMPORT_RUN_SUBPAGE,
-  settingsHref,
-} from "../../screens/settingsrouting";
+import { IMPORT_RUN_SUBPAGE, settingsHref } from "../settings/settingsrouting";
 
 const RUN_PARAM = "run";
 

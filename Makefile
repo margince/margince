@@ -722,20 +722,21 @@ frontend-e2e:
 	cd frontend && pnpm install --frozen-lockfile && pnpm e2e $(E2E_ARGS)
 
 ## bench-mobile — MOBILE-AC-2: record open p95 under the 300ms PERCEIVED budget
-## on a throttled Fast-3G profile at 390px (MOBILE-PARAM-2). A measurement run
-## BY HAND, like the backend bench-* targets: `pnpm e2e` does not collect this
-## spec and this target collects nothing else. It is the ONLY place that budget
-## is asserted: throttled p95 is the harder of the two conditions, so a budget
-## that holds here holds unthrottled by construction.
+## on a throttled Fast-3G profile at 390px (MOBILE-PARAM-2). Run by hand and by
+## the weekly scheduled job, which proposes the record as a pull request:
+## `pnpm e2e` does not collect this spec and this target collects nothing else.
+## It is the ONLY place that budget is asserted: throttled p95 is the harder of
+## the two conditions, so a budget that holds here holds unthrottled by
+## construction.
+BENCH_RENDER ?= 1
 bench-mobile:
 	cd frontend && pnpm install --frozen-lockfile && pnpm build && \
 		MARGINCE_BENCH_MOBILE=1 MARGINCE_BENCH_RECORD=1 pnpm exec playwright test
-	@$(MAKE) --no-print-directory perfdoc
+	@if [ -n "$(BENCH_RENDER)" ]; then $(MAKE) --no-print-directory perfdoc; fi
 
-## bench-mobile-check — the same measurement, writing NOTHING: what the weekly
-## scheduled workflow runs. The budget gets a heartbeat without a machine
-## publishing its own numbers, which is the rule bench-perf-check states and the
-## reason that target exists beside bench-perf.
+## bench-mobile-check — the same measurement, writing NOTHING: a check run by
+## hand without touching the published page, as bench-perf-check is beside
+## bench-perf.
 ##
 ## MARGINCE_BENCH_RECORD is CLEARED rather than left unset, for the reason
 ## spelled out on bench-perf-check: "writes nothing" must be a property of the
@@ -744,9 +745,7 @@ bench-mobile:
 ## rewrite the published record from a runner's numbers.
 ##
 ## perfdoc is not run here either. It re-renders the published page from the
-## COMMITTED records, so a machine that has recorded nothing has nothing to
-## re-render — and running it would only restate the last human's measurement
-## under this run's name.
+## COMMITTED records, so a run that recorded nothing has nothing to re-render.
 bench-mobile-check:
 	cd frontend && pnpm install --frozen-lockfile && pnpm build && \
 		MARGINCE_BENCH_MOBILE=1 MARGINCE_BENCH_RECORD= pnpm exec playwright test
@@ -1096,7 +1095,9 @@ test-disk-headroom:
 ## trap is armed for every `up` rather than only for a stack that claims a port,
 ## it follows TERM with KILL, and it spares a stack that was already up. The
 ## failure it replaces was an api or a Vite outliving the run on the PRIMARY
-## stack, which the next `make dev` reported as a port already in use.
+## stack, which the next `make dev` reported as a port already in use. It also
+## proves a process that dies during boot ends the readiness wait at once and
+## is reported with its own last log lines.
 test-dev-cleanup:
 	@./scripts/test-dev-cleanup.sh
 

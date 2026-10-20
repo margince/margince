@@ -86,7 +86,7 @@ func TestTheSchemaAcceptsAnExplicitNullWhereTheLoaderDoes(t *testing.T) {
 	}
 	if _, err := config.Load(reg, config.Sources{
 		Args: []string{"--config", path}, Environ: []string{},
-		KnownKey: compose.AllSettingKeys, KnownEnv: compose.AllSettingEnvs, BootstrapRoots: deployconfig.Roots(),
+		Known: compose.AllSettingNames(), BootstrapRoots: deployconfig.Roots(),
 	}); err != nil {
 		t.Fatalf("the settings loader refuses an explicit null; this test's premise is gone: %v", err)
 	}

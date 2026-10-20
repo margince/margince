@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, Card, Checkbox, EmptyState } from "../../design-system/atoms";
@@ -98,12 +98,18 @@ type Scope = ConsentRequest["scopes"][number];
 function ConsentErrorCard({
   titleKey,
   bodyKey,
-}: Readonly<{ titleKey: MessageKey; bodyKey: MessageKey }>) {
+  children,
+}: Readonly<{
+  titleKey: MessageKey;
+  bodyKey: MessageKey;
+  children?: ReactNode;
+}>) {
   const t = useT();
   return (
     <Card>
       <Heading size="xlarge">{t(titleKey)}</Heading>
       <p>{t(bodyKey)}</p>
+      {children}
       <Button variant="ghost" onClick={() => navigate({ screen: "home" })}>
         {t("consent.backToApp")}
       </Button>
@@ -205,7 +211,7 @@ export function OAuthConsent() {
     // scope list, and that is exactly the render holding a nonce. The states
     // below without one — the re-entry detour and the terminal refusals —
     // return before this query is ever read.
-    enabled: Boolean(consent),
+    enabled: Boolean(consent) || errorCode === "method_off",
     queryFn: async () => {
       return unwrap(
         await api.GET("/oauth/consent-request", {
@@ -264,6 +270,24 @@ export function OAuthConsent() {
       </div>
     );
   }
+  // A way of connecting the admin turned off: only the admin can change that.
+  // The client is still live, so its name can be read; the screen renders
+  // without it while the read is out or when it fails.
+  if (errorCode === "method_off") {
+    return (
+      <div className="wrap narrow">
+        <ConsentErrorCard
+          titleKey="consent.methodOffTitle"
+          bodyKey="consent.methodOffBody"
+        >
+          <MethodOffFacts
+            clientName={query.data?.client_name}
+            redirectURI={params.get("redirect_uri") ?? ""}
+          />
+        </ConsentErrorCard>
+      </div>
+    );
+  }
   // stale_consent says outright that the request is spent — and ANY arrival
   // without a nonce is the same fact, whatever marker it carries: the POST
   // requires cookie and body to agree, so a selector rendered here could only
@@ -286,6 +310,24 @@ export function OAuthConsent() {
           <ConsentSelector data={data} params={params} consent={consent} />
         )}
       </QueryGate>
+    </div>
+  );
+}
+
+// Which tool was refused and where it would have returned, so the human can
+// tell their admin which one to let in.
+function MethodOffFacts({
+  clientName,
+  redirectURI,
+}: Readonly<{ clientName: string | undefined; redirectURI: string }>) {
+  const t = useT();
+  const host = URL.canParse(redirectURI) ? new URL(redirectURI).host : "";
+  return (
+    <div className="oauthconsent-facts t-caption">
+      {clientName ? (
+        <span>{t("consent.methodOffTool", { client: clientName })}</span>
+      ) : null}
+      {host ? <span>{t("consent.methodOffReturn", { host })}</span> : null}
     </div>
   );
 }

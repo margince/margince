@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"slices"
 	"strings"
@@ -76,9 +77,13 @@ func number(path, text string) (json.RawMessage, error) {
 // schemaJSON is the whole margince.yaml schema: the bootstrap roots, then every
 // setting under its section, then the routing $defs.
 func schemaJSON(settings []setting, routing json.RawMessage, docs fieldDocs) ([]byte, error) {
-	props, err := fieldsOf(reflect.TypeFor[deployconfig.Bootstrap](), "", reflection{docs: docs})
+	rules := deployconfig.ValueRules()
+	props, err := fieldsOf(reflect.TypeFor[deployconfig.Bootstrap](), "", reflection{docs: docs, rules: rules})
 	if err != nil {
 		return nil, err
+	}
+	if len(rules) > 0 {
+		return nil, fmt.Errorf("gen-config: the value rules of %v name no bootstrap field", slices.Sorted(maps.Keys(rules)))
 	}
 	props, err = withSettings(props, settings)
 	if err != nil {
@@ -274,11 +279,14 @@ func numeric(t reflect.Type) bool {
 	}
 }
 
-// reflection is how typeSchema reads a Go type: the names its decoder reads
-// fields by, and the doc comments that describe them.
+// reflection is how typeSchema reads a Go type. It holds the names its decoder
+// reads fields by, the doc comments that describe them, and the value rules
+// boot checks them with. fieldsOf deletes each rule it states, so one left over
+// names a field that is gone.
 type reflection struct {
 	jsonNames bool
 	docs      fieldDocs
+	rules     map[string]deployconfig.ValueRule
 }
 
 // typeSchema describes a Go value the way the loader decodes it. A struct that
@@ -367,12 +375,27 @@ func fieldsOf(t reflect.Type, path string, how reflection) (object, error) {
 		if err != nil {
 			return nil, err
 		}
+		if rule, ok := how.rules[here]; ok {
+			body = withRule(body, rule)
+			delete(how.rules, here)
+		}
 		if doc := how.docs.of(t, f); doc != "" {
 			body = append(object{}.with("description", lit(doc)), body...)
 		}
 		props = props.with(name, body.raw())
 	}
 	return props, nil
+}
+
+// withRule states a bootstrap field's value rule beside its type.
+func withRule(body object, rule deployconfig.ValueRule) object {
+	if rule.Pattern != "" {
+		body = body.with("pattern", lit(rule.Pattern))
+	}
+	if rule.Enum != nil {
+		body = body.with("enum", lit(rule.Enum))
+	}
+	return body
 }
 
 var errInline = errors.New("an inline field has no name of its own; describe it before generating")

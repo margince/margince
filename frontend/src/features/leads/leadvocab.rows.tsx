@@ -9,7 +9,7 @@ import { type PluralTranslator, type Translator, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { Locale } from "../../i18n/locale";
 import { useCanWrite } from "../../lib/capability";
-import { usePageReadOnly } from "../../screens/settingsnav";
+import { usePageReadOnly } from "../settings/settingsnav";
 import "./leadvocab.css";
 
 // Folded, the column heading is out of sight, so the count says its unit.
