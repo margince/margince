@@ -114,7 +114,7 @@ not sort. The answers it can give:
 - **A newsletter**, **something transactional**, or **spam**: hide the mail and
   mark the domain as not a company.
 
-Google's calendar notifications and meeting notes are never hidden this way.
+Calendar notifications and meeting notes from Google are never hidden this way.
 They are the record that a meeting took place, so Margince keeps them visible
 without asking the model. This holds only for mail Gmail confirmed came from
 Google; a message that only claims to come from Google is judged like any other.
