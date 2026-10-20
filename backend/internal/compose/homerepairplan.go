@@ -12,8 +12,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/lifecyclereview"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -21,7 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-const homeRepairVersion = "2:" + activities.CommitmentAdmissionVersion
+const homeRepairVersion = "2:" + activities.CommitmentAdmissionVersion + ":" + deals.SuggestionRepairVersion + ":" + lifecyclereview.RuleVersion
 
 type homeRepairScope struct {
 	Tasks []homeRepairTaskRef `json:"tasks"`
@@ -34,10 +36,6 @@ type homeRepairTaskRef struct {
 	Version  int64            `json:"version"`
 	Action   homeRepairAction `json:"action"`
 	Reason   string           `json:"reason"`
-}
-
-func previewHomeRepairTx(ctx context.Context, tx pgx.Tx, limit int, asOf time.Time) (datatask.ReviewRequest, error) {
-	return previewHomeRepairAfterTx(ctx, tx, ids.Nil, limit, asOf)
 }
 
 func previewHomeRepairAfterTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int, asOf time.Time) (datatask.ReviewRequest, error) {
@@ -141,7 +139,7 @@ func validateHomeRepairTx(ctx context.Context, tx pgx.Tx, review datatask.Review
 		if err != nil {
 			return "", err
 		}
-		decision, err := homeRepairTaskDecisionTx(ctx, tx, task, review.AsOf)
+		decision, err := homeRepairTaskDecisionTx(ctx, tx, task, review.AsOf, true)
 		if err != nil {
 			return "", err
 		}

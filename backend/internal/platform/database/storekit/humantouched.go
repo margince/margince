@@ -43,3 +43,12 @@ func HumanActedSince(ctx context.Context, tx pgx.Tx, entityType string, id ids.U
 	}
 	return touched, nil
 }
+
+// MachineCreatedUntouched requires retained creation proof; missing audit history
+// cannot authorize an automatic repair of work a person may have adopted.
+func MachineCreatedUntouched(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) (bool, error) {
+	var pristine bool
+	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM audit_log WHERE entity_type=@kind AND entity_id=@id AND action='create' AND actor_type IN ('system','agent'))
+ AND NOT EXISTS (SELECT 1 FROM audit_log WHERE entity_type=@kind AND entity_id=@id AND actor_type='human')`, pgx.NamedArgs{"kind": entityType, "id": id}).Scan(&pristine)
+	return pristine, err
+}

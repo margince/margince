@@ -27,7 +27,7 @@ func homeRepairProposalDecisionTx(ctx context.Context, tx pgx.Tx, proposal appro
 	var err error
 	switch proposal.Kind {
 	case CommitmentTaskKind:
-		item, err = homeRepairCommitmentProposalTx(ctx, tx, proposal, item, asOf)
+		item, err = homeRepairCommitmentProposalTx(ctx, tx, proposal, item, asOf, forDecision)
 	case lifecycleProposalKind:
 		item, err = homeRepairLifecycleProposalTx(ctx, tx, proposal, item, asOf, forDecision)
 	default:
@@ -36,7 +36,7 @@ func homeRepairProposalDecisionTx(ctx context.Context, tx pgx.Tx, proposal appro
 	if err != nil || item.Action != repairLeaveCurrent {
 		return item, err
 	}
-	duplicate, err := approvals.DuplicateRepairProposalTx(ctx, tx, proposal.ID, asOf)
+	duplicate, err := approvals.DuplicateRepairProposalTx(ctx, tx, proposal.ID, asOf, forDecision)
 	if err != nil {
 		return item, err
 	}
@@ -46,7 +46,7 @@ func homeRepairProposalDecisionTx(ctx context.Context, tx pgx.Tx, proposal appro
 	return item, nil
 }
 
-func homeRepairCommitmentProposalTx(ctx context.Context, tx pgx.Tx, proposal approvals.RepairProposal, item homeRepairTaskRef, asOf time.Time) (homeRepairTaskRef, error) {
+func homeRepairCommitmentProposalTx(ctx context.Context, tx pgx.Tx, proposal approvals.RepairProposal, item homeRepairTaskRef, asOf time.Time, forDecision bool) (homeRepairTaskRef, error) {
 	var staged CommitmentTaskProposal
 	if err := json.Unmarshal(proposal.Change, &staged); err != nil || staged.SourceActivityID.IsZero() || proposal.TargetID == nil || staged.SourceActivityID != *proposal.TargetID {
 		return item, nil
@@ -59,7 +59,7 @@ func homeRepairCommitmentProposalTx(ctx context.Context, tx pgx.Tx, proposal app
 		}
 		due = &at
 	}
-	action, reason, err := homeRepairCommitmentAdmissionTx(ctx, tx, Commitment{SourceActivityID: staged.SourceActivityID, Seat: staged.SeatID, AsOf: asOf}, due, repairWithdrawProposal)
+	action, reason, err := homeRepairCommitmentAdmissionTx(ctx, tx, Commitment{SourceActivityID: staged.SourceActivityID, Seat: staged.SeatID, AsOf: asOf}, due, repairWithdrawProposal, forDecision)
 	if err != nil {
 		return item, err
 	}
@@ -99,8 +99,8 @@ func applyHomeRepairProposal(ctx context.Context, tx pgx.Tx, expected homeRepair
 	return changed, err
 }
 
-func homeRepairCommitmentAdmissionTx(ctx context.Context, tx pgx.Tx, commitment Commitment, due *time.Time, retire homeRepairAction) (homeRepairAction, string, error) {
-	reason, err := commitmentAdmissionForDue(ctx, tx, commitment, due)
+func homeRepairCommitmentAdmissionTx(ctx context.Context, tx pgx.Tx, commitment Commitment, due *time.Time, retire homeRepairAction, forDecision bool) (homeRepairAction, string, error) {
+	reason, err := readCommitmentAdmission(ctx, tx, commitment, due, forDecision)
 	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 		return repairHumanReview, string(activities.CommitmentSourceUnavailable), nil
 	}

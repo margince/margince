@@ -42,7 +42,7 @@ func TestReviewedRequestRepairUsesTheRetirementHorizon(t *testing.T) {
 		}{
 			{requestInstant.Add(time.Hour), false}, {pastTheHorizon, true},
 		} {
-			past, err := RequestReminderPastHorizonTx(ctx, tx, task, check.at)
+			past, err := RequestReminderPastHorizonTx(ctx, tx, task, check.at, true)
 			if err != nil {
 				return err
 			}

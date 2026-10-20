@@ -31,10 +31,14 @@ func (d *CommitmentDispatcher) admission(ctx context.Context, tx pgx.Tx, c Commi
 }
 
 func commitmentAdmissionForDue(ctx context.Context, tx pgx.Tx, c Commitment, due *time.Time) (activities.CommitmentAdmissionReason, error) {
+	return readCommitmentAdmission(ctx, tx, c, due, true)
+}
+
+func readCommitmentAdmission(ctx context.Context, tx pgx.Tx, c Commitment, due *time.Time, forDecision bool) (activities.CommitmentAdmissionReason, error) {
 	sourceID := c.SourceActivityID
 	if c.AdmissionSourceID != nil {
 		if _, err := activities.CommitmentAdmissionEvidenceTx(ctx, tx, activities.CommitmentAdmissionInput{
-			SourceID: ids.From[ids.ActivityKind](sourceID), ReadMessages: c.ReadMessages,
+			SourceID: ids.From[ids.ActivityKind](sourceID), ReadMessages: c.ReadMessages, Preview: !forDecision,
 		}); err != nil {
 			if errors.Is(err, apperrors.ErrNotFound) {
 				return activities.CommitmentSourceUnavailable, nil
@@ -44,7 +48,7 @@ func commitmentAdmissionForDue(ctx context.Context, tx pgx.Tx, c Commitment, due
 		sourceID = *c.AdmissionSourceID
 	}
 	evidence, err := activities.CommitmentAdmissionEvidenceTx(ctx, tx, activities.CommitmentAdmissionInput{
-		SourceID: ids.From[ids.ActivityKind](sourceID), ReadMessages: c.ReadMessages,
+		SourceID: ids.From[ids.ActivityKind](sourceID), ReadMessages: c.ReadMessages, Preview: !forDecision,
 	})
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return activities.CommitmentSourceUnavailable, nil

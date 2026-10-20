@@ -26,10 +26,9 @@ const (
 )
 
 type homeRepairTaskDecision struct {
-	Task        activities.HomeRepairTask
-	Action      homeRepairAction
-	Reason      string
-	RuleVersion string
+	Task   activities.HomeRepairTask
+	Action homeRepairAction
+	Reason string
 }
 
 func homeRepairTaskDecisionsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int, asOf time.Time) ([]homeRepairTaskDecision, error) {
@@ -39,7 +38,7 @@ func homeRepairTaskDecisionsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, l
 	}
 	decisions := make([]homeRepairTaskDecision, 0, len(tasks))
 	for _, task := range tasks {
-		decision, err := homeRepairTaskDecisionTx(ctx, tx, task, asOf)
+		decision, err := homeRepairTaskDecisionTx(ctx, tx, task, asOf, false)
 		if err != nil {
 			return nil, err
 		}
@@ -48,14 +47,14 @@ func homeRepairTaskDecisionsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, l
 	return decisions, nil
 }
 
-func homeRepairTaskDecisionTx(ctx context.Context, tx pgx.Tx, task activities.HomeRepairTask, asOf time.Time) (homeRepairTaskDecision, error) {
-	decision := homeRepairTaskDecision{Task: task, Action: repairHumanReview, RuleVersion: activities.CommitmentAdmissionVersion}
+func homeRepairTaskDecisionTx(ctx context.Context, tx pgx.Tx, task activities.HomeRepairTask, asOf time.Time, forDecision bool) (homeRepairTaskDecision, error) {
+	decision := homeRepairTaskDecision{Task: task, Action: repairHumanReview}
 	if !task.Pristine {
 		decision.Reason = "human_adoption_not_excluded"
 		return decision, nil
 	}
 	if task.SourceSystem == activities.EmailRequestTaskSource && task.SourceID != nil {
-		past, err := activities.RequestReminderPastHorizonTx(ctx, tx, task, asOf)
+		past, err := activities.RequestReminderPastHorizonTx(ctx, tx, task, asOf, forDecision)
 		if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 			decision.Reason = string(activities.CommitmentSourceUnavailable)
 			return decision, nil
@@ -76,6 +75,6 @@ func homeRepairTaskDecisionTx(ctx context.Context, tx pgx.Tx, task activities.Ho
 	var err error
 	decision.Action, decision.Reason, err = homeRepairCommitmentAdmissionTx(ctx, tx, Commitment{
 		SourceActivityID: *task.SourceID, Seat: task.AssigneeID, AsOf: asOf,
-	}, task.DueAt, repairArchiveReminder)
+	}, task.DueAt, repairArchiveReminder, forDecision)
 	return decision, err
 }

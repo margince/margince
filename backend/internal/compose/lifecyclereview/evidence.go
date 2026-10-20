@@ -21,6 +21,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
+const RuleVersion = "1"
+
 type Finding struct {
 	ActiveDelivery bool      `json:"active_delivery,omitempty"`
 	ActiveContract bool      `json:"active_contract,omitempty"`

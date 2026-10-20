@@ -104,7 +104,7 @@ func applyHomeRepairTask(ctx context.Context, tx pgx.Tx, store *activities.Store
 	if err != nil {
 		return false, err
 	}
-	decision, err := homeRepairTaskDecisionTx(ctx, tx, task, activation.AsOf)
+	decision, err := homeRepairTaskDecisionTx(ctx, tx, task, activation.AsOf, true)
 	if err != nil {
 		return false, err
 	}

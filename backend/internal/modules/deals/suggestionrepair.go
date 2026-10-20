@@ -11,9 +11,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+const SuggestionRepairVersion = "1"
 
 const (
 	RepairReasonCurrentWork     = "current_work"
@@ -120,11 +123,8 @@ func suggestionRepairTx(ctx context.Context, tx pgx.Tx, current Suggestion, asOf
 		out.Reason = RepairReasonUnverified
 		return out, nil
 	}
-	var pristine bool
-	if err := tx.QueryRow(ctx, `SELECT
- EXISTS (SELECT 1 FROM audit_log WHERE entity_type=@kind AND entity_id=@id AND action='create' AND actor_type IN ('system','agent'))
- AND NOT EXISTS (SELECT 1 FROM audit_log WHERE entity_type=@kind AND entity_id=@id AND actor_type='human')`,
-		pgx.NamedArgs{"kind": suggestionEntity, "id": current.ID}).Scan(&pristine); err != nil {
+	pristine, err := storekit.MachineCreatedUntouched(ctx, tx, suggestionEntity, current.ID)
+	if err != nil {
 		return out, err
 	}
 	if !pristine {

@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -70,7 +71,7 @@ func RepairProposalTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, asOf ti
 		return RepairProposal{}, err
 	}
 	if lock {
-		if _, err := tx.Exec(ctx, `SELECT id FROM approval WHERE id=@id FOR UPDATE`, pgx.NamedArgs{"id": id}); err != nil {
+		if _, err := tx.Exec(ctx, `SELECT id FROM approval WHERE id=@id `+lockOrder+` FOR UPDATE`, pgx.NamedArgs{"id": id}); err != nil {
 			return RepairProposal{}, err
 		}
 	}
@@ -96,13 +97,12 @@ func repairProposal(ctx context.Context, tx pgx.Tx, candidate row) (RepairPropos
 	}
 	sum := sha256.Sum256(encoded)
 	item := RepairProposal{ID: candidate.ID, Kind: candidate.Kind, TargetType: candidate.TargetType, TargetID: candidate.TargetID, Change: candidate.ProposedChange, Snapshot: hex.EncodeToString(sum[:])}
-	err = tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM audit_log WHERE entity_type='approval' AND entity_id=@id AND action='create' AND actor_type IN ('system','agent'))
- AND NOT EXISTS (SELECT 1 FROM audit_log WHERE entity_type='approval' AND entity_id=@id AND actor_type='human')`, pgx.NamedArgs{"id": candidate.ID}).Scan(&item.Pristine)
+	item.Pristine, err = storekit.MachineCreatedUntouched(ctx, tx, "approval", candidate.ID.UUID)
 	return item, err
 }
 
-// DuplicateRepairProposalTx retains the oldest identical pending offer under the staging lock.
-func DuplicateRepairProposalTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, asOf time.Time) (bool, error) {
+// DuplicateRepairProposalTx keeps the oldest identical offer, taking staging locks only for decisions.
+func DuplicateRepairProposalTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, asOf time.Time, forDecision bool) (bool, error) {
 	if _, err := RepairProposalTx(ctx, tx, id, asOf, false); err != nil {
 		return false, err
 	}
@@ -110,7 +110,7 @@ func DuplicateRepairProposalTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID
 	if err != nil || candidate.TargetID == nil {
 		return false, err
 	}
-	offers, err := offersAtTx(ctx, tx, candidate.Kind, *candidate.TargetID, asOf)
+	offers, err := readOffersAtTx(ctx, tx, candidate.Kind, *candidate.TargetID, asOf, forDecision)
 	if err != nil {
 		return false, err
 	}

@@ -85,8 +85,8 @@ func pristineRepairTaskSQL(alias string) string {
 }
 
 // RequestReminderPastHorizonTx uses the same age boundary as routine retirement.
-// Source visibility is checked again after its lock before disclosing eligibility.
-func RequestReminderPastHorizonTx(ctx context.Context, tx pgx.Tx, task HomeRepairTask, asOf time.Time) (bool, error) {
+// Decision reads lock the source and recheck visibility before disclosing eligibility.
+func RequestReminderPastHorizonTx(ctx context.Context, tx pgx.Tx, task HomeRepairTask, asOf time.Time, forDecision bool) (bool, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return false, err
 	}
@@ -101,7 +101,11 @@ func RequestReminderPastHorizonTx(ctx context.Context, tx pgx.Tx, task HomeRepai
 		return false, err
 	}
 	var occurredAt time.Time
-	if err := tx.QueryRow(ctx, `SELECT occurred_at FROM activity WHERE id=@source FOR UPDATE`, pgx.NamedArgs{"source": *task.SourceID}).Scan(&occurredAt); err != nil {
+	query := `SELECT occurred_at FROM activity WHERE id=@source`
+	if forDecision {
+		query += " FOR UPDATE"
+	}
+	if err := tx.QueryRow(ctx, query, pgx.NamedArgs{"source": *task.SourceID}).Scan(&occurredAt); err != nil {
 		return false, fmt.Errorf("activities: reading reminder source age: %w", err)
 	}
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, *task.SourceID); err != nil {

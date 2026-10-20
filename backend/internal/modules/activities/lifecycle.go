@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -459,44 +458,4 @@ func archiveActivityInTx(
 		return crmcontracts.Activity{}, err
 	}
 	return readActivity(ctx, tx, id, storekit.IncludeArchived)
-}
-
-// activityUpdatedChangedFields projects the patch's touched/untouched decisions
-// onto activity.updated's BOUNDED changed_fields struct. body carries a presence
-// flag, never the content — bodies can be large and are never echoed onto the
-// wire.
-//
-// It reads the REQUEST while the audit image reads the row, and the two are not
-// interchangeable: an event announces which fields a caller asked to change, an
-// audit image records what the row then held.
-func activityUpdatedChangedFields(in UpdateActivityInput) crmcontracts.PublicEventActivityChangedFields {
-	var fields crmcontracts.PublicEventActivityChangedFields
-	if in.Subject != nil {
-		fields.Subject = in.Subject
-	}
-	if in.Body != nil {
-		bodyTouched := true
-		fields.Body = &bodyTouched
-	}
-	if in.OccurredAt != nil {
-		fields.OccurredAt = in.OccurredAt
-	}
-	if in.DueAt != nil {
-		fields.DueAt = in.DueAt
-	}
-	if in.RemindAt != nil {
-		fields.RemindAt = in.RemindAt
-	}
-	if in.AssigneeID != nil {
-		assignee := openapi_types.UUID(in.AssigneeID.UUID)
-		fields.AssigneeId = &assignee
-	}
-	if in.IsDone != nil {
-		fields.IsDone = in.IsDone
-	}
-	if in.MeetingStatus != nil {
-		status := crmcontracts.PublicEventActivityChangedFieldsMeetingStatus(*in.MeetingStatus)
-		fields.MeetingStatus = &status
-	}
-	return fields
 }
