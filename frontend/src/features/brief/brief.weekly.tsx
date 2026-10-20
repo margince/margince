@@ -50,18 +50,24 @@ export function WeeklySection({
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const [params] = useUrlParams();
-  const review = useWeeklyReview(params.get("week") ?? undefined);
+  const asked = params.get("week") ?? undefined;
+  const review = useWeeklyReview(asked);
   const data = review.data ?? null;
+  // The next report follows the newest week, whichever week is shown. Until the
+  // index loads, only the default view is known to show the newest.
+  const newest =
+    useWeeklyReviewIndex().data?.[0] ??
+    (asked === undefined ? data?.local_week_start : undefined);
   return (
     <article id="brief-weekly" className="brief-report">
       {data && <WeeklyNarrative review={data} />}
       <WeeklyBody review={data} state={readState(review)} plan={plan} />
-      {data && (
+      {data && newest && (
         <footer className="brief-report-closing">
           <p className="t-caption">
             {t("brief.report.next", {
               date: formatDayLong(
-                startOfDayInZone(data.local_week_start, recordZone, 14),
+                startOfDayInZone(newest, recordZone, 14),
                 locale,
                 recordZone,
               ),

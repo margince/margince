@@ -640,6 +640,25 @@ describe("BriefScreen — the week against the one before", () => {
     ]);
   });
 
+  // An older review may not carry a figure at all. Its column says so with a
+  // dash; a "0" there would claim a week that counted nothing.
+  it("dashes a figure the week before did not carry", async () => {
+    await mount({
+      ...withPrior,
+      counts: { ...counts, tasks_completed: 5 },
+    });
+
+    const table = screen.getByRole("table", {
+      name: en["brief.report.chapter.figures"],
+    });
+    expect(row(table, en["brief.weekly.tasksCompleted"])).toEqual([
+      en["brief.weekly.tasksCompleted"],
+      "5",
+      "—",
+      "—",
+    ]);
+  });
+
   // Two readings, two names — and neither of them a promise.
   //
   // commitments_* counts what a rep wrote into their weekly PLAN and settled;
@@ -967,6 +986,45 @@ describe("BriefScreen — the weekly report", () => {
 
     expect(
       await screen.findByText(
+        new RegExp(
+          `^${en["brief.report.next"].replace("{date}", "Monday,? 13 July")}$`,
+        ),
+      ),
+    ).toBeTruthy();
+  });
+
+  // An earlier week's report was followed long ago. The next report is the
+  // one after the newest week, whichever week is open.
+  it("dates the next report from the newest week, on an earlier one too", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": (_body, query) =>
+        jsonResponse(
+          query.get("week") === "2026-06-22"
+            ? { ...review, local_week_start: "2026-06-22" }
+            : review,
+        ),
+      "GET /weekly-reviews": () =>
+        jsonResponse({ weeks: ["2026-06-29", "2026-06-22"] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(
+      <RecordZoneProvider zone="Europe/Berlin">
+        <BriefScreen />
+      </RecordZoneProvider>,
+    );
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", { name: en["brief.report.earlier"] }),
+    );
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: /^22\s*[–-]\s*28 June$/,
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
         new RegExp(
           `^${en["brief.report.next"].replace("{date}", "Monday,? 13 July")}$`,
         ),

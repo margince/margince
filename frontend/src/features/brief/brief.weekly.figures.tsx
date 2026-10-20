@@ -353,7 +353,8 @@ export function FiguresTable({
     key: figure.key,
     label: figure.label,
     week: figureValue(figures[figure.figure], figure.shown(review.counts), t),
-    prior: prior ? figure.shown(prior) : "—",
+    prior:
+      prior && figure.count(prior) !== undefined ? figure.shown(prior) : "—",
     change:
       figures[figure.figure].kind === "measured"
         ? (change(figure, review, locale) ?? "—")
