@@ -8,6 +8,8 @@ package mailmap
 // own website.
 
 import (
+	"errors"
+	"io"
 	"net/url"
 	"regexp"
 	"strings"
@@ -19,9 +21,14 @@ import (
 // list is marked cut short, so capture still decides.
 const maxLinkHosts = 200
 
-// maxLinkHTMLBytes bounds the HTML the link walk parses. The body is a
-// stranger's text, and the walk must not cost more than the rendering beside it.
-const maxLinkHTMLBytes = 2 << 20
+// The link walk's bounds. The body is a stranger's text, and the HTML5 parser
+// spends time per tag in proportion to how deeply it nests. The parser itself
+// refuses more than 512 open elements; the walk counts tags first, and a body
+// past either bound is not parsed at all.
+const (
+	maxLinkHTMLBytes = 1 << 20
+	maxLinkTokens    = 20000
+)
 
 // maxRedirectDepth bounds how many redirect wrappers one link may nest.
 const maxRedirectDepth = 5
@@ -65,9 +72,8 @@ func linkHosts(plain, htmlBody string) (hosts []string, truncated bool) {
 // reads <svg><style>, script escapes and <noscript> differently, and a sender
 // can hide a link in that gap.
 func anchorHrefs(src string) ([]string, bool) {
-	complete := len(src) <= maxLinkHTMLBytes
-	if !complete {
-		src = src[:maxLinkHTMLBytes]
+	if len(src) > maxLinkHTMLBytes || !withinTagBound(src) {
+		return nil, false
 	}
 	doc, err := html.ParseWithOptions(strings.NewReader(src), html.ParseOptionEnableScripting(false))
 	if err != nil {
@@ -84,7 +90,19 @@ func anchorHrefs(src string) ([]string, bool) {
 			}
 		}
 	}
-	return hrefs, complete
+	return hrefs, true
+}
+
+// withinTagBound reports whether a linear token walk of src ends within
+// maxLinkTokens.
+func withinTagBound(src string) bool {
+	z := html.NewTokenizer(strings.NewReader(src))
+	for range maxLinkTokens {
+		if z.Next() == html.ErrorToken {
+			return errors.Is(z.Err(), io.EOF)
+		}
+	}
+	return false
 }
 
 // linkTarget is the host a web link really leads to, or "" for anything that

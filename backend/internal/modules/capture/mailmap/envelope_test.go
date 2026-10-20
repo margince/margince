@@ -195,10 +195,23 @@ func TestALongLinkListIsMarkedCutShort(t *testing.T) {
 // An HTML body longer than the walk's bound is marked cut short, so a link past
 // the bound is not silently lost.
 func TestAnHTMLWalkPastItsBoundIsCutShort(t *testing.T) {
-	body := strings.Repeat("<b>x</b>", maxLinkHTMLBytes/8) + `<a href="https://landing.example.org/">x</a>`
-
-	if _, cut := linkHosts("", body); !cut {
-		t.Error("a walk that stopped at its bound did not say so")
+	landing := `<a href="https://landing.example.org/">x</a>`
+	cases := map[string]struct {
+		body string
+		cut  bool
+	}{
+		"too many tags":             {body: strings.Repeat("<b>x</b>", maxLinkTokens) + landing, cut: true},
+		"too deep":                  {body: strings.Repeat("<div>", 520) + landing, cut: true},
+		"too long":                  {body: landing + strings.Repeat("x", maxLinkHTMLBytes), cut: true},
+		"deep but within the bound": {body: strings.Repeat("<div>", 400) + landing},
+		"many line breaks":          {body: strings.Repeat("x<br>", 2000) + landing},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			if _, cut := linkHosts("", tc.body); cut != tc.cut {
+				t.Errorf("cut is %v, want %v", cut, tc.cut)
+			}
+		})
 	}
 }
 
