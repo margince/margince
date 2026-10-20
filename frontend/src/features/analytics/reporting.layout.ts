@@ -168,7 +168,8 @@ export const layoutEdits = {
       const next = card + step;
       if (next < 0 || next >= section.cards.length) return section;
       const cards = [...section.cards];
-      [cards[card], cards[next]] = [cards[next], cards[card]];
+      const [moving] = cards.splice(card, 1);
+      if (moving) cards.splice(next, 0, moving);
       return { ...section, cards };
     });
   },
