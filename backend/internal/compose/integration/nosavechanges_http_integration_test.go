@@ -236,6 +236,12 @@ func TestADealRoomExpirySetToItsStoredValueChangesNothing(t *testing.T) {
 	}
 	assertSaveChangesNothing(t, e, "PUT", "/v1/deal-rooms/"+roomID+"/expiry",
 		AnyMap{"expires_at": "2027-01-15T12:00:00+02:00"}, roomID, set.Version)
+
+	stale := map[string]string{"If-Match": strconv.FormatInt(set.Version-1, 10)}
+	if status := e.Call(t, "PUT", "/v1/deal-rooms/"+roomID+"/expiry", body, stale, nil); status != http.StatusConflict &&
+		status != http.StatusPreconditionFailed {
+		t.Errorf("a stale If-Match on a save of the stored expiry -> %d, want a version conflict", status)
+	}
 }
 
 // noOpProbedRoutes names the test that sends each listed route a save of the
@@ -284,6 +290,18 @@ func TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing(t *testing.T) {
 			t.Fatalf("creating the template -> %d", status)
 		}
 		assertSaveChangesNothing(t, e.AppEnv, "PUT", "/v1/offer-templates/"+tpl.ID, body, tpl.ID, tpl.Version)
+		renamed := AnyMap{"name": "Standard v2", "locale": "en-US", "is_default": false, "layout": AnyMap{"footer": "Thanks"}}
+		var moved versionedWire
+		if status := e.Call(t, "PUT", "/v1/offer-templates/"+tpl.ID, renamed,
+			map[string]string{"If-Match": strconv.FormatInt(tpl.Version, 10)}, &moved); status != http.StatusOK ||
+			moved.Version != tpl.Version+1 {
+			t.Errorf("renaming the template -> %d at version %d, want 200 at version %d", status, moved.Version, tpl.Version+1)
+		}
+		if status := e.Call(t, "PUT", "/v1/offer-templates/"+tpl.ID, renamed,
+			map[string]string{"If-Match": strconv.FormatInt(tpl.Version, 10)}, nil); status != http.StatusConflict &&
+			status != http.StatusPreconditionFailed {
+			t.Errorf("a stale If-Match on a save of the stored template -> %d, want a version conflict", status)
+		}
 	})
 	t.Run("product", func(t *testing.T) {
 		var product versionedWire
@@ -384,5 +402,24 @@ func TestTheFullFormPayloadOfAnUntouchedRecordChangesNothing(t *testing.T) {
 	}
 	t.Run("company", func(t *testing.T) {
 		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/companies/"+e.companyID, companyForm, e.companyID, company.Version)
+	})
+	t.Run("a company whose sets changed is a change", func(t *testing.T) {
+		changed := AnyMap{
+			"display_name": "Edge Company",
+			"domains":      []AnyMap{{"domain": "edge.example", "is_primary": true}, {"domain": "edge.org", "is_primary": false}},
+		}
+		var moved versionedWire
+		if status := e.Call(t, "PATCH", "/v1/companies/"+e.companyID, changed,
+			map[string]string{"If-Match": strconv.FormatInt(company.Version, 10)}, &moved); status != http.StatusOK ||
+			moved.Version != company.Version+1 {
+			t.Errorf("adding a domain -> %d at version %d, want 200 at version %d", status, moved.Version, company.Version+1)
+		}
+		types := AnyMap{"relationship_types": []string{"customer"}}
+		var retyped versionedWire
+		if status := e.Call(t, "PATCH", "/v1/companies/"+e.companyID, types,
+			map[string]string{"If-Match": strconv.FormatInt(moved.Version, 10)}, &retyped); status != http.StatusOK ||
+			retyped.Version != moved.Version+1 {
+			t.Errorf("dropping a relationship type -> %d at version %d, want 200 at version %d", status, retyped.Version, moved.Version+1)
+		}
 	})
 }
