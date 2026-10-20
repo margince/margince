@@ -86,3 +86,17 @@ export const TaskSourceUnavailableDark: Story = {
   ...TaskSourceUnavailable,
   globals: { theme: "dark" },
 };
+
+export const FlaggedValueWithUnpricedDeals: Story = {
+  args: {
+    day: readingsDay({
+      revenue_at_risk_minor: 12500000,
+      revenue_currency: "USD",
+      unpriced_deals: 2,
+    }),
+  },
+};
+export const FlaggedValueWithUnpricedDealsDark: Story = {
+  ...FlaggedValueWithUnpricedDeals,
+  globals: { theme: "dark" },
+};

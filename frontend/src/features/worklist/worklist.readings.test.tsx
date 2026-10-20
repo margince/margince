@@ -102,7 +102,7 @@ describe("the worklist readings strip", () => {
     ).toBeNull();
     expect(screen.getByText("€0")).toBeTruthy();
     expect(
-      screen.getByText(en["worklist.readings.revenue.detail"]),
+      screen.getByText(`EUR · ${en["brief.readings.riskBasis"]}`),
     ).toBeTruthy();
   });
 
@@ -121,7 +121,7 @@ describe("the worklist readings strip", () => {
     await user.click(
       screen.getByRole("button", {
         name: "Open",
-        description: "Revenue at risk",
+        description: "Flagged pipeline value",
       }),
     );
     expect(priced).toHaveBeenCalledWith("deals_at_risk");
@@ -131,7 +131,7 @@ describe("the worklist readings strip", () => {
     await user.click(
       screen.getByRole("button", {
         name: "Open",
-        description: "Revenue at risk",
+        description: "Flagged pipeline value",
       }),
     );
     expect(unpriced).toHaveBeenCalledWith("deals_at_risk");

@@ -123,3 +123,14 @@ export const OvernightRefused: Story = {
       jsonResponse({ title: "Server error", code: "internal" }, 500),
   }),
 };
+
+export const OvernightNotImplemented: Story = {
+  render: panel(
+    { ...DIGEST_ROUTES, "GET /digest": () => jsonResponse(NOT_FOUND, 501) },
+    false,
+  ),
+};
+export const OvernightNotImplementedDark: Story = {
+  ...OvernightNotImplemented,
+  globals: { theme: "dark" },
+};

@@ -938,9 +938,15 @@ export const de = {
   "worklist.deal.omitted": "nicht in der Prognose",
   "worklist.deal.provisional":
     "prognostizierter Abschluss {date} (unbestätigt)",
-  "brief.readings.riskBasis":
-    "Erwarteter Wert · Deals ohne Preis nicht enthalten",
-  "brief.readings.risk": "Gefährdeter Umsatz",
+  "brief.readings.riskBasis": "Nennwert · Deals ohne Preis nicht enthalten",
+  "brief.digestNightly": "Stand des nächtlichen Laufs",
+  "magic.action.forecast_changed": "Prognose angepasst",
+  "magic.why.forecast_review":
+    "Der Deal muss nach einer Zeit ohne Fortschritt geprüft werden.",
+  "magic.why.forecast_date":
+    "Das Prognosedatum wurde anhand des Pipeline-Fortschritts geschätzt.",
+  "magic.undescribed": "Aktivität nicht beschrieben",
+  "brief.readings.risk": "Wert markierter Pipeline-Deals",
   "brief.glance.introTeamWeekly": "Prüfe die erfasste Woche deines Teams.",
   "brief.feed.teamTitle": "Prioritäten im Team",
   "theme.toDark": "Dunkles Design",
@@ -14300,7 +14306,7 @@ export const de = {
   "worklist.exceptions.ownerWithheld": "Ausgeblendet",
   "worklist.exceptions.truncated": "Liste gekürzt. Es gibt weitere Einträge.",
   "worklist.exceptions.kind.response_breached": "Erste Antwort überfällig",
-  "worklist.exceptions.kind.revenue_at_risk": "Gefährdeter Umsatz",
+  "worklist.exceptions.kind.revenue_at_risk": "Wert markierter Pipeline-Deals",
   "worklist.exceptions.kind.unassigned": "Nicht zugewiesen",
   "worklist.exceptions.kind.repeated_failure": "Wiederholter Fehler",
   "worklist.board.loading": "Teamarbeit wird geladen…",
@@ -14335,7 +14341,7 @@ export const de = {
     "Die Zählung ist unvollständig. Jede Zahl ist ein Mindestwert.",
   "worklist.rowMenu": "Weitere Aktionen für {title}",
   "worklist.readings.label": "Zahlen von heute",
-  "worklist.readings.revenue": "Gefährdeter Umsatz",
+  "worklist.readings.revenue": "Wert markierter Pipeline-Deals",
   "worklist.readings.revenue.detail": "Heute stagnierende Deals",
   "worklist.readings.revenue.unpriced": "Stagnierende Deals · keiner mit Preis",
   "worklist.readings.revenue.noFigure": "Ohne Preis",
@@ -14434,6 +14440,8 @@ export const de = {
   "worklist.because.champion_unknown": "Champion unbekannt",
   "worklist.because.promised": "von dir zugesagt",
   "worklist.because.approved_and_failed": "freigegeben, aber nicht ausgeführt",
+  "worklist.because.account_termination":
+    "Kontobeendigung braucht deine Entscheidung",
   "worklist.because.blocks_customer_work": "ein Kontakt wartet darauf",
   "worklist.because.routine": "routinemäßiges Aufräumen",
   "worklist.because.repeated_failure": "wiederholter Fehler",

@@ -170,6 +170,15 @@ describe("the receipt draws every lane it promises", () => {
     ).toBeTruthy();
   });
 
+  it("does not claim an empty receipt is complete when unsupported counts are withheld", async () => {
+    stub(receipt({ not_shown_count_withheld: true }));
+    renderMagic();
+    expect(
+      await screen.findByText("Done for you: may be incomplete"),
+    ).toBeTruthy();
+    expect(screen.queryByText("Nothing done for you")).toBeNull();
+  });
+
   it("says how much it left out, so five lines never imply five things happened", async () => {
     stub(
       receipt({
@@ -186,7 +195,7 @@ describe("the receipt draws every lane it promises", () => {
     ).toBeTruthy();
   });
 
-  it("drops a sentence this build has no key for rather than printing the key", async () => {
+  it("describes unsupported receipt sentences without printing the key", async () => {
     stub(
       receipt({
         done: [
@@ -203,6 +212,7 @@ describe("the receipt draws every lane it promises", () => {
       }),
     );
     renderMagic();
+    expect(await screen.findByText("Activity not described")).toBeTruthy();
     // The row still says what it was about, so the reader loses a sentence
     // rather than the line.
     expect(await screen.findByText("Fleet retrofit")).toBeTruthy();

@@ -149,3 +149,41 @@ func TestFocusDoesNotSubtractAnEntireBatchFromUrgentObligations(t *testing.T) {
 		t.Fatalf("batch count erased an urgent obligation: %+v", focus)
 	}
 }
+
+func TestFocusPrioritizesOnlyAVerifiedAccountTerminationDecision(t *testing.T) {
+	owner := crmcontracts.Approval{Id: [16]byte{1}}.Id
+	for _, state := range []string{"ready", "stale", "incomplete", "unavailable"} {
+		t.Run(state, func(t *testing.T) {
+			approval := crmcontracts.Approval{
+				Kind: "lifecycle_change", Summary: new("Review account termination"), RequestedDeciderId: &owner,
+				Preview: &crmcontracts.ApprovalPreview{Version: 1, State: state},
+			}
+			termination := approvalItem(approval, nil)
+			row := classifyDecision(termination, rankInstant)
+			if got := focusEligible(row, rankInstant); got != (state == "ready") {
+				t.Fatalf("%s preview focus eligible = %v", state, got)
+			}
+			if state == "ready" {
+				if row.item.Level != levelWaiting || row.item.Because[0].Kind != "account_termination" {
+					t.Fatalf("termination did not explain its priority: %+v", row.item)
+				}
+				routine := classifyDecision(item("reply", "approval", withKind("send_email")), rankInstant)
+				focus := focusOf([]ranked{routine, row}, []ranked{routine, row}, rankInstant, ids.UUID{})
+				if len(focus.Items) != 2 || focus.Items[0].Kind == nil || *focus.Items[0].Kind != "lifecycle_change" {
+					t.Fatalf("routine reply outranked verified termination: %+v", focus.Items)
+				}
+			}
+		})
+	}
+}
+
+func TestFocusRequiresTerminationResponsibilityAndAnAvailableDecision(t *testing.T) {
+	for _, approval := range []crmcontracts.Approval{
+		{Kind: "lifecycle_change", Preview: &crmcontracts.ApprovalPreview{Version: 1, State: "ready"}},
+		{Kind: "lifecycle_change", RequestedDeciderId: new(crmcontracts.Approval{}.Id)},
+	} {
+		if focusEligible(classifyDecision(approvalItem(approval, nil), rankInstant), rankInstant) {
+			t.Fatal("a termination without responsibility or verified evidence entered focus")
+		}
+	}
+}

@@ -18,6 +18,7 @@ import { fillsPage, type MagicLine } from "./magic.queries";
 // is a sentence that never lands in the done lane, and several sentences share
 // one reading where a reader would not tell the work apart.
 const READING_OF: Readonly<Record<MagicSentenceKey, MessageKey | null>> = {
+  "magic.action.forecast_changed": "magic.glance.recordsUpdated",
   "magic.action.advance_stage": "magic.glance.dealsMoved",
   "magic.action.promote": "magic.glance.leadsPromoted",
   "magic.action.update": "magic.glance.recordsUpdated",

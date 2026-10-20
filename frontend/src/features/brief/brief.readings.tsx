@@ -406,21 +406,25 @@ function RiskReading({ day }: Readonly<{ day: Worklist }>) {
                 : "brief.readings.unpriced",
             )
       }
-      detail={
+      detail={[
+        amount != null ? currency : undefined,
         nothingFlagged
           ? t("brief.readings.noDealWorkWhy")
           : incomplete
             ? t("brief.readings.riskPartial")
-            : day.readings.unpriced_deals
-              ? plural(
-                  "brief.readings.unpricedCount",
-                  day.readings.unpriced_deals,
-                  {
-                    count: formatNumber(day.readings.unpriced_deals, locale),
-                  },
-                )
-              : t("brief.readings.riskBasis")
-      }
+            : t("brief.readings.riskBasis"),
+        day.readings.unpriced_deals
+          ? plural(
+              "brief.readings.unpricedCount",
+              day.readings.unpriced_deals,
+              {
+                count: formatNumber(day.readings.unpriced_deals, locale),
+              },
+            )
+          : undefined,
+      ]
+        .filter(Boolean)
+        .join(" · ")}
       onOpen={() => openLane("deals_at_risk", day.scope)}
     />
   );

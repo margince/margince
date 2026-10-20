@@ -104,13 +104,12 @@ function MagicLineRow({
         aria-hidden="true"
       />
       <p className="magic-line-text">
-        {/* A sentence this build has no key for is DROPPED rather than
-            printed: `magic.action.something` on a receipt is worse than a row
-            that says only what it was about and when. */}
-        {sentence && t(sentence, readableValues(line.summary.values, t))}{" "}
+        {sentence
+          ? t(sentence, readableValues(line.summary.values, t))
+          : t("magic.undescribed")}{" "}
         <LineSubject line={line} since={since} />
         {detail.length > 0 && (
-          <span className="sr-only">
+          <span className="t-caption">
             {detail.map((part) => (
               <span key={part}>{part} </span>
             ))}

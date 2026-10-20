@@ -93,11 +93,10 @@ describe("BriefScreen — the context rail", () => {
     },
   };
 
-  it("renders the overnight counts and jumps into the duplicates queue", async () => {
+  it("labels capture counts as nightly without repeating decision counts", async () => {
     stubApi({
       "GET /digest": () => jsonResponse({ ...digestBase, connectors: [] }),
     });
-    const user = userEvent.setup();
     render(<BriefScreen />);
 
     // Waited on CONTENT, not on the panel's name: the name is also what the
@@ -111,8 +110,31 @@ describe("BriefScreen — the context rail", () => {
         "Commitments: 4 · Meetings: 2 · Messages without a sales action: 30",
       ),
     ).toBeTruthy();
-    await user.click(screen.getByText("Duplicates to review"));
-    expect(window.location.hash).toBe("#/worklist");
+    expect(screen.queryByText("Duplicates to review")).toBeNull();
+    expect(screen.getByText(en["brief.digestNightly"])).toBeTruthy();
+  });
+
+  it("uses current decisions when the nightly digest has an older count", async () => {
+    const day = readingsDay({ review: 1 }, []);
+    day.counts = [
+      { category: "decisions", considered: 1, shown: 1, more_available: false },
+    ];
+    stubApi({
+      "GET /worklist": () => jsonResponse(day),
+      "GET /digest": () =>
+        jsonResponse({
+          ...digestBase,
+          review: { ...digestBase.review, approvals_pending: 3 },
+          connectors: [],
+        }),
+    });
+    render(<BriefScreen />);
+    await screen.findByText(en["brief.digestNightly"]);
+    const label = screen.getByText(en["brief.readings.decisions"]);
+    const card = label.closest("section");
+    if (!card) throw new Error("decision reading has no card");
+    expect(within(card).getByText("1")).toBeTruthy();
+    expect(within(card).queryByText("3")).toBeNull();
   });
 
   it("draws the night inside Home's receipt rather than beside it", async () => {

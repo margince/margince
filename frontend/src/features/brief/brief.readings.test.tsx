@@ -161,7 +161,7 @@ describe("the brief readings strip", () => {
   it("uses the priced risk from the same day as the other readings", () => {
     draw({ revenue_at_risk_minor: 42000000, revenue_currency: "EUR" });
     expect(screen.getByText(/420k/i)).toBeTruthy();
-    expect(screen.getByText(en["brief.readings.riskBasis"])).toBeTruthy();
+    expect(screen.getByText(`EUR · ${en["brief.readings.riskBasis"]}`)).toBeTruthy();
   });
 
   it("still draws five slots when nothing is waiting", () => {
@@ -994,5 +994,5 @@ it("marks known deal value and urgent work as incomplete when a source fails", (
   drawDay(day);
   expect(strippedFigures()).toContain("3+");
   expect(screen.getByText(/12k.*\+/i)).toBeTruthy();
-  expect(screen.getByText(en["brief.readings.riskPartial"])).toBeTruthy();
+  expect(screen.getByText(en["brief.readings.riskPartial"], { exact: false })).toBeTruthy();
 });

@@ -916,8 +916,15 @@ export const vi = {
   "worklist.lead.lastTouch": "hoạt động gần nhất {date}",
   "worklist.deal.omitted": "không tính vào dự báo",
   "worklist.deal.provisional": "dự kiến chốt {date} (chưa xác nhận)",
-  "brief.readings.riskBasis": "Giá trị kỳ vọng · không tính deal chưa định giá",
-  "brief.readings.risk": "Doanh thu có rủi ro",
+  "brief.readings.riskBasis":
+    "Giá trị danh nghĩa · không tính deal chưa định giá",
+  "brief.digestNightly": "Tại thời điểm chạy ban đêm",
+  "magic.action.forecast_changed": "Đã điều chỉnh dự báo",
+  "magic.why.forecast_review":
+    "Deal cần được xem xét sau một thời gian không có tiến triển.",
+  "magic.why.forecast_date": "Ngày dự báo được ước tính từ tiến độ pipeline.",
+  "magic.undescribed": "Hoạt động chưa được mô tả",
+  "brief.readings.risk": "Giá trị pipeline được đánh dấu",
   "brief.glance.introTeamWeekly": "Xem lại tuần đã ghi nhận của nhóm.",
   "brief.feed.teamTitle": "Ưu tiên của nhóm",
   "theme.toDark": "Giao diện tối",
@@ -13956,7 +13963,7 @@ export const vi = {
   "worklist.exceptions.truncated":
     "Danh sách đã bị cắt bớt. Vẫn còn việc khác.",
   "worklist.exceptions.kind.response_breached": "Quá hạn phản hồi lần đầu",
-  "worklist.exceptions.kind.revenue_at_risk": "Doanh thu có rủi ro",
+  "worklist.exceptions.kind.revenue_at_risk": "Giá trị pipeline được đánh dấu",
   "worklist.exceptions.kind.unassigned": "Chưa giao",
   "worklist.exceptions.kind.repeated_failure": "Lỗi lặp lại",
   "worklist.board.loading": "Đang tải việc của nhóm…",
@@ -13992,7 +13999,7 @@ export const vi = {
     "Số đếm chưa đầy đủ. Mỗi con số là mức tối thiểu.",
   "worklist.rowMenu": "Thao tác khác cho {title}",
   "worklist.readings.label": "Số liệu hôm nay",
-  "worklist.readings.revenue": "Doanh thu có rủi ro",
+  "worklist.readings.revenue": "Giá trị pipeline được đánh dấu",
   "worklist.readings.revenue.detail": "Deal đang chững lại hôm nay",
   "worklist.readings.revenue.unpriced":
     "Deal đang chững lại · chưa deal nào có giá trị",
@@ -14091,6 +14098,8 @@ export const vi = {
   "worklist.because.champion_unknown": "chưa rõ người ủng hộ",
   "worklist.because.promised": "bạn đã cam kết",
   "worklist.because.approved_and_failed": "đã duyệt nhưng không chạy",
+  "worklist.because.account_termination":
+    "việc chấm dứt quan hệ khách hàng cần quyết định của bạn",
   "worklist.because.blocks_customer_work": "khách hàng đang chờ việc này",
   "worklist.because.routine": "dọn dẹp thường lệ",
   "worklist.because.repeated_failure": "lỗi lặp lại",

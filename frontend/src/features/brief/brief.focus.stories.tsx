@@ -140,3 +140,23 @@ export const AccountInHand: Story = {
 export const NothingBehindIt: Story = {
   render: panel([waitingEmailRow(), taskRow("one", "Call the buyer")], 1),
 };
+
+const termination: WorklistItem = {
+  id: "00000000-0000-7000-8000-0000000d0001",
+  source: "approval",
+  kind: "lifecycle_change",
+  category: "decisions",
+  level: 1,
+  band: "now",
+  title: "Review Atlas account termination",
+  because: [{ kind: "account_termination" }],
+  consequence: "work_blocked",
+  actions: ["decide"],
+};
+export const AccountTermination: Story = {
+  render: panel([termination, waitingEmailRow()]),
+};
+export const AccountTerminationDark: Story = {
+  ...AccountTermination,
+  globals: { theme: "dark" },
+};

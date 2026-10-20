@@ -20304,6 +20304,7 @@ func (e WorklistReachSource) Valid() bool {
 
 // Defines values for WorklistReasonKind.
 const (
+	WorklistReasonKindAccountTermination WorklistReasonKind = "account_termination"
 	WorklistReasonKindAddressedElsewhere WorklistReasonKind = "addressed_elsewhere"
 	WorklistReasonKindApprovedAndFailed  WorklistReasonKind = "approved_and_failed"
 	WorklistReasonKindAsksNothing        WorklistReasonKind = "asks_nothing"
@@ -20351,6 +20352,8 @@ const (
 // Valid indicates whether the value is a known member of the WorklistReasonKind enum.
 func (e WorklistReasonKind) Valid() bool {
 	switch e {
+	case WorklistReasonKindAccountTermination:
+		return true
 	case WorklistReasonKindAddressedElsewhere:
 		return true
 	case WorklistReasonKindApprovedAndFailed:
@@ -27280,6 +27283,9 @@ type AttentionRelationshipFactsStrength string
 // a reader doing a substring match to get them back — which made the supporting line
 // undrawable on this source and would have shown a rep an internal token.
 type AttentionStagedFacts struct {
+	// AccountTermination A current account termination intervention verified by the lifecycle approval preview for its requested decision owner.
+	AccountTermination *bool `json:"account_termination,omitempty"`
+
 	// KnownCompany The address's domain already names a company in this workspace.
 	KnownCompany *bool `json:"known_company,omitempty"`
 
@@ -41274,6 +41280,9 @@ type MagicReceipt struct {
 	// cannot place, and is reported only to a seat holding `ai_diagnostics` read. Its
 	// absence for any other seat is not a zero.
 	NotShown []MagicNotShown `json:"not_shown"`
+
+	// NotShownCountWithheld True when the reader cannot inspect unsupported record counts. No count is disclosed; absence of described actions does not establish a complete receipt.
+	NotShownCountWithheld *bool `json:"not_shown_count_withheld,omitempty"`
 
 	// Since The start of the window reported, resolved by the server. A client shows it, because "nothing happened" over an hour and over a day are different claims.
 	Since time.Time `json:"since"`

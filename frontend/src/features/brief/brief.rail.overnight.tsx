@@ -221,6 +221,9 @@ function DigestBody({ digest }: Readonly<{ digest: MorningDigest }>) {
   return (
     <>
       <PanelGroupHead title={t("brief.panel.overnight")} level="h3" />
+      <PanelBody>
+        <p className="t-caption">{t("brief.digestNightly")}</p>
+      </PanelBody>
       {projects && <DigestProjectsBlock projects={projects} />}
       {unhealthy.length > 0 && (
         <PanelBody>
@@ -281,11 +284,6 @@ function DigestBody({ digest }: Readonly<{ digest: MorningDigest }>) {
               new Map([["sort", "-created_at"]]),
             )
           }
-        />
-        <DigestCount
-          label={t("brief.digestDedupe")}
-          value={review.dedupe_open ?? 0}
-          onOpen={() => navigate({ screen: "worklist" })}
         />
         <PanelBody>
           <p className="t-caption">

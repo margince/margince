@@ -154,22 +154,22 @@ func doneSince(
 //
 // The count is installation-wide, not the reader's own, so it is a diagnostic: a
 // seat without ai_diagnostics read gets no entry and the query never runs.
-func notShownSince(ctx context.Context, tx pgx.Tx, since time.Time) (map[string]int, error) {
+func notShownSince(ctx context.Context, tx pgx.Tx, since time.Time) (map[string]int, bool, error) {
 	notShown := map[string]int{}
 	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return notShown, nil
+			return notShown, true, nil
 		}
-		return nil, err
+		return nil, false, err
 	}
 	unplaceable, err := unplaceableSince(ctx, tx, since)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if unplaceable > 0 {
 		notShown[string(crmcontracts.MagicNotShownReasonMagicNotShownUnknownEntityType)] = unplaceable
 	}
-	return notShown, nil
+	return notShown, false, nil
 }
 
 // armOf names the read an entry came from, which is what a cut is recorded

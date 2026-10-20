@@ -176,10 +176,15 @@ and in the Worklist.
 
 ### How complete is Morning?
 Morning names each source it could not read, with **Refresh brief**, and never shows it as a zero.
-- **Work summary** adds up deal value without the deals that have no price, and says how many those are.
-- That value may not be complete, and it is not a forecast.
+- **Flagged pipeline value** adds up deal value without the deals that have no price, and says how many those are.
+- That value is the full deal amount, not expected loss. It may not be complete, and it is not a forecast.
 - Meetings count calendar entries still to come. Margince does not say you are prepared unless the
   source says so.
+
+### When were these figures read?
+The work counts come from the current Worklist read. **Overnight** shows capture totals and connection health as of the nightly run.
+Its stored counts do not replace today's decisions. Each part of Home can refresh at a different time.
+Opening another Worklist page keeps the walk's members, but reads their current state. It does not hold all pages at one instant.
 
 ### Changes made for you
 **Changes made for you**, on **Morning**, lists the changes Margince made to your deals that you can

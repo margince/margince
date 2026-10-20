@@ -72,3 +72,33 @@ export const ConnectorsToRestoreDark: Story = {
   globals: { theme: "dark" },
   render: lane,
 };
+
+export const UnsupportedReceipt: Story = {
+  render: (args) => (
+    <StoryProviders>
+      <Panel title="Activity">
+        <MagicLaneSection {...args} />
+      </Panel>
+    </StoryProviders>
+  ),
+  args: {
+    lane: "done",
+    title: "Activity",
+    since: "2026-09-12T18:00:00Z",
+    zone: "UTC",
+    byDay: false,
+    rows: [
+      {
+        id: "00000000-0000-7000-8000-0000000c0001",
+        occurred_at: "2026-09-13T05:10:00Z",
+        actor: system,
+        lane: "done",
+        summary: { key: "newer_receipt_kind" },
+      },
+    ],
+  },
+};
+export const UnsupportedReceiptDark: Story = {
+  ...UnsupportedReceipt,
+  globals: { theme: "dark" },
+};

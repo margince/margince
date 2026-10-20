@@ -153,7 +153,10 @@ export function MagicPanel({
   const drawn = LANES.filter((lane) => hasLines(shown?.[lane]));
   const done = rowsOf(shown?.done);
   const doneRecords = recordsOf(done);
-  const doneFloor = sumIsFloor("done", done);
+  const doneFloor =
+    sumIsFloor("done", done) ||
+    shown?.not_shown_count_withheld === true ||
+    (shown?.not_shown?.length ?? 0) > 0;
   // "All" would claim the whole of a count that is only a floor.
   const doneFold = plural(
     doneFloor ? "magic.done.atLeast" : "magic.done.all",
@@ -303,7 +306,14 @@ function LaneSummary({
   }
   const answers = LANES.map((lane) => {
     const rows = receipt[lane];
-    if (!Array.isArray(rows) || (rows.length === 0 && !canReportEmpty)) {
+    const countWithheld =
+      lane === "done" &&
+      (receipt.not_shown_count_withheld ||
+        (receipt.not_shown?.length ?? 0) > 0);
+    if (
+      !Array.isArray(rows) ||
+      (rows.length === 0 && (!canReportEmpty || countWithheld))
+    ) {
       return {
         lane,
         tone: "neutral" as const,

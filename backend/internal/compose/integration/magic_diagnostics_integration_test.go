@@ -36,12 +36,19 @@ func TestTheUnplaceableCountReachesOnlyADiagnosticsSeat(t *testing.T) {
 		t.Fatalf("a seat without ai_diagnostics read was told %d workspace-wide unplaceable actions", count)
 	}
 
+	if rep.NotShownCountWithheld == nil || !*rep.NotShownCountWithheld {
+		t.Fatal("restricted receipt must state its unsupported counts are withheld")
+	}
+
 	diagnostics := RepPerms
 	diagnostics.Objects = maps.Clone(RepPerms.Objects)
 	diagnostics.Objects["ai_diagnostics"] = principal.ObjectGrant{Read: true}
 	diag, err := svc.Read(e.As(e.Rep1, []ids.UUID{e.Team1}, diagnostics), &since, 20)
 	if err != nil {
 		t.Fatalf("reading the receipt as a diagnostics seat: %v", err)
+	}
+	if diag.NotShownCountWithheld == nil || *diag.NotShownCountWithheld {
+		t.Fatal("diagnostics receipt must state its counts were read")
 	}
 	if count, ok := unknownEntityCount(diag); !ok || count < 1 {
 		t.Fatalf("a diagnostics seat was not told of the unplaceable action: %+v", diag.NotShown)

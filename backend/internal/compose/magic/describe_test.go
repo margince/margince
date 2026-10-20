@@ -253,3 +253,17 @@ func TestALineFromACompleteReadStatesItsCountFlat(t *testing.T) {
 		t.Errorf("a line from an uncut contact read claims its count is a floor; only the deal arm was cut")
 	}
 }
+
+func TestForecastCorrectionExplainsReviewWithoutRepeatingPrivateBasis(t *testing.T) {
+	row := auditRow("system:close-date", `{"forecast_category":"commit"}`, `{"forecast_category":"best_case"}`,
+		`{"close_date_correction":"downgrade_and_review","basis":"Restricted correspondence"}`, whenStaged)
+	row.EntityType = typeDeal
+	line, _, ok := lineOf(unmasked(t), row)
+	if !ok || line.Summary.Key != "magic.action.forecast_changed" || line.Reason == nil || line.Reason.Key != "magic.why.forecast_review" || line.Reason.Values != nil {
+		t.Fatalf("forecast reason = %+v, admitted = %v", line.Reason, ok)
+	}
+	changes := changesOf(row)
+	if len(changes) != 1 || changes[0].Field != "forecast_category" || changes[0].Before != "commit" || changes[0].After != "best_case" {
+		t.Fatalf("forecast changes = %+v", changes)
+	}
+}

@@ -267,6 +267,10 @@ func approvalItem(approval crmcontracts.Approval, machine MachineSender) crmcont
 	if approval.TargetEntityType != nil && approval.TargetEntityId != nil {
 		item.Subject = subjectOf(*approval.TargetEntityType, ids.UUID(*approval.TargetEntityId))
 	}
+	if approval.Kind == "lifecycle_change" && approval.Preview != nil && approval.Preview.State == "ready" &&
+		approval.RequestedDeciderId != nil && len(item.Actions) > 0 {
+		item.Staged = &crmcontracts.AttentionStagedFacts{AccountTermination: new(true)}
+	}
 	if staged, ok := stagedFacts(approval, machine); ok {
 		item.Staged = &staged
 	}
