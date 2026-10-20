@@ -17,10 +17,13 @@ import (
 	"errors"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -47,20 +50,35 @@ func seedAccountAtStage(t *testing.T, e *integration.Env, stage string) ids.UUID
 // conversation says the relationship is over.
 func seedOpenContractEnded(t *testing.T, e *integration.Env, company ids.UUID) ids.UUID {
 	t.Helper()
-	signal := ids.NewV7()
+	return seedScopedContractEnded(t, e, company, "company", "We are ending all business with your company.")
+}
+
+func seedScopedContractEnded(t *testing.T, e *integration.Env, company ids.UUID, scope, quote string) ids.UUID {
+	t.Helper()
+	at := time.Date(2026, 7, 31, 12, 0, 0, 0, time.UTC)
+	return seedScopedContractEndedAt(t, e, company, scope, quote, at, at)
+}
+
+func seedScopedContractEndedAt(t *testing.T, e *integration.Env, company ids.UUID, scope, quote string, at, detected time.Time) ids.UUID {
+	t.Helper()
+	source, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "note", Subject: new("Relationship decision"), Body: &quote, OccurredAt: &at, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fingerprint := ids.NewV7().String()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		// No fingerprint: these stand for signals a human filed, and the point
-		// of several is that they are several rows rather than one deduped one.
-		_, err := tx.Exec(context.Background(), `
-			INSERT INTO signal (id, kind, source_channel, entity_type, entity_id,
-			                    resolved_company_id, resolution_state, severity, summary, status,
-			                    detected_at, source, captured_by)
-			VALUES ($1, 'contract_ended', 'derived', 'company', $2, $2, 'resolved',
-			        'warn', 'They wrote that the contract ends on 31 July.', 'open',
-			        now(), 'signal-scan', 'agent:contract_ended')`,
-			signal, company)
+		_, err := signals.RecordDerived(e.Admin(), tx, signals.DerivedSignal{
+			Kind: signalKindContractEnded, CompanyID: company, Summary: quote, Severity: "warn", Fingerprint: fingerprint,
+			Evidence: []signals.DerivedEvidence{{ActivityID: ids.UUID(source.Id), Snippet: quote, LifecycleScope: scope}},
+		}, detected)
 		return err
 	}); err != nil {
+		t.Fatal(err)
+	}
+	signal, err := ids.Parse(e.WsScalar(t, `SELECT id::text FROM signal WHERE fingerprint=$1`, fingerprint))
+	if err != nil {
 		t.Fatal(err)
 	}
 	return signal
@@ -71,7 +89,7 @@ func proposePass(t *testing.T, e *integration.Env) int {
 	t.Helper()
 	proposer := NewSignalProposer(e.Pool, approvalsServiceWithEffects(e.Pool),
 		slog.New(slog.DiscardHandler))
-	staged, err := proposer.RunWorkspace(e.Admin())
+	staged, err := proposer.RunWorkspace(e.As(e.AdminUser, nil, integration.AdminWithSignals))
 	if err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
@@ -250,14 +268,7 @@ func TestNoOfferIsMadeOnAnAccountAlreadyFiledAsOver(t *testing.T) {
 	}
 }
 
-// An account can carry several signals saying the same thing — three
-// conversations that each mention the contract ending are three rows. The
-// human answering the proposal has answered the question all of them ask.
-//
-// Settling only the quoted row leaves the rest open forever: the record has
-// left the stage the reconciler looks for, so no later pass considers them and
-// nothing else will ever close them.
-func TestAcceptingSettlesEveryOpenContradictionOnTheAccount(t *testing.T) {
+func TestAcceptingSettlesOnlyTheCitedContradiction(t *testing.T) {
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "customer")
 	first := seedOpenContractEnded(t, e, company)
@@ -265,17 +276,22 @@ func TestAcceptingSettlesEveryOpenContradictionOnTheAccount(t *testing.T) {
 	third := seedOpenContractEnded(t, e, company)
 
 	proposePass(t, e)
+	cited := e.WsScalar(t, `SELECT proposed_change->>'signal_id' FROM approval WHERE target_entity_id=$1`, company)
+	later := seedScopedContractEndedAt(t, e, company, "company", "We ended all business earlier.",
+		time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC), time.Date(2026, 8, 1, 12, 0, 0, 0, time.UTC))
 	if _, err := approvalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, integration.AdminWithSignals),
 		ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil); err != nil {
 		t.Fatalf("accepting the offer: %v", err)
 	}
 
-	for _, signal := range []ids.UUID{first, second, third} {
-		if status := signalStatus(t, e, signal); status != "acknowledged" {
-			t.Errorf("signal %s reads %q after the accept, want acknowledged — the "+
-				"account has left the stage this rule looks for, so nothing else "+
-				"would ever close it", signal, status)
+	for _, signal := range []ids.UUID{first, second, third, later} {
+		want := "open"
+		if signal.String() == cited {
+			want = "acknowledged"
+		}
+		if status := signalStatus(t, e, signal); status != want {
+			t.Errorf("signal %s status=%s, want %s", signal, status, want)
 		}
 	}
 }
@@ -287,10 +303,13 @@ func TestAcceptingSettlesEveryOpenContradictionOnTheAccount(t *testing.T) {
 var teamScopedDecider = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"company": {Read: true, Update: true},
-		"signal":  {Read: true, Update: true},
-		"deal":    {Read: true},
-		"contact": {Read: true},
+		"company":  {Read: true, Update: true},
+		"signal":   {Read: true, Update: true},
+		"deal":     {Read: true},
+		"contact":  {Read: true},
+		"activity": {Read: true},
+		"contract": {Read: true},
+		"project":  {Read: true},
 	},
 	RowScope: principal.RowScopeTeam,
 }

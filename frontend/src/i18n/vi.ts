@@ -52,6 +52,22 @@ export const vi = {
     "Làm rõ thông tin mâu thuẫn trước khi phê duyệt thay đổi này.",
   "history.field.closed_at": "Ngày chốt",
   "history.field.amount_minor_base": "Giá trị theo tiền tệ cơ sở",
+  "approval.preview.activeContract":
+    "Một hợp đồng vẫn đang hoạt động. Kiểm tra trước khi kết thúc quan hệ với khách hàng.",
+  "approval.preview.activeDelivery":
+    "Một dự án vẫn đang được thực hiện. Kiểm tra trước khi kết thúc quan hệ với khách hàng.",
+  "approval.preview.unknownScope":
+    "Nguồn chưa xác nhận toàn bộ quan hệ với khách hàng đã kết thúc.",
+  "approval.preview.incompleteEvidence":
+    "Bằng chứng hiện tại chưa đầy đủ. Kiểm tra công ty trước khi đổi trạng thái.",
+  "approval.preview.newerEvidence":
+    "Nguồn đã thay đổi sau đề xuất này. Kiểm tra bằng chứng hiện tại.",
+  "approval.preview.scopeCompany": "Toàn bộ quan hệ với khách hàng",
+  "approval.preview.scopeWorkstream": "Một công việc",
+  "approval.preview.scopeUnknown": "Chưa xác định phạm vi",
+  "approval.preview.scope": "Phạm vi kết thúc",
+  "approval.preview.sourceDate": "Ngày của nguồn",
+  "approval.preview.workstream": "Công việc",
   "approval.preview.conflict": "Thông tin mâu thuẫn",
   "approval.preview.execution": "Được xác định khi áp dụng",
   "approval.preview.effects": "Thay đổi kèm theo",

@@ -8,6 +8,9 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/backend/internal/compose/lifecyclereview"
+
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -34,6 +37,34 @@ func (r approvalPreviewReader) lifecycleEvidence(ctx context.Context, approval c
 		preview.State = previewIncompleteState
 		return nil //nolint:nilerr // Invalid stored proposals are presented as incomplete rather than failing the inbox.
 	}
+	if proposal.Evidence == nil {
+		preview.State = previewIncompleteState
+		return nil
+	}
+	var current lifecyclereview.Finding
+	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
+		var readErr error
+		current, readErr = lifecyclereview.Reconcile(ctx, tx, proposal.CompanyID, r.now())
+		return readErr
+	})
+	if state := evidenceFailureState(err); state != "" {
+		preview.State = state
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	setLifecyclePreviewContext(preview, current, proposal.Evidence)
+	if !lifecyclereview.Matches(current, proposal.Evidence) {
+		if !current.SourceID.IsZero() {
+			evidence = append(evidence, crmcontracts.ApprovalEvidence{
+				EvidenceSnippet: approvals.SanitizeSummary(current.Quote),
+				SourceType:      new(crmcontracts.ApprovalEvidenceSourceTypeActivity), SourceId: new(openapi_types.UUID(current.SourceID)),
+			})
+		}
+		preview.State = previewStaleState
+		return nil
+	}
 	signal, err := r.signals.GetSignal(ctx, ids.From[ids.SignalKind](proposal.SignalID), storekit.LiveOnly)
 	if previewUnavailable(err) {
 		preview.State = previewUnavailableState
@@ -42,7 +73,7 @@ func (r approvalPreviewReader) lifecycleEvidence(ctx context.Context, approval c
 	if err != nil {
 		return err
 	}
-	if !lifecycleSignalMatches(signal, approval, proposal) {
+	if signal.Version == nil || *signal.Version != current.SignalVersion {
 		preview.State = previewStaleState
 		return nil
 	}
@@ -155,6 +186,37 @@ func evidenceFailureState(err error) string {
 	}
 }
 
-func lifecycleSignalMatches(signal crmcontracts.Signal, approval crmcontracts.Approval, proposal lifecycleProposal) bool {
-	return signal.ResolvedCompanyId != nil && *signal.ResolvedCompanyId == *approval.TargetEntityId && string(signal.Kind) == signalKindContractEnded && string(signal.Status) == commitmentStateOpen && signal.Summary == proposal.Because
+func setLifecyclePreviewContext(preview *crmcontracts.ApprovalPreview, current lifecyclereview.Finding, shown *lifecyclereview.Finding) {
+	if !current.SourceID.IsZero() {
+		preview.LifecycleEvidence = &crmcontracts.LifecyclePreviewEvidence{
+			Scope: crmcontracts.LifecyclePreviewEvidenceScope(current.Scope), OccurredAt: current.OccurredAt,
+		}
+		if current.Workstream != "" {
+			preview.LifecycleEvidence.Workstream = &current.Workstream
+		}
+	}
+	conflicts := []crmcontracts.ApprovalPreviewConflict{}
+	reason := lifecyclereview.BlockingReason(current)
+	if reason == "" && !lifecyclereview.Matches(current, shown) {
+		reason = "newer_evidence"
+	}
+	if reason != "" {
+		conflicts = append(conflicts, crmcontracts.ApprovalPreviewConflict{Kind: reason, Summary: lifecycleConflictSummary(reason), BlocksApproval: true})
+	}
+	preview.Conflicts = &conflicts
+}
+
+func lifecycleConflictSummary(reason string) string {
+	switch reason {
+	case "active_contract":
+		return "An agreement is still active. Review it before ending the account relationship."
+	case "active_delivery":
+		return "A project is still in delivery. Review it before ending the account relationship."
+	case "unknown_scope":
+		return "The source does not establish that the whole account relationship ended."
+	case "newer_evidence":
+		return "The source changed after this proposal. Review the current evidence."
+	default:
+		return "The current evidence is incomplete. Review the account before changing its lifecycle."
+	}
 }

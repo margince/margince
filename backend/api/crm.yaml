@@ -55242,6 +55242,14 @@ components:
         blocks_approval:
           type: boolean
           description: Whether the domain requires reconciliation before this proposal can be approved.
+    LifecyclePreviewEvidence:
+      type: object
+      description: Current readable source and scope supporting a company lifecycle review.
+      required: [scope, occurred_at]
+      properties:
+        scope: { type: string, enum: [company, workstream, unknown] }
+        occurred_at: { type: string, format: date-time }
+        workstream: { type: string }
     ApprovalPreview:
       type: object
       description: >-
@@ -55254,6 +55262,8 @@ components:
         or approval_preview_conflict respectively, without recording a decision.
       required: [version, state, changes, reviewer_reason]
       properties:
+        lifecycle_evidence:
+          $ref: '#/components/schemas/LifecyclePreviewEvidence'
         effects:
           type: array
           description: Additional business effects released by this approval. Other proposals remain separate decisions.

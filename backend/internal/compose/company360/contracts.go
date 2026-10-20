@@ -100,12 +100,7 @@ func readContractStrip(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 	if err != nil {
 		return contractStrip{}, err
 	}
-	where := storekit.SQLf(`company_id = $%d
-		  AND archived_at IS NULL
-		  AND status NOT IN ('draft', 'superseded')
-		  AND (starts_on IS NULL OR starts_on <= $%d)
-		  AND (LEAST(ends_on, cancellation_effective_on) IS NULL
-		       OR $%d <= LEAST(ends_on, cancellation_effective_on))`, companyPos, asOfPos, asOfPos)
+	where := storekit.SQLf("company_id = $%d AND ", companyPos) + contracts.UnderContractSQL(asOfPos)
 	if scope != "" {
 		where += " AND " + scope
 	}

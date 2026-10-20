@@ -183,123 +183,21 @@ func (s *Store) GetSignal(ctx context.Context, id ids.SignalID, archived storeki
 	}
 	var out crmcontracts.Signal
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureSignalVisible(ctx, tx, id.UUID); err != nil {
-			return err
-		}
 		var err error
-		out, err = readSignal(ctx, tx, id, archived)
+		out, err = ReadSignalTx(ctx, tx, id, archived)
 		return err
 	})
 	return out, err
 }
 
-type ListSignalsInput struct {
-	Cursor          *string
-	Limit           *int
-	Status          *string
-	Kind            *string
-	ResolutionState *string
-	// CompanyID narrows the list to one account. The id is an
-	// company's, but it is compared against BOTH the resolver's
-	// resolved_company_id and the polymorphic (entity_type, entity_id) subject
-	// pair, so it stays untyped here (rule 6).
-	CompanyID       *ids.UUID
-	IncludeArchived bool
-}
-
-// OfCompanyWhere includes resolved and directly filed company signals.
-//
-// Two arms, because a signal reaches a company two ways: the resolver
-// stamps resolved_company_id on the item it attributed, and a signal created
-// directly ABOUT the company carries the subject pair and no
-// resolved_company_id at all. Both belong to the account.
-//
-// A deal-subject signal belongs to its DEAL, even when the resolver attributed
-// it to this account, so the resolved arm excludes it.
-//
-// The company connections card shares this scope so it cannot cite a signal
-// that the account’s signal list hides.
-func OfCompanyWhere(companyPos int) string {
-	return storekit.SQLf(
-		`((s.entity_type IS DISTINCT FROM 'deal' AND s.resolved_company_id = $%[1]d)
-		  OR (s.entity_type = 'company' AND s.entity_id = $%[1]d))`, companyPos)
-}
-
-func (s *Store) ListSignals(ctx context.Context, in ListSignalsInput) ([]crmcontracts.Signal, storekit.Page, error) {
+func ReadSignalTx(ctx context.Context, tx pgx.Tx, id ids.SignalID, archived storekit.ArchivedFilter) (crmcontracts.Signal, error) {
 	if err := auth.Require(ctx, "signal", principal.ActionRead); err != nil {
-		return nil, storekit.Page{}, err
+		return crmcontracts.Signal{}, err
 	}
-	limit := storekit.ClampLimit(in.Limit)
-
-	where := []string{"1=1"}
-	args := []any{}
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	if !in.IncludeArchived {
-		where = append(where, "s.archived_at IS NULL")
+	if err := auth.EnsureSignalVisible(ctx, tx, id.UUID); err != nil {
+		return crmcontracts.Signal{}, err
 	}
-	if in.Status != nil {
-		where = append(where, storekit.SQLf("s.status = $%d", arg(*in.Status)))
-	}
-	if in.Kind != nil {
-		where = append(where, storekit.SQLf("s.kind = $%d", arg(*in.Kind)))
-	}
-	if in.ResolutionState != nil {
-		where = append(where, storekit.SQLf("s.resolution_state = $%d", arg(*in.ResolutionState)))
-	}
-	if in.CompanyID != nil {
-		where = append(where, OfCompanyWhere(arg(*in.CompanyID)))
-	}
-	scope, err := auth.SignalScopeClause(ctx, "s", arg)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
-	if scope != "" {
-		where = append(where, scope)
-	}
-	if in.Cursor != nil && *in.Cursor != "" {
-		c, err := storekit.DecodeCursor(*in.Cursor)
-		if err != nil {
-			return nil, storekit.Page{}, err
-		}
-		where = append(where, storekit.SQLf("(s.created_at, s.id) < ($%d, $%d)", arg(c.CreatedAt), arg(c.ID)))
-	}
-
-	var signals []crmcontracts.Signal
-	var page storekit.Page
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx,
-			`SELECT `+signalColumns("s")+` FROM signal s`+signalResolutionJoin+` WHERE `+strings.Join(where, " AND ")+
-				storekit.SQLf(` ORDER BY s.created_at DESC, s.id DESC LIMIT %d`, limit+1),
-			args...)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			sig, err := scanSignal(rows)
-			if err != nil {
-				return err
-			}
-			signals = append(signals, sig)
-		}
-		if err := rows.Err(); err != nil {
-			return err
-		}
-		if len(signals) > limit {
-			signals = signals[:limit]
-			last := signals[len(signals)-1]
-			next, err := storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))
-			if err != nil {
-				return err
-			}
-			page = storekit.Page{HasMore: true, NextCursor: next}
-		}
-		return nil
-	})
-	if signals == nil {
-		signals = []crmcontracts.Signal{}
-	}
-	return signals, page, err
+	return readSignal(ctx, tx, id, archived)
 }
 
 type UpdateSignalInput struct {

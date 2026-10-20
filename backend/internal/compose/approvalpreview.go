@@ -43,6 +43,7 @@ const (
 )
 
 type approvalPreviewReader struct {
+	now        func() time.Time
 	db         *database.DB
 	records    datasource.SystemOfRecordProvider
 	deals      *deals.Store
@@ -53,7 +54,7 @@ type approvalPreviewReader struct {
 }
 
 func newApprovalPreviewReader(db *database.DB) approvalPreviewReader {
-	return approvalPreviewReader{db: db, names: newAttentionNames(db), records: NewProviderFor(db), deals: deals.NewStore(db, DealsInstallation()), signals: signals.NewStore(db, nil), activities: activities.NewStore(db)}
+	return approvalPreviewReader{db: db, now: time.Now, names: newAttentionNames(db), records: NewProviderFor(db), deals: deals.NewStore(db, DealsInstallation()), signals: signals.NewStore(db, nil), activities: activities.NewStore(db)}
 }
 
 func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {

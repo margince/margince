@@ -66,12 +66,23 @@ export function commercialPreviewDisplay(
   locale: Locale = "en",
   formatDay?: (value: string) => string,
 ): readonly ResolvedDisplayField[] {
-  const conflicts = (preview.conflicts ?? []).map((conflict, index) => ({
-    field: `preview_conflict_${index}`,
-    label: t("approval.preview.conflict"),
-    value: conflict.summary,
-    comparison: null,
-  }));
+  const evidence = lifecyclePreviewFields(preview, t, formatDay);
+  const conflictLabels: Record<string, Parameters<Translator>[0]> = {
+    active_contract: "approval.preview.activeContract",
+    active_delivery: "approval.preview.activeDelivery",
+    unknown_scope: "approval.preview.unknownScope",
+    incomplete_evidence: "approval.preview.incompleteEvidence",
+    newer_evidence: "approval.preview.newerEvidence",
+  };
+  const conflicts = (preview.conflicts ?? []).map((conflict, index) => {
+    const label = conflictLabels[conflict.kind];
+    return {
+      field: `preview_conflict_${index}`,
+      label: t("approval.preview.conflict"),
+      value: label ? t(label) : conflict.summary,
+      comparison: null,
+    };
+  });
   if (preview.version !== 1 || preview.state !== "ready") {
     const key =
       preview.version === 1 && preview.state === "stale"
@@ -87,6 +98,7 @@ export function commercialPreviewDisplay(
         comparison: null,
         lead: true,
       },
+      ...evidence,
       ...conflicts,
     ];
   }
@@ -128,6 +140,7 @@ export function commercialPreviewDisplay(
     };
   });
   return [
+    ...evidence,
     ...conflicts,
     ...changes,
     ...effects,
@@ -198,4 +211,40 @@ function previewFieldLabel(field: string, t: Translator): string {
     default:
       return historyFieldLabel(field, t);
   }
+}
+
+function lifecyclePreviewFields(
+  preview: Preview,
+  t: Translator,
+  formatDay?: (value: string) => string,
+): ResolvedDisplayField[] {
+  const evidence = preview.lifecycle_evidence;
+  if (!evidence) return [];
+  const labels = {
+    company: "approval.preview.scopeCompany",
+    workstream: "approval.preview.scopeWorkstream",
+    unknown: "approval.preview.scopeUnknown",
+  } satisfies Record<typeof evidence.scope, Parameters<Translator>[0]>;
+  const fields: ResolvedDisplayField[] = [
+    {
+      field: "lifecycle_scope",
+      label: t("approval.preview.scope"),
+      value: t(labels[evidence.scope] ?? "approval.preview.scopeUnknown"),
+      comparison: null,
+    },
+    {
+      field: "source_date",
+      label: t("approval.preview.sourceDate"),
+      value: formatDay?.(evidence.occurred_at) ?? evidence.occurred_at,
+      comparison: null,
+    },
+  ];
+  if (evidence.workstream)
+    fields.push({
+      field: "workstream",
+      label: t("approval.preview.workstream"),
+      value: evidence.workstream,
+      comparison: null,
+    });
+  return fields;
 }

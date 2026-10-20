@@ -21,7 +21,7 @@ import (
 // future edit reaching for COALESCE — which takes the FIRST non-null instead —
 // would silently let a July cancellation extend a June term.
 func TestUnderContractTakesTheEarlierEndDate(t *testing.T) {
-	sql := underContractSQL(1)
+	sql := UnderContractSQL(1)
 
 	if !strings.Contains(sql, "LEAST(ends_on, cancellation_effective_on)") {
 		t.Errorf("the effective end must be LEAST of the two dates; got:\n%s", sql)
@@ -34,7 +34,7 @@ func TestUnderContractTakesTheEarlierEndDate(t *testing.T) {
 // A draft is not yet an agreement and a superseded one has been replaced.
 // Neither counts as being under contract, whatever their dates say.
 func TestUnderContractExcludesDraftAndSuperseded(t *testing.T) {
-	sql := underContractSQL(1)
+	sql := UnderContractSQL(1)
 
 	if !strings.Contains(sql, "status NOT IN ('draft', 'superseded')") {
 		t.Errorf("draft and superseded must not count as under contract; got:\n%s", sql)
@@ -43,7 +43,7 @@ func TestUnderContractExcludesDraftAndSuperseded(t *testing.T) {
 
 // An archived agreement is gone from every surface that counts it.
 func TestUnderContractExcludesArchived(t *testing.T) {
-	if !strings.Contains(underContractSQL(1), "archived_at IS NULL") {
+	if !strings.Contains(UnderContractSQL(1), "archived_at IS NULL") {
 		t.Error("an archived contract must not count as under contract")
 	}
 }
@@ -52,7 +52,7 @@ func TestUnderContractExcludesArchived(t *testing.T) {
 // end comparison — one instant, so a row cannot be judged against two
 // different "today"s inside one read.
 func TestUnderContractUsesOneAsOfParameter(t *testing.T) {
-	sql := underContractSQL(7)
+	sql := UnderContractSQL(7)
 
 	if strings.Count(sql, "$7") != 2 {
 		t.Errorf("expected the as-of parameter twice (start and end); got:\n%s", sql)

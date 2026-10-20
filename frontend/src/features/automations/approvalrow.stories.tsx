@@ -359,3 +359,52 @@ export const AdditionalRecipientDark: Story = {
   ...AdditionalRecipient,
   globals: { theme: "dark" },
 };
+
+function lifecycleDecision(blocked: boolean): Approval {
+  return approval({
+    kind: "lifecycle_change",
+    target_entity_type: "company",
+    target_entity_id: "company-one",
+    target_label: "Cedar Labs",
+    summary: "Review the end of the account relationship",
+    proposed_change: {
+      company_id: "company-one",
+      proposed_lifecycle: "former_customer",
+    },
+    preview: {
+      version: 1,
+      state: blocked ? "stale" : "ready",
+      reviewer_reason: "requested_decider",
+      lifecycle_evidence: {
+        scope: "company",
+        occurred_at: "2026-07-31T12:00:00Z",
+      },
+      changes: [
+        {
+          field: "lifecycle",
+          before: { kind: "lifecycle", text: "customer" },
+          after: { kind: "lifecycle", text: "former_customer" },
+        },
+      ],
+      conflicts: blocked
+        ? [
+            {
+              kind: "active_contract",
+              summary: "An agreement remains active.",
+              blocks_approval: true,
+            },
+          ]
+        : [],
+    },
+  });
+}
+export const AccountTermination: Story = {
+  render: () => <Row subject={lifecycleDecision(false)} />,
+};
+export const ContinuingAgreement: Story = {
+  render: () => <Row subject={lifecycleDecision(true)} />,
+};
+export const ContinuingAgreementDark: Story = {
+  ...ContinuingAgreement,
+  globals: { theme: "dark" },
+};

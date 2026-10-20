@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/lifecyclereview"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -26,12 +27,11 @@ import (
 type signalFacts struct {
 	Readable      bool
 	ContractEnded bool
-	// ContractEndedSaid and ContractEndedAt are the newest open contract_ended
-	// signal's own sentence and when it was read. They are what the
-	// contradiction rule cites, so a reader checks the conflict against the
-	// words that raised it rather than against a rule's paraphrase of them.
-	ContractEndedSaid string
-	ContractEndedAt   time.Time
+	// Source words and occurrence time support the conflict. Legacy signals
+	// keep their reviewable summary without claiming a source date.
+	ContractEndedSaid   string
+	ContractEndedAt     time.Time
+	ContractEndedSource ids.UUID
 	// Worst is the most serious signal standing open, or absent when nothing
 	// is. Severity first, then the newest of that severity — an older warning
 	// that has been sitting there is less news than the one that just arrived.
@@ -49,7 +49,7 @@ type signalHeadline struct {
 // readSignalFacts reads what the account's open signals say: the worst one
 // standing, and whether the contract ended. A caller who may not read signals
 // gets Readable false rather than an account with nothing standing.
-func readSignalFacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (signalFacts, error) {
+func readSignalFacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time) (signalFacts, error) {
 	if !auth.ReadGranted(ctx, "signal") {
 		return signalFacts{}, nil
 	}
@@ -71,7 +71,7 @@ func readSignalFacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (s
 	}
 	facts := signalFacts{Readable: true}
 	var kind, severity, summary, endedSaid *string
-	var endedAt *time.Time
+	var endedID *ids.UUID
 	// One read serves two readers: the strip states the worst, and the
 	// contradiction rule asks whether the contract ended — and what the mail
 	// that says so said. Two queries would let them describe two instants.
@@ -80,11 +80,11 @@ func readSignalFacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (s
 			SELECT s.id, s.kind, s.severity, s.summary, s.detected_at FROM signal s
 			 WHERE %[1]s AND s.status = 'open' AND s.archived_at IS NULL AND %[2]s
 		)
-		SELECT ended.summary, ended.detected_at,
+		SELECT ended.summary, ended.id,
 		       worst.kind, worst.severity, worst.summary
 		  FROM (SELECT 1) one
 		  LEFT JOIN LATERAL (
-			SELECT summary, detected_at FROM open_signals
+			SELECT id, summary, detected_at FROM open_signals
 			 WHERE kind = 'contract_ended'
 			 ORDER BY detected_at DESC, id DESC
 			 LIMIT 1) ended ON true
@@ -94,18 +94,24 @@ func readSignalFacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (s
 			          detected_at DESC, id DESC
 			 LIMIT 1) worst ON true`,
 		signals.OfCompanyWhere(companyPos), scope), args...).
-		Scan(&endedSaid, &endedAt,
+		Scan(&endedSaid, &endedID,
 			&kind, &severity, &summary); err != nil {
 		return signalFacts{}, fmt.Errorf("read the account's open signals: %w", err)
 	}
-	// The signal's presence IS the fact; its words and date decorate the
-	// citation. A row with a NULL summary still ends the contract.
-	if endedAt != nil {
+	if endedID != nil {
+		finding, err := lifecyclereview.Reconcile(ctx, tx, companyID, now)
+		if err != nil {
+			return signalFacts{}, err
+		}
 		facts.ContractEnded = true
-		facts.ContractEndedAt = *endedAt
-	}
-	if endedSaid != nil {
-		facts.ContractEndedSaid = *endedSaid
+		if endedSaid != nil {
+			facts.ContractEndedSaid = *endedSaid
+		}
+		if !finding.SourceID.IsZero() {
+			facts.ContractEndedSaid = finding.Quote
+			facts.ContractEndedAt = finding.OccurredAt
+			facts.ContractEndedSource = finding.SourceID
+		}
 	}
 	if kind != nil && severity != nil && summary != nil {
 		facts.Worst = signalHeadline{Kind: *kind, Severity: *severity, Summary: *summary}
