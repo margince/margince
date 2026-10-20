@@ -307,7 +307,7 @@ describe("the Brief's dials", () => {
     // above the greeting — which is the whole of what the block draws now.
     const glance = screen.getByTestId("brief-glance");
     expect(glance.children).toHaveLength(3);
-    expect(glance.firstElementChild?.tagName).toBe("H1");
+    expect(glance.firstElementChild?.firstElementChild?.tagName).toBe("H1");
     // And no clock. The time the queue was read was the one thing here that
     // moved on its own, and a substring read is what catches it coming back in
     // some other wording.

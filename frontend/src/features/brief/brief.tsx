@@ -36,7 +36,7 @@ import { BriefQueue } from "./brief.queue";
 import { BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
-import { WeeklySection } from "./brief.weekly";
+import { WeeklySection, WeekStepper } from "./brief.weekly";
 import { BriefCoverage } from "./briefcoverage";
 import "./brief.css";
 
@@ -111,10 +111,10 @@ export function BriefScreen() {
       now={new Date(nowMs)}
       briefedAt={morning ? brief.data?.generated_at : undefined}
       controls={dials}
+      titleAside={morning ? undefined : <WeekStepper />}
     />
   );
-  // The dial stands on the date's line. The way into the queue closes the
-  // view: under the day's order, or under the report's last line.
+  // The dial stands on the date's line, and the week stepper on the title's.
   const head = <div className="brief-head">{glance}</div>;
   return (
     <div className="wrap brief-wrap">

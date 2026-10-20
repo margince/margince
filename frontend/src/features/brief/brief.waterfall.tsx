@@ -1,6 +1,7 @@
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
+import { Panel } from "../../design-system/panel";
 import { Waterfall, type WaterfallStep } from "../../design-system/waterfall";
 import { formatMoney, formatMoneyOrAbsent } from "../../format/format";
 import { formatMoneyOrWord } from "../../format/moneyword";
@@ -103,34 +104,37 @@ export function OutlookPanel({
   const bridged = outlook.find((o) => o.period_kind === "quarter") ?? first;
   return (
     <>
-      <DataTable
-        label={t("brief.weekly.outlook")}
-        rowKey={(row: ForecastRow) => row.key}
-        rows={rows}
-        columns={[
-          {
-            key: "figure",
-            header: t("brief.report.col.figure"),
-            grow: true,
-            render: (row) => (
-              <>
-                {row.label}
-                {row.basis && (
-                  <span className="brief-report-basis t-caption">
-                    {row.basis}
-                  </span>
-                )}
-              </>
-            ),
-          },
-          ...outlook.map((o) => ({
-            key: o.period_kind,
-            header: t(PERIOD_LABEL[o.period_kind]),
-            align: "end" as const,
-            render: (row: ForecastRow) => money(o, row.minor(o)),
-          })),
-        ]}
-      />
+      <Panel>
+        <DataTable
+          bleed
+          label={t("brief.weekly.outlook")}
+          rowKey={(row: ForecastRow) => row.key}
+          rows={rows}
+          columns={[
+            {
+              key: "figure",
+              header: t("brief.report.col.figure"),
+              grow: true,
+              render: (row) => (
+                <>
+                  {row.label}
+                  {row.basis && (
+                    <span className="brief-report-basis t-caption">
+                      {row.basis}
+                    </span>
+                  )}
+                </>
+              ),
+            },
+            ...outlook.map((o) => ({
+              key: o.period_kind,
+              header: t(PERIOD_LABEL[o.period_kind]),
+              align: "end" as const,
+              render: (row: ForecastRow) => money(o, row.minor(o)),
+            })),
+          ]}
+        />
+      </Panel>
       <div className="brief-report-actions">
         <Button variant="ghost" onClick={onOpenForecast}>
           {t("brief.weekly.outlook.open")}

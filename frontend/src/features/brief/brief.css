@@ -127,6 +127,17 @@
   margin: 0;
   color: var(--accentText);
 }
+.glance-frozen {
+  color: var(--textSecondary);
+}
+/* The title, with what acts on it (the weekly's stepper) at its line's end. */
+.glance-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
 .greeting-name {
   color: var(--accentText);
 }

@@ -3,6 +3,7 @@
 
 import { DataTable } from "../../design-system/datatable";
 import { Heading } from "../../design-system/heading";
+import { Panel } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { WeeklyReview } from "./brief.queries";
@@ -45,30 +46,33 @@ export function ScorecardPanel({
       <Heading size="small" as="h3">
         {t("brief.weekly.scorecard.title")}
       </Heading>
-      <DataTable
-        label={t("brief.weekly.scorecard.title")}
-        rowKey={(row: ScoreRow) => row.key}
-        rows={rows}
-        columns={[
-          {
-            key: "label",
-            header: t("brief.report.col.figure"),
-            render: (row) => row.label,
-          },
-          {
-            key: "value",
-            header: t("brief.report.col.week"),
-            align: "end",
-            render: (row) => row.value,
-          },
-          {
-            key: "basis",
-            header: t("brief.weekly.scorecard.basis"),
-            grow: true,
-            render: (row) => <span className="t-caption">{row.basis}</span>,
-          },
-        ]}
-      />
+      <Panel>
+        <DataTable
+          bleed
+          label={t("brief.weekly.scorecard.title")}
+          rowKey={(row: ScoreRow) => row.key}
+          rows={rows}
+          columns={[
+            {
+              key: "label",
+              header: t("brief.report.col.figure"),
+              render: (row) => row.label,
+            },
+            {
+              key: "value",
+              header: t("brief.report.col.week"),
+              align: "end",
+              render: (row) => row.value,
+            },
+            {
+              key: "basis",
+              header: t("brief.weekly.scorecard.basis"),
+              grow: true,
+              render: (row) => <span className="t-caption">{row.basis}</span>,
+            },
+          ]}
+        />
+      </Panel>
     </>
   );
 }

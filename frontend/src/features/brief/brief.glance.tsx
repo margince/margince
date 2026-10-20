@@ -8,6 +8,7 @@ import { Heading } from "../../design-system/heading";
 import { RecordChip } from "../../design-system/recordchip";
 import { isoWeekOf } from "../../format/calendarday";
 import {
+  formatDateTime,
   formatDayLong,
   formatDayRange,
   formatNumber,
@@ -114,6 +115,8 @@ export type GlanceFacts = Readonly<{
   /** The page's controls, on one line with the date over the greeting. Absent,
    *  the date stands alone over it. */
   controls?: ReactNode;
+  /** What stands at the end of the title's line: the weekly's week stepper. */
+  titleAside?: ReactNode;
 }>;
 
 export type GlanceProps = GlanceFacts;
@@ -261,6 +264,43 @@ function filled(
   return value;
 }
 
+/**
+ * The line over the title. The morning names its day written out; the weekly
+ * names the report, its calendar week, and when it was frozen.
+ */
+function GlanceKicker({
+  view,
+  date,
+  week,
+}: Readonly<{ view: BriefView; date: string; week: GlanceFacts["week"] }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  return (
+    <p className="t-eyebrow glance-date">
+      <time dateTime={date}>
+        {view === "weekly"
+          ? t("brief.report.kicker", {
+              week: formatNumber(isoWeekOf(date), locale),
+            })
+          : formatDayLong(date, locale, viewerZone())}
+      </time>
+      {/* Frozen: written when the week closed, and it can no longer move.
+          Only over a review that exists. */}
+      {view === "weekly" && week?.generated_at && (
+        <>
+          {" · "}
+          <span className="glance-frozen">
+            {t("brief.report.frozenAt", {
+              at: formatDateTime(week.generated_at, locale, recordZone),
+            })}
+          </span>
+        </>
+      )}
+    </p>
+  );
+}
+
 export function BriefGlance({
   firstName,
   now,
@@ -269,6 +309,7 @@ export function BriefGlance({
   view,
   briefedAt,
   controls,
+  titleAside,
 }: GlanceProps) {
   const t = useT();
   const hour = hourInZone(now, viewerZone());
@@ -294,44 +335,24 @@ export function BriefGlance({
   const date = view === "morning" ? now.toISOString() : week?.local_week_start;
   return (
     <header className="glance arrive" data-testid="brief-glance">
-      <Heading size="xlarge" className="glance-greeting t-display">
-        {view === "weekly" ? (
-          greeting
-        ) : (
-          <Greeting text={greeting} firstName={firstName} />
-        )}
-      </Heading>
+      <div className="glance-title">
+        <Heading size="xlarge" className="glance-greeting t-display">
+          {view === "weekly" ? (
+            greeting
+          ) : (
+            <Greeting text={greeting} firstName={firstName} />
+          )}
+        </Heading>
+        {titleAside}
+      </div>
       {(date || controls) && (
         <div className="glance-topline">
-          {date && (
-            <p className="t-eyebrow glance-date">
-              <time dateTime={date}>
-                {/* The morning names its day written out; the weekly names
-                    the report and its calendar week, as a report's kicker. */}
-                {view === "weekly"
-                  ? t("brief.report.kicker", {
-                      week: formatNumber(isoWeekOf(date), locale),
-                    })
-                  : formatDayLong(date, locale, viewerZone())}
-              </time>
-            </p>
-          )}
+          {date && <GlanceKicker view={view} date={date} week={week} />}
           {controls}
         </div>
       )}
-      {sentence ? (
-        <GlanceSentence sentence={sentence} meeting={meeting} />
-      ) : (
-        // Neither view could compose a sentence: the queue or the week has not
-        // arrived, or the read failed. The fallback names the view rather than
-        // describing it, because there is nothing yet to describe — and the
-        // morning's "this is your day" read as the wrong week entirely beneath
-        // a weekly. Each view says its own.
-        //
-        // ONE FACE either way. It is the same slot the composed sentence fills,
-        // and drawn as a caption it read as a footnote where the composed one
-        // read as the page's opening.
-        <p className="glance-sentence">{t(introKey(view))}</p>
+      {!narratedWeek(view, week) && (
+        <GlanceOpening view={view} sentence={sentence} meeting={meeting} />
       )}
       {briefedAt && (
         <p className="glance-briefed">
@@ -344,6 +365,28 @@ export function BriefGlance({
       )}
     </header>
   );
+}
+
+/** A week Margince narrated opens on that narration, under the head; the
+ *  counted sentence stands in only where nobody wrote one. */
+function narratedWeek(view: BriefView, week: GlanceFacts["week"]): boolean {
+  return view === "weekly" && Boolean(week?.narrated_at && week.narrative);
+}
+
+function GlanceOpening({
+  view,
+  sentence,
+  meeting,
+}: Readonly<{
+  view: BriefView;
+  sentence: BriefSentence | null;
+  meeting: BriefSentence | null;
+}>) {
+  const t = useT();
+  if (sentence) return <GlanceSentence sentence={sentence} meeting={meeting} />;
+  // No sentence yet: the read is in flight or failed. The fallback names the
+  // view, since there is nothing to describe, in the same face as a sentence.
+  return <p className="glance-sentence">{t(introKey(view))}</p>;
 }
 
 function glanceSentence(

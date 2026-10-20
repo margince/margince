@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { Badge } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
-import { middayInstant } from "../../format/calendarday";
+import { Panel } from "../../design-system/panel";
+import { isoWeekOf } from "../../format/calendarday";
 import {
-  formatDate,
+  formatDayRange,
   formatMoney,
   formatNumber,
   formatSignedMoney,
   formatSignedNumber,
 } from "../../format/format";
+import { startOfDayInZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import {
@@ -27,7 +30,8 @@ type Counts = WeeklyReview["counts"];
  *
  * `count` is what the change against the week before is taken on. `shown` is
  * how the figure reads, which for a share is "3 of 4" rather than the count.
- * `none` marks a share with nothing to share out, which reads as words.
+ * `share` is a figure's two numbers when it is part of a whole; a share of
+ * nothing reads as words.
  */
 type WeekFigure = Readonly<{
   key: string;
@@ -35,8 +39,10 @@ type WeekFigure = Readonly<{
   figure: WeeklyFigure;
   count: (counts: Counts) => number | undefined;
   shown: (counts: Counts) => string;
-  none?: (counts: Counts) => boolean;
+  share?: (counts: Counts) => Share;
 }>;
+
+type Share = Readonly<{ filled: number; total: number }>;
 
 /**
  * Every figure the report states, in the order the figures table reads them.
@@ -65,7 +71,7 @@ function weekFigures(t: Translator, locale: Locale): readonly WeekFigure[] {
       label: t("brief.weekly.planCommitmentsKept"),
       figure: "commitments",
       count: (c) => c.commitments_kept,
-      none: (c) => c.commitments_due === 0,
+      share: (c) => ({ filled: c.commitments_kept, total: c.commitments_due }),
       shown: (c) =>
         c.commitments_due === 0
           ? t("brief.weekly.noCommitments")
@@ -79,7 +85,10 @@ function weekFigures(t: Translator, locale: Locale): readonly WeekFigure[] {
       label: t("brief.weekly.leadsAnswered"),
       figure: "leads",
       count: (c) => c.leads_answered_in_target,
-      none: (c) => c.leads_routed === 0,
+      share: (c) => ({
+        filled: c.leads_answered_in_target,
+        total: c.leads_routed,
+      }),
       shown: (c) =>
         c.leads_routed === 0
           ? t("brief.weekly.noLeads")
@@ -93,7 +102,10 @@ function weekFigures(t: Translator, locale: Locale): readonly WeekFigure[] {
       label: t("brief.weekly.meetingsHeld"),
       figure: "meetings",
       count: (c) => c.meetings_held,
-      none: (c) => c.meetings_held === 0,
+      share: (c) => ({
+        filled: c.meetings_with_next_step,
+        total: c.meetings_held,
+      }),
       shown: (c) =>
         c.meetings_held === 0
           ? t("brief.weekly.noMeetings")
@@ -129,22 +141,30 @@ function carried(review: WeeklyReview, t: Translator, locale: Locale) {
 }
 
 /** The change against the week before, or nothing for a first week. */
+function difference(
+  figure: WeekFigure,
+  review: WeeklyReview,
+): number | undefined {
+  const now = figure.count(review.counts);
+  const prior = review.prior?.counts;
+  const before = prior ? figure.count(prior) : undefined;
+  if (now === undefined || before === undefined) return undefined;
+  return now - before;
+}
+
 function change(
   figure: WeekFigure,
   review: WeeklyReview,
   locale: Locale,
 ): string | undefined {
-  const now = figure.count(review.counts);
-  const prior = review.prior?.counts;
-  const before = prior ? figure.count(prior) : undefined;
-  if (now === undefined || before === undefined) return undefined;
-  return formatSignedNumber(now - before, locale);
+  const delta = difference(figure, review);
+  return delta === undefined ? undefined : formatSignedNumber(delta, locale);
 }
 
 /**
- * The four figures the week is judged by, large, each with what it moved since
- * the week before. Only a count is drawn large: a figure with nothing to count
- * shows a dash, and its words move to the caption, where they fit.
+ * The four figures the week is judged by, as one plate read across. Only a
+ * count is a figure: a figure with nothing to count shows a dash, and its
+ * words move under it. Each counted figure says what it moved since last week.
  */
 export function HeadlineFigures({
   review,
@@ -153,54 +173,122 @@ export function HeadlineFigures({
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
-  const priorWeek = review.prior?.local_week_start;
-  const since = (delta: string | undefined) =>
-    delta && priorWeek
-      ? t("brief.weekly.sincePrior", {
-          delta,
-          week: formatDate(middayInstant(priorWeek, zone), locale, zone),
-        })
-      : undefined;
-  const pipeline = review.pipeline;
-  const wonValue = pipeline
-    ? formatMoney(pipeline.won_minor, pipeline.currency, locale)
-    : undefined;
+  const priorStart = review.prior?.local_week_start;
   return (
-    <dl className="brief-report-figures" data-testid="weekly-strip">
-      {carried(review, t, locale)
-        .filter((figure) => HEADLINE.includes(figure.key))
-        .map((figure) => {
-          const state = figures[figure.figure];
-          const reading = figureReading(
-            state,
-            {
-              value: figure.shown(review.counts),
-              detail: since(change(figure, review, locale)),
-            },
-            { t, locale, zone },
-          );
-          const counted =
-            (state.kind === "measured" || state.kind === "partial") &&
-            !figure.none?.(review.counts);
-          const lines = counted
-            ? [figure.key === "won" ? wonValue : undefined, reading.detail]
-            : [reading.value, reading.detail];
-          return (
-            <div className="brief-report-figure" key={figure.key}>
-              <dt>{figure.label}</dt>
-              <dd className="brief-report-figure-value t-num">
-                {counted ? reading.value : "—"}
-              </dd>
-              {lines.filter(Boolean).map((line) => (
-                <dd className="t-caption" key={line}>
-                  {line}
-                </dd>
-              ))}
-            </div>
-          );
-        })}
-    </dl>
+    <>
+      <Panel>
+        <div className="brief-report-tiles" data-testid="weekly-strip">
+          {carried(review, t, locale)
+            .filter((figure) => HEADLINE.includes(figure.key))
+            .map((figure) => (
+              <HeadlineTile
+                key={figure.key}
+                figure={figure}
+                review={review}
+                state={figures[figure.figure]}
+              />
+            ))}
+        </div>
+      </Panel>
+      {priorStart && (
+        <p className="t-caption">
+          {t("brief.report.priorWeek", {
+            week: formatNumber(isoWeekOf(priorStart), locale),
+            range: formatDayRange(
+              priorStart,
+              startOfDayInZone(priorStart, zone, 6),
+              locale,
+              zone,
+            ),
+          })}
+        </p>
+      )}
+    </>
   );
+}
+
+/**
+ * One headline figure: its name, and the count with what it is out of or, for
+ * deals won, their worth. Under it come the share as a bar and the change.
+ */
+function HeadlineTile({
+  figure,
+  review,
+  state,
+}: Readonly<{
+  figure: WeekFigure;
+  review: WeeklyReview;
+  state: WeeklyFigures[WeeklyFigure];
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
+  const reading = figureReading(
+    state,
+    { value: figure.shown(review.counts) },
+    { t, locale, zone },
+  );
+  const share = figure.share?.(review.counts);
+  const count = figure.count(review.counts);
+  const counted =
+    (state.kind === "measured" || state.kind === "partial") &&
+    share?.total !== 0 &&
+    count !== undefined;
+  const delta = counted ? difference(figure, review) : undefined;
+  const pipeline = figure.key === "won" ? review.pipeline : undefined;
+  const lines = counted ? [reading.detail] : [reading.value, reading.detail];
+  return (
+    <div className="brief-report-tile">
+      <span className="brief-report-tile-label">{figure.label}</span>
+      <span className="brief-report-tile-figure">
+        <span className="brief-report-tile-value t-num">
+          {counted ? formatNumber(share?.filled ?? count, locale) : "—"}
+        </span>
+        {counted && share && (
+          <span className="brief-report-tile-of t-num">
+            {`/ ${formatNumber(share.total, locale)}`}
+          </span>
+        )}
+        {counted && pipeline && (
+          <span className="brief-report-tile-money t-num">
+            {formatMoney(pipeline.won_minor, pipeline.currency, locale)}
+          </span>
+        )}
+      </span>
+      {/* The share as a bar under the words that state it, so a screen
+          reader is not read it twice. */}
+      {counted && share && (
+        <span className="brief-report-tile-bar" aria-hidden="true">
+          <span
+            data-down={delta !== undefined && delta < 0}
+            style={{
+              inlineSize: `${Math.round((Math.min(share.filled, share.total) / share.total) * 100)}%`,
+            }}
+          />
+        </span>
+      )}
+      {lines.filter(Boolean).map((line) => (
+        <span className="brief-report-figure-line t-caption" key={line}>
+          {line}
+        </span>
+      ))}
+      {delta !== undefined && (
+        <span className="brief-report-figure-delta">
+          <Badge tone={deltaTone(delta)}>
+            {t("brief.report.vsPrior", {
+              delta: formatSignedNumber(delta, locale),
+            })}
+          </Badge>
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** A week up reads as good news and a week down as a warning; level is level. */
+function deltaTone(delta: number): "success" | "danger" | "default" {
+  if (delta > 0) return "success";
+  return delta < 0 ? "danger" : "default";
 }
 
 type TableRow = Readonly<{
@@ -271,6 +359,7 @@ export function FiguresTable({
   const rows = money ? [counted[0], money, ...counted.slice(1)] : counted;
   return (
     <DataTable
+      bleed
       label={t("brief.report.chapter.figures")}
       rowKey={(row: TableRow) => row.key}
       rows={rows.filter((row): row is TableRow => row !== undefined)}

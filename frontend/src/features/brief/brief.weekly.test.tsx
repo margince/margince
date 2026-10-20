@@ -305,12 +305,11 @@ describe("BriefScreen — the weekly retrospective", () => {
       </RecordZoneProvider>,
     );
 
-    expect(await screen.findByText(en["brief.weekly.frozen"])).toBeTruthy();
-    const written = en["brief.weekly.written"].replace(
+    const frozen = en["brief.report.frozenAt"].replace(
       "{at}",
       formatDateTime(review.generated_at, "en", installationZone),
     );
-    expect(screen.getByText(written)).toBeTruthy();
+    expect(await screen.findByText(frozen)).toBeTruthy();
   });
 
   // And nothing is certified when there is no review to certify. A badge over
@@ -325,7 +324,8 @@ describe("BriefScreen — the weekly retrospective", () => {
     render(<BriefScreen />);
 
     await screen.findByText(en["brief.weekly.none"]);
-    expect(screen.queryByText(en["brief.weekly.frozen"])).toBeNull();
+    const frozenWord = en["brief.report.frozenAt"].split("{at}")[0] ?? "";
+    expect(screen.queryByText(new RegExp(`^${frozenWord}`))).toBeNull();
   });
 
   it("says there is no review yet rather than drawing a week of zeroes", async () => {
@@ -413,11 +413,6 @@ describe("BriefScreen — the week's sentence", () => {
     const sentence = await screen.findByText(
       "Weber signed; two promises slipped to this week.",
     );
-    // Model-authored prose sitting beside numbers a deterministic pass
-    // computed; nothing else on the panel would tell them apart.
-    expect(
-      screen.getAllByText(en["trust.agentUnnamed"]).length,
-    ).toBeGreaterThan(0);
     const weekly = within(weeklySection());
     expect(weekly.getByText(en["co.assistant.aiTag"])).toBeTruthy();
     // The mark is on the sentence, not the report. The figures are worked out
@@ -528,23 +523,21 @@ describe("BriefScreen — the week against the one before", () => {
     const strip = await mount(withPrior);
 
     expect(strip.textContent).toContain(
-      en["brief.weekly.sincePrior"]
-        .replace("{delta}", "+2")
-        .replace("{week}", "22/06/2026"),
+      en["brief.report.vsPrior"].replace("{delta}", "+2"),
     );
+    expect(
+      screen.getByText(/^Last week = week 26 \(22\s*[–-]\s*28 June\)$/),
+    ).toBeTruthy();
   });
 
   it("names an older comparison week when a report is missing in between", async () => {
-    const strip = await mount({
+    await mount({
       ...withPrior,
       prior: { ...withPrior.prior, local_week_start: "2026-06-01" },
     });
-    expect(strip.textContent).toContain(
-      en["brief.weekly.sincePrior"]
-        .replace("{delta}", "+2")
-        .replace("{week}", "01/06/2026"),
-    );
-    expect(strip.textContent).not.toContain("vs last week");
+    expect(
+      screen.getByText(/^Last week = week 23 \(1\s*[–-]\s*7 June\)$/),
+    ).toBeTruthy();
   });
 
   // A week that stayed exactly level is a real answer. Printing "+0" dresses it
@@ -553,9 +546,7 @@ describe("BriefScreen — the week against the one before", () => {
     const strip = await mount(withPrior);
 
     expect(strip.textContent).toContain(
-      en["brief.weekly.sincePrior"]
-        .replace("{delta}", "±0")
-        .replace("{week}", "22/06/2026"),
+      en["brief.report.vsPrior"].replace("{delta}", "±0"),
     );
   });
 
@@ -565,7 +556,7 @@ describe("BriefScreen — the week against the one before", () => {
   it("draws no comparison for a first week", async () => {
     const strip = await mount(review);
 
-    const marker = en["brief.weekly.sincePrior"].replace("{delta}", "").trim();
+    const marker = en["brief.report.vsPrior"].replace("{delta}", "").trim();
     expect(strip.textContent).not.toContain(marker);
   });
 
@@ -575,7 +566,7 @@ describe("BriefScreen — the week against the one before", () => {
   it("leads with four headline figures", async () => {
     const strip = await mount(withPrior);
 
-    const labels = [...strip.querySelectorAll("dt")].map(
+    const labels = [...strip.querySelectorAll(".brief-report-tile-label")].map(
       (label) => label.textContent,
     );
     expect(labels).toEqual([
@@ -695,12 +686,19 @@ describe("BriefScreen — figures whose source had not started", () => {
   };
   const card = (strip: HTMLElement, label: string) => {
     const found = [
-      ...strip.querySelectorAll<HTMLElement>(".brief-report-figure"),
-    ].find((each) => each.querySelector("dt")?.textContent === label);
+      ...strip.querySelectorAll<HTMLElement>(".brief-report-tile"),
+    ].find(
+      (each) =>
+        each.querySelector(".brief-report-tile-label")?.textContent === label,
+    );
     if (!found) throw new Error(`no figure labelled ${label}`);
     return {
-      value: found.querySelector(".brief-report-figure-value")?.textContent,
-      details: [...found.querySelectorAll(".t-caption")].map(
+      value: [".brief-report-tile-value", ".brief-report-tile-of"]
+        .map((part) => found.querySelector(part)?.textContent)
+        .filter(Boolean)
+        .join(" "),
+      money: found.querySelector(".brief-report-tile-money")?.textContent,
+      details: [...found.querySelectorAll(".brief-report-figure-line")].map(
         (line) => line.textContent,
       ),
     };
@@ -721,9 +719,9 @@ describe("BriefScreen — figures whose source had not started", () => {
     });
 
     // Nothing to count draws no figure large: a dash, and the words under it.
-    const values = [
-      ...strip.querySelectorAll(".brief-report-figure-value"),
-    ].map((value) => value.textContent);
+    const values = [...strip.querySelectorAll(".brief-report-tile-value")].map(
+      (value) => value.textContent,
+    );
     expect(values).toHaveLength(4);
     expect(new Set(values)).toEqual(new Set(["—"]));
     // Every figure in the table says the same, all seven of them.
@@ -768,16 +766,16 @@ describe("BriefScreen — figures whose source had not started", () => {
 
     const won = card(strip, en["brief.weekly.dealsWon"]);
     expect(won.value).toBe("3");
-    // The money line stays, and the qualifier follows it.
+    // The money stays beside the count, and the qualifier goes under it.
+    expect(won.money).toMatch(/^(12.500,00\s*€|€12,500\.00)$/);
     expect(won.details).toEqual([
-      expect.stringMatching(/^(12.500,00\s*€|€12,500\.00)$/),
       en["brief.weekly.partialFrom"].replace(
         "{date}",
         formatDateAbbrev("2026-09-10T08:00:00Z", "en", recordZone),
       ),
     ]);
     expect(card(strip, en["brief.weekly.meetingsHeld"])).toEqual({
-      value: "3 of 5",
+      value: "3 / 5",
       details: ["Some meeting history predates confirmed outcomes."],
     });
     expect(card(strip, en["brief.weekly.leadsAnswered"])).toEqual({
@@ -855,19 +853,61 @@ describe("BriefScreen — the weekly report", () => {
     ).toBeTruthy();
   });
 
-  // A chapter with nothing to say is left out, and the numbers close up: a
-  // report that reads 1, 3, 4 looks like it lost a page.
-  it("numbers its chapters with no gap where one is left out", async () => {
+  // Each closed deal says how it ended and what it closed at; a lost one's
+  // worth is marked as what the week did not get.
+  it("lists each closed deal with its outcome and what it closed at", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": () =>
+        jsonResponse({
+          ...review,
+          deals: [
+            {
+              deal_id: "01a04000-0000-7000-8000-0000000000d1",
+              label: "Weber Rahmenvertrag",
+              outcome: "won",
+              amount_minor_at_close: 7200000,
+              currency_at_close: "EUR",
+              occurred_at: "2026-07-02T10:00:00Z",
+            },
+            {
+              deal_id: "01a04000-0000-7000-8000-0000000000d2",
+              label: "Aster Handel",
+              outcome: "lost",
+              amount_minor_at_close: 3100000,
+              currency_at_close: "EUR",
+              occurred_at: "2026-07-03T10:00:00Z",
+            },
+          ],
+        }),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<BriefScreen />);
+
+    const won = (await screen.findByText("Weber Rahmenvertrag")).closest(
+      ".brief-report-deal",
+    );
+    expect(won?.textContent).toContain(en["brief.report.won"]);
+    expect(
+      won?.querySelector(".brief-report-deal-amount")?.textContent,
+    ).toMatch(/€72,000\.00/);
+    const lost = screen.getByText("Aster Handel").closest(".brief-report-deal");
+    expect(lost?.textContent).toContain(en["brief.report.lost"]);
+    expect(
+      lost
+        ?.querySelector(".brief-report-deal-amount")
+        ?.getAttribute("data-outcome"),
+    ).toBe("lost");
+  });
+
+  // A section with nothing to say is left out rather than drawn empty.
+  it("leaves out a section with nothing to say", async () => {
     openReport(["2026-06-29"]);
 
     await screen.findByText(en["brief.report.chapter.figures"], {
       selector: "h2",
     });
-    const numbers = [
-      ...document.querySelectorAll(".brief-report-chapter-number"),
-    ].map((number) => number.textContent);
-    expect(numbers).toEqual(numbers.map((_, at) => String(at + 1)));
-    // No deal closed this week, so there is no chapter for closed deals.
+    // No deal closed this week, so there is no section for closed deals.
     expect(
       screen.queryByRole("heading", {
         name: new RegExp(en["brief.report.chapter.closed"]),

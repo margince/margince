@@ -10,13 +10,15 @@ The weekly review in Margince is on **Home → Weekly**, and reads as a report. 
 once, on the Monday after the week it covers, and marks it **Frozen**. You cannot make it again: the
 counts are what they were.
 
-Its title is the week it covers, with the calendar week above it. Under the title, **Earlier week**
-and **Later week** step through the weeks that have a report. The report's numbered parts are:
-- **At a glance**: what Margince wrote about the week, and four figures with their change on the week
-  before.
-- **Closed deals**: the deals won and lost, and what they were worth.
-- **Pipeline movement**: the deals that changed stage, and one table of the forecast for the week,
-  month and quarter.
+Its title is the week it covers. Above it are the calendar week and when the report was frozen.
+Beside the title, the two arrows **Earlier week** and **Later week** step through the weeks that have
+a report. Under it, a card holds what Margince wrote about the week, marked as written by AI. The
+report's parts are:
+- **At a glance**: four figures, each with its share as a bar and its change on the week before.
+- **Closed deals**: the deals won and lost, each with what it closed at, and a bar of won against
+  lost.
+- **Pipeline movement**: the deals that changed stage, and the stage each reached.
+- **Forecast**: one table of the forecast for the week, month and quarter.
 - **Figures**: every figure beside the week before, and the scorecard.
 - **Observations**: what worked in the week and what did not, where Margince found something.
 - **The week ahead**: your plan for this week.
