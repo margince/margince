@@ -116,6 +116,7 @@ func TestReviewedDuplicateProposalKeepsTheOriginalAndDoesNotRestage(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
+	assertRepairDecisionProjection(t, e, operator, at.Add(time.Hour), 2)
 	if err := e.DB().Tx(operator, func(tx pgx.Tx) error {
 		review, err := previewHomeRepairSourceTx(operator, tx, "approval", ids.Nil, 10, at.Add(time.Hour))
 		if err != nil {
@@ -151,6 +152,7 @@ func TestReviewedDuplicateProposalKeepsTheOriginalAndDoesNotRestage(t *testing.T
 	}); err != nil {
 		t.Fatal(err)
 	}
+	assertRepairDecisionProjection(t, e, operator, at.Add(time.Hour), 1)
 	dispatcher := NewCommitmentDispatcher(e.Pool, service)
 	if err := e.DB().Tx(writer, func(tx pgx.Tx) error {
 		_, _, err := dispatcher.DispatchTx(writer, tx, commitment, ids.NewV7())
