@@ -47,6 +47,22 @@ describe("How MCP clients may connect", () => {
     expect(screen.queryByText("Only an admin can change these.")).toBeNull();
   });
 
+  it("links each automatic way to its section of the MCP specification", async () => {
+    serve({
+      "GET /installation/agent-clients": () => json(agentClientList([])),
+    });
+    renderWithClient(<AgentClientMethodsCard />);
+    const cimd = await screen.findByRole("link", { name: /\(CIMD\)/ });
+    const dcr = screen.getByRole("link", { name: /\(DCR\)/ });
+    expect(cimd.getAttribute("href")).toBe(
+      "https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization#client-id-metadata-documents",
+    );
+    expect(dcr.getAttribute("href")).toBe(
+      "https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization#dynamic-client-registration",
+    );
+    expect(cimd.getAttribute("target")).toBe("_blank");
+  });
+
   it("keeps the switch focusable while its save is out", async () => {
     const user = userEvent.setup();
     serve({

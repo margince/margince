@@ -6178,9 +6178,13 @@ export const de = {
     "Veröffentlichte Identität eines Tools akzeptieren",
   "agentClients.methods.publishedHint":
     "Die ID des Tools ist eine Webadresse auf der Website des Herstellers. Claude, Codex und ChatGPT nutzen diesen Weg zuerst.",
+  "agentClients.methods.publishedSpec":
+    "Spezifikation: Client ID Metadata Documents (CIMD)",
   "agentClients.methods.dynamic": "Selbstregistrierung von Tools zulassen",
   "agentClients.methods.dynamicHint":
     "Der ältere Weg. Jedes Tool kann sich selbst hinzufügen, daher wächst die Client-Liste mit der Zeit.",
+  "agentClients.methods.dynamicSpec":
+    "Spezifikation: Dynamic Client Registration (DCR)",
   "agentClients.methods.deploymentOff":
     "Die Systemadministration hat diesen Weg in der Konfiguration der Installation deaktiviert.",
   "agentClients.methods.admin": "Von Admins registrierte Clients",

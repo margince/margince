@@ -6021,9 +6021,12 @@ export const vi = {
   "agentClients.methods.published": "Chấp nhận danh tính công khai của công cụ",
   "agentClients.methods.publishedHint":
     "ID của công cụ là một địa chỉ web trên trang của nhà sản xuất. Claude, Codex và ChatGPT ưu tiên cách này.",
+  "agentClients.methods.publishedSpec":
+    "Đặc tả: Tài liệu siêu dữ liệu Client ID (CIMD)",
   "agentClients.methods.dynamic": "Cho phép công cụ tự đăng ký",
   "agentClients.methods.dynamicHint":
     "Cách cũ hơn. Bất kỳ công cụ nào cũng có thể tự thêm vào, nên danh sách ứng dụng dài dần theo thời gian.",
+  "agentClients.methods.dynamicSpec": "Đặc tả: Đăng ký client động (DCR)",
   "agentClients.methods.deploymentOff":
     "Bên vận hành bản cài đặt này đã tắt cách này trong cấu hình.",
   "agentClients.methods.admin": "Ứng dụng do quản trị viên đăng ký",

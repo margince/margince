@@ -3,6 +3,7 @@
 
 import { Badge } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { OffsiteLink } from "../../design-system/offsitelink";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { PanelNotices } from "../../design-system/panelnotices";
 import { QueryGate } from "../../design-system/querystates";
@@ -18,36 +19,50 @@ import {
   useSaveClientMethods,
 } from "./agent-clients.queries";
 
-// Each switch's row in the read, and the settings field that writes it.
+const MCP_AUTHORIZATION_SPEC =
+  "https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization";
+
+// Each switch's row in the read, the settings field that writes it, and the
+// section of the MCP specification that defines the method.
 const METHODS = [
   {
     method: "metadata_document",
     field: "metadata_document_clients",
     label: "agentClients.methods.published",
     description: "agentClients.methods.publishedHint",
+    spec: "agentClients.methods.publishedSpec",
+    specHref: `${MCP_AUTHORIZATION_SPEC}#client-id-metadata-documents`,
   },
   {
     method: "dynamic",
     field: "dynamic_client_registration",
     label: "agentClients.methods.dynamic",
     description: "agentClients.methods.dynamicHint",
+    spec: "agentClients.methods.dynamicSpec",
+    specHref: `${MCP_AUTHORIZATION_SPEC}#dynamic-client-registration`,
   },
 ] as const satisfies readonly {
   method: string;
   field: string;
   label: MessageKey;
   description: MessageKey;
+  spec: MessageKey;
+  specHref: string;
 }[];
 
 function MethodDescription({
   method,
-  description,
-}: Readonly<{ method: AgentClientMethod; description: MessageKey }>) {
+  row,
+}: Readonly<{ method: AgentClientMethod; row: (typeof METHODS)[number] }>) {
   const t = useT();
-  if (method.deployment_allows) {
-    return t(description);
-  }
-  return `${t(description)} ${t("agentClients.methods.deploymentOff")}`;
+  return (
+    <>
+      {t(row.description)}
+      {!method.deployment_allows &&
+        ` ${t("agentClients.methods.deploymentOff")}`}{" "}
+      <OffsiteLink href={row.specHref}>{t(row.spec)}</OffsiteLink>
+    </>
+  );
 }
 
 /**
@@ -93,12 +108,7 @@ export function AgentClientMethodsCard() {
                 <SettingRow
                   key={row.method}
                   label={t(row.label)}
-                  description={
-                    <MethodDescription
-                      method={method}
-                      description={row.description}
-                    />
-                  }
+                  description={<MethodDescription method={method} row={row} />}
                   control={(control) => (
                     <Switch
                       label={t(row.label)}

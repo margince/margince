@@ -6280,9 +6280,12 @@ export const en = {
   "agentClients.methods.published": "Accept a tool’s published identity",
   "agentClients.methods.publishedHint":
     "The tool’s ID is a web address on its maker’s site. Claude, Codex and ChatGPT use this first.",
+  "agentClients.methods.publishedSpec":
+    "Spec: Client ID Metadata Documents (CIMD)",
   "agentClients.methods.dynamic": "Let tools register themselves",
   "agentClients.methods.dynamicHint":
     "The older way. Any tool can add itself, so the client list grows over time.",
+  "agentClients.methods.dynamicSpec": "Spec: Dynamic Client Registration (DCR)",
   "agentClients.methods.deploymentOff":
     "Whoever runs this installation turned this off in its configuration.",
   "agentClients.methods.admin": "Clients an admin registers",
