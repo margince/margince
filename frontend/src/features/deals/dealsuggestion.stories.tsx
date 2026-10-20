@@ -22,7 +22,7 @@ import type { DealSuggestion } from "./dealsuggestions.queries";
 // amount only where a finished document reading stated one with its currency,
 // the evidence in the reader's words, and the two answers.
 
-import { suggestion } from "./dealsuggestion.fixture";
+import { suggestion } from "../../testing/dealsuggestion.fixture";
 
 const unpriced: DealSuggestion = {
   ...suggestion,
