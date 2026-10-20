@@ -34,6 +34,7 @@ import {
   DEAL_SEARCH_REACH,
   walkAccountDeals,
 } from "./adddocument.dealsearch";
+import { staleAfterUpload, uploadRefusal } from "./adddocument.upload";
 
 // Adding a document to the record the dialog was opened from — an account's
 // document library, or a contact's.
@@ -51,7 +52,6 @@ import {
 // Why the question is only asked on an account: deals hang off a company, so an
 // account can offer its own deals as filing targets. A contact sits on deals at
 // companies they may not work for, so its library files against the contact.
-import { staleAfterUpload, uploadRefusal } from "./adddocument.upload";
 
 type Attachment = components["schemas"]["Attachment"];
 

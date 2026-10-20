@@ -12,6 +12,7 @@ import { minorUnitDigits, toMajorUnits } from "../../format/minorunits";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { throwProblem, unwrap } from "../../lib/problem";
+import { GroundedField, OmittedList } from "./documentextraction.fields";
 
 // What a document says, staged for a human to accept onto the deal.
 //
@@ -32,7 +33,6 @@ import { throwProblem, unwrap } from "../../lib/problem";
 // with its reason, not shown greyed out with a number in it. And it does not
 // re-read the document to check itself before accepting — it sends the id of the
 // reading it is showing, so what lands on the deal is the value on this screen.
-import { GroundedField, OmittedList } from "./documentextraction.fields";
 
 type Extraction = components["schemas"]["AttachmentExtraction"];
 
