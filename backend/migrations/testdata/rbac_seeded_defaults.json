@@ -127,6 +127,12 @@
         "read": true,
         "update": false
       },
+      "data_task": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "deal": {
         "create": true,
         "delete": true,
@@ -535,6 +541,12 @@
         "update": false
       },
       "data_coverage": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "data_task": {
         "create": false,
         "delete": false,
         "read": false,
@@ -953,6 +965,12 @@
         "read": false,
         "update": false
       },
+      "data_task": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "deal": {
         "create": true,
         "delete": true,
@@ -1365,6 +1383,12 @@
         "delete": false,
         "read": true,
         "update": false
+      },
+      "data_task": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": true
       },
       "deal": {
         "create": true,
@@ -1779,6 +1803,12 @@
         "read": false,
         "update": false
       },
+      "data_task": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "deal": {
         "create": false,
         "delete": false,
@@ -2187,6 +2217,12 @@
         "update": false
       },
       "data_coverage": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "data_task": {
         "create": false,
         "delete": false,
         "read": false,

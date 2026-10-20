@@ -297,3 +297,10 @@ DSN and a shell, though, so prefer the set-password link for that.
 **Restart the api after a missed MCP view.** If the api booted while the web tier was down, it logs
 the views it is without. Restart it once the web tier is up. The setting that removes this dependency,
 and its cost, is in [MCP App views read at boot](../explanation/self-hosting.md#mcp-app-views-read-at-boot).
+
+## Background correction progress
+
+After an upgrade, the worker seeds and runs the release's data tasks. Watch Settings → System health
+or run `margince-migrate data-tasks status --dsn "$DSN"`. A paused or failed correction holds later
+automatic corrections; review its status before resuming or retrying. Data tasks do not run on API
+startup. See [Background data corrections](../explanation/data-tasks.md).

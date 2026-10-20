@@ -12,6 +12,7 @@ import (
 	"io"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // TestSweepWorkspaceDataClearsDomainKeepsIdentity is the reset engine's core
@@ -37,8 +39,15 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 
 	e.SeedContact(t, "Alice", nil)
 	e.SeedCompany(t, "Acme", nil)
+	engine, err := newDataTaskEngine(e.Pool, "test", time.Now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Seed(principal.SystemActing(ctx, "system:test")); err != nil {
+		t.Fatal(err)
+	}
 
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		tables, err := resetTargetTables(ctx, tx)
 		if err != nil {
 			return err
@@ -49,6 +58,9 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 		t.Fatalf("sweep: %v", err)
 	}
 
+	if got := e.WsCount(t, "SELECT count(*) FROM data_task_run"); got != 2 {
+		t.Fatalf("reset erased correction progress: %d", got)
+	}
 	if got := e.WsCount(t, "SELECT count(*) FROM contact"); got != 0 {
 		t.Errorf("contact count after sweep = %d, want 0", got)
 	}

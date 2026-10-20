@@ -248,6 +248,7 @@ const (
 	// Operational, not commercial, so Ops reads it: this is the question an
 	// operator is on call for.
 	objJobHealth = "job_health"
+	objDataTask  = "data_task"
 	// Which extension units this installation composed. Read-only because
 	// presence under `extensions/` IS the enablement — there is no runtime
 	// toggle for a grant to gate.

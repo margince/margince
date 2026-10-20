@@ -82,6 +82,7 @@ func sweepInsertOpts() *river.InsertOpts {
 // Embedder registers nothing for the drift sweep and anyway for a reindex —
 // which is why the posture is stated per kind and never per field.
 type JobRunnerConfig struct {
+	DataTasksPace time.Duration
 	// Schedules is the interval every {setting: …} cadence runs at, read from
 	// the admin's settings at boot and moved by its Watch while the worker
 	// runs. Nil schedules from the registered defaults.
@@ -404,6 +405,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	addImportJobs(reg, pool, cfg, log)
 
 	periodic := slices.Concat(
+		addDataTaskJobs(reg, pool, cfg),
 		addMeetingDeliveryJob(reg, pool, cfg),
 		// The passes that register themselves: each helper wires its own
 		// workers and hands back the schedules that go with them, so this

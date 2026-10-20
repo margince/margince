@@ -146,6 +146,7 @@ type Server struct {
 	webhooksHandlers
 	dataResetHandlers
 	jobHealthHandlers
+	dataTaskHandlers
 	captureHealthHandlers
 	extensionIngestHealthHandlers
 	recoveryHealthHandlers

@@ -1,0 +1,52 @@
+<!-- prose:plain -->
+# Add a background data task
+
+Use a data task for a correction whose cost grows with stored records. Keep schema changes in
+migrations. Read [Background data corrections](../explanation/data-tasks.md) for execution and
+upgrade rules.
+
+1. Add the schema prerequisites as additive migrations. Do not make a migration depend on the
+   correction's result.
+2. Add a stable `core/<unix-second>_<name>` task to `dataTaskCatalog` in
+   `backend/internal/compose/datatask_heldmail.go`. Declare its version, title, prerequisites and
+   ordered steps. Existing task IDs stay registered.
+3. Give each step a starting batch limit, a minimum limit, a bounded estimate and its audit policy.
+   An unaudited derived-column write must name the runtime writer that follows the same policy.
+4. Implement domain writes in the owning module's exported transaction function. The adapter takes
+   the executor's `pgx.Tx`; it must not call a store that starts another transaction or perform
+   network I/O. Preserve the module's audit and event policy.
+5. Page over an indexed key and advance over every inspected row. A batch that changes nothing may
+   still have more rows to inspect. Exclude already corrected rows from writes so a nil-cursor
+   replay changes nothing. The estimate must inspect at most its supplied cap plus one row.
+6. Test rollback after domain writes, body replay, malformed input and bounded paging through the
+   real executor. Add the owning module's real-path regressions. Run the database integration lanes
+   as well as `make check`.
+
+The executor supplies the system actor and durable run ID for audit attribution. Do not replace them.
+Keep raw causes and record content out of progress, job arguments, metrics and notices.
+
+## Check failures
+
+| Failure | What to change |
+|---|---|
+| Invalid registration | Supply a unique core ID, positive version, named steps, finite limits and callbacks. |
+| Missing audit policy | Choose per-record auditing or explain the existing derived-column exception. |
+| No cursor progress | Advance over inspected rows even when none changed. |
+| Missing prerequisite | Declare the core migration that supplies the schema the writer reads. |
+| Changed ledger version | Refresh progress before controlling the step; do not retry a stale overwrite. |
+| Table ownership | Put the write in the owning module and inject it through compose. |
+
+## Observe a correction
+
+Read Settings → System health, or use the same catalog from the command line:
+
+```sh
+margince-migrate data-tasks status --dsn "$DSN"
+margince-migrate data-tasks estimate --dsn "$DSN"
+margince-migrate data-tasks run --wait --dsn "$DSN"
+```
+
+`run` queues reconciliation and waits for the worker when requested. It never runs a batch in the
+CLI process. The database credentials confer operator authority; the HTTP controls require a human
+session and the `data_task` read or update grant. A wait stops with an error on a paused or failed
+step. Use System health to review the cause before resuming or retrying.

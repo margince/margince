@@ -37,6 +37,10 @@ import (
 // passport satisfies every object grant. This rung does not depend on the
 // wiring being right.
 func admitHealthReader(w http.ResponseWriter, r *http.Request) bool {
+	return admitOperator(w, r, "job_health", principal.ActionRead)
+}
+
+func admitOperator(w http.ResponseWriter, r *http.Request, object string, action principal.Action) bool {
 	ctx := r.Context()
 	if _, ok := principal.Actor(ctx); !ok {
 		httperr.Write(w, r, apperrors.ErrPermissionDenied)
@@ -46,7 +50,7 @@ func admitHealthReader(w http.ResponseWriter, r *http.Request) bool {
 		httperr.Write(w, r, err)
 		return false
 	}
-	if err := auth.Require(ctx, "job_health", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, object, action); err != nil {
 		httperr.Write(w, r, err)
 		return false
 	}

@@ -243,6 +243,7 @@ var tableOwners = map[string]string{
 	// table from all of them through platform's helper — which is why the helper, and
 	// the table with it, sit below every module rather than inside one.
 	"stored_object_intent": "internal/platform/storedobjects",
+	"data_task_run":        "internal/platform/datatask",
 	"deal_document_hide":   "internal/modules/activities",
 	"meeting_proposal":     "internal/modules/activities",
 	"meeting_invitation":   "internal/modules/activities",

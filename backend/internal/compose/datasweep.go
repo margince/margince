@@ -40,6 +40,7 @@ import (
 //     underneath a running worker.
 var preservedResetTables = map[string]bool{
 	"report_projection_fence": true,
+	"data_task_run":           true,
 	// Seeded by its migration; mail captured after a reset is past it anyway.
 	"activity_own_sent_mail_repair_cutoff": true,
 	// The installation's own published wording. Not tenant data: it is the

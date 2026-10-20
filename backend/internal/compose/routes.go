@@ -197,6 +197,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 		Published: events.PublishedTotal,
 		Extra:     srv.writeMetricsSections,
 		JobStats: fleetSections(
+			dataTaskMetricsSection(pool),
 			jobMetricsSection(func(ctx context.Context) (jobs.Snapshot, error) { return jobs.Stats(ctx, pool) }),
 			backfillFleetSection(backfillFleetReader(pool)),
 		),
