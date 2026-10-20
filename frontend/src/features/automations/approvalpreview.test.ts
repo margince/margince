@@ -23,6 +23,24 @@ const preview: Preview = {
 };
 
 describe("commercial approval preview", () => {
+  it.each(LOCALES)(
+    "explains an unknown conflict without a summary in %s",
+    (locale) => {
+      const unknown: Preview = {
+        ...preview,
+        conflicts: [
+          { kind: "future_reason", summary: " ", blocks_approval: true },
+        ],
+      };
+      const rows = commercialPreviewDisplay(unknown, (key, params) =>
+        translate(locale, key, params),
+      );
+      expect(
+        rows.find((row) => row.field === "preview_conflict_0")?.value,
+      ).toBe(translate(locale, "approval.preview.incompleteEvidence"));
+      expect(approvalAcceptable({ preview: unknown })).toBe(false);
+    },
+  );
   it.each(LOCALES)("labels a structured companion value in %s", (locale) => {
     const value = '{"city":"Berlin"}';
     const rows = commercialPreviewDisplay(

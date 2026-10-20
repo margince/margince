@@ -56,6 +56,10 @@ func (r approvalPreviewReader) lifecycleEvidence(ctx context.Context, approval c
 		return err
 	}
 	setLifecyclePreviewContext(preview, current, proposal.Evidence)
+	if current.SourceID.IsZero() {
+		preview.State = previewUnavailableState
+		return nil
+	}
 	if !lifecyclereview.Matches(current, proposal.Evidence) {
 		if !current.SourceID.IsZero() {
 			evidence = append(evidence, crmcontracts.ApprovalEvidence{
@@ -210,22 +214,7 @@ func setLifecyclePreviewContext(preview *crmcontracts.ApprovalPreview, current l
 		reason = "newer_evidence"
 	}
 	if reason != "" {
-		conflicts = append(conflicts, crmcontracts.ApprovalPreviewConflict{Kind: reason, Summary: lifecycleConflictSummary(reason), BlocksApproval: true})
+		conflicts = append(conflicts, crmcontracts.ApprovalPreviewConflict{Kind: reason, BlocksApproval: true})
 	}
 	preview.Conflicts = &conflicts
-}
-
-func lifecycleConflictSummary(reason string) string {
-	switch reason {
-	case "active_contract":
-		return "An agreement is still active. Review it before ending the account relationship."
-	case "active_delivery":
-		return "A project is still in delivery. Review it before ending the account relationship."
-	case "unknown_scope":
-		return "The source does not establish that the whole account relationship ended."
-	case "newer_evidence":
-		return "The source changed after this proposal. Review the current evidence."
-	default:
-		return "The current evidence is incomplete. Review the account before changing its lifecycle."
-	}
 }

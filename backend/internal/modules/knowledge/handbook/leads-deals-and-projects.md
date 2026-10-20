@@ -1,10 +1,7 @@
 <!-- prose:plain -->
 # Leads, deals and projects
 
-A lead is someone you may sell to. A deal is one opportunity with one
-company, and a project is a body of work a deal may belong to. Contacts and
-companies are in [Contacts, companies, leads, deals and projects](records.md).
-So are archiving, undo, custom fields and tags for every record.
+A lead is someone you may sell to. A deal is one opportunity with one company, and a project is work a deal may belong to. See [Records](records.md) for contacts, companies, archiving, undo, custom fields and tags.
 
 ## Leads
 
@@ -44,9 +41,7 @@ A lead has five statuses. The first three are open, the last two are final.
 | **Qualified** | A contact now exists for this lead |
 | **Disqualified** | Closed, with a reason |
 
-Contacted and engaged are set on their own from captured activity, and can also
-be set by hand. The record tells you which: "set automatically from captured
-activity" or "set by hand".
+Contacted and engaged can be set by captured activity or by hand. The record tells you which.
 
 You may move an open lead to any open step, forward or back, on its **Lead
 status** ladder. Margince itself only ever moves it forward.
@@ -175,11 +170,11 @@ command palette, or by qualifying a lead. How a deal then moves through stages,
 closes and reopens is on [The pipeline: how a deal moves](the-pipeline.md).
 
 ### How do I review a possible deal?
-A deal suggestion names the buyer's company and shows the dated evidence behind it. Read the source before accepting it. A meeting, an invitation or a proposal you sent does not establish that someone wants to buy.
+A deal suggestion names the buyer's company and shows the dated evidence behind it. Read the source before accepting it. A meeting, an invitation or a proposal you sent does not establish that someone wants your services.
 
-Choose **Link to existing deal** when the request belongs to a deal already at that company. Otherwise, check the proposed details before creating a deal. Dismiss a suggestion with a reason when it should not become a deal.
+Choose **Link to existing deal** when the request belongs to a deal already at that company. For a new deal, check the proposed details before creating a deal. Dismiss a suggestion with a reason when it should not become a deal.
 
-Buying evidence without a proposal appears in **Input checks**. Open **Answer** to read the source, check who is buying, and choose a deal. You can create a deal there when you have permission, then save the answer to file the source on it. **Not relevant** and **Remind later** keep the decision explicit.
+Buying evidence without a proposal appears in **Input checks**. Open **Answer** to read the source, check who is buying, and choose a deal. You can create a deal there when you have permission, then save the answer to file the source on it. **Not relevant** and **Remind later** record your choice.
 
 Old buying evidence carries its source date and a warning to check whether the buyer still wants it. The mailbox history date can exclude old promises from automatic work while leaving this evidence available for review.
 
@@ -370,13 +365,9 @@ A project always has at least one company. Trying to remove the last one is
 refused: "A project keeps at least one company; add another before taking this
 one off." A company with deals still on the project cannot be removed either.
 
-Companies on a project are offered three roles: **Customer, Partner,
-Subcontractor**. These are labels only. Two companies can both be Customer, or
-none can be.
+Companies on a project have roles: **Customer, Partner, Subcontractor**. These are labels only; a project can have several customers or none.
 
-Stakeholders on a project use these roles: **Champion, Economic buyer, Blocker,
-Influencer, User, Sponsor, Project lead, Delivery lead, Subject-matter
-expert.**
+Stakeholder roles: **Champion, Economic buyer, Blocker, Influencer, User, Sponsor, Project lead, Delivery lead, Subject-matter expert.**
 
 You can add someone from either end. The project's own Stakeholders card adds,
 removes and changes roles, and so does the contact's page. The contact page

@@ -60,6 +60,17 @@ function previewLabel(value: Value, field: string, t: Translator): string {
   return value.text;
 }
 
+export const LIFECYCLE_CONFLICT_LABELS: Record<
+  string,
+  Parameters<Translator>[0]
+> = {
+  active_contract: "approval.preview.activeContract",
+  active_delivery: "approval.preview.activeDelivery",
+  unknown_scope: "approval.preview.unknownScope",
+  incomplete_evidence: "approval.preview.incompleteEvidence",
+  newer_evidence: "approval.preview.newerEvidence",
+};
+
 export function commercialPreviewDisplay(
   preview: Preview,
   t: Translator,
@@ -67,19 +78,14 @@ export function commercialPreviewDisplay(
   formatDay?: (value: string) => string,
 ): readonly ResolvedDisplayField[] {
   const evidence = lifecyclePreviewFields(preview, t, formatDay);
-  const conflictLabels: Record<string, Parameters<Translator>[0]> = {
-    active_contract: "approval.preview.activeContract",
-    active_delivery: "approval.preview.activeDelivery",
-    unknown_scope: "approval.preview.unknownScope",
-    incomplete_evidence: "approval.preview.incompleteEvidence",
-    newer_evidence: "approval.preview.newerEvidence",
-  };
   const conflicts = (preview.conflicts ?? []).map((conflict, index) => {
-    const label = conflictLabels[conflict.kind];
+    const label = LIFECYCLE_CONFLICT_LABELS[conflict.kind];
     return {
       field: `preview_conflict_${index}`,
       label: t("approval.preview.conflict"),
-      value: label ? t(label) : conflict.summary,
+      value: label
+        ? t(label)
+        : conflict.summary.trim() || t("approval.preview.incompleteEvidence"),
       comparison: null,
     };
   });

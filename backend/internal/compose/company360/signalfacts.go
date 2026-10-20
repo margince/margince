@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/lifecyclereview"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -108,7 +109,7 @@ func readSignalFacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, no
 			facts.ContractEndedSaid = *endedSaid
 		}
 		if !finding.SourceID.IsZero() {
-			facts.ContractEndedSaid = finding.Quote
+			facts.ContractEndedSaid = approvals.SanitizeSummary(finding.Quote)
 			facts.ContractEndedAt = finding.OccurredAt
 			facts.ContractEndedSource = finding.SourceID
 		}

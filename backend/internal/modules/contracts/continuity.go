@@ -33,7 +33,8 @@ func CompanyContinuityTx(ctx context.Context, tx pgx.Tx, company ids.CompanyID, 
 	scope = trueWhenEmpty(scope)
 	from := "contract"
 	if lock {
-		from = storekit.SQLf("(SELECT * FROM contract WHERE company_id = $%d ORDER BY id FOR UPDATE)", companyPos)
+		// Name the scope and continuity columns so custom-field DDL cannot change the locked row shape.
+		from = storekit.SQLf("(SELECT id, company_id, deal_id, status, starts_on, ends_on, cancellation_effective_on, archived_at FROM contract WHERE company_id = $%d ORDER BY id FOR UPDATE)", companyPos)
 	}
 	query := storekit.SQLf(`SELECT coalesce(bool_or(%s AND %s), false), coalesce(bool_and(%s), true)
  FROM %s AS contract WHERE company_id = $%d AND archived_at IS NULL`, UnderContractSQL(dayPos), scope, scope, from, companyPos)

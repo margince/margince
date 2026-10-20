@@ -44,6 +44,11 @@ func (s *Store) LockContactForBulkTx(ctx context.Context, tx pgx.Tx, id ids.Cont
 
 // LockCompanyForBulkTx is LockContactForBulkTx for a company.
 func (s *Store) LockCompanyForBulkTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID) (BulkRow, error) {
+	return LockCompanyTx(ctx, tx, id)
+}
+
+// LockCompanyTx shares the readable company lock across bulk edits and lifecycle decisions.
+func LockCompanyTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID) (BulkRow, error) {
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return BulkRow{}, err
 	}

@@ -34,7 +34,8 @@ func CompanyDeliveryTx(ctx context.Context, tx pgx.Tx, company ids.CompanyID, lo
 	}
 	from := "project"
 	if lock {
-		from = storekit.SQLf("(SELECT * FROM project WHERE company_id = $%d ORDER BY id FOR UPDATE)", companyPos)
+		// Name the scope and continuity columns so custom-field DDL cannot change the locked row shape.
+		from = storekit.SQLf("(SELECT id, company_id, owner_id, phase, archived_at FROM project WHERE company_id = $%d ORDER BY id FOR UPDATE)", companyPos)
 	}
 	query := storekit.SQLf(`SELECT coalesce(bool_or(p.phase = $%d AND %s), false), coalesce(bool_and(%s), true)
  FROM %s p WHERE p.company_id = $%d AND p.archived_at IS NULL`, phasePos, scope, scope, from, companyPos)
