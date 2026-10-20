@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Button, Field, SearchField } from "../design-system/atoms";
-import { ErrorLine } from "../design-system/errorline";
-import { Select } from "../design-system/select";
-import { useDeals } from "../features/deals/deals.queries";
-import { useT } from "../i18n";
+import { Button, Field, SearchField } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
+import { Select } from "../../design-system/select";
+import { useT } from "../../i18n";
+import { useDeals } from "./deals.queries";
 
 export function CompanyDealPicker({
   companyId,
