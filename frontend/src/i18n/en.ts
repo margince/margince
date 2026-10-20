@@ -713,9 +713,6 @@ export const en = {
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
 
   "brief.weekly.tasksCompleted": "Tasks completed",
-  "teamweekly.noPriority": "No priority indicated by the recorded metrics",
-  "teamweekly.basis":
-    "Member summaries for the recorded week. Current plans and Worklists show today’s responsibilities.",
   "brief.weekly.noMeetings": "None recorded",
   "brief.weekly.noLeads": "None received",
   "brief.weekly.noCommitments": "None due",
@@ -729,8 +726,6 @@ export const en = {
   "brief.weekly.partialValue": "{value} (partial)",
   "brief.week.beforeHistory":
     "This week falls before the first records, so it has no figures to report.",
-  "teamweekly.headline.notRecorded":
-    "Some figures were not recorded for this week and are left out.",
   "home.receipt.date": "Close date: {before} → {after}",
   "home.receipt.undated": "No date",
   "home.receipt.confidence": "Updated forecast confidence",
@@ -750,8 +745,6 @@ export const en = {
   "brief.queue.hide": "Hide Worklist",
   "brief.team.planUnavailable": "No current plan visible to you for {name}.",
   "brief.team.noCommitments": "{name} has no commitments in this plan.",
-  "brief.team.outcomes":
-    "{won} won · {lost} lost · {moved} deals moved · {leads} leads assigned",
   "brief.schedule.unavailable": "Calendar did not load.",
   "brief.schedule.more":
     "Load more agenda items to see the remaining meetings.",
@@ -821,11 +814,6 @@ export const en = {
   "dealSuggestion.accepted": "Deal opened: {name}.",
   "dealSuggestion.acceptedUnlinked":
     "Deal opened: {name}. Some evidence remains in place because permissions do not allow it to be moved.",
-  "brief.team.commitmentRate":
-    "{done} of {total} due commitments were completed.",
-  "brief.team.meetingRate":
-    "{done} of {total} meetings had a recorded next step.",
-  "brief.team.week": "Week starting",
   "brief.week.lostLabel": "Lost",
   "brief.feed.refreshFailed":
     "The Morning brief did not refresh. Showing the last loaded work.",
@@ -853,7 +841,6 @@ export const en = {
   "brief.plan.period": "Current plan · week of {date}",
   "brief.forecast.period":
     "Forecast period: {start} to {end}. Saved with this weekly review.",
-  "brief.team.none": "No teams available. Add a team in Settings.",
   "brief.week.supporting": "Metrics, forecast and observations",
   "brief.coverage.retry": "Refresh brief",
   "brief.reply.owed": "Customer awaiting your reply",
@@ -883,20 +870,12 @@ export const en = {
   "brief.week.lost_one": "{count} deal lost.",
   "brief.week.lost_other": "{count} deals lost.",
   "brief.row.details": "Details",
-  "brief.glance.introTeam": "Your team’s day at a glance.",
-  "teamweekly.focus.deals_at_risk": "Deal recovery",
-  "teamweekly.headline.partial":
-    "Partial coverage. These figures cover the members counted below.",
-  "teamweekly.headline.unmeasured":
-    "No member snapshots are available for this week. Performance is not measured.",
   "worklist.lead.noTarget": "no response target set",
   "worklist.lead.lastTouch": "last activity {date}",
   "worklist.deal.omitted": "omitted from forecast",
   "worklist.deal.provisional": "forecast close {date} (unconfirmed)",
   "brief.readings.riskBasis": "Expected value · unpriced excluded",
   "brief.readings.risk": "Revenue at risk",
-  "brief.glance.introTeamWeekly": "Review your team’s recorded week.",
-  "brief.feed.teamTitle": "Team priorities",
   "theme.toDark": "Dark theme",
   "theme.toLight": "Light theme",
   // The three appearance choices, as the options of a chooser — the account menu
@@ -4351,88 +4330,7 @@ export const en = {
   "brief.feed.loading": "Loading Morning brief…",
   "brief.feed.clear":
     "No immediate priorities. The full Worklist is available.",
-  "teamweekly.title": "Team week",
-  "teamweekly.weekOf": "{team} · week of {day}",
-  "teamweekly.frozen": "Frozen",
-  "teamweekly.loading": "Loading team week…",
-  "teamweekly.empty": "Nothing to show for this week.",
-  "teamweekly.forbidden":
-    "Team reviews are available to the team’s lead and to roles that oversee every team.",
-  "teamweekly.noSnapshot":
-    "No saved review is available for this team and week. Choose another week or review the team’s current work.",
   "teamweekly.pickTeam": "Choose a team",
-  "teamweekly.chooseTeam": "Choose a team to review its work.",
-  "teamweekly.repsUnread":
-    "Snapshots are missing for {count} team members. These figures cover {counted} members.",
-  "teamweekly.ofTotal": "{part} of {whole}",
-  "teamweekly.headline.plain": "No meetings or due commitments were recorded.",
-  "teamweekly.card.firstResponse": "Leads answered",
-  "teamweekly.card.firstResponseBasis": "{breached} past target",
-  "teamweekly.card.noLeads": "None received",
-  "teamweekly.card.meetings": "Meetings with follow-up",
-  "teamweekly.card.meetingsBasis": "Task linked before week end",
-  "teamweekly.card.noMeetings": "None recorded",
-  "teamweekly.card.commitments": "Commitments kept",
-  "teamweekly.card.commitmentsBasis": "Due in the plan",
-  "teamweekly.card.noCommitments": "None due",
-  "teamweekly.card.won": "Won",
-  "teamweekly.card.wonBasis": "{lost} lost · value unavailable",
-  "teamweekly.card.wonBasisValue": "{value} · {lost} lost",
-  "teamweekly.card.reps": "Members counted",
-  "teamweekly.card.repsBasis": "Full week recorded",
-  "teamweekly.movement.title": "Week activity",
-  "teamweekly.movement.won": "Won",
-  "teamweekly.movement.lost": "Lost",
-  "teamweekly.movement.moved": "Advanced",
-  "teamweekly.movement.meetings": "Meetings held",
-  "teamweekly.movement.leads": "Leads routed",
-  "teamweekly.agenda.title": "Monday agenda",
-  "teamweekly.agenda.empty":
-    "No member’s week could be loaded for this team, so there is no agenda.",
-  "teamweekly.agenda.summary_one":
-    "{count} item for Monday, starting with {first}.",
-  "teamweekly.agenda.summary_other":
-    "{count} items for Monday, starting with {first}.",
-  "teamweekly.agenda.copy": "Copy agenda",
-  "teamweekly.agenda.copied": "Copied",
-  "teamweekly.agenda.copyFailed":
-    "Agenda was not copied. Select the list and copy it manually.",
-  "teamweekly.focus.help_requested": "Help requested",
-  "teamweekly.focus.leads_breached": "Response targets missed",
-  "teamweekly.focus.commitments_missed": "Plan commitments missed",
-  "teamweekly.focus.meetings_without_next_step": "Follow-up evidence missing",
-  "teamweekly.focus.strong_week": "Strong week",
-  "teamweekly.focus.quiet_week": "No priority identified",
-  "teamweekly.focus.forecast_downgrades": "Forecast downgraded",
-  "teamweekly.focus.stage_regressions": "Deals moved back",
-  "teamweekly.focus.close_dates_provisional": "Close dates provisional",
-  "teamweekly.focus.no_next_step_coverage": "Next steps missing",
-  "teamweekly.funnel.line": "{stage} → {next}: {rep} against the team’s {team}",
-  "teamweekly.funnel.lineLast": "{stage}: {rep} against the team’s {team}",
-  "teamweekly.attention.title": "Needs attention now",
-  "teamweekly.attention.live": "Live",
-  "teamweekly.attention.basis":
-    "Read now from the deals the team’s members own, not frozen with the week.",
-  "teamweekly.attention.empty":
-    "Nothing on the team’s deals needs attention now.",
-  "teamweekly.attention.quiet": "No activity for {days} days",
-  "teamweekly.quality.title": "Record quality",
-  "teamweekly.quality.accepted": "Proposals accepted",
-  "teamweekly.quality.rejected": "Proposals rejected",
-  "teamweekly.quality.reversals": "Automatic changes undone",
-  "teamweekly.quality.notMeasured": "Not measured",
-  "teamweekly.quality.basis": "Frozen with the week",
-  "teamweekly.coverage.title": "Deal value coverage",
-  "teamweekly.coverage.month": "Month",
-  "teamweekly.coverage.quarter": "Quarter",
-  "teamweekly.coverage.atRisk": "Coverage at risk against {basis}",
-  "teamweekly.coverage.holds": "Coverage holds against {basis}",
-  "teamweekly.coverage.percent": "{percent} of the deal value needed",
-  "teamweekly.coverage.replan": "Replan recommended",
-  "teamweekly.coverage.notAuthorized":
-    "The call for this period could not be read when the week closed.",
-  "teamweekly.coverage.basis.manager_call": "the manager’s call",
-  "teamweekly.coverage.basis.historical_median": "the historical median",
 
   "plan.loading": "Loading plan…",
   "plan.empty": "Nothing on the plan yet.",

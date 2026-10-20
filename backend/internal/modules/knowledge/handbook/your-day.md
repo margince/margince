@@ -136,7 +136,7 @@ of your last closed week sits above your plan.
 
 Margince writes the review on the Monday after the week, and then it is **Frozen**; you cannot make
 it again. Before your first full week it says "No weekly review yet. The first one is created on the
-Monday after your first full week." The team's week is in [Your week](your-week.md#the-teams-week).
+Monday after your first full week."
 Also called: weekly report, week in review, weekly summary.
 
 ## Morning

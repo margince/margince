@@ -739,9 +739,6 @@ export const de = {
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 
   "brief.weekly.tasksCompleted": "Aufgaben erledigt",
-  "teamweekly.noPriority": "Die erfassten Kennzahlen zeigen keine Priorität",
-  "teamweekly.basis":
-    "Übersichten je Mitglied für die erfasste Woche. Aktuelle Pläne und Worklists zeigen, wer heute verantwortlich ist.",
   "brief.weekly.noMeetings": "Keine erfasst",
   "brief.weekly.noLeads": "Keine eingegangen",
   "brief.weekly.noCommitments": "Keine fällig",
@@ -756,8 +753,6 @@ export const de = {
   "brief.weekly.partialValue": "{value} (teilweise)",
   "brief.week.beforeHistory":
     "Für diese Woche gibt es keine Zahlen, da sie vor den ersten Datensätzen liegt.",
-  "teamweekly.headline.notRecorded":
-    "Einige Zahlen wurden für diese Woche nicht erfasst und fehlen hier.",
   "home.receipt.date": "Abschlussdatum: {before} → {after}",
   "home.receipt.undated": "Kein Datum",
   "home.receipt.confidence": "Prognosesicherheit aktualisiert",
@@ -778,8 +773,6 @@ export const de = {
   "brief.team.planUnavailable":
     "Für {name} ist kein aktueller Plan für dich sichtbar.",
   "brief.team.noCommitments": "{name} hat in diesem Plan keine Zusagen.",
-  "brief.team.outcomes":
-    "Gewonnen: {won} · Verloren: {lost} · Deals bewegt: {moved} · Leads zugewiesen: {leads}",
   "brief.schedule.unavailable": "Der Kalender konnte nicht geladen werden.",
   "brief.schedule.more":
     "Lade weitere Agenda-Einträge, um die übrigen Termine zu sehen.",
@@ -852,10 +845,6 @@ export const de = {
   "dealSuggestion.accepted": "Deal erstellt: {name}.",
   "dealSuggestion.acceptedUnlinked":
     "Deal erstellt: {name}. Einige Hinweise bleiben, wo sie waren, da die Berechtigungen kein Verschieben erlauben.",
-  "brief.team.commitmentRate": "Erledigte fällige Zusagen: {done} von {total}.",
-  "brief.team.meetingRate":
-    "Termine mit erfasstem nächsten Schritt: {done} von {total}.",
-  "brief.team.week": "Woche ab",
   "brief.week.lostLabel": "Verloren",
   "brief.feed.refreshFailed":
     "Der Morgenbericht konnte nicht aktualisiert werden. Angezeigt wird die zuletzt geladene Arbeit.",
@@ -884,8 +873,6 @@ export const de = {
   "brief.plan.period": "Aktueller Plan · Woche vom {date}",
   "brief.forecast.period":
     "Prognosezeitraum: {start} bis {end}. Mit diesem Wochenrückblick gespeichert.",
-  "brief.team.none":
-    "Keine Teams verfügbar. Erstelle ein Team in den Einstellungen.",
   "brief.week.supporting": "Kennzahlen, Prognose und Beobachtungen",
   "brief.coverage.retry": "Morgenbericht aktualisieren",
   "brief.reply.owed": "Kontakt wartet auf deine Antwort",
@@ -918,12 +905,6 @@ export const de = {
   "brief.week.lost_one": "{count} Deal verloren.",
   "brief.week.lost_other": "{count} Deals verloren.",
   "brief.row.details": "Details",
-  "brief.glance.introTeam": "Der Tag deines Teams im Überblick.",
-  "teamweekly.focus.deals_at_risk": "Rettung gefährdeter Deals",
-  "teamweekly.headline.partial":
-    "Unvollständige Abdeckung. Diese Zahlen betreffen die unten gezählten Mitglieder.",
-  "teamweekly.headline.unmeasured":
-    "Für diese Woche liegen keine Snapshots der Mitglieder vor. Die Leistung wird nicht gemessen.",
   "worklist.lead.noTarget": "ohne Zielzeit",
   "worklist.lead.lastTouch": "letzte Aktivität {date}",
   "worklist.deal.omitted": "nicht in der Prognose",
@@ -932,8 +913,6 @@ export const de = {
   "brief.readings.riskBasis":
     "Erwarteter Wert · Deals ohne Preis nicht enthalten",
   "brief.readings.risk": "Gefährdeter Umsatz",
-  "brief.glance.introTeamWeekly": "Prüfe die erfasste Woche deines Teams.",
-  "brief.feed.teamTitle": "Prioritäten im Team",
   "theme.toDark": "Dunkles Design",
   "theme.toLight": "Helles Design",
   // Die drei Auswahlmöglichkeiten fürs Erscheinungsbild: das Kontomenü zeigt
@@ -4269,7 +4248,7 @@ export const de = {
   "plan.title": "Zusagen dieser Woche",
   // Die zwei Regler des Briefings: welches, und für wen.
   "brief.view.label": "Home-Ansicht",
-  "brief.view.morning": "Morgen",
+  "brief.view.morning": "Heute",
   "brief.view.weekly": "Woche",
   // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
   // Seite zeigt — nie von einem Modell geschrieben.
@@ -4315,90 +4294,7 @@ export const de = {
   "brief.feed.loading": "Morgenbericht wird geladen…",
   "brief.feed.clear":
     "Keine unmittelbaren Prioritäten. Die vollständige Worklist ist verfügbar.",
-  "teamweekly.title": "Teamwoche",
-  "teamweekly.weekOf": "{team} · Woche vom {day}",
-  "teamweekly.frozen": "Eingefroren",
-  "teamweekly.loading": "Teamwoche wird geladen…",
-  "teamweekly.empty": "Für diese Woche gibt es nichts anzuzeigen.",
-  "teamweekly.forbidden":
-    "Teamrückblicke stehen der Teamleitung und Rollen zur Verfügung, die alle Teams überblicken.",
-  "teamweekly.noSnapshot":
-    "Für dieses Team und diese Woche ist kein gespeicherter Rückblick verfügbar. Wähle eine andere Woche oder prüfe die aktuelle Arbeit des Teams.",
   "teamweekly.pickTeam": "Team auswählen",
-  "teamweekly.chooseTeam": "Wähle ein Team, um seine Arbeit zu prüfen.",
-  "teamweekly.repsUnread":
-    "Teammitglieder ohne Snapshot: {count}. In diesen Zahlen gezählt: {counted}.",
-  "teamweekly.ofTotal": "{part} von {whole}",
-  "teamweekly.headline.plain":
-    "Es wurden keine Termine oder fälligen Zusagen erfasst.",
-  "teamweekly.card.firstResponse": "Beantwortete Leads",
-  "teamweekly.card.firstResponseBasis": "Über der Zielzeit: {breached}",
-  "teamweekly.card.noLeads": "Keine eingegangen",
-  "teamweekly.card.meetings": "Termine mit Follow-up",
-  "teamweekly.card.meetingsBasis": "Aufgabe vor Ende der Woche verknüpft",
-  "teamweekly.card.noMeetings": "Keine erfasst",
-  "teamweekly.card.commitments": "Eingehaltene Zusagen",
-  "teamweekly.card.commitmentsBasis": "Im Plan fällig",
-  "teamweekly.card.noCommitments": "Keine fällig",
-  "teamweekly.card.won": "Gewonnen",
-  "teamweekly.card.wonBasis": "Verloren: {lost} · Wert nicht verfügbar",
-  "teamweekly.card.wonBasisValue": "{value} · Verloren: {lost}",
-  "teamweekly.card.reps": "Gezählte Mitglieder",
-  "teamweekly.card.repsBasis": "Ganze Woche erfasst",
-  "teamweekly.movement.title": "Aktivität der Woche",
-  "teamweekly.movement.won": "Gewonnen",
-  "teamweekly.movement.lost": "Verloren",
-  "teamweekly.movement.moved": "Vorangebracht",
-  "teamweekly.movement.meetings": "Abgehaltene Termine",
-  "teamweekly.movement.leads": "Verteilte Leads",
-  "teamweekly.agenda.title": "Agenda für Montag",
-  "teamweekly.agenda.empty":
-    "Für dieses Team konnte keine Woche eines Mitglieds geladen werden, daher gibt es keine Agenda.",
-  "teamweekly.agenda.summary_one":
-    "{count} Punkt für Montag, beginnend mit {first}.",
-  "teamweekly.agenda.summary_other":
-    "{count} Punkte für Montag, beginnend mit {first}.",
-  "teamweekly.agenda.copy": "Agenda kopieren",
-  "teamweekly.agenda.copied": "Kopiert",
-  "teamweekly.agenda.copyFailed":
-    "Die Agenda konnte nicht kopiert werden. Markiere die Liste und kopiere sie manuell.",
-  "teamweekly.focus.help_requested": "Hilfe angefragt",
-  "teamweekly.focus.leads_breached": "Zielzeiten für Antworten verfehlt",
-  "teamweekly.focus.commitments_missed": "Verpasste Planzusagen",
-  "teamweekly.focus.meetings_without_next_step": "Beleg für Follow-up fehlt",
-  "teamweekly.focus.strong_week": "Starke Woche",
-  "teamweekly.focus.quiet_week": "Keine Priorität erkannt",
-  "teamweekly.focus.forecast_downgrades": "Prognose herabgestuft",
-  "teamweekly.focus.stage_regressions": "Deals zurückgefallen",
-  "teamweekly.focus.close_dates_provisional": "Abschlusstermine vorläufig",
-  "teamweekly.focus.no_next_step_coverage": "Nächste Schritte fehlen",
-  "teamweekly.funnel.line": "{stage} → {next}: {rep} gegenüber {team} im Team",
-  "teamweekly.funnel.lineLast": "{stage}: {rep} gegenüber {team} im Team",
-  "teamweekly.attention.title": "Braucht jetzt Aufmerksamkeit",
-  "teamweekly.attention.live": "Aktuell",
-  "teamweekly.attention.basis":
-    "Jetzt aus den Deals der Teammitglieder gelesen, nicht mit der Woche eingefroren.",
-  "teamweekly.attention.empty":
-    "Bei den Deals des Teams braucht gerade nichts Aufmerksamkeit.",
-  "teamweekly.attention.quiet": "Seit {days} Tagen keine Aktivität",
-  "teamweekly.quality.title": "Datenqualität",
-  "teamweekly.quality.accepted": "Vorschläge angenommen",
-  "teamweekly.quality.rejected": "Vorschläge abgelehnt",
-  "teamweekly.quality.reversals": "Automatische Änderungen rückgängig gemacht",
-  "teamweekly.quality.notMeasured": "Nicht gemessen",
-  "teamweekly.quality.basis": "Mit der Woche eingefroren",
-  "teamweekly.coverage.title": "Deckung des Dealwerts",
-  "teamweekly.coverage.month": "Monat",
-  "teamweekly.coverage.quarter": "Quartal",
-  "teamweekly.coverage.atRisk": "Deckung gefährdet gegenüber {basis}",
-  "teamweekly.coverage.holds": "Deckung ausreichend gegenüber {basis}",
-  "teamweekly.coverage.percent": "{percent} des benötigten Dealwerts",
-  "teamweekly.coverage.replan": "Neuplanung empfohlen",
-  "teamweekly.coverage.notAuthorized":
-    "Die Einschätzung für diesen Zeitraum konnte beim Wochenabschluss nicht gelesen werden.",
-  "teamweekly.coverage.basis.manager_call":
-    "der Einschätzung der Führungskraft",
-  "teamweekly.coverage.basis.historical_median": "dem historischen Median",
 
   "plan.loading": "Plan wird geladen…",
   "plan.empty": "Noch nichts im Plan.",

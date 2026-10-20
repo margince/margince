@@ -200,7 +200,7 @@ it.each([false, true])(
   },
 );
 
-it("ends the row in hand's one line with its menu, the agent's move before it", () => {
+it("leads the row in hand's one line with the agent's move, and ends it with its menu", () => {
   stubApi({});
   const { container } = render(
     <BriefFeed
@@ -215,20 +215,21 @@ it("ends the row in hand's one line with its menu, the agent's move before it", 
       .querySelector(".worklist-row-acts")
       ?.querySelectorAll("button, a") ?? []),
   ];
-  // The way into what the row is about opens the line. Done stands before the
-  // agent's move, and the row's menu, holding the other set-asides, closes it.
-  expect(line.at(0)).toBe(
-    lead.getByRole("button", { name: en["brief.focus.context"] }),
-  );
-  expect(line.at(-1)).toBe(lead.getByRole("button", { name: rowMenu }));
+  // The card is finished on its answer, so the answer opens the line. Then the
+  // way into what the row is about and Done; the row's menu, holding the other
+  // set-asides, closes it.
   const draft = lead.getByRole("link", {
     name: en["worklist.verb.draft_reply_now"],
   });
   expect(draft.className).toContain("btn-ai");
-  expect(line.at(-2)).toBe(draft);
-  expect(line.at(-3)).toBe(
+  expect(line.at(0)).toBe(draft);
+  expect(line.at(1)).toBe(
+    lead.getByRole("button", { name: en["brief.focus.context"] }),
+  );
+  expect(line.at(-2)).toBe(
     lead.getByRole("button", { name: en["worklist.disposition.verb.handled"] }),
   );
+  expect(line.at(-1)).toBe(lead.getByRole("button", { name: rowMenu }));
   expect(
     lead.queryByRole("button", {
       name: en["worklist.disposition.verb.not_mine"],

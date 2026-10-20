@@ -68,11 +68,7 @@ export function BriefFeed({
     <section id="brief-today" className="brief-first" aria-labelledby={titleId}>
       <div className="brief-first-head">
         <Eyebrow as="h2" id={titleId}>
-          {t(
-            day?.scope === "team"
-              ? "brief.feed.teamTitle"
-              : "brief.first.title",
-          )}
+          {t("brief.first.title")}
         </Eyebrow>
         {changed && (
           <a className="entity-link" href={changed.href}>

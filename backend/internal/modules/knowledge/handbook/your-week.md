@@ -43,7 +43,6 @@ The weekly review counts recorded work, and says plainly where the record is sho
 - An older review keeps the rules it was made with. One from before tasks completed were counted
   shows no figure, not a zero.
 - With nothing to coach on, it says no priority was found. It says nothing about how hard someone worked.
-- A team total is left out when a member's week is missing, or is in another currency.
 - A view against an earlier week names that week, which may not be the week just before.
 
 ### The scorecard
@@ -124,54 +123,3 @@ that, ask them yourself as well.
 know about the request; nothing built in does that.)
 
 A lead may answer a commitment and nothing else. A lead cannot close it, change its words or drop it.
-
-## The team's week
-
-A team's week in Margince is on **Home → Weekly** for the team. Home has no switch for it: a lead
-opens it at the address `#/home?view=weekly&scope=team`. A lead looking at a team sees the same
-week from the other side. It shows reply rates,
-meetings with a recorded next step, commitments kept, won and lost, and how many members were
-counted.
-
-A short summary opens the page. Margince writes it from the week's figures by fixed rules.
-
-**Monday agenda** has one line per teammate, the most urgent first. Each line names every reason
-to talk about their week, the most urgent first:
-- **Help requested**: they asked for help
-- **Response targets missed**
-- **Plan commitments missed**
-- **Forecast downgraded** and **Deals moved back**
-- **Close dates provisional**: more than 3 in 10 open deals
-- **Next steps missing**: fewer than half of the open deals have one
-- **Strong week**: worth copying
-- **Follow-up evidence missing**: meetings with no next step
-- **No priority identified**: a quiet week
-
-The two rules about open deals need at least 3 of them. Under a line, a stage can show where that
-teammate converts differently from the team over the last 13 weeks. A stage needs at least 5 entries
-on each side.
-
-**Copy agenda** copies it in one press.
-
-Under the agenda:
-- **Needs attention now** lists open checks on the team's deals and deals with no activity for 60
-  days. It is read when you open the page, not frozen with the week.
-- **Record quality** counts proposals accepted and rejected, and automatic changes the team took
-  back.
-- **Deal value coverage** covers the month and the quarter. It says whether coverage holds or is at
-  risk against the call, or against what past periods closed. Below 80%, it says to plan again.
-  Without a call or enough past periods it says why there is no figure.
-
-The page carries two notes about missing data:
-
-- Where member data is missing, it says for how many team members, and how many members the numbers
-  cover. It is never hidden behind a button.
-- Where nobody was measured, it says there is no member data for this week, so nothing is measured.
-  The page does not show a row of 0s.
-
-A team's week is for the team's lead, and for a role that looks after every team (Admin and
-Management, as they come). Reaching every record is not enough. A read-only seat sees the whole
-company and its team's live work on Morning, and is still not offered the team's week. The week's
-picker lists the teams you lead, or every team if your role looks after them all. A seat that may
-open no team's week sees that this is not theirs. A lead asking about a team they are not on gets
-**not found**.

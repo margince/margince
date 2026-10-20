@@ -7,7 +7,7 @@ import { Select } from "../../design-system/select";
 import { SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
 import { useMe } from "../../lib/session";
-import { useTeams } from "../worklist/teamweekly.queries";
+import { useTeams } from "../worklist/teams.queries";
 import { useWorklist } from "../worklist/worklist.queries";
 
 type Delivery = components["schemas"]["BriefDelivery"];

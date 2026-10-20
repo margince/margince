@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The verbs one row of the day offers, on one right-aligned line. The row
-// decides how a piece of work reads; this decides what can be done about it.
-// The line holds Done where the row offers it, then the lane's answer, then
-// the row's menu. So the answer and the menu stand at one x down the queue.
+// The verbs one row of the day offers, on one line: Done where the row offers
+// it, then the lane's answer, then the row's menu. So the answer and the menu
+// stand at one x down the queue; in a card the answer leads.
 // The menu holds the rest, most used first: the snooze, a way to the record,
 // the pin, the hand-off, then the hand-backs.
 
@@ -91,12 +90,8 @@ export function RowActs({
   const putsDown = write.offered.some(
     (disposition) => folded || disposition !== "handled",
   );
-  return (
-    <div className="worklist-row-acts">
-      {context}
-      {reviews && onReview && <BatchVerb onReview={onReview} />}
-      {equals}
-      <DoneVerb write={write} />
+  const answer = (
+    <>
       {!item.batch && <PreparedMove item={item} onOpenEmail={onOpenEmail} />}
       {lead && (
         <a className={NAVIGATING_VERB} href={lead.destination}>
@@ -104,6 +99,31 @@ export function RowActs({
         </a>
       )}
       {primary}
+    </>
+  );
+  const others = (
+    <>
+      {context}
+      {reviews && onReview && <BatchVerb onReview={onReview} />}
+      {equals}
+      <DoneVerb write={write} />
+    </>
+  );
+  // A card is read top to bottom and finished on its answer, so the answer
+  // leads there. Down the queue it stands last, at one x on every row.
+  return (
+    <div className="worklist-row-acts">
+      {framed ? (
+        <>
+          {answer}
+          {others}
+        </>
+      ) : (
+        <>
+          {others}
+          {answer}
+        </>
+      )}
       {(ways.length > 0 || pins || handsOff || putsDown) && (
         <OverflowMenu label={t("worklist.rowMenu", { title })}>
           <PutDownLines write={write} />

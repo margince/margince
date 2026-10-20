@@ -19,7 +19,6 @@ import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
 import { MagicPanel } from "../sign-in/magic";
 import { useTaskUpdate } from "../worklist/taskactions";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
-import type { TeamWeekReach } from "../worklist/teamweekly.queries";
 import { drawerScope } from "../worklist/worklist.address";
 import { WorklistPane } from "../worklist/worklist.pane";
 import { useWorklist, worklistKey } from "../worklist/worklist.queries";
@@ -36,15 +35,7 @@ import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue } from "./brief.queue";
 import { BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
-import { BriefTeamBoard } from "./brief.teamboard";
-import { BriefTeamSelect, morningTeams } from "./brief.teamselect";
-import { TeamWeeklyPanel } from "./brief.teamweekly";
-import {
-  addressFrom,
-  type BriefAddress,
-  paramsFor,
-  type TeamOffers,
-} from "./brief.view";
+import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { WeeklySection } from "./brief.weekly";
 import { BriefCoverage } from "./briefcoverage";
 import "./brief.css";
@@ -53,18 +44,9 @@ export function BriefScreen() {
   const t = useT();
   const nowMs = useNow(60_000);
   const me = useMe();
-  const own = useWorklist("mine", "all");
-  // Each view's team surface on its own server rule: the team's live work on
-  // row scope, the team's frozen week on who leads or oversees. An older
-  // server without `team_week` offers no week, which is the safe reading.
-  const teamWeek = own.data?.pages[0]?.team_week ?? "none";
-  const teamOffered: TeamOffers = {
-    morning: own.data?.pages[0]?.scope_options?.includes("team") ?? false,
-    weekly: teamWeek !== "none",
-  };
+  const query = useWorklist("mine", "all");
   const [params, setParams] = useUrlParams();
-  const address = addressFrom(params, teamOffered);
-  const query = own;
+  const address = addressFrom(params);
   const day = briefDay(query.data?.pages);
   // THE QUEUE THE BUTTON OPENS, which is not always the reader's own. The
   // drawer keeps its scope and its named owner in the address and both survive
@@ -83,7 +65,7 @@ export function BriefScreen() {
   const review = useWeeklyReview(address.week);
   const firstName = greetingNameOf(me.data?.user);
   const brief = useMorningBrief();
-  const ownMorning = address.view === "morning" && address.scope === "mine";
+  const morning = address.view === "morning";
   const dials = (
     <BriefDials
       address={address}
@@ -95,7 +77,7 @@ export function BriefScreen() {
   // the drawer's head sentence ends on, whichever queue it shows.
   const queueToggle = (
     <PageAsideToggle
-      prominent={!ownMorning}
+      prominent={!morning}
       controlled={{
         open: params.get("queue") === "1",
         count: queuedDay ? pillCount(queuedDay, "all") : undefined,
@@ -115,9 +97,8 @@ export function BriefScreen() {
   const glance = (
     <BriefGlance
       view={address.view}
-      scope={address.scope}
       day={
-        address.scope === "mine" && day
+        day
           ? {
               ...day,
               focus: day.focus
@@ -131,20 +112,20 @@ export function BriefScreen() {
             }
           : undefined
       }
-      week={address.scope === "mine" ? review.data : undefined}
+      week={review.data}
       firstName={firstName}
       now={new Date(nowMs)}
-      briefedAt={ownMorning ? brief.data?.generated_at : undefined}
-      controls={ownMorning ? dials : undefined}
+      briefedAt={morning ? brief.data?.generated_at : undefined}
+      controls={morning ? dials : undefined}
     />
   );
-  // The reader's own morning puts its dials on the date's line, and the way
-  // into the queue under the day's order. Every other view keeps both at the
-  // head's far edge, where a record keeps its verbs.
+  // The morning puts its dial on the date's line, and the way into the queue
+  // under the day's order. The weekly keeps both at the head's far edge,
+  // where a record keeps its verbs.
   const head = (
     <div className="brief-head">
       {glance}
-      {!ownMorning && (
+      {!morning && (
         <div className="brief-controls">
           {dials}
           {queueToggle}
@@ -156,13 +137,11 @@ export function BriefScreen() {
     <div className="wrap brief-wrap">
       {/* A link to one decision, from a notice or a receipt, opens it here. */}
       <LinkedApprovalDrawer />
-      {ownMorning && (
+      {morning && (
         <BriefIntro firstName={firstName} day={day} now={new Date(nowMs)} />
       )}
       <BriefBody
         address={address}
-        teamOffered={teamOffered}
-        teamWeek={teamWeek}
         query={query}
         head={head}
         queueToggle={queueToggle}
@@ -176,45 +155,21 @@ export { deckItems } from "./brief.decisions.items";
 
 function BriefBody({
   address,
-  teamOffered,
-  teamWeek,
   query,
   head,
   queueToggle,
 }: Readonly<{
   address: BriefAddress;
-  teamOffered: TeamOffers;
-  teamWeek: TeamWeekReach;
   query: ReturnType<typeof useWorklist>;
   head: ReactNode;
   queueToggle: ReactNode;
 }>) {
-  const me = useMe();
   if (address.view === "weekly")
     return (
       <>
         {head}
-        {address.scope === "team" ? (
-          <TeamWeeklyPanel reach={teamWeek} />
-        ) : (
-          <>
-            <WeeklySection />
-            <PlanSection />
-          </>
-        )}
-      </>
-    );
-  if (address.scope === "team")
-    return (
-      <>
-        {head}
-        <BriefTeamSelect
-          lists={morningTeams(me.data?.authorization?.row_scope)}
-        >
-          {(teamId) => (
-            <BriefTeamBoard offered={teamOffered.morning} teamId={teamId} />
-          )}
-        </BriefTeamSelect>
+        <WeeklySection />
+        <PlanSection />
       </>
     );
   return (

@@ -113,7 +113,6 @@ const PENDING: readonly string[] = [
   "ob.conv.voice.dimSentenceEvidence",
   "settings.voice.meter",
   "tagResult.totalVisible",
-  "teamweekly.repsUnread",
   "today.silence.days",
   "voice.insights.next.addWords",
   "voice.insights.statSentence",

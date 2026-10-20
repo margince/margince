@@ -87,8 +87,7 @@ function stubBrief(
 }
 
 describe("the Brief's dials", () => {
-  // Home offers no switch between the reader's own day and the team's: a lead
-  // opens the team's view by its address.
+  // Home is the reader's own day and week: there is no team view to switch to.
   it("draws the view dial and no scope dial, even for a lead", async () => {
     stubBrief(["mine", "team"]);
     render(<BriefScreen />);
@@ -262,11 +261,9 @@ describe("the Brief's dials", () => {
     expect(document.querySelector(".page-zones-aside")).not.toBeNull();
   });
 
-  // DECISION 5, ON THE PAGE. Every combination the dials offer must draw
-  // something. An empty work column under a selectable dial is the defect the
-  // rule exists to prevent, and it is invisible to a test that only checks the
-  // address resolved.
-  it("draws a surface under every combination it offers", async () => {
+  // Every address draws a surface, an old team link included: Home has no
+  // team view, so that link opens the reader's own day or week.
+  it("draws a surface under every address it may be given", async () => {
     for (const hash of [
       "#/home",
       "#/home?view=weekly",
@@ -282,12 +279,9 @@ describe("the Brief's dials", () => {
         expect(
           view.container.querySelector(".brief-wrap")?.textContent,
         ).not.toBe("");
-        if (hash.includes("scope=team"))
-          expect(screen.getByText(en["brief.team.none"])).toBeTruthy();
-        else
-          expect(
-            view.container.querySelector(".brief-main, #brief-weekly"),
-          ).toBeTruthy();
+        expect(
+          view.container.querySelector(".brief-main, #brief-weekly"),
+        ).toBeTruthy();
       });
       cleanup();
       vi.unstubAllGlobals();
@@ -354,14 +348,4 @@ describe("the Brief's dials", () => {
       expect(screen.queryByText(en["brief.first.title"])).toBeNull(),
     );
   });
-});
-
-it("the team view does not describe a personal queue as team work", async () => {
-  stubBrief(["mine", "team"]);
-  globalThis.location.hash = "#/home?scope=team";
-  const { container } = render(<BriefScreen />);
-  await screen.findByRole("group", { name: en["brief.view.label"] });
-  await screen.findByText(en["brief.team.none"]);
-  expect(container.querySelector("#brief-today")).toBeNull();
-  expect(screen.queryByTestId("brief-readings")).toBeNull();
 });

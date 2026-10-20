@@ -107,7 +107,6 @@ export type GlanceFacts = Readonly<{
    *  from the ranked queue, the weekly's from the counts the week was frozen
    *  with. Neither can describe the other. */
   view: BriefView;
-  scope?: "mine" | "team";
   /** When the agent wrote the morning brief, for the provenance badge. Only
    *  the reader's own morning carries one. */
   briefedAt?: string;
@@ -267,7 +266,6 @@ export function BriefGlance({
   day,
   week,
   view,
-  scope = "mine",
   briefedAt,
   controls,
 }: GlanceProps) {
@@ -279,7 +277,7 @@ export function BriefGlance({
     view === "weekly"
       ? t("brief.panel.weekly")
       : greetingText(firstName, hour, t);
-  const sentence = glanceSentence({ view, scope, day, week }, t, locale);
+  const sentence = glanceSentence({ view, day, week }, t, locale);
   const meeting =
     view === "morning" ? meetingSentence(day, now, t, locale) : null;
   const date = view === "morning" ? now.toISOString() : week?.local_week_start;
@@ -324,7 +322,7 @@ export function BriefGlance({
         // ONE FACE either way. It is the same slot the composed sentence fills,
         // and drawn as a caption it read as a footnote where the composed one
         // read as the page's opening.
-        <p className="glance-sentence">{t(introKey(view, scope))}</p>
+        <p className="glance-sentence">{t(introKey(view))}</p>
       )}
       {briefedAt && (
         <p className="glance-briefed">
@@ -340,18 +338,14 @@ export function BriefGlance({
 }
 
 function glanceSentence(
-  facts: Pick<GlanceFacts, "view" | "scope" | "day" | "week">,
+  facts: Pick<GlanceFacts, "view" | "day" | "week">,
   t: ReturnType<typeof useT>,
   locale: ReturnType<typeof useLocale>["locale"],
 ) {
   if (facts.view === "morning") return briefSentence(facts.day, t, locale);
-  return facts.scope === "team" ? null : weekSentence(facts.week, t, locale);
+  return weekSentence(facts.week, t, locale);
 }
 
-function introKey(view: BriefView, scope: "mine" | "team"): MessageKey {
-  if (view === "weekly")
-    return scope === "team"
-      ? "brief.glance.introTeamWeekly"
-      : "brief.glance.introWeekly";
-  return scope === "team" ? "brief.glance.introTeam" : "brief.glance.intro";
+function introKey(view: BriefView): MessageKey {
+  return view === "weekly" ? "brief.glance.introWeekly" : "brief.glance.intro";
 }
