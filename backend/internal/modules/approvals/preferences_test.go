@@ -7,10 +7,10 @@ import "testing"
 
 func TestMuteableKindsKeepFiniteExpiryAndSharedReview(t *testing.T) {
 	for _, kind := range muteableKinds() {
-		if ExpiresNever(kind) || selfOnlyKinds[kind] || retiredKinds[kind] {
+		if ExpiresNever(kind) || selfOnlyKinds[kind] || retiredKinds[kind] || ReleaseSends(kind) {
 			t.Errorf("%s cannot safely leave the ordinary queue", kind)
 		}
-		if _, err := decisionGrantsFor(kind, new(tableDeal)); err != nil {
+		if _, err := decisionGrantsFor(kind, nil); err != nil {
 			t.Errorf("%s lacks a governed decision route: %v", kind, err)
 		}
 	}

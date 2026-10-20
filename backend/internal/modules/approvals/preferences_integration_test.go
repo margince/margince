@@ -33,6 +33,12 @@ func TestAPersonalMutePreservesAnotherReadersQueueAndTheSharedProposal(t *testin
 	if _, err := e.svc.SetAutoApply(otherCtx, countedKind, true); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := e.svc.SetApprovalPreference(ctx, countedKind, false); err != nil {
+		t.Fatal(err)
+	}
+	if mode, err := e.svc.AutoApplyMode(ctx, countedKind); err != nil || mode != ModeAuto {
+		t.Fatalf("unchanged preference rewrote policy: %s, %v", mode, err)
+	}
 	if _, err := e.svc.SetApprovalPreference(ctx, countedKind, true); err != nil {
 		t.Fatal(err)
 	}
@@ -98,6 +104,12 @@ func TestMuteFilteringPrecedesPaginationAndNeverHidesPassportRows(t *testing.T) 
 	seed := newDealSeeder(t, e)
 	visible := seed.stageCounted(ctx, t)
 	passport := e.lentPassport(t, e.rep)
+	actor, ok := principal.Actor(passport)
+	if !ok {
+		t.Fatal("passport actor missing")
+	}
+	actor.Permissions.Objects[tableDeal] = principal.ObjectGrant{Read: true, Update: true}
+	passport = principal.WithActor(passport, actor)
 	passportID := seed.stageCounted(passport, t)
 	for range 4 {
 		seed.stageCounted(ctx, t)
@@ -121,7 +133,8 @@ func TestMuteFilteringPrecedesPaginationAndNeverHidesPassportRows(t *testing.T) 
 func TestUnsafeApprovalKindsCannotBeMuted(t *testing.T) {
 	e := setupStaging(t)
 	ctx := e.asRep(e.rep)
-	for _, kind := range []string{"send_email", "held_draft", KindScheduledSendHeld, "book_meeting", "invite_meeting", "merge_records", "merge_tags", "unregistered_future_kind"} {
+	// Direct sends, bookings and merges have no shared approval effect classifier; exercise their public kind contracts here.
+	for _, kind := range []string{"send_email", "send_company_email", "send_message", "held_draft", KindScheduledSendHeld, "book_meeting", "invite_meeting", "merge_records", "merge_tags", "unregistered_future_kind"} {
 		if _, err := e.svc.SetApprovalPreference(ctx, kind, true); !errors.Is(err, apperrors.ErrNotFound) {
 			t.Errorf("%s mute = %v", kind, err)
 		}

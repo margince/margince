@@ -101,8 +101,10 @@ func (s *Service) SetApprovalPreference(ctx context.Context, kind string, muted 
 		}
 		beforeAudit := map[string]any{"approval_kind": kind, preferenceMutedKey: before}
 		afterAudit := map[string]any{"approval_kind": kind, preferenceMutedKey: muted}
-		if err := resetPreferenceAutonomy(ctx, tx, p.UserID, kind, beforeAudit, afterAudit); err != nil {
-			return err
+		if before != muted {
+			if err := resetPreferenceAutonomy(ctx, tx, p.UserID, kind, beforeAudit, afterAudit); err != nil {
+				return err
+			}
 		}
 		auditID, err := storekit.Audit(ctx, tx, "update", "user", p.UserID,
 			beforeAudit, afterAudit)
