@@ -199,6 +199,13 @@ type WaitingCustomer struct {
 	// Ownership is resolved only from records this reader may see.
 	OwnerID    ids.UUID
 	OwnerKnown bool
+	// SenderWasStranger says the workspace had never written to the sender
+	// when the mail arrived. BccOnly says this reader was in neither To nor Cc;
+	// ForeignLink that a link leads to a site unrelated to the sender. All three
+	// are capture's facts, and false where capture judged nothing.
+	SenderWasStranger bool
+	BccOnly           bool
+	ForeignLink       bool
 }
 
 // waitingCustomers reads who is waiting, or names why it could not.

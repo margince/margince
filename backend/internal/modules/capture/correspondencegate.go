@@ -15,6 +15,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -61,24 +62,72 @@ func correspondencePositiveTx(ctx context.Context, tx pgx.Tx, email string) (boo
 	if normalized == "" {
 		return false, nil
 	}
+	return correspondedBeforeTx(ctx, tx, []string{normalized}, time.Time{})
+}
+
+// correspondedBeforeTx is correspondencePositiveTx over several spellings of
+// one address, counting only outbound mail strictly before `before`. A zero
+// `before` counts all of it.
+func correspondedBeforeTx(ctx context.Context, tx pgx.Tx, addresses []string, before time.Time) (bool, error) {
+	var bound *time.Time
+	if !before.IsZero() {
+		bound = &before
+	}
+	// The LIMIT 2 is why this is safe on a high-volume address: one outbound
+	// versus more than one is the only distinction writesTo draws.
+	sent, err := outboundToTx(ctx, tx, `
+		  AND ($2::timestamptz IS NULL OR occurred_at < $2)
+		 LIMIT 2`, addresses, bound)
+	if err != nil {
+		return false, err
+	}
+	return writesTo(sent), nil
+}
+
+// correspondingSinceTx returns the instant after which correspondedBeforeTx
+// answers yes for these spellings, or false when it never does. Only the
+// two earliest outbound mails decide it, read in the order they were sent.
+func correspondingSinceTx(ctx context.Context, tx pgx.Tx, addresses []string) (time.Time, bool, error) {
+	sent, err := outboundToTx(ctx, tx, ` ORDER BY occurred_at LIMIT 2`, addresses)
+	if err != nil {
+		return time.Time{}, false, err
+	}
+	for n := 1; n <= len(sent); n++ {
+		if writesTo(sent[:n]) {
+			return sent[n-1].at, true, nil
+		}
+	}
+	return time.Time{}, false, nil
+}
+
+// outboundMail is one attested outbound mail as the correspondence test reads
+// it: when it was sent, and what its sender wrote.
+type outboundMail struct {
+	at    time.Time
+	words string
+}
+
+// outboundToTx reads the attested outbound mail to any of these spellings.
+// tail continues the `WHERE` clause with arguments from $2 on.
+func outboundToTx(ctx context.Context, tx pgx.Tx, tail string, addresses []string, args ...any) ([]outboundMail, error) {
 	// Body and subject travel SEPARATELY because only the body carries a quoted
 	// thread. Concatenating them first would leave no way to strip the sender's
 	// own words out of our reply.
 	rows, err := tx.Query(ctx, `
-		SELECT COALESCE(subject, ''), COALESCE(body, '')
+		SELECT occurred_at, COALESCE(subject, ''), COALESCE(body, '')
 		  FROM activity
-		 WHERE counterparty_email = $1 AND counterparty_outbound_attested
-		   AND `+auth.ActivityAvailableClause("activity")+`
-		 LIMIT 2`, normalized)
+		 WHERE counterparty_email = ANY($1::text[]) AND counterparty_outbound_attested
+		   AND `+auth.ActivityAvailableClause("activity")+tail, append([]any{addresses}, args...)...)
 	if err != nil {
-		return false, fmt.Errorf("capture: correspondence-positive gate: %w", err)
+		return nil, fmt.Errorf("capture: correspondence-positive gate: %w", err)
 	}
 	defer rows.Close()
-	var texts []string
+	var sent []outboundMail
 	for rows.Next() {
+		var mail outboundMail
 		var subject, body string
-		if err := rows.Scan(&subject, &body); err != nil {
-			return false, fmt.Errorf("capture: correspondence-positive gate: %w", err)
+		if err := rows.Scan(&mail.at, &subject, &body); err != nil {
+			return nil, fmt.Errorf("capture: correspondence-positive gate: %w", err)
 		}
 		// Only what the SENDER of this outbound message wrote. A stored body
 		// keeps the quoted thread beneath the reply (mailmap caps it at 8000
@@ -86,23 +135,27 @@ func correspondencePositiveTx(ctx context.Context, tx pgx.Tx, email string) (boo
 		// in their own mail would otherwise put those words into our reply the
 		// moment somebody hits Reply — and talk themselves out of the CRM by
 		// feeding this gate a decline the mailbox owner never wrote.
-		texts = append(texts, subject+" "+textlang.NewTextOnly(body))
+		mail.words = subject + " " + textlang.NewTextOnly(body)
+		sent = append(sent, mail)
 	}
 	if err := rows.Err(); err != nil {
-		return false, fmt.Errorf("capture: correspondence-positive gate: %w", err)
+		return nil, fmt.Errorf("capture: correspondence-positive gate: %w", err)
 	}
-	switch len(texts) {
+	return sent, nil
+}
+
+// writesTo reports whether these outbound mails make the workspace one that
+// writes to their address. A single mail that declines does not.
+func writesTo(sent []outboundMail) bool {
+	switch len(sent) {
 	case 0:
-		return false, nil
+		return false
 	case 1:
-		return !isDecliningReply(texts[0]), nil
+		return !isDecliningReply(sent[0].words)
 	default:
-		// The LIMIT 2 above is why this is safe on a high-volume address: the
-		// query stops at the only distinction that matters, one outbound versus
-		// more than one, and never loads a whole correspondence to count it.
 		// Two or more outbound messages are a correspondence whatever any one of
 		// them says; nobody declines twice and keeps writing.
-		return true, nil
+		return true
 	}
 }
 

@@ -398,14 +398,18 @@ mine_dsn="postgres://margince_app:pw@localhost:15432/margince"
 theirs_dsn="postgres://margince_app:pw@localhost:15432/margince_dev_band"
 fake_server "$mine_dsn" "localhost:16379/0";    mine=$REPLY
 fake_server "$theirs_dsn" "localhost:16379/64"; theirs=$REPLY
-# The exec'd argv has to be visible to ps before the matcher reads it. Poll for
-# it rather than sleeping a guessed interval.
-for _ in 1 2 3 4 5 6 7 8 9 10; do
-    [[ -n "$(ps -o command= -p "$mine" 2>/dev/null)" ]] && break
+# The exec'd argv has to be visible to ps before the matcher reads it. Until the
+# exec lands, ps shows the `bash -c` that will make it, so wait for the worker's
+# own argv on both, not for any command at all. Poll rather than sleep a guess.
+worker_argv() { # pid — true once ps shows the renamed worker
+    [[ "$(ps -o command= -p "$1" 2>/dev/null)" == ./bin/worker* ]]
+}
+for _ in $(seq 1 50); do
+    worker_argv "$mine" && worker_argv "$theirs" && break
     sleep 0.1
 done
-check "1" "$([[ -n "$(ps -o command= -p "$mine" 2>/dev/null)" ]] && echo 1 || echo 0)" \
-      "the fake worker is running — without this the four checks below would pass on an empty machine"
+check "1" "$(worker_argv "$mine" && worker_argv "$theirs" && echo 1 || echo 0)" \
+      "the fake workers are running under their own argv — without this the four checks below would pass on an empty machine"
 
 check "$mine" "$(stack_server_pids "$mine_dsn" "localhost:16379/0" | sort -u)" \
       "this stack's worker is found by its database and its logical Redis database, with no pid on file"

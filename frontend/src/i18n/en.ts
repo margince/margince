@@ -14460,6 +14460,10 @@ export const en = {
   "worklist.because.no_reply_history": "no reply history",
   "worklist.because.asks_nothing": "asks for nothing",
   "worklist.because.addressed_elsewhere": "addressed to a colleague",
+  "worklist.because.bcc_from_stranger":
+    "sent to you by Bcc from someone you have not written with",
+  "worklist.because.link_off_sender":
+    "its link leads to a different site than the sender’s",
   "worklist.because.read_only": "you can read this but not change it",
   "worklist.above.pin": "Ranked above the next item because you pinned it.",
   "worklist.above.level":

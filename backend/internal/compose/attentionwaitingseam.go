@@ -157,6 +157,9 @@ func (w attentionWaiting) asWaitingCustomers(
 			EarlierRequests:   row.EarlierRequests,
 			FirstAskedAt:      row.FirstAskedAt,
 			MeetingBookedAt:   row.MeetingBookedAt,
+			SenderWasStranger: row.SenderWasStranger,
+			BccOnly:           row.BccOnly,
+			ForeignLink:       row.ForeignLink,
 		})
 	}
 	return out, nil

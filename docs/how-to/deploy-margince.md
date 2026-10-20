@@ -82,7 +82,9 @@ and the binaries resolve every flag from a `MARGINCE_*` env fallback. Set at lea
 - `MARGINCE_REDIS`, `MARGINCE_CONFIG` and `MARGINCE_PUBLIC_BASE_URL`, in the
   [cmd/api table](../reference/configuration.md#cmdapi-the-http-process-role).
 
-The annotated env template is [`.env.example`](../../.env.example).
+The annotated env template is [`.env.example`](../../.env.example). To check the configuration before a
+rollout, and to see which settings the app shows as locked, read
+[change-a-setting.md](change-a-setting.md).
 
 Do **not** set `MARGINCE_ENV=dev` in a deployed environment. It decides which license authorities are
 honoured, and whether the installation may run unlicensed at all. With no license configured,
