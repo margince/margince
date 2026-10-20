@@ -363,6 +363,12 @@ function PartnerDetail({
   );
 }
 
+// The Partner tab. A company is a partner when it has a `partner` row, so a 404
+// from GET /companies/{id}/partner means "not a partner yet", not an error. It
+// renders the setup form instead of the shared error state. Setup and edit
+// both PUT the same UpsertPartnerRequest. The first creation carries no
+// If-Match, since there is no prior version; an edit carries the partner's
+// own `version`.
 export function PartnerTab({ companyId }: Readonly<{ companyId: string }>) {
   const t = useT();
   const queryClient = useQueryClient();

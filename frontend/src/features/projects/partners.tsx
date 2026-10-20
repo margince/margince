@@ -23,13 +23,8 @@ import {
   STAGE_LABELS,
 } from "./partners.vocab";
 
-// The Partner tab: a company IS a partner iff it has a `partner` row, so GET
-// /companies/{id}/partner's 404 means "not a partner yet" rather than an
-// error and renders an honest setup form instead of the shared error state.
-// Both the setup and edit paths PUT the same UpsertPartnerRequest; first
-// creation carries no If-Match (there is no prior version to precondition
-// on), an edit carries the partner's own `version`. #/partners
-// (PartnersScreen) is the flat list, reached from the Companies list header.
+// #/partners (PartnersScreen) is the flat list, reached from the Companies
+// list header. The Partner tab on a company is in partners.form.tsx.
 
 export { PartnerTab } from "./partners.form";
 

@@ -3,9 +3,8 @@
 // (contractlifecycle.tsx). Both write the same shape of request, so this is the
 // one place the fields are drawn rather than a second, driftable copy of each.
 //
-// Its own file because contractform.tsx sits at a frozen line ceiling and this
-// component is the largest thing in it that the form's state machine does not
-// touch: it takes a draft and a setter and renders controls, nothing more.
+// The form's state machine does not touch it: it takes a draft and a setter
+// and renders controls, nothing more.
 //
 // The workspace's own fields are deliberately NOT here. They render beside this
 // component on the record form and nowhere near the renewal, because a renewal
