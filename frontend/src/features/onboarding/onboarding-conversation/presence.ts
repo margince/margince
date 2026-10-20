@@ -109,8 +109,8 @@ function companyPresence(
 /**
  * What a build stage looks like on the Core, for every surface that draws one.
  *
- * Exported because two of them draw one (`voice-scenes.tsx` renders its own),
- * and a second copy is how a queued build came to read as intake on one surface
+ * Exported because two of them draw one (`voice-scenes.build.tsx` renders its
+ * own). A second copy would let a queued build read as intake on one surface
  * and rest on the other. A build that has started and reported no stage yet is
  * still a build in flight: material is arriving, so it is intake, not rest.
  */

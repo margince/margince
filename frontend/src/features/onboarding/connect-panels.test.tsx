@@ -15,7 +15,7 @@ import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import {
   OAuthConnectPanel,
   OAuthReturnPanel,
-} from "../onboarding/onboarding-connect-panels";
+} from "./onboarding-connect-panels";
 
 // The Google panel's pre-connect state must reassure a first-time user before
 // the redirect: an unverified dev app shows Google's "unverified app" notice,

@@ -101,8 +101,8 @@
 1 react-hooks/set-state-in-effect src/features/onboarding/onboarding-conversation/use-company-read.ts
 1 react-hooks/refs src/features/onboarding/onboarding-conversation/use-confirm-recovery.ts
 1 react-hooks/refs src/features/onboarding/onboarding-conversation/voice-act.tsx
-1 react-hooks/refs src/features/onboarding/onboarding-conversation/voice-scenes.tsx
-2 react-hooks/refs src/features/onboarding/onboarding-gate.tsx
+1 react-hooks/refs src/features/onboarding/onboarding-conversation/voice-scenes.build.tsx
+2 react-hooks/refs src/features/onboarding/onboarding-gate.ticker.tsx
 1 react-hooks/set-state-in-effect src/features/onboarding/onboarding-ignition.tsx
 2 react-hooks/refs src/features/mail/openemaildrawer.tsx
 1 react-hooks/set-state-in-effect src/features/settings/preferences.tsx
