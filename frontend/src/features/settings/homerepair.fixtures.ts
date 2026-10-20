@@ -10,7 +10,14 @@ export const repairReview: components["schemas"]["HomeRepairReview"] = {
   digest: "a".repeat(64),
   rule_version: "test",
   limit: 2,
-  counts: { archive: 1, withdraw: 0, supersede: 0, review: 1, keep: 0 },
+  counts: {
+    reclassify: 0,
+    archive: 1,
+    withdraw: 0,
+    supersede: 0,
+    review: 1,
+    keep: 0,
+  },
   tasks: [
     {
       id: reviewedTaskID,
@@ -30,7 +37,14 @@ export const repairReview: components["schemas"]["HomeRepairReview"] = {
 export const proposalRepairReview: components["schemas"]["HomeRepairReview"] = {
   ...repairReview,
   limit: 1,
-  counts: { archive: 0, withdraw: 1, supersede: 0, review: 0, keep: 0 },
+  counts: {
+    reclassify: 0,
+    archive: 0,
+    withdraw: 1,
+    supersede: 0,
+    review: 0,
+    keep: 0,
+  },
   tasks: [
     {
       id: reviewedTaskID,
@@ -47,7 +61,14 @@ export const suggestionRepairReview: components["schemas"]["HomeRepairReview"] =
   {
     ...repairReview,
     limit: 1,
-    counts: { archive: 0, withdraw: 0, supersede: 1, review: 0, keep: 0 },
+    counts: {
+      reclassify: 0,
+      archive: 0,
+      withdraw: 0,
+      supersede: 1,
+      review: 0,
+      keep: 0,
+    },
     tasks: [
       {
         id: "01a0e9f1-0000-7000-8000-000000000001",
@@ -55,6 +76,33 @@ export const suggestionRepairReview: components["schemas"]["HomeRepairReview"] =
         version: 1,
         action: "supersede_suggestion",
         reason: "buyer_no_longer_verified",
+      },
+    ],
+  };
+
+export const classificationRepairReview: components["schemas"]["HomeRepairReview"] =
+  {
+    ...repairReview,
+    limit: 1,
+    preview_token: "r".repeat(43),
+    counts: {
+      reclassify: 1,
+      archive: 0,
+      withdraw: 0,
+      supersede: 0,
+      review: 0,
+      keep: 0,
+    },
+    tasks: [
+      {
+        id: reviewedTaskID,
+        source: "verdict",
+        version: 1,
+        snapshot: "c".repeat(64),
+        action: "reclassify_message",
+        reason: "classification_changed",
+        before_verdict: "asks_us",
+        after_verdict: "informs_us",
       },
     ],
   };

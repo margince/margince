@@ -770,7 +770,12 @@ paths:
       security: [{cookieAuth: []}]
       x-agent-access: human-only
       summary: Review a bounded page of automatic Home work.
-      description: Requires data_task:read and each record's content permissions. This operation changes no work.
+      description: |
+        Requires data_task:read and each record's content permissions. This operation changes no work.
+        Classification review uses the ordinary model check and holds its proposed results for fifteen minutes.
+        Classification pages contain at most 25 records; suggestion and proposal pages contain at most 200.
+        Other pages accept up to 1000 records, but activation also limits the encoded selection to 256 KiB.
+        The application reviews 25 records per page.
       requestBody:
         required: true
         content:
@@ -782,7 +787,7 @@ paths:
               properties:
                 limit: {type: integer, minimum: 1, maximum: 1000}
                 after: {type: string, format: uuid}
-                source: {type: string, enum: [task, approval, suggestion], default: task}
+                source: {type: string, enum: [task, approval, suggestion, verdict], default: task}
       responses:
         '200':
           description: Exact reviewed identities, dispositions and rule version. Use the last identity to read the next page.
@@ -52949,6 +52954,7 @@ components:
           maxItems: 1000
           items: {$ref: '#/components/schemas/HomeRepairTask'}
         counts: {$ref: '#/components/schemas/HomeRepairCounts'}
+        preview_token: {type: string, minLength: 43, maxLength: 43, description: Reader-bound classification review token; expires after fifteen minutes and is consumed on activation.}
         digest: {type: string, minLength: 64, maxLength: 64}
         rule_version: {type: string}
         limit: {type: integer, minimum: 0, maximum: 1000}
@@ -52959,19 +52965,22 @@ components:
       required: [id, version, action, reason]
       properties:
         id: {type: string, format: uuid}
-        source: {type: string, enum: [task, approval, suggestion]}
+        source: {type: string, enum: [task, approval, suggestion, verdict]}
+        before_verdict: {type: string, enum: [asks_us, informs_us]}
+        after_verdict: {type: string, enum: [asks_us, informs_us]}
         snapshot: {type: string, minLength: 64, maxLength: 64}
         version: {type: integer, format: int64}
         action:
           type: string
-          enum: [archive_automatic_reminder, withdraw_proposal, supersede_suggestion, human_review, leave_current]
+          enum: [archive_automatic_reminder, withdraw_proposal, supersede_suggestion, reclassify_message, human_review, leave_current]
         reason: {type: string}
 
     HomeRepairCounts:
       type: object
       additionalProperties: false
-      required: [archive, withdraw, supersede, review, keep]
+      required: [archive, withdraw, supersede, reclassify, review, keep]
       properties:
+        reclassify: {type: integer, minimum: 0}
         archive: {type: integer, minimum: 0}
         withdraw: {type: integer, minimum: 0}
         supersede: {type: integer, minimum: 0}

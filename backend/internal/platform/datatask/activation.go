@@ -25,11 +25,13 @@ func (p Progress) AwaitingReview() bool { return p.BlockedReason == ReviewRequir
 
 // ReviewRequest identifies the exact bounded plan a human has inspected.
 type ReviewRequest struct {
-	Scope       json.RawMessage `json:"scope"`
-	Digest      string          `json:"digest"`
-	RuleVersion string          `json:"rule_version"`
-	Limit       int             `json:"limit"`
-	AsOf        time.Time       `json:"as_of"`
+	PreviewToken string          `json:"preview_token,omitempty"`
+	Trusted      bool            `json:"-"`
+	Scope        json.RawMessage `json:"scope"`
+	Digest       string          `json:"digest"`
+	RuleVersion  string          `json:"rule_version"`
+	Limit        int             `json:"limit"`
+	AsOf         time.Time       `json:"as_of"`
 }
 
 // Activation keeps reviewed authority with the run, across worker restarts.
@@ -41,6 +43,7 @@ type Activation struct {
 
 // Activate rechecks a reviewed plan before replacing any previous manual run.
 func (e *Engine) Activate(ctx context.Context, taskID, stepName string, version int64, review ReviewRequest) error {
+	review.Trusted = false
 	if err := auth.RequireHuman(ctx); err != nil {
 		return err
 	}
@@ -93,6 +96,12 @@ func (e *Engine) Activate(ctx context.Context, taskID, stepName string, version 
 		}
 		if len(missing) > 0 {
 			return apperrors.ErrConflict
+		}
+		if review.PreviewToken != "" {
+			review, err = consumeReview(ctx, tx, taskID, actor.ID, review, e.now())
+			if err != nil {
+				return err
+			}
 		}
 		digest, err := task.Review(ctx, tx, review)
 		if err != nil {

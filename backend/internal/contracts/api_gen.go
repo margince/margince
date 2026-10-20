@@ -10827,6 +10827,7 @@ const (
 	HomeRepairTaskActionArchiveAutomaticReminder HomeRepairTaskAction = "archive_automatic_reminder"
 	HomeRepairTaskActionHumanReview              HomeRepairTaskAction = "human_review"
 	HomeRepairTaskActionLeaveCurrent             HomeRepairTaskAction = "leave_current"
+	HomeRepairTaskActionReclassifyMessage        HomeRepairTaskAction = "reclassify_message"
 	HomeRepairTaskActionSupersedeSuggestion      HomeRepairTaskAction = "supersede_suggestion"
 	HomeRepairTaskActionWithdrawProposal         HomeRepairTaskAction = "withdraw_proposal"
 )
@@ -10840,9 +10841,47 @@ func (e HomeRepairTaskAction) Valid() bool {
 		return true
 	case HomeRepairTaskActionLeaveCurrent:
 		return true
+	case HomeRepairTaskActionReclassifyMessage:
+		return true
 	case HomeRepairTaskActionSupersedeSuggestion:
 		return true
 	case HomeRepairTaskActionWithdrawProposal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HomeRepairTaskAfterVerdict.
+const (
+	HomeRepairTaskAfterVerdictAsksUs    HomeRepairTaskAfterVerdict = "asks_us"
+	HomeRepairTaskAfterVerdictInformsUs HomeRepairTaskAfterVerdict = "informs_us"
+)
+
+// Valid indicates whether the value is a known member of the HomeRepairTaskAfterVerdict enum.
+func (e HomeRepairTaskAfterVerdict) Valid() bool {
+	switch e {
+	case HomeRepairTaskAfterVerdictAsksUs:
+		return true
+	case HomeRepairTaskAfterVerdictInformsUs:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HomeRepairTaskBeforeVerdict.
+const (
+	HomeRepairTaskBeforeVerdictAsksUs    HomeRepairTaskBeforeVerdict = "asks_us"
+	HomeRepairTaskBeforeVerdictInformsUs HomeRepairTaskBeforeVerdict = "informs_us"
+)
+
+// Valid indicates whether the value is a known member of the HomeRepairTaskBeforeVerdict enum.
+func (e HomeRepairTaskBeforeVerdict) Valid() bool {
+	switch e {
+	case HomeRepairTaskBeforeVerdictAsksUs:
+		return true
+	case HomeRepairTaskBeforeVerdictInformsUs:
 		return true
 	default:
 		return false
@@ -10854,6 +10893,7 @@ const (
 	HomeRepairTaskSourceApproval   HomeRepairTaskSource = "approval"
 	HomeRepairTaskSourceSuggestion HomeRepairTaskSource = "suggestion"
 	HomeRepairTaskSourceTask       HomeRepairTaskSource = "task"
+	HomeRepairTaskSourceVerdict    HomeRepairTaskSource = "verdict"
 )
 
 // Valid indicates whether the value is a known member of the HomeRepairTaskSource enum.
@@ -10864,6 +10904,8 @@ func (e HomeRepairTaskSource) Valid() bool {
 	case HomeRepairTaskSourceSuggestion:
 		return true
 	case HomeRepairTaskSourceTask:
+		return true
+	case HomeRepairTaskSourceVerdict:
 		return true
 	default:
 		return false
@@ -21126,6 +21168,7 @@ const (
 	PreviewHomeRepairJSONBodySourceApproval   PreviewHomeRepairJSONBodySource = "approval"
 	PreviewHomeRepairJSONBodySourceSuggestion PreviewHomeRepairJSONBodySource = "suggestion"
 	PreviewHomeRepairJSONBodySourceTask       PreviewHomeRepairJSONBodySource = "task"
+	PreviewHomeRepairJSONBodySourceVerdict    PreviewHomeRepairJSONBodySource = "verdict"
 )
 
 // Valid indicates whether the value is a known member of the PreviewHomeRepairJSONBodySource enum.
@@ -21136,6 +21179,8 @@ func (e PreviewHomeRepairJSONBodySource) Valid() bool {
 	case PreviewHomeRepairJSONBodySourceSuggestion:
 		return true
 	case PreviewHomeRepairJSONBodySourceTask:
+		return true
+	case PreviewHomeRepairJSONBodySourceVerdict:
 		return true
 	default:
 		return false
@@ -38583,35 +38628,47 @@ type HistoryEdgeOtherEntityType string
 
 // HomeRepairCounts defines model for HomeRepairCounts.
 type HomeRepairCounts struct {
-	Archive   int `json:"archive"`
-	Keep      int `json:"keep"`
-	Review    int `json:"review"`
-	Supersede int `json:"supersede"`
-	Withdraw  int `json:"withdraw"`
+	Archive    int `json:"archive"`
+	Keep       int `json:"keep"`
+	Reclassify int `json:"reclassify"`
+	Review     int `json:"review"`
+	Supersede  int `json:"supersede"`
+	Withdraw   int `json:"withdraw"`
 }
 
 // HomeRepairReview defines model for HomeRepairReview.
 type HomeRepairReview struct {
-	AsOf        time.Time        `json:"as_of"`
-	Counts      HomeRepairCounts `json:"counts"`
-	Digest      string           `json:"digest"`
-	Limit       int              `json:"limit"`
-	RuleVersion string           `json:"rule_version"`
-	Tasks       []HomeRepairTask `json:"tasks"`
+	AsOf   time.Time        `json:"as_of"`
+	Counts HomeRepairCounts `json:"counts"`
+	Digest string           `json:"digest"`
+	Limit  int              `json:"limit"`
+
+	// PreviewToken Reader-bound classification review token; expires after fifteen minutes and is consumed on activation.
+	PreviewToken *string          `json:"preview_token,omitempty"`
+	RuleVersion  string           `json:"rule_version"`
+	Tasks        []HomeRepairTask `json:"tasks"`
 }
 
 // HomeRepairTask defines model for HomeRepairTask.
 type HomeRepairTask struct {
-	Action   HomeRepairTaskAction  `json:"action"`
-	Id       openapi_types.UUID    `json:"id"`
-	Reason   string                `json:"reason"`
-	Snapshot *string               `json:"snapshot,omitempty"`
-	Source   *HomeRepairTaskSource `json:"source,omitempty"`
-	Version  int64                 `json:"version"`
+	Action        HomeRepairTaskAction         `json:"action"`
+	AfterVerdict  *HomeRepairTaskAfterVerdict  `json:"after_verdict,omitempty"`
+	BeforeVerdict *HomeRepairTaskBeforeVerdict `json:"before_verdict,omitempty"`
+	Id            openapi_types.UUID           `json:"id"`
+	Reason        string                       `json:"reason"`
+	Snapshot      *string                      `json:"snapshot,omitempty"`
+	Source        *HomeRepairTaskSource        `json:"source,omitempty"`
+	Version       int64                        `json:"version"`
 }
 
 // HomeRepairTaskAction defines model for HomeRepairTask.Action.
 type HomeRepairTaskAction string
+
+// HomeRepairTaskAfterVerdict defines model for HomeRepairTask.AfterVerdict.
+type HomeRepairTaskAfterVerdict string
+
+// HomeRepairTaskBeforeVerdict defines model for HomeRepairTask.BeforeVerdict.
+type HomeRepairTaskBeforeVerdict string
 
 // HomeRepairTaskSource defines model for HomeRepairTask.Source.
 type HomeRepairTaskSource string

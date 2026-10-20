@@ -26,14 +26,17 @@ import (
 const homeRepairTaskID = "core/1792501453_home_attention_repair"
 
 func homeRepairDataTask(pool *pgxpool.Pool, now func() time.Time) datatask.Task {
-	return datatask.Task{ID: homeRepairTaskID, Version: 1, Title: "Review automatic Home work", Manual: true, ReviewVersion: homeRepairVersion,
+	return datatask.Task{
+		ID: homeRepairTaskID, Version: 1, Title: "Review automatic Home work", Manual: true, ReviewVersion: homeRepairVersion,
 		Requires: []string{"core/1792501453"}, Review: validateHomeRepairTx,
-		Steps: []datatask.Step{{Name: "reviewed_tasks", Limit: 50, MinLimit: 1, Audit: datatask.AuditPolicy{PerRecord: true},
+		Steps: []datatask.Step{{
+			Name: "reviewed_tasks", Limit: 50, MinLimit: 1, Audit: datatask.AuditPolicy{PerRecord: true},
 			Estimate: func(context.Context, datatask.Querier, int64) (int64, bool, error) { return 0, false, nil },
 			Batch: func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
 				return applyHomeRepairBatch(ctx, tx, pool, in, now())
 			},
-		}}}
+		}},
+	}
 }
 
 func applyHomeRepairBatch(ctx context.Context, tx pgx.Tx, pool *pgxpool.Pool, in datatask.BatchIn, asOf time.Time) (datatask.BatchOut, error) {
@@ -84,6 +87,9 @@ func applyHomeRepairBatch(ctx context.Context, tx pgx.Tx, pool *pgxpool.Pool, in
 }
 
 func applyHomeRepairItem(ctx context.Context, tx pgx.Tx, store *activities.Store, expected homeRepairTaskRef, activation datatask.Activation, runID ids.UUID) (bool, error) {
+	if expected.Source == "verdict" {
+		return applyHomeRepairVerdict(ctx, tx, expected, activation, runID)
+	}
 	if expected.Source == "suggestion" {
 		return applyHomeRepairSuggestion(ctx, tx, expected, activation, runID)
 	}

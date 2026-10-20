@@ -3,6 +3,23 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "homeRepair.reason.classificationNotAttempted":
+    "No completed check is available. Preview again when classification is available.",
+  "homeRepair.reclassify": "Reclassify message",
+  "homeRepair.classifications": "Message results",
+  "homeRepair.asks": "Requests action",
+  "homeRepair.informs": "Information only",
+  "homeRepair.classificationChange": "Current: {before}. Proposed: {after}.",
+  "homeRepair.reason.classificationUncertain":
+    "The new check is uncertain. Review the message before changing its result.",
+  "homeRepair.reason.classificationAdopted":
+    "Human changes or missing audit evidence prevent an automatic correction.",
+  "homeRepair.reason.classificationWithheld":
+    "Some message context is outside current access. Review it before changing this result.",
+  "homeRepair.reason.classificationCurrent":
+    "The new check agrees with the current result.",
+  "homeRepair.reason.classificationChanged":
+    "The new check proposes a different message result.",
   "homeRepair.suggestionPermission":
     "Deal creation permission is required to retire these suggestions.",
   "homeRepair.supersede": "Retire automatic deal suggestion",
@@ -63,7 +80,7 @@ export const en = {
   "homeRepair.preview": "Preview items",
   "homeRepair.next": "Review next page",
   "homeRepair.summary":
-    "Reminders to archive: {archive}. Proposals to withdraw: {withdraw}. Deal suggestions to retire: {supersede}. Keep for review: {review}; keep as current work: {keep}.",
+    "Results to change: {reclassify}. Reminders to archive: {archive}. Proposals to withdraw: {withdraw}. Deal suggestions to retire: {supersede}. Keep for review: {review}; keep as current work: {keep}.",
   "homeRepair.apply_one": "Apply {count} reviewed change",
   "homeRepair.apply_other": "Apply {count} reviewed changes",
   "homeRepair.started":

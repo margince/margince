@@ -120,6 +120,9 @@ func (e *Engine) Seed(ctx context.Context) error {
 		if err := database.BoundStatement(ctx, tx, statementLimit); err != nil {
 			return err
 		}
+		if err := purgeExpiredReviews(ctx, tx, e.now()); err != nil {
+			return err
+		}
 		for _, task := range e.tasks {
 			for _, step := range task.Steps {
 				if err := e.seedStep(ctx, tx, task, step); err != nil {

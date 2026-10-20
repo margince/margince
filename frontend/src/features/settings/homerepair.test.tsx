@@ -9,6 +9,7 @@ import { meFixture } from "../../testing/mefixture";
 import { suggestion } from "../deals/dealsuggestion.fixture";
 import { HomeRepairControls } from "./homerepair";
 import {
+  classificationRepairReview,
   proposalRepairReview as proposalReview,
   repairReview as review,
   suggestionRepairReview,
@@ -168,7 +169,7 @@ it("reviews proposals separately and activates only their displayed snapshot", a
   ).toBeInTheDocument();
   expect(
     screen.getByText(
-      "Reminders to archive: 0. Proposals to withdraw: 1. Deal suggestions to retire: 0. Keep for review: 0; keep as current work: 0.",
+      "Results to change: 0. Reminders to archive: 0. Proposals to withdraw: 1. Deal suggestions to retire: 0. Keep for review: 0; keep as current work: 0.",
     ),
   ).toBeInTheDocument();
   expect(writes).toEqual([]);
@@ -176,4 +177,26 @@ it("reviews proposals separately and activates only their displayed snapshot", a
   await waitFor(() =>
     expect(writes).toEqual([{ version: 7, review: proposalReview }]),
   );
+});
+
+it("shows the exact classification change and submits its server review token", async () => {
+  const previews: unknown[] = [];
+  const writes = serve(204, classificationRepairReview, previews);
+  render(<HomeRepairControls version={7} canActivate />);
+  fireEvent.click(screen.getByRole("button", { name: "Message results" }));
+  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
+  expect(
+    await screen.findByText(
+      "Current: Requests action. Proposed: Information only.",
+    ),
+  ).toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Apply 1 reviewed change" }),
+  );
+  await waitFor(() =>
+    expect(writes).toEqual([
+      { version: 7, review: classificationRepairReview },
+    ]),
+  );
+  expect(previews).toEqual([{ limit: 25, source: "verdict" }]);
 });

@@ -3387,6 +3387,17 @@ public.data_subject_request.updated_at timestamp with time zone NOT NULL gen=- d
 public.data_subject_request_one_case_per_submission CREATE UNIQUE INDEX data_subject_request_one_case_per_submission ON public.data_subject_request USING btree (source_submission_id) WHERE (source_submission_id IS NOT NULL)
 public.data_subject_request_pkey CREATE UNIQUE INDEX data_subject_request_pkey ON public.data_subject_request USING btree (id)
 public.data_subject_request_receipt_reference CREATE UNIQUE INDEX data_subject_request_receipt_reference ON public.data_subject_request USING btree (receipt_reference) WHERE (receipt_reference IS NOT NULL)
+public.data_task_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.data_task_review.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.data_task_review.data_task_review_pkey PRIMARY KEY (token_hash)
+public.data_task_review.data_task_review_token_hash_check CHECK ((octet_length(token_hash) = 32))
+public.data_task_review.expires_at timestamp with time zone NOT NULL gen=- def=-
+public.data_task_review.operator text NOT NULL gen=- def=-
+public.data_task_review.review jsonb NOT NULL gen=- def=-
+public.data_task_review.task_id text NOT NULL gen=- def=-
+public.data_task_review.token_hash bytea NOT NULL gen=- def=-
+public.data_task_review_expiry CREATE INDEX data_task_review_expiry ON public.data_task_review USING btree (expires_at)
+public.data_task_review_pkey CREATE UNIQUE INDEX data_task_review_pkey ON public.data_task_review USING btree (token_hash)
 public.data_task_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.data_task_run.activation jsonb gen=- def=-
 public.data_task_run.batch_limit integer NOT NULL gen=- def=-

@@ -5,6 +5,24 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de = {
+  "homeRepair.reason.classificationNotAttempted":
+    "Es liegt keine abgeschlossene Prüfung vor. Prüfe erneut, sobald die Einordnung verfügbar ist.",
+  "homeRepair.reclassify": "Nachricht neu einordnen",
+  "homeRepair.classifications": "Nachrichtenergebnisse",
+  "homeRepair.asks": "Handlung angefragt",
+  "homeRepair.informs": "Nur Information",
+  "homeRepair.classificationChange":
+    "Aktuell: {before}. Vorgeschlagen: {after}.",
+  "homeRepair.reason.classificationUncertain":
+    "Die neue Prüfung ist unsicher. Prüfe die Nachricht, bevor du das Ergebnis änderst.",
+  "homeRepair.reason.classificationAdopted":
+    "Menschliche Änderungen oder fehlende Nachweise verhindern eine automatische Korrektur.",
+  "homeRepair.reason.classificationWithheld":
+    "Ein Teil des Nachrichtenkontexts ist nicht zugänglich. Prüfe ihn vor einer Änderung.",
+  "homeRepair.reason.classificationCurrent":
+    "Die neue Prüfung bestätigt das aktuelle Ergebnis.",
+  "homeRepair.reason.classificationChanged":
+    "Die neue Prüfung schlägt ein anderes Ergebnis vor.",
   "homeRepair.suggestionPermission":
     "Zum Zurückziehen dieser Vorschläge brauchst du die Berechtigung, Deals zu erstellen.",
   "homeRepair.supersede": "Automatischen Deal-Vorschlag zurückziehen",
@@ -66,7 +84,7 @@ export const de = {
   "homeRepair.preview": "Einträge prüfen",
   "homeRepair.next": "Nächste Seite prüfen",
   "homeRepair.summary":
-    "Erinnerungen zum Archivieren: {archive}. Zurückzuziehende Vorschläge: {withdraw}. Zurückzuziehende Deal-Vorschläge: {supersede}. Zur Prüfung behalten: {review}; als aktuelle Arbeit behalten: {keep}.",
+    "Zu ändernde Ergebnisse: {reclassify}. Erinnerungen zum Archivieren: {archive}. Zurückzuziehende Vorschläge: {withdraw}. Zurückzuziehende Deal-Vorschläge: {supersede}. Zur Prüfung behalten: {review}; als aktuelle Arbeit behalten: {keep}.",
   "homeRepair.apply_one": "{count} geprüfte Änderung anwenden",
   "homeRepair.apply_other": "{count} geprüfte Änderungen anwenden",
   "homeRepair.started":

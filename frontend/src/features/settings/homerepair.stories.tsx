@@ -12,6 +12,7 @@ import {
 import { suggestion } from "../deals/dealsuggestion.fixture";
 import { HomeRepairControls } from "./homerepair";
 import {
+  classificationRepairReview,
   proposalRepairReview,
   repairReview,
   suggestionRepairReview,
@@ -133,6 +134,27 @@ export const DuplicateProposal: Story = {
     ).toBeInTheDocument();
     await expect(
       canvas.getByText("An identical pending proposal remains available."),
+    ).toBeInTheDocument();
+  },
+};
+
+export const MessageClassification: Story = {
+  render: example(true, false, classificationRepairReview),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Message results" }),
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Preview items" }),
+    );
+    await expect(
+      await canvas.findByText(
+        "Current: Requests action. Proposed: Information only.",
+      ),
+    ).toBeInTheDocument();
+    await expect(
+      canvas.getByRole("button", { name: "Apply 1 reviewed change" }),
     ).toBeInTheDocument();
   },
 };

@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/lifecyclereview"
+	"github.com/margince/margince/backend/internal/compose/owedverdict"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -23,19 +24,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-const homeRepairVersion = "2:" + activities.CommitmentAdmissionVersion + ":" + deals.SuggestionRepairVersion + ":" + lifecyclereview.RuleVersion
+var homeRepairVersion = "2:" + activities.CommitmentAdmissionVersion + ":" + deals.SuggestionRepairVersion + ":" + lifecyclereview.RuleVersion + ":" + owedverdict.Ruleset
 
 type homeRepairScope struct {
 	Tasks []homeRepairTaskRef `json:"tasks"`
 }
 
 type homeRepairTaskRef struct {
-	Source   string           `json:"source,omitempty"`
-	Snapshot string           `json:"snapshot,omitempty"`
-	ID       ids.UUID         `json:"id"`
-	Version  int64            `json:"version"`
-	Action   homeRepairAction `json:"action"`
-	Reason   string           `json:"reason"`
+	BeforeVerdict string           `json:"before_verdict,omitempty"`
+	AfterVerdict  string           `json:"after_verdict,omitempty"`
+	Source        string           `json:"source,omitempty"`
+	Snapshot      string           `json:"snapshot,omitempty"`
+	ID            ids.UUID         `json:"id"`
+	Version       int64            `json:"version"`
+	Action        homeRepairAction `json:"action"`
+	Reason        string           `json:"reason"`
 }
 
 func previewHomeRepairAfterTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int, asOf time.Time) (datatask.ReviewRequest, error) {
@@ -94,7 +97,17 @@ func homeRepairReview(scope homeRepairScope, asOf time.Time) (datatask.ReviewReq
 }
 
 func homeRepairDigest(review datatask.ReviewRequest) (string, error) {
+	var scope homeRepairScope
+	if err := json.Unmarshal(review.Scope, &scope); err != nil {
+		return "", err
+	}
+	canonical, err := json.Marshal(scope)
+	if err != nil {
+		return "", err
+	}
+	review.Scope = canonical
 	review.Digest = ""
+	review.PreviewToken = ""
 	encoded, err := json.Marshal(review)
 	if err != nil {
 		return "", err
@@ -117,6 +130,15 @@ func validateHomeRepairTx(ctx context.Context, tx pgx.Tx, review datatask.Review
 			return "", apperrors.ErrInvalidArgument
 		}
 		seen[expected.ID] = true
+		if expected.Source == "verdict" {
+			if !review.Trusted {
+				return "", apperrors.ErrPermissionDenied
+			}
+			if err := validateHomeRepairVerdictTx(ctx, tx, expected); err != nil {
+				return "", err
+			}
+			continue
+		}
 		if expected.Source == "suggestion" {
 			if err := validateHomeRepairSuggestionTx(ctx, tx, expected, review.AsOf); err != nil {
 				return "", err

@@ -38664,6 +38664,8 @@ export interface components {
         HomeRepairReview: {
             tasks: components["schemas"]["HomeRepairTask"][];
             counts: components["schemas"]["HomeRepairCounts"];
+            /** @description Reader-bound classification review token; expires after fifteen minutes and is consumed on activation. */
+            preview_token?: string;
             digest: string;
             rule_version: string;
             limit: number;
@@ -38674,15 +38676,20 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            source?: "task" | "approval" | "suggestion";
+            source?: "task" | "approval" | "suggestion" | "verdict";
+            /** @enum {string} */
+            before_verdict?: "asks_us" | "informs_us";
+            /** @enum {string} */
+            after_verdict?: "asks_us" | "informs_us";
             snapshot?: string;
             /** Format: int64 */
             version: number;
             /** @enum {string} */
-            action: "archive_automatic_reminder" | "withdraw_proposal" | "supersede_suggestion" | "human_review" | "leave_current";
+            action: "archive_automatic_reminder" | "withdraw_proposal" | "supersede_suggestion" | "reclassify_message" | "human_review" | "leave_current";
             reason: string;
         };
         HomeRepairCounts: {
+            reclassify: number;
             archive: number;
             withdraw: number;
             supersede: number;
@@ -48677,7 +48684,7 @@ export interface operations {
                      * @default task
                      * @enum {string}
                      */
-                    source?: "task" | "approval" | "suggestion";
+                    source?: "task" | "approval" | "suggestion" | "verdict";
                 };
             };
         };

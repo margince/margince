@@ -26,6 +26,7 @@ import { OpenActivityDrawer } from "../voice-knowledge/activitydrawer";
 type Review = components["schemas"]["HomeRepairReview"];
 type Task = components["schemas"]["HomeRepairTask"];
 const actionLabels: Record<Task["action"], MessageKey> = {
+  reclassify_message: "homeRepair.reclassify",
   supersede_suggestion: "homeRepair.supersede",
   withdraw_proposal: "homeRepair.withdraw",
   archive_automatic_reminder: "homeRepair.archive",
@@ -33,6 +34,13 @@ const actionLabels: Record<Task["action"], MessageKey> = {
   leave_current: "homeRepair.keepCurrent",
 };
 export const HOME_REPAIR_REASON_LABELS: Record<string, MessageKey> = {
+  classification_not_attempted: "homeRepair.reason.classificationNotAttempted",
+  classification_uncertain: "homeRepair.reason.classificationUncertain",
+  human_changed_or_provenance_missing:
+    "homeRepair.reason.classificationAdopted",
+  classification_context_withheld: "homeRepair.reason.classificationWithheld",
+  classification_current: "homeRepair.reason.classificationCurrent",
+  classification_changed: "homeRepair.reason.classificationChanged",
   company_has_deal: "homeRepair.reason.dealExists",
   suggestion_source_changed: "homeRepair.reason.dealSource",
   buyer_no_longer_verified: "homeRepair.reason.buyer",
@@ -94,10 +102,27 @@ function RepairItemRow({
   return (
     <SettingRow
       label={label}
-      description={t(
-        HOME_REPAIR_REASON_LABELS[task.reason] ??
-          "homeRepair.reason.unverified",
-      )}
+      description={
+        task.before_verdict &&
+        task.after_verdict &&
+        task.before_verdict !== task.after_verdict
+          ? t("homeRepair.classificationChange", {
+              before: t(
+                task.before_verdict === "asks_us"
+                  ? "homeRepair.asks"
+                  : "homeRepair.informs",
+              ),
+              after: t(
+                task.after_verdict === "asks_us"
+                  ? "homeRepair.asks"
+                  : "homeRepair.informs",
+              ),
+            })
+          : t(
+              HOME_REPAIR_REASON_LABELS[task.reason] ??
+                "homeRepair.reason.unverified",
+            )
+      }
       control={
         <Button variant="ghost" disabled={disabled} onClick={onInspect}>
           {t("homeRepair.inspect")}
@@ -179,16 +204,16 @@ export function HomeRepairControls({
   const client = useQueryClient();
   const plural = usePlural();
   const mayRetireSuggestions = useCanWrite("deal", "create");
-  const [source, setSource] = useState<"task" | "approval" | "suggestion">(
-    "task",
-  );
+  const [source, setSource] = useState<
+    "task" | "approval" | "suggestion" | "verdict"
+  >("task");
   const preview = useMutation({
     mutationFn: async ({
       after,
       source,
     }: {
       after?: string;
-      source: "task" | "approval" | "suggestion";
+      source: "task" | "approval" | "suggestion" | "verdict";
     }) =>
       unwrap(
         await api.POST("/admin/home-repair/preview", {
@@ -210,10 +235,14 @@ export function HomeRepairControls({
   });
   const review =
     preview.variables?.source === source ? preview.data : undefined;
-  const changeCount =
-    (review?.counts.archive ?? 0) +
-    (review?.counts.withdraw ?? 0) +
-    (review?.counts.supersede ?? 0);
+  const changeCount = review
+    ? [
+        review.counts.archive,
+        review.counts.withdraw,
+        review.counts.supersede,
+        review.counts.reclassify,
+      ].reduce((total, count) => total + (count ?? 0), 0)
+    : 0;
   return (
     <>
       <p>{t("homeRepair.explain")}</p>
@@ -223,6 +252,7 @@ export function HomeRepairControls({
           { value: "task", label: t("homeRepair.tasks") },
           { value: "approval", label: t("homeRepair.proposals") },
           { value: "suggestion", label: t("homeRepair.suggestions") },
+          { value: "verdict", label: t("homeRepair.classifications") },
         ]}
         label={t("homeRepair.kind")}
         onChange={(next) => {
@@ -262,6 +292,7 @@ export function HomeRepairControls({
         <>
           <p>
             {t("homeRepair.summary", {
+              reclassify: formatNumber(review.counts.reclassify ?? 0, locale),
               archive: formatNumber(review.counts.archive, locale),
               withdraw: formatNumber(review.counts.withdraw, locale),
               supersede: formatNumber(review.counts.supersede ?? 0, locale),

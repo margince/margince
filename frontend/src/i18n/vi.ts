@@ -14,6 +14,23 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "homeRepair.reason.classificationNotAttempted":
+    "Chưa có lần kiểm tra hoàn tất. Xem trước lại khi có thể phân loại.",
+  "homeRepair.reclassify": "Phân loại lại",
+  "homeRepair.classifications": "Kết quả tin nhắn",
+  "homeRepair.asks": "Yêu cầu hành động",
+  "homeRepair.informs": "Chỉ cung cấp thông tin",
+  "homeRepair.classificationChange": "Hiện tại: {before}. Đề xuất: {after}.",
+  "homeRepair.reason.classificationUncertain":
+    "Lần kiểm tra mới chưa chắc chắn. Xem xét tin nhắn trước khi đổi kết quả.",
+  "homeRepair.reason.classificationAdopted":
+    "Thay đổi của người dùng hoặc thiếu bằng chứng kiểm toán ngăn việc sửa tự động.",
+  "homeRepair.reason.classificationWithheld":
+    "Một phần ngữ cảnh tin nhắn nằm ngoài quyền truy cập hiện tại. Xem xét trước khi đổi kết quả.",
+  "homeRepair.reason.classificationCurrent":
+    "Lần kiểm tra mới khớp với kết quả hiện tại.",
+  "homeRepair.reason.classificationChanged":
+    "Lần kiểm tra mới đề xuất kết quả khác cho tin nhắn.",
   "homeRepair.suggestionPermission":
     "Cần quyền tạo deal để ngừng các đề xuất này.",
   "homeRepair.supersede": "Ngừng đề xuất deal tự động",
@@ -70,7 +87,7 @@ export const vi = {
   "homeRepair.preview": "Xem trước các mục",
   "homeRepair.next": "Xem trang tiếp theo",
   "homeRepair.summary":
-    "Lời nhắc cần lưu trữ: {archive}. Đề xuất cần rút: {withdraw}. Đề xuất deal cần ngừng: {supersede}. Giữ để xem xét: {review}; giữ làm công việc hiện tại: {keep}.",
+    "Kết quả cần đổi: {reclassify}. Lời nhắc cần lưu trữ: {archive}. Đề xuất cần rút: {withdraw}. Đề xuất deal cần ngừng: {supersede}. Giữ để xem xét: {review}; giữ làm công việc hiện tại: {keep}.",
   "homeRepair.apply_one": "Áp dụng {count} thay đổi đã xem xét",
   "homeRepair.apply_other": "Áp dụng {count} thay đổi đã xem xét",
   "homeRepair.started":

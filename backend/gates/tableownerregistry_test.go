@@ -245,6 +245,7 @@ var tableOwners = map[string]string{
 	// the table with it, sit below every module rather than inside one.
 	"stored_object_intent":  "internal/platform/storedobjects",
 	"data_task_run_history": "internal/platform/datatask",
+	"data_task_review":      "internal/platform/datatask",
 	"data_task_run":         "internal/platform/datatask",
 	"deal_document_hide":    "internal/modules/activities",
 	"meeting_proposal":      "internal/modules/activities",

@@ -20,8 +20,9 @@ import (
 )
 
 type dataTaskHandlers struct {
-	pool  *pgxpool.Pool
-	clock func() time.Time
+	classifier *OwedClassifier
+	pool       *pgxpool.Pool
+	clock      func() time.Time
 }
 
 func (h dataTaskHandlers) now() time.Time {
