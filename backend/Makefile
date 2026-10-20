@@ -480,12 +480,15 @@ test-integration-serial: composition ## Escape hatch: the old sequential lane, a
 # reaches the tree only when a human merges it.
 BENCH_PERF_TIER    ?= mid_market
 BENCH_PERF_TIMEOUT ?= 30m
+# Empty skips the page render, for a caller that renders once after collecting
+# records: a render failure must not read as the measurement failing.
+BENCH_RENDER       ?= 1
 bench-perf: composition ## PERF-3/PERF-7 benchmark harness, writing a record; mid-market unless BENCH_PERF_TIER=smb (needs db-up; seeds 250k contacts)
 	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DB_NAME) \
 	  && cd backend && MARGINCE_BENCH_TIER=$(BENCH_PERF_TIER) MARGINCE_BENCH_RECORD=1 \
 	     MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
 	     $(GO) test -tags "integration bench" -run TestPerfBudgetsHoldOnSeededVolumeTier -count=1 -v -timeout $(BENCH_PERF_TIMEOUT) ./internal/compose/integration'
-	@$(MAKE) --no-print-directory perfdoc
+	@if [ -n "$(BENCH_RENDER)" ]; then $(MAKE) --no-print-directory perfdoc; fi
 
 # The SMB budgets, recording NOTHING: a drift check, run by hand, without
 # touching the published page.

@@ -728,10 +728,11 @@ frontend-e2e:
 ## It is the ONLY place that budget is asserted: throttled p95 is the harder of
 ## the two conditions, so a budget that holds here holds unthrottled by
 ## construction.
+BENCH_RENDER ?= 1
 bench-mobile:
 	cd frontend && pnpm install --frozen-lockfile && pnpm build && \
 		MARGINCE_BENCH_MOBILE=1 MARGINCE_BENCH_RECORD=1 pnpm exec playwright test
-	@$(MAKE) --no-print-directory perfdoc
+	@if [ -n "$(BENCH_RENDER)" ]; then $(MAKE) --no-print-directory perfdoc; fi
 
 ## bench-mobile-check — the same measurement, writing NOTHING: a check run by
 ## hand without touching the published page, as bench-perf-check is beside

@@ -275,7 +275,8 @@ one contract of that title is a harness stop.
 A note that copies a file's text never shows in the answer. So
 `must_not_call_with` reads each call itself. Each entry is `tool~regex`,
 and it fails the run when that regex matches the arguments of a call to that
-tool, as one JSON text.
+tool, as one JSON text. `must_call_matching` is the other direction: in the same
+`tool~regex` form, it fails the run when no call to that tool matches.
 
 ## 6. Find the cause of a failure from the transcript
 

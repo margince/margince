@@ -67,14 +67,17 @@ may_call:
 # makes send_email the tidy reach, but a run that starts a fresh mail to him with
 # send_company_email has still sent him the follow-up — so send_email is covered
 # only as one of a set, which is the ruling for that tool.
-#
-# The chaser itself is not held to one route. With one deal slipping, a single
-# one_message draft for Reply Deutschland is the same work as the bulk route, so
-# the bulk route is not required; a draft naming Körber is refused below instead.
 must_call_with:
   - send_outbound.as=email_new
   - send_outbound.as=chat_reply
   - send_outbound.to=["jonas.reinhard@replydeutschland.test"]
+
+# The chaser is not held to one route. With one deal slipping, a single
+# one_message draft for Reply Deutschland is the same work as the bulk route.
+# Either way a draft must aim at that deal: the bulk route, or a one_message
+# draft that names the deal, its company or Jonas.
+must_call_matching:
+  - 'draft_outbound~slipping_deals|Reply Deutschland|Jonas|replydeutschland'
 
 must_mention:
   - "Reply Deutschland"

@@ -415,7 +415,7 @@ jobs:
         working-directory: .
         run: |
           set -o pipefail
-          if make bench-perf BENCH_PERF_TIER=smb BENCH_PERF_TIMEOUT=20m 2>&1 | tee bench.log; then
+          if make bench-perf BENCH_PERF_TIER=smb BENCH_PERF_TIMEOUT=20m BENCH_RENDER= 2>&1 | tee bench.log; then
             echo "outcome=ok" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -673,11 +673,6 @@ jobs:
           node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      # `make bench-mobile` re-renders the budget pages with gen-perfdoc.
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
       # The browser only. `make bench-mobile` runs the install and the
       # build itself, so doing them here as well would install twice and leave
       # two spellings of the lane's setup to drift apart.
@@ -700,7 +695,7 @@ jobs:
         working-directory: .
         run: |
           set -o pipefail
-          if make bench-mobile 2>&1 | tee bench-mobile.log; then
+          if make bench-mobile BENCH_RENDER= 2>&1 | tee bench-mobile.log; then
             echo "outcome=ok" >> "$GITHUB_OUTPUT"
             exit 0
           fi
