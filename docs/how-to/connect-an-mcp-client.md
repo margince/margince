@@ -111,8 +111,8 @@ client ID and a client secret. An admin makes them in Settings → **MCP** → *
    of Claude, Claude Code, ChatGPT and Gemini Enterprise as soon as it opens.
 3. Copy the values Margince shows into the tool. Margince shows the secret once, and stores only a hash of it.
 
-A client an admin registers always has a secret, and the tool must send it. A tool that cannot send a secret, such as
-Codex, which takes only a client ID, connects through a published identity or by registering itself instead.
+A client an admin registers always has a secret, and the tool must send it. A tool that cannot send a secret connects
+through a published identity or by registering itself instead. Codex is one: it takes only a client ID.
 
 | Tool | Redirect URI |
 |---|---|
@@ -131,7 +131,7 @@ The values to paste:
   tool gets no refresh token, and the user signs in again when the token runs out;
 - the MCP server URL, `<public-base-url>/mcp`.
 
-Every sign-in still needs PKCE `S256`, as well as the secret. In Gemini Enterprise, turn on PKCE if the form offers it. After
+Every sign-in still needs PKCE `S256` and the secret. In Gemini Enterprise, turn on PKCE if the form offers it. After
 **Verify Auth**, choose **Continue**, pick a **Multi-region** location, name the data connector, and choose **Add**. Gemini adds the connection turned off,
 so turn it on before the team connects.
 
