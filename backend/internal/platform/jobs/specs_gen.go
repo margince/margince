@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "5ffec09fce3668c4aced51073888c2764b5ae097403c22a670c0ece5a99c224b"
+const JobContractHash = "299ce67b6a9b6376b279b8522a295deda69cfe3f0089b740a32b36f632f5c92f"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -347,6 +347,25 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 24 * time.Hour},
+	},
+	"data_task_reconcile": {
+		Kind:      "data_task_reconcile",
+		GoType:    "DataTaskReconcileArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 10 * time.Minute},
+	},
+	"data_task_run": {
+		Kind:      "data_task_run",
+		GoType:    "DataTaskRunArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "data_task",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
 	},
 	"deal_scout": {
 		Kind:      "deal_scout",
@@ -978,6 +997,7 @@ var queues = map[string]int{
 	"ai_capture":        2,
 	"capture_part_slim": 1,
 	"comms_send":        3,
+	"data_task":         1,
 	"deep_read":         6,
 	"default":           5,
 	"geocode":           1,

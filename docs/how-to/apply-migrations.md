@@ -131,3 +131,10 @@ Two edits to applied migrations exist, and each one was safe for a stated reason
 Neither case sets a rule for others. The second needed every database to be one that could be built again.
 `scripts/migration-baseline.sh verify` also needed to prove that the baseline builds the same schema as the
 history, byte for byte. Without both, never edit a shipped migration.
+
+## Large data corrections
+
+Move work whose cost grows with records into a
+[background data task](add-a-data-task.md). The worker owns its bounded transactions and progress;
+API startup only applies schema changes. Never ship a migration that requires a background task to
+have completed. Reads must remain correct while the task is partially done.

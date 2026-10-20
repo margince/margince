@@ -8707,6 +8707,90 @@ func (e DataSubjectRequestSubjectKind) Valid() bool {
 	}
 }
 
+// Defines values for DataTaskControlAction.
+const (
+	DataTaskControlActionEstimate DataTaskControlAction = "estimate"
+	DataTaskControlActionPause    DataTaskControlAction = "pause"
+	DataTaskControlActionResume   DataTaskControlAction = "resume"
+	DataTaskControlActionRetry    DataTaskControlAction = "retry"
+)
+
+// Valid indicates whether the value is a known member of the DataTaskControlAction enum.
+func (e DataTaskControlAction) Valid() bool {
+	switch e {
+	case DataTaskControlActionEstimate:
+		return true
+	case DataTaskControlActionPause:
+		return true
+	case DataTaskControlActionResume:
+		return true
+	case DataTaskControlActionRetry:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DataTaskProgressBlockedReason.
+const (
+	DataTaskProgressBlockedReasonEarlierStep          DataTaskProgressBlockedReason = "earlier_step"
+	DataTaskProgressBlockedReasonFailed               DataTaskProgressBlockedReason = "failed"
+	DataTaskProgressBlockedReasonMissingPrerequisite  DataTaskProgressBlockedReason = "missing_prerequisite"
+	DataTaskProgressBlockedReasonNewerReleaseRequired DataTaskProgressBlockedReason = "newer_release_required"
+	DataTaskProgressBlockedReasonPaused               DataTaskProgressBlockedReason = "paused"
+	DataTaskProgressBlockedReasonRetryWait            DataTaskProgressBlockedReason = "retry_wait"
+	DataTaskProgressBlockedReasonWaitingForWorker     DataTaskProgressBlockedReason = "waiting_for_worker"
+)
+
+// Valid indicates whether the value is a known member of the DataTaskProgressBlockedReason enum.
+func (e DataTaskProgressBlockedReason) Valid() bool {
+	switch e {
+	case DataTaskProgressBlockedReasonEarlierStep:
+		return true
+	case DataTaskProgressBlockedReasonFailed:
+		return true
+	case DataTaskProgressBlockedReasonMissingPrerequisite:
+		return true
+	case DataTaskProgressBlockedReasonNewerReleaseRequired:
+		return true
+	case DataTaskProgressBlockedReasonPaused:
+		return true
+	case DataTaskProgressBlockedReasonRetryWait:
+		return true
+	case DataTaskProgressBlockedReasonWaitingForWorker:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DataTaskProgressStatus.
+const (
+	DataTaskProgressStatusDone    DataTaskProgressStatus = "done"
+	DataTaskProgressStatusFailed  DataTaskProgressStatus = "failed"
+	DataTaskProgressStatusPaused  DataTaskProgressStatus = "paused"
+	DataTaskProgressStatusPending DataTaskProgressStatus = "pending"
+	DataTaskProgressStatusRunning DataTaskProgressStatus = "running"
+)
+
+// Valid indicates whether the value is a known member of the DataTaskProgressStatus enum.
+func (e DataTaskProgressStatus) Valid() bool {
+	switch e {
+	case DataTaskProgressStatusDone:
+		return true
+	case DataTaskProgressStatusFailed:
+		return true
+	case DataTaskProgressStatusPaused:
+		return true
+	case DataTaskProgressStatusPending:
+		return true
+	case DataTaskProgressStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealCommercialMotion.
 const (
 	DealCommercialMotionCrossSell        DealCommercialMotion = "cross_sell"
@@ -35364,6 +35448,53 @@ type DataSubjectRequestStatus string
 // external identifier, an erased subject, or one the caller may not read.
 type DataSubjectRequestSubjectKind string
 
+// DataTaskControl defines model for DataTaskControl.
+type DataTaskControl struct {
+	Action  DataTaskControlAction `json:"action"`
+	Step    string                `json:"step"`
+	TaskId  string                `json:"task_id"`
+	Version int64                 `json:"version"`
+}
+
+// DataTaskControlAction defines model for DataTaskControl.Action.
+type DataTaskControlAction string
+
+// DataTaskProgress defines model for DataTaskProgress.
+type DataTaskProgress struct {
+	BatchLimit          int                            `json:"batch_limit"`
+	Batches             int64                          `json:"batches"`
+	BlockedBy           *string                        `json:"blocked_by,omitempty"`
+	BlockedReason       *DataTaskProgressBlockedReason `json:"blocked_reason,omitempty"`
+	Changed             int64                          `json:"changed"`
+	ConsecutiveFailures int                            `json:"consecutive_failures"`
+	ErrorRemedy         *string                        `json:"error_remedy,omitempty"`
+	ErrorSentence       *string                        `json:"error_sentence,omitempty"`
+
+	// Estimate Bounded count of rows to inspect; absent means unknown, not zero.
+	Estimate             *int64                 `json:"estimate,omitempty"`
+	EstimateCapped       bool                   `json:"estimate_capped"`
+	EstimatedAt          *time.Time             `json:"estimated_at,omitempty"`
+	FirstRelease         *string                `json:"first_release,omitempty"`
+	LastErrorClass       *string                `json:"last_error_class,omitempty"`
+	LastProgressAt       *time.Time             `json:"last_progress_at,omitempty"`
+	MissingPrerequisites []string               `json:"missing_prerequisites"`
+	NextAttemptAt        *time.Time             `json:"next_attempt_at,omitempty"`
+	RunId                *openapi_types.UUID    `json:"run_id,omitempty"`
+	Scanned              int64                  `json:"scanned"`
+	Status               DataTaskProgressStatus `json:"status"`
+	Step                 string                 `json:"step"`
+	TaskId               string                 `json:"task_id"`
+	TaskVersion          int                    `json:"task_version"`
+	Title                string                 `json:"title"`
+	Version              int64                  `json:"version"`
+}
+
+// DataTaskProgressBlockedReason defines model for DataTaskProgress.BlockedReason.
+type DataTaskProgressBlockedReason string
+
+// DataTaskProgressStatus defines model for DataTaskProgress.Status.
+type DataTaskProgressStatus string
+
 // DeactivateUserRequest defines model for DeactivateUserRequest.
 type DeactivateUserRequest struct {
 	// Reason Optional operator note that rides the user.deactivated event.
@@ -60210,6 +60341,9 @@ type SendMessageJSONRequestBody = SendMessageRequest
 // UpdateActivityReviewTemplateJSONRequestBody defines body for UpdateActivityReviewTemplate for application/json ContentType.
 type UpdateActivityReviewTemplateJSONRequestBody = UpdateActivityReviewTemplateRequest
 
+// ControlDataTaskJSONRequestBody defines body for ControlDataTask for application/json ContentType.
+type ControlDataTaskJSONRequestBody = DataTaskControl
+
 // ResetDataJSONRequestBody defines body for ResetData for application/json ContentType.
 type ResetDataJSONRequestBody ResetDataJSONBody
 
@@ -72468,6 +72602,12 @@ type ServerInterface interface {
 	// What capture's judgement queues are holding, and in whose mailbox.
 	// (GET /admin/capture-health)
 	GetCaptureHealth(w http.ResponseWriter, r *http.Request)
+	// Read background correction progress.
+	// (GET /admin/data-tasks)
+	ListDataTasks(w http.ResponseWriter, r *http.Request)
+	// Pause, resume, retry or estimate a background correction.
+	// (POST /admin/data-tasks/control)
+	ControlDataTask(w http.ResponseWriter, r *http.Request)
 	// Which composed units are handing the core records it cannot express.
 	// (GET /admin/extension-ingest-health)
 	GetExtensionIngestHealth(w http.ResponseWriter, r *http.Request)
@@ -75174,6 +75314,18 @@ func (_ Unimplemented) UpdateActivityReviewTemplate(w http.ResponseWriter, r *ht
 // What capture's judgement queues are holding, and in whose mailbox.
 // (GET /admin/capture-health)
 func (_ Unimplemented) GetCaptureHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read background correction progress.
+// (GET /admin/data-tasks)
+func (_ Unimplemented) ListDataTasks(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Pause, resume, retry or estimate a background correction.
+// (POST /admin/data-tasks/control)
+func (_ Unimplemented) ControlDataTask(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -81784,6 +81936,46 @@ func (siw *ServerInterfaceWrapper) GetCaptureHealth(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCaptureHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListDataTasks operation middleware
+func (siw *ServerInterfaceWrapper) ListDataTasks(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDataTasks(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ControlDataTask operation middleware
+func (siw *ServerInterfaceWrapper) ControlDataTask(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ControlDataTask(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -117031,6 +117223,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/capture-health", wrapper.GetCaptureHealth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/data-tasks", wrapper.ListDataTasks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/data-tasks/control", wrapper.ControlDataTask)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/extension-ingest-health", wrapper.GetExtensionIngestHealth)

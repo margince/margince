@@ -155,6 +155,14 @@ func (stubs) GetCaptureHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetCaptureHealth")
 }
 
+func (stubs) ListDataTasks(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListDataTasks")
+}
+
+func (stubs) ControlDataTask(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ControlDataTask")
+}
+
 func (stubs) GetExtensionIngestHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetExtensionIngestHealth")
 }

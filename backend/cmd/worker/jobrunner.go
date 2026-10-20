@@ -204,7 +204,8 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, sch
 		return nil, err
 	}
 	return compose.NewJobRunner(pool, logger, compose.JobRunnerConfig{
-		ListsEnabled: cfg.listsEnabled,
+		ListsEnabled:  cfg.listsEnabled,
+		DataTasksPace: cfg.dataTasksPace,
 		// Every setting-driven schedule, read once here and kept current by
 		// the watch startJobRunner starts.
 		Schedules: schedules,

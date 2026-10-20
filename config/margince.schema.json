@@ -795,6 +795,23 @@
         }
       }
     },
+    "data_tasks": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pace": {
+          "description": "Delay between committed background correction batches.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": "1s"
+        }
+      }
+    },
     "deals": {
       "type": [
         "object",

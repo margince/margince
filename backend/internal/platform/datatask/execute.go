@@ -1,0 +1,174 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package datatask
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+const (
+	LockKey          int64 = 0x646174617461736b
+	transactionLimit       = 20 * time.Second
+	statementLimit         = 15 * time.Second
+	estimateCap      int64 = 100000
+)
+
+// Outcome asks River to pace the next attempt without spending a retry.
+type Outcome struct {
+	More bool
+	Busy bool
+	Wait time.Duration
+}
+
+// Execute commits one bounded batch and its progress under the same global lock.
+func (e *Engine) Execute(ctx context.Context) (Outcome, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return Outcome{}, err
+	}
+	batchCtx, cancel := context.WithTimeout(ctx, transactionLimit)
+	defer cancel()
+	var picked *selection
+	var outcome Outcome
+	err := database.WithWorkspaceTx(batchCtx, e.pool, func(tx pgx.Tx) error {
+		locked, err := lockExecutor(batchCtx, tx)
+		if err != nil || !locked {
+			outcome.Busy = !locked && err == nil
+			return err
+		}
+		progress, err := readProgress(batchCtx, tx)
+		if err != nil {
+			return err
+		}
+		candidate, blocked := nextStep(e.tasks, progress, e.now())
+		if candidate != nil && blocked == "retry_wait" {
+			outcome.Wait = candidate.progress.NextAttemptAt.Sub(e.now())
+		}
+		if candidate == nil || blocked != "" {
+			return nil
+		}
+		missing, err := missingRequirements(batchCtx, tx, candidate.task)
+		if err != nil || len(missing) != 0 {
+			return err
+		}
+		picked = candidate
+		current, err := scanProgress(tx.QueryRow(batchCtx,
+			`SELECT `+progressColumns+` FROM data_task_run WHERE task_id = @task AND step = @step FOR UPDATE`,
+			pgx.NamedArgs{"task": candidate.task.ID, "step": candidate.step.Name}))
+		if err != nil {
+			return err
+		}
+		outcome.More = true
+		if current.Version != candidate.progress.Version {
+			return nil
+		}
+		return e.runBatch(batchCtx, tx, *picked)
+	})
+	if err == nil || ctx.Err() != nil {
+		return outcome, nil
+	}
+	if picked == nil {
+		return Outcome{}, err
+	}
+	if err := e.recordFailure(ctx, *picked, err); err != nil {
+		return Outcome{}, err
+	}
+	return Outcome{More: true}, nil
+}
+
+func lockExecutor(ctx context.Context, tx pgx.Tx) (bool, error) {
+	if err := database.BoundStatement(ctx, tx, statementLimit); err != nil {
+		return false, err
+	}
+	if _, err := tx.Exec(ctx, `SET LOCAL lock_timeout = '2s'`); err != nil {
+		return false, err
+	}
+	var locked bool
+	err := tx.QueryRow(ctx, `SELECT pg_try_advisory_xact_lock(@key)`, pgx.NamedArgs{"key": LockKey}).Scan(&locked)
+	return locked, err
+}
+
+func (e *Engine) runBatch(ctx context.Context, tx pgx.Tx, picked selection) error {
+	p := picked.progress
+	if p.TaskVersion != picked.task.Version {
+		p.Cursor, p.Scanned, p.Changed, p.Batches = nil, 0, 0, 0
+		p.Estimate, p.EstimatedAt = nil, nil
+		p.BatchLimit = picked.step.Limit
+		p.TaskVersion = picked.task.Version
+	}
+	if p.Estimate == nil {
+		estimate, capped, err := picked.step.Estimate(ctx, tx, estimateCap)
+		if err != nil {
+			return err
+		}
+		if estimate < 0 || estimate > estimateCap {
+			return fmt.Errorf("data task estimate exceeded its declared bound")
+		}
+		now := e.now()
+		p.Estimate, p.EstimateCapped, p.EstimatedAt = &estimate, capped, &now
+	}
+	ctx = storekit.WithBatch(principal.SystemActing(ctx, "system:datatask:"+picked.task.ID), p.RunID)
+	out, err := picked.step.Batch(ctx, tx, BatchIn{Cursor: p.Cursor, Limit: p.BatchLimit, RunID: p.RunID})
+	if err != nil {
+		return err
+	}
+	if err := validateBatch(p, out); err != nil {
+		return err
+	}
+	if e.beforeCommit != nil {
+		if err := e.beforeCommit(ctx, tx); err != nil {
+			return err
+		}
+	}
+	return e.commitProgress(ctx, tx, p, out)
+}
+
+func validateBatch(in Progress, out BatchOut) error {
+	if out.Scanned < 0 || out.Changed < 0 || out.Changed > out.Scanned || out.Scanned > in.BatchLimit {
+		return fmt.Errorf("data task batch exceeded its declared bound")
+	}
+	if len(out.Cursor) > 0 && !json.Valid(out.Cursor) {
+		return fmt.Errorf("data task cursor must be JSON")
+	}
+	if !out.Done && (out.Scanned == 0 || len(out.Cursor) == 0 || bytes.Equal(in.Cursor, out.Cursor)) {
+		return fmt.Errorf("data task batch made no cursor progress")
+	}
+	return nil
+}
+
+func (e *Engine) commitProgress(ctx context.Context, tx pgx.Tx, p Progress, out BatchOut) error {
+	status := Running
+	if out.Done {
+		status = Done
+	}
+	tag, err := tx.Exec(ctx, `UPDATE data_task_run SET task_version = @revision, status = @status,
+ cursor = @cursor, batch_limit = @limit, scanned = @scanned, changed = @changed, batches = @batches,
+ estimate = @estimate, estimate_capped = @capped, estimated_at = @estimated,
+ consecutive_failures = 0, last_error_class = NULL, next_attempt_at = NULL,
+ last_progress_at = @now, updated_at = @now, version = version + 1
+ WHERE task_id = @task AND step = @step AND version = @version`,
+		pgx.NamedArgs{
+			"revision": p.TaskVersion, "status": status, "cursor": out.Cursor,
+			"limit": p.BatchLimit, "scanned": p.Scanned + int64(out.Scanned), "changed": p.Changed + int64(out.Changed),
+			"batches": p.Batches + 1, "estimate": p.Estimate, "capped": p.EstimateCapped, "estimated": p.EstimatedAt,
+			"now": e.now(), "task": p.TaskID, "step": p.Step, "version": p.Version,
+		})
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() != 1 {
+		return fmt.Errorf("data task progress changed before commit")
+	}
+	return nil
+}

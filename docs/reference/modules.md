@@ -133,3 +133,11 @@ A module never reaches another module; the `compose` root injects the link (how 
 To place a new module, add `internal/modules/<name>/` (flat) and give it a `doc.go` with a "Tables
 owned" list. Follow one spine shape. Wire any need for another module as a `compose` adapter, never as an
 import.
+
+## Background corrections
+
+`platform/datatask` owns `data_task_run`, the durable progress ledger for release corrections.
+It receives step functions from compose and never imports a module. Capture owns provider-date
+stamping, contacts owns acquisition provenance, and consent owns privacy-notice settlement. Their
+transaction functions share the executor's transaction. See
+[Background data corrections](../explanation/data-tasks.md).
