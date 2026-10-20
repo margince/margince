@@ -292,14 +292,6 @@ var retentionSweepFiles = []string{
 // Comments matter as much as quotes here — `SET body = NULL /* ; */ ,
 // counterparty_email = NULL` splits at the comment's semicolon and the
 // destruction rides out in a fragment sqlWriteTargets drops.
-//
-// ONE form it still does not understand, and does not guess at: the E” escape,
-// where a backslashed apostrophe leaves the scan believing it has closed a
-// string it has not. quotingBeyondTheSplit answers for it at the collection
-// site, so its arrival is a failure naming the literal rather than a green run
-// over a split nobody can trust — and it looks for it OUTSIDE the spans the
-// scan does understand, or an E-string MENTIONED inside a value or a comment
-// would refuse a statement that reads perfectly well.
 func sqlStatements(literal string) []string {
 	var out []string
 	start := 0
@@ -322,30 +314,17 @@ func sqlStatements(literal string) []string {
 	return out
 }
 
-// escapeStringRe is the one form the split cannot track: E'…' takes a
-// BACKSLASH escape, so `E'a\';b'` leaves the scan believing it has closed a
-// string it has not, and an inverted scan splits inside one.
-var escapeStringRe = regexp.MustCompile(`(?i)\bE'`)
-
-// quotingBeyondTheSplit names the form in a literal that sqlStatements would
-// mis-scan, or "" when there is none. Nothing in the swept files uses it today;
-// this is the tripwire for the day one does, and it fails CLOSED — the caller
-// reports the literal — because the alternative is a split landing inside a
-// string and a destructive assignment riding out in a fragment that names no
-// table.
-//
-// Looked for OUTSIDE the spans the scan does understand, which is the half a
-// bare regex gets wrong in the expensive direction: `SET body = 'E”s note'` or
-// a comment mentioning one would refuse a statement that is read perfectly
-// well, and a tripwire that fires on correct SQL is one somebody turns off.
-func quotingBeyondTheSplit(literal string) string {
+// A truncated span hides every later assignment, so collection refuses it before splitting.
+func unclosedWriteSpan(literal string) string {
+	if len(sqlWriteTargets(literal)) == 0 {
+		return ""
+	}
 	for i := 0; i < len(literal); i++ {
-		if skip, _ := gatekit.SQLSpanAt(literal, i); skip > 0 {
+		if skip, closed := gatekit.SQLSpanAt(literal, i); skip > 0 {
+			if !closed {
+				return literal[i:]
+			}
 			i += skip - 1
-			continue
-		}
-		if m := escapeStringRe.FindString(literal[i:]); m != "" && strings.HasPrefix(strings.ToLower(literal[i:]), "e'") {
-			return m
 		}
 	}
 	return ""

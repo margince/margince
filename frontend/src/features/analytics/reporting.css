@@ -69,6 +69,36 @@
   gap: var(--space-5);
   padding: var(--padPanel);
 }
+/* A section's heading sits over its own grid; sections stack with the gap the
+   cards use between them. */
+.reporting-section {
+  display: grid;
+  gap: var(--space-3);
+}
+.reporting-section + .reporting-section {
+  margin-top: var(--gapCards);
+}
+/* Edit report's layout editor: a section is a bordered group, and each card
+   is one row whose controls wrap under its name on a narrow dialog. */
+.reporting-layout-section {
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  padding: var(--space-3);
+}
+.reporting-layout-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.reporting-layout-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+}
+.reporting-layout-name {
+  flex: 1 1 12rem;
+}
 .reporting-panel-wide {
   grid-column: 1 / -1;
 }

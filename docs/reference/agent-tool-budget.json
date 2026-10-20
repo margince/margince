@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 37,
     "system_frame_tokens": 597,
-    "tokens": 21862,
+    "tokens": 22084,
     "median_tool_tokens": 474,
-    "mean_tool_tokens": 590
+    "mean_tool_tokens": 596
   },
   "agents": [
     {
@@ -84,12 +84,12 @@
   ],
   "tool_cost": [
     {
-      "name": "find_records",
-      "tokens": 1697
+      "name": "read_reports",
+      "tokens": 1726
     },
     {
-      "name": "read_reports",
-      "tokens": 1647
+      "name": "find_records",
+      "tokens": 1697
     },
     {
       "name": "change_activities",
@@ -108,12 +108,12 @@
       "tokens": 989
     },
     {
-      "name": "change_state",
-      "tokens": 866
+      "name": "read_analytics",
+      "tokens": 912
     },
     {
-      "name": "read_analytics",
-      "tokens": 834
+      "name": "change_state",
+      "tokens": 866
     },
     {
       "name": "read_forecast",
@@ -168,6 +168,10 @@
       "tokens": 417
     },
     {
+      "name": "list_approvals",
+      "tokens": 401
+    },
+    {
       "name": "enrich",
       "tokens": 395
     },
@@ -190,10 +194,6 @@
     {
       "name": "check_availability",
       "tokens": 342
-    },
-    {
-      "name": "list_approvals",
-      "tokens": 336
     },
     {
       "name": "read_attention",

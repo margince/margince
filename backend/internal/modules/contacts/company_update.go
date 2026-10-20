@@ -324,11 +324,16 @@ func stageCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 		}
 		*in.Domains = electPrimary(*in.Domains, live)
 	}
-	// A replace-set changes no column on the row itself, so this bump is what
-	// makes the patch non-empty and carries the version guard. Once, after both
-	// branches: a request naming both sets is still one write at one instant, and
-	// which branch happened to run last should not pick the timestamp.
-	p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
+	changed, err := companyReplaceSetsChanged(ctx, tx, id, in)
+	if err != nil {
+		return "", err
+	}
+	if changed {
+		// A replace-set changes no column on the row itself, so this bump makes
+		// the patch non-empty and carries the version guard. It is stamped once,
+		// after both sets, so one request has one timestamp.
+		p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
+	}
 	return by, nil
 }
 

@@ -234,7 +234,11 @@ func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*st
 		if err := checkFigure(defaultTaxLimit, wireDecimal(*in.DefaultTaxRate)); err != nil {
 			return nil, err
 		}
-		p.Set("default_tax_rate", current.DefaultTaxRate, formatPct(*in.DefaultTaxRate))
+		// The column is numeric(…, 2) and the row reads back as a float, so the
+		// two are compared as the same two-decimal text the write binds.
+		if sent := formatPct(*in.DefaultTaxRate); sent != formatPct(current.DefaultTaxRate) {
+			p.Set("default_tax_rate", current.DefaultTaxRate, sent)
+		}
 	}
 	if in.Active != nil {
 		p.Set("active", current.Active, *in.Active)

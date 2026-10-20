@@ -503,6 +503,37 @@ export const ExplainLoading: Story = {
   },
 };
 
+// The door, and the tile that has none. Five tiles partition the pipeline into
+// named buckets, and "which deals are in commit" is the first question anyone
+// asks of one. `slipped` is derived by the report rather than stored. No query
+// parameter names its set, so it draws no door. A reader sees the difference
+// between a figure that opens and one that is an end.
+export const ForecastDoors: Story = {
+  render: () => (
+    <StoryProviders>
+      <StatStrip>
+        <ForecastTile
+          label="Commit"
+          amountMinor={1_240_000}
+          weightedMinor={1_116_000}
+          dealCount={8}
+          currency="EUR"
+          locale="en"
+          dealsUrl="#/deals?forecast_category=commit"
+        />
+        <ForecastTile
+          label="Slipped"
+          amountMinor={320_000}
+          weightedMinor={96_000}
+          dealCount={3}
+          currency="EUR"
+          locale="en"
+        />
+      </StatStrip>
+    </StoryProviders>
+  ),
+};
+
 // The four absences a slot has to tell apart, side by side, because they are
 // four different facts and one of them used to be drawn as €0.00. A category
 // the report returned no row for was measured in no currency at all; a band of

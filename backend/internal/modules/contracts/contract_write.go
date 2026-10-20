@@ -449,13 +449,13 @@ func setContractFields(patch *storekit.Patch, existing crmcontracts.Contract, in
 // where most of the contract's fields are.
 func setContractTermFields(patch *storekit.Patch, existing crmcontracts.Contract, in crmcontracts.UpdateContractRequest) {
 	if in.StartsOn != nil {
-		patch.Set(startsOnColumn, existing.StartsOn, in.StartsOn.Time)
+		patch.SetDate(startsOnColumn, storekit.PlainDate(existing.StartsOn), storekit.PlainDate(in.StartsOn))
 	}
 	if in.EndsOn != nil {
-		patch.Set(endsOnColumn, existing.EndsOn, in.EndsOn.Time)
+		patch.SetDate(endsOnColumn, storekit.PlainDate(existing.EndsOn), storekit.PlainDate(in.EndsOn))
 	}
 	if in.RenewalOn != nil {
-		patch.Set("renewal_on", existing.RenewalOn, in.RenewalOn.Time)
+		patch.SetDate("renewal_on", storekit.PlainDate(existing.RenewalOn), storekit.PlainDate(in.RenewalOn))
 	}
 	if in.AutoRenew != nil {
 		patch.Set("auto_renew", existing.AutoRenew, *in.AutoRenew)
@@ -467,6 +467,6 @@ func setContractTermFields(patch *storekit.Patch, existing crmcontracts.Contract
 		patch.Set("payment_term_days", existing.PaymentTermDays, *in.PaymentTermDays)
 	}
 	if in.SignedOn != nil {
-		patch.Set("signed_on", existing.SignedOn, in.SignedOn.Time)
+		patch.SetDate("signed_on", storekit.PlainDate(existing.SignedOn), storekit.PlainDate(in.SignedOn))
 	}
 }

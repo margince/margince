@@ -5,6 +5,61 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de = {
+  "approvalPreferences.title": "Persönlich stummgeschaltete Freigaben",
+  "approvalPreferences.explain":
+    "Stummgeschaltete Arten verschwinden nur aus deiner Worklist. Andere Mitglieder behalten ihre Vorschläge. Stummschalten und Wiederherstellen deaktivieren deine automatischen Änderungen dieser Art. Versand, Buchungen, Zusammenführungen und Vorschläge mit Agentenpass bleiben sichtbar.",
+  "approvalPreferences.review": "Auch stumme Vorschläge prüfen",
+  "approvalPreferences.reviewExplain":
+    "Diese Ansicht enthält stumme und abgelaufene Vorschläge. Pakete in deiner normalen Worklist können durch persönliche Einstellungen weniger Einträge zeigen. Prüfe jeden Vorschlag vor der Entscheidung.",
+  "approvalPreferences.close": "Prüfung schließen",
+  "approvalPreferences.next": "Nächste Seite",
+  "approvalPreferences.first": "Erste Seite",
+  "dataTasks.unknownState":
+    "Aktualisiere die Anwendung, um diesen Status zu verwalten.",
+  "dataTasks.blockedBy": "Wartet auf: {name}",
+  "roles.object.data_task": "Datenaktualisierungen",
+  "dataTasks.title": "Datenaktualisierungen",
+  "dataTasks.sub":
+    "Gespeicherte Datensätze werden in kleinen Paketen aktualisiert. Bereits gespeicherte Änderungen bleiben bei einer Pause erhalten.",
+  "dataTasks.withheld":
+    "Zum Lesen der Datenaktualisierungen ist eine Berechtigung erforderlich. Wende dich an einen Admin, um Zugriff zu erhalten.",
+  "dataTasks.empty": "Keine Datenaktualisierungen registriert.",
+  "dataTasks.unknown": "Nicht geschätzt",
+  "dataTasks.atLeast_one": "Mindestens {count}",
+  "dataTasks.atLeast_other": "Mindestens {count}",
+  "dataTasks.scanned": "Geprüfte Zeilen",
+  "dataTasks.changed": "Geänderte Zeilen",
+  "dataTasks.estimate": "Geschätzte zu prüfende Zeilen",
+  "dataTasks.batchLimit": "Zeilen pro Paket",
+  "dataTasks.batches": "Gespeicherte Pakete",
+  "dataTasks.lastProgress": "Letzter Fortschritt",
+  "dataTasks.notStarted": "Nicht gestartet",
+  "dataTasks.nextAttempt": "Nächster Versuch",
+  "dataTasks.release": "Erste Version",
+  "dataTasks.run": "Lauf-ID",
+  "dataTasks.step": "Schritt: {step}",
+  "dataTasks.prerequisites": "Zuerst erforderlich: {names}",
+  "dataTasks.status.pending": "Ausstehend",
+  "dataTasks.status.running": "Läuft",
+  "dataTasks.status.paused": "Pausiert",
+  "dataTasks.status.done": "Abgeschlossen",
+  "dataTasks.status.failed": "Fehlgeschlagen",
+  "dataTasks.action.pause": "Pausieren",
+  "dataTasks.action.resume": "Fortsetzen",
+  "dataTasks.action.retry": "Erneut versuchen",
+  "dataTasks.action.estimate": "Zeilen schätzen",
+  "dataTasks.blocked.waiting_for_worker":
+    "Wartet auf einen Hintergrundprozess.",
+  "dataTasks.blocked.newer_release_required":
+    "Eine neuere Version ist erforderlich. Aktualisiere die Anwendung, bevor du fortfährst.",
+  "dataTasks.blocked.paused": "An der gespeicherten Position pausiert.",
+  "dataTasks.blocked.failed":
+    "Nach wiederholten Fehlern gestoppt. Prüfe den Fehler vor einem neuen Versuch.",
+  "dataTasks.blocked.retry_wait": "Wartet auf den nächsten Versuch.",
+  "dataTasks.blocked.earlier_step":
+    "Ein vorheriger Schritt muss zuerst abgeschlossen werden.",
+  "dataTasks.blocked.missing_prerequisite":
+    "Erforderliche Aktualisierungen müssen zuerst abgeschlossen werden.",
   "approval.preview.nameUnavailable": "Name nicht verfügbar",
   "approval.preview.structured": "Strukturierter Wert: {value}",
   "approval.preview.resolveConflict":
@@ -191,6 +246,21 @@ export const de = {
     "Vor dem Wiederherstellen einer früheren Version den Entwurf veröffentlichen oder verwerfen.",
   "reporting.moveUp": "Nach oben",
   "reporting.moveDown": "Nach unten",
+  "reporting.sectionN": "Abschnitt {n}",
+  "reporting.sectionTitle": "Titel von Abschnitt {n}",
+  "reporting.addSection": "Abschnitt hinzufügen",
+  "reporting.removeSection": "Abschnitt {n} entfernen",
+  "reporting.cardWidth": "Breite von {chart}",
+  "reporting.widthFull": "Volle Breite",
+  "reporting.widthHalf": "Halbe Breite",
+  "reporting.cardSection": "Abschnitt für {chart}",
+  "reporting.removeCard": "{chart} entfernen",
+  "reporting.addChart": "Diagramm hinzufügen",
+  "reporting.previewChart": "Vorschau",
+  "reporting.previewLoading": "Vorschau wird geladen…",
+  "reporting.previewEmpty":
+    "Für Zeitraum und Kennzahlen dieses Berichts gibt es noch nichts zu zeichnen. Das Diagramm trotzdem hinzufügen oder den Zeitraum unter Bericht anpassen ändern.",
+  "reporting.chooseChart": "Diagramm zum Hinzufügen",
   "reporting.exportCsv": "CSV exportieren",
   "reporting.captureContexts": "Täglichen Pipeline-Verlauf speichern",
   "reporting.captureHelp":
@@ -338,6 +408,7 @@ export const de = {
   "reporting.restricted": "Geschützter Datensatz",
   "reporting.next": "Nächste Seite",
   "reporting.name": "Berichtsname",
+  "reporting.description": "Zweck",
   "reporting.audience": "Sichtbar für",
   "reporting.private": "Privat",
   "reporting.team": "Ausgewähltes Team",
@@ -6884,6 +6955,9 @@ export const de = {
     "Wiederherstellung geplanter Sendungen",
   "jobs.kind.comms_send_email": "E-Mail-Versand",
   "jobs.kind.company_name_promotion": "Unternehmensnamen aus Signaturen",
+  "systemJob.datatask": "Datenaktualisierung",
+  "jobs.kind.data_task_run": "Datenaktualisierung in Schritten",
+  "jobs.kind.data_task_reconcile": "Abgleich der Datenaktualisierung",
   "jobs.kind.deal_scout": "Deal Scout",
   "jobs.kind.document_extract": "Dokumentauswertung",
   "jobs.kind.embed_drift_sweep": "Nachholen des Suchindex",
@@ -8378,6 +8452,33 @@ export const de = {
   "blockedDomains.source.verdict": "Modellergebnis",
   "blockedDomains.source.heuristic": "Heuristik",
   "blockedDomains.source.human": "Mensch",
+  "blockedDomains.source.reservedDomain":
+    "Reservierte Domain: Firmenerkennung pausiert",
+  "blockedDomains.source.forwardedIdentity":
+    "Eine andere Website antwortete. Firmenzuordnung prüfen.",
+  "worklist.domainReview.defer": "Zurückstellen",
+  "worklist.domainReview.restore": "Zur Prüfung zurückholen",
+  "worklist.domainReview.deferEffect":
+    "Zurückstellen entfernt diese Frage aus deiner Warteschlange, bis neue Belege eintreffen. Hier bleibt sie erreichbar.",
+  "worklist.domainReview.title": "Domains prüfen",
+  "worklist.domainReview.loading": "Domains werden geladen…",
+  "worklist.domainReview.empty": "Keine Domains zu prüfen.",
+  "worklist.domainReview.more": "Weitere laden",
+  "worklist.domainReview.forwarded": "Antwortende Website: {url}",
+  "worklist.domainReview.evidenceAt": "Neuester Beleg: {date}",
+  "worklist.domainReview.noEvidenceDate": "Datum des Belegs fehlt",
+  "worklist.domainReview.match": "Unternehmen zuordnen",
+  "worklist.domainReview.matchEffect":
+    "Die Zuordnung verknüpft diese Domain und ihre erfassten Kontakte mit dem gewählten Unternehmen.",
+  "worklist.domainReview.create": "Unternehmen erstellen",
+  "worklist.domainReview.retry": "Website erneut lesen",
+  "worklist.domainReview.exclude": "Domain ausschließen",
+  "worklist.domainReview.forwardedEffects":
+    "Erneut lesen lässt die Identität offen. Ausschließen stoppt die Erfassung für deine Postfächer.",
+  "worklist.domainReview.effects":
+    "Erstellen legt ein Unternehmen an. Erneut lesen lässt die Identität offen. Ausschließen stoppt die Erfassung für deine Postfächer.",
+  "worklist.batch.domain_questions_one": "{count} Domain prüfen",
+  "worklist.batch.domain_questions_other": "{count} Domains prüfen",
   "blockedDomains.source.unevidenced":
     "Kein Unternehmen auf der Website genannt",
   "blockedDomains.source.staleEvidence": "Belegende E-Mails zu alt",
@@ -12515,6 +12616,10 @@ export const de = {
   "webhooks.event.voice.draft_outcome_recorded.when":
     "Das Ergebnis eines Entwurfs im Schreibstil des Mitglieds wird erfasst.",
   "webhooks.eventGroup.approvals_audit": "Freigaben und Audit",
+  "webhooks.event.approval.preference_changed.label":
+    "Freigabeeinstellung geändert",
+  "webhooks.event.approval.preference_changed.when":
+    "Ein Mitglied ändert, ob ein Freigabetyp in seiner Worklist erscheint.",
   "webhooks.event.approval.requested.label": "Freigabe angefragt",
   "webhooks.event.approval.requested.when":
     "Eine Agent-Aktion wird zurückgehalten, bis jemand entscheidet.",

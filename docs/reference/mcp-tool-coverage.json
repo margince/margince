@@ -1957,6 +1957,39 @@
       "measured_by_model": {}
     },
     {
+      "name": "read_reports",
+      "tokens": 1726,
+      "agents": [],
+      "required_by_cases": [
+        "case49_who_can_introduce_us"
+      ],
+      "required_as_one_of_a_set_by_cases": [
+        "case7_ask_for_a_number"
+      ],
+      "permitted_in_cases": [
+        "case20_put_it_in_the_board_pack",
+        "case21_what_are_we_closing",
+        "case22_can_i_trust_the_numbers"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "find_records",
       "tokens": 1697,
       "agents": [
@@ -2016,39 +2049,6 @@
         "gpt-5.6-sol@codex-cli": {
           "runs": 6,
           "passed": 6,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "read_reports",
-      "tokens": 1647,
-      "agents": [],
-      "required_by_cases": [
-        "case49_who_can_introduce_us"
-      ],
-      "required_as_one_of_a_set_by_cases": [
-        "case7_ask_for_a_number"
-      ],
-      "permitted_in_cases": [
-        "case20_put_it_in_the_board_pack",
-        "case21_what_are_we_closing",
-        "case22_can_i_trust_the_numbers"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -2145,38 +2145,8 @@
       }
     },
     {
-      "name": "change_state",
-      "tokens": 866,
-      "agents": [],
-      "required_by_cases": [
-        "case40_sort_the_queue",
-        "case41_close_the_project",
-        "case45_move_the_deal_on",
-        "case47_tidy_the_fair_list"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 10,
-          "passed": 8,
-          "reliability": 0.8,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 9,
-          "passed": 8,
-          "reliability": 0.8888888888888888,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "read_analytics",
-      "tokens": 834,
+      "tokens": 912,
       "agents": [],
       "required_by_cases": [
         "case20_put_it_in_the_board_pack"
@@ -2202,6 +2172,36 @@
           "runs": 2,
           "passed": 2,
           "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "change_state",
+      "tokens": 866,
+      "agents": [],
+      "required_by_cases": [
+        "case40_sort_the_queue",
+        "case41_close_the_project",
+        "case45_move_the_deal_on",
+        "case47_tidy_the_fair_list"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 10,
+          "passed": 8,
+          "reliability": 0.8,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 9,
+          "passed": 8,
+          "reliability": 0.8888888888888888,
           "cases_below_their_bar": []
         }
       }
@@ -2534,6 +2534,41 @@
       }
     },
     {
+      "name": "list_approvals",
+      "tokens": 401,
+      "agents": [],
+      "required_by_cases": [
+        "case8_whats_waiting"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case1_log_it",
+        "case32_two_words_for_one_thing",
+        "case43_the_fair_leads_are_prospects",
+        "case46_get_us_in_a_room",
+        "case48_that_whole_thread_is_filed_wrong",
+        "case57_put_it_on_the_file",
+        "case59_file_it_on_the_meeting_and_the_contract"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "resolve_duplicates",
       "tokens": 393,
       "agents": [],
@@ -2633,41 +2668,6 @@
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [
         "case46_get_us_in_a_room"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "list_approvals",
-      "tokens": 336,
-      "agents": [],
-      "required_by_cases": [
-        "case8_whats_waiting"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case1_log_it",
-        "case32_two_words_for_one_thing",
-        "case43_the_fair_leads_are_prospects",
-        "case46_get_us_in_a_room",
-        "case48_that_whole_thread_is_filed_wrong",
-        "case57_put_it_on_the_file",
-        "case59_file_it_on_the_meeting_and_the_contract"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,

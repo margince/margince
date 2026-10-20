@@ -1,37 +1,18 @@
 import type { ReactNode } from "react";
-import { Button, Disclosure, EmptyState } from "../../design-system/atoms";
-import { DataTable } from "../../design-system/datatable";
+import { Button, EmptyState } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { BarList, SegmentBar } from "../../design-system/readings";
-import {
-  BulletChart,
-  CumulativeChart,
-  RangeChart,
-} from "../../design-system/report-charts";
-import { Waterfall } from "../../design-system/waterfall";
-import {
-  formatDateTime,
-  formatMoneyCompact,
-  formatNumber,
-  MONEY_ABSENT,
-} from "../../format/format";
-import { type Translator, useLocale, usePlural, useT } from "../../i18n";
+import { useT } from "../../i18n";
+import { ChartBody, chartTitle } from "./reporting.chartbody";
 import { ChartContext } from "./reporting.chartcontext";
-import { withDealCount } from "./reporting.dealcount";
+import { type LaidOutSection, laidOut } from "./reporting.layout";
 import { MetricsTable } from "./reporting.metricstable";
-import {
-  blockLabel,
-  metricLabel,
-  type ReportingChart,
-  type ReportingEvaluation,
-  type ReportingEvidenceRef,
-  reportingAmount,
-  reportingCompactAmount,
-  reportingMoneyUnit,
+import type {
+  ReportingChart,
+  ReportingEvaluation,
+  ReportingEvidenceRef,
 } from "./reporting.model";
-import { movementLabel } from "./reporting.movement";
-import { SdrOutcomes } from "./reporting.sdroutcomes";
-import { ResultsSummary, TargetProgress } from "./reporting.summary";
+import { ResultsSummary } from "./reporting.summary";
 import { WrittenSummary } from "./reporting.written";
 import "./reporting.css";
 
@@ -50,8 +31,37 @@ export function ReportingCharts({
   afterSummary?: ReactNode;
   onEvidence: EvidenceAction;
 }>) {
-  const t = useT();
-  const charts = evaluation.charts.filter(
+  const charts = pageCharts(evaluation);
+  const sections: readonly LaidOutSection[] = evaluation.selection.layout
+    ? laidOut(evaluation.selection.layout, charts)
+    : [{ charts, full: [] }];
+  return (
+    <div className="reporting-results">
+      <WrittenSummary evaluation={evaluation} />
+      <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
+      {afterSummary}
+      {sections.map((section) => (
+        <ChartSection
+          // A chart is placed once, so a section's first chart names it.
+          key={`${section.charts[0]?.kind}:${section.charts[0]?.metric}`}
+          section={section}
+          evaluation={evaluation}
+          editionId={editionId}
+          onEvidence={onEvidence}
+        />
+      ))}
+      <MetricsTable evaluation={evaluation} onEvidence={onEvidence} />
+    </div>
+  );
+}
+
+/**
+ * The charts the page draws from an evaluation. A target chart with no target
+ * is left out, and the accepted-opportunities series joins the meetings chart.
+ * A preview reads the same list, so it shows what adding the card will.
+ */
+export function pageCharts(evaluation: ReportingEvaluation): ReportingChart[] {
+  return evaluation.charts.filter(
     (chart) =>
       chart.kind !== "metric_reading" &&
       (chart.kind !== "target_progress" ||
@@ -69,67 +79,101 @@ export function ReportingCharts({
         )
       ),
   );
-  const wide = wideCharts(charts);
+}
+
+// One section of the layout: its heading, when it has one, over its charts.
+function ChartSection({
+  section,
+  evaluation,
+  editionId,
+  onEvidence,
+}: Readonly<{
+  section: LaidOutSection;
+  evaluation: ReportingEvaluation;
+  editionId?: string;
+  onEvidence: EvidenceAction;
+}>) {
+  const wide = wideCharts(section.charts, section.full);
   return (
-    <div className="reporting-results">
-      <WrittenSummary evaluation={evaluation} />
-      <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
-      {afterSummary}
+    <section className="reporting-section">
+      {section.title && (
+        <Heading as="h3" size="small">
+          {section.title}
+        </Heading>
+      )}
       <div className="reporting-grid">
-        {charts.map((chart, index) => {
-          const drawn =
-            chart.points.length > 0 && chart.coverage.status !== "no_data";
-          return (
-            <Panel
-              key={`${chart.kind}:${chart.metric}`}
-              className={
-                wide[index]
-                  ? "reporting-panel reporting-panel-wide"
-                  : "reporting-panel"
-              }
-              title={chartTitle(chart, evaluation, t)}
-              // The one door from a chart to the records behind it, in the head
-              // beside the title it opens, rather than trailing the figure.
-              titleAction={
-                drawn ? (
-                  <Button
-                    variant="link"
-                    onClick={() =>
-                      onEvidence({
-                        metric: chart.metric,
-                        context_id: chart.context_id,
-                      })
-                    }
-                  >
-                    {t("reporting.viewRecords")}
-                  </Button>
-                ) : undefined
-              }
-            >
-              <PanelBody>
-                <ChartContext
-                  chart={chart}
-                  evaluation={evaluation}
-                  editionId={editionId}
-                />
-                {drawn ? (
-                  <ChartBody
-                    chart={chart}
-                    evaluation={evaluation}
-                    onEvidence={onEvidence}
-                  />
-                ) : (
-                  <EmptyState>
-                    {chart.coverage.reason ?? t("common.empty")}
-                  </EmptyState>
-                )}
-              </PanelBody>
-            </Panel>
-          );
-        })}
+        {section.charts.map((chart, index) => (
+          <ChartPanel
+            key={`${chart.kind}:${chart.metric}`}
+            chart={chart}
+            wide={wide[index] === true}
+            evaluation={evaluation}
+            editionId={editionId}
+            onEvidence={onEvidence}
+          />
+        ))}
       </div>
-      <MetricsTable evaluation={evaluation} onEvidence={onEvidence} />
-    </div>
+    </section>
+  );
+}
+
+// One chart in its panel, with the door to the records behind it.
+export function ChartPanel({
+  chart,
+  wide,
+  evaluation,
+  editionId,
+  onEvidence,
+}: Readonly<{
+  chart: ReportingChart;
+  wide: boolean;
+  evaluation: ReportingEvaluation;
+  editionId?: string;
+  onEvidence: EvidenceAction;
+}>) {
+  const t = useT();
+  const drawn = chart.points.length > 0 && chart.coverage.status !== "no_data";
+  return (
+    <Panel
+      className={
+        wide ? "reporting-panel reporting-panel-wide" : "reporting-panel"
+      }
+      title={chartTitle(chart, evaluation, t)}
+      // The one door from a chart to the records behind it, in the head
+      // beside the title it opens, rather than trailing the figure.
+      titleAction={
+        drawn ? (
+          <Button
+            variant="link"
+            onClick={() =>
+              onEvidence({
+                metric: chart.metric,
+                context_id: chart.context_id,
+              })
+            }
+          >
+            {t("reporting.viewRecords")}
+          </Button>
+        ) : undefined
+      }
+    >
+      <PanelBody>
+        <ChartContext
+          chart={chart}
+          evaluation={evaluation}
+          editionId={editionId}
+        />
+        {drawn ? (
+          <ChartBody
+            chart={chart}
+            evaluation={evaluation}
+            onEvidence={onEvidence}
+          />
+        ) : (
+          <EmptyState>{chart.coverage.reason ?? t("common.empty")}</EmptyState>
+        )}
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -140,10 +184,16 @@ const WIDE_KINDS: ReadonlySet<ReportingChart["kind"]> = new Set([
   "sdr_outcomes",
 ]);
 
-// Which charts span the whole row. A half-width chart with no partner beside it
-// spans too, or the grid leaves the other half of its row empty.
-export function wideCharts(charts: readonly ReportingChart[]): boolean[] {
-  const wide = charts.map((chart) => WIDE_KINDS.has(chart.kind));
+// Which charts span the whole row: a kind that needs it, or one its card makes
+// full. A half-width chart with no partner beside it spans too, or the grid
+// leaves the other half of its row empty.
+export function wideCharts(
+  charts: readonly ReportingChart[],
+  full: readonly boolean[] = [],
+): boolean[] {
+  const wide = charts.map(
+    (chart, index) => WIDE_KINDS.has(chart.kind) || full[index] === true,
+  );
   let unpaired: number | null = null;
   for (const [index, isWide] of wide.entries()) {
     if (!isWide && unpaired == null) {
@@ -155,333 +205,4 @@ export function wideCharts(charts: readonly ReportingChart[]): boolean[] {
   }
   if (unpaired != null) wide[unpaired] = true;
   return wide;
-}
-
-function ChartBody({
-  chart,
-  evaluation,
-  onEvidence,
-}: Readonly<{
-  chart: ReportingChart;
-  evaluation: ReportingEvaluation;
-  onEvidence: EvidenceAction;
-}>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  const format = (value: number | null | undefined) =>
-    reportingAmount(value, chart.unit, evaluation.context.currency, locale);
-  const compact = (value: number) =>
-    reportingMoneyUnit(chart.unit, evaluation.context.currency)
-      ? formatMoneyCompact(value, evaluation.context.currency, locale)
-      : format(value);
-  const readings = chart.points.map((point) => ({
-    ...point,
-    label:
-      chart.kind === "target_progress"
-        ? metricLabel(chart.metric, t)
-        : point.label,
-    amount: reportingCompactAmount(
-      point.value,
-      chart.unit,
-      evaluation.context.currency,
-      locale,
-    ),
-    comparison: chart.comparison_interval ? point.comparison : undefined,
-    comparisonAmount: chart.comparison_interval
-      ? format(point.comparison)
-      : undefined,
-    targetAmount: point.target == null ? undefined : compact(point.target),
-    upperAmount: format(point.upper),
-  }));
-  const onSelect = (key: string) => {
-    if (
-      chart.kind === "pipeline_movement" &&
-      (key === "opening" || key === "closing")
-    ) {
-      onEvidence({ metric: chart.metric, context_id: `movement_${key}` });
-      return;
-    }
-    const reference = chart.points.find((point) => point.key === key)?.evidence;
-    if (reference) onEvidence(reference);
-  };
-  const shared = {
-    readings,
-    label: chartTitle(chart, evaluation, t),
-    dataLabel: t("reporting.data"),
-    valueLabel: t("reporting.actual"),
-    onSelect,
-  };
-  switch (chart.kind) {
-    case "bookings_trend": {
-      const target = chart.points.find((point) => point.target != null)?.target;
-      return (
-        <CumulativeChart
-          {...shared}
-          comparisonLabel={
-            chart.comparison_interval
-              ? `${t("reporting.previous")}: ${formatDateTime(chart.comparison_interval.start_at, locale, evaluation.context.timezone)} – ${formatDateTime(new Date(Date.parse(chart.comparison_interval.end_at) - 1).toISOString(), locale, evaluation.context.timezone)}`
-              : undefined
-          }
-          axisLabel={(value) =>
-            reportingMoneyUnit(chart.unit, evaluation.context.currency)
-              ? formatMoneyCompact(value, evaluation.context.currency, locale)
-              : format(value)
-          }
-          reference={
-            target == null
-              ? undefined
-              : {
-                  value: target,
-                  amount: compact(target),
-                  label: t("reporting.target"),
-                }
-          }
-        />
-      );
-    }
-    case "owner_attainment":
-      return <BulletChart {...shared} targetLabel={t("reporting.target")} />;
-    case "stage_age":
-      return (
-        <RangeChart
-          {...shared}
-          valueLabel={t("reporting.median")}
-          upperLabel={t("reporting.upper")}
-        />
-      );
-    case "target_progress":
-      return (
-        <>
-          <BulletChart {...shared} targetLabel={t("reporting.target")} />
-          {chart.points.map((point) => (
-            <TargetProgress
-              key={point.key}
-              value={point.value}
-              target={point.target}
-              format={format}
-            />
-          ))}
-        </>
-      );
-    case "stage_distribution":
-      return (
-        <>
-          <p className="reporting-headline t-num">
-            {reportingCompactAmount(
-              evaluation.metrics.find((metric) => metric.id === chart.metric)
-                ?.value,
-              chart.unit,
-              evaluation.context.currency,
-              locale,
-            )}
-          </p>
-          <BarList
-            label={shared.label}
-            rows={readings.flatMap((point) =>
-              point.value == null
-                ? []
-                : [
-                    {
-                      key: point.key,
-                      label: point.label,
-                      value: point.value,
-                      amount: withDealCount(
-                        reportingMoneyUnit(
-                          chart.unit,
-                          evaluation.context.currency,
-                        )
-                          ? formatMoneyCompact(
-                              point.value,
-                              evaluation.context.currency,
-                              locale,
-                            )
-                          : point.amount,
-                        point.observations,
-                        plural,
-                        locale,
-                      ),
-                    },
-                  ],
-            )}
-            onSelect={onSelect}
-          />
-          <Disclosure
-            className="report-chart-data"
-            summary={t("reporting.data")}
-          >
-            <DataTable
-              label={shared.label}
-              rows={chart.points}
-              rowKey={(point) => point.key}
-              columns={[
-                {
-                  key: "label",
-                  header: shared.label,
-                  render: (point) => (
-                    <Button variant="link" onClick={() => onSelect(point.key)}>
-                      {point.label}
-                    </Button>
-                  ),
-                },
-                {
-                  key: "value",
-                  header: t("reporting.actual"),
-                  render: (point) => format(point.value),
-                },
-                {
-                  key: "deals",
-                  header: t("reporting.stageDeals"),
-                  render: (point) =>
-                    point.observations == null
-                      ? MONEY_ABSENT
-                      : formatNumber(point.observations, locale),
-                },
-              ]}
-            />
-          </Disclosure>
-        </>
-      );
-    case "sdr_outcomes":
-      return (
-        <SdrOutcomes
-          chart={chart}
-          evaluation={evaluation}
-          onEvidence={onEvidence}
-        />
-      );
-    case "forecast_support": {
-      const [won, supported, upside] = readings;
-      if (
-        !won ||
-        !supported ||
-        !upside ||
-        won.value == null ||
-        supported.value == null ||
-        upside.value == null
-      )
-        return <EmptyState>{t("reporting.unavailable")}</EmptyState>;
-      return (
-        <SegmentBar
-          label={shared.label}
-          parts={[
-            { ...won, value: won.value },
-            { ...supported, value: supported.value },
-            { ...upside, value: upside.value },
-          ]}
-          marker={
-            chart.marker == null
-              ? undefined
-              : {
-                  key: "manager",
-                  label: t("reporting.managerCall"),
-                  value: chart.marker,
-                  amount: format(chart.marker),
-                }
-          }
-          onSelect={onSelect}
-        />
-      );
-    }
-    case "pipeline_movement":
-      if (chart.opening == null || chart.closing == null)
-        return <EmptyState>{t("reporting.unavailable")}</EmptyState>;
-      return (
-        <>
-          <p className="t-num">
-            {t("reporting.netChange", {
-              amount: `${chart.closing - chart.opening > 0 ? "+" : ""}${compact(chart.closing - chart.opening)}`,
-            })}
-          </p>
-          <Waterfall
-            label={shared.label}
-            opening={{
-              label: t("reporting.opening"),
-              value: chart.opening,
-              amount: compact(chart.opening),
-            }}
-            closing={{
-              label: t("reporting.closing"),
-              value: chart.closing,
-              amount: compact(chart.closing),
-            }}
-            steps={readings.flatMap((point) =>
-              point.value == null
-                ? []
-                : [
-                    {
-                      ...point,
-                      label: movementLabel(point.key, point.label, t),
-                      value: point.value,
-                      amount: compact(point.value),
-                    },
-                  ],
-            )}
-            reconciliationWarning={t("reporting.reconcile")}
-            onSelect={onSelect}
-          />
-          <Disclosure
-            className="report-chart-data"
-            summary={t("reporting.data")}
-          >
-            <DataTable
-              label={shared.label}
-              rows={[
-                {
-                  key: "opening",
-                  label: t("reporting.opening"),
-                  value: chart.opening,
-                },
-                ...chart.points.map((point) => ({
-                  ...point,
-                  label: movementLabel(point.key, point.label, t),
-                })),
-                {
-                  key: "closing",
-                  label: t("reporting.closing"),
-                  value: chart.closing,
-                },
-              ]}
-              rowKey={(point) => point.key}
-              columns={[
-                {
-                  key: "label",
-                  header: t("reporting.metrics"),
-                  render: (point) => (
-                    <Button variant="link" onClick={() => onSelect(point.key)}>
-                      {point.label}
-                    </Button>
-                  ),
-                },
-                {
-                  key: "value",
-                  header: t("reporting.actual"),
-                  render: (point) => format(point.value),
-                },
-              ]}
-            />
-          </Disclosure>
-        </>
-      );
-    case "metric_reading":
-      return null;
-  }
-}
-
-function chartTitle(
-  chart: ReportingChart,
-  evaluation: ReportingEvaluation,
-  t: Translator,
-): string {
-  if (chart.kind === "owner_attainment")
-    return t("reporting.ownerMetric", { metric: metricLabel(chart.metric, t) });
-  if (chart.kind === "target_progress") return metricLabel(chart.metric, t);
-  if (
-    chart.kind === "sdr_outcomes" &&
-    !evaluation.charts.some(
-      (other) => other.kind === "sdr_outcomes" && other.metric !== chart.metric,
-    )
-  )
-    return metricLabel(chart.metric, t);
-  return blockLabel(chart.kind, t);
 }

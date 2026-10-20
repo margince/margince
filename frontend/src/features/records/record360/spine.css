@@ -34,7 +34,7 @@
   margin: 0;
   padding: 0;
   display: grid;
-  /* The columns come from the stops themselves (spine.tsx): the gap
+  /* The columns come from the stops themselves (spine.stops.tsx): the gap
      takes half again the width of its neighbours, because on this axis the
      width IS the waiting. */
   column-gap: var(--space-3);

@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // The wire names of the two nullable dates a patch may clear.
@@ -91,6 +92,10 @@ func relationshipUpdateInput(req crmcontracts.UpdateRelationshipRequest, ifVersi
 	}
 	if req.EndedAt != nil {
 		in.EndedAt = &req.EndedAt.Time
+	}
+	// A role with nothing visible in it is a cleared role, not an empty title.
+	if in.Role != nil && !values.HasVisibleText(*in.Role) {
+		in.Role, in.ClearRole = nil, true
 	}
 	for _, field := range cleared {
 		switch field {

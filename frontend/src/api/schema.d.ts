@@ -335,6 +335,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/data-tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read background correction progress.
+         * @description Requires data_task:read. A failed ledger read returns an error, never empty progress.
+         */
+        get: operations["listDataTasks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/data-tasks/control": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause, resume, retry or estimate a background correction.
+         * @description Requires data_task:update and the observed ledger version. Retry retains the audit run ID.
+         */
+        post: operations["controlDataTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/job-health": {
         parameters: {
             query?: never;
@@ -12204,6 +12244,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/capture/domain-questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Review the calling reader’s undecided domains.
+         * @description Lists only the reader’s own domain questions, oldest first, with continuation and source evidence.
+         */
+        get: operations["listDomainQuestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/domain-questions/{domain}/keep": {
         parameters: {
             query?: never;
@@ -13128,10 +13188,36 @@ export interface paths {
          *     and leaves everything already applied where it is — this is a setting, not an
          *     undo.
          *
+         *     A muted kind cannot be turned on automatically; restore its queue preference first (409).
+         *
          *     Human session only, and writes the caller's own row: an agent never widens the
          *     authority of the contact it acts for.
          */
         patch: operations["updateAutonomy"];
+        trace?: never;
+    };
+    "/me/approval-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the caller's personal approval queue preferences. */
+        get: operations["listApprovalPreferences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Mute or restore one kind in the caller's own queue.
+         * @description Changes presentation only. Shared proposals remain pending for other readers and
+         *     expire normally. Passport-bearing rows, sends, bookings and merges cannot be hidden.
+         *     Both mute and unmute set this caller's automatic-change policy to manual; no previous
+         *     automatic setting is restored. Muted proposals remain reachable through include_muted.
+         */
+        patch: operations["updateApprovalPreference"];
         trace?: never;
     };
     "/approvals": {
@@ -22351,6 +22437,21 @@ export interface components {
             /** @description Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts. */
             shared_posture_allowed?: boolean;
         };
+        DomainQuestionPage: {
+            data: components["schemas"]["DomainQuestion"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        DomainQuestion: {
+            domain: string;
+            reason_code: string;
+            /** Format: date-time */
+            asked_at: string;
+            deferred: boolean;
+            /** Format: date-time */
+            evidence_at?: string;
+            effective_url?: string;
+            redirect_chain?: string[];
+        };
         /**
          * @description One domain and where its company question stands. `suppressed` refuses it a company —
          *     a vendor or bulk sender the business does not sell to — while `admitted` is a human
@@ -22399,7 +22500,7 @@ export interface components {
              *       carries its stored sentence.
              * @enum {string}
              */
-            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "unknown";
+            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "reserved_domain" | "unknown";
             /** @description The reason as its author wrote it, in their words. Sent only with `reason_code` `stated`. */
             note?: string;
             /**
@@ -22421,7 +22522,7 @@ export interface components {
              *     to is a human's call rather than the machine's.
              * @enum {string}
              */
-            source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence" | "near_duplicate";
+            source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "reserved_domain";
             /**
              * Format: date-time
              * @description When the decision was recorded. For an `undecided` domain, when the row last moved.
@@ -36411,7 +36512,35 @@ export interface components {
             /** @enum {string} */
             close_window: "fiscal_quarter" | "all_open";
             metrics: components["schemas"]["ReportingMetricID"][];
+            /**
+             * @description The chart kinds the report draws, in order. When `layout` is present the service
+             *     derives this list from it (each kind once, in the order the layout first names it)
+             *     and ignores what was sent, so a client that reads only `blocks` keeps working.
+             */
             blocks: components["schemas"]["ReportingBlockKind"][];
+            /**
+             * @description Sections of cards, in reading order. Absent means one untitled section of
+             *     full-width cards in `blocks` order. A report holds at most 20 cards in total,
+             *     counted across all its sections.
+             */
+            layout?: components["schemas"]["ReportingSection"][];
+        };
+        ReportingSection: {
+            /** @description The heading over this section. Absent or blank draws none. */
+            title?: string;
+            cards: components["schemas"]["ReportingCard"][];
+        };
+        ReportingCard: {
+            /** @description A short id the client mints. Unique within the report, so one chart kind can be placed twice. */
+            id: string;
+            kind: components["schemas"]["ReportingBlockKind"];
+            /** @description The one metric this card draws. Absent draws the kind for every selected metric that has it. */
+            metric?: components["schemas"]["ReportingMetricID"];
+            /**
+             * @description `half` shares a row with the next half card. A chart that needs the whole width draws full regardless.
+             * @enum {string}
+             */
+            width: "full" | "half";
         };
         ReportingContext: {
             /** @description Base language used for generated explanations. Absent on legacy readings, which use English. */
@@ -38077,7 +38206,7 @@ export interface components {
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "agent_client" | "seat_usage" | "team_oversight" | "team_lead" | "report_definition" | "sales_target" | "reporting_framework" | "report_schedule" | "report_edition" | "reporting_credit" | "legal_review";
+        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "data_task" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "agent_client" | "seat_usage" | "team_oversight" | "team_lead" | "report_definition" | "sales_target" | "reporting_framework" | "report_schedule" | "report_edition" | "reporting_credit" | "legal_review";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -38418,6 +38547,54 @@ export interface components {
             refused: number;
             /** Format: date-time */
             last_refused_at?: string;
+        };
+        DataTaskControl: {
+            task_id: string;
+            step: string;
+            /** @enum {string} */
+            action: "pause" | "resume" | "retry" | "estimate";
+            /** Format: int64 */
+            version: number;
+        };
+        DataTaskProgress: {
+            task_id: string;
+            title: string;
+            step: string;
+            task_version: number;
+            /** Format: uuid */
+            run_id?: string;
+            /** @enum {string} */
+            status: "pending" | "running" | "paused" | "done" | "failed";
+            /** Format: int64 */
+            version: number;
+            batch_limit: number;
+            /** Format: int64 */
+            scanned: number;
+            /** Format: int64 */
+            changed: number;
+            /** Format: int64 */
+            batches: number;
+            /**
+             * Format: int64
+             * @description Bounded count of rows to inspect; absent means unknown, not zero.
+             */
+            estimate?: number;
+            estimate_capped: boolean;
+            /** Format: date-time */
+            estimated_at?: string;
+            consecutive_failures: number;
+            last_error_class?: string;
+            error_sentence?: string;
+            error_remedy?: string;
+            /** Format: date-time */
+            next_attempt_at?: string;
+            /** Format: date-time */
+            last_progress_at?: string;
+            first_release?: string;
+            /** @enum {string} */
+            blocked_reason?: "waiting_for_worker" | "newer_release_required" | "paused" | "failed" | "retry_wait" | "earlier_step" | "missing_prerequisite";
+            blocked_by?: string;
+            missing_prerequisites: string[];
         };
         JobHealth: {
             /** Format: date-time */
@@ -40453,6 +40630,14 @@ export interface components {
         ApprovalListResponse: {
             data: components["schemas"]["Approval"][];
             page: components["schemas"]["PageInfo"];
+        };
+        ApprovalPreference: {
+            /** @description A kind the server permits this reader to mute. */
+            kind: string;
+            muted: boolean;
+        };
+        ApprovalPreferences: {
+            data: components["schemas"]["ApprovalPreference"][];
         };
         /**
          * @description What the reader has decided about answering their own queue: one row per kind
@@ -44658,29 +44843,25 @@ export interface components {
              */
             capture_health?: components["schemas"]["AttentionItem"][];
             /**
-             * @description Domains the capture triage could not judge, whose mail belongs to THIS
-             *     reader — the machine read the site, found nothing that named a company,
-             *     and left the question open rather than inventing a record.
+             * @description Up to 100 undecided domains whose captured mail belongs to this reader.
+             *     Each item names the domain, its typed reason, and the permitted answer
+             *     or retry actions. Forwarded identity requires an explicit company match.
+             *     Discard excludes capture for this reader's mailboxes only. Deferral hides
+             *     the reader's question until newer evidence arrives; the paged
+             *     `/capture/domain-questions` review still includes deferred questions.
              *
-             *     Each card names the domain as `title` and why the machine stopped as
-             *     `detail`. The two verbs are the whole answer a human owes: `keep` makes
-             *     the company from the domain's own label, and `discard` writes a capture
-             *     exclusion for this reader's mailboxes alone. Neither needs anything
-             *     typed, which is why this lane can settle from a queue row where a
-             *     free-text answer could not.
-             *
-             *     OWNED, and that is the point of the lane. Every open question carries
-             *     the mailbox owner whose mail raised it (`company_domain_disposition.owner_id`,
-             *     stamped when the question opens), so it reaches the reader whose mail it
-             *     is about rather than a shared pile nobody answers for. One installation's
-             *     two colleagues may answer the same domain differently, and the exclusion
-             *     a `discard` writes binds only the colleague who pressed it.
-             *
-             *     Withheld — named in `lanes_omitted` — for a caller with no human behind
-             *     it. Absent — not empty — on an installation whose feed does not read
-             *     domain questions.
+             *     Responsibility is recorded separately for each reader whose mail raised
+             *     the question. A colleague's personal exclusion or deferral does not
+             *     remove another reader's question. Callers with no human are withheld
+             *     through `lanes_omitted`; an unbound reader leaves the lane absent.
              */
             domain_questions?: components["schemas"]["AttentionItem"][];
+            /**
+             * @description The domain question scan reached its limit. When true, its count is a
+             *     lower bound; the paged domain review may contain further questions.
+             *     Absent when the lane could not be read.
+             */
+            domain_questions_more_available?: boolean;
             /**
              * @description The reader's OWN AI work that went wrong: runs that failed in the recent
              *     window, and live runs past the lease their source declared (stalled).
@@ -44853,7 +45034,7 @@ export interface components {
             notice_cases?: number;
             /** @description How many capture connections need the reader's hand — one per connection, the full count rather than a bounded page. */
             capture_health?: number;
-            /** @description How many open domain questions belong to this reader — the full count rather than a bounded page, because a reader with thirty must be told thirty and the lane offers no second page to find the rest by. */
+            /** @description How many open domain questions the bounded reader returned. This is a lower bound when `domain_questions_more_available` is true. The paged domain review provides the remaining questions. */
             domain_questions?: number;
             /** @description How many troubled AI runs the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest failures. */
             ai_work_health?: number;
@@ -44913,6 +45094,8 @@ export interface components {
              * @description The member explicitly asked to decide, independent of who has permission to approve.
              */
             readonly requested_decider_id?: string;
+            /** @description The domain question's reason code, rendered in the reader's language. */
+            domain_reason_code?: string;
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
             id: string;
@@ -45088,12 +45271,11 @@ export interface components {
              *     contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
              *     the read-only fallback for a receipt.
              *
-             *     `keep` and `discard` are an undecided domain's pair, and they always travel
-             *     together: keeping it creates the company the triage withheld, discarding it stops
-             *     the caller's OWN mailboxes capturing that domain. Neither carries a body, because
-             *     a domain question has no field to fill in — which is what lets it be answered from
-             *     a queue row. They route to `/capture/domain-questions/{domain}/…`, keyed on the
-             *     domain because an open question is named by the domain rather than by a record id.
+             *     Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
+             *     company or matches the supplied `company_id`; forwarded identity requires an
+             *     explicit match. Discarding stops the caller's own mailboxes capturing that
+             *     domain. Reopening retries identification without settling identity. These verbs route
+             *     to `/capture/domain-questions/{domain}/…`.
              *
              *     `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
              *     to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
@@ -45102,7 +45284,7 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "discard")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "discard" | "reopen")[];
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -46388,6 +46570,8 @@ export interface components {
             promise_recipients?: components["schemas"]["WorklistPromiseRecipient"][];
             /** @description The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access. */
             source_record?: components["schemas"]["AttentionSubject"];
+            /** @description The domain question's reason code, rendered in the reader's language. */
+            domain_reason_code?: string;
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
             id: string;
@@ -46565,7 +46749,7 @@ export interface components {
              */
             undo?: components["schemas"]["AppliedUndo"];
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "discard")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "discard" | "reopen")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *
@@ -47119,7 +47303,7 @@ export interface components {
              *     urgency.
              * @enum {string}
              */
-            key: "likely_automated" | "company_match" | "uncertain_contact" | "duplicates" | "held_draft" | "system_incident";
+            key: "likely_automated" | "company_match" | "uncertain_contact" | "duplicates" | "held_draft" | "system_incident" | "domain_questions";
             /** @description How many decisions this row stands for. */
             count: number;
             /**
@@ -48270,6 +48454,57 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listDataTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Registered correction steps in execution order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["DataTaskProgress"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    controlDataTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DataTaskControl"];
+            };
+        };
+        responses: {
+            /** @description The correction control was recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -66752,6 +66987,43 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listDomainQuestions: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of personal domain questions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainQuestionPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     keepDomainQuestion: {
         parameters: {
             query?: never;
@@ -66762,7 +67034,17 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: uuid
+                     * @description Match to this visible, writable company instead of creating one.
+                     */
+                    company_id?: string;
+                };
+            };
+        };
         responses: {
             /** @description Where the domain stands now that it has an answer. */
             200: {
@@ -67808,6 +68090,57 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listApprovalPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One preference per kind that can be muted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalPreferences"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateApprovalPreference: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalPreference"];
+            };
+        };
+        responses: {
+            /** @description The caller's preferences after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalPreferences"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -67827,6 +68160,8 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /** @description Include the caller's muted pending proposals for explicit review; all existing visibility checks still apply. A filtered bundle can contain fewer members than its complete review. */
+                include_muted?: boolean;
                 status?: "pending" | "approved" | "rejected";
                 /** @description Filter by proposal kind (e.g. coldstart, send_email, advance_deal, overnight). */
                 kind?: string;

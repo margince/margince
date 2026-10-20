@@ -205,6 +205,15 @@ describe("what a tool is called on screen", () => {
     );
   });
 
+  it("names a data update without printing the task identifier", () => {
+    expect(tagText("system:datatask:core/100_mail", "en")).toContain(
+      "Data update",
+    );
+    expect(tagText("system:datatask:core/100_mail", "en")).not.toContain(
+      "core/100_mail",
+    );
+  });
+
   // The core catalogue cannot know a unit's jobs, so an extension dispatcher
   // keeps its unit and job as words rather than losing its name.
   it("names an extension dispatcher from its kind", () => {

@@ -280,6 +280,25 @@ func suggestibleAfter(before tagRow, in TagUpdate) bool {
 	return suggestible && (description == nil || !values.HasVisibleText(*description))
 }
 
+// tagUpdateChangesNothing answers whether the update leaves the tag as it is.
+// It compares the way every other versioned update does, through the patch.
+func tagUpdateChangesNothing(before tagRow, name *string, in TagUpdate) bool {
+	p := storekit.NewPatch()
+	if name != nil {
+		p.Set(nameField, before.Name, *name)
+	}
+	if in.Color != nil {
+		p.Set("color", before.Color, *in.Color)
+	}
+	if in.Description != nil {
+		p.Set("description", before.Description, *in.Description)
+	}
+	if in.Suggestible != nil {
+		p.Set(suggestibleField, before.Suggestible, *in.Suggestible)
+	}
+	return p.Empty()
+}
+
 // UpdateTag renames, recolours or describes a tag.
 //
 // `expectedVersion` is the If-Match precondition: zero means the caller did
@@ -319,6 +338,10 @@ func (s *Store) UpdateTag(ctx context.Context, id ids.TagID, in TagUpdate, expec
 		}
 		if suggestibleAfter(before, in) {
 			return errUndescribedSuggestion
+		}
+		if tagUpdateChangesNothing(before, name, in) {
+			out = before
+			return nil
 		}
 		row := tx.QueryRow(ctx, `
 			UPDATE tag

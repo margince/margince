@@ -20,6 +20,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { layoutOf } from "./reporting.layout";
 import { ReportingOverview } from "./reporting.overview";
 import { ReportingReportDetail } from "./reporting.report";
 import { SaveReportingDialog } from "./reporting.save";
@@ -75,9 +76,87 @@ it("saves the full selected graph layout and context", async () => {
       name: "Friday review",
       description: "For the Friday call.",
       audience: "private",
-      selection: reportingStoryEvaluation.selection,
+      selection: {
+        ...reportingStoryEvaluation.selection,
+        layout: layoutOf(reportingStoryEvaluation.selection),
+      },
     }),
   );
+});
+it("draws a saved layout's sections under their titles", async () => {
+  const laidOutEvaluation = {
+    ...reportingStoryEvaluation,
+    selection: {
+      ...reportingStoryEvaluation.selection,
+      layout: [
+        {
+          title: "Where deals stand",
+          cards: [
+            {
+              id: "stages",
+              kind: "stage_distribution" as const,
+              width: "half" as const,
+            },
+          ],
+        },
+      ],
+    },
+  };
+  installFetchStub(reportingStoryRoutes(laidOutEvaluation, true));
+  render(
+    <StoryProviders>
+      <ReportingReportDetail reportId="report" />
+    </StoryProviders>,
+  );
+  expect(
+    await screen.findByRole("heading", { name: "Where deals stand" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Sales won over time" }),
+  ).not.toBeInTheDocument();
+});
+it("previews one chart before it is added, saving nothing", async () => {
+  const user = userEvent.setup({ delay: null });
+  const write = vi.fn(() => jsonResponse(reportingStoryReport));
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "PATCH /analytics/reports/report": write,
+  });
+  const fetch = vi.spyOn(globalThis, "fetch");
+  render(
+    <StoryProviders>
+      <SaveReportingDialog
+        selection={reportingStoryReport.selection}
+        report={reportingStoryReport}
+        onClose={() => {}}
+        onSaved={() => {}}
+      />
+    </StoryProviders>,
+  );
+  await user.click(
+    screen.getByText("Charts and order", { selector: ".disclosure-label" }),
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Remove Time in current stage" }),
+  );
+  await pickOption(
+    user,
+    screen.getByRole("combobox", { name: "Chart to add" }),
+    "Time in current stage",
+  );
+  await user.click(screen.getByRole("button", { name: "Preview" }));
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(([input]) => {
+        const url = input instanceof Request ? input.url : String(input);
+        return (
+          url.includes("/analytics/evaluate") &&
+          url.includes("blocks=stage_age")
+        );
+      }),
+    ).toBe(true),
+  );
+  expect(write).not.toHaveBeenCalled();
 });
 it("shows the report's purpose under its name", async () => {
   const routes = reportingStoryRoutes(reportingStoryEvaluation, true);

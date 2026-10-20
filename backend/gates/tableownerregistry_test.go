@@ -107,8 +107,9 @@ var tableOwners = map[string]string{
 	// What a mail domain is allowed to create. It governs COMPANY
 	// creation, which contacts owns, so the verdict lives with the records it
 	// authorizes rather than with the capture path that asks the question.
-	"company_domain_disposition": "internal/modules/contacts",
-	"site_read":                  "internal/modules/contacts",
+	"company_domain_disposition":     "internal/modules/contacts",
+	"company_domain_question_reader": "internal/modules/contacts",
+	"site_read":                      "internal/modules/contacts",
 	// DH-DDL-1: the pair verdicts live with the ONE dedupe implementation.
 	"dedupe_candidate": "internal/modules/contacts",
 	// deals (incl. the E03 offer engine: rate-card + versioned offers)
@@ -243,6 +244,7 @@ var tableOwners = map[string]string{
 	// table from all of them through platform's helper — which is why the helper, and
 	// the table with it, sit below every module rather than inside one.
 	"stored_object_intent": "internal/platform/storedobjects",
+	"data_task_run":        "internal/platform/datatask",
 	"deal_document_hide":   "internal/modules/activities",
 	"meeting_proposal":     "internal/modules/activities",
 	"meeting_invitation":   "internal/modules/activities",
@@ -251,6 +253,7 @@ var tableOwners = map[string]string{
 	// proposal, so it sits with the kinds and the decisions it counts.
 	"approval":                 "internal/modules/approvals",
 	"approval_autonomy_policy": "internal/modules/approvals",
+	"approval_preference":      "internal/modules/approvals",
 	// consent (the DSR case queue and the retention-policy catalog are
 	// consent's; the engines that EXECUTE them live in privacy)
 	"consent_purpose":   "internal/modules/consent",

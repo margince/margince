@@ -126,15 +126,14 @@ func customAssignments(active []fieldcatalog.Column, values map[string]any, arg 
 	return b.String()
 }
 
-// changesCustom is true when the patch sets a custom field, or clears one that
-// holds a value.
+// changesCustom is true when the patch sets a custom field to a value the row
+// does not hold, or clears one that holds a value.
 func (in UpdateActivityInput) changesCustom(current crmcontracts.Activity) bool {
+	p := storekit.NewPatch()
 	for name, v := range in.CustomFields {
-		if v != nil || current.AdditionalProperties[name] != nil {
-			return true
-		}
+		p.Set(name, current.AdditionalProperties[name], v)
 	}
-	return false
+	return !p.Empty()
 }
 
 // ErasableColumns holds the activity custom-field columns an erase empties,

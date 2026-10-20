@@ -80,6 +80,7 @@ changes none.
 | `contract` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `custom_field` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `data_coverage` | -R-- | ---- | ---- | ---- | ---- | -R-- |
+| `data_task` | -RU- | ---- | ---- | ---- | ---- | -RU- |
 | `deal` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `deal_room` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `embedding_reindex` | -RU- | ---- | ---- | ---- | ---- | -RU- |

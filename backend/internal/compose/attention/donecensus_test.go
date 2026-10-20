@@ -31,7 +31,6 @@ var leavesByItsOwnVerb = map[crmcontracts.WorklistItemSource][]crmcontracts.Atte
 	crmcontracts.WorklistItemSourceDealSuggestion:    {"decide", "dismiss"},
 	crmcontracts.WorklistItemSourceTagSuggestion:     {"decide", "dismiss"},
 	crmcontracts.WorklistItemSourceDedupeCandidate:   {"merge", "dismiss"},
-	crmcontracts.WorklistItemSourceDomainQuestion:    {"keep", "discard"},
 	crmcontracts.WorklistItemSourceMeetingOutcome:    {"decide"},
 	crmcontracts.WorklistItemSourceNotice:            {"acknowledge"},
 	crmcontracts.WorklistItemSourceRelationshipDecay: {"dismiss"},

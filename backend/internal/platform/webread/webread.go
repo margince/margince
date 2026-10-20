@@ -279,10 +279,11 @@ func (f *Fetcher) getRaw(ctx context.Context, rawURL, accept string) (string, in
 // when the site redirected. Relative references in a body resolve against
 // where it came from, so that URL has to travel with it.
 type fetched struct {
-	body        []byte
-	status      int
-	contentType string
-	finalURL    *url.URL
+	body          []byte
+	status        int
+	contentType   string
+	finalURL      *url.URL
+	redirectChain []string
 	// header is the whole response header. Most callers want only the media
 	// type above; the fingerprint read wants the rest of it, and re-fetching
 	// the page to see headers the first fetch already received would spend a
@@ -320,7 +321,8 @@ func (f *Fetcher) getBytes(ctx context.Context, rawURL, accept string, limit int
 	return fetched{
 		body: body, status: resp.StatusCode,
 		contentType: resp.Header.Get("Content-Type"), finalURL: resp.Request.URL,
-		header: resp.Header, capped: int64(len(body)) >= limit,
+		redirectChain: responseChain(resp.Request),
+		header:        resp.Header, capped: int64(len(body)) >= limit,
 	}, nil
 }
 

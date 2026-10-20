@@ -19,6 +19,7 @@ package contacts
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -205,5 +206,92 @@ func TestACallerWithNoHumanBehindItIsRefusedRatherThanServedNothing(t *testing.T
 	if _, err := e.store.OpenDomainQuestionsForOwner(connector); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a connector reading open questions answered %v, want ErrPermissionDenied so "+
 			"the lane can name itself withheld rather than reporting an empty backlog", err)
+	}
+}
+
+func TestDomainQuestionsContinueBeyondTheAttentionWindow(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	for i := range 3 {
+		domain := fmt.Sprintf("domain-%d.test", i)
+		e.openTriageFirst(ctx, t, "sales@"+domain, "Sales", domain)
+		if _, err := e.store.ResolveUnreadableDomainTriage(ctx, ResolveDomainTriageInput{Domain: domain}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	first, page, err := e.store.DomainQuestionsForOwner(ctx, "", 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(first) != 2 || !page.HasMore || page.NextCursor == "" {
+		t.Fatalf("first page: rows=%d page=%+v", len(first), page)
+	}
+	if _, err := e.store.ReopenWithheldDomain(ctx, first[0].Domain); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.store.ResolveUnreadableDomainTriage(ctx, ResolveDomainTriageInput{Domain: first[0].Domain}); err != nil {
+		t.Fatal(err)
+	}
+	second, final, err := e.store.DomainQuestionsForOwner(ctx, page.NextCursor, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(second) != 1 || final.HasMore {
+		t.Fatalf("second page: rows=%d page=%+v", len(second), final)
+	}
+	for _, old := range first {
+		if old.Domain == second[0].Domain {
+			t.Fatal("continuation repeated a domain")
+		}
+	}
+}
+
+func TestDomainQuestionBelongsToEveryReaderWhoseMailRaisedIt(t *testing.T) {
+	e := setupDedupe(t)
+	first, second := e.as(), e.asOther()
+	e.openTriageFirst(first, t, "first@shared-question.test", "First Sender", "shared-question.test")
+	input := e.ensureInput(second, t, "second@shared-question.test", "Second Sender", "shared-question.test")
+	input.OwnerID = e.otherRep
+	if _, err := e.store.EnsureCounterparty(second, input); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.store.ResolveUnreadableDomainTriage(first, ResolveDomainTriageInput{Domain: "shared-question.test"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, ctx := range []context.Context{first, second} {
+		if got := e.openQuestionDomains(ctx, t); !contains(got, "shared-question.test") {
+			t.Fatalf("reader's questions = %v", got)
+		}
+	}
+	e.excludeDomain(first, t, "user", "shared-question.test", &e.rep)
+	if got := e.openQuestionDomains(first, t); contains(got, "shared-question.test") {
+		t.Fatalf("excluded question remains: %v", got)
+	}
+	if got := e.openQuestionDomains(second, t); !contains(got, "shared-question.test") {
+		t.Fatalf("another reader's question disappeared: %v", got)
+	}
+}
+
+func TestRepeatedUnreadableEvidenceKeepsTheQuestionStable(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.openTriageFirst(ctx, t, "hello@uncertain.test", "Sender", "uncertain.test")
+	input := ResolveDomainTriageInput{Domain: "uncertain.test", Evidence: "No company evidence"}
+	if _, err := e.store.ResolveUnreadableDomainTriage(ctx, input); err != nil {
+		t.Fatal(err)
+	}
+	before, err := e.store.OpenDomainQuestionsForOwner(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.store.ResolveUnreadableDomainTriage(ctx, input); err != nil {
+		t.Fatal(err)
+	}
+	after, err := e.store.OpenDomainQuestionsForOwner(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(before) != 1 || len(after) != 1 || !after[0].AskedAt.Equal(before[0].AskedAt) {
+		t.Fatalf("replay moved question: before=%+v after=%+v", before, after)
 	}
 }

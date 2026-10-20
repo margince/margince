@@ -106,6 +106,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// The captured-company auto-enrich sweep (ADR-0072): always
 	// registered, it enqueues system deep reads the site worker applies.
 	autoEnrich := newCaptureAutoEnrichSweepWorker(pool, log)
+	autoEnrich.skipReservedDomains = cfg.CaptureConfig.SkipReservedDomainProposals
 	addDeclaredWorker[CaptureAutoEnrichSweepArgs](reg, autoEnrich)
 	// The outbound send is not periodic — the api stages one job per accepted
 	// message, in the same transaction as the activity; this role only needs

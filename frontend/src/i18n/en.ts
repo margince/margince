@@ -3,6 +3,58 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "approvalPreferences.title": "Personal approval mutes",
+  "approvalPreferences.explain":
+    "Muted kinds leave your queue only. Other readers keep their proposals. Muting or restoring a kind turns off your automatic changes for that kind. Sends, bookings, merges and proposals from agent passports stay visible.",
+  "approvalPreferences.review": "Review including muted",
+  "approvalPreferences.reviewExplain":
+    "This review includes muted proposals and expired items. Bundles in your ordinary queue can show fewer members because of your personal mutes; review each proposal before deciding.",
+  "approvalPreferences.close": "Close review",
+  "approvalPreferences.next": "Next page",
+  "approvalPreferences.first": "First page",
+  "dataTasks.unknownState": "Update the application to manage this state.",
+  "dataTasks.blockedBy": "Waiting for: {name}",
+  "roles.object.data_task": "Data updates",
+  "dataTasks.title": "Data updates",
+  "dataTasks.sub":
+    "Stored records are updated in small batches. Changes already saved remain when a run pauses.",
+  "dataTasks.withheld":
+    "Permission is required to read data updates. Ask an admin for access.",
+  "dataTasks.empty": "No data updates are registered.",
+  "dataTasks.unknown": "Not estimated",
+  "dataTasks.atLeast_one": "At least {count}",
+  "dataTasks.atLeast_other": "At least {count}",
+  "dataTasks.scanned": "Rows checked",
+  "dataTasks.changed": "Rows changed",
+  "dataTasks.estimate": "Estimated rows to check",
+  "dataTasks.batchLimit": "Rows per batch",
+  "dataTasks.batches": "Batches saved",
+  "dataTasks.lastProgress": "Last progress",
+  "dataTasks.notStarted": "Not started",
+  "dataTasks.nextAttempt": "Next attempt",
+  "dataTasks.release": "First release",
+  "dataTasks.run": "Run ID",
+  "dataTasks.step": "Step: {step}",
+  "dataTasks.prerequisites": "Required first: {names}",
+  "dataTasks.status.pending": "Pending",
+  "dataTasks.status.running": "Running",
+  "dataTasks.status.paused": "Paused",
+  "dataTasks.status.done": "Done",
+  "dataTasks.status.failed": "Failed",
+  "dataTasks.action.pause": "Pause",
+  "dataTasks.action.resume": "Resume",
+  "dataTasks.action.retry": "Retry",
+  "dataTasks.action.estimate": "Estimate rows",
+  "dataTasks.blocked.waiting_for_worker": "Waiting for a worker.",
+  "dataTasks.blocked.newer_release_required":
+    "A newer release is required. Update the application before continuing.",
+  "dataTasks.blocked.paused": "Paused at the saved position.",
+  "dataTasks.blocked.failed":
+    "Stopped after repeated failures. Check the error before retrying.",
+  "dataTasks.blocked.retry_wait": "Waiting before the next attempt.",
+  "dataTasks.blocked.earlier_step": "An earlier step must finish first.",
+  "dataTasks.blocked.missing_prerequisite":
+    "Required updates must finish first.",
   "approval.preview.nameUnavailable": "Name unavailable",
   "approval.preview.structured": "Structured value: {value}",
   "approval.preview.resolveConflict":
@@ -185,6 +237,21 @@ export const en = {
     "Publish or discard the draft before you restore an earlier version.",
   "reporting.moveUp": "Move up",
   "reporting.moveDown": "Move down",
+  "reporting.sectionN": "Section {n}",
+  "reporting.sectionTitle": "Section {n} title",
+  "reporting.addSection": "Add section",
+  "reporting.removeSection": "Remove section {n}",
+  "reporting.cardWidth": "Width of {chart}",
+  "reporting.widthFull": "Full width",
+  "reporting.widthHalf": "Half width",
+  "reporting.cardSection": "Section of {chart}",
+  "reporting.removeCard": "Remove {chart}",
+  "reporting.addChart": "Add chart",
+  "reporting.previewChart": "Preview",
+  "reporting.previewLoading": "Loading the preview…",
+  "reporting.previewEmpty":
+    "Nothing to draw for this report’s period and metrics yet. Add the chart anyway, or change the period under Customize report.",
+  "reporting.chooseChart": "Chart to add",
   "reporting.exportCsv": "Export CSV",
   "reporting.captureContexts": "Record daily pipeline history",
   "reporting.captureHelp":
@@ -330,6 +397,7 @@ export const en = {
   "reporting.restricted": "Restricted record",
   "reporting.next": "Next page",
   "reporting.name": "Report name",
+  "reporting.description": "Purpose",
   "reporting.audience": "Visible to",
   "reporting.private": "Only me",
   "reporting.team": "Selected team",
@@ -6964,6 +7032,9 @@ export const en = {
   "jobs.kind.comms_scheduled_send_recovery": "Scheduled send recovery",
   "jobs.kind.comms_send_email": "Email sending",
   "jobs.kind.company_name_promotion": "Company names from signatures",
+  "systemJob.datatask": "Data update",
+  "jobs.kind.data_task_run": "Data update batch",
+  "jobs.kind.data_task_reconcile": "Data update reconciliation",
   "jobs.kind.deal_scout": "Deal Scout",
   "jobs.kind.document_extract": "Document extraction",
   "jobs.kind.embed_drift_sweep": "Search index catch-up",
@@ -8442,6 +8513,33 @@ export const en = {
   "blockedDomains.source.verdict": "Model result",
   "blockedDomains.source.heuristic": "Heuristic",
   "blockedDomains.source.human": "Person",
+  "blockedDomains.source.reservedDomain":
+    "Reserved domain: company identification paused",
+  "blockedDomains.source.forwardedIdentity":
+    "Different site answered. Confirm the company match.",
+  "worklist.domainReview.defer": "Set aside",
+  "worklist.domainReview.restore": "Return to Review",
+  "worklist.domainReview.deferEffect":
+    "Set aside removes this question from your queue until new evidence arrives. You can still find it here.",
+  "worklist.domainReview.title": "Domain review",
+  "worklist.domainReview.loading": "Loading domains…",
+  "worklist.domainReview.empty": "No domains need review.",
+  "worklist.domainReview.more": "Load more",
+  "worklist.domainReview.forwarded": "Answering site: {url}",
+  "worklist.domainReview.evidenceAt": "Latest evidence: {date}",
+  "worklist.domainReview.noEvidenceDate": "Evidence date unavailable",
+  "worklist.domainReview.match": "Match company",
+  "worklist.domainReview.matchEffect":
+    "Matching links this domain and its captured contacts to the selected company.",
+  "worklist.domainReview.create": "Create company",
+  "worklist.domainReview.retry": "Retry site read",
+  "worklist.domainReview.exclude": "Exclude domain",
+  "worklist.domainReview.forwardedEffects":
+    "Retry keeps identity undecided. Exclude stops capture for your mailboxes.",
+  "worklist.domainReview.effects":
+    "Create adds a company. Retry keeps identity undecided. Exclude stops capture for your mailboxes.",
+  "worklist.batch.domain_questions_one": "Review {count} domain",
+  "worklist.batch.domain_questions_other": "Review {count} domains",
   "blockedDomains.source.unevidenced": "No company named on the site",
   "blockedDomains.source.staleEvidence": "Supporting mail too old",
   "blockedDomains.source.nearDuplicate": "Company name already exists",
@@ -12497,6 +12595,10 @@ export const en = {
   "webhooks.event.voice.draft_outcome_recorded.when":
     "The outcome of a draft written in the member’s voice is recorded.",
   "webhooks.eventGroup.approvals_audit": "Approvals and audit",
+  "webhooks.event.approval.preference_changed.label":
+    "Approval preference changed",
+  "webhooks.event.approval.preference_changed.when":
+    "A reader changes whether an approval type appears in their Worklist.",
   "webhooks.event.approval.requested.label": "Approval requested",
   "webhooks.event.approval.requested.when":
     "An agent action is held for a member to decide.",

@@ -58,7 +58,7 @@ func (s *Service) applyTargets(ctx context.Context, tx pgx.Tx, out *crmcontracts
 	}
 	for index := range out.Charts {
 		chart := &out.Charts[index]
-		if chart.Kind == "owner_attainment" {
+		if chart.Kind == reportingOwnerAttainment {
 			if err := s.ownerTargets(ctx, tx, out.Context, chart); err != nil {
 				return err
 			}

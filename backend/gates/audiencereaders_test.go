@@ -98,7 +98,10 @@ var audienceLiteralMarkers = []*regexp.Regexp{
 // audienceReadersAdmitted ratifies the readers that serve activity rows
 // without the audience test and may. Keyed by FILE AND FUNCTION, so a waiver
 // covers one reader and not every reader added to that file afterwards.
+const heldMailMaintenanceReader = "system-only maintenance reads bounded original headers to restore provider arrival evidence on capture_import, including held rows. No content or row is returned to a reader, and no activity is changed. Filtering by a viewer would leave privacy-notice history dependent on that viewer; the cost is internal parsing of restricted mail headers inside the batch transaction."
+
 var audienceReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/capture/heldmailtask.go:StampHeldMailTx": heldMailMaintenanceReader,
 	"internal/modules/search/embedgen.go:EmbedGen.HandleEvent": "the activity entry in embedText appends activityIndexable, the same workspace-audience, restriction and erased-evidence predicate used by rebuild and the locked embedding writer. The static string census cannot expand this function call in the map value",
 	"internal/modules/search/embedgen.go:Store.healEntity":     "the repair reader uses the same embedText activity query and activityIndexable predicate as event indexing. It admits only workspace-audience, unrestricted content with retained evidence; the static string census cannot expand the query's function call",
 

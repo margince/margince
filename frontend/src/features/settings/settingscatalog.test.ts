@@ -274,7 +274,7 @@ describe("what each page lets a reader change", () => {
     // The reindex takes the seat; watching the queue beside it is a read, and
     // watching a stalled queue is an operator acting.
     "system-health":
-      "any(all(full-seat, any(any(embedding_reindex:update))), all(full-seat, any(any(installation_settings:update))), job_health:read)",
+      "any(all(full-seat, any(any(embedding_reindex:update))), all(full-seat, any(any(data_task:update))), all(full-seat, any(any(installation_settings:update))), job_health:read)",
     extensions: "all(full-seat, any(any(role_admin:update)))",
     configuration: "all(full-seat, any(any(installation_settings:update)))",
     reset: "all(full-seat, system_reset:delete, flag:data_reset_available)",
@@ -711,6 +711,7 @@ describe("a page and its cards ask the same question", () => {
     // A union that is really a union: each card answers to its own grant.
     const grants: GrantSpec[] = [
       { job_health: ["read"] },
+      { data_task: ["read"] },
       { embedding_reindex: ["read"] },
       { installation_settings: ["read", "update"] },
     ];

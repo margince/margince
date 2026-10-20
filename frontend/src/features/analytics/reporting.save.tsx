@@ -1,6 +1,5 @@
 import "./reporting.css";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -19,9 +18,17 @@ import { Modal } from "../../design-system/modal";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { throwProblem, unwrap } from "../../lib/problem";
+import { CardPreview } from "./reporting.cardpreview";
 import { ReportingFilters } from "./reporting.filters";
 import {
-  blockLabel,
+  blocksOf,
+  cardChoices,
+  keptCards,
+  layoutOf,
+  type ReportingLayout,
+} from "./reporting.layout";
+import { LayoutEditor } from "./reporting.layouteditor";
+import {
   metricLabel,
   type ReportingReport,
   type ReportingSelection,
@@ -51,32 +58,28 @@ export function SaveReportingDialog({
     report?.audience ?? "private",
   );
   const [metrics, setMetrics] = useState(selection.metrics);
-  const [blocks, setBlocks] = useState(selection.blocks);
+  const [layout, setLayout] = useState(layoutOf(selection));
   const catalog = useQuery({
     queryKey: ["reporting-catalog"],
     queryFn: async () => {
       return unwrap(await api.GET("/analytics/metrics"));
     },
   });
-  const allowedBlocks =
-    catalog.data?.metrics
+  // Each selected metric's charts, from the catalog once it has loaded and from
+  // the report's own blocks until then.
+  const metricBlocks = new Map(
+    (catalog.data?.metrics ?? [])
       .filter((metric) => metrics.includes(metric.id))
-      .flatMap((metric) => metric.blocks) ?? selection.blocks;
-  const selectedBlocks = blocks.filter((block) =>
-    allowedBlocks.includes(block),
+      .map((metric) => [metric.id, metric.blocks] as const),
   );
-  const moveBlock = (
-    block: ReportingSelection["blocks"][number],
-    direction: number,
-  ) => {
-    const ordered = [...selectedBlocks];
-    const index = ordered.indexOf(block);
-    const next = index + direction;
-    if (index < 0 || next < 0 || next >= ordered.length) return;
-    ordered.splice(index, 1);
-    ordered.splice(next, 0, block);
-    setBlocks(ordered);
-  };
+  const drawable = (card: ReportingLayout[number]["cards"][number]) =>
+    catalog.data === undefined ||
+    (card.metric
+      ? (metricBlocks.get(card.metric)?.includes(card.kind) ?? false)
+      : [...metricBlocks.values()].some((blocks) =>
+          blocks.includes(card.kind),
+        ));
+  const kept = keptCards(layout, drawable);
   const write = useMutation({
     mutationFn: async ({
       body,
@@ -133,7 +136,12 @@ export function SaveReportingDialog({
         description,
         audience,
         audience_team_id: audience === "team" ? selection.scope.id : undefined,
-        selection: { ...selection, metrics, blocks: selectedBlocks },
+        selection: {
+          ...selection,
+          metrics,
+          layout: kept,
+          blocks: blocksOf(kept),
+        },
       },
     });
   const metadataChanged = renamedOrReshared(report, {
@@ -237,6 +245,9 @@ export function SaveReportingDialog({
                 <Checkbox
                   key={metric}
                   label={metricLabel(metric, t)}
+                  // Which charts a metric brings is in the catalog, so the
+                  // choice waits for it rather than keep cards it cannot judge.
+                  disabled={catalog.data === undefined}
                   checked={metrics.includes(metric)}
                   onChange={(event) =>
                     setMetrics(
@@ -249,52 +260,17 @@ export function SaveReportingDialog({
               ))}
             </fieldset>
             <Disclosure summary={t("reporting.blocks")}>
-              <fieldset className="form-stack">
-                <legend>{t("reporting.blocks")}</legend>
-                {[...new Set([...selectedBlocks, ...allowedBlocks])].map(
-                  (block) => (
-                    <div key={block} className="reporting-block-choice">
-                      <Checkbox
-                        key={block}
-                        label={blockLabel(block, t)}
-                        checked={selectedBlocks.includes(block)}
-                        onChange={(event) =>
-                          setBlocks(
-                            event.target.checked
-                              ? [...selectedBlocks, block]
-                              : blocks.filter(
-                                  (candidate) => candidate !== block,
-                                ),
-                          )
-                        }
-                      />
-                      {selectedBlocks.includes(block) && (
-                        <span className="reporting-block-order">
-                          <Button
-                            variant="ghost"
-                            disabled={selectedBlocks.indexOf(block) === 0}
-                            onClick={() => moveBlock(block, -1)}
-                            aria-label={`${t("reporting.moveUp")}: ${blockLabel(block, t)}`}
-                          >
-                            <ArrowUp aria-hidden="true" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            disabled={
-                              selectedBlocks.indexOf(block) ===
-                              selectedBlocks.length - 1
-                            }
-                            onClick={() => moveBlock(block, 1)}
-                            aria-label={`${t("reporting.moveDown")}: ${blockLabel(block, t)}`}
-                          >
-                            <ArrowDown aria-hidden="true" />
-                          </Button>
-                        </span>
-                      )}
-                    </div>
-                  ),
+              <LayoutEditor
+                layout={kept}
+                choices={cardChoices(kept, metricBlocks)}
+                onChange={setLayout}
+                preview={(choice) => (
+                  <CardPreview
+                    selection={{ ...selection, metrics }}
+                    choice={choice}
+                  />
                 )}
-              </fieldset>
+              />
             </Disclosure>
           </div>
         )}

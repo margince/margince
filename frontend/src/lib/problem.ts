@@ -49,7 +49,7 @@ export {
 // who can lift the ceiling. It names "the seat", not "your seat". The same code
 // answers a read seat's own mutation and an agent passport acting for one. It
 // also answers a grant that would give a read seat write access. A surface
-// that knows whose seat it is (share.tsx knows it is the recipient's) says so
+// that knows whose seat it is (sharerevoke.tsx knows it is the recipient's) says so
 // before it gets here.
 function problemDetail(
   problem: unknown,

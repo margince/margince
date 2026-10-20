@@ -106,6 +106,7 @@ var managerObjects = grid(crud, map[string]grant{
 	objPrivacyRequest:         none,
 	objAuditLog:               none,
 	objJobHealth:              none,
+	objDataTask:               none,
 	objExtensionAccess:        none,
 	objSystemReset:            none,
 	objAiDiagnostics:          none,
@@ -135,6 +136,7 @@ var managerObjects = grid(crud, map[string]grant{
 // records posture would silently widen the company-scoped seat too.
 var managementObjects = func() map[string]grant {
 	out := maps.Clone(managerObjects)
+	out[objDataTask] = none
 	for _, object := range []string{
 		objAiDiagnostics,
 		objAiBudget,
@@ -189,6 +191,7 @@ var defaults = map[string]Document{
 			objPrivacyRequest:       readUpdate,
 			objAuditLog:             readOnly,
 			objJobHealth:            readOnly,
+			objDataTask:             readUpdate,
 			objExtensionAccess:      readOnly,
 			objSystemReset:          deleteOnly,
 			objAiDiagnostics:        readOnly,
@@ -306,6 +309,7 @@ var defaults = map[string]Document{
 			objPrivacyRequest:         none,
 			objAuditLog:               none,
 			objJobHealth:              none,
+			objDataTask:               none,
 			objExtensionAccess:        none,
 			objSystemReset:            none,
 			objAiDiagnostics:          none,
@@ -350,6 +354,7 @@ var defaults = map[string]Document{
 			objPrivacyRequest:         none,
 			objAuditLog:               none,
 			objJobHealth:              none,
+			objDataTask:               none,
 			objExtensionAccess:        none,
 			objSystemReset:            none,
 			objAiDiagnostics:          none,
@@ -406,6 +411,7 @@ var defaults = map[string]Document{
 			objPrivacyRequest:       none,
 			objAuditLog:             none,
 			objJobHealth:            readOnly,
+			objDataTask:             readUpdate,
 			objExtensionAccess:      readOnly,
 			objSystemReset:          none,
 			objAiDiagnostics:        readOnly,

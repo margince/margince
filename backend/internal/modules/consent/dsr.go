@@ -390,6 +390,10 @@ func (s *Store) UpdateDSR(ctx context.Context, id ids.UUID, in UpdateDSRInput) (
 		if verr := validateDSRUpdate(current, in); verr != nil {
 			return verr
 		}
+		if dsrUpdateChangesNothing(current, in) {
+			out = current
+			return nil
+		}
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		assignee := dsrAssigneeSet(in, arg)

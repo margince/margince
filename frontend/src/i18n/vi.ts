@@ -14,6 +14,59 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "approvalPreferences.title": "Ẩn phê duyệt cho riêng bạn",
+  "approvalPreferences.explain":
+    "Loại bị ẩn chỉ rời hàng đợi của bạn. Thành viên khác vẫn thấy đề xuất. Ẩn hoặc khôi phục một loại sẽ tắt thay đổi tự động của bạn cho loại đó. Gửi tin, đặt lịch, hợp nhất và đề xuất có passport vẫn hiển thị.",
+  "approvalPreferences.review": "Xem cả đề xuất đã ẩn",
+  "approvalPreferences.reviewExplain":
+    "Chế độ này gồm đề xuất đã ẩn và hết hạn. Gói trong hàng đợi thường có thể hiển thị ít mục hơn do tùy chọn cá nhân. Xem từng đề xuất trước khi quyết định.",
+  "approvalPreferences.close": "Đóng xem xét",
+  "approvalPreferences.next": "Trang tiếp",
+  "approvalPreferences.first": "Trang đầu",
+
+  "dataTasks.unknownState": "Cập nhật ứng dụng để quản lý trạng thái này.",
+  "dataTasks.blockedBy": "Đang chờ: {name}",
+  "roles.object.data_task": "Cập nhật dữ liệu",
+  "dataTasks.title": "Cập nhật dữ liệu",
+  "dataTasks.sub":
+    "Các bản ghi được cập nhật theo từng lô nhỏ. Những thay đổi đã lưu vẫn được giữ lại khi tạm dừng.",
+  "dataTasks.withheld":
+    "Cần có quyền để xem các bản cập nhật dữ liệu. Liên hệ quản trị viên để được cấp quyền.",
+  "dataTasks.empty": "Chưa có bản cập nhật dữ liệu nào được đăng ký.",
+  "dataTasks.unknown": "Chưa ước tính",
+  "dataTasks.atLeast_one": "Ít nhất {count}",
+  "dataTasks.atLeast_other": "Ít nhất {count}",
+  "dataTasks.scanned": "Số dòng đã kiểm tra",
+  "dataTasks.changed": "Số dòng đã thay đổi",
+  "dataTasks.estimate": "Ước tính số dòng cần kiểm tra",
+  "dataTasks.batchLimit": "Số dòng mỗi lô",
+  "dataTasks.batches": "Số lô đã lưu",
+  "dataTasks.lastProgress": "Tiến độ gần nhất",
+  "dataTasks.notStarted": "Chưa bắt đầu",
+  "dataTasks.nextAttempt": "Lần thử tiếp theo",
+  "dataTasks.release": "Phiên bản đầu tiên",
+  "dataTasks.run": "Mã lần chạy",
+  "dataTasks.step": "Bước: {step}",
+  "dataTasks.prerequisites": "Cần hoàn tất trước: {names}",
+  "dataTasks.status.pending": "Đang chờ",
+  "dataTasks.status.running": "Đang chạy",
+  "dataTasks.status.paused": "Đã tạm dừng",
+  "dataTasks.status.done": "Đã hoàn tất",
+  "dataTasks.status.failed": "Có lỗi",
+  "dataTasks.action.pause": "Tạm dừng",
+  "dataTasks.action.resume": "Tiếp tục",
+  "dataTasks.action.retry": "Thử lại",
+  "dataTasks.action.estimate": "Ước tính số dòng",
+  "dataTasks.blocked.waiting_for_worker": "Đang chờ tiến trình nền.",
+  "dataTasks.blocked.newer_release_required":
+    "Cần phiên bản mới hơn. Hãy cập nhật ứng dụng trước khi tiếp tục.",
+  "dataTasks.blocked.paused": "Đã tạm dừng tại vị trí đã lưu.",
+  "dataTasks.blocked.failed":
+    "Đã dừng sau nhiều lần thất bại. Hãy kiểm tra lỗi trước khi thử lại.",
+  "dataTasks.blocked.retry_wait": "Đang chờ lần thử tiếp theo.",
+  "dataTasks.blocked.earlier_step": "Cần hoàn tất bước trước đó.",
+  "dataTasks.blocked.missing_prerequisite":
+    "Cần hoàn tất các bản cập nhật bắt buộc trước.",
   "approval.preview.nameUnavailable": "Không có tên",
   "approval.preview.structured": "Giá trị có cấu trúc: {value}",
   "approval.preview.resolveConflict":
@@ -199,6 +252,21 @@ export const vi = {
     "Hãy công bố hoặc bỏ bản nháp trước khi khôi phục một phiên bản trước.",
   "reporting.moveUp": "Chuyển lên",
   "reporting.moveDown": "Chuyển xuống",
+  "reporting.sectionN": "Phần {n}",
+  "reporting.sectionTitle": "Tiêu đề phần {n}",
+  "reporting.addSection": "Thêm phần",
+  "reporting.removeSection": "Xóa phần {n}",
+  "reporting.cardWidth": "Độ rộng của {chart}",
+  "reporting.widthFull": "Toàn chiều rộng",
+  "reporting.widthHalf": "Nửa chiều rộng",
+  "reporting.cardSection": "Phần của {chart}",
+  "reporting.removeCard": "Xóa {chart}",
+  "reporting.addChart": "Thêm biểu đồ",
+  "reporting.previewChart": "Xem trước",
+  "reporting.previewLoading": "Đang tải bản xem trước…",
+  "reporting.previewEmpty":
+    "Chưa có gì để vẽ cho kỳ và chỉ số của báo cáo này. Vẫn thêm biểu đồ, hoặc đổi kỳ trong Tùy chỉnh báo cáo.",
+  "reporting.chooseChart": "Biểu đồ cần thêm",
   "reporting.exportCsv": "Xuất CSV",
   "reporting.captureContexts": "Ghi nhận lịch sử pipeline hằng ngày",
   "reporting.captureHelp":
@@ -346,6 +414,7 @@ export const vi = {
   "reporting.restricted": "Hồ sơ bị hạn chế",
   "reporting.next": "Trang tiếp",
   "reporting.name": "Tên báo cáo",
+  "reporting.description": "Mục đích",
   "reporting.audience": "Hiển thị với",
   "reporting.private": "Chỉ tôi",
   "reporting.team": "Nhóm đã chọn",
@@ -6702,6 +6771,9 @@ export const vi = {
   "jobs.kind.comms_scheduled_send_recovery": "Khôi phục thư hẹn giờ",
   "jobs.kind.comms_send_email": "Gửi thư",
   "jobs.kind.company_name_promotion": "Lấy tên công ty từ chữ ký thư",
+  "systemJob.datatask": "Cập nhật dữ liệu",
+  "jobs.kind.data_task_run": "Lô cập nhật dữ liệu",
+  "jobs.kind.data_task_reconcile": "Đối soát cập nhật dữ liệu",
   "jobs.kind.deal_scout": "Trinh sát deal",
   "jobs.kind.document_extract": "Trích xuất tài liệu",
   "jobs.kind.embed_drift_sweep": "Cập nhật bù chỉ mục tìm kiếm",
@@ -8167,6 +8239,33 @@ export const vi = {
   "blockedDomains.source.verdict": "Kết quả mô hình",
   "blockedDomains.source.heuristic": "Quy tắc suy đoán",
   "blockedDomains.source.human": "Thành viên",
+  "blockedDomains.source.reservedDomain":
+    "Tên miền dành riêng: tạm dừng nhận dạng công ty",
+  "blockedDomains.source.forwardedIdentity":
+    "Trang web khác đã phản hồi. Xác nhận công ty phù hợp.",
+  "worklist.domainReview.defer": "Để sau",
+  "worklist.domainReview.restore": "Đưa lại vào mục xem xét",
+  "worklist.domainReview.deferEffect":
+    "Để sau ẩn câu hỏi khỏi hàng đợi của bạn cho đến khi có bằng chứng mới. Bạn vẫn có thể tìm thấy câu hỏi tại đây.",
+  "worklist.domainReview.title": "Xem xét tên miền",
+  "worklist.domainReview.loading": "Đang tải tên miền…",
+  "worklist.domainReview.empty": "Không có tên miền cần xem xét.",
+  "worklist.domainReview.more": "Tải thêm",
+  "worklist.domainReview.forwarded": "Trang phản hồi: {url}",
+  "worklist.domainReview.evidenceAt": "Bằng chứng mới nhất: {date}",
+  "worklist.domainReview.noEvidenceDate": "Không có ngày bằng chứng",
+  "worklist.domainReview.match": "Ghép công ty",
+  "worklist.domainReview.matchEffect":
+    "Ghép sẽ liên kết tên miền và liên hệ đã ghi nhận với công ty đã chọn.",
+  "worklist.domainReview.create": "Tạo công ty",
+  "worklist.domainReview.retry": "Đọc lại trang",
+  "worklist.domainReview.exclude": "Loại tên miền",
+  "worklist.domainReview.forwardedEffects":
+    "Đọc lại giữ danh tính chưa xác định. Loại sẽ ngừng ghi nhận cho hộp thư của bạn.",
+  "worklist.domainReview.effects":
+    "Tạo sẽ thêm công ty. Đọc lại giữ danh tính chưa xác định. Loại sẽ ngừng ghi nhận cho hộp thư của bạn.",
+  "worklist.batch.domain_questions_one": "Xem xét {count} tên miền",
+  "worklist.batch.domain_questions_other": "Xem xét {count} tên miền",
   "blockedDomains.source.unevidenced": "Trang web không nêu tên công ty nào",
   "blockedDomains.source.staleEvidence": "Email làm căn cứ đã quá cũ",
   "blockedDomains.source.nearDuplicate": "Tên công ty đã tồn tại",
@@ -12206,6 +12305,10 @@ export const vi = {
   "webhooks.event.voice.draft_outcome_recorded.when":
     "Kết quả của bản nháp viết theo giọng văn của thành viên được ghi nhận.",
   "webhooks.eventGroup.approvals_audit": "Phê duyệt và nhật ký hoạt động",
+  "webhooks.event.approval.preference_changed.label":
+    "Đã đổi tùy chọn phê duyệt",
+  "webhooks.event.approval.preference_changed.when":
+    "Thành viên đổi việc hiển thị một loại phê duyệt trong Danh sách công việc.",
   "webhooks.event.approval.requested.label": "Đã yêu cầu phê duyệt",
   "webhooks.event.approval.requested.when":
     "Hành động của trợ lý AI được giữ lại để chờ quyết định.",

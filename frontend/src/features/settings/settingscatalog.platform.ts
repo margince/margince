@@ -216,6 +216,7 @@ export const PLATFORM_PAGES = [
     // read every role holds.
     requires: anyOf(
       reads("job_health"),
+      reads("data_task"),
       reads("embedding_reindex"),
       writes("installation_settings", ["update"]),
     ),
@@ -223,6 +224,7 @@ export const PLATFORM_PAGES = [
     // stalled queue is an operator acting, so that arm stands outside it.
     changes: anyOf(
       acts(writes("embedding_reindex", ["update"])),
+      acts(writes("data_task", ["update"])),
       acts(writes("installation_settings", ["update"])),
       reads("job_health"),
     ),
