@@ -78,6 +78,7 @@ func TestEveryJudgelessCaseFailsTheWrongAnswerItsJudgeCaught(t *testing.T) {
 	scenarios := loadShippedCorpus(t)
 	proofs := judgelessProofs()
 	maps.Copy(proofs, semanticProofs(t, scenarios))
+	maps.Copy(proofs, lifecycleProofs(t, scenarios))
 	for name, sc := range scenarios {
 		if _, proven := proofs[name]; !sc.Expect.Judged() && !proven {
 			t.Errorf("%s declares judge: none and has no proof here that its check refuses a wrong answer", name)
