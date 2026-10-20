@@ -280,10 +280,8 @@ func suggestibleAfter(before tagRow, in TagUpdate) bool {
 	return suggestible && (description == nil || !values.HasVisibleText(*description))
 }
 
-// tagUpdateChangesNothing answers whether the update would leave the tag as it
-// is, so an empty body or a repeat of the stored values writes no version, no
-// audit row and no stale If-Match for another editor. The comparison is the
-// patch type's, which every other versioned update already decides by.
+// tagUpdateChangesNothing answers whether the update leaves the tag as it is.
+// It compares the way every other versioned update does, through the patch.
 func tagUpdateChangesNothing(before tagRow, name *string, in TagUpdate) bool {
 	p := storekit.NewPatch()
 	if name != nil {

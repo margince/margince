@@ -220,11 +220,8 @@ func reconcileCompanyRelationshipTypes(
 }
 
 // ensureCompanyRelationshipType asserts one type without disturbing the others.
-// The partner upsert calls it to keep its half of the invariant, inside the
-// same transaction that writes the partner row — the classification flip it
-// replaces did exactly this, for exactly this reason. It reports whether it
-// added the type, because a write that only found it already there changed
-// nothing a caller deciding on a no-op needs to count.
+// The partner upsert calls it inside the transaction that writes the partner
+// row, to keep its half of the invariant. It reports whether it added the type.
 func ensureCompanyRelationshipType(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, relType, source, by string,
 ) (added bool, err error) {

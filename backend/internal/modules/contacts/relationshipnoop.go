@@ -17,13 +17,10 @@ import (
 // patchRelationshipUnlessUnchanged lands a relationship patch and reports
 // whether it changed the edge.
 //
-// The statement coalesces every field the request left out onto its stored
-// value and derives the primary flag in SQL, so whether a save moved anything
-// is only knowable from the row it returns. By then the version trigger has
-// run, and a save that changed nothing would have moved the version and made
-// every other editor's If-Match stale. So the demotion and the patch run in a
-// savepoint, and a result equal to the edge the caller already had rolls both
-// back.
+// The statement coalesces absent fields and derives the primary flag in SQL, so
+// only the row it returns shows whether anything moved. By then the version
+// trigger has run. The demotion and the patch therefore run in a savepoint that
+// is rolled back when the result equals the edge the caller already had.
 func patchRelationshipUnlessUnchanged(
 	ctx context.Context, tx pgx.Tx, current relationshipRow, id ids.UUID, in UpdateRelationshipInput, capturedBy string,
 ) (relationshipRow, bool, error) {
@@ -51,10 +48,9 @@ func patchRelationshipUnlessUnchanged(
 	return current, false, nil
 }
 
-// demoteAndPatchRelationship is the two statements of a relationship edit. A
-// patch can violate rel_dates exactly as a create can, so its errors go through
-// the same constraint mapping the insert uses: without it the two verbs answer
-// one rule two ways.
+// demoteAndPatchRelationship is the two statements of a relationship edit. Its
+// errors take the constraint mapping the insert uses, so a patch that breaks
+// rel_dates gets the same named refusal as a create.
 func demoteAndPatchRelationship(
 	ctx context.Context, tx pgx.Tx, current relationshipRow, id ids.UUID, in UpdateRelationshipInput, capturedBy string,
 ) (relationshipRow, error) {

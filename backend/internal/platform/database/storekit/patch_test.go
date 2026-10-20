@@ -286,10 +286,8 @@ func TestSetStampRidesTheUpdateWithoutEnteringTheAuditImages(t *testing.T) {
 	}
 }
 
-// A save that carries the values the row already holds is the empty patch, so
-// the early return every update path keeps for an empty patch fires and the
-// version, the audit log and the event stay where they were. Set records an
-// assignment without comparing, so Empty has to ask what actually moved.
+// A save that carries the stored values is the empty patch, so the early return
+// every update path keeps fires. Empty asks what moved, not what was staged.
 func TestAPatchOfOnlyUnchangedValuesIsEmpty(t *testing.T) {
 	title := "Head of Sales"
 	p := NewPatch()
@@ -306,9 +304,8 @@ func TestAPatchOfOnlyUnchangedValuesIsEmpty(t *testing.T) {
 	}
 }
 
-// A pointer and the value it points at are one value to the database, and the
-// audit image renders them identically, so the comparison must not call a
-// stored *string different from the string a request carries.
+// A pointer and the value it points at are one value to the database, so a
+// stored *string equals the string a request carries.
 func TestAStoredPointerEqualsTheValueItPointsAt(t *testing.T) {
 	stored := "Same"
 	p := NewPatch()

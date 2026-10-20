@@ -194,24 +194,15 @@ type PoolBudget struct {
 	BalanceReadAt     *time.Time
 }
 
-// presentConnection adds to a stored connection row what the card shows beside
-// it, so a list and the answer to a write to one connection carry the same
-// fields.
+// presentConnection adds what the card shows beside a stored connection row, so
+// a list and the answer to a write carry the same fields.
 //
-// The card shows what the provider says is LEFT and what this installation
-// SPENT side by side, so both arrive in one read — two round trips could show a
-// balance and a history from different moments. The backlog is read inside the
-// same transaction for the same reason.
+// Spend and backlog are read in the caller's transaction, so the card shows one
+// moment rather than three.
 //
-// A backlog this read cannot produce is ABSENT, not fatal. It is one line on a
-// card whose other rows — the key, the posture, the balance, the spend — are
-// what an operator came for, and a secondary count taking the whole settings
-// page down with it is the wrong trade. The contract makes it optional for
-// exactly this.
-//
-// A cancelled request is the exception and still aborts: the caller has gone,
-// so there is nobody to render a degraded card for, and swallowing it would
-// turn a disconnect into a pointless read of every remaining provider.
+// A backlog this read cannot produce is absent, not fatal. It is one line on a
+// card whose other rows matter more, and the contract makes it optional.
+// A cancelled request still aborts, because nobody is left to render the card.
 func (s *Store) presentConnection(
 	ctx context.Context, tx pgx.Tx, c Connection, d provider.Descriptor,
 ) (Connection, error) {

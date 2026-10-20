@@ -10,9 +10,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
-// poolPolicy is the part of a pool's budget a user sets. The balance the
-// provider last reported rides on the same row but is not a setting, so a save
-// that repeats the settings must not look different because a balance moved.
+// poolPolicy is the part of a pool's budget a user sets. The reported balance
+// shares the row but is not a setting, so a moved balance is not a change.
 type poolPolicy struct {
 	Pool              string
 	MonthlyCeiling    *int
@@ -20,8 +19,7 @@ type poolPolicy struct {
 }
 
 // policyImage renders the settings a configuration save can change. Categories
-// and pools are sorted because the request carries them as a map, whose order
-// says nothing about the policy.
+// and pools are sorted because the request carries them as a map.
 //
 //craft:ignore naked-any the image is the schemaless column map storekit compares
 func policyImage(c currentConfig) map[string]any {
@@ -40,9 +38,8 @@ func policyImage(c currentConfig) map[string]any {
 	}
 }
 
-// configurationUnchanged answers whether a save would leave the policy as it
-// stands. A save that does not change it must not move the version, which would
-// make every other editor's If-Match stale, and must not write an audit row.
+// configurationUnchanged answers whether a save leaves the policy as it stands.
+// Such a save must not move the version or write an audit row.
 func configurationUnchanged(current, merged currentConfig) bool {
 	_, after := storekit.ChangedColumns(policyImage(current), policyImage(merged))
 	return len(after) == 0

@@ -5,10 +5,9 @@
 
 package integration
 
-// A save that changes nothing changes nothing: the answer is the current record
-// at the version it already had, no audit row and no event are written, and a
-// stale If-Match still answers 409, because the caller's picture of the record
-// is wrong whether or not this save would have moved it.
+// A save that changes nothing changes nothing. The answer is the current record
+// at its current version, and no audit row or event is written. A stale
+// If-Match still answers 409.
 
 import (
 	"bytes"

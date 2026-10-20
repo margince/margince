@@ -58,10 +58,9 @@ func union(before, after map[string]any) []string {
 // row held SQL NULL has changed nothing, and reporting that as a change puts a
 // field on the history screen that nobody edited.
 //
-// Two values are also the same when the audit image renders them alike, so a
-// stored *string and the string a request carries are one value. That is the
-// comparison the undo path makes between an image and the live row, so "moved"
-// here and "superseded" there read one field the same way.
+// Two values are also the same when the audit image renders them alike. A
+// stored *string equals the string a request carries. The undo path compares an
+// image with the live row the same way.
 //
 //craft:ignore naked-any same column-value contract as ChangedColumns
 func sameColumnValue(oldValue, newValue any) bool {
@@ -79,10 +78,8 @@ func sameColumnValue(oldValue, newValue any) bool {
 	return oldErr == nil && newErr == nil && bytes.Equal(oldJSON, newJSON)
 }
 
-// instants reads two timestamps, by value or by pointer, as the moments they
-// are. One instant spelled in two zones is one value to the column, and a
-// request that carries a stored time back in another offset has changed
-// nothing.
+// instants reads two timestamps, by value or by pointer, as moments. One instant
+// in two zones is one value to the column.
 //
 //craft:ignore naked-any same column-value contract as ChangedColumns
 func instants(a, b any) (time.Time, time.Time, bool) {

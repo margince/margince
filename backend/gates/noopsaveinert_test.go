@@ -7,25 +7,19 @@ package gates
 
 // A save that changes nothing changes nothing.
 //
-// A versioned row moves its version on every UPDATE that reaches it, so an edit
-// that re-sends the values the row already holds, if it writes, makes the
-// version, the audit log and the event stream say a change happened and makes
-// every other editor's If-Match stale for no reason. storekit.Patch decides
-// whether an edit changed anything (Patch.Empty), and a store that skips the
-// question writes anyway.
+// A versioned row moves its version on every UPDATE that reaches it. An edit
+// that re-sends the stored values and still writes moves the version, the audit
+// log and the event stream. It also makes other editors' If-Match stale.
+// storekit.Patch decides whether an edit changed anything (Patch.Empty).
 //
-// The client-driven update seam is Patch.ApplyGuarded and ApplyGuardedIn: they
-// take the caller's If-Match, which is what makes the function an edit a user
-// or an agent sent rather than an internal flow that locked its own row first.
-// So the census is derived from that seam rather than listed: every function
-// that reaches it asks the patch whether it is empty or what moved, or says here
-// why the write it makes always moves something.
+// The client update seam is Patch.ApplyGuarded and ApplyGuardedIn. They take
+// the caller's If-Match, so the function is an edit a user or an agent sent.
+// The census is derived from that seam: every function that reaches it asks
+// Empty or Moved, or says here why its write always moves something.
 //
-// What this cannot see is an edit that skips Patch altogether and writes with
-// its own UPDATE statement, and an edit that reaches the seam through a helper
-// its caller asks. The first is held by the integration tests that send a save
-// of the stored values to each route; the second is ratified below, naming the
-// caller that asks.
+// The gate cannot see an edit that writes with its own UPDATE statement; the
+// HTTP integration test holds those routes. A helper that only applies is
+// ratified below and names the caller that asks.
 
 import (
 	"go/ast"
