@@ -16,12 +16,14 @@ package integration
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -182,51 +184,62 @@ func TestAnAnonymizePolicyReachesALeadTheArchiveAlreadyTook(t *testing.T) {
 
 // A fresh installation's defaults leave an old contact with no consent and no
 // deal as it is, and keep an old transcript's text. Neither scope is seeded.
-// The activity archive row reaches a transcript only at 1095 days.
+// The activity archive row reaches a transcript only at 1095 days. Bootstrap,
+// the contact and the transcript all go through the real writers.
 func TestTheDefaultPoliciesKeepAnOldContactAndAnOldTranscript(t *testing.T) {
-	e := Setup(t)
-	contact, transcript := ids.NewV7(), ids.NewV7()
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
 	ctx := context.Background()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `DELETE FROM retention_policy`); err != nil {
-			return err
-		}
-		if err := consent.SeedDefaultRetentionTx(ctx, tx); err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO contact (id, full_name, source, captured_by, created_at, entered_at)
-			VALUES ($1, 'Quiet Contact', 'manual', 'human:x', now() - interval '800 days', now() - interval '800 days')`,
-			contact); err != nil {
-			return err
-		}
-		_, err := tx.Exec(ctx, `
-			INSERT INTO activity (id, kind, subject, body, occurred_at, created_at, source, source_system, source_id, captured_by)
-			VALUES ($1, 'note', 'Transcript', 'what was said', now() - interval '400 days', now() - interval '400 days',
-			        'capture', 'transcript', 't-default', 'connector:t')`, transcript)
-		return err
-	}); err != nil {
+
+	var contact, transcript struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source": "manual", "full_name": "Quiet Contact",
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("creating the contact → %d", status)
+	}
+	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
+		"kind": "meeting", "subject": "Rollout call", "body": transcriptText,
+		"source_system": "transcript", "source": "manual",
+	}, nil, &transcript); status != http.StatusCreated {
+		t.Fatalf("logging the transcript → %d", status)
+	}
+	// Both clocks back past the window each removed rule had: the record's own
+	// date and its time in this installation.
+	if _, err := e.Owner.Exec(ctx, `UPDATE contact SET created_at = now() - interval '800 days',
+		entered_at = now() - interval '800 days' WHERE id = $1`, contact.ID); err != nil {
+		t.Fatalf("backdating the contact: %v", err)
+	}
+	if _, err := e.Owner.Exec(ctx, `UPDATE activity SET occurred_at = now() - interval '400 days',
+		created_at = now() - interval '400 days' WHERE id = $1`, transcript.ID); err != nil {
+		t.Fatalf("backdating the transcript: %v", err)
+	}
+	var stored *string
+	if err := e.Owner.QueryRow(ctx, `SELECT body FROM activity WHERE id = $1`, transcript.ID).Scan(&stored); err != nil {
 		t.Fatal(err)
 	}
 
-	runRetentionPass(t, e)
+	ws := apptest.InstallationWorkspaceUUID(ctx, t, e.Pool)
+	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	if err := svc.EvaluateInstallation(RetentionPassCtx(ws)); err != nil {
+		t.Fatal(err)
+	}
 
 	var contactName string
 	var contactArchived bool
+	if err := e.Owner.QueryRow(ctx, `SELECT full_name, archived_at IS NOT NULL FROM contact WHERE id = $1`,
+		contact.ID).Scan(&contactName, &contactArchived); err != nil {
+		t.Fatal(err)
+	}
 	var body *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx, `SELECT full_name, archived_at IS NOT NULL FROM contact WHERE id = $1`,
-			contact).Scan(&contactName, &contactArchived); err != nil {
-			return err
-		}
-		return tx.QueryRow(ctx, `SELECT body FROM activity WHERE id = $1`, transcript).Scan(&body)
-	}); err != nil {
+	if err := e.Owner.QueryRow(ctx, `SELECT body FROM activity WHERE id = $1`, transcript.ID).Scan(&body); err != nil {
 		t.Fatal(err)
 	}
 	if contactName != "Quiet Contact" || contactArchived {
 		t.Errorf("the default policies acted on an 800-day-old contact: name %q, archived %v", contactName, contactArchived)
 	}
-	if body == nil || *body != "what was said" {
-		t.Errorf("the default policies cleared a 400-day-old transcript's text: body %v", body)
+	if stored == nil || body == nil || *body != *stored {
+		t.Errorf("the default policies cleared a 400-day-old transcript's text: stored %v, after the pass %v", stored, body)
 	}
 }
