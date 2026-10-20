@@ -465,6 +465,7 @@ describe("the grouped postal address", () => {
   it("keeps the six parts behind one editor even when the address is empty", async () => {
     const user = userEvent.setup();
     await renderSettledGrid(COMPANY);
+    await user.click(screen.getByRole("button", { name: /empty field/ }));
     await user.click(screen.getByRole("button", { name: "Change Address" }));
     for (const label of PART_LABELS)
       expect(screen.getByLabelText(new RegExp(label))).toBeVisible();

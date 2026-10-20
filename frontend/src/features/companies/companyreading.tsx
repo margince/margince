@@ -12,7 +12,6 @@ import { recordNamesIn, StateStrip, type SuggestionAction } from "./company360";
 import { DeepReadPanel } from "./companydeepread";
 import type { CompanyTab } from "./companytab";
 import { Company360Call, NeedsList, useTodayReading } from "./companytoday";
-import { sinceLastVisitFooter } from "./companywork";
 
 type Company = components["schemas"]["Company"];
 type Company360View = components["schemas"]["Company360"];
@@ -129,7 +128,6 @@ export function CompanyReading({
         // Composed from the account's own records, not model prose.
         titleAction={view && <WrittenBy by="deterministic" />}
         scale="compact"
-        footer={sinceLastVisitFooter(view)}
       >
         <RecordSpine
           source={view}

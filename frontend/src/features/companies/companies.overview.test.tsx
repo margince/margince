@@ -516,15 +516,8 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
 
   // A name and a link say somebody exists. To pick which contact to call, a
   // reader would open all three to find the buyer. The list carries that.
-  it("carries what a listed contact does and how to write to them", async () => {
+  it("carries what a listed contact does and links to their record", async () => {
     stubFetch(companyBackstop, {
-      // The reader has a mailbox to send from, so the address is the
-      // composer's; without one it would be their own mail client's.
-      connectors: {
-        data: [
-          { id: "g1", provider: "gmail", status: "connected", scopes: [] },
-        ],
-      },
       company360: {
         ...company360,
         contacts: {
@@ -561,21 +554,9 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     for (const each of names) {
       expect(each.getAttribute("href")).toBe("#/contacts/p-1");
     }
-    const name = names[0];
     expect(screen.getAllByText("Head of Procurement").length).toBeGreaterThan(
       0,
     );
-
-    // The address is its own control, a sibling of the name, not nested in it.
-    // A control inside a link is a press nobody can predict. It is a button
-    // into the product's composer, never a link the reader's mail client takes.
-    const write = (
-      await screen.findAllByRole("button", {
-        name: "anna.brandt@brandt-automotive.de",
-      })
-    )[0];
-    expect(write.hasAttribute("href")).toBe(false);
-    expect(name.contains(write)).toBe(false);
   });
 
   // None of the reference cards comes from the 360; each runs its own read.

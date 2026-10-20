@@ -324,6 +324,12 @@ it("keeps a mobile Details edit open until it is saved or cancelled", async () =
   const dialog = await screen.findByRole("dialog", {
     name: "Details and permissions",
   });
+  // The sparse contact has no title, so the field waits with the empty ones.
+  await user.click(
+    await within(dialog).findByRole("button", {
+      name: /^Show \d+ empty fields?$/,
+    }),
+  );
   await user.click(
     await within(dialog).findByRole("button", { name: "Change Title" }),
   );

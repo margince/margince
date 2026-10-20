@@ -110,6 +110,10 @@ describe("CompanyScreen — edit domains round-trip (B7)", () => {
     });
     render(<CompanyScreen id="o-1" />);
 
+    // The fixture carries no domain, so its row waits behind the empties link.
+    await userEvent.click(
+      await screen.findByRole("button", { name: /empty field/ }),
+    );
     await userEvent.click(
       await screen.findByRole("button", { name: "Change Domains" }),
     );

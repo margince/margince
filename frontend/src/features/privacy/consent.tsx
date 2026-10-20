@@ -458,7 +458,7 @@ export function ConfirmDetailsAction({
           {t("consent.confirmRecipient", { address: recipient })}
         </p>
       )}
-      <p>{t("consent.askToConfirmWhat")}</p>
+      <p className="t-caption">{t("consent.askToConfirmWhat")}</p>
       <ErrorLine error={ask.error} />
       {ask.data && (
         <p className="t-caption" data-testid="confirm-details-sent">

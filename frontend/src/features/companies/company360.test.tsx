@@ -457,17 +457,20 @@ describe("company view — a failed read is not an empty account", () => {
     await waitFor(() =>
       expect(screen.getByText(/this page may be incomplete/)).toBeTruthy(),
     );
-    // The business rail STAYS, with each card saying it could not be loaded.
-    // Removing it would read as an account with no contacts and no deals,
-    // which is the one thing this page does not know.
-    const card = screen.getByRole("complementary", { name: "Context" });
-    expect(within(card).getAllByText(/did not load/).length).toBeGreaterThan(0);
-    expect(
-      within(card).queryByText("No open deals for this company."),
-    ).toBeNull();
-    expect(
-      within(card).queryByText("No contact linked to this account yet."),
-    ).toBeNull();
+    // The overview's Deals and Contacts sections STAY, each saying it could
+    // not be loaded. Dropping them would read as an account with neither.
+    for (const title of ["Deals", "Contacts"]) {
+      const panel = screen
+        .getAllByRole("heading", { name: title })
+        .map((heading) => heading.closest<HTMLElement>(".panel"))
+        .find((each) => each !== null);
+      if (!panel) {
+        throw new Error(`the ${title} section is not drawn`);
+      }
+      expect(within(panel).getByText(/did not load/)).toBeTruthy();
+    }
+    expect(screen.queryByText("No deals for this company yet.")).toBeNull();
+    expect(screen.queryByText("No contacts yet.")).toBeNull();
   });
 
   it("distinguishes a section that is missing from one that is empty", async () => {

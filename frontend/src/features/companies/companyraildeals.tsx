@@ -46,6 +46,8 @@ export function DealsSection({
   onTab: (tab: "deals") => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   const deals = view?.deals;
   const rows = rankedDeals(deals?.data ?? []);
   const count = wholeCount(deals);
@@ -70,12 +72,21 @@ export function DealsSection({
       title={
         <SectionTitle
           title={t("co.rail.deals.title")}
-          count={answered ? count : undefined}
+          count={
+            answered && count != null
+              ? plural("co.deals.open", count, {
+                  count: formatNumber(count, locale),
+                })
+              : undefined
+          }
         />
       }
       titleAction={
         state === "ready" ? (
-          <AllRowsLink count={count} onOpen={() => onTab("deals")} />
+          <AllRowsLink
+            label={t("co.deals.all")}
+            onOpen={() => onTab("deals")}
+          />
         ) : undefined
       }
     >

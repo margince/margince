@@ -23,7 +23,6 @@ import {
   SourcesPill,
   type SpineSource,
   spineTask,
-  WrittenBy,
 } from "../records/record360";
 import {
   colleagueWords,
@@ -105,26 +104,21 @@ export function ContactBriefCard({
   }
   return (
     <Panel
-      // The page's ONE indigo card: the agent's reading of the relationship,
-      // with its claim (who wrote it, as of when) in the head where a reader
-      // meets it first. The work queue above stays neutral and marks each
-      // suggested row on its own byline, so "a machine did this" is said once
-      // per thing a machine did rather than once per card.
-      tone="ai"
-      className="record-hero"
-      // A dateline over the call once it is written: what this is, and as
-      // of when. The head ends on who wrote it.
-      title={
-        written
-          ? t("record.howItStands", {
-              when: formatDayMonth(brief.generated_at, locale, recordZone),
-            })
-          : t("contact.brief.title")
-      }
+      // A section like the others under it. Its name and date stand in the
+      // title column; who wrote it and its sources stand in its foot.
+      className="pe-brief"
+      title={written ? t("record.howItStandsTitle") : t("contact.brief.title")}
       titleAction={
         written ? (
-          <>
-            <WrittenBy by={brief.generated_by} />
+          <span className="t-sub">
+            {formatDayMonth(brief.generated_at, locale, recordZone)}
+          </span>
+        ) : undefined
+      }
+      footer={
+        written ? (
+          <span className="pe-brief-foot t-caption">
+            <span>{t(`co.brief.by.${brief.generated_by}`)}</span>
             {/* The messages the reading rests on, behind one pill: a busy
                 contact cites dozens, and a list of them buried the call. */}
             <SourcesPill count={sources.length}>
@@ -138,7 +132,7 @@ export function ContactBriefCard({
                 </li>
               ))}
             </SourcesPill>
-          </>
+          </span>
         ) : undefined
       }
     >

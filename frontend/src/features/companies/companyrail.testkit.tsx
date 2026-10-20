@@ -5,7 +5,7 @@ import { vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
-import { CompanyRail } from "./companyrail";
+import { CompanyFiling, CompanyRail } from "./companyrail";
 
 export type Company360 = components["schemas"]["Company360"];
 
@@ -91,16 +91,21 @@ export function render(ui: ReactNode): RenderResult {
 
 export type RailProps = ComponentProps<typeof CompanyRail>;
 
-// Every site below wants the same rail: a writable view, not loading, and a
-// no-op tab switch. `overrides` supplies whatever the test varies.
+// Every site below wants the same rail: a writable view. `overrides` supplies
+// whatever the test varies.
 export function renderRail(overrides: Partial<RailProps> = {}): RenderResult {
+  return render(<CompanyRail companyId="o-1" view={view()} {...overrides} />);
+}
+
+// The account's filing drawers, which stand on the Profile tab.
+export function renderFiling(loading: boolean): RenderResult {
   return render(
-    <CompanyRail
+    <CompanyFiling
       companyId="o-1"
-      view={view()}
-      loading={false}
+      company={company}
+      view={undefined}
+      loading={loading}
       onTab={onTab}
-      {...overrides}
     />,
   );
 }

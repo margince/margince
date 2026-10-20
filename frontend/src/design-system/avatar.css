@@ -45,13 +45,12 @@
   height: 46px;
 }
 /* The mark of a record PAGE: the one picture in the head, beside a name set
-   at the record rung. Sized to the reference's 72, which reads as the page's
-   own mark rather than as a large list avatar — at 56 beside a 44px name it
-   was the smaller of the two things naming the record. Round like every other
-   rung: a company and a contact are one kind of chip. */
+   at the record rung. At 56 it stands level with the name's two lines rather
+   than over them. Round like every other rung: a company and a contact are
+   one kind of chip. */
 .avatar-xl {
-  width: 72px;
-  height: 72px;
+  width: 56px;
+  height: 56px;
 }
 /* A tile keeps the tree's own corner, so the round shape is the circle's alone. */
 .avatar:not(.avatar-tile) {

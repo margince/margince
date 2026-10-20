@@ -159,13 +159,7 @@ function Rail({ view, row }: Readonly<{ view?: View; row?: Company }>) {
   return (
     <StoryProviders>
       <div style={{ maxWidth: 340 }}>
-        <CompanyRail
-          companyId="o-1"
-          company={row}
-          view={view}
-          loading={false}
-          onTab={() => {}}
-        />
+        <CompanyRail companyId="o-1" company={row} view={view} />
       </div>
     </StoryProviders>
   );

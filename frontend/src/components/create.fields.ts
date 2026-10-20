@@ -26,6 +26,9 @@ export type CreateField = {
   // A text field that offers existing records by name. See NameOffers.
   offers?: NameOffers;
   key: string;
+  // The reader was not shown this field's value; the row says so, and is
+  // never filed among the empty ones.
+  withheld?: boolean;
   // Static fields carry an i18n `label` key; dynamic fields (custom fields,
   // whose labels are workspace data, not translated) carry a literal
   // `labelText` instead. One of the two is set; the render prefers labelText.

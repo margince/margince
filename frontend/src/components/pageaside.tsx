@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ChevronLeft, PanelRight, PanelRightClose } from "lucide-react";
+import { ChevronLeft, PanelRight } from "lucide-react";
 import {
   createContext,
   type ReactNode,
@@ -116,6 +116,11 @@ export function useShowDetails(field: string): (() => void) | undefined {
     if (state.collapsed) state.toggle();
     state.setFocusField(field);
   };
+}
+
+/** The field a reader was just sent to in the details pane, if any. */
+export function useDetailsFocusField(): string | null {
+  return useContext(PageAsideContext)?.focusField ?? null;
 }
 
 export function useDetailsFieldTarget(field: string) {
@@ -259,10 +264,10 @@ function PaneToggle({
         variant="link"
         reason={dirty ? t("record.finishFieldEdit") : undefined}
         aria-pressed
+        aria-label={words.hide}
         onClick={onToggle}
       >
-        <PanelRightClose aria-hidden="true" />
-        {words.hide}
+        {t("record.panel.hide")}
       </Button>
     );
   }

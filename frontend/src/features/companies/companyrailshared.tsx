@@ -11,7 +11,7 @@ import {
   sectionState,
 } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useLocale } from "../../i18n";
 import { roleOf } from "../capture/provider-status";
 
 // Small pieces the rail's own sections draw off — a leaf so companyrail.tsx
@@ -45,36 +45,30 @@ export function SectionSummary({
 }
 
 /**
- * SectionTitle is an overview section's name with how many rows it holds
- * beside it. `count` is absent, not zero, while the section is not answered.
+ * SectionTitle is an overview section's name, with how many rows it holds on
+ * a quiet line under it. `count` is absent, not zero, while the section is not
+ * answered.
  */
 export function SectionTitle({
   title,
   count,
-}: Readonly<{ title: string; count?: number }>) {
-  const { locale } = useLocale();
+}: Readonly<{ title: string; count?: string }>) {
   return (
     <>
       {title}
-      {count != null && (
-        <span className="co-section-count">{formatNumber(count, locale)}</span>
-      )}
+      {count != null && <span className="co-section-count">{count}</span>}
     </>
   );
 }
 
 /** AllRowsLink opens the tab that holds every row of a section. */
 export function AllRowsLink({
-  count,
+  label,
   onOpen,
-}: Readonly<{ count?: number; onOpen: () => void }>) {
-  const t = useT();
-  const { locale } = useLocale();
+}: Readonly<{ label: string; onOpen: () => void }>) {
   return (
     <Button variant="link" onClick={onOpen}>
-      {count != null
-        ? t("co.rail.all", { count: formatNumber(count, locale) })
-        : t("co.rail.allUncounted")}
+      {label}
     </Button>
   );
 }

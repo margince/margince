@@ -618,10 +618,13 @@
   /* The verdict a record's 360 reached, set as the record's lead: the one
      word on the page larger than its name, because it is what the page is for. */
   --fontVerdict:
-    var(--fontWeightMedium) 3rem / 3.25rem var(--fontFamilyHeading);
+    var(--fontWeightBold) 2.5rem / 2.75rem var(--fontFamilyHeading);
   /* The sentence under that verdict, in the display face at reading size. */
   --fontVerdictBecause:
     var(--fontWeightRegular) 1.125rem / 1.625rem var(--fontFamilyHeading);
+  /* A panel's title. A record's sheet and fields column rebind it to the
+     small rung (panel.css), because there a panel is a section of a document. */
+  --fontPanelTitle: var(--fontHeadingMedium);
   /* Sparingly: fine print, over Body S. */
   --fontHeadingXXSmall:
     var(--fontWeightBold) 0.75rem / 1rem var(--fontFamilyHeading);

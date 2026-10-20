@@ -177,6 +177,14 @@
   flex-direction: column;
   min-width: 0;
 }
+.co-deal-name > a {
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
+  text-decoration: none;
+}
+.co-deal-name > a:hover {
+  text-decoration: underline;
+}
 .co-deal-stage {
   color: var(--textSecondary);
 }
@@ -186,9 +194,11 @@
 .co-deal-won {
   margin: var(--space-2) 0 0;
 }
-/* A section's count sits beside its title in the secondary ink. */
+/* A section's count stands on a quiet line under its title. */
 .co-section-count {
-  margin-inline-start: var(--space-2);
+  display: block;
+  margin-block-start: var(--space-1);
+  font: var(--fontBody);
   color: var(--textSecondary);
 }
 @container work (max-width: 40rem) {

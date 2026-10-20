@@ -1803,7 +1803,7 @@ export const en = {
   // a destination.
   "ref.nameLoadFailed": "Name did not load",
   "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
-  "ref.notInRoster": "Currently assigned (no longer in the user list)",
+  "ref.notInRoster": "No longer in the user list",
 
   // A record search that ANSWERED and found nothing. Distinct from a search
   // that has not run: both drew the same empty space before, and a reader
@@ -2247,6 +2247,7 @@ export const en = {
   "deal.rings.committee.caption_other": "{part} of {count} buying roles named",
   "record.origin": "Origin",
   "record.howItStands": "How it stands · {when}",
+  "record.howItStandsTitle": "How it stands",
   "record.sourcesPill": "Margince · {sources}",
   "record.restsOn": "Sources",
   "record.restsOn.source_one": "source",
@@ -2255,6 +2256,10 @@ export const en = {
   "record.panel.showDetails": "Show details",
   "record.panel.hideDetails": "Hide details",
   "record.panel.fold": "Details",
+  "record.panel.hide": "Hide",
+  "record.showEmptyFields_one": "Show 1 empty field",
+  "record.showEmptyFields_other": "Show {count} empty fields",
+  "record.hideEmptyFields": "Hide empty fields",
   // The Deal Room aside on a deal. `room.` rather than `dealroom.` for the
   // reason the other abbreviated namespaces give: the surface is named once at
   // the top of the panel and every key under it is read in that context.
@@ -2784,7 +2789,7 @@ export const en = {
   // Said plainly, because the reader's next move depends on it: a step they
   // believe was written is a step nobody goes looking for again.
   "co.suggest.addTaskFailed": "Next step was not saved. Retry.",
-  "co.suggest.viewTasks": "View tasks",
+  "co.suggest.viewTasks": "All tasks",
   "co.suggest.commitment.overdueCount": "{count} overdue",
   "co.suggest.commitment.openCount": "{count} open",
   "co.suggest.commitment.overdueAtLeast": "{count}+ overdue",
@@ -2800,6 +2805,10 @@ export const en = {
   "co.rail.deals.title": "Deals",
   "co.latest.title": "Latest",
   "co.latest.all": "All activity",
+  "co.deals.all": "All deals",
+  "co.contacts.all": "All contacts",
+  "co.deals.open_one": "{count} open",
+  "co.deals.open_other": "{count} open",
   "co.deals.won_one": "{count} won · {amount} to date",
   "co.deals.won_other": "{count} won · {amount} to date",
   "co.rail.deals.empty": "No deals for this company yet.",
@@ -12964,9 +12973,9 @@ export const en = {
     "No commitments or questions in the captured messages.",
   "contact.loops.ours": "You",
   "contact.loops.question": "Open question",
-  "contact.loops.overdue_one": "overdue {count} day",
-  "contact.loops.overdue_other": "overdue {count} days",
-  "contact.loops.overdueUnderDay": "overdue by less than a day",
+  "contact.loops.overdue_one": "Overdue {count} day",
+  "contact.loops.overdue_other": "Overdue {count} days",
+  "contact.loops.overdueUnderDay": "Overdue by less than a day",
   "contact.loops.due": "due {when}",
   "contact.loops.dueToday": "today",
   "contact.loops.dueTomorrow": "tomorrow",

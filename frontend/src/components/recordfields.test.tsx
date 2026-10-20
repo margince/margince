@@ -86,10 +86,14 @@ describe("record fields", () => {
     ).not.toBeInTheDocument();
     expect(save).toHaveBeenCalledTimes(1);
   });
-  it("renders unset fields, and does not write an unchanged value", async () => {
+  it("keeps unset fields behind one link, and does not write an unchanged value", async () => {
     const save = vi.fn<RecordFieldSave>(async () => undefined);
     const user = userEvent.setup();
     render(editor(save, { ...record, title: "" }), { wrapper });
+    expect(screen.queryByRole("button", { name: "Change Title" })).toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: "Show 1 empty field" }),
+    );
     expect(
       screen.getByRole("button", { name: "Change Title" }),
     ).toBeInTheDocument();
@@ -239,6 +243,7 @@ it("connects the reference label to its search input", async () => {
     />,
     { wrapper },
   );
+  await user.click(screen.getByRole("button", { name: /empty field/ }));
   await user.click(screen.getByRole("button", { name: "Change Parent" }));
   const label = document.querySelector("label");
   if (!label) throw new Error("Reference field has no label");

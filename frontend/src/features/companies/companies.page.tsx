@@ -154,8 +154,6 @@ export function CompanyPage({
       // The composite read still in flight, as opposed to failed. An
       // undefined `view` alone cannot tell the rail's sections which of the
       // two holds, and each needs its own drawing.
-      loading={loading}
-      onTab={onTab}
     />
   );
   const {

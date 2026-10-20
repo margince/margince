@@ -28,6 +28,7 @@ import { useHasSiteRead } from "./companydeepread";
 import { CompanyDocumentsCard } from "./companydocuments";
 import { EvidenceModal } from "./companyevidence";
 import { CompanyFinanceCard } from "./companyfinance";
+import { CompanyFiling } from "./companyrail";
 import type { CompanyTab } from "./companytab";
 import "./company360.css";
 
@@ -320,13 +321,22 @@ export function CompanyRecordBody({
         onOpenReceipt={receipt.open}
         onOpenEmail={receipt.openEmail}
         readings={
-          <CompanyReadings
-            company={company}
-            view={view}
-            onOpenRecord={openCitation}
-            onOpenReceipt={receipt.open}
-            onOpenEmail={receipt.openEmail}
-          />
+          <>
+            <CompanyReadings
+              company={company}
+              view={view}
+              onOpenRecord={openCitation}
+              onOpenReceipt={receipt.open}
+              onOpenEmail={receipt.openEmail}
+            />
+            <CompanyFiling
+              companyId={company.id}
+              company={company}
+              view={view}
+              loading={loading}
+              onTab={onTab}
+            />
+          </>
         }
       />
     </>

@@ -13,7 +13,7 @@ import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
-import { formatDate } from "../../format/format";
+import { formatDate, formatNumber } from "../../format/format";
 import { webUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
@@ -78,8 +78,6 @@ export function CompanyRail({
   companyId,
   company,
   view,
-  loading,
-  onTab,
 }: Readonly<{
   companyId: string;
   // The page's own resolved record, read regardless of how the composite
@@ -88,32 +86,13 @@ export function CompanyRail({
   // going blank on a read the page already has the answer to.
   company?: Company;
   view?: Company360;
-  // The composite read `view` comes off is still in flight. Threaded to the
-  // sections that read `view` straight (Deals, Contacts, Tags) so their
-  // `sectionState` calls can tell "still loading" apart from "the read
-  // failed" — both hand a section an undefined `view`, and without this flag
-  // every one of them reads the failed state for as long as the read runs,
-  // flashing "could not be loaded" on every ordinary page open.
-  loading: boolean;
-  // Where each panel's header link goes: Deals/Contacts switch the record's own
-  // tab strip, Details opens Profile. One callback rather than three, because
-  // every use is the same verb aimed at a different tab.
-  onTab: (tab: "deals" | "contacts" | "profile") => void;
 }>) {
   const t = useT();
-  // The same per-row answer the company's other verbs read: an archived
-  // company, or one this seat may read but not write, takes no new
-  // responsibilities.
   const resolved = view?.company ?? company;
-  const canWriteCompany =
-    useCanWriteRecord("company", resolved) && !resolved?.archived_at;
   return (
-    // A plain div: the shell's own <aside> is the landmark around this, and a
-    // second labelled region inside it would give a reader two names for one
-    // column. Inside it ONE pane of named sections (DESIGN.md §6): the
-    // account's fields, its deals, its contacts, the hold, its tags — each a
-    // disclosure with its own summary, so the column reads as one object with
-    // five slices rather than five cards a reader has to assemble.
+    // A plain div: the shell's own <aside> is the landmark around this. A
+    // second labelled region inside it would give one column two names. It
+    // holds what the account is: its fields, origin, registration and lists.
     <div className="co-rail">
       {/* Details lead the column: the account's own fields are the first
             thing a reader orients by, and they draw from the page's already-
@@ -145,33 +124,65 @@ export function CompanyRail({
               </PanelBody>
             </Disclosure>
           )}
-          <Disclosure
-            className="co-sect"
-            summary={<SectionSummary title={t("assignments.title")} />}
-          >
-            <RecordTeam
-              recordType="company"
-              recordId={companyId}
-              readOnly={!canWriteCompany}
-              bare
-            />
-          </Disclosure>
-          {/* The server refuses an archived account's 360 and its lists. */}
-          {!resolved?.archived_at && (
-            <>
-              <ProjectsSection view={view} loading={loading} onTab={onTab} />
-              {/* Who on the team can reach the contacts not yet on file. */}
-              {resolved && <CompanyReachCard companyId={resolved.id} />}
-              <ListsSection companyId={companyId} />
-            </>
-          )}
-          <CompanyHoldSection company={resolved} />
-          {/* Beside the hold, and for the same reason: both are about the
-            account's mail DOMAIN rather than about the work on it. */}
-          <CompanyTriageSection companyId={companyId} />
+          {/* The server refuses an archived account's lists. */}
+          {!resolved?.archived_at && <ListsSection companyId={companyId} />}
         </DisclosureGroup>
       </Panel>
     </div>
+  );
+}
+
+/**
+ * CompanyFiling is how the account is looked after beyond its fields. It holds
+ * who is responsible, its projects, who on the team can reach it, and its mail
+ * domain's hold. It stands on the Profile tab, so the fields column keeps to
+ * what the account is.
+ */
+export function CompanyFiling({
+  companyId,
+  company,
+  view,
+  loading,
+  onTab,
+}: Readonly<{
+  companyId: string;
+  company?: Company;
+  view?: Company360;
+  loading: boolean;
+  onTab: (tab: "deals" | "contacts" | "profile") => void;
+}>) {
+  const t = useT();
+  const resolved = view?.company ?? company;
+  const canWriteCompany =
+    useCanWriteRecord("company", resolved) && !resolved?.archived_at;
+  return (
+    <Panel>
+      <DisclosureGroup>
+        <Disclosure
+          className="co-sect"
+          summary={<SectionSummary title={t("assignments.title")} />}
+        >
+          <RecordTeam
+            recordType="company"
+            recordId={companyId}
+            readOnly={!canWriteCompany}
+            bare
+          />
+        </Disclosure>
+        {/* The server refuses an archived account's 360 and its lists. */}
+        {!resolved?.archived_at && (
+          <>
+            <ProjectsSection view={view} loading={loading} onTab={onTab} />
+            {/* Who on the team can reach the contacts not yet on file. */}
+            {resolved && <CompanyReachCard companyId={resolved.id} />}
+          </>
+        )}
+        <CompanyHoldSection company={resolved} />
+        {/* Beside the hold, and for the same reason: both are about the
+            account's mail domain rather than about the work on it. */}
+        <CompanyTriageSection companyId={companyId} />
+      </DisclosureGroup>
+    </Panel>
   );
 }
 
@@ -236,6 +247,7 @@ export function ContactsSection({
   onTab: (tab: "contacts") => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   // Already ranked: the server orders contacts by engagement, strength and id
   // (contacts.RankContacts) before it cuts to twenty-five. Re-sorting here
   // would be a second spelling of that rule.
@@ -246,12 +258,17 @@ export function ContactsSection({
       title={
         <SectionTitle
           title={t("co.rail.contacts.title")}
-          count={answered ? count : undefined}
+          count={
+            answered && count != null ? formatNumber(count, locale) : undefined
+          }
         />
       }
       titleAction={
         state === "ready" ? (
-          <AllRowsLink count={count} onOpen={() => onTab("contacts")} />
+          <AllRowsLink
+            label={t("co.contacts.all")}
+            onOpen={() => onTab("contacts")}
+          />
         ) : undefined
       }
     >
@@ -298,7 +315,6 @@ function ContactCard({ contact }: Readonly<{ contact: Contact }>) {
       identity={contact.contact_id}
       href={routeHash({ screen: "contacts", id: contact.contact_id })}
       position={contactRole(contact)}
-      email={contact.primary_email ?? undefined}
       aside={
         colleagues.length > 0 && (
           /* The rail's own wrapper: whether the stack's trigger wears a

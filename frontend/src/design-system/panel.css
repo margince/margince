@@ -54,7 +54,7 @@
  * A compound longer than the line breaks at a syllable, as `.fieldgrid-label`
  * does. */
 .panel-head .panel-title {
-  font-family: var(--fontFamilyHeading);
+  font: var(--fontPanelTitle);
   color: var(--textPrimary);
   min-width: 0;
   margin-right: auto;
@@ -556,7 +556,13 @@
   background: none;
 }
 .record-aside .panel > .panel-head .panel-title {
-  color: var(--textSecondary);
+  color: var(--textPrimary);
+}
+/* A record's sections and its fields are read as one document, so their names
+   take the small heading rung rather than a standalone card's. */
+.record-sheet,
+.record-aside {
+  --fontPanelTitle: var(--fontHeadingSmall);
 }
 /* A section has no band to tint, so a tone keeps only its title's ink and the
  * machine's section keeps its provenance badge: indigo on the title as well

@@ -3,7 +3,13 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
-import { company, renderRail, stub, view } from "./companyrail.testkit";
+import {
+  company,
+  renderFiling,
+  renderRail,
+  stub,
+  view,
+} from "./companyrail.testkit";
 
 afterEach(() => {
   cleanup();
@@ -47,7 +53,7 @@ describe("CompanyRail", () => {
   // crash is not the fix — it has to render DIFFERENTLY from the failed case.
   it("reads an in-flight composite read as loading, not unavailable", () => {
     stub();
-    const { container } = renderRail({ view: undefined, loading: true });
+    const { container } = renderFiling(true);
     // The skeleton placeholder, not the "could not be loaded" sentence.
     expect(container.querySelector(".skeleton")).toBeTruthy();
     expect(screen.queryByText(en["state.unavailable"])).not.toBeInTheDocument();
@@ -55,7 +61,7 @@ describe("CompanyRail", () => {
 
   it("reads a failed composite read (view undefined, not loading) as unavailable", () => {
     stub();
-    renderRail({ view: undefined, loading: false });
+    renderFiling(false);
     // The SAME undefined `view` as the loading test above, but with
     // `loading={false}` — the honest "could not be loaded" sentence, not a
     // skeleton pretending a read is still running.

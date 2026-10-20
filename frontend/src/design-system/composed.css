@@ -639,15 +639,19 @@
   padding-top: var(--space-3);
   border-top: 1px solid var(--borderSubtle);
 }
-/* The compact head lays out as the prototype does: the mark and the identity
-   at their natural width, the verbs at the far end, and the verbs wrapping
-   under the identity when both do not fit. The name keeps its line, rather
-   than giving its width to a row of buttons. */
+/* The compact head: the mark and the identity on one row at their natural
+   width, so the name keeps its line, and the verbs on the row under them. */
 .record-head-compact {
   row-gap: var(--space-4);
 }
 .record-head-compact .record-id {
   flex: 0 1 auto;
+}
+/* The verbs stand on a row of their own under the identity, from its left. */
+.record-head-compact > .record-actions-inline {
+  flex-basis: 100%;
+  margin-inline-start: 0;
+  justify-content: flex-start;
 }
 .record-head-compact .record-sub {
   margin-top: var(--space-2);
@@ -667,7 +671,7 @@
 /* The fields column is a card of its own beside the sheet, on the same white
    ground, wide enough for a label and a value that does not break. */
 .page-zones.record-zones {
-  --asideOpenW: 340px;
+  --asideOpenW: 320px;
   --asideFoldW: var(--space-12);
   column-gap: var(--space-6);
 }
@@ -700,13 +704,34 @@
   border-radius: var(--r-lg);
 }
 .record-zones > .record-aside {
-  padding-block-end: var(--space-3);
+  position: relative;
+  padding-block: var(--space-5) var(--space-3);
 }
-/* The pane's own switch heads it, at the end of its first line. */
+/* The pane's own switch sits on its first title's line, at the far end. */
 .record-aside-head {
-  display: flex;
-  justify-content: flex-end;
-  padding: var(--space-3) var(--padPanel) 0;
+  position: absolute;
+  inset-block-start: var(--space-4);
+  inset-inline-end: var(--padPanel);
+  z-index: 1;
+}
+/* As wide as its switch, against the pane's rule that sizes every child to
+   the open track. */
+.record-zones > .record-aside > .record-aside-head {
+  width: max-content;
+}
+/* Each group of fields is parted from the next by one rule across the card. */
+.record-aside .panel + .panel {
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--borderSubtle);
+}
+/* The card is narrow, so its labels take a narrower rung than a form's, and
+   every group in it shares that rung so their values line up. */
+.record-aside {
+  --asideLabelW: 88px;
+}
+.record-aside .fieldgrid {
+  grid-template-columns: var(--asideLabelW) minmax(0, 1fr);
+  row-gap: var(--space-2);
 }
 /* Folded, the pane is a strip the height of the sheet: its name set on its
    side, and the arrow that brings it back. */
@@ -769,6 +794,14 @@
 }
 .record-sheet .record-tabs .recordtabs-row {
   padding-inline: 0;
+}
+/* On the sheet a tab's count is a quiet number beside its name, on the
+   sheet's own ground rather than a chip. */
+.record-sheet .recordtabs-tab .optioncount {
+  min-inline-size: 0;
+  padding-inline: 0;
+  background: var(--bgElevated);
+  color: var(--textSecondary);
 }
 /* Two sections side by side on the sheet stand a gutter apart wide enough for
    both bleeds (panel.css, `.record-sheet .panel`) with air left between them. */
@@ -837,7 +870,7 @@
 }
 .record-aside .record-fact {
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
+  grid-template-columns: var(--asideLabelW) minmax(0, 1fr);
   gap: var(--space-3);
   align-items: baseline;
 }
@@ -1921,4 +1954,9 @@
   .record-details-fold-label {
     writing-mode: horizontal-tb;
   }
+}
+
+/* The link to a card's empty fields stands a step under its last row. */
+.record-aside .fieldgrid + .btn-link {
+  margin-block-start: var(--space-3);
 }

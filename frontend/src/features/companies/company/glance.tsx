@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { ReactNode } from "react";
 import type { components } from "../../../api/schema";
 import { Button } from "../../../design-system/atoms";
 import { Panel, PanelBody } from "../../../design-system/panel";
@@ -31,9 +32,12 @@ export function LatestSection({
   onOpenHistory,
   onOpenRecord,
   onOpenEmail,
+  footer,
 }: Readonly<{
   view?: Company360;
   loading: boolean;
+  // What is new since the reader last looked, under the rows it counts.
+  footer?: ReactNode;
   onOpenHistory?: () => void;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   // The page's email drawer. The rows draw messages in full, so without this
@@ -53,6 +57,7 @@ export function LatestSection({
     <Panel
       className="co-latest"
       title={t("co.latest.title")}
+      footer={footer}
       titleAction={
         onOpenHistory && (
           <Button variant="link" onClick={onOpenHistory}>

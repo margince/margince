@@ -7,7 +7,7 @@ import { GrowthFitPanel } from "./companygrowthfit";
 import { ContactsSection, SignalsSection } from "./companyrail";
 import { DealsSection } from "./companyraildeals";
 import { type CompanyOverviewProps, CompanyReading } from "./companyreading";
-import { hasWorkInFlight } from "./companywork";
+import { hasWorkInFlight, sinceLastVisitFooter } from "./companywork";
 import "./company360.css";
 
 // Whether this account has anything captured against it at all.
@@ -77,6 +77,7 @@ export function CompanyOverviewStack(props: CompanyOverviewProps) {
             onOpenHistory={onOpenHistory}
             onOpenRecord={props.onOpenRecord}
             onOpenEmail={props.onOpenEmail}
+            footer={sinceLastVisitFooter(view)}
           />
           <DealsSection view={view} loading={loading} onTab={onOpenTab} />
           <ContactsSection view={view} loading={loading} onTab={onOpenTab} />

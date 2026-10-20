@@ -1,7 +1,7 @@
 import { Mail, Phone } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import type { components } from "../../api/schema";
-import { Button, Modal, Skeleton } from "../../design-system/atoms";
+import { Badge, Button, Modal, Skeleton } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { type Translator, useT } from "../../i18n";
@@ -125,7 +125,7 @@ export function ConsentAndChannels({
               ))}
           </>
         )}
-        <p>{t("consent.permissionScope")}</p>
+        <p className="t-caption">{t("consent.permissionScope")}</p>
         <Button
           variant="ghost"
           onClick={() => {
@@ -200,9 +200,11 @@ function ConsentRow({
           {icon}
           {label}
         </span>
-        <span className={reachable ? verdictClass(verdict) : "pe-rail-value "}>
-          {reachable ? consentWord(verdict, t) : unreachableWord}
-        </span>
+        {reachable ? (
+          <Badge tone={verdictTone(verdict)}>{consentWord(verdict, t)}</Badge>
+        ) : (
+          <span className="pe-rail-value">{unreachableWord}</span>
+        )}
       </div>
       {/* Only where the row shows a verdict: a sentence explaining an answer
         the row above replaced with "no address" explains nothing. */}
@@ -243,17 +245,18 @@ const TRANSPORT_ROWS: Record<Channel, TransportRow> = {
   }),
 };
 
-// Paired with consentWord's table, and with the same `??` for the same reason:
-// the union is a claim about the wire, so a verdict off a newer server than
-// this build would otherwise reach the class attribute as `undefined` and the
-// row would carry no tone at all.
-const VERDICT_TONE: Record<GuardEntry["verdict"], string> = {
-  allowed: "pe-rail-value-good",
-  blocked: "pe-rail-value-warning",
-  unknown: "pe-rail-value-muted",
+// Paired with consentWord's table, and with the same fallback for the same
+// reason. The union is a claim about the wire, so a verdict off a newer server
+// must still reach the badge with a tone.
+const VERDICT_TONE: Record<
+  GuardEntry["verdict"],
+  "success" | "warning" | undefined
+> = {
+  allowed: "success",
+  blocked: "warning",
+  unknown: undefined,
 };
 
-function verdictClass(verdict: GuardEntry["verdict"] | undefined): string {
-  const tone = (verdict && VERDICT_TONE[verdict]) ?? VERDICT_TONE.unknown;
-  return `pe-rail-value ${tone}`;
+function verdictTone(verdict: GuardEntry["verdict"] | undefined) {
+  return verdict ? VERDICT_TONE[verdict] : VERDICT_TONE.unknown;
 }

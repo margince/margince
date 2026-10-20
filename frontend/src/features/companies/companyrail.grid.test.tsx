@@ -39,7 +39,8 @@ describe("CompanyRail", () => {
     );
   });
 
-  it("still draws every known row when the record carries no value for it", () => {
+  it("still draws every known row when the record carries no value for it", async () => {
+    const user = userEvent.setup();
     stub();
     const bare = {
       ...company,
@@ -52,11 +53,13 @@ describe("CompanyRail", () => {
       owner_id: null,
     };
     renderRail({ view: view({ company: bare }) });
-    // Every row's label still draws: an absent field is a fact about the
-    // record, not a reason to hide its row. Industry (InlineText) and Company
+    // The unset rows wait behind one link, and every one of them comes back
+    // when the reader opens it. Industry (InlineText) and Company
     // size (InlineChoice with `hideLabel`) draw no visible label of their own.
     // Both get it from FieldRow's label column only, so it is checked directly.
     // Address is six rows, one per part, and City stands in for the other five.
+    expect(screen.queryByText("Industry")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /empty field/ }));
     expect(screen.getByText("Industry")).toBeInTheDocument();
     expect(screen.getByText("Company size")).toBeInTheDocument();
     expect(screen.getByText("Address")).toBeInTheDocument();

@@ -46,6 +46,7 @@ function mount(current = deal) {
 it("saves a brief verbatim without rewriting other commercial fields", async () => {
   const user = userEvent.setup();
   const { sent } = mount();
+  await user.click(await screen.findByRole("button", { name: /empty field/ }));
   await user.click(
     await screen.findByRole("button", { name: "Change Deal brief" }),
   );
@@ -108,9 +109,11 @@ it("locks offer-derived ARR and currency while permitting an amount correction",
 });
 
 it("names masked money as withheld while leaving unrelated fields editable", async () => {
+  const user = userEvent.setup();
   mount({ ...deal, amount_minor: undefined, masked_fields: ["amount_minor"] });
   expect(await screen.findByText("Not shown")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Change Value" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: /empty field/ }));
   expect(
     await screen.findByRole("button", { name: "Change Deal brief" }),
   ).toBeTruthy();

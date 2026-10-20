@@ -88,7 +88,7 @@ export function hasMatters(view: Contact360): boolean {
 // says so, rather than disappearing and leaving the card looking complete.
 function Absent(): ReactNode {
   const t = useT();
-  return <span>{t("contact.matters.absent")}</span>;
+  return <span className="pe-row-absent">{t("contact.matters.absent")}</span>;
 }
 
 // --- Open deal and buying role (§5.8) --------------------------------------
@@ -120,17 +120,19 @@ export function ContactCommercialCard({
             committee with nothing currently for sale, and both facts belong
             on the card whether or not there is a deal to hang them off. */}
         {!deal && (
-          <p className="pe-prose t-body">{t("contact.commercial.noDeal")}</p>
-        )}
-        {!deal && commercial.role && (
-          <Badge tone="success">{readableRole(commercial.role)}</Badge>
+          <p className="pe-prose t-body pe-deal-none">
+            {t("contact.commercial.noDeal")}
+            {commercial.role ? (
+              <Badge>{readableRole(commercial.role)}</Badge>
+            ) : null}
+          </p>
         )}
         {deal && (
           <>
             <div className="pe-deal-head">
               <span className="pe-deal-title">{deal.title}</span>
               {commercial.role && (
-                <Badge tone="success">{readableRole(commercial.role)}</Badge>
+                <Badge>{readableRole(commercial.role)}</Badge>
               )}
             </div>
             <div className="pe-deal-figures">
@@ -407,14 +409,13 @@ function LoopStatus({ loop }: Readonly<{ loop: OpenLoop }>) {
     const { days, late } = daysPast(dueMs, nowMs);
     if (late) {
       return (
-        // ds:ignore an overdue marker in the danger ink, not a message
-        <span className="pe-loop-due pe-loop-overdue">
+        <Badge tone="danger">
           {days > 0
             ? plural("contact.loops.overdue", days, {
                 count: formatNumber(days, locale),
               })
             : t("contact.loops.overdueUnderDay")}
-        </span>
+        </Badge>
       );
     }
     return (

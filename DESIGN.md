@@ -242,9 +242,10 @@ then `[data-theme="dark"]`.
   with a dashed `--aiLine` edge until a human accepts it. Nothing else is indigo.
 - **States are soft badges first**. A column of states is a column of soft badges, one weight down
   the page. The solid fill is for a count and the one state a reader must not miss.
-- **The record's lead is the second soft gradient**. On the record's sheet the 360 is the one section
-  that keeps a surface. It has a hairline, a 20px corner and no shadow, and a wash of the call's own
-  tone comes in from the top-left corner.
+- **The record's lead is the second soft gradient**. On a company's or a deal's sheet the 360 is the
+  one section that keeps a surface. It has a hairline, a 20px corner and no shadow, and a wash of the
+  call's own tone comes in from the top-left corner. A contact's 360 is a plain section like the ones
+  under it. Its second sentence sits in a grey callout, and its sources in one caption line at its foot.
 - **The verdict is the largest word**, larger than the record's name (`--fontVerdict`). The
   sentence under it is set in the display face at reading size. The readings it rests on stand to its
   right as up to three soft rings (`Rings`). A call not reached yet keeps the heading rung in
@@ -381,7 +382,7 @@ and `min-width: 0`. A page never scrolls to the side; the thing that is too wide
 │  over  │ mark  NAME (display)  badges                  verbs, right     │
 │  the   │       facts line                                               │
 │  glow) │ tabs ──────────────────────────────────────────────────────── │
-│ Brief  │ ┌ THE 360 ─────────────────────────────┐ ┌ details (340) ────┐│
+│ Brief  │ ┌ THE 360 ─────────────────────────────┐ ┌ details (320) ────┐│
 │ RECORDS│ │ ● {name} · 360                        ││ │ Ask               ││
 │ …      │ │ VERDICT  because · sources (hover)    ││ │ Details           ││
 │ WORK   │ │ readings ┊ readings ┊ readings        ││ │ Contacts / Seats    ││
@@ -421,8 +422,9 @@ and `min-width: 0`. A page never scrolls to the side; the thing that is too wide
   because to qualify is the whole job of the record. The **more** button (a 36px square with an
   outline and the three dots) holds Archive, Share, Merge and the rest. The **Details** control sits
   in the head of the details panel.
-- **Details panel**: a white card on the right of the sheet, 340px wide (280px up to 1360px). Its
-  own "Hide details" control sits in its head. Folded, it is a narrow white strip with "Details" set on its side and an
+- **Details panel**: a white card on the right of the sheet, 320px wide (280px up to 1360px). Its
+  own "Hide" control sits on its first title's line, and a hairline parts each group from the next.
+  Section titles on the sheet and in the panel take the small heading rung (`--fontPanelTitle`). Folded, it is a narrow white strip with "Details" set on its side and an
   arrow that opens it again.
 
   It holds Ask, and the fields as label and value rows. A

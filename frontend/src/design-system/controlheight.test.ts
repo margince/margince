@@ -215,6 +215,11 @@ const ACCEPTED = new Map<string, string>([
   ["btn-link", "the same affordance, worn by Button's link variant"],
   ["stat-card-open", "the card's own 'open' link, not a control on it"],
   [
+    ".pe-brief-foot .popover-trigger",
+    "the brief's sources as a footnote link in its caption line, not a verb " +
+      "in a row",
+  ],
+  [
     "record-details-fold",
     "the folded details pane: a strip the height of the record sheet, with " +
       "the pane's name set on its side, not a verb in a row",

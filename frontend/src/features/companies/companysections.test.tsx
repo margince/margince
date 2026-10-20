@@ -183,8 +183,9 @@ describe("the overview's Deals and Contacts sections", () => {
     expect(
       within(dealsPanel).queryByText("Onboarding add-on"),
     ).not.toBeInTheDocument();
+    expect(within(dealsPanel).getByText("5 open")).toBeInTheDocument();
     expect(
-      within(dealsPanel).getByRole("button", { name: "All 5" }),
+      within(dealsPanel).getByRole("button", { name: "All deals" }),
     ).toBeInTheDocument();
   });
 
@@ -335,8 +336,9 @@ describe("the overview's Deals and Contacts sections", () => {
         name: /Buyer|Voss|Lund|Reyes|Berg/,
       }).length,
     ).toBe(3);
+    expect(within(contactsPanel).getByText("5")).toBeInTheDocument();
     expect(
-      within(contactsPanel).getByRole("button", { name: "All 5" }),
+      within(contactsPanel).getByRole("button", { name: "All contacts" }),
     ).toBeInTheDocument();
   });
 
@@ -414,7 +416,7 @@ describe("the overview's Deals and Contacts sections", () => {
     expect(screen.getByText("Overdue · no close date")).toBeInTheDocument();
   });
 
-  it("switches to the Deals tab from the header's own All-N link", async () => {
+  it("switches to the Deals tab from the header's own All-deals link", async () => {
     const spy = vi.fn();
     stub();
     renderSections({
@@ -437,7 +439,7 @@ describe("the overview's Deals and Contacts sections", () => {
       }),
       onTab: spy,
     });
-    await userEvent.click(screen.getByRole("button", { name: "All 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "All deals" }));
     expect(spy).toHaveBeenCalledWith("deals");
   });
 
@@ -550,23 +552,18 @@ describe("the overview's Deals and Contacts sections", () => {
       }),
     });
     // Twenty-five is where the server cut, not how many there are: the
-    // summary carries no badge and the verb no figure, on both sections.
-    for (const name of ["Contacts", "Deals"]) {
-      const panel = screen
-        .getAllByRole("heading")
-        .find((heading) => heading.textContent?.startsWith(name))
-        ?.closest<HTMLElement>(".panel");
-      expect(panel).not.toBeNull();
-      if (!panel) {
-        throw new Error(`${name} has no wrapper`);
-      }
-      expect(within(panel).queryByText("25")).not.toBeInTheDocument();
+    // heading carries no figure on either section, and its link still opens.
+    const sections: [Tab, string][] = [
+      ["contacts", "Contacts"],
+      ["deals", "Deals"],
+    ];
+    for (const [kind, title] of sections) {
+      expect(within(section(kind)).getByRole("heading").textContent).toBe(
+        title,
+      );
       expect(
-        within(panel).getByRole("button", { name: "All" }),
+        within(section(kind)).getByRole("button", { name: `All ${kind}` }),
       ).toBeInTheDocument();
-      expect(
-        within(panel).queryByRole("button", { name: /All \d/ }),
-      ).not.toBeInTheDocument();
     }
   });
 
@@ -581,7 +578,7 @@ describe("the overview's Deals and Contacts sections", () => {
     // see. Scoped to Contacts: Deals shows its own "Add" when empty.
     expect(
       within(section("contacts")).queryByRole("button", {
-        name: /All \d|^Add$/,
+        name: /^All contacts$|^Add$/,
       }),
     ).toBeNull();
   });
