@@ -91,15 +91,12 @@ export function RowActs({
     (disposition) => folded || disposition !== "handled",
   );
   const answer = (
-    <>
-      {!item.batch && <PreparedMove item={item} onOpenEmail={onOpenEmail} />}
-      {lead && (
-        <a className={NAVIGATING_VERB} href={lead.destination}>
-          {VERB_LABEL[lead.action](t)}
-        </a>
-      )}
-      {primary}
-    </>
+    <RowAnswer
+      item={item}
+      lead={lead}
+      primary={primary}
+      onOpenEmail={onOpenEmail}
+    />
   );
   const others = (
     <>
@@ -149,6 +146,32 @@ export function RowActs({
         />
       )}
     </div>
+  );
+}
+
+/** The row's answer: the prepared move, the verb a page reaches, the lane's. */
+function RowAnswer({
+  item,
+  lead,
+  primary,
+  onOpenEmail,
+}: Readonly<{
+  item: WorklistItem;
+  lead: RoutedVerb | undefined;
+  primary?: ReactNode;
+  onOpenEmail?: (id: string) => void;
+}>) {
+  const t = useT();
+  return (
+    <>
+      {!item.batch && <PreparedMove item={item} onOpenEmail={onOpenEmail} />}
+      {lead && (
+        <a className={NAVIGATING_VERB} href={lead.destination}>
+          {VERB_LABEL[lead.action](t)}
+        </a>
+      )}
+      {primary}
+    </>
   );
 }
 
