@@ -14,7 +14,7 @@ import { AiRoutingCard } from "../features/ai/ai-routing";
 import { AiTasksCard } from "../features/ai/ai-tasks";
 import { AiCallsCard } from "../features/ai/aicalls";
 import { AiUsageCard } from "../features/ai/aiusage";
-import { AgentConnectionsCard } from "../features/automations/agent-token-settings";
+import { McpCards } from "../features/automations/agent-clients";
 import { AgentAllowancesCard } from "../features/automations/agentallowances";
 import { AgentUsageByUserCard } from "../features/automations/agentusage";
 import { AutomationsAdmin } from "../features/automations/automations";
@@ -159,15 +159,10 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
         </>
       );
     case "authentication":
-      // Split from the company profile, which is a different question with a
-      // different reader: what the company IS, versus who may sign in to
-      // it. The vendor OAuth apps sit with the sign-in methods because the same
-      // OAuth client now serves sign-in as well as mailbox connection — filing
-      // them under Capture said they belonged to one of the two.
+      // Who may sign in, and how: one vendor OAuth app serves sign-in and mail.
       return (
         <>
           <SignInMethodsCard />
-          <AgentConnectionsCard />
           <OAuthAppCard provider="google" />
           <OAuthAppCard provider="microsoft" />
         </>
@@ -263,6 +258,8 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
           <AiUsageCard />
         </>
       );
+    case "mcp":
+      return <McpCards />;
     case "model-calls":
       return <AiCallsCard />;
 

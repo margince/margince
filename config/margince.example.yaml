@@ -372,6 +372,12 @@ bootstrap_admin:
 #   # The sign-in providers offered, as a list of provider keys; unset offers every provider the
 #   # deployment set up.
 #   enabled_oidc_providers:
+#   # AI tools may register their own OAuth client (DCR) for new sign-ins.
+#   # default: true
+#   oauth_dynamic_registration: true
+#   # AI tools may sign in with a client ID that is the URL of their metadata document (CIMD).
+#   # default: true
+#   oauth_metadata_documents: true
 #   # The role each directory group grants at sign-in, as group:role pairs; it only grants, and never
 #   # removes a role.
 #   oidc_group_role_map:
@@ -494,6 +500,15 @@ bootstrap_admin:
 
 # ---- mcp ----
 # mcp:
+#   client_registration:
+#     # Let AI tools register their own OAuth client at /oauth/register (DCR); false keeps it off
+#     # whatever the admin's switch in Settings > MCP says.
+#     # default: true
+#     dynamic: true
+#     # Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps
+#     # it off whatever the admin's switch in Settings > MCP says.
+#     # default: true
+#     metadata_document: true
 #   # Serve /mcp and the OAuth authorization server to outside agent clients; needs --public-base-url.
 #   # default: false
 #   connector_enabled: false

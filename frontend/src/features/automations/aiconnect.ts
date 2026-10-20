@@ -137,8 +137,17 @@ export const CONNECT_PATHS: Readonly<Record<ConnectPathId, ConnectPath>> = {
     vendor: "Google",
     help: "https://support.google.com/g/answer/17106276",
     helpForAdmin: true,
-    unavailable: "aiAccess.gemini.companyUnavailable",
-    steps: [],
+    admin: {
+      line: "aiAccess.gemini.adminLine",
+      steps: [
+        "aiAccess.gemini.admin1",
+        "aiAccess.gemini.admin2",
+        "aiAccess.gemini.admin3",
+        "aiAccess.gemini.admin4",
+        "aiAccess.gemini.admin5",
+      ],
+    },
+    steps: ["aiAccess.gemini.connect", "aiAccess.step.allow"],
   },
   "gemini-own": {
     vendor: "Google",

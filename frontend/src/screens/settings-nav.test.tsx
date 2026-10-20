@@ -93,6 +93,8 @@ const EVERY_PAGE_GRANTED: GrantSpec = {
   installation_settings: ["read", "update"],
   // Sign-in & apps, whose card reads the narrow projection.
   authentication_policy: ["read"],
+  // MCP: the OAuth clients outside AI tools sign users in through.
+  agent_client: ["read", "create", "update", "delete"],
   license: ["read"],
   // The sales vocabulary, with its WRITES. Reads alone opened every one of these
   // pages and still do — but the rail carries what a reader can act on, and a

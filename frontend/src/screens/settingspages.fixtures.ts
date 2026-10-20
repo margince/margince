@@ -3,6 +3,7 @@
 
 import type { components } from "../api/schema";
 import { allowance, status } from "../features/ai/ai-admin.testkit";
+import { agentClientList } from "../features/automations/agent-clients.fixtures";
 import { defaultAgentAllowances } from "../features/automations/agentallowances.fixtures";
 import { bookingProfile } from "../features/booking/book.testkit";
 import { readingsDay } from "../features/brief/brief.fixtures";
@@ -153,6 +154,7 @@ export const UNUSED_INSTALLATION_ROUTES: RouteMap = {
   "GET /capture/activity": () => jsonResponse(QUIET_CAPTURE),
   "GET /capture/activity/workspace": () => jsonResponse(QUIET_CAPTURE),
   "GET /capture/settings": () => jsonResponse(CAPTURE_SETTINGS),
+  "GET /installation/agent-clients": () => jsonResponse(agentClientList([])),
   "GET /knowledge/corpora": () =>
     jsonResponse({ items: [] } satisfies Schemas["KnowledgeCorpusList"]),
   "GET /imports/format": () => jsonResponse(formatFixture),

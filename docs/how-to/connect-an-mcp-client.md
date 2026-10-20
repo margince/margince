@@ -42,7 +42,7 @@ claude mcp add --transport http margince http://localhost:8080/mcp
 
 For a deployment, use `<public-base-url>/mcp`. The first call answers `401`, with an RFC 9728
 `WWW-Authenticate` value that points at `/.well-known/oauth-protected-resource`. The client follows it,
-registers itself (DCR), and opens the consent screen.
+names itself (a metadata document, or DCR), and opens the consent screen.
 
 If no one is signed in to Margince in that browser, the sign-in screen comes first, and the consent
 screen comes after it. The request waits through the sign-in.
@@ -99,6 +99,74 @@ npx @modelcontextprotocol/inspector
 
 `tools/list` shows only what the granted scopes of the connection can call. So the surface the Inspector
 reports is the surface that client has. The grant is what the human kept checked on the consent screen.
+
+## Register a client by hand
+
+Some AI tools have no way to register on their own. Gemini Enterprise, and Copilot Studio in **Manual** mode, ask for a
+client ID and a client secret. An admin makes them in Settings → **MCP** → **MCP clients** →
+**Register a client**:
+
+1. Give the client a name. The consent screen shows it.
+2. Add the redirect URI the tool sends users back to. It must match to the character.
+3. Choose whether the tool needs a client secret.
+4. Copy the values Margince shows into the tool. Margince shows the secret once, and stores only a hash of it.
+
+| Tool | Redirect URI |
+|---|---|
+| Gemini Enterprise | `https://vertexaisearch.cloud.google.com/oauth-redirect` |
+| Claude (web and app) | `https://claude.ai/api/mcp/auth_callback` |
+| ChatGPT | `https://chatgpt.com/connector_platform_oauth_redirect` |
+| Claude Code, Codex | `http://localhost/callback` or `http://127.0.0.1/callback`; the port is ignored |
+| Copilot Studio | the URL it shows after you create the connection |
+
+The values to paste:
+
+- the client ID, and the secret when there is one;
+- the URL the tool opens to sign a user in, `<public-base-url>/oauth/authorize`;
+- the token URL, `<public-base-url>/oauth/token`, which also gives the tool new tokens later;
+- the scopes `read draft write send enrich offline_access`, with a space between each one. Without `offline_access` the
+  tool gets no refresh token, and the user signs in again when the token runs out;
+- the MCP server URL, `<public-base-url>/mcp`.
+
+Every sign-in still needs PKCE `S256`, a secret or not. In Gemini Enterprise, turn on PKCE if the form offers it. After
+**Verify Auth**, choose **Continue**, pick a **Multi-region** location, name the data connector, and choose **Add**. Gemini adds the connection turned off,
+so turn it on before the team connects.
+
+A client with a secret sends it to `/oauth/token` and `/oauth/revoke`, either in the `Authorization` header
+(`client_secret_basic`) or in the form (`client_secret_post`), never both. A wrong or missing secret gets
+`401 invalid_client`. To replace a lost secret, choose **Rotate secret** in the client's menu. The old one stops at
+once. The connections go on once the tool has the new one.
+
+## Choose how clients register
+
+A tool can get a client ID without an admin in two ways. Each has a key in the deployment file and a switch in
+Settings → **MCP** → **How MCP clients may connect**:
+
+| Way | Deployment file key | Switch |
+|---|---|---|
+| A metadata document (CIMD) | `mcp.client_registration.metadata_document` | **Accept a tool's published identity** |
+| Tools that register on their own (DCR) | `mcp.client_registration.dynamic` | **Let tools register themselves** |
+
+```yaml
+# config/margince.yaml
+mcp:
+  connector_enabled: true
+  client_registration:
+    dynamic: false          # admins cannot turn DCR on
+    metadata_document: true
+```
+
+Both keys default to `true` and both switches start on. A way is on only when the file allows it and the switch is
+on. So an admin can turn off a way the file allows, and cannot turn on one it holds off.
+
+A way that is off refuses new sign-ins through it, a returning user included, and the consent screen tells the user
+to ask their admin. Discovery stops listing it, and with DCR off `/oauth/register` answers `404`. Connections that
+already work go on. To end those, use **MCP clients**:
+
+- **Disable** blocks the client at once, its live tokens too. **Enable** lets it in again.
+- **Delete** ends every connection through the client. A client an admin registered is removed for good. A tool that
+  registered itself can register again, and a metadata document client comes back the next time someone connects
+  it. To keep a tool out, use **Disable**.
 
 ## Turn it off
 

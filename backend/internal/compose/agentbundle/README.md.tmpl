@@ -99,7 +99,22 @@ Microsoft's guide, for Copilot through work: https://learn.microsoft.com/en-us/m
 <!-- connect: gemini-company -->
 ### Gemini, through work or school
 
-Gemini through work or school cannot connect to Margince yet.
+Your Gemini Enterprise admin adds Margince once for your company:
+
+1. Ask a Margince admin for a client ID and secret. In **Settings → MCP → MCP
+   clients**, they choose "Register a client", answer that the tool needs a secret, and add the
+   redirect URI https://vertexaisearch.cloud.google.com/oauth-redirect.
+2. In Gemini Enterprise, open "Manage team", then "Connected apps", and choose "Add MCP Server".
+3. Paste the address above as the server URL, name it Margince and choose "Next". Choose "OAuth
+   2.0", then paste the authorization URL, token URL, client ID and client secret the Margince admin
+   gave you. Margince shows each one when it registers the client.
+4. Enter the scopes the Margince admin gave you, turn on PKCE if the form offers it, then choose
+   "Verify Auth" and "Continue".
+5. Choose a multi-region location, name the data connector and choose "Add". Gemini adds it turned off, so turn it on for your
+   team.
+
+Then everyone, in Gemini, opens "Connected apps", chooses "Connect" next to Margince, signs in to
+Margince and chooses "Authorize".
 
 Google's guide: https://support.google.com/g/answer/17106276
 

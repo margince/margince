@@ -18,7 +18,7 @@ Margince Settings puts its pages in these groups:
 - **People**: Members, Teams, Roles and permissions, Seats and license.
 - **Sales**: Pipelines, Stage automation, Lead handling, Acquisition sources, Outcome reviews, Responsibility roles, Fields, Tags, Products and offers.
 - **Data**: Capture rules, Integrations, Knowledge, Data import.
-- **AI**: AI usage, AI models, AI call log, Automations.
+- **AI**: AI usage, AI models, MCP, AI call log, Automations.
 - **Governance**: Privacy and retention, Audit log, System health, [Configuration](configuration.md), Extensions, Reset data.
 
 You see only the pages your permissions open. The Reset data page appears only where the installation turns it on.
@@ -61,6 +61,7 @@ Sales and data settings in Margince each have one page.
 ### Which settings page do I need for AI and governance?
 AI and governance settings in Margince each have one page.
 - Which model does which work, and provider keys: **AI models**.
+- Which AI tools may connect over MCP, and their clients: **MCP**.
 - Rules that do an action when something happens: **Automations**.
 - The monthly AI allowance and what was used: **AI usage**. Each call that ran: **AI call log**.
 - Consent purposes, how long records are kept, and privacy requests: **Privacy and retention**.
@@ -230,6 +231,34 @@ When someone sets a higher allowance, three kinds of waiting work run on the nex
 Look at a preview of an allowance or model change before you save it. Margince refuses a save if the stored setting has changed after your preview, so you never save against an answer you did not see.
 
 **AI usage** and **AI call log** show "AI spend this month against the allowance", and "each model request and its response". **AI usage** also holds the agent passport allowances, and how much each user's agents used. [Agents and passports](agents-and-passports.md#allowances-per-window) says how they work. Anything that failed for good stays in view in **Background jobs**, on **System health**, instead.
+
+## MCP
+
+The MCP page in Settings (group **AI**) holds which AI tools may connect to Margince over MCP, and how. It has the switches, the list of MCP clients, and how long a connection's token lasts. Admin changes it; Management and Ops can read it, and Ops can also set how long a token lasts. Each user connects their own tool under **AI access**.
+
+### How do I let Gemini through work or school connect?
+To let Gemini through work or school connect to Margince, register it as a client on Settings → **MCP**.
+1. Under **MCP clients**, choose **Register a client**.
+2. Name it, add `https://vertexaisearch.cloud.google.com/oauth-redirect`, and choose that it needs a client secret.
+3. Copy each value Margince shows into the Gemini form, since it shows the secret only once.
+4. In Gemini, turn on PKCE if the form offers it, choose **Verify Auth**, then **Continue**.
+5. Pick a **Multi-region** location, name the data connector, and choose **Add**.
+6. Turn the connection on, since Gemini adds it turned off.
+Also called: Gemini Enterprise, client ID and secret, OAuth client.
+
+### How do I choose how AI tools may connect?
+To choose how AI tools may connect to Margince, use the switches under **How MCP clients may connect** on Settings → **MCP**.
+**Accept a tool's published identity** is how Claude, Codex and ChatGPT connect first, and **Let tools register themselves** is the older way.
+Turning one off stops new sign-ins through it, and tools that are already connected go on working.
+A switch that is off and locked was turned off by whoever runs your installation.
+Also called: DCR, CIMD.
+
+### How do I turn off one AI tool for everyone?
+To turn off one AI tool for everyone in Margince, open **MCP clients** on Settings → **MCP** and choose **Disable** in its menu.
+It stops at once, for everyone who connected it, and **Enable** lets it in again.
+**Delete** ends every connection through it, but the tool can come back, so use **Disable** to keep it out. For a tool that signed up on its own, also turn off **Let tools register themselves**, which stops new sign-ins for every tool that did.
+If a tool your admin turned off asks you to sign in, Margince says it cannot connect and to ask your admin.
+Also called: block an AI tool, remove a connector.
 
 ## Knowledge
 

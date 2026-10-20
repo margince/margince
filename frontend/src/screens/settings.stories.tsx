@@ -646,6 +646,7 @@ export const KnowledgePage: Story = catalogPage("knowledge");
 export const ImportPage: Story = catalogPage("import");
 export const UsagePage: Story = catalogPage("usage");
 export const ModelsPage: Story = catalogPage("models");
+export const McpPage: Story = catalogPage("mcp");
 export const ModelCallsPage: Story = catalogPage("model-calls");
 export const AutomationsPage: Story = catalogPage("automations");
 export const PrivacyPage: Story = catalogPage("privacy");

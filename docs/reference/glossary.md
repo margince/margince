@@ -19,8 +19,10 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | BUSL | The Business Source License 1.1, the license Margince uses. |
 | changelog | The list of changes in each release, kept in `CHANGELOG.md`. |
 | CI | Continuous integration: the checks GitHub runs on every pull request. |
+| CIMD | Client ID Metadata Document: an AI tool's ID that is the URL of a file describing it. |
 | Compose | Docker Compose, which starts Postgres and Redis for local work. |
 | Conventional | Conventional Commits, a format for commit messages. |
+| Copilot | Microsoft's AI assistant, whose Copilot Studio builds agents that connect to Margince. |
 | Corepack | The Node tool that installs the pinned version of pnpm. |
 | CRA | The EU Cyber Resilience Act, which sets duties for software makers. |
 | CRM | Customer relationship management: software for contacts, companies and deals. |
@@ -59,6 +61,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Ollama | A tool that runs language models on your own machine. |
 | OpenDocument | The open file format for text, tables and slides. |
 | OpenRouter | A service that routes model calls to many AI providers. |
+| PKCE | Proof Key for Code Exchange: a one-time secret that ties the end of a sign-in to its start. |
 | pnpm | The package manager for the web app. |
 | Postgres | PostgreSQL, the database Margince stores its data in. |
 | RBAC | Role-based access control: what each role may see and change. |

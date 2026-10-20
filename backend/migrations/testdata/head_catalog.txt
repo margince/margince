@@ -5510,6 +5510,7 @@ public.oauth_authorization_code_pkey CREATE UNIQUE INDEX oauth_authorization_cod
 public.oauth_client acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.oauth_client.client_id text NOT NULL gen=- def=-
 public.oauth_client.client_name text NOT NULL gen=- def=-
+public.oauth_client.client_secret_hash text gen=- def=-
 public.oauth_client.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.oauth_client.created_via text NOT NULL gen=- def='dcr'::text
 public.oauth_client.deleted_at timestamp with time zone gen=- def=-
@@ -5520,6 +5521,7 @@ public.oauth_client.metadata_expires_at timestamp with time zone gen=- def=-
 public.oauth_client.oauth_client_client_id_key UNIQUE (client_id)
 public.oauth_client.oauth_client_created_via_check CHECK ((created_via = ANY (ARRAY['dcr'::text, 'admin'::text, 'cimd'::text])))
 public.oauth_client.oauth_client_pkey PRIMARY KEY (id)
+public.oauth_client.oauth_client_secret_is_admin_only CHECK (((client_secret_hash IS NULL) OR (created_via = 'admin'::text)))
 public.oauth_client.redirect_uris text[] NOT NULL gen=- def=-
 public.oauth_client_client_id_key CREATE UNIQUE INDEX oauth_client_client_id_key ON public.oauth_client USING btree (client_id)
 public.oauth_client_pkey CREATE UNIQUE INDEX oauth_client_pkey ON public.oauth_client USING btree (id)

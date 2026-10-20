@@ -32,10 +32,7 @@ describe("AI connect paths", () => {
     const unavailable = Object.entries(CONNECT_PATHS).filter(
       ([, path]) => path.unavailable !== undefined,
     );
-    expect(unavailable.map(([id]) => id).sort()).toEqual([
-      "copilot-own",
-      "gemini-company",
-    ]);
+    expect(unavailable.map(([id]) => id).sort()).toEqual(["copilot-own"]);
     for (const [, path] of unavailable) {
       expect(path.steps).toEqual([]);
       expect(path.admin).toBeUndefined();
@@ -102,6 +99,39 @@ describe("AI connect paths", () => {
       "codex mcp add margince --url https://crm.acme.test/mcp",
       '{ "mcpServers": { "margince": { "serverUrl": "https://crm.acme.test/mcp" } } }',
     ]);
+  });
+});
+
+describe("Gemini through work or school", () => {
+  it("connects through a client a Margince admin registers with a secret", () => {
+    const path = connectPath("gemini", "company");
+    expect(path.unavailable).toBeUndefined();
+    expect(path.helpForAdmin).toBe(true);
+    expect(path.help).toBe("https://support.google.com/g/answer/17106276");
+    const adminSteps = (path.admin?.steps ?? []).map(en).join("\n");
+    expect(adminSteps).toContain(
+      "https://vertexaisearch.cloud.google.com/oauth-redirect",
+    );
+    expect(adminSteps).toContain("the scopes the Margince admin gave you");
+    expect(adminSteps).toContain("“Verify Auth” and “Continue”");
+    expect(adminSteps).toContain("turn it on for your team");
+    expect(path.steps.at(-1)).toBe("aiAccess.step.allow");
+  });
+
+  it("writes its admin guide with the steps for both sides", () => {
+    const path = CONNECT_PATHS["gemini-company"];
+    const guide = adminGuide({
+      tool: "gemini",
+      path,
+      mcpUrl: URL_FROM_SERVER,
+      t: translatorFor("en"),
+      checkedOn: "19 Oct 2026",
+    });
+    const [admin, team] = guide.markdown
+      .split("## What your team does next")
+      .map((part) => part.match(/^\d+\. /gm) ?? []);
+    expect(admin).toEqual(["1. ", "2. ", "3. ", "4. ", "5. "]);
+    expect(team).toEqual(["1. ", "2. "]);
   });
 });
 

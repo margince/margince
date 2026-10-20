@@ -68,6 +68,11 @@ export const routes: readonly MockRoute[] = [
   },
   {
     method: "GET",
+    path: "/installation/agent-clients",
+    handle: reply(session.agentClients),
+  },
+  {
+    method: "GET",
     path: "/installation/configuration",
     handle: reply(session.installationConfiguration),
   },

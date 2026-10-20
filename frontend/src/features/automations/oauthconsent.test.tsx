@@ -380,6 +380,38 @@ describe("OAuthConsent — what a refused consent is handed back", () => {
   });
 });
 
+describe("OAuthConsent — a way of connecting the admin turned off", () => {
+  it("says the tool cannot connect and who can change that, with no form", async () => {
+    globalThis.location.hash = hashWithError("method_off");
+    stubConsentUnavailable();
+    render(<OAuthConsent />);
+    expect(await screen.findByText("This AI tool cannot connect")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Your admin has turned off this way of connecting AI tools. Ask them to let this tool connect, or to register it for your company.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /authorize/i })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /back to margince/i }),
+    ).toBeTruthy();
+    expect(screen.getByText("Would return to: client.example")).toBeTruthy();
+    expect(screen.queryByText(/^Tool:/)).toBeNull();
+  });
+
+  it("names the refused tool when the client can still be read", async () => {
+    globalThis.location.hash = hashWithError("method_off");
+    stubConsent({
+      client_name: "Example Assistant",
+      offline: false,
+      scopes: [],
+    });
+    render(<OAuthConsent />);
+    expect(await screen.findByText("Tool: Example Assistant")).toBeTruthy();
+    expect(screen.getByText("Would return to: client.example")).toBeTruthy();
+  });
+});
+
 describe("OAuthConsent — re-entering after sign-in", () => {
   it("re-enters /oauth/authorize once signed in, when the fragment carries no nonce", async () => {
     globalThis.location.hash = hashWithoutNonce();

@@ -262,7 +262,7 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deploy
 	// declared it. The boot check in bindInstallation already proved the
 	// canonical base URL those routes advertise.
 	if cfg.mcpConnector {
-		opts = append(opts, compose.WithMCPConnector())
+		opts = append(opts, compose.WithMCPConnector(), compose.WithClientRegistrationLimit(cfg.clientRegistration))
 	}
 
 	passwordOpts, err := passwordResetOptions(ctx, cfg.settings, pool, vault, cfg.publicBaseURL, logger, stdout)

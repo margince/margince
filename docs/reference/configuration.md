@@ -7,7 +7,7 @@ a boot error, and so is a value its setting does not take.
 
 A limit an admin changes while the product runs is a setting, not configuration. The daily cap on
 automatic web page reads, the limits per read and how often Margince reads a mailbox are on
-Settings → Capture rules. How long a connector access token lasts is on Settings → Sign-in and apps. How often
+Settings → Capture rules. How long a connector access token lasts is on Settings → MCP. How often
 each scheduled run starts, how early Margince renews a mail subscription and how fast one mailbox
 sends are on Settings → System health. Each applies on its next use with no restart; a running
 worker checks the schedules again every minute.
@@ -315,6 +315,8 @@ admin can also change under Settings.
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
 | `identity.enabled_oidc_providers` | `MARGINCE_IDENTITY_ENABLED_OIDC_PROVIDERS` | — | `list<string>`, stored | — | api, worker | The sign-in providers offered, as a list of provider keys; unset offers every provider the deployment set up. |
+| `identity.oauth_dynamic_registration` | `MARGINCE_IDENTITY_OAUTH_DYNAMIC_REGISTRATION` | — | `bool`, stored | `true` | api, worker | AI tools may register their own OAuth client (DCR) for new sign-ins. |
+| `identity.oauth_metadata_documents` | `MARGINCE_IDENTITY_OAUTH_METADATA_DOCUMENTS` | — | `bool`, stored | `true` | api, worker | AI tools may sign in with a client ID that is the URL of their metadata document (CIMD). |
 | `identity.oidc_group_role_map` | `MARGINCE_IDENTITY_OIDC_GROUP_ROLE_MAP` | — | `map<string,string>`, stored | — | api, worker | The role each directory group grants at sign-in, as group:role pairs; it only grants, and never removes a role. |
 | `identity.require_mfa` | `MARGINCE_IDENTITY_REQUIRE_MFA` | — | `bool`, stored | `false` | api, worker | Every member must use two-step sign-in. |
 | `identity.require_sso` | `MARGINCE_IDENTITY_REQUIRE_SSO` | — | `bool`, stored | `false` | api, worker | Members other than admins sign in only through a sign-in provider. |
@@ -375,6 +377,8 @@ admin can also change under Settings.
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
+| `mcp.client_registration.dynamic` | `MARGINCE_MCP_CLIENT_REGISTRATION_DYNAMIC` | — | `bool` | `true` | api | Let AI tools register their own OAuth client at `/oauth/register` (DCR); false keeps it off whatever the admin's switch in Settings > MCP says. |
+| `mcp.client_registration.metadata_document` | `MARGINCE_MCP_CLIENT_REGISTRATION_METADATA_DOCUMENT` | — | `bool` | `true` | api | Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings > MCP says. |
 | `mcp.connector_enabled` | `MARGINCE_MCP_CONNECTOR_ENABLED` | — | `bool` | `false` | api | Serve `/mcp` and the OAuth authorization server to outside agent clients; needs `--public-base-url`. |
 
 ### `operations`
@@ -711,6 +715,10 @@ Served next to `/v1`:
     endpoint.
   - The example config that ships declares the gate on, so a `make dev` stack serves the connector
     with no edit. The boot error keeps that a local help only.
+  - `mcp.client_registration.dynamic` and `mcp.client_registration.metadata_document` (both default
+    `true`) set which automatic ways a tool may use to get a client ID: dynamic registration and a
+    metadata document. `false` holds that way off whatever the admin's switch under **MCP**
+    says; `true` leaves it to the switch. Clients an admin registers are always allowed.
 
   Both discovery documents list `scopes_supported`, derived from the closed set of passport words.
   The protected resource names the record verbs (`read`, `draft`, `write`, `send`, `enrich`). The

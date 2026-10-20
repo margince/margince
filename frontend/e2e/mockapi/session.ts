@@ -2,6 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../src/api/schema";
+import {
+  agentClientList,
+  GEMINI_CLIENT,
+  PUBLISHED_CLIENT,
+} from "../../src/features/automations/agent-clients.fixtures";
 import { defaultAgentAllowances } from "../../src/features/automations/agentallowances.fixtures";
 import { defaultOperations } from "../../src/screens/operationsettings.fixtures";
 import { meFixture } from "../../src/testing/mefixture";
@@ -92,6 +97,10 @@ export const oauthApp: Handler = ({ json, path }) => {
 // The shell holds its first paint on this read: `timezone` is the clock every
 // record date renders in. Europe/Berlin, because the specs assert German
 // dates against it.
+// The MCP page's client list: one client an admin registered and one that
+// signs in with its published identity.
+export const agentClients = agentClientList([GEMINI_CLIENT, PUBLISHED_CLIENT]);
+
 export const installationSettings = {
   name: "Brandt Automotive",
   timezone: "Europe/Berlin",

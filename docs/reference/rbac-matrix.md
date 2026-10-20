@@ -60,6 +60,7 @@ changes none.
 | Object | `admin` | `management` | `manager` | `rep` | `read_only` | `ops` |
 |---|---|---|---|---|---|---|
 | `activity` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
+| `agent_client` | CRUD | -R-- | ---- | ---- | ---- | -R-- |
 | `ai_budget` | -RU- | -R-- | ---- | ---- | ---- | -RU- |
 | `ai_diagnostics` | -R-- | -R-- | ---- | ---- | ---- | -R-- |
 | `ai_model_rate` | CRU- | ---- | ---- | ---- | ---- | CRU- |

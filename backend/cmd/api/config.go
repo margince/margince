@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	ps "github.com/margince/margince/backend/internal/compose/programsettings"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/dbsettings"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
@@ -69,6 +70,9 @@ type apiConfig struct {
 	passwordLogin bool
 	// mcpConnector is mcp.connector_enabled, the connector's deployment gate.
 	mcpConnector bool
+	// clientRegistration is mcp.client_registration: the ways an admin's
+	// switches may turn on.
+	clientRegistration identity.RegistrationMethods
 }
 
 // loadAPIConfig resolves the boot settings from args and environ and checks the
@@ -123,7 +127,11 @@ func fromRegistry(loaded *config.Config, posture runtimeenv.Environment) (apiCon
 		vatCheckBaseURL: config.Val(loaded, ps.VATCheckBaseURL), geocodeBaseURL: config.Val(loaded, ps.GeocodeBaseURL),
 		passwordLogin: config.Val(loaded, ps.PasswordLogin), settings: loaded,
 		mcpConnector: config.Val(loaded, ps.MCPConnector),
-		posture:      posture,
+		clientRegistration: identity.RegistrationMethods{
+			Dynamic:          config.Val(loaded, ps.MCPDynamicRegistration),
+			MetadataDocument: config.Val(loaded, ps.MCPMetadataDocument),
+		},
+		posture: posture,
 	}
 	trusted, err := httpserver.ParseTrustedProxies(config.Val(loaded, ps.TrustedProxies))
 	if err != nil {

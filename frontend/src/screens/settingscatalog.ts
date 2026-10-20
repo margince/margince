@@ -342,21 +342,10 @@ export const SETTINGS_PAGES = [
     id: "authentication",
     group: "company",
     scope: "installation",
-    // `authentication_policy`, which SignInMethodsCard now reads through
-    // `GET /installation/authentication-policy`.
-    //
-    // Not `installation_settings`: that grant is held by every seeded role — a
-    // rep reads it for the base currency — so a page opening on it would put
-    // the installation's sign-in policy in front of the whole workspace, which
-    // is the disclosure the backend split existed to close.
-    //
-    // The two OAuth cards on this page still ride `capture_settings`, so they
-    // are readable by a rep who cannot reach the page at all. That is the safe
-    // direction — a card narrower than its page withholds itself — and it
-    // closes when they move to `oauth_application`.
+    // Not `installation_settings`, which every role holds. The OAuth cards ride
+    // `capture_settings`: a card narrower than its page withholds itself.
     requires: reads("authentication_policy"),
-    // Each card saves on its own grant below, and any one of them makes the
-    // page the reader's to work in.
+    // Each card saves on its own grant, and any one makes the page the reader's.
     changes: acts(
       writes("installation_settings", ["update"]),
       writes("authentication_policy", ["update"]),
@@ -635,6 +624,17 @@ export const SETTINGS_PAGES = [
     // a provider sheet, on the `ai_model_rate` upsert (removal is admitted on
     // update).
     changes: acts(writes("ai_routing", ["update"]), writes("ai_model_rate")),
+  },
+  {
+    id: "mcp",
+    group: "ai",
+    scope: "installation",
+    requires: reads("agent_client"),
+    changes: acts(
+      writes("agent_client"),
+      destroys("agent_client"),
+      writes("installation_settings", ["update"]),
+    ),
   },
   {
     id: "model-calls",

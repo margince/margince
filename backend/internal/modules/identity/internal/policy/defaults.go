@@ -113,6 +113,7 @@ var managerObjects = grid(crud, map[string]grant{
 	objCommunicationException: none,
 	objAuthenticationPolicy:   none,
 	objOauthApplication:       none,
+	objAgentClient:            none,
 	objSeatUsage:              none,
 	objTeamOversight:          none,
 
@@ -140,6 +141,7 @@ var managementObjects = func() map[string]grant {
 		objConsentConfig,
 		objAuthenticationPolicy,
 		objOauthApplication,
+		objAgentClient,
 		objSeatUsage,
 		objTeamOversight,
 	} {
@@ -311,6 +313,7 @@ var defaults = map[string]Document{
 			objCommunicationException: none,
 			objAuthenticationPolicy:   none,
 			objOauthApplication:       none,
+			objAgentClient:            none,
 			objSeatUsage:              none,
 			objTeamOversight:          none,
 			objTeamLead:               none,
@@ -354,6 +357,7 @@ var defaults = map[string]Document{
 			objCommunicationException: none,
 			objAuthenticationPolicy:   none,
 			objOauthApplication:       none,
+			objAgentClient:            none,
 			objSeatUsage:              none,
 			objTeamOversight:          none,
 			objTeamLead:               none,
@@ -406,7 +410,10 @@ var defaults = map[string]Document{
 			objSystemReset:          none,
 			objAiDiagnostics:        readOnly,
 			objAuthenticationPolicy: readOnly,
-			objSeatUsage:            readOnly,
+			// Ops reads the AI tool clients and leaves admitting a new one to admin,
+			// as it does the sign-in policy.
+			objAgentClient: readOnly,
+			objSeatUsage:   readOnly,
 			// Ops runs the installation and leads nobody, so it reads no
 			// team's coaching week.
 			objTeamOversight: none,

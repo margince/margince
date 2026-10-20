@@ -114,24 +114,49 @@ changed mid-window would restart every count. The passports of one OAuth grant s
 (`agentvolume.SubjectOf`), so a refresh, which mints a new passport, keeps the count. The per-minute limits of the
 transport stay in the build (`compose/mcpedge.go`).
 
-**How a client gets a `client_id`.** There are two ways, and a client that reads the priority order of the profile
-picks the first:
+**How a client gets a `client_id`.** There are three ways. A client that reads the priority order of the profile
+tries a client it was given first, then a metadata document, then dynamic registration:
 
-- **A Client ID Metadata Document (CIMD)**, the newer way. The `client_id` is an `https` URL with a path, which leads
-  to a JSON document that states its own `client_id`, `client_name` and `redirect_uris`.
+- **A client an admin registered** (`created_via = 'admin'`), made in Settings → **MCP** → **MCP
+  clients**. Margince mints the `client_id`. With a secret, the secret is stored as a SHA-256 digest and shown once.
+- **A Client ID Metadata Document (CIMD)**, the newer automatic way. The `client_id` is an `https` URL with a path,
+  which leads to a JSON document that states its own `client_id`, `client_name` and `redirect_uris`.
   - When this server gets it, it **does not follow redirects**, since a redirect is a second URL the caller picked.
   - The address is refused at connect time if it points to any address inside the deployment. The body is limited to
     64 KiB, and the timeout is `5s`.
   - The `client_id` in the document must be the same as the URL Margince read it from, **byte for byte**. There is no
     clean-up step, because such a step is a second reading of one value.
-  - A document that passes becomes a normal `oauth_client` row with `created_via = 'cimd'`. So an admin turns it off,
-    deletes it and revokes it as they would a registered client.
+  - A document that passes becomes a normal `oauth_client` row with `created_via = 'cimd'`. So an admin disables,
+    deletes and revokes it as they would a registered client.
   - Margince gets it again when the cache headers of the client say it is old (no less than 5 minutes and no more than
-    24 hours).
+    24 hours). A deleted CIMD client is fetched again on its next sign-in; a disabled one is never fetched.
 - **Dynamic client registration** (`POST /oauth/register`). The profile marks it as old, and Margince **keeps it for
-  the window it still supports**. So a client registered earlier is not cut off by a version it never asked for.
-  `client_id_metadata_document_supported: true` and `registration_endpoint` are both listed in the metadata of the
-  authorization server.
+  the window it still supports**. So a client registered earlier is not cut off by a version it never asked for. It
+  registers public clients only: a request for `client_secret_basic` or `client_secret_post` is refused.
+
+**Client authentication.** `token_endpoint_auth_methods_supported` and `revocation_endpoint_auth_methods_supported`
+list `none`, `client_secret_basic` and `client_secret_post`, with `none` first: Claude and Codex pick a metadata
+document only when `none` is listed. A public client proves itself with PKCE alone, and a secret it sends is ignored.
+
+A client with a secret sends it in one of the two ways, never both (`400 invalid_request`). A wrong or missing
+secret gets `401 invalid_client`. It is checked before a code or refresh token is read, so a refresh without the
+secret cannot end the connection. The token of a client with a secret is revoked only by that client: every
+other caller gets the same `200` an unknown token gets.
+
+**The switches.** `mcp.client_registration.dynamic` and `.metadata_document` in the deployment file, and the two
+settings `identity.oauth_dynamic_registration` and `identity.oauth_metadata_documents` (`agent_client` update), turn
+the two automatic ways on and off. A way is on only when both allow it. Off, discovery leaves out
+`registration_endpoint` or `client_id_metadata_document_supported`, `/oauth/register` answers `404`, and
+`/oauth/authorize` refuses that kind of client with `unauthorized_client`, shown on the consent screen. The token
+endpoint never reads them, so a connection that already works keeps renewing.
+
+A failed read of the settings leaves
+both ways out of discovery. A `GET /oauth/authorize` then answers `503 temporarily_unavailable`, and the consent
+`POST` shows the screen's general refusal.
+
+**`iss` (RFC 9207).** Every authorization response, success or error, carries `iss`, the same as the `issuer` in
+discovery, which sets `authorization_response_iss_parameter_supported: true`. A preset `iss` on a registered loopback
+redirect URI is removed first.
 
 Either way, the consent screen names the **host** the authorization goes back to. It says so again when that host is
 an address on this machine. A metadata document can prove what a client calls itself, and cannot prove which program

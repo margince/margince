@@ -123,6 +123,7 @@ describe("the scope each page declares", () => {
     automations: "workspace",
     // Read-only pages: no write at all, so the scope describes what they SHOW.
     usage: "workspace",
+    mcp: "installation",
     "model-calls": "workspace",
     audit: "workspace",
     // Reads the installation's unit inventory, but its only write is
@@ -261,6 +262,7 @@ describe("what each page lets a reader change", () => {
     automations:
       "all(full-seat, any(any(automation:update, automation:create), automation:delete))",
     usage: "all(full-seat, any(any(ai_budget:update)))",
+    mcp: "all(full-seat, any(any(agent_client:update, agent_client:create), agent_client:delete, any(installation_settings:update)))",
     "model-calls": "same-as-requires",
 
     privacy:

@@ -47,10 +47,10 @@ var preservedResetTables = map[string]bool{
 	// surviving the reset would otherwise point at a version the sweep removed.
 	// The migration revokes DELETE on it, so a sweep would abort here anyway.
 	"consent_text_version": true,
-	// identity and auth
+	// identity and auth; an AI tool's connection stays with its passports (passport_grant_fkey is RESTRICT)
 	objectWorkspace: true, "app_user": true, "role": true, "role_assignment": true,
 	"team": true, "team_membership": true,
-	"session": true, "passport": true, "auth_token": true,
+	"session": true, "passport": true, "auth_token": true, "oauth_client": true, "oauth_grant": true, "oauth_refresh_token": true,
 	// append-only ledgers
 	"audit_log": true, "system_log": true,
 	// installation configuration and secrets

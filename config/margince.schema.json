@@ -1038,6 +1038,22 @@
             "type": "string"
           }
         },
+        "oauth_dynamic_registration": {
+          "description": "AI tools may register their own OAuth client (DCR) for new sign-ins.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
+        },
+        "oauth_metadata_documents": {
+          "description": "AI tools may sign in with a client ID that is the URL of their metadata document (CIMD).",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
+        },
         "oidc_group_role_map": {
           "description": "The role each directory group grants at sign-in, as group:role pairs; it only grants, and never removes a role.",
           "type": [
@@ -1465,6 +1481,31 @@
       ],
       "additionalProperties": false,
       "properties": {
+        "client_registration": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "dynamic": {
+              "description": "Let AI tools register their own OAuth client at /oauth/register (DCR); false keeps it off whatever the admin's switch in Settings \u003e MCP says.",
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "default": true
+            },
+            "metadata_document": {
+              "description": "Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings \u003e MCP says.",
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "default": true
+            }
+          }
+        },
         "connector_enabled": {
           "description": "Serve /mcp and the OAuth authorization server to outside agent clients; needs --public-base-url.",
           "type": [
