@@ -13,6 +13,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -29,12 +30,12 @@ type Finding struct {
 	SignalVersion  int64     `json:"signal_version"`
 	SourceID       ids.UUID  `json:"source_id"`
 	SourceVersion  int64     `json:"source_version"`
-	OccurredAt     time.Time `json:"occurred_at"`
+	OccurredAt     time.Time `json:"-"`
 	Quote          string    `json:"-"`
 	Summary        string    `json:"-"`
 	QuoteDigest    string    `json:"quote_digest"`
 	Scope          string    `json:"scope"`
-	Workstream     string    `json:"workstream,omitempty"`
+	Workstream     string    `json:"-"`
 }
 
 // LiveStages keeps conflict cards and proposal scans on the same account boundary.
@@ -50,7 +51,7 @@ func Revalidate(ctx context.Context, tx pgx.Tx, company ids.CompanyID, signalID 
 	if shown == nil || current.SourceID.IsZero() {
 		return apperrors.ErrVersionSkew
 	}
-	if _, err := storekit.LockRow(ctx, tx, "company", company.UUID, storekit.LiveOnly); err != nil {
+	if _, err := contacts.LockCompanyTx(ctx, tx, company); err != nil {
 		return err
 	}
 	current, err = reconcile(ctx, tx, company, now, true)
@@ -67,7 +68,7 @@ func Matches(current Finding, shown *Finding) bool {
 	return shown != nil && Actionable(current) && !shown.Incomplete && shown.Scope == current.Scope &&
 		!current.SourceID.IsZero() && current.SignalID == shown.SignalID && current.SignalVersion == shown.SignalVersion &&
 		current.SourceID == shown.SourceID && current.SourceVersion == shown.SourceVersion &&
-		current.QuoteDigest != "" && current.QuoteDigest == shown.QuoteDigest && current.Workstream == shown.Workstream && current.OccurredAt.Equal(shown.OccurredAt)
+		current.QuoteDigest != "" && current.QuoteDigest == shown.QuoteDigest
 }
 
 // Read binds a signal's scope to words its reader can still open.

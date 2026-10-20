@@ -61,7 +61,7 @@ func seedScopedContractEnded(t *testing.T, e *integration.Env, company ids.UUID,
 	return seedScopedContractEndedAt(t, e, company, scope, quote, at, at)
 }
 
-func seedScopedContractEndedAt(t *testing.T, e *integration.Env, company ids.UUID, scope, quote string, at, detected time.Time) ids.UUID {
+func seedScopedContractEndedAt(t *testing.T, e *integration.Env, company ids.UUID, scope, quote string, at, detected time.Time, workstream ...string) ids.UUID {
 	t.Helper()
 	source, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "note", Subject: new("Relationship decision"), Body: &quote, OccurredAt: &at, Source: "manual",
@@ -73,11 +73,15 @@ func seedScopedContractEndedAt(t *testing.T, e *integration.Env, company ids.UUI
 	if !ok {
 		t.Fatal("fixture quote has no source proof")
 	}
+	named := ""
+	if len(workstream) > 0 {
+		named = workstream[0]
+	}
 	fingerprint := ids.NewV7().String()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := signals.RecordDerived(e.Admin(), tx, signals.DerivedSignal{
 			Kind: signalKindContractEnded, CompanyID: company, Summary: "The source reports an ending.", Severity: "warn", Fingerprint: fingerprint,
-			Evidence: []signals.DerivedEvidence{{ActivityID: ids.UUID(source.Id), Snippet: "Termination reported", SourceQuote: &proof, LifecycleScope: scope}},
+			Evidence: []signals.DerivedEvidence{{ActivityID: ids.UUID(source.Id), Snippet: "Termination reported", SourceQuote: &proof, LifecycleScope: scope, Workstream: named}},
 		}, detected)
 		return err
 	}); err != nil {
@@ -416,13 +420,14 @@ func TestWhitespaceNormalizedSourceProofAllowsTheDecision(t *testing.T) {
 func TestLifecycleProposalKeepsSourceWordsBehindTheSourceReader(t *testing.T) {
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "customer")
-	quote := "We are ending all business with your company."
-	seedScopedContractEnded(t, e, company, "company", quote)
+	quote := "We are ending all business, including Atlas support, with your company."
+	at := time.Date(2026, 7, 31, 12, 0, 0, 0, time.UTC)
+	seedScopedContractEndedAt(t, e, company, "company", quote, at, at, "Atlas support")
 	if proposePass(t, e) != 1 {
 		t.Fatal("fixture did not stage a decision")
 	}
 	stored := e.WsScalar(t, `SELECT jsonb_build_object('change', proposed_change, 'evidence', evidence)::text FROM approval WHERE id=$1`, stagedOffer(t, e, company))
-	if strings.Contains(stored, quote) {
+	if strings.Contains(stored, quote) || strings.Contains(stored, "Atlas support") || strings.Contains(stored, `"occurred_at"`) {
 		t.Fatal("proposal copied source words outside source authorization")
 	}
 	view, err := approvalsServiceWithEffects(e.Pool).GetWire(e.As(e.Rep1, nil, integration.AdminWithSignals), ids.From[ids.ApprovalKind](stagedOffer(t, e, company)))
