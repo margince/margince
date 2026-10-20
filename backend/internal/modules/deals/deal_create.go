@@ -32,6 +32,11 @@ import (
 type CreateDealInput struct {
 	Name        string
 	AmountMinor *int64
+	// ReferencesFromRequest says the caller typed the ids this deal points at,
+	// so a miss is refused naming the field. A writer that derives them from a
+	// stored suggestion, a lead or an import row leaves it false: naming a
+	// field the caller never sent would point at the wrong input.
+	ReferencesFromRequest bool
 	// ExpectedArrMinor is the recurring half of the price, in the same
 	// currency as AmountMinor.
 	ExpectedArrMinor *int64
@@ -229,7 +234,11 @@ func ensureBirthLinksVisible(ctx context.Context, tx pgx.Tx, in CreateDealInput,
 		links = append(links, recordLink{filterPartnerCompanyID, linkEntityCompany, in.PartnerCompanyID.UUID})
 	}
 	for _, link := range links {
-		if err := auth.EnsureReferenceTarget(ctx, tx, link.field, link.entity, link.id); err != nil {
+		err := auth.EnsureLinkTarget(ctx, tx, link.entity, link.id)
+		if in.ReferencesFromRequest {
+			err = auth.NameMissingReference(link.field, err)
+		}
+		if err != nil {
 			return err
 		}
 	}
@@ -239,7 +248,10 @@ func ensureBirthLinksVisible(ctx context.Context, tx pgx.Tx, in CreateDealInput,
 	// ensureProjectAttachable says the whole reasoning.
 	if in.ProjectID != nil {
 		if err := ensureProjectAttachable(ctx, tx, in.ProjectID.UUID); err != nil {
-			return auth.NameMissingReference("project_id", err)
+			if in.ReferencesFromRequest {
+				err = auth.NameMissingReference("project_id", err)
+			}
+			return err
 		}
 	}
 	return nil
@@ -276,7 +288,7 @@ func (s *Store) clearedForBirth(ctx context.Context, tx pgx.Tx, in CreateDealInp
 		in.OwnerID = owner
 	}
 
-	if err := ensureOpenBirthStage(ctx, tx, in.StageID, in.PipelineID); err != nil {
+	if err := ensureOpenBirthStage(ctx, tx, in.StageID, in.PipelineID, in.ReferencesFromRequest); err != nil {
 		return in, err
 	}
 	if err := refuseBirthPastLegalGate(ctx, tx, in.StageID); err != nil {

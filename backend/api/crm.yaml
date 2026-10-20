@@ -2929,6 +2929,8 @@ paths:
         transaction, so only an administrator may: another human gets `403`, an agent `422
         anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
         past 200 characters (`too_long`); other companies' names have no length cap.
+        A `parent_company_id` that names a company the caller cannot read answers 422 naming
+        `parent_company_id`, the same for a missing record and for one hidden by row scope.
       x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -5542,6 +5544,11 @@ paths:
       tags: [Deals]
       operationId: updateDeal
       summary: Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`.
+      description: |
+        A `company_id`, `partner_company_id` or `project_id` that names a record the caller cannot
+        read answers 422 naming that field, the same for a missing record and for one hidden by row
+        scope. An `amount_minor` below zero answers 422 `amount_negative`; a deal that already holds
+        one stays editable on its other fields.
       x-mcp-tool: { verb: update_record, record_type: deal, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -5596,6 +5603,7 @@ paths:
         A move to the stage the deal already holds changes nothing and answers 200 with the
         deal as it stands: a retried call must not close a closed deal again and move its
         close day. A `lost_reason` is trimmed and must not be blank (422 `lost_reason_required`).
+        A `to_stage_id` that names a stage nobody has answers 422 naming `to_stage_id`.
       # advance_deal is the one TierDynamic tool (ADR-0026): the gate resolves the tier from the
       # stage semantics at BOTH ENDS of the move, not statically. open→open = 🟢 (no token); a
       # terminal won/lost stage at either end = 🟡 (approval token required), so closing a deal and
@@ -5772,6 +5780,8 @@ paths:
         a caller can get wrong. A collision is resolved by taking the next number, never
         reported.
         The project starts in `initiative` and its creation row is appended to the phase history.
+        A `company_id` that names a company the caller cannot read answers 422 naming `company_id`,
+        the same for a missing record and for one hidden by row scope.
       x-mcp-tool: { verb: create_record, record_type: project, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -8290,6 +8300,8 @@ paths:
         the call arrives at, every entry in `links` is row-scope probed before the message is
         sent; over MCP that probe also runs at staging, so an agent naming a record it cannot
         see is refused before a human is asked about it at all.
+        A link that names a record the caller cannot read answers 422 naming `links`, the same for a
+        missing record and for one hidden by row scope.
       x-mcp-tool: { verb: send_company_email, record_type: activity, tier: auto_execute, scope: send }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -9081,6 +9093,8 @@ paths:
         tier floor on `book_meeting`. On success a
         `meeting` `activity` is logged and linked to the supplied entities. Idempotent on
         `Idempotency-Key`.
+        A link that names a record the caller cannot read answers 422 naming `links`, the same for a
+        missing record and for one hidden by row scope.
       x-mcp-tool: { verb: book_meeting, record_type: activity, tier: auto_execute, scope: send }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -10347,6 +10361,9 @@ paths:
       tags: [Leads]
       operationId: updateLead
       summary: Update a lead (partial).
+      description: |
+        A `project_id` that names a project the caller cannot read answers 422 naming `project_id`,
+        the same for a missing record and for one hidden by row scope.
       x-mcp-tool: { verb: update_record, record_type: lead, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -11275,6 +11292,10 @@ paths:
         — and an employment that has already ended never takes the flag. Send the
         field to decide it yourself. A later PATCH can change it on the same terms,
         the ended-employment rule included: see `updateRelationship`.
+        An endpoint id (`contact_id`, `counterparty_contact_id`, `company_id`,
+        `counterparty_company_id`, `deal_id`, `project_id`) that names a record the caller cannot
+        read answers 422 naming that field, the same for a missing record and for one hidden by row
+        scope.
       requestBody:
         required: true
         content:
@@ -24642,6 +24663,8 @@ paths:
         Line items may ride the create; each snapshots description/price from its optional
         `product_id` unless given explicitly. Totals are DERIVED — a body carrying
         `net_minor`/`gross_minor`/`line_total` (any spelling) is rejected 422.
+        A `buyer_company_id` or `template_id` that names a record the caller cannot read answers 422
+        naming that field, the same for a missing record and for one hidden by row scope.
       x-mcp-tool: { verb: create_record, record_type: offer, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -24680,6 +24703,9 @@ paths:
       tags: [Offers]
       operationId: updateOffer
       summary: Update offer header fields — allowed only while status=draft.
+      description: |
+        A `buyer_company_id` or `template_id` that names a record the caller cannot read answers 422
+        naming that field, the same for a missing record and for one hidden by row scope.
       x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IfMatch'
@@ -25038,6 +25064,8 @@ paths:
         company or drops it. Signals are COMPANY-LEVEL: there is no mandatory contact
         link, and `resolved_contact_id` is only ever set by the resolver under recorded
         consent (P12).
+        An `entity_id` that names a record the caller cannot read answers 422 naming `entity_id`, the
+        same for a missing record and for one hidden by row scope.
       # The warm room proposes; the rep sends (features/07 §9). Recording,
       # triaging, resolving and archiving a consent-gated (P12) company-level
       # signal is a human act through the governed surface — never an agent tool.
@@ -28315,6 +28343,8 @@ paths:
 
         `signed_on` is never defaulted from a deal's close time: that timestamp records
         when somebody moved a stage, which is not evidence that anything was signed.
+        A `company_id`, `deal_id` or `project_id` that names a record the caller cannot read answers
+        422 naming that field, the same for a missing record and for one hidden by row scope.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -28361,6 +28391,8 @@ paths:
         Status is NOT patchable here. A status moves through its own transitions so the
         proposal and event that belong to it are written from the same transaction, and
         so a correction to a term can never silently activate an agreement.
+        A `deal_id` or `project_id` that names a record the caller cannot read answers 422 naming
+        that field, the same for a missing record and for one hidden by row scope.
       parameters:
         - $ref: '#/components/parameters/Id'
         - $ref: '#/components/parameters/IfMatch'

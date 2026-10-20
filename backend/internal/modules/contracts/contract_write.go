@@ -69,20 +69,24 @@ func (s *Store) CreateContract(ctx context.Context, in CreateContractInput) (crm
 		if err != nil {
 			return err
 		}
-		out, err = createContractTx(ctx, tx, in, by, today, active)
+		out, err = createContractTx(ctx, tx, in, by, today, active, true)
 		return err
 	})
 	return out, err
 }
 
-func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by string, asOf time.Time, active []fieldcatalog.Column) (crmcontracts.Contract, error) {
+func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by string, asOf time.Time, active []fieldcatalog.Column, fromRequest bool) (crmcontracts.Contract, error) {
 	// Naming the counterparty is a read of it, and naming a deal is a read of
 	// that deal — both are client-supplied references to row-scoped records, so
 	// a caller may not hang an agreement off something it cannot see.
-	if err := auth.EnsureReferenceTarget(ctx, tx, "company_id", companyTable, in.CompanyID.UUID); err != nil {
-		return crmcontracts.Contract{}, err
+	companyProbe := auth.EnsureLinkTarget(ctx, tx, companyTable, in.CompanyID.UUID)
+	if fromRequest {
+		companyProbe = auth.NameMissingReference("company_id", companyProbe)
 	}
-	if err := ensureLinksVisible(ctx, tx, dealRef(in.DealID), projectRef(in.ProjectID)); err != nil {
+	if companyProbe != nil {
+		return crmcontracts.Contract{}, companyProbe
+	}
+	if err := ensureLinksVisible(ctx, tx, fromRequest, dealRef(in.DealID), projectRef(in.ProjectID)); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 	if err := ensureLinksShareCompany(ctx, tx, in.CompanyID.UUID,
@@ -166,7 +170,7 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 		// cannot see — and because the company arm of the visibility
 		// predicate enforces capture privacy while the deal arm does not,
 		// moving the anchor would strip that boundary from the row for good.
-		if err := ensureLinksVisible(ctx, tx, uuidRef(dealTable, in.DealId), uuidRef(projectTable, in.ProjectId)); err != nil {
+		if err := ensureLinksVisible(ctx, tx, true, uuidRef(dealTable, in.DealId), uuidRef(projectTable, in.ProjectId)); err != nil {
 			return err
 		}
 		anchor, err := anchorOf(existing)

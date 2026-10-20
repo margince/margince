@@ -23,10 +23,13 @@ import (
 // closed_at/lost_reason/FX invariants. Creating straight onto a terminal
 // stage would put an string(DealOpen) deal on a won column — silent forecast
 // corruption, no CHECK trips.
-func ensureOpenBirthStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, pipelineID ids.PipelineID) error {
+func ensureOpenBirthStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, pipelineID ids.PipelineID, fromRequest bool) error {
 	stage, err := resolveLiveStage(ctx, tx, stageID, pipelineID, "stage_id")
 	if err != nil {
-		return auth.NameMissingReference("stage_id", err)
+		if fromRequest {
+			err = auth.NameMissingReference("stage_id", err)
+		}
+		return err
 	}
 	if StageSemantic(stage.semantic).Terminal() {
 		return &TerminalStageOnCreateError{Semantic: stage.semantic}

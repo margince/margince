@@ -1795,6 +1795,8 @@ export interface paths {
          *     transaction, so only an administrator may: another human gets `403`, an agent `422
          *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
          *     past 200 characters (`too_long`); other companies' names have no length cap.
+         *     A `parent_company_id` that names a company the caller cannot read answers 422 naming
+         *     `parent_company_id`, the same for a missing record and for one hidden by row scope.
          */
         patch: operations["updateCompany"];
         trace?: never;
@@ -3718,7 +3720,13 @@ export interface paths {
         delete: operations["archiveDeal"];
         options?: never;
         head?: never;
-        /** Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`. */
+        /**
+         * Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`.
+         * @description A `company_id`, `partner_company_id` or `project_id` that names a record the caller cannot
+         *     read answers 422 naming that field, the same for a missing record and for one hidden by row
+         *     scope. An `amount_minor` below zero answers 422 `amount_negative`; a deal that already holds
+         *     one stays editable on its other fields.
+         */
         patch: operations["updateDeal"];
         trace?: never;
     };
@@ -3748,6 +3756,7 @@ export interface paths {
          *     A move to the stage the deal already holds changes nothing and answers 200 with the
          *     deal as it stands: a retried call must not close a closed deal again and move its
          *     close day. A `lost_reason` is trimmed and must not be blank (422 `lost_reason_required`).
+         *     A `to_stage_id` that names a stage nobody has answers 422 naming `to_stage_id`.
          */
         post: operations["advanceDeal"];
         delete?: never;
@@ -3830,6 +3839,8 @@ export interface paths {
          *     a caller can get wrong. A collision is resolved by taking the next number, never
          *     reported.
          *     The project starts in `initiative` and its creation row is appended to the phase history.
+         *     A `company_id` that names a company the caller cannot read answers 422 naming `company_id`,
+         *     the same for a missing record and for one hidden by row scope.
          */
         post: operations["createProject"];
         delete?: never;
@@ -5681,6 +5692,8 @@ export interface paths {
          *     the call arrives at, every entry in `links` is row-scope probed before the message is
          *     sent; over MCP that probe also runs at staging, so an agent naming a record it cannot
          *     see is refused before a human is asked about it at all.
+         *     A link that names a record the caller cannot read answers 422 naming `links`, the same for a
+         *     missing record and for one hidden by row scope.
          */
         post: operations["sendCompanyEmail"];
         delete?: never;
@@ -6133,6 +6146,8 @@ export interface paths {
          *     tier floor on `book_meeting`. On success a
          *     `meeting` `activity` is logged and linked to the supplied entities. Idempotent on
          *     `Idempotency-Key`.
+         *     A link that names a record the caller cannot read answers 422 naming `links`, the same for a
+         *     missing record and for one hidden by row scope.
          */
         post: operations["bookMeeting"];
         delete?: never;
@@ -6880,7 +6895,11 @@ export interface paths {
         delete: operations["disqualifyLead"];
         options?: never;
         head?: never;
-        /** Update a lead (partial). */
+        /**
+         * Update a lead (partial).
+         * @description A `project_id` that names a project the caller cannot read answers 422 naming `project_id`,
+         *     the same for a missing record and for one hidden by row scope.
+         */
         patch: operations["updateLead"];
         trace?: never;
     };
@@ -7484,6 +7503,10 @@ export interface paths {
          *     — and an employment that has already ended never takes the flag. Send the
          *     field to decide it yourself. A later PATCH can change it on the same terms,
          *     the ended-employment rule included: see `updateRelationship`.
+         *     An endpoint id (`contact_id`, `counterparty_contact_id`, `company_id`,
+         *     `counterparty_company_id`, `deal_id`, `project_id`) that names a record the caller cannot
+         *     read answers 422 naming that field, the same for a missing record and for one hidden by row
+         *     scope.
          */
         post: operations["createRelationship"];
         delete?: never;
@@ -16747,6 +16770,8 @@ export interface paths {
          * @description Line items may ride the create; each snapshots description/price from its optional
          *     `product_id` unless given explicitly. Totals are DERIVED — a body carrying
          *     `net_minor`/`gross_minor`/`line_total` (any spelling) is rejected 422.
+         *     A `buyer_company_id` or `template_id` that names a record the caller cannot read answers 422
+         *     naming that field, the same for a missing record and for one hidden by row scope.
          */
         post: operations["createOffer"];
         delete?: never;
@@ -16776,7 +16801,11 @@ export interface paths {
         delete: operations["archiveOffer"];
         options?: never;
         head?: never;
-        /** Update offer header fields — allowed only while status=draft. */
+        /**
+         * Update offer header fields — allowed only while status=draft.
+         * @description A `buyer_company_id` or `template_id` that names a record the caller cannot read answers 422
+         *     naming that field, the same for a missing record and for one hidden by row scope.
+         */
         patch: operations["updateOffer"];
         trace?: never;
     };
@@ -17003,6 +17032,8 @@ export interface paths {
          *     company or drops it. Signals are COMPANY-LEVEL: there is no mandatory contact
          *     link, and `resolved_contact_id` is only ever set by the resolver under recorded
          *     consent (P12).
+         *     An `entity_id` that names a record the caller cannot read answers 422 naming `entity_id`, the
+         *     same for a missing record and for one hidden by row scope.
          */
         post: operations["createSignal"];
         delete?: never;
@@ -19474,6 +19505,8 @@ export interface paths {
          *
          *     `signed_on` is never defaulted from a deal's close time: that timestamp records
          *     when somebody moved a stage, which is not evidence that anything was signed.
+         *     A `company_id`, `deal_id` or `project_id` that names a record the caller cannot read answers
+         *     422 naming that field, the same for a missing record and for one hidden by row scope.
          */
         post: operations["createContract"];
         delete?: never;
@@ -19507,6 +19540,8 @@ export interface paths {
          * @description Status is NOT patchable here. A status moves through its own transitions so the
          *     proposal and event that belong to it are written from the same transaction, and
          *     so a correction to a term can never silently activate an agreement.
+         *     A `deal_id` or `project_id` that names a record the caller cannot read answers 422 naming
+         *     that field, the same for a missing record and for one hidden by row scope.
          */
         patch: operations["updateContract"];
         trace?: never;
@@ -24778,7 +24813,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own

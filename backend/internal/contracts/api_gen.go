@@ -10849,6 +10849,7 @@ const (
 	ImportReasonCodeActivityTypeUnknown          ImportReasonCode = "activity_type_unknown"
 	ImportReasonCodeActivityTypeUnnamed          ImportReasonCode = "activity_type_unnamed"
 	ImportReasonCodeActivityUnlinked             ImportReasonCode = "activity_unlinked"
+	ImportReasonCodeAmountNegative               ImportReasonCode = "amount_negative"
 	ImportReasonCodeAuthorTooLong                ImportReasonCode = "author_too_long"
 	ImportReasonCodeCannotCreate                 ImportReasonCode = "cannot_create"
 	ImportReasonCodeCannotCreateTags             ImportReasonCode = "cannot_create_tags"
@@ -10972,6 +10973,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeActivityTypeUnnamed:
 		return true
 	case ImportReasonCodeActivityUnlinked:
+		return true
+	case ImportReasonCodeAmountNegative:
 		return true
 	case ImportReasonCodeAuthorTooLong:
 		return true
