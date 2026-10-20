@@ -6,7 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { LegalEntitiesCard } from "./legalentities";
-import { jsonResponse, render } from "./settings.testkit";
+import { jsonResponse, render } from "../../testing/settings.testkit";
 
 // Settings › Company › Legal entities: every seat reads the list, and only a
 // seat holding legal_entity:create is offered a new one.
