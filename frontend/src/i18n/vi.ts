@@ -4353,7 +4353,7 @@ export const vi = {
   "brief.report.priorWeek": "Tuần trước = tuần {week} ({range})",
   "brief.report.chapter.forecast": "Dự báo",
   "brief.report.chapter.glance": "Tổng quan",
-  "brief.report.chapter.closed": "Giao dịch đã chốt",
+  "brief.report.chapter.closed": "Deal đã đóng",
   "brief.report.chapter.movement": "Biến động pipeline",
   "brief.report.chapter.commitments": "Tuần tới",
   "brief.report.chapter.figures": "Số liệu",

@@ -542,6 +542,29 @@ describe("BriefScreen — the week against the one before", () => {
 
   // A week that stayed exactly level is a real answer. Printing "+0" dresses it
   // as an increase, which is a small lie told every Monday.
+  // The meetings figure is the meetings with a follow-up, so its change is
+  // too: more meetings held with fewer follow-ups is a week that fell.
+  it("changes the meetings figure by its follow-ups, not by meetings held", async () => {
+    const strip = await mount({
+      ...review,
+      prior: {
+        local_week_start: "2026-06-22",
+        counts: { ...counts, meetings_held: 2, meetings_with_next_step: 2 },
+      },
+    });
+
+    const meetings = [
+      ...strip.querySelectorAll<HTMLElement>(".brief-report-tile"),
+    ].find(
+      (tile) =>
+        tile.querySelector(".brief-report-tile-label")?.textContent ===
+        en["brief.weekly.meetingsHeld"],
+    );
+    expect(meetings?.textContent).toContain(
+      en["brief.report.vsPrior"].replace("{delta}", "+1"),
+    );
+  });
+
   it("says a level week stayed level", async () => {
     const strip = await mount(withPrior);
 

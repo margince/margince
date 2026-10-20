@@ -14,7 +14,8 @@ Its title is the week it covers. Above it are the calendar week and when the rep
 Beside the title, the two arrows **Earlier week** and **Later week** step through the weeks that have
 a report. Under it, a card holds what Margince wrote about the week, marked as written by AI. The
 report's parts are:
-- **At a glance**: four figures, each with its share as a bar and its change on the week before.
+- **At a glance**: four figures. Deals won shows what they were worth; the other three show their
+  share as a bar. Each shows its change on the week before, where there is one.
 - **Closed deals**: the deals won and lost, each with what it closed at, and a bar of won against
   lost.
 - **Pipeline movement**: the deals that changed stage, and the stage each reached.
@@ -23,7 +24,9 @@ report's parts are:
 - **Observations**: what worked in the week and what did not, where Margince found something.
 - **The week ahead**: your plan for this week.
 
-A part with nothing in it is left out. The last line says when the next report comes.
+**Closed deals**, **Pipeline movement**, **Observations** and **The week ahead** are left out when
+they hold nothing. **Forecast** and **Figures** are always there. The last line says when the next report
+comes.
 
 If there is none yet: "No weekly review yet. The first one is created on the Monday after your first
 full week."

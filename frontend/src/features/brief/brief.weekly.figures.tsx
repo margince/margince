@@ -101,7 +101,7 @@ function weekFigures(t: Translator, locale: Locale): readonly WeekFigure[] {
       key: "meetings",
       label: t("brief.weekly.meetingsHeld"),
       figure: "meetings",
-      count: (c) => c.meetings_held,
+      count: (c) => c.meetings_with_next_step,
       share: (c) => ({
         filled: c.meetings_with_next_step,
         total: c.meetings_held,
