@@ -141,3 +141,16 @@ func TestTeamExceptionsExcludeReadableDealsOutsideTheLiveRoster(t *testing.T) {
 func unassignedTask() ranked {
 	return classifyTask(taskItem(Task{ID: ids.NewV7(), Subject: "Call selected prospect", LinkType: "lead", LinkID: leadOwed}, rankInstant, rankInstant.AddDate(0, 0, 7), time.UTC), rankInstant)
 }
+
+func TestWaitingAgeDoesNotInventAResponsePolicyBreach(t *testing.T) {
+	for _, age := range []time.Duration{time.Hour, 72 * time.Hour, 30 * 24 * time.Hour} {
+		row := classifyWaiting(WaitingCustomer{
+			ActivityID: ids.NewV7(), ContactID: ids.NewV7(), DealID: riskDeal,
+			Since: boardInstant.Add(-age), Engaged: true, ConfirmedRequest: true,
+			OwnerID: ids.NewV7(), OwnerKnown: true,
+		}, boardInstant)
+		if exception, found := exceptionOf(row, boardInstant); found {
+			t.Errorf("waiting %s became an unsupported exception: %+v", age, exception)
+		}
+	}
+}
