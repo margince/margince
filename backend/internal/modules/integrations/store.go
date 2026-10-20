@@ -223,9 +223,9 @@ func (s *Store) presentConnection(
 }
 
 // presentAfterWrite is presentConnection for the answer to a write. The write
-// has already landed in this transaction, so a failed spend read must not roll
-// it back: it runs in a savepoint, and on failure the answer carries the stored
-// row and the catalog without spend. A cancelled request still aborts.
+// has landed in this transaction, so a failed spend read must not roll it back.
+// The read runs in a savepoint. On failure the answer carries the stored row and
+// the catalog without spend. A cancelled request still aborts.
 func (s *Store) presentAfterWrite(
 	ctx context.Context, tx pgx.Tx, c Connection, d provider.Descriptor,
 ) (Connection, error) {

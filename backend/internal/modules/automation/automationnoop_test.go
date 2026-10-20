@@ -9,7 +9,7 @@ import (
 )
 
 // A save that repeats what the automation holds changes nothing, whatever order
-// the params keys arrive in; a save that moves any one of the three fields does.
+// the params keys arrive in. A save that moves any of the three fields does.
 func TestAnAutomationUpdateChangesNothingOnlyWhenEveryFieldRepeatsTheStoredOne(t *testing.T) {
 	stored := Automation{
 		Name: "Chase quotes", Enabled: false, Params: json.RawMessage(`{"days":3,"list":"a"}`),

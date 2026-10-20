@@ -9,8 +9,8 @@ import (
 )
 
 // updateChangesNothing answers whether the update leaves the automation as it
-// is. Such a save must not move the version, and must not clear the reason a
-// paused automation carries, which only a change to its enabled state retires.
+// is. Such a save must not move the version. It must not clear the reason a
+// paused automation carries either: only a change of enabled state retires it.
 func updateChangesNothing(before Automation, in UpdateAutomationInput) bool {
 	if in.Name != nil && *in.Name != before.Name {
 		return false

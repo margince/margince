@@ -188,7 +188,7 @@ func TestAWebhookSubscriptionSavedAsItAlreadyIsChangesNothing(t *testing.T) {
 	assertSaveChangesNothing(t, e, "PATCH", path, AnyMap{"state": "paused"}, created.Subscription.ID, version)
 }
 
-// Clearing the headers a subscription sends is a change: the tokens they carry
+// Clearing the headers a subscription sends is a change. The tokens they carry
 // must stop being sent, so an empty list is not "nothing to do".
 func TestClearingAWebhooksCustomHeadersIsAChange(t *testing.T) {
 	cipher, err := webhooks.NewCipher(bytes.Repeat([]byte{0x5a}, webhooks.WebhookKeyBytes))
@@ -243,8 +243,8 @@ func TestADealRoomExpirySetToItsStoredValueChangesNothing(t *testing.T) {
 }
 
 // noOpProbedRoutes names the test that sends each listed route a save of the
-// values its record already holds. The gate that reads it derives the routes from
-// the contract, so a new versioned PATCH or PUT has to join this table or be
+// values its record already holds. The gate that reads it derives the routes
+// from the contract. A new versioned PATCH or PUT joins this table or is
 // ratified there with a reason.
 //
 // gatekit:fixture the routes an HTTP probe covers and the test that probes each, expected data checked against the contract

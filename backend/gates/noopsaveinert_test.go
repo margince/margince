@@ -124,10 +124,10 @@ func fileReachesTheClientUpdateSeam(path string, file *ast.File) bool {
 	return found
 }
 
-// reachesSeamAndAsks reads one function, closures included: the update body of
-// most stores is the closure handed to the transaction runner. A patch counts as
-// asked only when the same variable was asked Empty or Moved earlier in the
-// source than the call that applies it, so an unrelated method of that name, or
+// reachesSeamAndAsks reads one function, closures included, because the update
+// body of most stores is the closure handed to the transaction runner. A patch
+// counts as asked only when the same variable was asked Empty or Moved earlier in
+// the source than the call that applies it. An unrelated method of that name, or
 // a question asked after the write, does not satisfy the census.
 func reachesSeamAndAsks(fn *ast.FuncDecl) (reaches, asks bool) {
 	asked := map[string]token.Pos{}
