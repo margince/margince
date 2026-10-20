@@ -19,9 +19,11 @@ type Story = StoryObj;
 function Answer({
   historical = false,
   buyerVerified = true,
+  missingCompany = false,
 }: {
   historical?: boolean;
   buyerVerified?: boolean;
+  missingCompany?: boolean;
 }) {
   const t = useT();
   return (
@@ -36,8 +38,9 @@ function Answer({
         subject_kind: "signal",
         subject_id: "signal-one",
         subject: { type: "company", id: "company-one", label: "Acme" },
-        claim: { company_id: "company-one" },
+        claim: missingCompany ? undefined : { company_id: "company-one" },
         observed: {
+          suggestion_id: missingCompany ? "suggestion-one" : undefined,
           occurred_at: "2026-07-01T10:00:00Z",
           historical,
           buyer_verified: buyerVerified,
@@ -54,6 +57,7 @@ function renderAnswer(
   historical: boolean,
   buyerVerified = true,
   mayAnswer = true,
+  missingCompany = false,
 ) {
   installFetchStub({
     "GET /me": meRoute({
@@ -77,7 +81,11 @@ function renderAnswer(
   return (
     <StoryProviders>
       <ReviewActionsProvider>
-        <Answer historical={historical} buyerVerified={buyerVerified} />
+        <Answer
+          historical={historical}
+          buyerVerified={buyerVerified}
+          missingCompany={missingCompany}
+        />
       </ReviewActionsProvider>
     </StoryProviders>
   );
@@ -91,4 +99,8 @@ export const BuyerNeedsConfirmation: Story = {
 
 export const ReadOnlySignal: Story = {
   render: () => renderAnswer(false, true, false),
+};
+
+export const CoveredFindingLostCompany: Story = {
+  render: () => renderAnswer(false, true, true, true),
 };
