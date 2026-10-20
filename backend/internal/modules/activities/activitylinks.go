@@ -177,7 +177,7 @@ func mayAttach(ctx context.Context, tx pgx.Tx, link ActivityLinkInput) error {
 	}
 	// ATTACH: the named record gains an activity that every reader of it
 	// will see, so a share marked read-only does not confer this.
-	return auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID)
+	return auth.NameMissingReference("links", auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID))
 }
 
 // ProbeLinkWrites asks every question a write's link inserts will ask of the

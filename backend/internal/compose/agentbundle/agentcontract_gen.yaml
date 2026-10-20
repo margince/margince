@@ -544,8 +544,8 @@ paths:
       summary: Create a company.
       description: |-
         Domains are normalized/lowercased and unique per workspace (409 on collision).
-        A `parent_company_id` that names no company the caller can read answers `404`, the same
-        for a missing company and for one hidden by row scope.
+        A `parent_company_id` that names no company the caller can read answers 422 naming
+        `parent_company_id`, the same for a missing company and for one hidden by row scope.
 
         Needs the passport permission Change records.
 
@@ -573,7 +573,6 @@ paths:
               schema: {$ref: '#/components/schemas/Company'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
         '409':
           description: A domain already maps to another company.
           content:
@@ -1402,9 +1401,9 @@ paths:
         Amount is integer minor-units + ISO-4217 currency (no float money). The stage
         must belong to the deal's pipeline (422 otherwise). Deals attach to contact/company,
         never to a raw lead. An id in the body that names nothing the caller can
-        read (`company_id`, `partner_company_id`, `project_id`, `stage_id`, among others) answers
-        `404`, the same for a missing record and for one hidden by row scope, so the answer does
-        not say which exists.
+        read (`company_id`, `partner_company_id`, `project_id`, `stage_id`) answers 422 naming
+        that field, the same for a missing record and for one hidden by row scope, so the answer
+        does not say which exists. An `amount_minor` below zero answers 422 `amount_negative`.
 
         Needs the passport permission Change records.
 
@@ -1436,7 +1435,6 @@ paths:
               schema: {$ref: '#/components/schemas/Deal'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
         '422':
           description: Validation error (e.g. stage not in pipeline, lost without lost_reason).
           content:
@@ -2546,8 +2544,8 @@ paths:
         own send, may claim a mail identity. A `note` or a `call` needs a non-blank `subject` or
         `body`, on create and on an edit that would leave it with neither (422 naming `subject`);
         a task needs its `subject`. An activity may link to >1 entity
-        (contact and deal). A link that names a record the caller cannot read answers `404`,
-        the same for a missing record and for one hidden by row scope. `log_activity` is
+        (contact and deal). A link that names a record the caller cannot read answers 422
+        naming `links`, the same for a missing record and for one hidden by row scope. `log_activity` is
         (reversible).
 
         Needs the passport permission Change records.
@@ -2575,7 +2573,6 @@ paths:
               schema: {$ref: '#/components/schemas/Activity'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /activities/{id}:
     parameters:
@@ -3357,7 +3354,7 @@ paths:
         `company_name` is FREE TEXT — a lead has NO company FK. Lead-internal exact-email
         dedupe → 409 with existing lead id. Bulk/connector sourcing uses (source_system, source_id)
         for idempotent re-import. A `project_id` that names no project the caller can read
-        answers `404`, the same for a missing project and for one hidden by row scope.
+        answers 422 naming `project_id`, the same for a missing project and for one hidden by row scope.
 
         Needs the passport permission Change records.
 
@@ -3389,7 +3386,6 @@ paths:
               schema: {$ref: '#/components/schemas/Lead'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
         '409':
           description: A live lead already owns this email.
           content:
@@ -13200,7 +13196,7 @@ components:
       required: [name, pipeline_id, stage_id, source]
       properties:
         name: {type: string}
-        amount_minor: {type: [integer, 'null'], format: int64}
+        amount_minor: {type: [integer, 'null'], format: int64, minimum: 0, description: 'The deal''s one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.'}
         currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
         expected_arr_minor: {type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.'}
         pipeline_id: {type: string, format: uuid}
@@ -13243,7 +13239,7 @@ components:
       type: object
       properties:
         name: {type: string}
-        amount_minor: {type: [integer, 'null'], format: int64}
+        amount_minor: {type: [integer, 'null'], format: int64, minimum: 0, description: 'The deal''s one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.'}
         currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
         expected_arr_minor: {type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.'}
         company_id: {type: [string, 'null'], format: uuid}

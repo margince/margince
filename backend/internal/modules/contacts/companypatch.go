@@ -79,7 +79,7 @@ func setCompanyCheckedFields(ctx context.Context, tx pgx.Tx, p *storekit.Patch, 
 		p.Set("lifecycle", lifecycleValue(current.Lifecycle), *in.Lifecycle)
 	}
 	if in.ParentCompanyID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "company", in.ParentCompanyID.UUID); err != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, "parent_company_id", "company", in.ParentCompanyID.UUID); err != nil {
 			return err
 		}
 		p.Set("parent_company_id", current.ParentCompanyId, *in.ParentCompanyID)

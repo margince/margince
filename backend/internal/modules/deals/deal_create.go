@@ -220,13 +220,13 @@ func ensureBirthLinksVisible(ctx context.Context, tx pgx.Tx, in CreateDealInput,
 	// than checked as a zero id.
 	var links []recordLink
 	if in.CompanyID != nil {
-		links = append(links, recordLink{linkEntityCompany, in.CompanyID.UUID})
+		links = append(links, recordLink{filterCompanyID, linkEntityCompany, in.CompanyID.UUID})
 	}
 	if in.PartnerCompanyID != nil {
-		links = append(links, recordLink{linkEntityCompany, in.PartnerCompanyID.UUID})
+		links = append(links, recordLink{filterPartnerCompanyID, linkEntityCompany, in.PartnerCompanyID.UUID})
 	}
 	for _, link := range links {
-		if err := auth.EnsureLinkTarget(ctx, tx, link.entity, link.id); err != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, link.field, link.entity, link.id); err != nil {
 			return err
 		}
 	}
@@ -236,15 +236,16 @@ func ensureBirthLinksVisible(ctx context.Context, tx pgx.Tx, in CreateDealInput,
 	// ensureProjectAttachable says the whole reasoning.
 	if in.ProjectID != nil {
 		if err := ensureProjectAttachable(ctx, tx, in.ProjectID.UUID); err != nil {
-			return err
+			return auth.NameMissingReference("project_id", err)
 		}
 	}
 	return nil
 }
 
-// recordLink is one row-scoped record a deal points at, named by the entity the
-// visibility gate knows it as.
+// recordLink is one row-scoped record a deal points at: the body field that
+// carried the id, and the entity the visibility gate knows it as.
 type recordLink struct {
+	field  string
 	entity string
 	id     ids.UUID
 }

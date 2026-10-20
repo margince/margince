@@ -60,7 +60,8 @@ func ensureLinksVisible(ctx context.Context, tx pgx.Tx, refs ...linkRef) error {
 		if ref.id == nil {
 			continue
 		}
-		if err := auth.EnsureLinkTarget(ctx, tx, ref.table, *ref.id); err != nil {
+		// The body names each reference by its table: deal_id, project_id.
+		if err := auth.EnsureReferenceTarget(ctx, tx, ref.table+"_id", ref.table, *ref.id); err != nil {
 			return err
 		}
 	}

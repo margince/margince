@@ -1761,8 +1761,8 @@ export interface paths {
         /**
          * Create a company.
          * @description Domains are normalized/lowercased and unique per workspace (409 on collision).
-         *     A `parent_company_id` that names no company the caller can read answers `404`, the same
-         *     for a missing company and for one hidden by row scope.
+         *     A `parent_company_id` that names no company the caller can read answers 422 naming
+         *     `parent_company_id`, the same for a missing company and for one hidden by row scope.
          */
         post: operations["createCompany"];
         delete?: never;
@@ -3609,9 +3609,9 @@ export interface paths {
          * @description Amount is integer minor-units + ISO-4217 currency (no float money). The stage
          *     must belong to the deal's pipeline (422 otherwise). Deals attach to contact/company,
          *     never to a raw lead (ADR-0008 §5). An id in the body that names nothing the caller can
-         *     read (`company_id`, `partner_company_id`, `project_id`, `stage_id`, among others) answers
-         *     `404`, the same for a missing record and for one hidden by row scope, so the answer does
-         *     not say which exists.
+         *     read (`company_id`, `partner_company_id`, `project_id`, `stage_id`) answers 422 naming
+         *     that field, the same for a missing record and for one hidden by row scope, so the answer
+         *     does not say which exists. An `amount_minor` below zero answers 422 `amount_negative`.
          */
         post: operations["createDeal"];
         delete?: never;
@@ -4947,8 +4947,8 @@ export interface paths {
          *     own send, may claim a mail identity. A `note` or a `call` needs a non-blank `subject` or
          *     `body`, on create and on an edit that would leave it with neither (422 naming `subject`);
          *     a task needs its `subject`. An activity may link to >1 entity
-         *     (contact and deal). A link that names a record the caller cannot read answers `404`,
-         *     the same for a missing record and for one hidden by row scope. `log_activity` is 🟢
+         *     (contact and deal). A link that names a record the caller cannot read answers 422
+         *     naming `links`, the same for a missing record and for one hidden by row scope. `log_activity` is 🟢
          *     (reversible).
          */
         post: operations["logActivity"];
@@ -6740,7 +6740,7 @@ export interface paths {
          *     `company_name` is FREE TEXT — a lead has NO company FK. Lead-internal exact-email
          *     dedupe → 409 with existing lead id. Bulk/connector sourcing uses (source_system, source_id)
          *     for idempotent re-import. A `project_id` that names no project the caller can read
-         *     answers `404`, the same for a missing project and for one hidden by row scope.
+         *     answers 422 naming `project_id`, the same for a missing project and for one hidden by row scope.
          */
         post: operations["createLead"];
         delete?: never;
@@ -31000,7 +31000,10 @@ export interface components {
         };
         CreateDealRequest: {
             name: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description The deal's one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.
+             */
             amount_minor?: number | null;
             currency?: string | null;
             /**
@@ -31065,7 +31068,10 @@ export interface components {
         };
         UpdateDealRequest: {
             name?: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description The deal's one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.
+             */
             amount_minor?: number | null;
             currency?: string | null;
             /**
@@ -50508,7 +50514,6 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
             /** @description A domain already maps to another company. */
             409: {
                 headers: {
@@ -53050,7 +53055,6 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
             /** @description Validation error (e.g. stage not in pipeline, lost without lost_reason). */
             422: {
                 headers: {
@@ -55603,7 +55607,6 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -58911,7 +58914,6 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
             /** @description A live lead already owns this email. */
             409: {
                 headers: {

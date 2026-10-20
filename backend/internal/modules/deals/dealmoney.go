@@ -48,6 +48,9 @@ func moneyPairError(amount, arr *int64, currency *string) error {
 		return &AmountCurrencyPairError{Missing: currencyField}
 	}
 	if amount != nil {
+		if *amount < 0 {
+			return &NegativeAmountError{}
+		}
 		// One spelling of "a valid amount+currency" (values.Money), the same
 		// rule the schema CHECKs repeat.
 		if _, err := values.NewMoney(*amount, *currency); err != nil {
@@ -234,9 +237,23 @@ func (e *ArrCurrencyConflictError) FieldFault() (field, code, message string) {
 	return arrField, "arr_currency_conflict", e.Error()
 }
 
-// NegativeArrError refuses recurring revenue below zero. A negative one-off
-// amount is a credit somebody can argue for; a negative subscription is not a
-// subscription, and deal_expected_arr_nonnegative refuses it in SQL either way.
+// NegativeAmountError refuses a one-off amount below zero. Every total that
+// sums open deals would otherwise count the deal against the pipeline; a credit
+// belongs on an offer line, not on the deal's price.
+type NegativeAmountError struct{}
+
+func (e *NegativeAmountError) Error() string {
+	return "amount_minor cannot be negative"
+}
+
+// FieldFault points a 422 at the amount itself.
+func (e *NegativeAmountError) FieldFault() (field, code, message string) {
+	return amountField, "amount_negative", e.Error()
+}
+
+// NegativeArrError refuses recurring revenue below zero: a negative
+// subscription is not a subscription, and deal_expected_arr_nonnegative
+// refuses it in SQL either way.
 type NegativeArrError struct{}
 
 func (e *NegativeArrError) Error() string {

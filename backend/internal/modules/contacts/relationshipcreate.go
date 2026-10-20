@@ -213,20 +213,21 @@ func lockEmploymentClocks(ctx context.Context, tx pgx.Tx, in CreateRelationshipI
 // under the caller's row scope before the edge lands.
 func ensureRelationshipEndpoints(ctx context.Context, tx pgx.Tx, in CreateRelationshipInput) error {
 	for _, ref := range []struct {
+		field string
 		table string
 		id    *ids.UUID
 	}{
-		{anchorContact, untypedPtr(in.ContactID)},
-		{anchorContact, untypedPtr(in.CounterpartyContactID)},
-		{companyEntity, untypedPtr(in.CompanyID)},
-		{companyEntity, untypedPtr(in.CounterpartyCompanyID)},
-		{anchorDeal, untypedPtr(in.DealID)},
-		{projectObjectName, untypedPtr(in.ProjectID)},
+		{endContactColumn, anchorContact, untypedPtr(in.ContactID)},
+		{"counterparty_contact_id", anchorContact, untypedPtr(in.CounterpartyContactID)},
+		{endCompanyColumn, companyEntity, untypedPtr(in.CompanyID)},
+		{"counterparty_company_id", companyEntity, untypedPtr(in.CounterpartyCompanyID)},
+		{endDealColumn, anchorDeal, untypedPtr(in.DealID)},
+		{endProjectColumn, projectObjectName, untypedPtr(in.ProjectID)},
 	} {
 		if ref.id == nil {
 			continue
 		}
-		if err := auth.EnsureLinkTarget(ctx, tx, ref.table, *ref.id); err != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, ref.field, ref.table, *ref.id); err != nil {
 			return err
 		}
 	}

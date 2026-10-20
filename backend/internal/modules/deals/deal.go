@@ -26,7 +26,7 @@ import (
 func ensureOpenBirthStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, pipelineID ids.PipelineID) error {
 	stage, err := resolveLiveStage(ctx, tx, stageID, pipelineID, "stage_id")
 	if err != nil {
-		return err
+		return auth.NameMissingReference("stage_id", err)
 	}
 	if StageSemantic(stage.semantic).Terminal() {
 		return &TerminalStageOnCreateError{Semantic: stage.semantic}
@@ -238,7 +238,7 @@ func applyPartnerAttributionPatch(ctx context.Context, tx pgx.Tx,
 		p.Set("partner_attribution", current.PartnerAttribution, *in.PartnerAttribution)
 		return nil
 	}
-	if err := auth.EnsureLinkTarget(ctx, tx, "company", in.PartnerCompanyID.UUID); err != nil {
+	if err := auth.EnsureReferenceTarget(ctx, tx, "partner_company_id", "company", in.PartnerCompanyID.UUID); err != nil {
 		return err
 	}
 	// Visible is not enough: it must actually BE a partner, or the deal reads
