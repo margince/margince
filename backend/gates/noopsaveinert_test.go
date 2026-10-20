@@ -189,7 +189,6 @@ var unprobedSaveRoutes = gatekit.Waive(map[string]string{
 	"PATCH /activities/{id}/audience":                 "margince#8133 probes it",
 	"PATCH /companies/{id}/facts/{factKey}":           "margince#8133 probes it",
 	"PATCH /companies/{id}/profile-fields/{field}":    "margince#8133 probes it",
-	"PATCH /contracts/{id}":                           "margince#8133 probes it",
 	"PATCH /custom-fields/{id}":                       "margince#8133 probes it",
 	"PATCH /deal-rooms/{id}":                          "margince#8133 probes it",
 	"PATCH /deal-rooms/{id}/documents/{documentId}":   "margince#8133 probes it",
@@ -205,7 +204,6 @@ var unprobedSaveRoutes = gatekit.Waive(map[string]string{
 	"PATCH /voice-profiles/{id}/sources/{sourceId}":   "margince#8133 probes it",
 	"PATCH /automations/{id}":                         "held by the automation store tests at the store; margince#8133 adds the HTTP probe",
 	"PATCH /offers/{id}":                              "margince#8133 probes it",
-	"PATCH /projects/{id}":                            "margince#8133 probes it",
 	"PUT /mail-drafts":                                "margince#8133 probes it",
 	"PUT /pipelines/{id}/stage-order":                 "margince#8133 probes it",
 })

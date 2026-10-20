@@ -188,6 +188,45 @@ func TestAWebhookSubscriptionSavedAsItAlreadyIsChangesNothing(t *testing.T) {
 	assertSaveChangesNothing(t, e, "PATCH", path, AnyMap{"state": "paused"}, created.Subscription.ID, version)
 }
 
+// Clearing the headers a subscription sends is a change: the tokens they carry
+// must stop being sent, so an empty list is not "nothing to do".
+func TestClearingAWebhooksCustomHeadersIsAChange(t *testing.T) {
+	cipher, err := webhooks.NewCipher(bytes.Repeat([]byte{0x5a}, webhooks.WebhookKeyBytes))
+	if err != nil {
+		t.Fatalf("cipher: %v", err)
+	}
+	e := apptest.SetupAppWithOptions(t, compose.WithWebhookSigningKey(cipher))
+	e.BootstrapWorkspace(t)
+
+	var created struct {
+		Subscription struct {
+			ID      string `json:"id"`
+			Version int64  `json:"version"`
+		} `json:"subscription"`
+	}
+	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", AnyMap{
+		"target_url": "https://ok.example/hook", "event_types": []string{"deal.created"},
+		"custom_headers": []AnyMap{{"name": "X-Token", "value": "secret"}},
+	}, nil, &created); status != http.StatusCreated {
+		t.Fatalf("create subscription -> %d, want 201", status)
+	}
+	path := "/v1/webhook-subscriptions/" + created.Subscription.ID
+	var cleared struct {
+		Version int64 `json:"version"`
+		Headers []struct {
+			Name string `json:"name"`
+		} `json:"custom_headers"`
+	}
+	if status := e.Call(t, "PATCH", path, AnyMap{"custom_headers": []AnyMap{}},
+		map[string]string{"If-Match": strconv.FormatInt(created.Subscription.Version, 10)}, &cleared); status != http.StatusOK {
+		t.Fatalf("clearing the headers -> %d", status)
+	}
+	if cleared.Version != created.Subscription.Version+1 || len(cleared.Headers) != 0 {
+		t.Errorf("clearing the headers answered version %d with headers %v, want version %d and none",
+			cleared.Version, cleared.Headers, created.Subscription.Version+1)
+	}
+}
+
 func TestADealRoomExpirySetToItsStoredValueChangesNothing(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Room Expiry", "ada@expiry.test", "Ada Admin")
@@ -222,6 +261,8 @@ var noOpProbedRoutes = map[string]string{
 	"PATCH /activities/{id}":            "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
 	"PATCH /leads/{id}":                 "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
 	"PATCH /deals/{id}":                 "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /projects/{id}":              "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /contracts/{id}":             "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
 }
 
 func TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing(t *testing.T) {
@@ -262,6 +303,28 @@ func TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing(t *testing.T) {
 		}
 		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/leads/"+lead.ID,
 			AnyMap{"full_name": "Probe Lead"}, lead.ID, lead.Version)
+	})
+	t.Run("project", func(t *testing.T) {
+		var project versionedWire
+		if status := e.Call(t, "POST", "/v1/projects", AnyMap{
+			"name": "Joint rollout", "company_id": e.companyID, "source": "manual",
+		}, nil, &project); status != http.StatusCreated {
+			t.Fatalf("creating the project -> %d", status)
+		}
+		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/projects/"+project.ID,
+			AnyMap{"name": "Joint rollout"}, project.ID, project.Version)
+	})
+	t.Run("contract with its dates", func(t *testing.T) {
+		var contract versionedWire
+		if status := e.Call(t, "POST", "/v1/contracts", AnyMap{
+			"company_id": e.companyID, "title": "MSA 2026", "value_basis": "total",
+			"starts_on": "2026-01-01", "ends_on": "2026-12-31", "renewal_on": "2026-10-01",
+		}, nil, &contract); status != http.StatusCreated {
+			t.Fatalf("creating the contract -> %d", status)
+		}
+		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/contracts/"+contract.ID,
+			AnyMap{"title": "MSA 2026", "starts_on": "2026-01-01", "ends_on": "2026-12-31", "renewal_on": "2026-10-01"},
+			contract.ID, contract.Version)
 	})
 	t.Run("deal", func(t *testing.T) {
 		stages := apptest.DiscoverSeededPipeline(t, e.AppEnv)
