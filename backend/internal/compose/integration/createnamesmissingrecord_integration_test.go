@@ -5,12 +5,12 @@
 
 package integration
 
-// A create whose body names a record the caller cannot read is a validation
-// error that names the field, not a bare not-found: a deal carries a pipeline,
-// a stage, a company and an owner, and "not found" says none of which was wrong.
+// A create whose body names a record the caller cannot read answers 422 naming
+// the field. A deal carries several ids, and a bare not-found does not say
+// which one was wrong.
 //
-// A record that does not exist and one hidden by row scope answer the same, so
-// the status still tells nobody which rows are there.
+// A missing record and a hidden one answer alike, so the status tells nobody
+// which rows exist.
 
 import (
 	"maps"
@@ -26,7 +26,7 @@ func TestACreateNamingAMissingRecordIsA422NamingTheField(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Missing Refs", "admin@missingrefs.test", "Admin")
 
-	contact := createAndID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Real Person"})
+	contact := createAndID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Real Contact"})
 	var pipelines struct {
 		Data []struct {
 			ID     string `json:"id"`

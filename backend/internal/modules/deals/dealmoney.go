@@ -237,9 +237,8 @@ func (e *ArrCurrencyConflictError) FieldFault() (field, code, message string) {
 	return arrField, "arr_currency_conflict", e.Error()
 }
 
-// NegativeAmountError refuses a one-off amount below zero. Every total that
-// sums open deals would otherwise count the deal against the pipeline; a credit
-// belongs on an offer line, not on the deal's price.
+// NegativeAmountError refuses a one-off amount below zero. A negative deal
+// would count against every total that sums open deals.
 type NegativeAmountError struct{}
 
 func (e *NegativeAmountError) Error() string {

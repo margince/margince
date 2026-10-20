@@ -16,15 +16,12 @@ import (
 // ReferenceNotFoundError refuses a request body that names a record the caller
 // cannot read: 422, naming the field that carried the id.
 //
-// A missing record and one hidden by row scope answer identically, so the
-// status still tells nobody which rows exist. What it adds over a bare not-found
-// is the field, which matters on a body that carries several ids (a deal names a
-// pipeline, a stage, a company and a project) where "not found" does not say
-// which one to fix.
+// A missing record and one hidden by row scope answer alike, so the status
+// tells nobody which rows exist. The field is what a bare not-found lacks on a
+// body that carries several ids.
 //
-// It keeps the probe's own not-found as its cause. A caller that is not an HTTP
-// handler (an import row, an agent tool) still classifies it as not-found, and
-// httperr reads the field first, so only the wire answer changes.
+// The probe's not-found stays as the cause. An import row or an agent tool
+// still classifies it as not-found, because httperr reads the field first.
 type ReferenceNotFoundError struct {
 	Field string
 	Cause error
@@ -46,9 +43,9 @@ func (e *ReferenceNotFoundError) FieldFault() (field, code, message string) {
 // NameMissingReference turns a probe's not-found into ReferenceNotFoundError and
 // leaves every other answer alone, so a permission denial stays a denial.
 //
-// It is for a request BODY that names a record the write will point at. A path
-// id, or a record an action operates on, keeps the bare not-found: the caller
-// chose that record by address and there is no sibling field to confuse it with.
+// It is for a request body that names a record the write points at. A path id
+// keeps the bare not-found, because the caller addressed that record and has no
+// sibling field to confuse it with.
 func NameMissingReference(field string, err error) error {
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return &ReferenceNotFoundError{Field: field, Cause: err}
